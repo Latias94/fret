@@ -12,6 +12,7 @@ pub mod color_scheme_queries;
 pub mod container_queries;
 pub mod contrast_queries;
 pub mod controllable_state;
+pub mod current_color;
 pub mod dismissible;
 pub mod file_tree;
 pub mod focus_scope;

@@ -678,7 +678,8 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
             "Nested collapsibles in file trees should keep each node state independent and keyed for stable toggling.",
             "Always verify RTL with long trigger labels to ensure direction and alignment remain predictable.",
         ],
-    );
+    )
+    .test_id("ui-gallery-collapsible-notes");
 
     let body = doc_layout::render_doc_page(
         cx,

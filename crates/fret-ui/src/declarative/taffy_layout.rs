@@ -1,9 +1,14 @@
 use super::prelude::*;
 
+#[allow(dead_code)]
 pub(crate) fn taffy_dimension(length: Length) -> Dimension {
     match length {
         Length::Auto => Dimension::auto(),
         Length::Fill => Dimension::percent(1.0),
+        Length::Fraction(f) => {
+            let f = if f.is_finite() { f.max(0.0) } else { 0.0 };
+            Dimension::percent(f)
+        }
         Length::Px(px) => Dimension::length(px.0),
     }
 }

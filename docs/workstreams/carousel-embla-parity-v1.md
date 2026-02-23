@@ -75,6 +75,12 @@ This workstream assumes the following mechanism contracts exist (or are introduc
 - Pointer regions can opt in to receiving capture-phase pointer moves.
 - When pointer capture switches, the previous capture target receives a `PointerCancel` event so pressed/drag state is cleared.
 
+Layout note:
+
+- Carousel recipes also rely on percent sizing (`basis-full`). If percent sizing collapses under intrinsic measurement,
+  carousel items can clip/collapse in auto-height parents. Track percent/fraction closure in:
+  - `docs/workstreams/length-percentage-semantics-v1.md`
+
 ## Design notes (how to translate Embla to a custom renderer)
 
 ### Embla’s mental model

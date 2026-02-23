@@ -2050,7 +2050,7 @@ mod tests {
             line_height_policy: Default::default(),
             letter_spacing_em: None,
             vertical_placement: TextVerticalPlacement::CenterMetricsBox,
-            leading_distribution: fret_core::TextLeadingDistribution::Even,
+            leading_distribution: Default::default(),
             strut_style: None,
         };
 
@@ -2071,7 +2071,7 @@ mod tests {
             line_height_policy: Default::default(),
             letter_spacing_em: None,
             vertical_placement: TextVerticalPlacement::CenterMetricsBox,
-            leading_distribution: fret_core::TextLeadingDistribution::Even,
+            leading_distribution: Default::default(),
             strut_style: None,
         };
 

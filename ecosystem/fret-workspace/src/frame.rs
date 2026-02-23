@@ -109,7 +109,11 @@ impl WorkspaceFrame {
             move |cx| {
                 let center_row = cx.flex(
                     FlexProps {
-                        layout: fill_grow_layout(),
+                        layout: {
+                            let mut layout = flex_grow_layout();
+                            layout.size.min_height = Some(Px(0.0));
+                            layout
+                        },
                         direction: fret_core::Axis::Horizontal,
                         ..Default::default()
                     },

@@ -8,6 +8,7 @@ pub use super::container_queries::{
     container_query_region_with_id, container_width_at_least,
 };
 pub use super::contrast_queries::{contrast_preference, prefers_more_contrast};
+pub use super::current_color::{inherited_current_color, with_current_color_provider};
 pub use super::forced_colors_queries::{forced_colors_active, forced_colors_mode};
 pub use super::global_watch::GlobalWatchExt;
 pub use super::keyboard_avoidance::window_insets_padding_refinement_or_zero;

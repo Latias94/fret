@@ -438,6 +438,11 @@ pub enum Length {
     #[default]
     Auto,
     Px(Px),
+    /// Fraction of the containing block size (percent sizing).
+    ///
+    /// This is expressed as a ratio (e.g. `0.5` for 50%). When the containing block size is not
+    /// definite, this should behave like `Auto` (CSS-like percent sizing semantics).
+    Fraction(f32),
     Fill,
 }
 

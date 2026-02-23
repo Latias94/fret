@@ -216,7 +216,7 @@ pub(super) fn preview_dropdown_menu(
                 shadcn::DropdownMenuEntry::Separator,
                 shadcn::DropdownMenuEntry::Item(
                     shadcn::DropdownMenuItem::new("Profile")
-                        .leading(icon(cx, "lucide.user"))
+                        .leading_icon(fret_icons::IconId::new_static("lucide.user"))
                         .trailing(shadcn::DropdownMenuShortcut::new("Cmd+P").into_element(cx))
                         .on_select(CMD_MENU_DROPDOWN_APPLE)
                         .test_id("ui-gallery-dropdown-menu-demo-profile"),
@@ -349,13 +349,15 @@ pub(super) fn preview_dropdown_menu(
             vec![
                 shadcn::DropdownMenuEntry::Item(
                     shadcn::DropdownMenuItem::new("Profile")
-                        .leading(icon(cx, "lucide.user"))
-                        .on_select(CMD_MENU_DROPDOWN_APPLE),
+                        .leading_icon(fret_icons::IconId::new_static("lucide.user"))
+                        .on_select(CMD_MENU_DROPDOWN_APPLE)
+                        .test_id("ui-gallery-dropdown-menu-icons-profile"),
                 ),
                 shadcn::DropdownMenuEntry::Item(
                     shadcn::DropdownMenuItem::new("Settings")
-                        .leading(icon(cx, "lucide.settings"))
-                        .on_select(CMD_MENU_DROPDOWN_ORANGE),
+                        .leading_icon(fret_icons::IconId::new_static("lucide.settings"))
+                        .on_select(CMD_MENU_DROPDOWN_ORANGE)
+                        .test_id("ui-gallery-dropdown-menu-icons-settings"),
                 ),
             ]
         },
@@ -525,7 +527,7 @@ pub(super) fn preview_dropdown_menu(
                     shadcn::DropdownMenuEntry::Separator,
                     shadcn::DropdownMenuEntry::Item(
                         shadcn::DropdownMenuItem::new("Open")
-                            .leading(icon(cx, "lucide.folder-open"))
+                            .leading_icon(fret_icons::IconId::new_static("lucide.folder-open"))
                             .on_select(CMD_MENU_DROPDOWN_APPLE),
                     ),
                     shadcn::DropdownMenuEntry::Item(
@@ -644,10 +646,7 @@ let menu = shadcn::DropdownMenu::new(open).into_element(
                     "rust",
                     r#"shadcn::DropdownMenuEntry::Item(
     shadcn::DropdownMenuItem::new("Settings")
-        .leading(shadcn::icon::icon(
-            cx,
-            fret_icons::IconId::new_static("lucide.settings"),
-        ))
+        .leading_icon(fret_icons::IconId::new_static("lucide.settings"))
         .on_select(CMD_MENU_DROPDOWN_ORANGE),
 );"#,
                 ),

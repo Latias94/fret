@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use fret_core::{Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextStyle};
+use fret_icons::IconId;
 use fret_runtime::{CommandId, Effect};
 use fret_ui::action::{OnActivate, OnHoverChange};
 use fret_ui::element::{AnyElement, PressableA11y, PressableKeyActivation, PressableProps};
@@ -8,6 +9,7 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
+use fret_ui_kit::declarative::current_color;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
 use fret_ui_kit::{
@@ -316,7 +318,10 @@ pub(crate) fn button_text_style(theme: &Theme, size: ButtonSize) -> TextStyle {
 #[derive(Clone)]
 pub struct Button {
     label: Arc<str>,
+    a11y_label: Option<Arc<str>>,
     children: Vec<AnyElement>,
+    leading_icon: Option<IconId>,
+    trailing_icon: Option<IconId>,
     command: Option<CommandId>,
     on_activate: Option<OnActivate>,
     on_hover_change: Option<OnHoverChange>,
@@ -346,7 +351,10 @@ impl std::fmt::Debug for Button {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Button")
             .field("label", &self.label)
+            .field("a11y_label", &self.a11y_label)
             .field("children_len", &self.children.len())
+            .field("leading_icon", &self.leading_icon)
+            .field("trailing_icon", &self.trailing_icon)
             .field("command", &self.command)
             .field("on_activate", &self.on_activate.is_some())
             .field("on_hover_change", &self.on_hover_change.is_some())
@@ -371,7 +379,10 @@ impl Button {
         let label = label.into();
         Self {
             label,
+            a11y_label: None,
             children: Vec::new(),
+            leading_icon: None,
+            trailing_icon: None,
             command: None,
             on_activate: None,
             on_hover_change: None,
@@ -390,8 +401,35 @@ impl Button {
         }
     }
 
+    /// Overrides the semantic label (useful for icon-only buttons).
+    pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.a11y_label = Some(label.into());
+        self
+    }
+
     pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
         self.children = children.into_iter().collect();
+        self
+    }
+
+    /// Adds a leading icon rendered under the button's `currentColor` scope.
+    pub fn leading_icon(mut self, icon: IconId) -> Self {
+        self.leading_icon = Some(icon);
+        self
+    }
+
+    /// Adds a trailing icon rendered under the button's `currentColor` scope.
+    pub fn trailing_icon(mut self, icon: IconId) -> Self {
+        self.trailing_icon = Some(icon);
+        self
+    }
+
+    /// Shorthand for an icon-only button content slot.
+    ///
+    /// Note: this does not set `size=Icon*`; callers should still pick an icon size variant.
+    pub fn icon(mut self, icon: IconId) -> Self {
+        self.leading_icon = Some(icon);
+        self.trailing_icon = None;
         self
     }
 
@@ -579,6 +617,10 @@ impl Button {
                 None => (None, PressableKeyActivation::EnterAndSpace, None),
             };
             let a11y_label = self.label.clone();
+            let a11y_label = self
+                .a11y_label
+                .clone()
+                .unwrap_or_else(|| a11y_label.clone());
             let disabled_explicit = self.disabled;
             let disabled = disabled_explicit
                 || command
@@ -598,9 +640,14 @@ impl Button {
                 .line_height
                 .unwrap_or_else(|| theme.metric_token("font.line_height"));
             let is_icon = is_icon_button;
-            let has_svg_icon_like_children =
-                !is_icon_button && self.children.iter().any(contains_svg_icon_like);
+            let has_svg_icon_like_children = !is_icon_button
+                && (self.children.iter().any(contains_svg_icon_like)
+                    || self.leading_icon.is_some()
+                    || self.trailing_icon.is_some());
             let children = self.children;
+            let visible_label = self.label;
+            let leading_icon = self.leading_icon;
+            let trailing_icon = self.trailing_icon;
 
             let pressable = control_chrome_pressable_with_id_props(cx, move |cx, st, _id| {
                 cx.pressable_dispatch_command_if_enabled_opt(command);
@@ -719,38 +766,58 @@ impl Button {
                 };
 
                 let content_children = move |cx: &mut ElementContext<'_, H>| {
-                    let gap = if is_icon {
-                        Space::N0
-                    } else {
-                        match size {
-                            ComponentSize::Small | ComponentSize::XSmall => Space::N1p5,
-                            ComponentSize::Medium | ComponentSize::Large => Space::N2,
-                        }
-                    };
+                    current_color::with_current_color_provider(cx, fg.clone(), |cx| {
+                        let gap = if is_icon {
+                            Space::N0
+                        } else {
+                            match size {
+                                ComponentSize::Small | ComponentSize::XSmall => Space::N1p5,
+                                ComponentSize::Medium | ComponentSize::Large => Space::N2,
+                            }
+                        };
 
-                    let content = if children.is_empty() {
-                        vec![
-                            ui::text(cx, a11y_label.clone())
-                                .text_size_px(text_px)
-                                .fixed_line_box_px(text_line_height)
-                                .line_box_in_bounds()
-                                .font_weight(text_weight)
-                                .nowrap()
-                                .text_color(fg.clone())
-                                .into_element(cx),
-                        ]
-                    } else {
-                        children.clone()
-                    };
+                        let content = if children.is_empty() {
+                            let mut content = Vec::with_capacity(
+                                usize::from(leading_icon.is_some())
+                                    + usize::from(!visible_label.is_empty())
+                                    + usize::from(trailing_icon.is_some()),
+                            );
 
-                    vec![fret_ui_kit::declarative::stack::hstack(
-                        cx,
-                        fret_ui_kit::declarative::stack::HStackProps::default()
-                            .justify_center()
-                            .items_center()
-                            .gap_x(gap),
-                        |_cx| content,
-                    )]
+                            if let Some(icon) = leading_icon.clone() {
+                                content.push(crate::icon::icon(cx, icon));
+                            }
+
+                            if !visible_label.is_empty() {
+                                content.push(
+                                    ui::text(cx, visible_label.clone())
+                                        .text_size_px(text_px)
+                                        .fixed_line_box_px(text_line_height)
+                                        .line_box_in_bounds()
+                                        .font_weight(text_weight)
+                                        .nowrap()
+                                        .text_color(fg.clone())
+                                        .into_element(cx),
+                                );
+                            }
+
+                            if let Some(icon) = trailing_icon.clone() {
+                                content.push(crate::icon::icon(cx, icon));
+                            }
+
+                            content
+                        } else {
+                            children.clone()
+                        };
+
+                        vec![fret_ui_kit::declarative::stack::hstack(
+                            cx,
+                            fret_ui_kit::declarative::stack::HStackProps::default()
+                                .justify_center()
+                                .items_center()
+                                .gap_x(gap),
+                            |_cx| content,
+                        )]
+                    })
                 };
 
                 (pressable_props, chrome_props, content_children)
