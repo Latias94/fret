@@ -54,7 +54,6 @@ impl Renderer {
             return (encoding, true);
         }
 
-        encoding.clear();
         let encode_start = perf_enabled.then(Instant::now);
         {
             let encode_span = if trace_enabled {
