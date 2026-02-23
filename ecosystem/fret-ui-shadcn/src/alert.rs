@@ -1,13 +1,16 @@
 use std::sync::Arc;
 
 use fret_core::{Color, FontWeight, Px, SemanticsRole, TextOverflow, TextWrap};
-use fret_ui::element::{AnyElement, ElementKind, SemanticsDecoration};
+use fret_ui::element::{
+    AnyElement, ContainerProps, ElementKind, InsetStyle, LayoutStyle, Length, PositionStyle,
+    SemanticsDecoration,
+};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space, ui};
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
 
-use crate::layout as shadcn_layout;
+const ALERT_ACTION_MARKER_TEST_ID: &str = "__fret_shadcn.alert_action";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum AlertVariant {
@@ -22,6 +25,52 @@ pub struct Alert {
     variant: AlertVariant,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
+}
+
+#[derive(Debug, Clone)]
+pub struct AlertAction {
+    children: Vec<AnyElement>,
+    layout: LayoutRefinement,
+}
+
+impl AlertAction {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        Self {
+            children: children.into_iter().collect(),
+            layout: LayoutRefinement::default(),
+        }
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    #[track_caller]
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app);
+        let inset = MetricRef::space(Space::N4).resolve(theme);
+
+        let mut layout = LayoutStyle::default();
+        layout.position = PositionStyle::Absolute;
+        layout.inset = InsetStyle {
+            top: Some(inset),
+            right: Some(inset),
+            bottom: None,
+            left: None,
+        };
+        layout.size.width = Length::Auto;
+        layout.size.height = Length::Auto;
+
+        cx.container(
+            ContainerProps {
+                layout,
+                ..Default::default()
+            },
+            move |_cx| self.children,
+        )
+        .test_id(ALERT_ACTION_MARKER_TEST_ID)
+    }
 }
 
 impl Alert {
@@ -127,6 +176,15 @@ fn alert_with_patch<H: UiHost>(
     };
     let mut body_children = children;
 
+    let action_idx = body_children.iter().position(|child| {
+        child
+            .semantics_decoration
+            .as_ref()
+            .and_then(|d| d.test_id.as_deref())
+            == Some(ALERT_ACTION_MARKER_TEST_ID)
+    });
+    let action = action_idx.map(|idx| body_children.remove(idx));
+
     let props = decl_style::container_props(
         &theme,
         ChromeRefinement::default()
@@ -160,11 +218,11 @@ fn alert_with_patch<H: UiHost>(
         cx,
         stack::VStackProps::default()
             .gap(Space::N0p5)
-            .layout(LayoutRefinement::default().flex_1().min_w_0()),
+            .layout(LayoutRefinement::default().w_full().flex_1().min_w_0()),
         |_cx| body_children,
     );
 
-    let container = if let Some(mut icon) = icon {
+    let main = if let Some(mut icon) = icon {
         maybe_patch_svg_icon(&mut icon, fg, Px(16.0));
         let icon = cx.container(
             decl_style::container_props(
@@ -175,26 +233,29 @@ fn alert_with_patch<H: UiHost>(
             move |_cx| [icon],
         );
 
-        shadcn_layout::container_hstack(
+        stack::hstack(
             cx,
-            props,
             stack::HStackProps::default()
                 .gap(Space::N3)
                 .items_start()
                 .layout(LayoutRefinement::default().w_full()),
-            vec![icon, body],
+            move |_cx| vec![icon, body],
         )
     } else {
-        shadcn_layout::container_vstack(
-            cx,
-            props,
-            stack::VStackProps::default()
-                .gap(Space::N0p5)
-                .layout(LayoutRefinement::default().w_full()),
-            vec![body],
-        )
+        body
     };
-    container.attach_semantics(SemanticsDecoration::default().role(SemanticsRole::Alert))
+
+    let mut props = props;
+    props.layout.position = PositionStyle::Relative;
+
+    cx.container(props, move |_cx| {
+        let mut out: Vec<AnyElement> = vec![main];
+        if let Some(action) = action {
+            out.push(action);
+        }
+        out
+    })
+    .attach_semantics(SemanticsDecoration::default().role(SemanticsRole::Alert))
 }
 
 #[derive(Debug, Clone)]
