@@ -147,6 +147,26 @@ macro_rules! forward_layout_noargs {
 }
 
 impl UiBuilder<crate::ui::TextBox> {
+    /// Enables or disables drag-to-select + `edit.copy` for this text element.
+    ///
+    /// Notes:
+    /// - Keep this off by default for most UI labels to avoid gesture conflicts with pressable
+    ///   rows/buttons. Prefer a dedicated copy button in interactive surfaces.
+    pub fn selectable(mut self, selectable: bool) -> Self {
+        self.inner.selectable = selectable;
+        self
+    }
+
+    /// Convenience helper for `selectable(true)`.
+    pub fn selectable_on(self) -> Self {
+        self.selectable(true)
+    }
+
+    /// Convenience helper for `selectable(false)`.
+    pub fn selectable_off(self) -> Self {
+        self.selectable(false)
+    }
+
     pub fn text_xs(mut self) -> Self {
         self.inner.preset = crate::ui::TextPreset::Xs;
         self.inner.wrap = TextWrap::Word;
