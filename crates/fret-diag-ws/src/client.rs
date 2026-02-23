@@ -75,6 +75,7 @@ struct WasmInner {
     _on_message: Closure<dyn FnMut(web_sys::MessageEvent)>,
     _on_error: Closure<dyn FnMut(web_sys::ErrorEvent)>,
     _on_close: Closure<dyn FnMut(web_sys::CloseEvent)>,
+    _hello_tick: Closure<dyn FnMut()>,
 }
 
 impl DevtoolsWsClient {
@@ -152,6 +153,44 @@ impl DevtoolsWsClient {
         }) as Box<dyn FnMut(web_sys::CloseEvent)>);
         ws.set_onclose(Some(on_close.as_ref().unchecked_ref()));
 
+        // Retry flushing the outbox until the socket is OPEN. This covers fast OPEN transitions
+        // where `onopen` may be missed, and "idle UI" cases where the app isn't ticking frames yet.
+        //
+        // The timer self-cancels once the outbox is empty.
+        let ws_tick = ws.clone();
+        let state_tick = Arc::clone(&state);
+        let interval_handle = std::rc::Rc::new(std::cell::Cell::new(None::<i32>));
+        let interval_handle_tick = std::rc::Rc::clone(&interval_handle);
+        let hello_tick = Closure::wrap(Box::new(move || {
+            flush_wasm_outbox(&ws_tick, &state_tick);
+            if ws_tick.ready_state() != web_sys::WebSocket::OPEN {
+                return;
+            }
+            let is_empty = state_tick
+                .outbox
+                .lock()
+                .ok()
+                .is_some_and(|q| q.is_empty());
+            if !is_empty {
+                return;
+            }
+            let Some(id) = interval_handle_tick.get() else {
+                return;
+            };
+            if let Some(window) = web_sys::window() {
+                window.clear_interval_with_handle(id);
+            }
+            interval_handle_tick.set(None);
+        }) as Box<dyn FnMut()>);
+        if let Some(window) = web_sys::window() {
+            if let Ok(id) = window.set_interval_with_callback_and_timeout_and_arguments_0(
+                hello_tick.as_ref().unchecked_ref(),
+                50,
+            ) {
+                interval_handle.set(Some(id));
+            }
+        }
+
         // If the socket is already OPEN (or becomes OPEN before `onopen` is observed), flush the
         // queued hello immediately.
         flush_wasm_outbox(&ws, &state);
@@ -164,6 +203,7 @@ impl DevtoolsWsClient {
                 _on_message: on_message,
                 _on_error: on_error,
                 _on_close: on_close,
+                _hello_tick: hello_tick,
             }),
         })
     }
