@@ -244,6 +244,7 @@ diagnostics stack stays easy to evolve.
 - [x] Extract window target + geometry helpers into `ecosystem/fret-bootstrap/src/ui_diagnostics/window_target_and_geometry_helpers.rs`.
 - [x] Extract DevTools WS helpers into `ecosystem/fret-bootstrap/src/ui_diagnostics/devtools_ws_helpers.rs`.
 - [x] Move `sanitize_path_for_bundle` into `ecosystem/fret-bootstrap/src/ui_diagnostics/path_utils.rs`.
+- [x] Extract docking + predicate evaluation helpers into `ecosystem/fret-bootstrap/src/ui_diagnostics/predicates.rs`.
 - [x] Extract sidecar writing helpers out of `bundle_dump.rs` into
       `ecosystem/fret-bootstrap/src/ui_diagnostics/bundle_sidecars.rs` to reduce dump churn.
 - [x] Split schema-specific dump logic into `dump_schema_v1` / `dump_schema_v2` helpers to keep
