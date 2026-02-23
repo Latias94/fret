@@ -422,6 +422,17 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `cargo test -p fret-render-wgpu --lib`
     - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
 
+- [x] REN-VNEXT-refactor-120 Stage 12: extract per-frame text + svg preparation into dedicated helpers.
+  - Goal: keep tracing/perf accounting stable while making `execute` a linear “prepare → encode → compile → upload → dispatch” driver.
+  - Landed (step 1): move text prepare + atlas snapshot behind `Renderer::prepare_text_for_frame`.
+  - Landed (step 2): move SVG ops prepare + perf snapshot behind `Renderer::prepare_svg_for_frame`.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/render_scene/frame_prepare.rs` (`prepare_text_for_frame`, `prepare_svg_for_frame`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (call sites)
+  - Gates:
+    - `cargo test -p fret-render-wgpu --lib`
+    - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
 ## M7 — Post-v1 semantic expansions (deferred backlog)
 
 These items are intentionally *not* part of the vNext refactor’s v1 closure. They are common UI

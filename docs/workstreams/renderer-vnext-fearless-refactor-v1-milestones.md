@@ -631,6 +631,17 @@ Progress record (Frame perf finalize helper):
   - `cargo test -p fret-render-wgpu --lib`
   - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
 
+Progress record (Text + SVG prepare helpers):
+
+- Date: 2026-02-23
+- Status: Landed (Stage 12 steps 1–2)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/frame_prepare.rs` (`prepare_text_for_frame`, `prepare_svg_for_frame`)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (call sites)
+- Gates run:
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
 ## M4 — Paint/Material evolution (staged)
 
 Deliverables:
