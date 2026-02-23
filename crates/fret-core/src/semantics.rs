@@ -79,6 +79,15 @@ pub enum SemanticsPressedState {
     Mixed,
 }
 
+/// Indicates if a form control has invalid input (ARIA `aria-invalid` class).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum SemanticsInvalid {
+    True,
+    Grammar,
+    Spelling,
+}
+
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct SemanticsFlags {
     pub focused: bool,
@@ -95,6 +104,10 @@ pub struct SemanticsFlags {
     pub checked_state: Option<SemanticsCheckedState>,
     /// Tri-state pressed state for toggle-button-like widgets (None = not a toggle / unknown).
     pub pressed_state: Option<SemanticsPressedState>,
+    /// Indicates that a form field is required to be filled in.
+    pub required: bool,
+    /// Indicates that a form control has invalid input.
+    pub invalid: Option<SemanticsInvalid>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

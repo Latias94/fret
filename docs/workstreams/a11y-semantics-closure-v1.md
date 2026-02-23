@@ -1,6 +1,6 @@
 # A11y semantics closure (v1)
 
-Status: In progress (pressed closed; required/invalid + busy queued)
+Status: In progress (pressed + required/invalid closed; busy queued)
 
 Last updated: 2026-02-23
 
@@ -44,6 +44,8 @@ A semantic surface is considered “closed” only when all boxes are checked:
   (ADR 0289).
 - Pressed/toggle-button semantics: `SemanticsFlags.pressed_state` + AccessKit mapping + shadcn toggle adoption
   (ADR 0290).
+- Required/invalid semantics: `SemanticsFlags.required/invalid` + AccessKit mapping + shadcn input adoption
+  (ADR 0291).
 - Viewport semantics for scroll containers: `SemanticsRole::Viewport` mapping.
 
 ### Next P0 candidates (high ROI, low policy surface)

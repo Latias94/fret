@@ -2,6 +2,11 @@
 
 Last updated: 2026-02-23
 
+## Current progress (2026-02-23)
+
+- M1: Complete (pressed semantics: contract + AccessKit mapping + shadcn gates + ADR 0290).
+- M2: Complete (required/invalid semantics: contract + AccessKit mapping + shadcn gates + ADR 0291).
+
 ## M0 — Inventory and priority agreement
 
 Exit criteria:
@@ -36,4 +41,3 @@ Exit criteria:
 - AccessKit mapping exists (or documented fallback).
 - shadcn adoption exists for at least one real loading surface.
 - Gate exists (snapshot and/or diag script).
-

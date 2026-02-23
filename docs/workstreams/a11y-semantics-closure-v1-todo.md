@@ -18,13 +18,13 @@ Last updated: 2026-02-23
 
 ## P0: Required + invalid semantics (forms)
 
-- [ ] Decide contract shape:
+- [x] Decide contract shape:
   - `required: bool` vs `Option<bool>` (unknown vs false),
   - `invalid: bool` vs richer invalid reason (v1 should stay mechanism-only).
-- [ ] Map into AccessKit (if supported) and document fallbacks.
-- [ ] Adopt in shadcn primitives:
+- [x] Map into AccessKit (if supported) and document fallbacks.
+- [x] Adopt in shadcn primitives:
   - input / textarea / select / checkbox (at least one).
-- [ ] Gate via shadcn semantics snapshots and/or a diag script.
+- [x] Gate via shadcn semantics snapshots and/or a diag script.
 
 ## P0: Busy semantics (loading)
 

@@ -515,6 +515,92 @@ fn checked_state_takes_precedence_over_pressed_state() {
 }
 
 #[test]
+fn required_and_invalid_flags_are_mapped() {
+    let window = AppWindowId::default();
+    let root = node(1);
+    let input = node(2);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(10.0), Px(10.0)),
+    );
+
+    let snapshot = SemanticsSnapshot {
+        window,
+        roots: vec![SemanticsRoot {
+            root,
+            visible: true,
+            blocks_underlay_input: false,
+            hit_testable: true,
+            z_index: 0,
+        }],
+        barrier_root: None,
+        focus_barrier_root: None,
+        focus: None,
+        captured: None,
+        nodes: vec![
+            SemanticsNode {
+                id: root,
+                parent: None,
+                role: SemanticsRole::Window,
+                bounds,
+                flags: SemanticsFlags::default(),
+                test_id: None,
+                active_descendant: None,
+                pos_in_set: None,
+                set_size: None,
+                label: None,
+                value: None,
+                extra: SemanticsNodeExtra::default(),
+                text_selection: None,
+                text_composition: None,
+                actions: SemanticsActions::default(),
+                labelled_by: Vec::new(),
+                described_by: Vec::new(),
+                controls: Vec::new(),
+                inline_spans: Vec::new(),
+            },
+            SemanticsNode {
+                id: input,
+                parent: Some(root),
+                role: SemanticsRole::TextField,
+                bounds,
+                flags: SemanticsFlags {
+                    required: true,
+                    invalid: Some(fret_core::SemanticsInvalid::True),
+                    ..SemanticsFlags::default()
+                },
+                test_id: None,
+                active_descendant: None,
+                pos_in_set: None,
+                set_size: None,
+                label: Some("Input".to_string()),
+                value: None,
+                extra: SemanticsNodeExtra::default(),
+                text_selection: None,
+                text_composition: None,
+                actions: SemanticsActions::default(),
+                labelled_by: Vec::new(),
+                described_by: Vec::new(),
+                controls: Vec::new(),
+                inline_spans: Vec::new(),
+            },
+        ],
+    };
+
+    let update = tree_update_from_snapshot(&snapshot, 1.0);
+    let input_id = to_accesskit_id(input);
+    let input_node = update
+        .nodes
+        .iter()
+        .find_map(|(id, n)| (*id == input_id).then_some(n))
+        .expect("input node present");
+
+    assert!(input_node.is_required());
+    assert_eq!(input_node.invalid(), Some(accesskit::Invalid::True));
+}
+
+#[test]
 fn increment_and_decrement_actions_are_exposed_and_decoded() {
     let window = AppWindowId::default();
     let root = node(1);

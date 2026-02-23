@@ -162,6 +162,8 @@ impl ElementHostWidget {
                 {
                     cx.push_controlled(node);
                 }
+                cx.set_required(props.a11y_required);
+                cx.set_invalid(props.a11y_invalid);
                 input.semantics(cx);
             }
             ElementInstance::TextArea(props) => {
@@ -188,6 +190,8 @@ impl ElementHostWidget {
                 if let Some(test_id) = props.test_id.as_ref() {
                     cx.set_test_id(test_id.as_ref().to_string());
                 }
+                cx.set_required(props.a11y_required);
+                cx.set_invalid(props.a11y_invalid);
                 area.semantics(cx);
             }
             ElementInstance::ResizablePanelGroup(props) => {
@@ -287,6 +291,8 @@ impl ElementHostWidget {
                 cx.set_value_editable(false);
                 cx.set_read_only(true);
                 cx.set_text_selection_supported(props.enabled);
+                cx.set_required(props.a11y_required);
+                cx.set_invalid(props.a11y_invalid);
 
                 // Only publish ranges when focused, matching TextInput/TextArea behavior.
                 if cx.focus == Some(cx.node) && props.a11y_value.is_some() {

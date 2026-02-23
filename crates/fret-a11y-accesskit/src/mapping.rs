@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use accesskit::{
-    Action, Node, NodeId, Rect, Role, TextPosition, TextSelection, Toggled, Tree, TreeId,
+    Action, Invalid, Node, NodeId, Rect, Role, TextPosition, TextSelection, Toggled, Tree, TreeId,
     TreeUpdate,
 };
 use fret_core::{SemanticsNode, SemanticsOrientation, SemanticsRole, SemanticsSnapshot};
@@ -171,6 +171,20 @@ pub fn tree_update_from_snapshot(snapshot: &SemanticsSnapshot, scale_factor: f64
         }
         if node.flags.read_only {
             out.set_read_only();
+        }
+        if node.flags.required {
+            out.set_required();
+        }
+        if let Some(invalid) = node.flags.invalid {
+            let invalid = match invalid {
+                fret_core::SemanticsInvalid::True => Some(Invalid::True),
+                fret_core::SemanticsInvalid::Grammar => Some(Invalid::Grammar),
+                fret_core::SemanticsInvalid::Spelling => Some(Invalid::Spelling),
+                _ => None,
+            };
+            if let Some(invalid) = invalid {
+                out.set_invalid(invalid);
+            }
         }
         if node.flags.selected {
             out.set_selected(true);

@@ -309,6 +309,7 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0288-a11y-numeric-and-range-semantics-v1.md`
 - `docs/adr/0289-a11y-tri-state-checked-semantics-v1.md`
 - `docs/adr/0290-a11y-pressed-semantics-v1.md`
+- `docs/adr/0291-a11y-required-and-invalid-semantics-v1.md`
 - `docs/adr/0084-virtualized-accessibility-and-collection-semantics.md`
 - `docs/adr/0035-layout-constraints-and-optional-taffy-integration.md`
 - `docs/adr/0057-declarative-layout-style-and-flex-semantics.md`

@@ -42,6 +42,24 @@ impl UiPressedStateV1 {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiInvalidV1 {
+    True,
+    Grammar,
+    Spelling,
+}
+
+impl UiInvalidV1 {
+    fn from_semantics_invalid(v: fret_core::SemanticsInvalid) -> Self {
+        match v {
+            fret_core::SemanticsInvalid::True => Self::True,
+            fret_core::SemanticsInvalid::Grammar => Self::Grammar,
+            fret_core::SemanticsInvalid::Spelling => Self::Spelling,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiSemanticsSnapshotV1 {
     pub window: u64,
@@ -119,6 +137,10 @@ pub struct UiSemanticsFlagsV1 {
     pub checked_state: Option<UiCheckedStateV1>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pressed_state: Option<UiPressedStateV1>,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub required: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub invalid: Option<UiInvalidV1>,
 }
 
 impl UiSemanticsFlagsV1 {
@@ -131,6 +153,8 @@ impl UiSemanticsFlagsV1 {
             && v.checked.is_none()
             && v.checked_state.is_none()
             && v.pressed_state.is_none()
+            && !v.required
+            && v.invalid.is_none()
     }
 }
 
@@ -236,6 +260,8 @@ impl UiSemanticsNodeV1 {
                     .flags
                     .pressed_state
                     .map(UiPressedStateV1::from_semantics_pressed_state),
+                required: node.flags.required,
+                invalid: node.flags.invalid.map(UiInvalidV1::from_semantics_invalid),
             },
             test_id,
             active_descendant: node.active_descendant.map(key_to_u64),

@@ -157,6 +157,10 @@ struct SnapSemanticsFlags {
     checked_state: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pressed_state: Option<String>,
+    #[serde(default, skip_serializing_if = "is_false")]
+    required: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    invalid: Option<String>,
 }
 
 #[derive(Clone, Copy, Debug, Default, Serialize, Deserialize)]
@@ -622,6 +626,8 @@ where
                 checked: n.flags.checked,
                 checked_state: n.flags.checked_state.map(|v| format!("{v:?}")),
                 pressed_state: n.flags.pressed_state.map(|v| format!("{v:?}")),
+                required: n.flags.required,
+                invalid: n.flags.invalid.map(|v| format!("{v:?}")),
             },
             extra: snap_semantics_extra(&n.extra),
         })
@@ -699,6 +705,24 @@ fn snapshot_toggle_group_pressed_semantics() {
         vec![
             fret_ui_shadcn::ToggleGroup::multiple_uncontrolled(vec!["alpha"])
                 .items(items)
+                .into_element(cx),
+        ]
+    });
+}
+
+#[test]
+fn snapshot_input_required_invalid_semantics() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(420.0), Px(180.0)),
+    );
+    snapshot_for_root("input_required_invalid_semantics", bounds, |cx| {
+        let model = cx.app.models_mut().insert("Hello".to_string());
+        vec![
+            fret_ui_shadcn::Input::new(model)
+                .a11y_label("Email")
+                .aria_required(true)
+                .aria_invalid(true)
                 .into_element(cx),
         ]
     });

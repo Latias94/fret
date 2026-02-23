@@ -241,6 +241,8 @@ pub struct TextInputRegionProps {
     /// When present, selection and composition ranges are interpreted as UTF-8 byte offsets within
     /// this value (ADR 0071).
     pub a11y_value: Option<Arc<str>>,
+    pub a11y_required: bool,
+    pub a11y_invalid: Option<fret_core::SemanticsInvalid>,
     /// Optional selection range (anchor, focus) in UTF-8 byte offsets within `a11y_value`.
     pub a11y_text_selection: Option<(u32, u32)>,
     /// Optional IME composition range (start, end) in UTF-8 byte offsets within `a11y_value`.
@@ -302,6 +304,8 @@ impl Default for TextInputRegionProps {
             ime_cursor_area: None,
             a11y_label: None,
             a11y_value: None,
+            a11y_required: false,
+            a11y_invalid: None,
             a11y_text_selection: None,
             a11y_text_composition: None,
         }
@@ -1521,6 +1525,8 @@ pub struct TextInputProps {
     pub a11y_role: Option<SemanticsRole>,
     pub test_id: Option<std::sync::Arc<str>>,
     pub placeholder: Option<std::sync::Arc<str>>,
+    pub a11y_required: bool,
+    pub a11y_invalid: Option<fret_core::SemanticsInvalid>,
     pub active_descendant: Option<NodeId>,
     /// Declarative-only: element ID of a node which this text input controls.
     ///
@@ -1546,6 +1552,8 @@ impl TextInputProps {
             a11y_role: None,
             test_id: None,
             placeholder: None,
+            a11y_required: false,
+            a11y_invalid: None,
             active_descendant: None,
             controls_element: None,
             expanded: None,
@@ -1588,6 +1596,8 @@ pub struct TextAreaProps {
     pub focusable: bool,
     pub model: Model<String>,
     pub placeholder: Option<std::sync::Arc<str>>,
+    pub a11y_required: bool,
+    pub a11y_invalid: Option<fret_core::SemanticsInvalid>,
     pub a11y_label: Option<std::sync::Arc<str>>,
     pub test_id: Option<std::sync::Arc<str>>,
     pub chrome: TextAreaStyle,
@@ -1603,6 +1613,8 @@ impl TextAreaProps {
             focusable: true,
             model,
             placeholder: None,
+            a11y_required: false,
+            a11y_invalid: None,
             a11y_label: None,
             test_id: None,
             chrome: TextAreaStyle::default(),

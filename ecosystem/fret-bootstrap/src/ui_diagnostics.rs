@@ -7389,6 +7389,18 @@ fn semantics_fingerprint_v1(
                 });
             }
         }
+        hasher.write_bool(node.flags.required);
+        match node.flags.invalid {
+            None => hasher.write_u8(0),
+            Some(state) => {
+                hasher.write_u8(1);
+                hasher.write_u8(match state {
+                    fret_core::SemanticsInvalid::True => 0,
+                    fret_core::SemanticsInvalid::Grammar => 1,
+                    fret_core::SemanticsInvalid::Spelling => 2,
+                });
+            }
+        }
 
         hasher.write_opt_str(node.test_id.as_deref(), redact_text, max_string_bytes);
         hasher.write_opt_u64(node.active_descendant.map(key_to_u64));

@@ -1,7 +1,8 @@
 use crate::{Theme, UiHost};
 use fret_core::{
     AppWindowId, Corners, Event, NodeId, Point, Rect, Scene, SemanticsCheckedState, SemanticsFlags,
-    SemanticsOrientation, SemanticsPressedState, SemanticsRole, Size, Transform2D, UiServices,
+    SemanticsInvalid, SemanticsOrientation, SemanticsPressedState, SemanticsRole, Size,
+    Transform2D, UiServices,
 };
 use fret_runtime::{
     CommandId, DefaultAction, DefaultActionSet, Effect, InputContext, Model, ModelId,
@@ -1364,6 +1365,18 @@ impl<'a, H: UiHost> SemanticsCx<'a, H> {
 
     pub fn clear_pressed_state(&mut self) {
         self.flags.pressed_state = None;
+    }
+
+    pub fn set_required(&mut self, required: bool) {
+        self.flags.required = required;
+    }
+
+    pub fn set_invalid(&mut self, invalid: Option<SemanticsInvalid>) {
+        self.flags.invalid = invalid;
+    }
+
+    pub fn clear_invalid(&mut self) {
+        self.flags.invalid = None;
     }
 
     pub fn set_active_descendant(&mut self, node: Option<NodeId>) {
