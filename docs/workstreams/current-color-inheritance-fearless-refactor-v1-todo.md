@@ -29,6 +29,7 @@ Last updated: 2026-02-23
 - [x] Tabs triggers / pill-like controls provide resolved `fg` (prefer deferred icon slots for trigger icons).
 - [x] ToggleGroup items / pill-like controls provide resolved `fg` (prefer deferred icon slots for icon-only groups).
 - [x] Toggle provides resolved `fg` (prefer deferred icon slots for icons).
+- [x] `InputGroupButton` provides resolved `fg` (and supports deferred icon slots).
 
 ## Text adoption (the big win after icons)
 
@@ -57,6 +58,9 @@ Last updated: 2026-02-23
 - [x] Add a Toggle Group demo icons screenshot script (zinc/light + zinc/dark) to gate icon-only item visibility (`tools/diag-scripts/ui-gallery-toggle-group-demo-icons-screenshots-zinc-light-dark.json`).
 - [x] Add a Toggle demo icons screenshot script (zinc/light + zinc/dark) to gate icon + label foreground inheritance (`tools/diag-scripts/ui-gallery-toggle-demo-icons-screenshots-zinc-light-dark.json`).
 - [x] Add a shadcn Select scroll arrows icons screenshot script (zinc/light + zinc/dark) to gate popover-foreground icon contrast (`tools/diag-scripts/ui-gallery-shadcn-select-scroll-arrows-icons-screenshots-zinc-light-dark.json`).
+- [x] Add Spinner extras InputGroupButton icon screenshot scripts (zinc/light + zinc/dark) to gate icon foreground inheritance:
+  - `tools/diag-scripts/ui-gallery-spinner-extras-input-group-button-icon-screenshots-zinc-light.json`
+  - `tools/diag-scripts/ui-gallery-spinner-extras-input-group-button-icon-screenshots-zinc-dark.json`
 - [ ] Add a “menu item with leading icon + disabled/active” diag script.
 
 ## Cross-cutting checks

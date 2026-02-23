@@ -112,6 +112,19 @@ Evidence anchors:
 - `ecosystem/fret-ui-shadcn/src/select.rs`
 - `tools/diag-scripts/ui-gallery-shadcn-select-scroll-arrows-icons-screenshots-zinc-light-dark.json`
 
+### M4f — Host adoption: InputGroupButton icons (landed)
+
+- `InputGroupButton` provides resolved `fg` via `currentColor` so icon slots inherit the host foreground.
+- Add icon slots (`icon` / `leading_icon` / `trailing_icon`) to avoid prebuilt `AnyElement` children bypassing the provider.
+- Gate with light/dark screenshot scripts targeting Spinner extras.
+
+Evidence anchors:
+
+- `ecosystem/fret-ui-shadcn/src/input_group.rs`
+- `apps/fret-ui-gallery/src/ui/previews/pages/components/basics/spinner.rs`
+- `tools/diag-scripts/ui-gallery-spinner-extras-input-group-button-icon-screenshots-zinc-light.json`
+- `tools/diag-scripts/ui-gallery-spinner-extras-input-group-button-icon-screenshots-zinc-dark.json`
+
 ### M5 — Text adoption (landed; biggest ROI after icons)
 
 - Decide the minimal text surface that should inherit `currentColor` (v1 scope is “foreground only”).
