@@ -392,6 +392,16 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `cargo test -p fret-render-wgpu --lib`
     - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
 
+- [x] REN-VNEXT-refactor-090 Stage 9: extract per-frame uniform uploads + bind group preparation into a dedicated helper.
+  - Goal: keep uniform/clips/masks uploads + bind-group prep drift-free while further linearizing `execute`.
+  - Landed (step 1): move uniform/clips/masks capacity + writes + bind-group prep behind `Renderer::upload_frame_uniforms_and_prepare_bind_groups`.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/render_scene/frame_bindings.rs` (`upload_frame_uniforms_and_prepare_bind_groups`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (call site)
+  - Gates:
+    - `cargo test -p fret-render-wgpu --lib`
+    - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
 ## M7 — Post-v1 semantic expansions (deferred backlog)
 
 These items are intentionally *not* part of the vNext refactor’s v1 closure. They are common UI
