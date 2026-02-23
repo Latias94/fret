@@ -12,6 +12,32 @@ fn strip_releases(passes: &[RenderPlanPass]) -> Vec<&RenderPlanPass> {
         .collect()
 }
 
+fn apply_single_step_effect_with_scissor(
+    step: fret_core::EffectStep,
+    mode: fret_core::EffectMode,
+    scissor: ScissorRect,
+) -> Vec<RenderPlanPass> {
+    let mut passes: Vec<RenderPlanPass> = Vec::new();
+    effects::apply_chain_in_place(
+        &mut passes,
+        &[],
+        PlanTarget::Intermediate0,
+        mode,
+        fret_core::EffectChain::from_steps(&[step]),
+        fret_core::EffectQuality::Auto,
+        scissor,
+        None,
+        &[],
+        effects::EffectCompileCtx {
+            viewport_size: (100, 100),
+            format: wgpu::TextureFormat::Bgra8UnormSrgb,
+            intermediate_budget_bytes: u64::MAX,
+            clear: wgpu::Color::TRANSPARENT,
+        },
+    );
+    passes
+}
+
 #[test]
 fn debug_validate_rejects_load_before_init() {
     let init_src = RenderPlanPass::SceneDrawRange(SceneDrawRangePass {
@@ -211,6 +237,178 @@ fn insert_early_releases_inserts_release_after_last_use() {
         .position(|p| matches!(p, RenderPlanPass::ReleaseTarget(PlanTarget::Intermediate0)))
         .unwrap();
     assert!(release_at > last_use);
+}
+
+#[test]
+fn scissored_color_adjust_preserves_outside_region_via_pre_blit() {
+    let scissor = ScissorRect {
+        x: 10,
+        y: 11,
+        w: 20,
+        h: 21,
+    };
+    let passes = apply_single_step_effect_with_scissor(
+        fret_core::EffectStep::ColorAdjust {
+            saturation: 1.0,
+            brightness: 1.0,
+            contrast: 1.0,
+        },
+        fret_core::EffectMode::FilterContent,
+        scissor,
+    );
+
+    assert_eq!(passes.len(), 2);
+    let RenderPlanPass::FullscreenBlit(pre) = passes[0] else {
+        panic!("expected pre-blit");
+    };
+    assert_eq!(pre.src, PlanTarget::Intermediate0);
+    assert_eq!(pre.dst, PlanTarget::Intermediate1);
+    assert_eq!(pre.dst_scissor, None);
+    assert!(matches!(pre.load, wgpu::LoadOp::Clear(_)));
+
+    let RenderPlanPass::ColorAdjust(pass) = passes[1] else {
+        panic!("expected ColorAdjust pass");
+    };
+    assert_eq!(pass.src, PlanTarget::Intermediate1);
+    assert_eq!(pass.dst, PlanTarget::Intermediate0);
+    assert_eq!(pass.dst_scissor.map(|s| s.0), Some(scissor));
+    assert!(matches!(pass.load, wgpu::LoadOp::Load));
+}
+
+#[test]
+fn scissored_color_matrix_preserves_outside_region_via_pre_blit() {
+    let scissor = ScissorRect {
+        x: 2,
+        y: 3,
+        w: 70,
+        h: 31,
+    };
+    let passes = apply_single_step_effect_with_scissor(
+        fret_core::EffectStep::ColorMatrix { m: [0.0; 20] },
+        fret_core::EffectMode::FilterContent,
+        scissor,
+    );
+
+    assert_eq!(passes.len(), 2);
+    assert!(matches!(passes[0], RenderPlanPass::FullscreenBlit(_)));
+    let RenderPlanPass::ColorMatrix(pass) = passes[1] else {
+        panic!("expected ColorMatrix pass");
+    };
+    assert_eq!(pass.dst_scissor.map(|s| s.0), Some(scissor));
+    assert!(matches!(pass.load, wgpu::LoadOp::Load));
+}
+
+#[test]
+fn scissored_alpha_threshold_preserves_outside_region_via_pre_blit() {
+    let scissor = ScissorRect {
+        x: 8,
+        y: 9,
+        w: 10,
+        h: 11,
+    };
+    let passes = apply_single_step_effect_with_scissor(
+        fret_core::EffectStep::AlphaThreshold {
+            cutoff: 0.5,
+            soft: 0.25,
+        },
+        fret_core::EffectMode::FilterContent,
+        scissor,
+    );
+
+    assert_eq!(passes.len(), 2);
+    assert!(matches!(passes[0], RenderPlanPass::FullscreenBlit(_)));
+    let RenderPlanPass::AlphaThreshold(pass) = passes[1] else {
+        panic!("expected AlphaThreshold pass");
+    };
+    assert_eq!(pass.dst_scissor.map(|s| s.0), Some(scissor));
+    assert!(matches!(pass.load, wgpu::LoadOp::Load));
+}
+
+#[test]
+fn scissored_backdrop_warp_preserves_outside_region_via_pre_blit() {
+    let scissor = ScissorRect {
+        x: 1,
+        y: 1,
+        w: 33,
+        h: 44,
+    };
+    let warp = fret_core::scene::BackdropWarpV1 {
+        strength_px: fret_core::Px(10.0),
+        scale_px: fret_core::Px(12.0),
+        phase: 0.0,
+        chromatic_aberration_px: fret_core::Px(0.0),
+        kind: fret_core::scene::BackdropWarpKindV1::Wave,
+    };
+    let passes = apply_single_step_effect_with_scissor(
+        fret_core::EffectStep::BackdropWarpV1(warp),
+        fret_core::EffectMode::Backdrop,
+        scissor,
+    );
+
+    assert_eq!(passes.len(), 2);
+    assert!(matches!(passes[0], RenderPlanPass::FullscreenBlit(_)));
+    let RenderPlanPass::BackdropWarp(pass) = passes[1] else {
+        panic!("expected BackdropWarp pass");
+    };
+    assert_eq!(pass.dst_scissor.map(|s| s.0), Some(scissor));
+    assert!(matches!(pass.load, wgpu::LoadOp::Load));
+}
+
+#[test]
+fn scissored_drop_shadow_restores_original_outside_region() {
+    let scissor = ScissorRect {
+        x: 6,
+        y: 7,
+        w: 80,
+        h: 10,
+    };
+    let shadow = fret_core::scene::DropShadowV1 {
+        offset_px: fret_core::Point::new(fret_core::Px(2.0), fret_core::Px(3.0)),
+        blur_radius_px: fret_core::Px(8.0),
+        downsample: 1,
+        color: fret_core::Color {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+            a: 1.0,
+        },
+    };
+
+    let passes = apply_single_step_effect_with_scissor(
+        fret_core::EffectStep::DropShadowV1(shadow),
+        fret_core::EffectMode::FilterContent,
+        scissor,
+    );
+
+    let pre_blit = passes
+        .iter()
+        .find_map(|p| match p {
+            RenderPlanPass::FullscreenBlit(p) if p.dst == PlanTarget::Intermediate1 => Some(*p),
+            _ => None,
+        })
+        .expect("expected preserve-original pre-blit to Intermediate1");
+    assert_eq!(pre_blit.src, PlanTarget::Intermediate0);
+    assert!(matches!(pre_blit.load, wgpu::LoadOp::Clear(_)));
+
+    let restore = passes
+        .iter()
+        .find_map(|p| match p {
+            RenderPlanPass::FullscreenBlit(p) if p.src == PlanTarget::Intermediate1 => Some(*p),
+            _ => None,
+        })
+        .expect("expected restore blit from Intermediate1 to srcdst");
+    assert_eq!(restore.dst, PlanTarget::Intermediate0);
+    assert!(matches!(restore.load, wgpu::LoadOp::Clear(_)));
+
+    let RenderPlanPass::DropShadow(pass) = passes
+        .last()
+        .expect("expected at least one pass for drop shadow")
+    else {
+        panic!("expected final DropShadow pass");
+    };
+    assert_eq!(pass.dst, PlanTarget::Intermediate0);
+    assert_eq!(pass.dst_scissor.map(|s| s.0), Some(scissor));
+    assert!(matches!(pass.load, wgpu::LoadOp::Load));
 }
 
 #[test]
