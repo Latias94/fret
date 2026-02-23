@@ -61,7 +61,9 @@ Last updated: 2026-02-23
 - [x] Add Spinner extras InputGroupButton icon screenshot scripts (zinc/light + zinc/dark) to gate icon foreground inheritance:
   - `tools/diag-scripts/ui-gallery-spinner-extras-input-group-button-icon-screenshots-zinc-light.json`
   - `tools/diag-scripts/ui-gallery-spinner-extras-input-group-button-icon-screenshots-zinc-dark.json`
-- [ ] Add a “menu item with leading icon + disabled/active” diag script.
+- [x] Add a “menu item with leading icon + disabled/active” diag script:
+  - `tools/diag-scripts/ui-gallery-dropdown-menu-checkable-icons-hover-screenshots-zinc-light.json`
+  - `tools/diag-scripts/ui-gallery-dropdown-menu-checkable-icons-hover-screenshots-zinc-dark.json`
 
 ## Cross-cutting checks
 
