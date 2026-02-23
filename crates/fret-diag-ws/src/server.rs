@@ -84,6 +84,7 @@ struct SessionRecord {
 }
 
 fn handle_conn(stream: TcpStream, hub: Arc<Hub>, token: String) -> Result<(), String> {
+    let peer_addr = stream.peer_addr().ok();
     let mut ws = accept_with_token(stream, &token)?;
 
     let (tx, rx) = std::sync::mpsc::channel::<DiagTransportMessageV1>();
@@ -103,6 +104,16 @@ fn handle_conn(stream: TcpStream, hub: Arc<Hub>, token: String) -> Result<(), St
             hello: None,
         },
     );
+
+    if ws_log_enabled() {
+        eprintln!(
+            "fret-devtools-ws: conn accepted id={} peer={}",
+            id,
+            peer_addr
+                .map(|a| a.to_string())
+                .unwrap_or_else(|| "<unknown>".to_string())
+        );
+    }
 
     let _ = ws
         .get_mut()
@@ -222,6 +233,9 @@ fn handle_hello(hub: &Hub, from: u64, msg: DiagTransportMessageV1) {
     let is_app = client_kind == "native_app" || client_kind == "web_app";
 
     if is_tooling {
+        if ws_log_enabled() {
+            eprintln!("fret-devtools-ws: tooling hello client_kind={} peer_id={}", client_kind, from);
+        }
         {
             let mut peers = match hub.peers.lock() {
                 Ok(peers) => peers,
