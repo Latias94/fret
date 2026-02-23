@@ -56,6 +56,7 @@ Last updated: 2026-02-23
 - [x] Add a Tabs icons screenshot script (zinc/light + zinc/dark) to gate trigger icon visibility (`tools/diag-scripts/ui-gallery-tabs-icons-screenshots-zinc-light-dark.json`).
 - [x] Add a Toggle Group demo icons screenshot script (zinc/light + zinc/dark) to gate icon-only item visibility (`tools/diag-scripts/ui-gallery-toggle-group-demo-icons-screenshots-zinc-light-dark.json`).
 - [x] Add a Toggle demo icons screenshot script (zinc/light + zinc/dark) to gate icon + label foreground inheritance (`tools/diag-scripts/ui-gallery-toggle-demo-icons-screenshots-zinc-light-dark.json`).
+- [x] Add a shadcn Select scroll arrows icons screenshot script (zinc/light + zinc/dark) to gate popover-foreground icon contrast (`tools/diag-scripts/ui-gallery-shadcn-select-scroll-arrows-icons-screenshots-zinc-light-dark.json`).
 - [ ] Add a “menu item with leading icon + disabled/active” diag script.
 
 ## Cross-cutting checks

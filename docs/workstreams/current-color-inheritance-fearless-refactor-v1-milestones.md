@@ -102,6 +102,16 @@ Evidence anchors:
 - `apps/fret-ui-gallery/src/ui/pages/toggle.rs`
 - `tools/diag-scripts/ui-gallery-toggle-demo-icons-screenshots-zinc-light-dark.json`
 
+### M4e — Host adoption: Select scroll arrows (landed)
+
+- Align shadcn Select scroll arrow affordance icon foreground with upstream `text-popover-foreground` semantics.
+- Gate with a light/dark screenshot script that captures scroll arrow visibility/contrast.
+
+Evidence anchors:
+
+- `ecosystem/fret-ui-shadcn/src/select.rs`
+- `tools/diag-scripts/ui-gallery-shadcn-select-scroll-arrows-icons-screenshots-zinc-light-dark.json`
+
 ### M5 — Text adoption (landed; biggest ROI after icons)
 
 - Decide the minimal text surface that should inherit `currentColor` (v1 scope is “foreground only”).

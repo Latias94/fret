@@ -166,6 +166,7 @@ Statuses:
 | Diag gate: toggle group demo icon visibility (zinc light/dark) | `fret-ui-gallery` | Landed | `tools/diag-scripts/ui-gallery-toggle-group-demo-icons-screenshots-zinc-light-dark.json` | `tools/diag-scripts/ui-gallery-toggle-group-demo-icons-screenshots-zinc-light-dark.json` |
 | Toggle provides `currentColor` (and prefers deferred icon slots) | `fret-ui-shadcn` | Landed | `ecosystem/fret-ui-shadcn/src/toggle.rs` | `tools/diag-scripts/ui-gallery-toggle-demo-icons-screenshots-zinc-light-dark.json` |
 | Diag gate: toggle demo icon visibility (zinc light/dark) | `fret-ui-gallery` | Landed | `tools/diag-scripts/ui-gallery-toggle-demo-icons-screenshots-zinc-light-dark.json` | `tools/diag-scripts/ui-gallery-toggle-demo-icons-screenshots-zinc-light-dark.json` |
+| Select scroll arrows icon foreground | `fret-ui-shadcn` | Landed | `ecosystem/fret-ui-shadcn/src/select.rs` | `tools/diag-scripts/ui-gallery-shadcn-select-scroll-arrows-icons-screenshots-zinc-light-dark.json` |
 | Gallery usage cleanup | `fret-ui-gallery` | Planned | (TBD: per-page) | diag screenshot gate(s) |
 
 ## Migration plan
