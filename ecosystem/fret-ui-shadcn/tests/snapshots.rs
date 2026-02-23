@@ -6,7 +6,8 @@ use fret_core::{
     Transform2D, UvRect,
 };
 use fret_ui::element::{
-    AnyElement, ContainerProps, LayoutStyle, Length, PressableA11y, PressableProps, SemanticsProps,
+    AnyElement, ContainerProps, LayoutStyle, Length, PressableA11y, PressableProps,
+    SemanticsDecoration, SemanticsProps,
 };
 use fret_ui::tree::UiTree;
 use fret_ui_kit::primitives::scroll_area::ScrollAreaType;
@@ -920,6 +921,70 @@ fn snapshot_progress_numeric_semantics() {
                 .range(0.0, 100.0)
                 .into_element(cx),
         ]
+    });
+}
+
+#[test]
+fn snapshot_spin_button_numeric_semantics() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(320.0), Px(180.0)),
+    );
+    snapshot_for_root("spin_button_numeric_semantics", bounds, |cx| {
+        let mut layout = LayoutStyle::default();
+        layout.size.width = Length::Px(Px(240.0));
+        layout.size.height = Length::Px(Px(32.0));
+
+        let element = cx
+            .container(
+                ContainerProps {
+                    layout,
+                    ..Default::default()
+                },
+                |_cx| Vec::<AnyElement>::new(),
+            )
+            .attach_semantics(
+                SemanticsDecoration::default()
+                    .role(SemanticsRole::SpinButton)
+                    .label("Font size")
+                    .numeric_value(12.0)
+                    .numeric_range(1.0, 72.0)
+                    .numeric_step(1.0)
+                    .numeric_jump(10.0),
+            );
+
+        vec![element]
+    });
+}
+
+#[test]
+fn snapshot_meter_numeric_semantics() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(320.0), Px(180.0)),
+    );
+    snapshot_for_root("meter_numeric_semantics", bounds, |cx| {
+        let mut layout = LayoutStyle::default();
+        layout.size.width = Length::Px(Px(240.0));
+        layout.size.height = Length::Px(Px(16.0));
+
+        let element = cx
+            .container(
+                ContainerProps {
+                    layout,
+                    ..Default::default()
+                },
+                |_cx| Vec::<AnyElement>::new(),
+            )
+            .attach_semantics(
+                SemanticsDecoration::default()
+                    .role(SemanticsRole::Meter)
+                    .label("Disk usage")
+                    .numeric_value(0.42)
+                    .numeric_range(0.0, 1.0),
+            );
+
+        vec![element]
     });
 }
 
