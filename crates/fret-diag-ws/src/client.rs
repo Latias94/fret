@@ -138,6 +138,7 @@ impl DevtoolsWsClient {
                 }),
             });
         }
+        wasm_log("fret-diag-ws: queued hello");
 
         let ws_url =
             append_token_query_param_simple(&cfg.ws_url, &cfg.token, "fret_devtools_token");
@@ -453,6 +454,13 @@ fn flush_wasm_outbox(ws: &web_sys::WebSocket, state: &Arc<State>) {
         let Ok(text) = serde_json::to_string(&msg) else {
             continue;
         };
+        if wasm_client_log_enabled() {
+            wasm_log(&format!(
+                "fret-diag-ws: send type={} bytes={}",
+                msg.r#type,
+                text.len()
+            ));
+        }
         if ws.send_with_str(&text).is_err() {
             wasm_warn("fret-diag-ws: send_with_str failed (re-queue)");
             outbox.push_front(msg);

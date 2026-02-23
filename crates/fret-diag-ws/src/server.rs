@@ -187,10 +187,19 @@ fn handle_conn(stream: TcpStream, hub: Arc<Hub>, token: String) -> Result<(), St
             Err(err) => {
                 let is_timeout = matches!(
                     err,
-                    tungstenite::Error::Io(ref io) if io.kind() == std::io::ErrorKind::TimedOut
+                    tungstenite::Error::Io(ref io)
+                        if matches!(
+                            io.kind(),
+                            std::io::ErrorKind::TimedOut
+                                | std::io::ErrorKind::WouldBlock
+                                | std::io::ErrorKind::Interrupted
+                        )
                 );
                 if is_timeout {
                     continue;
+                }
+                if ws_log_enabled() {
+                    eprintln!("fret-devtools-ws: rx error peer_id={} err={}", id, err);
                 }
                 break;
             }
