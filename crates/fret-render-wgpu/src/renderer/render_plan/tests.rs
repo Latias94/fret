@@ -38,6 +38,69 @@ fn apply_single_step_effect_with_scissor(
     passes
 }
 
+fn first_output_write(passes: &[RenderPlanPass]) -> Option<&RenderPlanPass> {
+    passes.iter().find(|p| match p {
+        RenderPlanPass::SceneDrawRange(p) => p.target == PlanTarget::Output,
+        RenderPlanPass::PathMsaaBatch(p) => p.target == PlanTarget::Output,
+        RenderPlanPass::PathClipMask(_) => false,
+        RenderPlanPass::FullscreenBlit(p) => p.dst == PlanTarget::Output,
+        RenderPlanPass::CompositePremul(p) => p.dst == PlanTarget::Output,
+        RenderPlanPass::ScaleNearest(p) => p.dst == PlanTarget::Output,
+        RenderPlanPass::Blur(p) => p.dst == PlanTarget::Output,
+        RenderPlanPass::BackdropWarp(p) => p.dst == PlanTarget::Output,
+        RenderPlanPass::ColorAdjust(p) => p.dst == PlanTarget::Output,
+        RenderPlanPass::ColorMatrix(p) => p.dst == PlanTarget::Output,
+        RenderPlanPass::AlphaThreshold(p) => p.dst == PlanTarget::Output,
+        RenderPlanPass::DropShadow(p) => p.dst == PlanTarget::Output,
+        RenderPlanPass::ClipMask(_) => false,
+        RenderPlanPass::ReleaseTarget(_) => false,
+    })
+}
+
+fn assert_first_output_write_is_clear(passes: &[RenderPlanPass]) {
+    let pass = first_output_write(passes).expect("expected at least one Output write");
+    match pass {
+        RenderPlanPass::SceneDrawRange(p) => {
+            assert!(matches!(p.load, wgpu::LoadOp::Clear(_)));
+        }
+        RenderPlanPass::PathMsaaBatch(p) => {
+            assert!(matches!(p.load, wgpu::LoadOp::Clear(_)));
+        }
+        RenderPlanPass::FullscreenBlit(p) => {
+            assert!(matches!(p.load, wgpu::LoadOp::Clear(_)));
+        }
+        RenderPlanPass::CompositePremul(p) => {
+            assert!(matches!(p.load, wgpu::LoadOp::Clear(_)));
+        }
+        RenderPlanPass::ScaleNearest(p) => {
+            assert!(matches!(p.load, wgpu::LoadOp::Clear(_)));
+        }
+        RenderPlanPass::Blur(p) => {
+            assert!(matches!(p.load, wgpu::LoadOp::Clear(_)));
+        }
+        RenderPlanPass::BackdropWarp(p) => {
+            assert!(matches!(p.load, wgpu::LoadOp::Clear(_)));
+        }
+        RenderPlanPass::ColorAdjust(p) => {
+            assert!(matches!(p.load, wgpu::LoadOp::Clear(_)));
+        }
+        RenderPlanPass::ColorMatrix(p) => {
+            assert!(matches!(p.load, wgpu::LoadOp::Clear(_)));
+        }
+        RenderPlanPass::AlphaThreshold(p) => {
+            assert!(matches!(p.load, wgpu::LoadOp::Clear(_)));
+        }
+        RenderPlanPass::DropShadow(p) => {
+            assert!(matches!(p.load, wgpu::LoadOp::Clear(_)));
+        }
+        RenderPlanPass::PathClipMask(_)
+        | RenderPlanPass::ClipMask(_)
+        | RenderPlanPass::ReleaseTarget(_) => {
+            unreachable!("first_output_write filtered these out")
+        }
+    }
+}
+
 #[test]
 fn debug_validate_rejects_load_before_init() {
     let init_src = RenderPlanPass::SceneDrawRange(SceneDrawRangePass {
@@ -143,6 +206,8 @@ fn compile_for_scene_path_msaa_batch_initializes_output_via_empty_clear_pass() {
             h: 4,
         }
     );
+
+    assert_first_output_write_is_clear(&plan.passes);
 }
 
 #[test]
@@ -483,6 +548,7 @@ fn compile_for_scene_none_targets_output() {
         panic!("expected SceneDrawRange pass");
     };
     assert_eq!(pass.target, PlanTarget::Output);
+    assert!(matches!(pass.load, wgpu::LoadOp::Clear(_)));
 }
 
 #[test]
@@ -519,6 +585,8 @@ fn compile_for_scene_offscreen_blit_adds_fullscreen_blit() {
             .any(|p| matches!(p, RenderPlanPass::ReleaseTarget(PlanTarget::Intermediate0))),
         "expected ReleaseTarget(Intermediate0)"
     );
+
+    assert_first_output_write_is_clear(&plan.passes);
 }
 
 #[test]
