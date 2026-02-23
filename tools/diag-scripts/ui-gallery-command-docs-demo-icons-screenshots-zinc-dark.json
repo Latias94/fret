@@ -1,11 +1,11 @@
 {
   "schema_version": 2,
   "meta": {
-    "name": "UI gallery: Command docs demo icons screenshots (zinc light)",
+    "name": "UI gallery: Command docs demo icons screenshots (zinc dark)",
     "tags": ["ui-gallery", "shadcn", "command", "icons", "screenshots"],
     "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
     "target_hints": [
-      "Sets theme preset to zinc/light.",
+      "Sets theme preset to zinc/dark.",
       "Navigates to Command page and scrolls to the Docs Demo section.",
       "Captures screenshots to gate currentColor-driven icon visibility (enabled + disabled rows)."
     ]
@@ -21,8 +21,13 @@
     { "type": "wait_frames", "n": 20 },
 
     { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-theme-preset-trigger" } },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-theme-preset-item-zinc-light" } },
-    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-theme-preset-item-zinc-dark" } },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-theme-preset-item-zinc-dark" } },
+    { "type": "wait_frames", "n": 3 },
     { "type": "press_key", "key": "escape" },
     { "type": "wait_frames", "n": 2 },
 
@@ -44,23 +49,12 @@
     { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-command" } },
     {
       "type": "wait_until",
-      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-page-command" } },
-      "timeout_frames": 240
-    },
-    { "type": "wait_frames", "n": 3 },
-    {
-      "type": "wait_until",
       "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-command-docs-demo-content" } },
       "timeout_frames": 600
     },
     {
       "type": "wait_until",
       "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-content-scroll" } },
-      "timeout_frames": 240
-    },
-    {
-      "type": "wait_until",
-      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-command-docs-demo-content" } },
       "timeout_frames": 240
     },
 
@@ -82,7 +76,8 @@
       "timeout_frames": 600
     },
     { "type": "wait_frames", "n": 2 },
-    { "type": "capture_screenshot", "label": "ui-gallery-command-docs-demo-zinc-light" },
-    { "type": "capture_bundle", "label": "ui-gallery-command-docs-demo-zinc-light" }
+    { "type": "capture_screenshot", "label": "ui-gallery-command-docs-demo-zinc-dark" },
+    { "type": "capture_bundle", "label": "ui-gallery-command-docs-demo-zinc-dark" }
   ]
 }
+
