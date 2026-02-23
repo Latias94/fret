@@ -8,6 +8,7 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
+use fret_ui_kit::declarative::current_color;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
 use fret_ui_kit::{
@@ -719,38 +720,40 @@ impl Button {
                 };
 
                 let content_children = move |cx: &mut ElementContext<'_, H>| {
-                    let gap = if is_icon {
-                        Space::N0
-                    } else {
-                        match size {
-                            ComponentSize::Small | ComponentSize::XSmall => Space::N1p5,
-                            ComponentSize::Medium | ComponentSize::Large => Space::N2,
-                        }
-                    };
+                    current_color::with_current_color_provider(cx, fg.clone(), |cx| {
+                        let gap = if is_icon {
+                            Space::N0
+                        } else {
+                            match size {
+                                ComponentSize::Small | ComponentSize::XSmall => Space::N1p5,
+                                ComponentSize::Medium | ComponentSize::Large => Space::N2,
+                            }
+                        };
 
-                    let content = if children.is_empty() {
-                        vec![
-                            ui::text(cx, a11y_label.clone())
-                                .text_size_px(text_px)
-                                .fixed_line_box_px(text_line_height)
-                                .line_box_in_bounds()
-                                .font_weight(text_weight)
-                                .nowrap()
-                                .text_color(fg.clone())
-                                .into_element(cx),
-                        ]
-                    } else {
-                        children.clone()
-                    };
+                        let content = if children.is_empty() {
+                            vec![
+                                ui::text(cx, a11y_label.clone())
+                                    .text_size_px(text_px)
+                                    .fixed_line_box_px(text_line_height)
+                                    .line_box_in_bounds()
+                                    .font_weight(text_weight)
+                                    .nowrap()
+                                    .text_color(fg.clone())
+                                    .into_element(cx),
+                            ]
+                        } else {
+                            children.clone()
+                        };
 
-                    vec![fret_ui_kit::declarative::stack::hstack(
-                        cx,
-                        fret_ui_kit::declarative::stack::HStackProps::default()
-                            .justify_center()
-                            .items_center()
-                            .gap_x(gap),
-                        |_cx| content,
-                    )]
+                        vec![fret_ui_kit::declarative::stack::hstack(
+                            cx,
+                            fret_ui_kit::declarative::stack::HStackProps::default()
+                                .justify_center()
+                                .items_center()
+                                .gap_x(gap),
+                            |_cx| content,
+                        )]
+                    })
                 };
 
                 (pressable_props, chrome_props, content_children)
