@@ -19,6 +19,42 @@
         height: 100vh;
       }
     </style>
+    <script>
+      // Persist devtools WS config across in-app routing so the WASM runner stays connected even if
+      // the app canonicalizes/rewrites the URL.
+      //
+      // The Rust side reads either:
+      // - URL params: `fret_devtools_ws` + `fret_devtools_token`, or
+      // - globals: `window.__FRET_DEVTOOLS_WS` + `window.__FRET_DEVTOOLS_TOKEN`.
+      (function () {
+        try {
+          var url = new URL(window.location.href);
+          var ws = url.searchParams.get("fret_devtools_ws");
+          var token = url.searchParams.get("fret_devtools_token");
+          var keyWs = "FRET_DEVTOOLS_WS";
+          var keyToken = "FRET_DEVTOOLS_TOKEN";
+
+          if (ws && token) {
+            window.__FRET_DEVTOOLS_WS = ws;
+            window.__FRET_DEVTOOLS_TOKEN = token;
+            if (window.localStorage) {
+              window.localStorage.setItem(keyWs, ws);
+              window.localStorage.setItem(keyToken, token);
+            }
+            return;
+          }
+
+          if (window.localStorage) {
+            var wsStored = window.localStorage.getItem(keyWs);
+            var tokenStored = window.localStorage.getItem(keyToken);
+            if (wsStored && tokenStored) {
+              window.__FRET_DEVTOOLS_WS = wsStored;
+              window.__FRET_DEVTOOLS_TOKEN = tokenStored;
+            }
+          }
+        } catch (_e) {}
+      })();
+    </script>
     <link data-trunk rel="rust" data-wasm-opt="2" />
     <link data-trunk rel="copy-dir" href="../../assets/textures" />
   </head>
@@ -26,4 +62,3 @@
     <canvas id="fret-canvas"></canvas>
   </body>
 </html>
-
