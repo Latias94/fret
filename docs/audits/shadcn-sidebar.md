@@ -150,6 +150,9 @@ coverage for `sidebar-*` pages.
 - Added a scripted conformance gate that exercises mobile `open_mobile` controlled sync: external open-model toggles and `SidebarTrigger`/Escape dismissal stay in sync.
   - Script: `tools/diag-scripts/ui-gallery-sidebar-mobile-controlled-open-sync.json`
   - Suite: `crates/fret-diag/src/diag_suite_scripts.rs`
+- Added a scripted conformance gate that exercises the provider keyboard shortcut in forced-mobile mode (`Ctrl/Cmd+B` toggles the mobile sheet and restores focus).
+  - Script: `tools/diag-scripts/ui-gallery-sidebar-mobile-shortcut-toggle.json`
+  - Suite: `crates/fret-diag/src/diag_suite_scripts.rs`
 
 ## Component-by-component audit (24/24)
 

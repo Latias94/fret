@@ -844,6 +844,38 @@ impl Sidebar {
         publish_sidebar_surface_context(cx, surface_context);
 
         if is_mobile && let Some(sidebar_ctx) = sidebar_ctx {
+            let toggle_command = sidebar_toggle_command_id();
+            let toggle_command_for_on_command = toggle_command.clone();
+            let toggle_command_for_availability = toggle_command.clone();
+            let open_model = sidebar_ctx.open.clone();
+            let open_mobile_model = sidebar_ctx.open_mobile.clone();
+            let is_mobile_for_toggle = sidebar_ctx.is_mobile;
+
+            let on_command: OnCommand = Arc::new(move |host, acx, command| {
+                if command != toggle_command_for_on_command {
+                    return false;
+                }
+                sidebar_toggle_model(
+                    host.models_mut(),
+                    &open_model,
+                    &open_mobile_model,
+                    is_mobile_for_toggle,
+                );
+                host.request_redraw(acx.window);
+                true
+            });
+
+            let on_command_availability: OnCommandAvailability =
+                Arc::new(move |_host, acx, command| {
+                    if command != toggle_command_for_availability {
+                        return CommandAvailability::NotHandled;
+                    }
+                    if !acx.focus_in_subtree {
+                        return CommandAvailability::NotHandled;
+                    }
+                    CommandAvailability::Available
+                });
+
             let sheet_side = sidebar_sheet_side(side);
             let (surface_props, sheet_size, sheet_bg, sheet_border) = {
                 let theme = Theme::global(&*cx.app);
@@ -863,7 +895,7 @@ impl Sidebar {
                 let sheet_border = sidebar_border(theme);
                 (surface_props, sheet_size, sheet_bg, sheet_border)
             };
-            return Sheet::new(sidebar_ctx.open_mobile)
+            return Sheet::new(sidebar_ctx.open_mobile.clone())
                 .side(sheet_side)
                 .size(sheet_size)
                 .into_element(
@@ -880,7 +912,7 @@ impl Sidebar {
                         });
                         let surface = shadcn_layout::container_flow(cx, surface_props, children);
 
-                        SheetContent::new([surface])
+                        let content = SheetContent::new([surface])
                             .refine_style(
                                 ChromeRefinement::default()
                                     .bg(ColorRef::Color(sheet_bg))
@@ -893,7 +925,15 @@ impl Sidebar {
                                     .h_full()
                                     .overflow_hidden(),
                             )
-                            .into_element(cx)
+                            .into_element(cx);
+
+                        cx.command_on_command_for(content.id, on_command.clone());
+                        cx.command_on_command_availability_for(
+                            content.id,
+                            on_command_availability.clone(),
+                        );
+
+                        content
                     },
                 );
         }
