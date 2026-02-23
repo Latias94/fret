@@ -868,6 +868,9 @@ pub(super) struct BundleStatsReport {
     pub(super) p95_renderer_prepare_svg_us: u64,
     pub(super) p50_renderer_prepare_text_us: u64,
     pub(super) p95_renderer_prepare_text_us: u64,
+    pub(super) renderer_scene_encoding_cache_miss_frames: u64,
+    pub(super) renderer_scene_encoding_cache_miss_total: u64,
+    renderer_scene_encoding_cache_miss_reason_counts: std::collections::HashMap<String, u64>,
     worst_hover_layout: Option<BundleStatsWorstHoverLayout>,
     global_type_hotspots: Vec<BundleStatsGlobalTypeHotspot>,
     model_source_hotspots: Vec<BundleStatsModelSourceHotspot>,
@@ -1306,6 +1309,17 @@ struct BundleStatsModelSourceHotspot {
 
 impl BundleStatsReport {
     pub(super) fn print_human_brief(&self, bundle_path: &Path) {
+        fn fmt_top_reasons(map: &std::collections::HashMap<String, u64>) -> String {
+            let mut items: Vec<(&str, u64)> = map.iter().map(|(k, v)| (k.as_str(), *v)).collect();
+            items.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(b.0)));
+            items
+                .into_iter()
+                .take(3)
+                .map(|(k, v)| format!("{k}:{v}"))
+                .collect::<Vec<_>>()
+                .join(",")
+        }
+
         println!("bundle: {}", bundle_path.display());
         println!(
             "windows={} snapshots={} considered={} warmup_skipped={} model_changes={} global_changes={} propagated_model_changes={} propagated_global_changes={}",
@@ -1382,6 +1396,15 @@ impl BundleStatsReport {
                 self.max_renderer_prepare_text_us,
                 self.p95_renderer_prepare_svg_us,
                 self.max_renderer_prepare_svg_us,
+            );
+        }
+        if self.renderer_scene_encoding_cache_miss_total > 0 {
+            println!(
+                "renderer encoding_cache: miss_frames={}/{} total_misses={} top_reasons=[{}]",
+                self.renderer_scene_encoding_cache_miss_frames,
+                self.snapshots_considered,
+                self.renderer_scene_encoding_cache_miss_total,
+                fmt_top_reasons(&self.renderer_scene_encoding_cache_miss_reason_counts),
             );
         }
         if self.pointer_move_frames_present || self.pointer_move_frames_considered > 0 {
@@ -1485,6 +1508,17 @@ impl BundleStatsReport {
                     row.renderer_prepare_svg_us,
                     row.renderer_prepare_text_us,
                 ));
+                if row.renderer_scene_encoding_cache_misses > 0
+                    || row.renderer_scene_encoding_cache_last_miss_reason.is_some()
+                {
+                    line.push_str(&format!(
+                        " renderer.cache(misses/reason)={}/{}",
+                        row.renderer_scene_encoding_cache_misses,
+                        row.renderer_scene_encoding_cache_last_miss_reason
+                            .as_deref()
+                            .unwrap_or("-"),
+                    ));
+                }
             }
             println!("{line}");
         }
@@ -7750,6 +7784,25 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|m| m.get("renderer_material_degraded_due_to_budget"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+
+            out.renderer_scene_encoding_cache_miss_total = out
+                .renderer_scene_encoding_cache_miss_total
+                .saturating_add(renderer_scene_encoding_cache_misses);
+            if renderer_scene_encoding_cache_misses > 0 {
+                out.renderer_scene_encoding_cache_miss_frames = out
+                    .renderer_scene_encoding_cache_miss_frames
+                    .saturating_add(1);
+            }
+            if let Some(reason) = renderer_scene_encoding_cache_last_miss_reason.as_deref() {
+                for part in reason.split('|') {
+                    if part.is_empty() {
+                        continue;
+                    }
+                    *out.renderer_scene_encoding_cache_miss_reason_counts
+                        .entry(part.to_string())
+                        .or_insert(0) += 1;
+                }
+            }
             let layout_engine_solves = stats
                 .and_then(|m| m.get("layout_engine_solves"))
                 .and_then(|v| v.as_u64())
