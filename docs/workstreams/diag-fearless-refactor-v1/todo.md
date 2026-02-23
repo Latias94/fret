@@ -144,3 +144,8 @@ diagnostics stack stays easy to evolve.
 - `crates/fret-diag/src/stats.rs`
 - `crates/fret-diag/src/stats/ui_gallery_markdown_editor.rs`
 - `crates/fret-diag/src/stats/ui_gallery_code_editor.rs`
+
+## Notes (2026-02-23)
+
+- [x] Extract sidecar writing helpers out of `bundle_dump.rs` into
+      `ecosystem/fret-bootstrap/src/ui_diagnostics/bundle_sidecars.rs` to reduce dump churn.

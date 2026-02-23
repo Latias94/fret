@@ -52,6 +52,7 @@ mod bundle_index;
 
 mod bundle_dump;
 mod bundle_dump_policy;
+mod bundle_sidecars;
 mod fs_triggers;
 mod inspect;
 mod pick;
