@@ -122,7 +122,7 @@ pub trait ComponentResolver<H: UiHost> {
     ) -> Result<AnyElement, Self::Error>;
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct RenderedChildV1 {
     pub key: ElementKey,
     pub component: String,
