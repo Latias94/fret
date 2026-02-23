@@ -174,9 +174,19 @@ pub(crate) fn resolve_bundle_json_path(path: &Path) -> PathBuf {
         return path.to_path_buf();
     }
 
+    let direct_v2 = path.join("bundle.schema2.json");
+    if direct_v2.is_file() {
+        return direct_v2;
+    }
+
     let direct = path.join("bundle.json");
     if direct.is_file() {
         return direct;
+    }
+
+    let root_v2 = path.join("_root").join("bundle.schema2.json");
+    if root_v2.is_file() {
+        return root_v2;
     }
 
     let root = path.join("_root").join("bundle.json");
@@ -222,6 +232,10 @@ pub(crate) fn resolve_bundle_json_path(path: &Path) -> PathBuf {
     if let Some(dir) = crate::compare::read_latest_pointer(path)
         .or_else(|| crate::compare::find_latest_export_dir(path))
     {
+        let nested_v2 = dir.join("bundle.schema2.json");
+        if nested_v2.is_file() {
+            return nested_v2;
+        }
         let nested = dir.join("bundle.json");
         if nested.is_file() {
             return nested;
