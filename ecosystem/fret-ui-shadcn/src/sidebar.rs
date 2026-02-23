@@ -12,8 +12,8 @@ use fret_runtime::{
 };
 use fret_ui::action::{OnActivate, OnCommand, OnCommandAvailability, OnKeyDown};
 use fret_ui::element::{
-    AnyElement, CrossAlign, Elements, FlexProps, HoverRegionProps, MainAlign, OpacityProps,
-    Overflow, PressableProps, RingStyle, SemanticsDecoration, SpacerProps,
+    AnyElement, ContainerProps, CrossAlign, Elements, FlexProps, HoverRegionProps, MainAlign,
+    OpacityProps, Overflow, PressableProps, RingStyle, SemanticsDecoration, SpacerProps,
 };
 use fret_ui::{CommandAvailability, ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
@@ -935,14 +935,18 @@ impl Sidebar {
                         let children = with_sidebar_surface_state(cx, surface_context, |cx| {
                             render_children(cx).into_iter().collect::<Vec<_>>()
                         });
-                        let surface = shadcn_layout::container_flow(cx, surface_props, children);
+                        let content_root =
+                            cx.container(ContainerProps::default(), move |_cx| children);
 
-                        cx.key_add_on_key_down_capture_for(surface.id, on_key_down.clone());
-                        cx.command_on_command_for(surface.id, on_command.clone());
+                        cx.key_add_on_key_down_capture_for(content_root.id, on_key_down.clone());
+                        cx.command_on_command_for(content_root.id, on_command.clone());
                         cx.command_on_command_availability_for(
-                            surface.id,
+                            content_root.id,
                             on_command_availability.clone(),
                         );
+
+                        let surface =
+                            shadcn_layout::container_flow(cx, surface_props, vec![content_root]);
 
                         let content = SheetContent::new([surface])
                             .refine_style(
