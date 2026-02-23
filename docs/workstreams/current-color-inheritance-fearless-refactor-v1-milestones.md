@@ -50,12 +50,17 @@ Evidence anchors:
 ### M4 — Host adoption: Menu family (in progress)
 
 - `DropdownMenuItem` provides `currentColor` and supports `leading_icon`.
-- `CommandItem` provides `currentColor` and supports `leading_icon` (missing: gates + demo migrations).
+- `CommandItem` provides `currentColor` and supports `leading_icon` (including disabled state propagation).
+- Gallery: align Command page with shadcn `command-demo` (icons + disabled item + shortcuts).
+- Gate with light/dark screenshot scripts for both Dropdown Menu and Command demo icon visibility.
 
 Evidence anchors:
 
 - `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs`
 - `ecosystem/fret-ui-shadcn/src/command.rs`
+- `apps/fret-ui-gallery/src/ui/pages/command.rs`
+- `tools/diag-scripts/ui-gallery-dropdown-menu-icons-screenshots.json`
+- `tools/diag-scripts/ui-gallery-command-docs-demo-icons-screenshots.json`
 
 ### M5 — Text adoption (planned; biggest ROI after icons)
 
@@ -75,4 +80,3 @@ Evidence anchors:
 - At least 2 high-ROI hosts provide `currentColor` (Button + one menu family).
 - At least 2 regression gates exist (unit tests + diag scripts).
 - Gallery examples for the aligned components are copy/paste friendly and do not thread fg tokens by default.
-

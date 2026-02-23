@@ -23,7 +23,7 @@ Last updated: 2026-02-23
 - [ ] Menu family provides resolved `fg` (and prefers deferred icon slots):
   - [x] `DropdownMenuItem` provides `currentColor` and supports `leading_icon`.
   - [ ] `SelectItem` (if/when it grows icon slots)
-  - [ ] `CommandItem` provides `currentColor` and supports `leading_icon` (add gates + migrate demos)
+  - [x] `CommandItem` provides `currentColor` and supports `leading_icon` (add gates + migrate demos)
 - [ ] Badge provides resolved `fg`.
 - [ ] Tabs triggers / pill-like controls provide resolved `fg`.
 
@@ -46,6 +46,7 @@ Last updated: 2026-02-23
 
 - [x] Add a Button Group diag script capturing Demo preview + Code.
 - [x] Add a Dropdown Menu icons diag script (zinc/light + zinc/dark) to gate leading-icon foreground inheritance.
+- [x] Add a Command docs demo icons diag script (zinc/light + zinc/dark) to gate `CommandItem::leading_icon` inheritance.
 - [ ] Add a “primary button + icon” diag script that asserts the icon is visible:
   - [ ] capture screenshot in zinc/light and zinc/dark presets
   - [ ] (optional) pixel-change assertion for the icon bounds
