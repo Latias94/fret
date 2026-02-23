@@ -91,6 +91,8 @@ scope: diagnostics, automation, tooling, refactor
       `ecosystem/fret-bootstrap/src/ui_diagnostics/touch_stamp.rs` (via `include!`) to reduce churn.
 - [x] Extract selector/hit-test/bounds trace limits + helpers out of `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into
       `ecosystem/fret-bootstrap/src/ui_diagnostics/trace_helpers.rs` (via `mod` + `use`) to reduce churn.
+- [x] Extract input event synthesis helpers (pointer/key/shortcut parsing) out of `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into
+      `ecosystem/fret-bootstrap/src/ui_diagnostics/input_event_synthesis.rs` (via `include!`) to reduce churn.
 
 ## M1b: Make `fret-diag` stats less monolithic (mechanical moves)
 
@@ -221,6 +223,7 @@ diagnostics stack stays easy to evolve.
 ## Notes (2026-02-23)
 
 - [x] Extract selector/hit-test/bounds trace helpers into `ecosystem/fret-bootstrap/src/ui_diagnostics/trace_helpers.rs`.
+- [x] Extract input event synthesis helpers into `ecosystem/fret-bootstrap/src/ui_diagnostics/input_event_synthesis.rs`.
 - [x] Extract sidecar writing helpers out of `bundle_dump.rs` into
       `ecosystem/fret-bootstrap/src/ui_diagnostics/bundle_sidecars.rs` to reduce dump churn.
 - [x] Split schema-specific dump logic into `dump_schema_v1` / `dump_schema_v2` helpers to keep
