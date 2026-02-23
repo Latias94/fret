@@ -55,8 +55,11 @@
       "timeout_frames": 600
     },
     {
-      "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-date-picker-dropdowns-calendar.caption-year-trigger" }
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-date-picker-dropdowns-calendar.caption-year-trigger" },
+      "stable_frames": 2,
+      "max_move_px": 1.0,
+      "timeout_frames": 240
     },
     {
       "type": "wait_until",
