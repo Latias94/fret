@@ -31,6 +31,14 @@ fn env_usize_override(key: &str) -> Option<usize> {
         .and_then(|v| v.parse::<usize>().ok())
 }
 
+fn env_flag_override(key: &str) -> Option<bool> {
+    std::env::var(key)
+        .ok()
+        .map(|v| v.trim().to_ascii_lowercase())
+        .filter(|v| !v.is_empty())
+        .map(|v| !matches!(v.as_str(), "0" | "false" | "no" | "off"))
+}
+
 fn clamp_bundle_semantics_nodes(windows: &mut [UiDiagnosticsWindowBundleV1], max_nodes: usize) {
     for w in windows {
         for s in &mut w.snapshots {
@@ -40,6 +48,48 @@ fn clamp_bundle_semantics_nodes(windows: &mut [UiDiagnosticsWindowBundleV1], max
             if semantics.nodes.len() > max_nodes {
                 semantics.nodes.truncate(max_nodes);
             }
+        }
+    }
+}
+
+fn filter_bundle_semantics_nodes_to_test_ids_closure(windows: &mut [UiDiagnosticsWindowBundleV1]) {
+    use std::collections::{HashMap, HashSet};
+
+    for w in windows {
+        for s in &mut w.snapshots {
+            let Some(semantics) = s.debug.semantics.as_mut() else {
+                continue;
+            };
+
+            let mut parent_by_id: HashMap<u64, u64> = HashMap::new();
+            for n in &semantics.nodes {
+                if let Some(parent) = n.parent {
+                    parent_by_id.insert(n.id, parent);
+                }
+            }
+
+            let mut include: HashSet<u64> = HashSet::new();
+            let mut stack: Vec<u64> = semantics
+                .nodes
+                .iter()
+                .filter(|n| n.test_id.is_some())
+                .map(|n| n.id)
+                .collect();
+            while let Some(id) = stack.pop() {
+                if !include.insert(id) {
+                    continue;
+                }
+                if let Some(parent) = parent_by_id.get(&id).copied() {
+                    stack.push(parent);
+                }
+            }
+
+            if include.is_empty() {
+                semantics.nodes.clear();
+                continue;
+            }
+
+            semantics.nodes.retain(|n| include.contains(&n.id));
         }
     }
 }
@@ -147,6 +197,9 @@ pub(super) fn dump_bundle_with_options(
         })
         .clamp(0, 500_000);
 
+    let dump_semantics_test_ids_closure =
+        env_flag_override("FRET_DIAG_BUNDLE_DUMP_SEMANTICS_TEST_IDS_ONLY").unwrap_or(false);
+
     if !cfg!(target_arch = "wasm32") && std::fs::create_dir_all(&dir).is_err() {
         return None;
     }
@@ -164,6 +217,9 @@ pub(super) fn dump_bundle_with_options(
                 bundle.apply_semantics_mode_v1(semantics_mode);
                 if dump_max_semantics_nodes != bundle.config.max_semantics_nodes {
                     bundle.config.max_semantics_nodes = dump_max_semantics_nodes;
+                }
+                if dump_semantics_test_ids_closure {
+                    filter_bundle_semantics_nodes_to_test_ids_closure(&mut bundle.windows);
                 }
                 clamp_bundle_semantics_nodes(&mut bundle.windows, dump_max_semantics_nodes);
 
@@ -225,6 +281,9 @@ pub(super) fn dump_bundle_with_options(
                 bundle.apply_semantics_mode_v1(semantics_mode);
                 if dump_max_semantics_nodes != bundle.config.max_semantics_nodes {
                     bundle.config.max_semantics_nodes = dump_max_semantics_nodes;
+                }
+                if dump_semantics_test_ids_closure {
+                    filter_bundle_semantics_nodes_to_test_ids_closure(&mut bundle.windows);
                 }
                 clamp_bundle_semantics_nodes(&mut bundle.windows, dump_max_semantics_nodes);
 
