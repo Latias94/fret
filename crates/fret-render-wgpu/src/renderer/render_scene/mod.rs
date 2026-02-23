@@ -10,3 +10,4 @@ mod plan_compile;
 mod quad_vertices;
 mod recorders;
 mod render;
+mod render_space_upload;
