@@ -15,7 +15,11 @@ use crate::{ResizablePanelGroupStyle, SvgSource, TextAreaStyle, TextInputStyle};
 /// Declarative element tree node (ephemeral per frame), keyed by a stable `GlobalElementId`.
 ///
 /// This is the authoring-layer representation described by ADR 0028 / ADR 0039.
-#[derive(Debug, Clone)]
+///
+/// Note: `AnyElement` is intentionally move-only. Reusing the same `AnyElement` value in multiple
+/// places (e.g. via cloning) can create duplicate `GlobalElementId`s within a single frame, which
+/// violates the element-tree contract and can lead to downstream traversal issues.
+#[derive(Debug)]
 pub struct AnyElement {
     pub id: GlobalElementId,
     pub kind: ElementKind,
@@ -2205,7 +2209,7 @@ pub trait IntoElement {
 /// forcing callers into `Vec<AnyElement>` as the only option.
 ///
 /// This type is commonly used as a view return value (e.g. `ViewElements` in `fret-bootstrap`).
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Default)]
 pub struct Elements(pub Vec<AnyElement>);
 
 impl Elements {
