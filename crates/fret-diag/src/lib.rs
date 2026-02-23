@@ -6846,7 +6846,12 @@ fn find_semantics_bounds_for_test_id_latest(
         .filter(|s| crate::json_bundle::snapshot_frame_id(s) >= warmup_frames)
         .filter(|s| semantics.nodes(s).is_some())
         .max_by_key(|s| ts(s))
-        .or_else(|| snaps.iter().filter(|s| semantics.nodes(s).is_some()).max_by_key(|s| ts(s)))
+        .or_else(|| {
+            snaps
+                .iter()
+                .filter(|s| semantics.nodes(s).is_some())
+                .max_by_key(|s| ts(s))
+        })
         .or_else(|| snaps.iter().max_by_key(|s| ts(s)))?;
 
     let nodes = semantics.nodes(snap)?;

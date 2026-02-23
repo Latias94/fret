@@ -76,9 +76,9 @@ fn switch_padding(theme: &Theme, size: SwitchSize) -> Px {
             .unwrap_or(Px(0.0)),
         SwitchSize::Default => theme
             .metric_by_key("component.switch.thumb_pad")
-        // shadcn-web positions the thumb flush to the content edge and relies on the track border
-        // (1px) for the visible inset. Fret's border is paint-only, so we treat this as an extra
-        // inset on top of the border/padding compensation in the layout below.
+            // shadcn-web positions the thumb flush to the content edge and relies on the track border
+            // (1px) for the visible inset. Fret's border is paint-only, so we treat this as an extra
+            // inset on top of the border/padding compensation in the layout below.
             .unwrap_or(Px(0.0)),
     }
 }

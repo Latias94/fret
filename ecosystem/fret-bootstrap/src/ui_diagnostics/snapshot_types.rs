@@ -71,7 +71,11 @@ impl WindowRing {
         }
     }
 
-    pub(super) fn push_snapshot(&mut self, cfg: &UiDiagnosticsConfig, snapshot: UiDiagnosticsSnapshotV1) {
+    pub(super) fn push_snapshot(
+        &mut self,
+        cfg: &UiDiagnosticsConfig,
+        snapshot: UiDiagnosticsSnapshotV1,
+    ) {
         self.snapshots.push_back(snapshot);
         while self.snapshots.len() > cfg.max_snapshots {
             self.snapshots.pop_front();
@@ -338,7 +342,9 @@ impl UiRendererTextFallbackPolicySnapshotV1 {
                 fret_core::TextCommonFallbackInjection::PlatformDefault => {
                     UiTextCommonFallbackInjectionV1::PlatformDefault
                 }
-                fret_core::TextCommonFallbackInjection::None => UiTextCommonFallbackInjectionV1::None,
+                fret_core::TextCommonFallbackInjection::None => {
+                    UiTextCommonFallbackInjectionV1::None
+                }
                 fret_core::TextCommonFallbackInjection::CommonFallback => {
                     UiTextCommonFallbackInjectionV1::CommonFallback
                 }

@@ -75,7 +75,6 @@ fn apply_semantics_mode_inline(
     mode: &str,
     semantics: &BundleSemanticsPresence,
 ) {
-
     fn clear_snapshot_semantics(s: &mut serde_json::Value) {
         // Clear any known inline semantics locations so tooling won't accidentally treat legacy
         // keys as semantics when producing a v2 bundle.
