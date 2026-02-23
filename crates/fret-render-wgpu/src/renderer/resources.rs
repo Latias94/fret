@@ -485,6 +485,9 @@ impl Renderer {
             drop_shadow_param_buffer,
         };
 
+        let render_plan_strict_output_clear =
+            std::env::var("FRET_RENDER_PLAN_STRICT_OUTPUT_CLEAR").is_ok_and(|v| v != "0");
+
         Self {
             adapter: adapter.clone(),
             uniform_bind_group,
@@ -493,6 +496,7 @@ impl Renderer {
             render_space_bytes_scratch: Vec::new(),
             plan_quad_vertices_scratch: Vec::new(),
             plan_quad_vertex_bases_scratch: Vec::new(),
+            render_plan_strict_output_clear,
             globals,
             textures,
             effect_params,

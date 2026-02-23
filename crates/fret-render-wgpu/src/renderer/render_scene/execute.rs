@@ -137,6 +137,9 @@ impl Renderer {
             &mut frame_perf,
         );
         plan.debug_validate();
+        if self.render_plan_strict_output_clear {
+            plan.debug_validate_first_output_write_is_clear();
+        }
         render_scene_span.record("plan_passes", plan.passes.len() as u64);
         render_scene_span.record("plan_segments", plan.segments.len() as u64);
         render_scene_span.record("plan_degradations", plan.degradations.len() as u64);
