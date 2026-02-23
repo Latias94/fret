@@ -49,6 +49,8 @@ scope: diagnostics, automation, tooling, refactor
       `ecosystem/fret-bootstrap/src/ui_diagnostics/prepaint_diagnostics.rs` (via `include!`) to reduce churn.
 - [x] Consolidate overlay synthesis diagnostics into `ecosystem/fret-bootstrap/src/ui_diagnostics/overlay_synthesis_diagnostics.rs`
       (via `include!`) so overlay types no longer live in multiple places inside `ui_diagnostics.rs`.
+- [x] Extract command gating trace out of `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into
+      `ecosystem/fret-bootstrap/src/ui_diagnostics/command_gating_trace.rs` (via `include!`) to reduce churn.
 
 ## M1b: Make `fret-diag` stats less monolithic (mechanical moves)
 
