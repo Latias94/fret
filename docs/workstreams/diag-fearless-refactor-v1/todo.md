@@ -238,6 +238,15 @@ diagnostics stack stays easy to evolve.
   - legacy env knobs that are no longer used,
   - legacy schema compatibility layers that are no longer needed for in-tree workflows.
 
+### Debt removal checklist
+
+- [ ] Migrate tooling and docs to canonical screenshot env vars:
+  - `FRET_DIAG_GPU_SCREENSHOTS` (script-driven screenshots)
+  - `FRET_DIAG_BUNDLE_SCREENSHOT` (bundle `frame.bmp`)
+- [ ] Remove legacy screenshot env aliases from runtime parsing:
+  - `FRET_DIAG_SCREENSHOTS`
+  - `FRET_DIAG_SCREENSHOT`
+
 ## Evidence anchors (keep updated as implementation changes)
 
 - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`

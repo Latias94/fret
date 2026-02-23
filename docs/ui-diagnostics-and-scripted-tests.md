@@ -148,7 +148,7 @@ When `bundle.json` is too large to share or inspect directly, prefer a bounded a
 If you suspect a **rendering** regression (e.g. semantics + layout look correct but pixels look blank),
 enable bundle screenshots:
 
-- `FRET_DIAG_SCREENSHOT=1`
+- `FRET_DIAG_BUNDLE_SCREENSHOT=1` (legacy alias: `FRET_DIAG_SCREENSHOT=1`)
 
 When a bundle is dumped, the runner writes `frame.bmp` into the bundle directory (same folder as
 `bundle.json`).
@@ -317,8 +317,8 @@ Script shrinking (automated minimal repro):
 Screenshot note:
 
 - `capture_screenshot` requires the **on-demand PNG screenshot protocol**:
-  - Enable via `FRET_DIAG_SCREENSHOTS=1` (default disabled).
-  - This is distinct from `FRET_DIAG_SCREENSHOT=1`, which only writes `frame.bmp` during bundle dumps.
+  - Enable via `FRET_DIAG_GPU_SCREENSHOTS=1` (default disabled; legacy alias: `FRET_DIAG_SCREENSHOTS=1`).
+  - This is distinct from `FRET_DIAG_BUNDLE_SCREENSHOT=1`, which only writes `frame.bmp` during bundle dumps.
 
 ## Quick Start (scripted perf triage)
 
@@ -585,9 +585,9 @@ Script harness:
 Screenshot capture:
 
 - Requires the running app to enable the `fret-launch/diag-screenshots` feature (runner-side readback + PNG encode).
-- `FRET_DIAG_SCREENSHOTS=1`: enable GPU readback screenshots (default disabled).
+- `FRET_DIAG_GPU_SCREENSHOTS=1`: enable GPU readback screenshots (default disabled).
   - Alternatively, set `screenshots_enabled=true` in the `FRET_DIAG_CONFIG_PATH` config file.
-- `FRET_DIAG_GPU_SCREENSHOTS=1`: alias for `FRET_DIAG_SCREENSHOTS` (preferred name; old name remains supported).
+- `FRET_DIAG_SCREENSHOTS=1`: legacy alias for `FRET_DIAG_GPU_SCREENSHOTS=1`.
 - `FRET_DIAG_SCREENSHOT_REQUEST_PATH=...`: screenshot request JSON path (default `<dir>/screenshots.request.json`).
 - `FRET_DIAG_SCREENSHOT_TRIGGER_PATH=...`: screenshot request trigger file (default `<dir>/screenshots.touch`).
 - `FRET_DIAG_SCREENSHOT_RESULT_PATH=...`: screenshot completion log JSON path (default `<dir>/screenshots.result.json`).
@@ -597,8 +597,8 @@ The screenshot completion log is append-only (bounded) and includes a `request_i
 
 Bundle screenshots (frame dump):
 
-- `FRET_DIAG_SCREENSHOT=1`: write `frame.bmp` into each bundle directory when dumping `bundle.json`.
-- `FRET_DIAG_BUNDLE_SCREENSHOT=1`: alias for `FRET_DIAG_SCREENSHOT` (preferred name; old name remains supported).
+- `FRET_DIAG_BUNDLE_SCREENSHOT=1`: write `frame.bmp` into each bundle directory when dumping `bundle.json`.
+- `FRET_DIAG_SCREENSHOT=1`: legacy alias for `FRET_DIAG_BUNDLE_SCREENSHOT=1`.
 
 Picking:
 
@@ -687,7 +687,7 @@ Recent additions:
 Notes:
 
 - `capture_bundle` always writes a new `bundle.json` directory.
-  - When `FRET_DIAG_SCREENSHOTS=1`, the dump includes a screenshot and the step waits until it is written (so downstream automation can rely on it deterministically).
+  - When `FRET_DIAG_GPU_SCREENSHOTS=1`, the dump includes a screenshot and the step waits until it is written (so downstream automation can rely on it deterministically).
   - If you want an explicit screenshot step, follow with `capture_screenshot`.
   - Optional `max_snapshots` caps how many snapshots are included in this export (clamped to `FRET_DIAG_MAX_SNAPSHOTS`).
 - `capture_screenshot` requests a screenshot for the **most recent bundle directory** (`last_dump_dir`) and waits for completion (up to `timeout_frames`, default 300). If no bundle exists yet, the harness creates one first.
