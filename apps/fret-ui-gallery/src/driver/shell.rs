@@ -5,7 +5,9 @@ use fret_ui::{ElementContext, Invalidation};
 use fret_ui_shadcn::{decl_style, prelude::*};
 use std::sync::Arc;
 
-use crate::spec::{BISECT_SIMPLE_CONTENT, BISECT_SIMPLE_SIDEBAR, PAGE_INTRO};
+use crate::spec::{
+    BISECT_SIMPLE_CONTENT, BISECT_SIMPLE_SIDEBAR, PAGE_INTRO, PAGE_MAGIC_PATTERNS_TORTURE,
+};
 use crate::ui;
 
 pub(super) fn sidebar_view(
@@ -104,7 +106,16 @@ pub(super) fn content_view(
     selected_page: &Model<Arc<str>>,
     models: &ui::UiGalleryModels,
 ) -> AnyElement {
-    if cache_shell {
+    let selected = cx
+        .get_model_cloned(selected_page, Invalidation::Layout)
+        .unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
+
+    // Do not cache the content subtree for pages that intentionally animate without input.
+    // View-cache reuse skips rerendering declarative closures, which would freeze time-driven
+    // material params like the magic patterns torture stripes.
+    let cache_content = cache_shell && selected.as_ref() != PAGE_MAGIC_PATTERNS_TORTURE;
+
+    if cache_content {
         cx.view_cache(
             {
                 let mut layout = LayoutStyle::default();
@@ -117,10 +128,6 @@ pub(super) fn content_view(
                 }
             },
             |cx| {
-                let selected = cx
-                    .get_model_cloned(selected_page, Invalidation::Layout)
-                    .unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
-
                 vec![cx.keyed(("ui_gallery.content", selected.as_ref()), |cx| {
                     if (bisect & BISECT_SIMPLE_CONTENT) != 0 {
                         cx.container(
@@ -141,10 +148,6 @@ pub(super) fn content_view(
         )
     } else {
         cx.keyed("ui_gallery.content_root", |cx| {
-            let selected = cx
-                .get_model_cloned(selected_page, Invalidation::Layout)
-                .unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
-
             cx.keyed(("ui_gallery.content", selected.as_ref()), |cx| {
                 if (bisect & BISECT_SIMPLE_CONTENT) != 0 {
                     cx.container(
