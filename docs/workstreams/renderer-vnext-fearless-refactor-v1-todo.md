@@ -443,6 +443,16 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `cargo test -p fret-render-wgpu --lib`
     - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
 
+- [x] REN-VNEXT-refactor-140 Stage 14: extract per-frame perf initialization into a dedicated helper.
+  - Goal: keep upload/ingest pending counters initialization drift-free while further linearizing `execute`.
+  - Landed (step 1): move per-frame perf initialization behind `Renderer::begin_frame_perf_collection`.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/render_scene/frame_perf_init.rs` (`begin_frame_perf_collection`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (call site)
+  - Gates:
+    - `cargo test -p fret-render-wgpu --lib`
+    - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
 ## M7 — Post-v1 semantic expansions (deferred backlog)
 
 These items are intentionally *not* part of the vNext refactor’s v1 closure. They are common UI
