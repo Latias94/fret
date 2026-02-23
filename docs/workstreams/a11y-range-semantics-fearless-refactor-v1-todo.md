@@ -49,6 +49,8 @@ These are optional, but high leverage if we want to avoid follow-up “contract 
 
 - [x] Gate imui slider semantics: `Pressable(role=Slider)` must expose stepper actions and structured numeric metadata
   (`min/max/value/step/jump`) when present (via `SemanticsDecoration`).
+- [ ] (Ongoing hygiene) When adding a new range-like control, follow the “Closure checklist (range/numeric controls)” in
+  `docs/workstreams/a11y-range-semantics-fearless-refactor-v1.md` and add at least one gate per new production path.
 
 ## Diagnostics + scripts
 
