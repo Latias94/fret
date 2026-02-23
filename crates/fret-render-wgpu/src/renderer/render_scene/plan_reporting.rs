@@ -67,17 +67,28 @@ impl Renderer {
                 }
             }
 
-            let mut scene_draw_range_passes_by_segment: Vec<u32> = vec![0; plan.segments.len()];
-            let mut path_msaa_batch_passes_by_segment: Vec<u32> = vec![0; plan.segments.len()];
+            let segments_len = plan.segments.len();
+            self.render_plan_scene_draw_range_passes_scratch.clear();
+            self.render_plan_scene_draw_range_passes_scratch
+                .resize(segments_len, 0);
+            self.render_plan_path_msaa_batch_passes_scratch.clear();
+            self.render_plan_path_msaa_batch_passes_scratch
+                .resize(segments_len, 0);
             for p in &plan.passes {
                 match p {
                     RenderPlanPass::SceneDrawRange(p) => {
-                        if let Some(c) = scene_draw_range_passes_by_segment.get_mut(p.segment.0) {
+                        if let Some(c) = self
+                            .render_plan_scene_draw_range_passes_scratch
+                            .get_mut(p.segment.0)
+                        {
                             *c = c.saturating_add(1);
                         }
                     }
                     RenderPlanPass::PathMsaaBatch(p) => {
-                        if let Some(c) = path_msaa_batch_passes_by_segment.get_mut(p.segment.0) {
+                        if let Some(c) = self
+                            .render_plan_path_msaa_batch_passes_scratch
+                            .get_mut(p.segment.0)
+                        {
                             *c = c.saturating_add(1);
                         }
                     }
@@ -85,7 +96,9 @@ impl Renderer {
                 }
             }
 
-            let mut report: Vec<RenderPlanSegmentReport> = Vec::with_capacity(plan.segments.len());
+            self.render_plan_segment_report_scratch.clear();
+            self.render_plan_segment_report_scratch
+                .reserve(plan.segments.len());
             for (ix, seg) in plan.segments.iter().enumerate() {
                 let flags_mask = u8::from(seg.flags.has_quad)
                     | (u8::from(seg.flags.has_viewport) << 1)
@@ -93,26 +106,32 @@ impl Renderer {
                     | (u8::from(seg.flags.has_mask) << 3)
                     | (u8::from(seg.flags.has_text) << 4)
                     | (u8::from(seg.flags.has_path) << 5);
-                report.push(RenderPlanSegmentReport {
-                    draw_range: (seg.draw_range.start, seg.draw_range.end),
-                    start_uniform_fingerprint: seg.start_uniform_fingerprint,
-                    flags_mask,
-                    scene_draw_range_passes: *scene_draw_range_passes_by_segment
-                        .get(ix)
-                        .unwrap_or(&0),
-                    path_msaa_batch_passes: *path_msaa_batch_passes_by_segment
-                        .get(ix)
-                        .unwrap_or(&0),
-                });
+                self.render_plan_segment_report_scratch
+                    .push(RenderPlanSegmentReport {
+                        draw_range: (seg.draw_range.start, seg.draw_range.end),
+                        start_uniform_fingerprint: seg.start_uniform_fingerprint,
+                        flags_mask,
+                        scene_draw_range_passes: *self
+                            .render_plan_scene_draw_range_passes_scratch
+                            .get(ix)
+                            .unwrap_or(&0),
+                        path_msaa_batch_passes: *self
+                            .render_plan_path_msaa_batch_passes_scratch
+                            .get(ix)
+                            .unwrap_or(&0),
+                    });
             }
 
             let mut segments_changed: u64 = 0;
             let mut segments_passes_increased: u64 = 0;
             if let Some(prev) = &self.last_render_plan_segment_report {
-                if prev.len() != report.len() {
-                    segments_changed = report.len() as u64;
+                if prev.len() != self.render_plan_segment_report_scratch.len() {
+                    segments_changed = self.render_plan_segment_report_scratch.len() as u64;
                 } else {
-                    for (p, c) in prev.iter().zip(report.iter()) {
+                    for (p, c) in prev
+                        .iter()
+                        .zip(self.render_plan_segment_report_scratch.iter())
+                    {
                         if p.draw_range != c.draw_range
                             || p.start_uniform_fingerprint != c.start_uniform_fingerprint
                             || p.flags_mask != c.flags_mask
@@ -134,7 +153,12 @@ impl Renderer {
             }
             frame_perf.render_plan_segments_changed = segments_changed;
             frame_perf.render_plan_segments_passes_increased = segments_passes_increased;
-            self.last_render_plan_segment_report = Some(report);
+            if let Some(prev) = self.last_render_plan_segment_report.as_mut() {
+                std::mem::swap(prev, &mut self.render_plan_segment_report_scratch);
+            } else {
+                self.last_render_plan_segment_report =
+                    Some(std::mem::take(&mut self.render_plan_segment_report_scratch));
+            }
         }
 
         render_plan_dump::maybe_dump_render_plan_json(
