@@ -406,6 +406,32 @@ impl ElementHostWidget {
                     cx.set_scroll_y(Some(offset.y.0 as f64), Some(0.0), Some(max.y.0 as f64));
                 }
             }
+            ElementInstance::Scrollbar(props) => {
+                cx.set_role(SemanticsRole::ScrollBar);
+
+                let handle = props.scroll_handle.clone();
+                let offset = handle.offset();
+                let max = handle.max_offset();
+
+                match props.axis {
+                    crate::element::ScrollbarAxis::Horizontal => {
+                        cx.set_orientation(Some(fret_core::SemanticsOrientation::Horizontal));
+                        cx.set_scroll_x(Some(offset.x.0 as f64), Some(0.0), Some(max.x.0 as f64));
+                        cx.set_scroll_by_supported(max.x.0 > 0.01);
+                    }
+                    crate::element::ScrollbarAxis::Vertical => {
+                        cx.set_orientation(Some(fret_core::SemanticsOrientation::Vertical));
+                        cx.set_scroll_y(Some(offset.y.0 as f64), Some(0.0), Some(max.y.0 as f64));
+                        cx.set_scroll_by_supported(max.y.0 > 0.01);
+                    }
+                }
+
+                if let Some(target) = props.scroll_target
+                    && let Some(node) = cx.resolve_declarative_element(target.0)
+                {
+                    cx.push_controlled(node);
+                }
+            }
             ElementInstance::ViewportSurface(_) => {
                 cx.set_role(SemanticsRole::Viewport);
             }

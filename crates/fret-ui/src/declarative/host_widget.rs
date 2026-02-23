@@ -783,6 +783,22 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                     },
                 }
             }
+            ElementInstance::Scrollbar(props) => crate::widget::ScrollByResult::Handled {
+                did_scroll: {
+                    let handle = props.scroll_handle;
+                    let before = handle.offset();
+                    match props.axis {
+                        crate::element::ScrollbarAxis::Horizontal => {
+                            handle.set_offset(Point::new(Px(before.x.0 + delta.x.0), before.y));
+                        }
+                        crate::element::ScrollbarAxis::Vertical => {
+                            handle.set_offset(Point::new(before.x, Px(before.y.0 + delta.y.0)));
+                        }
+                    }
+                    let after = handle.offset();
+                    (after.x.0 - before.x.0).abs() > 0.01 || (after.y.0 - before.y.0).abs() > 0.01
+                },
+            },
             ElementInstance::VirtualList(props) => crate::widget::ScrollByResult::Handled {
                 did_scroll: {
                     let handle = props.scroll_handle.base_handle();

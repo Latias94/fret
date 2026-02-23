@@ -312,6 +312,70 @@ fn pressable_slider_exposes_stepper_actions_when_numeric_metadata_is_present() {
 }
 
 #[test]
+fn declarative_scrollbar_emits_role_and_scroll_metadata() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(160.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let handle = crate::scroll::ScrollHandle::default();
+    handle.set_viewport_size(fret_core::Size::new(Px(100.0), Px(100.0)));
+    handle.set_content_size(fret_core::Size::new(Px(100.0), Px(220.0)));
+    handle.set_offset(fret_core::Point::new(Px(0.0), Px(40.0)));
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "a11y-scrollbar",
+        |cx| {
+            vec![cx.scrollbar(crate::element::ScrollbarProps {
+                layout: crate::element::LayoutStyle {
+                    size: crate::element::SizeStyle {
+                        width: Length::Px(Px(12.0)),
+                        height: Length::Px(Px(120.0)),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                axis: crate::element::ScrollbarAxis::Vertical,
+                scroll_target: None,
+                scroll_handle: handle.clone(),
+                style: crate::element::ScrollbarStyle::default(),
+            })]
+        },
+    );
+    ui.set_root(root);
+
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    let node = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == fret_core::SemanticsRole::ScrollBar)
+        .expect("expected a ScrollBar semantics node");
+
+    assert_eq!(
+        node.extra.orientation,
+        Some(fret_core::SemanticsOrientation::Vertical)
+    );
+    assert!(node.actions.scroll_by, "expected scroll-by action surface");
+    assert_eq!(node.extra.scroll.y, Some(40.0));
+    assert_eq!(node.extra.scroll.y_min, Some(0.0));
+    assert_eq!(node.extra.scroll.y_max, Some(120.0));
+}
+
+#[test]
 fn declarative_text_input_region_utf16_queries_are_deterministic_for_mixed_scripts_and_surrogates()
 {
     let mut app = TestHost::new();

@@ -19,6 +19,7 @@ pub(crate) fn map_role(role: SemanticsRole) -> Role {
         SemanticsRole::Switch => Role::Switch,
         SemanticsRole::Slider => Role::Slider,
         SemanticsRole::ProgressBar => Role::ProgressIndicator,
+        SemanticsRole::ScrollBar => Role::ScrollBar,
         SemanticsRole::ComboBox => Role::ComboBox,
         SemanticsRole::RadioGroup => Role::RadioGroup,
         SemanticsRole::RadioButton => Role::RadioButton,

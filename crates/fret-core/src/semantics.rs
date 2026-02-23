@@ -21,6 +21,7 @@ pub enum SemanticsRole {
     Switch,
     Slider,
     ProgressBar,
+    ScrollBar,
     ComboBox,
     RadioGroup,
     RadioButton,
