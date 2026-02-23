@@ -1012,7 +1012,8 @@ pub fn slider<H: UiHost>(
                             }
                             if step_value.is_finite() && step_value > 0.0 {
                                 thumb_semantics.numeric_value_step = Some(step_value as f64);
-                                thumb_semantics.numeric_value_jump = Some((step_value * 10.0) as f64);
+                                thumb_semantics.numeric_value_jump =
+                                    Some((step_value * 10.0) as f64);
                             }
                             thumb_semantics.focusable = !disabled;
                             thumb_semantics.value_editable = Some(!disabled);

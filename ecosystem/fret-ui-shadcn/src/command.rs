@@ -1448,13 +1448,13 @@ impl CommandList {
                     cx.roving_nav_apg();
                     let mut out = Vec::with_capacity(render_rows.len());
 
-                     for row in render_rows.into_iter() {
-                         match row {
-                             CommandPaletteRenderRow::Heading(heading) => {
-                                 let heading = heading.clone();
-                                 let heading_style = heading_style.clone();
-                                 let fg_heading = fg_heading;
-                                 out.push(cx.container(
+                    for row in render_rows.into_iter() {
+                        match row {
+                            CommandPaletteRenderRow::Heading(heading) => {
+                                let heading = heading.clone();
+                                let heading_style = heading_style.clone();
+                                let fg_heading = fg_heading;
+                                out.push(cx.container(
                                     ContainerProps {
                                         layout: {
                                             let mut layout = LayoutStyle::default();
@@ -1536,10 +1536,12 @@ impl CommandList {
                                 out.push(loading.into_element(cx));
                             }
                             CommandPaletteRenderRow::Item(idx) => {
-                                let Some(item) = items.get(idx).cloned() else { continue };
+                                let Some(item) = items.get(idx).cloned() else {
+                                    continue;
+                                };
 
-                                 let enabled = !disabled_flags.get(idx).copied().unwrap_or(true);
-                                 let focusable = tab_stop.is_some_and(|i| i == idx);
+                                let enabled = !disabled_flags.get(idx).copied().unwrap_or(true);
+                                let focusable = tab_stop.is_some_and(|i| i == idx);
 
                                 let query_for_row = query_for_render.clone();
                                 let value_key = item.value.clone();

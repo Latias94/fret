@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
+use fret_core::SemanticsRole;
 use fret_core::{Edges, Px};
 use fret_runtime::Model;
-use fret_core::SemanticsRole;
 use fret_ui::element::{
     AnyElement, FractionalRenderTransformProps, LayoutStyle, Length, SemanticsDecoration,
 };
