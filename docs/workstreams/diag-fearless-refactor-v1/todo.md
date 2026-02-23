@@ -149,3 +149,5 @@ diagnostics stack stays easy to evolve.
 
 - [x] Extract sidecar writing helpers out of `bundle_dump.rs` into
       `ecosystem/fret-bootstrap/src/ui_diagnostics/bundle_sidecars.rs` to reduce dump churn.
+- [x] Split schema-specific dump logic into `dump_schema_v1` / `dump_schema_v2` helpers to keep
+      `dump_bundle_with_options` mostly about option resolution + dispatch.

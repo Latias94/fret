@@ -10,6 +10,15 @@ use super::{
     unix_ms_now, write_json, write_json_compact, write_latest_pointer,
 };
 
+struct DumpArtifactCounts {
+    bundle_json_bytes: Option<u64>,
+    window_count: u64,
+    event_count: u64,
+    snapshot_count: u64,
+    max_snapshots: u64,
+    dump_max_snapshots: Option<u64>,
+}
+
 pub(super) fn dump_bundle_with_options(
     service: &mut UiDiagnosticsService,
     label: Option<&str>,
@@ -81,131 +90,32 @@ pub(super) fn dump_bundle_with_options(
         .map(|v| v.trim().to_ascii_lowercase());
     let want_pretty = matches!(bundle_json_format.as_deref(), Some("pretty"));
 
-    let (bundle_json_bytes, window_count, event_count, snapshot_count, max_snapshots, dump_max) =
-        match schema_version {
-            bundle::BundleSchemaVersionV1::V1 => {
-                let mut bundle = bundle_v1;
-                bundle.apply_semantics_mode_v1(semantics_mode);
-                bundle.config.max_semantics_nodes = dump_semantics_policy.max_nodes;
-                apply_dump_semantics_policy_to_windows(&mut bundle.windows, &dump_semantics_policy);
-
-                let bundle_json_bytes = if !cfg!(target_arch = "wasm32") {
-                    let write_result = if want_pretty {
-                        write_json(bundle_json_path.clone(), &bundle)
-                    } else {
-                        write_json_compact(bundle_json_path.clone(), &bundle)
-                    };
-                    if write_result.is_err() {
-                        return None;
-                    }
-                    std::fs::metadata(&bundle_json_path).ok().map(|m| m.len())
-                } else if service.ws_is_configured() {
-                    serde_json::to_vec(&bundle).ok().map(|b| b.len() as u64)
-                } else {
-                    None
-                };
-
-                let window_count = bundle.windows.len() as u64;
-                let event_count = bundle.windows.iter().map(|w| w.events.len() as u64).sum();
-                let snapshot_count = bundle
-                    .windows
-                    .iter()
-                    .map(|w| w.snapshots.len() as u64)
-                    .sum();
-                let max_snapshots = bundle.config.max_snapshots as u64;
-                let dump_max = bundle.config.dump_max_snapshots.map(|n| n as u64);
-
-                #[cfg(feature = "diagnostics-ws")]
-                {
-                    service.ws_send_bundle_dumped_v1(ts, &dir, &bundle, request_id);
-                }
-
-                if !cfg!(target_arch = "wasm32") {
-                    if want_sidecars() {
-                        write_bundle_sidecars(
-                            service,
-                            &dir,
-                            &bundle_json_path,
-                            &bundle.windows,
-                            None,
-                            is_script_dump,
-                        );
-                    }
-                }
-
-                (
-                    bundle_json_bytes,
-                    window_count,
-                    event_count,
-                    snapshot_count,
-                    max_snapshots,
-                    dump_max,
-                )
-            }
-            bundle::BundleSchemaVersionV1::V2 => {
-                let mut bundle = UiDiagnosticsBundleV2::from_v1(bundle_v1);
-                bundle.apply_semantics_mode_v1(semantics_mode);
-                bundle.config.max_semantics_nodes = dump_semantics_policy.max_nodes;
-                apply_dump_semantics_policy_to_windows(&mut bundle.windows, &dump_semantics_policy);
-                if let Some(table) = bundle.tables.semantics.as_mut() {
-                    apply_dump_semantics_policy_to_semantics_table(table, &dump_semantics_policy);
-                }
-
-                let bundle_json_bytes = if !cfg!(target_arch = "wasm32") {
-                    let write_result = if want_pretty {
-                        write_json(bundle_json_path.clone(), &bundle)
-                    } else {
-                        write_json_compact(bundle_json_path.clone(), &bundle)
-                    };
-                    if write_result.is_err() {
-                        return None;
-                    }
-                    std::fs::metadata(&bundle_json_path).ok().map(|m| m.len())
-                } else if service.ws_is_configured() {
-                    serde_json::to_vec(&bundle).ok().map(|b| b.len() as u64)
-                } else {
-                    None
-                };
-
-                let window_count = bundle.windows.len() as u64;
-                let event_count = bundle.windows.iter().map(|w| w.events.len() as u64).sum();
-                let snapshot_count = bundle
-                    .windows
-                    .iter()
-                    .map(|w| w.snapshots.len() as u64)
-                    .sum();
-                let max_snapshots = bundle.config.max_snapshots as u64;
-                let dump_max = bundle.config.dump_max_snapshots.map(|n| n as u64);
-
-                #[cfg(feature = "diagnostics-ws")]
-                {
-                    service.ws_send_bundle_dumped_v1(ts, &dir, &bundle, request_id);
-                }
-
-                if !cfg!(target_arch = "wasm32") {
-                    if want_sidecars() {
-                        let semantics_table = bundle.tables.semantics.as_ref();
-                        write_bundle_sidecars(
-                            service,
-                            &dir,
-                            &bundle_json_path,
-                            &bundle.windows,
-                            semantics_table,
-                            is_script_dump,
-                        );
-                    }
-                }
-
-                (
-                    bundle_json_bytes,
-                    window_count,
-                    event_count,
-                    snapshot_count,
-                    max_snapshots,
-                    dump_max,
-                )
-            }
-        };
+    let counts = match schema_version {
+        bundle::BundleSchemaVersionV1::V1 => dump_schema_v1(
+            service,
+            ts,
+            &dir,
+            &bundle_json_path,
+            want_pretty,
+            bundle_v1,
+            semantics_mode,
+            &dump_semantics_policy,
+            is_script_dump,
+            request_id,
+        )?,
+        bundle::BundleSchemaVersionV1::V2 => dump_schema_v2(
+            service,
+            ts,
+            &dir,
+            &bundle_json_path,
+            want_pretty,
+            bundle_v1,
+            semantics_mode,
+            &dump_semantics_policy,
+            is_script_dump,
+            request_id,
+        )?,
+    };
 
     if !cfg!(target_arch = "wasm32") {
         let _ = write_latest_pointer(&service.cfg.out_dir, &dir);
@@ -217,13 +127,163 @@ pub(super) fn dump_bundle_with_options(
     service.last_dump_dir = Some(dir.clone());
     service.last_dump_artifact_stats = Some(UiArtifactStatsV1 {
         schema_version: 1,
+        bundle_json_bytes: counts.bundle_json_bytes,
+        window_count: counts.window_count,
+        event_count: counts.event_count,
+        snapshot_count: counts.snapshot_count,
+        max_snapshots: counts.max_snapshots,
+        dump_max_snapshots: counts.dump_max_snapshots,
+    });
+
+    Some(dir)
+}
+
+fn write_bundle_json_bytes<T: serde::Serialize>(
+    service: &UiDiagnosticsService,
+    bundle_json_path: &PathBuf,
+    want_pretty: bool,
+    bundle: &T,
+) -> Option<Option<u64>> {
+    if !cfg!(target_arch = "wasm32") {
+        let write_result = if want_pretty {
+            write_json(bundle_json_path.clone(), bundle)
+        } else {
+            write_json_compact(bundle_json_path.clone(), bundle)
+        };
+        if write_result.is_err() {
+            return None;
+        }
+        return Some(std::fs::metadata(bundle_json_path).ok().map(|m| m.len()));
+    }
+
+    if service.ws_is_configured() {
+        return Some(serde_json::to_vec(bundle).ok().map(|b| b.len() as u64));
+    }
+
+    Some(None)
+}
+
+fn dump_schema_v1(
+    service: &mut UiDiagnosticsService,
+    exported_unix_ms: u64,
+    dir: &PathBuf,
+    bundle_json_path: &PathBuf,
+    want_pretty: bool,
+    mut bundle: UiDiagnosticsBundleV1,
+    semantics_mode: bundle::BundleSemanticsModeV1,
+    dump_semantics_policy: &super::bundle_dump_policy::DumpSemanticsPolicy,
+    is_script_dump: bool,
+    request_id: Option<u64>,
+) -> Option<DumpArtifactCounts> {
+    #[cfg(not(feature = "diagnostics-ws"))]
+    let _ = request_id;
+    #[cfg(not(feature = "diagnostics-ws"))]
+    let _ = exported_unix_ms;
+
+    bundle.apply_semantics_mode_v1(semantics_mode);
+    bundle.config.max_semantics_nodes = dump_semantics_policy.max_nodes;
+    apply_dump_semantics_policy_to_windows(&mut bundle.windows, dump_semantics_policy);
+
+    let bundle_json_bytes =
+        write_bundle_json_bytes(service, bundle_json_path, want_pretty, &bundle)?;
+
+    let window_count = bundle.windows.len() as u64;
+    let event_count = bundle.windows.iter().map(|w| w.events.len() as u64).sum();
+    let snapshot_count = bundle
+        .windows
+        .iter()
+        .map(|w| w.snapshots.len() as u64)
+        .sum();
+    let max_snapshots = bundle.config.max_snapshots as u64;
+    let dump_max_snapshots = bundle.config.dump_max_snapshots.map(|n| n as u64);
+
+    #[cfg(feature = "diagnostics-ws")]
+    {
+        service.ws_send_bundle_dumped_v1(exported_unix_ms, dir, &bundle, request_id);
+    }
+
+    if !cfg!(target_arch = "wasm32") && want_sidecars() {
+        write_bundle_sidecars(
+            service,
+            dir,
+            bundle_json_path,
+            &bundle.windows,
+            None,
+            is_script_dump,
+        );
+    }
+
+    Some(DumpArtifactCounts {
         bundle_json_bytes,
         window_count,
         event_count,
         snapshot_count,
         max_snapshots,
-        dump_max_snapshots: dump_max,
-    });
+        dump_max_snapshots,
+    })
+}
 
-    Some(dir)
+fn dump_schema_v2(
+    service: &mut UiDiagnosticsService,
+    exported_unix_ms: u64,
+    dir: &PathBuf,
+    bundle_json_path: &PathBuf,
+    want_pretty: bool,
+    bundle_v1: UiDiagnosticsBundleV1,
+    semantics_mode: bundle::BundleSemanticsModeV1,
+    dump_semantics_policy: &super::bundle_dump_policy::DumpSemanticsPolicy,
+    is_script_dump: bool,
+    request_id: Option<u64>,
+) -> Option<DumpArtifactCounts> {
+    #[cfg(not(feature = "diagnostics-ws"))]
+    let _ = request_id;
+    #[cfg(not(feature = "diagnostics-ws"))]
+    let _ = exported_unix_ms;
+
+    let mut bundle = UiDiagnosticsBundleV2::from_v1(bundle_v1);
+    bundle.apply_semantics_mode_v1(semantics_mode);
+    bundle.config.max_semantics_nodes = dump_semantics_policy.max_nodes;
+    apply_dump_semantics_policy_to_windows(&mut bundle.windows, dump_semantics_policy);
+    if let Some(table) = bundle.tables.semantics.as_mut() {
+        apply_dump_semantics_policy_to_semantics_table(table, dump_semantics_policy);
+    }
+
+    let bundle_json_bytes =
+        write_bundle_json_bytes(service, bundle_json_path, want_pretty, &bundle)?;
+
+    let window_count = bundle.windows.len() as u64;
+    let event_count = bundle.windows.iter().map(|w| w.events.len() as u64).sum();
+    let snapshot_count = bundle
+        .windows
+        .iter()
+        .map(|w| w.snapshots.len() as u64)
+        .sum();
+    let max_snapshots = bundle.config.max_snapshots as u64;
+    let dump_max_snapshots = bundle.config.dump_max_snapshots.map(|n| n as u64);
+
+    #[cfg(feature = "diagnostics-ws")]
+    {
+        service.ws_send_bundle_dumped_v1(exported_unix_ms, dir, &bundle, request_id);
+    }
+
+    if !cfg!(target_arch = "wasm32") && want_sidecars() {
+        let semantics_table = bundle.tables.semantics.as_ref();
+        write_bundle_sidecars(
+            service,
+            dir,
+            bundle_json_path,
+            &bundle.windows,
+            semantics_table,
+            is_script_dump,
+        );
+    }
+
+    Some(DumpArtifactCounts {
+        bundle_json_bytes,
+        window_count,
+        event_count,
+        snapshot_count,
+        max_snapshots,
+        dump_max_snapshots,
+    })
 }
