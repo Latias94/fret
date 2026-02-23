@@ -9,7 +9,7 @@ pub struct DiagBundleScreenshotCapture {
 
 impl DiagBundleScreenshotCapture {
     pub fn from_env() -> Self {
-        let enabled = env_flag_default_false("FRET_DIAG_SCREENSHOT");
+        let enabled = env_flag_default_false("FRET_DIAG_BUNDLE_SCREENSHOT");
         let diag_dir = std::env::var_os("FRET_DIAG_DIR")
             .filter(|v| !v.is_empty())
             .map(PathBuf::from)
