@@ -508,7 +508,7 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
                         .to_string(),
                 );
             };
-            apply_post_run_checks_from_checks(
+            apply_post_run_checks(
                 bundle_path,
                 &resolved_out_dir,
                 &checks_for_post_run,
@@ -772,7 +772,7 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
                 bundle_doctor_ran = true;
             }
 
-            apply_post_run_checks_from_checks(
+            apply_post_run_checks(
                 &bundle_path,
                 &resolved_out_dir,
                 &checks_for_post_run,

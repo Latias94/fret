@@ -6370,15 +6370,6 @@ fn run_script_suite_collect_bundles(
     Ok(bundle_paths)
 }
 
-fn apply_post_run_checks_from_checks(
-    bundle_path: &Path,
-    out_dir: &Path,
-    checks: &diag_run::RunChecks,
-    warmup_frames: u64,
-) -> Result<(), String> {
-    apply_post_run_checks(bundle_path, out_dir, checks, warmup_frames)
-}
-
 fn apply_post_run_checks(
     bundle_path: &Path,
     out_dir: &Path,

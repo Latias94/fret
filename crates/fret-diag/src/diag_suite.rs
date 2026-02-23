@@ -2462,7 +2462,7 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
                 retained_vlist_keep_alive_budget_for_script
                     .or(suite_retained_vlist_keep_alive_budget);
 
-            apply_post_run_checks_from_checks(
+            apply_post_run_checks(
                 &bundle_path,
                 &resolved_out_dir,
                 &checks_for_post_run,

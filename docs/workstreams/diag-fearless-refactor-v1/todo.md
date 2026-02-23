@@ -39,7 +39,7 @@ scope: diagnostics, automation, tooling, refactor
 - [x] Extract `diag compare` command handler out of `crates/fret-diag/src/lib.rs` into `crates/fret-diag/src/diag_compare.rs`.
 - [x] Extract `diag stats` command handler out of `crates/fret-diag/src/lib.rs` into `crates/fret-diag/src/diag_stats.rs`.
 - [x] Extract `diag matrix` command handler out of `crates/fret-diag/src/lib.rs` into `crates/fret-diag/src/diag_matrix.rs`.
-- [x] Shrink post-run check call sites by routing through `apply_post_run_checks_from_checks(...)` (migrate `diag run` / `diag suite` / `diag repro`).
+- [x] Shrink post-run check call sites by using the `apply_post_run_checks(..., &diag_run::RunChecks, ...)` entrypoint (migrate `diag run` / `diag suite` / `diag repro`).
 - [x] Remove redundant `SuiteChecks` type (reuse `diag_run::RunChecks` for suite command wiring).
 - [ ] Continue extracting large subcommands into dedicated modules (keep `lib.rs` as CLI wiring + shared helpers):
   - `diag pack` / `diag ai-packet` follow-ups if they become churn hotspots.
