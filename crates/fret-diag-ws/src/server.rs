@@ -135,8 +135,45 @@ fn handle_conn(stream: TcpStream, hub: Arc<Hub>, token: String) -> Result<(), St
 
         match ws.read() {
             Ok(Message::Text(text)) => {
-                if let Ok(msg) = serde_json::from_str::<DiagTransportMessageV1>(&text) {
-                    handle_incoming(&hub, id, msg);
+                if ws_log_enabled() {
+                    let preview: String = text.chars().take(160).collect();
+                    eprintln!("fret-devtools-ws: rx text peer_id={} preview={}", id, preview);
+                }
+
+                match serde_json::from_str::<DiagTransportMessageV1>(&text) {
+                    Ok(msg) => handle_incoming(&hub, id, msg),
+                    Err(err) => {
+                        if ws_log_enabled() {
+                            eprintln!("fret-devtools-ws: rx text parse error peer_id={} err={}", id, err);
+                        }
+                    }
+                }
+            }
+            Ok(Message::Binary(bytes)) => {
+                if ws_log_enabled() {
+                    eprintln!(
+                        "fret-devtools-ws: rx binary peer_id={} bytes={}",
+                        id,
+                        bytes.len()
+                    );
+                }
+            }
+            Ok(Message::Ping(bytes)) => {
+                if ws_log_enabled() {
+                    eprintln!(
+                        "fret-devtools-ws: rx ping peer_id={} bytes={}",
+                        id,
+                        bytes.len()
+                    );
+                }
+            }
+            Ok(Message::Pong(bytes)) => {
+                if ws_log_enabled() {
+                    eprintln!(
+                        "fret-devtools-ws: rx pong peer_id={} bytes={}",
+                        id,
+                        bytes.len()
+                    );
                 }
             }
             Ok(Message::Close(_)) => break,
