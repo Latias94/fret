@@ -177,6 +177,18 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`UiFrameStatsV1`)
     - `crates/fret-diag/src/stats.rs` (`BundleStatsSnapshotRow`)
     - `crates/fret-diag/src/lib.rs` (`diag perf --json` output)
+- [x] REN-VNEXT-web-001 Keep the WebGPU evidence harness buildable on `wasm32-unknown-unknown`:
+  - Motivation: `REN-VNEXT-webgpu-004` requires exporting `diag perf` bundles from a real browser WebGPU run, so the
+    web runner must compile reliably.
+  - Landed:
+    - Disable Tree-sitter highlighting on wasm targets (avoid requiring a WebAssembly-capable C toolchain).
+    - Fix `diagnostics-ws` path to pass `Option<&UiTree<_>>` (read-only) rather than `Option<&mut UiTree<_>>`.
+  - Evidence:
+    - `ecosystem/fret-syntax/Cargo.toml` (target-gated Tree-sitter deps)
+    - `ecosystem/fret-syntax/src/lib.rs` (`highlight()` returns `Unavailable` on wasm)
+    - `ecosystem/fret-bootstrap/src/ui_diagnostics/script_engine.rs` (`ui.as_deref()`)
+  - Gates (2026-02-23):
+    - `cargo check -p fret-ui-gallery-web --target wasm32-unknown-unknown`
 - [ ] REN-VNEXT-webgpu-004 If perf evidence warrants, add bounded `MaterialTileMode` pipeline variants:
   - Note: “tile mode” here refers to the material-kind selector channel in the quad shader (see `material_eval`),
     not gradient tile modes (which are sanitized/degraded today).

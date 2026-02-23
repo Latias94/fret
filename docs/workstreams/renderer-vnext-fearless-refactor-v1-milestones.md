@@ -58,6 +58,17 @@ Baseline record (macOS local snapshot; not a gate):
   - `headless_renderer_perf: frames=180 encode=0.03ms prepare_svg=1.95ms prepare_text=0.02ms draws=8100 ... cache_hits=179 cache_misses=1`
   - `headless_renderer_perf_pipelines: quad=180 viewport=0 mask=180 text_mask=0 text_color=0 path=0 path_msaa=0 composite=0 fullscreen=0 clip_mask=0`
 
+Baseline record (web build sanity; prerequisite for WebGPU evidence capture):
+
+- Date: 2026-02-23
+- Commit: fee64c84f (plus a698b6413)
+- Platform/backend (native/wasm/mobile): wasm (wasm32-unknown-unknown)
+- Commands run (exact):
+  - `cargo check -p fret-ui-gallery-web --target wasm32-unknown-unknown`
+- Outputs (summary):
+  - build: pass
+  - note: `fret-syntax` disables Tree-sitter highlighting on wasm targets; `diagnostics-ws` uses a read-only `UiTree` view.
+
 ## M1 — RenderPlan substrate (time-boxed)
 
 Deliverables:
