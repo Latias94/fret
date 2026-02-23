@@ -85,6 +85,7 @@ pub struct Renderer {
     render_plan_scene_draw_range_passes_scratch: Vec<u32>,
     render_plan_path_msaa_batch_passes_scratch: Vec<u32>,
     render_plan_segment_report_scratch: Vec<RenderPlanSegmentReport>,
+    render_plan_dump_bytes_scratch: Vec<u8>,
     render_plan_strict_output_clear: bool,
     globals: GpuGlobals,
     textures: GpuTextures,

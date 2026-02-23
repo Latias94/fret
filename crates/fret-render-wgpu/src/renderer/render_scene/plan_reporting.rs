@@ -169,6 +169,7 @@ impl Renderer {
             postprocess,
             ordered_draws_len,
             effect_markers,
+            &mut self.render_plan_dump_bytes_scratch,
         );
     }
 }

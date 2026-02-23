@@ -499,6 +499,7 @@ impl Renderer {
             render_plan_scene_draw_range_passes_scratch: Vec::new(),
             render_plan_path_msaa_batch_passes_scratch: Vec::new(),
             render_plan_segment_report_scratch: Vec::new(),
+            render_plan_dump_bytes_scratch: Vec::new(),
             render_plan_strict_output_clear,
             globals,
             textures,

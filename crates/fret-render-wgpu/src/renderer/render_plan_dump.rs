@@ -707,6 +707,7 @@ pub(super) fn maybe_dump_render_plan_json(
     postprocess: DebugPostprocess,
     ordered_draws_len: usize,
     effect_markers: &[EffectMarker],
+    dump_bytes_scratch: &mut Vec<u8>,
 ) {
     if !should_dump_frame(frame_index) {
         return;
@@ -787,10 +788,11 @@ pub(super) fn maybe_dump_render_plan_json(
     };
 
     let file = dir.join(format!("renderplan.frame{frame_index}.json"));
-    let Ok(bytes) = serde_json::to_vec_pretty(&dump) else {
+    dump_bytes_scratch.clear();
+    if serde_json::to_writer_pretty(&mut *dump_bytes_scratch, &dump).is_err() {
         return;
-    };
-    let _ = std::fs::write(&file, bytes);
+    }
+    let _ = std::fs::write(&file, &*dump_bytes_scratch);
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -802,5 +804,6 @@ pub(super) fn maybe_dump_render_plan_json(
     _postprocess: DebugPostprocess,
     _ordered_draws_len: usize,
     _effect_markers: &[EffectMarker],
+    _dump_bytes_scratch: &mut Vec<u8>,
 ) {
 }
