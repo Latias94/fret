@@ -39,6 +39,8 @@ scope: diagnostics, automation, tooling, refactor
 - [x] Extract `diag compare` command handler out of `crates/fret-diag/src/lib.rs` into `crates/fret-diag/src/diag_compare.rs`.
 - [x] Extract `diag stats` command handler out of `crates/fret-diag/src/lib.rs` into `crates/fret-diag/src/diag_stats.rs`.
 - [x] Extract `diag matrix` command handler out of `crates/fret-diag/src/lib.rs` into `crates/fret-diag/src/diag_matrix.rs`.
+- [x] Shrink post-run check call sites by routing through `apply_post_run_checks_from_checks(...)` (migrate `diag run` / `diag suite` / `diag repro`).
+- [x] Remove redundant `SuiteChecks` type (reuse `diag_run::RunChecks` for suite command wiring).
 - [ ] Continue extracting large subcommands into dedicated modules (keep `lib.rs` as CLI wiring + shared helpers):
   - `diag pack` / `diag ai-packet` follow-ups if they become churn hotspots.
 
@@ -113,6 +115,7 @@ diagnostics stack stays easy to evolve.
   - [x] Remove the old inline `diag repro` implementation from `crates/fret-diag/src/lib.rs` after extraction (no redundant copies).
   - remove duplicated per-step dispatch code from the old location(s),
   - avoid “forwarder wrappers” that exist only because of historical file layout.
+- [x] Delete the legacy `apply_post_run_checks(...)` mega-signature once all callers are on `diag_run::RunChecks`.
 - [ ] Remove redundant semantics traversal helpers in gates:
   - prefer `crate::json_bundle::SemanticsResolver` + shared helpers (no `debug.semantics.nodes` re-greps).
 - [ ] Publish and enforce a bundle schema compatibility matrix (v1/v2) for in-tree workflows.
