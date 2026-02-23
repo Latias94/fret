@@ -48,6 +48,10 @@ pub struct SemanticsActions {
     pub focus: bool,
     pub invoke: bool,
     pub set_value: bool,
+    /// Decrement a numeric value by one step.
+    pub decrement: bool,
+    /// Increment a numeric value by one step.
+    pub increment: bool,
     pub scroll_by: bool,
     pub set_text_selection: bool,
 }

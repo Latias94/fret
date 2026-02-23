@@ -94,6 +94,8 @@ pub struct FnDriverHooks<D, S> {
     pub accessibility_invoke: Option<FnDriverAccessibilityInvokeHook<D, S>>,
     pub accessibility_set_value_text: Option<FnDriverAccessibilitySetValueTextHook<D, S>>,
     pub accessibility_set_value_numeric: Option<FnDriverAccessibilitySetValueNumericHook<D, S>>,
+    pub accessibility_decrement: Option<FnDriverAccessibilityDecrementHook<D, S>>,
+    pub accessibility_increment: Option<FnDriverAccessibilityIncrementHook<D, S>>,
     pub accessibility_scroll_by: Option<FnDriverAccessibilityScrollByHook<D, S>>,
     pub accessibility_set_text_selection: Option<FnDriverAccessibilitySetTextSelectionHook<D, S>>,
     pub accessibility_replace_selected_text:
@@ -168,6 +170,10 @@ pub type FnDriverAccessibilitySetValueNumericHook<D, S> = fn(
     fret_core::NodeId,
     f64,
 );
+pub type FnDriverAccessibilityDecrementHook<D, S> =
+    fn(&mut D, &mut App, &mut dyn UiServices, fret_core::AppWindowId, &mut S, fret_core::NodeId);
+pub type FnDriverAccessibilityIncrementHook<D, S> =
+    fn(&mut D, &mut App, &mut dyn UiServices, fret_core::AppWindowId, &mut S, fret_core::NodeId);
 pub type FnDriverAccessibilityScrollByHook<D, S> =
     fn(&mut D, &mut App, fret_core::AppWindowId, &mut S, fret_core::NodeId, f64, f64);
 pub type FnDriverAccessibilitySetTextSelectionHook<D, S> = fn(
@@ -213,6 +219,8 @@ impl<D, S> Default for FnDriverHooks<D, S> {
             accessibility_invoke: None,
             accessibility_set_value_text: None,
             accessibility_set_value_numeric: None,
+            accessibility_decrement: None,
+            accessibility_increment: None,
             accessibility_scroll_by: None,
             accessibility_set_text_selection: None,
             accessibility_replace_selected_text: None,
@@ -695,6 +703,50 @@ impl<D, S> WinitAppDriver for FnDriver<D, S> {
                     target,
                     value,
                 );
+            }
+        }
+    }
+
+    fn accessibility_decrement(
+        &mut self,
+        app: &mut App,
+        services: &mut dyn UiServices,
+        window: fret_core::AppWindowId,
+        state: &mut Self::WindowState,
+        target: fret_core::NodeId,
+    ) {
+        if let Some(f) = self.hooks.accessibility_decrement {
+            #[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
+            {
+                let mut hot = subsecond::HotFn::current(f);
+                hot.call((&mut self.driver_state, app, services, window, state, target));
+            }
+
+            #[cfg(not(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32"))))]
+            {
+                f(&mut self.driver_state, app, services, window, state, target);
+            }
+        }
+    }
+
+    fn accessibility_increment(
+        &mut self,
+        app: &mut App,
+        services: &mut dyn UiServices,
+        window: fret_core::AppWindowId,
+        state: &mut Self::WindowState,
+        target: fret_core::NodeId,
+    ) {
+        if let Some(f) = self.hooks.accessibility_increment {
+            #[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
+            {
+                let mut hot = subsecond::HotFn::current(f);
+                hot.call((&mut self.driver_state, app, services, window, state, target));
+            }
+
+            #[cfg(not(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32"))))]
+            {
+                f(&mut self.driver_state, app, services, window, state, target);
             }
         }
     }

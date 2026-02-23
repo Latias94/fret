@@ -210,6 +210,26 @@ pub trait WinitAppDriver {
     ) {
     }
 
+    fn accessibility_decrement(
+        &mut self,
+        _app: &mut App,
+        _services: &mut dyn UiServices,
+        _window: fret_core::AppWindowId,
+        _state: &mut Self::WindowState,
+        _target: fret_core::NodeId,
+    ) {
+    }
+
+    fn accessibility_increment(
+        &mut self,
+        _app: &mut App,
+        _services: &mut dyn UiServices,
+        _window: fret_core::AppWindowId,
+        _state: &mut Self::WindowState,
+        _target: fret_core::NodeId,
+    ) {
+    }
+
     fn accessibility_scroll_by(
         &mut self,
         _app: &mut App,

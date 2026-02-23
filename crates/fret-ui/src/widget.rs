@@ -1282,7 +1282,30 @@ impl<'a, H: UiHost> SemanticsCx<'a, H> {
     }
 
     pub fn set_value_editable(&mut self, editable: bool) {
-        self.actions.set_value = editable;
+        match *self.role {
+            // Text controls use AccessKit's `SetValue` / `ReplaceSelectedText` action surfaces.
+            SemanticsRole::TextField => {
+                self.actions.set_value = editable;
+            }
+            // Range controls generally surface as stepper semantics on platforms. Prefer
+            // Increment/Decrement for sliders rather than `SetValue`, since the latter is not
+            // universally implemented by assistive technologies.
+            SemanticsRole::Slider => {
+                self.actions.increment = editable;
+                self.actions.decrement = editable;
+            }
+            _ => {
+                self.actions.set_value = editable;
+            }
+        }
+    }
+
+    pub fn set_increment_supported(&mut self, supported: bool) {
+        self.actions.increment = supported;
+    }
+
+    pub fn set_decrement_supported(&mut self, supported: bool) {
+        self.actions.decrement = supported;
     }
 
     pub fn set_scroll_by_supported(&mut self, supported: bool) {

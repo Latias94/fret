@@ -23,6 +23,30 @@ pub fn invoke_target_from_action(req: &ActionRequest) -> Option<fret_core::NodeI
     parent_from_synthetic_id(req.target_node).or_else(|| from_accesskit_id(req.target_node))
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StepperAction {
+    Decrement,
+    Increment,
+}
+
+pub fn stepper_target_from_action(
+    req: &ActionRequest,
+) -> Option<(fret_core::NodeId, StepperAction)> {
+    if req.target_tree != TreeId::ROOT {
+        return None;
+    }
+
+    let action = match req.action {
+        Action::Decrement => StepperAction::Decrement,
+        Action::Increment => StepperAction::Increment,
+        _ => return None,
+    };
+
+    let target =
+        parent_from_synthetic_id(req.target_node).or_else(|| from_accesskit_id(req.target_node))?;
+    Some((target, action))
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum SetValueData {
     Text(String),

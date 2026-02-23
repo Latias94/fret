@@ -749,8 +749,10 @@ pub struct SemanticsProps {
     pub focusable: bool,
     /// Overrides whether this node supports `SetValue` actions (text or numeric).
     ///
-    /// This is primarily intended for range-like controls (e.g. sliders) that want to expose a
-    /// numeric value edit action via the semantics tree.
+    /// For `TextField` roles, this surfaces as the platform's "set value" action surface.
+    ///
+    /// For `Slider` roles, this is interpreted as stepper semantics and maps to
+    /// Increment/Decrement actions.
     pub value_editable: Option<bool>,
     pub disabled: bool,
     pub read_only: bool,

@@ -46,6 +46,48 @@ pub fn set_value_numeric(
     set_value_text(ui, app, services, target, &value.to_string());
 }
 
+pub fn decrement(ui: &mut UiTree, app: &mut App, services: &mut dyn UiServices, target: NodeId) {
+    ui.set_focus(Some(target));
+    ui.dispatch_event(
+        app,
+        services,
+        &Event::KeyDown {
+            key: KeyCode::ArrowDown,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        },
+    );
+    ui.dispatch_event(
+        app,
+        services,
+        &Event::KeyUp {
+            key: KeyCode::ArrowDown,
+            modifiers: Modifiers::default(),
+        },
+    );
+}
+
+pub fn increment(ui: &mut UiTree, app: &mut App, services: &mut dyn UiServices, target: NodeId) {
+    ui.set_focus(Some(target));
+    ui.dispatch_event(
+        app,
+        services,
+        &Event::KeyDown {
+            key: KeyCode::ArrowUp,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        },
+    );
+    ui.dispatch_event(
+        app,
+        services,
+        &Event::KeyUp {
+            key: KeyCode::ArrowUp,
+            modifiers: Modifiers::default(),
+        },
+    );
+}
+
 pub fn scroll_by(ui: &mut UiTree, app: &mut App, target: NodeId, dx: f64, dy: f64) {
     let dx = dx.clamp(-1_000_000.0, 1_000_000.0) as f32;
     let dy = dy.clamp(-1_000_000.0, 1_000_000.0) as f32;

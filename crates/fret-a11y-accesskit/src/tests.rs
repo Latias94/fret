@@ -8,8 +8,8 @@ use slotmap::KeyData;
 use crate::ids::{text_run_id_for, to_accesskit_id};
 use crate::roles::map_role;
 use crate::{
-    replace_selected_text_from_action, scroll_by_from_action, set_text_selection_from_action,
-    tree_update_from_snapshot,
+    StepperAction, replace_selected_text_from_action, scroll_by_from_action,
+    set_text_selection_from_action, stepper_target_from_action, tree_update_from_snapshot,
 };
 
 fn node(id: u64) -> fret_core::NodeId {
@@ -253,6 +253,113 @@ fn scroll_by_actions_are_exposed_and_decoded() {
     assert_eq!(target, scroll);
     assert_eq!(data.dx, 0.0);
     assert_eq!(data.dy, 2.0);
+}
+
+#[test]
+fn increment_and_decrement_actions_are_exposed_and_decoded() {
+    let window = AppWindowId::default();
+    let root = node(1);
+    let slider = node(2);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(10.0), Px(10.0)),
+    );
+
+    let snapshot = SemanticsSnapshot {
+        window,
+        roots: vec![SemanticsRoot {
+            root,
+            visible: true,
+            blocks_underlay_input: false,
+            hit_testable: true,
+            z_index: 0,
+        }],
+        barrier_root: None,
+        focus_barrier_root: None,
+        focus: None,
+        captured: None,
+        nodes: vec![
+            SemanticsNode {
+                id: root,
+                parent: None,
+                role: SemanticsRole::Window,
+                bounds,
+                flags: SemanticsFlags::default(),
+                test_id: None,
+                active_descendant: None,
+                pos_in_set: None,
+                set_size: None,
+                label: None,
+                value: None,
+                extra: SemanticsNodeExtra::default(),
+                text_selection: None,
+                text_composition: None,
+                actions: SemanticsActions::default(),
+                labelled_by: Vec::new(),
+                described_by: Vec::new(),
+                controls: Vec::new(),
+                inline_spans: Vec::new(),
+            },
+            SemanticsNode {
+                id: slider,
+                parent: Some(root),
+                role: SemanticsRole::Slider,
+                bounds,
+                flags: SemanticsFlags::default(),
+                test_id: None,
+                active_descendant: None,
+                pos_in_set: None,
+                set_size: None,
+                label: Some("Slider".to_string()),
+                value: Some("50".to_string()),
+                extra: SemanticsNodeExtra::default(),
+                text_selection: None,
+                text_composition: None,
+                actions: SemanticsActions {
+                    increment: true,
+                    decrement: true,
+                    ..SemanticsActions::default()
+                },
+                labelled_by: Vec::new(),
+                described_by: Vec::new(),
+                controls: Vec::new(),
+                inline_spans: Vec::new(),
+            },
+        ],
+    };
+
+    let update = tree_update_from_snapshot(&snapshot, 1.0);
+    let slider_id = to_accesskit_id(slider);
+    let slider_node = update
+        .nodes
+        .iter()
+        .find_map(|(id, n)| (*id == slider_id).then_some(n))
+        .expect("slider node present");
+    assert!(slider_node.supports_action(accesskit::Action::Increment));
+    assert!(slider_node.supports_action(accesskit::Action::Decrement));
+
+    let increment_req = accesskit::ActionRequest {
+        action: accesskit::Action::Increment,
+        target_tree: accesskit::TreeId::ROOT,
+        target_node: slider_id,
+        data: None,
+    };
+    let (target, action) =
+        stepper_target_from_action(&increment_req).expect("decoded increment target");
+    assert_eq!(target, slider);
+    assert_eq!(action, StepperAction::Increment);
+
+    let decrement_req = accesskit::ActionRequest {
+        action: accesskit::Action::Decrement,
+        target_tree: accesskit::TreeId::ROOT,
+        target_node: slider_id,
+        data: None,
+    };
+    let (target, action) =
+        stepper_target_from_action(&decrement_req).expect("decoded decrement target");
+    assert_eq!(target, slider);
+    assert_eq!(action, StepperAction::Decrement);
 }
 
 #[test]

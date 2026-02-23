@@ -208,6 +208,12 @@ pub fn tree_update_from_snapshot(snapshot: &SemanticsSnapshot, scale_factor: f64
         if node.actions.set_value {
             out.add_action(Action::SetValue);
         }
+        if node.actions.decrement {
+            out.add_action(Action::Decrement);
+        }
+        if node.actions.increment {
+            out.add_action(Action::Increment);
+        }
         if node.actions.scroll_by {
             out.add_action(Action::SetScrollOffset);
             if node.extra.scroll.x_max.is_some() {
