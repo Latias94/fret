@@ -442,6 +442,7 @@ impl<H: UiHost> Widget<H> for TextInput {
         }
         cx.set_value_editable(self.enabled);
         cx.set_text_selection_supported(self.enabled);
+        cx.set_placeholder(self.placeholder.as_deref());
 
         let (value, text_selection, text_composition) = if self.is_ime_composing()
             && let Some(value) =

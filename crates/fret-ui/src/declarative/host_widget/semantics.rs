@@ -306,8 +306,10 @@ impl ElementHostWidget {
             | ElementInstance::Grid(_) => {
                 // Flex/Grid are layout containers; they do not imply semantics beyond their children.
             }
-            ElementInstance::Image(_)
-            | ElementInstance::PointerRegion(_)
+            ElementInstance::Image(_) => {
+                cx.set_role(SemanticsRole::Image);
+            }
+            ElementInstance::PointerRegion(_)
             | ElementInstance::InternalDragRegion(_)
             | ElementInstance::ExternalDragRegion(_)
             | ElementInstance::HoverRegion(_)
@@ -319,9 +321,33 @@ impl ElementHostWidget {
             | ElementInstance::VisualTransform(_)
             | ElementInstance::RenderTransform(_)
             | ElementInstance::FractionalRenderTransform(_)
-            | ElementInstance::Anchored(_)
-            | ElementInstance::Scroll(_) => {
+            | ElementInstance::Anchored(_) => {
                 cx.set_role(SemanticsRole::Generic);
+            }
+            ElementInstance::Scroll(props) => {
+                cx.set_role(SemanticsRole::Generic);
+
+                let external_handle = props.scroll_handle.clone();
+                let handle = crate::elements::with_element_state(
+                    &mut *cx.app,
+                    window,
+                    self.element,
+                    crate::element::ScrollState::default,
+                    |state| {
+                        external_handle
+                            .as_ref()
+                            .unwrap_or(&state.scroll_handle)
+                            .clone()
+                    },
+                );
+                let offset = handle.offset();
+                let max = handle.max_offset();
+                if props.axis.scroll_x() {
+                    cx.set_scroll_x(Some(offset.x.0 as f64), Some(0.0), Some(max.x.0 as f64));
+                }
+                if props.axis.scroll_y() {
+                    cx.set_scroll_y(Some(offset.y.0 as f64), Some(0.0), Some(max.y.0 as f64));
+                }
             }
             ElementInstance::ViewportSurface(_) => {
                 cx.set_role(SemanticsRole::Viewport);
@@ -384,13 +410,21 @@ impl ElementHostWidget {
                 || decoration.scroll_x_min.is_some()
                 || decoration.scroll_x_max.is_some()
             {
-                cx.set_scroll_x(decoration.scroll_x, decoration.scroll_x_min, decoration.scroll_x_max);
+                cx.set_scroll_x(
+                    decoration.scroll_x,
+                    decoration.scroll_x_min,
+                    decoration.scroll_x_max,
+                );
             }
             if decoration.scroll_y.is_some()
                 || decoration.scroll_y_min.is_some()
                 || decoration.scroll_y_max.is_some()
             {
-                cx.set_scroll_y(decoration.scroll_y, decoration.scroll_y_min, decoration.scroll_y_max);
+                cx.set_scroll_y(
+                    decoration.scroll_y,
+                    decoration.scroll_y_min,
+                    decoration.scroll_y_max,
+                );
             }
             if let Some(element) = decoration.active_descendant_element
                 && let Some(node) = cx.resolve_declarative_element(element)
