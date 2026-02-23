@@ -2,7 +2,7 @@
 
 use super::super::intermediate_pool::estimate_texture_bytes;
 use super::super::render_plan_effects as effects;
-use super::super::{EffectMarker, EffectMarkerKind};
+use super::super::{EffectMarker, EffectMarkerKind, OrderedDraw, PathDraw};
 use super::*;
 
 fn strip_releases(passes: &[RenderPlanPass]) -> Vec<&RenderPlanPass> {
@@ -89,6 +89,60 @@ fn debug_validate_rejects_path_msaa_batch_before_init() {
     let err = validate_plan_target_lifetimes(&[pass]).unwrap_err();
     assert!(err.contains("writes Intermediate0"), "{err}");
     assert!(err.contains("LoadOp::Load"), "{err}");
+}
+
+#[test]
+fn compile_for_scene_path_msaa_batch_initializes_output_via_empty_clear_pass() {
+    let mut encoding = SceneEncoding::default();
+    encoding.ordered_draws.push(OrderedDraw::Path(PathDraw {
+        scissor: ScissorRect {
+            x: 1,
+            y: 2,
+            w: 3,
+            h: 4,
+        },
+        uniform_index: 0,
+        first_vertex: 0,
+        vertex_count: 0,
+        paint_index: 0,
+    }));
+
+    let viewport_size = (64, 64);
+    let plan = RenderPlan::compile_for_scene(
+        &encoding,
+        viewport_size,
+        wgpu::TextureFormat::Bgra8UnormSrgb,
+        wgpu::Color::TRANSPARENT,
+        4,
+        DebugPostprocess::None,
+        u64::MAX,
+    );
+
+    let core = strip_releases(&plan.passes);
+    assert_eq!(core.len(), 2);
+
+    let RenderPlanPass::SceneDrawRange(scene) = core[0] else {
+        panic!("expected SceneDrawRange init pass");
+    };
+    assert_eq!(scene.target, PlanTarget::Output);
+    assert!(matches!(scene.load, wgpu::LoadOp::Clear(_)));
+    assert_eq!(scene.draw_range, 0..0);
+
+    let RenderPlanPass::PathMsaaBatch(batch) = core[1] else {
+        panic!("expected PathMsaaBatch pass");
+    };
+    assert_eq!(batch.target, PlanTarget::Output);
+    assert!(matches!(batch.load, wgpu::LoadOp::Load));
+    assert_eq!(batch.draw_range, 0..1);
+    assert_eq!(
+        batch.union_scissor.0,
+        ScissorRect {
+            x: 1,
+            y: 2,
+            w: 3,
+            h: 4,
+        }
+    );
 }
 
 #[test]
