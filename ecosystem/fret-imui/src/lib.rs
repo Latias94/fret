@@ -278,6 +278,7 @@ mod tests {
         frame_id: FrameId,
         next_timer_token: u64,
         next_clipboard_token: u64,
+        next_share_sheet_token: u64,
         next_image_upload_token: u64,
     }
 
@@ -412,6 +413,12 @@ mod tests {
         fn next_clipboard_token(&mut self) -> ClipboardToken {
             let token = ClipboardToken(self.next_clipboard_token);
             self.next_clipboard_token = self.next_clipboard_token.saturating_add(1);
+            token
+        }
+
+        fn next_share_sheet_token(&mut self) -> fret_runtime::ShareSheetToken {
+            let token = fret_runtime::ShareSheetToken(self.next_share_sheet_token);
+            self.next_share_sheet_token = self.next_share_sheet_token.saturating_add(1);
             token
         }
 
@@ -8091,6 +8098,24 @@ mod tests {
         );
         assert!(!changed.get());
         assert!((value.get() - 0.0).abs() <= f32::EPSILON);
+
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let slider = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("imui-slider"))
+            .expect("slider semantics node");
+        assert_eq!(slider.role, SemanticsRole::Slider);
+        assert!(slider.actions.increment);
+        assert!(slider.actions.decrement);
+        assert!(slider.actions.set_value);
+        assert_eq!(slider.extra.numeric.value, Some(0.0));
+        assert_eq!(slider.extra.numeric.min, Some(0.0));
+        assert_eq!(slider.extra.numeric.max, Some(100.0));
+        assert_eq!(slider.extra.numeric.step, Some(1.0));
+        assert_eq!(slider.extra.numeric.jump, Some(10.0));
 
         let slider_node = ui.children(root)[0];
         let slider_bounds = ui.debug_node_bounds(slider_node).expect("slider bounds");

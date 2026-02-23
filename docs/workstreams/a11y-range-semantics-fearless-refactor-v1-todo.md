@@ -45,6 +45,11 @@ These are optional, but high leverage if we want to avoid follow-up “contract 
 - [x] Progress: populate numeric now/min/max for determinate progress.
 - [x] Update semantics-focused tests in `ecosystem/fret-ui-shadcn/tests/*` to assert numeric fields.
 
+## Additional gates
+
+- [x] Gate imui slider semantics: `Pressable(role=Slider)` must expose stepper actions and structured numeric metadata
+  (`min/max/value/step/jump`) when present (via `SemanticsDecoration`).
+
 ## Diagnostics + scripts
 
 - [x] Prefer `extra.numeric.value` in `SetSliderValue` script step; fallback to parsing `value` string.
