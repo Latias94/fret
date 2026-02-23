@@ -2,6 +2,8 @@ use std::cell::Cell;
 use std::rc::Rc;
 use std::sync::Arc;
 
+use fret_core::{FontWeight, Px};
+use fret_icons::IconId;
 use fret_runtime::Model;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
@@ -9,10 +11,13 @@ use fret_ui_headless::calendar::CalendarMonth;
 use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::primitives::popover as radix_popover;
-use fret_ui_kit::{ChromeRefinement, LayoutRefinement, LengthRefinement, Space};
+use fret_ui_kit::{
+    ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, LengthRefinement, Space,
+    WidgetStateProperty,
+};
 use time::{Date, OffsetDateTime, Weekday};
 
-use crate::button::{Button, ButtonVariant};
+use crate::button::{Button, ButtonStyle, ButtonVariant};
 use crate::calendar::Calendar;
 use crate::popover::{Popover, PopoverAlign, PopoverContent, PopoverSide};
 
@@ -182,6 +187,7 @@ impl DatePicker {
             let trigger_layout = self.layout.clone();
 
             let selected_value = cx.watch_model(&selected).copied().flatten();
+            let label_is_placeholder = selected_value.is_none();
             let button_text: Arc<str> = match selected_value {
                 Some(date) => (self.format_selected)(date),
                 None => self.placeholder.clone(),
@@ -194,17 +200,31 @@ impl DatePicker {
                 .into_element(
                     cx,
                     move |cx| {
-                        Button::new(button_text)
+                        let mut button = Button::new(button_text)
                             .variant(ButtonVariant::Outline)
                             .toggle_model(open_trigger.clone())
                             .disabled(self.disabled)
+                            .leading_icon(IconId::new_static("lucide.calendar"))
+                            .leading_icon_size(Px(16.0))
+                            .content_justify_start()
+                            .text_weight(FontWeight::NORMAL)
                             .refine_style(trigger_chrome.clone())
                             .refine_layout(
                                 LayoutRefinement::default()
                                     .w_full()
                                     .merge(trigger_layout.clone()),
-                            )
-                            .into_element(cx)
+                            );
+
+                        if label_is_placeholder {
+                            button = button.style(ButtonStyle::default().foreground(
+                                WidgetStateProperty::new(Some(ColorRef::Token {
+                                    key: "muted-foreground",
+                                    fallback: ColorFallback::ThemeTextMuted,
+                                })),
+                            ));
+                        }
+
+                        button.into_element(cx)
                     },
                     move |cx| {
                         let mut calendar = Calendar::new(month.clone(), selected.clone())

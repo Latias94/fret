@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use fret_core::{Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextStyle};
+use fret_icons::IconId;
 use fret_runtime::{CommandId, Effect};
 use fret_ui::action::{OnActivate, OnHoverChange};
 use fret_ui::element::{AnyElement, PressableA11y, PressableKeyActivation, PressableProps};
@@ -8,11 +9,13 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
+use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
 use fret_ui_kit::{
-    ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, OverrideSlot, ShadowPreset,
-    Size as ComponentSize, Space, WidgetStateProperty, WidgetStates, resolve_override_slot, ui,
+    ChromeRefinement, ColorFallback, ColorRef, Justify, LayoutRefinement, OverrideSlot,
+    ShadowPreset, Size as ComponentSize, Space, WidgetStateProperty, WidgetStates,
+    resolve_override_slot, ui,
 };
 
 #[derive(Debug, Clone, Default)]
@@ -326,6 +329,10 @@ pub struct Button {
     render: Option<ButtonRender>,
     variant: ButtonVariant,
     size: ButtonSize,
+    leading_icon: Option<IconId>,
+    leading_icon_size: Option<Px>,
+    content_justify: Justify,
+    text_weight_override: Option<FontWeight>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
     style: ButtonStyle,
@@ -381,6 +388,10 @@ impl Button {
             render: None,
             variant: ButtonVariant::default(),
             size: ButtonSize::default(),
+            leading_icon: None,
+            leading_icon_size: None,
+            content_justify: Justify::Center,
+            text_weight_override: None,
             chrome: ChromeRefinement::default(),
             layout: fret_ui_kit::LayoutRefinement::default(),
             style: ButtonStyle::default(),
@@ -392,6 +403,30 @@ impl Button {
 
     pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
         self.children = children.into_iter().collect();
+        self
+    }
+
+    pub fn leading_icon(mut self, icon: IconId) -> Self {
+        self.leading_icon = Some(icon);
+        self
+    }
+
+    pub fn leading_icon_size(mut self, size: Px) -> Self {
+        self.leading_icon_size = Some(size);
+        self
+    }
+
+    pub fn content_justify(mut self, justify: Justify) -> Self {
+        self.content_justify = justify;
+        self
+    }
+
+    pub fn content_justify_start(self) -> Self {
+        self.content_justify(Justify::Start)
+    }
+
+    pub fn text_weight(mut self, weight: FontWeight) -> Self {
+        self.text_weight_override = Some(weight);
         self
     }
 
@@ -593,7 +628,7 @@ impl Button {
             let corner_radii_override = self.corner_radii_override;
             let text_style = button_text_style(&theme, self.size);
             let text_px = text_style.size;
-            let text_weight = text_style.weight;
+            let text_weight = self.text_weight_override.unwrap_or(text_style.weight);
             let text_line_height = text_style
                 .line_height
                 .unwrap_or_else(|| theme.metric_token("font.line_height"));
@@ -601,6 +636,9 @@ impl Button {
             let has_svg_icon_like_children =
                 !is_icon_button && self.children.iter().any(contains_svg_icon_like);
             let children = self.children;
+            let leading_icon = self.leading_icon;
+            let leading_icon_size = self.leading_icon_size;
+            let content_justify = self.content_justify;
 
             let pressable = control_chrome_pressable_with_id_props(cx, move |cx, st, _id| {
                 cx.pressable_dispatch_command_if_enabled_opt(command);
@@ -729,7 +767,12 @@ impl Button {
                     };
 
                     let content = if children.is_empty() {
-                        vec![
+                        let mut out: Vec<AnyElement> = Vec::with_capacity(2);
+                        if let Some(icon) = leading_icon.clone() {
+                            let size = leading_icon_size.unwrap_or(Px(16.0));
+                            out.push(decl_icon::icon_with(cx, icon, Some(size), Some(fg.clone())));
+                        }
+                        out.push(
                             ui::text(cx, a11y_label.clone())
                                 .text_size_px(text_px)
                                 .fixed_line_box_px(text_line_height)
@@ -738,7 +781,8 @@ impl Button {
                                 .nowrap()
                                 .text_color(fg.clone())
                                 .into_element(cx),
-                        ]
+                        );
+                        out
                     } else {
                         children.clone()
                     };
@@ -746,7 +790,7 @@ impl Button {
                     vec![fret_ui_kit::declarative::stack::hstack(
                         cx,
                         fret_ui_kit::declarative::stack::HStackProps::default()
-                            .justify_center()
+                            .justify(content_justify)
                             .items_center()
                             .gap_x(gap),
                         |_cx| content,

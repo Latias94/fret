@@ -175,7 +175,7 @@ pub(super) fn preview_date_picker(
 
     let simple = shadcn::DatePicker::new(open, month, selected.clone())
         .placeholder("Pick a date")
-        .refine_layout(LayoutRefinement::default().w_px(Px(200.0)))
+        .refine_layout(LayoutRefinement::default().w_px(Px(240.0)))
         .into_element(cx)
         .test_id("ui-gallery-date-picker-simple");
 
@@ -206,62 +206,102 @@ pub(super) fn preview_date_picker(
         .flatten()
         .unwrap_or_else(|| "Pick a date".to_string());
 
+    let dropdowns_is_desktop = fret_ui_kit::declarative::viewport_width_at_least(
+        cx,
+        fret_ui::Invalidation::Layout,
+        Px(768.0),
+        fret_ui_kit::declarative::ViewportQueryHysteresis::default(),
+    );
+
     let dropdowns = {
         let theme = theme.clone();
         let open = dob_open.clone();
+        let open_for_trigger = open.clone();
+        let open_for_content = open.clone();
+        let dropdown_text = dropdown_text.clone();
+        let dropdown_placeholder = dropdown_text == "Pick a date";
 
-        shadcn::Popover::new(open.clone())
-            .side(shadcn::PopoverSide::Bottom)
-            .align(shadcn::PopoverAlign::Start)
-            .into_element(
+        let trigger = move |cx: &mut ElementContext<'_, App>| {
+            let mut button = shadcn::Button::new(dropdown_text.clone())
+                .variant(shadcn::ButtonVariant::Outline)
+                .toggle_model(open_for_trigger.clone())
+                .leading_icon(fret_icons::IconId::new_static("lucide.calendar"))
+                .content_justify_start()
+                .text_weight(fret_core::FontWeight::NORMAL)
+                .refine_layout(LayoutRefinement::default().w_px(Px(240.0)));
+
+            if dropdown_placeholder {
+                button = button.style(shadcn::button::ButtonStyle::default().foreground(
+                    fret_ui_kit::WidgetStateProperty::new(Some(fret_ui_kit::ColorRef::Token {
+                        key: "muted-foreground",
+                        fallback: fret_ui_kit::ColorFallback::ThemeTextMuted,
+                    })),
+                ));
+            }
+
+            button
+                .test_id("ui-gallery-date-picker-dropdowns-trigger")
+                .into_element(cx)
+        };
+
+        let content = move |cx: &mut ElementContext<'_, App>| {
+            let calendar = shadcn::Calendar::new(dob_month.clone(), dob_selected.clone())
+                .caption_layout(shadcn::CalendarCaptionLayout::Dropdown)
+                .into_element(cx)
+                .test_id("ui-gallery-date-picker-dropdowns-calendar");
+
+            let done = shadcn::Button::new("Done")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .toggle_model(open_for_content.clone())
+                .refine_layout(LayoutRefinement::default().w_full())
+                .into_element(cx)
+                .test_id("ui-gallery-date-picker-dropdowns-done");
+
+            let footer_props = decl_style::container_props(
+                &theme,
+                ChromeRefinement::default().p(Space::N2),
+                LayoutRefinement::default().w_full().min_w_0(),
+            );
+            let footer = cx.container(footer_props, move |_cx| vec![done]);
+
+            let separator = shadcn::Separator::new()
+                .into_element(cx)
+                .test_id("ui-gallery-date-picker-dropdowns-separator");
+
+            let body = stack::vstack(
                 cx,
-                |cx| {
-                    shadcn::Button::new(dropdown_text)
-                        .variant(shadcn::ButtonVariant::Outline)
-                        .toggle_model(open.clone())
-                        .refine_layout(LayoutRefinement::default().w_px(Px(200.0)))
-                        .into_element(cx)
-                },
-                |cx| {
-                    let calendar = shadcn::Calendar::new(dob_month.clone(), dob_selected.clone())
-                        .caption_layout(shadcn::CalendarCaptionLayout::Dropdown)
-                        .into_element(cx)
-                        .test_id("ui-gallery-date-picker-dropdowns-calendar");
+                stack::VStackProps::default()
+                    .gap(Space::N0)
+                    .items_stretch()
+                    .layout(LayoutRefinement::default().w_full().min_w_0()),
+                move |_cx| vec![calendar, separator, footer],
+            );
 
-                    let done = shadcn::Button::new("Done")
-                        .variant(shadcn::ButtonVariant::Outline)
-                        .size(shadcn::ButtonSize::Sm)
-                        .toggle_model(open.clone())
-                        .refine_layout(LayoutRefinement::default().w_full())
-                        .into_element(cx)
-                        .test_id("ui-gallery-date-picker-dropdowns-done");
+            if dropdowns_is_desktop {
+                shadcn::PopoverContent::new([body])
+                    .refine_style(ChromeRefinement::default().p(Space::N0))
+                    .into_element(cx)
+                    .test_id("ui-gallery-date-picker-dropdowns-popover-content")
+            } else {
+                shadcn::DrawerContent::new([body])
+                    .refine_style(ChromeRefinement::default().p(Space::N0))
+                    .into_element(cx)
+                    .test_id("ui-gallery-date-picker-dropdowns-drawer-content")
+            }
+        };
 
-                    let footer_props = decl_style::container_props(
-                        &theme,
-                        ChromeRefinement::default().p(Space::N2),
-                        LayoutRefinement::default().w_full().min_w_0(),
-                    );
-                    let footer = cx.container(footer_props, move |_cx| vec![done]);
-
-                    let separator = shadcn::Separator::new()
-                        .into_element(cx)
-                        .test_id("ui-gallery-date-picker-dropdowns-separator");
-
-                    let body = stack::vstack(
-                        cx,
-                        stack::VStackProps::default()
-                            .gap(Space::N0)
-                            .items_stretch()
-                            .layout(LayoutRefinement::default().w_full().min_w_0()),
-                        move |_cx| vec![calendar, separator, footer],
-                    );
-
-                    shadcn::PopoverContent::new([body])
-                        .refine_style(ChromeRefinement::default().p(Space::N0))
-                        .into_element(cx)
-                },
-            )
-            .test_id("ui-gallery-date-picker-dropdowns")
+        if dropdowns_is_desktop {
+            shadcn::Popover::new(open.clone())
+                .side(shadcn::PopoverSide::Bottom)
+                .align(shadcn::PopoverAlign::Start)
+                .into_element(cx, trigger, content)
+                .test_id("ui-gallery-date-picker-dropdowns")
+        } else {
+            shadcn::Drawer::new(open.clone())
+                .into_element(cx, trigger, content)
+                .test_id("ui-gallery-date-picker-dropdowns")
+        }
     };
 
     let demo = doc_layout::wrap_row_snapshot(
@@ -276,7 +316,7 @@ pub(super) fn preview_date_picker(
     let rtl = doc_layout::rtl(cx, |cx| {
         shadcn::DatePicker::new(rtl_open.clone(), rtl_month.clone(), rtl_selected.clone())
             .placeholder("Pick a date")
-            .refine_layout(LayoutRefinement::default().w_px(Px(200.0)))
+            .refine_layout(LayoutRefinement::default().w_px(Px(240.0)))
             .into_element(cx)
     })
     .test_id("ui-gallery-date-picker-rtl");
@@ -285,7 +325,7 @@ pub(super) fn preview_date_picker(
         cx,
         [
             "Demo aligns to shadcn `DatePickerDemo` (Simple, With Dropdowns, With Range).",
-            "The upstream dropdowns demo uses a Drawer on mobile; this gallery currently renders the Popover-only desktop recipe.",
+            "The dropdowns demo renders Popover on desktop and Drawer on narrow viewports (explicit branches for deterministic gallery validation).",
             "Calendar dropdown caption improves large-jump navigation compared with arrow-only controls.",
             "For diag runs, some dates are intentionally disabled (via env flag) to validate skip behavior.",
         ],
@@ -306,15 +346,22 @@ shadcn::DatePicker::new(open, month, selected)
     .placeholder("Pick a date")
     .into_element(cx);
 
-// With dropdown caption + Done footer (Popover-only approximation)
-shadcn::Popover::new(open).into_element(cx, |cx| trigger, |cx| {
-    shadcn::PopoverContent::new([
-        shadcn::Calendar::new(month, selected)
-            .caption_layout(shadcn::CalendarCaptionLayout::Dropdown)
-            .into_element(cx),
-    ])
-    .into_element(cx)
-});
+// With dropdown caption + Done footer (Popover on desktop, Drawer on mobile)
+let is_desktop = fret_ui_kit::declarative::viewport_width_at_least(
+    cx,
+    fret_ui::Invalidation::Layout,
+    Px(768.0),
+    fret_ui_kit::declarative::ViewportQueryHysteresis::default(),
+);
+if is_desktop {
+    shadcn::Popover::new(open).into_element(cx, |cx| trigger, |cx| {
+        shadcn::PopoverContent::new([calendar]).into_element(cx)
+    })
+} else {
+    shadcn::Drawer::new(open).into_element(cx, |cx| trigger, |cx| {
+        shadcn::DrawerContent::new([calendar]).into_element(cx)
+    })
+};
 
 // With range (2 months)
 shadcn::DateRangePicker::new(open, month, range_selected).into_element(cx);"#,
