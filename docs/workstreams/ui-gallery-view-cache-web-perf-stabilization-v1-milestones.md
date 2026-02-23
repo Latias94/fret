@@ -18,9 +18,11 @@
 - [x] Experimental bundle (web, view-cache enabled):
   - Evidence: `.fret/diag/exports/1771832191642-bundle` (view-cache active, but `view_cache_roots_total=0`)
 - [ ] View-cache harness bundles (web, URL-driven config; prefer `fret_ui_gallery_view_cache_continuous=1`):
-  - Evidence (off): `.fret/diag/exports/<ts>-bundle` (path only)
-  - Evidence (on): `.fret/diag/exports/<ts>-bundle` (path only)
-  - Expectation (on): `view_cache_active=true`, `view_cache_roots_total>0`, `view_cache_roots_reused>0`
+  - Evidence (off): `.fret/diag/exports/1771841870144-bundle`
+  - Evidence (on): `.fret/diag/exports/1771842156088-bundle`
+  - Notes:
+    - off: `view_cache_active=false`, `view_cache_roots_total=1`
+    - on: `view_cache_active=true`, `view_cache_roots_total=2`, `view_cache_roots_reused=2` (steady-state)
 - [ ] Post-fixes experimental bundle (web, view-cache enabled + shell default + churn fix):
   - Evidence: `.fret/diag/exports/<ts>-bundle` (path only)
 - [x] Post-churn-fix experimental bundle (web, view-cache enabled):
