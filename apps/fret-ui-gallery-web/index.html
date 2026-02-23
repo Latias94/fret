@@ -42,6 +42,15 @@
             "fret_ui_gallery_view_cache_continuous",
           ];
 
+          function parseBoolParam(v) {
+            if (v == null) return null;
+            var s = String(v).trim().toLowerCase();
+            if (s === "") return true;
+            if (s === "1" || s === "true" || s === "yes" || s === "on") return true;
+            if (s === "0" || s === "false" || s === "no" || s === "off") return false;
+            return null;
+          }
+
           // 1) Capture from URL (if present) and persist to globals/localStorage.
           if (ws && token) {
             window.__FRET_DEVTOOLS_WS = ws;
@@ -62,6 +71,20 @@
             window[globalKey] = v;
             if (window.localStorage) {
               window.localStorage.setItem(globalKey, v);
+            }
+          }
+
+          // If view-cache is explicitly enabled via URL, ensure shell caching defaults to on as
+          // well unless the shell flag is explicitly provided. This prevents stale localStorage
+          // overrides from silently disabling view-cache roots during perf/evidence runs.
+          var vcEnabled = parseBoolParam(url.searchParams.get("fret_ui_gallery_view_cache"));
+          var vcShellProvided =
+            url.searchParams.get("fret_ui_gallery_view_cache_shell") != null;
+          if (vcEnabled === true && !vcShellProvided) {
+            var shellKey = "__FRET_UI_GALLERY_VIEW_CACHE_SHELL";
+            window[shellKey] = "1";
+            if (window.localStorage) {
+              window.localStorage.setItem(shellKey, "1");
             }
           }
 
