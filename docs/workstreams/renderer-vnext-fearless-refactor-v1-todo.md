@@ -745,9 +745,11 @@ milestones) when implementation begins.
 ## Always-run guardrails (before/after each milestone)
 
 - [~] REN-VNEXT-guard-001 Keep `python3 tools/check_layering.py` green for all intermediate steps.
-  - Last run: 2026-02-16, commit `246030f3`.
+  - Last run: 2026-02-23, commit `77fe5ff03` (macOS local).
 - [~] REN-VNEXT-guard-002 Add/extend at least one renderer conformance test per new contract.
   - Status: satisfied through M5 (sampling hints gate) and stroke v2 (join/cap/dash conformance gate landed).
+  - Last run (macOS local, 2026-02-23, commit `77fe5ff03`):
+    - `cargo nextest run -p fret-render-wgpu --test affine_clip_conformance --test viewport_surface_metadata_conformance --test paint_gradient_conformance --test mask_gradient_conformance --test composite_group_conformance --test materials_conformance --test materials_sampled_conformance --test clip_path_conformance --test mask_image_conformance --test text_paint_conformance`
 - [~] REN-VNEXT-guard-003 Record a perf snapshot baseline and keep “worst bundles” attachable to milestones.
   - Last capture: 2026-02-15, commit `c4f08adb`.
   - Evidence: `docs/workstreams/renderer-vnext-fearless-refactor-v1-milestones.md` (Perf snapshot record).

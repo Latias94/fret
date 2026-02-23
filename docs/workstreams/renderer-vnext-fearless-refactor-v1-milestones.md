@@ -58,6 +58,17 @@ Baseline record (macOS local snapshot; not a gate):
   - `headless_renderer_perf: frames=180 encode=0.03ms prepare_svg=1.95ms prepare_text=0.02ms draws=8100 ... cache_hits=179 cache_misses=1`
   - `headless_renderer_perf_pipelines: quad=180 viewport=0 mask=180 text_mask=0 text_color=0 path=0 path_msaa=0 composite=0 fullscreen=0 clip_mask=0`
 
+Guardrails record (macOS local, smoke):
+
+- Date: 2026-02-23
+- Commit: 77fe5ff03
+- Commands run (exact):
+  - `python3 tools/check_layering.py`
+  - `cargo nextest run -p fret-render-wgpu --test affine_clip_conformance --test viewport_surface_metadata_conformance --test paint_gradient_conformance --test mask_gradient_conformance --test composite_group_conformance --test materials_conformance --test materials_sampled_conformance --test clip_path_conformance --test mask_image_conformance --test text_paint_conformance`
+- Outputs (summary):
+  - layering: pass
+  - conformance: pass (35 tests)
+
 Baseline record (web build sanity; prerequisite for WebGPU evidence capture):
 
 - Date: 2026-02-23
