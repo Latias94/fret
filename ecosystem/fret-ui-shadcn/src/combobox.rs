@@ -159,6 +159,7 @@ pub struct Combobox {
     items: Vec<ComboboxItem>,
     groups: Vec<ComboboxGroup>,
     group_separators: bool,
+    auto_highlight: bool,
     test_id_prefix: Option<Arc<str>>,
     trigger_test_id: Option<Arc<str>>,
     width: Option<Px>,
@@ -194,6 +195,7 @@ impl Combobox {
             items: Vec::new(),
             groups: Vec::new(),
             group_separators: false,
+            auto_highlight: false,
             test_id_prefix: None,
             trigger_test_id: None,
             width: None,
@@ -296,6 +298,12 @@ impl Combobox {
     /// consecutive groups (shadcn `ComboboxSeparator`).
     pub fn group_separators(mut self, enabled: bool) -> Self {
         self.group_separators = enabled;
+        self
+    }
+
+    /// Base UI: `autoHighlight`. When enabled, highlights the first enabled option on open/filter.
+    pub fn auto_highlight(mut self, auto_highlight: bool) -> Self {
+        self.auto_highlight = auto_highlight;
         self
     }
 
@@ -443,6 +451,7 @@ impl Combobox {
             self.responsive_device_md_breakpoint,
             self.search_enabled,
             self.group_separators,
+            self.auto_highlight,
             self.show_clear,
             self.trigger_variant,
             self.consume_outside_pointer_events,
@@ -496,6 +505,7 @@ pub fn combobox<H: UiHost>(
         search_enabled,
         false,
         false,
+        false,
         ComboboxTriggerVariant::default(),
         consume_outside_pointer_events,
         kit_combobox::SelectionCommitPolicy::default(),
@@ -531,6 +541,7 @@ fn combobox_with_patch<H: UiHost>(
     responsive_device_md_breakpoint: Px,
     search_enabled: bool,
     group_separators: bool,
+    auto_highlight: bool,
     show_clear: bool,
     trigger_variant: ComboboxTriggerVariant,
     consume_outside_pointer_events: bool,
@@ -1211,6 +1222,7 @@ fn combobox_with_patch<H: UiHost>(
                                         .a11y_selected_mode(
                                             crate::command::CommandPaletteA11ySelectedMode::Checked,
                                         )
+                                        .auto_highlight(auto_highlight)
                                         .placeholder(search_placeholder.clone())
                                         .disabled(disabled)
                                         .empty_text(empty_text.clone())
@@ -1790,6 +1802,7 @@ fn combobox_with_patch<H: UiHost>(
                             .a11y_selected_mode(
                                 crate::command::CommandPaletteA11ySelectedMode::Checked,
                             )
+                            .auto_highlight(auto_highlight)
                             .placeholder(search_placeholder.clone())
                             .disabled(disabled)
                             .empty_text(empty_text)

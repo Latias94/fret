@@ -10,6 +10,7 @@ pub(super) fn demo(
         .a11y_label("Combobox demo")
         .width(Px(260.0))
         .placeholder("Select a fruit")
+        .auto_highlight(true)
         .query_model(query.clone())
         .test_id_prefix("ui-gallery-combobox-demo")
         .trigger_test_id("ui-gallery-combobox-demo-trigger")
@@ -36,6 +37,31 @@ pub(super) fn basic_frameworks(
             shadcn::ComboboxItem::new("astro", "Astro"),
         ])
         .into_element(cx)
+}
+
+pub(super) fn auto_highlight(
+    cx: &mut ElementContext<'_, App>,
+    models: &ComboboxModels,
+) -> AnyElement {
+    shadcn::Combobox::new(
+        models.auto_highlight_value.clone(),
+        models.auto_highlight_open.clone(),
+    )
+    .a11y_label("Combobox auto highlight")
+    .width(Px(260.0))
+    .placeholder("Select a framework")
+    .auto_highlight(true)
+    .query_model(models.auto_highlight_query.clone())
+    .test_id_prefix("ui-gallery-combobox-auto-highlight")
+    .trigger_test_id("ui-gallery-combobox-auto-highlight-trigger")
+    .items([
+        shadcn::ComboboxItem::new("next", "Next.js"),
+        shadcn::ComboboxItem::new("svelte", "SvelteKit"),
+        shadcn::ComboboxItem::new("nuxt", "Nuxt.js"),
+        shadcn::ComboboxItem::new("remix", "Remix"),
+        shadcn::ComboboxItem::new("astro", "Astro"),
+    ])
+    .into_element(cx)
 }
 
 pub(super) fn clear_button(

@@ -5,6 +5,9 @@ struct ComboboxModelsState {
     basic_value: Option<Model<Option<Arc<str>>>>,
     basic_open: Option<Model<bool>>,
     basic_query: Option<Model<String>>,
+    auto_highlight_value: Option<Model<Option<Arc<str>>>>,
+    auto_highlight_open: Option<Model<bool>>,
+    auto_highlight_query: Option<Model<String>>,
     clear_value: Option<Model<Option<Arc<str>>>>,
     clear_open: Option<Model<bool>>,
     clear_query: Option<Model<String>>,
@@ -45,6 +48,9 @@ pub(super) struct ComboboxModels {
     pub(super) basic_value: Model<Option<Arc<str>>>,
     pub(super) basic_open: Model<bool>,
     pub(super) basic_query: Model<String>,
+    pub(super) auto_highlight_value: Model<Option<Arc<str>>>,
+    pub(super) auto_highlight_open: Model<bool>,
+    pub(super) auto_highlight_query: Model<String>,
     pub(super) clear_value: Model<Option<Arc<str>>>,
     pub(super) clear_open: Model<bool>,
     pub(super) clear_query: Model<String>,
@@ -86,6 +92,9 @@ impl ComboboxModels {
             basic_value: state.basic_value?,
             basic_open: state.basic_open?,
             basic_query: state.basic_query?,
+            auto_highlight_value: state.auto_highlight_value?,
+            auto_highlight_open: state.auto_highlight_open?,
+            auto_highlight_query: state.auto_highlight_query?,
             clear_value: state.clear_value?,
             clear_open: state.clear_open?,
             clear_query: state.clear_query?,
@@ -132,6 +141,10 @@ pub(super) fn get_or_init(cx: &mut ElementContext<'_, App>) -> ComboboxModels {
     let basic_value = cx.app.models_mut().insert(None);
     let basic_open = cx.app.models_mut().insert(false);
     let basic_query = cx.app.models_mut().insert(String::new());
+
+    let auto_highlight_value = cx.app.models_mut().insert(None);
+    let auto_highlight_open = cx.app.models_mut().insert(false);
+    let auto_highlight_query = cx.app.models_mut().insert(String::new());
 
     let clear_value = cx.app.models_mut().insert(Some(Arc::<str>::from("next")));
     let clear_open = cx.app.models_mut().insert(false);
@@ -182,6 +195,10 @@ pub(super) fn get_or_init(cx: &mut ElementContext<'_, App>) -> ComboboxModels {
         st.basic_open = Some(basic_open.clone());
         st.basic_query = Some(basic_query.clone());
 
+        st.auto_highlight_value = Some(auto_highlight_value.clone());
+        st.auto_highlight_open = Some(auto_highlight_open.clone());
+        st.auto_highlight_query = Some(auto_highlight_query.clone());
+
         st.clear_value = Some(clear_value.clone());
         st.clear_open = Some(clear_open.clone());
         st.clear_query = Some(clear_query.clone());
@@ -231,6 +248,9 @@ pub(super) fn get_or_init(cx: &mut ElementContext<'_, App>) -> ComboboxModels {
         basic_value,
         basic_open,
         basic_query,
+        auto_highlight_value,
+        auto_highlight_open,
+        auto_highlight_query,
         clear_value,
         clear_open,
         clear_query,

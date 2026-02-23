@@ -1445,13 +1445,13 @@ impl CommandList {
                     cx.roving_nav_apg();
                     let mut out = Vec::with_capacity(render_rows.len());
 
-                     for row in render_rows.into_iter() {
-                         match row {
-                             CommandPaletteRenderRow::Heading(heading) => {
-                                 let heading = heading.clone();
-                                 let heading_style = heading_style.clone();
-                                 let fg_heading = fg_heading;
-                                 out.push(cx.container(
+                    for row in render_rows.into_iter() {
+                        match row {
+                            CommandPaletteRenderRow::Heading(heading) => {
+                                let heading = heading.clone();
+                                let heading_style = heading_style.clone();
+                                let fg_heading = fg_heading;
+                                out.push(cx.container(
                                     ContainerProps {
                                         layout: {
                                             let mut layout = LayoutStyle::default();
@@ -1502,11 +1502,11 @@ impl CommandList {
                                 },
                                 |_cx| Vec::new(),
                             )),
-                             CommandPaletteRenderRow::Separator(test_id) => {
-                                 let mut sep = cx.container(
-                                     ContainerProps {
-                                         layout: {
-                                             let mut layout = LayoutStyle::default();
+                            CommandPaletteRenderRow::Separator(test_id) => {
+                                let mut sep = cx.container(
+                                    ContainerProps {
+                                        layout: {
+                                            let mut layout = LayoutStyle::default();
                                             layout.size.width = Length::Fill;
                                             layout.size.height = Length::Px(Px(1.0));
                                             // new-york-v4: `-mx-1 h-px`.
@@ -1526,17 +1526,19 @@ impl CommandList {
                                 );
                                 if let Some(test_id) = test_id.clone() {
                                     sep = sep.test_id(test_id);
-                                 }
-                                 out.push(sep);
-                             }
+                                }
+                                out.push(sep);
+                            }
                             CommandPaletteRenderRow::Loading(loading) => {
                                 out.push(loading.into_element(cx));
                             }
-                             CommandPaletteRenderRow::Item(idx) => {
-                                 let Some(item) = items.get(idx).cloned() else { continue };
+                            CommandPaletteRenderRow::Item(idx) => {
+                                let Some(item) = items.get(idx).cloned() else {
+                                    continue;
+                                };
 
-                                 let enabled = !disabled_flags.get(idx).copied().unwrap_or(true);
-                                 let focusable = tab_stop.is_some_and(|i| i == idx);
+                                let enabled = !disabled_flags.get(idx).copied().unwrap_or(true);
+                                let focusable = tab_stop.is_some_and(|i| i == idx);
 
                                 let query_for_row = query_for_render.clone();
                                 let value_key = item.value.clone();
@@ -1683,6 +1685,7 @@ pub struct CommandPalette {
     filter: Option<CommandPaletteFilterFn>,
     value: Option<Model<Option<Arc<str>>>>,
     default_value: Option<Arc<str>>,
+    auto_highlight: bool,
     wrap: bool,
     vim_bindings: bool,
     disable_pointer_selection: bool,
@@ -2042,6 +2045,7 @@ impl CommandPalette {
             filter: None,
             value: None,
             default_value: None,
+            auto_highlight: true,
             // cmdk default: no loop unless explicitly enabled via `loop`.
             wrap: false,
             // cmdk default: ctrl+n/j/p/k keybinds enabled.
@@ -2141,6 +2145,15 @@ impl CommandPalette {
     /// When omitted, the palette selects the first enabled item.
     pub fn default_value(mut self, default_value: impl Into<Arc<str>>) -> Self {
         self.default_value = Some(cmdk_trimmed_arc(default_value.into()));
+        self
+    }
+
+    /// When enabled, highlights the first enabled option when nothing has been explicitly
+    /// navigated to yet (cmdk default behavior).
+    ///
+    /// Base UI Combobox defaults to `false` and opts in via `autoHighlight`.
+    pub fn auto_highlight(mut self, auto_highlight: bool) -> Self {
+        self.auto_highlight = auto_highlight;
         self
     }
 
@@ -2430,11 +2443,31 @@ impl CommandPalette {
                 }
             });
 
+            let auto_highlight = self.auto_highlight;
             let cur_active_raw = cx.watch_model(&active).cloned().unwrap_or(None);
             let cur_active = cur_active_raw.clone().map(cmdk_trimmed_arc);
-            let next_active = cur_active
-                .as_ref()
-                .and_then(|v| {
+            let next_active = if auto_highlight {
+                cur_active
+                    .as_ref()
+                    .and_then(|v| {
+                        entries_arc
+                            .iter()
+                            .enumerate()
+                            .find(|(idx, e)| {
+                                disabled_flags.get(*idx).copied() == Some(false)
+                                    && e.value.as_ref() == v.as_ref()
+                            })
+                            .map(|(_, e)| e.value.clone())
+                    })
+                    .or_else(|| {
+                        entries_arc
+                            .iter()
+                            .enumerate()
+                            .find(|(idx, _)| disabled_flags.get(*idx).copied() == Some(false))
+                            .map(|(_, e)| e.value.clone())
+                    })
+            } else {
+                cur_active.as_ref().and_then(|v| {
                     entries_arc
                         .iter()
                         .enumerate()
@@ -2444,13 +2477,7 @@ impl CommandPalette {
                         })
                         .map(|(_, e)| e.value.clone())
                 })
-                .or_else(|| {
-                    entries_arc
-                        .iter()
-                        .enumerate()
-                        .find(|(idx, _)| disabled_flags.get(*idx).copied() == Some(false))
-                        .map(|(_, e)| e.value.clone())
-                });
+            };
             if next_active != cur_active_raw {
                 let _ = cx
                     .app

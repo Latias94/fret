@@ -19,6 +19,7 @@ pub(super) fn preview_combobox(
 
     let conformance_demo = sections::demo(cx, value, open, query);
     let basic = sections::basic_frameworks(cx, &models);
+    let auto_highlight = sections::auto_highlight(cx, &models);
     let clear = sections::clear_button(cx, &models);
     let custom_items_top = sections::custom_items_top(cx, &models);
     let long_list = sections::long_list(cx, &models);
@@ -68,6 +69,21 @@ pub(super) fn preview_combobox(
     ])
     .into_element(cx);"#,
                 ),
+            DocSection::new("Auto Highlight", auto_highlight)
+                .description("Base UI opt-in: highlight the first enabled match on open/filter (`autoHighlight`).")
+                .code(
+                    "rust",
+                    r#"shadcn::Combobox::new(value, open)
+    .placeholder("Select a framework")
+    .query_model(query)
+    .auto_highlight(true)
+    .items([
+        shadcn::ComboboxItem::new("next", "Next.js"),
+        shadcn::ComboboxItem::new("svelte", "SvelteKit"),
+    ])
+    .into_element(cx);"#,
+                )
+                .no_shell(),
             DocSection::new("Clear Button", clear)
                 .description("Enable `show_clear` to show a clear affordance when a value is selected.")
                 .code(
