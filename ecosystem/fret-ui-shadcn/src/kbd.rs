@@ -11,13 +11,13 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 enum KbdContent {
     Text(Arc<str>),
     Children(Vec<AnyElement>),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Kbd {
     content: KbdContent,
     chrome: ChromeRefinement,
@@ -139,21 +139,21 @@ fn kbd_with_patch<H: UiHost>(
                 align: CrossAlign::Center,
                 wrap: false,
             },
-            move |cx| match &content {
-                KbdContent::Text(text) => vec![ui::label(cx, Arc::clone(text))
+            move |cx| match content {
+                KbdContent::Text(text) => vec![ui::label(cx, text)
                         .text_size_px(px)
                         .fixed_line_box_px(line_height)
                         .line_box_in_bounds()
                         .font_weight(FontWeight::MEDIUM)
                         .text_color(ColorRef::Color(fg))
                         .into_element(cx)],
-                KbdContent::Children(children) => children.clone(),
+                KbdContent::Children(children) => children,
             },
         )]
     })
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct KbdGroup {
     children: Vec<AnyElement>,
     layout: LayoutRefinement,

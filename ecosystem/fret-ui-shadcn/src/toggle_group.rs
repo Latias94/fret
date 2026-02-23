@@ -76,7 +76,6 @@ enum ToggleGroupModel {
     },
 }
 
-#[derive(Clone)]
 pub struct ToggleGroupItem {
     value: Arc<str>,
     children: Vec<AnyElement>,
@@ -159,7 +158,6 @@ impl ToggleGroupStyle {
     }
 }
 
-#[derive(Clone)]
 pub struct ToggleGroup {
     model: ToggleGroupModel,
     items: Vec<ToggleGroupItem>,

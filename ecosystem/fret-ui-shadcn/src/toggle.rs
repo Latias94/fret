@@ -140,7 +140,6 @@ impl ToggleStyle {
     }
 }
 
-#[derive(Clone)]
 pub struct Toggle {
     model: Option<Model<bool>>,
     default_pressed: bool,

@@ -569,7 +569,6 @@ impl CommandShortcut {
     }
 }
 
-#[derive(Clone)]
 pub struct Command {
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
@@ -819,7 +818,6 @@ impl CommandInput {
     }
 }
 
-#[derive(Clone)]
 pub struct CommandItem {
     label: Arc<str>,
     value: Arc<str>,
@@ -957,7 +955,6 @@ impl CommandItem {
 }
 
 /// shadcn/ui `CommandGroup` (v4).
-#[derive(Clone)]
 pub struct CommandGroup {
     heading: Option<Arc<str>>,
     items: Vec<CommandItem>,
@@ -1231,7 +1228,6 @@ impl CommandLoading {
     }
 }
 
-#[derive(Clone)]
 pub enum CommandEntry {
     Item(CommandItem),
     Group(CommandGroup),
@@ -1263,7 +1259,6 @@ impl From<CommandSeparator> for CommandEntry {
     }
 }
 
-#[derive(Clone)]
 pub struct CommandList {
     entries: Vec<CommandEntry>,
     disabled: bool,
@@ -1366,15 +1361,20 @@ impl CommandList {
 
             let disabled_flags: Vec<bool> = items
                 .iter()
-                .map(|i| {
+                .map(|item| {
+                    let Some(item) = item.as_ref() else {
+                        return true;
+                    };
                     disabled
-                        || i.disabled
-                        || (i.command.is_none()
-                            && i.on_select.is_none()
-                            && i.on_select_value.is_none())
+                        || item.disabled
+                        || (item.command.is_none()
+                            && item.on_select.is_none()
+                            && item.on_select_value.is_none())
                 })
                 .collect();
             let tab_stop = roving_focus_group::first_enabled(&disabled_flags);
+
+            let mut items = items;
 
             let roving = RovingFocusProps {
                 enabled: !disabled,
@@ -1533,7 +1533,7 @@ impl CommandList {
                                 out.push(loading.into_element(cx));
                             }
                             CommandPaletteRenderRow::Item(idx) => {
-                                let Some(item) = items.get(idx).cloned() else {
+                                let Some(item) = items.get_mut(idx).and_then(Option::take) else {
                                     continue;
                                 };
 
@@ -1676,7 +1676,6 @@ pub enum CommandPaletteA11ySelectedMode {
     Checked,
 }
 
-#[derive(Clone)]
 pub struct CommandPalette {
     model: Model<String>,
     entries: Vec<CommandEntry>,
@@ -1714,7 +1713,6 @@ pub struct CommandPalette {
     pub(crate) list_id_out_cell: Option<Rc<Cell<Option<GlobalElementId>>>>,
 }
 
-#[derive(Clone)]
 enum CommandPaletteRenderRow {
     Heading(Arc<str>),
     GroupPad,
@@ -1730,10 +1728,9 @@ fn command_palette_render_rows_for_query_with_options(
     filter: Option<&CommandPaletteFilter>,
 ) -> (
     Vec<CommandPaletteRenderRow>,
-    Vec<CommandItem>,
+    Vec<Option<CommandItem>>,
     Vec<Option<u32>>,
 ) {
-    #[derive(Clone)]
     enum PendingRow {
         Heading(Arc<str>),
         Separator(CommandSeparator),
@@ -1988,6 +1985,7 @@ fn command_palette_render_rows_for_query_with_options(
         })
         .collect();
 
+    let items = items.into_iter().map(Some).collect();
     (render_rows, items, item_groups)
 }
 
@@ -2332,7 +2330,7 @@ impl CommandPalette {
                 .unwrap_or_default();
             let query_for_render: Arc<str> = Arc::from(query.as_str());
 
-            let (render_rows, items, item_groups) =
+            let (render_rows, mut items, item_groups) =
                 command_palette_render_rows_for_query_with_options(
                     self.entries,
                     query.as_str(),
@@ -2345,7 +2343,7 @@ impl CommandPalette {
                 query.as_str().hash(&mut hasher);
                 render_rows.len().hash(&mut hasher);
                 for row in &render_rows {
-                    match row.clone() {
+                    match row {
                         CommandPaletteRenderRow::Heading(h) => {
                             "heading".hash(&mut hasher);
                             h.as_ref().hash(&mut hasher);
@@ -2368,11 +2366,11 @@ impl CommandPalette {
                         }
                         CommandPaletteRenderRow::Item(idx) => {
                             "item".hash(&mut hasher);
-                            if let Some(item) = items.get(idx) {
+                            if let Some(item) = items.get(*idx).and_then(|item| item.as_ref()) {
                                 item.label.as_ref().hash(&mut hasher);
                                 item.value.as_ref().hash(&mut hasher);
                                 item_groups
-                                    .get(idx)
+                                    .get(*idx)
                                     .copied()
                                     .flatten()
                                     .unwrap_or(u32::MAX)
@@ -2397,18 +2395,30 @@ impl CommandPalette {
 
             let (entries, disabled_flags): (Vec<PaletteEntry>, Vec<bool>) = items
                 .iter()
-                .map(|i| {
+                .map(|item| {
+                    let Some(item) = item.as_ref() else {
+                        return (
+                            PaletteEntry {
+                                value: Arc::from(""),
+                                command: None,
+                                on_select: None,
+                                on_select_value: None,
+                                disabled: true,
+                            },
+                            true,
+                        );
+                    };
                     let disabled = disabled
-                        || i.disabled
-                        || (i.command.is_none()
-                            && i.on_select.is_none()
-                            && i.on_select_value.is_none());
+                        || item.disabled
+                        || (item.command.is_none()
+                            && item.on_select.is_none()
+                            && item.on_select_value.is_none());
                     (
                         PaletteEntry {
-                            value: i.value.clone(),
-                            command: i.command.clone(),
-                            on_select: i.on_select.clone(),
-                            on_select_value: i.on_select_value.clone(),
+                            value: item.value.clone(),
+                            command: item.command.clone(),
+                            on_select: item.on_select.clone(),
+                            on_select_value: item.on_select_value.clone(),
                             disabled,
                         },
                         disabled,
@@ -2494,6 +2504,9 @@ impl CommandPalette {
             let active_idx = next_active.as_ref().and_then(|active_value| {
                 items.iter().enumerate().find_map(|(idx, item)| {
                     let enabled = disabled_flags.get(idx).copied() == Some(false);
+                    let Some(item) = item.as_ref() else {
+                        return None;
+                    };
                     if enabled && item.value.as_ref() == active_value.as_ref() {
                         Some(idx)
                     } else {
@@ -2599,7 +2612,7 @@ impl CommandPalette {
                     }
                     CommandPaletteRenderRow::Loading(loading) => loading.into_element(cx),
                     CommandPaletteRenderRow::Item(idx) => {
-                        let Some(item) = items.get(idx).cloned() else {
+                        let Some(item) = items.get_mut(idx).and_then(Option::take) else {
                             return cx.container(ContainerProps::default(), |_cx| Vec::new());
                         };
 
@@ -3236,7 +3249,6 @@ impl CommandPalette {
     }
 }
 
-#[derive(Clone)]
 pub struct CommandDialog {
     open: Model<bool>,
     query: Model<String>,
@@ -3888,8 +3900,6 @@ mod tests {
         let reasons: Arc<std::sync::Mutex<Vec<(bool, CommandDialogOpenChangeReason)>>> =
             Arc::new(std::sync::Mutex::new(Vec::new()));
 
-        let items = vec![CommandItem::new("Alpha")];
-
         let bounds = bounds();
         let mut services = FakeServices::default();
 
@@ -3911,18 +3921,22 @@ mod tests {
                 "cmdk-dialog-reason",
                 |cx| {
                     vec![
-                        CommandDialog::new(open.clone(), query.clone(), items.clone())
-                            .close_on_select(true)
-                            .on_open_change_with_reason(Some(Arc::new({
-                                let reasons = reasons.clone();
-                                move |is_open, reason| {
-                                    reasons
-                                        .lock()
-                                        .expect("reasons lock")
-                                        .push((is_open, reason));
-                                }
-                            })))
-                            .into_element(cx, |cx| crate::Button::new("Open").into_element(cx)),
+                        CommandDialog::new(
+                            open.clone(),
+                            query.clone(),
+                            vec![CommandItem::new("Alpha")],
+                        )
+                        .close_on_select(true)
+                        .on_open_change_with_reason(Some(Arc::new({
+                            let reasons = reasons.clone();
+                            move |is_open, reason| {
+                                reasons
+                                    .lock()
+                                    .expect("reasons lock")
+                                    .push((is_open, reason));
+                            }
+                        })))
+                        .into_element(cx, |cx| crate::Button::new("Open").into_element(cx)),
                     ]
                 },
             );
@@ -4177,19 +4191,21 @@ mod tests {
         let query = app.models_mut().insert(String::new());
         let selected_value = app.models_mut().insert(None::<Arc<str>>);
 
-        let items = vec![
-            CommandItem::new("Alpha")
-                .value("alpha-id")
-                .on_select_value_action({
-                    let selected_value = selected_value.clone();
-                    move |host, action_cx, _reason, value| {
-                        let _ = host.models_mut().update(&selected_value, |cur| {
-                            *cur = Some(value.clone());
-                        });
-                        host.request_redraw(action_cx.window);
-                    }
-                }),
-        ];
+        let build_items = || {
+            vec![
+                CommandItem::new("Alpha")
+                    .value("alpha-id")
+                    .on_select_value_action({
+                        let selected_value = selected_value.clone();
+                        move |host, action_cx, _reason, value| {
+                            let _ = host.models_mut().update(&selected_value, |cur| {
+                                *cur = Some(value.clone());
+                            });
+                            host.request_redraw(action_cx.window);
+                        }
+                    }),
+            ]
+        };
 
         let bounds = bounds();
         let mut services = FakeServices::default();
@@ -4202,7 +4218,7 @@ mod tests {
             bounds,
             open.clone(),
             query.clone(),
-            items.clone(),
+            build_items(),
             false,
         );
 
@@ -4224,7 +4240,7 @@ mod tests {
             bounds,
             open.clone(),
             query.clone(),
-            items,
+            build_items(),
             false,
         );
 
@@ -4256,7 +4272,7 @@ mod tests {
             }
         });
 
-        let items = vec![CommandItem::new("Alpha").on_select_action(on_select)];
+        let build_items = || vec![CommandItem::new("Alpha").on_select_action(on_select.clone())];
 
         let bounds = bounds();
         let mut services = FakeServices::default();
@@ -4269,7 +4285,7 @@ mod tests {
             bounds,
             open.clone(),
             query.clone(),
-            items.clone(),
+            build_items(),
             true,
         );
 
@@ -4291,7 +4307,7 @@ mod tests {
             bounds,
             open.clone(),
             query.clone(),
-            items,
+            build_items(),
             true,
         );
 
@@ -4319,7 +4335,7 @@ mod tests {
             }
         });
 
-        let items = vec![CommandItem::new("Alpha").on_select_action(on_select)];
+        let build_items = || vec![CommandItem::new("Alpha").on_select_action(on_select.clone())];
 
         let bounds = bounds();
         let mut services = FakeServices::default();
@@ -4332,7 +4348,7 @@ mod tests {
             bounds,
             open.clone(),
             query.clone(),
-            items.clone(),
+            build_items(),
             false,
         );
 
@@ -4354,7 +4370,7 @@ mod tests {
             bounds,
             open.clone(),
             query.clone(),
-            items,
+            build_items(),
             false,
         );
 
@@ -4382,9 +4398,11 @@ mod tests {
         );
         let mut services = FakeServices::default();
 
-        let items: Vec<CommandItem> = (0..80)
-            .map(|i| CommandItem::new(format!("Item {i}")))
-            .collect();
+        let build_items = || {
+            (0..80)
+                .map(|i| CommandItem::new(format!("Item {i}")))
+                .collect::<Vec<_>>()
+        };
 
         // First frame: mount overlay/content.
         let _ = render_dialog_frame(
@@ -4395,7 +4413,7 @@ mod tests {
             bounds,
             open.clone(),
             query.clone(),
-            items.clone(),
+            build_items(),
             true,
         );
         // Second/third frame: settle overlay layout and list metrics.
@@ -4407,7 +4425,7 @@ mod tests {
             bounds,
             open.clone(),
             query.clone(),
-            items.clone(),
+            build_items(),
             true,
         );
         let _ = render_dialog_frame(
@@ -4418,7 +4436,7 @@ mod tests {
             bounds,
             open,
             query,
-            items,
+            build_items(),
             true,
         );
 
@@ -4550,7 +4568,10 @@ mod tests {
         root
     }
 
-    fn row_signatures(rows: &[CommandPaletteRenderRow], items: &[CommandItem]) -> Vec<String> {
+    fn row_signatures(
+        rows: &[CommandPaletteRenderRow],
+        items: &[Option<CommandItem>],
+    ) -> Vec<String> {
         rows.iter()
             .map(|row| match row {
                 CommandPaletteRenderRow::Heading(h) => format!("H:{h}"),
@@ -4560,6 +4581,7 @@ mod tests {
                 CommandPaletteRenderRow::Item(idx) => {
                     let label = items
                         .get(*idx)
+                        .and_then(|i| i.as_ref())
                         .map(|i| i.label.as_ref())
                         .unwrap_or("<missing>");
                     format!("I:{label}")
@@ -4651,10 +4673,12 @@ mod tests {
         );
         let mut services = FakeServices::default();
 
-        let items = vec![
-            CommandItem::new("Alpha").on_select(CommandId::new("alpha")),
-            CommandItem::new("Beta").on_select(CommandId::new("beta")),
-        ];
+        let build_items = || {
+            vec![
+                CommandItem::new("Alpha").on_select(CommandId::new("alpha")),
+                CommandItem::new("Beta").on_select(CommandId::new("beta")),
+            ]
+        };
 
         let root = render_frame(
             &mut ui,
@@ -4663,7 +4687,7 @@ mod tests {
             window,
             bounds,
             model.clone(),
-            items.clone(),
+            build_items(),
         );
 
         let input = ui
@@ -4689,7 +4713,7 @@ mod tests {
             window,
             bounds,
             model.clone(),
-            items,
+            build_items(),
         );
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
 
@@ -4759,11 +4783,13 @@ mod tests {
         });
         let on_value_change_opt = Some(on_value_change.clone());
 
-        let items = vec![
-            CommandItem::new("Alpha").on_select(CommandId::new("alpha")),
-            CommandItem::new("Beta").on_select(CommandId::new("beta")),
-            CommandItem::new("Gamma").on_select(CommandId::new("gamma")),
-        ];
+        let build_items = || {
+            vec![
+                CommandItem::new("Alpha").on_select(CommandId::new("alpha")),
+                CommandItem::new("Beta").on_select(CommandId::new("beta")),
+                CommandItem::new("Gamma").on_select(CommandId::new("gamma")),
+            ]
+        };
 
         let root = render_frame_with_value_and_on_value_change(
             &mut ui,
@@ -4774,7 +4800,7 @@ mod tests {
             model.clone(),
             value.clone(),
             on_value_change_opt.clone(),
-            items.clone(),
+            build_items(),
         );
 
         let input = ui
@@ -4807,7 +4833,7 @@ mod tests {
             model,
             value.clone(),
             on_value_change_opt,
-            items,
+            build_items(),
         );
 
         let seen = seen.lock().unwrap_or_else(|e| e.into_inner()).clone();
@@ -4839,10 +4865,12 @@ mod tests {
         );
         let mut services = FakeServices::default();
 
-        let items = vec![
-            CommandItem::new("Alpha").on_select(CommandId::new("alpha")),
-            CommandItem::new("Beta").on_select(CommandId::new("beta")),
-        ];
+        let build_items = || {
+            vec![
+                CommandItem::new("Alpha").on_select(CommandId::new("alpha")),
+                CommandItem::new("Beta").on_select(CommandId::new("beta")),
+            ]
+        };
 
         let root = render_frame_with_value(
             &mut ui,
@@ -4852,7 +4880,7 @@ mod tests {
             bounds,
             query.clone(),
             selected.clone(),
-            items.clone(),
+            build_items(),
         );
 
         let input = ui
@@ -4868,7 +4896,7 @@ mod tests {
             bounds,
             query,
             selected.clone(),
-            items,
+            build_items(),
         );
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
 
@@ -4915,10 +4943,12 @@ mod tests {
         );
         let mut services = FakeServices::default();
 
-        let items = vec![
-            CommandItem::new("Alpha").on_select(CommandId::new("alpha")),
-            CommandItem::new("Beta").on_select(CommandId::new("beta")),
-        ];
+        let build_items = || {
+            vec![
+                CommandItem::new("Alpha").on_select(CommandId::new("alpha")),
+                CommandItem::new("Beta").on_select(CommandId::new("beta")),
+            ]
+        };
 
         let root = render_frame_with_value(
             &mut ui,
@@ -4928,7 +4958,7 @@ mod tests {
             bounds,
             query.clone(),
             selected.clone(),
-            items.clone(),
+            build_items(),
         );
 
         let input = ui
@@ -4954,7 +4984,7 @@ mod tests {
             bounds,
             query,
             selected.clone(),
-            items,
+            build_items(),
         );
 
         assert_eq!(
@@ -4983,11 +5013,10 @@ mod tests {
         let (_rows, items, _groups) =
             command_palette_render_rows_for_query_with_options(entries, "zzz", true, None);
 
-        assert!(
-            items
-                .iter()
-                .any(|item| item.value.as_ref() == "force-mounted")
-        );
+        assert!(items.iter().any(|item| {
+            item.as_ref()
+                .is_some_and(|item| item.value.as_ref() == "force-mounted")
+        }));
     }
 
     #[test]
@@ -5068,11 +5097,13 @@ mod tests {
         );
         let mut services = FakeServices::default();
 
-        let items: Vec<CommandItem> = (0..12)
-            .map(|i| {
-                CommandItem::new(format!("Item {i}")).on_select(CommandId::new(format!("i{i}")))
-            })
-            .collect();
+        let build_items = || {
+            (0..12)
+                .map(|i| {
+                    CommandItem::new(format!("Item {i}")).on_select(CommandId::new(format!("i{i}")))
+                })
+                .collect::<Vec<_>>()
+        };
 
         let root = render_frame(
             &mut ui,
@@ -5081,7 +5112,7 @@ mod tests {
             window,
             bounds,
             model.clone(),
-            items.clone(),
+            build_items(),
         );
 
         let input = ui
@@ -5109,7 +5140,7 @@ mod tests {
             window,
             bounds,
             model,
-            items,
+            build_items(),
         );
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
@@ -5156,11 +5187,13 @@ mod tests {
         );
         let mut services = FakeServices::default();
 
-        let items = vec![
-            CommandItem::new("Alpha").on_select(CommandId::new("alpha")),
-            CommandItem::new("Beta").on_select(CommandId::new("beta")),
-            CommandItem::new("Gamma").on_select(CommandId::new("gamma")),
-        ];
+        let build_items = || {
+            vec![
+                CommandItem::new("Alpha").on_select(CommandId::new("alpha")),
+                CommandItem::new("Beta").on_select(CommandId::new("beta")),
+                CommandItem::new("Gamma").on_select(CommandId::new("gamma")),
+            ]
+        };
 
         let root = render_frame(
             &mut ui,
@@ -5169,7 +5202,7 @@ mod tests {
             window,
             bounds,
             model.clone(),
-            items.clone(),
+            build_items(),
         );
 
         let input = ui
@@ -5279,7 +5312,7 @@ mod tests {
             window,
             bounds,
             model.clone(),
-            items,
+            build_items(),
         );
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
         if debug {
@@ -5339,11 +5372,13 @@ mod tests {
         );
         let mut services = FakeServices::default();
 
-        let items = vec![
-            CommandItem::new("Alpha").on_select(CommandId::new("alpha")),
-            CommandItem::new("Beta").on_select(CommandId::new("beta")),
-            CommandItem::new("Gamma").on_select(CommandId::new("gamma")),
-        ];
+        let build_items = || {
+            vec![
+                CommandItem::new("Alpha").on_select(CommandId::new("alpha")),
+                CommandItem::new("Beta").on_select(CommandId::new("beta")),
+                CommandItem::new("Gamma").on_select(CommandId::new("gamma")),
+            ]
+        };
 
         let root = render_frame_disable_pointer_selection(
             &mut ui,
@@ -5352,7 +5387,7 @@ mod tests {
             window,
             bounds,
             model.clone(),
-            items.clone(),
+            build_items(),
             true,
         );
 
@@ -5391,7 +5426,7 @@ mod tests {
             window,
             bounds,
             model.clone(),
-            items,
+            build_items(),
             true,
         );
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
@@ -5432,11 +5467,13 @@ mod tests {
         );
         let mut services = FakeServices::default();
 
-        let items = vec![
-            CommandItem::new("Alpha").on_select(CommandId::new("alpha")),
-            CommandItem::new("Beta").on_select(CommandId::new("beta")),
-            CommandItem::new("Gamma").on_select(CommandId::new("gamma")),
-        ];
+        let build_items = || {
+            vec![
+                CommandItem::new("Alpha").on_select(CommandId::new("alpha")),
+                CommandItem::new("Beta").on_select(CommandId::new("beta")),
+                CommandItem::new("Gamma").on_select(CommandId::new("gamma")),
+            ]
+        };
 
         let root = render_frame(
             &mut ui,
@@ -5445,7 +5482,7 @@ mod tests {
             window,
             bounds,
             model.clone(),
-            items.clone(),
+            build_items(),
         );
 
         let input = ui
@@ -5473,7 +5510,7 @@ mod tests {
             window,
             bounds,
             model.clone(),
-            items,
+            build_items(),
         );
 
         // Reorder items and ensure highlight stays on the same value (not the same index).

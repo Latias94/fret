@@ -202,6 +202,7 @@ impl ComboboxChips {
         self
     }
 
+    #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         combobox_chips_with_patch(
             cx,
@@ -682,7 +683,7 @@ fn combobox_chips_with_patch<H: UiHost>(
                                                                 ))
                                                                 .truncate()
                                                                 .into_element(cx),
-                                                            remove.clone(),
+                                                            remove,
                                                         ]
                                                     },
                                                 )]
@@ -800,8 +801,11 @@ fn combobox_chips_with_patch<H: UiHost>(
                     }
 
                     for (idx, group) in non_empty_groups.into_iter().enumerate() {
-                        let group_items: Vec<CommandItem> =
-                            group.items.into_iter().map(|item| make_item(item)).collect();
+                        let group_items: Vec<CommandItem> = group
+                            .items
+                            .into_iter()
+                            .map(|item| make_item(item))
+                            .collect();
                         entries.push(CommandEntry::Group(
                             CommandGroup::new(group_items).heading(group.heading),
                         ));

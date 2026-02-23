@@ -18,7 +18,7 @@ pub enum BadgeVariant {
     Link,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Badge {
     label: Arc<str>,
     variant: BadgeVariant,

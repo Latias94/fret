@@ -3143,7 +3143,7 @@ fn select_impl<H: UiHost>(
                                                                                                             align: CrossAlign::Center,
                                                                                                             wrap: false,
                                                                                                         },
-                                                                                                        |_cx| vec![icon.clone()],
+                                                                                                        move |_cx| vec![icon],
                                                                                                     )]
                                                                                                 },
                                                                                             );

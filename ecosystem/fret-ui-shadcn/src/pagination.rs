@@ -59,7 +59,7 @@ fn disabled_fg(theme: &Theme) -> Color {
     alpha(base_fg(theme), 0.5)
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Pagination {
     children: Vec<AnyElement>,
     layout: LayoutRefinement,
@@ -100,7 +100,7 @@ impl Pagination {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct PaginationContent {
     children: Vec<AnyElement>,
 }
@@ -132,7 +132,7 @@ impl PaginationContent {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct PaginationItem {
     child: AnyElement,
 }
@@ -148,7 +148,7 @@ impl PaginationItem {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct PaginationLink {
     children: Vec<AnyElement>,
     size: PaginationLinkSize,
@@ -226,8 +226,7 @@ impl PaginationLink {
             disabled_fg(&theme)
         };
 
-        let children = std::rc::Rc::new(self.children);
-        let children_for_content = children.clone();
+        let children = self.children;
 
         let (layout, padding, inner_gap, inner_wrap) = match self.size {
             PaginationLinkSize::Icon => {
@@ -260,69 +259,6 @@ impl PaginationLink {
             ),
         };
 
-        let content = move |cx: &mut ElementContext<'_, H>, hovered: bool, pressed: bool| {
-            let bg = if !enabled {
-                base_bg
-            } else if pressed {
-                pressed_bg
-            } else if hovered {
-                hover_bg
-            } else {
-                base_bg
-            };
-
-            let fg = if !enabled {
-                base_fg
-            } else if pressed || hovered {
-                accent_fg(&theme)
-            } else {
-                base_fg
-            };
-
-            let inner_layout =
-                decl_style::layout_style(&theme, LayoutRefinement::default().size_full());
-            let children = children_for_content.clone();
-
-            let row = cx.flex(
-                FlexProps {
-                    layout: inner_layout,
-                    direction: fret_core::Axis::Horizontal,
-                    gap: inner_gap,
-                    padding: Edges::all(Px(0.0)),
-                    justify: MainAlign::Center,
-                    align: CrossAlign::Center,
-                    wrap: inner_wrap,
-                },
-                move |_cx| {
-                    let mut out = Vec::new();
-                    for child in (*children).clone() {
-                        let mut child = child;
-                        if let fret_ui::element::ElementKind::Text(ref mut p) = child.kind {
-                            p.color = Some(fg);
-                        }
-                        if let fret_ui::element::ElementKind::SvgIcon(ref mut p) = child.kind {
-                            p.color = fg;
-                        }
-                        out.push(child);
-                    }
-                    out
-                },
-            );
-
-            vec![cx.container(
-                ContainerProps {
-                    layout,
-                    padding,
-                    background: Some(bg),
-                    border: Edges::all(Px(1.0)),
-                    border_color: Some(base_border),
-                    corner_radii: Corners::all(r),
-                    ..Default::default()
-                },
-                move |_cx| vec![row],
-            )]
-        };
-
         cx.pressable(
             PressableProps {
                 layout,
@@ -332,7 +268,63 @@ impl PaginationLink {
             },
             move |cx, st| {
                 cx.pressable_dispatch_command_if_enabled_opt(self.command);
-                content(cx, st.hovered, st.pressed)
+
+                let bg = if !enabled {
+                    base_bg
+                } else if st.pressed {
+                    pressed_bg
+                } else if st.hovered {
+                    hover_bg
+                } else {
+                    base_bg
+                };
+
+                let fg = if !enabled {
+                    base_fg
+                } else if st.pressed || st.hovered {
+                    accent_fg(&theme)
+                } else {
+                    base_fg
+                };
+
+                let inner_layout =
+                    decl_style::layout_style(&theme, LayoutRefinement::default().size_full());
+
+                let mut children = children;
+                for child in &mut children {
+                    if let fret_ui::element::ElementKind::Text(ref mut p) = child.kind {
+                        p.color = Some(fg);
+                    }
+                    if let fret_ui::element::ElementKind::SvgIcon(ref mut p) = child.kind {
+                        p.color = fg;
+                    }
+                }
+
+                let row = cx.flex(
+                    FlexProps {
+                        layout: inner_layout,
+                        direction: fret_core::Axis::Horizontal,
+                        gap: inner_gap,
+                        padding: Edges::all(Px(0.0)),
+                        justify: MainAlign::Center,
+                        align: CrossAlign::Center,
+                        wrap: inner_wrap,
+                    },
+                    move |_cx| children,
+                );
+
+                vec![cx.container(
+                    ContainerProps {
+                        layout,
+                        padding,
+                        background: Some(bg),
+                        border: Edges::all(Px(1.0)),
+                        border_color: Some(base_border),
+                        corner_radii: Corners::all(r),
+                        ..Default::default()
+                    },
+                    move |_cx| vec![row],
+                )]
             },
         )
     }

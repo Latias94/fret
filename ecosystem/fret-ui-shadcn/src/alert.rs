@@ -16,7 +16,7 @@ pub enum AlertVariant {
     Destructive,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Alert {
     children: Vec<AnyElement>,
     variant: AlertVariant,

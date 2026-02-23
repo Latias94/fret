@@ -313,7 +313,6 @@ pub(crate) fn button_text_style(theme: &Theme, size: ButtonSize) -> TextStyle {
     style
 }
 
-#[derive(Clone)]
 pub struct Button {
     label: Arc<str>,
     children: Vec<AnyElement>,
@@ -728,7 +727,8 @@ impl Button {
                         }
                     };
 
-                    let content = if children.is_empty() {
+                    let mut children = Some(children);
+                    let content = if children.as_ref().is_some_and(|c| c.is_empty()) {
                         vec![
                             ui::text(cx, a11y_label.clone())
                                 .text_size_px(text_px)
@@ -740,7 +740,7 @@ impl Button {
                                 .into_element(cx),
                         ]
                     } else {
-                        children.clone()
+                        children.take().unwrap_or_default()
                     };
 
                     vec![fret_ui_kit::declarative::stack::hstack(
@@ -784,9 +784,7 @@ mod tests {
     use fret_ui::element::{ContainerProps, ElementKind, LayoutStyle, Length, SizeStyle};
     use fret_ui::elements;
     use fret_ui::tree::UiTree;
-    use std::cell::RefCell;
     use std::collections::HashMap;
-    use std::rc::Rc;
 
     struct FakeServices;
 
@@ -863,9 +861,6 @@ mod tests {
         );
         let mut services = FakeServices;
 
-        let captured: Rc<RefCell<Option<AnyElement>>> = Rc::new(RefCell::new(None));
-        let captured_for_view = captured.clone();
-
         let root = fret_ui::declarative::render_root(
             &mut ui,
             &mut app,
@@ -873,42 +868,38 @@ mod tests {
             window,
             bounds,
             "outline-icon-button-shadow-and-ring-follow-rounded-full",
-            move |cx| {
+            |cx| {
                 let el = Button::new("Next")
                     .variant(ButtonVariant::Outline)
                     .size(ButtonSize::IconSm)
                     .test_id("test-outline-icon-button")
                     .refine_style(ChromeRefinement::default().rounded(fret_ui_kit::Radius::Full))
                     .into_element(cx);
-                *captured_for_view.borrow_mut() = Some(el.clone());
+                let ElementKind::Pressable(pressable) = &el.kind else {
+                    panic!("expected pressable root, got {:?}", el.kind);
+                };
+                let ring = pressable.focus_ring.as_ref().expect("focus ring");
+                assert!(
+                    ring.corner_radii.top_left.0 >= 900.0,
+                    "expected rounded-full focus ring, got {:?}",
+                    ring.corner_radii
+                );
+
+                let chrome = el.children.first().expect("chrome child");
+                let ElementKind::Container(chrome_props) = &chrome.kind else {
+                    panic!("expected chrome container, got {:?}", chrome.kind);
+                };
+                let shadow = chrome_props.shadow.as_ref().expect("outline shadow");
+                assert!(
+                    shadow.corner_radii.top_left.0 >= 900.0,
+                    "expected rounded-full shadow, got {:?}",
+                    shadow.corner_radii
+                );
+
                 vec![el]
             },
         );
         ui.set_root(root);
-
-        let el = captured.borrow().clone().expect("captured element");
-        let pressable = match el.kind {
-            ElementKind::Pressable(props) => props,
-            other => panic!("expected pressable root, got {other:?}"),
-        };
-        let ring = pressable.focus_ring.expect("focus ring");
-        assert!(
-            ring.corner_radii.top_left.0 >= 900.0,
-            "expected rounded-full focus ring, got {:?}",
-            ring.corner_radii
-        );
-
-        let chrome = el.children.first().expect("chrome child");
-        let chrome_props = match &chrome.kind {
-            ElementKind::Container(props) => props,
-            other => panic!("expected chrome container, got {other:?}"),
-        };
-        let shadow = chrome_props.shadow.as_ref().expect("outline shadow");
-        assert!(
-            shadow.corner_radii.top_left.0 >= 900.0,
-            "expected rounded-full shadow, got {:?}",
-            shadow.corner_radii
-        );
     }
 
     #[test]
@@ -1058,7 +1049,7 @@ mod tests {
 
     #[test]
     fn outline_button_border_uses_ring_color_when_focused() {
-        use std::cell::{Cell, RefCell};
+        use std::cell::Cell;
         use std::rc::Rc;
 
         use fret_runtime::FrameId;
@@ -1079,7 +1070,6 @@ mod tests {
         let ring = theme.color_token("ring");
 
         let id_out: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
-        let rendered_out: Rc<RefCell<Option<AnyElement>>> = Rc::new(RefCell::new(None));
 
         fn render_outline_frame(
             ui: &mut UiTree<App>,
@@ -1088,7 +1078,7 @@ mod tests {
             window: AppWindowId,
             bounds: Rect,
             id_out: Rc<Cell<Option<GlobalElementId>>>,
-            rendered_out: Rc<RefCell<Option<AnyElement>>>,
+            expect_border_color: Option<Color>,
         ) {
             // Keep the render closure's callsite stable across frames so element identity is
             // stable under `#[track_caller]`-anchored IDs.
@@ -1104,7 +1094,16 @@ mod tests {
                         .variant(ButtonVariant::Outline)
                         .into_element(cx);
                     id_out.set(Some(el.id));
-                    rendered_out.borrow_mut().replace(el.clone());
+                    if let Some(ring) = expect_border_color {
+                        let chrome = el
+                            .children
+                            .first()
+                            .expect("expected pressable to contain chrome container");
+                        let ElementKind::Container(props) = &chrome.kind else {
+                            panic!("expected chrome container element");
+                        };
+                        assert_eq!(props.border_color, Some(ring));
+                    }
                     vec![el]
                 },
             );
@@ -1120,7 +1119,7 @@ mod tests {
             window,
             bounds,
             id_out.clone(),
-            rendered_out.clone(),
+            None,
         );
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
@@ -1147,26 +1146,9 @@ mod tests {
             window,
             bounds,
             id_out.clone(),
-            rendered_out.clone(),
+            Some(ring),
         );
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
-
-        let el = rendered_out
-            .borrow_mut()
-            .take()
-            .expect("rendered element captured");
-        let ElementKind::Pressable(_pressable) = &el.kind else {
-            panic!("expected button root element to be Pressable");
-        };
-
-        let chrome = el
-            .children
-            .first()
-            .expect("expected pressable to contain chrome container");
-        let ElementKind::Container(props) = &chrome.kind else {
-            panic!("expected chrome container element");
-        };
-        assert_eq!(props.border_color, Some(ring));
     }
 
     #[test]

@@ -34,7 +34,6 @@ pub enum InputGroupControlKind {
     Textarea,
 }
 
-#[derive(Clone)]
 pub struct InputGroup {
     model: Model<String>,
     control: InputGroupControlKind,
@@ -929,7 +928,7 @@ pub enum InputGroupButtonSize {
     IconSm,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct InputGroupButton {
     label: Arc<str>,
     children: Vec<AnyElement>,
