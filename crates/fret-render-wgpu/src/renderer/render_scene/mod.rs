@@ -8,6 +8,7 @@ mod execute;
 mod executor;
 mod frame_bindings;
 mod helpers;
+mod perf_finalize;
 mod plan_compile;
 mod plan_reporting;
 mod quad_vertices;
