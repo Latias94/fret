@@ -61,6 +61,8 @@ scope: diagnostics, automation, tooling, refactor
       `ecosystem/fret-bootstrap/src/ui_diagnostics/removed_subtree_diagnostics.rs` (via `include!`) to reduce churn.
 - [x] Extract invalidation diagnostics out of `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into
       `ecosystem/fret-bootstrap/src/ui_diagnostics/invalidation_diagnostics.rs` (via `include!`) to reduce churn.
+- [x] Extract model/global change diagnostics out of `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into
+      `ecosystem/fret-bootstrap/src/ui_diagnostics/model_global_change_diagnostics.rs` (via `include!`) to reduce churn.
 
 ## M1b: Make `fret-diag` stats less monolithic (mechanical moves)
 
