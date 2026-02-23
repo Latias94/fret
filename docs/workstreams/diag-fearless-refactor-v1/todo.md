@@ -1,7 +1,7 @@
 ---
 title: Diagnostics Fearless Refactor v1 (TODO)
 status: draft
-date: 2026-02-22
+date: 2026-02-23
 scope: diagnostics, automation, tooling, refactor
 ---
 
@@ -196,7 +196,8 @@ scope: diagnostics, automation, tooling, refactor
 - [x] Publish an explicit migration plan (Option 1 first, Option 2 later).
   - `docs/workstreams/diag-fearless-refactor-v1/migration-plan.md`
 - [ ] Prefer structured evidence diffs over screenshot diffs where possible.
-- [ ] Document a recommended script authoring style for stability (selectors first, bounded waits).
+- [x] Document a recommended script authoring style for stability (selectors first, bounded waits).
+  - `docs/workstreams/diag-fearless-refactor-v1/script-authoring-style.md`
 
 ## M4: Remove debt (finish migration, delete redundant code)
 
@@ -214,6 +215,10 @@ diagnostics stack stays easy to evolve.
 - [x] Delete the legacy `apply_post_run_checks(...)` mega-signature once all callers are on `diag_run::RunChecks`.
 - [ ] Remove redundant semantics traversal helpers in gates:
   - prefer `crate::json_bundle::SemanticsResolver` + shared helpers (no `debug.semantics.nodes` re-greps).
+- [x] Audit result: no remaining `debug.semantics` path-digging in `crates/fret-diag` (use `SemanticsResolver` + helpers).
+  - Evidence anchors:
+    - `crates/fret-diag/src/json_bundle.rs`
+    - `crates/fret-diag/src/stats/semantics.rs`
 - [x] Fix `diag bundle-v2` semantics mode behavior for schema v2 bundles that are semantics-table-only (no inline semantics):
   - apply mode decisions based on resolved semantics (inline or `tables.semantics`),
   - prune `tables.semantics.entries[]` to the post-mode referenced set (avoid dropping all semantics by accident).
