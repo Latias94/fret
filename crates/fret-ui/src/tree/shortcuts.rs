@@ -237,10 +237,14 @@ impl<H: UiHost> UiTree<H> {
                             Some(true),
                         );
                         self.suppress_text_input_until_key_up = Some(params.key);
-                        app.push_effect(Effect::Command {
-                            window: self.window,
-                            command,
-                        });
+                        if self.window.is_some() && self.dispatch_command(app, services, &command) {
+                            self.request_redraw_coalesced(app);
+                        } else {
+                            app.push_effect(Effect::Command {
+                                window: self.window,
+                                command,
+                            });
+                        }
                         return true;
                     }
 
@@ -341,10 +345,14 @@ impl<H: UiHost> UiTree<H> {
                     );
                     self.clear_pending_shortcut(app);
                     self.suppress_text_input_until_key_up = Some(params.key);
-                    app.push_effect(Effect::Command {
-                        window: self.window,
-                        command,
-                    });
+                    if self.window.is_some() && self.dispatch_command(app, services, &command) {
+                        self.request_redraw_coalesced(app);
+                    } else {
+                        app.push_effect(Effect::Command {
+                            window: self.window,
+                            command,
+                        });
+                    }
                     return true;
                 }
 
@@ -432,10 +440,14 @@ impl<H: UiHost> UiTree<H> {
                     Some(true),
                 );
                 self.suppress_text_input_until_key_up = Some(params.key);
-                app.push_effect(Effect::Command {
-                    window: self.window,
-                    command,
-                });
+                if self.window.is_some() && self.dispatch_command(app, services, &command) {
+                    self.request_redraw_coalesced(app);
+                } else {
+                    app.push_effect(Effect::Command {
+                        window: self.window,
+                        command,
+                    });
+                }
                 return true;
             }
 

@@ -153,6 +153,7 @@ coverage for `sidebar-*` pages.
 - Added a scripted conformance gate that exercises the provider keyboard shortcut in forced-mobile mode (`Ctrl/Cmd+B` toggles the mobile sheet and restores focus).
   - Script: `tools/diag-scripts/ui-gallery-sidebar-mobile-shortcut-toggle.json`
   - Suite: `crates/fret-diag/src/diag_suite_scripts.rs`
+- Fixed forced-mobile shortcut toggling when focus is inside the sheet: keymap shortcuts now dispatch into the UI tree command path (when handled) and `SidebarMenuButton` participates in handling `sidebar.toggle` so `Ctrl/Cmd+B` can close the sheet reliably.
 
 ## Component-by-component audit (24/24)
 
