@@ -101,6 +101,9 @@ impl ElementHostWidget {
                 if props.visited {
                     cx.set_visited(true);
                 }
+                if props.multiselectable {
+                    cx.set_multiselectable(true);
+                }
                 if props.busy {
                     cx.set_busy(true);
                 }
@@ -250,6 +253,9 @@ impl ElementHostWidget {
                     }
                     if props.a11y.visited {
                         cx.set_visited(true);
+                    }
+                    if props.a11y.multiselectable {
+                        cx.set_multiselectable(true);
                     }
                     if let Some(expanded) = props.a11y.expanded {
                         cx.set_expanded(expanded);
@@ -416,6 +422,9 @@ impl ElementHostWidget {
             }
             if let Some(visited) = decoration.visited {
                 cx.set_visited(visited);
+            }
+            if let Some(multiselectable) = decoration.multiselectable {
+                cx.set_multiselectable(multiselectable);
             }
             if let Some(busy) = decoration.busy {
                 cx.set_busy(busy);

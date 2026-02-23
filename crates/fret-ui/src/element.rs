@@ -539,6 +539,7 @@ pub struct SemanticsDecoration {
     pub read_only: Option<bool>,
     pub hidden: Option<bool>,
     pub visited: Option<bool>,
+    pub multiselectable: Option<bool>,
     pub busy: Option<bool>,
     pub selected: Option<bool>,
     pub expanded: Option<bool>,
@@ -582,6 +583,7 @@ impl SemanticsDecoration {
             read_only: other.read_only.or(self.read_only),
             hidden: other.hidden.or(self.hidden),
             visited: other.visited.or(self.visited),
+            multiselectable: other.multiselectable.or(self.multiselectable),
             busy: other.busy.or(self.busy),
             selected: other.selected.or(self.selected),
             expanded: other.expanded.or(self.expanded),
@@ -647,6 +649,11 @@ impl SemanticsDecoration {
 
     pub fn visited(mut self, visited: bool) -> Self {
         self.visited = Some(visited);
+        self
+    }
+
+    pub fn multiselectable(mut self, multiselectable: bool) -> Self {
+        self.multiselectable = Some(multiselectable);
         self
     }
 
@@ -797,6 +804,7 @@ pub struct SemanticsProps {
     pub read_only: bool,
     pub hidden: bool,
     pub visited: bool,
+    pub multiselectable: bool,
     pub busy: bool,
     pub selected: bool,
     pub expanded: Option<bool>,
@@ -851,6 +859,7 @@ impl Default for SemanticsProps {
             read_only: false,
             hidden: false,
             visited: false,
+            multiselectable: false,
             busy: false,
             selected: false,
             expanded: None,
@@ -1286,6 +1295,10 @@ pub struct PressableA11y {
     ///
     /// This is a portable approximation of the "visited link" concept in HTML.
     pub visited: bool,
+    /// Indicates that this collection supports selecting multiple items.
+    ///
+    /// This is a portable approximation of ARIA `aria-multiselectable`.
+    pub multiselectable: bool,
     pub selected: bool,
     pub expanded: Option<bool>,
     pub checked: Option<bool>,

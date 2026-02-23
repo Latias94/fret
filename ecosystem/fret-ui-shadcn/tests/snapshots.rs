@@ -154,6 +154,8 @@ struct SnapSemanticsFlags {
     #[serde(default, skip_serializing_if = "is_false")]
     visited: bool,
     #[serde(default, skip_serializing_if = "is_false")]
+    multiselectable: bool,
+    #[serde(default, skip_serializing_if = "is_false")]
     busy: bool,
     #[serde(default, skip_serializing_if = "is_false")]
     read_only: bool,
@@ -629,6 +631,7 @@ where
                 disabled: n.flags.disabled,
                 hidden: n.flags.hidden,
                 visited: n.flags.visited,
+                multiselectable: n.flags.multiselectable,
                 busy: n.flags.busy,
                 read_only: n.flags.read_only,
                 selected: n.flags.selected,
@@ -793,6 +796,32 @@ fn snapshot_badge_link_visited_semantics() {
                     rel: None,
                 })
                 .visited(true)
+                .into_element(cx),
+        ]
+    });
+}
+
+#[test]
+fn snapshot_command_palette_multiselectable_semantics() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(420.0), Px(240.0)),
+    );
+    snapshot_for_root("command_palette_multiselectable_semantics", bounds, |cx| {
+        let query = cx.app.models_mut().insert("".to_string());
+        let items = vec![
+            fret_ui_shadcn::command::CommandItem::new("Alpha")
+                .value("alpha")
+                .into(),
+            fret_ui_shadcn::command::CommandItem::new("Beta")
+                .value("beta")
+                .into(),
+        ];
+        vec![
+            fret_ui_shadcn::command::CommandPalette::new(query, [])
+                .entries(items)
+                .a11y_label("Multi-select listbox")
+                .list_multiselectable(true)
                 .into_element(cx),
         ]
     });

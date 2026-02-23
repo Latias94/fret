@@ -47,6 +47,13 @@ Last updated: 2026-02-23
 - [x] Adopt in at least one shadcn component (badge link).
 - [x] Gate via snapshot and unit test.
 
+## P0: Multiselectable semantics (collections)
+
+- [x] Decide contract shape (node flag) and intended primary role (`ListBox`).
+- [x] Map into AccessKit (`multiselectable`).
+- [x] Adopt in at least one shadcn component (combobox chips listbox).
+- [x] Gate via snapshot and unit test.
+
 ## Hygiene
 
 - [x] Add/refresh ADR(s) for any new hard-to-change surfaces (ADR 0290).

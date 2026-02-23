@@ -178,6 +178,9 @@ pub fn tree_update_from_snapshot(snapshot: &SemanticsSnapshot, scale_factor: f64
         if node.flags.visited {
             out.set_visited();
         }
+        if node.flags.multiselectable {
+            out.set_multiselectable();
+        }
         if node.flags.required {
             out.set_required();
         }

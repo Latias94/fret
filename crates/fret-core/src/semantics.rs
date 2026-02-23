@@ -103,6 +103,10 @@ pub struct SemanticsFlags {
     ///
     /// This is a portable approximation of the "visited link" concept in HTML.
     pub visited: bool,
+    /// Indicates that this collection supports selecting multiple items.
+    ///
+    /// This is a portable approximation of ARIA `aria-multiselectable`.
+    pub multiselectable: bool,
     pub selected: bool,
     pub expanded: bool,
     /// Legacy binary checked state.

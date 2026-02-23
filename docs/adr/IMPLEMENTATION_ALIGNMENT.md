@@ -24,9 +24,9 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 ## Summary
 
 - Last updated: 2026-02-23
-- ADR count (numbered): 259
+- ADR count (numbered): 260
 
-- Aligned: 105
+- Aligned: 106
 - Aligned (with known gaps): 94
 - N/A (superseded): 2
 - Not audited: 18
@@ -37,6 +37,7 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 
 | ADR | ADR Status | Implementation Alignment | Notes |
 | --- | --- | --- | --- |
+| [`0295-a11y-multiselectable-semantics-v1.md`](0295-a11y-multiselectable-semantics-v1.md) | Accepted | Aligned | Adds a portable multiselectable semantics surface (`SemanticsFlags.multiselectable`) to represent `aria-multiselectable` on collection containers and map it into platform APIs (AccessKit `multiselectable`). Evidence: contract `crates/fret-core/src/semantics.rs`, UI writers `crates/fret-ui/src/{widget.rs,element.rs,declarative/host_widget/semantics.rs}`, AccessKit mapping + test `crates/fret-a11y-accesskit/src/{mapping.rs,tests.rs}`, ecosystem adoption `ecosystem/fret-ui-shadcn/src/combobox_chips.rs`, shadcn gate `ecosystem/fret-ui-shadcn/tests/snapshots/command_palette_multiselectable_semantics.json`, diagnostics snapshot/fingerprint `ecosystem/fret-bootstrap/src/ui_diagnostics/{semantics.rs,ui_diagnostics.rs}`. |
 | [`0294-a11y-visited-semantics-v1.md`](0294-a11y-visited-semantics-v1.md) | Accepted | Aligned | Adds a portable visited-link semantics surface (`SemanticsFlags.visited`) to represent visited state for link roles and map it into platform APIs (AccessKit `visited`). Evidence: contract `crates/fret-core/src/semantics.rs`, UI writers `crates/fret-ui/src/{widget.rs,element.rs,declarative/host_widget/semantics.rs}`, AccessKit mapping + test `crates/fret-a11y-accesskit/src/{mapping.rs,tests.rs}`, ecosystem adoption + gate `ecosystem/fret-ui-shadcn/src/badge.rs` and `ecosystem/fret-ui-shadcn/tests/snapshots/badge_link_visited_semantics.json`, diagnostics snapshot/fingerprint `ecosystem/fret-bootstrap/src/ui_diagnostics/{semantics.rs,ui_diagnostics.rs}`. |
 | [`0293-a11y-hidden-semantics-v1.md`](0293-a11y-hidden-semantics-v1.md) | Accepted | Aligned | Adds a portable hidden semantics surface (`SemanticsFlags.hidden`) to exclude nodes from the platform accessibility tree (ARIA `aria-hidden`), mapping into AccessKit `hidden` and wiring declarative `PressableA11y.hidden` without relying on role/action coercion. Evidence: contract `crates/fret-core/src/semantics.rs`, UI writers `crates/fret-ui/src/{widget.rs,declarative/host_widget/semantics.rs}`, AccessKit mapping + test `crates/fret-a11y-accesskit/src/{mapping.rs,tests.rs}`, shadcn gate `ecosystem/fret-ui-shadcn/tests/snapshots/pressable_hidden_semantics.json` (and usage in `ecosystem/fret-ui-shadcn/src/select.rs`), diagnostics snapshot/fingerprint `ecosystem/fret-bootstrap/src/ui_diagnostics/{semantics.rs,ui_diagnostics.rs}`. |
 | [`0292-a11y-busy-semantics-v1.md`](0292-a11y-busy-semantics-v1.md) | Accepted | Aligned | Adds a portable busy/loading semantics surface (`SemanticsFlags.busy`) to represent `aria-busy`-like outcomes for regions and map them into platform APIs (AccessKit `busy`). Evidence: contract `crates/fret-core/src/semantics.rs`, UI writers `crates/fret-ui/src/{widget.rs,element.rs,declarative/host_widget/semantics.rs}`, AccessKit mapping + test `crates/fret-a11y-accesskit/src/{mapping.rs,tests.rs}`, ecosystem adoption + gate `ecosystem/fret-ui-shadcn/src/command.rs` and `ecosystem/fret-ui-shadcn/tests/snapshots/command_list_busy_semantics.json`, diagnostics snapshot/fingerprint `ecosystem/fret-bootstrap/src/ui_diagnostics/{semantics.rs,ui_diagnostics.rs}`. |

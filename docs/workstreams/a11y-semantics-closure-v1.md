@@ -1,6 +1,6 @@
 # A11y semantics closure (v1)
 
-Status: Shippable (pressed + required/invalid + busy + hidden + visited closed)
+Status: Shippable (pressed + required/invalid + busy + hidden + visited + multiselectable closed)
 
 Last updated: 2026-02-23
 
@@ -52,15 +52,18 @@ A semantic surface is considered “closed” only when all boxes are checked:
   (ADR 0293).
 - Visited semantics: `SemanticsFlags.visited` + AccessKit mapping + shadcn badge link adoption
   (ADR 0294).
+- Multiselectable semantics: `SemanticsFlags.multiselectable` + AccessKit mapping + shadcn combobox chips adoption
+  (ADR 0295).
 - Viewport semantics for scroll containers: `SemanticsRole::Viewport` mapping.
 
 ### Next P0 candidates (high ROI, low policy surface)
 
 These are common across apps/editors and map directly into platform APIs:
 
-1. **Multiselectable listbox semantics**
-   - Goal: mark multi-select listboxes/collections as multiselectable (AccessKit `multiselectable`) for parity with ARIA
-     listbox patterns.
+1. **Live region announcements**
+   - Goal: enable structured announcements (polite/assertive/atomic) without encoding "status text" into random labels.
+2. **Heading semantics adoption**
+   - Goal: consistently publish `role=Heading` (or equivalent) + `level` for document/editor-like UIs.
 
 ### P1 candidates (valuable, but may require more policy decisions)
 

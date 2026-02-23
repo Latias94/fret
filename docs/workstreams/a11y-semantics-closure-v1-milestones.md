@@ -9,6 +9,7 @@ Last updated: 2026-02-23
 - M3: Complete (busy semantics: contract + AccessKit mapping + shadcn gates + ADR 0292).
 - M4: Complete (hidden semantics: contract + AccessKit mapping + shadcn gate + ADR 0293).
 - M5: Complete (visited semantics: contract + AccessKit mapping + shadcn gate + ADR 0294).
+- M6: Complete (multiselectable semantics: contract + AccessKit mapping + shadcn gate + ADR 0295).
 
 ## M0 — Inventory and priority agreement
 
@@ -61,4 +62,13 @@ Exit criteria:
 - Portable contract exists and is documented.
 - AccessKit mapping exists (or documented fallback).
 - shadcn adoption exists for at least one real link surface.
+- Gate exists (snapshot and unit test).
+
+## M6 — Multiselectable semantics closed
+
+Exit criteria:
+
+- Portable contract exists and is documented.
+- AccessKit mapping exists (or documented fallback).
+- Ecosystem adoption exists for at least one multi-select collection.
 - Gate exists (snapshot and unit test).

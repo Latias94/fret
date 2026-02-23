@@ -1755,6 +1755,7 @@ pub struct CommandPalette {
     input_expanded: Option<bool>,
     input_test_id: Option<Arc<str>>,
     list_test_id: Option<Arc<str>>,
+    list_multiselectable: bool,
     a11y_selected_mode: CommandPaletteA11ySelectedMode,
     on_value_change: Option<OnValueChange>,
     input_wrapper_h: MetricRef,
@@ -2117,6 +2118,7 @@ impl CommandPalette {
             input_expanded: None,
             input_test_id: None,
             list_test_id: None,
+            list_multiselectable: false,
             a11y_selected_mode: CommandPaletteA11ySelectedMode::Active,
             on_value_change: None,
             input_wrapper_h: Px(36.0).into(),
@@ -2285,6 +2287,11 @@ impl CommandPalette {
         self
     }
 
+    pub fn list_multiselectable(mut self, multiselectable: bool) -> Self {
+        self.list_multiselectable = multiselectable;
+        self
+    }
+
     pub fn a11y_selected_mode(mut self, mode: CommandPaletteA11ySelectedMode) -> Self {
         self.a11y_selected_mode = mode;
         self
@@ -2379,6 +2386,7 @@ impl CommandPalette {
             let disable_pointer_selection = self.disable_pointer_selection;
             let input_test_id = self.input_test_id.clone();
             let list_test_id = self.list_test_id.clone();
+            let list_multiselectable = self.list_multiselectable;
             let list_id_out_cell = self.list_id_out_cell.clone();
             let a11y_selected_mode = self.a11y_selected_mode;
             let on_value_change = self.on_value_change.clone();
@@ -3314,6 +3322,7 @@ impl CommandPalette {
             let list = list.attach_semantics(SemanticsDecoration {
                 role: Some(SemanticsRole::ListBox),
                 busy: Some(list_busy),
+                multiselectable: list_multiselectable.then_some(true),
                 labelled_by_element: list_labelled_by,
                 ..Default::default()
             });

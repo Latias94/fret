@@ -1340,6 +1340,10 @@ impl<'a, H: UiHost> SemanticsCx<'a, H> {
         self.flags.visited = visited;
     }
 
+    pub fn set_multiselectable(&mut self, multiselectable: bool) {
+        self.flags.multiselectable = multiselectable;
+    }
+
     pub fn set_selected(&mut self, selected: bool) {
         self.flags.selected = selected;
     }
