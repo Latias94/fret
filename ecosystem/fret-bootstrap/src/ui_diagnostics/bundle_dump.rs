@@ -108,7 +108,7 @@ pub(super) fn dump_bundle_with_options(
     let default_semantics_mode = if is_script_dump {
         bundle::BundleSemanticsModeV1::Last
     } else {
-        bundle::BundleSemanticsModeV1::All
+        bundle::BundleSemanticsModeV1::Changed
     };
     let semantics_mode = bundle::BundleSemanticsModeV1::from_env_or_default(default_semantics_mode);
 
