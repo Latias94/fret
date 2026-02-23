@@ -412,6 +412,16 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `cargo test -p fret-render-wgpu --lib`
     - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
 
+- [x] REN-VNEXT-refactor-110 Stage 11: extract frame perf aggregation + snapshot into a dedicated helper.
+  - Goal: isolate the “frame perf → aggregated perf + last-frame snapshot” bookkeeping while keeping accounting drift-free.
+  - Landed (step 1): move SVG/memory snapshots, aggregated perf accumulation, and `last_frame_perf` construction behind `Renderer::finalize_frame_perf_after_dispatch`.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/render_scene/perf_finalize.rs` (`finalize_frame_perf_after_dispatch`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (call site)
+  - Gates:
+    - `cargo test -p fret-render-wgpu --lib`
+    - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
 ## M7 — Post-v1 semantic expansions (deferred backlog)
 
 These items are intentionally *not* part of the vNext refactor’s v1 closure. They are common UI
