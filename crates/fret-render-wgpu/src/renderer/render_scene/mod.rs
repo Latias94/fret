@@ -9,6 +9,7 @@ mod executor;
 mod frame_bindings;
 mod helpers;
 mod plan_compile;
+mod plan_reporting;
 mod quad_vertices;
 mod recorders;
 mod render;
