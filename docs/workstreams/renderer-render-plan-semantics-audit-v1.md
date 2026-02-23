@@ -48,6 +48,22 @@ Guardrail:
 - `ClipMask` always clears its destination mask target (it is an initialization pass).
 - `PathMsaaBatch` always composites with `LoadOp::Load` into its destination target.
 
+Scissored in-place effect preservation (v1)
+
+Some effect passes are intentionally executed *in place* (write back into the same `srcdst` target) while also being **scissored** to a smaller
+region. In this pattern, **outside-region content must remain untouched**, which implies:
+
+- the effect pass uses `LoadOp::Load`,
+- `dst_scissor` is set (dst-local),
+- and the plan compiler must preserve the outside region by using a scratch target to stage the original content (typically a pre-blit) before
+  the scissored `LoadOp::Load` pass runs.
+
+This is relied on by scissored postprocess steps such as:
+
+- `ColorAdjust`, `ColorMatrix`, `AlphaThreshold` (single-scratch in-place),
+- `BackdropWarp` (single-scratch in-place),
+- and `DropShadow` (two-scratch pattern with an explicit restore + composite step).
+
 ### 3) Coordinate spaces
 
 - `render_space_offset_u32` selects the correct `RenderSpaceUniform` for a pass.

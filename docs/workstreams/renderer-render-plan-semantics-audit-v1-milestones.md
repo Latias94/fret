@@ -22,6 +22,14 @@ Completion criteria:
 - At least 3 targeted tests cover the most failure-prone semantics (lifetime/load/scissor mapping).
 - Tests are stable and do not require large golden assets.
 
+Progress record (Scissored in-place effect preservation tests):
+
+- Date: 2026-02-23
+- Status: Landed (unit tests)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan/tests.rs` (`scissored_*` tests)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` (in-place patterns + `LoadOp::Load`)
+
 ## M3 — Plan diagnostics for refactors
 
 Completion criteria:
