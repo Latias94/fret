@@ -2068,7 +2068,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
         );
     }
     if check_pixels_changed_test_id.is_some() {
-        push_env_if_missing(&mut launch_env, "FRET_DIAG_SCREENSHOTS", "1");
+        push_env_if_missing(&mut launch_env, "FRET_DIAG_GPU_SCREENSHOTS", "1");
     }
 
     let resource_footprint_thresholds = ResourceFootprintThresholds {
@@ -6588,7 +6588,7 @@ fn check_out_dir_for_pixels_changed(
     let screenshots_result_path = out_dir.join("screenshots.result.json");
     if !screenshots_result_path.is_file() {
         return Err(format!(
-            "pixels changed check requires screenshots results under {} (set FRET_DIAG_SCREENSHOTS=1 and add capture_screenshot steps): {}",
+            "pixels changed check requires screenshots results under {} (set FRET_DIAG_GPU_SCREENSHOTS=1 and add capture_screenshot steps): {}",
             out_dir.display(),
             screenshots_result_path.display()
         ));

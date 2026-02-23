@@ -282,7 +282,7 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
         // The UI Gallery suite includes scripts that run the `--check-pixels-changed`
         // post-run gate. Enable screenshots so those checks can resolve semantics
         // bounds against captured PNGs.
-        push_env_if_missing(&mut launch_env, "FRET_DIAG_SCREENSHOTS", "1");
+        push_env_if_missing(&mut launch_env, "FRET_DIAG_GPU_SCREENSHOTS", "1");
         (
             diag_suite_scripts::ui_gallery_suite_scripts()
                 .into_iter()
@@ -304,7 +304,7 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
         push_env_if_missing(&mut launch_env, "FRET_DIAG_REDACT_TEXT", "0");
         // Some motion feel gates use the `--check-pixels-changed` post-run check, which
         // requires GPU screenshots.
-        push_env_if_missing(&mut launch_env, "FRET_DIAG_SCREENSHOTS", "1");
+        push_env_if_missing(&mut launch_env, "FRET_DIAG_GPU_SCREENSHOTS", "1");
         (
             vec![
                 resolve_path(
@@ -373,7 +373,7 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
     } else if is_ui_gallery_code_editor_suite {
         // The code-editor-focused UI Gallery suite also includes the pixels-changed
         // gate (soft-wrap editing baseline), so screenshots must be enabled.
-        push_env_if_missing(&mut launch_env, "FRET_DIAG_SCREENSHOTS", "1");
+        push_env_if_missing(&mut launch_env, "FRET_DIAG_GPU_SCREENSHOTS", "1");
         (
             diag_suite_scripts::ui_gallery_code_editor_suite_scripts()
                 .into_iter()
@@ -407,7 +407,7 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
     } else if is_ui_gallery_text_wrap_suite {
         // Text wrap/baseline gates rely on screenshots and should run with deterministic
         // bundled fonts on desktop.
-        push_env_if_missing(&mut launch_env, "FRET_DIAG_SCREENSHOTS", "1");
+        push_env_if_missing(&mut launch_env, "FRET_DIAG_GPU_SCREENSHOTS", "1");
         push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_BOOTSTRAP_FONTS", "1");
 
         (
@@ -439,7 +439,7 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
         // Conformance scripts rely on stable role-and-name semantics selectors and use
         // screenshot evidence for overlap regressions.
         push_env_if_missing(&mut launch_env, "FRET_DIAG_REDACT_TEXT", "0");
-        push_env_if_missing(&mut launch_env, "FRET_DIAG_SCREENSHOTS", "1");
+        push_env_if_missing(&mut launch_env, "FRET_DIAG_GPU_SCREENSHOTS", "1");
         // Ensure bundled fonts are loaded on desktop so font metrics are deterministic.
         push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_BOOTSTRAP_FONTS", "1");
 
@@ -694,7 +694,7 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
         push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE", "1");
         push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE_SHELL", "1");
         // This harness uses `capture_screenshot` to enable the `--check-pixels-changed` gate.
-        push_env_if_missing(&mut launch_env, "FRET_DIAG_SCREENSHOTS", "1");
+        push_env_if_missing(&mut launch_env, "FRET_DIAG_GPU_SCREENSHOTS", "1");
         (
             vec![resolve_path(
                 &workspace_root,
@@ -706,7 +706,7 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
         push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE", "1");
         push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE_SHELL", "1");
         // This harness uses `capture_screenshot` to enable the `--check-pixels-changed` gate.
-        push_env_if_missing(&mut launch_env, "FRET_DIAG_SCREENSHOTS", "1");
+        push_env_if_missing(&mut launch_env, "FRET_DIAG_GPU_SCREENSHOTS", "1");
         (
             vec![resolve_path(
                 &workspace_root,
@@ -720,7 +720,7 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
         push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE", "1");
         push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE_SHELL", "1");
         // This harness uses `capture_screenshot` to enable the `--check-pixels-changed` gate.
-        push_env_if_missing(&mut launch_env, "FRET_DIAG_SCREENSHOTS", "1");
+        push_env_if_missing(&mut launch_env, "FRET_DIAG_GPU_SCREENSHOTS", "1");
         (
             vec![resolve_path(
                 &workspace_root,
@@ -732,7 +732,7 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
         push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE", "1");
         push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE_SHELL", "1");
         // This harness uses `capture_screenshot` to enable the `--check-pixels-changed` gate.
-        push_env_if_missing(&mut launch_env, "FRET_DIAG_SCREENSHOTS", "1");
+        push_env_if_missing(&mut launch_env, "FRET_DIAG_GPU_SCREENSHOTS", "1");
         (
             vec![resolve_path(
                 &workspace_root,
@@ -746,7 +746,7 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
         push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE", "1");
         push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE_SHELL", "1");
         // This harness uses `capture_screenshot` to enable the `--check-pixels-changed` gate.
-        push_env_if_missing(&mut launch_env, "FRET_DIAG_SCREENSHOTS", "1");
+        push_env_if_missing(&mut launch_env, "FRET_DIAG_GPU_SCREENSHOTS", "1");
         (
             vec![resolve_path(
                 &workspace_root,

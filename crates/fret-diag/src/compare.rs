@@ -648,7 +648,7 @@ pub(crate) fn maybe_launch_demo(
     }
 
     if wants_screenshots {
-        cmd.env("FRET_DIAG_SCREENSHOTS", "1");
+        cmd.env("FRET_DIAG_GPU_SCREENSHOTS", "1");
     }
     for (key, value) in launch_env {
         match key.as_str() {
