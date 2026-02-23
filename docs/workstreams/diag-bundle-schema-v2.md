@@ -51,9 +51,23 @@ Snapshots may omit `debug.semantics` entirely and rely on:
 ### Controls
 
 - `FRET_DIAG_BUNDLE_SCHEMA_VERSION=1|2`
-  - default: manual dumps `1`, script-driven dumps `2`
+  - default: `2` for both manual and script-driven dumps (can be forced to `1` for legacy tooling)
 - `FRET_DIAG_BUNDLE_SEMANTICS_MODE=all|changed|last|off`
-  - in v2, this controls inline semantics presence; table remains available unless `off`
+  - default: script-driven dumps `last`, non-script dumps `changed`
+  - in v2:
+    - this controls which snapshots keep inline semantics (`debug.semantics`)
+    - after applying the mode, `tables.semantics.entries[]` is pruned to only entries still referenced by remaining snapshots
+    - `off` drops both inline semantics and the semantics table
+
+Additional size knobs (dump-time policies):
+
+- `FRET_DIAG_BUNDLE_DUMP_MAX_SEMANTICS_NODES=<usize>`
+  - caps exported `semantics.nodes[]` (applies to both inline semantics and `tables.semantics` entries)
+- `FRET_DIAG_BUNDLE_DUMP_SEMANTICS_TEST_IDS_ONLY=0|1`
+  - when enabled, export only nodes with `test_id` plus their ancestor closure (applies to both inline semantics and `tables.semantics`)
+- `FRET_DIAG_BUNDLE_WRITE_INDEX=0|1`
+  - controls writing agent/tool-friendly sidecars (`bundle.index.json`, `bundle.meta.json`, `test_ids.index.json`, plus `script.result.json` for script dumps)
+  - default: enabled
 
 ## Compatibility expectations
 
@@ -66,6 +80,7 @@ Snapshots may omit `debug.semantics` entirely and rely on:
 
 - v2 introduces a second semantics storage location (table). Consumers must prefer inline semantics when present and fall back to the table.
 - Dedup requires stable `semantics_fingerprint`. If absent, inline semantics must be kept.
+- When semantics are aggressively filtered/capped, some consumers may require updated expectations (e.g. scripts that rely on non-test-id nodes).
 
 ## Evidence / tracking
 
