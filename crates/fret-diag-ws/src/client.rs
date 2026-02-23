@@ -91,29 +91,30 @@ impl DevtoolsWsClient {
             default_session_id: Mutex::new(None),
         });
 
-        let ws_url =
-            append_token_query_param_simple(&cfg.ws_url, &cfg.token, "fret_devtools_token");
-        let ws = web_sys::WebSocket::new(&ws_url).map_err(|_| "WebSocket::new failed")?;
-
-        let state_open = Arc::clone(&state);
-        let cfg_open = cfg.clone();
-        let ws_open = ws.clone();
-        let on_open = Closure::wrap(Box::new(move |_e: web_sys::Event| {
-            let hello = DiagTransportMessageV1 {
+        // Queue hello before creating the socket so it can't be lost if `onopen` is missed due to
+        // a fast OPEN transition. The hello message must be the first thing we send so the server
+        // can create a session_id and we can capture it via hello_ack.
+        if let Ok(mut outbox) = state.outbox.lock() {
+            outbox.push_back(DiagTransportMessageV1 {
                 schema_version: 1,
                 r#type: "hello".to_string(),
                 session_id: None,
                 request_id: Some(1),
                 payload: serde_json::json!({
-                    "client_kind": cfg_open.client_kind.as_str(),
-                    "client_version": cfg_open.client_version,
-                    "capabilities": cfg_open.capabilities,
+                    "client_kind": cfg.client_kind.as_str(),
+                    "client_version": cfg.client_version.clone(),
+                    "capabilities": cfg.capabilities.clone(),
                 }),
-            };
-            if let Ok(text) = serde_json::to_string(&hello) {
-                let _ = ws_open.send_with_str(&text);
-            }
+            });
+        }
 
+        let ws_url =
+            append_token_query_param_simple(&cfg.ws_url, &cfg.token, "fret_devtools_token");
+        let ws = web_sys::WebSocket::new(&ws_url).map_err(|_| "WebSocket::new failed")?;
+
+        let state_open = Arc::clone(&state);
+        let ws_open = ws.clone();
+        let on_open = Closure::wrap(Box::new(move |_e: web_sys::Event| {
             flush_wasm_outbox(&ws_open, &state_open);
         }) as Box<dyn FnMut(web_sys::Event)>);
         ws.set_onopen(Some(on_open.as_ref().unchecked_ref()));
@@ -150,6 +151,10 @@ impl DevtoolsWsClient {
             // Best-effort: callers can re-create the client to reconnect.
         }) as Box<dyn FnMut(web_sys::CloseEvent)>);
         ws.set_onclose(Some(on_close.as_ref().unchecked_ref()));
+
+        // If the socket is already OPEN (or becomes OPEN before `onopen` is observed), flush the
+        // queued hello immediately.
+        flush_wasm_outbox(&ws, &state);
 
         Ok(Self {
             state,
@@ -366,7 +371,10 @@ fn flush_wasm_outbox(ws: &web_sys::WebSocket, state: &Arc<State>) {
         let Ok(text) = serde_json::to_string(&msg) else {
             continue;
         };
-        let _ = ws.send_with_str(&text);
+        if ws.send_with_str(&text).is_err() {
+            outbox.push_front(msg);
+            break;
+        }
     }
 }
 
