@@ -1128,16 +1128,24 @@ impl UiGalleryDriver {
             env_bool(env_name, default)
         };
 
-        let view_cache_enabled = app
-            .models_mut()
-            .insert(config_bool("FRET_UI_GALLERY_VIEW_CACHE", "fret_ui_gallery_view_cache", false));
-        let view_cache_cache_shell = app
-            .models_mut()
-            .insert(config_bool(
-                "FRET_UI_GALLERY_VIEW_CACHE_SHELL",
-                "fret_ui_gallery_view_cache_shell",
-                false,
-            ));
+        let view_cache_enabled_value =
+            config_bool("FRET_UI_GALLERY_VIEW_CACHE", "fret_ui_gallery_view_cache", false);
+        let view_cache_enabled = app.models_mut().insert(view_cache_enabled_value);
+
+        // On web targets, env vars are not available and evidence runs often rely on URL flags.
+        // If view-cache mode is explicitly enabled, default to caching the gallery shell as well,
+        // unless the shell flag is explicitly overridden.
+        let view_cache_shell_default = if cfg!(target_arch = "wasm32") {
+            view_cache_enabled_value
+        } else {
+            false
+        };
+        let view_cache_cache_shell_value = config_bool(
+            "FRET_UI_GALLERY_VIEW_CACHE_SHELL",
+            "fret_ui_gallery_view_cache_shell",
+            view_cache_shell_default,
+        );
+        let view_cache_cache_shell = app.models_mut().insert(view_cache_cache_shell_value);
         let view_cache_inner_enabled = app
             .models_mut()
             .insert(config_bool(
