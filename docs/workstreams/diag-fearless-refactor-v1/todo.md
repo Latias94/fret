@@ -54,6 +54,7 @@ scope: diagnostics, automation, tooling, refactor
 - [x] Define the “minimum useful bundle” contract (what must be in `bundle.json` vs what can be in sidecars).
   - `docs/workstreams/diag-fearless-refactor-v1/minimum-useful-bundle.md`
 - [x] Reduce default bundle size by defaulting non-script dumps to `FRET_DIAG_BUNDLE_SEMANTICS_MODE=changed` (script dumps still default to `last`).
+- [x] Reduce default bundle size further by defaulting non-script dumps to schema v2 (dedup semantics via `tables.semantics`).
 - [x] Add query-friendly indexes (sidecars) for tools/agents (implemented in `ecosystem/fret-bootstrap/src/ui_diagnostics/bundle_dump.rs`):
   - `bundle.index.json` (snapshot selectors, semantics fingerprints, test-id bloom),
   - `bundle.meta.json` (bundle-level counters + uniqueness summaries),

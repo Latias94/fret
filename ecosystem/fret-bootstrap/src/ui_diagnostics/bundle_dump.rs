@@ -101,7 +101,7 @@ pub(super) fn dump_bundle_with_options(
     let default_schema_version = if is_script_dump {
         bundle::BundleSchemaVersionV1::V2
     } else {
-        bundle::BundleSchemaVersionV1::V1
+        bundle::BundleSchemaVersionV1::V2
     };
     let schema_version = bundle::BundleSchemaVersionV1::from_env_or_default(default_schema_version);
 
