@@ -31,15 +31,19 @@
           var url = new URL(window.location.href);
           var ws = url.searchParams.get("fret_devtools_ws");
           var token = url.searchParams.get("fret_devtools_token");
+          var log = url.searchParams.get("fret_devtools_ws_log");
           var keyWs = "FRET_DEVTOOLS_WS";
           var keyToken = "FRET_DEVTOOLS_TOKEN";
+          var keyLog = "FRET_DEVTOOLS_WS_CLIENT_LOG";
 
           if (ws && token) {
             window.__FRET_DEVTOOLS_WS = ws;
             window.__FRET_DEVTOOLS_TOKEN = token;
+            window.__FRET_DEVTOOLS_WS_CLIENT_LOG = log === "1";
             if (window.localStorage) {
               window.localStorage.setItem(keyWs, ws);
               window.localStorage.setItem(keyToken, token);
+              window.localStorage.setItem(keyLog, log === "1" ? "1" : "0");
             }
             return;
           }
@@ -47,9 +51,11 @@
           if (window.localStorage) {
             var wsStored = window.localStorage.getItem(keyWs);
             var tokenStored = window.localStorage.getItem(keyToken);
+            var logStored = window.localStorage.getItem(keyLog);
             if (wsStored && tokenStored) {
               window.__FRET_DEVTOOLS_WS = wsStored;
               window.__FRET_DEVTOOLS_TOKEN = tokenStored;
+              window.__FRET_DEVTOOLS_WS_CLIENT_LOG = logStored === "1";
             }
           }
         } catch (_e) {}

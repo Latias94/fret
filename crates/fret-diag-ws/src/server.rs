@@ -137,14 +137,20 @@ fn handle_conn(stream: TcpStream, hub: Arc<Hub>, token: String) -> Result<(), St
             Ok(Message::Text(text)) => {
                 if ws_log_enabled() {
                     let preview: String = text.chars().take(160).collect();
-                    eprintln!("fret-devtools-ws: rx text peer_id={} preview={}", id, preview);
+                    eprintln!(
+                        "fret-devtools-ws: rx text peer_id={} preview={}",
+                        id, preview
+                    );
                 }
 
                 match serde_json::from_str::<DiagTransportMessageV1>(&text) {
                     Ok(msg) => handle_incoming(&hub, id, msg),
                     Err(err) => {
                         if ws_log_enabled() {
-                            eprintln!("fret-devtools-ws: rx text parse error peer_id={} err={}", id, err);
+                            eprintln!(
+                                "fret-devtools-ws: rx text parse error peer_id={} err={}",
+                                id, err
+                            );
                         }
                     }
                 }
@@ -271,7 +277,10 @@ fn handle_hello(hub: &Hub, from: u64, msg: DiagTransportMessageV1) {
 
     if is_tooling {
         if ws_log_enabled() {
-            eprintln!("fret-devtools-ws: tooling hello client_kind={} peer_id={}", client_kind, from);
+            eprintln!(
+                "fret-devtools-ws: tooling hello client_kind={} peer_id={}",
+                client_kind, from
+            );
         }
         {
             let mut peers = match hub.peers.lock() {
