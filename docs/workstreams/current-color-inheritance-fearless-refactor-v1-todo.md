@@ -28,6 +28,7 @@ Last updated: 2026-02-23
 - [x] Badge provides resolved `fg`.
 - [x] Tabs triggers / pill-like controls provide resolved `fg` (prefer deferred icon slots for trigger icons).
 - [x] ToggleGroup items / pill-like controls provide resolved `fg` (prefer deferred icon slots for icon-only groups).
+- [x] Toggle provides resolved `fg` (prefer deferred icon slots for icons).
 
 ## Text adoption (the big win after icons)
 
@@ -54,6 +55,7 @@ Last updated: 2026-02-23
   - [ ] (optional) pixel-change assertion for the icon bounds
 - [x] Add a Tabs icons screenshot script (zinc/light + zinc/dark) to gate trigger icon visibility (`tools/diag-scripts/ui-gallery-tabs-icons-screenshots-zinc-light-dark.json`).
 - [x] Add a Toggle Group demo icons screenshot script (zinc/light + zinc/dark) to gate icon-only item visibility (`tools/diag-scripts/ui-gallery-toggle-group-demo-icons-screenshots-zinc-light-dark.json`).
+- [x] Add a Toggle demo icons screenshot script (zinc/light + zinc/dark) to gate icon + label foreground inheritance (`tools/diag-scripts/ui-gallery-toggle-demo-icons-screenshots-zinc-light-dark.json`).
 - [ ] Add a “menu item with leading icon + disabled/active” diag script.
 
 ## Cross-cutting checks
