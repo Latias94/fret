@@ -23,6 +23,27 @@ fn read_script_result_v1(path: &Path) -> Option<UiScriptResultV1> {
         .filter(|r| r.schema_version == 1)
 }
 
+fn env_usize_override(key: &str) -> Option<usize> {
+    std::env::var(key)
+        .ok()
+        .map(|v| v.trim().to_string())
+        .filter(|v| !v.is_empty())
+        .and_then(|v| v.parse::<usize>().ok())
+}
+
+fn clamp_bundle_semantics_nodes(windows: &mut [UiDiagnosticsWindowBundleV1], max_nodes: usize) {
+    for w in windows {
+        for s in &mut w.snapshots {
+            let Some(semantics) = s.debug.semantics.as_mut() else {
+                continue;
+            };
+            if semantics.nodes.len() > max_nodes {
+                semantics.nodes.truncate(max_nodes);
+            }
+        }
+    }
+}
+
 fn write_bundle_sidecars(
     service: &UiDiagnosticsService,
     dir: &Path,
@@ -112,6 +133,20 @@ pub(super) fn dump_bundle_with_options(
     };
     let semantics_mode = bundle::BundleSemanticsModeV1::from_env_or_default(default_semantics_mode);
 
+    const DEFAULT_NON_SCRIPT_DUMP_MAX_SEMANTICS_NODES: usize = 10_000;
+    let dump_max_semantics_nodes = env_usize_override("FRET_DIAG_BUNDLE_DUMP_MAX_SEMANTICS_NODES")
+        .unwrap_or_else(|| {
+            if is_script_dump {
+                service.cfg.max_semantics_nodes
+            } else {
+                service
+                    .cfg
+                    .max_semantics_nodes
+                    .min(DEFAULT_NON_SCRIPT_DUMP_MAX_SEMANTICS_NODES)
+            }
+        })
+        .clamp(0, 500_000);
+
     if !cfg!(target_arch = "wasm32") && std::fs::create_dir_all(&dir).is_err() {
         return None;
     }
@@ -127,6 +162,10 @@ pub(super) fn dump_bundle_with_options(
             bundle::BundleSchemaVersionV1::V1 => {
                 let mut bundle = bundle_v1;
                 bundle.apply_semantics_mode_v1(semantics_mode);
+                if dump_max_semantics_nodes != bundle.config.max_semantics_nodes {
+                    bundle.config.max_semantics_nodes = dump_max_semantics_nodes;
+                }
+                clamp_bundle_semantics_nodes(&mut bundle.windows, dump_max_semantics_nodes);
 
                 let bundle_json_bytes = if !cfg!(target_arch = "wasm32") {
                     let write_result = if want_pretty {
@@ -184,6 +223,10 @@ pub(super) fn dump_bundle_with_options(
             bundle::BundleSchemaVersionV1::V2 => {
                 let mut bundle = UiDiagnosticsBundleV2::from_v1(bundle_v1);
                 bundle.apply_semantics_mode_v1(semantics_mode);
+                if dump_max_semantics_nodes != bundle.config.max_semantics_nodes {
+                    bundle.config.max_semantics_nodes = dump_max_semantics_nodes;
+                }
+                clamp_bundle_semantics_nodes(&mut bundle.windows, dump_max_semantics_nodes);
 
                 let bundle_json_bytes = if !cfg!(target_arch = "wasm32") {
                     let write_result = if want_pretty {
