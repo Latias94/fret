@@ -1,6 +1,6 @@
 # A11y range/numeric semantics (fearless refactor v1)
 
-Status: In progress (partially landed)
+Status: In progress (core + AccessKit mapping landed; diagnostics hardening pending)
 
 Last updated: 2026-02-23
 
@@ -13,6 +13,9 @@ and a **string** `label`/`value`. This is a solid skeleton, but it is insufficie
 (`min/max/now/step`).
 
 Symptoms before this workstream:
+
+Update (2026-02-23): The core contract now includes structured numeric + scroll fields, the AccessKit adapter emits them
+best-effort for finite values, and `scroll_by` is wired end-to-end for scrollable host widgets.
 
 - A slider/progress often becomes “just text” (e.g. `"50%"`) rather than a role with `aria-valuenow/min/max`-like data.
 - The diagnostics harness’s `set_slider_value` step must parse floats out of `SemanticsNode::value` strings
@@ -81,8 +84,8 @@ fearless refactor window if you want to avoid follow-up contract churn.
 
 ### A) Scroll semantics (high ROI for Viewport/Scroll/Scrollbar)
 
-Today, `Viewport` maps to AccessKit `ScrollView`, but we do not emit scroll positions/ranges. Adding portable scroll
-properties enables both AT and automation to reason about scroll state.
+As of 2026-02-23, `Viewport` maps to AccessKit `ScrollView` and emits scroll positions/ranges when available. Portable
+scroll properties enable both AT and automation to reason about scroll state.
 
 Candidate fields on `SemanticsNodeExtra.scroll`:
 

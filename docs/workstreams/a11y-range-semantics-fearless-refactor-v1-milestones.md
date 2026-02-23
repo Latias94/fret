@@ -2,6 +2,13 @@
 
 Last updated: 2026-02-23
 
+## Current progress (2026-02-23)
+
+- M1: Complete (core contract + AccessKit mapping + unit tests).
+- M1.5: Partially complete (scroll semantics + `scroll_by`, read-only, placeholder, url).
+- M2: In progress (ecosystem semantics snapshots landed; broaden adoption as needed).
+- M3: Not started (diag scripts prefer numeric fields; keep string fallback).
+
 ## M0 — Agreement on contract (design)
 
 Exit criteria:
