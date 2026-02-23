@@ -382,6 +382,9 @@ Recent fixes:
   - Inline addon layout now matches shadcn-web geometry: addons participate in normal flex flow
     instead of absolute slots; input padding switches to `pl-2` / `pr-2` when an inline addon is
     present.
+  - Focus navigation now matches the shadcn docs contract: addons can be authored after the control
+    in element-tree order (DOM order), while their visual placement is expressed via flex item
+    visual order (`order-first` / `order-last`) in layout.
   - `aria-invalid=true` border color now matches shadcn-web (`input-group-demo.invalid`) and is
     gated via `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`
     (`web_vs_fret_input_group_demo_aria_invalid_border_color_matches`).
@@ -411,6 +414,7 @@ Recent fixes:
     `web_vs_fret_layout_input_group_text_url_geometry_matches`,
     `web_vs_fret_layout_input_group_text_email_geometry_matches`,
     `web_vs_fret_layout_input_group_text_textarea_count_geometry_matches`).
+  - Focus navigation: `tools/diag-scripts/ui-gallery-input-group-addon-after-control-tab-focus.json`
 - Gaps to check next:
   - Placeholder + selection colors for group control content (ensure they match upstream shadcn tokens).
 
