@@ -616,19 +616,19 @@ fn pass_counts(plan: &RenderPlan) -> JsonDumpCounts {
 }
 
 #[derive(Debug, serde::Serialize)]
-struct RenderPlanJsonDump {
+struct RenderPlanJsonDump<'a> {
     schema_version: u32,
     frame_index: u64,
     viewport_size: [u32; 2],
     format: String,
     postprocess: JsonDumpDebugPostprocess,
     ordered_draws_len: usize,
-    segments: Vec<JsonDumpSegment>,
-    effect_markers: Vec<JsonDumpEffectMarker>,
+    segments: &'a [JsonDumpSegment],
+    effect_markers: &'a [JsonDumpEffectMarker],
     pass_counts: JsonDumpCounts,
     estimated_peak_intermediate_bytes: u64,
-    degradations: Vec<JsonDumpDegradation>,
-    passes: Vec<JsonDumpPass>,
+    degradations: &'a [JsonDumpDegradation],
+    passes: &'a [JsonDumpPass],
 }
 
 #[derive(Debug, serde::Serialize)]
@@ -636,6 +636,16 @@ struct JsonDumpDegradation {
     draw_ix: usize,
     kind: String,
     reason: String,
+}
+
+#[derive(Debug, Default)]
+pub(super) struct RenderPlanJsonDumpScratch {
+    segment_pass_counts: Vec<JsonDumpSegmentPassCounts>,
+    segments: Vec<JsonDumpSegment>,
+    effect_markers: Vec<JsonDumpEffectMarker>,
+    degradations: Vec<JsonDumpDegradation>,
+    passes: Vec<JsonDumpPass>,
+    bytes: Vec<u8>,
 }
 
 fn encode_degradation(d: RenderPlanDegradation) -> JsonDumpDegradation {
@@ -707,33 +717,82 @@ pub(super) fn maybe_dump_render_plan_json(
     postprocess: DebugPostprocess,
     ordered_draws_len: usize,
     effect_markers: &[EffectMarker],
-    dump_bytes_scratch: &mut Vec<u8>,
+    dump_scratch: &mut RenderPlanJsonDumpScratch,
 ) {
     if !should_dump_frame(frame_index) {
         return;
     }
 
-    let mut segment_pass_counts: Vec<JsonDumpSegmentPassCounts> = vec![
+    dump_scratch.segment_pass_counts.resize(
+        plan.segments.len(),
         JsonDumpSegmentPassCounts {
             scene_draw_range: 0,
             path_msaa_batch: 0,
-        };
-        plan.segments.len()
-    ];
+        },
+    );
+    dump_scratch
+        .segment_pass_counts
+        .fill(JsonDumpSegmentPassCounts {
+            scene_draw_range: 0,
+            path_msaa_batch: 0,
+        });
     for p in &plan.passes {
         match p {
             RenderPlanPass::SceneDrawRange(p) => {
-                if let Some(c) = segment_pass_counts.get_mut(p.segment.0) {
+                if let Some(c) = dump_scratch.segment_pass_counts.get_mut(p.segment.0) {
                     c.scene_draw_range += 1;
                 }
             }
             RenderPlanPass::PathMsaaBatch(p) => {
-                if let Some(c) = segment_pass_counts.get_mut(p.segment.0) {
+                if let Some(c) = dump_scratch.segment_pass_counts.get_mut(p.segment.0) {
                     c.path_msaa_batch += 1;
                 }
             }
             _ => {}
         }
+    }
+
+    dump_scratch.segments.clear();
+    dump_scratch.segments.reserve(plan.segments.len());
+    for (ix, s) in plan.segments.iter().enumerate() {
+        dump_scratch.segments.push(JsonDumpSegment {
+            id: s.id.0,
+            draw_range: [s.draw_range.start, s.draw_range.end],
+            start_uniform_index: s.start_uniform_index,
+            start_uniform_fingerprint: format!("0x{:016x}", s.start_uniform_fingerprint),
+            flags: JsonDumpSegmentFlags {
+                has_quad: s.flags.has_quad,
+                has_viewport: s.flags.has_viewport,
+                has_image: s.flags.has_image,
+                has_mask: s.flags.has_mask,
+                has_text: s.flags.has_text,
+                has_path: s.flags.has_path,
+            },
+            pass_counts: dump_scratch.segment_pass_counts.get(ix).copied().unwrap_or(
+                JsonDumpSegmentPassCounts {
+                    scene_draw_range: 0,
+                    path_msaa_batch: 0,
+                },
+            ),
+        });
+    }
+
+    dump_scratch.effect_markers.clear();
+    dump_scratch.effect_markers.reserve(effect_markers.len());
+    for m in effect_markers.iter().copied() {
+        dump_scratch.effect_markers.push(encode_effect_marker(m));
+    }
+
+    dump_scratch.degradations.clear();
+    dump_scratch.degradations.reserve(plan.degradations.len());
+    for d in plan.degradations.iter().copied() {
+        dump_scratch.degradations.push(encode_degradation(d));
+    }
+
+    dump_scratch.passes.clear();
+    dump_scratch.passes.reserve(plan.passes.len());
+    for p in &plan.passes {
+        dump_scratch.passes.push(encode_pass(p));
     }
 
     let dir = dump_dir_from_env();
@@ -746,53 +805,20 @@ pub(super) fn maybe_dump_render_plan_json(
         format: format!("{format:?}"),
         postprocess: encode_debug_postprocess(postprocess),
         ordered_draws_len,
-        segments: plan
-            .segments
-            .iter()
-            .enumerate()
-            .map(|(ix, s)| JsonDumpSegment {
-                id: s.id.0,
-                draw_range: [s.draw_range.start, s.draw_range.end],
-                start_uniform_index: s.start_uniform_index,
-                start_uniform_fingerprint: format!("0x{:016x}", s.start_uniform_fingerprint),
-                flags: JsonDumpSegmentFlags {
-                    has_quad: s.flags.has_quad,
-                    has_viewport: s.flags.has_viewport,
-                    has_image: s.flags.has_image,
-                    has_mask: s.flags.has_mask,
-                    has_text: s.flags.has_text,
-                    has_path: s.flags.has_path,
-                },
-                pass_counts: segment_pass_counts.get(ix).cloned().unwrap_or(
-                    JsonDumpSegmentPassCounts {
-                        scene_draw_range: 0,
-                        path_msaa_batch: 0,
-                    },
-                ),
-            })
-            .collect(),
-        effect_markers: effect_markers
-            .iter()
-            .copied()
-            .map(encode_effect_marker)
-            .collect(),
+        segments: &dump_scratch.segments,
+        effect_markers: &dump_scratch.effect_markers,
         pass_counts: pass_counts(plan),
         estimated_peak_intermediate_bytes: plan.compile_stats.estimated_peak_intermediate_bytes,
-        degradations: plan
-            .degradations
-            .iter()
-            .copied()
-            .map(encode_degradation)
-            .collect(),
-        passes: plan.passes.iter().map(encode_pass).collect(),
+        degradations: &dump_scratch.degradations,
+        passes: &dump_scratch.passes,
     };
 
     let file = dir.join(format!("renderplan.frame{frame_index}.json"));
-    dump_bytes_scratch.clear();
-    if serde_json::to_writer_pretty(&mut *dump_bytes_scratch, &dump).is_err() {
+    dump_scratch.bytes.clear();
+    if serde_json::to_writer_pretty(&mut dump_scratch.bytes, &dump).is_err() {
         return;
     }
-    let _ = std::fs::write(&file, &*dump_bytes_scratch);
+    let _ = std::fs::write(&file, &dump_scratch.bytes);
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -804,6 +830,6 @@ pub(super) fn maybe_dump_render_plan_json(
     _postprocess: DebugPostprocess,
     _ordered_draws_len: usize,
     _effect_markers: &[EffectMarker],
-    _dump_bytes_scratch: &mut Vec<u8>,
+    _dump_scratch: &mut RenderPlanJsonDumpScratch,
 ) {
 }
