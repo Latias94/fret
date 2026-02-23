@@ -87,6 +87,10 @@ pub(super) fn begin_frame(
         .models()
         .get_copied(&state.view_cache_cache_shell)
         .unwrap_or(false);
+    // Web evidence runs rely on URL flags and can suffer from stale localStorage overrides.
+    // When view-cache mode is enabled, treat shell caching as enabled as well so we actually
+    // mount view-cache roots and can measure reuse behavior.
+    let cache_shell = cache_shell || (cfg!(target_arch = "wasm32") && cache_enabled);
 
     if state.ui.view_cache_enabled() != cache_enabled {
         state.ui.set_view_cache_enabled(cache_enabled);
