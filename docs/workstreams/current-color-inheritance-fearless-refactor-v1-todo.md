@@ -25,7 +25,7 @@ Last updated: 2026-02-23
   - [x] `DropdownMenuItem` provides `currentColor` and supports `leading_icon`.
   - [ ] `SelectItem` (if/when it grows icon slots)
   - [x] `CommandItem` provides `currentColor` and supports `leading_icon` (add gates + migrate demos)
-- [ ] Badge provides resolved `fg`.
+- [x] Badge provides resolved `fg`.
 - [ ] Tabs triggers / pill-like controls provide resolved `fg`.
 
 ## Text adoption (the big win after icons)
