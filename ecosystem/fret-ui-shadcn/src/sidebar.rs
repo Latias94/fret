@@ -851,6 +851,31 @@ impl Sidebar {
             let open_mobile_model = sidebar_ctx.open_mobile.clone();
             let is_mobile_for_toggle = sidebar_ctx.is_mobile;
 
+            let open_model_for_key = open_model.clone();
+            let open_mobile_model_for_key = open_mobile_model.clone();
+            let on_key_down: OnKeyDown = Arc::new(move |host, acx, down| {
+                if down.ime_composing {
+                    return false;
+                }
+
+                let wants_toggle = down.key == SIDEBAR_TOGGLE_SHORTCUT_KEY
+                    && (down.modifiers.ctrl || down.modifiers.meta)
+                    && !down.modifiers.alt;
+
+                if !wants_toggle {
+                    return false;
+                }
+
+                sidebar_toggle_model(
+                    host.models_mut(),
+                    &open_model_for_key,
+                    &open_mobile_model_for_key,
+                    is_mobile_for_toggle,
+                );
+                host.request_redraw(acx.window);
+                true
+            });
+
             let on_command: OnCommand = Arc::new(move |host, acx, command| {
                 if command != toggle_command_for_on_command {
                     return false;
@@ -927,6 +952,7 @@ impl Sidebar {
                             )
                             .into_element(cx);
 
+                        cx.key_add_on_key_down_capture_for(content.id, on_key_down.clone());
                         cx.command_on_command_for(content.id, on_command.clone());
                         cx.command_on_command_availability_for(
                             content.id,
