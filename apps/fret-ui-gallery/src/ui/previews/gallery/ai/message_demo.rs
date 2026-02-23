@@ -9,7 +9,6 @@ pub(in crate::ui) fn preview_ai_message_demo(
     use fret_runtime::Model;
     use fret_ui::Invalidation;
     use fret_ui::action::OnActivate;
-    use fret_ui_kit::declarative::icon as decl_icon;
     use fret_ui_kit::declarative::stack;
     use fret_ui_kit::{Justify, LayoutRefinement, Space};
 
@@ -52,13 +51,13 @@ pub(in crate::ui) fn preview_ai_message_demo(
     let assistant_actions = ui_ai::MessageActions::new([
         ui_ai::MessageAction::new("Copy")
             .tooltip("Copy message")
-            .children([decl_icon::icon(cx, fret_icons::ids::ui::COPY)])
+            .icon(fret_icons::ids::ui::COPY)
             .test_id("ui-ai-message-demo-assistant-action-copy")
             .on_activate(set_action("assistant.copy"))
             .into_element(cx),
         ui_ai::MessageAction::new("Regenerate")
             .tooltip("Regenerate")
-            .children([decl_icon::icon(cx, fret_icons::ids::ui::LOADER)])
+            .icon(fret_icons::ids::ui::LOADER)
             .test_id("ui-ai-message-demo-assistant-action-regenerate")
             .on_activate(set_action("assistant.regenerate"))
             .into_element(cx),
@@ -69,7 +68,7 @@ pub(in crate::ui) fn preview_ai_message_demo(
 
     let user_actions = ui_ai::MessageActions::new([ui_ai::MessageAction::new("Edit")
         .tooltip("Edit message")
-        .children([decl_icon::icon(cx, fret_icons::ids::ui::FILE)])
+        .icon(fret_icons::ids::ui::FILE)
         .test_id("ui-ai-message-demo-user-action-edit")
         .on_activate(set_action("user.edit"))
         .into_element(cx)])

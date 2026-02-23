@@ -622,12 +622,13 @@ impl ArtifactClose {
     }
 
     pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let mut btn = Button::new("Close")
+        let mut btn = Button::new("")
+            .a11y_label("Close")
             .variant(self.variant)
             .size(self.size)
             .style(action_button_style())
             .disabled(self.disabled)
-            .children([decl_icon::icon(cx, ids::ui::CLOSE)]);
+            .icon(ids::ui::CLOSE);
         if let Some(on_activate) = self.on_activate {
             btn = btn.on_activate(on_activate);
         }
