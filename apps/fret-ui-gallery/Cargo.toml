@@ -31,6 +31,7 @@ fret-ui-magic = { path = "../../ecosystem/fret-ui-magic", features = ["app-integ
 fret-ui-shadcn = { path = "../../ecosystem/fret-ui-shadcn" }
 fret-ui-material3 = { path = "../../ecosystem/fret-ui-material3" }
 fret-icons = { path = "../../ecosystem/fret-icons" }
+fret-icons-lucide = { path = "../../ecosystem/fret-icons-lucide" }
 fret-code-editor-view = { path = "../../ecosystem/fret-code-editor-view" }
 fret-workspace = { path = "../../ecosystem/fret-workspace" }
 fret = { path = "../../ecosystem/fret" }

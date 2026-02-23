@@ -27,6 +27,7 @@ use fret_workspace::commands::{
     CMD_WORKSPACE_TAB_CLOSE, CMD_WORKSPACE_TAB_CLOSE_PREFIX, CMD_WORKSPACE_TAB_NEXT,
     CMD_WORKSPACE_TAB_PREV,
 };
+use fret_icons::IconRegistry;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
@@ -2344,6 +2345,12 @@ pub fn build_app() -> App {
         shadcn::shadcn_themes::ShadcnColorScheme::Light,
     );
 
+    app.with_global_mut(IconRegistry::default, |icons, app| {
+        fret_icons_lucide::register_icons(icons);
+        let frozen = icons.freeze_or_default_with_context("fret_ui_gallery.build_app");
+        app.set_global(frozen);
+    });
+
     let project_root = ui_gallery_project_root();
     let config_paths = LayeredConfigPaths::for_project_root(&project_root);
     if let Ok((settings, _report)) = load_layered_settings(&config_paths) {
@@ -2429,7 +2436,6 @@ pub fn run() -> anyhow::Result<()> {
         .with_default_config_files_for_root(&project_root)?
         .with_config_files_watcher_for_root(Duration::from_millis(500), &project_root)
         .with_ui_assets_budgets(64 * 1024 * 1024, 4096, 16 * 1024 * 1024, 4096)
-        .with_lucide_icons()
         .preload_icon_svgs_on_gpu_ready()
         .run()
         .map_err(anyhow::Error::from)
@@ -2460,7 +2466,6 @@ pub fn run_with_event_loop(event_loop: winit::event_loop::EventLoop) -> anyhow::
         .with_default_config_files_for_root(&project_root)?
         .with_config_files_watcher_for_root(Duration::from_millis(500), &project_root)
         .with_ui_assets_budgets(64 * 1024 * 1024, 4096, 16 * 1024 * 1024, 4096)
-        .with_lucide_icons()
         .preload_icon_svgs_on_gpu_ready()
         .into_inner()
         .with_event_loop(event_loop)

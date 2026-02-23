@@ -2739,6 +2739,7 @@ dependencies = [
  "fret-core",
  "fret-fonts",
  "fret-icons",
+ "fret-icons-lucide",
  "fret-launch",
  "fret-markdown",
  "fret-node",
