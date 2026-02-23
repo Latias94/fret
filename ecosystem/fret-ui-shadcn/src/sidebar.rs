@@ -10,7 +10,7 @@ use fret_runtime::keymap::Binding;
 use fret_runtime::{
     CommandId, Effect, KeyChord, Keymap, KeymapService, Model, ModelStore, PlatformFilter,
 };
-use fret_ui::action::OnActivate;
+use fret_ui::action::{OnActivate, OnCommand, OnCommandAvailability, OnKeyDown};
 use fret_ui::element::{
     AnyElement, CrossAlign, Elements, FlexProps, HoverRegionProps, MainAlign, OpacityProps,
     Overflow, PressableProps, RingStyle, SemanticsDecoration, SpacerProps,
@@ -688,24 +688,51 @@ impl SidebarProvider {
         let is_mobile_for_command = is_mobile;
 
         with_sidebar_provider_state(cx, context, |cx| {
-            let root = cx.root_id();
-            cx.command_on_command_for(
-                root,
-                Arc::new(move |host, _acx, command| {
-                    if command.as_str() != SIDEBAR_TOGGLE_COMMAND_ID {
-                        return false;
-                    }
-                    sidebar_toggle_model(
-                        host.models_mut(),
-                        &open_for_command,
-                        &open_mobile_for_command,
-                        is_mobile_for_command,
-                    );
-                    true
-                }),
-            );
-            cx.command_on_command_availability_for(
-                root,
+            let children = TooltipProvider::new()
+                .delay_duration_frames(0)
+                .with_elements(cx, f)
+                .into_vec();
+
+            let open_for_shortcut = open.clone();
+            let open_mobile_for_shortcut = open_mobile.clone();
+            let on_key_down: OnKeyDown = Arc::new(move |host, acx, down| {
+                if down.ime_composing {
+                    return false;
+                }
+
+                let wants_toggle = down.key == SIDEBAR_TOGGLE_SHORTCUT_KEY
+                    && (down.modifiers.ctrl || down.modifiers.meta)
+                    && !down.modifiers.alt;
+
+                if !wants_toggle {
+                    return false;
+                }
+
+                sidebar_toggle_model(
+                    host.models_mut(),
+                    &open_for_shortcut,
+                    &open_mobile_for_shortcut,
+                    is_mobile_for_command,
+                );
+                host.request_redraw(acx.window);
+                true
+            });
+
+            let on_command: OnCommand = Arc::new(move |host, acx, command| {
+                if command.as_str() != SIDEBAR_TOGGLE_COMMAND_ID {
+                    return false;
+                }
+                sidebar_toggle_model(
+                    host.models_mut(),
+                    &open_for_command,
+                    &open_mobile_for_command,
+                    is_mobile_for_command,
+                );
+                host.request_redraw(acx.window);
+                true
+            });
+
+            let on_command_availability: OnCommandAvailability =
                 Arc::new(move |_host, acx, command| {
                     if command != toggle_command {
                         return CommandAvailability::NotHandled;
@@ -714,13 +741,13 @@ impl SidebarProvider {
                         return CommandAvailability::NotHandled;
                     }
                     CommandAvailability::Available
-                }),
-            );
+                });
 
-            let children = TooltipProvider::new()
-                .delay_duration_frames(0)
-                .with_elements(cx, f)
-                .into_vec();
+            for child in &children {
+                cx.key_add_on_key_down_capture_for(child.id, on_key_down.clone());
+                cx.command_on_command_for(child.id, on_command.clone());
+                cx.command_on_command_availability_for(child.id, on_command_availability.clone());
+            }
 
             Elements::new(children)
         })
