@@ -1,5 +1,12 @@
 use super::*;
 
+mod launch;
+mod pack;
+mod renderdoc;
+mod scripts;
+mod summary;
+mod util;
+
 pub(crate) struct ReproCmdContext {
     pub rest: Vec<String>,
     pub workspace_root: PathBuf,
@@ -32,494 +39,6 @@ pub(crate) struct ReproCmdContext {
     pub resource_footprint_thresholds: ResourceFootprintThresholds,
     pub check_redraw_hitches_max_total_ms_threshold: Option<u64>,
     pub checks: diag_run::RunChecks,
-}
-
-fn read_tooling_reason_code(path: &Path) -> Option<String> {
-    read_json_value(path).and_then(|v| {
-        v.get("reason_code")
-            .and_then(|v| v.as_str())
-            .map(|s| s.to_string())
-    })
-}
-
-fn resolve_repro_scripts(rest: &[String], workspace_root: &Path) -> (Vec<PathBuf>, Option<String>) {
-    if rest.len() == 1 && rest[0] == "ui-gallery" {
-        (
-            diag_suite_scripts::ui_gallery_suite_scripts()
-                .into_iter()
-                .map(|p| resolve_path(workspace_root, PathBuf::from(p)))
-                .collect(),
-            Some("ui-gallery".to_string()),
-        )
-    } else if rest.len() == 1 && rest[0] == "ui-gallery-code-editor" {
-        (
-            diag_suite_scripts::ui_gallery_code_editor_suite_scripts()
-                .into_iter()
-                .map(|p| resolve_path(workspace_root, PathBuf::from(p)))
-                .collect(),
-            Some("ui-gallery-code-editor".to_string()),
-        )
-    } else if rest.len() == 1 && rest[0] == "docking-arbitration" {
-        (
-            diag_suite_scripts::docking_arbitration_suite_scripts()
-                .into_iter()
-                .map(|p| resolve_path(workspace_root, PathBuf::from(p)))
-                .collect(),
-            Some("docking-arbitration".to_string()),
-        )
-    } else {
-        (
-            rest.iter()
-                .map(|p| resolve_path(workspace_root, PathBuf::from(p)))
-                .collect(),
-            None,
-        )
-    }
-}
-
-fn compute_required_caps(scripts: &[PathBuf]) -> Vec<String> {
-    let mut required_caps: Vec<String> = Vec::new();
-    for src in scripts.iter() {
-        required_caps.extend(script_required_capabilities(src));
-    }
-    required_caps.sort();
-    required_caps.dedup();
-    required_caps
-}
-
-fn pack_defaults_with_fallback(
-    pack_include_root_artifacts: bool,
-    pack_include_triage: bool,
-    pack_include_screenshots: bool,
-) -> (bool, bool, bool) {
-    let mut pack_defaults = (
-        pack_include_root_artifacts,
-        pack_include_triage,
-        pack_include_screenshots,
-    );
-    if !pack_defaults.0 && !pack_defaults.1 && !pack_defaults.2 {
-        pack_defaults = (true, true, true);
-    }
-    pack_defaults
-}
-
-struct PreparedReproLaunch {
-    launch: Option<Vec<String>>,
-    launch_env: Vec<(String, String)>,
-    tracy_feature_injected: bool,
-    tracy_env_enabled: bool,
-    renderdoc_capture_dir: Option<PathBuf>,
-    renderdoc_autocapture_after_frames: Option<u32>,
-}
-
-fn prepare_repro_launch(
-    resolved_out_dir: &Path,
-    launch: Option<Vec<String>>,
-    launch_env: Vec<(String, String)>,
-    check_redraw_hitches_max_total_ms_threshold: Option<u64>,
-    with_tracy: bool,
-    with_renderdoc: bool,
-    renderdoc_after_frames: Option<u32>,
-) -> PreparedReproLaunch {
-    let mut repro_launch = launch;
-    let mut repro_launch_env = launch_env;
-    let _ = ensure_env_var(&mut repro_launch_env, "FRET_DIAG_RENDERER_PERF", "1");
-
-    if check_redraw_hitches_max_total_ms_threshold.is_some() {
-        let _ = ensure_env_var(&mut repro_launch_env, "FRET_REDRAW_HITCH_LOG", "1");
-        let _ = ensure_env_var(
-            &mut repro_launch_env,
-            "FRET_REDRAW_HITCH_LOG_PATH",
-            "redraw_hitches.log",
-        );
-    }
-
-    let mut tracy_feature_injected: bool = false;
-    let mut tracy_env_enabled: bool = false;
-    if with_tracy {
-        tracy_env_enabled = ensure_env_var(&mut repro_launch_env, "FRET_TRACY", "1");
-        if let Some(cmd) = repro_launch.as_mut() {
-            tracy_feature_injected = cargo_run_inject_feature(cmd, "fret-bootstrap/tracy");
-        }
-
-        let note = "\
-# Tracy capture (best-effort)\n\
-\n\
-This repro was run with `FRET_TRACY=1` (and may have auto-injected `--features fret-bootstrap/tracy` when the launch command was `cargo run`).\n\
-\n\
-Notes:\n\
-- Tracy requires running the target with the `fret-bootstrap/tracy` feature enabled.\n\
-- The capture file is not recorded automatically by `fretboard` yet. Use the Tracy UI to connect and save a capture.\n\
-\n\
-See: `docs/tracy.md`.\n";
-        let _ = std::fs::write(resolved_out_dir.join("tracy.note.md"), note);
-    }
-
-    let mut renderdoc_capture_dir: Option<PathBuf> = None;
-    let mut renderdoc_autocapture_after_frames: Option<u32> = None;
-    if with_renderdoc {
-        let after = renderdoc_after_frames.unwrap_or(60);
-        let capture_dir = resolved_out_dir.join("renderdoc");
-        let _ = std::fs::create_dir_all(&capture_dir);
-
-        let _ = ensure_env_var(&mut repro_launch_env, "FRET_RENDERDOC", "1");
-        let _ = ensure_env_var(
-            &mut repro_launch_env,
-            "FRET_RENDERDOC_CAPTURE_DIR",
-            capture_dir.to_string_lossy().as_ref(),
-        );
-        let _ = ensure_env_var(
-            &mut repro_launch_env,
-            "FRET_RENDERDOC_AUTOCAPTURE_AFTER_FRAMES",
-            &after.to_string(),
-        );
-
-        renderdoc_capture_dir = Some(capture_dir);
-        renderdoc_autocapture_after_frames = Some(after);
-    }
-
-    PreparedReproLaunch {
-        launch: repro_launch,
-        launch_env: repro_launch_env,
-        tracy_feature_injected,
-        tracy_env_enabled,
-        renderdoc_capture_dir,
-        renderdoc_autocapture_after_frames,
-    }
-}
-
-fn renderdoc_markers_or_default(renderdoc_markers: &[String]) -> Vec<String> {
-    if renderdoc_markers.is_empty() {
-        vec![
-            "fret clip mask pass".to_string(),
-            "fret downsample-nearest pass".to_string(),
-            "fret upscale-nearest pass".to_string(),
-        ]
-    } else {
-        renderdoc_markers.to_vec()
-    }
-}
-
-fn stop_demo_and_collect_renderdoc_captures(
-    workspace_root: &Path,
-    resolved_out_dir: &Path,
-    resolved_exit_path: &Path,
-    poll_ms: u64,
-    child: &mut Option<LaunchedDemo>,
-    with_renderdoc: bool,
-    renderdoc_capture_dir: Option<&PathBuf>,
-    renderdoc_autocapture_after_frames: Option<u32>,
-    renderdoc_markers: &[String],
-    renderdoc_no_outputs_png: bool,
-) -> (Option<serde_json::Value>, Option<serde_json::Value>) {
-    if !with_renderdoc {
-        let repro_process_footprint = stop_launched_demo(child, resolved_exit_path, poll_ms);
-        return (repro_process_footprint, None);
-    }
-
-    let Some(dir) = renderdoc_capture_dir else {
-        let repro_process_footprint = stop_launched_demo(child, resolved_exit_path, poll_ms);
-        return (repro_process_footprint, None);
-    };
-
-    let markers = renderdoc_markers_or_default(renderdoc_markers);
-    let captures = wait_for_files_with_extensions(dir, &["rdc"], 10_000, poll_ms);
-
-    let repro_process_footprint = stop_launched_demo(child, resolved_exit_path, poll_ms);
-
-    let mut capture_rows: Vec<serde_json::Value> = Vec::new();
-    for (cap_idx, capture) in captures.iter().enumerate() {
-        let stem = capture
-            .file_stem()
-            .and_then(|s| s.to_str())
-            .filter(|s| !s.trim().is_empty())
-            .unwrap_or("capture");
-        let safe_stem = format!(
-            "{:02}-{}",
-            cap_idx.saturating_add(1),
-            zip_safe_component(stem)
-        );
-        let inspect_root = dir.join("inspect").join(&safe_stem);
-
-        let summary_dir = inspect_root.join("summary");
-        let summary_attempt = run_fret_renderdoc_dump(
-            workspace_root,
-            capture,
-            &summary_dir,
-            "summary",
-            "",
-            Some(200_000),
-            true,
-            true,
-            Some(30),
-        );
-
-        let mut attempts: Vec<RenderdocDumpAttempt> = Vec::new();
-        attempts.push(summary_attempt);
-
-        for (idx, marker) in markers.iter().enumerate() {
-            let safe_marker = zip_safe_component(marker);
-            let out_dir =
-                inspect_root.join(format!("marker_{:02}_{safe_marker}", idx.saturating_add(1)));
-            let attempt = run_fret_renderdoc_dump(
-                workspace_root,
-                capture,
-                &out_dir,
-                "dump",
-                marker,
-                Some(2_000),
-                true,
-                renderdoc_no_outputs_png,
-                None,
-            );
-            attempts.push(attempt);
-        }
-
-        let attempt_rows = attempts
-            .into_iter()
-            .map(|a| {
-                let out_dir = a
-                    .out_dir
-                    .strip_prefix(resolved_out_dir)
-                    .unwrap_or(&a.out_dir)
-                    .display()
-                    .to_string();
-                let stdout_file = a.stdout_file.as_ref().map(|p| {
-                    p.strip_prefix(resolved_out_dir)
-                        .unwrap_or(p)
-                        .display()
-                        .to_string()
-                });
-                let stderr_file = a.stderr_file.as_ref().map(|p| {
-                    p.strip_prefix(resolved_out_dir)
-                        .unwrap_or(p)
-                        .display()
-                        .to_string()
-                });
-                let response_json = a.response_json.as_ref().map(|p| {
-                    p.strip_prefix(resolved_out_dir)
-                        .unwrap_or(p)
-                        .display()
-                        .to_string()
-                });
-
-                serde_json::json!({
-                    "marker": a.marker,
-                    "out_dir": out_dir,
-                    "stdout_file": stdout_file,
-                    "stderr_file": stderr_file,
-                    "response_json": response_json,
-                    "exit_code": a.exit_code,
-                    "error": a.error,
-                })
-            })
-            .collect::<Vec<_>>();
-
-        let capture_rel = capture
-            .strip_prefix(resolved_out_dir)
-            .unwrap_or(capture)
-            .display()
-            .to_string();
-        let inspect_rel = inspect_root
-            .strip_prefix(resolved_out_dir)
-            .unwrap_or(&inspect_root)
-            .display()
-            .to_string();
-
-        capture_rows.push(serde_json::json!({
-            "capture": capture_rel,
-            "inspect_dir": inspect_rel,
-            "dumps": attempt_rows,
-        }));
-    }
-
-    let payload = serde_json::json!({
-        "schema_version": 2,
-        "generated_unix_ms": now_unix_ms(),
-        "capture_dir": "renderdoc",
-        "autocapture_after_frames": renderdoc_autocapture_after_frames,
-        "captures": capture_rows,
-    });
-    let _ = write_json_value(&resolved_out_dir.join("renderdoc.captures.json"), &payload);
-
-    (repro_process_footprint, Some(payload))
-}
-
-fn build_captures_json(
-    with_tracy: bool,
-    with_renderdoc: bool,
-    prepared_launch: &PreparedReproLaunch,
-    renderdoc_capture_payload: Option<&serde_json::Value>,
-) -> serde_json::Value {
-    serde_json::json!({
-        "tracy": if with_tracy {
-            serde_json::json!({
-                "requested": true,
-                "env_enabled": prepared_launch.tracy_env_enabled,
-                "feature_injected": prepared_launch.tracy_feature_injected,
-                "note": "Capture is not recorded automatically yet; use the Tracy UI to save a capture."
-            })
-        } else {
-            serde_json::Value::Null
-        },
-        "renderdoc": if with_renderdoc {
-            renderdoc_capture_payload.cloned().unwrap_or_else(|| serde_json::json!({
-                "schema_version": 2,
-                "generated_unix_ms": now_unix_ms(),
-                "capture_dir": "renderdoc",
-                "autocapture_after_frames": prepared_launch.renderdoc_autocapture_after_frames,
-                "captures": [],
-            }))
-        } else {
-            serde_json::Value::Null
-        }
-    })
-}
-
-fn summary_json_with_error(
-    summary_json: &serde_json::Value,
-    overall_error: Option<&str>,
-    overall_reason_code: Option<&str>,
-) -> serde_json::Value {
-    summary_json
-        .as_object()
-        .cloned()
-        .map(|mut obj| {
-            if let Some(err) = overall_error {
-                obj.insert(
-                    "error".to_string(),
-                    serde_json::Value::String(err.to_string()),
-                );
-            }
-            if let Some(code) = overall_reason_code {
-                obj.insert(
-                    "error_reason_code".to_string(),
-                    serde_json::Value::String(code.to_string()),
-                );
-            }
-            serde_json::Value::Object(obj)
-        })
-        .unwrap_or_else(|| summary_json.clone())
-}
-
-fn write_summary_and_evidence_best_effort(
-    resolved_out_dir: &Path,
-    summary_path: &Path,
-    summary_json: &serde_json::Value,
-) {
-    if let Some(parent) = summary_path.parent() {
-        let _ = std::fs::create_dir_all(parent);
-    }
-    let _ = write_json_value(summary_path, summary_json);
-    let _ = write_evidence_index(resolved_out_dir, summary_path, Some(summary_json));
-}
-
-struct PackOutcome {
-    packed_zip: Option<PathBuf>,
-    overall_error: Option<String>,
-    overall_reason_code: Option<String>,
-}
-
-#[allow(clippy::too_many_arguments)]
-fn pack_repro_zip(
-    multi_pack: bool,
-    pack_items: &[ReproPackItem],
-    selected_bundle_path: Option<&PathBuf>,
-    resolved_out_dir: &Path,
-    summary_path: &Path,
-    zip_out: &Path,
-    pack_defaults: (bool, bool, bool),
-    with_renderdoc: bool,
-    with_tracy: bool,
-    stats_top: usize,
-    sort: BundleStatsSort,
-    warmup_frames: u64,
-) -> Result<PackOutcome, String> {
-    if multi_pack {
-        let bundles: Vec<ReproZipBundle> = pack_items
-            .iter()
-            .enumerate()
-            .map(|(idx, item)| ReproZipBundle {
-                prefix: repro_zip_prefix_for_script(item, idx),
-                bundle_json: item.bundle_json.clone(),
-                source_script: item.script_path.clone(),
-            })
-            .collect();
-
-        if let Err(err) = pack_repro_zip_multi(
-            zip_out,
-            pack_defaults.0,
-            pack_defaults.1,
-            pack_defaults.2,
-            with_renderdoc,
-            with_tracy,
-            resolved_out_dir,
-            summary_path,
-            &bundles,
-            stats_top,
-            sort,
-            warmup_frames,
-        ) {
-            return Ok(PackOutcome {
-                packed_zip: None,
-                overall_error: Some(format!("failed to pack repro zip: {err}")),
-                overall_reason_code: None,
-            });
-        }
-
-        return Ok(PackOutcome {
-            packed_zip: Some(zip_out.to_path_buf()),
-            overall_error: None,
-            overall_reason_code: None,
-        });
-    }
-
-    let Some(bundle_path) = selected_bundle_path else {
-        return Ok(PackOutcome {
-            packed_zip: None,
-            overall_error: Some(
-                "no bundle.json found (add `capture_bundle` or enable script auto-dumps)"
-                    .to_string(),
-            ),
-            overall_reason_code: Some("tooling.bundle_missing".to_string()),
-        });
-    };
-
-    let bundle_dir = resolve_bundle_root_dir(bundle_path)?;
-    let artifacts_root = if bundle_dir.starts_with(resolved_out_dir) {
-        resolved_out_dir.to_path_buf()
-    } else {
-        bundle_dir
-            .parent()
-            .unwrap_or(resolved_out_dir)
-            .to_path_buf()
-    };
-
-    if let Err(err) = pack_bundle_dir_to_zip(
-        &bundle_dir,
-        zip_out,
-        pack_defaults.0,
-        pack_defaults.1,
-        pack_defaults.2,
-        with_renderdoc,
-        with_tracy,
-        &artifacts_root,
-        stats_top,
-        sort,
-        warmup_frames,
-    ) {
-        return Ok(PackOutcome {
-            packed_zip: None,
-            overall_error: Some(format!("failed to pack repro zip: {err}")),
-            overall_reason_code: Some("tooling.pack.failed".to_string()),
-        });
-    }
-
-    Ok(PackOutcome {
-        packed_zip: Some(zip_out.to_path_buf()),
-        overall_error: None,
-        overall_reason_code: None,
-    })
 }
 
 pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
@@ -657,21 +176,21 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
         );
     }
 
-    let pack_defaults = pack_defaults_with_fallback(
+    let pack_defaults = util::pack_defaults_with_fallback(
         pack_include_root_artifacts,
         pack_include_triage,
         pack_include_screenshots,
     );
 
-    let (scripts, suite_name) = resolve_repro_scripts(&rest, &workspace_root);
+    let (scripts, suite_name) = scripts::resolve_repro_scripts(&rest, &workspace_root);
 
     let summary_path = resolved_out_dir.join("repro.summary.json");
 
-    let required_caps = compute_required_caps(&scripts);
+    let required_caps = scripts::compute_required_caps(&scripts);
 
     let mut overall_reason_code: Option<String> = None;
 
-    let prepared_launch = prepare_repro_launch(
+    let prepared_launch = launch::prepare_repro_launch(
         &resolved_out_dir,
         launch,
         launch_env,
@@ -782,7 +301,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
             "filesystem",
         )
     {
-        overall_reason_code = read_tooling_reason_code(&resolved_script_result_path)
+        overall_reason_code = util::read_tooling_reason_code(&resolved_script_result_path)
             .or_else(|| Some("capability.missing".to_string()));
         overall_error = Some(err);
     }
@@ -839,7 +358,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
         ) {
             Ok(v) => v,
             Err(err) => {
-                overall_reason_code = read_tooling_reason_code(&resolved_script_result_path)
+                overall_reason_code = util::read_tooling_reason_code(&resolved_script_result_path)
                     .or_else(|| Some("tooling.run.failed".to_string()));
                 overall_error = Some(err);
                 break;
@@ -1206,18 +725,19 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
         serde_json::Value::Null
     };
 
-    let (new_footprint, renderdoc_capture_payload) = stop_demo_and_collect_renderdoc_captures(
-        &workspace_root,
-        &resolved_out_dir,
-        &resolved_exit_path,
-        poll_ms,
-        &mut child,
-        with_renderdoc,
-        prepared_launch.renderdoc_capture_dir.as_ref(),
-        prepared_launch.renderdoc_autocapture_after_frames,
-        &renderdoc_markers,
-        renderdoc_no_outputs_png,
-    );
+    let (new_footprint, renderdoc_capture_payload) =
+        renderdoc::stop_demo_and_collect_renderdoc_captures(
+            &workspace_root,
+            &resolved_out_dir,
+            &resolved_exit_path,
+            poll_ms,
+            &mut child,
+            with_renderdoc,
+            prepared_launch.renderdoc_capture_dir.as_ref(),
+            prepared_launch.renderdoc_autocapture_after_frames,
+            &renderdoc_markers,
+            renderdoc_no_outputs_png,
+        );
     repro_process_footprint = repro_process_footprint.or(new_footprint);
 
     let repro_process_footprint_file = resolved_out_dir.join("resource.footprint.json");
@@ -1237,7 +757,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
             check_redraw_hitches_max_total_ms(&resolved_out_dir, max_total_ms).ok();
     }
 
-    let captures_json = build_captures_json(
+    let captures_json = summary::build_captures_json(
         with_tracy,
         with_renderdoc,
         &prepared_launch,
@@ -1279,11 +799,15 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
         "error": overall_error,
     });
 
-    write_summary_and_evidence_best_effort(&resolved_out_dir, &summary_path, &summary_json);
+    summary::write_summary_and_evidence_best_effort(
+        &resolved_out_dir,
+        &summary_path,
+        &summary_json,
+    );
 
     if overall_error.is_none() {
         let sort = sort_override.unwrap_or(BundleStatsSort::Invalidation);
-        let outcome = pack_repro_zip(
+        let outcome = pack::pack_repro_zip(
             multi_pack,
             &pack_items,
             selected_bundle_path.as_ref(),
@@ -1305,7 +829,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
 
         if overall_error.is_some() {
             // Keep the summary coherent even when packing fails.
-            let packing_failed_summary_json = summary_json_with_error(
+            let packing_failed_summary_json = summary::summary_json_with_error(
                 &summary_json,
                 overall_error.as_deref(),
                 overall_reason_code.as_deref(),
@@ -1337,7 +861,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
         overall_reason_code = Some("tooling.redraw_hitches.failed".to_string());
     }
 
-    let final_summary_json = summary_json_with_error(
+    let final_summary_json = summary::summary_json_with_error(
         &summary_json,
         overall_error.as_deref(),
         overall_reason_code.as_deref(),

@@ -34,6 +34,7 @@ scope: diagnostics, automation, tooling, refactor
 - [x] Extract `diag suite` command handler out of `crates/fret-diag/src/lib.rs` into `crates/fret-diag/src/diag_suite.rs`.
 - [x] Extract `diag repeat` command handler out of `crates/fret-diag/src/lib.rs` into `crates/fret-diag/src/diag_repeat.rs`.
 - [x] Extract `diag repro` command handler out of `crates/fret-diag/src/lib.rs` into `crates/fret-diag/src/diag_repro.rs`.
+- [x] Split `diag repro` helpers into dedicated submodules under `crates/fret-diag/src/diag_repro/` (launch/renderdoc/packing/summary/scripts).
 - [x] Extract `diag perf` command handler out of `crates/fret-diag/src/lib.rs` into `crates/fret-diag/src/diag_perf.rs`.
 - [x] Extract `diag compare` command handler out of `crates/fret-diag/src/lib.rs` into `crates/fret-diag/src/diag_compare.rs`.
 - [x] Extract `diag stats` command handler out of `crates/fret-diag/src/lib.rs` into `crates/fret-diag/src/diag_stats.rs`.
