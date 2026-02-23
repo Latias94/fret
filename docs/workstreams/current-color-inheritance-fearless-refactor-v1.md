@@ -156,7 +156,7 @@ Statuses:
 | DropdownMenuItem provides `currentColor` (and `leading_icon`) | `fret-ui-shadcn` | Landed | `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs` | `tools/diag-scripts/ui-gallery-dropdown-menu-icons-screenshots.json` |
 | CommandItem provides `currentColor` (and `leading_icon`) | `fret-ui-shadcn` | Landed | `ecosystem/fret-ui-shadcn/src/command.rs` | `tools/diag-scripts/ui-gallery-command-docs-demo-icons-screenshots.json` + `tools/diag-scripts/ui-gallery-command-docs-demo-icons-screenshots-zinc-dark.json` |
 | Sidebar icon-only toggle uses deferred icon slot | `fret-ui-shadcn` | Landed | `ecosystem/fret-ui-shadcn/src/sidebar.rs` | (manual) |
-| AI icon-only actions use deferred icon slots | `fret-ui-ai` | Landed | `ecosystem/fret-ui-ai/src/elements/message_actions.rs` | (manual) |
+| AI icon-only actions use deferred icon slots | `fret-ui-ai` | Landed | `ecosystem/fret-ui-ai/src/elements/message_actions.rs` | `tools/diag-scripts/ui-gallery-ai-chat-demo-message-actions-icons-screenshots-zinc-light.json`<br>`tools/diag-scripts/ui-gallery-ai-chat-demo-message-actions-icons-screenshots-zinc-dark.json` |
 | Diag gate: primary button icon visibility (via ButtonGroup demo; zinc light/dark) | `fret-ui-gallery` | Landed | `tools/diag-scripts/ui-gallery-button-group-demo-icons-screenshots-zinc-light-dark.json` | `tools/diag-scripts/ui-gallery-button-group-demo-icons-screenshots-zinc-light-dark.json` |
 | Badge provides `currentColor` (and icon slots) | `fret-ui-shadcn` | Landed | `ecosystem/fret-ui-shadcn/src/badge.rs` | unit test |
 | Text defaults inherit `currentColor` | `fret-ui-kit` | Landed | `ecosystem/fret-ui-kit/src/ui.rs` | unit test |
