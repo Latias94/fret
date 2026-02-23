@@ -434,6 +434,10 @@ impl Renderer {
             .perf
             .scene_encoding_cache_misses
             .saturating_add(frame_perf.scene_encoding_cache_misses);
+        if frame_perf.scene_encoding_cache_last_miss_reasons != 0 {
+            self.perf.scene_encoding_cache_last_miss_reasons =
+                frame_perf.scene_encoding_cache_last_miss_reasons;
+        }
         self.perf.material_quad_ops = self
             .perf
             .material_quad_ops
@@ -574,6 +578,8 @@ impl Renderer {
             vertex_bytes: frame_perf.vertex_bytes,
             scene_encoding_cache_hits: frame_perf.scene_encoding_cache_hits,
             scene_encoding_cache_misses: frame_perf.scene_encoding_cache_misses,
+            scene_encoding_cache_last_miss_reasons: frame_perf
+                .scene_encoding_cache_last_miss_reasons,
             material_quad_ops: frame_perf.material_quad_ops,
             material_sampled_quad_ops: frame_perf.material_sampled_quad_ops,
             material_distinct: frame_perf.material_distinct,

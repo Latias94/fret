@@ -13,10 +13,12 @@ Tracking format:
   - Evidence: `docs/workstreams/ui-perf-renderer-profiling-v1.md`
 - [x] REN-ENC-clean-001 Remove redundant `SceneEncoding::clear()` on cache miss (hygiene).
   - Evidence: `crates/fret-render-wgpu/src/renderer/render_scene/encoding_cache.rs`
-- [ ] REN-ENC-observe-001 Add a trace-friendly explanation string for encoding cache misses in `RenderPerfSnapshot` (optional).
-  - Example: `miss_reason=text_atlas_revision_changed|images_generation_changed|scene_fingerprint_changed`
-  - Evidence target: `crates/fret-render-wgpu/src/renderer/render_scene/encoding_cache.rs`,
-    `crates/fret-render-wgpu/src/renderer/types.rs`
+- [x] REN-ENC-observe-001 Add a trace-friendly explanation string for encoding cache misses in `RenderPerfSnapshot` (optional).
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (trace fields)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/encoding_cache.rs` (reason mask + display)
+    - `crates/fret-render-wgpu/src/renderer/types.rs` (`scene_encoding_cache_last_miss_reasons`)
+    - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (bundle export: `renderer_scene_encoding_cache_last_miss_reason`)
 
 ## Nice-to-have (only with perf evidence)
 

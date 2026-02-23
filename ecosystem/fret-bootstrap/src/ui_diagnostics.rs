@@ -5893,6 +5893,12 @@ pub struct UiFrameStatsV1 {
     pub renderer_scene_encoding_cache_hits: u64,
     #[serde(default)]
     pub renderer_scene_encoding_cache_misses: u64,
+    /// Best-effort miss reason mask for the most recent scene encoding cache miss.
+    #[serde(default)]
+    pub renderer_scene_encoding_cache_last_miss_reasons: u64,
+    /// Best-effort human-readable miss reason for the most recent scene encoding cache miss.
+    #[serde(default)]
+    pub renderer_scene_encoding_cache_last_miss_reason: Option<String>,
     #[serde(default)]
     pub renderer_material_quad_ops: u64,
     #[serde(default)]
@@ -6218,6 +6224,8 @@ impl UiFrameStatsV1 {
             renderer_vertex_bytes: 0,
             renderer_scene_encoding_cache_hits: 0,
             renderer_scene_encoding_cache_misses: 0,
+            renderer_scene_encoding_cache_last_miss_reasons: 0,
+            renderer_scene_encoding_cache_last_miss_reason: None,
             renderer_material_quad_ops: 0,
             renderer_material_sampled_quad_ops: 0,
             renderer_material_distinct: 0,
@@ -6324,6 +6332,12 @@ impl UiFrameStatsV1 {
             out.renderer_vertex_bytes = sample.perf.vertex_bytes;
             out.renderer_scene_encoding_cache_hits = sample.perf.scene_encoding_cache_hits;
             out.renderer_scene_encoding_cache_misses = sample.perf.scene_encoding_cache_misses;
+            out.renderer_scene_encoding_cache_last_miss_reasons =
+                sample.perf.scene_encoding_cache_last_miss_reasons;
+            out.renderer_scene_encoding_cache_last_miss_reason =
+                renderer_scene_encoding_cache_miss_reason_string(
+                    sample.perf.scene_encoding_cache_last_miss_reasons,
+                );
             out.renderer_material_quad_ops = sample.perf.material_quad_ops;
             out.renderer_material_sampled_quad_ops = sample.perf.material_sampled_quad_ops;
             out.renderer_material_distinct = sample.perf.material_distinct;
@@ -6333,6 +6347,59 @@ impl UiFrameStatsV1 {
         }
 
         out
+    }
+}
+
+fn renderer_scene_encoding_cache_miss_reason_string(reasons: u64) -> Option<String> {
+    if reasons == 0 {
+        return None;
+    }
+
+    let mut out = String::new();
+    let mut push = |s: &str| {
+        if !out.is_empty() {
+            out.push('|');
+        }
+        out.push_str(s);
+    };
+
+    if (reasons & (1 << 0)) != 0 {
+        push("cold_start");
+        return Some(out);
+    }
+
+    if (reasons & (1 << 1)) != 0 {
+        push("format");
+    }
+    if (reasons & (1 << 2)) != 0 {
+        push("viewport");
+    }
+    if (reasons & (1 << 3)) != 0 {
+        push("scale_factor");
+    }
+    if (reasons & (1 << 4)) != 0 {
+        push("scene_fingerprint");
+    }
+    if (reasons & (1 << 5)) != 0 {
+        push("scene_ops_len");
+    }
+    if (reasons & (1 << 6)) != 0 {
+        push("render_targets_generation");
+    }
+    if (reasons & (1 << 7)) != 0 {
+        push("images_generation");
+    }
+    if (reasons & (1 << 8)) != 0 {
+        push("text_atlas_revision");
+    }
+    if (reasons & (1 << 9)) != 0 {
+        push("text_quality_key");
+    }
+
+    if out.is_empty() {
+        Some("unknown".to_string())
+    } else {
+        Some(out)
     }
 }
 

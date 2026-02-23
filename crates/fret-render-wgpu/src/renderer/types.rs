@@ -305,6 +305,11 @@ pub struct RenderPerfSnapshot {
 
     pub scene_encoding_cache_hits: u64,
     pub scene_encoding_cache_misses: u64,
+    /// Best-effort miss reason mask for the most recent encoding cache miss.
+    ///
+    /// This is intended for diagnostics bundles and trace logs. It should not be treated as a
+    /// stable API surface.
+    pub scene_encoding_cache_last_miss_reasons: u64,
 
     // Tier B materials (ADR 0235) observability (best-effort).
     pub material_quad_ops: u64,
@@ -432,6 +437,7 @@ pub(super) struct RenderPerfStats {
 
     pub(super) scene_encoding_cache_hits: u64,
     pub(super) scene_encoding_cache_misses: u64,
+    pub(super) scene_encoding_cache_last_miss_reasons: u64,
 
     pub(super) material_quad_ops: u64,
     pub(super) material_sampled_quad_ops: u64,

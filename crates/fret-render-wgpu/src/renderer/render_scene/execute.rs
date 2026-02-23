@@ -33,6 +33,8 @@ impl Renderer {
                 scale_factor,
                 format = ?format,
                 encoding_cache_hit = tracing::field::Empty,
+                encoding_cache_miss_reasons = tracing::field::Empty,
+                encoding_cache_miss_reason = tracing::field::Empty,
                 plan_passes = tracing::field::Empty,
                 plan_segments = tracing::field::Empty,
                 plan_degradations = tracing::field::Empty,

@@ -12,6 +12,10 @@ impl SceneEncodingCache {
         self.key == Some(key)
     }
 
+    pub(super) fn key(&self) -> Option<SceneEncodingCacheKey> {
+        self.key
+    }
+
     pub(super) fn take_for_frame(&mut self, cache_hit: bool) -> SceneEncoding {
         if cache_hit {
             std::mem::take(&mut self.cache)
@@ -43,7 +47,7 @@ impl SceneEncodingCache {
 #[cfg(test)]
 impl SceneEncodingCache {
     pub(super) fn cache_key(&self) -> Option<SceneEncodingCacheKey> {
-        self.key
+        self.key()
     }
 
     pub(super) fn cache(&self) -> &SceneEncoding {
