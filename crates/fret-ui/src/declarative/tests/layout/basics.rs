@@ -233,6 +233,179 @@ fn flex_fraction_basis_and_fill_basis_do_not_collapse_under_min_content_measurem
 }
 
 #[test]
+fn min_max_fraction_only_resolve_under_definite_available_space_in_measurement() {
+    use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(80.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "min-max-fraction-measure",
+        |cx| {
+            let mut max_props = crate::element::ContainerProps::default();
+            max_props.layout.size.width = Length::Px(Px(150.0));
+            max_props.layout.size.max_width = Some(Length::Fraction(0.5));
+            let max_node = cx.container(max_props, |cx| vec![cx.text("x")]);
+
+            let mut min_props = crate::element::ContainerProps::default();
+            min_props.layout.size.width = Length::Px(Px(10.0));
+            min_props.layout.size.min_width = Some(Length::Fraction(0.5));
+            let min_node = cx.container(min_props, |cx| vec![cx.text("x")]);
+
+            vec![max_node, min_node]
+        },
+    );
+    ui.set_root(root);
+
+    let max_node = ui.children(root)[0];
+    let min_node = ui.children(root)[1];
+
+    let min_constraints = LayoutConstraints::new(
+        LayoutSize::new(None, None),
+        LayoutSize::new(AvailableSpace::MinContent, AvailableSpace::MinContent),
+    );
+    let measured = ui.measure_in(&mut app, &mut text, max_node, min_constraints, 1.0);
+    assert!(
+        (measured.width.0 - 150.0).abs() < 0.01,
+        "expected max_width Fraction to behave like auto under MinContent, got {:?}",
+        measured.width
+    );
+    let measured = ui.measure_in(&mut app, &mut text, min_node, min_constraints, 1.0);
+    assert!(
+        (measured.width.0 - 10.0).abs() < 0.01,
+        "expected min_width Fraction to behave like auto under MinContent, got {:?}",
+        measured.width
+    );
+
+    let max_constraints = LayoutConstraints::new(
+        LayoutSize::new(None, None),
+        LayoutSize::new(AvailableSpace::MaxContent, AvailableSpace::MaxContent),
+    );
+    let measured = ui.measure_in(&mut app, &mut text, max_node, max_constraints, 1.0);
+    assert!(
+        (measured.width.0 - 150.0).abs() < 0.01,
+        "expected max_width Fraction to behave like auto under MaxContent, got {:?}",
+        measured.width
+    );
+    let measured = ui.measure_in(&mut app, &mut text, min_node, max_constraints, 1.0);
+    assert!(
+        (measured.width.0 - 10.0).abs() < 0.01,
+        "expected min_width Fraction to behave like auto under MaxContent, got {:?}",
+        measured.width
+    );
+
+    let definite_constraints = LayoutConstraints::new(
+        LayoutSize::new(None, None),
+        LayoutSize::new(
+            AvailableSpace::Definite(Px(200.0)),
+            AvailableSpace::Definite(Px(80.0)),
+        ),
+    );
+    let measured = ui.measure_in(&mut app, &mut text, max_node, definite_constraints, 1.0);
+    assert!(
+        (measured.width.0 - 100.0).abs() < 0.01,
+        "expected max_width Fraction to resolve under definite available space, got {:?}",
+        measured.width
+    );
+    let measured = ui.measure_in(&mut app, &mut text, min_node, definite_constraints, 1.0);
+    assert!(
+        (measured.width.0 - 100.0).abs() < 0.01,
+        "expected min_width Fraction to resolve under definite available space, got {:?}",
+        measured.width
+    );
+}
+
+#[test]
+fn spacing_fraction_only_resolve_under_definite_available_space_in_measurement() {
+    use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(80.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "spacing-fraction-measure",
+        |cx| {
+            let mut props = crate::element::RowProps::default();
+            props.gap = crate::element::SpacingLength::Fraction(0.1);
+            props.padding = crate::element::SpacingEdges {
+                left: crate::element::SpacingLength::Fraction(0.1),
+                right: crate::element::SpacingLength::Fraction(0.1),
+                top: crate::element::SpacingLength::Fraction(0.1),
+                bottom: crate::element::SpacingLength::Fraction(0.1),
+            };
+            props.layout.size.width = Length::Auto;
+            props.layout.size.height = Length::Auto;
+
+            vec![cx.row(props, |cx| vec![cx.text("a"), cx.text("b")])]
+        },
+    );
+    ui.set_root(root);
+
+    let row_node = ui.children(root)[0];
+
+    let intrinsic_constraints = LayoutConstraints::new(
+        LayoutSize::new(None, None),
+        LayoutSize::new(AvailableSpace::MinContent, AvailableSpace::MinContent),
+    );
+    let measured = ui.measure_in(&mut app, &mut text, row_node, intrinsic_constraints, 1.0);
+    assert!(
+        (measured.width.0 - 20.0).abs() < 0.01,
+        "expected percent spacing to resolve to 0 under MinContent, got {:?}",
+        measured.width
+    );
+    assert!(
+        (measured.height.0 - 10.0).abs() < 0.01,
+        "expected percent spacing to resolve to 0 under MinContent, got {:?}",
+        measured.height
+    );
+
+    let definite_constraints = LayoutConstraints::new(
+        LayoutSize::new(None, None),
+        LayoutSize::new(
+            AvailableSpace::Definite(Px(200.0)),
+            AvailableSpace::Definite(Px(80.0)),
+        ),
+    );
+    let measured = ui.measure_in(&mut app, &mut text, row_node, definite_constraints, 1.0);
+    assert!(
+        (measured.width.0 - 76.0).abs() < 0.01,
+        "expected percent spacing to resolve under definite available space, got {:?}",
+        measured.width
+    );
+    assert!(
+        (measured.height.0 - 50.0).abs() < 0.01,
+        "expected percent spacing to resolve under definite available space, got {:?}",
+        measured.height
+    );
+}
+
+#[test]
 fn row_justify_center_and_align_end_positions_children() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
@@ -254,7 +427,7 @@ fn row_justify_center_and_align_end_positions_children() {
         "row-align",
         |cx| {
             let mut props = crate::element::RowProps {
-                gap: Px(5.0),
+                gap: Px(5.0).into(),
                 justify: MainAlign::Center,
                 align: CrossAlign::End,
                 ..Default::default()
@@ -585,7 +758,8 @@ fn wrapper_chain_padding_is_applied_via_engine_rects() {
                 right: Px(4.0),
                 top: Px(6.0),
                 bottom: Px(2.0),
-            },
+            }
+            .into(),
             ..Default::default()
         };
 
@@ -849,7 +1023,7 @@ fn fill_respects_max_width_constraint() {
                     layout: crate::element::LayoutStyle {
                         size: crate::element::SizeStyle {
                             width: crate::element::Length::Fill,
-                            max_width: Some(Px(100.0)),
+                            max_width: Some(crate::element::Length::Px(Px(100.0))),
                             ..Default::default()
                         },
                         ..Default::default()
@@ -895,7 +1069,7 @@ fn flex_child_margin_affects_layout() {
             vec![cx.flex(
                 crate::element::FlexProps {
                     direction: fret_core::Axis::Horizontal,
-                    gap: Px(0.0),
+                    gap: Px(0.0).into(),
                     layout: {
                         let mut l = crate::element::LayoutStyle::default();
                         l.size.width = crate::element::Length::Fill;
@@ -956,7 +1130,7 @@ fn flex_child_auto_margins_center_child() {
             vec![cx.flex(
                 crate::element::FlexProps {
                     direction: fret_core::Axis::Horizontal,
-                    gap: Px(0.0),
+                    gap: Px(0.0).into(),
                     layout: {
                         let mut l = crate::element::LayoutStyle::default();
                         l.size.width = crate::element::Length::Fill;
@@ -1013,7 +1187,7 @@ fn flex_child_negative_margin_shifts_layout() {
             vec![cx.flex(
                 crate::element::FlexProps {
                     direction: fret_core::Axis::Horizontal,
-                    gap: Px(0.0),
+                    gap: Px(0.0).into(),
                     ..Default::default()
                 },
                 |cx| {
@@ -1127,8 +1301,8 @@ fn flex_defaults_to_fit_content_under_constraints() {
             vec![cx.flex(
                 crate::element::FlexProps {
                     direction: fret_core::Axis::Horizontal,
-                    gap: Px(5.0),
-                    padding: fret_core::Edges::symmetric(Px(4.0), Px(6.0)),
+                    gap: Px(5.0).into(),
+                    padding: fret_core::Edges::symmetric(Px(4.0), Px(6.0)).into(),
                     ..Default::default()
                 },
                 |cx| vec![cx.text("a"), cx.text("b")],

@@ -296,7 +296,8 @@ pub fn tree_view_with_renderer<H: UiHost>(
                                         right: row_px,
                                         bottom: row_py,
                                         left: pad_left,
-                                    },
+                                    }
+                                    .into(),
                                     background: row_bg,
                                     ..Default::default()
                                 },
@@ -498,31 +499,37 @@ fn tree_view_retained_impl<H: UiHost + 'static>(
                             };
 
                             let mut renderer = DefaultTreeRowRenderer;
-                            vec![cx.container(
-                                ContainerProps {
-                                    padding: Edges {
-                                        top: row_py,
-                                        right: row_px,
-                                        bottom: row_py,
-                                        left: pad_left,
+                            vec![
+                                cx.container(
+                                    ContainerProps {
+                                        padding: Edges {
+                                            top: row_py,
+                                            right: row_px,
+                                            bottom: row_py,
+                                            left: pad_left,
+                                        }
+                                        .into(),
+                                        background: row_bg,
+                                        ..Default::default()
                                     },
-                                    background: row_bg,
-                                    ..Default::default()
-                                },
-                                |cx| {
-                                    vec![stack::hstack(
-                                        cx,
-                                        stack::HStackProps::default()
-                                            .gap_x(Space::N2)
-                                            .justify(Justify::Start)
-                                            .items(Items::Center),
-                                        |cx| {
-                                            let mut out = Vec::new();
+                                    |cx| {
+                                        vec![stack::hstack(
+                                            cx,
+                                            stack::HStackProps::default()
+                                                .gap_x(Space::N2)
+                                                .justify(Justify::Start)
+                                                .items(Items::Center),
+                                            |cx| {
+                                                let mut out = Vec::new();
 
-                                            if entry.has_children {
-                                                let glyph: Arc<str> =
-                                                    Arc::from(if is_expanded { "v" } else { ">" });
-                                                out.push(cx.pressable(
+                                                if entry.has_children {
+                                                    let glyph: Arc<str> =
+                                                        Arc::from(if is_expanded {
+                                                            "v"
+                                                        } else {
+                                                            ">"
+                                                        });
+                                                    out.push(cx.pressable(
                                                 PressableProps {
                                                     enabled: toggle_cmd.is_some(),
                                                     a11y: PressableA11y {
@@ -541,23 +548,26 @@ fn tree_view_retained_impl<H: UiHost + 'static>(
                                                     vec![cx.text(glyph.as_ref())]
                                                 },
                                             ));
-                                            } else {
-                                                out.push(cx.spacer(SpacerProps {
-                                                    min: Px(14.0),
-                                                    ..Default::default()
-                                                }));
-                                            }
+                                                } else {
+                                                    out.push(cx.spacer(SpacerProps {
+                                                        min: Px(14.0),
+                                                        ..Default::default()
+                                                    }));
+                                                }
 
-                                            out.extend(renderer.render_row(cx, &entry, row_state));
-                                            out.push(cx.spacer(SpacerProps::default()));
-                                            out.extend(
-                                                renderer.render_trailing(cx, &entry, row_state),
-                                            );
-                                            out
-                                        },
-                                    )]
-                                },
-                            )]
+                                                out.extend(
+                                                    renderer.render_row(cx, &entry, row_state),
+                                                );
+                                                out.push(cx.spacer(SpacerProps::default()));
+                                                out.extend(
+                                                    renderer.render_trailing(cx, &entry, row_state),
+                                                );
+                                                out
+                                            },
+                                        )]
+                                    },
+                                ),
+                            ]
                         },
                     )
                 });

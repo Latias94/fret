@@ -82,16 +82,18 @@ impl ElementHostWidget {
             );
         }
 
-        let pad_left = props.padding.left.0.max(0.0);
-        let pad_right = props.padding.right.0.max(0.0);
-        let pad_top = props.padding.top.0.max(0.0);
-        let pad_bottom = props.padding.bottom.0.max(0.0);
+        let padding_basis = cx.available.width;
+        let pad_left = super::spacing_px_for_basis(props.padding.left, padding_basis);
+        let pad_right = super::spacing_px_for_basis(props.padding.right, padding_basis);
+        let pad_top = super::spacing_px_for_basis(props.padding.top, padding_basis);
+        let pad_bottom = super::spacing_px_for_basis(props.padding.bottom, padding_basis);
         let pad_w = pad_left + pad_right;
         let pad_h = pad_top + pad_bottom;
         let inner_size = Size::new(
             Px((cx.available.width.0 - pad_w).max(0.0)),
             Px((cx.available.height.0 - pad_h).max(0.0)),
         );
+        let gap_x = super::spacing_px_for_basis(props.gap, inner_size.width);
         let auto_margin_inner_size = inner_size;
 
         let mut ml_auto_tail_group_start: Option<usize> = None;
@@ -164,7 +166,7 @@ impl ElementHostWidget {
                                 cx.tree.layout_engine_child_local_rect(cx.node, next_child)
                         {
                             let next_x = next_layout.origin.x.0 - pad_left;
-                            let desired = (next_x - props.gap.0 - layout.size.width.0).max(0.0);
+                            let desired = (next_x - gap_x - layout.size.width.0).max(0.0);
                             x = x.min(desired);
                         }
                     }

@@ -13,7 +13,7 @@ mod tests;
 
 pub use chrome::{
     ChromeRefinement, CornerRadiiRefinement, InsetRefinement, MarginEdgeRefinement,
-    MarginRefinement, PaddingRefinement, ShadowPreset,
+    MarginRefinement, PaddingLengthRefinement, PaddingRefinement, ShadowPreset,
 };
 pub use layout::{LayoutRefinement, LengthRefinement, SizeRefinement};
 pub use refs::{ColorRef, MetricRef, SignedMetricRef};

@@ -402,8 +402,49 @@ impl<T: UiSupportsChrome> UiBuilder<T> {
         })
     }
 
+    pub fn paddings_fraction(self, paddings: impl Into<Edges4<f32>>) -> Self {
+        self.style_with(|mut c| {
+            let Edges4 {
+                top,
+                right,
+                bottom,
+                left,
+            } = paddings.into();
+            let mut padding = c.padding_length.unwrap_or_default();
+            padding.top = Some(LengthRefinement::Fraction(top));
+            padding.right = Some(LengthRefinement::Fraction(right));
+            padding.bottom = Some(LengthRefinement::Fraction(bottom));
+            padding.left = Some(LengthRefinement::Fraction(left));
+            c.padding_length = Some(padding);
+            c
+        })
+    }
+
+    pub fn paddings_percent(self, paddings: impl Into<Edges4<f32>>) -> Self {
+        let Edges4 {
+            top,
+            right,
+            bottom,
+            left,
+        } = paddings.into();
+        self.paddings_fraction(Edges4 {
+            top: top / 100.0,
+            right: right / 100.0,
+            bottom: bottom / 100.0,
+            left: left / 100.0,
+        })
+    }
+
     pub fn padding(self, padding: impl Into<MetricRef>) -> Self {
         self.paddings(Edges4::all(padding.into()))
+    }
+
+    pub fn padding_fraction(self, fraction: f32) -> Self {
+        self.paddings_fraction(Edges4::all(fraction))
+    }
+
+    pub fn padding_percent(self, percent: f32) -> Self {
+        self.padding_fraction(percent / 100.0)
     }
 
     pub fn padding_px(self, px: Px) -> Self {
@@ -906,6 +947,7 @@ impl<T: UiPatchTarget> UiBuilder<T> {
 impl<H, F> UiBuilder<crate::ui::FlexBox<H, F>> {
     pub fn gap(mut self, gap: impl Into<MetricRef>) -> Self {
         self.inner.gap = gap.into();
+        self.inner.gap_length = None;
         self
     }
 
@@ -915,6 +957,20 @@ impl<H, F> UiBuilder<crate::ui::FlexBox<H, F>> {
 
     pub fn gap_metric(self, gap: MetricRef) -> Self {
         self.gap(gap)
+    }
+
+    pub fn gap_fraction(mut self, fraction: f32) -> Self {
+        self.inner.gap_length = Some(LengthRefinement::Fraction(fraction));
+        self
+    }
+
+    pub fn gap_percent(self, percent: f32) -> Self {
+        self.gap_fraction(percent / 100.0)
+    }
+
+    pub fn gap_full(mut self) -> Self {
+        self.inner.gap_length = Some(LengthRefinement::Fill);
+        self
     }
 
     pub fn justify(mut self, justify: Justify) -> Self {
@@ -973,6 +1029,7 @@ impl<H, F> UiBuilder<crate::ui::FlexBox<H, F>> {
 impl<H, B> UiBuilder<crate::ui::FlexBoxBuild<H, B>> {
     pub fn gap(mut self, gap: impl Into<MetricRef>) -> Self {
         self.inner.gap = gap.into();
+        self.inner.gap_length = None;
         self
     }
 
@@ -982,6 +1039,20 @@ impl<H, B> UiBuilder<crate::ui::FlexBoxBuild<H, B>> {
 
     pub fn gap_metric(self, gap: MetricRef) -> Self {
         self.gap(gap)
+    }
+
+    pub fn gap_fraction(mut self, fraction: f32) -> Self {
+        self.inner.gap_length = Some(LengthRefinement::Fraction(fraction));
+        self
+    }
+
+    pub fn gap_percent(self, percent: f32) -> Self {
+        self.gap_fraction(percent / 100.0)
+    }
+
+    pub fn gap_full(mut self) -> Self {
+        self.inner.gap_length = Some(LengthRefinement::Fill);
+        self
     }
 
     pub fn justify(mut self, justify: Justify) -> Self {

@@ -3,7 +3,7 @@ use fret_ui::ElementContext;
 use fret_ui::UiHost;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, Length, MainAlign, Overflow, PressableProps,
-    PressableState,
+    PressableState, SpacingLength,
 };
 use fret_ui::elements::GlobalElementId;
 use std::sync::Arc;
@@ -20,8 +20,12 @@ fn normalize_control_chrome_sizing(
     // Without this, shadcn-style controls that apply `min-height` + `py-*` would inflate:
     // the chrome node enforces the min-height, then adds padding on top (e.g. `h-9` becomes
     // 52px).
-    let pad_x = chrome_props.padding.left.0 + chrome_props.padding.right.0;
-    let pad_y = chrome_props.padding.top.0 + chrome_props.padding.bottom.0;
+    let spacing_px = |v: SpacingLength| match v {
+        SpacingLength::Px(px) => px.0.max(0.0),
+        SpacingLength::Fill | SpacingLength::Fraction(_) => 0.0,
+    };
+    let pad_x = spacing_px(chrome_props.padding.left) + spacing_px(chrome_props.padding.right);
+    let pad_y = spacing_px(chrome_props.padding.top) + spacing_px(chrome_props.padding.bottom);
     let border_x = chrome_props.border.left.0 + chrome_props.border.right.0;
     let border_y = chrome_props.border.top.0 + chrome_props.border.bottom.0;
     let inset_x = pad_x + border_x;
@@ -47,18 +51,18 @@ fn normalize_control_chrome_sizing(
         child_size.height = Length::Fill;
     }
 
-    if let Some(min_h) = parent_size.min_height {
-        child_size.min_height = Some(shrink_px(min_h, inset_y));
+    if let Some(Length::Px(min_h)) = parent_size.min_height {
+        child_size.min_height = Some(Length::Px(shrink_px(min_h, inset_y)));
     }
-    if let Some(max_h) = parent_size.max_height {
-        child_size.max_height = Some(shrink_px(max_h, inset_y));
+    if let Some(Length::Px(max_h)) = parent_size.max_height {
+        child_size.max_height = Some(Length::Px(shrink_px(max_h, inset_y)));
     }
 
-    if let Some(min_w) = parent_size.min_width {
-        child_size.min_width = Some(shrink_px(min_w, inset_x));
+    if let Some(Length::Px(min_w)) = parent_size.min_width {
+        child_size.min_width = Some(Length::Px(shrink_px(min_w, inset_x)));
     }
-    if let Some(max_w) = parent_size.max_width {
-        child_size.max_width = Some(shrink_px(max_w, inset_x));
+    if let Some(Length::Px(max_w)) = parent_size.max_width {
+        child_size.max_width = Some(Length::Px(shrink_px(max_w, inset_x)));
     }
 }
 

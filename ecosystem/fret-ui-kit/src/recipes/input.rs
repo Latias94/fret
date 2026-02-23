@@ -61,7 +61,7 @@ pub fn input_chrome_container_props(
     layout.overflow = Overflow::Clip;
     ContainerProps {
         layout,
-        padding: chrome.padding,
+        padding: chrome.padding.into(),
         background: Some(chrome.background),
         background_paint: None,
         shadow: None,

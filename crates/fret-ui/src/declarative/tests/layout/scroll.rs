@@ -123,7 +123,7 @@ fn scroll_wheel_updates_offset_and_shifts_child_bounds() {
             vec![cx.scroll(p, |cx| {
                 vec![cx.column(
                     crate::element::ColumnProps {
-                        gap: Px(0.0),
+                        gap: Px(0.0).into(),
                         ..Default::default()
                     },
                     |cx| vec![cx.text("a"), cx.text("b"), cx.text("c")],
@@ -198,7 +198,7 @@ fn scroll_translation_does_not_force_layout_engine_solves() {
             vec![cx.scroll(p, |cx| {
                 vec![cx.column(
                     crate::element::ColumnProps {
-                        gap: Px(0.0),
+                        gap: Px(0.0).into(),
                         ..Default::default()
                     },
                     |cx| vec![cx.text("a"), cx.text("b"), cx.text("c")],
@@ -298,7 +298,7 @@ fn scroll_axis_both_probe_unbounded_keeps_content_at_least_viewport_width() {
                             },
                             ..Default::default()
                         },
-                        gap: Px(0.0),
+                        gap: Px(0.0).into(),
                         ..Default::default()
                     },
                     |cx| vec![cx.text("a")],
@@ -372,7 +372,7 @@ fn scroll_thumb_drag_updates_offset() {
                         |cx| {
                             vec![cx.column(
                                 crate::element::ColumnProps {
-                                    gap: Px(0.0),
+                                    gap: Px(0.0).into(),
                                     ..Default::default()
                                 },
                                 |cx| {
@@ -538,7 +538,7 @@ fn scroll_handle_set_offset_triggers_visual_scroll_without_manual_invalidate() {
             |cx| {
                 vec![cx.column(
                     crate::element::ColumnProps {
-                        gap: Px(0.0),
+                        gap: Px(0.0).into(),
                         ..Default::default()
                     },
                     |cx| {
@@ -659,7 +659,7 @@ fn scroll_content_extent_updates_immediately_when_growing_at_scroll_end() {
 
                 vec![cx.column(
                     crate::element::ColumnProps {
-                        gap: Px(0.0),
+                        gap: Px(0.0).into(),
                         ..Default::default()
                     },
                     move |cx| {
@@ -784,7 +784,7 @@ fn scroll_at_end_reuses_cached_extent_when_clean() {
             move |cx| {
                 vec![cx.column(
                     crate::element::ColumnProps {
-                        gap: Px(0.0),
+                        gap: Px(0.0).into(),
                         ..Default::default()
                     },
                     move |cx| {
@@ -887,7 +887,7 @@ fn scroll_offset_clamps_when_content_shrinks_below_end() {
 
                 vec![cx.column(
                     crate::element::ColumnProps {
-                        gap: Px(0.0),
+                        gap: Px(0.0).into(),
                         ..Default::default()
                     },
                     move |cx| (0..rows).map(|i| row(cx, i)).collect::<Vec<_>>(),
@@ -1073,7 +1073,7 @@ fn scroll_extent_updates_under_view_cache_reconciliation_when_growing_at_end() {
 
                     vec![cx.column(
                         crate::element::ColumnProps {
-                            gap: Px(0.0),
+                            gap: Px(0.0).into(),
                             ..Default::default()
                         },
                         move |cx| {

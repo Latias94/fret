@@ -366,7 +366,7 @@ where
                                     layout.flex.grow = 1.0;
                                     layout.flex.shrink = 1.0;
                                     layout.flex.basis = Length::Px(Px(0.0));
-                                    layout.size.min_width = Some(Px(0.0));
+                                    layout.size.min_width = Some(Length::Px(Px(0.0)));
                                 }
                                 layout
                             },
@@ -403,7 +403,7 @@ where
                                     Length::Auto
                                 };
                                 if resizable_layout {
-                                    props.layout.size.min_width = Some(Px(0.0));
+                                    props.layout.size.min_width = Some(Length::Px(Px(0.0)));
                                     props.layout.flex.grow = 1.0;
                                     props.layout.flex.shrink = 1.0;
                                     props.layout.flex.basis = Length::Px(Px(0.0));

@@ -126,6 +126,18 @@ pub(super) fn layout_absolute_child_with_probe_bounds<H: UiHost>(
 }
 
 pub(super) fn clamp_to_constraints(mut size: Size, style: LayoutStyle, available: Size) -> Size {
+    let resolve_constraint = |l: Length, base: Px| -> Option<Px> {
+        match l {
+            Length::Auto => None,
+            Length::Px(px) => Some(Px(px.0.max(0.0))),
+            Length::Fill => Some(Px(base.0.max(0.0))),
+            Length::Fraction(f) => {
+                let f = if f.is_finite() { f.max(0.0) } else { 0.0 };
+                Some(Px((base.0 * f).max(0.0)))
+            }
+        }
+    };
+
     let width_auto = matches!(style.size.width, Length::Auto);
     let height_auto = matches!(style.size.height, Length::Auto);
 
@@ -148,16 +160,32 @@ pub(super) fn clamp_to_constraints(mut size: Size, style: LayoutStyle, available
         Length::Auto => {}
     }
 
-    if let Some(min_w) = style.size.min_width {
+    if let Some(min_w) = style
+        .size
+        .min_width
+        .and_then(|l| resolve_constraint(l, available.width))
+    {
         size.width = Px(size.width.0.max(min_w.0.max(0.0)));
     }
-    if let Some(min_h) = style.size.min_height {
+    if let Some(min_h) = style
+        .size
+        .min_height
+        .and_then(|l| resolve_constraint(l, available.height))
+    {
         size.height = Px(size.height.0.max(min_h.0.max(0.0)));
     }
-    if let Some(max_w) = style.size.max_width {
+    if let Some(max_w) = style
+        .size
+        .max_width
+        .and_then(|l| resolve_constraint(l, available.width))
+    {
         size.width = Px(size.width.0.min(max_w.0.max(0.0)));
     }
-    if let Some(max_h) = style.size.max_height {
+    if let Some(max_h) = style
+        .size
+        .max_height
+        .and_then(|l| resolve_constraint(l, available.height))
+    {
         size.height = Px(size.height.0.min(max_h.0.max(0.0)));
     }
 
@@ -174,16 +202,32 @@ pub(super) fn clamp_to_constraints(mut size: Size, style: LayoutStyle, available
             size.width = Px((size.height.0 * ratio).max(0.0));
         }
 
-        if let Some(min_w) = style.size.min_width {
+        if let Some(min_w) = style
+            .size
+            .min_width
+            .and_then(|l| resolve_constraint(l, available.width))
+        {
             size.width = Px(size.width.0.max(min_w.0.max(0.0)));
         }
-        if let Some(min_h) = style.size.min_height {
+        if let Some(min_h) = style
+            .size
+            .min_height
+            .and_then(|l| resolve_constraint(l, available.height))
+        {
             size.height = Px(size.height.0.max(min_h.0.max(0.0)));
         }
-        if let Some(max_w) = style.size.max_width {
+        if let Some(max_w) = style
+            .size
+            .max_width
+            .and_then(|l| resolve_constraint(l, available.width))
+        {
             size.width = Px(size.width.0.min(max_w.0.max(0.0)));
         }
-        if let Some(max_h) = style.size.max_height {
+        if let Some(max_h) = style
+            .size
+            .max_height
+            .and_then(|l| resolve_constraint(l, available.height))
+        {
             size.height = Px(size.height.0.min(max_h.0.max(0.0)));
         }
 

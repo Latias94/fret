@@ -73,7 +73,7 @@ where
 
         let inner = ContainerProps {
             layout: inner_layout,
-            padding: Edges::symmetric(chrome.padding_x, chrome.padding_y),
+            padding: Edges::symmetric(chrome.padding_x, chrome.padding_y).into(),
             background: Some(chrome.background),
             border: Edges::all(chrome.border_width),
             border_color: Some(chrome.border_color),

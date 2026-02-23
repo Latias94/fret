@@ -86,6 +86,14 @@ For v1, percent/fraction resolution should be robust to invalid input:
 - negative ratios clamp to `0`
 - ratios greater than `1.0` are allowed (e.g. 120%) unless a specific component opts into clamping
 
+### Spacing (padding + gap)
+
+For v1, percent-bearing spacing is treated as a *definite-only* contract:
+
+- `padding` percent/fraction resolves against the containing block **width** (CSS-like), even for top/bottom.
+- `gap` percent/fraction resolves against the **inner** available space (after padding shrink), since the gap lives inside the padding box.
+- During intrinsic probes (min/max-content measurement), percent-bearing spacing resolves to `0px` (effectively ignored) to avoid cyclic dependencies.
+
 ## Current implementation status (what is already landed)
 
 | Area | Layer | Status | Evidence anchor |
@@ -95,20 +103,21 @@ For v1, percent/fraction resolution should be robust to invalid input:
 | Available-aware resolution (`Fill`/`Fraction` → px only when definite, else auto) | `crates/fret-ui` | Landed | `crates/fret-ui/src/declarative/host_widget/measure.rs` |
 | Wrapper-chain promotion for percent descendants | `crates/fret-ui` | Landed | `crates/fret-ui/src/layout/engine/flow.rs` |
 | Regression tests (measurement + flex basis) | `crates/fret-ui` | Landed | `crates/fret-ui/src/declarative/tests/layout/basics.rs` |
+| Size constraints: `min_*` / `max_*` accept percent/fraction | `crates/fret-ui` + `fret-ui-kit` | Landed | `crates/fret-ui/src/element.rs` + `ecosystem/fret-ui-kit/src/style/layout.rs` |
+| Spacing: percent-capable `padding` + `gap` (definite-only) | `crates/fret-ui` | Landed | `crates/fret-ui/src/element.rs` + `crates/fret-ui/src/declarative/host_widget/measure.rs` |
+| Spacing authoring shorthands (`padding_percent`, `gap_percent`, ...) | `fret-ui-kit` | Landed | `ecosystem/fret-ui-kit/src/ui_builder.rs` |
+| Spacing regression test (definite vs intrinsic measurement) | `crates/fret-ui` | Landed | `crates/fret-ui/src/declarative/tests/layout/basics.rs` |
 
 ## Remaining closures (what is still missing)
 
-Percent/fraction semantics are currently “closed” for `size` and `flex-basis` but not for the full authoring language.
+Percent/fraction semantics are currently “closed” for `size`, `flex-basis`, and basic size constraints, but not for the full authoring language.
 The highest-ROI remaining work is to cover **spacing and constraints** consistently:
 
-1. Size constraints
-   - `min_width/min_height/max_width/max_height` should accept percent/fraction (with the same resolution rules).
-2. Spacing
-   - `padding` and `gap` should accept percent/fraction (definite-only, no `auto`).
+1. Positioning + spacing adjacency
    - `margin` and `inset` should accept percent/fraction (and preserve `auto` where it is meaningful).
-3. Positioning + overlays
+2. Positioning + overlays
    - `inset` percent should enable “inset by % of containing block” outcomes without per-component math.
-4. Migration
+3. Migration
    - remove ad-hoc workarounds like “clamp percent basis to px when viewport extent is measurable” from recipes.
 
 ## Migration plan (incremental)
@@ -124,6 +133,6 @@ The highest-ROI remaining work is to cover **spacing and constraints** consisten
 - Focused tests:
   - `cargo nextest run -p fret-ui -E "test(fraction_only_resolves_under_definite_available_space_in_measurement)"`
   - `cargo nextest run -p fret-ui -E "test(flex_fraction_basis_and_fill_basis_do_not_collapse_under_min_content_measurement)"`
+  - `cargo nextest run -p fret-ui -E "test(spacing_fraction_only_resolve_under_definite_available_space_in_measurement)"`
 - Targeted diag scripts (UI gallery):
   - Carousel basic screenshot gate: `tools/diag-scripts/ui-gallery-carousel-basic-screenshot.json`
-

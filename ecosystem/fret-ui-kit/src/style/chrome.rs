@@ -1,6 +1,9 @@
 use fret_core::Px;
 
-use super::{ColorFallback, ColorRef, MetricRef, Radius, SignedMetricRef, Space, ThemeTokenRead};
+use super::{
+    ColorFallback, ColorRef, LengthRefinement, MetricRef, Radius, SignedMetricRef, Space,
+    ThemeTokenRead,
+};
 use crate::Corners4;
 use fret_core::scene::DashPatternV1;
 
@@ -14,6 +17,32 @@ pub struct PaddingRefinement {
 
 impl PaddingRefinement {
     pub fn merge(mut self, other: PaddingRefinement) -> Self {
+        if other.top.is_some() {
+            self.top = other.top;
+        }
+        if other.right.is_some() {
+            self.right = other.right;
+        }
+        if other.bottom.is_some() {
+            self.bottom = other.bottom;
+        }
+        if other.left.is_some() {
+            self.left = other.left;
+        }
+        self
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct PaddingLengthRefinement {
+    pub top: Option<LengthRefinement>,
+    pub right: Option<LengthRefinement>,
+    pub bottom: Option<LengthRefinement>,
+    pub left: Option<LengthRefinement>,
+}
+
+impl PaddingLengthRefinement {
+    pub fn merge(mut self, other: PaddingLengthRefinement) -> Self {
         if other.top.is_some() {
             self.top = other.top;
         }
@@ -104,6 +133,7 @@ impl MarginEdgeRefinement {
 #[derive(Debug, Clone, Default)]
 pub struct ChromeRefinement {
     pub padding: Option<PaddingRefinement>,
+    pub padding_length: Option<PaddingLengthRefinement>,
     pub min_height: Option<MetricRef>,
     pub radius: Option<MetricRef>,
     pub corner_radii: Option<CornerRadiiRefinement>,
@@ -155,6 +185,9 @@ impl ChromeRefinement {
     pub fn merge(mut self, other: ChromeRefinement) -> Self {
         if let Some(p) = other.padding {
             self.padding = Some(self.padding.unwrap_or_default().merge(p));
+        }
+        if let Some(p) = other.padding_length {
+            self.padding_length = Some(self.padding_length.unwrap_or_default().merge(p));
         }
         if other.min_height.is_some() {
             self.min_height = other.min_height;

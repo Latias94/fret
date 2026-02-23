@@ -553,7 +553,7 @@ fn text_input_double_click_respects_window_text_boundary_mode_under_scroll_offse
                 |cx| {
                     vec![cx.column(
                         crate::element::ColumnProps {
-                            gap: Px(0.0),
+                            gap: Px(0.0).into(),
                             ..Default::default()
                         },
                         |cx| {
@@ -1145,7 +1145,7 @@ fn text_input_triple_click_selects_logical_line_under_scroll_offset() {
                 |cx| {
                     vec![cx.column(
                         crate::element::ColumnProps {
-                            gap: Px(0.0),
+                            gap: Px(0.0).into(),
                             ..Default::default()
                         },
                         |cx| {

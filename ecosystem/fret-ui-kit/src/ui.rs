@@ -20,8 +20,8 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use crate::declarative::style as decl_style;
 use crate::declarative::text as decl_text;
 use crate::{
-    ChromeRefinement, Items, Justify, LayoutRefinement, MetricRef, Space, UiBuilder, UiIntoElement,
-    UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout,
+    ChromeRefinement, Items, Justify, LayoutRefinement, LengthRefinement, MetricRef, Space,
+    UiBuilder, UiIntoElement, UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout,
 };
 
 fn collect_ui_children<H: UiHost, I>(
@@ -49,6 +49,7 @@ pub struct FlexBox<H, F> {
     pub(crate) layout: LayoutRefinement,
     pub(crate) direction: Axis,
     pub(crate) gap: MetricRef,
+    pub(crate) gap_length: Option<LengthRefinement>,
     pub(crate) justify: Justify,
     pub(crate) items: Items,
     pub(crate) wrap: bool,
@@ -63,6 +64,7 @@ pub struct FlexBoxBuild<H, B> {
     pub(crate) layout: LayoutRefinement,
     pub(crate) direction: Axis,
     pub(crate) gap: MetricRef,
+    pub(crate) gap_length: Option<LengthRefinement>,
     pub(crate) justify: Justify,
     pub(crate) items: Items,
     pub(crate) wrap: bool,
@@ -81,6 +83,7 @@ impl<H, F> FlexBox<H, F> {
             layout: LayoutRefinement::default(),
             direction,
             gap: MetricRef::space(Space::N0),
+            gap_length: None,
             justify: Justify::Start,
             items,
             wrap: false,
@@ -101,6 +104,7 @@ impl<H, B> FlexBoxBuild<H, B> {
             layout: LayoutRefinement::default(),
             direction,
             gap: MetricRef::space(Space::N0),
+            gap_length: None,
             justify: Justify::Start,
             items,
             wrap: false,
@@ -144,11 +148,18 @@ where
 
         let container = decl_style::container_props(theme, self.chrome, self.layout);
 
-        let gap = self.gap.resolve(theme);
+        let gap = self.gap_length.as_ref().and_then(|l| match l {
+            LengthRefinement::Auto => None,
+            LengthRefinement::Px(m) => Some(fret_ui::element::SpacingLength::Px(m.resolve(theme))),
+            LengthRefinement::Fraction(f) => Some(fret_ui::element::SpacingLength::Fraction(*f)),
+            LengthRefinement::Fill => Some(fret_ui::element::SpacingLength::Fill),
+        });
+        let gap =
+            gap.unwrap_or_else(|| fret_ui::element::SpacingLength::Px(self.gap.resolve(theme)));
         let mut flex_props = FlexProps {
             direction: self.direction,
             gap,
-            padding: Edges::all(Px(0.0)),
+            padding: Edges::all(Px(0.0)).into(),
             justify: self.justify.to_main_align(),
             align: self.items.to_cross_align(),
             wrap: self.wrap,
@@ -176,11 +187,18 @@ where
 
         let container = decl_style::container_props(theme, self.chrome, self.layout);
 
-        let gap = self.gap.resolve(theme);
+        let gap = self.gap_length.as_ref().and_then(|l| match l {
+            LengthRefinement::Auto => None,
+            LengthRefinement::Px(m) => Some(fret_ui::element::SpacingLength::Px(m.resolve(theme))),
+            LengthRefinement::Fraction(f) => Some(fret_ui::element::SpacingLength::Fraction(*f)),
+            LengthRefinement::Fill => Some(fret_ui::element::SpacingLength::Fill),
+        });
+        let gap =
+            gap.unwrap_or_else(|| fret_ui::element::SpacingLength::Px(self.gap.resolve(theme)));
         let mut flex_props = FlexProps {
             direction: self.direction,
             gap,
-            padding: Edges::all(Px(0.0)),
+            padding: Edges::all(Px(0.0)).into(),
             justify: self.justify.to_main_align(),
             align: self.items.to_cross_align(),
             wrap: self.wrap,

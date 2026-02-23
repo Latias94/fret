@@ -1899,8 +1899,8 @@ where
                                                 layout: LayoutStyle {
                                                     size: fret_ui::element::SizeStyle {
                                                         width: Length::Px(col_w),
-                                                        min_width: Some(col_w),
-                                                        max_width: Some(col_w),
+                                                        min_width: Some(Length::Px(col_w)),
+                                                        max_width: Some(Length::Px(col_w)),
                                                         height: Length::Fill,
                                                         ..Default::default()
                                                     },
@@ -2022,7 +2022,8 @@ where
                                                             ContainerProps {
                                                                 padding: Edges::symmetric(
                                                                     cell_px, cell_py,
-                                                                ),
+                                                                )
+                                                                .into(),
                                                                 layout: {
                                                                     let mut layout =
                                                                         LayoutStyle::default();
@@ -2341,12 +2342,13 @@ where
                                                                         border_color: Some(border),
                                                                         padding: Edges::symmetric(
                                                                             cell_px, cell_py,
-                                                                        ),
+                                                                        )
+                                                                        .into(),
                                                                         layout: LayoutStyle {
                                                                             size: fret_ui::element::SizeStyle {
                                                                                 width: Length::Px(col_w),
-                                                                                min_width: Some(col_w),
-                                                                                max_width: Some(col_w),
+                                                                                min_width: Some(Length::Px(col_w)),
+                                                                                max_width: Some(Length::Px(col_w)),
                                                                                 ..Default::default()
                                                                             },
                                                                             flex: fret_ui::element::FlexItemStyle {
@@ -3851,7 +3853,7 @@ where
                                                                         .unwrap_or(Px(col.size));
 
                                                                     let cell_props = ContainerProps {
-                                                                        padding: Edges::all(Px(0.0)),
+                                                                        padding: Edges::all(Px(0.0)).into(),
                                                                         border: Edges {
                                                                             right: if props.enable_column_resizing
                                                                                 && col.enable_resizing
@@ -3866,8 +3868,8 @@ where
                                                                         layout: LayoutStyle {
                                                                             size: fret_ui::element::SizeStyle {
                                                                                 width: Length::Px(col_w),
-                                                                                min_width: Some(col_w),
-                                                                                max_width: Some(col_w),
+                                                                                min_width: Some(Length::Px(col_w)),
+                                                                                max_width: Some(Length::Px(col_w)),
                                                                                 ..Default::default()
                                                                             },
                                                                             flex: fret_ui::element::FlexItemStyle {
@@ -4017,7 +4019,8 @@ where
                                                                                             ContainerProps {
                                                                                                 padding: Edges::symmetric(
                                                                                                     cell_px, cell_py,
-                                                                                                ),
+                                                                                                )
+                                                                                                .into(),
                                                                                                 layout: {
                                                                                                     let mut layout =
                                                                                                         LayoutStyle::default();
@@ -4581,13 +4584,13 @@ where
                                                                                                                             Some(border)
                                                                                                                         },
                                                                                                                         layout: LayoutStyle {
-                                                                                                                            size: fret_ui::element::SizeStyle {
-                                                                                                                                width: Length::Px(col_w),
-                                                                                                                                min_width: Some(col_w),
-                                                                                                                                max_width: Some(col_w),
-                                                                                                                                height: Length::Fill,
-                                                                                                                                ..Default::default()
-                                                                                                                            },
+                                                                                                                   size: fret_ui::element::SizeStyle {
+                                                                                                                        width: Length::Px(col_w),
+                                                                                                                        min_width: Some(Length::Px(col_w)),
+                                                                                                                        max_width: Some(Length::Px(col_w)),
+                                                                                                                        height: Length::Fill,
+                                                                                                                        ..Default::default()
+                                                                                                                    },
                                                                                                                             flex: fret_ui::element::FlexItemStyle {
                                                                                                                                 shrink: 0.0,
                                                                                                                                 ..Default::default()
@@ -4661,12 +4664,12 @@ where
 
                                                                                                                     cx.container(
                                                                                                                         ContainerProps {
-                                                                                                                            padding,
-                                                                                                                            layout: LayoutStyle {
+                                                                                                                            padding: padding.into(),
+                                                                                                                           layout: LayoutStyle {
                                                                                                                                 size: fret_ui::element::SizeStyle {
                                                                                                                                     width: Length::Px(col_w),
-                                                                                                                                    min_width: Some(col_w),
-                                                                                                                                    max_width: Some(col_w),
+                                                                                                                                    min_width: Some(Length::Px(col_w)),
+                                                                                                                                    max_width: Some(Length::Px(col_w)),
                                                                                                                                     height: Length::Fill,
                                                                                                                                     ..Default::default()
                                                                                                                                 },
@@ -4751,7 +4754,7 @@ where
 
                                                                                                     cx.container(
                                                                                                         ContainerProps {
-                                                                                                            padding,
+                                                                                                            padding: padding.into(),
                                                                                                             border: if props.optimize_grid_lines {
                                                                                                                 Edges::default()
                                                                                                             } else {
@@ -4766,12 +4769,12 @@ where
                                                                                                                 Some(border)
                                                                                                             },
                                                                                                             layout: LayoutStyle {
-                                                                                                                size: fret_ui::element::SizeStyle {
-                                                                                                                    width: Length::Px(col_w),
-                                                                                                                    min_width: Some(col_w),
-                                                                                                                    max_width: Some(col_w),
-                                                                                                                    ..Default::default()
-                                                                                                                },
+                                                                                                       size: fret_ui::element::SizeStyle {
+                                                                                                           width: Length::Px(col_w),
+                                                                                                            min_width: Some(Length::Px(col_w)),
+                                                                                                            max_width: Some(Length::Px(col_w)),
+                                                                                                           ..Default::default()
+                                                                                                       },
                                                                                                                 flex: fret_ui::element::FlexItemStyle {
                                                                                                                     shrink: 0.0,
                                                                                                                     ..Default::default()
@@ -5120,14 +5123,14 @@ where
                                                                                                             Some(border)
                                                                                                         },
                                                                                                         layout: LayoutStyle {
-                                                                                                            size: fret_ui::element::SizeStyle {
-                                                                                                                width: Length::Px(col_w),
-                                                                                                                min_width: Some(col_w),
-                                                                                                                max_width: Some(col_w),
-                                                                                                                height: Length::Fill,
-                                                                                                                ..Default::default()
-                                                                                                            },
-                                                                                                            flex: fret_ui::element::FlexItemStyle {
+                                                                                                                   size: fret_ui::element::SizeStyle {
+                                                                                                                       width: Length::Px(col_w),
+                                                                                                                        min_width: Some(Length::Px(col_w)),
+                                                                                                                        max_width: Some(Length::Px(col_w)),
+                                                                                                                       height: Length::Fill,
+                                                                                                                       ..Default::default()
+                                                                                                                   },
+                                                                                                                   flex: fret_ui::element::FlexItemStyle {
                                                                                                                 shrink: 0.0,
                                                                                                                 ..Default::default()
                                                                                                             },
@@ -5178,12 +5181,13 @@ where
                                                                                                                 padding: Edges::symmetric(
                                                                                                                     cell_px,
                                                                                                                     cell_py,
-                                                                                                                ),
+                                                                                                                )
+                                                                                                                .into(),
                                                                                                                 layout: LayoutStyle {
                                                                                                                     size: fret_ui::element::SizeStyle {
                                                                                                                         width: Length::Px(col_w),
-                                                                                                                        min_width: Some(col_w),
-                                                                                                                        max_width: Some(col_w),
+                                                                                                                        min_width: Some(Length::Px(col_w)),
+                                                                                                                        max_width: Some(Length::Px(col_w)),
                                                                                                                         height: Length::Fill,
                                                                                                                         ..Default::default()
                                                                                                                     },
@@ -5227,7 +5231,8 @@ where
                                                                                                 ContainerProps {
                                                                                                     padding: Edges::symmetric(
                                                                                                         cell_px, cell_py,
-                                                                                                    ),
+                                                                                                    )
+                                                                                                    .into(),
                                                                                                     border: if props.optimize_grid_lines {
                                                                                                         Edges::default()
                                                                                                     } else {
@@ -5242,15 +5247,15 @@ where
                                                                                                         Some(border)
                                                                                                     },
                                                                                                     layout: LayoutStyle {
-                                                                                                        size: fret_ui::element::SizeStyle {
-                                                                                                            width: Length::Px(col_w),
-                                                                                                            min_width: Some(col_w),
-                                                                                                            max_width: Some(col_w),
-                                                                                                            ..Default::default()
-                                                                                                        },
-                                                                                                    flex: fret_ui::element::FlexItemStyle {
-                                                                                                        shrink: 0.0,
-                                                                                                        ..Default::default()
+                                                                                                       size: fret_ui::element::SizeStyle {
+                                                                                                           width: Length::Px(col_w),
+                                                                                                            min_width: Some(Length::Px(col_w)),
+                                                                                                            max_width: Some(Length::Px(col_w)),
+                                                                                                           ..Default::default()
+                                                                                                       },
+                                                                                                   flex: fret_ui::element::FlexItemStyle {
+                                                                                                       shrink: 0.0,
+                                                                                                       ..Default::default()
                                                                                                     },
                                                                                                     ..Default::default()
                                                                                                 },

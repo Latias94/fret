@@ -393,10 +393,17 @@ pub struct GridLine {
 pub struct SizeStyle {
     pub width: Length,
     pub height: Length,
-    pub min_width: Option<Px>,
-    pub min_height: Option<Px>,
-    pub max_width: Option<Px>,
-    pub max_height: Option<Px>,
+    /// Minimum width constraint.
+    ///
+    /// Percent sizing semantics follow `Length` rules: `Fill`/`Fraction` only resolve under a
+    /// definite containing block; otherwise they should behave like `auto` in measurement paths.
+    pub min_width: Option<Length>,
+    /// Minimum height constraint.
+    pub min_height: Option<Length>,
+    /// Maximum width constraint.
+    pub max_width: Option<Length>,
+    /// Maximum height constraint.
+    pub max_height: Option<Length>,
 }
 
 impl Default for SizeStyle {
@@ -446,6 +453,94 @@ pub enum Length {
     Fill,
 }
 
+/// A length type for spacing (padding/gap) that can express percent sizing but has no `auto`.
+///
+/// Taffy resolves percent padding/border against the containing block *width* (inline size),
+/// including vertical edges (CSS-like). We mirror that behavior in the declarative bridge by
+/// resolving percent spacing only when the containing block width is definite; otherwise it
+/// resolves to `0` (definite-only).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum SpacingLength {
+    Px(Px),
+    /// Fraction of the containing block size (percent spacing).
+    ///
+    /// Expressed as a ratio (e.g. `0.5` for 50%).
+    Fraction(f32),
+    /// Shorthand for 100% (equivalent intent to `Fraction(1.0)`).
+    Fill,
+}
+
+impl Default for SpacingLength {
+    fn default() -> Self {
+        Self::Px(Px(0.0))
+    }
+}
+
+impl SpacingLength {
+    pub const fn px(px: Px) -> Self {
+        Self::Px(px)
+    }
+
+    pub const fn fraction(fraction: f32) -> Self {
+        Self::Fraction(fraction)
+    }
+
+    pub const fn fill() -> Self {
+        Self::Fill
+    }
+}
+
+impl From<Px> for SpacingLength {
+    fn from(value: Px) -> Self {
+        Self::Px(value)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SpacingEdges {
+    pub top: SpacingLength,
+    pub right: SpacingLength,
+    pub bottom: SpacingLength,
+    pub left: SpacingLength,
+}
+
+impl Default for SpacingEdges {
+    fn default() -> Self {
+        Self::all(SpacingLength::Px(Px(0.0)))
+    }
+}
+
+impl SpacingEdges {
+    pub const fn all(value: SpacingLength) -> Self {
+        Self {
+            top: value,
+            right: value,
+            bottom: value,
+            left: value,
+        }
+    }
+
+    pub const fn symmetric(horizontal: SpacingLength, vertical: SpacingLength) -> Self {
+        Self {
+            top: vertical,
+            right: horizontal,
+            bottom: vertical,
+            left: horizontal,
+        }
+    }
+}
+
+impl From<Edges> for SpacingEdges {
+    fn from(value: Edges) -> Self {
+        Self {
+            top: SpacingLength::Px(value.top),
+            right: SpacingLength::Px(value.right),
+            bottom: SpacingLength::Px(value.bottom),
+            left: SpacingLength::Px(value.left),
+        }
+    }
+}
+
 /// A low-opinionated container primitive for declarative authoring.
 ///
 /// This is intentionally small and composable: it provides padding and an optional quad background
@@ -454,7 +549,7 @@ pub enum Length {
 #[derive(Debug, Clone, Copy)]
 pub struct ContainerProps {
     pub layout: LayoutStyle,
-    pub padding: Edges,
+    pub padding: SpacingEdges,
     pub background: Option<Color>,
     /// Optional paint override for the container background (ADR 0233).
     ///
@@ -488,7 +583,7 @@ impl Default for ContainerProps {
     fn default() -> Self {
         Self {
             layout: LayoutStyle::default(),
-            padding: Edges::all(Px(0.0)),
+            padding: SpacingEdges::all(SpacingLength::Px(Px(0.0))),
             background: None,
             background_paint: None,
             shadow: None,
@@ -1187,8 +1282,8 @@ pub struct StackProps {
 #[derive(Debug, Clone, Copy)]
 pub struct ColumnProps {
     pub layout: LayoutStyle,
-    pub gap: Px,
-    pub padding: Edges,
+    pub gap: SpacingLength,
+    pub padding: SpacingEdges,
     pub justify: MainAlign,
     pub align: CrossAlign,
 }
@@ -1197,8 +1292,8 @@ impl Default for ColumnProps {
     fn default() -> Self {
         Self {
             layout: LayoutStyle::default(),
-            gap: Px(0.0),
-            padding: Edges::all(Px(0.0)),
+            gap: SpacingLength::Px(Px(0.0)),
+            padding: SpacingEdges::all(SpacingLength::Px(Px(0.0))),
             justify: MainAlign::Start,
             align: CrossAlign::Stretch,
         }
@@ -1208,8 +1303,8 @@ impl Default for ColumnProps {
 #[derive(Debug, Clone, Copy)]
 pub struct RowProps {
     pub layout: LayoutStyle,
-    pub gap: Px,
-    pub padding: Edges,
+    pub gap: SpacingLength,
+    pub padding: SpacingEdges,
     pub justify: MainAlign,
     pub align: CrossAlign,
 }
@@ -1218,8 +1313,8 @@ impl Default for RowProps {
     fn default() -> Self {
         Self {
             layout: LayoutStyle::default(),
-            gap: Px(0.0),
-            padding: Edges::all(Px(0.0)),
+            gap: SpacingLength::Px(Px(0.0)),
+            padding: SpacingEdges::all(SpacingLength::Px(Px(0.0))),
             justify: MainAlign::Start,
             align: CrossAlign::Stretch,
         }
@@ -1838,8 +1933,8 @@ impl SelectableTextProps {
 pub struct FlexProps {
     pub layout: LayoutStyle,
     pub direction: fret_core::Axis,
-    pub gap: Px,
-    pub padding: Edges,
+    pub gap: SpacingLength,
+    pub padding: SpacingEdges,
     pub justify: MainAlign,
     pub align: CrossAlign,
     pub wrap: bool,
@@ -1850,8 +1945,8 @@ impl Default for FlexProps {
         Self {
             layout: LayoutStyle::default(),
             direction: fret_core::Axis::Horizontal,
-            gap: Px(0.0),
-            padding: Edges::all(Px(0.0)),
+            gap: SpacingLength::Px(Px(0.0)),
+            padding: SpacingEdges::all(SpacingLength::Px(Px(0.0))),
             justify: MainAlign::Start,
             align: CrossAlign::Stretch,
             wrap: false,
@@ -1864,8 +1959,8 @@ pub struct GridProps {
     pub layout: LayoutStyle,
     pub cols: u16,
     pub rows: Option<u16>,
-    pub gap: Px,
-    pub padding: Edges,
+    pub gap: SpacingLength,
+    pub padding: SpacingEdges,
     pub justify: MainAlign,
     pub align: CrossAlign,
 }
@@ -1876,8 +1971,8 @@ impl Default for GridProps {
             layout: LayoutStyle::default(),
             cols: 1,
             rows: None,
-            gap: Px(0.0),
-            padding: Edges::all(Px(0.0)),
+            gap: SpacingLength::Px(Px(0.0)),
+            padding: SpacingEdges::all(SpacingLength::Px(Px(0.0))),
             justify: MainAlign::Start,
             align: CrossAlign::Stretch,
         }

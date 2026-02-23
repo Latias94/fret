@@ -200,7 +200,7 @@ fn container_applies_padding_and_paints_background() {
         |cx| {
             vec![cx.container(
                 crate::element::ContainerProps {
-                    padding: fret_core::Edges::symmetric(Px(4.0), Px(6.0)),
+                    padding: fret_core::Edges::symmetric(Px(4.0), Px(6.0)).into(),
                     background: Some(Color {
                         r: 1.0,
                         g: 0.0,
@@ -318,7 +318,7 @@ fn container_shrink_wraps_to_max_child_under_definite_parent_bounds() {
         "mvp50-container-shrink-wraps",
         |cx| {
             let outer = crate::element::ContainerProps {
-                padding: fret_core::Edges::all(Px(2.0)),
+                padding: fret_core::Edges::all(Px(2.0)).into(),
                 ..crate::element::ContainerProps::default()
             };
 
@@ -364,12 +364,12 @@ fn container_nested_chains_do_not_trigger_extra_engine_solves_when_clean() {
         "container-nested-clean-solves",
         |cx| {
             let outer = crate::element::ContainerProps {
-                padding: fret_core::Edges::all(Px(2.0)),
+                padding: fret_core::Edges::all(Px(2.0)).into(),
                 ..Default::default()
             };
 
             let inner = crate::element::ContainerProps {
-                padding: fret_core::Edges::all(Px(1.0)),
+                padding: fret_core::Edges::all(Px(1.0)).into(),
                 ..Default::default()
             };
 

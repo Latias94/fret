@@ -140,7 +140,7 @@ pub fn diamond_arrow_element_refined<H: UiHost>(
                         },
                         ..Default::default()
                     },
-                    padding: Edges::all(Px(0.0)),
+                    padding: Edges::all(Px(0.0)).into(),
                     background: Some(style.bg),
                     background_paint: None,
                     shadow: None,

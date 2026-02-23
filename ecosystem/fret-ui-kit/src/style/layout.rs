@@ -22,10 +22,10 @@ pub enum LengthRefinement {
 pub struct SizeRefinement {
     pub width: Option<LengthRefinement>,
     pub height: Option<LengthRefinement>,
-    pub min_width: Option<MetricRef>,
-    pub min_height: Option<MetricRef>,
-    pub max_width: Option<MetricRef>,
-    pub max_height: Option<MetricRef>,
+    pub min_width: Option<LengthRefinement>,
+    pub min_height: Option<LengthRefinement>,
+    pub max_width: Option<LengthRefinement>,
+    pub max_height: Option<LengthRefinement>,
 }
 
 impl SizeRefinement {
@@ -563,8 +563,9 @@ impl LayoutRefinement {
         self.flex_item.as_mut().expect("flex_item exists")
     }
 
+    /// Shorthand for `min-width: <px>`.
     pub fn min_w(mut self, width: impl Into<MetricRef>) -> Self {
-        self.ensure_size_mut().min_width = Some(width.into());
+        self.ensure_size_mut().min_width = Some(LengthRefinement::Px(width.into()));
         self
     }
 
@@ -572,13 +573,48 @@ impl LayoutRefinement {
         self.min_w(MetricRef::space(width))
     }
 
+    /// Shorthand for `min-width: 100%` of the containing block.
+    pub fn min_w_full(mut self) -> Self {
+        self.ensure_size_mut().min_width = Some(LengthRefinement::Fill);
+        self
+    }
+
+    /// Shorthand for `min-width: <fraction>` of the containing block.
+    pub fn min_w_fraction(mut self, fraction: f32) -> Self {
+        self.ensure_size_mut().min_width = Some(LengthRefinement::Fraction(fraction));
+        self
+    }
+
+    /// Shorthand for `min-width: <percent>%` of the containing block.
+    pub fn min_w_percent(self, percent: f32) -> Self {
+        self.min_w_fraction(percent / 100.0)
+    }
+
+    /// Shorthand for `min-height: <px>`.
     pub fn min_h(mut self, height: impl Into<MetricRef>) -> Self {
-        self.ensure_size_mut().min_height = Some(height.into());
+        self.ensure_size_mut().min_height = Some(LengthRefinement::Px(height.into()));
         self
     }
 
     pub fn min_h_space(self, height: Space) -> Self {
         self.min_h(MetricRef::space(height))
+    }
+
+    /// Shorthand for `min-height: 100%` of the containing block.
+    pub fn min_h_full(mut self) -> Self {
+        self.ensure_size_mut().min_height = Some(LengthRefinement::Fill);
+        self
+    }
+
+    /// Shorthand for `min-height: <fraction>` of the containing block.
+    pub fn min_h_fraction(mut self, fraction: f32) -> Self {
+        self.ensure_size_mut().min_height = Some(LengthRefinement::Fraction(fraction));
+        self
+    }
+
+    /// Shorthand for `min-height: <percent>%` of the containing block.
+    pub fn min_h_percent(self, percent: f32) -> Self {
+        self.min_h_fraction(percent / 100.0)
     }
 
     /// Shorthand for `min-width: 0px`.
@@ -656,8 +692,9 @@ impl LayoutRefinement {
         self.w_full().h_full()
     }
 
+    /// Shorthand for `max-width: <px>`.
     pub fn max_w(mut self, width: impl Into<MetricRef>) -> Self {
-        self.ensure_size_mut().max_width = Some(width.into());
+        self.ensure_size_mut().max_width = Some(LengthRefinement::Px(width.into()));
         self
     }
 
@@ -665,13 +702,48 @@ impl LayoutRefinement {
         self.max_w(MetricRef::space(width))
     }
 
+    /// Shorthand for `max-width: 100%` of the containing block.
+    pub fn max_w_full(mut self) -> Self {
+        self.ensure_size_mut().max_width = Some(LengthRefinement::Fill);
+        self
+    }
+
+    /// Shorthand for `max-width: <fraction>` of the containing block.
+    pub fn max_w_fraction(mut self, fraction: f32) -> Self {
+        self.ensure_size_mut().max_width = Some(LengthRefinement::Fraction(fraction));
+        self
+    }
+
+    /// Shorthand for `max-width: <percent>%` of the containing block.
+    pub fn max_w_percent(self, percent: f32) -> Self {
+        self.max_w_fraction(percent / 100.0)
+    }
+
+    /// Shorthand for `max-height: <px>`.
     pub fn max_h(mut self, height: impl Into<MetricRef>) -> Self {
-        self.ensure_size_mut().max_height = Some(height.into());
+        self.ensure_size_mut().max_height = Some(LengthRefinement::Px(height.into()));
         self
     }
 
     pub fn max_h_space(self, height: Space) -> Self {
         self.max_h(MetricRef::space(height))
+    }
+
+    /// Shorthand for `max-height: 100%` of the containing block.
+    pub fn max_h_full(mut self) -> Self {
+        self.ensure_size_mut().max_height = Some(LengthRefinement::Fill);
+        self
+    }
+
+    /// Shorthand for `max-height: <fraction>` of the containing block.
+    pub fn max_h_fraction(mut self, fraction: f32) -> Self {
+        self.ensure_size_mut().max_height = Some(LengthRefinement::Fraction(fraction));
+        self
+    }
+
+    /// Shorthand for `max-height: <percent>%` of the containing block.
+    pub fn max_h_percent(self, percent: f32) -> Self {
+        self.max_h_fraction(percent / 100.0)
     }
 
     pub fn basis(mut self, basis: LengthRefinement) -> Self {
