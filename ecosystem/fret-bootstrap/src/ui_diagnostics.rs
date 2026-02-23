@@ -20,8 +20,9 @@ use fret_diag_protocol::{
     UiPaddingInsetsV1, UiPointV1, UiPredicateV1, UiRectV1, UiRoleAndNameV1,
     UiScriptEventLogEntryV1, UiScriptEvidenceV1, UiScriptResultV1, UiScriptStageV1,
     UiSelectorResolutionCandidateV1, UiSelectorResolutionTraceEntryV1, UiSelectorV1,
-    UiShortcutRoutingTraceEntryV1, UiShortcutRoutingTraceQueryV1, UiSizeV1, UiTextInputSnapshotV1,
-    UiWebImeTraceEntryV1, UiWindowTargetV1,
+    UiSemanticsNumericFieldV1, UiSemanticsScrollFieldV1, UiShortcutRoutingTraceEntryV1,
+    UiShortcutRoutingTraceQueryV1, UiSizeV1, UiTextInputSnapshotV1, UiWebImeTraceEntryV1,
+    UiWindowTargetV1,
 };
 use fret_runtime::DragHost as _;
 use fret_ui::elements::ElementRuntime;
@@ -2318,6 +2319,24 @@ mod legacy_forked_script_protocol {
             #[serde(default)]
             eps: f64,
         },
+        SemanticsScrollIsFinite {
+            target: UiSelectorV1,
+            field: UiSemanticsScrollFieldV1,
+        },
+        SemanticsScrollApproxEq {
+            target: UiSelectorV1,
+            field: UiSemanticsScrollFieldV1,
+            value: f64,
+            #[serde(default)]
+            eps: f64,
+        },
+        SemanticsScrollNotApproxEq {
+            target: UiSelectorV1,
+            field: UiSemanticsScrollFieldV1,
+            value: f64,
+            #[serde(default)]
+            eps: f64,
+        },
     }
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -2328,6 +2347,17 @@ mod legacy_forked_script_protocol {
         Max,
         Step,
         Jump,
+    }
+
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+    #[serde(rename_all = "snake_case")]
+    pub enum UiSemanticsScrollFieldV1 {
+        X,
+        XMin,
+        XMax,
+        Y,
+        YMin,
+        YMax,
     }
 
     #[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]
@@ -9317,18 +9347,87 @@ fn eval_predicate(
                 return false;
             };
             let actual = match field {
-                ui_action_script_types::UiSemanticsNumericFieldV1::Value => {
-                    node.extra.numeric.value
-                }
-                ui_action_script_types::UiSemanticsNumericFieldV1::Min => node.extra.numeric.min,
-                ui_action_script_types::UiSemanticsNumericFieldV1::Max => node.extra.numeric.max,
-                ui_action_script_types::UiSemanticsNumericFieldV1::Step => node.extra.numeric.step,
-                ui_action_script_types::UiSemanticsNumericFieldV1::Jump => node.extra.numeric.jump,
+                UiSemanticsNumericFieldV1::Value => node.extra.numeric.value,
+                UiSemanticsNumericFieldV1::Min => node.extra.numeric.min,
+                UiSemanticsNumericFieldV1::Max => node.extra.numeric.max,
+                UiSemanticsNumericFieldV1::Step => node.extra.numeric.step,
+                UiSemanticsNumericFieldV1::Jump => node.extra.numeric.jump,
             };
             let Some(actual) = actual.filter(|v| v.is_finite()) else {
                 return false;
             };
             (actual - expected).abs() <= eps
+        }
+        UiPredicateV1::SemanticsScrollIsFinite { target, field } => {
+            let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
+            else {
+                return false;
+            };
+            let actual = match field {
+                UiSemanticsScrollFieldV1::X => node.extra.scroll.x,
+                UiSemanticsScrollFieldV1::XMin => node.extra.scroll.x_min,
+                UiSemanticsScrollFieldV1::XMax => node.extra.scroll.x_max,
+                UiSemanticsScrollFieldV1::Y => node.extra.scroll.y,
+                UiSemanticsScrollFieldV1::YMin => node.extra.scroll.y_min,
+                UiSemanticsScrollFieldV1::YMax => node.extra.scroll.y_max,
+            };
+            actual.is_some_and(|v| v.is_finite())
+        }
+        UiPredicateV1::SemanticsScrollApproxEq {
+            target,
+            field,
+            value,
+            eps,
+        } => {
+            let expected = *value;
+            if !expected.is_finite() {
+                return false;
+            }
+            let eps = eps.max(0.0);
+            let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
+            else {
+                return false;
+            };
+            let actual = match field {
+                UiSemanticsScrollFieldV1::X => node.extra.scroll.x,
+                UiSemanticsScrollFieldV1::XMin => node.extra.scroll.x_min,
+                UiSemanticsScrollFieldV1::XMax => node.extra.scroll.x_max,
+                UiSemanticsScrollFieldV1::Y => node.extra.scroll.y,
+                UiSemanticsScrollFieldV1::YMin => node.extra.scroll.y_min,
+                UiSemanticsScrollFieldV1::YMax => node.extra.scroll.y_max,
+            };
+            let Some(actual) = actual.filter(|v| v.is_finite()) else {
+                return false;
+            };
+            (actual - expected).abs() <= eps
+        }
+        UiPredicateV1::SemanticsScrollNotApproxEq {
+            target,
+            field,
+            value,
+            eps,
+        } => {
+            let expected = *value;
+            if !expected.is_finite() {
+                return false;
+            }
+            let eps = eps.max(0.0);
+            let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
+            else {
+                return false;
+            };
+            let actual = match field {
+                UiSemanticsScrollFieldV1::X => node.extra.scroll.x,
+                UiSemanticsScrollFieldV1::XMin => node.extra.scroll.x_min,
+                UiSemanticsScrollFieldV1::XMax => node.extra.scroll.x_max,
+                UiSemanticsScrollFieldV1::Y => node.extra.scroll.y,
+                UiSemanticsScrollFieldV1::YMin => node.extra.scroll.y_min,
+                UiSemanticsScrollFieldV1::YMax => node.extra.scroll.y_max,
+            };
+            let Some(actual) = actual.filter(|v| v.is_finite()) else {
+                return false;
+            };
+            (actual - expected).abs() > eps
         }
         UiPredicateV1::KnownWindowCountGe { n } => (known_windows.len() as u32) >= *n,
         UiPredicateV1::KnownWindowCountIs { n } => (known_windows.len() as u32) == *n,
