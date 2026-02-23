@@ -48,7 +48,7 @@ fn tool_status_badge<H: UiHost>(cx: &mut ElementContext<'_, H>, status: ToolStat
 }
 
 /// Sandbox disclosure root aligned with AI Elements `sandbox.tsx`.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Sandbox {
     default_open: bool,
     header: SandboxHeader,
@@ -103,8 +103,8 @@ impl Sandbox {
             .refine_style(base_chrome.merge(self.chrome))
             .into_element_with_open_model(
                 cx,
-                move |cx, open_model, is_open| header.clone().into_trigger(cx, open_model, is_open),
-                move |cx| content.clone().into_element(cx),
+                move |cx, open_model, is_open| header.into_trigger(cx, open_model, is_open),
+                move |cx| content.into_element(cx),
             )
     }
 }
@@ -247,7 +247,6 @@ impl SandboxHeader {
 }
 
 /// Sandbox body wrapper (`CollapsibleContent`).
-#[derive(Clone)]
 pub struct SandboxContent {
     children: Vec<AnyElement>,
     layout: LayoutRefinement,
@@ -304,7 +303,7 @@ impl SandboxContent {
 ///
 /// Note: Fret's shadcn `Tabs` currently hardcodes the list background to `muted`. We still align
 /// trigger border/active styling here; list background parity can be tightened later if needed.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct SandboxTabs {
     inner: TabsRoot,
 }

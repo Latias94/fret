@@ -82,7 +82,6 @@ fn with_banner_scope_provider<H: UiHost, R>(
 ///
 /// Upstream inspiration (MIT):
 /// - `repo-ref/kibo/packages/banner`
-#[derive(Clone)]
 pub struct Banner {
     children: Vec<AnyElement>,
     visible: Option<Model<bool>>,
@@ -219,7 +218,7 @@ impl Banner {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct BannerIcon {
     child: AnyElement,
     test_id: Option<Arc<str>>,

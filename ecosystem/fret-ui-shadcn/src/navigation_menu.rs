@@ -264,7 +264,7 @@ impl NavigationMenuIndicator {
 ///
 /// In the upstream DOM implementation this is an element; in Fret this is a "spec" that provides
 /// trigger children for [`NavigationMenuItem`].
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Default)]
 pub struct NavigationMenuTrigger {
     children: Vec<AnyElement>,
 }
@@ -292,7 +292,7 @@ impl NavigationMenuTrigger {
 /// root-dismiss-on-select behavior. Fret does not use implicit context objects, so this wrapper
 /// requires the navigation menu `model` and closes it on selection (unless the click is modified
 /// with Ctrl/Meta, matching Radix semantics).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct NavigationMenuLink {
     model: Model<Option<Arc<str>>>,
     children: Vec<AnyElement>,
@@ -362,7 +362,7 @@ impl NavigationMenuLink {
         let command = self.command;
         let label = self.label.clone();
         let test_id = self.test_id.clone();
-        let children = std::rc::Rc::new(self.children);
+        let children = self.children;
         let dismiss_on_ctrl_or_meta = self.dismiss_on_ctrl_or_meta;
 
         let fallback_input_ctx = navigation_menu_input_context(&*cx.app);
@@ -434,7 +434,7 @@ impl NavigationMenuLink {
                 ..Default::default()
             };
 
-            (pressable, children.as_ref().clone())
+            (pressable, children)
         })
     }
 }
@@ -443,7 +443,7 @@ impl NavigationMenuLink {
 ///
 /// In the upstream DOM implementation this is an element; in Fret this is a "spec" that provides
 /// viewport content for [`NavigationMenuItem`].
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Default)]
 pub struct NavigationMenuContent {
     children: Vec<AnyElement>,
 }
@@ -465,7 +465,7 @@ impl NavigationMenuContent {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct NavigationMenuItem {
     value: Arc<str>,
     label: Arc<str>,
@@ -527,7 +527,7 @@ impl NavigationMenuItem {
 ///
 /// In the upstream DOM implementation this is a structural wrapper. In Fret it is a named
 /// container for `NavigationMenuItem` specs so recipes read closer to shadcn docs.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Default)]
 pub struct NavigationMenuList {
     items: Vec<NavigationMenuItem>,
 }
@@ -583,7 +583,6 @@ impl NavigationMenuStyle {
     }
 }
 
-#[derive(Clone)]
 pub struct NavigationMenu {
     model: Option<Model<Option<Arc<str>>>>,
     default_value: Option<Arc<str>>,
@@ -798,7 +797,7 @@ impl NavigationMenu {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let controlled_model = self.model;
         let default_value = self.default_value;
-        let items = self.items;
+        let mut items = self.items;
         let menu_disabled = self.disabled;
         let viewport_enabled = self.viewport;
         let indicator_enabled = self.indicator;
@@ -1057,7 +1056,7 @@ impl NavigationMenu {
                 ..Default::default()
             };
 
-            let items_for_children = items.clone();
+            let items_for_children = &mut items;
             let value_for_viewport = value_model.clone();
             let trigger_text_style_for_list = trigger_text_style.clone();
             let nav_ctx_for_list = nav_ctx.clone();
@@ -1068,9 +1067,8 @@ impl NavigationMenu {
 
             let list = cx.flex(list_props, move |cx| {
                 items_for_children
-                    .iter()
+                    .iter_mut()
                     .map(|item| {
-                        let item = item.clone();
                         let item_value = item.value.clone();
                         let label = item.label.clone();
                         let disabled = menu_disabled || item.disabled;
@@ -1085,7 +1083,10 @@ impl NavigationMenu {
                         let default_trigger_fg = default_trigger_fg_for_list.clone();
                         let style_override = style_for_list.clone();
 
-                        cx.keyed(item_value.clone(), |cx| {
+                        let trigger_children = item.trigger.take();
+                        let content_is_empty = item.content.is_empty();
+                        let item_label = item.label.clone();
+                        cx.keyed(item_value.clone(), move |cx| {
                             let trigger_text_style = trigger_text_style_for_item.clone();
 
                             let mut pressable = PressableProps::default();
@@ -1104,14 +1105,12 @@ impl NavigationMenu {
                                 ..Default::default()
                             };
 
-                            let trigger_children = item.trigger.clone();
-                            let item_label = item.label.clone();
-                            if item.content.is_empty() {
+                            if content_is_empty {
                                 // shadcn/ui demo uses a `NavigationMenuLink` for items with no
                                 // content (e.g. "Docs"), styled via `navigationMenuTriggerStyle()`.
                                 // These should behave like a link (no chevron, no open/close).
                                 let trigger_text_style = trigger_text_style.clone();
-                                let trigger_children = trigger_children.clone();
+                                let trigger_children = trigger_children;
 
                                 return cx.pressable(pressable, move |cx, st| {
                                     let hovered = st.hovered && !st.pressed;
@@ -1142,8 +1141,7 @@ impl NavigationMenu {
                                         ..Default::default()
                                     };
 
-                                    let content_children =
-                                        trigger_children.clone().unwrap_or_else(|| {
+                                    let content_children = trigger_children.unwrap_or_else(|| {
                                             let style = trigger_text_style.clone();
                                             let mut label = ui::label(cx, item_label.clone())
                                                 .text_size_px(style.size)
@@ -1235,7 +1233,7 @@ impl NavigationMenu {
                                         };
 
                                         let content_children =
-                                            trigger_children.clone().unwrap_or_else(|| {
+                                            trigger_children.unwrap_or_else(|| {
                                                 let style = trigger_text_style.clone();
                                                 let mut label = ui::label(cx, item_label.clone())
                                                     .text_size_px(style.size)
@@ -1345,12 +1343,12 @@ impl NavigationMenu {
                     .collect::<Vec<_>>()
             });
 
-            let viewport = active_idx
-                .and_then(|idx| items.get(idx))
-                .map(|active| active.content.clone())
+            let viewport_children = active_idx
+                .and_then(|idx| items.get_mut(idx))
+                .map(|active| std::mem::take(&mut active.content))
                 .unwrap_or_default();
 
-            let has_content = !viewport.is_empty();
+            let has_content = !viewport_children.is_empty();
             let is_open = selected_local.is_some() && has_content && open_for_motion;
             let overlay_presence = OverlayPresence {
                 present: motion.present && has_content,
@@ -1380,8 +1378,8 @@ impl NavigationMenu {
             let content_switch = radix_navigation_menu::navigation_menu_content_switch(transition)
                 .map(|sw| {
                     let from_children = items
-                        .get(sw.from_idx)
-                        .map(|it| it.content.clone())
+                        .get_mut(sw.from_idx)
+                        .map(|it| std::mem::take(&mut it.content))
                         .unwrap_or_default();
                     (sw.progress, sw.forward, from_children)
                 });
@@ -1447,8 +1445,8 @@ impl NavigationMenu {
 
                 let root_state_for_viewport = root_state.clone();
                 let value_for_hover = value_for_viewport.clone();
-                let viewport_children = viewport.clone();
-                let content_switch = content_switch.clone();
+                let viewport_children_for_panel = viewport_children;
+                let content_switch_for_panel = content_switch;
                 let content_switch_slide_px = content_switch_slide_px;
 
                 let mut panel_props = if viewport_enabled {
@@ -1578,8 +1576,8 @@ impl NavigationMenu {
                         let root_state_for_hover = root_state_for_viewport.clone();
                         let value_for_hover = value_for_hover.clone();
                         let panel_props = panel_props;
-                        let viewport_children = viewport_children;
-                        let content_switch = content_switch;
+                        let viewport_children = viewport_children_for_panel;
+                        let content_switch = content_switch_for_panel;
                         let content_switch_slide_px = content_switch_slide_px;
                         let content_padding = content_padding;
                         let indicator_diamond_shadow = indicator_diamond_shadow;
@@ -1641,9 +1639,9 @@ impl NavigationMenu {
                                     };
 
                                     vec![cx.container(clip_props, move |cx| {
-                                    let Some((t, forward, from_children)) = content_switch.clone()
+                                    let Some((t, forward, from_children)) = content_switch
                                     else {
-                                        let children = viewport_children.clone();
+                                        let children = viewport_children;
                                         let viewport_enabled_for_body = viewport_enabled_for_registry;
                                         let md_breakpoint_for_body = md_breakpoint_for_registry;
                                         let body = cx.keyed("viewport-body", move |cx| {
@@ -1678,7 +1676,7 @@ impl NavigationMenu {
                                         return vec![body];
                                     };
 
-                                    let to_children = viewport_children.clone();
+                                    let to_children = viewport_children;
                                     let t = t.clamp(0.0, 1.0);
                                     let slide = content_switch_slide_px.0;
 
@@ -1718,7 +1716,7 @@ impl NavigationMenu {
                                                         ..Default::default()
                                                     },
                                                     {
-                                                        let from_children = from_children.clone();
+                                                        let from_children = from_children;
                                                         move |_cx| from_children
                                                     },
                                                 )
@@ -1737,7 +1735,7 @@ impl NavigationMenu {
                                                         ..Default::default()
                                                     },
                                                     {
-                                                        let to_children = to_children.clone();
+                                                        let to_children = to_children;
                                                         move |_cx| to_children
                                                     },
                                                 )

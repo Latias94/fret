@@ -333,8 +333,8 @@ impl WinitAppDriver for DataTableDemoDriver {
                                 },
                                 move |cx| {
                                     vec![
-                                        header.clone(),
-                                        toolbar.clone(),
+                                        header,
+                                        toolbar,
                                         cx.container(
                                             ContainerProps {
                                                 layout: table_slot,
@@ -346,9 +346,9 @@ impl WinitAppDriver for DataTableDemoDriver {
                                                 ),
                                                 ..Default::default()
                                             },
-                                            move |_cx| vec![data_table.clone()],
+                                            move |_cx| vec![data_table],
                                         ),
-                                        pagination.clone(),
+                                        pagination,
                                     ]
                                 },
                             )]

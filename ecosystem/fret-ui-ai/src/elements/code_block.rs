@@ -21,7 +21,6 @@ use fret_ui_kit::{ColorRef, LayoutRefinement};
 /// This is a policy/composition layer:
 /// - apps own effects (except for local clipboard copy),
 /// - the component exposes stable selectors for diag automation.
-#[derive(Clone)]
 pub struct CodeBlock {
     code: Arc<str>,
     language: Option<Arc<str>>,
@@ -147,7 +146,7 @@ impl CodeBlock {
             windowed_lines_overscan: 6,
             show_scrollbar_x: true,
             scrollbar_x_on_hover: true,
-            show_scrollbar_y: false,
+            show_scrollbar_y: true,
             scrollbar_y_on_hover: true,
         };
 

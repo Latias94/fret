@@ -104,7 +104,7 @@ fn base_item_border_color(theme: &Theme, variant: ItemVariant) -> Option<Color> 
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct ItemGroup {
     kind: ItemGroupKind,
     layout: LayoutRefinement,
@@ -227,7 +227,7 @@ impl Default for ItemSeparator {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct ItemMedia {
     variant: ItemMediaVariant,
     layout: LayoutRefinement,
@@ -322,7 +322,7 @@ impl ItemMedia {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct ItemContent {
     layout: LayoutRefinement,
     children: Vec<AnyElement>,
@@ -392,7 +392,7 @@ impl ItemContent {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct ItemActions {
     layout: LayoutRefinement,
     children: Vec<AnyElement>,
@@ -436,7 +436,7 @@ impl ItemActions {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct ItemHeader {
     layout: LayoutRefinement,
     children: Vec<AnyElement>,
@@ -482,7 +482,7 @@ impl ItemHeader {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct ItemFooter {
     layout: LayoutRefinement,
     children: Vec<AnyElement>,
@@ -638,7 +638,6 @@ impl ItemStyle {
     }
 }
 
-#[derive(Clone)]
 pub struct Item {
     variant: ItemVariant,
     size: ItemSize,
@@ -796,7 +795,7 @@ impl Item {
             )
         };
 
-        let children = std::rc::Rc::new(self.children);
+        let children = self.children;
         let enabled = self.enabled;
         let on_click = self.on_click;
         let on_activate = self.on_activate;
@@ -820,6 +819,7 @@ impl Item {
         };
 
         if on_click.is_some() || on_activate.is_some() || render_role.is_some() {
+            let children = children;
             control_chrome_pressable_with_id_props(cx, move |cx, st, _id| {
                 cx.pressable_dispatch_command_if_enabled_opt(on_click);
                 if let Some(on_activate) = on_activate.clone() {
@@ -884,9 +884,7 @@ impl Item {
                     ..Default::default()
                 };
 
-                let children = children.clone();
                 (pressable_props, chrome_props, move |cx| {
-                    let children = children.clone();
                     vec![cx.flex(
                         FlexProps {
                             layout: inner_layout,
@@ -897,7 +895,7 @@ impl Item {
                             align: CrossAlign::Center,
                             wrap: true,
                         },
-                        move |_cx| (*children).clone(),
+                        move |_cx| children,
                     )]
                 })
             })
@@ -921,6 +919,7 @@ impl Item {
                 decl_style::container_props(theme, chrome, layout)
             };
 
+            let children = children;
             cx.container(props, move |cx| {
                 let inner_layout = {
                     let theme = Theme::global(&*cx.app);
@@ -936,7 +935,7 @@ impl Item {
                         align: CrossAlign::Center,
                         wrap: true,
                     },
-                    move |_cx| (*children).clone(),
+                    move |_cx| children,
                 )]
             })
         }

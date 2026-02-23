@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use fret_core::{Color, Corners, Point, Px, SemanticsRole, Transform2D};
+use fret_icons::IconId;
 use fret_runtime::Effect;
 use fret_ui::action::OnActivate;
 use fret_ui::element::{
@@ -9,6 +10,8 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
+use fret_ui_kit::declarative::current_color;
+use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space, ui};
@@ -47,13 +50,14 @@ fn open_url_on_activate(
     })
 }
 
-#[derive(Clone)]
 pub struct Badge {
     label: Arc<str>,
     variant: BadgeVariant,
     render: Option<BadgeRender>,
     on_activate: Option<OnActivate>,
     test_id: Option<Arc<str>>,
+    leading_icon: Option<IconId>,
+    trailing_icon: Option<IconId>,
     children: Vec<AnyElement>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
@@ -82,10 +86,24 @@ impl Badge {
             render: None,
             on_activate: None,
             test_id: None,
+            leading_icon: None,
+            trailing_icon: None,
             children: Vec::new(),
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
         }
+    }
+
+    /// Adds a leading icon rendered under the badge's `currentColor` scope.
+    pub fn leading_icon(mut self, icon: IconId) -> Self {
+        self.leading_icon = Some(icon);
+        self
+    }
+
+    /// Adds a trailing icon rendered under the badge's `currentColor` scope.
+    pub fn trailing_icon(mut self, icon: IconId) -> Self {
+        self.trailing_icon = Some(icon);
+        self
     }
 
     pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
@@ -132,6 +150,8 @@ impl Badge {
             self.render,
             self.on_activate,
             self.test_id,
+            self.leading_icon,
+            self.trailing_icon,
             self.children,
             self.chrome,
             self.layout,
@@ -260,6 +280,8 @@ pub fn badge<H: UiHost>(
         None,
         None,
         None,
+        None,
+        None,
         Vec::new(),
         ChromeRefinement::default(),
         LayoutRefinement::default(),
@@ -273,6 +295,8 @@ fn badge_with_patch<H: UiHost>(
     render: Option<BadgeRender>,
     on_activate: Option<OnActivate>,
     test_id: Option<Arc<str>>,
+    leading_icon: Option<IconId>,
+    trailing_icon: Option<IconId>,
     children: Vec<AnyElement>,
     chrome_override: ChromeRefinement,
     layout_override: LayoutRefinement,
@@ -321,21 +345,26 @@ fn badge_with_patch<H: UiHost>(
         .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
     let content_children = move |cx: &mut ElementContext<'_, H>| {
-        let label = ui::text(cx, label_for_content.clone())
-            .text_size_px(text_px)
-            .fixed_line_box_px(line_height)
-            .line_box_in_bounds()
-            .font_semibold()
-            .nowrap()
-            .text_color(ColorRef::Color(fg))
-            .into_element(cx);
+        current_color::with_current_color_provider(cx, ColorRef::Color(fg), |cx| {
+            let label = ui::text(cx, label_for_content.clone())
+                .text_size_px(text_px)
+                .fixed_line_box_px(line_height)
+                .line_box_in_bounds()
+                .font_semibold()
+                .nowrap()
+                .into_element(cx);
 
-        if children.is_empty() {
-            vec![label]
-        } else {
+            if children.is_empty() && leading_icon.is_none() && trailing_icon.is_none() {
+                return vec![label];
+            }
+
             // Upstream shadcn badge enforces `[&>svg]:size-3` (12px) for direct svg children.
             let icon_px = Px(12.0);
-            let mut content = Vec::with_capacity(children.len() + 1);
+            let mut content = Vec::with_capacity(children.len() + 3);
+
+            if let Some(icon) = leading_icon.clone() {
+                content.push(decl_icon::icon_with(cx, icon, Some(icon_px), None));
+            }
 
             let children = children
                 .into_iter()
@@ -345,6 +374,10 @@ fn badge_with_patch<H: UiHost>(
             content.extend(children);
             content.push(label);
 
+            if let Some(icon) = trailing_icon.clone() {
+                content.push(decl_icon::icon_with(cx, icon, Some(icon_px), None));
+            }
+
             vec![stack::hstack(
                 cx,
                 stack::HStackProps::default()
@@ -353,7 +386,7 @@ fn badge_with_patch<H: UiHost>(
                     .gap_x(Space::N1),
                 |_cx| content,
             )]
-        }
+        })
     };
 
     let focus_radius = {
@@ -412,4 +445,65 @@ fn badge_with_patch<H: UiHost>(
         out = out.test_id(test_id);
     }
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Rect, Size};
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        )
+    }
+
+    fn collect_colors(
+        el: &AnyElement,
+        out_text: &mut Vec<(Arc<str>, Option<Color>)>,
+        out_svg: &mut Vec<Color>,
+    ) {
+        match &el.kind {
+            ElementKind::Text(props) => out_text.push((props.text.clone(), props.color)),
+            ElementKind::SvgIcon(SvgIconProps { color, .. }) => out_svg.push(*color),
+            _ => {}
+        }
+        for child in &el.children {
+            collect_colors(child, out_text, out_svg);
+        }
+    }
+
+    #[test]
+    fn badge_leading_icon_and_label_follow_variant_fg() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+            let theme = Theme::global(&*cx.app).clone();
+            let expected_fg = fg_for(&theme, BadgeVariant::Default);
+
+            let el = Badge::new("Verified")
+                .leading_icon(IconId::new_static("lucide.check"))
+                .trailing_icon(IconId::new_static("lucide.arrow-right"))
+                .into_element(cx);
+
+            let mut texts = Vec::new();
+            let mut icons = Vec::new();
+            collect_colors(&el, &mut texts, &mut icons);
+
+            assert!(
+                texts
+                    .iter()
+                    .any(|(t, c)| t.as_ref() == "Verified" && *c == Some(expected_fg)),
+                "expected badge label to resolve to variant fg"
+            );
+            assert!(
+                icons.len() >= 2 && icons.iter().all(|c| *c == expected_fg),
+                "expected badge icon(s) to resolve to variant fg"
+            );
+        });
+    }
 }

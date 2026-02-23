@@ -76,7 +76,6 @@ pub struct ToastLayerSpec {
     pub toast_max_width: Option<fret_core::Px>,
 }
 
-#[derive(Clone)]
 pub struct OverlayRequest {
     pub kind: OverlayKind,
     pub id: GlobalElementId,

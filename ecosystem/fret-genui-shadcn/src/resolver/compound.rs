@@ -61,7 +61,7 @@ impl ShadcnResolver {
             .map(Arc::<str>::from)
             .or_else(|| tabs.first().map(|t| t.value.clone()));
 
-        let mut panels_in_order: Vec<(Arc<str>, AnyElement)> = Vec::new();
+        let mut panels_in_order: Vec<(Arc<str>, Option<AnyElement>)> = Vec::new();
         for child in children.into_iter() {
             if child.component != "TabContent" {
                 continue;
@@ -75,15 +75,18 @@ impl ShadcnResolver {
             let Some(value) = value else {
                 continue;
             };
-            panels_in_order.push((value, child.rendered));
+            panels_in_order.push((value, Some(child.rendered)));
         }
 
         if panels_in_order.is_empty() {
             return self.unknown_component(cx, key, "Tabs (missing TabContent children)");
         }
 
-        let panel_by_value: BTreeMap<Arc<str>, AnyElement> =
-            panels_in_order.iter().cloned().collect();
+        let panel_index_by_value: BTreeMap<Arc<str>, usize> = panels_in_order
+            .iter()
+            .enumerate()
+            .map(|(idx, (value, _))| (value.clone(), idx))
+            .collect();
 
         let trigger_defs: Vec<TabsDef> = if !tabs.is_empty() {
             tabs
@@ -110,10 +113,14 @@ impl ShadcnResolver {
                 def.label.clone(),
             ));
 
-            let content = panel_by_value.get(&def.value).cloned().unwrap_or_else(|| {
-                let msg = Arc::<str>::from(format!("Missing TabContent for '{}'", def.value));
-                fret_ui_kit::ui::text(cx, msg).into_element(cx)
-            });
+            let content = panel_index_by_value
+                .get(&def.value)
+                .and_then(|&idx| panels_in_order.get_mut(idx))
+                .and_then(|(_, slot)| slot.take())
+                .unwrap_or_else(|| {
+                    let msg = Arc::<str>::from(format!("Missing TabContent for '{}'", def.value));
+                    fret_ui_kit::ui::text(cx, msg).into_element(cx)
+                });
             contents.push(fret_ui_shadcn::TabsContent::new(
                 def.value.clone(),
                 [content],
@@ -121,7 +128,10 @@ impl ShadcnResolver {
         }
 
         // Include any extra panels that weren't listed in `tabs`.
-        for (value, content) in panels_in_order.into_iter() {
+        for (value, content) in panels_in_order
+            .into_iter()
+            .filter_map(|(value, slot)| slot.map(|content| (value, content)))
+        {
             if included.contains(&value) {
                 continue;
             }

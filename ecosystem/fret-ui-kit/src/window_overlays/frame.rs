@@ -4,6 +4,9 @@ use fret_ui::ElementContext;
 use fret_ui::UiHost;
 
 use super::WindowOverlaySynthesisDiagnosticsStore;
+use super::requests::{
+    CachedDismissiblePopoverDecl, CachedHoverOverlayDecl, CachedModalDecl, CachedTooltipDecl,
+};
 use super::state::WindowOverlays;
 use super::{
     DismissiblePopoverRequest, HoverOverlayRequest, ModalRequest, ToastLayerRequest, TooltipRequest,
@@ -46,9 +49,10 @@ pub fn request_dismissible_popover_for_window<H: UiHost>(
 ) {
     app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
         let w = overlays.windows.entry(window).or_default();
-        overlays
-            .cached_popover_requests
-            .insert((window, request.id), request.clone());
+        overlays.cached_popover_requests.insert(
+            (window, request.id),
+            CachedDismissiblePopoverDecl::from(&request),
+        );
         w.popovers.push(request);
     });
 }
@@ -67,7 +71,7 @@ pub fn request_modal_for_window<H: UiHost>(
         let w = overlays.windows.entry(window).or_default();
         overlays
             .cached_modal_requests
-            .insert((window, request.id), request.clone());
+            .insert((window, request.id), CachedModalDecl::from(&request));
         w.modals.push(request);
     });
 }
@@ -92,7 +96,7 @@ pub fn request_hover_overlay_for_window<H: UiHost>(
             .insert((window, request.id), request.on_pointer_move.clone());
         overlays
             .cached_hover_overlay_requests
-            .insert((window, request.id), request.clone());
+            .insert((window, request.id), CachedHoverOverlayDecl::from(&request));
         w.hover_overlays.push(request);
     });
 }
@@ -111,7 +115,7 @@ pub fn request_tooltip_for_window<H: UiHost>(
         let w = overlays.windows.entry(window).or_default();
         overlays
             .cached_tooltip_requests
-            .insert((window, request.id), request.clone());
+            .insert((window, request.id), CachedTooltipDecl::from(&request));
         w.tooltips.push(request);
     });
 }

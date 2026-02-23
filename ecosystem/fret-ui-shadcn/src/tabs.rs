@@ -3,6 +3,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use fret_core::{Color, Corners, DrawOrder, Edges, FontId, FontWeight, Px, TextStyle};
+use fret_icons::IconId;
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
@@ -13,6 +14,8 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_headless::motion::tolerance::Tolerance;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
+use fret_ui_kit::declarative::current_color;
+use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::motion_springs::shared_indicator_spring_description;
 use fret_ui_kit::declarative::motion_value::{
@@ -47,6 +50,7 @@ fn apply_trigger_inherited_style(
     mut element: AnyElement,
     fg: Color,
     text_style: &TextStyle,
+    default_icon_color: Color,
 ) -> AnyElement {
     match &mut element.kind {
         fret_ui::element::ElementKind::Text(props) => {
@@ -58,14 +62,21 @@ fn apply_trigger_inherited_style(
             }
         }
         fret_ui::element::ElementKind::SvgIcon(SvgIconProps { color, .. }) => {
-            let is_default = *color
+            // Heuristic:
+            // - Older callsites may build an `SvgIcon` with the default white color.
+            // - Newer callsites that use `declarative::icon::icon(...)` (outside a currentColor
+            //   provider) resolve `muted-foreground` eagerly.
+            //
+            // In a TabsTrigger, both shapes should track the trigger foreground by default.
+            let is_default_white = *color
                 == Color {
                     r: 1.0,
                     g: 1.0,
                     b: 1.0,
                     a: 1.0,
                 };
-            if is_default {
+            let is_default_muted_fg = *color == default_icon_color;
+            if is_default_white || is_default_muted_fg {
                 *color = fg;
             }
         }
@@ -78,7 +89,7 @@ fn apply_trigger_inherited_style(
     element.children = element
         .children
         .into_iter()
-        .map(|child| apply_trigger_inherited_style(child, fg, text_style))
+        .map(|child| apply_trigger_inherited_style(child, fg, text_style, default_icon_color))
         .collect();
     element
 }
@@ -618,7 +629,7 @@ impl TabsStyle {
 ///
 /// This is a "spec" type consumed by [`TabsList`] and [`TabsRoot`]. It mirrors the Radix/shadcn
 /// authoring shape while letting Fret drive the underlying semantics and interaction wiring.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct TabsTrigger {
     value: Arc<str>,
     label: Arc<str>,
@@ -655,7 +666,7 @@ impl TabsTrigger {
 }
 
 /// shadcn/ui `TabsList` (v4).
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Default)]
 pub struct TabsList {
     triggers: Vec<TabsTrigger>,
 }
@@ -681,7 +692,7 @@ impl TabsList {
 /// Notes:
 /// - Fret currently provides "force mount all panels" via [`TabsRoot::force_mount_content`], which
 ///   approximates Radix `TabsContent forceMount` semantics.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct TabsContent {
     value: Arc<str>,
     children: Vec<AnyElement>,
@@ -700,7 +711,6 @@ impl TabsContent {
 /// `TabsContent`).
 ///
 /// This is the recommended authoring surface when translating upstream shadcn/ui examples.
-#[derive(Clone)]
 pub struct TabsRoot {
     model: Option<Model<Option<Arc<str>>>>,
     default_value: Option<Arc<str>>,
@@ -959,8 +969,29 @@ impl TabsRoot {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let list = self.list.clone();
-        let contents = self.contents.clone();
+        let Self {
+            model,
+            default_value,
+            list,
+            contents,
+            disabled,
+            orientation,
+            activation_mode,
+            loop_navigation,
+            style,
+            chrome,
+            layout,
+            force_mount_content,
+            list_full_width,
+            content_fill_remaining,
+            shared_indicator_motion,
+            content_presence_motion,
+            test_id,
+            on_value_change,
+            on_value_change_with_source,
+            on_value_change_with_details,
+            on_value_change_with_event_details,
+        } = self;
 
         let mut content_by_value: std::collections::HashMap<Arc<str>, Vec<AnyElement>> =
             std::collections::HashMap::new();
@@ -970,55 +1001,53 @@ impl TabsRoot {
 
         let items: Vec<TabsItem> = list
             .triggers
-            .iter()
-            .cloned()
+            .into_iter()
             .map(|trigger| {
-                TabsItem::new(
-                    trigger.value.clone(),
-                    trigger.label.clone(),
-                    content_by_value
-                        .remove(trigger.value.as_ref())
-                        .unwrap_or_default(),
-                )
-                .trigger_children(trigger.children.clone().unwrap_or_else(|| Vec::new()))
-                .disabled(trigger.disabled)
+                let content = content_by_value
+                    .remove(trigger.value.as_ref())
+                    .unwrap_or_default();
+                TabsItem::new(trigger.value, trigger.label, content)
+                    .trigger_children(trigger.children.unwrap_or_default())
+                    .disabled(trigger.disabled)
             })
             .collect();
 
-        let tabs = if let Some(model) = self.model.clone() {
+        let tabs = if let Some(model) = model {
             Tabs::new(model)
         } else {
-            Tabs::uncontrolled(self.default_value.clone())
+            Tabs::uncontrolled(default_value)
         };
 
-        tabs.disabled(self.disabled)
-            .orientation(self.orientation)
-            .activation_mode(self.activation_mode)
-            .loop_navigation(self.loop_navigation)
-            .on_value_change(self.on_value_change)
-            .on_value_change_with_source(self.on_value_change_with_source)
-            .on_value_change_with_details(self.on_value_change_with_details)
-            .on_value_change_with_event_details(self.on_value_change_with_event_details)
-            .style(self.style)
-            .refine_style(self.chrome)
-            .refine_layout(self.layout)
-            .force_mount_content(self.force_mount_content)
-            .list_full_width(self.list_full_width)
-            .content_fill_remaining(self.content_fill_remaining)
-            .shared_indicator_motion(self.shared_indicator_motion)
-            .content_presence_motion(self.content_presence_motion)
-            .test_id_opt(self.test_id)
+        tabs.disabled(disabled)
+            .orientation(orientation)
+            .activation_mode(activation_mode)
+            .loop_navigation(loop_navigation)
+            .on_value_change(on_value_change)
+            .on_value_change_with_source(on_value_change_with_source)
+            .on_value_change_with_details(on_value_change_with_details)
+            .on_value_change_with_event_details(on_value_change_with_event_details)
+            .style(style)
+            .refine_style(chrome)
+            .refine_layout(layout)
+            .force_mount_content(force_mount_content)
+            .list_full_width(list_full_width)
+            .content_fill_remaining(content_fill_remaining)
+            .shared_indicator_motion(shared_indicator_motion)
+            .content_presence_motion(content_presence_motion)
+            .test_id_opt(test_id)
             .items(items)
             .into_element(cx)
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct TabsItem {
     value: Arc<str>,
     label: Arc<str>,
     content: Vec<AnyElement>,
     trigger: Option<Vec<AnyElement>>,
+    trigger_leading_icon: Option<IconId>,
+    trigger_trailing_icon: Option<IconId>,
     trigger_test_id: Option<Arc<str>>,
     disabled: bool,
 }
@@ -1034,6 +1063,8 @@ impl TabsItem {
             label: label.into(),
             content: content.into_iter().collect(),
             trigger: None,
+            trigger_leading_icon: None,
+            trigger_trailing_icon: None,
             trigger_test_id: None,
             disabled: false,
         }
@@ -1054,6 +1085,22 @@ impl TabsItem {
         self
     }
 
+    /// Adds a leading icon to the default trigger contents (icon + label).
+    ///
+    /// This is preferred over pre-built icon elements because `declarative::icon::icon(...)`
+    /// resolves its final color during `into_element(cx)`. By deferring icon construction to the
+    /// `Tabs` host, the icon inherits the trigger foreground via the `currentColor` provider.
+    pub fn trigger_leading_icon(mut self, icon: IconId) -> Self {
+        self.trigger_leading_icon = Some(icon);
+        self
+    }
+
+    /// Adds a trailing icon to the default trigger contents (label + icon).
+    pub fn trigger_trailing_icon(mut self, icon: IconId) -> Self {
+        self.trigger_trailing_icon = Some(icon);
+        self
+    }
+
     pub fn trigger_test_id(mut self, id: impl Into<Arc<str>>) -> Self {
         self.trigger_test_id = Some(id.into());
         self
@@ -1065,7 +1112,6 @@ impl TabsItem {
     }
 }
 
-#[derive(Clone)]
 pub struct Tabs {
     model: Option<Model<Option<Arc<str>>>>,
     default_value: Option<Arc<str>>,
@@ -1397,35 +1443,58 @@ impl Tabs {
             decl_style::layout_style(&theme, refinement)
         };
 
+        struct TabsItemFrame {
+            value: Arc<str>,
+            label: Arc<str>,
+            trigger: Option<Vec<AnyElement>>,
+            trigger_leading_icon: Option<IconId>,
+            trigger_trailing_icon: Option<IconId>,
+            trigger_test_id: Option<Arc<str>>,
+        }
+
+        let items_len = items.len();
+        let mut items_frame: Vec<TabsItemFrame> = Vec::with_capacity(items_len);
+        let mut content_by_value: std::collections::HashMap<Arc<str>, Vec<AnyElement>> =
+            std::collections::HashMap::new();
+        for item in items {
+            content_by_value.insert(item.value.clone(), item.content);
+            items_frame.push(TabsItemFrame {
+                value: item.value,
+                label: item.label,
+                trigger: item.trigger,
+                trigger_leading_icon: item.trigger_leading_icon,
+                trigger_trailing_icon: item.trigger_trailing_icon,
+                trigger_test_id: item.trigger_test_id,
+            });
+        }
+
         let active_label = active_idx
-            .and_then(|active| items.get(active))
+            .and_then(|active| items_frame.get(active))
             .map(|item| item.label.clone())
             .unwrap_or_else(|| Arc::from(""));
-        let active_children = active_idx
-            .and_then(|active| items.get(active))
-            .and_then(|item| (!force_mount_content).then_some(item.content.clone()))
-            .unwrap_or_default();
         let active_value = active_idx
-            .and_then(|active| items.get(active))
+            .and_then(|active| items_frame.get(active))
             .map(|item| item.value.clone());
 
         let root_props = decl_style::container_props(&theme, chrome, layout);
 
         let mut root = cx.container(root_props, move |cx| {
+            let mut items = items_frame;
+            let mut content_by_value = content_by_value;
+
             let selected_tab_element: Cell<Option<u64>> = Cell::new(None);
             let selected_tab_element = &selected_tab_element;
             let tab_trigger_elements: Vec<Cell<Option<u64>>> =
-                (0..items.len()).map(|_| Cell::new(None)).collect();
+                (0..items_len).map(|_| Cell::new(None)).collect();
             let tab_trigger_elements = &tab_trigger_elements;
-            let items_for_list = items.clone();
             let mut children: Vec<AnyElement> = Vec::new();
             let content_stage_test_id = root_test_id_for_children
                 .as_ref()
                 .map(|id| Arc::<str>::from(format!("{id}-content-stage")));
 
             let tab_list_semantics = radix_tabs::tab_list_semantics_props(list_props.layout);
-            children.push(cx.semantics(tab_list_semantics, move |cx| {
-                vec![cx.container(list_props, move |cx| {
+            children.push(cx.semantics(tab_list_semantics, |cx| {
+                vec![cx.container(list_props, |cx| {
                         let list_container_id = cx.root_id();
                         let indicator_test_id = root_test_id_for_children
                             .as_ref()
@@ -1437,7 +1506,7 @@ impl Tabs {
                                 cx,
                                 list_container_id,
                                 orientation,
-                                items_for_list.len(),
+                                items_len,
                                 active_idx,
                                 indicator_test_id,
                                 tabs_disabled,
@@ -1565,10 +1634,10 @@ impl Tabs {
                                 let trigger_layout =
                                     decl_style::layout_style(&theme, trigger_refinement);
 
-                                let list_item_count = items_for_list.len();
+                                let list_item_count = items.len();
                                 let mut out: Vec<AnyElement> =
                                     Vec::with_capacity(disabled_flags.len());
-                                for (idx, item) in items_for_list.iter().cloned().enumerate() {
+                                for (idx, item) in items.iter_mut().enumerate() {
                                     let on_value_change = on_value_change.clone();
                                     let on_value_change_with_source =
                                         on_value_change_with_source.clone();
@@ -1595,7 +1664,9 @@ impl Tabs {
 
                                     let value = item.value.clone();
                                     let label = item.label.clone();
-                                    let trigger_children = item.trigger.clone();
+                                    let trigger_children = item.trigger.take();
+                                    let trigger_leading_icon = item.trigger_leading_icon.clone();
+                                    let trigger_trailing_icon = item.trigger_trailing_icon.clone();
                                     let trigger_test_id = item.trigger_test_id.clone();
                                     let model = model.clone();
                                     let text_style = text_style.clone();
@@ -1716,6 +1787,9 @@ impl Tabs {
                                             states,
                                         );
                                         let fg = fg_ref.resolve(&theme);
+                                        let default_icon_color = theme
+                                            .color_by_key("muted-foreground")
+                                            .unwrap_or_else(|| theme.color_token("muted-foreground"));
                                         let bg = if shared_indicator_motion {
                                             None
                                         } else {
@@ -1774,61 +1848,82 @@ impl Tabs {
                                             ..Default::default()
                                         };
 
+                                        let mut trigger_children = trigger_children;
                                         let content = move |cx: &mut ElementContext<'_, H>| {
-                                            let base = trigger_children.clone().unwrap_or_else(|| {
-                                                let style = text_style.clone();
-                                                let mut text = ui::label(cx, label.clone())
-                                                    .text_size_px(style.size)
-                                                    .font_weight(style.weight)
-                                                    .text_color(fg_ref.clone())
-                                                    .nowrap();
-                                                if let Some(line_height) = style.line_height {
-                                                    // Match web/GPUI baseline behavior in fixed-height controls by
-                                                    // treating the allocated bounds height as the effective line box.
-                                                    //
-                                                    // This opts into a "half-leading" baseline placement model for
-                                                    // the first line, but does not force the element height to equal
-                                                    // the configured line height.
-                                                    text = text
-                                                        .line_height_px(line_height)
-                                                        .line_height_policy(
-                                                            fret_core::TextLineHeightPolicy::FixedFromStyle,
-                                                        )
-                                                        .h_full()
-                                                        .line_box_in_bounds();
-                                                }
-                                                if let Some(letter_spacing_em) =
-                                                    style.letter_spacing_em
-                                                {
-                                                    text = text.letter_spacing_em(letter_spacing_em);
-                                                }
-                                                vec![text.into_element(cx)]
-                                            });
+                                            current_color::with_current_color_provider(
+                                                cx,
+                                                fg_ref.clone(),
+                                                |cx| {
+                                                    let base = trigger_children.take().unwrap_or_else(|| {
+                                                        let style = text_style.clone();
+                                                        let mut out: Vec<AnyElement> = Vec::new();
+                                                        if let Some(icon) = trigger_leading_icon.clone() {
+                                                            out.push(decl_icon::icon(cx, icon));
+                                                        }
 
-                                            let styled: Vec<AnyElement> = base
-                                                .into_iter()
-                                                .map(|child| {
-                                                    apply_trigger_inherited_style(child, fg, &text_style)
-                                                })
-                                                .collect();
+                                                        let mut text = ui::label(cx, label.clone())
+                                                            .text_size_px(style.size)
+                                                            .font_weight(style.weight)
+                                                            .nowrap();
+                                                        if let Some(line_height) = style.line_height {
+                                                            // Match web/GPUI baseline behavior in fixed-height controls by
+                                                            // treating the allocated bounds height as the effective line box.
+                                                            //
+                                                            // This opts into a "half-leading" baseline placement model for
+                                                            // the first line, but does not force the element height to equal
+                                                            // the configured line height.
+                                                            text = text
+                                                                .line_height_px(line_height)
+                                                                .line_height_policy(
+                                                                    fret_core::TextLineHeightPolicy::FixedFromStyle,
+                                                                )
+                                                                .h_full()
+                                                                .line_box_in_bounds();
+                                                        }
+                                                        if let Some(letter_spacing_em) =
+                                                            style.letter_spacing_em
+                                                        {
+                                                            text = text.letter_spacing_em(letter_spacing_em);
+                                                        }
+                                                        out.push(text.into_element(cx));
 
-                                            vec![cx.flex(
-                                                FlexProps {
-                                                    layout: {
-                                                        let mut layout = LayoutStyle::default();
-                                                     layout.size.width = Length::Fill;
-                                                     layout.size.height = Length::Fill;
-                                                     layout
-                                                 },
-                                                    direction: fret_core::Axis::Horizontal,
-                                                    gap: Px(6.0),
-                                                    padding: Edges::all(Px(0.0)),
-                                                    justify: MainAlign::Center,
-                                                    align: CrossAlign::Center,
-                                                    wrap: false,
+                                                        if let Some(icon) = trigger_trailing_icon.clone() {
+                                                            out.push(decl_icon::icon(cx, icon));
+                                                        }
+                                                        out
+                                                    });
+
+                                                    let styled: Vec<AnyElement> = base
+                                                        .into_iter()
+                                                        .map(|child| {
+                                                            apply_trigger_inherited_style(
+                                                                child,
+                                                                fg,
+                                                                &text_style,
+                                                                default_icon_color,
+                                                            )
+                                                        })
+                                                        .collect();
+
+                                                        vec![cx.flex(
+                                                            FlexProps {
+                                                                layout: {
+                                                                    let mut layout = LayoutStyle::default();
+                                                                    layout.size.width = Length::Fill;
+                                                                    layout.size.height = Length::Fill;
+                                                                    layout
+                                                                },
+                                                                direction: fret_core::Axis::Horizontal,
+                                                                gap: Px(6.0),
+                                                                padding: Edges::all(Px(0.0)),
+                                                                justify: MainAlign::Center,
+                                                                align: CrossAlign::Center,
+                                                                wrap: false,
+                                                            },
+                                                            move |_cx| styled,
+                                                        )]
                                                 },
-                                                move |_cx| styled,
-                                            )]
+                                            )
                                         };
 
                                         (props, chrome, content)
@@ -1884,12 +1979,11 @@ impl Tabs {
                     let mut stacked_panels: Vec<AnyElement> = Vec::new();
 
                     for value in exiting_values.iter().cloned() {
-                        let Some(item) = items.iter().find(|it| it.value == value) else {
+                        let Some(content) = content_by_value.remove(value.as_ref()) else {
                             prune.push(value);
                             continue;
                         };
 
-                        let content = item.content.clone();
                         let (present, panel) = cx.keyed(("tabs_panel", value.clone()), |cx| {
                             let out = transition::drive_transition_with_durations_and_cubic_bezier_duration_with_mount_behavior(
                                 cx,
@@ -1922,9 +2016,8 @@ impl Tabs {
                     }
 
                     if let Some(active_value) = active_value.as_ref() {
-                        if let Some(item) = items.iter().find(|it| it.value == *active_value) {
+                        if let Some(content) = content_by_value.remove(active_value.as_ref()) {
                             let labelled_by_element = selected_tab_element.get();
-                            let content = item.content.clone();
                             let active_value = active_value.clone();
 
                             let panel = cx.keyed(("tabs_panel", active_value), |cx| {
@@ -1969,27 +2062,36 @@ impl Tabs {
                         }
                         children.push(stage);
                     }
-                } else if let Some(panel) = radix_tabs::tab_panel_with_gate(
-                    cx,
-                    true,
-                    false,
-                    tab_panel_layout,
-                    active_label_opt,
-                    selected_tab_element.get(),
-                    move |_cx| active_children,
-                ) {
+                } else {
+                    let active_children = active_value
+                        .as_ref()
+                        .and_then(|value| content_by_value.remove(value.as_ref()))
+                        .unwrap_or_default();
+
+                    if let Some(panel) = radix_tabs::tab_panel_with_gate(
+                        cx,
+                        true,
+                        false,
+                        tab_panel_layout,
+                        active_label_opt,
+                        selected_tab_element.get(),
+                        move |_cx| active_children,
+                    ) {
                     children.push(panel);
+                }
                 }
             }
 
             if force_mount_content {
-                for (idx, item) in items.iter().cloned().enumerate() {
+                for (idx, item) in items.iter().enumerate() {
                     let active = active_idx.is_some_and(|a| a == idx);
                     let labelled_by_element = tab_trigger_elements
                         .get(idx)
                         .and_then(|cell| cell.get());
                     let label = item.label.clone();
-                    let content = item.content.clone();
+                    let content = content_by_value
+                        .remove(item.value.as_ref())
+                        .unwrap_or_default();
 
                     let panel = radix_tabs::tab_panel_with_gate(
                         cx,

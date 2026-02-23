@@ -35,4 +35,5 @@ time.workspace = true
 
 [dev-dependencies]
 fret-app = { version = "0.1.0", path = "../../crates/fret-app" }
+fret-ui-app = { version = "0.1.0", path = "../../crates/fret-ui-app" }
 slotmap.workspace = true

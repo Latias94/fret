@@ -856,6 +856,10 @@ impl ElementHostWidget {
                 let mut measure_width = match props.layout.size.width {
                     Length::Px(px) => Px(px.0.max(0.0)),
                     Length::Fill | Length::Auto => cx.available.width,
+                    Length::Fraction(f) => {
+                        let f = if f.is_finite() { f.max(0.0) } else { 0.0 };
+                        Px((cx.available.width.0 * f).max(0.0))
+                    }
                 };
                 if let Some(max_w) = props.layout.size.max_width {
                     measure_width = Px(measure_width.0.min(max_w.0.max(0.0)));
@@ -992,6 +996,10 @@ impl ElementHostWidget {
                 let mut measure_width = match props.layout.size.width {
                     Length::Px(px) => Px(px.0.max(0.0)),
                     Length::Fill | Length::Auto => cx.available.width,
+                    Length::Fraction(f) => {
+                        let f = if f.is_finite() { f.max(0.0) } else { 0.0 };
+                        Px((cx.available.width.0 * f).max(0.0))
+                    }
                 };
                 if let Some(max_w) = props.layout.size.max_width {
                     measure_width = Px(measure_width.0.min(max_w.0.max(0.0)));
@@ -1140,6 +1148,10 @@ impl ElementHostWidget {
                 let mut measure_width = match props.layout.size.width {
                     Length::Px(px) => Px(px.0.max(0.0)),
                     Length::Fill | Length::Auto => cx.available.width,
+                    Length::Fraction(f) => {
+                        let f = if f.is_finite() { f.max(0.0) } else { 0.0 };
+                        Px((cx.available.width.0 * f).max(0.0))
+                    }
                 };
                 if let Some(max_w) = props.layout.size.max_width {
                     measure_width = Px(measure_width.0.min(max_w.0.max(0.0)));

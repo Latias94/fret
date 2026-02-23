@@ -738,6 +738,67 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
         false
     }
 
+    fn can_scroll_by(&self) -> bool {
+        self.can_scroll_descendant
+    }
+
+    fn scroll_by(
+        &mut self,
+        cx: &mut crate::widget::ScrollByCx<'_, H>,
+        delta: Point,
+    ) -> crate::widget::ScrollByResult {
+        let Some(window) = cx.window else {
+            return crate::widget::ScrollByResult::NotHandled;
+        };
+        let Some(instance) = self.instance(cx.app, window, cx.node) else {
+            return crate::widget::ScrollByResult::NotHandled;
+        };
+
+        match instance {
+            ElementInstance::Scroll(props) => {
+                let external_handle = props.scroll_handle.clone();
+                let handle = crate::elements::with_element_state(
+                    &mut *cx.app,
+                    window,
+                    self.element,
+                    crate::element::ScrollState::default,
+                    |state| {
+                        external_handle
+                            .as_ref()
+                            .unwrap_or(&state.scroll_handle)
+                            .clone()
+                    },
+                );
+
+                crate::widget::ScrollByResult::Handled {
+                    did_scroll: {
+                        let before = handle.offset();
+                        handle.scroll_to_offset(Point::new(
+                            Px(before.x.0 + delta.x.0),
+                            Px(before.y.0 + delta.y.0),
+                        ));
+                        let after = handle.offset();
+                        (after.x.0 - before.x.0).abs() > 0.01
+                            || (after.y.0 - before.y.0).abs() > 0.01
+                    },
+                }
+            }
+            ElementInstance::VirtualList(props) => crate::widget::ScrollByResult::Handled {
+                did_scroll: {
+                    let handle = props.scroll_handle.base_handle();
+                    let before = handle.offset();
+                    handle.scroll_to_offset(Point::new(
+                        Px(before.x.0 + delta.x.0),
+                        Px(before.y.0 + delta.y.0),
+                    ));
+                    let after = handle.offset();
+                    (after.x.0 - before.x.0).abs() > 0.01 || (after.y.0 - before.y.0).abs() > 0.01
+                },
+            },
+            _ => crate::widget::ScrollByResult::NotHandled,
+        }
+    }
+
     fn can_scroll_descendant_into_view(&self) -> bool {
         self.can_scroll_descendant
     }

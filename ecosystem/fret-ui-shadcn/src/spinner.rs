@@ -2,6 +2,7 @@ use fret_core::{Point, Px, Transform2D};
 use fret_icons::{IconId, ids};
 use fret_ui::element::{AnyElement, LayoutStyle, Length, SvgIconProps, VisualTransformProps};
 use fret_ui::{ElementContext, SvgSource, Theme, UiHost};
+use fret_ui_kit::declarative::current_color;
 use fret_ui_kit::declarative::icon as icon_runtime;
 use fret_ui_kit::declarative::scheduling;
 use fret_ui_kit::declarative::style as decl_style;
@@ -70,6 +71,7 @@ impl Spinner {
         let layout = decl_style::layout_style(&theme, base_layout.merge(self.layout));
         let color = self
             .color
+            .or_else(|| current_color::inherited_current_color(cx))
             .map(|c| c.resolve(&theme))
             .or_else(|| theme.color_by_key("foreground"))
             .unwrap_or_else(|| theme.color_token("foreground"));

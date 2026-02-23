@@ -21,7 +21,6 @@ use fret_ui_shadcn::{Button, ButtonSize, ButtonVariant};
 /// Notes:
 /// - Upstream is `@xyflow/react`-backed (`ControlsPrimitive`).
 /// - In Fret this is a styling/composition wrapper only; apps own the actual zoom/pan behavior.
-#[derive(Clone)]
 pub struct WorkflowControls {
     children: Vec<AnyElement>,
     test_id: Option<Arc<str>>,

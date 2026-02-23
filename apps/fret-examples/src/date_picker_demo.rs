@@ -384,9 +384,9 @@ impl WinitAppDriver for DatePickerDemoDriver {
                                 },
                                 move |cx| {
                                     vec![
-                                        header.clone(),
-                                        toggles.clone(),
-                                        instructions.clone(),
+                                        header,
+                                        toggles,
+                                        instructions,
                                         cx.container(
                                             ContainerProps {
                                                 layout: LayoutStyle {
@@ -401,7 +401,7 @@ impl WinitAppDriver for DatePickerDemoDriver {
                                                 padding: Edges::all(Px(12.0)),
                                                 ..Default::default()
                                             },
-                                            move |_cx| vec![picker.clone()],
+                                            move |_cx| vec![picker],
                                         ),
                                         cx.container(
                                             ContainerProps {
@@ -417,7 +417,7 @@ impl WinitAppDriver for DatePickerDemoDriver {
                                                 padding: Edges::all(Px(12.0)),
                                                 ..Default::default()
                                             },
-                                            move |_cx| vec![calendar.clone()],
+                                            move |_cx| vec![calendar],
                                         ),
                                     ]
                                 },

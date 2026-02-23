@@ -69,11 +69,31 @@ impl ElementHostWidget {
                 if let Some(value) = props.value.as_ref() {
                     cx.set_value(value.as_ref().to_string());
                 }
+                if let Some(placeholder) = props.placeholder.as_ref() {
+                    cx.set_placeholder(Some(placeholder.as_ref().to_string()));
+                }
+                if let Some(url) = props.url.as_ref() {
+                    cx.set_url(Some(url.as_ref().to_string()));
+                }
+                cx.set_level(props.level);
+                cx.set_orientation(props.orientation);
+                cx.set_numeric_value(props.numeric_value);
+                cx.set_numeric_range(props.min_numeric_value, props.max_numeric_value);
+                cx.set_numeric_step(props.numeric_value_step);
+                cx.set_numeric_jump(props.numeric_value_jump);
+                cx.set_scroll_x(props.scroll_x, props.scroll_x_min, props.scroll_x_max);
+                cx.set_scroll_y(props.scroll_y, props.scroll_y_min, props.scroll_y_max);
                 if props.focusable && !props.disabled {
                     cx.set_focusable(true);
                 }
+                if let Some(editable) = props.value_editable {
+                    cx.set_value_editable(editable);
+                }
                 if props.disabled {
                     cx.set_disabled(true);
+                }
+                if props.read_only {
+                    cx.set_read_only(true);
                 }
                 if props.selected {
                     cx.set_selected(true);
@@ -204,6 +224,7 @@ impl ElementHostWidget {
                     cx.set_invokable(false);
                 } else {
                     cx.set_role(props.a11y.role.unwrap_or(SemanticsRole::Button));
+                    cx.set_level(props.a11y.level);
                     if let Some(label) = props.a11y.label.as_ref() {
                         cx.set_label(label.as_ref().to_string());
                     }
@@ -216,6 +237,9 @@ impl ElementHostWidget {
                     }
                     if let Some(expanded) = props.a11y.expanded {
                         cx.set_expanded(expanded);
+                    }
+                    if props.a11y.checked_state.is_some() {
+                        cx.set_checked_state(props.a11y.checked_state);
                     }
                     if props.a11y.checked.is_some() {
                         cx.set_checked(props.a11y.checked);
@@ -258,6 +282,7 @@ impl ElementHostWidget {
                 // This is a mechanism-only surface: it can accept selection updates via hooks, but
                 // does not provide an internal buffer for `SetValue` edits.
                 cx.set_value_editable(false);
+                cx.set_read_only(true);
                 cx.set_text_selection_supported(props.enabled);
 
                 // Only publish ranges when focused, matching TextInput/TextArea behavior.
@@ -286,8 +311,10 @@ impl ElementHostWidget {
             | ElementInstance::Grid(_) => {
                 // Flex/Grid are layout containers; they do not imply semantics beyond their children.
             }
-            ElementInstance::Image(_)
-            | ElementInstance::PointerRegion(_)
+            ElementInstance::Image(_) => {
+                cx.set_role(SemanticsRole::Image);
+            }
+            ElementInstance::PointerRegion(_)
             | ElementInstance::InternalDragRegion(_)
             | ElementInstance::ExternalDragRegion(_)
             | ElementInstance::HoverRegion(_)
@@ -299,9 +326,42 @@ impl ElementHostWidget {
             | ElementInstance::VisualTransform(_)
             | ElementInstance::RenderTransform(_)
             | ElementInstance::FractionalRenderTransform(_)
-            | ElementInstance::Anchored(_)
-            | ElementInstance::Scroll(_) => {
+            | ElementInstance::Anchored(_) => {
                 cx.set_role(SemanticsRole::Generic);
+            }
+            ElementInstance::Scroll(props) => {
+                cx.set_role(SemanticsRole::Viewport);
+                cx.set_scroll_by_supported(true);
+
+                let scroll_x = props.axis.scroll_x();
+                let scroll_y = props.axis.scroll_y();
+                cx.set_orientation(match (scroll_x, scroll_y) {
+                    (true, false) => Some(fret_core::SemanticsOrientation::Horizontal),
+                    (false, true) => Some(fret_core::SemanticsOrientation::Vertical),
+                    _ => None,
+                });
+
+                let external_handle = props.scroll_handle.clone();
+                let handle = crate::elements::with_element_state(
+                    &mut *cx.app,
+                    window,
+                    self.element,
+                    crate::element::ScrollState::default,
+                    |state| {
+                        external_handle
+                            .as_ref()
+                            .unwrap_or(&state.scroll_handle)
+                            .clone()
+                    },
+                );
+                let offset = handle.offset();
+                let max = handle.max_offset();
+                if scroll_x {
+                    cx.set_scroll_x(Some(offset.x.0 as f64), Some(0.0), Some(max.x.0 as f64));
+                }
+                if scroll_y {
+                    cx.set_scroll_y(Some(offset.y.0 as f64), Some(0.0), Some(max.y.0 as f64));
+                }
             }
             ElementInstance::ViewportSurface(_) => {
                 cx.set_role(SemanticsRole::Viewport);
@@ -327,6 +387,9 @@ impl ElementHostWidget {
             if let Some(disabled) = decoration.disabled {
                 cx.set_disabled(disabled);
             }
+            if let Some(read_only) = decoration.read_only {
+                cx.set_read_only(read_only);
+            }
             if let Some(selected) = decoration.selected {
                 cx.set_selected(selected);
             }
@@ -335,6 +398,50 @@ impl ElementHostWidget {
             }
             if let Some(checked) = decoration.checked {
                 cx.set_checked(checked);
+            }
+            if let Some(placeholder) = decoration.placeholder.as_ref() {
+                cx.set_placeholder(Some(placeholder.as_ref().to_string()));
+            }
+            if let Some(url) = decoration.url.as_ref() {
+                cx.set_url(Some(url.as_ref().to_string()));
+            }
+            if let Some(level) = decoration.level {
+                cx.set_level(Some(level));
+            }
+            if let Some(orientation) = decoration.orientation {
+                cx.set_orientation(Some(orientation));
+            }
+            if let Some(value) = decoration.numeric_value {
+                cx.set_numeric_value(Some(value));
+            }
+            if decoration.min_numeric_value.is_some() || decoration.max_numeric_value.is_some() {
+                cx.set_numeric_range(decoration.min_numeric_value, decoration.max_numeric_value);
+            }
+            if let Some(step) = decoration.numeric_value_step {
+                cx.set_numeric_step(Some(step));
+            }
+            if let Some(jump) = decoration.numeric_value_jump {
+                cx.set_numeric_jump(Some(jump));
+            }
+            if decoration.scroll_x.is_some()
+                || decoration.scroll_x_min.is_some()
+                || decoration.scroll_x_max.is_some()
+            {
+                cx.set_scroll_x(
+                    decoration.scroll_x,
+                    decoration.scroll_x_min,
+                    decoration.scroll_x_max,
+                );
+            }
+            if decoration.scroll_y.is_some()
+                || decoration.scroll_y_min.is_some()
+                || decoration.scroll_y_max.is_some()
+            {
+                cx.set_scroll_y(
+                    decoration.scroll_y,
+                    decoration.scroll_y_min,
+                    decoration.scroll_y_max,
+                );
             }
             if let Some(element) = decoration.active_descendant_element
                 && let Some(node) = cx.resolve_declarative_element(element)

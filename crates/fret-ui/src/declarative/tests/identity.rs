@@ -171,6 +171,26 @@ fn unkeyed_list_reorder_does_not_preserve_element_identity_for_state() {
 }
 
 #[test]
+fn element_tree_duplicate_ids_detect_duplicates_in_one_frame() {
+    use crate::element::{ContainerProps, ElementKind};
+    use crate::elements::GlobalElementId;
+
+    let a = AnyElement::new(
+        GlobalElementId(1),
+        ElementKind::Container(ContainerProps::default()),
+        Vec::new(),
+    );
+    let b = AnyElement::new(
+        GlobalElementId(1),
+        ElementKind::Container(ContainerProps::default()),
+        Vec::new(),
+    );
+
+    let duplicates = super::super::mount::element_tree_duplicate_ids(&[a, b]);
+    assert_eq!(duplicates, vec![GlobalElementId(1)]);
+}
+
+#[test]
 #[cfg(feature = "diagnostics")]
 fn named_scopes_appear_in_debug_paths() {
     let mut app = TestHost::new();

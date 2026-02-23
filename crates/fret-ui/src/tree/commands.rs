@@ -637,4 +637,31 @@ impl<H: UiHost> UiTree<H> {
 
         false
     }
+
+    pub fn scroll_by(&mut self, app: &mut H, target: NodeId, delta: Point) -> bool {
+        let Some(bounds) = self.nodes.get(target).map(|n| n.bounds) else {
+            return false;
+        };
+
+        let result = self.with_widget_mut(target, |widget, tree| {
+            let mut cx = crate::widget::ScrollByCx {
+                app,
+                node: target,
+                window: tree.window,
+                bounds,
+            };
+            widget.scroll_by(&mut cx, delta)
+        });
+
+        match result {
+            crate::widget::ScrollByResult::NotHandled => false,
+            crate::widget::ScrollByResult::Handled { did_scroll } => {
+                if did_scroll {
+                    self.mark_invalidation(target, Invalidation::HitTestOnly);
+                    self.request_redraw_coalesced(app);
+                }
+                did_scroll
+            }
+        }
+    }
 }

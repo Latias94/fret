@@ -2,7 +2,7 @@ use std::cell::Cell;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use fret_core::{Axis, Color, Corners, CursorIcon, Edges, MouseButton, Px};
+use fret_core::{Axis, Color, Corners, CursorIcon, Edges, MouseButton, Px, SemanticsOrientation};
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, PointerDownCx, PointerMoveCx, PointerUpCx, UiPointerActionHost};
 use fret_ui::element::{
@@ -489,6 +489,21 @@ pub fn slider<H: UiHost>(
             radix_slider::slider_root_semantics(a11y_label.clone(), active_value, disabled);
         semantics.layout = semantics_layout;
         semantics.test_id = test_id.clone();
+        semantics.orientation = Some(match orientation {
+            radix_slider::SliderOrientation::Horizontal => SemanticsOrientation::Horizontal,
+            radix_slider::SliderOrientation::Vertical => SemanticsOrientation::Vertical,
+        });
+        if min.is_finite() {
+            semantics.min_numeric_value = Some(min as f64);
+        }
+        if max.is_finite() {
+            semantics.max_numeric_value = Some(max as f64);
+        }
+        if step.is_finite() && step > 0.0 {
+            semantics.numeric_value_step = Some(step as f64);
+            semantics.numeric_value_jump = Some((step * 10.0) as f64);
+        }
+        semantics.value_editable = Some(!disabled);
         let test_id_prefix = test_id.clone();
 
         let min_value = min;
@@ -993,6 +1008,27 @@ pub fn slider<H: UiHost>(
                                 disabled,
                             );
                             thumb_semantics.layout = thumb_layout;
+                            thumb_semantics.orientation = Some(match orientation {
+                                radix_slider::SliderOrientation::Horizontal => {
+                                    SemanticsOrientation::Horizontal
+                                }
+                                radix_slider::SliderOrientation::Vertical => {
+                                    SemanticsOrientation::Vertical
+                                }
+                            });
+                            if min_value.is_finite() {
+                                thumb_semantics.min_numeric_value = Some(min_value as f64);
+                            }
+                            if max_value.is_finite() {
+                                thumb_semantics.max_numeric_value = Some(max_value as f64);
+                            }
+                            if step_value.is_finite() && step_value > 0.0 {
+                                thumb_semantics.numeric_value_step = Some(step_value as f64);
+                                thumb_semantics.numeric_value_jump =
+                                    Some((step_value * 10.0) as f64);
+                            }
+                            thumb_semantics.focusable = !disabled;
+                            thumb_semantics.value_editable = Some(!disabled);
                             if let Some(test_id) = test_id_prefix.as_ref() {
                                 thumb_semantics.test_id = Some(Arc::<str>::from(format!(
                                     "{test_id}-thumb-{thumb_index}"
@@ -1327,6 +1363,70 @@ mod tests {
             .find(|n| n.test_id.as_deref() == Some(test_id))
             .unwrap_or_else(|| panic!("missing semantics test_id={test_id}"))
             .id
+    }
+
+    #[test]
+    fn slider_set_value_numeric_updates_model_via_accessibility_driver() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(240.0), Px(60.0)),
+        );
+        let mut services = FakeServices;
+
+        let model = app.models_mut().insert(vec![50.0]);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-slider-a11y-set-value-numeric",
+            |cx| {
+                vec![
+                    Slider::new(model.clone())
+                        .range(0.0, 100.0)
+                        .step(1.0)
+                        .test_id("slider")
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let thumb = node_id_by_test_id(&ui, "slider-thumb-0");
+        let thumb_node = ui
+            .semantics_snapshot()
+            .expect("semantics snapshot")
+            .nodes
+            .iter()
+            .find(|n| n.id == thumb)
+            .expect("thumb semantics node");
+        assert!(
+            thumb_node.actions.set_value,
+            "expected slider thumb to support SetValue"
+        );
+
+        fret_ui_app::accessibility_actions::set_value_numeric(
+            &mut ui,
+            &mut app,
+            &mut services,
+            thumb,
+            42.0,
+        );
+
+        let v = app
+            .models()
+            .get_cloned(&model)
+            .and_then(|values| values.first().copied())
+            .unwrap_or(f32::NAN);
+        assert!((v - 42.0).abs() < 0.01, "expected slider=42, got {v}");
     }
 
     struct FakeServices;

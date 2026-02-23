@@ -286,7 +286,7 @@ impl Terminal {
     }
 }
 
-#[derive(Clone, Default)]
+#[derive(Default)]
 pub struct TerminalHeader {
     children: Vec<AnyElement>,
     layout: LayoutRefinement,
@@ -425,7 +425,7 @@ impl TerminalTitle {
     }
 }
 
-#[derive(Clone, Default)]
+#[derive(Default)]
 pub struct TerminalStatus {
     layout: LayoutRefinement,
     chrome: ChromeRefinement,
@@ -485,7 +485,7 @@ impl TerminalStatus {
     }
 }
 
-#[derive(Clone, Default)]
+#[derive(Default)]
 pub struct TerminalActions {
     children: Vec<AnyElement>,
     layout: LayoutRefinement,

@@ -99,7 +99,9 @@ pub(crate) fn cmd_matrix(ctx: MatrixCmdContext) -> Result<(), String> {
     let _ = ensure_env_var(&mut matrix_base_env, "FRET_DIAG_RENDERER_PERF", "1");
 
     let shell_reuse_enabled = matrix_base_env.iter().any(|(k, v)| {
-        (k.as_str() == "FRET_UI_GALLERY_VIEW_CACHE_SHELL") && !v.trim().is_empty() && (v.as_str() != "0")
+        (k.as_str() == "FRET_UI_GALLERY_VIEW_CACHE_SHELL")
+            && !v.trim().is_empty()
+            && (v.as_str() != "0")
     });
     let overlay_synthesis_gate = match check_overlay_synthesis_min {
         Some(0) => None,
@@ -138,7 +140,8 @@ pub(crate) fn cmd_matrix(ctx: MatrixCmdContext) -> Result<(), String> {
         None,
         None,
         viewport_input_gate,
-        viewport_input_gate.map(|_| ui_gallery_script_requires_viewport_input_gate as fn(&Path) -> bool),
+        viewport_input_gate
+            .map(|_| ui_gallery_script_requires_viewport_input_gate as fn(&Path) -> bool),
         None,
         None,
     )?;
@@ -158,7 +161,8 @@ pub(crate) fn cmd_matrix(ctx: MatrixCmdContext) -> Result<(), String> {
         overlay_synthesis_gate
             .map(|_| ui_gallery_script_requires_overlay_synthesis_gate as fn(&Path) -> bool),
         viewport_input_gate,
-        viewport_input_gate.map(|_| ui_gallery_script_requires_viewport_input_gate as fn(&Path) -> bool),
+        viewport_input_gate
+            .map(|_| ui_gallery_script_requires_viewport_input_gate as fn(&Path) -> bool),
         None,
         None,
     )?;
@@ -166,12 +170,14 @@ pub(crate) fn cmd_matrix(ctx: MatrixCmdContext) -> Result<(), String> {
     let mut ok = true;
     let mut comparisons: Vec<(PathBuf, CompareReport)> = Vec::new();
     for (idx, script) in scripts.iter().enumerate() {
-        let a = uncached_bundles.get(idx).cloned().ok_or_else(|| {
-            format!("missing uncached bundle for script: {}", script.display())
-        })?;
-        let b = cached_bundles.get(idx).cloned().ok_or_else(|| {
-            format!("missing cached bundle for script: {}", script.display())
-        })?;
+        let a = uncached_bundles
+            .get(idx)
+            .cloned()
+            .ok_or_else(|| format!("missing uncached bundle for script: {}", script.display()))?;
+        let b = cached_bundles
+            .get(idx)
+            .cloned()
+            .ok_or_else(|| format!("missing cached bundle for script: {}", script.display()))?;
         let report = compare_bundles(&a, &b, compare_opts)?;
         ok &= report.ok;
         comparisons.push((script.clone(), report));
@@ -237,4 +243,3 @@ pub(crate) fn cmd_matrix(ctx: MatrixCmdContext) -> Result<(), String> {
         Err("matrix compare failed".to_string())
     }
 }
-

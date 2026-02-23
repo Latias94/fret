@@ -167,6 +167,7 @@ pub fn slider_root_semantics(
         role: SemanticsRole::Generic,
         label,
         value: Some(format_semantics_value(value)),
+        numeric_value: value.is_finite().then_some(value as f64),
         disabled,
         ..Default::default()
     }
@@ -182,6 +183,7 @@ pub fn slider_thumb_semantics(
         role: SemanticsRole::Slider,
         label,
         value: Some(format_semantics_value(value)),
+        numeric_value: value.is_finite().then_some(value as f64),
         disabled,
         ..Default::default()
     }

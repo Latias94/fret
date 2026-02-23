@@ -100,7 +100,6 @@ pub mod composable {
         },
     }
 
-    #[derive(Clone)]
     pub struct AccordionTrigger {
         disabled: bool,
         a11y_label: Option<Arc<str>>,
@@ -327,7 +326,6 @@ pub mod composable {
         }
     }
 
-    #[derive(Clone)]
     pub struct AccordionContent {
         test_id: Option<Arc<str>>,
         chrome: ChromeRefinement,
@@ -406,7 +404,6 @@ pub mod composable {
         }
     }
 
-    #[derive(Clone)]
     pub struct AccordionItem {
         value: Arc<str>,
         trigger: Option<AccordionTrigger>,
@@ -473,7 +470,6 @@ pub mod composable {
         }
     }
 
-    #[derive(Clone)]
     pub struct AccordionRoot {
         model: AccordionModel,
         items: Vec<AccordionItem>,
@@ -767,7 +763,6 @@ pub mod composable {
 
                                 let theme = theme.clone();
                                 let value = item.value.clone();
-                                let content = content.clone();
                                 let content_test_id = content.test_id.clone();
                                 let item_test_id = item.test_id.clone();
 
@@ -855,7 +850,7 @@ pub mod composable {
                                                     layout: LayoutStyle::default(),
                                                     opacity: motion_for_wrapper.wrapper_opacity,
                                                 },
-                                                move |cx| vec![content.clone().into_element(cx)],
+                                                move |cx| vec![content.into_element(cx)],
                                             )];
 
                                             let wrapper_kind =
@@ -933,7 +928,6 @@ enum AccordionModel {
     },
 }
 
-#[derive(Clone)]
 pub struct AccordionTrigger {
     disabled: bool,
     a11y_label: Option<Arc<str>>,
@@ -1158,7 +1152,6 @@ impl AccordionTrigger {
     }
 }
 
-#[derive(Clone)]
 pub struct AccordionContent {
     test_id: Option<Arc<str>>,
     chrome: ChromeRefinement,
@@ -1237,7 +1230,6 @@ impl AccordionContent {
     }
 }
 
-#[derive(Clone)]
 pub struct AccordionItem {
     value: Arc<str>,
     trigger: AccordionTrigger,
@@ -1298,7 +1290,6 @@ impl AccordionItem {
     }
 }
 
-#[derive(Clone)]
 pub struct Accordion {
     model: AccordionModel,
     items: Vec<AccordionItem>,
@@ -1644,7 +1635,6 @@ impl Accordion {
                                 let motion_for_wrapper = motion.clone();
                                 let motion_for_update = motion.clone();
                                 let theme_for_wrapper = theme.clone();
-                                let content = content.clone();
 
                                 let (content_id, wrapper_el) =
                                     cx.keyed(("accordion-content", value.clone()), move |cx| {
@@ -1665,7 +1655,7 @@ impl Accordion {
                                                 layout: LayoutStyle::default(),
                                                 opacity: motion_for_wrapper.wrapper_opacity,
                                             },
-                                            move |cx| vec![content.clone().into_element(cx)],
+                                            move |cx| vec![content.into_element(cx)],
                                         )];
 
                                         let wrapper_kind = if motion_for_wrapper.wants_measurement {

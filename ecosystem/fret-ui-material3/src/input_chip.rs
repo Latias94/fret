@@ -651,7 +651,7 @@ fn trailing_icon_touch_target_overlay<H: UiHost>(
             let trailing_pressable_id = pressable_id;
             let primary_id = primary_pressable_id;
 
-            cx.key_on_key_down_for(
+            cx.key_on_key_down_focused_for(
                 primary_id,
                 Arc::new(move |host, _acx, key_cx| {
                     if key_cx.repeat {

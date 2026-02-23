@@ -308,6 +308,8 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
             line_height_policy: Default::default(),
             letter_spacing_em: None,
             vertical_placement: Default::default(),
+            leading_distribution: Default::default(),
+            strut_style: Default::default(),
         };
 
         let axis_span = |min: f64, max: f64, scale: AxisScale| -> f64 {
@@ -741,6 +743,8 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
             line_height_policy: Default::default(),
             letter_spacing_em: None,
             vertical_placement: Default::default(),
+            leading_distribution: Default::default(),
+            strut_style: Default::default(),
         };
         let constraints = TextConstraints {
             max_width: None,

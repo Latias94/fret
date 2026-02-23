@@ -259,7 +259,6 @@ impl WorkspaceShellDemoDriver {
                                                 ..Default::default()
                                             },
                                             move |cx| {
-                                                let header = strip.clone();
                                                 let content = cx.container(
                                                     ContainerProps {
                                                         layout: body_layout,
@@ -281,7 +280,7 @@ impl WorkspaceShellDemoDriver {
                                                         vec![cx.text(msg)]
                                                     },
                                                 );
-                                                vec![header, content]
+                                                vec![strip, content]
                                             },
                                         )]
                                     },

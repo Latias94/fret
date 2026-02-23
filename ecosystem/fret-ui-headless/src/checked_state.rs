@@ -44,6 +44,14 @@ impl CheckedState {
             Self::Indeterminate => None,
         }
     }
+
+    pub fn to_semantics_checked_state(self) -> Option<fret_core::SemanticsCheckedState> {
+        match self {
+            Self::Unchecked => Some(fret_core::SemanticsCheckedState::False),
+            Self::Checked => Some(fret_core::SemanticsCheckedState::True),
+            Self::Indeterminate => Some(fret_core::SemanticsCheckedState::Mixed),
+        }
+    }
 }
 
 impl From<bool> for CheckedState {
@@ -78,5 +86,21 @@ mod tests {
         assert_eq!(CheckedState::Unchecked.to_semantics_checked(), Some(false));
         assert_eq!(CheckedState::Checked.to_semantics_checked(), Some(true));
         assert_eq!(CheckedState::Indeterminate.to_semantics_checked(), None);
+    }
+
+    #[test]
+    fn semantics_checked_state_maps_indeterminate_to_mixed() {
+        assert_eq!(
+            CheckedState::Unchecked.to_semantics_checked_state(),
+            Some(fret_core::SemanticsCheckedState::False)
+        );
+        assert_eq!(
+            CheckedState::Checked.to_semantics_checked_state(),
+            Some(fret_core::SemanticsCheckedState::True)
+        );
+        assert_eq!(
+            CheckedState::Indeterminate.to_semantics_checked_state(),
+            Some(fret_core::SemanticsCheckedState::Mixed)
+        );
     }
 }

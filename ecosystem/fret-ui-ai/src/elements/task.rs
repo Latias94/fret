@@ -63,7 +63,6 @@ pub fn use_task_controller<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<Task
         .and_then(|st| st.controller.clone())
 }
 
-#[derive(Clone)]
 /// Collapsible task root aligned with AI Elements `Task`.
 pub struct Task {
     open: Option<Model<bool>>,
@@ -166,7 +165,6 @@ impl Task {
     }
 }
 
-#[derive(Clone)]
 /// Collapsible trigger aligned with AI Elements `TaskTrigger`.
 pub struct TaskTrigger {
     title: Arc<str>,
@@ -290,7 +288,6 @@ impl TaskTrigger {
     }
 }
 
-#[derive(Clone)]
 /// Collapsible content wrapper aligned with AI Elements `TaskContent`.
 pub struct TaskContent {
     children: Vec<AnyElement>,
@@ -375,7 +372,6 @@ impl TaskContent {
     }
 }
 
-#[derive(Clone)]
 /// Task item wrapper aligned with AI Elements `TaskItem`.
 pub struct TaskItem {
     children: Vec<AnyElement>,
@@ -434,7 +430,6 @@ impl TaskItem {
     }
 }
 
-#[derive(Clone)]
 /// File pill aligned with AI Elements `TaskItemFile`.
 pub struct TaskItemFile {
     children: Vec<AnyElement>,

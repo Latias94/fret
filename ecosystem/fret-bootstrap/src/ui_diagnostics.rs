@@ -20,8 +20,9 @@ use fret_diag_protocol::{
     UiPaddingInsetsV1, UiPointV1, UiPredicateV1, UiRectV1, UiRoleAndNameV1,
     UiScriptEventLogEntryV1, UiScriptEvidenceV1, UiScriptResultV1, UiScriptStageV1,
     UiSelectorResolutionCandidateV1, UiSelectorResolutionTraceEntryV1, UiSelectorV1,
-    UiShortcutRoutingTraceEntryV1, UiShortcutRoutingTraceQueryV1, UiSizeV1, UiTextInputSnapshotV1,
-    UiWebImeTraceEntryV1, UiWindowTargetV1,
+    UiSemanticsNumericFieldV1, UiSemanticsScrollFieldV1, UiShortcutRoutingTraceEntryV1,
+    UiShortcutRoutingTraceQueryV1, UiSizeV1, UiTextInputSnapshotV1, UiWebImeTraceEntryV1,
+    UiWindowTargetV1,
 };
 use fret_runtime::DragHost as _;
 use fret_ui::elements::ElementRuntime;
@@ -2311,6 +2312,52 @@ mod legacy_forked_script_protocol {
             #[serde(default)]
             eps_px: f32,
         },
+        SemanticsNumericApproxEq {
+            target: UiSelectorV1,
+            field: UiSemanticsNumericFieldV1,
+            value: f64,
+            #[serde(default)]
+            eps: f64,
+        },
+        SemanticsScrollIsFinite {
+            target: UiSelectorV1,
+            field: UiSemanticsScrollFieldV1,
+        },
+        SemanticsScrollApproxEq {
+            target: UiSelectorV1,
+            field: UiSemanticsScrollFieldV1,
+            value: f64,
+            #[serde(default)]
+            eps: f64,
+        },
+        SemanticsScrollNotApproxEq {
+            target: UiSelectorV1,
+            field: UiSemanticsScrollFieldV1,
+            value: f64,
+            #[serde(default)]
+            eps: f64,
+        },
+    }
+
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+    #[serde(rename_all = "snake_case")]
+    pub enum UiSemanticsNumericFieldV1 {
+        Value,
+        Min,
+        Max,
+        Step,
+        Jump,
+    }
+
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+    #[serde(rename_all = "snake_case")]
+    pub enum UiSemanticsScrollFieldV1 {
+        X,
+        XMin,
+        XMax,
+        Y,
+        YMin,
+        YMax,
     }
 
     #[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]
@@ -7387,6 +7434,18 @@ fn semantics_fingerprint_v1(
         hasher.write_bool(node.flags.selected);
         hasher.write_bool(node.flags.expanded);
         hasher.write_opt_bool(node.flags.checked);
+        match node.flags.checked_state {
+            None => hasher.write_u8(0),
+            Some(state) => {
+                hasher.write_u8(1);
+                hasher.write_u8(match state {
+                    fret_core::SemanticsCheckedState::False => 0,
+                    fret_core::SemanticsCheckedState::True => 1,
+                    fret_core::SemanticsCheckedState::Mixed => 2,
+                    _ => 3,
+                });
+            }
+        }
 
         hasher.write_opt_str(node.test_id.as_deref(), redact_text, max_string_bytes);
         hasher.write_opt_u64(node.active_descendant.map(key_to_u64));
@@ -7400,6 +7459,7 @@ fn semantics_fingerprint_v1(
         hasher.write_bool(node.actions.focus);
         hasher.write_bool(node.actions.invoke);
         hasher.write_bool(node.actions.set_value);
+        hasher.write_bool(node.actions.scroll_by);
         hasher.write_bool(node.actions.set_text_selection);
 
         hasher.write_u32(node.labelled_by.len() as u32);
@@ -9351,6 +9411,104 @@ fn eval_predicate(
             let overlap_h = (ay1.min(by1) - ay0.max(by0)).max(0.0);
             overlap_h > eps
         }
+        UiPredicateV1::SemanticsNumericApproxEq {
+            target,
+            field,
+            value,
+            eps,
+        } => {
+            let expected = *value;
+            if !expected.is_finite() {
+                return false;
+            }
+            let eps = eps.max(0.0);
+            let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
+            else {
+                return false;
+            };
+            let actual = match field {
+                UiSemanticsNumericFieldV1::Value => node.extra.numeric.value,
+                UiSemanticsNumericFieldV1::Min => node.extra.numeric.min,
+                UiSemanticsNumericFieldV1::Max => node.extra.numeric.max,
+                UiSemanticsNumericFieldV1::Step => node.extra.numeric.step,
+                UiSemanticsNumericFieldV1::Jump => node.extra.numeric.jump,
+            };
+            let Some(actual) = actual.filter(|v| v.is_finite()) else {
+                return false;
+            };
+            (actual - expected).abs() <= eps
+        }
+        UiPredicateV1::SemanticsScrollIsFinite { target, field } => {
+            let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
+            else {
+                return false;
+            };
+            let actual = match field {
+                UiSemanticsScrollFieldV1::X => node.extra.scroll.x,
+                UiSemanticsScrollFieldV1::XMin => node.extra.scroll.x_min,
+                UiSemanticsScrollFieldV1::XMax => node.extra.scroll.x_max,
+                UiSemanticsScrollFieldV1::Y => node.extra.scroll.y,
+                UiSemanticsScrollFieldV1::YMin => node.extra.scroll.y_min,
+                UiSemanticsScrollFieldV1::YMax => node.extra.scroll.y_max,
+            };
+            actual.is_some_and(|v| v.is_finite())
+        }
+        UiPredicateV1::SemanticsScrollApproxEq {
+            target,
+            field,
+            value,
+            eps,
+        } => {
+            let expected = *value;
+            if !expected.is_finite() {
+                return false;
+            }
+            let eps = eps.max(0.0);
+            let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
+            else {
+                return false;
+            };
+            let actual = match field {
+                UiSemanticsScrollFieldV1::X => node.extra.scroll.x,
+                UiSemanticsScrollFieldV1::XMin => node.extra.scroll.x_min,
+                UiSemanticsScrollFieldV1::XMax => node.extra.scroll.x_max,
+                UiSemanticsScrollFieldV1::Y => node.extra.scroll.y,
+                UiSemanticsScrollFieldV1::YMin => node.extra.scroll.y_min,
+                UiSemanticsScrollFieldV1::YMax => node.extra.scroll.y_max,
+            };
+            let Some(actual) = actual.filter(|v| v.is_finite()) else {
+                return false;
+            };
+            (actual - expected).abs() <= eps
+        }
+        UiPredicateV1::SemanticsScrollNotApproxEq {
+            target,
+            field,
+            value,
+            eps,
+        } => {
+            let expected = *value;
+            if !expected.is_finite() {
+                return false;
+            }
+            let eps = eps.max(0.0);
+            let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
+            else {
+                return false;
+            };
+            let actual = match field {
+                UiSemanticsScrollFieldV1::X => node.extra.scroll.x,
+                UiSemanticsScrollFieldV1::XMin => node.extra.scroll.x_min,
+                UiSemanticsScrollFieldV1::XMax => node.extra.scroll.x_max,
+                UiSemanticsScrollFieldV1::Y => node.extra.scroll.y,
+                UiSemanticsScrollFieldV1::YMin => node.extra.scroll.y_min,
+                UiSemanticsScrollFieldV1::YMax => node.extra.scroll.y_max,
+            };
+            let Some(actual) = actual.filter(|v| v.is_finite()) else {
+                return false;
+            };
+            (actual - expected).abs() > eps
+        }
         UiPredicateV1::KnownWindowCountGe { n } => (known_windows.len() as u32) >= *n,
         UiPredicateV1::KnownWindowCountIs { n } => (known_windows.len() as u32) == *n,
         UiPredicateV1::PlatformUiWindowHoverDetectionIs { quality } => {
@@ -10542,12 +10700,14 @@ mod tests {
         snapshot: &fret_core::SemanticsSnapshot,
         window_bounds: Rect,
         window: AppWindowId,
+        input_ctx: Option<&fret_runtime::InputContext>,
         element_runtime: Option<&ElementRuntime>,
         text_input_snapshot: Option<&fret_runtime::WindowTextInputSnapshot>,
         render_text: Option<fret_core::RendererTextPerfSnapshot>,
-        render_text_font_trace: Option<&fret_core::RendererTextFontTraceSnapshot>,
         known_windows: &[AppWindowId],
+        platform_caps: Option<&fret_runtime::PlatformCapabilities>,
         docking: Option<&fret_runtime::DockingInteractionDiagnostics>,
+        dock_drag_runtime: Option<&DockDragRuntimeState>,
         text_font_stack_key_stable_frames: u32,
         font_catalog_populated: bool,
         system_font_rescan_idle: bool,
@@ -10557,13 +10717,15 @@ mod tests {
             snapshot,
             window_bounds,
             window,
+            input_ctx,
             element_runtime,
-            None,
             text_input_snapshot,
             render_text,
-            render_text_font_trace,
+            None,
             known_windows,
+            platform_caps,
             docking,
+            dock_drag_runtime,
             text_font_stack_key_stable_frames,
             font_catalog_populated,
             system_font_rescan_idle,
@@ -10665,12 +10827,14 @@ mod tests {
             set_size: None,
             label: Some(label.to_string()),
             value: None,
+            extra: fret_core::SemanticsNodeExtra::default(),
             text_selection: None,
             text_composition: None,
             actions: SemanticsActions::default(),
             labelled_by: Vec::new(),
             described_by: Vec::new(),
             controls: Vec::new(),
+            inline_spans: Vec::new(),
         }
     }
 
@@ -11057,7 +11221,6 @@ mod tests {
             None,
             None,
             None,
-            None,
             &[],
             None,
             None,
@@ -11081,7 +11244,6 @@ mod tests {
                 &snapshot,
                 window_bounds,
                 window_id(1),
-                None,
                 None,
                 None,
                 None,
@@ -11317,7 +11479,9 @@ mod tests {
             None,
             None,
             &[],
+            None,
             Some(&docking),
+            None,
             0,
             false,
             true,
@@ -11347,7 +11511,9 @@ mod tests {
             None,
             None,
             &[],
+            None,
             Some(&docking),
+            None,
             0,
             false,
             true,
@@ -11392,7 +11558,9 @@ mod tests {
             None,
             None,
             &[],
+            None,
             Some(&docking),
+            None,
             0,
             false,
             true,
@@ -11409,7 +11577,9 @@ mod tests {
             None,
             None,
             &[],
+            None,
             Some(&docking),
+            None,
             0,
             false,
             true,
@@ -11437,7 +11607,9 @@ mod tests {
             None,
             None,
             &[],
+            None,
             Some(&docking),
+            None,
             0,
             false,
             true,
@@ -11486,7 +11658,9 @@ mod tests {
             None,
             None,
             &[],
+            None,
             Some(&docking),
+            None,
             0,
             false,
             true,
@@ -11503,7 +11677,9 @@ mod tests {
             None,
             None,
             &[],
+            None,
             Some(&docking),
+            None,
             0,
             false,
             true,
@@ -11520,7 +11696,9 @@ mod tests {
             None,
             None,
             &[],
+            None,
             Some(&docking),
+            None,
             0,
             false,
             true,
@@ -11537,7 +11715,9 @@ mod tests {
                 None,
                 None,
                 &[],
+                None,
                 Some(&docking),
+                None,
                 0,
                 false,
                 true,
@@ -11556,7 +11736,9 @@ mod tests {
             None,
             None,
             &[],
+            None,
             Some(&docking),
+            None,
             0,
             false,
             true,
@@ -11573,7 +11755,9 @@ mod tests {
                 None,
                 None,
                 &[],
+                None,
                 Some(&docking),
+                None,
                 0,
                 false,
                 true,
@@ -11594,7 +11778,9 @@ mod tests {
             None,
             None,
             &[],
+            None,
             Some(&docking),
+            None,
             0,
             false,
             true,
@@ -11613,7 +11799,9 @@ mod tests {
             None,
             None,
             &[],
+            None,
             Some(&docking),
+            None,
             0,
             false,
             true,
@@ -11630,7 +11818,9 @@ mod tests {
             None,
             None,
             &[],
+            None,
             Some(&docking),
+            None,
             0,
             false,
             true,
@@ -11648,7 +11838,9 @@ mod tests {
                 None,
                 None,
                 &[],
+                None,
                 Some(&docking),
+                None,
                 0,
                 false,
                 true,

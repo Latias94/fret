@@ -246,7 +246,6 @@ impl VoiceSelector {
 }
 
 /// AI Elements-aligned `VoiceSelectorTrigger` (button that opens the dialog).
-#[derive(Clone)]
 pub struct VoiceSelectorTrigger {
     child: AnyElement,
     test_id: Option<Arc<str>>,
@@ -300,7 +299,7 @@ impl VoiceSelectorTrigger {
             },
             move |cx, _st| {
                 cx.pressable_on_activate(on_activate.clone());
-                vec![child.clone()]
+                vec![child]
             },
         );
 
@@ -313,7 +312,6 @@ impl VoiceSelectorTrigger {
 }
 
 /// AI Elements-aligned `VoiceSelectorContent` (DialogContent + Command container).
-#[derive(Clone)]
 pub struct VoiceSelectorContent {
     title: Arc<str>,
     children: Vec<AnyElement>,

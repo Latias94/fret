@@ -15,7 +15,7 @@ use crate::Skeleton;
 ///
 /// This stays policy-owned (ecosystem layer) and only depends on the stable mechanism contract:
 /// `SceneOp::Image { fit: ViewportFit, .. }` (ADR 0231).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct MediaImage {
     source: MediaImageSource,
     fit: ViewportFit,

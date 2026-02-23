@@ -24,6 +24,7 @@ New to the repo? Start with:
 - Gesture recognizers v1 (component-layer policy): `docs/workstreams/gesture-recognizers-v1.md`, `docs/workstreams/gesture-recognizers-v1-todo.md`, and `docs/workstreams/gesture-recognizers-v1-milestones.md`
 - Node graph roadmap: `docs/node-graph-roadmap.md`
 - Layout engine refactor: `docs/layout-engine-refactor-roadmap.md`
+- Percent sizing semantics v1 (percent/fraction closure): `docs/workstreams/length-percentage-semantics-v1.md` and `docs/workstreams/length-percentage-semantics-v1-todo.md`
 - Renderer refactor: `docs/renderer-refactor-roadmap.md`
 - GPU debugging (RenderDoc): `docs/renderdoc-inspection.md`
 - Debugging playbook: `docs/debugging-playbook.md`
