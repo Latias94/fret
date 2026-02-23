@@ -156,3 +156,5 @@ diagnostics stack stays easy to evolve.
 - [x] Reuse `UiArtifactStatsV1` directly as the dump return value (remove intermediate count structs).
 - [x] Migrate `diag bundle-v2` conversion to shared semantics helpers (`json_bundle::snapshot_semantics`) and
       prune `tables.semantics` after applying semantics mode (avoid oversized converted bundles).
+- [x] Extract `build_semantics_table_entries_from_windows` helper into `crates/fret-diag/src/json_bundle.rs` to
+      avoid repeating v1→v2 semantics table construction logic.

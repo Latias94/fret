@@ -1,4 +1,3 @@
-use std::collections::BTreeMap;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
@@ -301,41 +300,7 @@ pub(crate) fn cmd_bundle_v2(
                 .and_then(|v| v.as_array())
                 .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
 
-            let mut table: BTreeMap<(u64, u64), serde_json::Value> = BTreeMap::new();
-            for w in windows {
-                let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
-                let snaps = w
-                    .get("snapshots")
-                    .and_then(|v| v.as_array())
-                    .map_or(&[][..], |v| v.as_slice());
-                for s in snaps {
-                    let Some(sem) = crate::json_bundle::snapshot_semantics(s) else {
-                        continue;
-                    };
-                    if sem.is_null() {
-                        continue;
-                    }
-                    let Some(fp) = crate::json_bundle::snapshot_semantics_fingerprint(s) else {
-                        continue;
-                    };
-                    let snap_window =
-                        crate::json_bundle::snapshot_window_id(s).unwrap_or(window_id);
-                    table
-                        .entry((snap_window, fp))
-                        .or_insert_with(|| sem.clone());
-                }
-            }
-
-            let entries: Vec<serde_json::Value> = table
-                .into_iter()
-                .map(|((window, fp), semantics)| {
-                    serde_json::json!({
-                        "window": window,
-                        "semantics_fingerprint": fp,
-                        "semantics": semantics,
-                    })
-                })
-                .collect();
+            let entries = crate::json_bundle::build_semantics_table_entries_from_windows(windows);
             let tables = serde_json::json!({
                 "semantics": {
                     "schema_version": 1,
