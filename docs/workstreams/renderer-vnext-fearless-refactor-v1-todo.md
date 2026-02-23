@@ -184,6 +184,8 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - Only proceed if material work is measurably hot in at least one reproducible bundle:
       - `fretboard diag perf` (or a GPU profiler) shows the quad fragment shader is a top hotspot and `material_eval` dominates.
       - Use `top_renderer_material_*` counters from `fretboard diag perf --json` (added in `REN-VNEXT-diag-001`) to keep this quantitative.
+    - Evidence script (native + web export friendly):
+      - `tools/diag-scripts/ui-gallery-magic-patterns-torture-perf-steady.json`
     - And the current bounded variants are insufficient (confirmed by one of):
       - `material_sampled_quad_ops` is high relative to `quad_draw_calls` in the headless gate’s `headless_renderer_perf_materials`
         output and wall time regresses in `fret-quad-material-stress` on the same machine.
