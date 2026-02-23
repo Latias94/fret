@@ -1,6 +1,7 @@
 mod bind_groups;
 mod debug_postprocess;
 mod dispatch;
+mod effect_pipelines;
 mod encode;
 mod encoding_cache;
 mod execute;
