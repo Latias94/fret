@@ -134,6 +134,14 @@ coverage for `sidebar-*` pages.
 - Added targeted tests asserting `href` semantics-value exposure in link paths and explicit
   non-exposure for `as_child` href paths in `ecosystem/fret-ui-shadcn/src/sidebar.rs`.
 
+### Update note (2026-02-23)
+
+- Updated the UI gallery sidebar preview to demonstrate `SidebarProvider` composition (uncontrolled + controlled open model), removing the previous "approximation" note.
+  - Preview: `apps/fret-ui-gallery/src/ui/previews/pages/components/composites/sidebar.rs`
+- Added a scripted conformance gate that exercises the sidebar provider keyboard shortcut outcomes in the UI gallery (`Ctrl+B` toggles collapse/expand deterministically on desktop).
+  - Script: `tools/diag-scripts/ui-gallery-sidebar-provider-shortcut-toggle-focus.json`
+  - Suite: `crates/fret-diag/src/diag_suite_scripts.rs`
+
 ## Component-by-component audit (24/24)
 
 Status legend:
