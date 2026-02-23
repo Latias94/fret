@@ -23,6 +23,8 @@ scope: diagnostics, automation, tooling, refactor
       (keeps `ui_diagnostics.rs` lighter and changes localized).
 - [x] Extract bundle dump policy helpers into `ecosystem/fret-bootstrap/src/ui_diagnostics/bundle_dump_policy.rs`.
 - [x] Keep a regression gate: `cargo check -p fret-ui-gallery` after each extraction step.
+- [x] Extract snapshot recording helpers out of `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into
+      `ecosystem/fret-bootstrap/src/ui_diagnostics/snapshot_recording.rs`.
 
 ## M1b: Make `fret-diag` stats less monolithic (mechanical moves)
 
