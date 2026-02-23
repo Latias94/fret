@@ -191,7 +191,32 @@ pub enum SemanticsValidationField {
     InlineSpan,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SemanticsNumericField {
+    Value,
+    Min,
+    Max,
+    Step,
+    Jump,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SemanticsScrollField {
+    X,
+    XMin,
+    XMax,
+    Y,
+    YMin,
+    YMax,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SemanticsScrollAxis {
+    X,
+    Y,
+}
+
+#[derive(Debug, Clone)]
 pub enum SemanticsValidationErrorKind {
     MissingValueForTextRange {
         field: SemanticsValidationField,
@@ -222,7 +247,203 @@ pub enum SemanticsValidationErrorKind {
         pos_in_set: Option<u32>,
         set_size: Option<u32>,
     },
+    InvalidHierarchyLevel {
+        level: u32,
+    },
+    NonFiniteNumeric {
+        field: SemanticsNumericField,
+        value: f64,
+    },
+    InvalidNumericBounds {
+        min: f64,
+        max: f64,
+    },
+    NumericValueOutOfBounds {
+        value: f64,
+        min: f64,
+        max: f64,
+    },
+    InvalidNumericStep {
+        step: f64,
+    },
+    InvalidNumericJump {
+        jump: f64,
+    },
+    NonFiniteScroll {
+        field: SemanticsScrollField,
+        value: f64,
+    },
+    InvalidScrollBounds {
+        axis: SemanticsScrollAxis,
+        min: f64,
+        max: f64,
+    },
+    ScrollValueOutOfBounds {
+        axis: SemanticsScrollAxis,
+        value: f64,
+        min: f64,
+        max: f64,
+    },
 }
+
+impl PartialEq for SemanticsValidationErrorKind {
+    fn eq(&self, other: &Self) -> bool {
+        use SemanticsValidationErrorKind::*;
+        match (self, other) {
+            (MissingValueForTextRange { field: a }, MissingValueForTextRange { field: b }) => {
+                a == b
+            }
+            (
+                RangeOutOfBounds {
+                    field: a_field,
+                    start: a_start,
+                    end: a_end,
+                    len: a_len,
+                },
+                RangeOutOfBounds {
+                    field: b_field,
+                    start: b_start,
+                    end: b_end,
+                    len: b_len,
+                },
+            ) => a_field == b_field && a_start == b_start && a_end == b_end && a_len == b_len,
+            (
+                RangeNotCharBoundary {
+                    field: a_field,
+                    offset: a_offset,
+                },
+                RangeNotCharBoundary {
+                    field: b_field,
+                    offset: b_offset,
+                },
+            ) => a_field == b_field && a_offset == b_offset,
+            (
+                InvalidRangeOrder {
+                    field: a_field,
+                    start: a_start,
+                    end: a_end,
+                },
+                InvalidRangeOrder {
+                    field: b_field,
+                    start: b_start,
+                    end: b_end,
+                },
+            ) => a_field == b_field && a_start == b_start && a_end == b_end,
+            (DuplicateNodeId { id: a }, DuplicateNodeId { id: b }) => a == b,
+            (
+                MissingReferencedNode {
+                    field: a_field,
+                    referenced: a_referenced,
+                },
+                MissingReferencedNode {
+                    field: b_field,
+                    referenced: b_referenced,
+                },
+            ) => a_field == b_field && a_referenced == b_referenced,
+            (
+                InvalidCollectionMetadata {
+                    pos_in_set: a_pos_in_set,
+                    set_size: a_set_size,
+                },
+                InvalidCollectionMetadata {
+                    pos_in_set: b_pos_in_set,
+                    set_size: b_set_size,
+                },
+            ) => a_pos_in_set == b_pos_in_set && a_set_size == b_set_size,
+            (InvalidHierarchyLevel { level: a }, InvalidHierarchyLevel { level: b }) => a == b,
+            (
+                NonFiniteNumeric {
+                    field: a_field,
+                    value: a_value,
+                },
+                NonFiniteNumeric {
+                    field: b_field,
+                    value: b_value,
+                },
+            ) => a_field == b_field && a_value.to_bits() == b_value.to_bits(),
+            (
+                InvalidNumericBounds {
+                    min: a_min,
+                    max: a_max,
+                },
+                InvalidNumericBounds {
+                    min: b_min,
+                    max: b_max,
+                },
+            ) => a_min.to_bits() == b_min.to_bits() && a_max.to_bits() == b_max.to_bits(),
+            (
+                NumericValueOutOfBounds {
+                    value: a_value,
+                    min: a_min,
+                    max: a_max,
+                },
+                NumericValueOutOfBounds {
+                    value: b_value,
+                    min: b_min,
+                    max: b_max,
+                },
+            ) => {
+                a_value.to_bits() == b_value.to_bits()
+                    && a_min.to_bits() == b_min.to_bits()
+                    && a_max.to_bits() == b_max.to_bits()
+            }
+            (InvalidNumericStep { step: a }, InvalidNumericStep { step: b }) => {
+                a.to_bits() == b.to_bits()
+            }
+            (InvalidNumericJump { jump: a }, InvalidNumericJump { jump: b }) => {
+                a.to_bits() == b.to_bits()
+            }
+            (
+                NonFiniteScroll {
+                    field: a_field,
+                    value: a_value,
+                },
+                NonFiniteScroll {
+                    field: b_field,
+                    value: b_value,
+                },
+            ) => a_field == b_field && a_value.to_bits() == b_value.to_bits(),
+            (
+                InvalidScrollBounds {
+                    axis: a_axis,
+                    min: a_min,
+                    max: a_max,
+                },
+                InvalidScrollBounds {
+                    axis: b_axis,
+                    min: b_min,
+                    max: b_max,
+                },
+            ) => {
+                a_axis == b_axis
+                    && a_min.to_bits() == b_min.to_bits()
+                    && a_max.to_bits() == b_max.to_bits()
+            }
+            (
+                ScrollValueOutOfBounds {
+                    axis: a_axis,
+                    value: a_value,
+                    min: a_min,
+                    max: a_max,
+                },
+                ScrollValueOutOfBounds {
+                    axis: b_axis,
+                    value: b_value,
+                    min: b_min,
+                    max: b_max,
+                },
+            ) => {
+                a_axis == b_axis
+                    && a_value.to_bits() == b_value.to_bits()
+                    && a_min.to_bits() == b_min.to_bits()
+                    && a_max.to_bits() == b_max.to_bits()
+            }
+            _ => false,
+        }
+    }
+}
+
+impl Eq for SemanticsValidationErrorKind {}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SemanticsReferenceField {
@@ -253,6 +474,7 @@ impl SemanticsNode {
             self.text_composition,
         )?;
         validate_inline_spans(self.id, self.value.as_deref(), &self.inline_spans)?;
+        validate_extra(self.id, &self.extra)?;
         Ok(())
     }
 }
@@ -356,6 +578,183 @@ impl SemanticsSnapshot {
         }
         Ok(())
     }
+}
+
+fn validate_extra(
+    node: NodeId,
+    extra: &SemanticsNodeExtra,
+) -> Result<(), SemanticsValidationError> {
+    if let Some(level) = extra.level
+        && level == 0
+    {
+        return Err(SemanticsValidationError {
+            node,
+            kind: SemanticsValidationErrorKind::InvalidHierarchyLevel { level },
+        });
+    }
+
+    validate_numeric(node, extra.numeric)?;
+    validate_scroll(node, extra.scroll)?;
+    Ok(())
+}
+
+fn validate_numeric(
+    node: NodeId,
+    numeric: SemanticsNumeric,
+) -> Result<(), SemanticsValidationError> {
+    let check_finite =
+        |field: SemanticsNumericField, value: f64| -> Result<(), SemanticsValidationError> {
+            if value.is_finite() {
+                Ok(())
+            } else {
+                Err(SemanticsValidationError {
+                    node,
+                    kind: SemanticsValidationErrorKind::NonFiniteNumeric { field, value },
+                })
+            }
+        };
+
+    if let Some(value) = numeric.value {
+        check_finite(SemanticsNumericField::Value, value)?;
+    }
+    if let Some(min) = numeric.min {
+        check_finite(SemanticsNumericField::Min, min)?;
+    }
+    if let Some(max) = numeric.max {
+        check_finite(SemanticsNumericField::Max, max)?;
+    }
+    if let Some(step) = numeric.step {
+        check_finite(SemanticsNumericField::Step, step)?;
+    }
+    if let Some(jump) = numeric.jump {
+        check_finite(SemanticsNumericField::Jump, jump)?;
+    }
+
+    if let (Some(min), Some(max)) = (numeric.min, numeric.max)
+        && min > max
+    {
+        return Err(SemanticsValidationError {
+            node,
+            kind: SemanticsValidationErrorKind::InvalidNumericBounds { min, max },
+        });
+    }
+
+    if let Some(step) = numeric.step
+        && step <= 0.0
+    {
+        return Err(SemanticsValidationError {
+            node,
+            kind: SemanticsValidationErrorKind::InvalidNumericStep { step },
+        });
+    }
+    if let Some(jump) = numeric.jump
+        && jump <= 0.0
+    {
+        return Err(SemanticsValidationError {
+            node,
+            kind: SemanticsValidationErrorKind::InvalidNumericJump { jump },
+        });
+    }
+
+    if let (Some(value), Some(min), Some(max)) = (numeric.value, numeric.min, numeric.max)
+        && (value < min || value > max)
+    {
+        return Err(SemanticsValidationError {
+            node,
+            kind: SemanticsValidationErrorKind::NumericValueOutOfBounds { value, min, max },
+        });
+    }
+
+    Ok(())
+}
+
+fn validate_scroll(node: NodeId, scroll: SemanticsScroll) -> Result<(), SemanticsValidationError> {
+    const EPS: f64 = 1e-9;
+
+    let check_finite =
+        |field: SemanticsScrollField, value: f64| -> Result<(), SemanticsValidationError> {
+            if value.is_finite() {
+                Ok(())
+            } else {
+                Err(SemanticsValidationError {
+                    node,
+                    kind: SemanticsValidationErrorKind::NonFiniteScroll { field, value },
+                })
+            }
+        };
+
+    if let Some(x) = scroll.x {
+        check_finite(SemanticsScrollField::X, x)?;
+    }
+    if let Some(x_min) = scroll.x_min {
+        check_finite(SemanticsScrollField::XMin, x_min)?;
+    }
+    if let Some(x_max) = scroll.x_max {
+        check_finite(SemanticsScrollField::XMax, x_max)?;
+    }
+    if let Some(y) = scroll.y {
+        check_finite(SemanticsScrollField::Y, y)?;
+    }
+    if let Some(y_min) = scroll.y_min {
+        check_finite(SemanticsScrollField::YMin, y_min)?;
+    }
+    if let Some(y_max) = scroll.y_max {
+        check_finite(SemanticsScrollField::YMax, y_max)?;
+    }
+
+    if let (Some(min), Some(max)) = (scroll.x_min, scroll.x_max)
+        && min > max
+    {
+        return Err(SemanticsValidationError {
+            node,
+            kind: SemanticsValidationErrorKind::InvalidScrollBounds {
+                axis: SemanticsScrollAxis::X,
+                min,
+                max,
+            },
+        });
+    }
+    if let (Some(value), Some(min), Some(max)) = (scroll.x, scroll.x_min, scroll.x_max)
+        && (value < min - EPS || value > max + EPS)
+    {
+        return Err(SemanticsValidationError {
+            node,
+            kind: SemanticsValidationErrorKind::ScrollValueOutOfBounds {
+                axis: SemanticsScrollAxis::X,
+                value,
+                min,
+                max,
+            },
+        });
+    }
+
+    if let (Some(min), Some(max)) = (scroll.y_min, scroll.y_max)
+        && min > max
+    {
+        return Err(SemanticsValidationError {
+            node,
+            kind: SemanticsValidationErrorKind::InvalidScrollBounds {
+                axis: SemanticsScrollAxis::Y,
+                min,
+                max,
+            },
+        });
+    }
+    if let (Some(value), Some(min), Some(max)) = (scroll.y, scroll.y_min, scroll.y_max)
+        && (value < min - EPS || value > max + EPS)
+    {
+        return Err(SemanticsValidationError {
+            node,
+            kind: SemanticsValidationErrorKind::ScrollValueOutOfBounds {
+                axis: SemanticsScrollAxis::Y,
+                value,
+                min,
+                max,
+            },
+        });
+    }
+
+    Ok(())
 }
 
 fn validate_text_ranges(
@@ -536,6 +935,30 @@ mod tests {
         }
     }
 
+    fn base_node(extra: SemanticsNodeExtra) -> SemanticsNode {
+        SemanticsNode {
+            id: node(1),
+            parent: None,
+            role: SemanticsRole::Slider,
+            bounds: Rect::default(),
+            flags: SemanticsFlags::default(),
+            test_id: None,
+            active_descendant: None,
+            pos_in_set: None,
+            set_size: None,
+            label: None,
+            value: None,
+            extra,
+            text_selection: None,
+            text_composition: None,
+            actions: SemanticsActions::default(),
+            labelled_by: Vec::new(),
+            described_by: Vec::new(),
+            controls: Vec::new(),
+            inline_spans: Vec::new(),
+        }
+    }
+
     #[test]
     fn validates_utf8_char_boundaries_for_text_ranges() {
         let n = SemanticsNode {
@@ -640,6 +1063,183 @@ mod tests {
             err.kind,
             SemanticsValidationErrorKind::MissingValueForTextRange {
                 field: SemanticsValidationField::InlineSpan
+            }
+        ));
+    }
+
+    #[test]
+    fn validates_extra_numeric_and_scroll_metadata() {
+        let n = base_node(SemanticsNodeExtra {
+            level: Some(1),
+            numeric: SemanticsNumeric {
+                value: Some(5.0),
+                min: Some(0.0),
+                max: Some(10.0),
+                step: Some(1.0),
+                jump: Some(5.0),
+            },
+            scroll: SemanticsScroll {
+                x: Some(0.0),
+                x_min: Some(0.0),
+                x_max: Some(0.0),
+                y: Some(10.0),
+                y_min: Some(0.0),
+                y_max: Some(10.0),
+            },
+            ..SemanticsNodeExtra::default()
+        });
+        n.validate().expect("valid extra metadata should pass");
+    }
+
+    #[test]
+    fn rejects_invalid_hierarchy_level() {
+        let n = base_node(SemanticsNodeExtra {
+            level: Some(0),
+            ..SemanticsNodeExtra::default()
+        });
+        let err = n.validate().expect_err("level=0 should fail");
+        assert!(matches!(
+            err.kind,
+            SemanticsValidationErrorKind::InvalidHierarchyLevel { level: 0 }
+        ));
+    }
+
+    #[test]
+    fn rejects_non_finite_numeric_metadata() {
+        let n = base_node(SemanticsNodeExtra {
+            numeric: SemanticsNumeric {
+                value: Some(f64::NAN),
+                ..SemanticsNumeric::default()
+            },
+            ..SemanticsNodeExtra::default()
+        });
+        let err = n.validate().expect_err("NaN should fail");
+        assert!(matches!(
+            err.kind,
+            SemanticsValidationErrorKind::NonFiniteNumeric {
+                field: SemanticsNumericField::Value,
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn rejects_invalid_numeric_bounds() {
+        let n = base_node(SemanticsNodeExtra {
+            numeric: SemanticsNumeric {
+                min: Some(10.0),
+                max: Some(5.0),
+                ..SemanticsNumeric::default()
+            },
+            ..SemanticsNodeExtra::default()
+        });
+        let err = n.validate().expect_err("min > max should fail");
+        assert!(matches!(
+            err.kind,
+            SemanticsValidationErrorKind::InvalidNumericBounds { .. }
+        ));
+    }
+
+    #[test]
+    fn rejects_numeric_value_out_of_bounds() {
+        let n = base_node(SemanticsNodeExtra {
+            numeric: SemanticsNumeric {
+                value: Some(11.0),
+                min: Some(0.0),
+                max: Some(10.0),
+                ..SemanticsNumeric::default()
+            },
+            ..SemanticsNodeExtra::default()
+        });
+        let err = n.validate().expect_err("out-of-bounds should fail");
+        assert!(matches!(
+            err.kind,
+            SemanticsValidationErrorKind::NumericValueOutOfBounds { .. }
+        ));
+    }
+
+    #[test]
+    fn rejects_non_positive_numeric_step_and_jump() {
+        let step = base_node(SemanticsNodeExtra {
+            numeric: SemanticsNumeric {
+                step: Some(0.0),
+                ..SemanticsNumeric::default()
+            },
+            ..SemanticsNodeExtra::default()
+        });
+        let err = step.validate().expect_err("step <= 0 should fail");
+        assert!(matches!(
+            err.kind,
+            SemanticsValidationErrorKind::InvalidNumericStep { .. }
+        ));
+
+        let jump = base_node(SemanticsNodeExtra {
+            numeric: SemanticsNumeric {
+                jump: Some(-1.0),
+                ..SemanticsNumeric::default()
+            },
+            ..SemanticsNodeExtra::default()
+        });
+        let err = jump.validate().expect_err("jump <= 0 should fail");
+        assert!(matches!(
+            err.kind,
+            SemanticsValidationErrorKind::InvalidNumericJump { .. }
+        ));
+    }
+
+    #[test]
+    fn rejects_non_finite_scroll_metadata() {
+        let n = base_node(SemanticsNodeExtra {
+            scroll: SemanticsScroll {
+                y: Some(f64::INFINITY),
+                ..SemanticsScroll::default()
+            },
+            ..SemanticsNodeExtra::default()
+        });
+        let err = n.validate().expect_err("Infinity should fail");
+        assert!(matches!(
+            err.kind,
+            SemanticsValidationErrorKind::NonFiniteScroll {
+                field: SemanticsScrollField::Y,
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn rejects_invalid_scroll_bounds_and_value_out_of_bounds() {
+        let bounds = base_node(SemanticsNodeExtra {
+            scroll: SemanticsScroll {
+                x_min: Some(10.0),
+                x_max: Some(5.0),
+                ..SemanticsScroll::default()
+            },
+            ..SemanticsNodeExtra::default()
+        });
+        let err = bounds.validate().expect_err("x_min > x_max should fail");
+        assert!(matches!(
+            err.kind,
+            SemanticsValidationErrorKind::InvalidScrollBounds {
+                axis: SemanticsScrollAxis::X,
+                ..
+            }
+        ));
+
+        let oob = base_node(SemanticsNodeExtra {
+            scroll: SemanticsScroll {
+                y: Some(11.0),
+                y_min: Some(0.0),
+                y_max: Some(10.0),
+                ..SemanticsScroll::default()
+            },
+            ..SemanticsNodeExtra::default()
+        });
+        let err = oob.validate().expect_err("y out-of-bounds should fail");
+        assert!(matches!(
+            err.kind,
+            SemanticsValidationErrorKind::ScrollValueOutOfBounds {
+                axis: SemanticsScrollAxis::Y,
+                ..
             }
         ));
     }

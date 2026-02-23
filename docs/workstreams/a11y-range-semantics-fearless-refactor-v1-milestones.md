@@ -7,6 +7,7 @@ Last updated: 2026-02-23
 Exit criteria:
 
 - Contract shape selected (`SemanticsNode.extra.numeric` with `value/min/max/step/jump`) and invariants documented.
+- Contract invariants enforced by `SemanticsNode::validate()` (finite, bounds order, in-range where applicable).
 - Layer ownership confirmed (`fret-core` contract; adapters; ecosystem policy).
 - At least one smallest repro target chosen (e.g. `ui-gallery` slider, or shadcn slider tests).
 

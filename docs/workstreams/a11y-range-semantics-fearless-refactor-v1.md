@@ -72,6 +72,7 @@ Notes:
 - For indeterminate progress, omit `extra.numeric.value` and keep the role as `ProgressBar`.
 - Keep `value: Option<String>` as a *human-readable* string (screen readers may still use it, diagnostics can display it).
 - AccessKit mapping is best-effort: only emit numeric/scroll properties for finite values.
+- Validation: `SemanticsNode::validate()` rejects non-finite numeric/scroll values; requires `min <= max` when both are present; requires `value` within `[min,max]` when all are present; requires positive `step/jump`; requires scroll positions within `[min,max]` when all are present; and enforces `level` as 1-based.
 
 ## Additional “mechanismizable” semantics gaps (candidates)
 

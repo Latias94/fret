@@ -4,9 +4,9 @@ Last updated: 2026-02-23
 
 ## Contract + docs
 
-- [ ] Decide invariants: should `extra.numeric.value` be clamped to `[min,max]` or can it be out-of-range?
-- [ ] Decide indeterminate progress representation (omit `extra.numeric.value` vs sentinel).
-- [ ] Confirm we want `extra.numeric.jump` in v1 (PageUp/PageDown increments).
+- [x] Decide invariants: `extra.numeric.value` should be within `[min,max]` when all are present (validate as an error; do not clamp in `validate()`).
+- [x] Decide indeterminate progress representation: omit `extra.numeric.value` (keep role as `ProgressBar`).
+- [x] Confirm `extra.numeric.jump` in v1: keep as optional “page” increment (PageUp/PageDown); producers may omit.
 - [ ] (If needed) add/update an ADR describing the numeric/range semantics surface.
 
 ## Adjacent semantics candidates (batchable during contract touch)
@@ -26,7 +26,7 @@ These are optional, but high leverage if we want to avoid follow-up “contract 
 - [x] Extend `fret-core` `SemanticsNode` with structured extras (`extra.numeric`, `extra.scroll`, etc.).
 - [x] Extend `fret-ui` `SemanticsProps` and `SemanticsDecoration` to carry extras + read-only.
 - [x] Forward extras into the snapshot in `crates/fret-ui/src/tree/ui_tree_semantics.rs`.
-- [ ] Add snapshot validation for numeric ranges (best-effort; strict mode later).
+- [x] Add snapshot validation for numeric/scroll invariants via `SemanticsNode::validate()` (finite values, bounds order, out-of-bounds values, positive step/jump, `level` is 1-based).
 
 ## AccessKit adapter
 
@@ -48,6 +48,6 @@ These are optional, but high leverage if we want to avoid follow-up “contract 
 
 ## Quality gates
 
-- [ ] `cargo fmt` for touched crates.
-- [ ] `cargo nextest run -p fret-a11y-accesskit` (and any affected packages) or `cargo test` fallback.
+- [x] `cargo fmt -p fret-core`
+- [x] `cargo nextest run -p fret-core`
 - [ ] (If cross-crate moves happen) `python3 tools/check_layering.py`.
