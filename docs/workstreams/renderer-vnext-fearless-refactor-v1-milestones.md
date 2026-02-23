@@ -664,6 +664,17 @@ Progress record (Frame perf init helper):
   - `cargo test -p fret-render-wgpu --lib`
   - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
 
+Progress record (RenderSpace per-frame upload scratch reuse):
+
+- Date: 2026-02-23
+- Status: Landed (Stage 15 step 1)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/render_space_upload.rs` (`upload_render_space_uniforms_for_plan`)
+  - `crates/fret-render-wgpu/src/renderer/mod.rs` (`Renderer::render_space_bytes_scratch`)
+- Gates run:
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
 ## M4 — Paint/Material evolution (staged)
 
 Deliverables:

@@ -453,6 +453,16 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `cargo test -p fret-render-wgpu --lib`
     - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
 
+- [x] REN-VNEXT-refactor-150 Stage 15: reuse a renderer-owned scratch buffer for per-frame RenderSpace uniform uploads.
+  - Goal: avoid per-frame heap allocations for RenderSpace uniform bytes without changing per-pass RenderSpace semantics.
+  - Landed (step 1): store a `Vec<u8>` scratch buffer on `Renderer` and reuse it in `upload_render_space_uniforms_for_plan`.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/render_scene/render_space_upload.rs` (`upload_render_space_uniforms_for_plan`)
+    - `crates/fret-render-wgpu/src/renderer/mod.rs` (`Renderer::render_space_bytes_scratch`)
+  - Gates:
+    - `cargo test -p fret-render-wgpu --lib`
+    - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
 ## M7 — Post-v1 semantic expansions (deferred backlog)
 
 These items are intentionally *not* part of the vNext refactor’s v1 closure. They are common UI
