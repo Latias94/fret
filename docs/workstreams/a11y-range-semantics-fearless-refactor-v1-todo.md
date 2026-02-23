@@ -24,6 +24,8 @@ These are optional, but high leverage if we want to avoid follow-up “contract 
 - [x] Tri-state checked semantics: add `SemanticsFlags.checked_state` (`false/true/mixed`) and map to AccessKit toggled state; adopt in shadcn checkbox indeterminate state and gate via semantics snapshots.
 - [x] Scrollbar semantics: add `SemanticsRole::ScrollBar` and publish `extra.scroll` + `scroll_by` actions for the
   `Scrollbar` mechanism element, mapping into AccessKit `Role::ScrollBar` (ADR 0298).
+- [x] Range-like roles: add `SemanticsRole::{SpinButton,Meter,Splitter}` and map to AccessKit roles for richer portable
+  semantics coverage (gated via shadcn snapshots).
 
 ## Core + runtime plumbing
 
@@ -47,6 +49,8 @@ These are optional, but high leverage if we want to avoid follow-up “contract 
 - [x] Progress: populate numeric now/min/max for determinate progress.
 - [x] Update semantics-focused tests in `ecosystem/fret-ui-shadcn/tests/*` to assert numeric fields.
 - [x] ScrollArea: gate `SemanticsRole::ScrollBar` emission via `scroll_area_scrollbar_semantics` snapshot.
+- [x] Range-like roles: gate `SemanticsRole::{SpinButton,Meter}` via `spin_button_numeric_semantics` and
+  `meter_numeric_semantics` snapshots.
 
 ## Additional gates
 
