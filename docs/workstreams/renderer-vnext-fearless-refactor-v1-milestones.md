@@ -239,6 +239,44 @@ Exit criteria:
   - `tools/perf/headless_clip_mask_stress_gate.py`
   - `docs/workstreams/perf-baselines/clip-mask-stress-headless.windows-local.v1.json`
 
+Progress record (Stable sampler reuse for uniform bind groups):
+
+- Date: 2026-02-23
+- Status: Landed (Stage 1 step 1)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/bind_group_caches.rs` (`SamplingBindGroups`, `SamplingBindGroups::pick`)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/helpers.rs` (`pick_image_bind_group`, `pick_uniform_bind_group_for_mask_image`)
+  - `crates/fret-render-wgpu/src/renderer/bind_group_builders.rs` (`UniformBindGroupGlobals`, `UniformMaskImageBindGroupGlobals`)
+  - `crates/fret-render-wgpu/src/renderer/buffers.rs` (`rebuild_uniform_bind_group`)
+  - `crates/fret-render-wgpu/src/renderer/resources.rs` (`UniformBindGroupGlobals::create`)
+- Gates run:
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+Progress record (Uniform buffer lifecycle consolidation):
+
+- Date: 2026-02-23
+- Status: Landed (Stage 2 step 1)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/buffers.rs` (`ensure_*_capacity`, `rebuild_uniform_bind_group`)
+  - `crates/fret-render-wgpu/src/renderer/uniform_resources.rs` (`ensure_*_capacity`)
+- Gates run:
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+Progress record (BindGroupCaches facade + invalidation contract):
+
+- Date: 2026-02-23
+- Status: Landed (Stage 3 steps 1–3)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/bind_group_caches.rs` (`BindGroupCaches` contract doc, `invalidate_all`)
+  - `crates/fret-render-wgpu/src/renderer/bind_group_caches.rs` (`ensure_viewport_sampler_texture_bind_group`, `ensure_image_sampler_texture_bind_groups`)
+  - `crates/fret-render-wgpu/src/renderer/bind_group_caches.rs` (`ensure_uniform_mask_image_override_bind_groups`, `invalidate_uniform_mask_image_override_bind_groups`)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/bind_groups.rs` (call sites)
+- Gates run:
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
 Progress record (Bind group + uniform-resource lifecycle tightening):
 
 - Date: 2026-02-22
