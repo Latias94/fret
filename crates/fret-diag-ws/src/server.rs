@@ -9,6 +9,16 @@ use std::time::Duration;
 use tungstenite::handshake::server::{Request, Response};
 use tungstenite::{Message, WebSocket};
 
+fn ws_log_enabled() -> bool {
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ENABLED.get_or_init(|| {
+        std::env::var("FRET_DEVTOOLS_WS_LOG")
+            .ok()
+            .map(|v| v.trim().to_ascii_lowercase())
+            .is_some_and(|v| !v.is_empty() && !matches!(v.as_str(), "0" | "false" | "no" | "off"))
+    })
+}
+
 #[derive(Debug, Clone)]
 pub struct DevtoolsWsServerConfig {
     pub bind: SocketAddr,
@@ -279,6 +289,13 @@ fn handle_hello(hub: &Hub, from: u64, msg: DiagTransportMessageV1) {
             .unwrap_or_else(|| format!("session-{from}"))
         };
 
+        if ws_log_enabled() {
+            eprintln!(
+                "fret-devtools-ws: app hello client_kind={} session_id={}",
+                client_kind, assigned_session_id
+            );
+        }
+
         let desc = DevtoolsSessionDescriptorV1 {
             session_id: assigned_session_id.clone(),
             client_kind: client_kind.to_string(),
@@ -444,16 +461,34 @@ fn accept_with_token(
 fn token_matches_request(req: &Request, expected: &str) -> bool {
     let uri = req.uri();
     let Some(query) = uri.query() else {
+        if ws_log_enabled() {
+            eprintln!(
+                "fret-devtools-ws: ws unauthorized (missing query) path={}",
+                uri.path()
+            );
+        }
         return false;
     };
 
+    let mut saw_token = false;
     for pair in query.split('&') {
         let mut it = pair.splitn(2, '=');
         let k = it.next().unwrap_or_default();
         let v = it.next().unwrap_or_default();
-        if k == "fret_devtools_token" && v == expected {
-            return true;
+        if k == "fret_devtools_token" {
+            saw_token = true;
+            if v == expected {
+                return true;
+            }
         }
+    }
+
+    if ws_log_enabled() {
+        eprintln!(
+            "fret-devtools-ws: ws unauthorized path={} saw_token_param={}",
+            uri.path(),
+            saw_token
+        );
     }
     false
 }
