@@ -218,12 +218,19 @@ impl CardHeader {
             CardSize::Default => Space::N6,
             CardSize::Sm => Space::N4,
         };
+        let border_bottom = self.border_bottom;
         let props = {
             let theme = Theme::global(&*cx.app);
+            let base = if border_bottom {
+                // shadcn/ui v4: when the header has a bottom border it also adds `pb-6`.
+                ChromeRefinement::default().px(p).pb(Space::N6)
+            } else {
+                // shadcn/ui v4: `px-6` (and `px-4` for smaller cards).
+                ChromeRefinement::default().px(p)
+            };
             decl_style::container_props(
                 theme,
-                // shadcn/ui v4: `px-6` (and `px-4` for smaller cards).
-                ChromeRefinement::default().px(p).merge(self.chrome),
+                base.merge(self.chrome),
                 LayoutRefinement::default().w_full(),
             )
         };
@@ -270,7 +277,7 @@ impl CardHeader {
             )
         };
 
-        if self.border_bottom {
+        if border_bottom {
             let outer_props = {
                 let theme = Theme::global(&*cx.app);
                 decl_style::container_props(
@@ -350,6 +357,7 @@ mod tests {
     use fret_core::{AppWindowId, Point, Rect, Size};
     use fret_ui::element::{ContainerProps, Overflow, SemanticsProps};
     use fret_ui::elements::GlobalElementId;
+    use fret_ui_kit::MetricRef;
 
     #[test]
     fn card_action_marker_matches_semantics_decoration_test_id() {
@@ -438,6 +446,48 @@ mod tests {
             assert_eq!(padding.bottom, Px(0.0));
             assert_eq!(padding.left, padding.right);
             assert!(padding.left.0 > 0.0);
+        });
+    }
+
+    #[test]
+    fn card_header_border_bottom_adds_pb_6() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let theme = Theme::global(&*cx.app);
+            let pb = MetricRef::space(Space::N6).resolve(theme);
+
+            let el = CardHeader::new(Vec::<AnyElement>::new())
+                .border_bottom(true)
+                .into_element(cx);
+
+            fn has_header_padding(el: &AnyElement, pb: Px) -> bool {
+                let mut stack = vec![el];
+                while let Some(node) = stack.pop() {
+                    if let ElementKind::Container(ContainerProps { padding, .. }) = &node.kind {
+                        if padding.bottom == pb
+                            && padding.left == padding.right
+                            && padding.left.0 > 0.0
+                        {
+                            return true;
+                        }
+                    }
+                    for child in &node.children {
+                        stack.push(child);
+                    }
+                }
+                false
+            }
+
+            assert!(
+                has_header_padding(&el, pb),
+                "expected CardHeader(border_bottom=true) to apply pb-6 to the padded header container"
+            );
         });
     }
 }

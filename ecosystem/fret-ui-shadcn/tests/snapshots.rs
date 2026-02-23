@@ -9,6 +9,10 @@ use fret_ui::tree::UiTree;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
+fn is_false(v: &bool) -> bool {
+    !*v
+}
+
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 struct SnapPoint {
     x: f32,
@@ -135,16 +139,79 @@ struct SnapSemanticsNode {
     value: Option<String>,
     bounds: SnapRect,
     flags: SnapSemanticsFlags,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    extra: Option<SnapSemanticsExtra>,
 }
 
-#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 struct SnapSemanticsFlags {
     focused: bool,
     captured: bool,
     disabled: bool,
+    #[serde(default, skip_serializing_if = "is_false")]
+    read_only: bool,
     selected: bool,
     expanded: bool,
     checked: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    checked_state: Option<String>,
+}
+
+#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize)]
+struct SnapSemanticsNumeric {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    value: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    min: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    max: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    step: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    jump: Option<f64>,
+}
+
+#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize)]
+struct SnapSemanticsScroll {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    x: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    x_min: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    x_max: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    y: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    y_min: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    y_max: Option<f64>,
+}
+
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+struct SnapSemanticsExtra {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    placeholder: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    url: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    level: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    orientation: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    numeric: Option<SnapSemanticsNumeric>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    scroll: Option<SnapSemanticsScroll>,
+}
+
+impl SnapSemanticsExtra {
+    fn is_empty(&self) -> bool {
+        self.placeholder.is_none()
+            && self.url.is_none()
+            && self.level.is_none()
+            && self.orientation.is_none()
+            && self.numeric.is_none()
+            && self.scroll.is_none()
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -156,6 +223,14 @@ struct Snapshot {
 
 fn round3(v: f32) -> f32 {
     (v * 1000.0).round() / 1000.0
+}
+
+fn round6_f64(v: f64) -> f64 {
+    (v * 1_000_000.0).round() / 1_000_000.0
+}
+
+fn snap_opt_f64(v: Option<f64>) -> Option<f64> {
+    v.map(round6_f64)
 }
 
 fn snap_point(p: Point) -> SnapPoint {
@@ -334,18 +409,67 @@ fn snap_scene_op(op: SceneOp) -> SnapSceneOp {
             rect: snap_rect(rect),
             opacity: round3(opacity),
         },
-        SceneOp::PushMask { .. }
-        | SceneOp::PopMask
-        | SceneOp::PushCompositeGroup { .. }
-        | SceneOp::PopCompositeGroup => {
-            unreachable!("mask/composite ops are not expected in fret-ui-shadcn snapshots")
-        }
         SceneOp::PushEffect { .. } | SceneOp::PopEffect => {
             unreachable!("effect ops are not expected in fret-ui-shadcn snapshots")
         }
         #[allow(unreachable_patterns)]
         other => unreachable!("unhandled scene op in fret-ui-shadcn snapshots: {other:?}"),
     }
+}
+
+fn snap_semantics_numeric(n: fret_core::SemanticsNumeric) -> Option<SnapSemanticsNumeric> {
+    let out = SnapSemanticsNumeric {
+        value: snap_opt_f64(n.value),
+        min: snap_opt_f64(n.min),
+        max: snap_opt_f64(n.max),
+        step: snap_opt_f64(n.step),
+        jump: snap_opt_f64(n.jump),
+    };
+
+    if out.value.is_none()
+        && out.min.is_none()
+        && out.max.is_none()
+        && out.step.is_none()
+        && out.jump.is_none()
+    {
+        None
+    } else {
+        Some(out)
+    }
+}
+
+fn snap_semantics_scroll(s: fret_core::SemanticsScroll) -> Option<SnapSemanticsScroll> {
+    let out = SnapSemanticsScroll {
+        x: snap_opt_f64(s.x),
+        x_min: snap_opt_f64(s.x_min),
+        x_max: snap_opt_f64(s.x_max),
+        y: snap_opt_f64(s.y),
+        y_min: snap_opt_f64(s.y_min),
+        y_max: snap_opt_f64(s.y_max),
+    };
+    if out.x.is_none()
+        && out.x_min.is_none()
+        && out.x_max.is_none()
+        && out.y.is_none()
+        && out.y_min.is_none()
+        && out.y_max.is_none()
+    {
+        None
+    } else {
+        Some(out)
+    }
+}
+
+fn snap_semantics_extra(e: &fret_core::SemanticsNodeExtra) -> Option<SnapSemanticsExtra> {
+    let mut out = SnapSemanticsExtra::default();
+    out.placeholder = e.placeholder.clone();
+    out.url = e.url.clone();
+    out.level = e.level;
+    out.orientation = e.orientation.map(|v| format!("{v:?}"));
+    out.numeric = snap_semantics_numeric(e.numeric);
+    out.scroll = snap_semantics_scroll(e.scroll);
+
+    if out.is_empty() { None } else { Some(out) }
 }
 
 fn snapshot_path(name: &str) -> PathBuf {
@@ -490,10 +614,13 @@ where
                 focused: n.flags.focused,
                 captured: n.flags.captured,
                 disabled: n.flags.disabled,
+                read_only: n.flags.read_only,
                 selected: n.flags.selected,
                 expanded: n.flags.expanded,
                 checked: n.flags.checked,
+                checked_state: n.flags.checked_state.map(|v| format!("{v:?}")),
             },
+            extra: snap_semantics_extra(&n.extra),
         })
         .collect();
 
@@ -554,6 +681,57 @@ fn snapshot_tabs_default() {
         vec![
             fret_ui_shadcn::Tabs::uncontrolled(Some("alpha"))
                 .items(items)
+                .into_element(cx),
+        ]
+    });
+}
+
+#[test]
+fn snapshot_slider_numeric_semantics() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(320.0), Px(180.0)),
+    );
+    snapshot_for_root("slider_numeric_semantics", bounds, |cx| {
+        let model = cx.app.models_mut().insert(vec![80.0f32]);
+        vec![
+            fret_ui_shadcn::Slider::new(model)
+                .a11y_label("Volume")
+                .range(0.0, 100.0)
+                .step(1.0)
+                .into_element(cx),
+        ]
+    });
+}
+
+#[test]
+fn snapshot_progress_numeric_semantics() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(320.0), Px(180.0)),
+    );
+    snapshot_for_root("progress_numeric_semantics", bounds, |cx| {
+        let model = cx.app.models_mut().insert(66.0f32);
+        vec![
+            fret_ui_shadcn::Progress::new(model)
+                .a11y_label("Loading")
+                .range(0.0, 100.0)
+                .into_element(cx),
+        ]
+    });
+}
+
+#[test]
+fn snapshot_checkbox_indeterminate_semantics() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(320.0), Px(180.0)),
+    );
+    snapshot_for_root("checkbox_indeterminate_semantics", bounds, |cx| {
+        let model = cx.app.models_mut().insert(None::<bool>);
+        vec![
+            fret_ui_shadcn::Checkbox::new_optional(model)
+                .a11y_label("Agree")
                 .into_element(cx),
         ]
     });

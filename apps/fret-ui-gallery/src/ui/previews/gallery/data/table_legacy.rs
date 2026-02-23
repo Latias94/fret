@@ -426,17 +426,15 @@ pub(in crate::ui) fn preview_data_table_legacy(
                             }
                         };
 
-                        let trigger = shadcn::Button::new("Open menu")
+                        let trigger = shadcn::Button::new("")
+                            .a11y_label("Open menu")
                             .variant(shadcn::ButtonVariant::Ghost)
                             .size(shadcn::ButtonSize::IconSm)
                             .test_id(Arc::<str>::from(format!(
                                 "ui-gallery-data-table-row-actions-open-{}",
                                 row.id
                             )))
-                            .children([shadcn::icon::icon(
-                                cx,
-                                fret_icons::IconId::new_static("lucide.more-horizontal"),
-                            )])
+                            .icon(fret_icons::IconId::new_static("lucide.more-horizontal"))
                             .into_element(cx);
 
                             shadcn::DropdownMenu::new(open)

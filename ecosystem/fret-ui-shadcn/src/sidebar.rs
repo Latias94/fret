@@ -1239,10 +1239,11 @@ impl SidebarTrigger {
                 }))
             };
 
-        let mut trigger = Button::new("Toggle Sidebar")
+        let mut trigger = Button::new("")
+            .a11y_label("Toggle Sidebar")
             .variant(ButtonVariant::Ghost)
             .size(ButtonSize::Icon)
-            .children([decl_icon::icon(cx, IconId::new_static("lucide.panel-left"))])
+            .icon(IconId::new_static("lucide.panel-left"))
             .disabled(self.disabled)
             .refine_style(self.chrome)
             .refine_layout(

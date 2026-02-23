@@ -11,6 +11,7 @@ pub(super) fn preview_command_palette(
     #[derive(Default)]
     struct CommandPageModels {
         usage_query: Option<Model<String>>,
+        docs_demo_query: Option<Model<String>>,
         basic_open: Option<Model<bool>>,
         basic_query: Option<Model<String>>,
         shortcuts_query: Option<Model<String>>,
@@ -28,6 +29,7 @@ pub(super) fn preview_command_palette(
 
     let (
         usage_query,
+        docs_demo_query,
         basic_open,
         basic_query,
         shortcuts_query,
@@ -44,6 +46,7 @@ pub(super) fn preview_command_palette(
     ) = cx.with_state(CommandPageModels::default, |st| {
         (
             st.usage_query.clone(),
+            st.docs_demo_query.clone(),
             st.basic_open.clone(),
             st.basic_query.clone(),
             st.shortcuts_query.clone(),
@@ -62,6 +65,7 @@ pub(super) fn preview_command_palette(
 
     let (
         usage_query,
+        docs_demo_query,
         basic_open,
         basic_query,
         shortcuts_query,
@@ -77,6 +81,7 @@ pub(super) fn preview_command_palette(
         loading_enabled,
     ) = match (
         usage_query,
+        docs_demo_query,
         basic_open,
         basic_query,
         shortcuts_query,
@@ -93,6 +98,7 @@ pub(super) fn preview_command_palette(
     ) {
         (
             Some(usage_query),
+            Some(docs_demo_query),
             Some(basic_open),
             Some(basic_query),
             Some(shortcuts_query),
@@ -108,6 +114,7 @@ pub(super) fn preview_command_palette(
             Some(loading_enabled),
         ) => (
             usage_query,
+            docs_demo_query,
             basic_open,
             basic_query,
             shortcuts_query,
@@ -124,6 +131,7 @@ pub(super) fn preview_command_palette(
         ),
         _ => {
             let usage_query = cx.app.models_mut().insert(String::new());
+            let docs_demo_query = cx.app.models_mut().insert(String::new());
             let basic_open = cx.app.models_mut().insert(false);
             let basic_query = cx.app.models_mut().insert(String::new());
             let shortcuts_query = cx.app.models_mut().insert(String::new());
@@ -142,6 +150,7 @@ pub(super) fn preview_command_palette(
             let loading_enabled = cx.app.models_mut().insert(false);
             cx.with_state(CommandPageModels::default, |st| {
                 st.usage_query = Some(usage_query.clone());
+                st.docs_demo_query = Some(docs_demo_query.clone());
                 st.basic_open = Some(basic_open.clone());
                 st.basic_query = Some(basic_query.clone());
                 st.shortcuts_query = Some(shortcuts_query.clone());
@@ -159,6 +168,7 @@ pub(super) fn preview_command_palette(
             });
             (
                 usage_query,
+                docs_demo_query,
                 basic_open,
                 basic_query,
                 shortcuts_query,
@@ -251,6 +261,58 @@ pub(super) fn preview_command_palette(
         .test_id_item_prefix("ui-gallery-command-usage-item-")
         .into_element(cx)
         .test_id("ui-gallery-command-usage");
+
+    let icon_id = fret_icons::IconId::new_static;
+    let docs_demo_entries: Vec<shadcn::CommandEntry> = vec![
+        shadcn::CommandGroup::new([
+            shadcn::CommandItem::new("Calendar")
+                .leading_icon(icon_id("lucide.calendar"))
+                .on_select_action(on_select(Arc::from("command.docs-demo.calendar"))),
+            shadcn::CommandItem::new("Search Emoji")
+                .leading_icon(icon_id("lucide.smile"))
+                .on_select_action(on_select(Arc::from("command.docs-demo.search-emoji"))),
+            shadcn::CommandItem::new("Calculator")
+                .leading_icon(icon_id("lucide.calculator"))
+                .disabled(true),
+        ])
+        .heading("Suggestions")
+        .into(),
+        shadcn::CommandSeparator::new().into(),
+        shadcn::CommandGroup::new([
+            shadcn::CommandItem::new("Profile")
+                .leading_icon(icon_id("lucide.user"))
+                .shortcut("⌘P")
+                .on_select_action(on_select(Arc::from("command.docs-demo.profile"))),
+            shadcn::CommandItem::new("Billing")
+                .leading_icon(icon_id("lucide.credit-card"))
+                .shortcut("⌘B")
+                .on_select_action(on_select(Arc::from("command.docs-demo.billing"))),
+            shadcn::CommandItem::new("Settings")
+                .leading_icon(icon_id("lucide.settings"))
+                .shortcut("⌘S")
+                .on_select_action(on_select(Arc::from("command.docs-demo.settings"))),
+        ])
+        .heading("Settings")
+        .into(),
+    ];
+
+    let docs_demo_palette = shadcn::CommandPalette::new(docs_demo_query.clone(), Vec::new())
+        .placeholder("Type a command or search...")
+        .empty_text("No results found.")
+        .a11y_label("Command docs demo")
+        .refine_style(ChromeRefinement::default().shadow(ShadowPreset::Md))
+        .refine_layout(
+            LayoutRefinement::default()
+                .w_full()
+                .max_w(Px(450.0))
+                .min_w_0(),
+        )
+        .entries(docs_demo_entries)
+        .test_id_input("ui-gallery-command-docs-demo-input")
+        .list_test_id("ui-gallery-command-docs-demo-listbox")
+        .test_id_item_prefix("ui-gallery-command-docs-demo-item-")
+        .into_element(cx)
+        .test_id("ui-gallery-command-docs-demo");
     let mut demo_filter_entries: Vec<shadcn::CommandEntry> = build_basic_items(&on_select)
         .into_iter()
         .map(Into::into)
@@ -688,7 +750,7 @@ pub(super) fn preview_command_palette(
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Command docs order: Usage, Basic, Shortcuts, Groups, Scrollable, RTL, Loading.",
+            "Preview follows shadcn Command docs order: Usage, Demo, Basic, Shortcuts, Groups, Scrollable, RTL, Loading.",
         ),
         vec![
             DocSection::new("Usage", usage_palette)
@@ -718,8 +780,61 @@ pub(super) fn preview_command_palette(
     .into(),
 ];
 
+ shadcn::CommandPalette::new(query, Vec::new())
+     .placeholder("Type a command or search...")
+     .entries(entries)
+     .into_element(cx);"#,
+                ),
+            DocSection::new("Demo", docs_demo_palette)
+                .max_w(Px(760.0))
+                .test_id_prefix("ui-gallery-command-docs-demo")
+                .descriptions([
+                    "This aligns with the shadcn `command-demo` example (icons + disabled item + shortcuts).",
+                    "Use `leading_icon(...)` so icons inherit the row foreground (`currentColor`) for hover/active/disabled states.",
+                ])
+                .code(
+                    "rust",
+                    r#"let query = cx.app.models_mut().insert(String::new());
+let icon_id = fret_icons::IconId::new_static;
+
+let entries: Vec<shadcn::CommandEntry> = vec![
+    shadcn::CommandGroup::new([
+        shadcn::CommandItem::new("Calendar")
+            .leading_icon(icon_id("lucide.calendar"))
+            .on_select("command.demo.calendar"),
+        shadcn::CommandItem::new("Search Emoji")
+            .leading_icon(icon_id("lucide.smile"))
+            .on_select("command.demo.search-emoji"),
+        shadcn::CommandItem::new("Calculator")
+            .leading_icon(icon_id("lucide.calculator"))
+            .disabled(true),
+    ])
+    .heading("Suggestions")
+    .into(),
+    shadcn::CommandSeparator::new().into(),
+    shadcn::CommandGroup::new([
+        shadcn::CommandItem::new("Profile")
+            .leading_icon(icon_id("lucide.user"))
+            .shortcut("⌘P")
+            .on_select("command.demo.profile"),
+        shadcn::CommandItem::new("Billing")
+            .leading_icon(icon_id("lucide.credit-card"))
+            .shortcut("⌘B")
+            .on_select("command.demo.billing"),
+        shadcn::CommandItem::new("Settings")
+            .leading_icon(icon_id("lucide.settings"))
+            .shortcut("⌘S")
+            .on_select("command.demo.settings"),
+    ])
+    .heading("Settings")
+    .into(),
+];
+
 shadcn::CommandPalette::new(query, Vec::new())
     .placeholder("Type a command or search...")
+    .empty_text("No results found.")
+    .refine_style(ChromeRefinement::default().shadow(ShadowPreset::Md))
+    .refine_layout(LayoutRefinement::default().w_full().max_w(Px(450.0)).min_w_0())
     .entries(entries)
     .into_element(cx);"#,
                 ),

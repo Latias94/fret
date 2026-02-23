@@ -4,8 +4,8 @@ use crate::overlay_placement::{Align, AnchoredPanelLayout, AnchoredPanelOptions,
 use fret_core::scene::{BlendMode, Mask, Paint};
 use fret_core::{
     AttributedText, CaretAffinity, Color, Corners, Edges, EffectChain, EffectMode, EffectQuality,
-    ImageId, KeyCode, NodeId, Px, Rect, RenderTargetId, SemanticsRole, Size, SvgFit, TextAlign,
-    TextOverflow, TextStyle, TextWrap, UvRect, ViewportFit,
+    ImageId, KeyCode, NodeId, Px, Rect, RenderTargetId, SemanticsOrientation, SemanticsRole, Size,
+    SvgFit, TextAlign, TextOverflow, TextStyle, TextWrap, UvRect, ViewportFit,
 };
 use fret_runtime::{CommandId, Model};
 use std::sync::Arc;
@@ -442,6 +442,11 @@ pub enum Length {
     #[default]
     Auto,
     Px(Px),
+    /// Fraction of the containing block size (percent sizing).
+    ///
+    /// This is expressed as a ratio (e.g. `0.5` for 50%). When the containing block size is not
+    /// definite, this should behave like `Auto` (CSS-like percent sizing semantics).
+    Fraction(f32),
     Fill,
 }
 
@@ -531,10 +536,27 @@ pub struct SemanticsDecoration {
     pub test_id: Option<Arc<str>>,
     pub value: Option<Arc<str>>,
     pub disabled: Option<bool>,
+    pub read_only: Option<bool>,
     pub selected: Option<bool>,
     pub expanded: Option<bool>,
     /// Tri-state checked override (Some(None) clears; Some(Some(v)) sets to v).
     pub checked: Option<Option<bool>>,
+    pub placeholder: Option<Arc<str>>,
+    pub url: Option<Arc<str>>,
+    /// Optional hierarchy level for outline/tree semantics (1-based).
+    pub level: Option<u32>,
+    pub orientation: Option<SemanticsOrientation>,
+    pub numeric_value: Option<f64>,
+    pub min_numeric_value: Option<f64>,
+    pub max_numeric_value: Option<f64>,
+    pub numeric_value_step: Option<f64>,
+    pub numeric_value_jump: Option<f64>,
+    pub scroll_x: Option<f64>,
+    pub scroll_x_min: Option<f64>,
+    pub scroll_x_max: Option<f64>,
+    pub scroll_y: Option<f64>,
+    pub scroll_y_min: Option<f64>,
+    pub scroll_y_max: Option<f64>,
     /// Declarative-only: element ID of the active descendant for composite widgets.
     pub active_descendant_element: Option<u64>,
     /// Declarative-only: element ID of a node which labels this node (`aria-labelledby`).
@@ -554,9 +576,25 @@ impl SemanticsDecoration {
             test_id: other.test_id.or(self.test_id),
             value: other.value.or(self.value),
             disabled: other.disabled.or(self.disabled),
+            read_only: other.read_only.or(self.read_only),
             selected: other.selected.or(self.selected),
             expanded: other.expanded.or(self.expanded),
             checked: other.checked.or(self.checked),
+            placeholder: other.placeholder.or(self.placeholder),
+            url: other.url.or(self.url),
+            level: other.level.or(self.level),
+            orientation: other.orientation.or(self.orientation),
+            numeric_value: other.numeric_value.or(self.numeric_value),
+            min_numeric_value: other.min_numeric_value.or(self.min_numeric_value),
+            max_numeric_value: other.max_numeric_value.or(self.max_numeric_value),
+            numeric_value_step: other.numeric_value_step.or(self.numeric_value_step),
+            numeric_value_jump: other.numeric_value_jump.or(self.numeric_value_jump),
+            scroll_x: other.scroll_x.or(self.scroll_x),
+            scroll_x_min: other.scroll_x_min.or(self.scroll_x_min),
+            scroll_x_max: other.scroll_x_max.or(self.scroll_x_max),
+            scroll_y: other.scroll_y.or(self.scroll_y),
+            scroll_y_min: other.scroll_y_min.or(self.scroll_y_min),
+            scroll_y_max: other.scroll_y_max.or(self.scroll_y_max),
             active_descendant_element: other
                 .active_descendant_element
                 .or(self.active_descendant_element),
@@ -591,6 +629,11 @@ impl SemanticsDecoration {
         self
     }
 
+    pub fn read_only(mut self, read_only: bool) -> Self {
+        self.read_only = Some(read_only);
+        self
+    }
+
     pub fn selected(mut self, selected: bool) -> Self {
         self.selected = Some(selected);
         self
@@ -603,6 +646,61 @@ impl SemanticsDecoration {
 
     pub fn checked(mut self, checked: Option<bool>) -> Self {
         self.checked = Some(checked);
+        self
+    }
+
+    pub fn placeholder(mut self, placeholder: impl Into<Arc<str>>) -> Self {
+        self.placeholder = Some(placeholder.into());
+        self
+    }
+
+    pub fn url(mut self, url: impl Into<Arc<str>>) -> Self {
+        self.url = Some(url.into());
+        self
+    }
+
+    pub fn level(mut self, level: u32) -> Self {
+        self.level = Some(level);
+        self
+    }
+
+    pub fn orientation(mut self, orientation: SemanticsOrientation) -> Self {
+        self.orientation = Some(orientation);
+        self
+    }
+
+    pub fn numeric_value(mut self, value: f64) -> Self {
+        self.numeric_value = Some(value);
+        self
+    }
+
+    pub fn numeric_range(mut self, min: f64, max: f64) -> Self {
+        self.min_numeric_value = Some(min);
+        self.max_numeric_value = Some(max);
+        self
+    }
+
+    pub fn numeric_step(mut self, step: f64) -> Self {
+        self.numeric_value_step = Some(step);
+        self
+    }
+
+    pub fn numeric_jump(mut self, jump: f64) -> Self {
+        self.numeric_value_jump = Some(jump);
+        self
+    }
+
+    pub fn scroll_x(mut self, x: f64, min: f64, max: f64) -> Self {
+        self.scroll_x = Some(x);
+        self.scroll_x_min = Some(min);
+        self.scroll_x_max = Some(max);
+        self
+    }
+
+    pub fn scroll_y(mut self, y: f64, min: f64, max: f64) -> Self {
+        self.scroll_y = Some(y);
+        self.scroll_y_min = Some(min);
+        self.scroll_y_max = Some(max);
         self
     }
 
@@ -645,12 +743,37 @@ pub struct SemanticsProps {
     /// This MUST NOT be mapped into platform accessibility name/label fields by default.
     pub test_id: Option<Arc<str>>,
     pub value: Option<Arc<str>>,
+    pub placeholder: Option<Arc<str>>,
+    pub url: Option<Arc<str>>,
+    /// Optional hierarchy level for outline/tree semantics (1-based).
+    pub level: Option<u32>,
+    pub orientation: Option<SemanticsOrientation>,
+    pub numeric_value: Option<f64>,
+    pub min_numeric_value: Option<f64>,
+    pub max_numeric_value: Option<f64>,
+    pub numeric_value_step: Option<f64>,
+    pub numeric_value_jump: Option<f64>,
+    pub scroll_x: Option<f64>,
+    pub scroll_x_min: Option<f64>,
+    pub scroll_x_max: Option<f64>,
+    pub scroll_y: Option<f64>,
+    pub scroll_y_min: Option<f64>,
+    pub scroll_y_max: Option<f64>,
     /// Whether this semantics wrapper participates in focus traversal.
     ///
     /// Note: this is intentionally separate from pointer hit-testing. `Semantics` remains
     /// input-transparent; use `Pressable` when you need pointer-driven focus.
     pub focusable: bool,
+    /// Overrides whether this node supports `SetValue` actions (text or numeric).
+    ///
+    /// For `TextField` roles, this surfaces as the platform's "set value" action surface.
+    ///
+    /// For `Slider` roles, this is interpreted as stepper semantics and maps to
+    /// Increment/Decrement actions. `SetValue` for sliders is derived conservatively by the
+    /// runtime when sufficient numeric metadata is present.
+    pub value_editable: Option<bool>,
     pub disabled: bool,
+    pub read_only: bool,
     pub selected: bool,
     pub expanded: Option<bool>,
     pub checked: Option<bool>,
@@ -683,8 +806,25 @@ impl Default for SemanticsProps {
             label: None,
             test_id: None,
             value: None,
+            placeholder: None,
+            url: None,
+            level: None,
+            orientation: None,
+            numeric_value: None,
+            min_numeric_value: None,
+            max_numeric_value: None,
+            numeric_value_step: None,
+            numeric_value_jump: None,
+            scroll_x: None,
+            scroll_x_min: None,
+            scroll_x_max: None,
+            scroll_y: None,
+            scroll_y_min: None,
+            scroll_y_max: None,
             focusable: false,
+            value_editable: None,
             disabled: false,
+            read_only: false,
             selected: false,
             expanded: None,
             checked: None,
@@ -1103,6 +1243,8 @@ impl Default for RovingFocusProps {
 pub struct PressableA11y {
     pub role: Option<SemanticsRole>,
     pub label: Option<Arc<str>>,
+    /// Optional hierarchy level for outline/tree semantics (1-based).
+    pub level: Option<u32>,
     /// Debug/test-only identifier for deterministic automation.
     ///
     /// This MUST NOT be mapped into platform accessibility name/label fields by default.
@@ -1116,6 +1258,7 @@ pub struct PressableA11y {
     pub selected: bool,
     pub expanded: Option<bool>,
     pub checked: Option<bool>,
+    pub checked_state: Option<fret_core::SemanticsCheckedState>,
     pub active_descendant: Option<NodeId>,
     /// Declarative-only: element ID of a node which labels this node.
     ///

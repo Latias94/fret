@@ -15,6 +15,7 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
 use fret_ui_kit::declarative::chrome as decl_chrome;
 use fret_ui_kit::declarative::collection_semantics::CollectionSemanticsExt as _;
+use fret_ui_kit::declarative::current_color;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::overlay_motion;
@@ -370,18 +371,18 @@ where
                                         wrap: false,
                                     },
                                     |cx| {
-                                        vec![decl_icon::icon_with(
+                                        current_color::with_current_color_provider(
                                             cx,
-                                            icon,
-                                            Some(Px(16.0)),
-                                            Some(ColorRef::Color(
-                                                theme
-                                                    .color_by_key("muted-foreground")
-                                                    .unwrap_or_else(|| {
-                                                        theme.color_token("muted-foreground")
-                                                    }),
-                                            )),
-                                        )]
+                                            ColorRef::Color(theme.color_token("popover.foreground")),
+                                            |cx| {
+                                                vec![decl_icon::icon_with(
+                                                    cx,
+                                                    icon,
+                                                    Some(Px(16.0)),
+                                                    None,
+                                                )]
+                                            },
+                                        )
                                     },
                                 )]
                             },
@@ -3013,11 +3014,17 @@ fn select_impl<H: UiHost>(
                                                                                     )
                                                                                     .resolve(&theme);
 
+                                                                                    let indicator_fg = if item_disabled {
+                                                                                        alpha_mul(fg_muted, 0.8)
+                                                                                    } else {
+                                                                                        fg_muted
+                                                                                    };
+
                                                                                     let icon = decl_icon::icon_with(
                                                                                         cx,
                                                                                         ids::ui::CHECK,
                                                                                         Some(Px(16.0)),
-                                                                                        Some(ColorRef::Color(fg)),
+                                                                                        Some(ColorRef::Color(indicator_fg)),
                                                                                     );
                                                                                     let icon = cx.opacity(
                                                                                         if is_selected { 1.0 } else { 0.0 },

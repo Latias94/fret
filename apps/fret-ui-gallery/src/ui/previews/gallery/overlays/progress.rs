@@ -128,7 +128,8 @@ pub(in crate::ui) fn preview_progress(
 
                 let bar = shadcn::Progress::new(demo_value.clone())
                     .refine_layout(LayoutRefinement::default().w_px(Px(240.0)))
-                    .into_element(cx);
+                    .into_element(cx)
+                    .test_id("ui-gallery-progress-demo-bar");
 
                 vec![centered(cx, bar)]
             },

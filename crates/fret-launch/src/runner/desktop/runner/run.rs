@@ -523,6 +523,43 @@ impl<D: super::WinitAppDriver> super::WinitAppDriver for HookedDriver<D> {
             .accessibility_set_value_numeric(app, services, window, state, target, value);
     }
 
+    fn accessibility_decrement(
+        &mut self,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: fret_core::AppWindowId,
+        state: &mut Self::WindowState,
+        target: fret_core::NodeId,
+    ) {
+        self.inner
+            .accessibility_decrement(app, services, window, state, target);
+    }
+
+    fn accessibility_increment(
+        &mut self,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: fret_core::AppWindowId,
+        state: &mut Self::WindowState,
+        target: fret_core::NodeId,
+    ) {
+        self.inner
+            .accessibility_increment(app, services, window, state, target);
+    }
+
+    fn accessibility_scroll_by(
+        &mut self,
+        app: &mut App,
+        window: fret_core::AppWindowId,
+        state: &mut Self::WindowState,
+        target: fret_core::NodeId,
+        dx: f64,
+        dy: f64,
+    ) {
+        self.inner
+            .accessibility_scroll_by(app, window, state, target, dx, dy);
+    }
+
     fn accessibility_set_text_selection(
         &mut self,
         app: &mut App,

@@ -61,9 +61,10 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
                        variant: shadcn::ButtonVariant,
                        test_id: Arc<str>| {
         shadcn::Button::new("")
+            .a11y_label(icon_id)
             .variant(variant)
             .size(shadcn::ButtonSize::Icon)
-            .children([icon(cx, icon_id)])
+            .icon(fret_icons::IconId::new_static(icon_id))
             .into_element(cx)
             .test_id(test_id)
     };
@@ -823,10 +824,11 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
         .into_element(cx);
 
         let invite = shadcn::Button::new("")
+            .a11y_label("Invite")
             .variant(shadcn::ButtonVariant::Outline)
             .size(shadcn::ButtonSize::IconSm)
             .refine_style(ChromeRefinement::default().rounded(Radius::Full))
-            .children([icon(cx, "lucide.plus")])
+            .icon(fret_icons::IconId::new_static("lucide.plus"))
             .into_element(cx)
             .test_id("ui-gallery-item-avatar-invite");
         let actions = shadcn::ItemActions::new([invite]).into_element(cx);
@@ -950,10 +952,11 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
             .into_element(cx);
 
             let add = shadcn::Button::new("")
+                .a11y_label("Add")
                 .variant(shadcn::ButtonVariant::Ghost)
                 .size(shadcn::ButtonSize::IconSm)
                 .refine_style(ChromeRefinement::default().rounded(Radius::Full))
-                .children([icon(cx, "lucide.plus")])
+                .icon(fret_icons::IconId::new_static("lucide.plus"))
                 .into_element(cx)
                 .test_id(format!("ui-gallery-item-group-add-{idx}"));
             let actions = shadcn::ItemActions::new([add]).into_element(cx);

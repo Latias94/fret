@@ -1,0 +1,314 @@
+{
+  "version": 1,
+  "semantics": [
+    {
+      "role": "Checkbox",
+      "label": "Agree",
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 0.0,
+          "y": 0.0
+        },
+        "size": {
+          "w": 16.0,
+          "h": 16.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null,
+        "checked_state": "Mixed"
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 0.0,
+          "y": 0.0
+        },
+        "size": {
+          "w": 16.0,
+          "h": 16.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 1.0,
+          "y": 1.0
+        },
+        "size": {
+          "w": 14.0,
+          "h": 14.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 1.0,
+          "y": 1.0
+        },
+        "size": {
+          "w": 14.0,
+          "h": 14.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Window",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 0.0,
+          "y": 0.0
+        },
+        "size": {
+          "w": 320.0,
+          "h": 180.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    }
+  ],
+  "scene_ops": [
+    {
+      "kind": "Quad",
+      "rect": {
+        "origin": {
+          "x": -2.0,
+          "y": -1.0
+        },
+        "size": {
+          "w": 20.0,
+          "h": 20.0
+        }
+      },
+      "background": {
+        "r": 0.0,
+        "g": 0.0,
+        "b": 0.0,
+        "a": 0.017
+      },
+      "border": {
+        "top": 0.0,
+        "right": 0.0,
+        "bottom": 0.0,
+        "left": 0.0
+      },
+      "border_color": {
+        "r": 0.0,
+        "g": 0.0,
+        "b": 0.0,
+        "a": 0.0
+      },
+      "corner_radii": {
+        "top_left": 8.0,
+        "top_right": 8.0,
+        "bottom_right": 8.0,
+        "bottom_left": 8.0
+      }
+    },
+    {
+      "kind": "Quad",
+      "rect": {
+        "origin": {
+          "x": -1.0,
+          "y": 0.0
+        },
+        "size": {
+          "w": 18.0,
+          "h": 18.0
+        }
+      },
+      "background": {
+        "r": 0.0,
+        "g": 0.0,
+        "b": 0.0,
+        "a": 0.025
+      },
+      "border": {
+        "top": 0.0,
+        "right": 0.0,
+        "bottom": 0.0,
+        "left": 0.0
+      },
+      "border_color": {
+        "r": 0.0,
+        "g": 0.0,
+        "b": 0.0,
+        "a": 0.0
+      },
+      "corner_radii": {
+        "top_left": 7.0,
+        "top_right": 7.0,
+        "bottom_right": 7.0,
+        "bottom_left": 7.0
+      }
+    },
+    {
+      "kind": "Quad",
+      "rect": {
+        "origin": {
+          "x": 0.0,
+          "y": 1.0
+        },
+        "size": {
+          "w": 16.0,
+          "h": 16.0
+        }
+      },
+      "background": {
+        "r": 0.0,
+        "g": 0.0,
+        "b": 0.0,
+        "a": 0.05
+      },
+      "border": {
+        "top": 0.0,
+        "right": 0.0,
+        "bottom": 0.0,
+        "left": 0.0
+      },
+      "border_color": {
+        "r": 0.0,
+        "g": 0.0,
+        "b": 0.0,
+        "a": 0.0
+      },
+      "corner_radii": {
+        "top_left": 6.0,
+        "top_right": 6.0,
+        "bottom_right": 6.0,
+        "bottom_left": 6.0
+      }
+    },
+    {
+      "kind": "Quad",
+      "rect": {
+        "origin": {
+          "x": 0.0,
+          "y": 0.0
+        },
+        "size": {
+          "w": 16.0,
+          "h": 16.0
+        }
+      },
+      "background": {
+        "r": 0.047,
+        "g": 0.258,
+        "b": 1.0,
+        "a": 1.0
+      },
+      "border": {
+        "top": 1.0,
+        "right": 1.0,
+        "bottom": 1.0,
+        "left": 1.0
+      },
+      "border_color": {
+        "r": 0.047,
+        "g": 0.258,
+        "b": 1.0,
+        "a": 1.0
+      },
+      "corner_radii": {
+        "top_left": 6.0,
+        "top_right": 6.0,
+        "bottom_right": 6.0,
+        "bottom_left": 6.0
+      }
+    },
+    {
+      "kind": "PushClipRRect",
+      "rect": {
+        "origin": {
+          "x": 0.0,
+          "y": 0.0
+        },
+        "size": {
+          "w": 16.0,
+          "h": 16.0
+        }
+      },
+      "corner_radii": {
+        "top_left": 6.0,
+        "top_right": 6.0,
+        "bottom_right": 6.0,
+        "bottom_left": 6.0
+      }
+    },
+    {
+      "kind": "SvgMaskIcon",
+      "rect": {
+        "origin": {
+          "x": 1.0,
+          "y": 1.0
+        },
+        "size": {
+          "w": 14.0,
+          "h": 14.0
+        }
+      },
+      "fit": "Contain",
+      "color": {
+        "r": 0.68,
+        "g": 0.73,
+        "b": 0.815,
+        "a": 1.0
+      },
+      "opacity": 1.0
+    },
+    {
+      "kind": "PopClip"
+    }
+  ]
+}

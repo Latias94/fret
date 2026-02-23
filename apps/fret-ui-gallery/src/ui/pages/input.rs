@@ -493,8 +493,11 @@ pub(super) fn preview_input(
                     .placeholder("Type to search...")
                     .into_element(cx)
                     .into(),
-                shadcn::Button::new("Search")
+                shadcn::Button::new("")
                     .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Icon)
+                    .a11y_label("Search")
+                    .icon(fret_icons::IconId::new_static("lucide.search"))
                     .into_element(cx)
                     .into(),
             ])
@@ -811,14 +814,19 @@ shadcn::Field::new([
                 .description("ButtonGroup composes an input and a button with shared chrome.")
                 .code(
                     "rust",
-                    r#"shadcn::ButtonGroup::new([
+                    r#"let model = cx.app.models_mut().insert(String::new());
+
+shadcn::ButtonGroup::new([
     shadcn::Input::new(model)
         .a11y_label("Search text")
         .placeholder("Type to search...")
         .into_element(cx)
         .into(),
-    shadcn::Button::new("Search")
+    shadcn::Button::new("")
         .variant(shadcn::ButtonVariant::Outline)
+        .size(shadcn::ButtonSize::Icon)
+        .a11y_label("Search")
+        .icon(fret_icons::IconId::new_static("lucide.search"))
         .into_element(cx)
         .into(),
 ])

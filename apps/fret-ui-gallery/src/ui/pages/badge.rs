@@ -5,15 +5,6 @@ use crate::ui::doc_layout::{self, DocSection};
 pub(super) fn preview_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let theme = Theme::global(&*cx.app).snapshot();
 
-    let icon = |cx: &mut ElementContext<'_, App>, id: &'static str, fg: ColorRef| {
-        shadcn::icon::icon_with(
-            cx,
-            fret_icons::IconId::new_static(id),
-            Some(Px(12.0)),
-            Some(fg),
-        )
-    };
-
     let variants = {
         doc_layout::wrap_controls_row_snapshot(cx, &theme, Space::N2, |cx| {
             vec![
@@ -39,18 +30,15 @@ pub(super) fn preview_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     };
 
     let with_icon = {
-        let secondary_fg = ColorRef::Color(theme.color_token("secondary-foreground"));
-        let outline_fg = ColorRef::Color(theme.color_token("foreground"));
-
         doc_layout::wrap_controls_row_snapshot(cx, &theme, Space::N2, |cx| {
             vec![
                 shadcn::Badge::new("Verified")
                     .variant(shadcn::BadgeVariant::Secondary)
-                    .children([icon(cx, "lucide.badge-check", secondary_fg.clone())])
+                    .leading_icon(fret_icons::IconId::new_static("lucide.badge-check"))
                     .into_element(cx),
                 shadcn::Badge::new("Bookmark")
                     .variant(shadcn::BadgeVariant::Outline)
-                    .children([icon(cx, "lucide.bookmark", outline_fg.clone())])
+                    .leading_icon(fret_icons::IconId::new_static("lucide.bookmark"))
                     .into_element(cx),
             ]
         })
@@ -58,22 +46,15 @@ pub(super) fn preview_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     };
 
     let with_spinner = {
-        let destructive_fg = ColorRef::Color(theme.color_token("destructive-foreground"));
-        let secondary_fg = ColorRef::Color(theme.color_token("secondary-foreground"));
-
         doc_layout::wrap_controls_row_snapshot(cx, &theme, Space::N2, |cx| {
             vec![
                 shadcn::Badge::new("Deleting")
                     .variant(shadcn::BadgeVariant::Destructive)
-                    .children([shadcn::Spinner::new()
-                        .color(destructive_fg.clone())
-                        .into_element(cx)])
+                    .children([shadcn::Spinner::new().into_element(cx)])
                     .into_element(cx),
                 shadcn::Badge::new("Generating")
                     .variant(shadcn::BadgeVariant::Secondary)
-                    .children([shadcn::Spinner::new()
-                        .color(secondary_fg.clone())
-                        .into_element(cx)])
+                    .children([shadcn::Spinner::new().into_element(cx)])
                     .into_element(cx),
             ]
         })
@@ -83,17 +64,22 @@ pub(super) fn preview_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     let link = {
         doc_layout::wrap_controls_row_snapshot(cx, &theme, Space::N2, |cx| {
             vec![
-                shadcn::Badge::new("Link")
+                shadcn::Badge::new("Open Link")
                     .variant(shadcn::BadgeVariant::Link)
-                    .children([icon(
-                        cx,
-                        "lucide.arrow-right",
-                        ColorRef::Color(theme.color_token("primary")),
-                    )])
+                    .render(shadcn::BadgeRender::Link {
+                        href: Arc::from("https://example.com"),
+                        target: None,
+                        rel: None,
+                    })
+                    // Avoid launching the system browser during diag runs; the render surface
+                    // still applies link semantics and Enter-only activation.
+                    .on_activate(Arc::new(|_host, _acx, _reason| {}))
+                    .test_id("ui-gallery-badge-link")
+                    .trailing_icon(fret_icons::IconId::new_static("lucide.arrow-right"))
                     .into_element(cx),
             ]
         })
-        .test_id("ui-gallery-badge-link")
+        .test_id("ui-gallery-badge-link-row")
     };
 
     let custom_colors = {
@@ -174,7 +160,6 @@ pub(super) fn preview_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
 
     let rtl = doc_layout::rtl(cx, |cx| {
         doc_layout::wrap_controls_row_snapshot(cx, &theme, Space::N2, |cx| {
-            let secondary_fg = ColorRef::Color(theme.color_token("secondary-foreground"));
             vec![
                 shadcn::Badge::new("شارة").into_element(cx),
                 shadcn::Badge::new("ثانوي")
@@ -182,7 +167,7 @@ pub(super) fn preview_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                     .into_element(cx),
                 shadcn::Badge::new("متحقق")
                     .variant(shadcn::BadgeVariant::Secondary)
-                    .children([icon(cx, "lucide.badge-check", secondary_fg.clone())])
+                    .leading_icon(fret_icons::IconId::new_static("lucide.badge-check"))
                     .into_element(cx),
             ]
         })
@@ -194,7 +179,7 @@ pub(super) fn preview_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         [
             "Badge is a small status/label primitive; prefer concise text and keep contrast high.",
             "API reference: `ecosystem/fret-ui-shadcn/src/badge.rs`.",
-            "Gap: upstream shadcn uses a `render/asChild` prop to turn a badge into a real link. Fret currently exposes a `Link` variant style but not a render hook.",
+            "Note: the Link render example installs a no-op `on_activate` so diag scripts do not launch a system browser; remove it to enable the default `Effect::OpenUrl` fallback.",
             "If you customize colors, verify hover/focus states and token-driven variants stay consistent.",
         ],
     );
@@ -224,7 +209,7 @@ pub(super) fn preview_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                     "rust",
                     r#"shadcn::Badge::new("Verified")
     .variant(shadcn::BadgeVariant::Secondary)
-    .children([shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.badge-check"))])
+    .leading_icon(fret_icons::IconId::new_static("lucide.badge-check"))
     .into_element(cx);"#,
                 ),
             DocSection::new("With Spinner", with_spinner)
@@ -241,8 +226,10 @@ pub(super) fn preview_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                 .code(
                     "rust",
                     r#"shadcn::Badge::new("Open Link")
-    .variant(shadcn::BadgeVariant::Outline)
-    .children([shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.arrow-up-right"))])
+    .variant(shadcn::BadgeVariant::Link)
+    .render(shadcn::BadgeRender::Link { href: Arc::from("https://example.com"), target: None, rel: None })
+    .on_activate(Arc::new(|_host, _acx, _reason| {})) // optional; remove to open the URL
+    .trailing_icon(fret_icons::IconId::new_static("lucide.arrow-right"))
     .into_element(cx);"#,
                 ),
             DocSection::new("Custom Colors", custom_colors)

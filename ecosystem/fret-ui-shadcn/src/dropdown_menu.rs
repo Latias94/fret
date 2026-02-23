@@ -3,7 +3,7 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_core::{Edges, FontId, FontWeight, Point, Px, Rect, Size, TextStyle};
-use fret_icons::ids;
+use fret_icons::{IconId, ids};
 use fret_runtime::{CommandId, Model};
 use fret_ui::action::{OnActivate, OnDismissRequest};
 use fret_ui::element::{
@@ -16,6 +16,7 @@ use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::collection_semantics::CollectionSemanticsExt as _;
+use fret_ui_kit::declarative::current_color;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
@@ -113,6 +114,7 @@ pub struct DropdownMenuItem {
     pub value: Arc<str>,
     pub inset: bool,
     pub leading: Option<AnyElement>,
+    pub leading_icon: Option<IconId>,
     pub content: Option<AnyElement>,
     pub padding: Option<Edges>,
     pub estimated_height: Option<Px>,
@@ -134,6 +136,7 @@ impl std::fmt::Debug for DropdownMenuItem {
             .field("value", &self.value)
             .field("inset", &self.inset)
             .field("leading", &self.leading)
+            .field("leading_icon", &self.leading_icon)
             .field("content", &self.content)
             .field("padding", &self.padding)
             .field("estimated_height", &self.estimated_height)
@@ -158,6 +161,7 @@ impl DropdownMenuItem {
             value: label,
             inset: false,
             leading: None,
+            leading_icon: None,
             content: None,
             padding: None,
             estimated_height: None,
@@ -184,7 +188,15 @@ impl DropdownMenuItem {
     }
 
     pub fn leading(mut self, element: AnyElement) -> Self {
+        self.leading_icon = None;
         self.leading = Some(element);
+        self
+    }
+
+    /// Prefer this over `leading(icon(cx, ...))` so the icon can inherit the item's `currentColor`.
+    pub fn leading_icon(mut self, icon: IconId) -> Self {
+        self.leading = None;
+        self.leading_icon = Some(icon);
         self
     }
 
@@ -256,10 +268,12 @@ pub struct DropdownMenuCheckboxItem {
     pub value: Arc<str>,
     pub checked: Model<bool>,
     pub leading: Option<AnyElement>,
+    pub leading_icon: Option<IconId>,
     pub disabled: bool,
     pub close_on_select: bool,
     pub command: Option<CommandId>,
     pub a11y_label: Option<Arc<str>>,
+    pub test_id: Option<Arc<str>>,
     pub trailing: Option<AnyElement>,
 }
 
@@ -271,10 +285,12 @@ impl DropdownMenuCheckboxItem {
             value: label,
             checked,
             leading: None,
+            leading_icon: None,
             disabled: false,
             close_on_select: false,
             command: None,
             a11y_label: None,
+            test_id: None,
             trailing: None,
         }
     }
@@ -285,7 +301,15 @@ impl DropdownMenuCheckboxItem {
     }
 
     pub fn leading(mut self, element: AnyElement) -> Self {
+        self.leading_icon = None;
         self.leading = Some(element);
+        self
+    }
+
+    /// Prefer this over `leading(icon(cx, ...))` so the icon can inherit the item's `currentColor`.
+    pub fn leading_icon(mut self, icon: IconId) -> Self {
+        self.leading = None;
+        self.leading_icon = Some(icon);
         self
     }
 
@@ -306,6 +330,11 @@ impl DropdownMenuCheckboxItem {
 
     pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
         self.a11y_label = Some(label.into());
+        self
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
         self
     }
 
@@ -341,10 +370,12 @@ pub struct DropdownMenuRadioItemSpec {
     pub label: Arc<str>,
     pub value: Arc<str>,
     pub leading: Option<AnyElement>,
+    pub leading_icon: Option<IconId>,
     pub disabled: bool,
     pub close_on_select: bool,
     pub command: Option<CommandId>,
     pub a11y_label: Option<Arc<str>>,
+    pub test_id: Option<Arc<str>>,
     pub trailing: Option<AnyElement>,
 }
 
@@ -356,16 +387,26 @@ impl DropdownMenuRadioItemSpec {
             label,
             value,
             leading: None,
+            leading_icon: None,
             disabled: false,
             close_on_select: true,
             command: None,
             a11y_label: None,
+            test_id: None,
             trailing: None,
         }
     }
 
     pub fn leading(mut self, element: AnyElement) -> Self {
+        self.leading_icon = None;
         self.leading = Some(element);
+        self
+    }
+
+    /// Prefer this over `leading(icon(cx, ...))` so the icon can inherit the item's `currentColor`.
+    pub fn leading_icon(mut self, icon: IconId) -> Self {
+        self.leading = None;
+        self.leading_icon = Some(icon);
         self
     }
 
@@ -389,6 +430,11 @@ impl DropdownMenuRadioItemSpec {
         self
     }
 
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+
     pub fn trailing(mut self, element: AnyElement) -> Self {
         self.trailing = Some(element);
         self
@@ -400,10 +446,12 @@ impl DropdownMenuRadioItemSpec {
             value: self.value,
             group_value,
             leading: self.leading,
+            leading_icon: self.leading_icon,
             disabled: self.disabled,
             close_on_select: self.close_on_select,
             command: self.command,
             a11y_label: self.a11y_label,
+            test_id: self.test_id,
             trailing: self.trailing,
         }
     }
@@ -416,10 +464,12 @@ pub struct DropdownMenuRadioItem {
     pub value: Arc<str>,
     pub group_value: Model<Option<Arc<str>>>,
     pub leading: Option<AnyElement>,
+    pub leading_icon: Option<IconId>,
     pub disabled: bool,
     pub close_on_select: bool,
     pub command: Option<CommandId>,
     pub a11y_label: Option<Arc<str>>,
+    pub test_id: Option<Arc<str>>,
     pub trailing: Option<AnyElement>,
 }
 
@@ -436,10 +486,12 @@ impl DropdownMenuRadioItem {
             value,
             group_value,
             leading: None,
+            leading_icon: None,
             disabled: false,
             close_on_select: true,
             command: None,
             a11y_label: None,
+            test_id: None,
             trailing: None,
         }
     }
@@ -465,7 +517,20 @@ impl DropdownMenuRadioItem {
     }
 
     pub fn leading(mut self, element: AnyElement) -> Self {
+        self.leading_icon = None;
         self.leading = Some(element);
+        self
+    }
+
+    /// Prefer this over `leading(icon(cx, ...))` so the icon can inherit the item's `currentColor`.
+    pub fn leading_icon(mut self, icon: IconId) -> Self {
+        self.leading = None;
+        self.leading_icon = Some(icon);
+        self
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
         self
     }
 
@@ -580,22 +645,26 @@ fn reserve_leading_slot(entries: &[DropdownMenuEntry]) -> bool {
     for entry in entries {
         match entry {
             DropdownMenuEntry::Item(item) => {
-                if item.leading.is_some() {
+                if item.leading.is_some() || item.leading_icon.is_some() {
                     return true;
                 }
             }
             DropdownMenuEntry::CheckboxItem(item) => {
-                if item.leading.is_some() {
+                if item.leading.is_some() || item.leading_icon.is_some() {
                     return true;
                 }
             }
             DropdownMenuEntry::RadioItem(item) => {
-                if item.leading.is_some() {
+                if item.leading.is_some() || item.leading_icon.is_some() {
                     return true;
                 }
             }
             DropdownMenuEntry::RadioGroup(group) => {
-                if group.items.iter().any(|i| i.leading.is_some()) {
+                if group
+                    .items
+                    .iter()
+                    .any(|i| i.leading.is_some() || i.leading_icon.is_some())
+                {
                     return true;
                 }
             }
@@ -861,6 +930,7 @@ fn checkable_menu_row_children<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     label: Arc<str>,
     leading: Option<AnyElement>,
+    leading_icon: Option<IconId>,
     reserve_leading_slot: bool,
     trailing: Option<AnyElement>,
     indicator_kind: CheckableIndicatorKind,
@@ -877,7 +947,8 @@ fn checkable_menu_row_children<H: UiHost>(
     radius_sm: Px,
     text_disabled: fret_core::Color,
 ) -> Vec<AnyElement> {
-    let indicator_fg = if disabled { text_disabled } else { row_fg };
+    let effective_fg = if disabled { text_disabled } else { row_fg };
+    let indicator_fg = effective_fg;
 
     vec![cx.container(
         ContainerProps {
@@ -898,128 +969,134 @@ fn checkable_menu_row_children<H: UiHost>(
             ..Default::default()
         },
         move |cx| {
-            let indicator = cx.container(
-                ContainerProps {
-                    layout: LayoutStyle {
-                        position: fret_ui::element::PositionStyle::Absolute,
-                        inset: fret_ui::element::InsetStyle {
-                            top: Some(Px(0.0)),
-                            right: None,
-                            bottom: Some(Px(0.0)),
-                            // new-york-v4: indicator slot uses `left-2`.
-                            left: Some(pad_x),
-                        },
-                        size: SizeStyle {
-                            width: Length::Px(Px(16.0)),
-                            height: Length::Fill,
+            current_color::with_current_color_provider(cx, ColorRef::Color(effective_fg), |cx| {
+                let indicator = cx.container(
+                    ContainerProps {
+                        layout: LayoutStyle {
+                            position: fret_ui::element::PositionStyle::Absolute,
+                            inset: fret_ui::element::InsetStyle {
+                                top: Some(Px(0.0)),
+                                right: None,
+                                bottom: Some(Px(0.0)),
+                                // new-york-v4: indicator slot uses `left-2`.
+                                left: Some(pad_x),
+                            },
+                            size: SizeStyle {
+                                width: Length::Px(Px(16.0)),
+                                height: Length::Fill,
+                                ..Default::default()
+                            },
                             ..Default::default()
                         },
                         ..Default::default()
                     },
-                    ..Default::default()
-                },
-                move |cx| {
-                    vec![cx.flex(
-                        FlexProps {
-                            layout: LayoutStyle::default(),
-                            direction: fret_core::Axis::Horizontal,
-                            gap: Px(0.0),
-                            padding: Edges::all(Px(0.0)),
-                            justify: MainAlign::Center,
-                            align: CrossAlign::Center,
-                            wrap: false,
-                        },
-                        move |cx| {
-                            if !indicator_on {
-                                return Vec::new();
-                            }
+                    move |cx| {
+                        vec![cx.flex(
+                            FlexProps {
+                                layout: LayoutStyle::default(),
+                                direction: fret_core::Axis::Horizontal,
+                                gap: Px(0.0),
+                                padding: Edges::all(Px(0.0)),
+                                justify: MainAlign::Center,
+                                align: CrossAlign::Center,
+                                wrap: false,
+                            },
+                            move |cx| {
+                                if !indicator_on {
+                                    return Vec::new();
+                                }
 
-                            match indicator_kind {
-                                CheckableIndicatorKind::Check => vec![decl_icon::icon_with(
-                                    cx,
-                                    ids::ui::CHECK,
-                                    Some(Px(16.0)),
-                                    Some(ColorRef::Color(indicator_fg)),
-                                )],
-                                CheckableIndicatorKind::RadioDot => vec![cx.container(
-                                    ContainerProps {
-                                        layout: {
-                                            let mut layout = LayoutStyle::default();
-                                            layout.size.width = Length::Px(Px(8.0));
-                                            layout.size.height = Length::Px(Px(8.0));
-                                            layout
+                                match indicator_kind {
+                                    CheckableIndicatorKind::Check => vec![decl_icon::icon_with(
+                                        cx,
+                                        ids::ui::CHECK,
+                                        Some(Px(16.0)),
+                                        Some(ColorRef::Color(indicator_fg)),
+                                    )],
+                                    CheckableIndicatorKind::RadioDot => vec![cx.container(
+                                        ContainerProps {
+                                            layout: {
+                                                let mut layout = LayoutStyle::default();
+                                                layout.size.width = Length::Px(Px(8.0));
+                                                layout.size.height = Length::Px(Px(8.0));
+                                                layout
+                                            },
+                                            padding: Edges::all(Px(0.0)),
+                                            background: Some(indicator_fg),
+                                            shadow: None,
+                                            border: Edges::all(Px(0.0)),
+                                            border_color: None,
+                                            corner_radii: fret_core::Corners::all(Px(999.0)),
+                                            ..Default::default()
                                         },
-                                        padding: Edges::all(Px(0.0)),
-                                        background: Some(indicator_fg),
-                                        shadow: None,
-                                        border: Edges::all(Px(0.0)),
-                                        border_color: None,
-                                        corner_radii: fret_core::Corners::all(Px(999.0)),
-                                        ..Default::default()
-                                    },
-                                    |_cx| Vec::new(),
-                                )],
-                            }
-                        },
-                    )]
-                },
-            );
-
-            let mut row: Vec<AnyElement> = Vec::with_capacity(
-                2 + usize::from(leading.is_some() || reserve_leading_slot)
-                    + usize::from(trailing.is_some()),
-            );
-
-            if let Some(l) = leading {
-                row.push(menu_icon_slot(cx, l));
-            } else if reserve_leading_slot {
-                row.push(menu_icon_slot_empty(cx));
-            }
-
-            let style = text_style.clone();
-            let mut text = ui::text(cx, label.clone())
-                .layout(LayoutRefinement::default().min_w_0().flex_1())
-                .text_size_px(style.size)
-                .font_weight(style.weight)
-                .nowrap()
-                .text_color(ColorRef::Color(if disabled {
-                    text_disabled
-                } else {
-                    row_fg
-                }));
-
-            if let Some(line_height) = style.line_height {
-                text = text.fixed_line_box_px(line_height).line_box_in_bounds();
-            }
-
-            if let Some(letter_spacing_em) = style.letter_spacing_em {
-                text = text.letter_spacing_em(letter_spacing_em);
-            }
-
-            row.push(text.into_element(cx));
-
-            if let Some(t) = trailing {
-                row.push(t);
-            }
-
-            let content = cx.flex(
-                FlexProps {
-                    layout: {
-                        let mut layout = LayoutStyle::default();
-                        layout.size.width = Length::Fill;
-                        layout
+                                        |_cx| Vec::new(),
+                                    )],
+                                }
+                            },
+                        )]
                     },
-                    direction: fret_core::Axis::Horizontal,
-                    gap: Px(8.0),
-                    padding: Edges::all(Px(0.0)),
-                    justify: MainAlign::Start,
-                    align: CrossAlign::Center,
-                    wrap: false,
-                },
-                move |_cx| row,
-            );
+                );
 
-            vec![content, indicator]
+                let mut row: Vec<AnyElement> = Vec::with_capacity(
+                    2 + usize::from(
+                        leading.is_some() || leading_icon.is_some() || reserve_leading_slot,
+                    ) + usize::from(trailing.is_some()),
+                );
+
+                if let Some(l) = leading {
+                    row.push(menu_icon_slot(cx, l));
+                } else if let Some(icon) = leading_icon {
+                    let icon_el = decl_icon::icon_with(cx, icon, Some(Px(16.0)), None);
+                    row.push(menu_icon_slot(cx, icon_el));
+                } else if reserve_leading_slot {
+                    row.push(menu_icon_slot_empty(cx));
+                }
+
+                let style = text_style.clone();
+                let mut text = ui::text(cx, label.clone())
+                    .layout(LayoutRefinement::default().min_w_0().flex_1())
+                    .text_size_px(style.size)
+                    .font_weight(style.weight)
+                    .nowrap()
+                    .text_color(ColorRef::Color(if disabled {
+                        text_disabled
+                    } else {
+                        row_fg
+                    }));
+
+                if let Some(line_height) = style.line_height {
+                    text = text.fixed_line_box_px(line_height).line_box_in_bounds();
+                }
+
+                if let Some(letter_spacing_em) = style.letter_spacing_em {
+                    text = text.letter_spacing_em(letter_spacing_em);
+                }
+
+                row.push(text.into_element(cx));
+
+                if let Some(t) = trailing {
+                    row.push(t);
+                }
+
+                let content = cx.flex(
+                    FlexProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Fill;
+                            layout
+                        },
+                        direction: fret_core::Axis::Horizontal,
+                        gap: Px(8.0),
+                        padding: Edges::all(Px(0.0)),
+                        justify: MainAlign::Start,
+                        align: CrossAlign::Center,
+                        wrap: false,
+                    },
+                    move |_cx| row,
+                );
+
+                vec![content, indicator]
+            })
         },
     )]
 }
@@ -1976,7 +2053,9 @@ impl DropdownMenu {
                                                         let close_on_select = item.close_on_select;
                                                         let command = item.command;
                                                         let leading = item.leading;
+                                                        let leading_icon = item.leading_icon;
                                                         let trailing = item.trailing;
+                                                        let test_id = item.test_id;
                                                         let open = open_for_menu.clone();
                                                         let text_style = text_style.clone();
                                                         let submenu_for_item =
@@ -2033,14 +2112,17 @@ impl DropdownMenu {
                                                                         enabled: !disabled,
                                                                         focusable: !disabled,
                                                                         focus_ring: Some(ring),
-                                                                        a11y: menu::item::menu_item_checkbox_a11y(
-                                                                            a11y_label,
-                                                                            checked_now,
-                                                                        )
-                                                                        .with_collection_position(
+                                                                        a11y: {
+                                                                            let mut a11y = menu::item::menu_item_checkbox_a11y(
+                                                                                a11y_label,
+                                                                                checked_now,
+                                                                            );
+                                                                            a11y.test_id = test_id.clone();
+                                                                            a11y.with_collection_position(
                                                                             collection_index,
                                                                             item_count,
-                                                                        ),
+                                                                            )
+                                                                        },
                                                                         ..Default::default()
                                                                     };
 
@@ -2074,6 +2156,7 @@ impl DropdownMenu {
                                                                         cx,
                                                                         label.clone(),
                                                                         leading,
+                                                                        leading_icon,
                                                                         reserve_leading_slot_enabled,
                                                                         trailing,
                                                                         CheckableIndicatorKind::Check,
@@ -2111,7 +2194,9 @@ impl DropdownMenu {
                                                         let close_on_select = item.close_on_select;
                                                         let command = item.command;
                                                         let leading = item.leading;
+                                                        let leading_icon = item.leading_icon;
                                                         let trailing = item.trailing;
+                                                        let test_id = item.test_id;
                                                         let open = open_for_menu.clone();
                                                         let text_style = text_style.clone();
                                                         let submenu_for_item =
@@ -2174,14 +2259,17 @@ impl DropdownMenu {
                                                                         enabled: !disabled,
                                                                         focusable: !disabled,
                                                                         focus_ring: Some(ring),
-                                                                        a11y: menu::item::menu_item_radio_a11y(
-                                                                            a11y_label,
-                                                                            is_selected,
-                                                                        )
-                                                                        .with_collection_position(
+                                                                        a11y: {
+                                                                            let mut a11y = menu::item::menu_item_radio_a11y(
+                                                                                a11y_label,
+                                                                                is_selected,
+                                                                            );
+                                                                            a11y.test_id = test_id.clone();
+                                                                            a11y.with_collection_position(
                                                                             collection_index,
                                                                             item_count,
-                                                                        ),
+                                                                            )
+                                                                        },
                                                                         ..Default::default()
                                                                     };
 
@@ -2215,6 +2303,7 @@ impl DropdownMenu {
                                                                         cx,
                                                                         label.clone(),
                                                                         leading,
+                                                                        leading_icon,
                                                                         reserve_leading_slot_enabled,
                                                                         trailing,
                                                                         CheckableIndicatorKind::RadioDot,
@@ -2256,6 +2345,7 @@ impl DropdownMenu {
                                                         let command = item.command;
                                                         let on_activate = item.on_activate.clone();
                                                         let leading = item.leading;
+                                                        let leading_icon = item.leading_icon;
                                                         let trailing = item.trailing;
                                                         let content = item.content;
                                                         let padding_override = item.padding;
@@ -2432,81 +2522,108 @@ impl DropdownMenu {
                                                                                  corner_radii: fret_core::Corners::all(radius_sm),
                                                                                  ..Default::default()
                                                                              },
-                                                                      move |cx| {
-                                                                          if let Some(custom) = content {
-                                                                              return vec![custom];
-                                                                          }
+                                                                     move |cx| {
+                                                                        let effective_fg = if disabled {
+                                                                            text_disabled
+                                                                        } else {
+                                                                            row_fg
+                                                                        };
+                                                                        let mut content = content;
+                                                                        let mut leading = leading;
+                                                                        let mut trailing = trailing;
+                                                                        let leading_icon = leading_icon;
 
-                                                                         let has_leading = leading.is_some();
-                                                                         let has_trailing = trailing.is_some();
-                                                                         let mut row: Vec<AnyElement> = Vec::with_capacity(
-                                                                             2 + usize::from(
-                                                                                 has_leading
-                                                                                     || reserve_leading_slot_enabled,
-                                                                             ) + usize::from(has_trailing)
-                                                                                 + usize::from(has_submenu),
-                                                                         );
-                                                                         if let Some(l) = leading {
-                                                                             row.push(menu_icon_slot(cx, l));
-                                                                         } else if reserve_leading_slot_enabled {
-                                                                             row.push(menu_icon_slot_empty(cx));
-                                                                         }
-                                                                        let style = text_style.clone();
-                                                                        let mut text = ui::text(cx, label.clone())
-                                                                            .layout(LayoutRefinement::default().min_w_0().flex_1())
-                                                                            .text_size_px(style.size)
-                                                                            .font_weight(style.weight)
-                                                                            .nowrap()
-                                                                            .text_color(ColorRef::Color(if disabled { text_disabled } else { row_fg }));
+                                                                        current_color::with_current_color_provider(
+                                                                            cx,
+                                                                            ColorRef::Color(effective_fg),
+                                                                            |cx| {
+                                                                                if let Some(custom) = content.take() {
+                                                                                    return vec![custom];
+                                                                                }
 
-                                                                        if let Some(line_height) = style.line_height {
-                                                                            text = text
-                                                                                .line_height_px(line_height)
-                                                                                .line_height_policy(
-                                                                                    fret_core::TextLineHeightPolicy::FixedFromStyle,
-                                                                                );
-                                                                        }
+                                                                                let mut row: Vec<AnyElement> =
+                                                                                    Vec::with_capacity(
+                                                                                        2 + usize::from(
+                                                                                            leading.is_some()
+                                                                                                || leading_icon
+                                                                                                    .is_some()
+                                                                                                || reserve_leading_slot_enabled,
+                                                                                        ) + usize::from(trailing.is_some())
+                                                                                            + usize::from(has_submenu),
+                                                                                    );
+                                                                                if let Some(icon) = leading_icon {
+                                                                                    let icon =
+                                                                                        decl_icon::icon(cx, icon);
+                                                                                    row.push(menu_icon_slot(cx, icon));
+                                                                                } else if let Some(l) = leading.take() {
+                                                                                    row.push(menu_icon_slot(cx, l));
+                                                                                } else if reserve_leading_slot_enabled {
+                                                                                    row.push(menu_icon_slot_empty(cx));
+                                                                                }
+                                                                                let style = text_style.clone();
+                                                                                let mut text = ui::text(cx, label.clone())
+                                                                                    .layout(LayoutRefinement::default().min_w_0().flex_1())
+                                                                                    .text_size_px(style.size)
+                                                                                    .font_weight(style.weight)
+                                                                                    .nowrap()
+                                                                                    .text_color(ColorRef::Color(if disabled { text_disabled } else { row_fg }));
 
-                                                                        if let Some(letter_spacing_em) = style.letter_spacing_em {
-                                                                            text = text.letter_spacing_em(letter_spacing_em);
-                                                                        }
+                                                                                if let Some(line_height) =
+                                                                                    style.line_height
+                                                                                {
+                                                                                    text = text
+                                                                                        .line_height_px(line_height)
+                                                                                        .line_height_policy(
+                                                                                            fret_core::TextLineHeightPolicy::FixedFromStyle,
+                                                                                        );
+                                                                                }
 
-                                                                        row.push(text.into_element(cx));
+                                                                                if let Some(letter_spacing_em) =
+                                                                                    style.letter_spacing_em
+                                                                                {
+                                                                                    text = text.letter_spacing_em(letter_spacing_em);
+                                                                                }
 
-                                                                         if let Some(t) = trailing {
-                                                                             row.push(t);
-                                                                         }
-                                                                        if has_submenu {
-                                                                            row.push(submenu_chevron_right_text(
-                                                                                cx,
-                                                                                if disabled {
-                                                                                    text_disabled
-                                                                                } else {
-                                                                                    icon_muted_fg
-                                                                                },
-                                                                                font_size,
-                                                                                font_line_height,
-                                                                            ));
-                                                                        }
+                                                                                row.push(text.into_element(cx));
 
-                                                                         vec![cx.flex(
-                                                                             FlexProps {
-                                                                                 layout: {
-                                                                                     let mut layout = LayoutStyle::default();
-                                                                                     layout.size.width = Length::Fill;
-                                                                                     layout
-                                                                                 },
-                                                                                 direction: fret_core::Axis::Horizontal,
-                                                                                 gap: Px(8.0),
-                                                                                 padding: Edges::all(Px(0.0)),
-                                                                                 justify: MainAlign::Start,
-                                                                                 align: CrossAlign::Center,
-                                                                                 wrap: false,
-                                                                              },
-                                                                              move |_cx| row,
-                                                                          )]
-                                                                      },
-                                                                  );
+                                                                                if let Some(t) = trailing.take() {
+                                                                                    row.push(t);
+                                                                                }
+                                                                                if has_submenu {
+                                                                                    row.push(submenu_chevron_right_text(
+                                                                                        cx,
+                                                                                        if disabled {
+                                                                                            text_disabled
+                                                                                        } else {
+                                                                                            icon_muted_fg
+                                                                                        },
+                                                                                        font_size,
+                                                                                        font_line_height,
+                                                                                    ));
+                                                                                }
+
+                                                                                vec![cx.flex(
+                                                                                    FlexProps {
+                                                                                        layout: {
+                                                                                            let mut layout =
+                                                                                                LayoutStyle::default();
+                                                                                            layout.size.width = Length::Fill;
+                                                                                            layout
+                                                                                        },
+                                                                                        direction:
+                                                                                            fret_core::Axis::Horizontal,
+                                                                                        gap: Px(8.0),
+                                                                                        padding: Edges::all(Px(0.0)),
+                                                                                        justify: MainAlign::Start,
+                                                                                        align: CrossAlign::Center,
+                                                                                        wrap: false,
+                                                                                    },
+                                                                                    move |_cx| row,
+                                                                                )]
+                                                                            },
+                                                                        )
+                                                                     },
+                                                                 );
 
                                                                  let mut chrome = child;
                                                                  if let Some(test_id) = chrome_test_id.clone() {
@@ -2962,7 +3079,9 @@ impl DropdownMenu {
                                                                 let close_on_select = item.close_on_select;
                                                                 let command = item.command;
                                                                 let leading = item.leading;
+                                                                let leading_icon = item.leading_icon;
                                                                 let trailing = item.trailing;
+                                                                let test_id = item.test_id;
                                                                 let open = open_for_submenu.clone();
                                                                 let submenu_for_key =
                                                                     submenu_models_for_panel.clone();
@@ -3003,14 +3122,17 @@ impl DropdownMenu {
                                                                                 enabled: !disabled,
                                                                                 focusable: !disabled,
                                                                                 focus_ring: Some(ring),
-                                                                                a11y: menu::item::menu_item_checkbox_a11y(
-                                                                                    a11y_label,
-                                                                                    checked_now,
-                                                                                )
-                                                                                .with_collection_position(
+                                                                                a11y: {
+                                                                                    let mut a11y = menu::item::menu_item_checkbox_a11y(
+                                                                                        a11y_label,
+                                                                                        checked_now,
+                                                                                    );
+                                                                                    a11y.test_id = test_id.clone();
+                                                                                    a11y.with_collection_position(
                                                                                     collection_index,
                                                                                     item_count,
-                                                                                ),
+                                                                                    )
+                                                                                },
                                                                                 ..Default::default()
                                                                             };
 
@@ -3041,6 +3163,7 @@ impl DropdownMenu {
                                                                                 cx,
                                                                                 label.clone(),
                                                                                 leading,
+                                                                                leading_icon,
                                                                                 reserve_leading_slot_enabled,
                                                                                 trailing,
                                                                                 CheckableIndicatorKind::Check,
@@ -3078,7 +3201,9 @@ impl DropdownMenu {
                                                                 let close_on_select = item.close_on_select;
                                                                 let command = item.command;
                                                                 let leading = item.leading;
+                                                                let leading_icon = item.leading_icon;
                                                                 let trailing = item.trailing;
+                                                                let test_id = item.test_id;
                                                                 let open = open_for_submenu.clone();
                                                                 let submenu_for_key =
                                                                     submenu_models_for_panel.clone();
@@ -3124,14 +3249,17 @@ impl DropdownMenu {
                                                                                 enabled: !disabled,
                                                                                 focusable: !disabled,
                                                                                 focus_ring: Some(ring),
-                                                                                a11y: menu::item::menu_item_radio_a11y(
-                                                                                    a11y_label,
-                                                                                    is_selected,
-                                                                                )
-                                                                                .with_collection_position(
+                                                                                a11y: {
+                                                                                    let mut a11y = menu::item::menu_item_radio_a11y(
+                                                                                        a11y_label,
+                                                                                        is_selected,
+                                                                                    );
+                                                                                    a11y.test_id = test_id.clone();
+                                                                                    a11y.with_collection_position(
                                                                                     collection_index,
                                                                                     item_count,
-                                                                                ),
+                                                                                    )
+                                                                                },
                                                                                 ..Default::default()
                                                                             };
 
@@ -3162,6 +3290,7 @@ impl DropdownMenu {
                                                                                 cx,
                                                                                 label.clone(),
                                                                                 leading,
+                                                                                leading_icon,
                                                                                 reserve_leading_slot_enabled,
                                                                                 trailing,
                                                                                 CheckableIndicatorKind::RadioDot,

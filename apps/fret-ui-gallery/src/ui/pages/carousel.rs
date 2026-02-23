@@ -1,10 +1,19 @@
 use super::super::*;
 
+use std::sync::Arc;
+
 use crate::ui::doc_layout::{self, DocSection};
 
 use fret_ui::element::{CrossAlign, FlexProps, MainAlign};
 
 pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    cx.keyed("ui_gallery.carousel_page", |cx| {
+        #[derive(Default)]
+        struct CarouselPageState {
+            demo_inner_clicked: Option<Model<bool>>,
+            expandable_selected: Option<Model<Option<usize>>>,
+        }
+
     #[derive(Debug, Clone, Copy)]
     struct SlideVisual {
         text_px: Px,
@@ -43,6 +52,115 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
     };
 
     let max_w_sm = Px(384.0);
+
+    // Demo: include a descendant pressable so diag scripts can gate pointer propagation
+    // (drag-from-descendant should not activate; click should).
+    let demo_inner_clicked =
+        cx.with_state(CarouselPageState::default, |st| st.demo_inner_clicked.clone());
+    let demo_inner_clicked = match demo_inner_clicked {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(false);
+            cx.with_state(CarouselPageState::default, |st| {
+                st.demo_inner_clicked = Some(model.clone());
+            });
+            model
+        }
+    };
+    let demo_inner_clicked_now = cx
+        .watch_model(&demo_inner_clicked)
+        .copied()
+        .unwrap_or(false);
+    let toggle_demo_inner_clicked = {
+        let demo_inner_clicked = demo_inner_clicked.clone();
+        Arc::new(
+            move |host: &mut dyn fret_ui::action::UiActionHost,
+                  action_cx: fret_ui::action::ActionCx,
+                  _reason: fret_ui::action::ActivateReason| {
+                let _ = host
+                    .models_mut()
+                    .update(&demo_inner_clicked, |v| *v = !*v);
+                host.request_redraw(action_cx.window);
+            },
+        ) as fret_ui::action::OnActivate
+    };
+
+    let demo_slide = |cx: &mut ElementContext<'_, App>, idx: usize, visual: SlideVisual| {
+        let theme = Theme::global(&*cx.app).clone();
+
+        let number = ui::text(cx, format!("{idx}"))
+            .text_size_px(visual.text_px)
+            .line_height_px(visual.line_height_px)
+            .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
+            .font_semibold()
+            .into_element(cx);
+
+        let mut children: Vec<AnyElement> = vec![number];
+
+        if idx == 1 {
+            children.push(
+                shadcn::Button::new("Inner button")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .on_activate(toggle_demo_inner_clicked.clone())
+                    .test_id("ui-gallery-carousel-demo-inner-button")
+                    .into_element(cx),
+            );
+
+            if demo_inner_clicked_now {
+                children.push(
+                    ui::container(cx, move |cx| {
+                        vec![ui::text(cx, "clicked").text_sm().into_element(cx)]
+                    })
+                    .into_element(cx)
+                    .attach_semantics(
+                        SemanticsDecoration::default()
+                            .role(fret_core::SemanticsRole::Group)
+                            .test_id("ui-gallery-carousel-demo-inner-clicked"),
+                    ),
+                );
+            }
+        }
+
+        let gap = decl_style::space(&theme, Space::N3);
+        let content = cx.flex(
+            FlexProps {
+                layout: decl_style::layout_style(
+                    &theme,
+                    LayoutRefinement::default().w_full().aspect_ratio(1.0),
+                ),
+                direction: fret_core::Axis::Vertical,
+                justify: MainAlign::Center,
+                align: CrossAlign::Center,
+                gap,
+                padding: Edges::all(Px(24.0)),
+                ..Default::default()
+            },
+            move |_cx| children,
+        );
+
+        let card = shadcn::Card::new([content]).into_element(cx);
+        ui::container(cx, move |_cx| vec![card])
+            .p_1()
+            .into_element(cx)
+    };
+
+    let demo_visual = SlideVisual {
+        text_px: Px(36.0),
+        line_height_px: Px(44.0),
+    };
+    let demo_items = (1..=5)
+        .map(|idx| demo_slide(cx, idx, demo_visual))
+        .collect::<Vec<_>>();
+    let demo = shadcn::Carousel::new(demo_items)
+        .refine_layout(
+            LayoutRefinement::default()
+                .w_full()
+                .max_w(max_w_sm)
+                .mx_auto(),
+        )
+        .test_id("ui-gallery-carousel-demo")
+        .into_element(cx);
 
     let basic_visual = SlideVisual {
         text_px: Px(36.0),
@@ -108,10 +226,149 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
         ],
     );
 
+    // Expandable: used by the motion pilot suite to exercise content-driven resizing while the
+    // carousel remains interactive.
+    let expandable_selected =
+        cx.with_state(CarouselPageState::default, |st| st.expandable_selected.clone());
+    let expandable_selected = match expandable_selected {
+        Some(model) => model,
+        None => {
+            let model: Model<Option<usize>> = cx.app.models_mut().insert(None);
+            cx.with_state(CarouselPageState::default, |st| {
+                st.expandable_selected = Some(model.clone());
+            });
+            model
+        }
+    };
+    let expandable_selected_now = cx
+        .watch_model(&expandable_selected)
+        .copied()
+        .unwrap_or(None);
+
+    let set_expandable_selected = |next: Option<usize>| {
+        let expandable_selected = expandable_selected.clone();
+        Arc::new(
+            move |host: &mut dyn fret_ui::action::UiActionHost,
+                  action_cx: fret_ui::action::ActionCx,
+                  _reason: fret_ui::action::ActivateReason| {
+                let next = next;
+                let _ = host
+                    .models_mut()
+                    .update(&expandable_selected, |cur| *cur = next);
+                host.request_redraw(action_cx.window);
+            },
+        ) as fret_ui::action::OnActivate
+    };
+
+    let expandable_items = (1..=5)
+        .map(|idx| {
+            let expanded = expandable_selected_now == Some(idx);
+            let height = if expanded { Px(260.0) } else { Px(140.0) };
+
+            let theme = Theme::global(&*cx.app).clone();
+            let gap = decl_style::space(&theme, Space::N2);
+
+            let body = cx.flex(
+                FlexProps {
+                    layout: decl_style::layout_style(
+                        &theme,
+                        LayoutRefinement::default().w_full().h_px(height),
+                    ),
+                    direction: fret_core::Axis::Vertical,
+                    justify: MainAlign::Center,
+                    align: CrossAlign::Center,
+                    gap,
+                    padding: Edges::all(Px(24.0)),
+                    ..Default::default()
+                },
+                move |cx| {
+                    let mut out = vec![
+                        ui::text(cx, format!("Item {idx}"))
+                            .text_base()
+                            .font_semibold()
+                            .into_element(cx),
+                        shadcn::Button::new(if expanded { "Collapse" } else { "Expand" })
+                            .variant(shadcn::ButtonVariant::Outline)
+                            .size(shadcn::ButtonSize::Sm)
+                            .on_activate(set_expandable_selected(Some(idx)))
+                            .into_element(cx),
+                    ];
+
+                    if expanded {
+                        out.push(ui::text(cx, "Expandable body").text_sm().into_element(cx));
+                    }
+
+                    out
+                },
+            );
+
+            shadcn::Card::new([body]).into_element(cx)
+        })
+        .collect::<Vec<_>>();
+
+    let expandable = shadcn::Carousel::new(expandable_items)
+        .refine_layout(
+            LayoutRefinement::default()
+                .w_full()
+                .max_w(max_w_sm)
+                .mx_auto(),
+        )
+        .test_id("ui-gallery-carousel-expandable")
+        .into_element(cx);
+
+    // Orientation (vertical): aligns with upstream docs, and is used by the existing screenshot
+    // diag script.
+    let vertical_items = (1..=5)
+        .map(|idx| {
+            let theme = Theme::global(&*cx.app).clone();
+            let body = cx.flex(
+                FlexProps {
+                    layout: decl_style::layout_style(
+                        &theme,
+                        LayoutRefinement::default().w_full().h_full(),
+                    ),
+                    direction: fret_core::Axis::Vertical,
+                    justify: MainAlign::Center,
+                    align: CrossAlign::Center,
+                    padding: Edges::all(Px(24.0)),
+                    ..Default::default()
+                },
+                move |cx| {
+                    vec![
+                        ui::text(cx, format!("{idx}"))
+                            .text_base()
+                            .font_semibold()
+                            .into_element(cx),
+                    ]
+                },
+            );
+            shadcn::Card::new([body]).into_element(cx)
+        })
+        .collect::<Vec<_>>();
+
+    let orientation_vertical = shadcn::Carousel::new(vertical_items)
+        .orientation(shadcn::CarouselOrientation::Vertical)
+        .refine_viewport_layout(LayoutRefinement::default().h_px(Px(200.0)))
+        .track_start_neg_margin(Space::N1)
+        .item_padding_start(Space::N1)
+        .item_basis_main_px(Px(100.0))
+        .refine_layout(
+            LayoutRefinement::default()
+                .w_full()
+                .max_w(max_w_sm)
+                .mx_auto(),
+        )
+        .test_id("ui-gallery-carousel-orientation-vertical")
+        .into_element(cx);
+
     let body = doc_layout::render_doc_page(
         cx,
         Some("Preview follows shadcn Carousel demo cards (Fret builder API; not Embla)."),
         vec![
+            DocSection::new("Demo", demo)
+                .description("A carousel with 5 items and previous/next buttons.")
+                .max_w(Px(760.0))
+                .test_id_prefix("ui-gallery-carousel-demo"),
             DocSection::new("Basic", basic)
                 .description("Default slide width (basis-full).")
                 .max_w(Px(760.0))
@@ -152,9 +409,18 @@ shadcn::Carousel::new(items)
     .refine_layout(LayoutRefinement::default().w_full().max_w(Px(384.0)).mx_auto())
     .into_element(cx);"#,
                 ),
+            DocSection::new("Expandable", expandable)
+                .description("Content-driven height changes (used by the motion pilot suite).")
+                .max_w(Px(760.0))
+                .test_id_prefix("ui-gallery-carousel-expandable"),
+            DocSection::new("Orientation (Vertical)", orientation_vertical)
+                .description("A vertical carousel (orientation=\"vertical\").")
+                .max_w(Px(760.0))
+                .test_id_prefix("ui-gallery-carousel-orientation-vertical"),
             DocSection::new("Notes", notes_stack).max_w(Px(760.0)),
         ],
     );
 
     vec![body.test_id("ui-gallery-carousel-component")]
+    })
 }

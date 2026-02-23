@@ -55,12 +55,10 @@ pub(super) fn preview_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
 
             let keyboard_tooltip = shadcn::Tooltip::new(
                 shadcn::Button::new("")
+                    .a11y_label("Save")
                     .variant(shadcn::ButtonVariant::Outline)
                     .size(shadcn::ButtonSize::IconSm)
-                    .children([shadcn::icon::icon(
-                        cx,
-                        fret_icons::IconId::new_static("lucide.save"),
-                    )])
+                    .icon(fret_icons::IconId::new_static("lucide.save"))
                     .into_element(cx),
                 shadcn::TooltipContent::new(vec![stack::hstack(
                     cx,
@@ -186,12 +184,10 @@ pub(super) fn preview_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
                         "rust",
                         r#"shadcn::Tooltip::new(
     shadcn::Button::new("")
+        .a11y_label("Save")
         .variant(shadcn::ButtonVariant::Outline)
         .size(shadcn::ButtonSize::IconSm)
-        .children([shadcn::icon::icon(
-            cx,
-            fret_icons::IconId::new_static("lucide.save"),
-        )])
+        .icon(fret_icons::IconId::new_static("lucide.save"))
         .into_element(cx),
     shadcn::TooltipContent::new(vec![stack::hstack(
         cx,

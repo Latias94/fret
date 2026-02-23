@@ -122,9 +122,15 @@ pub(super) fn handle_set_slider_value_step(
                     output.request_redraw = true;
                 } else {
                     let observed = node
+                        .extra
+                        .numeric
                         .value
-                        .as_deref()
-                        .and_then(parse_semantics_numeric_value);
+                        .and_then(|v| v.is_finite().then_some(v as f32))
+                        .or_else(|| {
+                            node.value
+                                .as_deref()
+                                .and_then(parse_semantics_numeric_value)
+                        });
                     if let Some(observed) = observed {
                         if (observed - value).abs() <= epsilon.max(0.0) {
                             active.v2_step_state = None;

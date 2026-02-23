@@ -30,6 +30,12 @@ Related living docs:
 - Internal script runner state types were extracted into `ecosystem/fret-bootstrap/src/ui_diagnostics/script_types.rs` to reduce churn.
 - The per-frame script driver (`UiDiagnosticsService::drive_script_for_window`) was extracted into
   `ecosystem/fret-bootstrap/src/ui_diagnostics/script_engine.rs`.
+- `fret-diag` CLI dispatch remains centralized, but larger subcommands are being extracted into dedicated modules to reduce churn in
+  `crates/fret-diag/src/lib.rs`:
+  - `crates/fret-diag/src/diag_perf.rs` (extracted `diag perf` command handler)
+  - `crates/fret-diag/src/diag_compare.rs` (extracted `diag compare` command handler)
+  - `crates/fret-diag/src/diag_stats.rs` (extracted `diag stats` command handler)
+  - `crates/fret-diag/src/diag_matrix.rs` (extracted `diag matrix` command handler)
 - `crates/fret-diag/src/stats.rs` remains large, but UI gallery checks have started moving into dedicated submodules under
   `crates/fret-diag/src/stats/`:
   - `crates/fret-diag/src/stats/ui_gallery_markdown_editor.rs`

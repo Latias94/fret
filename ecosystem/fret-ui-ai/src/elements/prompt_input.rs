@@ -1353,11 +1353,12 @@ impl PromptInput {
 
         let add_attachments_button = self.on_add_attachments.clone().map(|on_add| {
             let add_disabled = self.disabled || self.loading;
-            let mut btn = Button::new("Add attachments")
+            let mut btn = Button::new("")
+                .a11y_label("Add attachments")
                 .variant(ButtonVariant::Ghost)
                 .size(ButtonSize::IconSm)
                 .disabled(add_disabled)
-                .children([decl_icon::icon(cx, IconId::new("lucide.plus"))])
+                .icon(IconId::new("lucide.plus"))
                 .on_activate(on_add);
 
             let test_id = self.test_id_add_attachments.clone().or_else(|| {
@@ -1785,6 +1786,7 @@ impl PromptInputTools {
 /// Generic prompt input button aligned with AI Elements `PromptInputButton` (ghost by default).
 pub struct PromptInputButton {
     label: Arc<str>,
+    icon: Option<IconId>,
     children: Vec<AnyElement>,
     disabled: bool,
     on_activate: Option<OnActivate>,
@@ -1798,6 +1800,7 @@ impl PromptInputButton {
     pub fn new(label: impl Into<Arc<str>>) -> Self {
         Self {
             label: label.into(),
+            icon: None,
             children: Vec::new(),
             disabled: false,
             on_activate: None,
@@ -1810,6 +1813,11 @@ impl PromptInputButton {
 
     pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
         self.children = children.into_iter().collect();
+        self
+    }
+
+    pub fn icon(mut self, icon: IconId) -> Self {
+        self.icon = Some(icon);
         self
     }
 
@@ -1844,19 +1852,33 @@ impl PromptInputButton {
     }
 
     pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let icon_only = self.icon.is_some() && self.children.is_empty();
         let size = self.size.unwrap_or_else(|| {
-            if self.children.len() > 1 {
+            if icon_only {
+                ButtonSize::IconSm
+            } else if self.children.len() > 1 {
                 ButtonSize::Sm
             } else {
                 ButtonSize::IconSm
             }
         });
-        let mut btn = Button::new(self.label)
-            .variant(self.variant)
-            .size(size)
-            .disabled(self.disabled)
-            .children(self.children)
-            .refine_layout(self.layout);
+
+        let mut btn = if icon_only {
+            Button::new("")
+                .a11y_label(self.label)
+                .variant(self.variant)
+                .size(size)
+                .disabled(self.disabled)
+                .icon(self.icon.expect("icon_only implies icon is Some"))
+                .refine_layout(self.layout)
+        } else {
+            Button::new(self.label)
+                .variant(self.variant)
+                .size(size)
+                .disabled(self.disabled)
+                .children(self.children)
+                .refine_layout(self.layout)
+        };
 
         if let Some(on_activate) = self.on_activate {
             btn = btn.on_activate(on_activate);
@@ -1912,7 +1934,7 @@ impl PromptInputActionMenuTrigger {
         });
 
         let mut btn = PromptInputButton::new("Prompt actions")
-            .children([decl_icon::icon(cx, IconId::new("lucide.plus"))])
+            .icon(IconId::new("lucide.plus"))
             .disabled(disabled)
             .on_activate(on_toggle)
             .refine_layout(self.layout);
@@ -1928,7 +1950,7 @@ impl PromptInputActionMenuTrigger {
 pub struct PromptInputActionMenuItem {
     label: Arc<str>,
     value: Option<Arc<str>>,
-    leading: Option<AnyElement>,
+    leading_icon: Option<IconId>,
     disabled: bool,
     close_on_select: bool,
     on_activate: Option<OnActivate>,
@@ -1940,7 +1962,7 @@ impl PromptInputActionMenuItem {
         Self {
             label: label.into(),
             value: None,
-            leading: None,
+            leading_icon: None,
             disabled: false,
             close_on_select: true,
             on_activate: None,
@@ -1953,8 +1975,8 @@ impl PromptInputActionMenuItem {
         self
     }
 
-    pub fn leading(mut self, leading: AnyElement) -> Self {
-        self.leading = Some(leading);
+    pub fn leading_icon(mut self, icon: IconId) -> Self {
+        self.leading_icon = Some(icon);
         self
     }
 
@@ -1980,10 +2002,12 @@ impl PromptInputActionMenuItem {
 
     pub fn into_entry(self) -> DropdownMenuEntry {
         let mut item = DropdownMenuItem::new(self.label.clone());
+        if let Some(icon) = self.leading_icon {
+            item = item.leading_icon(icon);
+        }
         if let Some(value) = self.value.or_else(|| Some(self.label.clone())) {
             item.value = value;
         }
-        item.leading = self.leading;
         item.disabled = self.disabled;
         item.close_on_select = self.close_on_select;
         item.on_activate = self.on_activate;
@@ -2136,7 +2160,7 @@ impl PromptInputActionAddAttachments {
         let on_activate = cfg.as_ref().and_then(|c| c.on_add_attachments.clone());
 
         let mut item = PromptInputActionMenuItem::new(self.label)
-            .leading(decl_icon::icon(cx, IconId::new("lucide.image")))
+            .leading_icon(IconId::new("lucide.image"))
             .disabled(disabled);
 
         if let Some(on_activate) = on_activate {
@@ -2368,7 +2392,7 @@ impl PromptInputActionAddAttachmentsButton {
             });
 
         let mut btn = PromptInputButton::new("Add attachments")
-            .children([decl_icon::icon(cx, IconId::new("lucide.plus"))])
+            .icon(IconId::new("lucide.plus"))
             .disabled(disabled || loading)
             .refine_layout(self.layout);
 

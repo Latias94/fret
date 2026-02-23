@@ -269,6 +269,41 @@ where
 {
     let lines = lines.into_iter().map(Into::into).collect::<Vec<Arc<str>>>();
 
+    fn muted_flex_1_min_w_0<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        text: impl Into<Arc<str>>,
+    ) -> AnyElement {
+        let (style, color) = {
+            let theme = Theme::global(&*cx.app);
+            let style = fret_ui_kit::typography::control_text_style(
+                theme,
+                fret_ui_kit::typography::UiTextSize::Xs,
+            );
+            let color = theme
+                .color_by_key("muted-foreground")
+                .or_else(|| theme.color_by_key("muted_foreground"))
+                .unwrap_or_else(|| theme.color_token("foreground"));
+            (style, color)
+        };
+
+        cx.text_props(TextProps {
+            layout: {
+                let mut layout = fret_ui::element::LayoutStyle::default();
+                layout.flex.grow = 1.0;
+                layout.flex.shrink = 1.0;
+                layout.size.min_width = Some(Px(0.0));
+                layout
+            },
+            text: text.into(),
+            style: Some(style),
+            color: Some(color),
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            ink_overflow: fret_ui::element::TextInkOverflow::None,
+        })
+    }
+
     stack::vstack(
         cx,
         stack::VStackProps::default()
@@ -286,7 +321,7 @@ where
                             .gap(Space::N1)
                             .items_start()
                             .layout(LayoutRefinement::default().w_full().min_w_0()),
-                        move |cx| [muted_inline(cx, "•"), muted_full_width(cx, line)],
+                        move |cx| [muted_inline(cx, "•"), muted_flex_1_min_w_0(cx, line)],
                     )
                 })
                 .collect::<Vec<_>>()
@@ -521,6 +556,7 @@ fn code_block_shell(
         .language(block.language)
         .show_header(true)
         .show_language(true)
+        .max_height(Px(520.0))
         .header_right([copy])
         .into_element(cx);
 
