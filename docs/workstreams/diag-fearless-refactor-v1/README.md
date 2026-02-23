@@ -45,6 +45,11 @@ Related living docs:
   - `crates/fret-diag/src/stats/ui_gallery_markdown_editor.rs`
   - `crates/fret-diag/src/stats/ui_gallery_code_editor.rs`
   - `crates/fret-diag/src/stats/ui_gallery_text_gates.rs`
+- To reduce churn while larger modularization is in flight, some of the largest bundle-stats blocks were split out of
+  `crates/fret-diag/src/stats.rs` into dedicated files (currently via `include!`):
+  - `crates/fret-diag/src/stats/bundle_stats_sort.rs`
+  - `crates/fret-diag/src/stats/bundle_stats_report.inc.rs`
+  - `crates/fret-diag/src/stats/bundle_stats_compute.inc.rs`
 - `fret-diag` CLI commands treat sidecars as optional accelerators:
   - validate `kind` / `schema_version` / `warmup_frames`,
   - accept `_root/` bundle layouts,

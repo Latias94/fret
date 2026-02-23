@@ -228,6 +228,10 @@ diagnostics stack stays easy to evolve.
 - [ ] Reduce “stats mega-module” churn permanently:
   - keep `crates/fret-diag/src/stats.rs` as a small index/exports surface,
   - large check families stay in `crates/fret-diag/src/stats/*.rs`.
+  - [x] Split the largest bundle-stats blocks out of `crates/fret-diag/src/stats.rs` (mechanical move to reduce churn):
+    - `crates/fret-diag/src/stats/bundle_stats_sort.rs`
+    - `crates/fret-diag/src/stats/bundle_stats_report.inc.rs`
+    - `crates/fret-diag/src/stats/bundle_stats_compute.inc.rs`
 - [ ] Audit and remove dead/legacy code paths once consumers have migrated:
   - legacy env knobs that are no longer used,
   - legacy schema compatibility layers that are no longer needed for in-tree workflows.
