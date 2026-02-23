@@ -1,6 +1,6 @@
 # UI Gallery view-cache web perf stabilization (v1)
 
-Status: In progress
+Status: Landed (evidence harness ready)
 
 ## Context
 
@@ -23,12 +23,20 @@ This workstream focuses on making web perf captures *stable and interpretable* b
 ## Evidence inputs (baseline)
 
 - Web script: `tools/diag-scripts/ui-gallery-magic-patterns-torture-perf-steady-web.json`
+- Web scripts (code editor torture):
+  - `tools/diag-scripts/ui-gallery-code-editor-torture-perf-steady-web.json`
+  - `tools/diag-scripts/ui-gallery-code-editor-torture-perf-steady-web-view-cache-sidebar.json`
 - Web scripts (view-cache harness, URL-driven):
   - `tools/diag-scripts/ui-gallery-view-cache-harness-perf-steady-web-off.json`
   - `tools/diag-scripts/ui-gallery-view-cache-harness-perf-steady-web-on.json`
 - Exported bundle (baseline, view-cache disabled): `.fret/diag/exports/1771829809968-bundle`
 - Exported bundle (early attempt, view-cache enabled but no roots): `.fret/diag/exports/1771832191642-bundle`
 - Metrics: `fretboard diag stats` + `fretboard diag triage --json`
+- Tracked perf baselines (derived from exported bundles; worst bundles are local evidence):
+  - `docs/workstreams/perf-baselines/ui-gallery-magic-patterns-torture-no-view-cache.web-local.v1.json`
+  - `docs/workstreams/perf-baselines/ui-gallery-magic-patterns-torture-view-cache-shell.web-local.v1.json`
+  - `docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-no-view-cache.web-local.v1.json`
+  - `docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-view-cache-sidebar.web-local.v1.json`
 
 ## Configuration surface (web)
 
@@ -69,3 +77,5 @@ Implementation note: on web targets, UI Gallery routing may rewrite/canonicalize
 See:
 - `docs/workstreams/ui-gallery-view-cache-web-perf-stabilization-v1-todo.md`
 - `docs/workstreams/ui-gallery-view-cache-web-perf-stabilization-v1-milestones.md`
+And the renderer/WebGPU decision tracker:
+- `docs/workstreams/renderer-vnext-fearless-refactor-v1-todo.md` (see `REN-VNEXT-webgpu-004`)

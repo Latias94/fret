@@ -222,6 +222,16 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Status note (2026-02-23): re-exported `magic_patterns_torture` under web view-cache flags (shell-only caching, animation preserved):
     - Bundle: `.fret/diag/exports/1771842539046-bundle`
     - `fretboard diag stats`: avg total ≈ 4.9ms, p95 total ≈ 5.2ms; `paint` still dominates but shell reuse is active (`cache_roots=1`, `cache_roots_reused=1`).
+    - Perf baselines:
+      - `docs/workstreams/perf-baselines/ui-gallery-magic-patterns-torture-no-view-cache.web-local.v1.json`
+      - `docs/workstreams/perf-baselines/ui-gallery-magic-patterns-torture-view-cache-shell.web-local.v1.json`
+  - Status note (2026-02-23): exported `code_editor_torture` under the same web harness:
+    - Bundle (view-cache off): `.fret/diag/exports/1771847658648-bundle`
+    - Bundle (view-cache on, shell-only): `.fret/diag/exports/1771847993928-bundle`
+    - `fretboard diag triage` indicates steady-state is still dominated by `paint` and `layout`; shell-only caching does not materially reduce code editor cost.
+    - Perf baselines:
+      - `docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-no-view-cache.web-local.v1.json`
+      - `docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-view-cache-sidebar.web-local.v1.json`
 - [x] REN-VNEXT-clean-001 Remove dead/legacy shader branches once variants cover all active cases.
   - Landed: quad shader skips inner-border SDF work when `FRET_BORDER_PRESENT=0` (compile-time override),
     keeping WebGPU uniformity rules satisfied while reducing waste in borderless variants.
