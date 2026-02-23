@@ -1,4 +1,4 @@
-use super::state::{EncodeState, MaskPop};
+use super::state::EncodeState;
 use super::*;
 
 use fret_core::scene::{MAX_STOPS, Mask, TileMode};

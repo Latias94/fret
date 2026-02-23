@@ -1,21 +1,5 @@
 use super::*;
 
-#[derive(Clone, Copy)]
-pub(super) enum ClipPop {
-    NoShader,
-    Shader { prev_head: u32 },
-    Path,
-}
-
-#[derive(Clone, Copy)]
-pub(super) enum MaskPop {
-    NoShader,
-    Shader {
-        prev_head: u32,
-        prev_mask_image: Option<UniformMaskImageSelection>,
-    },
-}
-
 pub(super) struct EncodeState<'a> {
     pub(super) scale_factor: f32,
     pub(super) viewport_size: (u32, u32),
@@ -38,19 +22,19 @@ pub(super) struct EncodeState<'a> {
     pub(super) ordered_draws: &'a mut Vec<OrderedDraw>,
     pub(super) effect_markers: &'a mut Vec<EffectMarker>,
 
-    pub(super) scissor_stack: Vec<ScissorRect>,
+    pub(super) scissor_stack: &'a mut Vec<ScissorRect>,
     pub(super) current_scissor: ScissorRect,
 
-    pub(super) clip_pop_stack: Vec<ClipPop>,
+    pub(super) clip_pop_stack: &'a mut Vec<ClipPop>,
     pub(super) clip_head: u32,
     pub(super) clip_count: u32,
 
-    pub(super) mask_pop_stack: Vec<MaskPop>,
+    pub(super) mask_pop_stack: &'a mut Vec<MaskPop>,
     pub(super) mask_head: u32,
     pub(super) mask_count: u32,
     pub(super) mask_image: Option<UniformMaskImageSelection>,
 
-    pub(super) mask_scope_stack: Vec<(u32, u32)>,
+    pub(super) mask_scope_stack: &'a mut Vec<(u32, u32)>,
     pub(super) mask_scope_head: u32,
     pub(super) mask_scope_count: u32,
 
@@ -60,13 +44,13 @@ pub(super) struct EncodeState<'a> {
 
     pub(super) text_white_paint_index: Option<u32>,
 
-    pub(super) transform_stack: Vec<Transform2D>,
-    pub(super) opacity_stack: Vec<f32>,
+    pub(super) transform_stack: &'a mut Vec<Transform2D>,
+    pub(super) opacity_stack: &'a mut Vec<f32>,
 
     pub(super) material_paint_budget_per_frame: u64,
     pub(super) material_distinct_budget_per_frame: usize,
     pub(super) material_paints_used: u64,
-    pub(super) material_seen: Vec<fret_core::MaterialId>,
+    pub(super) material_seen: &'a mut Vec<fret_core::MaterialId>,
     pub(super) material_quad_ops: &'a mut u64,
     pub(super) material_sampled_quad_ops: &'a mut u64,
     pub(super) material_distinct: &'a mut u64,
@@ -102,6 +86,13 @@ impl<'a> EncodeState<'a> {
         let uniform_mask_images = &mut encoding.uniform_mask_images;
         let ordered_draws = &mut encoding.ordered_draws;
         let effect_markers = &mut encoding.effect_markers;
+        let scissor_stack = &mut encoding.encode_scissor_stack_scratch;
+        let clip_pop_stack = &mut encoding.encode_clip_pop_stack_scratch;
+        let mask_pop_stack = &mut encoding.encode_mask_pop_stack_scratch;
+        let mask_scope_stack = &mut encoding.encode_mask_scope_stack_scratch;
+        let transform_stack = &mut encoding.encode_transform_stack_scratch;
+        let opacity_stack = &mut encoding.encode_opacity_stack_scratch;
+        let material_seen = &mut encoding.encode_material_seen_scratch;
 
         let material_quad_ops = &mut encoding.material_quad_ops;
         let material_sampled_quad_ops = &mut encoding.material_sampled_quad_ops;
@@ -112,6 +103,18 @@ impl<'a> EncodeState<'a> {
         let current_scissor = ScissorRect::full(viewport_size.0, viewport_size.1);
         let mask_scope_head = 0;
         let mask_scope_count = 0;
+
+        scissor_stack.clear();
+        scissor_stack.push(current_scissor);
+        clip_pop_stack.clear();
+        mask_pop_stack.clear();
+        mask_scope_stack.clear();
+        mask_scope_stack.push((mask_scope_head, mask_scope_count));
+        transform_stack.clear();
+        transform_stack.push(Transform2D::IDENTITY);
+        opacity_stack.clear();
+        opacity_stack.push(1.0);
+        material_seen.clear();
         let mut state = Self {
             scale_factor,
             viewport_size,
@@ -132,28 +135,28 @@ impl<'a> EncodeState<'a> {
             uniform_mask_images,
             ordered_draws,
             effect_markers,
-            scissor_stack: vec![current_scissor],
+            scissor_stack,
             current_scissor,
-            clip_pop_stack: Vec::new(),
+            clip_pop_stack,
             clip_head: 0,
             clip_count: 0,
-            mask_pop_stack: Vec::new(),
+            mask_pop_stack,
             mask_head: 0,
             mask_count: 0,
             mask_image: None,
-            mask_scope_stack: vec![(mask_scope_head, mask_scope_count)],
+            mask_scope_stack,
             mask_scope_head,
             mask_scope_count,
             current_uniform_index: 0,
             quad_batch: None,
             text_white_paint_index: None,
-            transform_stack: vec![Transform2D::IDENTITY],
-            opacity_stack: vec![1.0],
+            transform_stack,
+            opacity_stack,
 
             material_paint_budget_per_frame,
             material_distinct_budget_per_frame,
             material_paints_used: 0,
-            material_seen: Vec::new(),
+            material_seen,
             material_quad_ops,
             material_sampled_quad_ops,
             material_distinct,

@@ -1,4 +1,5 @@
 use bytemuck::{Pod, Zeroable};
+use fret_core::geometry::Transform2D;
 use fret_core::scene::MAX_STOPS;
 use fret_core::scene::UvRect;
 use std::sync::Arc;
@@ -600,6 +601,22 @@ pub(super) struct UniformMaskImageSelection {
 }
 
 #[derive(Clone, Copy)]
+pub(super) enum ClipPop {
+    NoShader,
+    Shader { prev_head: u32 },
+    Path,
+}
+
+#[derive(Clone, Copy)]
+pub(super) enum MaskPop {
+    NoShader,
+    Shader {
+        prev_head: u32,
+        prev_mask_image: Option<UniformMaskImageSelection>,
+    },
+}
+
+#[derive(Clone, Copy)]
 pub(super) struct ImageDraw {
     pub(super) scissor: ScissorRect,
     pub(super) uniform_index: u32,
@@ -726,6 +743,14 @@ pub(super) struct SceneEncoding {
     pub(super) ordered_draws: Vec<OrderedDraw>,
     pub(super) effect_markers: Vec<EffectMarker>,
 
+    pub(super) encode_scissor_stack_scratch: Vec<ScissorRect>,
+    pub(super) encode_clip_pop_stack_scratch: Vec<ClipPop>,
+    pub(super) encode_mask_pop_stack_scratch: Vec<MaskPop>,
+    pub(super) encode_mask_scope_stack_scratch: Vec<(u32, u32)>,
+    pub(super) encode_transform_stack_scratch: Vec<Transform2D>,
+    pub(super) encode_opacity_stack_scratch: Vec<f32>,
+    pub(super) encode_material_seen_scratch: Vec<fret_core::MaterialId>,
+
     pub(super) material_quad_ops: u64,
     pub(super) material_sampled_quad_ops: u64,
     pub(super) material_distinct: u64,
@@ -748,6 +773,13 @@ impl SceneEncoding {
         self.uniform_mask_images.clear();
         self.ordered_draws.clear();
         self.effect_markers.clear();
+        self.encode_scissor_stack_scratch.clear();
+        self.encode_clip_pop_stack_scratch.clear();
+        self.encode_mask_pop_stack_scratch.clear();
+        self.encode_mask_scope_stack_scratch.clear();
+        self.encode_transform_stack_scratch.clear();
+        self.encode_opacity_stack_scratch.clear();
+        self.encode_material_seen_scratch.clear();
         self.material_quad_ops = 0;
         self.material_sampled_quad_ops = 0;
         self.material_distinct = 0;
