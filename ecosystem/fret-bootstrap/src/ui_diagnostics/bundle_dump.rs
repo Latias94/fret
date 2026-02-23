@@ -3,7 +3,8 @@ use std::path::{Path, PathBuf};
 use fret_diag_protocol::UiScriptResultV1;
 
 use super::bundle_dump_policy::{
-    apply_dump_semantics_policy_to_windows, resolve_dump_semantics_policy,
+    apply_dump_semantics_policy_to_semantics_table, apply_dump_semantics_policy_to_windows,
+    resolve_dump_semantics_policy,
 };
 use super::{
     UiArtifactStatsV1, UiDiagnosticsBundleV1, UiDiagnosticsBundleV2, UiDiagnosticsService,
@@ -193,6 +194,9 @@ pub(super) fn dump_bundle_with_options(
                 bundle.apply_semantics_mode_v1(semantics_mode);
                 bundle.config.max_semantics_nodes = dump_semantics_policy.max_nodes;
                 apply_dump_semantics_policy_to_windows(&mut bundle.windows, &dump_semantics_policy);
+                if let Some(table) = bundle.tables.semantics.as_mut() {
+                    apply_dump_semantics_policy_to_semantics_table(table, &dump_semantics_policy);
+                }
 
                 let bundle_json_bytes = if !cfg!(target_arch = "wasm32") {
                     let write_result = if want_pretty {

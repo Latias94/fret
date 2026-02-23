@@ -398,9 +398,36 @@ impl UiDiagnosticsBundleV2 {
     }
 
     pub(super) fn apply_semantics_mode_v1(&mut self, mode: BundleSemanticsModeV1) {
+        apply_semantics_mode_to_windows(&mut self.windows, mode);
+
         if mode == BundleSemanticsModeV1::Off {
             self.tables.semantics = None;
+            return;
         }
-        apply_semantics_mode_to_windows(&mut self.windows, mode);
+
+        let Some(table) = self.tables.semantics.as_mut() else {
+            return;
+        };
+
+        let mut referenced: std::collections::HashSet<(u64, u64)> =
+            std::collections::HashSet::new();
+        for w in &self.windows {
+            for s in &w.snapshots {
+                if s.debug.semantics.is_none() {
+                    continue;
+                }
+                let Some(fp) = s.semantics_fingerprint else {
+                    continue;
+                };
+                referenced.insert((s.window, fp));
+            }
+        }
+
+        table
+            .entries
+            .retain(|e| referenced.contains(&(e.window, e.semantics_fingerprint)));
+        if table.entries.is_empty() {
+            self.tables.semantics = None;
+        }
     }
 }

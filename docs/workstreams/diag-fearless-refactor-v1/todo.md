@@ -58,6 +58,8 @@ scope: diagnostics, automation, tooling, refactor
 - [x] Reduce default bundle size further by defaulting non-script dumps to schema v2 (dedup semantics via `tables.semantics`).
 - [x] Cap non-script dump semantics nodes by default (via `FRET_DIAG_BUNDLE_DUMP_MAX_SEMANTICS_NODES`, defaulting to 10,000).
 - [x] Optional: export only `test_id` semantics nodes plus their ancestors (via `FRET_DIAG_BUNDLE_DUMP_SEMANTICS_TEST_IDS_ONLY`).
+- [x] Apply dump-time semantics policies to schema v2 `tables.semantics` entries (not just inline `debug.semantics`).
+- [x] Prune schema v2 semantics tables to only referenced snapshots after applying semantics mode (avoid retaining dropped frames).
 - [x] Add query-friendly indexes (sidecars) for tools/agents (implemented in `ecosystem/fret-bootstrap/src/ui_diagnostics/bundle_dump.rs`):
   - `bundle.index.json` (snapshot selectors, semantics fingerprints, test-id bloom),
   - `bundle.meta.json` (bundle-level counters + uniqueness summaries),

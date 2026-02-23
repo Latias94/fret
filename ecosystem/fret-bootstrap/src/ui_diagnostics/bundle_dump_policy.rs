@@ -57,57 +57,76 @@ pub(super) fn apply_dump_semantics_policy_to_windows(
     clamp_bundle_semantics_nodes(windows, policy.max_nodes);
 }
 
+pub(super) fn apply_dump_semantics_policy_to_semantics_table(
+    table: &mut bundle::UiBundleSemanticsTableV1,
+    policy: &DumpSemanticsPolicy,
+) {
+    for e in &mut table.entries {
+        if policy.test_ids_closure {
+            filter_semantics_snapshot_nodes_to_test_ids_closure(&mut e.semantics);
+        }
+        clamp_semantics_snapshot_nodes(&mut e.semantics, policy.max_nodes);
+    }
+}
+
 fn clamp_bundle_semantics_nodes(windows: &mut [UiDiagnosticsWindowBundleV1], max_nodes: usize) {
     for w in windows {
         for s in &mut w.snapshots {
             let Some(semantics) = s.debug.semantics.as_mut() else {
                 continue;
             };
-            if semantics.nodes.len() > max_nodes {
-                semantics.nodes.truncate(max_nodes);
-            }
+            clamp_semantics_snapshot_nodes(semantics, max_nodes);
         }
     }
 }
 
 fn filter_bundle_semantics_nodes_to_test_ids_closure(windows: &mut [UiDiagnosticsWindowBundleV1]) {
-    use std::collections::{HashMap, HashSet};
-
     for w in windows {
         for s in &mut w.snapshots {
             let Some(semantics) = s.debug.semantics.as_mut() else {
                 continue;
             };
-
-            let mut parent_by_id: HashMap<u64, u64> = HashMap::new();
-            for n in &semantics.nodes {
-                if let Some(parent) = n.parent {
-                    parent_by_id.insert(n.id, parent);
-                }
-            }
-
-            let mut include: HashSet<u64> = HashSet::new();
-            let mut stack: Vec<u64> = semantics
-                .nodes
-                .iter()
-                .filter(|n| n.test_id.is_some())
-                .map(|n| n.id)
-                .collect();
-            while let Some(id) = stack.pop() {
-                if !include.insert(id) {
-                    continue;
-                }
-                if let Some(parent) = parent_by_id.get(&id).copied() {
-                    stack.push(parent);
-                }
-            }
-
-            if include.is_empty() {
-                semantics.nodes.clear();
-                continue;
-            }
-
-            semantics.nodes.retain(|n| include.contains(&n.id));
+            filter_semantics_snapshot_nodes_to_test_ids_closure(semantics);
         }
     }
+}
+
+fn clamp_semantics_snapshot_nodes(semantics: &mut UiSemanticsSnapshotV1, max_nodes: usize) {
+    if semantics.nodes.len() > max_nodes {
+        semantics.nodes.truncate(max_nodes);
+    }
+}
+
+fn filter_semantics_snapshot_nodes_to_test_ids_closure(semantics: &mut UiSemanticsSnapshotV1) {
+    use std::collections::{HashMap, HashSet};
+
+    let mut parent_by_id: HashMap<u64, u64> = HashMap::new();
+    for n in &semantics.nodes {
+        if let Some(parent) = n.parent {
+            parent_by_id.insert(n.id, parent);
+        }
+    }
+
+    let mut include: HashSet<u64> = HashSet::new();
+    let mut stack: Vec<u64> = semantics
+        .nodes
+        .iter()
+        .filter(|n| n.test_id.is_some())
+        .map(|n| n.id)
+        .collect();
+    while let Some(id) = stack.pop() {
+        if !include.insert(id) {
+            continue;
+        }
+        if let Some(parent) = parent_by_id.get(&id).copied() {
+            stack.push(parent);
+        }
+    }
+
+    if include.is_empty() {
+        semantics.nodes.clear();
+        return;
+    }
+
+    semantics.nodes.retain(|n| include.contains(&n.id));
 }
