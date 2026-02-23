@@ -937,6 +937,13 @@ impl Sidebar {
                         });
                         let surface = shadcn_layout::container_flow(cx, surface_props, children);
 
+                        cx.key_add_on_key_down_capture_for(surface.id, on_key_down.clone());
+                        cx.command_on_command_for(surface.id, on_command.clone());
+                        cx.command_on_command_availability_for(
+                            surface.id,
+                            on_command_availability.clone(),
+                        );
+
                         let content = SheetContent::new([surface])
                             .refine_style(
                                 ChromeRefinement::default()
@@ -951,13 +958,6 @@ impl Sidebar {
                                     .overflow_hidden(),
                             )
                             .into_element(cx);
-
-                        cx.key_add_on_key_down_capture_for(content.id, on_key_down.clone());
-                        cx.command_on_command_for(content.id, on_command.clone());
-                        cx.command_on_command_availability_for(
-                            content.id,
-                            on_command_availability.clone(),
-                        );
 
                         content
                     },
