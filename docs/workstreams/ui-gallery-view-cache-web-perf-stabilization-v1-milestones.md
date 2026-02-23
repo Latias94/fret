@@ -19,6 +19,9 @@
   - Evidence: `.fret/diag/exports/1771832191642-bundle` (view-cache active, but `view_cache_roots_total=0`)
 - [ ] Post-fixes experimental bundle (web, view-cache enabled + shell default + churn fix):
   - Evidence: `.fret/diag/exports/<ts>-bundle` (path only)
+- [x] Post-churn-fix experimental bundle (web, view-cache enabled):
+  - Evidence: `.fret/diag/exports/1771835082078-bundle`
+  - Notes: `model_changes=0`, `paint_cache_misses≈2`, but `view_cache_roots_total=0` still (shell roots not being mounted yet).
 
 ## M3 — Decision (pending)
 

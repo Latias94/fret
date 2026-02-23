@@ -9,6 +9,9 @@
 - [ ] Re-capture a view-cache bundle after:
   - enabling shell view-cache by default on `wasm32` when view-cache is enabled
   - removing per-frame model churn for undo/redo availability
+- [ ] Confirm view-cache roots are actually mounted for the magic-patterns workload:
+  - Expect: `view_cache_roots_total > 0` (at least sidebar + content) and some reuse in steady-state.
+  - If still `0`, verify effective shell caching and/or force it for evidence runs.
 - [ ] Compare:
   - `paint_time_us` p95 and max
   - `paint_cache_misses`
