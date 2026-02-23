@@ -75,10 +75,7 @@ pub(super) fn preview_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                     // still applies link semantics and Enter-only activation.
                     .on_activate(Arc::new(|_host, _acx, _reason| {}))
                     .test_id("ui-gallery-badge-link")
-                    .children([shadcn::icon::icon(
-                        cx,
-                        fret_icons::IconId::new_static("lucide.arrow-right"),
-                    )])
+                    .trailing_icon(fret_icons::IconId::new_static("lucide.arrow-right"))
                     .into_element(cx),
             ]
         })
@@ -232,7 +229,7 @@ pub(super) fn preview_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     .variant(shadcn::BadgeVariant::Link)
     .render(shadcn::BadgeRender::Link { href: Arc::from("https://example.com"), target: None, rel: None })
     .on_activate(Arc::new(|_host, _acx, _reason| {})) // optional; remove to open the URL
-    .children([shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.arrow-right"))])
+    .trailing_icon(fret_icons::IconId::new_static("lucide.arrow-right"))
     .into_element(cx);"#,
                 ),
             DocSection::new("Custom Colors", custom_colors)
