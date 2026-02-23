@@ -287,6 +287,17 @@ pub fn tree_update_from_snapshot(snapshot: &SemanticsSnapshot, scale_factor: f64
         if node.actions.set_value {
             out.add_action(Action::SetValue);
         }
+        if node.actions.scroll_by {
+            out.add_action(Action::SetScrollOffset);
+            if node.extra.scroll.x_max.is_some() {
+                out.add_action(Action::ScrollLeft);
+                out.add_action(Action::ScrollRight);
+            }
+            if node.extra.scroll.y_max.is_some() {
+                out.add_action(Action::ScrollUp);
+                out.add_action(Action::ScrollDown);
+            }
+        }
         if node.actions.set_text_selection && node.value.is_some() {
             out.add_action(Action::SetTextSelection);
         }
@@ -474,6 +485,81 @@ pub fn set_value_from_action(req: &ActionRequest) -> Option<(fret_core::NodeId, 
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ScrollByData {
+    pub dx: f64,
+    pub dy: f64,
+}
+
+fn scroll_delta_for_unit(unit: accesskit::ScrollUnit, viewport_extent: f32) -> f64 {
+    match unit {
+        accesskit::ScrollUnit::Item => 40.0,
+        accesskit::ScrollUnit::Page => {
+            // Best-effort approximation: a page scroll is usually close to the viewport size.
+            //
+            // Use a small overlap so repeated PageDown/PageUp keeps context.
+            ((viewport_extent as f64) * 0.9).max(40.0)
+        }
+    }
+}
+
+pub fn scroll_by_from_action(
+    req: &ActionRequest,
+    snapshot: &SemanticsSnapshot,
+) -> Option<(fret_core::NodeId, ScrollByData)> {
+    if req.target_tree != TreeId::ROOT {
+        return None;
+    }
+
+    let target =
+        parent_from_synthetic_id(req.target_node).or_else(|| from_accesskit_id(req.target_node))?;
+    let node = snapshot.nodes.iter().find(|n| n.id == target)?;
+
+    let unit = match &req.data {
+        Some(accesskit::ActionData::ScrollUnit(unit)) => *unit,
+        _ => accesskit::ScrollUnit::Item,
+    };
+
+    match req.action {
+        Action::ScrollDown => {
+            let dy = scroll_delta_for_unit(unit, node.bounds.size.height.0);
+            Some((target, ScrollByData { dx: 0.0, dy }))
+        }
+        Action::ScrollUp => {
+            let dy = -scroll_delta_for_unit(unit, node.bounds.size.height.0);
+            Some((target, ScrollByData { dx: 0.0, dy }))
+        }
+        Action::ScrollLeft => {
+            let dx = -scroll_delta_for_unit(unit, node.bounds.size.width.0);
+            Some((target, ScrollByData { dx, dy: 0.0 }))
+        }
+        Action::ScrollRight => {
+            let dx = scroll_delta_for_unit(unit, node.bounds.size.width.0);
+            Some((target, ScrollByData { dx, dy: 0.0 }))
+        }
+        Action::SetScrollOffset => {
+            let accesskit::ActionData::SetScrollOffset(p) = req.data.as_ref()? else {
+                return None;
+            };
+
+            let mut dx = 0.0;
+            let mut dy = 0.0;
+
+            if node.extra.scroll.x.is_some() || node.extra.scroll.x_max.is_some() {
+                let cur = node.extra.scroll.x.unwrap_or(0.0);
+                dx = p.x - cur;
+            }
+            if node.extra.scroll.y.is_some() || node.extra.scroll.y_max.is_some() {
+                let cur = node.extra.scroll.y.unwrap_or(0.0);
+                dy = p.y - cur;
+            }
+
+            Some((target, ScrollByData { dx, dy }))
+        }
+        _ => None,
+    }
+}
+
 pub fn replace_selected_text_from_action(
     req: &ActionRequest,
     snapshot: &SemanticsSnapshot,
@@ -559,8 +645,8 @@ pub fn set_text_selection_from_action(
 #[cfg(test)]
 mod tests {
     use super::{
-        replace_selected_text_from_action, set_text_selection_from_action, text_run_id_for,
-        to_accesskit_id, tree_update_from_snapshot,
+        replace_selected_text_from_action, scroll_by_from_action, set_text_selection_from_action,
+        text_run_id_for, to_accesskit_id, tree_update_from_snapshot,
     };
     use accesskit::Role;
     use fret_core::{
@@ -702,6 +788,124 @@ mod tests {
         assert_eq!(slider_node.scroll_x_max(), Some(10.0));
         assert_eq!(slider_node.level(), Some(3));
         assert_eq!(slider_node.url(), Some("https://example.com"));
+    }
+
+    #[test]
+    fn scroll_by_actions_are_exposed_and_decoded() {
+        let window = AppWindowId::default();
+        let root = node(1);
+        let scroll = node(2);
+
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(320.0), Px(180.0)),
+        );
+
+        let mut extra = SemanticsNodeExtra::default();
+        extra.scroll.y = Some(5.0);
+        extra.scroll.y_min = Some(0.0);
+        extra.scroll.y_max = Some(100.0);
+
+        let snapshot = SemanticsSnapshot {
+            window,
+            roots: vec![SemanticsRoot {
+                root,
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus_barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes: vec![
+                SemanticsNode {
+                    id: root,
+                    parent: None,
+                    role: SemanticsRole::Window,
+                    bounds,
+                    flags: SemanticsFlags::default(),
+                    test_id: None,
+                    active_descendant: None,
+                    pos_in_set: None,
+                    set_size: None,
+                    label: None,
+                    value: None,
+                    extra: SemanticsNodeExtra::default(),
+                    text_selection: None,
+                    text_composition: None,
+                    actions: SemanticsActions::default(),
+                    labelled_by: Vec::new(),
+                    described_by: Vec::new(),
+                    controls: Vec::new(),
+                    inline_spans: Vec::new(),
+                },
+                SemanticsNode {
+                    id: scroll,
+                    parent: Some(root),
+                    role: SemanticsRole::Generic,
+                    bounds,
+                    flags: SemanticsFlags::default(),
+                    test_id: None,
+                    active_descendant: None,
+                    pos_in_set: None,
+                    set_size: None,
+                    label: None,
+                    value: None,
+                    extra,
+                    text_selection: None,
+                    text_composition: None,
+                    actions: SemanticsActions {
+                        scroll_by: true,
+                        ..SemanticsActions::default()
+                    },
+                    labelled_by: Vec::new(),
+                    described_by: Vec::new(),
+                    controls: Vec::new(),
+                    inline_spans: Vec::new(),
+                },
+            ],
+        };
+
+        let update = tree_update_from_snapshot(&snapshot, 1.0);
+        let scroll_id = to_accesskit_id(scroll);
+        let scroll_node = update
+            .nodes
+            .iter()
+            .find_map(|(id, n)| (*id == scroll_id).then_some(n))
+            .expect("scroll node present");
+        assert!(scroll_node.supports_action(accesskit::Action::SetScrollOffset));
+        assert!(scroll_node.supports_action(accesskit::Action::ScrollDown));
+        assert!(scroll_node.supports_action(accesskit::Action::ScrollUp));
+
+        let req = accesskit::ActionRequest {
+            action: accesskit::Action::ScrollDown,
+            target_tree: accesskit::TreeId::ROOT,
+            target_node: scroll_id,
+            data: Some(accesskit::ActionData::ScrollUnit(
+                accesskit::ScrollUnit::Item,
+            )),
+        };
+        let (target, data) = scroll_by_from_action(&req, &snapshot).expect("decoded scroll down");
+        assert_eq!(target, scroll);
+        assert_eq!(data.dx, 0.0);
+        assert!(data.dy > 0.0);
+
+        let req = accesskit::ActionRequest {
+            action: accesskit::Action::SetScrollOffset,
+            target_tree: accesskit::TreeId::ROOT,
+            target_node: scroll_id,
+            data: Some(accesskit::ActionData::SetScrollOffset(accesskit::Point {
+                x: 0.0,
+                y: 7.0,
+            })),
+        };
+        let (target, data) =
+            scroll_by_from_action(&req, &snapshot).expect("decoded set scroll offset");
+        assert_eq!(target, scroll);
+        assert_eq!(data.dx, 0.0);
+        assert_eq!(data.dy, 2.0);
     }
 
     #[test]

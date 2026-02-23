@@ -94,6 +94,7 @@ pub struct FnDriverHooks<D, S> {
     pub accessibility_invoke: Option<FnDriverAccessibilityInvokeHook<D, S>>,
     pub accessibility_set_value_text: Option<FnDriverAccessibilitySetValueTextHook<D, S>>,
     pub accessibility_set_value_numeric: Option<FnDriverAccessibilitySetValueNumericHook<D, S>>,
+    pub accessibility_scroll_by: Option<FnDriverAccessibilityScrollByHook<D, S>>,
     pub accessibility_set_text_selection: Option<FnDriverAccessibilitySetTextSelectionHook<D, S>>,
     pub accessibility_replace_selected_text:
         Option<FnDriverAccessibilityReplaceSelectedTextHook<D, S>>,
@@ -167,6 +168,8 @@ pub type FnDriverAccessibilitySetValueNumericHook<D, S> = fn(
     fret_core::NodeId,
     f64,
 );
+pub type FnDriverAccessibilityScrollByHook<D, S> =
+    fn(&mut D, &mut App, fret_core::AppWindowId, &mut S, fret_core::NodeId, f64, f64);
 pub type FnDriverAccessibilitySetTextSelectionHook<D, S> = fn(
     &mut D,
     &mut App,
@@ -210,6 +213,7 @@ impl<D, S> Default for FnDriverHooks<D, S> {
             accessibility_invoke: None,
             accessibility_set_value_text: None,
             accessibility_set_value_numeric: None,
+            accessibility_scroll_by: None,
             accessibility_set_text_selection: None,
             accessibility_replace_selected_text: None,
         }
@@ -691,6 +695,29 @@ impl<D, S> WinitAppDriver for FnDriver<D, S> {
                     target,
                     value,
                 );
+            }
+        }
+    }
+
+    fn accessibility_scroll_by(
+        &mut self,
+        app: &mut App,
+        window: fret_core::AppWindowId,
+        state: &mut Self::WindowState,
+        target: fret_core::NodeId,
+        dx: f64,
+        dy: f64,
+    ) {
+        if let Some(f) = self.hooks.accessibility_scroll_by {
+            #[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
+            {
+                let mut hot = subsecond::HotFn::current(f);
+                hot.call((&mut self.driver_state, app, window, state, target, dx, dy));
+            }
+
+            #[cfg(not(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32"))))]
+            {
+                f(&mut self.driver_state, app, window, state, target, dx, dy);
             }
         }
     }

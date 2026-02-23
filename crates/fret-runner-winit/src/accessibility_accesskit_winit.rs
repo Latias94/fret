@@ -11,9 +11,9 @@ use accesskit_winit::Adapter;
 use winit::{event::WindowEvent, event_loop::ActiveEventLoop, window::Window};
 
 pub use fret_a11y_accesskit::{
-    SetTextSelectionData, SetValueData, focus_target_from_action, invoke_target_from_action,
-    replace_selected_text_from_action, set_text_selection_from_action, set_value_from_action,
-    tree_update_from_snapshot,
+    ScrollByData, SetTextSelectionData, SetValueData, focus_target_from_action,
+    invoke_target_from_action, replace_selected_text_from_action, scroll_by_from_action,
+    set_text_selection_from_action, set_value_from_action, tree_update_from_snapshot,
 };
 
 pub struct WinitAccessibility {

@@ -273,6 +273,7 @@ impl<S> UiAppDriver<S> {
             hooks.accessibility_focus = Some(ui_app_accessibility_focus::<S>);
             hooks.accessibility_invoke = Some(ui_app_accessibility_invoke::<S>);
             hooks.accessibility_set_value_text = Some(ui_app_accessibility_set_value_text::<S>);
+            hooks.accessibility_scroll_by = Some(ui_app_accessibility_scroll_by::<S>);
 
             hooks.viewport_input = Some(ui_app_viewport_input::<S>);
             hooks.dock_op = Some(ui_app_dock_op::<S>);
@@ -2710,6 +2711,18 @@ fn ui_app_accessibility_set_value_text<S>(
     value: &str,
 ) {
     fret_ui_app::accessibility_actions::set_value_text(&mut state.ui, app, services, target, value);
+}
+
+fn ui_app_accessibility_scroll_by<S>(
+    _driver: &mut UiAppDriver<S>,
+    app: &mut App,
+    _window: AppWindowId,
+    state: &mut UiAppWindowState<S>,
+    target: NodeId,
+    dx: f64,
+    dy: f64,
+) {
+    fret_ui_app::accessibility_actions::scroll_by(&mut state.ui, app, target, dx, dy);
 }
 
 fn ui_app_viewport_input<S>(driver: &mut UiAppDriver<S>, app: &mut App, event: ViewportInputEvent) {

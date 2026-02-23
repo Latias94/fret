@@ -1,5 +1,5 @@
 use fret_app::{App, CommandId};
-use fret_core::{Event, KeyCode, Modifiers, NodeId, UiServices};
+use fret_core::{Event, KeyCode, Modifiers, NodeId, Point, Px, UiServices};
 
 use crate::UiTree;
 
@@ -44,6 +44,12 @@ pub fn set_value_numeric(
     value: f64,
 ) {
     set_value_text(ui, app, services, target, &value.to_string());
+}
+
+pub fn scroll_by(ui: &mut UiTree, app: &mut App, target: NodeId, dx: f64, dy: f64) {
+    let dx = dx.clamp(-1_000_000.0, 1_000_000.0) as f32;
+    let dy = dy.clamp(-1_000_000.0, 1_000_000.0) as f32;
+    let _ = ui.scroll_by(app, target, Point::new(Px(dx), Px(dy)));
 }
 
 pub fn set_text_selection(

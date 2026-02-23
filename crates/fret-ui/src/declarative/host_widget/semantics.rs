@@ -326,6 +326,7 @@ impl ElementHostWidget {
             }
             ElementInstance::Scroll(props) => {
                 cx.set_role(SemanticsRole::Generic);
+                cx.set_scroll_by_supported(true);
 
                 let external_handle = props.scroll_handle.clone();
                 let handle = crate::elements::with_element_state(

@@ -256,6 +256,7 @@ impl<H: UiHost> UiTree<H> {
                     focus: is_focusable || is_text_input,
                     invoke: false,
                     set_value: is_text_input,
+                    scroll_by: false,
                     set_text_selection: is_text_input,
                 };
 

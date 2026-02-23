@@ -101,12 +101,14 @@ pub struct UiSemanticsActionsV1 {
     #[serde(default, skip_serializing_if = "is_false")]
     pub set_value: bool,
     #[serde(default, skip_serializing_if = "is_false")]
+    pub scroll_by: bool,
+    #[serde(default, skip_serializing_if = "is_false")]
     pub set_text_selection: bool,
 }
 
 impl UiSemanticsActionsV1 {
     fn is_default(v: &Self) -> bool {
-        !v.focus && !v.invoke && !v.set_value && !v.set_text_selection
+        !v.focus && !v.invoke && !v.set_value && !v.scroll_by && !v.set_text_selection
     }
 }
 
@@ -197,6 +199,7 @@ impl UiSemanticsNodeV1 {
                 focus: node.actions.focus,
                 invoke: node.actions.invoke,
                 set_value: node.actions.set_value,
+                scroll_by: node.actions.scroll_by,
                 set_text_selection: node.actions.set_text_selection,
             },
             labelled_by: node.labelled_by.iter().copied().map(key_to_u64).collect(),

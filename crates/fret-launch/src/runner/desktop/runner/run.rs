@@ -523,6 +523,19 @@ impl<D: super::WinitAppDriver> super::WinitAppDriver for HookedDriver<D> {
             .accessibility_set_value_numeric(app, services, window, state, target, value);
     }
 
+    fn accessibility_scroll_by(
+        &mut self,
+        app: &mut App,
+        window: fret_core::AppWindowId,
+        state: &mut Self::WindowState,
+        target: fret_core::NodeId,
+        dx: f64,
+        dy: f64,
+    ) {
+        self.inner
+            .accessibility_scroll_by(app, window, state, target, dx, dy);
+    }
+
     fn accessibility_set_text_selection(
         &mut self,
         app: &mut App,

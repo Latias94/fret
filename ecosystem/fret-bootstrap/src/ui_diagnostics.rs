@@ -7380,6 +7380,7 @@ fn semantics_fingerprint_v1(
         hasher.write_bool(node.actions.focus);
         hasher.write_bool(node.actions.invoke);
         hasher.write_bool(node.actions.set_value);
+        hasher.write_bool(node.actions.scroll_by);
         hasher.write_bool(node.actions.set_text_selection);
 
         hasher.write_u32(node.labelled_by.len() as u32);

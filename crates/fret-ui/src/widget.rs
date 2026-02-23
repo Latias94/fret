@@ -1285,6 +1285,10 @@ impl<'a, H: UiHost> SemanticsCx<'a, H> {
         self.actions.set_value = editable;
     }
 
+    pub fn set_scroll_by_supported(&mut self, supported: bool) {
+        self.actions.scroll_by = supported;
+    }
+
     pub fn set_text_selection_supported(&mut self, supported: bool) {
         self.actions.set_text_selection = supported;
     }
@@ -1599,6 +1603,13 @@ pub trait Widget<H: UiHost> {
     ) -> bool {
         false
     }
+    /// Whether this node supports direct "scroll-by" requests (typically for accessibility).
+    fn can_scroll_by(&self) -> bool {
+        false
+    }
+    fn scroll_by(&mut self, _cx: &mut ScrollByCx<'_, H>, _delta: Point) -> ScrollByResult {
+        ScrollByResult::NotHandled
+    }
     /// Whether this node can scroll a focused descendant into view.
     ///
     /// This is a mechanism-only capability used by `UiTree` to implement a minimal
@@ -1628,6 +1639,22 @@ pub trait Widget<H: UiHost> {
         cx.paint_children();
     }
     fn semantics(&mut self, _cx: &mut SemanticsCx<'_, H>) {}
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub enum ScrollByResult {
+    #[default]
+    NotHandled,
+    Handled {
+        did_scroll: bool,
+    },
+}
+
+pub struct ScrollByCx<'a, H: UiHost> {
+    pub app: &'a mut H,
+    pub node: NodeId,
+    pub window: Option<AppWindowId>,
+    pub bounds: Rect,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]

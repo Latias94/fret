@@ -210,6 +210,17 @@ pub trait WinitAppDriver {
     ) {
     }
 
+    fn accessibility_scroll_by(
+        &mut self,
+        _app: &mut App,
+        _window: fret_core::AppWindowId,
+        _state: &mut Self::WindowState,
+        _target: fret_core::NodeId,
+        _dx: f64,
+        _dy: f64,
+    ) {
+    }
+
     #[allow(clippy::too_many_arguments)]
     fn accessibility_set_text_selection(
         &mut self,
