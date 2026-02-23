@@ -382,6 +382,16 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `cargo test -p fret-render-wgpu --lib`
     - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
 
+- [x] REN-VNEXT-refactor-080 Stage 8: extract effect pipeline setup into a dedicated helper.
+  - Goal: isolate per-plan pass scanning + `ensure_*` effect pipelines + capacity ensures to keep `execute` linear.
+  - Landed (step 1): move effect pipeline selection + scale params/render space capacity behind `Renderer::ensure_effect_pipelines_for_plan`.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/render_scene/effect_pipelines.rs` (`ensure_effect_pipelines_for_plan`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (call site)
+  - Gates:
+    - `cargo test -p fret-render-wgpu --lib`
+    - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
 ## M7 — Post-v1 semantic expansions (deferred backlog)
 
 These items are intentionally *not* part of the vNext refactor’s v1 closure. They are common UI
