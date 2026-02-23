@@ -6,6 +6,14 @@
   - Evidence: `.fret/diag/exports/1771829809968-bundle`
 - [x] Capture an experimental bundle with `fret_ui_gallery_view_cache=1`.
   - Evidence: `.fret/diag/exports/1771832191642-bundle` (view-cache active, but `view_cache_roots_total=0`)
+- [ ] Capture view-cache harness bundles with URL-driven config (avoid UI toggle flake):
+  - Scripts:
+    - `tools/diag-scripts/ui-gallery-view-cache-harness-perf-steady-web-off.json`
+    - `tools/diag-scripts/ui-gallery-view-cache-harness-perf-steady-web-on.json`
+  - Expectation:
+    - off: `view_cache_active=false`, `view_cache_roots_total>0` (has `cached_subtree`, but reuse should be gated off)
+    - on: `view_cache_active=true`, `view_cache_roots_total>0`, `view_cache_roots_reused>0` after warm-up
+  - Note: prefer `fret_ui_gallery_view_cache_continuous=1` on web so scripts can advance frames reliably.
 - [ ] Re-capture a view-cache bundle after:
   - enabling shell view-cache by default on `wasm32` when view-cache is enabled
   - removing per-frame model churn for undo/redo availability
