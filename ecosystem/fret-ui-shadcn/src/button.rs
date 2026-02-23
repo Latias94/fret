@@ -392,7 +392,9 @@ impl Button {
             variant: ButtonVariant::default(),
             size: ButtonSize::default(),
             chrome: ChromeRefinement::default(),
-            layout: fret_ui_kit::LayoutRefinement::default(),
+            // Match shadcn/ui `Button` base class `shrink-0`: buttons should not collapse when used
+            // inside wrapping control rows.
+            layout: fret_ui_kit::LayoutRefinement::default().flex_shrink_0(),
             style: ButtonStyle::default(),
             border_override: None,
             border_width_override: BorderWidthOverride::default(),
@@ -1112,6 +1114,28 @@ mod tests {
             assert_eq!(props.padding.left, expected_px);
             assert_eq!(props.padding.right, expected_px);
         }
+    }
+
+    #[test]
+    fn button_default_layout_does_not_flex_shrink() {
+        let mut app = App::new();
+        let window = AppWindowId::default();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(400.0), Px(200.0)),
+        );
+
+        let element =
+            elements::with_element_cx(&mut app, window, bounds, "button-flex-shrink", |cx| {
+                Button::new("Default").into_element(cx)
+            });
+
+        let ElementKind::Pressable(props) = &element.kind else {
+            panic!("expected button to render as a Pressable");
+        };
+
+        assert_eq!(props.layout.flex.shrink, 0.0);
     }
 
     #[test]
