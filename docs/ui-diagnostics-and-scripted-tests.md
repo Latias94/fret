@@ -67,6 +67,8 @@ Legacy note:
 - Older bundles may still be schema v1 (inline-only semantics, no tables).
 - Tooling remains compatible: `fretboard diag meta/query/slice/stats/compare` resolve semantics from either inline
   semantics or the schema-v2 semantics table.
+- If you want to “upgrade” a schema v1 bundle in-place, run `cargo run -p fretboard -- diag bundle-v2 <bundle_dir>`
+  (writes `bundle.schema2.json`, and directory-based tooling will prefer it when present).
 
 Defaults:
 

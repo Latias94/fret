@@ -72,6 +72,7 @@ Schema note:
 
 - The runtime now always emits schema v2 bundles.
 - Older schema v1 bundles remain readable by tooling; upgrade via `fretboard diag bundle-v2 <bundle_dir|bundle.json> ...` when needed.
+  - The converter writes `bundle.schema2.json` and directory-based tooling prefers it when present.
 
 ## Compatibility expectations
 
