@@ -37,6 +37,7 @@ mod render_plan_dump;
 mod render_plan_effects;
 mod render_scene;
 mod resources;
+mod scene_encoding_cache;
 mod services;
 mod shaders;
 mod svg;
@@ -53,6 +54,7 @@ use gpu_textures::GpuTextures;
 use intermediate_pool::*;
 use path::*;
 use render_plan::*;
+use scene_encoding_cache::SceneEncodingCache;
 use types::*;
 pub use types::{IntermediatePerfSnapshot, RenderPerfSnapshot, SvgPerfSnapshot};
 use uniform_resources::UniformResources;
@@ -150,9 +152,7 @@ pub struct Renderer {
 
     gpu_resources: GpuResources,
 
-    scene_encoding_cache_key: Option<SceneEncodingCacheKey>,
-    scene_encoding_cache: SceneEncoding,
-    scene_encoding_scratch: SceneEncoding,
+    scene_encoding_cache: SceneEncodingCache,
 
     materials: SlotMap<fret_core::MaterialId, MaterialEntry>,
     materials_by_desc: HashMap<fret_core::MaterialDescriptor, fret_core::MaterialId>,

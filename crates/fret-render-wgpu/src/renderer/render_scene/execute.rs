@@ -216,7 +216,7 @@ impl Renderer {
             text_quality_key: self.text_system.text_quality_key(),
         };
 
-        let cache_hit = self.scene_encoding_cache_key == Some(key);
+        let cache_hit = self.scene_encoding_cache.is_hit(key);
         render_scene_span.record("encoding_cache_hit", cache_hit);
         if perf_enabled {
             if cache_hit {
@@ -228,9 +228,9 @@ impl Renderer {
             }
         }
         let encoding = if cache_hit {
-            std::mem::take(&mut self.scene_encoding_cache)
+            self.scene_encoding_cache.take_for_frame(true)
         } else {
-            let mut encoding = std::mem::take(&mut self.scene_encoding_scratch);
+            let mut encoding = self.scene_encoding_cache.take_for_frame(false);
             encoding.clear();
             let encode_start = perf_enabled.then(Instant::now);
             {
@@ -252,9 +252,7 @@ impl Renderer {
                 frame_perf.encode_scene += encode_start.elapsed();
             }
 
-            // Preserve the old cache's allocations for reuse.
-            self.scene_encoding_scratch = std::mem::take(&mut self.scene_encoding_cache);
-            self.scene_encoding_cache_key = Some(key);
+            self.scene_encoding_cache.note_miss(key);
             encoding
         };
 
@@ -1456,11 +1454,8 @@ impl Renderer {
             });
         }
 
-        // Keep the most recent encoding for potential reuse on the next frame.
-        if cache_hit {
-            self.scene_encoding_cache_key = Some(key);
-        }
-        self.scene_encoding_cache = encoding;
+        self.scene_encoding_cache
+            .store_after_frame(key, cache_hit, encoding);
         cmd
     }
 }

@@ -546,9 +546,7 @@ impl Renderer {
             intermediate_perf: IntermediatePerfStats::default(),
             intermediate_pool: IntermediatePool::default(),
             gpu_resources: super::gpu_resources::GpuResources::default(),
-            scene_encoding_cache_key: None,
-            scene_encoding_cache: SceneEncoding::default(),
-            scene_encoding_scratch: SceneEncoding::default(),
+            scene_encoding_cache: super::scene_encoding_cache::SceneEncodingCache::default(),
 
             materials: SlotMap::with_key(),
             materials_by_desc: HashMap::new(),
