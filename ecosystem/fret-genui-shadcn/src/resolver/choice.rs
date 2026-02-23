@@ -84,7 +84,7 @@ impl ShadcnResolver {
             out_children.push(
                 fret_ui_kit::ui::h_flex(cx, move |_cx| {
                     vec![
-                        checkbox.clone(),
+                        checkbox,
                         fret_ui_kit::ui::text(_cx, label).into_element(_cx),
                     ]
                 })
