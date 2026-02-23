@@ -56,13 +56,6 @@ pub(super) fn dump_bundle_with_options(
 
     let bundle_v1 = UiDiagnosticsBundleV1::from_service(ts, &dir, service, dump_max_snapshots);
 
-    let default_schema_version = if is_script_dump {
-        bundle::BundleSchemaVersionV1::V2
-    } else {
-        bundle::BundleSchemaVersionV1::V2
-    };
-    let schema_version = bundle::BundleSchemaVersionV1::from_env_or_default(default_schema_version);
-
     let default_semantics_mode = if is_script_dump {
         bundle::BundleSemanticsModeV1::Last
     } else {
@@ -82,32 +75,18 @@ pub(super) fn dump_bundle_with_options(
         .map(|v| v.trim().to_ascii_lowercase());
     let want_pretty = matches!(bundle_json_format.as_deref(), Some("pretty"));
 
-    let stats = match schema_version {
-        bundle::BundleSchemaVersionV1::V1 => dump_schema_v1(
-            service,
-            ts,
-            &dir,
-            &bundle_json_path,
-            want_pretty,
-            bundle_v1,
-            semantics_mode,
-            &dump_semantics_policy,
-            is_script_dump,
-            request_id,
-        )?,
-        bundle::BundleSchemaVersionV1::V2 => dump_schema_v2(
-            service,
-            ts,
-            &dir,
-            &bundle_json_path,
-            want_pretty,
-            bundle_v1,
-            semantics_mode,
-            &dump_semantics_policy,
-            is_script_dump,
-            request_id,
-        )?,
-    };
+    let stats = dump_schema_v2(
+        service,
+        ts,
+        &dir,
+        &bundle_json_path,
+        want_pretty,
+        bundle_v1,
+        semantics_mode,
+        &dump_semantics_policy,
+        is_script_dump,
+        request_id,
+    )?;
 
     if !cfg!(target_arch = "wasm32") {
         let _ = write_latest_pointer(&service.cfg.out_dir, &dir);
@@ -199,37 +178,6 @@ fn finalize_dump(
         max_snapshots,
         dump_max_snapshots,
     })
-}
-
-fn dump_schema_v1(
-    service: &mut UiDiagnosticsService,
-    exported_unix_ms: u64,
-    dir: &PathBuf,
-    bundle_json_path: &PathBuf,
-    want_pretty: bool,
-    mut bundle: UiDiagnosticsBundleV1,
-    semantics_mode: bundle::BundleSemanticsModeV1,
-    dump_semantics_policy: &super::bundle_dump_policy::DumpSemanticsPolicy,
-    is_script_dump: bool,
-    request_id: Option<u64>,
-) -> Option<UiArtifactStatsV1> {
-    bundle.apply_semantics_mode_v1(semantics_mode);
-    bundle.config.max_semantics_nodes = dump_semantics_policy.max_nodes;
-    apply_dump_semantics_policy_to_windows(&mut bundle.windows, dump_semantics_policy);
-
-    finalize_dump(
-        service,
-        exported_unix_ms,
-        dir,
-        bundle_json_path,
-        want_pretty,
-        &bundle,
-        &bundle.windows,
-        None,
-        &bundle.config,
-        is_script_dump,
-        request_id,
-    )
 }
 
 fn dump_schema_v2(

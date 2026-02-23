@@ -3,26 +3,6 @@ use serde::{Deserialize, Serialize};
 use super::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) enum BundleSchemaVersionV1 {
-    V1,
-    V2,
-}
-
-impl BundleSchemaVersionV1 {
-    pub(super) fn from_env_or_default(default: BundleSchemaVersionV1) -> Self {
-        let v = std::env::var("FRET_DIAG_BUNDLE_SCHEMA_VERSION")
-            .ok()
-            .map(|v| v.trim().to_ascii_lowercase());
-        match v.as_deref() {
-            None | Some("") => default,
-            Some("1") | Some("v1") => Self::V1,
-            Some("2") | Some("v2") => Self::V2,
-            Some(_) => default,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum BundleSemanticsModeV1 {
     All,
     Changed,
@@ -293,10 +273,6 @@ impl UiDiagnosticsBundleV1 {
                 })
                 .collect(),
         }
-    }
-
-    pub(super) fn apply_semantics_mode_v1(&mut self, mode: BundleSemanticsModeV1) {
-        apply_semantics_mode_to_windows(&mut self.windows, mode);
     }
 }
 
