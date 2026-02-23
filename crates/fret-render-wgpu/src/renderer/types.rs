@@ -2,6 +2,7 @@ use bytemuck::{Pod, Zeroable};
 use fret_core::geometry::Transform2D;
 use fret_core::scene::MAX_STOPS;
 use fret_core::scene::UvRect;
+use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -749,7 +750,7 @@ pub(super) struct SceneEncoding {
     pub(super) encode_mask_scope_stack_scratch: Vec<(u32, u32)>,
     pub(super) encode_transform_stack_scratch: Vec<Transform2D>,
     pub(super) encode_opacity_stack_scratch: Vec<f32>,
-    pub(super) encode_material_seen_scratch: Vec<fret_core::MaterialId>,
+    pub(super) encode_material_seen_scratch: HashSet<fret_core::MaterialId>,
 
     pub(super) material_quad_ops: u64,
     pub(super) material_sampled_quad_ops: u64,

@@ -50,7 +50,7 @@ pub(super) struct EncodeState<'a> {
     pub(super) material_paint_budget_per_frame: u64,
     pub(super) material_distinct_budget_per_frame: usize,
     pub(super) material_paints_used: u64,
-    pub(super) material_seen: &'a mut Vec<fret_core::MaterialId>,
+    pub(super) material_seen: &'a mut std::collections::HashSet<fret_core::MaterialId>,
     pub(super) material_quad_ops: &'a mut u64,
     pub(super) material_sampled_quad_ops: &'a mut u64,
     pub(super) material_distinct: &'a mut u64,
