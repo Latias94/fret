@@ -5,8 +5,11 @@ use fret_core::{
     Size as CoreSize, SvgId, SvgService, TextBlobId, TextConstraints, TextMetrics, TextService,
     Transform2D, UvRect,
 };
-use fret_ui::element::{AnyElement, PressableA11y, PressableProps, SemanticsProps};
+use fret_ui::element::{
+    AnyElement, ContainerProps, LayoutStyle, Length, PressableA11y, PressableProps, SemanticsProps,
+};
 use fret_ui::tree::UiTree;
+use fret_ui_kit::primitives::scroll_area::ScrollAreaType;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -915,6 +918,35 @@ fn snapshot_progress_numeric_semantics() {
             fret_ui_shadcn::Progress::new(model)
                 .a11y_label("Loading")
                 .range(0.0, 100.0)
+                .into_element(cx),
+        ]
+    });
+}
+
+#[test]
+fn snapshot_scroll_area_scrollbar_semantics() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(320.0), Px(180.0)),
+    );
+    snapshot_for_root("scroll_area_scrollbar_semantics", bounds, |cx| {
+        let mut content_layout = LayoutStyle::default();
+        content_layout.size.width = Length::Fill;
+        content_layout.size.height = Length::Px(Px(1200.0));
+        content_layout.size.min_width = Some(Px(0.0));
+        content_layout.size.min_height = Some(Px(0.0));
+
+        let content = cx.container(
+            ContainerProps {
+                layout: content_layout,
+                ..Default::default()
+            },
+            |_cx| Vec::<AnyElement>::new(),
+        );
+
+        vec![
+            fret_ui_shadcn::ScrollArea::new([content])
+                .type_(ScrollAreaType::Always)
                 .into_element(cx),
         ]
     });
