@@ -37,7 +37,7 @@ These are optional, but high leverage if we want to avoid follow-up “contract 
 
 - [x] Slider: populate numeric value/min/max/step (and jump if chosen) on slider semantics nodes.
 - [x] Progress: populate numeric now/min/max for determinate progress.
-- [ ] Update semantics-focused tests in `ecosystem/fret-ui-shadcn/tests/*` to assert numeric fields.
+- [x] Update semantics-focused tests in `ecosystem/fret-ui-shadcn/tests/*` to assert numeric fields.
 
 ## Diagnostics + scripts
 
