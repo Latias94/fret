@@ -727,8 +727,20 @@ Progress record (Render plan JSON dump bytes scratch reuse):
 - Status: Landed (Stage 19 step 1)
 - Evidence anchors:
   - `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` (`maybe_dump_render_plan_json`)
-  - `crates/fret-render-wgpu/src/renderer/mod.rs` (`Renderer::render_plan_dump_bytes_scratch`)
+  - `crates/fret-render-wgpu/src/renderer/mod.rs` (`Renderer::render_plan_dump_scratch`)
 - Gates run:
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+Progress record (Render plan JSON dump vector scratch reuse):
+
+- Date: 2026-02-23
+- Status: Landed (Stage 20 step 1)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` (`RenderPlanJsonDumpScratch`, `maybe_dump_render_plan_json`)
+  - `crates/fret-render-wgpu/src/renderer/mod.rs` (`Renderer::render_plan_dump_scratch`)
+- Gates run:
+  - `python3 tools/check_layering.py`
   - `cargo test -p fret-render-wgpu --lib`
   - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
 

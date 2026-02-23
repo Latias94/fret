@@ -498,11 +498,22 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 
 - [x] REN-VNEXT-refactor-190 Stage 19: reuse renderer-owned scratch for RenderPlan JSON dump bytes.
   - Goal: avoid per-dump allocation when `FRET_RENDERPLAN_DUMP*` is enabled (debugging/tracing runs).
-  - Landed (step 1): serialize JSON into a `Renderer`-owned `Vec<u8>` via `serde_json::to_writer_pretty`.
+  - Landed (step 1): serialize JSON into a `Renderer`-owned byte scratch via `serde_json::to_writer_pretty`.
   - Evidence:
     - `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` (`maybe_dump_render_plan_json`)
     - `crates/fret-render-wgpu/src/renderer/render_scene/plan_reporting.rs` (call site)
-    - `crates/fret-render-wgpu/src/renderer/mod.rs` (`Renderer::render_plan_dump_bytes_scratch`)
+    - `crates/fret-render-wgpu/src/renderer/mod.rs` (`Renderer::render_plan_dump_scratch`)
+  - Gates:
+    - `cargo test -p fret-render-wgpu --lib`
+    - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+- [x] REN-VNEXT-refactor-200 Stage 20: reuse renderer-owned scratch for RenderPlan JSON dump vectors.
+  - Goal: avoid per-dump heap allocations for segment/pass/effect/degradation lists when `FRET_RENDERPLAN_DUMP*` is enabled.
+  - Landed (step 1): store a `Renderer`-owned `RenderPlanJsonDumpScratch` and serialize from slice-backed dump views.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` (`RenderPlanJsonDumpScratch`, `maybe_dump_render_plan_json`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/plan_reporting.rs` (call site)
+    - `crates/fret-render-wgpu/src/renderer/mod.rs` (`Renderer::render_plan_dump_scratch`)
   - Gates:
     - `cargo test -p fret-render-wgpu --lib`
     - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
