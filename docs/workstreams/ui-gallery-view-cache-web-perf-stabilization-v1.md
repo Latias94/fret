@@ -37,6 +37,9 @@ These URL query flags are read from either `?` or `#...?...` (hash routing):
 
 Rationale: UI Gallery already supports env-var configuration on native; web runs need an equivalent that can be embedded into the reproducible URL used for devtools-ws exports.
 
+Implementation note: on web targets, UI Gallery routing may rewrite/canonicalize the URL. The web harness persists these flags into
+`window.__FRET_UI_GALLERY_VIEW_CACHE*` (and localStorage) early in `index.html`, and the Rust side falls back to reading those globals.
+
 ## Process (repeatable)
 
 1. Start `fret-devtools-ws` and the web gallery.
@@ -54,4 +57,3 @@ Rationale: UI Gallery already supports env-var configuration on native; web runs
 See:
 - `docs/workstreams/ui-gallery-view-cache-web-perf-stabilization-v1-todo.md`
 - `docs/workstreams/ui-gallery-view-cache-web-perf-stabilization-v1-milestones.md`
-
