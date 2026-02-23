@@ -694,6 +694,8 @@ fn compile_for_scene_pixelate_adds_scale_chain_then_blit() {
     assert!(releases.contains(&PlanTarget::Intermediate0));
     assert!(releases.contains(&PlanTarget::Intermediate1));
     assert!(releases.contains(&PlanTarget::Intermediate2));
+
+    assert_first_output_write_is_clear(&plan.passes);
 }
 
 #[test]
@@ -943,6 +945,8 @@ fn compile_for_scene_blur_emits_separable_passes() {
     assert!(releases.contains(&PlanTarget::Intermediate0));
     assert!(releases.contains(&PlanTarget::Intermediate1));
     assert!(releases.contains(&PlanTarget::Intermediate2));
+
+    assert_first_output_write_is_clear(&plan.passes);
 }
 
 #[test]
@@ -1138,4 +1142,6 @@ fn blur_scissor_is_mapped_per_pass_dst_size() {
             h: 50
         })
     );
+
+    assert_first_output_write_is_clear(&plan.passes);
 }
