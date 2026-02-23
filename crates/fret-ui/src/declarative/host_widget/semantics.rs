@@ -245,7 +245,8 @@ impl ElementHostWidget {
                     cx.set_focusable(false);
                     cx.set_invokable(false);
                 } else {
-                    cx.set_role(props.a11y.role.unwrap_or(SemanticsRole::Button));
+                    let role = props.a11y.role.unwrap_or(SemanticsRole::Button);
+                    cx.set_role(role);
                     cx.set_level(props.a11y.level);
                     if let Some(label) = props.a11y.label.as_ref() {
                         cx.set_label(label.as_ref().to_string());
@@ -292,7 +293,16 @@ impl ElementHostWidget {
                     }
                     cx.set_disabled(!props.enabled);
                     cx.set_focusable(props.enabled && props.focusable);
-                    cx.set_invokable(props.enabled);
+                    if props.enabled {
+                        if role == SemanticsRole::Slider {
+                            cx.set_invokable(false);
+                            cx.set_value_editable(true);
+                        } else {
+                            cx.set_invokable(true);
+                        }
+                    } else {
+                        cx.set_invokable(false);
+                    }
                     cx.set_collection_position(props.a11y.pos_in_set, props.a11y.set_size);
                 }
             }

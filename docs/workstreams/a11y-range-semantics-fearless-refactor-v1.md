@@ -18,6 +18,9 @@ Update (2026-02-23): The core contract now includes structured numeric + scroll 
 best-effort for finite values, `scroll_by` is wired end-to-end for scrollable host widgets, and sliders expose
 Increment/Decrement stepper actions end-to-end (runner + default UI driver hooks).
 
+Update (2026-02-23): Declarative `Pressable` nodes with `role=Slider` also expose stepper actions by default, and can
+publish the structured numeric metadata via `SemanticsDecoration` (e.g. imui slider surfaces).
+
 - A slider/progress often becomes “just text” (e.g. `"50%"`) rather than a role with `aria-valuenow/min/max`-like data.
 - The diagnostics harness’s `set_slider_value` step must parse floats out of `SemanticsNode::value` strings
   (`ecosystem/fret-bootstrap/src/ui_diagnostics.rs`), which is brittle and locale-unfriendly.
