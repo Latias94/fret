@@ -238,6 +238,9 @@ impl ElementHostWidget {
                     if let Some(expanded) = props.a11y.expanded {
                         cx.set_expanded(expanded);
                     }
+                    if props.a11y.checked_state.is_some() {
+                        cx.set_checked_state(props.a11y.checked_state);
+                    }
                     if props.a11y.checked.is_some() {
                         cx.set_checked(props.a11y.checked);
                     }

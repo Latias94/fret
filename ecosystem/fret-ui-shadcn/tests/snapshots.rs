@@ -143,7 +143,7 @@ struct SnapSemanticsNode {
     extra: Option<SnapSemanticsExtra>,
 }
 
-#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 struct SnapSemanticsFlags {
     focused: bool,
     captured: bool,
@@ -153,6 +153,8 @@ struct SnapSemanticsFlags {
     selected: bool,
     expanded: bool,
     checked: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    checked_state: Option<String>,
 }
 
 #[derive(Clone, Copy, Debug, Default, Serialize, Deserialize)]
@@ -616,6 +618,7 @@ where
                 selected: n.flags.selected,
                 expanded: n.flags.expanded,
                 checked: n.flags.checked,
+                checked_state: n.flags.checked_state.map(|v| format!("{v:?}")),
             },
             extra: snap_semantics_extra(&n.extra),
         })
@@ -713,6 +716,22 @@ fn snapshot_progress_numeric_semantics() {
             fret_ui_shadcn::Progress::new(model)
                 .a11y_label("Loading")
                 .range(0.0, 100.0)
+                .into_element(cx),
+        ]
+    });
+}
+
+#[test]
+fn snapshot_checkbox_indeterminate_semantics() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(320.0), Px(180.0)),
+    );
+    snapshot_for_root("checkbox_indeterminate_semantics", bounds, |cx| {
+        let model = cx.app.models_mut().insert(None::<bool>);
+        vec![
+            fret_ui_shadcn::Checkbox::new_optional(model)
+                .a11y_label("Agree")
                 .into_element(cx),
         ]
     });

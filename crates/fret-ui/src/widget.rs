@@ -1,7 +1,7 @@
 use crate::{Theme, UiHost};
 use fret_core::{
-    AppWindowId, Corners, Event, NodeId, Point, Rect, Scene, SemanticsFlags, SemanticsOrientation,
-    SemanticsRole, Size, Transform2D, UiServices,
+    AppWindowId, Corners, Event, NodeId, Point, Rect, Scene, SemanticsCheckedState, SemanticsFlags,
+    SemanticsOrientation, SemanticsRole, Size, Transform2D, UiServices,
 };
 use fret_runtime::{
     CommandId, DefaultAction, DefaultActionSet, Effect, InputContext, Model, ModelId,
@@ -1341,6 +1341,21 @@ impl<'a, H: UiHost> SemanticsCx<'a, H> {
 
     pub fn set_checked(&mut self, checked: Option<bool>) {
         self.flags.checked = checked;
+    }
+
+    pub fn set_checked_state(&mut self, checked: Option<SemanticsCheckedState>) {
+        self.flags.checked_state = checked;
+        match checked {
+            Some(SemanticsCheckedState::True) => self.flags.checked = Some(true),
+            Some(SemanticsCheckedState::False) => self.flags.checked = Some(false),
+            Some(SemanticsCheckedState::Mixed) => self.flags.checked = None,
+            None => {}
+            _ => {}
+        }
+    }
+
+    pub fn clear_checked_state(&mut self) {
+        self.flags.checked_state = None;
     }
 
     pub fn set_active_descendant(&mut self, node: Option<NodeId>) {

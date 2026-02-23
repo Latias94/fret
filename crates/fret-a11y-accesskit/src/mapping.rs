@@ -178,7 +178,17 @@ pub fn tree_update_from_snapshot(snapshot: &SemanticsSnapshot, scale_factor: f64
         if node.flags.expanded {
             out.set_expanded(true);
         }
-        if let Some(checked) = node.flags.checked {
+        if let Some(checked) = node.flags.checked_state {
+            let checked = match checked {
+                fret_core::SemanticsCheckedState::False => Some(Toggled::False),
+                fret_core::SemanticsCheckedState::True => Some(Toggled::True),
+                fret_core::SemanticsCheckedState::Mixed => Some(Toggled::Mixed),
+                _ => None,
+            };
+            if let Some(checked) = checked {
+                out.set_toggled(checked);
+            }
+        } else if let Some(checked) = node.flags.checked {
             out.set_toggled(if checked {
                 Toggled::True
             } else {

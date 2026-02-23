@@ -69,6 +69,7 @@ Instead of adding many top-level optional fields onto `SemanticsNode`, we use an
 Additional additive surfaces landed in the same refactor window:
 
 - `SemanticsFlags::read_only` (portable text flag)
+- `SemanticsFlags.checked_state` (tri-state checked: `false/true/mixed`, see ADR 0289)
 - `SemanticsRole::Image` (portable role)
 
 Notes:

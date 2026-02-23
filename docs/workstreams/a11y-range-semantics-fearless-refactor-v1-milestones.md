@@ -11,6 +11,7 @@ Last updated: 2026-02-23
 - M2.5: Complete (best-effort slider `SetValue(NumericValue)` handling via key sequences; runtime-gated exposure + tests).
 - M3: Complete (SetSliderValue prefers structured numeric semantics; string parsing as fallback).
 - M4: Complete (ADR 0288 landed; ADR 0181 notes updated; alignment matrix updated with evidence anchors).
+- M4.5: Complete (tri-state checked semantics: `checked_state` contract + AccessKit mapping + shadcn checkbox indeterminate gates).
 
 ## M0 — Agreement on contract (design)
 

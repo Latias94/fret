@@ -63,6 +63,14 @@ pub struct SemanticsActions {
     pub set_text_selection: bool,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum SemanticsCheckedState {
+    False,
+    True,
+    Mixed,
+}
+
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct SemanticsFlags {
     pub focused: bool,
@@ -71,8 +79,12 @@ pub struct SemanticsFlags {
     pub read_only: bool,
     pub selected: bool,
     pub expanded: bool,
-    /// Tri-state checked state (None = not checkable / unknown).
+    /// Legacy binary checked state.
+    ///
+    /// Prefer `checked_state` for tri-state widgets.
     pub checked: Option<bool>,
+    /// Tri-state checked state (None = not checkable / unknown).
+    pub checked_state: Option<SemanticsCheckedState>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

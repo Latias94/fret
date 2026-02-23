@@ -21,6 +21,7 @@ These are optional, but high leverage if we want to avoid follow-up “contract 
 - [x] Text placeholder: add `extra.placeholder` and map to AccessKit `placeholder`.
 - [x] Link URL: add `extra.url` and map to AccessKit `url`.
 - [x] Image semantics: add `SemanticsRole::Image` (and treat `label` as alt text by convention).
+- [x] Tri-state checked semantics: add `SemanticsFlags.checked_state` (`false/true/mixed`) and map to AccessKit toggled state; adopt in shadcn checkbox indeterminate state and gate via semantics snapshots.
 
 ## Core + runtime plumbing
 
