@@ -1,5 +1,6 @@
 mod bind_groups;
 mod encode;
+mod encoding_cache;
 mod execute;
 mod executor;
 mod helpers;

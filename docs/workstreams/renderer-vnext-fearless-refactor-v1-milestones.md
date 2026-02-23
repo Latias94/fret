@@ -483,6 +483,17 @@ Progress record (SceneEncodingCache integration helper):
   - `cargo test -p fret-render-wgpu --lib`
   - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
 
+Progress record (Scene encoding cache module split):
+
+- Date: 2026-02-23
+- Status: Landed (Stage 5 step 3)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/encoding_cache.rs` (`build_scene_encoding_cache_key`, `acquire_scene_encoding_for_frame`)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (call sites)
+- Gates run:
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
 ## M4 — Paint/Material evolution (staged)
 
 Deliverables:
