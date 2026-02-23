@@ -707,8 +707,9 @@ impl UiDiagnosticsService {
             snapshot_recording::changed_model_sources_top(app, &changed_models);
 
         let resource_caches = {
-            let icon_svg_cache = icon_svg_cache_stats(app);
-            let canvas = canvas_cache_stats_for_window(app, window.data().as_ffi());
+            let icon_svg_cache = snapshot_recording::icon_svg_cache_stats(app);
+            let canvas =
+                snapshot_recording::canvas_cache_stats_for_window(app, window.data().as_ffi());
             let render_text = app
                 .global::<fret_core::RendererTextPerfSnapshot>()
                 .copied()
@@ -996,130 +997,6 @@ struct PendingPick {
 }
 
 // Bundle serialization types live in `ui_diagnostics/bundle.rs`.
-
-#[cfg(feature = "preload-icon-svgs")]
-fn icon_svg_cache_stats(app: &App) -> Option<UiRetainedSvgCacheStatsV1> {
-    let stats = app.global::<fret_ui_kit::declarative::icon::IconSvgPreloadDiagnostics>()?;
-    let entries = stats.entries;
-    let bytes_ready = stats.bytes_ready;
-    let register_calls = stats.register_calls;
-    Some(UiRetainedSvgCacheStatsV1 {
-        entries,
-        bytes_ready,
-        stats: UiCacheStatsV1 {
-            prepare_calls: register_calls,
-            ..Default::default()
-        },
-    })
-}
-
-#[cfg(not(feature = "preload-icon-svgs"))]
-fn icon_svg_cache_stats(_app: &App) -> Option<UiRetainedSvgCacheStatsV1> {
-    None
-}
-
-fn canvas_cache_stats_for_window(app: &App, window: u64) -> Vec<UiCanvasCacheEntryV1> {
-    let Some(registry) = app.global::<fret_canvas::diagnostics::CanvasCacheStatsRegistry>() else {
-        return Vec::new();
-    };
-
-    registry
-        .iter()
-        .filter_map(|(key, snap)| {
-            ((key.window == window) || (key.window == 0)).then_some((key, snap))
-        })
-        .map(|(key, snap)| UiCanvasCacheEntryV1 {
-            node: key.node,
-            name: key.name.to_string(),
-            path: snap.path.map(|s| UiCacheKindSnapshotV1 {
-                entries: s.entries,
-                bytes_ready: s.bytes_ready,
-                stats: UiCacheStatsV1 {
-                    get_calls: s.stats.get_calls,
-                    get_hits: s.stats.get_hits,
-                    get_misses: s.stats.get_misses,
-                    prepare_calls: s.stats.prepare_calls,
-                    prepare_hits: s.stats.prepare_hits,
-                    prepare_misses: s.stats.prepare_misses,
-                    prune_calls: s.stats.prune_calls,
-                    clear_calls: s.stats.clear_calls,
-                    evict_calls: s.stats.evict_calls,
-                    release_replaced: s.stats.release_replaced,
-                    release_prune_age: s.stats.release_prune_age,
-                    release_prune_budget: s.stats.release_prune_budget,
-                    release_clear: s.stats.release_clear,
-                    release_evict: s.stats.release_evict,
-                },
-            }),
-            svg: snap.svg.map(|s| UiCacheKindSnapshotV1 {
-                entries: s.entries,
-                bytes_ready: s.bytes_ready,
-                stats: UiCacheStatsV1 {
-                    get_calls: s.stats.get_calls,
-                    get_hits: s.stats.get_hits,
-                    get_misses: s.stats.get_misses,
-                    prepare_calls: s.stats.prepare_calls,
-                    prepare_hits: s.stats.prepare_hits,
-                    prepare_misses: s.stats.prepare_misses,
-                    prune_calls: s.stats.prune_calls,
-                    clear_calls: s.stats.clear_calls,
-                    evict_calls: s.stats.evict_calls,
-                    release_replaced: s.stats.release_replaced,
-                    release_prune_age: s.stats.release_prune_age,
-                    release_prune_budget: s.stats.release_prune_budget,
-                    release_clear: s.stats.release_clear,
-                    release_evict: s.stats.release_evict,
-                },
-            }),
-            text: snap.text.map(|s| UiCacheKindSnapshotV1 {
-                entries: s.entries,
-                bytes_ready: s.bytes_ready,
-                stats: UiCacheStatsV1 {
-                    get_calls: s.stats.get_calls,
-                    get_hits: s.stats.get_hits,
-                    get_misses: s.stats.get_misses,
-                    prepare_calls: s.stats.prepare_calls,
-                    prepare_hits: s.stats.prepare_hits,
-                    prepare_misses: s.stats.prepare_misses,
-                    prune_calls: s.stats.prune_calls,
-                    clear_calls: s.stats.clear_calls,
-                    evict_calls: s.stats.evict_calls,
-                    release_replaced: s.stats.release_replaced,
-                    release_prune_age: s.stats.release_prune_age,
-                    release_prune_budget: s.stats.release_prune_budget,
-                    release_clear: s.stats.release_clear,
-                    release_evict: s.stats.release_evict,
-                },
-            }),
-            scene_op_tiles: snap.scene_op_tiles.map(|s| UiSceneOpTileCacheSnapshotV1 {
-                entries: s.entries,
-                requested_tiles: s.requested_tiles,
-                budget_limit: s.budget_limit,
-                budget_used: s.budget_used,
-                skipped_tiles: s.skipped_tiles,
-                stats: UiSceneOpTileCacheStatsV1 {
-                    calls: s.stats.calls,
-                    hits: s.stats.hits,
-                    misses: s.stats.misses,
-                    stored_tiles: s.stats.stored_tiles,
-                    recorded_ops: s.stats.recorded_ops,
-                    replayed_ops: s.stats.replayed_ops,
-                    clear_calls: s.stats.clear_calls,
-                    prune_calls: s.stats.prune_calls,
-                    evict_calls: s.stats.evict_calls,
-                    evict_prune_age: s.stats.evict_prune_age,
-                    evict_prune_budget: s.stats.evict_prune_budget,
-                },
-            }),
-            work_budget: snap.work_budget.map(|b| UiWorkBudgetSnapshotV1 {
-                requested_units: b.requested_units,
-                limit: b.limit,
-                used: b.used,
-                skipped_units: b.skipped_units,
-            }),
-        })
-        .collect()
-}
 
 #[cfg(any())]
 mod legacy_forked_script_protocol {

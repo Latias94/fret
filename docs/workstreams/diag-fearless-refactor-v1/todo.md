@@ -29,6 +29,8 @@ scope: diagnostics, automation, tooling, refactor
       `ecosystem/fret-bootstrap/src/ui_diagnostics/snapshot_types.rs`.
 - [x] Extract resource cache/perf snapshot types out of `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into
       `ecosystem/fret-bootstrap/src/ui_diagnostics/snapshot_types.rs`.
+- [x] Extract resource cache stats helpers out of `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into
+      `ecosystem/fret-bootstrap/src/ui_diagnostics/snapshot_recording.rs`.
 
 ## M1b: Make `fret-diag` stats less monolithic (mechanical moves)
 
