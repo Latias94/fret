@@ -3345,6 +3345,43 @@ impl SidebarMenuSubButton {
             vec![chrome]
         });
 
+        if let Some(sidebar_ctx) = use_sidebar(cx) {
+            let toggle_command = sidebar_toggle_command_id();
+            let toggle_command_for_on_command = toggle_command.clone();
+            let toggle_command_for_availability = toggle_command.clone();
+            let open_model = sidebar_ctx.open.clone();
+            let open_mobile_model = sidebar_ctx.open_mobile.clone();
+            let is_mobile_for_toggle = sidebar_ctx.is_mobile;
+
+            let on_command: OnCommand = Arc::new(move |host, acx, command| {
+                if command != toggle_command_for_on_command {
+                    return false;
+                }
+                sidebar_toggle_model(
+                    host.models_mut(),
+                    &open_model,
+                    &open_mobile_model,
+                    is_mobile_for_toggle,
+                );
+                host.request_redraw(acx.window);
+                true
+            });
+
+            let on_command_availability: OnCommandAvailability =
+                Arc::new(move |_host, acx, command| {
+                    if command != toggle_command_for_availability {
+                        return CommandAvailability::NotHandled;
+                    }
+                    if !acx.focus_in_subtree {
+                        return CommandAvailability::NotHandled;
+                    }
+                    CommandAvailability::Available
+                });
+
+            cx.command_add_on_command_for(element.id, on_command);
+            cx.command_add_on_command_availability_for(element.id, on_command_availability);
+        }
+
         if let Some(href) = href_for_semantics {
             element.attach_semantics(SemanticsDecoration::default().value(href))
         } else {
