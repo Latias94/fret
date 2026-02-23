@@ -8,6 +8,7 @@ Last updated: 2026-02-23
 - M2: Complete (required/invalid semantics: contract + AccessKit mapping + shadcn gates + ADR 0291).
 - M3: Complete (busy semantics: contract + AccessKit mapping + shadcn gates + ADR 0292).
 - M4: Complete (hidden semantics: contract + AccessKit mapping + shadcn gate + ADR 0293).
+- M5: Complete (visited semantics: contract + AccessKit mapping + shadcn gate + ADR 0294).
 
 ## M0 — Inventory and priority agreement
 
@@ -51,4 +52,13 @@ Exit criteria:
 - Portable contract exists and is documented.
 - AccessKit mapping exists (or documented fallback).
 - Declarative pressables can be marked hidden without relying on role/action coercion.
+- Gate exists (snapshot and unit test).
+
+## M5 — Visited semantics closed
+
+Exit criteria:
+
+- Portable contract exists and is documented.
+- AccessKit mapping exists (or documented fallback).
+- shadcn adoption exists for at least one real link surface.
 - Gate exists (snapshot and unit test).

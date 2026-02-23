@@ -538,6 +538,7 @@ pub struct SemanticsDecoration {
     pub disabled: Option<bool>,
     pub read_only: Option<bool>,
     pub hidden: Option<bool>,
+    pub visited: Option<bool>,
     pub busy: Option<bool>,
     pub selected: Option<bool>,
     pub expanded: Option<bool>,
@@ -580,6 +581,7 @@ impl SemanticsDecoration {
             disabled: other.disabled.or(self.disabled),
             read_only: other.read_only.or(self.read_only),
             hidden: other.hidden.or(self.hidden),
+            visited: other.visited.or(self.visited),
             busy: other.busy.or(self.busy),
             selected: other.selected.or(self.selected),
             expanded: other.expanded.or(self.expanded),
@@ -640,6 +642,11 @@ impl SemanticsDecoration {
 
     pub fn hidden(mut self, hidden: bool) -> Self {
         self.hidden = Some(hidden);
+        self
+    }
+
+    pub fn visited(mut self, visited: bool) -> Self {
+        self.visited = Some(visited);
         self
     }
 
@@ -789,6 +796,7 @@ pub struct SemanticsProps {
     pub disabled: bool,
     pub read_only: bool,
     pub hidden: bool,
+    pub visited: bool,
     pub busy: bool,
     pub selected: bool,
     pub expanded: Option<bool>,
@@ -842,6 +850,7 @@ impl Default for SemanticsProps {
             disabled: false,
             read_only: false,
             hidden: false,
+            visited: false,
             busy: false,
             selected: false,
             expanded: None,
@@ -1273,6 +1282,10 @@ pub struct PressableA11y {
     /// Select) that should remain interactive for pointer users but should not appear in the
     /// accessibility tree.
     pub hidden: bool,
+    /// Indicates that the pressable represents a visited link.
+    ///
+    /// This is a portable approximation of the "visited link" concept in HTML.
+    pub visited: bool,
     pub selected: bool,
     pub expanded: Option<bool>,
     pub checked: Option<bool>,

@@ -1336,6 +1336,10 @@ impl<'a, H: UiHost> SemanticsCx<'a, H> {
         self.flags.hidden = hidden;
     }
 
+    pub fn set_visited(&mut self, visited: bool) {
+        self.flags.visited = visited;
+    }
+
     pub fn set_selected(&mut self, selected: bool) {
         self.flags.selected = selected;
     }

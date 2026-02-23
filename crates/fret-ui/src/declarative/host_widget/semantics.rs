@@ -98,6 +98,9 @@ impl ElementHostWidget {
                 if props.hidden {
                     cx.set_hidden(true);
                 }
+                if props.visited {
+                    cx.set_visited(true);
+                }
                 if props.busy {
                     cx.set_busy(true);
                 }
@@ -244,6 +247,9 @@ impl ElementHostWidget {
                     cx.set_active_descendant(props.a11y.active_descendant);
                     if props.a11y.selected {
                         cx.set_selected(true);
+                    }
+                    if props.a11y.visited {
+                        cx.set_visited(true);
                     }
                     if let Some(expanded) = props.a11y.expanded {
                         cx.set_expanded(expanded);
@@ -407,6 +413,9 @@ impl ElementHostWidget {
             }
             if let Some(hidden) = decoration.hidden {
                 cx.set_hidden(hidden);
+            }
+            if let Some(visited) = decoration.visited {
+                cx.set_visited(visited);
             }
             if let Some(busy) = decoration.busy {
                 cx.set_busy(busy);

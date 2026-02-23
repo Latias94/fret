@@ -152,6 +152,8 @@ struct SnapSemanticsFlags {
     #[serde(default, skip_serializing_if = "is_false")]
     hidden: bool,
     #[serde(default, skip_serializing_if = "is_false")]
+    visited: bool,
+    #[serde(default, skip_serializing_if = "is_false")]
     busy: bool,
     #[serde(default, skip_serializing_if = "is_false")]
     read_only: bool,
@@ -626,6 +628,7 @@ where
                 captured: n.flags.captured,
                 disabled: n.flags.disabled,
                 hidden: n.flags.hidden,
+                visited: n.flags.visited,
                 busy: n.flags.busy,
                 read_only: n.flags.read_only,
                 selected: n.flags.selected,
@@ -772,6 +775,26 @@ fn snapshot_pressable_hidden_semantics() {
             },
             |_cx, _st| Vec::new(),
         )]
+    });
+}
+
+#[test]
+fn snapshot_badge_link_visited_semantics() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(320.0), Px(180.0)),
+    );
+    snapshot_for_root("badge_link_visited_semantics", bounds, |cx| {
+        vec![
+            fret_ui_shadcn::Badge::new("Docs")
+                .render(fret_ui_shadcn::BadgeRender::Link {
+                    href: Arc::from("https://example.com"),
+                    target: None,
+                    rel: None,
+                })
+                .visited(true)
+                .into_element(cx),
+        ]
     });
 }
 

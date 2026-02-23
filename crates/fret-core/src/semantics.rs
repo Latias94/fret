@@ -99,6 +99,10 @@ pub struct SemanticsFlags {
     ///
     /// This is a portable approximation of ARIA `aria-hidden`.
     pub hidden: bool,
+    /// Indicates that a link has been visited.
+    ///
+    /// This is a portable approximation of the "visited link" concept in HTML.
+    pub visited: bool,
     pub selected: bool,
     pub expanded: bool,
     /// Legacy binary checked state.

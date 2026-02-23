@@ -1,6 +1,6 @@
 # A11y semantics closure (v1)
 
-Status: Shippable (pressed + required/invalid + busy + hidden closed)
+Status: Shippable (pressed + required/invalid + busy + hidden + visited closed)
 
 Last updated: 2026-02-23
 
@@ -50,15 +50,15 @@ A semantic surface is considered “closed” only when all boxes are checked:
   (ADR 0292).
 - Hidden semantics: `SemanticsFlags.hidden` + AccessKit mapping + declarative `PressableA11y.hidden` wiring
   (ADR 0293).
+- Visited semantics: `SemanticsFlags.visited` + AccessKit mapping + shadcn badge link adoption
+  (ADR 0294).
 - Viewport semantics for scroll containers: `SemanticsRole::Viewport` mapping.
 
 ### Next P0 candidates (high ROI, low policy surface)
 
 These are common across apps/editors and map directly into platform APIs:
 
-1. **Link visited semantics**
-   - Goal: allow link-like surfaces to publish visited state (AccessKit `visited`) without encoding into label strings.
-2. **Multiselectable listbox semantics**
+1. **Multiselectable listbox semantics**
    - Goal: mark multi-select listboxes/collections as multiselectable (AccessKit `multiselectable`) for parity with ARIA
      listbox patterns.
 

@@ -40,6 +40,13 @@ Last updated: 2026-02-23
 - [x] Wire declarative `PressableA11y.hidden` without relying on role/action coercion.
 - [x] Gate via snapshot and unit test.
 
+## P0: Visited semantics (links)
+
+- [x] Decide contract shape (node flag) and intended primary role (`Link`).
+- [x] Map into AccessKit (`visited`).
+- [x] Adopt in at least one shadcn component (badge link).
+- [x] Gate via snapshot and unit test.
+
 ## Hygiene
 
 - [x] Add/refresh ADR(s) for any new hard-to-change surfaces (ADR 0290).

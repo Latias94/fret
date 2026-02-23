@@ -7365,6 +7365,7 @@ fn semantics_fingerprint_v1(
         hasher.write_bool(node.flags.captured);
         hasher.write_bool(node.flags.disabled);
         hasher.write_bool(node.flags.hidden);
+        hasher.write_bool(node.flags.visited);
         hasher.write_bool(node.flags.busy);
         hasher.write_bool(node.flags.selected);
         hasher.write_bool(node.flags.expanded);
