@@ -8,7 +8,7 @@ use std::sync::Arc;
 use fret_core::{
     Color, Corners, Edges, FontId, FontWeight, KeyCode, NodeId, Px, SemanticsRole, TextStyle,
 };
-use fret_icons::ids;
+use fret_icons::{IconId, ids};
 use fret_runtime::WindowCommandGatingService;
 use fret_runtime::WindowCommandGatingSnapshot;
 use fret_runtime::{
@@ -29,6 +29,7 @@ use fret_ui_headless::cmdk_score;
 use fret_ui_headless::cmdk_selection;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::collection_semantics::CollectionSemanticsExt as _;
+use fret_ui_kit::declarative::current_color;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
@@ -833,6 +834,7 @@ pub struct CommandItem {
     command: Option<CommandId>,
     on_select: Option<fret_ui::action::OnActivate>,
     on_select_value: Option<OnSelectValueAction>,
+    leading_icon: Option<IconId>,
     children: Vec<AnyElement>,
 }
 
@@ -851,6 +853,7 @@ impl std::fmt::Debug for CommandItem {
             .field("command", &self.command)
             .field("on_select", &self.on_select.is_some())
             .field("on_select_value", &self.on_select_value.is_some())
+            .field("leading_icon", &self.leading_icon)
             .field("children_len", &self.children.len())
             .finish()
     }
@@ -872,6 +875,7 @@ impl CommandItem {
             command: None,
             on_select: None,
             on_select_value: None,
+            leading_icon: None,
             children: Vec::new(),
         }
     }
@@ -911,6 +915,13 @@ impl CommandItem {
     /// current filter query.
     pub fn force_mount(mut self, force_mount: bool) -> Self {
         self.force_mount = force_mount;
+        self
+    }
+
+    /// Prefer this over `children([icon(cx, ...), ...])` so the icon can follow the row's
+    /// foreground (`currentColor`) for hover/active/disabled states.
+    pub fn leading_icon(mut self, icon: IconId) -> Self {
+        self.leading_icon = Some(icon);
         self
     }
 
@@ -1445,13 +1456,13 @@ impl CommandList {
                     cx.roving_nav_apg();
                     let mut out = Vec::with_capacity(render_rows.len());
 
-                     for row in render_rows.into_iter() {
-                         match row {
-                             CommandPaletteRenderRow::Heading(heading) => {
-                                 let heading = heading.clone();
-                                 let heading_style = heading_style.clone();
-                                 let fg_heading = fg_heading;
-                                 out.push(cx.container(
+                    for row in render_rows.into_iter() {
+                        match row {
+                            CommandPaletteRenderRow::Heading(heading) => {
+                                let heading = heading.clone();
+                                let heading_style = heading_style.clone();
+                                let fg_heading = fg_heading;
+                                out.push(cx.container(
                                     ContainerProps {
                                         layout: {
                                             let mut layout = LayoutStyle::default();
@@ -1502,11 +1513,11 @@ impl CommandList {
                                 },
                                 |_cx| Vec::new(),
                             )),
-                             CommandPaletteRenderRow::Separator(test_id) => {
-                                 let mut sep = cx.container(
-                                     ContainerProps {
-                                         layout: {
-                                             let mut layout = LayoutStyle::default();
+                            CommandPaletteRenderRow::Separator(test_id) => {
+                                let mut sep = cx.container(
+                                    ContainerProps {
+                                        layout: {
+                                            let mut layout = LayoutStyle::default();
                                             layout.size.width = Length::Fill;
                                             layout.size.height = Length::Px(Px(1.0));
                                             // new-york-v4: `-mx-1 h-px`.
@@ -1526,17 +1537,19 @@ impl CommandList {
                                 );
                                 if let Some(test_id) = test_id.clone() {
                                     sep = sep.test_id(test_id);
-                                 }
-                                 out.push(sep);
-                             }
+                                }
+                                out.push(sep);
+                            }
                             CommandPaletteRenderRow::Loading(loading) => {
                                 out.push(loading.into_element(cx));
                             }
-                             CommandPaletteRenderRow::Item(idx) => {
-                                 let Some(item) = items.get(idx).cloned() else { continue };
+                            CommandPaletteRenderRow::Item(idx) => {
+                                let Some(item) = items.get(idx).cloned() else {
+                                    continue;
+                                };
 
-                                 let enabled = !disabled_flags.get(idx).copied().unwrap_or(true);
-                                 let focusable = tab_stop.is_some_and(|i| i == idx);
+                                let enabled = !disabled_flags.get(idx).copied().unwrap_or(true);
+                                let focusable = tab_stop.is_some_and(|i| i == idx);
 
                                 let query_for_row = query_for_render.clone();
                                 let value_key = item.value.clone();
@@ -1550,6 +1563,7 @@ impl CommandList {
                                 let on_select = item.on_select.clone();
                                 let on_select_value = item.on_select_value.clone();
                                 let children = item.children;
+                                let leading_icon = item.leading_icon.clone();
                                 let text_style = text_style.clone();
 
                                 out.push(cx.keyed(value_key, move |cx| {
@@ -1616,28 +1630,51 @@ impl CommandList {
                                             };
 
                                             let child = cx.container(props, move |cx| {
-                                                vec![cx.row(
-                                                    RowProps {
-                                                        layout: LayoutStyle::default(),
-                                                        gap: row_gap,
-                                                        padding: Edges::all(Px(0.0)),
-                                                        justify: MainAlign::Start,
-                                                        align: CrossAlign::Center,
+                                                current_color::with_current_color_provider(
+                                                    cx,
+                                                    ColorRef::Color(fg),
+                                                    |cx| {
+                                                        vec![cx.row(
+                                                            RowProps {
+                                                                layout: LayoutStyle::default(),
+                                                                gap: row_gap,
+                                                                padding: Edges::all(Px(0.0)),
+                                                                justify: MainAlign::Start,
+                                                                align: CrossAlign::Center,
+                                                            },
+                                                            move |cx| {
+                                                                if children.is_empty() {
+                                                                    let mut out: Vec<AnyElement> =
+                                                                        Vec::with_capacity(
+                                                                            1 + usize::from(
+                                                                                leading_icon
+                                                                                    .is_some(),
+                                                                            ),
+                                                                        );
+                                                                    if let Some(icon) =
+                                                                        leading_icon.clone()
+                                                                    {
+                                                                        out.push(decl_icon::icon(
+                                                                            cx, icon,
+                                                                        ));
+                                                                    }
+                                                                    out.push(
+                                                                        cmdk_highlighted_label(
+                                                                            cx,
+                                                                            label.clone(),
+                                                                            query_for_row.as_ref(),
+                                                                            fg,
+                                                                            text_style.clone(),
+                                                                        ),
+                                                                    );
+                                                                    out
+                                                                } else {
+                                                                    children
+                                                                }
+                                                            },
+                                                        )]
                                                     },
-                                                    move |cx| {
-                                                        if children.is_empty() {
-                                                            vec![cmdk_highlighted_label(
-                                                                cx,
-                                                                label.clone(),
-                                                                query_for_row.as_ref(),
-                                                                fg,
-                                                                text_style.clone(),
-                                                            )]
-                                                        } else {
-                                                            children
-                                                        }
-                                                    },
-                                                )]
+                                                )
                                             });
 
                                             let mut chrome = child;

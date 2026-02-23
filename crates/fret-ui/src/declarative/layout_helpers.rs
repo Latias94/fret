@@ -132,11 +132,19 @@ pub(super) fn clamp_to_constraints(mut size: Size, style: LayoutStyle, available
     match style.size.width {
         Length::Px(px) => size.width = Px(px.0.max(0.0)),
         Length::Fill => size.width = available.width,
+        Length::Fraction(f) => {
+            let f = if f.is_finite() { f.max(0.0) } else { 0.0 };
+            size.width = Px((available.width.0 * f).max(0.0));
+        }
         Length::Auto => {}
     }
     match style.size.height {
         Length::Px(px) => size.height = Px(px.0.max(0.0)),
         Length::Fill => size.height = available.height,
+        Length::Fraction(f) => {
+            let f = if f.is_finite() { f.max(0.0) } else { 0.0 };
+            size.height = Px((available.height.0 * f).max(0.0));
+        }
         Length::Auto => {}
     }
 

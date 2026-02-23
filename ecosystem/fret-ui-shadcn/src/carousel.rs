@@ -244,7 +244,6 @@ impl Carousel {
             let index_now = cx.watch_model(&index_model).copied().unwrap_or(0);
             let mut offset_now = cx.watch_model(&offset_model).copied().unwrap_or(Px(0.0));
             let runtime_snapshot = cx.watch_model(&runtime_model).copied().unwrap_or_default();
-
             if runtime_snapshot.settling {
                 let tick = runtime_snapshot.settle_tick.saturating_add(1);
                 let t = (tick as f32 / CAROUSEL_SETTLE_TICKS as f32).min(1.0);

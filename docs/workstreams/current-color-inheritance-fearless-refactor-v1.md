@@ -58,6 +58,22 @@ This workstream is intentionally *ecosystem-layer* and *authoring-layer*:
 
 ## Proposed surface
 
+## Key constraint (Fret authoring model)
+
+Fret’s declarative tree is *built in one pass* into concrete `AnyElement` nodes. That means leaf elements like
+`SvgIconProps` currently resolve their final `Color` during `into_element(cx)`, not later during paint.
+
+Practical implication:
+
+- `currentColor` inheritance only applies when the leaf is *constructed under the provider scope*.
+- If a component stores `AnyElement` slots that are already-built (e.g. `leading: AnyElement`), installing a provider
+  inside the host **cannot retroactively recolor** that existing element.
+
+To get Flutter/Web-like ergonomics, hosts should prefer *deferred construction* for common foreground children:
+
+- icon-id slots (store `IconId`, build the icon inside the host under `currentColor`), or
+- builder slots (store a closure to build the subtree inside the host), where feasible.
+
 ### Provider (authoring glue)
 
 In `fret-ui-kit`, add a small provider module:
@@ -131,7 +147,8 @@ Statuses:
 | Icon inheritance | `fret-ui-kit` | Landed | `ecosystem/fret-ui-kit/src/declarative/icon.rs` | unit test (`--features icons`) |
 | Spinner inheritance | `fret-ui-shadcn` | Landed | `ecosystem/fret-ui-shadcn/src/spinner.rs` | existing shadcn tests (smoke) |
 | Button provides `currentColor` | `fret-ui-shadcn` | Landed | `ecosystem/fret-ui-shadcn/src/button.rs` | web-vs-fret button tests |
-| Menu item provides `currentColor` | `fret-ui-shadcn` | Planned | (TBD: dropdown/select/command item) | diag script + targeted test |
+| DropdownMenuItem provides `currentColor` (and `leading_icon`) | `fret-ui-shadcn` | In progress | `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs` | `tools/diag-scripts/ui-gallery-dropdown-menu-icons-screenshots.json` |
+| CommandItem provides `currentColor` (and `leading_icon`) | `fret-ui-shadcn` | In progress | `ecosystem/fret-ui-shadcn/src/command.rs` | (TBD: diag + targeted test) |
 | Badge provides `currentColor` | `fret-ui-shadcn` | Planned | `ecosystem/fret-ui-shadcn/src/badge.rs` | targeted test |
 | Text defaults inherit `currentColor` | `fret-ui-kit` | Planned | (TBD: `declarative/text.rs` or `ui::text`) | unit test + gallery gate |
 | Gallery usage cleanup | `fret-ui-gallery` | Planned | (TBD: per-page) | diag screenshot gate(s) |
@@ -151,4 +168,3 @@ Statuses:
   - `cargo nextest run -p fret-ui-kit -E "test(current_color_provider_inherits_and_restores)"`
 - Targeted diag scripts:
   - One script that captures a primary button with an icon (ensures contrast and follow-foreground behavior).
-

@@ -19,10 +19,10 @@ Last updated: 2026-02-23
 ## Host adoption (provide `currentColor`)
 
 - [x] `shadcn::Button` provides resolved `fg` to subtree.
-- [ ] Menu family provides resolved `fg`:
-  - [ ] `DropdownMenuItem` (and label/shortcut rows)
-  - [ ] `SelectItem`
-  - [ ] `CommandItem`
+- [ ] Menu family provides resolved `fg` (and prefers deferred icon slots):
+  - [x] `DropdownMenuItem` provides `currentColor` and supports `leading_icon`.
+  - [ ] `SelectItem` (if/when it grows icon slots)
+  - [ ] `CommandItem` provides `currentColor` and supports `leading_icon` (add gates + migrate demos)
 - [ ] Badge provides resolved `fg`.
 - [ ] Tabs triggers / pill-like controls provide resolved `fg`.
 
@@ -43,6 +43,7 @@ Last updated: 2026-02-23
 ## Diagnostics / regression gates
 
 - [x] Add a Button Group diag script capturing Demo preview + Code.
+- [x] Add a Dropdown Menu icons diag script (zinc/light + zinc/dark) to gate leading-icon foreground inheritance.
 - [ ] Add a “primary button + icon” diag script that asserts the icon is visible:
   - [ ] capture screenshot in zinc/light and zinc/dark presets
   - [ ] (optional) pixel-change assertion for the icon bounds
@@ -53,4 +54,3 @@ Last updated: 2026-02-23
 - [ ] Ensure `currentColor` does not leak across unrelated subtrees (nested scopes restore correctly).
 - [ ] Confirm explicit color overrides still win over inherited `currentColor`.
 - [ ] Document the rule of thumb: “hosts provide, leaves consume”.
-

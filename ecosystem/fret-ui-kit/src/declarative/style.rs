@@ -26,6 +26,7 @@ fn resolve_length<T: ThemeTokenRead + ?Sized>(theme: &T, l: &LengthRefinement) -
     match l {
         LengthRefinement::Auto => Length::Auto,
         LengthRefinement::Fill => Length::Fill,
+        LengthRefinement::Fraction(f) => Length::Fraction(*f),
         LengthRefinement::Px(m) => Length::Px(m.resolve(theme)),
     }
 }

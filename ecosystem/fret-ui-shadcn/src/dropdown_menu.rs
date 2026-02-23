@@ -3,7 +3,7 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_core::{Edges, FontId, FontWeight, Point, Px, Rect, Size, TextStyle};
-use fret_icons::ids;
+use fret_icons::{IconId, ids};
 use fret_runtime::{CommandId, Model};
 use fret_ui::action::{OnActivate, OnDismissRequest};
 use fret_ui::element::{
@@ -16,6 +16,7 @@ use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::collection_semantics::CollectionSemanticsExt as _;
+use fret_ui_kit::declarative::current_color;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
@@ -114,6 +115,7 @@ pub struct DropdownMenuItem {
     pub value: Arc<str>,
     pub inset: bool,
     pub leading: Option<AnyElement>,
+    pub leading_icon: Option<IconId>,
     pub content: Option<AnyElement>,
     pub padding: Option<Edges>,
     pub estimated_height: Option<Px>,
@@ -135,6 +137,7 @@ impl std::fmt::Debug for DropdownMenuItem {
             .field("value", &self.value)
             .field("inset", &self.inset)
             .field("leading", &self.leading)
+            .field("leading_icon", &self.leading_icon)
             .field("content", &self.content)
             .field("padding", &self.padding)
             .field("estimated_height", &self.estimated_height)
@@ -159,6 +162,7 @@ impl DropdownMenuItem {
             value: label,
             inset: false,
             leading: None,
+            leading_icon: None,
             content: None,
             padding: None,
             estimated_height: None,
@@ -185,7 +189,15 @@ impl DropdownMenuItem {
     }
 
     pub fn leading(mut self, element: AnyElement) -> Self {
+        self.leading_icon = None;
         self.leading = Some(element);
+        self
+    }
+
+    /// Prefer this over `leading(icon(cx, ...))` so the icon can inherit the item's `currentColor`.
+    pub fn leading_icon(mut self, icon: IconId) -> Self {
+        self.leading = None;
+        self.leading_icon = Some(icon);
         self
     }
 
@@ -873,7 +885,8 @@ fn checkable_menu_row_children<H: UiHost>(
     radius_sm: Px,
     text_disabled: fret_core::Color,
 ) -> Vec<AnyElement> {
-    let indicator_fg = if disabled { text_disabled } else { row_fg };
+    let effective_fg = if disabled { text_disabled } else { row_fg };
+    let indicator_fg = effective_fg;
 
     vec![cx.container(
         ContainerProps {
@@ -894,128 +907,130 @@ fn checkable_menu_row_children<H: UiHost>(
             ..Default::default()
         },
         move |cx| {
-            let indicator = cx.container(
-                ContainerProps {
-                    layout: LayoutStyle {
-                        position: fret_ui::element::PositionStyle::Absolute,
-                        inset: fret_ui::element::InsetStyle {
-                            top: Some(Px(0.0)),
-                            right: None,
-                            bottom: Some(Px(0.0)),
-                            // new-york-v4: indicator slot uses `left-2`.
-                            left: Some(pad_x),
-                        },
-                        size: SizeStyle {
-                            width: Length::Px(Px(16.0)),
-                            height: Length::Fill,
+            current_color::with_current_color_provider(cx, ColorRef::Color(effective_fg), |cx| {
+                let indicator = cx.container(
+                    ContainerProps {
+                        layout: LayoutStyle {
+                            position: fret_ui::element::PositionStyle::Absolute,
+                            inset: fret_ui::element::InsetStyle {
+                                top: Some(Px(0.0)),
+                                right: None,
+                                bottom: Some(Px(0.0)),
+                                // new-york-v4: indicator slot uses `left-2`.
+                                left: Some(pad_x),
+                            },
+                            size: SizeStyle {
+                                width: Length::Px(Px(16.0)),
+                                height: Length::Fill,
+                                ..Default::default()
+                            },
                             ..Default::default()
                         },
                         ..Default::default()
                     },
-                    ..Default::default()
-                },
-                move |cx| {
-                    vec![cx.flex(
-                        FlexProps {
-                            layout: LayoutStyle::default(),
-                            direction: fret_core::Axis::Horizontal,
-                            gap: Px(0.0),
-                            padding: Edges::all(Px(0.0)),
-                            justify: MainAlign::Center,
-                            align: CrossAlign::Center,
-                            wrap: false,
-                        },
-                        move |cx| {
-                            if !indicator_on {
-                                return Vec::new();
-                            }
+                    move |cx| {
+                        vec![cx.flex(
+                            FlexProps {
+                                layout: LayoutStyle::default(),
+                                direction: fret_core::Axis::Horizontal,
+                                gap: Px(0.0),
+                                padding: Edges::all(Px(0.0)),
+                                justify: MainAlign::Center,
+                                align: CrossAlign::Center,
+                                wrap: false,
+                            },
+                            move |cx| {
+                                if !indicator_on {
+                                    return Vec::new();
+                                }
 
-                            match indicator_kind {
-                                CheckableIndicatorKind::Check => vec![decl_icon::icon_with(
-                                    cx,
-                                    ids::ui::CHECK,
-                                    Some(Px(16.0)),
-                                    Some(ColorRef::Color(indicator_fg)),
-                                )],
-                                CheckableIndicatorKind::RadioDot => vec![cx.container(
-                                    ContainerProps {
-                                        layout: {
-                                            let mut layout = LayoutStyle::default();
-                                            layout.size.width = Length::Px(Px(8.0));
-                                            layout.size.height = Length::Px(Px(8.0));
-                                            layout
+                                match indicator_kind {
+                                    CheckableIndicatorKind::Check => vec![decl_icon::icon_with(
+                                        cx,
+                                        ids::ui::CHECK,
+                                        Some(Px(16.0)),
+                                        Some(ColorRef::Color(indicator_fg)),
+                                    )],
+                                    CheckableIndicatorKind::RadioDot => vec![cx.container(
+                                        ContainerProps {
+                                            layout: {
+                                                let mut layout = LayoutStyle::default();
+                                                layout.size.width = Length::Px(Px(8.0));
+                                                layout.size.height = Length::Px(Px(8.0));
+                                                layout
+                                            },
+                                            padding: Edges::all(Px(0.0)),
+                                            background: Some(indicator_fg),
+                                            shadow: None,
+                                            border: Edges::all(Px(0.0)),
+                                            border_color: None,
+                                            corner_radii: fret_core::Corners::all(Px(999.0)),
+                                            ..Default::default()
                                         },
-                                        padding: Edges::all(Px(0.0)),
-                                        background: Some(indicator_fg),
-                                        shadow: None,
-                                        border: Edges::all(Px(0.0)),
-                                        border_color: None,
-                                        corner_radii: fret_core::Corners::all(Px(999.0)),
-                                        ..Default::default()
-                                    },
-                                    |_cx| Vec::new(),
-                                )],
-                            }
-                        },
-                    )]
-                },
-            );
-
-            let mut row: Vec<AnyElement> = Vec::with_capacity(
-                2 + usize::from(leading.is_some() || reserve_leading_slot)
-                    + usize::from(trailing.is_some()),
-            );
-
-            if let Some(l) = leading.clone() {
-                row.push(menu_icon_slot(cx, l));
-            } else if reserve_leading_slot {
-                row.push(menu_icon_slot_empty(cx));
-            }
-
-            let style = text_style.clone();
-            let mut text = ui::text(cx, label.clone())
-                .layout(LayoutRefinement::default().min_w_0().flex_1())
-                .text_size_px(style.size)
-                .font_weight(style.weight)
-                .nowrap()
-                .text_color(ColorRef::Color(if disabled {
-                    text_disabled
-                } else {
-                    row_fg
-                }));
-
-            if let Some(line_height) = style.line_height {
-                text = text.fixed_line_box_px(line_height).line_box_in_bounds();
-            }
-
-            if let Some(letter_spacing_em) = style.letter_spacing_em {
-                text = text.letter_spacing_em(letter_spacing_em);
-            }
-
-            row.push(text.into_element(cx));
-
-            if let Some(t) = trailing.clone() {
-                row.push(t);
-            }
-
-            let content = cx.flex(
-                FlexProps {
-                    layout: {
-                        let mut layout = LayoutStyle::default();
-                        layout.size.width = Length::Fill;
-                        layout
+                                        |_cx| Vec::new(),
+                                    )],
+                                }
+                            },
+                        )]
                     },
-                    direction: fret_core::Axis::Horizontal,
-                    gap: Px(8.0),
-                    padding: Edges::all(Px(0.0)),
-                    justify: MainAlign::Start,
-                    align: CrossAlign::Center,
-                    wrap: false,
-                },
-                move |_cx| row.clone(),
-            );
+                );
 
-            vec![content, indicator]
+                let mut row: Vec<AnyElement> = Vec::with_capacity(
+                    2 + usize::from(leading.is_some() || reserve_leading_slot)
+                        + usize::from(trailing.is_some()),
+                );
+
+                if let Some(l) = leading.clone() {
+                    row.push(menu_icon_slot(cx, l));
+                } else if reserve_leading_slot {
+                    row.push(menu_icon_slot_empty(cx));
+                }
+
+                let style = text_style.clone();
+                let mut text = ui::text(cx, label.clone())
+                    .layout(LayoutRefinement::default().min_w_0().flex_1())
+                    .text_size_px(style.size)
+                    .font_weight(style.weight)
+                    .nowrap()
+                    .text_color(ColorRef::Color(if disabled {
+                        text_disabled
+                    } else {
+                        row_fg
+                    }));
+
+                if let Some(line_height) = style.line_height {
+                    text = text.fixed_line_box_px(line_height).line_box_in_bounds();
+                }
+
+                if let Some(letter_spacing_em) = style.letter_spacing_em {
+                    text = text.letter_spacing_em(letter_spacing_em);
+                }
+
+                row.push(text.into_element(cx));
+
+                if let Some(t) = trailing.clone() {
+                    row.push(t);
+                }
+
+                let content = cx.flex(
+                    FlexProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Fill;
+                            layout
+                        },
+                        direction: fret_core::Axis::Horizontal,
+                        gap: Px(8.0),
+                        padding: Edges::all(Px(0.0)),
+                        justify: MainAlign::Start,
+                        align: CrossAlign::Center,
+                        wrap: false,
+                    },
+                    move |_cx| row.clone(),
+                );
+
+                vec![content, indicator]
+            })
         },
     )]
 }
@@ -2209,6 +2224,7 @@ impl DropdownMenu {
                                                         let command = item.command;
                                                         let on_activate = item.on_activate.clone();
                                                         let leading = item.leading.clone();
+                                                        let leading_icon = item.leading_icon.clone();
                                                         let trailing = item.trailing.clone();
                                                         let content = item.content.clone();
                                                         let padding_override = item.padding;
@@ -2380,76 +2396,103 @@ impl DropdownMenu {
                                                                                  ..Default::default()
                                                                              },
                                                                      move |cx| {
-                                                                         if let Some(custom) = content.clone() {
-                                                                             return vec![custom];
-                                                                         }
+                                                                        let effective_fg = if disabled {
+                                                                            text_disabled
+                                                                        } else {
+                                                                            row_fg
+                                                                        };
 
-                                                                        let mut row: Vec<AnyElement> = Vec::with_capacity(
-                                                                            2 + usize::from(
-                                                                                leading.is_some()
-                                                                                    || reserve_leading_slot_enabled,
-                                                                            ) + usize::from(trailing.is_some())
-                                                                                + usize::from(has_submenu),
-                                                                        );
-                                                                        if let Some(l) = leading.clone() {
-                                                                            row.push(menu_icon_slot(cx, l));
-                                                                        } else if reserve_leading_slot_enabled {
-                                                                            row.push(menu_icon_slot_empty(cx));
-                                                                        }
-                                                                        let style = text_style.clone();
-                                                                        let mut text = ui::text(cx, label.clone())
-                                                                            .layout(LayoutRefinement::default().min_w_0().flex_1())
-                                                                            .text_size_px(style.size)
-                                                                            .font_weight(style.weight)
-                                                                            .nowrap()
-                                                                            .text_color(ColorRef::Color(if disabled { text_disabled } else { row_fg }));
+                                                                        current_color::with_current_color_provider(
+                                                                            cx,
+                                                                            ColorRef::Color(effective_fg),
+                                                                            |cx| {
+                                                                                if let Some(custom) = content.clone() {
+                                                                                    return vec![custom];
+                                                                                }
 
-                                                                        if let Some(line_height) = style.line_height {
-                                                                            text = text
-                                                                                .line_height_px(line_height)
-                                                                                .line_height_policy(
-                                                                                    fret_core::TextLineHeightPolicy::FixedFromStyle,
-                                                                                );
-                                                                        }
+                                                                                let mut row: Vec<AnyElement> =
+                                                                                    Vec::with_capacity(
+                                                                                        2 + usize::from(
+                                                                                            leading.is_some()
+                                                                                                || leading_icon
+                                                                                                    .is_some()
+                                                                                                || reserve_leading_slot_enabled,
+                                                                                        ) + usize::from(trailing.is_some())
+                                                                                            + usize::from(has_submenu),
+                                                                                    );
+                                                                                if let Some(icon) =
+                                                                                    leading_icon.clone()
+                                                                                {
+                                                                                    let icon =
+                                                                                        decl_icon::icon(cx, icon);
+                                                                                    row.push(menu_icon_slot(cx, icon));
+                                                                                } else if let Some(l) = leading.clone() {
+                                                                                    row.push(menu_icon_slot(cx, l));
+                                                                                } else if reserve_leading_slot_enabled {
+                                                                                    row.push(menu_icon_slot_empty(cx));
+                                                                                }
+                                                                                let style = text_style.clone();
+                                                                                let mut text = ui::text(cx, label.clone())
+                                                                                    .layout(LayoutRefinement::default().min_w_0().flex_1())
+                                                                                    .text_size_px(style.size)
+                                                                                    .font_weight(style.weight)
+                                                                                    .nowrap()
+                                                                                    .text_color(ColorRef::Color(if disabled { text_disabled } else { row_fg }));
 
-                                                                        if let Some(letter_spacing_em) = style.letter_spacing_em {
-                                                                            text = text.letter_spacing_em(letter_spacing_em);
-                                                                        }
+                                                                                if let Some(line_height) =
+                                                                                    style.line_height
+                                                                                {
+                                                                                    text = text
+                                                                                        .line_height_px(line_height)
+                                                                                        .line_height_policy(
+                                                                                            fret_core::TextLineHeightPolicy::FixedFromStyle,
+                                                                                        );
+                                                                                }
 
-                                                                        row.push(text.into_element(cx));
+                                                                                if let Some(letter_spacing_em) =
+                                                                                    style.letter_spacing_em
+                                                                                {
+                                                                                    text = text.letter_spacing_em(letter_spacing_em);
+                                                                                }
 
-                                                                        if let Some(t) = trailing.clone() {
-                                                                            row.push(t);
-                                                                        }
-                                                                        if has_submenu {
-                                                                            row.push(submenu_chevron_right_text(
-                                                                                cx,
-                                                                                if disabled {
-                                                                                    text_disabled
-                                                                                } else {
-                                                                                    icon_muted_fg
-                                                                                },
-                                                                                font_size,
-                                                                                font_line_height,
-                                                                            ));
-                                                                        }
+                                                                                row.push(text.into_element(cx));
 
-                                                                         vec![cx.flex(
-                                                                             FlexProps {
-                                                                                 layout: {
-                                                                                     let mut layout = LayoutStyle::default();
-                                                                                     layout.size.width = Length::Fill;
-                                                                                     layout
-                                                                                 },
-                                                                                 direction: fret_core::Axis::Horizontal,
-                                                                                 gap: Px(8.0),
-                                                                                 padding: Edges::all(Px(0.0)),
-                                                                                 justify: MainAlign::Start,
-                                                                                 align: CrossAlign::Center,
-                                                                                 wrap: false,
-                                                                             },
-                                                                             move |_cx| row.clone(),
-                                                                         )]
+                                                                                if let Some(t) = trailing.clone() {
+                                                                                    row.push(t);
+                                                                                }
+                                                                                if has_submenu {
+                                                                                    row.push(submenu_chevron_right_text(
+                                                                                        cx,
+                                                                                        if disabled {
+                                                                                            text_disabled
+                                                                                        } else {
+                                                                                            icon_muted_fg
+                                                                                        },
+                                                                                        font_size,
+                                                                                        font_line_height,
+                                                                                    ));
+                                                                                }
+
+                                                                                vec![cx.flex(
+                                                                                    FlexProps {
+                                                                                        layout: {
+                                                                                            let mut layout =
+                                                                                                LayoutStyle::default();
+                                                                                            layout.size.width = Length::Fill;
+                                                                                            layout
+                                                                                        },
+                                                                                        direction:
+                                                                                            fret_core::Axis::Horizontal,
+                                                                                        gap: Px(8.0),
+                                                                                        padding: Edges::all(Px(0.0)),
+                                                                                        justify: MainAlign::Start,
+                                                                                        align: CrossAlign::Center,
+                                                                                        wrap: false,
+                                                                                    },
+                                                                                    move |_cx| row.clone(),
+                                                                                )]
+                                                                            },
+                                                                        )
                                                                      },
                                                                  );
 

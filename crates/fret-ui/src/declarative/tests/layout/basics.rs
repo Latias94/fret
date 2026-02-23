@@ -86,6 +86,153 @@ fn fill_only_resolves_under_definite_available_space_in_measurement() {
 }
 
 #[test]
+fn fraction_only_resolves_under_definite_available_space_in_measurement() {
+    use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(80.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "fraction-measure",
+        |cx| {
+            let mut props = crate::element::ContainerProps::default();
+            props.layout.size.width = Length::Fraction(0.5);
+            props.layout.size.height = Length::Fraction(0.25);
+            vec![cx.container(props, |cx| vec![cx.text("x")])]
+        },
+    );
+    ui.set_root(root);
+
+    let container = ui.children(root)[0];
+
+    let min_constraints = LayoutConstraints::new(
+        LayoutSize::new(None, None),
+        LayoutSize::new(AvailableSpace::MinContent, AvailableSpace::MinContent),
+    );
+    let measured = ui.measure_in(&mut app, &mut text, container, min_constraints, 1.0);
+    assert!(
+        (measured.width.0 - 10.0).abs() < 0.01,
+        "expected Fraction to behave like auto under MinContent, got {:?}",
+        measured.width
+    );
+    assert!(
+        (measured.height.0 - 10.0).abs() < 0.01,
+        "expected Fraction to behave like auto under MinContent, got {:?}",
+        measured.height
+    );
+
+    let max_constraints = LayoutConstraints::new(
+        LayoutSize::new(None, None),
+        LayoutSize::new(AvailableSpace::MaxContent, AvailableSpace::MaxContent),
+    );
+    let measured = ui.measure_in(&mut app, &mut text, container, max_constraints, 1.0);
+    assert!(
+        (measured.width.0 - 10.0).abs() < 0.01,
+        "expected Fraction to behave like auto under MaxContent, got {:?}",
+        measured.width
+    );
+    assert!(
+        (measured.height.0 - 10.0).abs() < 0.01,
+        "expected Fraction to behave like auto under MaxContent, got {:?}",
+        measured.height
+    );
+
+    let definite_constraints = LayoutConstraints::new(
+        LayoutSize::new(None, None),
+        LayoutSize::new(
+            AvailableSpace::Definite(Px(200.0)),
+            AvailableSpace::Definite(Px(80.0)),
+        ),
+    );
+    let measured = ui.measure_in(&mut app, &mut text, container, definite_constraints, 1.0);
+    assert!(
+        (measured.width.0 - 100.0).abs() < 0.01,
+        "expected Fraction to resolve width under definite available space, got {:?}",
+        measured.width
+    );
+    assert!(
+        (measured.height.0 - 20.0).abs() < 0.01,
+        "expected Fraction to resolve height under definite available space, got {:?}",
+        measured.height
+    );
+}
+
+#[test]
+fn flex_fraction_basis_and_fill_basis_do_not_collapse_under_min_content_measurement() {
+    use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(80.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "flex-fraction-basis-min-content",
+        |cx| {
+            let mut props = crate::element::FlexProps::default();
+            props.direction = fret_core::Axis::Horizontal;
+
+            let mut child = crate::element::ContainerProps::default();
+            child.layout.size.height = Length::Px(Px(10.0));
+            child.layout.aspect_ratio = Some(1.0);
+            // If percent/fraction basis is treated as 0 under MinContent, this will collapse to 0.
+            child.layout.flex.basis = Length::Fill;
+            let fill_child = cx.container(child, |cx| vec![cx.text("x")]);
+
+            let mut child = crate::element::ContainerProps::default();
+            child.layout.size.height = Length::Px(Px(10.0));
+            child.layout.aspect_ratio = Some(1.0);
+            child.layout.flex.basis = Length::Fraction(0.5);
+            let fraction_child = cx.container(child, |cx| vec![cx.text("x")]);
+
+            vec![cx.flex(props, |_cx| vec![fill_child, fraction_child])]
+        },
+    );
+    ui.set_root(root);
+
+    let flex = ui.children(root)[0];
+    let constraints = LayoutConstraints::new(
+        LayoutSize::new(None, None),
+        LayoutSize::new(AvailableSpace::MinContent, AvailableSpace::MinContent),
+    );
+    let measured = ui.measure_in(&mut app, &mut text, flex, constraints, 1.0);
+    assert!(
+        measured.width.0 > 0.01,
+        "expected flex width to be non-zero under MinContent, got {:?}",
+        measured.width
+    );
+    assert!(
+        measured.height.0 > 0.01,
+        "expected flex height to be non-zero under MinContent, got {:?}",
+        measured.height
+    );
+}
+
+#[test]
 fn row_justify_center_and_align_end_positions_children() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

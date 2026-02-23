@@ -185,6 +185,10 @@ fn build_flow_subtree_impl<H: UiHost>(
                         descendant_requests_fill_width = true;
                         scan_width = false;
                     }
+                    crate::element::Length::Fraction(_) => {
+                        descendant_requests_fill_width = true;
+                        scan_width = false;
+                    }
                     crate::element::Length::Px(_) => {
                         scan_width = false;
                     }
@@ -194,6 +198,10 @@ fn build_flow_subtree_impl<H: UiHost>(
             if scan_height {
                 match probe_style.size.height {
                     crate::element::Length::Fill => {
+                        descendant_requests_fill_height = true;
+                        scan_height = false;
+                    }
+                    crate::element::Length::Fraction(_) => {
                         descendant_requests_fill_height = true;
                         scan_height = false;
                     }
@@ -216,6 +224,10 @@ fn build_flow_subtree_impl<H: UiHost>(
 
         let needs_definite_width = descendant_requests_fill_width
             || matches!(wrapper_style.size.width, crate::element::Length::Fill)
+            || matches!(
+                wrapper_style.size.width,
+                crate::element::Length::Fraction(_)
+            )
             || matches!(wrapper_style.size.width, crate::element::Length::Px(_));
         style.grid_template_columns =
             vec![GridTemplateComponent::Single(if needs_definite_width {
@@ -226,6 +238,10 @@ fn build_flow_subtree_impl<H: UiHost>(
 
         let needs_definite_height = descendant_requests_fill_height
             || matches!(wrapper_style.size.height, crate::element::Length::Fill)
+            || matches!(
+                wrapper_style.size.height,
+                crate::element::Length::Fraction(_)
+            )
             || matches!(wrapper_style.size.height, crate::element::Length::Px(_));
         style.grid_template_rows = vec![GridTemplateComponent::Single(if needs_definite_height {
             taffy::style_helpers::fr(1.0)
@@ -1189,6 +1205,10 @@ fn taffy_dimension(scale_factor: f32, length: crate::element::Length) -> Dimensi
     match length {
         crate::element::Length::Auto => Dimension::auto(),
         crate::element::Length::Fill => Dimension::percent(1.0),
+        crate::element::Length::Fraction(f) => {
+            let f = if f.is_finite() { f.max(0.0) } else { 0.0 };
+            Dimension::percent(f)
+        }
         crate::element::Length::Px(px) => Dimension::length(px.0 * sf),
     }
 }

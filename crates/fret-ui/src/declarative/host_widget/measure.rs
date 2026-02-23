@@ -33,6 +33,12 @@ fn clamp_to_constraints_in_measure(
                 size.width = avail;
             }
         }
+        Length::Fraction(f) => {
+            if let Some(avail) = constraints.available.width.definite() {
+                let f = if f.is_finite() { f.max(0.0) } else { 0.0 };
+                size.width = Px((avail.0 * f).max(0.0));
+            }
+        }
         Length::Auto => {}
     }
     match style.size.height {
@@ -40,6 +46,12 @@ fn clamp_to_constraints_in_measure(
         Length::Fill => {
             if let Some(avail) = constraints.available.height.definite() {
                 size.height = avail;
+            }
+        }
+        Length::Fraction(f) => {
+            if let Some(avail) = constraints.available.height.definite() {
+                let f = if f.is_finite() { f.max(0.0) } else { 0.0 };
+                size.height = Px((avail.0 * f).max(0.0));
             }
         }
         Length::Auto => {}
@@ -135,6 +147,24 @@ fn fallback_measure_flex<H: UiHost>(
         Px((inner_h + pad_h).max(0.0)),
     );
     clamp_to_constraints_in_measure(desired, props.layout, cx.constraints)
+}
+
+fn taffy_dimension_for_available(length: Length, available: AvailableSpace) -> Dimension {
+    match length {
+        Length::Auto => Dimension::auto(),
+        Length::Px(px) => Dimension::length(px.0.max(0.0)),
+        Length::Fill => match available {
+            AvailableSpace::Definite(px) => Dimension::length(px.0.max(0.0)),
+            AvailableSpace::MinContent | AvailableSpace::MaxContent => Dimension::auto(),
+        },
+        Length::Fraction(f) => match available {
+            AvailableSpace::Definite(px) => {
+                let f = if f.is_finite() { f.max(0.0) } else { 0.0 };
+                Dimension::length((px.0 * f).max(0.0))
+            }
+            AvailableSpace::MinContent | AvailableSpace::MaxContent => Dimension::auto(),
+        },
+    }
 }
 
 fn fallback_measure_grid<H: UiHost>(
@@ -773,6 +803,10 @@ impl ElementHostWidget {
         let w = match props.layout.size.width {
             Length::Px(px) => Px(px.0.max(0.0)),
             Length::Fill | Length::Auto => avail.width,
+            Length::Fraction(f) => {
+                let f = if f.is_finite() { f.max(0.0) } else { 0.0 };
+                Px((avail.width.0 * f).max(0.0))
+            }
         };
 
         clamp_to_constraints_in_measure(Size::new(w, h), props.layout, cx.constraints)
@@ -808,6 +842,10 @@ impl ElementHostWidget {
         let w = match props.layout.size.width {
             Length::Px(px) => Px(px.0.max(0.0)),
             Length::Fill | Length::Auto => avail.width,
+            Length::Fraction(f) => {
+                let f = if f.is_finite() { f.max(0.0) } else { 0.0 };
+                Px((avail.width.0 * f).max(0.0))
+            }
         };
 
         clamp_to_constraints_in_measure(Size::new(w, h), props.layout, cx.constraints)
@@ -866,11 +904,19 @@ impl ElementHostWidget {
                 constraints.known.width.is_some()
                     || constraints.available.width.definite().is_some()
             }
+            Length::Fraction(_) => {
+                constraints.known.width.is_some()
+                    || constraints.available.width.definite().is_some()
+            }
             Length::Auto => false,
         };
         let height_determined = match props.layout.size.height {
             Length::Px(_) => true,
             Length::Fill => {
+                constraints.known.height.is_some()
+                    || constraints.available.height.definite().is_some()
+            }
+            Length::Fraction(_) => {
                 constraints.known.height.is_some()
                     || constraints.available.height.definite().is_some()
             }
@@ -1025,6 +1071,10 @@ impl ElementHostWidget {
         let desired_w = match props.layout.size.width {
             Length::Px(px) => Px(px.0.max(0.0)),
             Length::Fill => avail.width,
+            Length::Fraction(f) => {
+                let f = if f.is_finite() { f.max(0.0) } else { 0.0 };
+                Px((avail.width.0 * f).max(0.0))
+            }
             Length::Auto => match axis {
                 fret_core::Axis::Vertical => avail.width,
                 fret_core::Axis::Horizontal => Px(content_extent.0.min(avail.width.0.max(0.0))),
@@ -1033,6 +1083,10 @@ impl ElementHostWidget {
         let desired_h = match props.layout.size.height {
             Length::Px(px) => Px(px.0.max(0.0)),
             Length::Fill => avail.height,
+            Length::Fraction(f) => {
+                let f = if f.is_finite() { f.max(0.0) } else { 0.0 };
+                Px((avail.height.0 * f).max(0.0))
+            }
             Length::Auto => match axis {
                 fret_core::Axis::Vertical => Px(content_extent.0.min(avail.height.0.max(0.0))),
                 fret_core::Axis::Horizontal => avail.height,
@@ -1106,12 +1160,30 @@ impl ElementHostWidget {
                             Dimension::auto()
                         }
                     },
+                    Length::Fraction(f) => match inner_available.width {
+                        AvailableSpace::Definite(px) => {
+                            let f = if f.is_finite() { f.max(0.0) } else { 0.0 };
+                            Dimension::length((px.0 * f).max(0.0))
+                        }
+                        AvailableSpace::MinContent | AvailableSpace::MaxContent => {
+                            Dimension::auto()
+                        }
+                    },
                     Length::Auto => Dimension::auto(),
                 },
                 height: match props.layout.size.height {
                     Length::Px(px) => Dimension::length((px.0 - pad_h).max(0.0)),
                     Length::Fill => match inner_available.height {
                         AvailableSpace::Definite(px) => Dimension::length(px.0.max(0.0)),
+                        AvailableSpace::MinContent | AvailableSpace::MaxContent => {
+                            Dimension::auto()
+                        }
+                    },
+                    Length::Fraction(f) => match inner_available.height {
+                        AvailableSpace::Definite(px) => {
+                            let f = if f.is_finite() { f.max(0.0) } else { 0.0 };
+                            Dimension::length((px.0 * f).max(0.0))
+                        }
                         AvailableSpace::MinContent | AvailableSpace::MaxContent => {
                             Dimension::auto()
                         }
@@ -1177,8 +1249,14 @@ impl ElementHostWidget {
                     layout_style.inset,
                 ),
                 size: TaffySize {
-                    width: super::super::taffy_layout::taffy_dimension(layout_style.size.width),
-                    height: super::super::taffy_layout::taffy_dimension(layout_style.size.height),
+                    width: taffy_dimension_for_available(
+                        layout_style.size.width,
+                        inner_available.width,
+                    ),
+                    height: taffy_dimension_for_available(
+                        layout_style.size.height,
+                        inner_available.height,
+                    ),
                 },
                 aspect_ratio: layout_style.aspect_ratio,
                 min_size: TaffySize {
@@ -1206,7 +1284,16 @@ impl ElementHostWidget {
                     0.0
                 },
                 flex_shrink: layout_style.flex.shrink.max(0.0),
-                flex_basis: super::super::taffy_layout::taffy_dimension(layout_style.flex.basis),
+                flex_basis: match props.direction {
+                    fret_core::Axis::Horizontal => taffy_dimension_for_available(
+                        layout_style.flex.basis,
+                        inner_available.width,
+                    ),
+                    fret_core::Axis::Vertical => taffy_dimension_for_available(
+                        layout_style.flex.basis,
+                        inner_available.height,
+                    ),
+                },
                 align_self: layout_style
                     .flex
                     .align_self
@@ -1328,12 +1415,30 @@ impl ElementHostWidget {
                             Dimension::auto()
                         }
                     },
+                    Length::Fraction(f) => match inner_available.width {
+                        AvailableSpace::Definite(px) => {
+                            let f = if f.is_finite() { f.max(0.0) } else { 0.0 };
+                            Dimension::length((px.0 * f).max(0.0))
+                        }
+                        AvailableSpace::MinContent | AvailableSpace::MaxContent => {
+                            Dimension::auto()
+                        }
+                    },
                     Length::Auto => Dimension::auto(),
                 },
                 height: match props.layout.size.height {
                     Length::Px(px) => Dimension::length((px.0 - pad_h).max(0.0)),
                     Length::Fill => match inner_available.height {
                         AvailableSpace::Definite(px) => Dimension::length(px.0.max(0.0)),
+                        AvailableSpace::MinContent | AvailableSpace::MaxContent => {
+                            Dimension::auto()
+                        }
+                    },
+                    Length::Fraction(f) => match inner_available.height {
+                        AvailableSpace::Definite(px) => {
+                            let f = if f.is_finite() { f.max(0.0) } else { 0.0 };
+                            Dimension::length((px.0 * f).max(0.0))
+                        }
                         AvailableSpace::MinContent | AvailableSpace::MaxContent => {
                             Dimension::auto()
                         }
@@ -1379,8 +1484,14 @@ impl ElementHostWidget {
                     layout_style.inset,
                 ),
                 size: TaffySize {
-                    width: super::super::taffy_layout::taffy_dimension(layout_style.size.width),
-                    height: super::super::taffy_layout::taffy_dimension(layout_style.size.height),
+                    width: taffy_dimension_for_available(
+                        layout_style.size.width,
+                        inner_available.width,
+                    ),
+                    height: taffy_dimension_for_available(
+                        layout_style.size.height,
+                        inner_available.height,
+                    ),
                 },
                 aspect_ratio: layout_style.aspect_ratio,
                 min_size: TaffySize {
