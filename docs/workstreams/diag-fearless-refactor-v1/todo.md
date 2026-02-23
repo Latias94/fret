@@ -51,6 +51,8 @@ scope: diagnostics, automation, tooling, refactor
       (via `include!`) so overlay types no longer live in multiple places inside `ui_diagnostics.rs`.
 - [x] Extract command gating trace out of `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into
       `ecosystem/fret-bootstrap/src/ui_diagnostics/command_gating_trace.rs` (via `include!`) to reduce churn.
+- [x] Extract layer + overlay policy diagnostics out of `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into
+      `ecosystem/fret-bootstrap/src/ui_diagnostics/layer_diagnostics.rs` (via `include!`) to reduce churn.
 
 ## M1b: Make `fret-diag` stats less monolithic (mechanical moves)
 
