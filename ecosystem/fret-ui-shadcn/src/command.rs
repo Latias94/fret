@@ -1394,7 +1394,18 @@ impl CommandList {
                 ..Default::default()
             };
 
-            let (row_gap, pad_x, pad_y, radius, ring, bg_hover, fg, text_style, item_layout) = {
+            let (
+                row_gap,
+                pad_x,
+                pad_y,
+                radius,
+                ring,
+                bg_hover,
+                fg,
+                fg_disabled,
+                text_style,
+                item_layout,
+            ) = {
                 let theme = Theme::global(&*cx.app);
                 let row_h = MetricRef::space(Space::N8).resolve(theme);
                 let row_gap = MetricRef::space(Space::N2).resolve(theme);
@@ -1405,6 +1416,7 @@ impl CommandList {
                 let ring = decl_style::focus_ring(theme, radius);
                 let bg_hover = item_bg_hover(theme);
                 let fg = theme.color_token("foreground");
+                let fg_disabled = alpha_mul(fg, 0.5);
                 let text_style = item_text_style(theme);
                 let item_layout = decl_style::layout_style(
                     theme,
@@ -1418,6 +1430,7 @@ impl CommandList {
                     ring,
                     bg_hover,
                     fg,
+                    fg_disabled,
                     text_style,
                     item_layout,
                 )
@@ -1630,9 +1643,11 @@ impl CommandList {
                                             };
 
                                             let child = cx.container(props, move |cx| {
+                                                let effective_fg =
+                                                    if enabled { fg } else { fg_disabled };
                                                 current_color::with_current_color_provider(
                                                     cx,
-                                                    ColorRef::Color(fg),
+                                                    ColorRef::Color(effective_fg),
                                                     |cx| {
                                                         vec![cx.row(
                                                             RowProps {
@@ -1663,7 +1678,7 @@ impl CommandList {
                                                                             cx,
                                                                             label.clone(),
                                                                             query_for_row.as_ref(),
-                                                                            fg,
+                                                                            effective_fg,
                                                                             text_style.clone(),
                                                                         ),
                                                                     );
@@ -2662,6 +2677,7 @@ impl CommandPalette {
                             let command = item.command;
                             let on_select = item.on_select.clone();
                             let on_select_value = item.on_select_value.clone();
+                            let leading_icon = item.leading_icon.clone();
                             let children = item.children;
                             let text_style = text_style.clone();
 
@@ -2777,34 +2793,16 @@ impl CommandPalette {
                                     };
 
                                     let child = cx.container(props, move |cx| {
-                                        vec![cx.row(
-                                            RowProps {
-                                                layout: {
-                                                    let mut layout = LayoutStyle::default();
-                                                    layout.size.width = Length::Fill;
-                                                    layout
-                                                },
-                                                gap: row_gap,
-                                                padding: Edges::all(Px(0.0)),
-                                                justify: MainAlign::Start,
-                                                align: CrossAlign::Center,
-                                            },
-                                            move |cx| {
-                                                if !children.is_empty() {
-                                                    return children;
-                                                }
-
-                                                let fg = if enabled { fg } else { fg_disabled };
-
-                                                let left = cx.row(
+                                        let effective_fg = if enabled { fg } else { fg_disabled };
+                                        current_color::with_current_color_provider(
+                                            cx,
+                                            ColorRef::Color(effective_fg),
+                                            |cx| {
+                                                vec![cx.row(
                                                     RowProps {
                                                         layout: {
                                                             let mut layout = LayoutStyle::default();
                                                             layout.size.width = Length::Fill;
-                                                            layout.size.min_width = Some(Px(0.0));
-                                                            layout.flex.grow = 1.0;
-                                                            layout.flex.shrink = 1.0;
-                                                            layout.flex.basis = Length::Px(Px(0.0));
                                                             layout
                                                         },
                                                         gap: row_gap,
@@ -2813,44 +2811,92 @@ impl CommandPalette {
                                                         align: CrossAlign::Center,
                                                     },
                                                     move |cx| {
-                                                        let mut out = Vec::with_capacity(2);
-                                                        if show_checkmark {
-                                                            let icon = decl_icon::icon_with(
-                                                                cx,
-                                                                ids::ui::CHECK,
-                                                                Some(Px(16.0)),
-                                                                Some(ColorRef::Color(fg)),
-                                                            );
-                                                            let icon = cx.opacity(
-                                                                if checked { 1.0 } else { 0.0 },
-                                                                move |_cx| vec![icon],
-                                                            );
-                                                            out.push(icon);
+                                                        if !children.is_empty() {
+                                                            return children;
                                                         }
 
-                                                        out.push(cmdk_highlighted_label(
-                                                            cx,
-                                                            label.clone(),
-                                                            query_for_row.as_ref(),
-                                                            fg,
-                                                            text_style.clone(),
-                                                        ));
+                                                        let left = cx.row(
+                                                            RowProps {
+                                                                layout: {
+                                                                    let mut layout =
+                                                                        LayoutStyle::default();
+                                                                    layout.size.width =
+                                                                        Length::Fill;
+                                                                    layout.size.min_width =
+                                                                        Some(Px(0.0));
+                                                                    layout.flex.grow = 1.0;
+                                                                    layout.flex.shrink = 1.0;
+                                                                    layout.flex.basis =
+                                                                        Length::Px(Px(0.0));
+                                                                    layout
+                                                                },
+                                                                gap: row_gap,
+                                                                padding: Edges::all(Px(0.0)),
+                                                                justify: MainAlign::Start,
+                                                                align: CrossAlign::Center,
+                                                            },
+                                                            move |cx| {
+                                                                let mut out: Vec<AnyElement> =
+                                                                    Vec::with_capacity(
+                                                                        usize::from(show_checkmark)
+                                                                            + usize::from(
+                                                                                leading_icon
+                                                                                    .is_some(),
+                                                                            )
+                                                                            + 1,
+                                                                    );
 
-                                                        out
+                                                                if show_checkmark {
+                                                                    let icon = decl_icon::icon_with(
+                                                                        cx,
+                                                                        ids::ui::CHECK,
+                                                                        Some(Px(16.0)),
+                                                                        None,
+                                                                    );
+                                                                    let icon = cx.opacity(
+                                                                        if checked {
+                                                                            1.0
+                                                                        } else {
+                                                                            0.0
+                                                                        },
+                                                                        move |_cx| vec![icon],
+                                                                    );
+                                                                    out.push(icon);
+                                                                }
+
+                                                                if let Some(icon) =
+                                                                    leading_icon.clone()
+                                                                {
+                                                                    out.push(decl_icon::icon(
+                                                                        cx, icon,
+                                                                    ));
+                                                                }
+
+                                                                out.push(cmdk_highlighted_label(
+                                                                    cx,
+                                                                    label.clone(),
+                                                                    query_for_row.as_ref(),
+                                                                    effective_fg,
+                                                                    text_style.clone(),
+                                                                ));
+
+                                                                out
+                                                            },
+                                                        );
+
+                                                        if let Some(shortcut) = shortcut.clone() {
+                                                            vec![
+                                                                left,
+                                                                CommandShortcut::new(shortcut)
+                                                                    .into_element(cx),
+                                                            ]
+                                                        } else {
+                                                            vec![left]
+                                                        }
                                                     },
-                                                );
-
-                                                if let Some(shortcut) = shortcut.clone() {
-                                                    vec![
-                                                        left,
-                                                        CommandShortcut::new(shortcut)
-                                                            .into_element(cx),
-                                                    ]
-                                                } else {
-                                                    vec![left]
-                                                }
+                                                )]
                                             },
-                                        )]
+                                        )
                                     });
 
                                     let mut chrome = child;
