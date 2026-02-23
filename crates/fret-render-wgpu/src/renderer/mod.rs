@@ -78,6 +78,7 @@ pub struct Renderer {
     adapter: wgpu::Adapter,
     uniform_bind_group: wgpu::BindGroup,
     uniforms: UniformResources,
+    viewport_uniform_bytes_scratch: Vec<u8>,
     render_space_bytes_scratch: Vec<u8>,
     globals: GpuGlobals,
     textures: GpuTextures,
