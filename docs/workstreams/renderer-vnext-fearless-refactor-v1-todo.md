@@ -474,6 +474,18 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `cargo test -p fret-render-wgpu --lib`
     - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
 
+- [x] REN-VNEXT-refactor-170 Stage 17: reuse renderer-owned scratch for plan quad vertices/bases used by non-fullscreen quad passes.
+  - Goal: avoid per-frame heap allocations for plan-derived quad vertices and per-pass `base` indices.
+  - Landed (step 1): build vertices + bases into `Renderer` scratch, upload once, and return the bases `Vec` to the caller so it can be
+    returned to the renderer after dispatch.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/render_scene/quad_vertices.rs` (`build_plan_quad_vertices_into`, `upload_plan_quad_vertices`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (returns bases to scratch after dispatch)
+    - `crates/fret-render-wgpu/src/renderer/mod.rs` (`Renderer::{plan_quad_vertices_scratch,plan_quad_vertex_bases_scratch}`)
+  - Gates:
+    - `cargo test -p fret-render-wgpu --lib`
+    - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
 ## M7 — Post-v1 semantic expansions (deferred backlog)
 
 These items are intentionally *not* part of the vNext refactor’s v1 closure. They are common UI

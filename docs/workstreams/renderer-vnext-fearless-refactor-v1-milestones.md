@@ -687,6 +687,18 @@ Progress record (Viewport uniform per-frame upload scratch reuse):
   - `cargo test -p fret-render-wgpu --lib`
   - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
 
+Progress record (Plan quad vertices/bases scratch reuse):
+
+- Date: 2026-02-23
+- Status: Landed (Stage 17 step 1)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/quad_vertices.rs` (`build_plan_quad_vertices_into`, `upload_plan_quad_vertices`)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (returns bases to scratch after dispatch)
+  - `crates/fret-render-wgpu/src/renderer/mod.rs` (`Renderer::{plan_quad_vertices_scratch,plan_quad_vertex_bases_scratch}`)
+- Gates run:
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
 ## M4 — Paint/Material evolution (staged)
 
 Deliverables:
