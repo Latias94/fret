@@ -154,7 +154,7 @@ diagnostics stack stays easy to evolve.
 - [x] Delete the legacy `apply_post_run_checks(...)` mega-signature once all callers are on `diag_run::RunChecks`.
 - [ ] Remove redundant semantics traversal helpers in gates:
   - prefer `crate::json_bundle::SemanticsResolver` + shared helpers (no `debug.semantics.nodes` re-greps).
-- [ ] Fix `diag bundle-v2` semantics mode behavior for schema v2 bundles that are semantics-table-only (no inline semantics):
+- [x] Fix `diag bundle-v2` semantics mode behavior for schema v2 bundles that are semantics-table-only (no inline semantics):
   - apply mode decisions based on resolved semantics (inline or `tables.semantics`),
   - prune `tables.semantics.entries[]` to the post-mode referenced set (avoid dropping all semantics by accident).
 - [ ] Publish and enforce a bundle schema compatibility matrix (v1/v2) for in-tree workflows.
