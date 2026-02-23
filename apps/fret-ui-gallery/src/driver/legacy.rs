@@ -1118,10 +1118,10 @@ impl UiGalleryDriver {
             !(v == "0" || v == "false" || v == "no" || v == "off")
         };
 
-        let config_bool = |env_name: &str, query_name: &str, default: bool| {
+        let config_bool = |env_name: &str, _query_name: &str, default: bool| {
             #[cfg(target_arch = "wasm32")]
             {
-                if let Some(v) = bool_from_window_query(query_name) {
+                if let Some(v) = bool_from_window_query(_query_name) {
                     return v;
                 }
             }

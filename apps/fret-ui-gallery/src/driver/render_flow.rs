@@ -59,12 +59,25 @@ pub(super) fn begin_frame(
         .and_then(|svc| svc.snapshot(window))
         .copied()
         .unwrap_or_default();
-    let _ = app.models_mut().update(&state.settings_edit_can_undo, |v| {
-        *v = availability.edit_can_undo
-    });
-    let _ = app.models_mut().update(&state.settings_edit_can_redo, |v| {
-        *v = availability.edit_can_redo
-    });
+    let prev_edit_can_undo = app
+        .models()
+        .get_copied(&state.settings_edit_can_undo)
+        .unwrap_or_default();
+    if prev_edit_can_undo != availability.edit_can_undo {
+        let _ = app.models_mut().update(&state.settings_edit_can_undo, |v| {
+            *v = availability.edit_can_undo
+        });
+    }
+
+    let prev_edit_can_redo = app
+        .models()
+        .get_copied(&state.settings_edit_can_redo)
+        .unwrap_or_default();
+    if prev_edit_can_redo != availability.edit_can_redo {
+        let _ = app.models_mut().update(&state.settings_edit_can_redo, |v| {
+            *v = availability.edit_can_redo
+        });
+    }
 
     let cache_enabled = app
         .models()
