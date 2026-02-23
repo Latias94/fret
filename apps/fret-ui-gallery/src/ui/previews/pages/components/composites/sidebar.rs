@@ -8,6 +8,8 @@ pub(in crate::ui) fn preview_sidebar(cx: &mut ElementContext<'_, App>) -> Vec<An
         demo_selected: Option<Model<Arc<str>>>,
         controlled_open: Option<Model<bool>>,
         controlled_selected: Option<Model<Arc<str>>>,
+        mobile_open: Option<Model<bool>>,
+        mobile_selected: Option<Model<Arc<str>>>,
         rtl_selected: Option<Model<Arc<str>>>,
     }
 
@@ -44,6 +46,28 @@ pub(in crate::ui) fn preview_sidebar(cx: &mut ElementContext<'_, App>) -> Vec<An
                 .insert(Arc::<str>::from("design-engineering"));
             cx.with_state(SidebarModels::default, |st| {
                 st.controlled_selected = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let mobile_open = match state.mobile_open {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(false);
+            cx.with_state(SidebarModels::default, |st| {
+                st.mobile_open = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let mobile_selected = match state.mobile_selected {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(Arc::<str>::from("playground"));
+            cx.with_state(SidebarModels::default, |st| {
+                st.mobile_selected = Some(model.clone())
             });
             model
         }
@@ -437,6 +461,116 @@ pub(in crate::ui) fn preview_sidebar(cx: &mut ElementContext<'_, App>) -> Vec<An
             .unwrap_or_else(|| cx.text("Missing sidebar controlled content."))
     };
 
+    let mobile = {
+        let content = shadcn::SidebarProvider::new()
+            .default_open(false)
+            .open_mobile(Some(mobile_open.clone()))
+            .is_mobile(true)
+            .with(cx, |cx| {
+                let open_mobile_now = cx
+                    .watch_model(&mobile_open)
+                    .layout()
+                    .copied()
+                    .unwrap_or(false);
+                let selected_value = resolve_selected(cx, &mobile_selected, "playground");
+
+                let header = stack::hstack(
+                    cx,
+                    stack::HStackProps::default()
+                        .gap(Space::N2)
+                        .items_center()
+                        .layout(LayoutRefinement::default().w_full()),
+                    |cx| {
+                        vec![
+                            shadcn::SidebarTrigger::new()
+                                .test_id("ui-gallery-sidebar-mobile-trigger")
+                                .into_element(cx),
+                            shadcn::typography::muted(
+                                cx,
+                                "Forced mobile mode via SidebarProvider.is_mobile(true).",
+                            ),
+                            shadcn::typography::muted(cx, format!("open_mobile={open_mobile_now}")),
+                            shadcn::typography::muted(
+                                cx,
+                                format!("selected={}", selected_value.as_ref()),
+                            ),
+                        ]
+                    },
+                );
+
+                let projects = shadcn::SidebarGroup::new([
+                    shadcn::SidebarGroupLabel::new("Projects").into_element(cx),
+                    shadcn::SidebarMenu::new([
+                        shadcn::SidebarMenuItem::new(menu_button(
+                            cx,
+                            mobile_selected.clone(),
+                            &selected_value,
+                            "playground",
+                            "Playground",
+                            "lucide.square-terminal",
+                            Arc::from("ui-gallery-sidebar-mobile-item-playground"),
+                        ))
+                        .into_element(cx),
+                        shadcn::SidebarMenuItem::new(menu_button(
+                            cx,
+                            mobile_selected.clone(),
+                            &selected_value,
+                            "documentation",
+                            "Documentation",
+                            "lucide.book-open",
+                            Arc::from("ui-gallery-sidebar-mobile-item-documentation"),
+                        ))
+                        .into_element(cx),
+                    ])
+                    .into_element(cx),
+                ])
+                .into_element(cx);
+
+                let sidebar = shadcn::Sidebar::new([shadcn::SidebarContent::new([projects])
+                    .into_element(cx)])
+                .collapsible(shadcn::SidebarCollapsible::Offcanvas)
+                .refine_layout(LayoutRefinement::default().h_full())
+                .into_element(cx);
+
+                let main = shadcn::Card::new(vec![
+                    shadcn::CardHeader::new(vec![shadcn::CardTitle::new("Mobile Sheet").into_element(cx)])
+                        .into_element(cx),
+                    shadcn::CardContent::new(vec![
+                        cx.text("Open the sidebar via SidebarTrigger. Escape should close and restore focus."),
+                        shadcn::Button::new("Focus")
+                            .variant(shadcn::ButtonVariant::Ghost)
+                            .size(shadcn::ButtonSize::Sm)
+                            .test_id("ui-gallery-sidebar-mobile-focus")
+                            .into_element(cx),
+                    ])
+                    .into_element(cx),
+                ])
+                .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+                .into_element(cx)
+                .attach_semantics(
+                    SemanticsDecoration::default()
+                        .role(fret_core::SemanticsRole::Group)
+                        .test_id("ui-gallery-sidebar-mobile-main"),
+                );
+
+                let body = stack::vstack(
+                    cx,
+                    stack::VStackProps::default()
+                        .gap(Space::N3)
+                        .items_start()
+                        .layout(LayoutRefinement::default().w_full()),
+                    |_cx| vec![header, sidebar, main],
+                );
+
+                vec![body]
+            });
+
+        content
+            .into_iter()
+            .next()
+            .unwrap_or_else(|| cx.text("Missing sidebar mobile content."))
+    };
+
     let rtl = {
         let selected_value = resolve_selected(cx, &rtl_selected, "playground");
 
@@ -529,6 +663,7 @@ pub(in crate::ui) fn preview_sidebar(cx: &mut ElementContext<'_, App>) -> Vec<An
         [
             "This is a Fret-specific demo (not part of upstream shadcn sink components).",
             "The controlled example demonstrates SidebarProvider controlled open state via a `Model<bool>`.",
+            "The mobile example forces mobile mode for deterministic diagnostics.",
         ],
     );
 
@@ -571,6 +706,25 @@ shadcn::SidebarProvider::new()
         let main = shadcn::SidebarInset::new([shadcn::SidebarTrigger::new().into_element(cx)])
             .into_element(cx);
         [stack::hstack(cx, stack::HStackProps::default(), |_cx| vec![sidebar, main])]
+    });"#,
+                ),
+            DocSection::new("Mobile", mobile)
+                .max_w(Px(980.0))
+                .test_id_prefix("ui-gallery-sidebar-mobile")
+                .code(
+                    "rust",
+                    r#"let open_mobile = cx.app.models_mut().insert(false);
+
+shadcn::SidebarProvider::new()
+    .is_mobile(true)
+    .open_mobile(Some(open_mobile.clone()))
+    .with(cx, |cx| {
+        let sidebar = shadcn::Sidebar::new([shadcn::SidebarContent::new([...]).into_element(cx)])
+            .collapsible(shadcn::SidebarCollapsible::Offcanvas)
+            .into_element(cx);
+        let main = shadcn::SidebarInset::new([shadcn::SidebarTrigger::new().into_element(cx)])
+            .into_element(cx);
+        [stack::vstack(cx, stack::VStackProps::default(), |_cx| vec![sidebar, main])]
     });"#,
                 ),
             DocSection::new("RTL", rtl)
