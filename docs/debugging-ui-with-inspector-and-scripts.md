@@ -149,7 +149,7 @@ If a bug is “bounds look right but pixels look wrong”, enable GPU-readback s
 `capture_screenshot`. The bundle viewer can then render screenshots as a background overlay (auto-matched by
 `manifest.json`):
 
-- Enable screenshots: `FRET_DIAG_SCREENSHOTS=1` (see `docs/ui-diagnostics-and-scripted-tests.md`)
+- Enable screenshots: `FRET_DIAG_GPU_SCREENSHOTS=1` (legacy alias: `FRET_DIAG_SCREENSHOTS=1`; see `docs/ui-diagnostics-and-scripted-tests.md`)
 - Offline viewer: `tools/fret-bundle-viewer`
 
 ## Accessibility (a11y) notes
