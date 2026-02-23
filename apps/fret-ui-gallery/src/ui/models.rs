@@ -81,6 +81,7 @@ pub(crate) struct UiGalleryModels {
 
     pub(crate) text_input: Model<String>,
     pub(crate) text_area: Model<String>,
+    pub(crate) input_file_value: Model<String>,
 
     pub(crate) dropdown_open: Model<bool>,
     pub(crate) context_menu_open: Model<bool>,
