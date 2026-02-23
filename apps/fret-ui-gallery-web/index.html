@@ -35,7 +35,14 @@
           var keyWs = "FRET_DEVTOOLS_WS";
           var keyToken = "FRET_DEVTOOLS_TOKEN";
           var keyLog = "FRET_DEVTOOLS_WS_CLIENT_LOG";
+          var viewCacheKeys = [
+            "fret_ui_gallery_view_cache",
+            "fret_ui_gallery_view_cache_shell",
+            "fret_ui_gallery_view_cache_inner",
+            "fret_ui_gallery_view_cache_continuous",
+          ];
 
+          // 1) Capture from URL (if present) and persist to globals/localStorage.
           if (ws && token) {
             window.__FRET_DEVTOOLS_WS = ws;
             window.__FRET_DEVTOOLS_TOKEN = token;
@@ -45,17 +52,39 @@
               window.localStorage.setItem(keyToken, token);
               window.localStorage.setItem(keyLog, log === "1" ? "1" : "0");
             }
-            return;
           }
 
+          for (var i = 0; i < viewCacheKeys.length; i++) {
+            var k = viewCacheKeys[i];
+            var v = url.searchParams.get(k);
+            if (v == null) continue;
+            var globalKey = "__" + k.toUpperCase();
+            window[globalKey] = v;
+            if (window.localStorage) {
+              window.localStorage.setItem(globalKey, v);
+            }
+          }
+
+          // 2) Backfill from localStorage when URL was rewritten/canonicalized by the app.
           if (window.localStorage) {
             var wsStored = window.localStorage.getItem(keyWs);
             var tokenStored = window.localStorage.getItem(keyToken);
             var logStored = window.localStorage.getItem(keyLog);
             if (wsStored && tokenStored) {
-              window.__FRET_DEVTOOLS_WS = wsStored;
-              window.__FRET_DEVTOOLS_TOKEN = tokenStored;
-              window.__FRET_DEVTOOLS_WS_CLIENT_LOG = logStored === "1";
+              window.__FRET_DEVTOOLS_WS = window.__FRET_DEVTOOLS_WS || wsStored;
+              window.__FRET_DEVTOOLS_TOKEN = window.__FRET_DEVTOOLS_TOKEN || tokenStored;
+              window.__FRET_DEVTOOLS_WS_CLIENT_LOG =
+                window.__FRET_DEVTOOLS_WS_CLIENT_LOG || logStored === "1";
+            }
+
+            for (var j = 0; j < viewCacheKeys.length; j++) {
+              var k2 = viewCacheKeys[j];
+              var globalKey2 = "__" + k2.toUpperCase();
+              if (window[globalKey2] != null) continue;
+              var stored = window.localStorage.getItem(globalKey2);
+              if (stored != null) {
+                window[globalKey2] = stored;
+              }
             }
           }
         } catch (_e) {}

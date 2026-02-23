@@ -2396,6 +2396,16 @@ fn bool_from_window_query(key: &str) -> Option<bool> {
         }
     }
 
+    let global_key = format!("__{}", key.to_ascii_uppercase());
+    if let Ok(v) = js_sys::Reflect::get(window.as_ref(), &wasm_bindgen::JsValue::from_str(&global_key)) {
+        if let Some(b) = v.as_bool() {
+            return Some(b);
+        }
+        if let Some(s) = v.as_string() {
+            return parse_bool(Some(s));
+        }
+    }
+
     None
 }
 
