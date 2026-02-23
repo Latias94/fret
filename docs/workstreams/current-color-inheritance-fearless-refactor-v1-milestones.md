@@ -61,6 +61,7 @@ Evidence anchors:
 - `apps/fret-ui-gallery/src/ui/pages/command.rs`
 - `tools/diag-scripts/ui-gallery-dropdown-menu-icons-screenshots.json`
 - `tools/diag-scripts/ui-gallery-command-docs-demo-icons-screenshots.json`
+- `tools/diag-scripts/ui-gallery-command-docs-demo-icons-screenshots-zinc-dark.json`
 
 ### M5 — Text adoption (planned; biggest ROI after icons)
 
