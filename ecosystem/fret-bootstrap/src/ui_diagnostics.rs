@@ -7375,6 +7375,7 @@ fn semantics_fingerprint_v1(
                     fret_core::SemanticsCheckedState::False => 0,
                     fret_core::SemanticsCheckedState::True => 1,
                     fret_core::SemanticsCheckedState::Mixed => 2,
+                    _ => 3,
                 });
             }
         }

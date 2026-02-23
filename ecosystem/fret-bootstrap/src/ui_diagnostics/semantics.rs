@@ -20,6 +20,7 @@ impl UiCheckedStateV1 {
             fret_core::SemanticsCheckedState::False => Self::False,
             fret_core::SemanticsCheckedState::True => Self::True,
             fret_core::SemanticsCheckedState::Mixed => Self::Mixed,
+            _ => Self::Mixed,
         }
     }
 }
