@@ -111,6 +111,8 @@ Hosts that compute a stateful foreground should provide it to their subtree. Thi
 Initial target:
 
 - `fret-ui-shadcn::Button` provides its resolved `fg` when building content children.
+- `fret-ui-shadcn::Button` offers deferred icon slots (`leading_icon` / `trailing_icon` / `icon`)
+  so common icon usage is constructed *under* the provider (and therefore inherits `currentColor`).
 
 Evidence anchor:
 
@@ -147,6 +149,7 @@ Statuses:
 | Icon inheritance | `fret-ui-kit` | Landed | `ecosystem/fret-ui-kit/src/declarative/icon.rs` | unit test (`--features icons`) |
 | Spinner inheritance | `fret-ui-shadcn` | Landed | `ecosystem/fret-ui-shadcn/src/spinner.rs` | existing shadcn tests (smoke) |
 | Button provides `currentColor` | `fret-ui-shadcn` | Landed | `ecosystem/fret-ui-shadcn/src/button.rs` | web-vs-fret button tests |
+| Button deferred icon slots (`leading_icon` / `trailing_icon` / `icon`) | `fret-ui-shadcn` | Landed | `ecosystem/fret-ui-shadcn/src/button.rs` | gallery + button goldens |
 | DropdownMenuItem provides `currentColor` (and `leading_icon`) | `fret-ui-shadcn` | In progress | `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs` | `tools/diag-scripts/ui-gallery-dropdown-menu-icons-screenshots.json` |
 | CommandItem provides `currentColor` (and `leading_icon`) | `fret-ui-shadcn` | In progress | `ecosystem/fret-ui-shadcn/src/command.rs` | (TBD: diag + targeted test) |
 | Badge provides `currentColor` | `fret-ui-shadcn` | Planned | `ecosystem/fret-ui-shadcn/src/badge.rs` | targeted test |

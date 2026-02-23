@@ -556,6 +556,7 @@ fn code_block_shell(
         .language(block.language)
         .show_header(true)
         .show_language(true)
+        .max_height(Px(520.0))
         .header_right([copy])
         .into_element(cx);
 

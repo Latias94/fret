@@ -19,6 +19,7 @@ Last updated: 2026-02-23
 ## Host adoption (provide `currentColor`)
 
 - [x] `shadcn::Button` provides resolved `fg` to subtree.
+- [x] `shadcn::Button` supports deferred icon slots (`leading_icon` / `trailing_icon` / `icon`).
 - [ ] Menu family provides resolved `fg` (and prefers deferred icon slots):
   - [x] `DropdownMenuItem` provides `currentColor` and supports `leading_icon`.
   - [ ] `SelectItem` (if/when it grows icon slots)
