@@ -5,6 +5,15 @@ fn display_path(base_dir: &Path, path: &Path) -> String {
     path.to_string_lossy().to_string()
 }
 
+fn sanitize_path_for_bundle(base_dir: &Path, path: &Path) -> String {
+    if let Ok(rel) = path.strip_prefix(base_dir) {
+        return rel.to_string_lossy().to_string();
+    }
+    path.file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_default()
+}
+
 fn maybe_redact_string(s: &str, redact_text: bool) -> String {
     if !redact_text {
         return s.to_string();

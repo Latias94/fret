@@ -3888,15 +3888,6 @@ mod tests {
     }
 }
 
-fn sanitize_path_for_bundle(base_dir: &Path, path: &Path) -> String {
-    if let Ok(rel) = path.strip_prefix(base_dir) {
-        return rel.to_string_lossy().to_string();
-    }
-    path.file_name()
-        .map(|n| n.to_string_lossy().to_string())
-        .unwrap_or_default()
-}
-
 trait PointerEventExt {
     fn kind(&self) -> &'static str;
     fn position(&self) -> Point;
