@@ -34,7 +34,49 @@ pub(crate) struct ReproCmdContext {
     pub checks: diag_run::RunChecks,
 }
 
-#[allow(clippy::too_many_arguments)]
+fn read_tooling_reason_code(path: &Path) -> Option<String> {
+    read_json_value(path).and_then(|v| {
+        v.get("reason_code")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string())
+    })
+}
+
+fn resolve_repro_scripts(rest: &[String], workspace_root: &Path) -> (Vec<PathBuf>, Option<String>) {
+    if rest.len() == 1 && rest[0] == "ui-gallery" {
+        (
+            diag_suite_scripts::ui_gallery_suite_scripts()
+                .into_iter()
+                .map(|p| resolve_path(workspace_root, PathBuf::from(p)))
+                .collect(),
+            Some("ui-gallery".to_string()),
+        )
+    } else if rest.len() == 1 && rest[0] == "ui-gallery-code-editor" {
+        (
+            diag_suite_scripts::ui_gallery_code_editor_suite_scripts()
+                .into_iter()
+                .map(|p| resolve_path(workspace_root, PathBuf::from(p)))
+                .collect(),
+            Some("ui-gallery-code-editor".to_string()),
+        )
+    } else if rest.len() == 1 && rest[0] == "docking-arbitration" {
+        (
+            diag_suite_scripts::docking_arbitration_suite_scripts()
+                .into_iter()
+                .map(|p| resolve_path(workspace_root, PathBuf::from(p)))
+                .collect(),
+            Some("docking-arbitration".to_string()),
+        )
+    } else {
+        (
+            rest.iter()
+                .map(|p| resolve_path(workspace_root, PathBuf::from(p)))
+                .collect(),
+            None,
+        )
+    }
+}
+
 pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
     let ReproCmdContext {
         rest,
@@ -170,14 +212,6 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
         );
     }
 
-    fn read_tooling_reason_code(path: &Path) -> Option<String> {
-        read_json_value(path).and_then(|v| {
-            v.get("reason_code")
-                .and_then(|v| v.as_str())
-                .map(|s| s.to_string())
-        })
-    }
-
     let mut pack_defaults = (
         pack_include_root_artifacts,
         pack_include_triage,
@@ -187,39 +221,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
         pack_defaults = (true, true, true);
     }
 
-    let (scripts, suite_name): (Vec<PathBuf>, Option<String>) =
-        if rest.len() == 1 && rest[0] == "ui-gallery" {
-            (
-                diag_suite_scripts::ui_gallery_suite_scripts()
-                    .into_iter()
-                    .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-                    .collect(),
-                Some("ui-gallery".to_string()),
-            )
-        } else if rest.len() == 1 && rest[0] == "ui-gallery-code-editor" {
-            (
-                diag_suite_scripts::ui_gallery_code_editor_suite_scripts()
-                    .into_iter()
-                    .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-                    .collect(),
-                Some("ui-gallery-code-editor".to_string()),
-            )
-        } else if rest.len() == 1 && rest[0] == "docking-arbitration" {
-            (
-                diag_suite_scripts::docking_arbitration_suite_scripts()
-                    .into_iter()
-                    .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-                    .collect(),
-                Some("docking-arbitration".to_string()),
-            )
-        } else {
-            (
-                rest.into_iter()
-                    .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-                    .collect(),
-                None,
-            )
-        };
+    let (scripts, suite_name) = resolve_repro_scripts(&rest, &workspace_root);
 
     let summary_path = resolved_out_dir.join("repro.summary.json");
 
