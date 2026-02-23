@@ -518,6 +518,57 @@ fn sidebar_toggle_model(
     });
 }
 
+fn sidebar_toggle_key_down_handler(
+    open: Model<bool>,
+    open_mobile: Model<bool>,
+    is_mobile: bool,
+) -> OnKeyDown {
+    Arc::new(move |host, acx, down| {
+        if down.ime_composing {
+            return false;
+        }
+
+        let wants_toggle = down.key == SIDEBAR_TOGGLE_SHORTCUT_KEY
+            && (down.modifiers.ctrl || down.modifiers.meta)
+            && !down.modifiers.alt;
+
+        if !wants_toggle {
+            return false;
+        }
+
+        sidebar_toggle_model(host.models_mut(), &open, &open_mobile, is_mobile);
+        host.request_redraw(acx.window);
+        true
+    })
+}
+
+fn sidebar_toggle_command_handlers(
+    open: Model<bool>,
+    open_mobile: Model<bool>,
+    is_mobile: bool,
+) -> (OnCommand, OnCommandAvailability) {
+    let on_command: OnCommand = Arc::new(move |host, acx, command| {
+        if command.as_str() != SIDEBAR_TOGGLE_COMMAND_ID {
+            return false;
+        }
+        sidebar_toggle_model(host.models_mut(), &open, &open_mobile, is_mobile);
+        host.request_redraw(acx.window);
+        true
+    });
+
+    let on_command_availability: OnCommandAvailability = Arc::new(move |_host, acx, command| {
+        if command.as_str() != SIDEBAR_TOGGLE_COMMAND_ID {
+            return CommandAvailability::NotHandled;
+        }
+        if !acx.focus_in_subtree {
+            return CommandAvailability::NotHandled;
+        }
+        CommandAvailability::Available
+    });
+
+    (on_command, on_command_availability)
+}
+
 /// shadcn/ui `SidebarProvider` (V1).
 ///
 /// Provides shared sidebar open/collapsed state and wraps descendants in `TooltipProvider`
@@ -694,53 +745,17 @@ impl SidebarProvider {
 
             let open_for_shortcut = open.clone();
             let open_mobile_for_shortcut = open_mobile.clone();
-            let on_key_down: OnKeyDown = Arc::new(move |host, acx, down| {
-                if down.ime_composing {
-                    return false;
-                }
+            let on_key_down = sidebar_toggle_key_down_handler(
+                open_for_shortcut,
+                open_mobile_for_shortcut,
+                is_mobile_for_command,
+            );
 
-                let wants_toggle = down.key == SIDEBAR_TOGGLE_SHORTCUT_KEY
-                    && (down.modifiers.ctrl || down.modifiers.meta)
-                    && !down.modifiers.alt;
-
-                if !wants_toggle {
-                    return false;
-                }
-
-                sidebar_toggle_model(
-                    host.models_mut(),
-                    &open_for_shortcut,
-                    &open_mobile_for_shortcut,
-                    is_mobile_for_command,
-                );
-                host.request_redraw(acx.window);
-                true
-            });
-
-            let on_command: OnCommand = Arc::new(move |host, acx, command| {
-                if command.as_str() != SIDEBAR_TOGGLE_COMMAND_ID {
-                    return false;
-                }
-                sidebar_toggle_model(
-                    host.models_mut(),
-                    &open_for_command,
-                    &open_mobile_for_command,
-                    is_mobile_for_command,
-                );
-                host.request_redraw(acx.window);
-                true
-            });
-
-            let on_command_availability: OnCommandAvailability =
-                Arc::new(move |_host, acx, command| {
-                    if command.as_str() != SIDEBAR_TOGGLE_COMMAND_ID {
-                        return CommandAvailability::NotHandled;
-                    }
-                    if !acx.focus_in_subtree {
-                        return CommandAvailability::NotHandled;
-                    }
-                    CommandAvailability::Available
-                });
+            let (on_command, on_command_availability) = sidebar_toggle_command_handlers(
+                open_for_command,
+                open_mobile_for_command,
+                is_mobile_for_command,
+            );
 
             for child in &children {
                 cx.key_add_on_key_down_capture_for(child.id, on_key_down.clone());
@@ -847,55 +862,16 @@ impl Sidebar {
             let open_mobile_model = sidebar_ctx.open_mobile.clone();
             let is_mobile_for_toggle = sidebar_ctx.is_mobile;
 
-            let open_model_for_key = open_model.clone();
-            let open_mobile_model_for_key = open_mobile_model.clone();
-            let on_key_down: OnKeyDown = Arc::new(move |host, acx, down| {
-                if down.ime_composing {
-                    return false;
-                }
-
-                let wants_toggle = down.key == SIDEBAR_TOGGLE_SHORTCUT_KEY
-                    && (down.modifiers.ctrl || down.modifiers.meta)
-                    && !down.modifiers.alt;
-
-                if !wants_toggle {
-                    return false;
-                }
-
-                sidebar_toggle_model(
-                    host.models_mut(),
-                    &open_model_for_key,
-                    &open_mobile_model_for_key,
-                    is_mobile_for_toggle,
-                );
-                host.request_redraw(acx.window);
-                true
-            });
-
-            let on_command: OnCommand = Arc::new(move |host, acx, command| {
-                if command.as_str() != SIDEBAR_TOGGLE_COMMAND_ID {
-                    return false;
-                }
-                sidebar_toggle_model(
-                    host.models_mut(),
-                    &open_model,
-                    &open_mobile_model,
-                    is_mobile_for_toggle,
-                );
-                host.request_redraw(acx.window);
-                true
-            });
-
-            let on_command_availability: OnCommandAvailability =
-                Arc::new(move |_host, acx, command| {
-                    if command.as_str() != SIDEBAR_TOGGLE_COMMAND_ID {
-                        return CommandAvailability::NotHandled;
-                    }
-                    if !acx.focus_in_subtree {
-                        return CommandAvailability::NotHandled;
-                    }
-                    CommandAvailability::Available
-                });
+            let on_key_down = sidebar_toggle_key_down_handler(
+                open_model.clone(),
+                open_mobile_model.clone(),
+                is_mobile_for_toggle,
+            );
+            let (on_command, on_command_availability) = sidebar_toggle_command_handlers(
+                open_model,
+                open_mobile_model,
+                is_mobile_for_toggle,
+            );
 
             let sheet_side = sidebar_sheet_side(side);
             let (surface_props, sheet_size, sheet_bg, sheet_border) = {
@@ -3362,55 +3338,16 @@ impl SidebarMenuSubButton {
             let open_mobile_model = sidebar_ctx.open_mobile.clone();
             let is_mobile_for_toggle = sidebar_ctx.is_mobile;
 
-            let open_model_for_key = open_model.clone();
-            let open_mobile_model_for_key = open_mobile_model.clone();
-            let on_key_down: OnKeyDown = Arc::new(move |host, acx, down| {
-                if down.ime_composing {
-                    return false;
-                }
-
-                let wants_toggle = down.key == SIDEBAR_TOGGLE_SHORTCUT_KEY
-                    && (down.modifiers.ctrl || down.modifiers.meta)
-                    && !down.modifiers.alt;
-
-                if !wants_toggle {
-                    return false;
-                }
-
-                sidebar_toggle_model(
-                    host.models_mut(),
-                    &open_model_for_key,
-                    &open_mobile_model_for_key,
-                    is_mobile_for_toggle,
-                );
-                host.request_redraw(acx.window);
-                true
-            });
-
-            let on_command: OnCommand = Arc::new(move |host, acx, command| {
-                if command.as_str() != SIDEBAR_TOGGLE_COMMAND_ID {
-                    return false;
-                }
-                sidebar_toggle_model(
-                    host.models_mut(),
-                    &open_model,
-                    &open_mobile_model,
-                    is_mobile_for_toggle,
-                );
-                host.request_redraw(acx.window);
-                true
-            });
-
-            let on_command_availability: OnCommandAvailability =
-                Arc::new(move |_host, acx, command| {
-                    if command.as_str() != SIDEBAR_TOGGLE_COMMAND_ID {
-                        return CommandAvailability::NotHandled;
-                    }
-                    if !acx.focus_in_subtree {
-                        return CommandAvailability::NotHandled;
-                    }
-                    CommandAvailability::Available
-                });
+            let on_key_down = sidebar_toggle_key_down_handler(
+                open_model.clone(),
+                open_mobile_model.clone(),
+                is_mobile_for_toggle,
+            );
+            let (on_command, on_command_availability) = sidebar_toggle_command_handlers(
+                open_model,
+                open_mobile_model,
+                is_mobile_for_toggle,
+            );
 
             cx.key_add_on_key_down_capture_for(element.id, on_key_down);
             cx.command_add_on_command_for(element.id, on_command);
@@ -3778,30 +3715,11 @@ impl SidebarMenuButton {
             let open_mobile_model = sidebar_ctx.open_mobile.clone();
             let is_mobile_for_toggle = sidebar_ctx.is_mobile;
 
-            let on_command: OnCommand = Arc::new(move |host, acx, command| {
-                if command.as_str() != SIDEBAR_TOGGLE_COMMAND_ID {
-                    return false;
-                }
-                sidebar_toggle_model(
-                    host.models_mut(),
-                    &open_model,
-                    &open_mobile_model,
-                    is_mobile_for_toggle,
-                );
-                host.request_redraw(acx.window);
-                true
-            });
-
-            let on_command_availability: OnCommandAvailability =
-                Arc::new(move |_host, acx, command| {
-                    if command.as_str() != SIDEBAR_TOGGLE_COMMAND_ID {
-                        return CommandAvailability::NotHandled;
-                    }
-                    if !acx.focus_in_subtree {
-                        return CommandAvailability::NotHandled;
-                    }
-                    CommandAvailability::Available
-                });
+            let (on_command, on_command_availability) = sidebar_toggle_command_handlers(
+                open_model,
+                open_mobile_model,
+                is_mobile_for_toggle,
+            );
 
             cx.command_add_on_command_for(element.id, on_command);
             cx.command_add_on_command_availability_for(element.id, on_command_availability);
