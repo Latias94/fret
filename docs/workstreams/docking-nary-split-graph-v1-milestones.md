@@ -143,7 +143,7 @@ Gates:
 - Prefer running via `--launch` so environment is applied consistently:
   - `pwsh -NoProfile -Command "$env:FRET_DIAG=1; cargo run -p fretboard -- diag suite <suite-name> --launch -- cargo run -p fret-demo --bin docking_arbitration_demo --release"`
 - If any script uses screenshots:
-  - `pwsh -NoProfile -Command "$env:FRET_DIAG=1; $env:FRET_DIAG_SCREENSHOTS=1; cargo run -p fretboard -- diag suite <suite-name> --launch -- cargo run -p fret-demo --bin docking_arbitration_demo --release"`
+  - `pwsh -NoProfile -Command "$env:FRET_DIAG=1; $env:FRET_DIAG_GPU_SCREENSHOTS=1; cargo run -p fretboard -- diag suite <suite-name> --launch -- cargo run -p fret-demo --bin docking_arbitration_demo --release"`
 
 ## M5 — Performance: probe and gate “editor worst-cases”
 

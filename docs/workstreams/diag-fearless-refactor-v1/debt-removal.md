@@ -24,7 +24,7 @@ Non-goals:
 ## Env knob policy
 
 - Canonical knobs are documented in `docs/ui-diagnostics-and-scripted-tests.md`.
-- Tooling should **set** canonical knobs (even if runtimes still accept legacy aliases).
+- Tooling should **set** canonical knobs (do not introduce new aliases).
 - Legacy aliases should be:
   1. documented as deprecated,
   2. removed from tooling first,
@@ -37,9 +37,9 @@ Non-goals:
 - Canonical:
   - `FRET_DIAG_GPU_SCREENSHOTS=1`: enables script-driven GPU readback screenshots (`capture_screenshot`).
   - `FRET_DIAG_BUNDLE_SCREENSHOT=1`: writes a `frame.bmp` alongside bundle dumps.
-- Legacy aliases (still accepted in runtime today; should be removed later):
-  - `FRET_DIAG_SCREENSHOTS=1` (alias of `FRET_DIAG_GPU_SCREENSHOTS`)
-  - `FRET_DIAG_SCREENSHOT=1` (alias of `FRET_DIAG_BUNDLE_SCREENSHOT`)
+- Removed legacy aliases (no longer supported as of 2026-02-23):
+  - `FRET_DIAG_SCREENSHOTS=1` (use `FRET_DIAG_GPU_SCREENSHOTS=1`)
+  - `FRET_DIAG_SCREENSHOT=1` (use `FRET_DIAG_BUNDLE_SCREENSHOT=1`)
 
 Evidence anchors:
 
@@ -79,7 +79,12 @@ Evidence anchors:
 This list stays intentionally short and actionable. When a compatibility layer is removed, add the
 commit hash + evidence anchor(s) here.
 
-- Legacy screenshot env aliases (`FRET_DIAG_SCREENSHOTS`, `FRET_DIAG_SCREENSHOT`) in runtime parsing.
 - Legacy fixed-delta env alias (`FRET_DIAG_FRAME_DELTA_MS`).
 - Legacy schema-v1-only traversal helpers in tooling once all in-tree dumps default to schema v2.
 
+Completed:
+
+- Removed legacy screenshot env aliases from runtime parsing (`3793c44ec`).
+  - Evidence: `ecosystem/fret-bootstrap/src/ui_diagnostics/config.rs`,
+    `crates/fret-launch/src/runner/desktop/runner/diag_screenshots.rs`,
+    `crates/fret-launch/src/runner/desktop/runner/diag_bundle_screenshots.rs`

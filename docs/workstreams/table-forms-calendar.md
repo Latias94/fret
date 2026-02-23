@@ -113,7 +113,7 @@ As of the initial audit:
 
 - Diagnostics:
   - The UI gallery exposes stable `test_id` anchors for Table/DataTable and ships smoke scripts under `tools/diag-scripts/*`.
-  - If semantics + bounds look correct but pixels look blank, run with `FRET_DIAG_SCREENSHOT=1` and inspect `frame.bmp` in the dumped bundle directory.
+  - If semantics + bounds look correct but pixels look blank, run with `FRET_DIAG_BUNDLE_SCREENSHOT=1` and inspect `frame.bmp` in the dumped bundle directory.
 - `ecosystem/fret-ui-shadcn`
   - `Table` primitives exist and are always available: `ecosystem/fret-ui-shadcn/src/table.rs` (shadcn taxonomy).
   - `DataTable` is headless-backed (ADR 0100) and rendered via the shared declarative table view:

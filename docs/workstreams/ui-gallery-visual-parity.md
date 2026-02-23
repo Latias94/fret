@@ -59,5 +59,5 @@ For performance investigations, see `docs/workstreams/ui-gallery-perf-scroll-mea
 ## Notes (Branch-local)
 
 - Overlay anchoring: cherry-picked `fix(ui): reanchor overlays after scroll updates` (commit `6ce3c7a` on this branch).
-- Scripted screenshots: require `FRET_DIAG_SCREENSHOTS=1`, and the desktop surface must include `COPY_SRC` (commit `713e2d3` on this branch).
+- Scripted screenshots: require `FRET_DIAG_GPU_SCREENSHOTS=1`, and the desktop surface must include `COPY_SRC` (commit `713e2d3` on this branch).
   - New script: `tools/diag-scripts/ui-gallery-select-wheel-scroll-screenshots.json`.

@@ -240,10 +240,10 @@ diagnostics stack stays easy to evolve.
 
 ### Debt removal checklist
 
-- [ ] Migrate tooling and docs to canonical screenshot env vars:
+- [x] Migrate tooling and docs to canonical screenshot env vars:
   - `FRET_DIAG_GPU_SCREENSHOTS` (script-driven screenshots)
   - `FRET_DIAG_BUNDLE_SCREENSHOT` (bundle `frame.bmp`)
-- [ ] Remove legacy screenshot env aliases from runtime parsing:
+- [x] Remove legacy screenshot env aliases from runtime parsing:
   - `FRET_DIAG_SCREENSHOTS`
   - `FRET_DIAG_SCREENSHOT`
 

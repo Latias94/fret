@@ -288,7 +288,7 @@ Acceptance criteria (v1):
   - a lifecycle toggle (unregister/register) to validate ID stability and cleanup.
 - Diagnostics closure:
   - `fretboard diag run` can launch the demo and execute a script v2 end-to-end, producing bundles and
-    PNG screenshots (requires `FRET_DIAG_SCREENSHOTS=1`).
+    PNG screenshots (requires `FRET_DIAG_GPU_SCREENSHOTS=1`).
 - Perf closure:
   - a steady-state perf baseline is committed under `docs/workstreams/perf-baselines/` with a matching
     seed policy preset under `docs/workstreams/perf-baselines/policies/`.

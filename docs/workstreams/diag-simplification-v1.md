@@ -185,7 +185,7 @@ Do not remove env vars, but add a single canonical config file entry point:
 
 Also, deprecate ambiguous env names by introducing unambiguous replacements (keep old ones working):
 
-- Prefer a single `FRET_DIAG_SCREENSHOTS=1` for scripted screenshot steps.
+- Prefer a single `FRET_DIAG_GPU_SCREENSHOTS=1` for scripted screenshot steps.
 - Use a single `FRET_DIAG_BUNDLE_SCREENSHOT=1` (or similar) for per-dump frame image output.
 
 ### 6) Implementation split (reduce monolith risk)

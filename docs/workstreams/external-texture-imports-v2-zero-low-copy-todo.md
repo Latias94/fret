@@ -74,7 +74,7 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
       - `apps/fret-demo/src/bin/external_video_imports_mf_demo.rs` (demo entrypoint)
       - Perf script: `tools/diag-scripts/external-video-imports-mf-cpu-upload-perf-steady.json`
       - Baseline: `docs/workstreams/perf-baselines/external-video-imports-mf-cpu-upload.windows-local.v1.json`
-      - Correctness script (requires `FRET_DIAG_SCREENSHOTS=1` + `--check-pixels-changed external-video-imports-mf-surface`):
+      - Correctness script (requires `FRET_DIAG_GPU_SCREENSHOTS=1` + `--check-pixels-changed external-video-imports-mf-surface`):
         - `tools/diag-scripts/external-video-imports-mf-cpu-upload-correctness.json`
     - Tooling note (native gates):
       - Native sessions may omit embedding `bundle.json` into WS messages. `fret-diag-export`
@@ -170,7 +170,7 @@ When completing an item, leave 1–3 evidence anchors (paths + key functions/tes
     - Start a devtools WS hub (token can be fixed for repeatable scripts):
       - `FRET_DEVTOOLS_TOKEN=<token> cargo run -p fret-devtools-ws`
     - Run the demo:
-      - `FRET_DIAG_SCREENSHOTS=1 FRET_DEVTOOLS_WS=ws://127.0.0.1:7331/ FRET_DEVTOOLS_TOKEN=<token> FRET_AVF_VIDEO_PATH=<dir_or_file> cargo run -p fret-demo --features devtools-ws --bin external_video_imports_avf_demo`
+      - `FRET_DIAG_GPU_SCREENSHOTS=1 FRET_DEVTOOLS_WS=ws://127.0.0.1:7331/ FRET_DEVTOOLS_TOKEN=<token> FRET_AVF_VIDEO_PATH=<dir_or_file> cargo run -p fret-demo --features devtools-ws --bin external_video_imports_avf_demo`
       - Pacing (optional, on by default in the demo):
         - `FRET_AVF_PACING=0` to disable (decode/upload every frame; stress path).
         - `FRET_AVF_TARGET_FPS=30` to override the pacing target fps.

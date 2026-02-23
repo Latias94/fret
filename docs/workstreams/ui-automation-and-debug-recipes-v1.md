@@ -79,8 +79,8 @@ This section is a quick “what’s real today vs what we want in v1” checklis
     for `cargo run` launches, but capture export still requires the Tracy UI (no automated `tracy-capture` integration yet).
   - The machine summary is still evolving (it is not yet a stabilized CI gate format).
 - **Screenshot capture remains split into two modes.**
-  - `FRET_DIAG_SCREENSHOT=1` writes `frame.bmp` during bundle dumps (dump-triggered, bundle-scoped).
-  - `FRET_DIAG_SCREENSHOTS=1` enables the on-demand PNG protocol used by script steps like `capture_screenshot`.
+  - `FRET_DIAG_BUNDLE_SCREENSHOT=1` writes `frame.bmp` during bundle dumps (dump-triggered, bundle-scoped).
+  - `FRET_DIAG_GPU_SCREENSHOTS=1` enables the on-demand PNG protocol used by script steps like `capture_screenshot`.
   - These are intentionally separate today, but the UX and documentation should keep them unambiguous.
 - **High-level intent actions exist (Script schema v2), but are still early.**
   - In addition to the low-level v1 steps (`click`, `drag_pointer`, `wheel`, `wait_until`, ...), schema v2 adds intent steps:
@@ -151,7 +151,7 @@ Output:
   - `bundle.json` (or multiple bundles, with stable naming),
   - `triage.json` and `stats.json`,
   - `script.json` + `script.result.json`,
-  - optional screenshots (`FRET_DIAG_SCREENSHOTS=1`),
+  - optional screenshots (`FRET_DIAG_GPU_SCREENSHOTS=1`),
   - optional RenderDoc inspection JSON (offline, from `.rdc`),
   - optional Tracy metadata (at least “how to correlate”; future: capture export).
 - `repro.summary.json` (small, stable, machine-readable):
