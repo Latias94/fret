@@ -1017,6 +1017,15 @@ pub enum UiPredicateV1 {
         /// The expected active item (highlighted option / row).
         item: UiSelectorV1,
     },
+    /// True when there is no active item (neither roving focus nor `active_descendant`).
+    ///
+    /// This is primarily intended for combobox/listbox recipes that should not implicitly
+    /// highlight the first option on open unless `auto_highlight` is enabled.
+    ActiveItemIsNone {
+        /// Container node used for composite focus + `active_descendant` models (typically the
+        /// focused input or listbox root).
+        container: UiSelectorV1,
+    },
     BarrierRoots {
         #[serde(default)]
         barrier_root: UiOptionalRootStateV1,

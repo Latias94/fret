@@ -8977,6 +8977,26 @@ fn eval_predicate(
 
             container_node.active_descendant == Some(item_node.id)
         }
+        UiPredicateV1::ActiveItemIsNone { container } => {
+            let Some(container_node) =
+                select_semantics_node(snapshot, window, element_runtime, container)
+            else {
+                return false;
+            };
+
+            if container_node.active_descendant.is_some() {
+                return false;
+            }
+
+            let Some(focus_id) = snapshot.focus else {
+                return true;
+            };
+            let Some(focus_node) = snapshot.nodes.iter().find(|n| n.id == focus_id) else {
+                return true;
+            };
+
+            focus_node.role != SemanticsRole::ListBoxOption
+        }
         UiPredicateV1::BarrierRoots {
             barrier_root,
             focus_barrier_root,
@@ -11209,6 +11229,66 @@ mod tests {
             ),
             "expected active_descendant to satisfy active_item_is"
         );
+    }
+
+    #[test]
+    fn active_item_is_none_predicate_matches_when_no_active_descendant_and_focus_is_not_option() {
+        let window_bounds = rect(0.0, 0.0, 100.0, 100.0);
+        let root = semantics_node_with_test_id(
+            1,
+            None,
+            SemanticsRole::ListBox,
+            rect(0.0, 0.0, 100.0, 100.0),
+            "listbox",
+            "listbox",
+        );
+        let item_a = semantics_node_with_test_id(
+            2,
+            Some(1),
+            SemanticsRole::ListBoxOption,
+            rect(0.0, 0.0, 100.0, 20.0),
+            "a",
+            "a",
+        );
+
+        let snapshot = SemanticsSnapshot {
+            window: window_id(1),
+            roots: vec![SemanticsRoot {
+                root: node_id(1),
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus_barrier_root: None,
+            focus: Some(node_id(1)),
+            captured: None,
+            nodes: vec![root, item_a],
+        };
+
+        let pred = UiPredicateV1::ActiveItemIsNone {
+            container: UiSelectorV1::TestId {
+                id: "listbox".to_string(),
+            },
+        };
+        assert!(eval_predicate(
+            &snapshot,
+            window_bounds,
+            window_id(1),
+            None,
+            None,
+            None,
+            None,
+            &[],
+            None,
+            None,
+            None,
+            0,
+            false,
+            true,
+            &pred
+        ));
     }
 
     #[test]
