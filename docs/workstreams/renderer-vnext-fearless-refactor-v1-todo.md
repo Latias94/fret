@@ -197,7 +197,8 @@ When completing an item, prefer leaving 1–3 evidence anchors:
       - `fretboard diag perf` (or a GPU profiler) shows the quad fragment shader is a top hotspot and `material_eval` dominates.
       - Use `top_renderer_material_*` counters from `fretboard diag perf --json` (added in `REN-VNEXT-diag-001`) to keep this quantitative.
     - Evidence script (native + web export friendly):
-      - `tools/diag-scripts/ui-gallery-magic-patterns-torture-perf-steady.json`
+      - Native: `tools/diag-scripts/ui-gallery-magic-patterns-torture-perf-steady.json`
+      - Web (devtools-ws + trunk): `tools/diag-scripts/ui-gallery-magic-patterns-torture-perf-steady-web.json`
     - And the current bounded variants are insufficient (confirmed by one of):
       - `material_sampled_quad_ops` is high relative to `quad_draw_calls` in the headless gate’s `headless_renderer_perf_materials`
         output and wall time regresses in `fret-quad-material-stress` on the same machine.
@@ -207,6 +208,11 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Status note (2026-02-15): `diag perf ui-gallery-steady` shows renderer encode is not a dominant contributor on the native Vulkan path
     (see `docs/workstreams/renderer-vnext-fearless-refactor-v1-milestones.md`). Keep this item pending until a WebGPU-specific bundle/profiler
     shows `material_eval` dominates and the existing bounded variants are insufficient.
+  - Status note (2026-02-23): exported a Web runner bundle for `magic_patterns_torture` and triaged it:
+    - `fretboard diag stats` shows p95 total ≈ 9.9ms with `paint` dominating (≈ 5.4ms) and `layout` next (≈ 4.1ms).
+    - `renderer_encode_scene_us` p95 ≈ 1.3ms (not a top hotspot in this workload).
+    - View-cache reuse was off (`cache_roots=0`, `cache_roots_reused=0`), and paint cache misses were high (`paint_cache_misses≈1150`).
+    Keep `REN-VNEXT-webgpu-004` pending until a bundle/profiler shows quad fragment material eval dominates (or we otherwise eliminate paint-side costs first).
 - [x] REN-VNEXT-clean-001 Remove dead/legacy shader branches once variants cover all active cases.
   - Landed: quad shader skips inner-border SDF work when `FRET_BORDER_PRESENT=0` (compile-time override),
     keeping WebGPU uniformity rules satisfied while reducing waste in borderless variants.
