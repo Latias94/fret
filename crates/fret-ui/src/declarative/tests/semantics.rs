@@ -312,6 +312,83 @@ fn pressable_slider_exposes_stepper_actions_when_numeric_metadata_is_present() {
 }
 
 #[test]
+fn pressable_spin_button_exposes_stepper_actions_when_numeric_metadata_is_present() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(80.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "a11y-pressable-spin-button-actions",
+        |cx| {
+            let mut props = crate::element::PressableProps::default();
+            props.enabled = true;
+            props.focusable = true;
+            props.layout.size.width = Length::Px(Px(200.0));
+            props.layout.size.height = Length::Px(Px(24.0));
+            props.a11y = crate::element::PressableA11y {
+                role: Some(fret_core::SemanticsRole::SpinButton),
+                label: Some(Arc::from("Font size")),
+                ..Default::default()
+            };
+
+            let a11y = crate::element::SemanticsDecoration::default()
+                .numeric_value(12.0)
+                .numeric_range(1.0, 72.0)
+                .numeric_step(1.0)
+                .numeric_jump(10.0);
+
+            vec![
+                cx.pressable(props, |_cx, _state| Vec::new())
+                    .attach_semantics(a11y),
+            ]
+        },
+    );
+    ui.set_root(root);
+
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    let node = snap
+        .nodes
+        .iter()
+        .find(|n| {
+            n.role == fret_core::SemanticsRole::SpinButton
+                && n.label.as_deref() == Some("Font size")
+        })
+        .expect("expected a SpinButton semantics node");
+
+    assert!(node.actions.increment, "expected Increment to be exposed");
+    assert!(node.actions.decrement, "expected Decrement to be exposed");
+    assert!(
+        node.actions.set_value,
+        "expected SetValue to be gated on for spin button with numeric metadata"
+    );
+    assert!(
+        !node.actions.invoke,
+        "expected Click to be suppressed for spin button"
+    );
+
+    assert_eq!(node.extra.numeric.value, Some(12.0));
+    assert_eq!(node.extra.numeric.min, Some(1.0));
+    assert_eq!(node.extra.numeric.max, Some(72.0));
+    assert_eq!(node.extra.numeric.step, Some(1.0));
+    assert_eq!(node.extra.numeric.jump, Some(10.0));
+}
+
+#[test]
 fn declarative_scrollbar_emits_role_and_scroll_metadata() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
