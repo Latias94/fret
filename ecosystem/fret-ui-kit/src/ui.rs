@@ -995,9 +995,14 @@ impl UiIntoElement for TextBox {
 
             let layout = decl_style::layout_style(theme, layout_refinement);
 
+            let inherited_color = crate::declarative::current_color::inherited_current_color(cx)
+                .as_ref()
+                .map(|c| c.resolve(theme));
+
             let resolved_color = color_override
                 .as_ref()
                 .map(|c| c.resolve(theme))
+                .or(inherited_color)
                 .or_else(|| {
                     (preset == TextPreset::Label).then(|| {
                         theme
@@ -1176,7 +1181,13 @@ impl UiIntoElement for RawTextBox {
         let (layout, color) = {
             let theme = Theme::global(&*cx.app);
             let layout = decl_style::layout_style(theme, layout_refinement);
-            let color = color_override.as_ref().map(|c| c.resolve(theme));
+            let inherited_color = crate::declarative::current_color::inherited_current_color(cx)
+                .as_ref()
+                .map(|c| c.resolve(theme));
+            let color = color_override
+                .as_ref()
+                .map(|c| c.resolve(theme))
+                .or(inherited_color);
             (layout, color)
         };
 
@@ -1274,6 +1285,37 @@ mod tests {
             assert!(
                 matches!(el.kind, ElementKind::SelectableText(_)),
                 "expected ui::text(...).selectable_on() to render a SelectableText element"
+            );
+        });
+    }
+
+    #[test]
+    fn text_inherits_current_color_when_available() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        let expected = fret_core::Color {
+            r: 0.25,
+            g: 0.5,
+            b: 0.75,
+            a: 1.0,
+        };
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            crate::declarative::current_color::with_current_color_provider(
+                cx,
+                crate::ColorRef::Color(expected),
+                |cx| {
+                    let el = text(cx, "hello").into_element(cx);
+                    let ElementKind::Text(props) = el.kind else {
+                        panic!("expected Text element");
+                    };
+                    assert_eq!(props.color, Some(expected));
+                },
             );
         });
     }
