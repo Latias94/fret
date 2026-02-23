@@ -755,6 +755,18 @@ Progress record (Render plan JSON dump string allocation cleanup):
   - `cargo test -p fret-render-wgpu --lib`
   - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
 
+Progress record (EncodeState per-frame stack scratch reuse):
+
+- Date: 2026-02-23
+- Status: Landed (Stage 22 step 1)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/types.rs` (`SceneEncoding` scratch fields, `ClipPop`, `MaskPop`)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/encode/state.rs` (`EncodeState::new`)
+- Gates run:
+  - `python3 tools/check_layering.py`
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
 ## M4 — Paint/Material evolution (staged)
 
 Deliverables:

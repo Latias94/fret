@@ -528,6 +528,17 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `cargo test -p fret-render-wgpu --lib`
     - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
 
+- [x] REN-VNEXT-refactor-220 Stage 22: reuse SceneEncoding-owned scratch for per-frame encode stacks.
+  - Goal: avoid per-frame heap allocations in `EncodeState` (scissor/clip/mask/transform/opacity/material_seen stacks).
+  - Landed (step 1): store encode scratch vectors on `SceneEncoding` and borrow them from `EncodeState::new`.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/types.rs` (`SceneEncoding` scratch fields, `ClipPop`, `MaskPop`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/encode/state.rs` (`EncodeState::new`)
+  - Gates:
+    - `python3 tools/check_layering.py`
+    - `cargo test -p fret-render-wgpu --lib`
+    - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
 ## M7 — Post-v1 semantic expansions (deferred backlog)
 
 These items are intentionally *not* part of the vNext refactor’s v1 closure. They are common UI
