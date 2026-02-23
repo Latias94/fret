@@ -43,6 +43,8 @@ These are optional, but high leverage if we want to avoid follow-up “contract 
 
 - [x] Prefer `extra.numeric.value` in `SetSliderValue` script step; fallback to parsing `value` string.
 - [x] Add/adjust one `tools/diag-scripts/*set-slider-value*.json` script to assert numeric semantics explicitly.
+- [x] Add a progress demo script gate asserting `extra.numeric` on `ProgressBar`.
+- [x] Add a scroll demo script gate asserting `extra.scroll` is emitted for scroll containers.
 
 ## Quality gates
 
