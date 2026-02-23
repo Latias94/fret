@@ -243,25 +243,18 @@ impl Renderer {
         }
 
         let postprocess = self.pick_debug_postprocess(viewport_size, format);
-        let (plan, plan_elapsed) = fret_perf::measure_span(
+        let plan = self.compile_render_plan_for_scene(
+            frame_index,
             perf_enabled,
             trace_enabled,
-            || tracing::trace_span!("fret.renderer.plan.compile", frame_index),
-            || {
-                RenderPlan::compile_for_scene(
-                    &encoding,
-                    viewport_size,
-                    format,
-                    clear.0,
-                    path_samples,
-                    postprocess,
-                    self.intermediate_budget_bytes,
-                )
-            },
+            &encoding,
+            viewport_size,
+            format,
+            clear.0,
+            path_samples,
+            postprocess,
+            &mut frame_perf,
         );
-        if let Some(plan_elapsed) = plan_elapsed {
-            frame_perf.plan_compile += plan_elapsed;
-        }
         plan.debug_validate();
         render_scene_span.record("plan_passes", plan.passes.len() as u64);
         render_scene_span.record("plan_segments", plan.segments.len() as u64);
