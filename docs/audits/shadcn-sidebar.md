@@ -141,6 +141,9 @@ coverage for `sidebar-*` pages.
 - Added a scripted conformance gate that exercises the sidebar provider keyboard shortcut outcomes in the UI gallery (`Ctrl+B` toggles collapse/expand deterministically on desktop).
   - Script: `tools/diag-scripts/ui-gallery-sidebar-provider-shortcut-toggle-focus.json`
   - Suite: `crates/fret-diag/src/diag_suite_scripts.rs`
+- Added a scripted conformance gate that exercises `SidebarProvider` controlled open model composition (external toggle + internal trigger stay in sync).
+  - Script: `tools/diag-scripts/ui-gallery-sidebar-controlled-open-sync.json`
+  - Suite: `crates/fret-diag/src/diag_suite_scripts.rs`
 
 ## Component-by-component audit (24/24)
 

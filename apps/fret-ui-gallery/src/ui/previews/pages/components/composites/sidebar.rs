@@ -378,7 +378,12 @@ pub(in crate::ui) fn preview_sidebar(cx: &mut ElementContext<'_, App>) -> Vec<An
                     )
                     .collapsible(shadcn::SidebarCollapsible::Icon)
                     .refine_layout(LayoutRefinement::default().h_full())
-                    .into_element(cx);
+                    .into_element(cx)
+                    .attach_semantics(
+                        SemanticsDecoration::default()
+                            .role(fret_core::SemanticsRole::Group)
+                            .test_id("ui-gallery-sidebar-controlled-sidebar"),
+                    );
 
                 let trigger = shadcn::SidebarTrigger::new()
                     .test_id("ui-gallery-sidebar-controlled-trigger")
