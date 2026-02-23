@@ -294,7 +294,7 @@ impl ElementHostWidget {
                     cx.set_disabled(!props.enabled);
                     cx.set_focusable(props.enabled && props.focusable);
                     if props.enabled {
-                        if role == SemanticsRole::Slider {
+                        if role == SemanticsRole::Slider || role == SemanticsRole::SpinButton {
                             cx.set_invokable(false);
                             cx.set_value_editable(true);
                         } else {
