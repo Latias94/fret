@@ -1,7 +1,7 @@
 ---
 title: Diagnostics Fearless Refactor v1 (Milestones)
 status: draft
-date: 2026-02-22
+date: 2026-02-23
 scope: diagnostics, automation, tooling, refactor
 ---
 
@@ -24,6 +24,8 @@ Exit criteria:
 - Extracted modules exist for large check families:
   - `crates/fret-diag/src/stats/ui_gallery_markdown_editor.rs`
   - `crates/fret-diag/src/stats/ui_gallery_code_editor.rs`
+  - `crates/fret-diag/src/stats/debug_stats_gates.rs`
+  - `crates/fret-diag/src/stats/view_cache_gates.rs`
 - The `diag perf` subcommand handler is no longer implemented inline in `crates/fret-diag/src/lib.rs`.
   - Evidence: `crates/fret-diag/src/diag_perf.rs`
 - The `diag compare` subcommand handler is no longer implemented inline in `crates/fret-diag/src/lib.rs`.
