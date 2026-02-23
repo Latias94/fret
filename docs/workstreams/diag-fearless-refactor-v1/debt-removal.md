@@ -79,7 +79,6 @@ Evidence anchors:
 This list stays intentionally short and actionable. When a compatibility layer is removed, add the
 commit hash + evidence anchor(s) here.
 
-- Legacy fixed-delta env alias (`FRET_DIAG_FRAME_DELTA_MS`).
 - Legacy schema-v1-only traversal helpers in tooling once all in-tree dumps default to schema v2.
 
 Completed:
@@ -88,3 +87,5 @@ Completed:
   - Evidence: `ecosystem/fret-bootstrap/src/ui_diagnostics/config.rs`,
     `crates/fret-launch/src/runner/desktop/runner/diag_screenshots.rs`,
     `crates/fret-launch/src/runner/desktop/runner/diag_bundle_screenshots.rs`
+- Removed legacy fixed frame delta env alias (`FRET_DIAG_FRAME_DELTA_MS`) (`f93507648`).
+  - Evidence: `crates/fret-core/src/window.rs`
