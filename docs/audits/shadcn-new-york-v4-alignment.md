@@ -401,6 +401,8 @@ Recent fixes:
   - `InputGroupButton` is now available (xs/sm/icon sizes) to support input-group compositions.
   - `InputGroupButton` no longer forces a fill-width content row for text buttons, matching the
     upstream shrink-to-fit behavior.
+  - UI gallery dropdown demo now uses the real chevron-down icon (`lucide.chevron-down`) instead of
+    a text placeholder.
 - Conformance gates:
   - Layout: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs`
     (`web_vs_fret_layout_input_group_dropdown_height`, `web_vs_fret_layout_input_group_icon_geometry_matches`,
