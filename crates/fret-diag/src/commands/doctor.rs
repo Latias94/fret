@@ -467,6 +467,16 @@ pub(crate) fn cmd_doctor(
     }
     println!("required_ok: {required_ok}");
     println!("ok: {ok}");
+    let warnings = report
+        .get("warnings")
+        .and_then(|v| v.as_array())
+        .map(|v| v.as_slice())
+        .unwrap_or(&[]);
+    for w in warnings {
+        if let Some(w) = w.as_str() {
+            println!("warning: {w}");
+        }
+    }
     let repairs = report
         .get("repairs")
         .and_then(|v| v.as_array())
@@ -635,6 +645,61 @@ fn file_bytes(path: &Path) -> Option<u64> {
     std::fs::metadata(path).ok().map(|m| m.len())
 }
 
+fn sniff_schema_version_from_json_prefix(bytes: &[u8]) -> Option<u64> {
+    fn find_subslice(haystack: &[u8], needle: &[u8]) -> Option<usize> {
+        haystack
+            .windows(needle.len())
+            .position(|window| window == needle)
+    }
+
+    fn parse_number_after_key(bytes: &[u8], key_offset: usize, key_len: usize) -> Option<u64> {
+        let mut i = key_offset.saturating_add(key_len);
+        while i < bytes.len() && bytes[i].is_ascii_whitespace() {
+            i = i.saturating_add(1);
+        }
+        if bytes.get(i).copied() != Some(b':') {
+            return None;
+        }
+        i = i.saturating_add(1);
+        while i < bytes.len() && bytes[i].is_ascii_whitespace() {
+            i = i.saturating_add(1);
+        }
+
+        let start = i;
+        while i < bytes.len() && bytes[i].is_ascii_digit() {
+            i = i.saturating_add(1);
+        }
+        if start == i {
+            return None;
+        }
+        std::str::from_utf8(&bytes[start..i])
+            .ok()?
+            .parse::<u64>()
+            .ok()
+    }
+
+    for key in [br#""schema_version""#, br#""schemaVersion""#] {
+        let Some(off) = find_subslice(bytes, key) else {
+            continue;
+        };
+        if let Some(v) = parse_number_after_key(bytes, off, key.len()) {
+            return Some(v);
+        }
+    }
+
+    None
+}
+
+fn sniff_bundle_schema_version(bundle_json_path: &Path) -> Result<Option<u64>, String> {
+    // Only read a prefix: schema_version is expected near the top-level object.
+    const MAX_PREFIX_BYTES: usize = 64 * 1024;
+    let mut bytes = std::fs::read(bundle_json_path).map_err(|e| e.to_string())?;
+    if bytes.len() > MAX_PREFIX_BYTES {
+        bytes.truncate(MAX_PREFIX_BYTES);
+    }
+    Ok(sniff_schema_version_from_json_prefix(&bytes))
+}
+
 fn manifest_bundle_json_chunks_summary(manifest_dir: &Path, manifest: &Value) -> Option<Value> {
     let bundle_json = manifest.get("bundle_json")?;
     let chunks = bundle_json.get("chunks")?.as_array()?;
@@ -689,6 +754,15 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
 
     let (items, required_ok, ok) = doctor_items(bundle_dir, warmup_frames);
     let bundle_json = resolve_bundle_json_path_no_materialize(bundle_dir);
+    let bundle_json_bytes = bundle_json.as_deref().and_then(file_bytes);
+    let (bundle_schema_version, bundle_schema_error) = if let Some(path) = bundle_json.as_deref() {
+        match sniff_bundle_schema_version(path) {
+            Ok(v) => (v, None),
+            Err(e) => (None, Some(e)),
+        }
+    } else {
+        (None, None)
+    };
 
     let script_result_path = resolve_script_result_path(bundle_dir);
     let script_result = script_result_path
@@ -738,6 +812,7 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
         .and_then(|v| v.as_u64());
 
     let mut repairs: Vec<Value> = Vec::new();
+    let mut warnings: Vec<Value> = Vec::new();
     if !items.iter().all(|it| it.status == DoctorStatus::Ok) {
         repairs.push(json!({
             "code": "fix_sidecars",
@@ -763,6 +838,51 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
             "error": err,
             "repair_hint": "re-extract the share zip (ensure manifest.json is intact) or re-capture the bundle",
         }));
+    }
+
+    if let Some(schema_version) = bundle_schema_version {
+        if schema_version != 1 && schema_version != 2 {
+            warnings.push(Value::String(format!(
+                "unsupported bundle.json schema_version={schema_version} (expected 1 or 2)"
+            )));
+            repairs.push(json!({
+                "code": "unsupported_bundle_schema_version",
+                "note": "bundle.json schema_version is not supported by in-tree tooling",
+                "schema_version": schema_version,
+                "repair_hint": "re-capture the bundle or regenerate bundle.json from a known-good source",
+            }));
+        }
+        if schema_version == 1 {
+            if let Some(bytes) = bundle_json_bytes {
+                const SUGGEST_V2_MIN_BYTES: u64 = 64 * 1024 * 1024;
+                if bytes >= SUGGEST_V2_MIN_BYTES {
+                    warnings.push(Value::String(
+                        "bundle.json uses schema v1; consider converting to schema v2 to reduce bundle size and enable semantics tables"
+                            .to_string(),
+                    ));
+                    repairs.push(json!({
+                        "code": "suggest_bundle_v2",
+                        "note": "convert to schema v2 (writes bundle.schema2.json)",
+                        "command": format!("fretboard diag bundle-v2 {}", bundle_dir.display()),
+                    }));
+                }
+            }
+        }
+    } else if bundle_json.is_some() {
+        warnings.push(Value::String(
+            "bundle.json is present but schema_version could not be detected from the file prefix"
+                .to_string(),
+        ));
+        repairs.push(json!({
+            "code": "missing_bundle_schema_version",
+            "note": "bundle.json is present but schema_version could not be detected",
+            "repair_hint": "re-capture the bundle or regenerate bundle.json; ensure schema_version is at the top-level object",
+        }));
+    }
+    if let Some(err) = &bundle_schema_error {
+        warnings.push(Value::String(format!(
+            "bundle schema version sniff failed: {err}"
+        )));
     }
 
     if bundle_json.is_none() {
@@ -799,7 +919,7 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
         }
     }
 
-    if let Some(bundle_json_bytes) = bundle_json.as_deref().and_then(file_bytes) {
+    if let Some(bundle_json_bytes) = bundle_json_bytes {
         const DEFAULT_MAX_FILE_BYTES: u64 = 512 * 1024 * 1024;
         if bundle_json_bytes > DEFAULT_MAX_FILE_BYTES {
             repairs.push(json!({
@@ -816,7 +936,9 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
         "required_ok": required_ok,
         "bundle_dir": bundle_dir.display().to_string(),
         "bundle_json": bundle_json.as_ref().map(|p| p.display().to_string()),
-        "bundle_json_bytes": bundle_json.as_deref().and_then(file_bytes),
+        "bundle_json_bytes": bundle_json_bytes,
+        "bundle_schema_version": bundle_schema_version,
+        "bundle_schema_error": bundle_schema_error,
         "warmup_frames": warmup_frames,
         "script_result_path": script_result_path.as_ref().map(|p| p.display().to_string()),
         "script_result": script_result,
@@ -825,6 +947,7 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
         "manifest_schema_version": manifest_schema_version,
         "manifest_run_id": manifest_run_id,
         "manifest_error": manifest_error,
+        "warnings": warnings,
         "repairs": repairs,
         "items": items.iter().map(|it| {
             json!({
