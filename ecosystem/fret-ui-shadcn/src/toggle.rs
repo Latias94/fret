@@ -617,13 +617,15 @@ mod tests {
 
     #[test]
     fn toggle_uncontrolled_applies_default_pressed_once_and_does_not_reset() {
-        fn is_selected(ui: &UiTree<App>, label: &str) -> bool {
+        fn is_pressed(ui: &UiTree<App>, label: &str) -> bool {
             ui.semantics_snapshot()
                 .expect("semantics snapshot")
                 .nodes
                 .iter()
                 .find(|n| n.label.as_deref() == Some(label))
-                .is_some_and(|n| n.flags.selected)
+                .is_some_and(|n| {
+                    n.flags.pressed_state == Some(fret_core::SemanticsPressedState::True)
+                })
         }
 
         let window = AppWindowId::default();
@@ -639,7 +641,7 @@ mod tests {
 
         let root =
             render_uncontrolled_frame(&mut ui, &mut app, &mut services, window, bounds, true);
-        assert!(is_selected(&ui, "Toggle"));
+        assert!(is_pressed(&ui, "Toggle"));
 
         let focusable = ui
             .first_focusable_descendant_including_declarative(&mut app, window, root)
@@ -665,11 +667,11 @@ mod tests {
         );
 
         let _ = render_uncontrolled_frame(&mut ui, &mut app, &mut services, window, bounds, true);
-        assert!(!is_selected(&ui, "Toggle"));
+        assert!(!is_pressed(&ui, "Toggle"));
 
         // The internal model should not be reset by repeatedly passing the same default value.
         let _ = render_uncontrolled_frame(&mut ui, &mut app, &mut services, window, bounds, true);
-        assert!(!is_selected(&ui, "Toggle"));
+        assert!(!is_pressed(&ui, "Toggle"));
     }
 
     #[test]

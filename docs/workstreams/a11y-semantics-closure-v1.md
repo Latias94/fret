@@ -1,6 +1,6 @@
 # A11y semantics closure (v1)
 
-Status: In progress (doc-first inventory; implementation work queued)
+Status: In progress (pressed closed; required/invalid + busy queued)
 
 Last updated: 2026-02-23
 
@@ -42,17 +42,17 @@ A semantic surface is considered “closed” only when all boxes are checked:
 - Orientation semantics: `SemanticsNodeExtra.orientation` + AccessKit mapping + shadcn slider/progress adoption.
 - Tri-state checked semantics: `SemanticsFlags.checked_state` + AccessKit mapping + shadcn checkbox indeterminate gate
   (ADR 0289).
+- Pressed/toggle-button semantics: `SemanticsFlags.pressed_state` + AccessKit mapping + shadcn toggle adoption
+  (ADR 0290).
 - Viewport semantics for scroll containers: `SemanticsRole::Viewport` mapping.
 
 ### Next P0 candidates (high ROI, low policy surface)
 
 These are common across apps/editors and map directly into platform APIs:
 
-1. **Pressed/toggle-button semantics** (aria-pressed class)
-   - Goal: distinguish toggle buttons from plain buttons, and support “mixed” where applicable.
-2. **Required/invalid semantics** (forms and validation)
+1. **Required/invalid semantics** (forms and validation)
    - Goal: allow AT and automation to reason about validation state without parsing text.
-3. **Busy/loading semantics**
+2. **Busy/loading semantics**
    - Goal: mark regions/widgets as busy during async loads, decoupled from progress text.
 
 ### P1 candidates (valuable, but may require more policy decisions)
@@ -66,4 +66,3 @@ These are common across apps/editors and map directly into platform APIs:
 1. Close **pressed** first (smallest cross-cutting surface; easy shadcn adoption).
 2. Close **required/invalid** next (immediately useful for real apps; easy gating).
 3. Close **busy** next (ties into progress/async and reduces string-only “Loading…” patterns).
-

@@ -4,17 +4,17 @@ Last updated: 2026-02-23
 
 ## P0: Pressed semantics (toggle buttons)
 
-- [ ] Confirm AccessKit surface:
+- [x] Confirm AccessKit surface:
   - property shape (`pressed` / `toggled` / role differentiation) and whether “mixed” is supported.
   - action surface expectations (Invoke only vs explicit Toggle).
-- [ ] Add portable contract in `crates/fret-core` (additive, validated where appropriate).
-- [ ] Add `fret-ui` writers:
+- [x] Add portable contract in `crates/fret-core` (additive, validated where appropriate).
+- [x] Add `fret-ui` writers:
   - declarative `Pressable` / shadcn `Toggle` / `ToggleGroup` publish the pressed semantics.
-- [ ] Add `fret-a11y-accesskit` mapping + unit tests.
-- [ ] Add shadcn snapshot gate(s) asserting pressed semantics for:
+- [x] Add `fret-a11y-accesskit` mapping + unit tests.
+- [x] Add shadcn snapshot gate(s) asserting pressed semantics for:
   - a single toggle button,
   - a toggle group item.
-- [ ] Ensure diagnostics snapshots/fingerprint include the new field(s) if they affect determinism.
+- [x] Ensure diagnostics snapshots/fingerprint include the new field(s) if they affect determinism.
 
 ## P0: Required + invalid semantics (forms)
 
@@ -35,6 +35,5 @@ Last updated: 2026-02-23
 
 ## Hygiene
 
-- [ ] Add/refresh ADR(s) for any new hard-to-change surfaces.
-- [ ] Update `docs/adr/IMPLEMENTATION_ALIGNMENT.md` with evidence anchors once a surface is closed.
-
+- [x] Add/refresh ADR(s) for any new hard-to-change surfaces (ADR 0290).
+- [x] Update `docs/adr/IMPLEMENTATION_ALIGNMENT.md` with evidence anchors once a surface is closed.

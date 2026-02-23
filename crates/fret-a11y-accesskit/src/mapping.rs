@@ -194,6 +194,16 @@ pub fn tree_update_from_snapshot(snapshot: &SemanticsSnapshot, scale_factor: f64
             } else {
                 Toggled::False
             });
+        } else if let Some(pressed) = node.flags.pressed_state {
+            let pressed = match pressed {
+                fret_core::SemanticsPressedState::False => Some(Toggled::False),
+                fret_core::SemanticsPressedState::True => Some(Toggled::True),
+                fret_core::SemanticsPressedState::Mixed => Some(Toggled::Mixed),
+                _ => None,
+            };
+            if let Some(pressed) = pressed {
+                out.set_toggled(pressed);
+            }
         }
 
         if snapshot.barrier_root.is_some()

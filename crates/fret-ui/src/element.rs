@@ -1255,6 +1255,7 @@ pub struct PressableA11y {
     pub expanded: Option<bool>,
     pub checked: Option<bool>,
     pub checked_state: Option<fret_core::SemanticsCheckedState>,
+    pub pressed_state: Option<fret_core::SemanticsPressedState>,
     pub active_descendant: Option<NodeId>,
     /// Declarative-only: element ID of a node which labels this node.
     ///

@@ -24,6 +24,24 @@ impl UiCheckedStateV1 {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiPressedStateV1 {
+    False,
+    True,
+    Mixed,
+}
+
+impl UiPressedStateV1 {
+    fn from_semantics_pressed_state(v: fret_core::SemanticsPressedState) -> Self {
+        match v {
+            fret_core::SemanticsPressedState::False => Self::False,
+            fret_core::SemanticsPressedState::True => Self::True,
+            fret_core::SemanticsPressedState::Mixed => Self::Mixed,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiSemanticsSnapshotV1 {
     pub window: u64,
@@ -99,6 +117,8 @@ pub struct UiSemanticsFlagsV1 {
     pub checked: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub checked_state: Option<UiCheckedStateV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pressed_state: Option<UiPressedStateV1>,
 }
 
 impl UiSemanticsFlagsV1 {
@@ -110,6 +130,7 @@ impl UiSemanticsFlagsV1 {
             && !v.expanded
             && v.checked.is_none()
             && v.checked_state.is_none()
+            && v.pressed_state.is_none()
     }
 }
 
@@ -211,6 +232,10 @@ impl UiSemanticsNodeV1 {
                     .flags
                     .checked_state
                     .map(UiCheckedStateV1::from_semantics_checked_state),
+                pressed_state: node
+                    .flags
+                    .pressed_state
+                    .map(UiPressedStateV1::from_semantics_pressed_state),
             },
             test_id,
             active_descendant: node.active_descendant.map(key_to_u64),

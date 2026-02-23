@@ -244,6 +244,9 @@ impl ElementHostWidget {
                     if props.a11y.checked.is_some() {
                         cx.set_checked(props.a11y.checked);
                     }
+                    if props.a11y.pressed_state.is_some() {
+                        cx.set_pressed_state(props.a11y.pressed_state);
+                    }
                     if let Some(element) = props.a11y.labelled_by_element
                         && let Some(node) = cx.resolve_declarative_element(element)
                     {

@@ -7378,6 +7378,17 @@ fn semantics_fingerprint_v1(
                 });
             }
         }
+        match node.flags.pressed_state {
+            None => hasher.write_u8(0),
+            Some(state) => {
+                hasher.write_u8(1);
+                hasher.write_u8(match state {
+                    fret_core::SemanticsPressedState::False => 0,
+                    fret_core::SemanticsPressedState::True => 1,
+                    fret_core::SemanticsPressedState::Mixed => 2,
+                });
+            }
+        }
 
         hasher.write_opt_str(node.test_id.as_deref(), redact_text, max_string_bytes);
         hasher.write_opt_u64(node.active_descendant.map(key_to_u64));

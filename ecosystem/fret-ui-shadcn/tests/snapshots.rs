@@ -155,6 +155,8 @@ struct SnapSemanticsFlags {
     checked: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     checked_state: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pressed_state: Option<String>,
 }
 
 #[derive(Clone, Copy, Debug, Default, Serialize, Deserialize)]
@@ -619,6 +621,7 @@ where
                 expanded: n.flags.expanded,
                 checked: n.flags.checked,
                 checked_state: n.flags.checked_state.map(|v| format!("{v:?}")),
+                pressed_state: n.flags.pressed_state.map(|v| format!("{v:?}")),
             },
             extra: snap_semantics_extra(&n.extra),
         })
@@ -663,6 +666,41 @@ fn snapshot_button_default() {
     );
     snapshot_for_root("button_default", bounds, |cx| {
         vec![fret_ui_shadcn::Button::new("Hello").into_element(cx)]
+    });
+}
+
+#[test]
+fn snapshot_toggle_pressed_semantics() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(320.0), Px(180.0)),
+    );
+    snapshot_for_root("toggle_pressed_semantics", bounds, |cx| {
+        vec![
+            fret_ui_shadcn::Toggle::uncontrolled(true)
+                .a11y_label("Toggle")
+                .label("Hello")
+                .into_element(cx),
+        ]
+    });
+}
+
+#[test]
+fn snapshot_toggle_group_pressed_semantics() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(420.0), Px(180.0)),
+    );
+    snapshot_for_root("toggle_group_pressed_semantics", bounds, |cx| {
+        let items = vec![
+            fret_ui_shadcn::ToggleGroupItem::new("alpha", vec![cx.text("A")]).a11y_label("Alpha"),
+            fret_ui_shadcn::ToggleGroupItem::new("beta", vec![cx.text("B")]).a11y_label("Beta"),
+        ];
+        vec![
+            fret_ui_shadcn::ToggleGroup::multiple_uncontrolled(vec!["alpha"])
+                .items(items)
+                .into_element(cx),
+        ]
     });
 }
 

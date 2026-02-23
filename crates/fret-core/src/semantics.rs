@@ -71,6 +71,14 @@ pub enum SemanticsCheckedState {
     Mixed,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum SemanticsPressedState {
+    False,
+    True,
+    Mixed,
+}
+
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct SemanticsFlags {
     pub focused: bool,
@@ -85,6 +93,8 @@ pub struct SemanticsFlags {
     pub checked: Option<bool>,
     /// Tri-state checked state (None = not checkable / unknown).
     pub checked_state: Option<SemanticsCheckedState>,
+    /// Tri-state pressed state for toggle-button-like widgets (None = not a toggle / unknown).
+    pub pressed_state: Option<SemanticsPressedState>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

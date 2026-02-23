@@ -346,6 +346,175 @@ fn mixed_checked_state_maps_to_accesskit_toggled_mixed() {
 }
 
 #[test]
+fn pressed_state_maps_to_accesskit_toggled() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(10.0), Px(10.0)),
+    );
+
+    let root = node(1);
+    let toggle = node(2);
+
+    let snapshot = SemanticsSnapshot {
+        window,
+        roots: vec![SemanticsRoot {
+            root,
+            visible: true,
+            blocks_underlay_input: false,
+            hit_testable: true,
+            z_index: 0,
+        }],
+        barrier_root: None,
+        focus_barrier_root: None,
+        focus: None,
+        captured: None,
+        nodes: vec![
+            SemanticsNode {
+                id: root,
+                parent: None,
+                role: SemanticsRole::Window,
+                bounds,
+                flags: SemanticsFlags::default(),
+                test_id: None,
+                active_descendant: None,
+                pos_in_set: None,
+                set_size: None,
+                label: None,
+                value: None,
+                extra: SemanticsNodeExtra::default(),
+                text_selection: None,
+                text_composition: None,
+                actions: SemanticsActions::default(),
+                labelled_by: Vec::new(),
+                described_by: Vec::new(),
+                controls: Vec::new(),
+                inline_spans: Vec::new(),
+            },
+            SemanticsNode {
+                id: toggle,
+                parent: Some(root),
+                role: SemanticsRole::Button,
+                bounds,
+                flags: SemanticsFlags {
+                    pressed_state: Some(fret_core::SemanticsPressedState::Mixed),
+                    ..SemanticsFlags::default()
+                },
+                test_id: None,
+                active_descendant: None,
+                pos_in_set: None,
+                set_size: None,
+                label: Some("Toggle".to_string()),
+                value: None,
+                extra: SemanticsNodeExtra::default(),
+                text_selection: None,
+                text_composition: None,
+                actions: SemanticsActions::default(),
+                labelled_by: Vec::new(),
+                described_by: Vec::new(),
+                controls: Vec::new(),
+                inline_spans: Vec::new(),
+            },
+        ],
+    };
+
+    let update = tree_update_from_snapshot(&snapshot, 1.0);
+    let toggle_id = to_accesskit_id(toggle);
+    let toggle_node = update
+        .nodes
+        .iter()
+        .find_map(|(id, n)| (*id == toggle_id).then_some(n))
+        .expect("toggle node present");
+
+    assert_eq!(toggle_node.toggled(), Some(accesskit::Toggled::Mixed));
+}
+
+#[test]
+fn checked_state_takes_precedence_over_pressed_state() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(10.0), Px(10.0)),
+    );
+
+    let root = node(1);
+    let node = node(2);
+
+    let snapshot = SemanticsSnapshot {
+        window,
+        roots: vec![SemanticsRoot {
+            root,
+            visible: true,
+            blocks_underlay_input: false,
+            hit_testable: true,
+            z_index: 0,
+        }],
+        barrier_root: None,
+        focus_barrier_root: None,
+        focus: None,
+        captured: None,
+        nodes: vec![
+            SemanticsNode {
+                id: root,
+                parent: None,
+                role: SemanticsRole::Window,
+                bounds,
+                flags: SemanticsFlags::default(),
+                test_id: None,
+                active_descendant: None,
+                pos_in_set: None,
+                set_size: None,
+                label: None,
+                value: None,
+                extra: SemanticsNodeExtra::default(),
+                text_selection: None,
+                text_composition: None,
+                actions: SemanticsActions::default(),
+                labelled_by: Vec::new(),
+                described_by: Vec::new(),
+                controls: Vec::new(),
+                inline_spans: Vec::new(),
+            },
+            SemanticsNode {
+                id: node,
+                parent: Some(root),
+                role: SemanticsRole::Checkbox,
+                bounds,
+                flags: SemanticsFlags {
+                    checked_state: Some(fret_core::SemanticsCheckedState::True),
+                    pressed_state: Some(fret_core::SemanticsPressedState::False),
+                    ..SemanticsFlags::default()
+                },
+                test_id: None,
+                active_descendant: None,
+                pos_in_set: None,
+                set_size: None,
+                label: Some("Checkbox".to_string()),
+                value: None,
+                extra: SemanticsNodeExtra::default(),
+                text_selection: None,
+                text_composition: None,
+                actions: SemanticsActions::default(),
+                labelled_by: Vec::new(),
+                described_by: Vec::new(),
+                controls: Vec::new(),
+                inline_spans: Vec::new(),
+            },
+        ],
+    };
+
+    let update = tree_update_from_snapshot(&snapshot, 1.0);
+    let id = to_accesskit_id(node);
+    let mapped = update
+        .nodes
+        .iter()
+        .find_map(|(nid, n)| (*nid == id).then_some(n))
+        .expect("node present");
+
+    assert_eq!(mapped.toggled(), Some(accesskit::Toggled::True));
+}
+
+#[test]
 fn increment_and_decrement_actions_are_exposed_and_decoded() {
     let window = AppWindowId::default();
     let root = node(1);
