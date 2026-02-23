@@ -217,9 +217,9 @@ diagnostics stack stays easy to evolve.
 - [x] Fix `diag bundle-v2` semantics mode behavior for schema v2 bundles that are semantics-table-only (no inline semantics):
   - apply mode decisions based on resolved semantics (inline or `tables.semantics`),
   - prune `tables.semantics.entries[]` to the post-mode referenced set (avoid dropping all semantics by accident).
-- [ ] Publish and enforce a bundle schema compatibility matrix (v1/v2) for in-tree workflows.
-  - Doc home: `docs/workstreams/diag-fearless-refactor-v1/migration-plan.md`
-  - Tooling: `diag doctor` should warn when bundles are produced with legacy-only knobs or unexpected schema versions.
+- [x] Publish and enforce a bundle schema compatibility matrix (v1/v2) for in-tree workflows.
+  - Doc home: `docs/workstreams/diag-fearless-refactor-v1/schema-compat-matrix.md`
+  - Tooling: `diag doctor` warns on unexpected/missing bundle schema versions and suggests concrete repairs.
 - [ ] Reduce “stats mega-module” churn permanently:
   - keep `crates/fret-diag/src/stats.rs` as a small index/exports surface,
   - large check families stay in `crates/fret-diag/src/stats/*.rs`.
