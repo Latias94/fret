@@ -2,6 +2,10 @@ use serde_json::Value;
 use std::collections::HashMap;
 use std::path::Path;
 
+use crate::json_bundle::{
+    SemanticsResolver, pick_last_snapshot_with_resolved_semantics_after_warmup,
+};
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum LintLevel {
     Error,
@@ -113,14 +117,6 @@ fn push_finding(
     }));
 }
 
-fn pick_last_snapshot_after_warmup(snaps: &[Value], warmup_frames: u64) -> Option<&Value> {
-    snaps
-        .iter()
-        .rev()
-        .find(|s| s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0) >= warmup_frames)
-        .or_else(|| snaps.last())
-}
-
 pub(super) fn lint_bundle_from_path(
     bundle_path: &Path,
     warmup_frames: u64,
@@ -142,6 +138,8 @@ fn lint_bundle_from_json(
         .and_then(|v| v.as_array())
         .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
 
+    let semantics = SemanticsResolver::new(bundle);
+
     let mut findings: Vec<Value> = Vec::new();
 
     for w in windows {
@@ -150,14 +148,15 @@ fn lint_bundle_from_json(
             .get("snapshots")
             .and_then(|v| v.as_array())
             .map_or(&[][..], |v| v);
-        let Some(snapshot) = pick_last_snapshot_after_warmup(snaps, warmup_frames) else {
+        let Some(snapshot) = pick_last_snapshot_with_resolved_semantics_after_warmup(
+            snaps,
+            warmup_frames,
+            &semantics,
+        ) else {
             continue;
         };
 
-        let frame_id = snapshot
-            .get("frame_id")
-            .and_then(|v| v.as_u64())
-            .unwrap_or(0);
+        let frame_id = crate::json_bundle::snapshot_frame_id(snapshot);
         let window_bounds = snapshot
             .get("window_bounds")
             .and_then(rect_from_bounds)
@@ -168,20 +167,12 @@ fn lint_bundle_from_json(
                 h: 0.0,
             });
 
-        let semantics = snapshot
-            .get("debug")
-            .and_then(|v| v.get("semantics"))
-            .and_then(|v| v.as_object());
-        let Some(semantics) = semantics else {
-            continue;
-        };
+        let focus = semantics
+            .semantics_snapshot(snapshot)
+            .and_then(|v| v.get("focus"))
+            .and_then(|v| v.as_u64());
 
-        let focus = semantics.get("focus").and_then(|v| v.as_u64());
-
-        let nodes = semantics
-            .get("nodes")
-            .and_then(|v| v.as_array())
-            .map_or(&[][..], |v| v);
+        let nodes = semantics.nodes(snapshot).unwrap_or(&[]);
         if nodes.is_empty() {
             continue;
         }
@@ -518,6 +509,115 @@ mod tests {
                     ]
                 }
             ]
+        });
+
+        let report = lint_bundle_from_json(
+            &bundle,
+            Path::new("bundle.json"),
+            0,
+            LintOptions {
+                all_test_ids_bounds: false,
+                eps_px: 0.5,
+            },
+        )
+        .expect("lint should succeed");
+
+        let findings = report
+            .payload
+            .get("findings")
+            .and_then(|v| v.as_array())
+            .expect("expected findings");
+
+        assert!(
+            findings
+                .iter()
+                .any(|f| f.get("code").and_then(|v| v.as_str())
+                    == Some("semantics.duplicate_test_id")),
+            "expected duplicate test_id finding"
+        );
+        assert!(
+            findings.iter().any(|f| {
+                f.get("code").and_then(|v| v.as_str())
+                    == Some("semantics.active_descendant_missing")
+            }),
+            "expected active_descendant missing finding"
+        );
+    }
+
+    #[test]
+    fn lint_supports_schema_v2_table_semantics() {
+        let bundle = serde_json::json!({
+            "schema_version": 2,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        {
+                            "frame_id": 10,
+                            "window": 1,
+                            "semantics_fingerprint": 42,
+                            "window_bounds": { "x": 0.0, "y": 0.0, "w": 100.0, "h": 100.0 },
+                            "debug": {}
+                        }
+                    ]
+                }
+            ],
+            "tables": {
+                "semantics": {
+                    "schema_version": 1,
+                    "entries": [
+                        {
+                            "window": 1,
+                            "semantics_fingerprint": 42,
+                            "semantics": {
+                                "window": 1,
+                                "focus": 1,
+                                "captured": null,
+                                "nodes": [
+                                    {
+                                        "id": 1,
+                                        "parent": null,
+                                        "role": "list_box",
+                                        "bounds": { "x": 0.0, "y": 0.0, "w": 100.0, "h": 100.0 },
+                                        "flags": { "focused": true, "captured": false, "disabled": false, "selected": false, "expanded": false, "checked": null },
+                                        "test_id": "dup",
+                                        "active_descendant": 999,
+                                        "pos_in_set": null,
+                                        "set_size": null,
+                                        "label": null,
+                                        "value": null,
+                                        "text_selection": null,
+                                        "text_composition": null,
+                                        "actions": { "focus": true, "invoke": false, "set_value": false, "set_text_selection": false },
+                                        "labelled_by": [],
+                                        "described_by": [],
+                                        "controls": []
+                                    },
+                                    {
+                                        "id": 2,
+                                        "parent": 1,
+                                        "role": "list_box_option",
+                                        "bounds": { "x": 0.0, "y": 0.0, "w": 100.0, "h": 20.0 },
+                                        "flags": { "focused": false, "captured": false, "disabled": false, "selected": false, "expanded": false, "checked": null },
+                                        "test_id": "dup",
+                                        "active_descendant": null,
+                                        "pos_in_set": null,
+                                        "set_size": null,
+                                        "label": "A",
+                                        "value": null,
+                                        "text_selection": null,
+                                        "text_composition": null,
+                                        "actions": { "focus": true, "invoke": true, "set_value": false, "set_text_selection": false },
+                                        "labelled_by": [],
+                                        "described_by": [],
+                                        "controls": []
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
         });
 
         let report = lint_bundle_from_json(

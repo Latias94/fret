@@ -158,3 +158,4 @@ diagnostics stack stays easy to evolve.
       prune `tables.semantics` after applying semantics mode (avoid oversized converted bundles).
 - [x] Extract `build_semantics_table_entries_from_windows` helper into `crates/fret-diag/src/json_bundle.rs` to
       avoid repeating v1→v2 semantics table construction logic.
+- [x] Update `fret-diag` lints to resolve semantics via `json_bundle::SemanticsResolver` so schema v2 bundles are linted correctly.
