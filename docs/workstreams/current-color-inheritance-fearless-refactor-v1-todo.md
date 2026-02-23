@@ -38,6 +38,7 @@ Last updated: 2026-02-23
 
 ## Gallery + docs cleanups
 
+- [x] ButtonGroup gallery page: migrate icon usage to deferred `Button` icon slots (no manual fg threading).
 - [ ] Remove manual `*_fg` threading in gallery pages where inheritance is now sufficient.
 - [ ] Add one “copy/paste ready” snippet per component page where code previously relied on local variables.
 

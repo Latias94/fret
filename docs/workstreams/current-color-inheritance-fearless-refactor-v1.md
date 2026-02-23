@@ -4,6 +4,8 @@ Status: In progress (workstream)
 
 Last updated: 2026-02-23
 
+Milestones: `docs/workstreams/current-color-inheritance-fearless-refactor-v1-milestones.md`
+
 ## Motivation
 
 shadcn/ui + Radix recipes routinely rely on CSS `currentColor` (or equivalent) so that icons and other foreground
@@ -150,6 +152,7 @@ Statuses:
 | Spinner inheritance | `fret-ui-shadcn` | Landed | `ecosystem/fret-ui-shadcn/src/spinner.rs` | existing shadcn tests (smoke) |
 | Button provides `currentColor` | `fret-ui-shadcn` | Landed | `ecosystem/fret-ui-shadcn/src/button.rs` | web-vs-fret button tests |
 | Button deferred icon slots (`leading_icon` / `trailing_icon` / `icon`) | `fret-ui-shadcn` | Landed | `ecosystem/fret-ui-shadcn/src/button.rs` | gallery + button goldens |
+| Gallery ButtonGroup demo uses deferred icon slots | `fret-ui-gallery` | Landed | `apps/fret-ui-gallery/src/ui/previews/pages/components/basics/button_group.rs` | `tools/diag-scripts/ui-gallery-button-group-demo-screenshots.json` |
 | DropdownMenuItem provides `currentColor` (and `leading_icon`) | `fret-ui-shadcn` | In progress | `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs` | `tools/diag-scripts/ui-gallery-dropdown-menu-icons-screenshots.json` |
 | CommandItem provides `currentColor` (and `leading_icon`) | `fret-ui-shadcn` | In progress | `ecosystem/fret-ui-shadcn/src/command.rs` | (TBD: diag + targeted test) |
 | Badge provides `currentColor` | `fret-ui-shadcn` | Planned | `ecosystem/fret-ui-shadcn/src/badge.rs` | targeted test |
