@@ -1047,6 +1047,8 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) renderer_bind_group_switches: u64,
     pub(super) renderer_scissor_sets: u64,
     pub(super) renderer_scene_encoding_cache_misses: u64,
+    pub(super) renderer_scene_encoding_cache_last_miss_reasons: u64,
+    pub(super) renderer_scene_encoding_cache_last_miss_reason: Option<String>,
     pub(super) renderer_material_quad_ops: u64,
     pub(super) renderer_material_sampled_quad_ops: u64,
     pub(super) renderer_material_distinct: u64,
@@ -3192,6 +3194,21 @@ impl BundleStatsReport {
                 obj.insert(
                     "renderer_prepare_text_us".to_string(),
                     Value::from(row.renderer_prepare_text_us),
+                );
+                obj.insert(
+                    "renderer_scene_encoding_cache_misses".to_string(),
+                    Value::from(row.renderer_scene_encoding_cache_misses),
+                );
+                obj.insert(
+                    "renderer_scene_encoding_cache_last_miss_reasons".to_string(),
+                    Value::from(row.renderer_scene_encoding_cache_last_miss_reasons),
+                );
+                obj.insert(
+                    "renderer_scene_encoding_cache_last_miss_reason".to_string(),
+                    row.renderer_scene_encoding_cache_last_miss_reason
+                        .clone()
+                        .map(Value::from)
+                        .unwrap_or(Value::Null),
                 );
                 obj.insert(
                     "prepaint_time_us".to_string(),
@@ -7705,6 +7722,14 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|m| m.get("renderer_scene_encoding_cache_misses"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let renderer_scene_encoding_cache_last_miss_reasons = stats
+                .and_then(|m| m.get("renderer_scene_encoding_cache_last_miss_reasons"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_scene_encoding_cache_last_miss_reason = stats
+                .and_then(|m| m.get("renderer_scene_encoding_cache_last_miss_reason"))
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
             let renderer_material_quad_ops = stats
                 .and_then(|m| m.get("renderer_material_quad_ops"))
                 .and_then(|v| v.as_u64())
@@ -8429,6 +8454,8 @@ pub(super) fn bundle_stats_from_json_with_options(
                 renderer_bind_group_switches,
                 renderer_scissor_sets,
                 renderer_scene_encoding_cache_misses,
+                renderer_scene_encoding_cache_last_miss_reasons,
+                renderer_scene_encoding_cache_last_miss_reason,
                 renderer_material_quad_ops,
                 renderer_material_sampled_quad_ops,
                 renderer_material_distinct,
