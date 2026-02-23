@@ -413,32 +413,17 @@ impl Renderer {
         let uploads_guard = uploads_span.enter();
 
         self.ensure_effect_pipelines_for_plan(device, format, path_samples, &plan);
-
-        self.ensure_uniform_capacity(device, encoding.uniforms.len());
-        let uniform_bytes_written =
-            self.uniforms
-                .write_viewport_uniforms(queue, &encoding.uniforms) as u64;
-        if perf_enabled {
-            frame_perf.uniform_bytes = frame_perf
-                .uniform_bytes
-                .saturating_add(uniform_bytes_written);
-        }
-
-        self.ensure_clip_capacity(device, encoding.clips.len().max(1));
-        let clip_bytes_written = self.uniforms.write_clips(queue, &encoding.clips) as u64;
-        if perf_enabled {
-            frame_perf.uniform_bytes = frame_perf.uniform_bytes.saturating_add(clip_bytes_written);
-        }
-
-        self.ensure_mask_capacity(device, encoding.masks.len().max(1));
-        let mask_bytes_written = self.uniforms.write_masks(queue, &encoding.masks) as u64;
-        if perf_enabled {
-            frame_perf.uniform_bytes = frame_perf.uniform_bytes.saturating_add(mask_bytes_written);
-        }
-
-        self.prepare_viewport_bind_groups(device, &encoding.ordered_draws);
-        self.prepare_image_bind_groups(device, &encoding.ordered_draws);
-        self.prepare_uniform_mask_image_bind_groups(device, &encoding.uniform_mask_images);
+        self.upload_frame_uniforms_and_prepare_bind_groups(
+            device,
+            queue,
+            &encoding.uniforms,
+            &encoding.clips,
+            &encoding.masks,
+            &encoding.ordered_draws,
+            &encoding.uniform_mask_images,
+            perf_enabled,
+            &mut frame_perf,
+        );
 
         let FrameUploadResources {
             quad_instance_bind_group,

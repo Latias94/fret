@@ -6,6 +6,7 @@ mod encode;
 mod encoding_cache;
 mod execute;
 mod executor;
+mod frame_bindings;
 mod helpers;
 mod plan_compile;
 mod quad_vertices;
