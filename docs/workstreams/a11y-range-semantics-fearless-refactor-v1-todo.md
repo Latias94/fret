@@ -42,7 +42,7 @@ These are optional, but high leverage if we want to avoid follow-up “contract 
 ## Diagnostics + scripts
 
 - [x] Prefer `extra.numeric.value` in `SetSliderValue` script step; fallback to parsing `value` string.
-- [ ] Add/adjust one `tools/diag-scripts/*set-slider-value*.json` script to assert numeric semantics explicitly.
+- [x] Add/adjust one `tools/diag-scripts/*set-slider-value*.json` script to assert numeric semantics explicitly.
 
 ## Quality gates
 

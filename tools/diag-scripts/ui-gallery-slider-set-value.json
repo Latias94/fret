@@ -29,6 +29,16 @@
       "timeout_frames": 240,
       "drag_steps": 8
     },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_numeric_approx_eq",
+        "target": { "kind": "test_id", "id": "ui-gallery-slider-single" },
+        "field": "value",
+        "value": 80.0,
+        "eps": 0.5
+      }
+    },
     { "type": "capture_bundle", "label": "after-set-slider" }
   ]
 }
