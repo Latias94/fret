@@ -67,12 +67,18 @@
           "order": 0
         },
         {
+          "kind": "push_clip_rect"
+        },
+        {
           "kind": "text",
           "order": 0
         },
         {
           "kind": "quad",
           "order": 0
+        },
+        {
+          "kind": "pop_clip"
         },
         {
           "kind": "svg_mask_icon",
@@ -616,8 +622,14 @@
           "order": 0
         },
         {
+          "kind": "push_clip_rect"
+        },
+        {
           "kind": "text",
           "order": 0
+        },
+        {
+          "kind": "pop_clip"
         },
         {
           "kind": "svg_mask_icon",
@@ -1126,8 +1138,14 @@
           "order": 0
         },
         {
+          "kind": "push_clip_rect"
+        },
+        {
           "kind": "text",
           "order": 0
+        },
+        {
+          "kind": "pop_clip"
         },
         {
           "kind": "svg_mask_icon",
@@ -1613,12 +1631,18 @@
           "order": 0
         },
         {
+          "kind": "push_clip_rect"
+        },
+        {
           "kind": "text",
           "order": 0
         },
         {
           "kind": "quad",
           "order": 0
+        },
+        {
+          "kind": "pop_clip"
         },
         {
           "kind": "svg_mask_icon",

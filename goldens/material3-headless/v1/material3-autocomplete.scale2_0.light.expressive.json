@@ -14,8 +14,14 @@
           "order": 0
         },
         {
+          "kind": "push_clip_rect"
+        },
+        {
           "kind": "text",
           "order": 0
+        },
+        {
+          "kind": "pop_clip"
         },
         {
           "kind": "pop_clip"
@@ -36,8 +42,14 @@
           "order": 0
         },
         {
+          "kind": "push_clip_rect"
+        },
+        {
           "kind": "text",
           "order": 0
+        },
+        {
+          "kind": "pop_clip"
         },
         {
           "kind": "pop_clip"
@@ -172,8 +184,14 @@
           "order": 0
         },
         {
+          "kind": "push_clip_rect"
+        },
+        {
           "kind": "text",
           "order": 0
+        },
+        {
+          "kind": "pop_clip"
         },
         {
           "kind": "pop_clip"
@@ -194,12 +212,18 @@
           "order": 0
         },
         {
+          "kind": "push_clip_rect"
+        },
+        {
           "kind": "text",
           "order": 0
         },
         {
           "kind": "quad",
           "order": 0
+        },
+        {
+          "kind": "pop_clip"
         },
         {
           "kind": "pop_clip"
@@ -765,12 +789,18 @@
           "order": 0
         },
         {
+          "kind": "push_clip_rect"
+        },
+        {
           "kind": "text",
           "order": 0
         },
         {
           "kind": "quad",
           "order": 0
+        },
+        {
+          "kind": "pop_clip"
         },
         {
           "kind": "pop_clip"
@@ -795,8 +825,14 @@
           "order": 0
         },
         {
+          "kind": "push_clip_rect"
+        },
+        {
           "kind": "text",
           "order": 0
+        },
+        {
+          "kind": "pop_clip"
         },
         {
           "kind": "pop_clip"
