@@ -8,7 +8,9 @@ Last updated: 2026-02-23
 - M1.5: Complete (scroll semantics + `scroll_by`, level, read-only, placeholder, url).
 - M2: Complete (shadcn slider + progress populate numeric semantics; snapshots gated).
 - M2.25: Complete (slider Increment/Decrement stepper actions exposed; runner + default UI driver hooks wired).
+- M2.5: Complete (best-effort slider `SetValue(NumericValue)` handling via key sequences; runtime-gated exposure + tests).
 - M3: Complete (SetSliderValue prefers structured numeric semantics; string parsing as fallback).
+- M4: Complete (ADR 0288 landed; ADR 0181 notes updated; alignment matrix updated with evidence anchors).
 
 ## M0 — Agreement on contract (design)
 

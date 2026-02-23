@@ -7,7 +7,7 @@ Last updated: 2026-02-23
 - [x] Decide invariants: `extra.numeric.value` should be within `[min,max]` when all are present (validate as an error; do not clamp in `validate()`).
 - [x] Decide indeterminate progress representation: omit `extra.numeric.value` (keep role as `ProgressBar`).
 - [x] Confirm `extra.numeric.jump` in v1: keep as optional “page” increment (PageUp/PageDown); producers may omit.
-- [ ] (If needed) add/update an ADR describing the numeric/range semantics surface.
+- [x] Add an ADR describing the numeric/range semantics surface (ADR 0288).
 
 ## Adjacent semantics candidates (batchable during contract touch)
 
@@ -29,6 +29,7 @@ These are optional, but high leverage if we want to avoid follow-up “contract 
 - [x] Add snapshot validation for numeric/scroll invariants via `SemanticsNode::validate()` (finite values, bounds order, out-of-bounds values, positive step/jump, `level` is 1-based).
 - [x] Wire default `fret-bootstrap` UI driver hooks for common a11y actions (text selection, replace selected text, numeric set value, slider stepping).
 - [x] Implement best-effort slider `SetValue` numeric handling via key sequences (Home/End/PageUp/PageDown/ArrowUp/ArrowDown).
+- [ ] Decide whether scroll containers should use `SemanticsRole::Viewport` (vs `Generic`) for clearer platform mappings.
 
 ## AccessKit adapter
 

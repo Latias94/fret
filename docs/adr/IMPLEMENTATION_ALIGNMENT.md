@@ -23,20 +23,21 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 
 ## Summary
 
-- Last updated: 2026-02-22
-- ADR count (numbered): 254
+- Last updated: 2026-02-23
+- ADR count (numbered): 256
 
-- Aligned: 101
-- Aligned (with known gaps): 92
+- Aligned: 102
+- Aligned (with known gaps): 94
 - N/A (superseded): 2
 - Not audited: 18
-- Not implemented: 5
+- Not implemented: 4
 - Partially aligned: 36
 
 ## Matrix
 
 | ADR | ADR Status | Implementation Alignment | Notes |
 | --- | --- | --- | --- |
+| [`0288-a11y-numeric-and-range-semantics-v1.md`](0288-a11y-numeric-and-range-semantics-v1.md) | Accepted | Aligned | Adds a portable structured numeric/range semantics surface (`SemanticsNodeExtra.numeric` and related invariants) to prevent “range controls as strings only”, and maps it into AccessKit numeric properties and actions (increment/decrement, scroll-by, and conservative slider `SetValue` gating). Evidence: contract + validation `crates/fret-core/src/semantics.rs`, snapshot production + gating `crates/fret-ui/src/tree/ui_tree_semantics.rs`, AccessKit mapping/decoding `crates/fret-a11y-accesskit/src/{mapping.rs,actions.rs}`, slider SetValue convergence `crates/fret-ui-app/src/accessibility_actions.rs`, driver wiring `crates/fret-launch/src/runner/desktop/runner/app_handler.rs` + `ecosystem/fret-bootstrap/src/ui_app_driver.rs`, ecosystem adoption + gates `ecosystem/fret-ui-shadcn/src/{slider.rs,progress.rs}` and `ecosystem/fret-ui-shadcn/tests/snapshots/*numeric*`. |
 | [`0287-ui-typography-presets-and-stable-line-boxes-v1.md`](0287-ui-typography-presets-and-stable-line-boxes-v1.md) | Accepted | Aligned (with known gaps) | Ecosystem typography presets exist and control text has been migrated to stable fixed line boxes to avoid “first-line jump” under fallback fonts (ADR 0066 compliant: policy stays outside `crates/fret-ui`). Evidence: mechanism types `crates/fret-core/src/text/mod.rs` (`TextLineHeightPolicy`, `TextVerticalPlacement::BoundsAsLineBox`), shaping behavior + bundled-font regression tests `crates/fret-render-text/src/parley_shaper.rs`, `ecosystem/fret-ui-kit/tests/typography_real_shaping.rs`, Material 3 token/shaping gates `ecosystem/fret-ui-material3/src/lib.rs` (`material3_control_typography_tokens_use_stable_line_boxes`, `material3_control_text_keeps_metrics_stable_across_fallback_runs`), ecosystem preset helpers `ecosystem/fret-ui-kit/src/typography.rs` + `ecosystem/fret-ui-kit/src/ui_builder.rs` (`control()`, `content()`, `line_box_in_bounds()`), and migrations across `ecosystem/fret-ui-shadcn/src/*`, `ecosystem/fret-ui-material3/src/*`, and `ecosystem/fret-ui-ai/src/elements/*`. Gaps: finish remaining shadcn ad-hoc control text literals; consider adding an end-to-end widget-level gate that exercises `UiTree` layout/paint with real shaping. |
 | [`0270-theme-token-contract-tiers-and-missing-token-policy-v1.md`](0270-theme-token-contract-tiers-and-missing-token-policy-v1.md) | Proposed | Aligned (with known gaps) | Defines a non-panicking-by-default missing-token policy with warn-once diagnostics and stable fallbacks, while separating typed mechanism-owned keys from string ecosystem extension tokens. Evidence: `crates/fret-ui/src/theme/mod.rs` (`*_token` accessors; warn-once + fallback; strict mode via `FRET_STRICT_RUNTIME`), tests in `crates/fret-ui/src/theme/mod.rs` (missing tokens do not panic by default; strict mode panics), ecosystem compatibility trait in `ecosystem/fret-ui-kit/src/style/theme_read.rs`. Gaps: “apply-time” validation/normalization vs “access-time” diagnostics may evolve; `*_required` remains as a compatibility shim and should be deprecated over time. |
 | [`0271-stroke-rrect-and-dashed-borders-v1.md`](0271-stroke-rrect-and-dashed-borders-v1.md) | Draft | Aligned (with known gaps) | Adds `SceneOp::StrokeRRect` plus a v1 dash model (`DashPatternV1`, `StrokeStyleV1`) to enable first-class dashed borders without changing `SceneOp::Quad` semantics (consistent with ADR 0030). Evidence: contract types in `crates/fret-core/src/scene/{stroke.rs,mod.rs}`, renderer encoding in `crates/fret-render-wgpu/src/renderer/render_scene/encode/ops.rs` and quad instance packing in `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/quad.rs`, dash masking in `crates/fret-render-wgpu/src/renderer/shaders.rs` (`rrect_perimeter_s`, `dash_params`), GPU readback gate `crates/fret-render-wgpu/tests/dashed_border_conformance.rs`, UI authoring wiring via `crates/fret-ui/src/element.rs` (`ContainerProps::border_dash`) + `crates/fret-ui/src/declarative/host_widget/paint.rs` (emits `SceneOp::StrokeRRect`), plus a UI wiring unit test `crates/fret-ui/src/declarative/tests/layout/container.rs`. shadcn usage is exercised in `ecosystem/fret-ui-shadcn/src/data_table_recipes.rs` (tasks-style faceted filter trigger) and `ecosystem/fret-ui-shadcn/src/empty.rs`. Gaps: the contract only covers rounded-rect strokes (not general path strokes / joins/caps), and shadcn `border-dashed` mapping may need additional callsites beyond the current pilots. |

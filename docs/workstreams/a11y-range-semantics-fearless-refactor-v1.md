@@ -1,6 +1,6 @@
 # A11y range/numeric semantics (fearless refactor v1)
 
-Status: In progress (core + AccessKit mapping landed; slider stepper actions wired; ADR/docs alignment pending)
+Status: Shippable (core contract + AccessKit mapping + shadcn adoption + gates landed; contract locked in ADR 0288; follow-ups tracked below)
 
 Last updated: 2026-02-23
 
@@ -77,6 +77,7 @@ Notes:
 - Keep `value: Option<String>` as a *human-readable* string (screen readers may still use it, diagnostics can display it).
 - AccessKit mapping is best-effort: only emit numeric/scroll properties for finite values.
 - Validation: `SemanticsNode::validate()` rejects non-finite numeric/scroll values; requires `min <= max` when both are present; requires `value` within `[min,max]` when all are present; requires positive `step/jump`; requires scroll positions within `[min,max]` when all are present; and enforces `level` as 1-based.
+- See ADR 0288 for the contract rationale and invariants: `docs/adr/0288-a11y-numeric-and-range-semantics-v1.md`.
 
 Action notes:
 
@@ -93,7 +94,8 @@ fearless refactor window if you want to avoid follow-up contract churn.
 
 ### A) Scroll semantics (high ROI for Viewport/Scroll/Scrollbar)
 
-As of 2026-02-23, `Viewport` maps to AccessKit `ScrollView` and emits scroll positions/ranges when available. Portable
+As of 2026-02-23, `SemanticsRole::Viewport` maps to AccessKit `ScrollView`. In practice, Fret publishes portable scroll
+positions/ranges via `SemanticsNodeExtra.scroll` on scrollable host widgets (e.g. `Scroll`) when available. Portable
 scroll properties enable both AT and automation to reason about scroll state.
 
 Candidate fields on `SemanticsNodeExtra.scroll`:
