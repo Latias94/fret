@@ -24,6 +24,7 @@ Exit criteria:
 - Extracted modules exist for large check families:
   - `crates/fret-diag/src/stats/ui_gallery_markdown_editor.rs`
   - `crates/fret-diag/src/stats/ui_gallery_code_editor.rs`
+  - `crates/fret-diag/src/stats/ui_gallery_text_gates.rs`
   - `crates/fret-diag/src/stats/debug_stats_gates.rs`
   - `crates/fret-diag/src/stats/drag_cache_gates.rs`
   - `crates/fret-diag/src/stats/hover_layout_checks.rs`
