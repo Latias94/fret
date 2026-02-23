@@ -75,6 +75,8 @@ scope: diagnostics, automation, tooling, refactor
       `ecosystem/fret-bootstrap/src/ui_diagnostics/pick_output_types.rs` (via `include!`) to reduce churn.
 - [x] Extract recorded event + geometry types out of `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into
       `ecosystem/fret-bootstrap/src/ui_diagnostics/recorded_event_types.rs` (via `include!`) to reduce churn.
+- [x] Extract UI thread CPU-time sampler out of `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into
+      `ecosystem/fret-bootstrap/src/ui_diagnostics/ui_thread_cpu_time.rs` (via `mod` + `#[path]`) to reduce churn.
 
 ## M1b: Make `fret-diag` stats less monolithic (mechanical moves)
 
