@@ -961,25 +961,6 @@ include!("ui_diagnostics/hit_test_trace_recording.rs");
 
 include!("ui_diagnostics/selector_resolution_trace_recording.rs");
 
-fn reason_code_for_script_failure(reason: &str) -> Option<&'static str> {
-    let reason = reason.trim();
-    if reason.is_empty() {
-        return None;
-    }
-
-    match reason {
-        "no_semantics_snapshot" => Some("semantics.missing"),
-        "assert_failed" => Some("assert.failed"),
-        "window_target_unresolved" => Some("window.target_unresolved"),
-        _ if reason.contains("focus") => Some("focus.mismatch"),
-        _ if reason.ends_with("_timeout") => Some("timeout"),
-        _ if reason.contains("no_semantics_match") || reason.contains("no_match") => {
-            Some("selector.not_found")
-        }
-        _ => None,
-    }
-}
-
 include!("ui_diagnostics/predicates.rs");
 
 include!("ui_diagnostics/window_target_and_geometry_helpers.rs");

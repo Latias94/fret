@@ -251,6 +251,7 @@ diagnostics stack stays easy to evolve.
 - [x] Extract sidecar writing helpers out of `bundle_dump.rs` into
       `ecosystem/fret-bootstrap/src/ui_diagnostics/bundle_sidecars.rs` to reduce dump churn.
 - [x] Consolidate small touch-stamp + pointer helpers into the dedicated helper files (`touch_stamp.rs`, `input_event_synthesis.rs`).
+- [x] Move script failure reason-code mapping into `ecosystem/fret-bootstrap/src/ui_diagnostics/labels.rs`.
 - [x] Split schema-specific dump logic into `dump_schema_v1` / `dump_schema_v2` helpers to keep
       `dump_bundle_with_options` mostly about option resolution + dispatch.
 - [x] Factor dump finalization (write bundle.json, WS notify, sidecars, counters) into a shared helper
