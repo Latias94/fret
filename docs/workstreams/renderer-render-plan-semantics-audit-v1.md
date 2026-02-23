@@ -134,7 +134,7 @@ This section is intentionally terse: it is meant to be a checklist for refactors
   - Therefore requires `target` to be initialized earlier in the frame.
   - Uses absolute (render-space) scissors mapped against `target_origin`/`target_size`.
 - `PathClipMask`
-  - Writes a mask target (`Mask*`) with an explicit `load`.
+  - Writes a mask target (`Mask*`) and always clears to transparent (initialization pass).
   - Uses an absolute (render-space) `scissor` that must intersect `dst_origin`/`dst_size`.
 - `ClipMask`
   - Writes a mask target and always clears to transparent.
@@ -150,12 +150,28 @@ This section is intentionally terse: it is meant to be a checklist for refactors
   - Reads `src`, writes `dst` with an explicit `load`.
   - `dst_scissor` is local to the destination target.
   - When `mask` is present, it must be an upscale pass and `mask_uniform_index` must be set.
+  - Common patterns:
+    - Downsample into scratch uses `LoadOp::Clear` (does not depend on prior `dst` contents).
+    - In-place scissored upscales use `LoadOp::Load` and therefore require the destination to be initialized within the frame.
 - `Blur`, `BackdropWarp`, `ColorAdjust`, `ColorMatrix`, `AlphaThreshold`, `DropShadow`
   - Read `src`, write `dst` with an explicit `load`.
   - `dst_scissor` is local to the destination target.
   - When present, `mask.viewport_rect` is local to `dst_size` and `mask.size` must match the target tier.
 - `ReleaseTarget`
   - Ends the lifetime of an intermediate/mask target; future reads/writes must not assume the previous contents.
+
+## Scale/scissor mapping notes (v1)
+
+This section records the scissor mapping rules we rely on for scale-related passes so refactors can't accidentally change rounding or coverage.
+
+- `ScaleNearest` (downsample, nearest-style)
+  - When a scissor is carried into a downsampled target, we use integer-division mapping with floor/ceil edges:
+    - see `map_scissor_downsample_nearest(scissor, scale, dst_size)`.
+  - The mapping must be coverage-monotonic (never expands beyond the mapped bounds).
+- `ScaleNearest` (general resize mapping)
+  - When a scissor is carried between arbitrary sizes, we use floor start + ceil end mapping:
+    - see `map_scissor_to_size(scissor, src_size, dst_size)`.
+  - The mapping must be coverage-monotonic (never expands beyond the mapped bounds).
 
 ## Ambiguities / TODO (v1)
 
@@ -171,8 +187,8 @@ or stronger guardrails before larger internal refactors.
   - Keep the mapping matrix above in sync with validation and recorders.
   - If a pass’s shader semantics changes (e.g. `CompositePremul` starts requiring `mask_uniform_index`), update both the validator and the matrix.
 - Scissor mapping across scale chains:
-  - We have unit tests that assert non-expansion across downsample steps; we still want a small doc table that records the exact mapping rules
-    (integer division / rounding behavior) for each scale-related pass so refactors can’t accidentally change them.
+  - Guardrail: unit tests assert non-expansion across downsample steps.
+  - Keep the mapping notes above in sync with the actual helper functions used by the compiler.
 
 ## Evidence / gates
 

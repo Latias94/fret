@@ -10,6 +10,7 @@ Tracking files:
 
 Related semantic workstreams (drafts; 3-doc format):
 
+- `docs/workstreams/renderer-render-plan-semantics-audit-v1.md`
 - `docs/workstreams/renderer-effect-backdrop-warp-v1.md`
 - `docs/workstreams/renderer-drop-shadow-effect-v1.md`
 - `docs/workstreams/renderer-clip-mask-closure-v1.md`
