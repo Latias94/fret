@@ -1,8 +1,8 @@
 # A11y range/numeric semantics (fearless refactor v1)
 
-Status: Draft (workstream)
+Status: In progress (partially landed)
 
-Last updated: 2026-02-22
+Last updated: 2026-02-23
 
 ## Motivation
 
@@ -12,7 +12,7 @@ and a **string** `label`/`value`. This is a solid skeleton, but it is insufficie
 (slider/progress/scroll-like controls) where assistive technologies expect **structured numeric properties**
 (`min/max/now/step`).
 
-Symptoms today:
+Symptoms before this workstream:
 
 - A slider/progress often becomes “just text” (e.g. `"50%"`) rather than a role with `aria-valuenow/min/max`-like data.
 - The diagnostics harness’s `set_slider_value` step must parse floats out of `SemanticsNode::value` strings
@@ -45,26 +45,33 @@ However, once we touch the semantics contract, it is worth auditing adjacent gap
 
 ## Ownership / layering
 
-- `crates/fret-core`: the **portable contract** (new numeric/range fields on `SemanticsNode`).
+- `crates/fret-core`: the **portable contract** (structured semantics extras on `SemanticsNode`).
 - `crates/fret-a11y-accesskit`: **adapter** (emit AccessKit numeric properties when present).
 - `crates/fret-ui`: semantics snapshot production plumbing (forward fields from `SemanticsProps` / `SemanticsDecoration`).
 - `ecosystem/*`: policy + recipes (shadcn, Radix-aligned composition decides what values/labels to expose).
 
-## Proposed contract (core)
+## Landed contract shape (core)
 
-Add an optional numeric/range surface to `SemanticsNode` (additive, default `None`):
+Instead of adding many top-level optional fields onto `SemanticsNode`, we use an additive “extras” bucket:
 
-- `numeric_value: Option<f64>`
-- `min_numeric_value: Option<f64>`
-- `max_numeric_value: Option<f64>`
-- `numeric_value_step: Option<f64>` (e.g. slider step)
-- `numeric_value_jump: Option<f64>` (e.g. PageUp/PageDown increment)
+- `SemanticsNode { .., extra: SemanticsNodeExtra, .. }`
+- `SemanticsNodeExtra` currently contains:
+  - `placeholder: Option<String>`
+  - `url: Option<String>` (primarily for `SemanticsRole::Link`)
+  - `level: Option<u32>` (1-based hierarchy level for outline/tree semantics)
+  - `numeric: SemanticsNumeric { value/min/max/step/jump }`
+  - `scroll: SemanticsScroll { x/x_min/x_max/y/y_min/y_max }`
+
+Additional additive surfaces landed in the same refactor window:
+
+- `SemanticsFlags::read_only` (portable text flag)
+- `SemanticsRole::Image` (portable role)
 
 Notes:
 
-- For indeterminate progress, omit `numeric_value` and keep the role as `ProgressBar`.
+- For indeterminate progress, omit `extra.numeric.value` and keep the role as `ProgressBar`.
 - Keep `value: Option<String>` as a *human-readable* string (screen readers may still use it, diagnostics can display it).
-- Validation (core) should be best-effort and non-fatal by default; strict mode can tighten later.
+- AccessKit mapping is best-effort: only emit numeric/scroll properties for finite values.
 
 ## Additional “mechanismizable” semantics gaps (candidates)
 
@@ -76,10 +83,10 @@ fearless refactor window if you want to avoid follow-up contract churn.
 Today, `Viewport` maps to AccessKit `ScrollView`, but we do not emit scroll positions/ranges. Adding portable scroll
 properties enables both AT and automation to reason about scroll state.
 
-Candidate fields on `SemanticsNode`:
+Candidate fields on `SemanticsNodeExtra.scroll`:
 
-- `scroll_x`, `scroll_x_min`, `scroll_x_max`
-- `scroll_y`, `scroll_y_min`, `scroll_y_max`
+- `x`, `x_min`, `x_max`
+- `y`, `y_min`, `y_max`
 
 Candidate actions (portable):
 
@@ -140,7 +147,7 @@ Targets (first pass):
 
 Update the script engine to prefer structured numeric values:
 
-- `SetSliderValue` should first read `SemanticsNode.numeric_value` (when present), otherwise fallback to parsing
+- `SetSliderValue` should first read `SemanticsNode.extra.numeric.value` (when present), otherwise fallback to parsing
   `SemanticsNode.value` as today.
 
 Regression protection:
@@ -158,6 +165,20 @@ Regression protection:
 - `ecosystem/fret-ui-shadcn/src/slider.rs`
 - `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_slider.rs`
 - `docs/adr/0181-ui-automation-and-debug-recipes-v1.md`
+
+## Implementation snapshot (what’s landed)
+
+- Core contract: `crates/fret-core/src/semantics.rs` (`SemanticsNodeExtra`, `SemanticsNumeric`, `SemanticsScroll`,
+  `SemanticsFlags::read_only`, `SemanticsRole::Image`).
+- Snapshot plumbing: `crates/fret-ui/src/tree/ui_tree_semantics.rs` forwards `extra` through `SemanticsCx`.
+- Declarative + widgets:
+  - `crates/fret-ui/src/declarative/host_widget/semantics.rs` emits `Image` role and scroll positions for `Scroll`.
+  - `crates/fret-ui/src/text/input/widget.rs` and `crates/fret-ui/src/text/area/widget.rs` emit placeholder.
+- AccessKit adapter: `crates/fret-a11y-accesskit/src/lib.rs` maps numeric/scroll/placeholder/url/level/read-only.
+- Ecosystem adoption:
+  - `ecosystem/fret-ui-shadcn/src/slider.rs` emits numeric range/value.
+  - `ecosystem/fret-ui-shadcn/src/progress.rs` emits determinate progress numeric semantics.
+- Diagnostics: `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_slider.rs` prefers structured numeric semantics.
 
 ## Risks / mitigations
 
