@@ -149,6 +149,8 @@ struct SnapSemanticsFlags {
     captured: bool,
     disabled: bool,
     #[serde(default, skip_serializing_if = "is_false")]
+    busy: bool,
+    #[serde(default, skip_serializing_if = "is_false")]
     read_only: bool,
     selected: bool,
     expanded: bool,
@@ -620,6 +622,7 @@ where
                 focused: n.flags.focused,
                 captured: n.flags.captured,
                 disabled: n.flags.disabled,
+                busy: n.flags.busy,
                 read_only: n.flags.read_only,
                 selected: n.flags.selected,
                 expanded: n.flags.expanded,
@@ -725,6 +728,23 @@ fn snapshot_input_required_invalid_semantics() {
                 .aria_invalid(true)
                 .into_element(cx),
         ]
+    });
+}
+
+#[test]
+fn snapshot_command_list_busy_semantics() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(420.0), Px(240.0)),
+    );
+    snapshot_for_root("command_list_busy_semantics", bounds, |cx| {
+        let entries = vec![
+            fret_ui_shadcn::command::CommandLoading::new("Fetching…").into(),
+            fret_ui_shadcn::command::CommandItem::new("Alpha")
+                .value("alpha")
+                .into(),
+        ];
+        vec![fret_ui_shadcn::command::CommandList::new_entries(entries).into_element(cx)]
     });
 }
 

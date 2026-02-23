@@ -108,6 +108,10 @@ pub struct SemanticsFlags {
     pub required: bool,
     /// Indicates that a form control has invalid input.
     pub invalid: Option<SemanticsInvalid>,
+    /// Indicates that this node (and typically its subtree) is currently busy (e.g. loading).
+    ///
+    /// This is a portable approximation of ARIA `aria-busy`.
+    pub busy: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

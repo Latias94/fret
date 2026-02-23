@@ -175,6 +175,9 @@ pub fn tree_update_from_snapshot(snapshot: &SemanticsSnapshot, scale_factor: f64
         if node.flags.required {
             out.set_required();
         }
+        if node.flags.busy {
+            out.set_busy();
+        }
         if let Some(invalid) = node.flags.invalid {
             let invalid = match invalid {
                 fret_core::SemanticsInvalid::True => Some(Invalid::True),

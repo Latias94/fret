@@ -28,10 +28,10 @@ Last updated: 2026-02-23
 
 ## P0: Busy semantics (loading)
 
-- [ ] Decide contract shape (node flag vs extra field) and how it composes with progress numeric semantics.
-- [ ] Map into AccessKit where possible.
-- [ ] Adopt in at least one shadcn component (e.g. command loading state or spinner wrapper).
-- [ ] Gate via snapshot/diag script.
+- [x] Decide contract shape (node flag vs extra field) and how it composes with progress numeric semantics.
+- [x] Map into AccessKit where possible.
+- [x] Adopt in at least one shadcn component (command list/palette loading state).
+- [x] Gate via snapshot/diag script.
 
 ## Hygiene
 

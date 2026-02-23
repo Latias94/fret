@@ -1361,6 +1361,9 @@ impl CommandList {
             // drives highlight via `active_descendant` (ADR 0073).
             let (render_rows, items, _item_groups) =
                 command_palette_render_rows_for_query_with_options(entries, "", false, None);
+            let list_busy = render_rows
+                .iter()
+                .any(|row| matches!(row, CommandPaletteRenderRow::Loading(_)));
 
             let query_for_render: Arc<str> = highlight_query
                 .as_ref()
@@ -1713,7 +1716,11 @@ impl CommandList {
             )])
             .refine_layout(scroll)
             .into_element(cx)
-            .attach_semantics(SemanticsDecoration::default().role(SemanticsRole::ListBox))
+            .attach_semantics(
+                SemanticsDecoration::default()
+                    .role(SemanticsRole::ListBox)
+                    .busy(list_busy),
+            )
         })
     }
 }
@@ -2392,6 +2399,9 @@ impl CommandPalette {
                     should_filter,
                     filter.as_deref(),
                 );
+            let list_busy = render_rows
+                .iter()
+                .any(|row| matches!(row, CommandPaletteRenderRow::Loading(_)));
 
             let items_fingerprint = {
                 let mut hasher = DefaultHasher::new();
@@ -3303,6 +3313,7 @@ impl CommandPalette {
 
             let list = list.attach_semantics(SemanticsDecoration {
                 role: Some(SemanticsRole::ListBox),
+                busy: Some(list_busy),
                 labelled_by_element: list_labelled_by,
                 ..Default::default()
             });

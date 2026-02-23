@@ -95,6 +95,9 @@ impl ElementHostWidget {
                 if props.read_only {
                     cx.set_read_only(true);
                 }
+                if props.busy {
+                    cx.set_busy(true);
+                }
                 if props.selected {
                     cx.set_selected(true);
                 }
@@ -398,6 +401,9 @@ impl ElementHostWidget {
             }
             if let Some(read_only) = decoration.read_only {
                 cx.set_read_only(read_only);
+            }
+            if let Some(busy) = decoration.busy {
+                cx.set_busy(busy);
             }
             if let Some(selected) = decoration.selected {
                 cx.set_selected(selected);

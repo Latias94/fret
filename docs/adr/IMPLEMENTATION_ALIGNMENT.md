@@ -24,9 +24,9 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 ## Summary
 
 - Last updated: 2026-02-23
-- ADR count (numbered): 256
+- ADR count (numbered): 257
 
-- Aligned: 102
+- Aligned: 103
 - Aligned (with known gaps): 94
 - N/A (superseded): 2
 - Not audited: 18
@@ -37,6 +37,7 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 
 | ADR | ADR Status | Implementation Alignment | Notes |
 | --- | --- | --- | --- |
+| [`0292-a11y-busy-semantics-v1.md`](0292-a11y-busy-semantics-v1.md) | Accepted | Aligned | Adds a portable busy/loading semantics surface (`SemanticsFlags.busy`) to represent `aria-busy`-like outcomes for regions and map them into platform APIs (AccessKit `busy`). Evidence: contract `crates/fret-core/src/semantics.rs`, UI writers `crates/fret-ui/src/{widget.rs,element.rs,declarative/host_widget/semantics.rs}`, AccessKit mapping + test `crates/fret-a11y-accesskit/src/{mapping.rs,tests.rs}`, ecosystem adoption + gate `ecosystem/fret-ui-shadcn/src/command.rs` and `ecosystem/fret-ui-shadcn/tests/snapshots/command_list_busy_semantics.json`, diagnostics snapshot/fingerprint `ecosystem/fret-bootstrap/src/ui_diagnostics/{semantics.rs,ui_diagnostics.rs}`. |
 | [`0291-a11y-required-and-invalid-semantics-v1.md`](0291-a11y-required-and-invalid-semantics-v1.md) | Accepted | Aligned | Adds portable form-control validity semantics (`SemanticsFlags.required` and `SemanticsFlags.invalid`) to map `aria-required` / `aria-invalid` outcomes into platform APIs (AccessKit `required` + `invalid`). Evidence: contract `crates/fret-core/src/semantics.rs`, UI writers `crates/fret-ui/src/{widget.rs,declarative/host_widget/semantics.rs}`, AccessKit mapping + test `crates/fret-a11y-accesskit/src/{mapping.rs,tests.rs}`, ecosystem adoption + gate `ecosystem/fret-ui-shadcn/src/{input.rs,textarea.rs}` and `ecosystem/fret-ui-shadcn/tests/snapshots/input_required_invalid_semantics.json`, diagnostics snapshot/fingerprint `ecosystem/fret-bootstrap/src/ui_diagnostics/{semantics.rs,ui_diagnostics.rs}`. |
 | [`0290-a11y-pressed-semantics-v1.md`](0290-a11y-pressed-semantics-v1.md) | Accepted | Aligned | Adds a portable pressed (toggle-button) semantics surface (`SemanticsPressedState` + `SemanticsFlags.pressed_state`) so `aria-pressed` outcomes map cleanly into platform APIs (AccessKit toggled state) without overloading `selected`. Evidence: contract `crates/fret-core/src/semantics.rs`, UI writers `crates/fret-ui/src/{widget.rs,element.rs,declarative/host_widget/semantics.rs}`, AccessKit mapping + tests `crates/fret-a11y-accesskit/src/{mapping.rs,tests.rs}`, ecosystem adoption `ecosystem/fret-ui-kit/src/primitives/{toggle.rs,toggle_group.rs}`, shadcn gate `ecosystem/fret-ui-shadcn/tests/snapshots/toggle_pressed_semantics.json`, diagnostics snapshot field `ecosystem/fret-bootstrap/src/ui_diagnostics/semantics.rs`. |
 | [`0289-a11y-tri-state-checked-semantics-v1.md`](0289-a11y-tri-state-checked-semantics-v1.md) | Accepted | Aligned | Adds a portable tri-state checked contract (`SemanticsCheckedState` + `SemanticsFlags.checked_state`) so indeterminate checkboxes can map cleanly into platform APIs (AccessKit `Toggled::Mixed`) instead of string-only announcements. Evidence: contract `crates/fret-core/src/semantics.rs`, UI writers `crates/fret-ui/src/{widget.rs,declarative/host_widget/semantics.rs}`, AccessKit mapping + test `crates/fret-a11y-accesskit/src/{mapping.rs,tests.rs}`, ecosystem adoption + gates `ecosystem/fret-ui-kit/src/primitives/checkbox.rs`, `ecosystem/fret-ui-shadcn/src/checkbox.rs`, `ecosystem/fret-ui-shadcn/tests/snapshots/checkbox_indeterminate_semantics.json`, diagnostics snapshot field `ecosystem/fret-bootstrap/src/ui_diagnostics/semantics.rs`. |

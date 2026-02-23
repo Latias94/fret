@@ -1379,6 +1379,10 @@ impl<'a, H: UiHost> SemanticsCx<'a, H> {
         self.flags.invalid = None;
     }
 
+    pub fn set_busy(&mut self, busy: bool) {
+        self.flags.busy = busy;
+    }
+
     pub fn set_active_descendant(&mut self, node: Option<NodeId>) {
         *self.active_descendant = node;
     }

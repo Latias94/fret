@@ -1,6 +1,6 @@
 # A11y semantics closure (v1)
 
-Status: In progress (pressed + required/invalid closed; busy queued)
+Status: Shippable (pressed + required/invalid + busy closed)
 
 Last updated: 2026-02-23
 
@@ -46,16 +46,22 @@ A semantic surface is considered “closed” only when all boxes are checked:
   (ADR 0290).
 - Required/invalid semantics: `SemanticsFlags.required/invalid` + AccessKit mapping + shadcn input adoption
   (ADR 0291).
+- Busy/loading semantics: `SemanticsFlags.busy` + AccessKit mapping + shadcn command list/palette adoption
+  (ADR 0292).
 - Viewport semantics for scroll containers: `SemanticsRole::Viewport` mapping.
 
 ### Next P0 candidates (high ROI, low policy surface)
 
 These are common across apps/editors and map directly into platform APIs:
 
-1. **Required/invalid semantics** (forms and validation)
-   - Goal: allow AT and automation to reason about validation state without parsing text.
-2. **Busy/loading semantics**
-   - Goal: mark regions/widgets as busy during async loads, decoupled from progress text.
+1. **Hidden/excluded semantics**
+   - Goal: allow components to explicitly exclude nodes from the platform a11y tree (AccessKit `hidden`) without relying
+     on ad-hoc role changes.
+2. **Link visited semantics**
+   - Goal: allow link-like surfaces to publish visited state (AccessKit `visited`) without encoding into label strings.
+3. **Multiselectable listbox semantics**
+   - Goal: mark multi-select listboxes/collections as multiselectable (AccessKit `multiselectable`) for parity with ARIA
+     listbox patterns.
 
 ### P1 candidates (valuable, but may require more policy decisions)
 

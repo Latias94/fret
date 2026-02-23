@@ -1,0 +1,340 @@
+{
+  "version": 1,
+  "semantics": [
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 0.0,
+          "y": 0.0
+        },
+        "size": {
+          "w": 420.0,
+          "h": 98.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 0.0,
+          "y": 0.0
+        },
+        "size": {
+          "w": 420.0,
+          "h": 98.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 4.0,
+          "y": 28.0
+        },
+        "size": {
+          "w": 412.0,
+          "h": 10.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 4.0,
+          "y": 62.0
+        },
+        "size": {
+          "w": 412.0,
+          "h": 32.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 12.0,
+          "y": 68.0
+        },
+        "size": {
+          "w": 396.0,
+          "h": 10.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "ListBox",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 0.0,
+          "y": 0.0
+        },
+        "size": {
+          "w": 420.0,
+          "h": 98.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "busy": true,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "ListBoxOption",
+      "label": "Alpha",
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 4.0,
+          "y": 62.0
+        },
+        "size": {
+          "w": 412.0,
+          "h": 32.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": true,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "ProgressBar",
+      "label": "Fetching…",
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 4.0,
+          "y": 4.0
+        },
+        "size": {
+          "w": 412.0,
+          "h": 58.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      },
+      "extra": {
+        "numeric": {
+          "min": 0.0,
+          "max": 100.0
+        }
+      }
+    },
+    {
+      "role": "Text",
+      "label": "Alpha",
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 12.0,
+          "y": 68.0
+        },
+        "size": {
+          "w": 396.0,
+          "h": 10.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Text",
+      "label": "Fetching…",
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 205.0,
+          "y": 28.0
+        },
+        "size": {
+          "w": 10.0,
+          "h": 10.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Viewport",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 0.0,
+          "y": 0.0
+        },
+        "size": {
+          "w": 420.0,
+          "h": 98.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      },
+      "extra": {
+        "orientation": "Vertical",
+        "scroll": {
+          "y": 0.0,
+          "y_min": 0.0,
+          "y_max": 0.0
+        }
+      }
+    },
+    {
+      "role": "Window",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 0.0,
+          "y": 0.0
+        },
+        "size": {
+          "w": 420.0,
+          "h": 240.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    }
+  ],
+  "scene_ops": [
+    {
+      "kind": "PushClipRect",
+      "rect": {
+        "origin": {
+          "x": 0.0,
+          "y": 0.0
+        },
+        "size": {
+          "w": 420.0,
+          "h": 98.0
+        }
+      }
+    },
+    {
+      "kind": "Text",
+      "origin": {
+        "x": 205.0,
+        "y": 36.0
+      },
+      "color": {
+        "r": 0.402,
+        "g": 0.451,
+        "b": 0.539,
+        "a": 1.0
+      }
+    },
+    {
+      "kind": "Text",
+      "origin": {
+        "x": 12.0,
+        "y": 76.0
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.73,
+        "b": 0.815,
+        "a": 0.5
+      }
+    },
+    {
+      "kind": "PopClip"
+    }
+  ]
+}
