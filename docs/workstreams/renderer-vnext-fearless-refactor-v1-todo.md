@@ -344,6 +344,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 - [~] REN-VNEXT-refactor-050 Stage 5: extract scene encoding cache as an explicit subsystem.
   - Goal: make the encode-cache ownership (`key/cache/scratch`) reviewable and keep the allocation-reuse semantics stable.
   - Landed (step 1): move cache bookkeeping into `SceneEncodingCache` and update call sites in `render_scene/execute`.
+  - Landed (step 2): move the cache hit/miss paths + perf accounting into a single helper to keep behavior drift-free.
   - Evidence:
     - `crates/fret-render-wgpu/src/renderer/scene_encoding_cache.rs` (`SceneEncodingCache`)
     - `crates/fret-render-wgpu/src/renderer/mod.rs` (`Renderer::scene_encoding_cache`)
