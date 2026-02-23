@@ -155,6 +155,8 @@ Statuses:
 | Gallery ButtonGroup demo uses deferred icon slots | `fret-ui-gallery` | Landed | `apps/fret-ui-gallery/src/ui/previews/pages/components/basics/button_group.rs` | `tools/diag-scripts/ui-gallery-button-group-demo-screenshots.json` |
 | DropdownMenuItem provides `currentColor` (and `leading_icon`) | `fret-ui-shadcn` | Landed | `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs` | `tools/diag-scripts/ui-gallery-dropdown-menu-icons-screenshots.json` |
 | CommandItem provides `currentColor` (and `leading_icon`) | `fret-ui-shadcn` | Landed | `ecosystem/fret-ui-shadcn/src/command.rs` | `tools/diag-scripts/ui-gallery-command-docs-demo-icons-screenshots.json` + `tools/diag-scripts/ui-gallery-command-docs-demo-icons-screenshots-zinc-dark.json` |
+| Sidebar icon-only toggle uses deferred icon slot | `fret-ui-shadcn` | Landed | `ecosystem/fret-ui-shadcn/src/sidebar.rs` | (manual) |
+| AI icon-only actions use deferred icon slots | `fret-ui-ai` | Landed | `ecosystem/fret-ui-ai/src/elements/message_actions.rs` | (manual) |
 | Badge provides `currentColor` | `fret-ui-shadcn` | Planned | `ecosystem/fret-ui-shadcn/src/badge.rs` | targeted test |
 | Text defaults inherit `currentColor` | `fret-ui-kit` | Planned | (TBD: `declarative/text.rs` or `ui::text`) | unit test + gallery gate |
 | Gallery usage cleanup | `fret-ui-gallery` | Planned | (TBD: per-page) | diag screenshot gate(s) |

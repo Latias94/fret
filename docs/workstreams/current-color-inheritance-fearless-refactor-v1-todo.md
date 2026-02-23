@@ -20,6 +20,7 @@ Last updated: 2026-02-23
 
 - [x] `shadcn::Button` provides resolved `fg` to subtree.
 - [x] `shadcn::Button` supports deferred icon slots (`leading_icon` / `trailing_icon` / `icon`).
+- [x] Audit icon-only controls that override `children` to render a single SVG icon and migrate to deferred icon slots where possible.
 - [ ] Menu family provides resolved `fg` (and prefers deferred icon slots):
   - [x] `DropdownMenuItem` provides `currentColor` and supports `leading_icon`.
   - [ ] `SelectItem` (if/when it grows icon slots)
