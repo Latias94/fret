@@ -549,6 +549,7 @@ fn compile_for_scene_none_targets_output() {
     };
     assert_eq!(pass.target, PlanTarget::Output);
     assert!(matches!(pass.load, wgpu::LoadOp::Clear(_)));
+    assert_first_output_write_is_clear(&plan.passes);
 }
 
 #[test]
@@ -741,6 +742,8 @@ fn compile_for_scene_backdrop_color_adjust_emits_mask_target_when_budget_allows(
         .filter(|p| matches!(p, RenderPlanPass::ClipMask(_)))
         .count();
     assert_eq!(count, 1);
+
+    assert_first_output_write_is_clear(&plan.passes);
 }
 
 #[test]
@@ -798,6 +801,8 @@ fn compile_for_scene_backdrop_blur_caps_clip_mask_tier_when_forced_to_quarter() 
         .collect();
     assert!(!clip_mask_tiers.is_empty());
     assert!(clip_mask_tiers.iter().all(|t| *t == PlanTarget::Mask2));
+
+    assert_first_output_write_is_clear(&plan.passes);
 }
 
 #[test]
@@ -843,6 +848,8 @@ fn compile_for_scene_filter_content_composite_does_not_allocate_clip_mask() {
         .filter(|p| matches!(p, RenderPlanPass::ClipMask(_)))
         .count();
     assert_eq!(count, 0);
+
+    assert_first_output_write_is_clear(&plan.passes);
 }
 
 #[test]
