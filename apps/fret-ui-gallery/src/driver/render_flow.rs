@@ -1,6 +1,7 @@
 use crate::spec::*;
 use crate::ui;
 use fret_app::{App, Model};
+use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
 use fret_core::{AppWindowId, Px, SemanticsRole};
 use fret_runtime::WindowCommandAvailabilityService;
 use fret_ui::Invalidation;
@@ -121,11 +122,14 @@ pub(super) fn begin_frame(
     // Perf suites set `FRET_DIAG_RENDERER_PERF=1`. Avoid enabling the UI-tree debug HUD/stats in
     // that mode because it perturbs steady-state perf measurements.
     let perf_mode = std::env::var_os("FRET_DIAG_RENDERER_PERF").is_some_and(|v| !v.is_empty());
-    let debug_on = inspector_on
+    let hud_on = inspector_on
         || std::env::var_os("FRET_UI_DEBUG_STATS").is_some_and(|v| !v.is_empty())
         || (!perf_mode && std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty()));
-    state.ui.set_debug_enabled(debug_on);
-    if debug_on {
+    let diag_enabled = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
+        svc.is_enabled()
+    });
+    state.ui.set_debug_enabled(diag_enabled || hud_on);
+    if hud_on {
         app.request_redraw(window);
     }
 
@@ -140,7 +144,7 @@ pub(super) fn begin_frame(
         &mut state.debug_hud,
         &inspector_enabled,
         &inspector_last_pointer,
-        debug_on,
+        hud_on,
     );
 
     PreparedFrame {
