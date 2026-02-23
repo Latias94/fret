@@ -433,6 +433,16 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `cargo test -p fret-render-wgpu --lib`
     - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
 
+- [x] REN-VNEXT-refactor-130 Stage 13: extract frame-level pipeline ensures into a dedicated helper.
+  - Goal: isolate “ensure core pipelines + compute path MSAA samples” without changing tracing/perf semantics.
+  - Landed (step 1): move `ensure_*` pipeline calls and path-samples selection behind `Renderer::ensure_frame_pipelines_and_path_samples`.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/render_scene/frame_pipelines.rs` (`ensure_frame_pipelines_and_path_samples`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (call site)
+  - Gates:
+    - `cargo test -p fret-render-wgpu --lib`
+    - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
 ## M7 — Post-v1 semantic expansions (deferred backlog)
 
 These items are intentionally *not* part of the vNext refactor’s v1 closure. They are common UI
