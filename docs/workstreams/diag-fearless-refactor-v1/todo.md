@@ -15,10 +15,13 @@ scope: diagnostics, automation, tooling, refactor
 - [x] Extract the per-frame driver (`UiDiagnosticsService::drive_script_for_window`) out of
       `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into `ecosystem/fret-bootstrap/src/ui_diagnostics/script_engine.rs`.
   - Keep the public entrypoint signature stable.
-- [ ] Define a stable “module boundary” inside `ecosystem/fret-bootstrap/src/ui_diagnostics/`:
-  - script execution / state / step handlers,
-  - bundle dumping + sidecar writers,
-  - DevTools WS bridge wiring.
+- [x] Define a stable “module boundary” inside `ecosystem/fret-bootstrap/src/ui_diagnostics/`:
+  - Script execution / state / step handlers: `script_engine.rs`, `script_types.rs`, `script_steps_*.rs`.
+  - Trace recording helpers: `trace_helpers.rs`, `*_trace_recording.rs`.
+  - Predicate evaluation: `predicates.rs`.
+  - Bundle dumping + sidecar writers: `bundle.rs`, `bundle_dump*.rs`, `bundle_index.rs`, `bundle_sidecars.rs`.
+  - DevTools WS bridge wiring: `ui_diagnostics_devtools_ws.rs`, `devtools_ws_helpers.rs`.
+  - Common glue/utilities: `path_utils.rs`, `json_utils.rs`, `touch_stamp.rs`, `input_event_synthesis.rs`.
 - [x] Continue shrinking churny sections by moving DevTools WS request state types into the DevTools WS module
       (keeps `ui_diagnostics.rs` lighter and changes localized).
 - [x] Extract bundle dump policy helpers into `ecosystem/fret-bootstrap/src/ui_diagnostics/bundle_dump_policy.rs`.
