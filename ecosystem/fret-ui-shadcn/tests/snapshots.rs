@@ -855,6 +855,17 @@ fn snapshot_live_region_semantics() {
 }
 
 #[test]
+fn snapshot_heading_level_semantics() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(320.0), Px(180.0)),
+    );
+    snapshot_for_root("heading_level_semantics", bounds, |cx| {
+        vec![fret_ui_shadcn::DialogTitle::new("Dialog Title").into_element(cx)]
+    });
+}
+
+#[test]
 fn snapshot_tabs_default() {
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),

@@ -1,6 +1,6 @@
 # A11y semantics closure (v1)
 
-Status: Shippable (pressed + required/invalid + busy + hidden + visited + multiselectable + live region closed)
+Status: Shippable (pressed + required/invalid + busy + hidden + visited + multiselectable + live region + heading closed)
 
 Last updated: 2026-02-23
 
@@ -56,18 +56,14 @@ A semantic surface is considered “closed” only when all boxes are checked:
   (ADR 0295).
 - Live region semantics: `SemanticsFlags.live/live_atomic` + AccessKit mapping + toast viewport adoption
   (ADR 0296).
+- Heading semantics: `SemanticsRole::Heading` + `extra.level` + AccessKit mapping + shadcn modal title adoption
+  (ADR 0297).
 - Viewport semantics for scroll containers: `SemanticsRole::Viewport` mapping.
-
-### Next P0 candidates (high ROI, low policy surface)
-
-These are common across apps/editors and map directly into platform APIs:
-
-1. **Heading semantics adoption**
-   - Goal: consistently publish `role=Heading` (or equivalent) + `level` for document/editor-like UIs.
 
 ### P1 candidates (valuable, but may require more policy decisions)
 
-- Heading semantics (role + `level` adoption policy).
+- Heading semantics adoption policy beyond the v1 baseline (which components qualify as headings, and which default levels
+  they should use).
 - More complete text field semantics (autofill hints, input purpose, spellcheck, etc.) depending on adapter support.
 - Live region policy surfaces beyond the mechanism contract (e.g. `announce()` APIs, queueing, relevance semantics).
 

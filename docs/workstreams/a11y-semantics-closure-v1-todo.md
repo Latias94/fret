@@ -64,6 +64,13 @@ Last updated: 2026-02-23
 - [x] Gate via a shadcn semantics snapshot.
 - [x] Ensure diagnostics snapshots/fingerprint include the new field(s) if they affect determinism.
 
+## P0: Heading semantics (role + level)
+
+- [x] Add a portable `Heading` role to the `SemanticsRole` contract.
+- [x] Map into AccessKit `Role::Heading` (and reuse the existing `level` property mapping).
+- [x] Adopt in at least one ecosystem surface (shadcn modal titles).
+- [x] Gate via a shadcn semantics snapshot (heading + level).
+
 ## Hygiene
 
 - [x] Add/refresh ADR(s) for any new hard-to-change surfaces (ADR 0290).

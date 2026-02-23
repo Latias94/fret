@@ -24,6 +24,7 @@ fn maps_extended_semantics_roles_to_accesskit_roles() {
         map_role(SemanticsRole::ProgressBar),
         Role::ProgressIndicator
     );
+    assert_eq!(map_role(SemanticsRole::Heading), Role::Heading);
     assert_eq!(map_role(SemanticsRole::RadioGroup), Role::RadioGroup);
     assert_eq!(map_role(SemanticsRole::RadioButton), Role::RadioButton);
     assert_eq!(

@@ -11,6 +11,7 @@ Last updated: 2026-02-23
 - M5: Complete (visited semantics: contract + AccessKit mapping + shadcn gate + ADR 0294).
 - M6: Complete (multiselectable semantics: contract + AccessKit mapping + shadcn gate + ADR 0295).
 - M7: Complete (live region semantics: contract + AccessKit mapping + shadcn gate + ADR 0296).
+- M8: Complete (heading semantics: contract + AccessKit mapping + shadcn gate + ADR 0297).
 
 ## M0 — Inventory and priority agreement
 
@@ -82,3 +83,12 @@ Exit criteria:
 - AccessKit mapping exists with unit tests (or documented fallback).
 - Ecosystem adoption exists for at least one announcement surface (toasts/notifications).
 - Gate exists (snapshot and unit test).
+
+## M8 — Heading semantics closed
+
+Exit criteria:
+
+- Portable contract role exists and is documented.
+- AccessKit mapping exists (or documented fallback).
+- Ecosystem adoption exists for at least one heading surface (modal titles or document renderers).
+- Gate exists (snapshot and/or unit test).
