@@ -402,6 +402,16 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `cargo test -p fret-render-wgpu --lib`
     - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
 
+- [x] REN-VNEXT-refactor-100 Stage 10: extract render plan diagnostics and perf reporting into a dedicated helper.
+  - Goal: keep plan degradation accounting + segment report drift-free while reducing `execute` surface area.
+  - Landed (step 1): move render plan perf counters, segment report update, and plan dump behind `Renderer::record_render_plan_diagnostics_for_frame`.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/render_scene/plan_reporting.rs` (`record_render_plan_diagnostics_for_frame`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (call site)
+  - Gates:
+    - `cargo test -p fret-render-wgpu --lib`
+    - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
 ## M7 — Post-v1 semantic expansions (deferred backlog)
 
 These items are intentionally *not* part of the vNext refactor’s v1 closure. They are common UI
