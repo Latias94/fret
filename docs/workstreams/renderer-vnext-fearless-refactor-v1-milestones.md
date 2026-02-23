@@ -47,6 +47,17 @@ Baseline record (fill in; keep this section short):
   - `headless_renderer_perf: frames=600 encode=0.09ms prepare_svg=19.11ms prepare_text=0.46ms draws=27000 ... cache_hits=596 cache_misses=4`
   - `headless_renderer_perf_pipelines: quad=600 viewport=0 mask=600 text_mask=0 text_color=0 path=0 path_msaa=0 composite=0 fullscreen=0 clip_mask=0`
 
+Baseline record (macOS local snapshot; not a gate):
+
+- Date: 2026-02-23
+- Commit: 0a4be0810
+- Platform/backend (native/wasm/mobile): native (macOS + wgpu)
+- Commands run (exact):
+  - `FRET_RENDERER_PERF_PIPELINES=1 cargo run -p fret-svg-atlas-stress --release -- --headless --frames 180`
+- Outputs (summary):
+  - `headless_renderer_perf: frames=180 encode=0.03ms prepare_svg=1.95ms prepare_text=0.02ms draws=8100 ... cache_hits=179 cache_misses=1`
+  - `headless_renderer_perf_pipelines: quad=180 viewport=0 mask=180 text_mask=0 text_color=0 path=0 path_msaa=0 composite=0 fullscreen=0 clip_mask=0`
+
 ## M1 — RenderPlan substrate (time-boxed)
 
 Deliverables:
