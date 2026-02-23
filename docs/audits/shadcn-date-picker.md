@@ -51,3 +51,4 @@ section is rendered as explicit desktop/mobile branches for deterministic valida
 
 - `cargo check -p fret-ui-shadcn -p fret-ui-gallery -p fret-diag`
 - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-date-picker-dropdowns-mobile-drawer.json --launch -- cargo run -p fret-ui-gallery --release`
+- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-date-picker-nested-caption-select-scroll-clamp.json --launch -- cargo run -p fret-ui-gallery --release`

@@ -247,6 +247,7 @@ pub(super) fn preview_date_picker(
         let content = move |cx: &mut ElementContext<'_, App>| {
             let calendar = shadcn::Calendar::new(dob_month.clone(), dob_selected.clone())
                 .caption_layout(shadcn::CalendarCaptionLayout::Dropdown)
+                .test_id_prefix("ui-gallery-date-picker-dropdowns-calendar")
                 .into_element(cx)
                 .test_id("ui-gallery-date-picker-dropdowns-calendar");
 
