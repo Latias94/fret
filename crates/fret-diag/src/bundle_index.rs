@@ -467,7 +467,7 @@ fn build_bundle_meta_payload_from_json(
     let windows = bundle
         .get("windows")
         .and_then(|v| v.as_array())
-        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+        .ok_or_else(|| "invalid bundle artifact: missing windows".to_string())?;
 
     let mut out_windows: Vec<Value> = Vec::new();
     let mut total_snapshots: u64 = 0;
@@ -623,7 +623,7 @@ fn build_bundle_index_payload_from_json(
     let windows = bundle
         .get("windows")
         .and_then(|v| v.as_array())
-        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+        .ok_or_else(|| "invalid bundle artifact: missing windows".to_string())?;
 
     let mut windows_out: Vec<Value> = Vec::new();
     let mut total_snapshots: u64 = 0;
@@ -838,7 +838,7 @@ fn build_test_ids_payload(
     let windows = bundle
         .get("windows")
         .and_then(|v| v.as_array())
-        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+        .ok_or_else(|| "invalid bundle artifact: missing windows".to_string())?;
 
     let mut total_unique: HashSet<String> = HashSet::new();
     let mut windows_out: Vec<Value> = Vec::new();
@@ -947,7 +947,7 @@ fn build_test_ids_index_payload_from_json(
     let windows = bundle
         .get("windows")
         .and_then(|v| v.as_array())
-        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+        .ok_or_else(|| "invalid bundle artifact: missing windows".to_string())?;
 
     // Hard safety budget: if we exceed this, something is wrong with `test_id` usage (e.g. per-frame unique ids).
     const MAX_UNIQUE_TEST_IDS_BUDGET: usize = 50_000;

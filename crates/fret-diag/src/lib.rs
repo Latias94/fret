@@ -4109,7 +4109,7 @@ fn bundle_paint_cache_hit_test_only_replay_maxes(
     let windows = bundle
         .get("windows")
         .and_then(|v| v.as_array())
-        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+        .ok_or_else(|| "invalid bundle artifact: missing windows".to_string())?;
     if windows.is_empty() {
         return Ok((0, 0));
     }
@@ -6399,7 +6399,7 @@ fn check_bundle_for_idle_no_paint_min(
     let windows = bundle
         .get("windows")
         .and_then(|v| v.as_array())
-        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+        .ok_or_else(|| "invalid bundle artifact: missing windows".to_string())?;
 
     let mut reports: Vec<IdleNoPaintWindowReport> = Vec::new();
     let mut failures: Vec<serde_json::Value> = Vec::new();
@@ -7047,8 +7047,11 @@ mod tests {
 
         let run_id_dir = root.join("777");
         std::fs::create_dir_all(&run_id_dir).expect("create run_id dir");
-        std::fs::write(run_id_dir.join("bundle.schema2.json"), br#"{"schema_version":2}"#)
-            .expect("write bundle.schema2.json");
+        std::fs::write(
+            run_id_dir.join("bundle.schema2.json"),
+            br#"{"schema_version":2}"#,
+        )
+        .expect("write bundle.schema2.json");
 
         std::fs::write(root.join("script.result.json"), br#"{"run_id":777}"#)
             .expect("write script.result.json");

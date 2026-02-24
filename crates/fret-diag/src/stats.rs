@@ -28,7 +28,6 @@ pub(super) use script_runtime::{
     wait_for_failure_dump_bundle, write_pick_script,
 };
 use semantics::{semantics_node_id_for_test_id, semantics_parent_map};
-#[cfg(test)]
 pub(super) use ui_gallery_code_editor::*;
 pub(super) use ui_gallery_markdown_editor::*;
 use wheel_scroll::first_wheel_frame_id_for_window;

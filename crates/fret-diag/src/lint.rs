@@ -136,7 +136,7 @@ fn lint_bundle_from_json(
     let windows = bundle
         .get("windows")
         .and_then(|v| v.as_array())
-        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+        .ok_or_else(|| "invalid bundle artifact: missing windows".to_string())?;
 
     let semantics = SemanticsResolver::new(bundle);
 

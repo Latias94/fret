@@ -9,7 +9,7 @@ pub(super) fn bundle_stats_from_json_with_options(
     let windows = bundle
         .get("windows")
         .and_then(|v| v.as_array())
-        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+        .ok_or_else(|| "invalid bundle artifact: missing windows".to_string())?;
 
     let semantics = crate::json_bundle::SemanticsResolver::new(bundle);
 

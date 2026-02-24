@@ -221,10 +221,10 @@ fn first_window_from_bundle(bundle: &serde_json::Value) -> Result<&serde_json::V
     let windows = bundle
         .get("windows")
         .and_then(|v| v.as_array())
-        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+        .ok_or_else(|| "invalid bundle artifact: missing windows".to_string())?;
     windows
         .first()
-        .ok_or_else(|| "bundle.json contains no windows".to_string())
+        .ok_or_else(|| "bundle contains no windows".to_string())
 }
 
 #[derive(Debug, Clone, Copy, Default)]

@@ -49,7 +49,8 @@ pub(super) fn write_anchor_slices_if_possible(
     report.failed_step_index = script.step_index;
 
     if !matches!(script.stage, UiScriptStageV1::Failed) {
-        report.reason_code = Some("tooling.ai_packet.failed_step_slices.skipped.not_failed".to_string());
+        report.reason_code =
+            Some("tooling.ai_packet.failed_step_slices.skipped.not_failed".to_string());
         return Ok(Some(report));
     }
 
@@ -192,4 +193,3 @@ fn build_slice_payload_with_budget_at_selector(
         "slice payload exceeds max bytes budget (max_bytes={max_bytes})"
     ))
 }
-

@@ -146,7 +146,11 @@ fn packet_total_bytes(dir: &Path) -> Result<u64, String> {
     Ok(total)
 }
 
-fn drop_if_present(dir: &Path, name: &str, report: &mut AiPacketBudgetReport) -> Result<(), String> {
+fn drop_if_present(
+    dir: &Path,
+    name: &str,
+    report: &mut AiPacketBudgetReport,
+) -> Result<(), String> {
     let path = dir.join(name);
     if path.is_file() {
         std::fs::remove_file(&path).map_err(|e| e.to_string())?;
@@ -554,7 +558,10 @@ fn clip_frames_index_if_needed(
                     rows.len() as u64
                 };
                 if let Some(obj) = w.as_object_mut() {
-                    obj.insert("frames_total".to_string(), serde_json::Value::from(rows_len));
+                    obj.insert(
+                        "frames_total".to_string(),
+                        serde_json::Value::from(rows_len),
+                    );
                 }
             }
 

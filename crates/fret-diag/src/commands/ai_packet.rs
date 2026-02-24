@@ -205,7 +205,11 @@ pub(crate) fn cmd_ai_packet(
         &packet_dir,
         "script.result.json",
     )?;
-    fs::copy_if_present(&bundle_dir.join("manifest.json"), &packet_dir, "manifest.json")?;
+    fs::copy_if_present(
+        &bundle_dir.join("manifest.json"),
+        &packet_dir,
+        "manifest.json",
+    )?;
 
     crate::util::write_json_value(
         &packet_dir.join("doctor.json"),
@@ -233,7 +237,8 @@ pub(crate) fn cmd_ai_packet(
             BundleStatsOptions { warmup_frames },
         ) {
             Ok(report) => {
-                let payload = crate::triage_json_from_stats(&bundle_path, &report, sort, warmup_frames);
+                let payload =
+                    crate::triage_json_from_stats(&bundle_path, &report, sort, warmup_frames);
                 crate::util::write_json_value(&packet_dir.join("triage.json"), &payload)?;
             }
             Err(err) => {
@@ -306,4 +311,3 @@ fn resolve_bundle_json_path_or_latest(
         .ok_or_else(|| format!("no diagnostics bundle found under {}", out_dir.display()))?;
     Ok(crate::resolve_bundle_json_path(&latest))
 }
-

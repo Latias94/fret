@@ -29,7 +29,7 @@ pub(crate) fn check_bundle_for_layout_fast_path_min_json(
     let windows = bundle
         .get("windows")
         .and_then(|v| v.as_array())
-        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+        .ok_or_else(|| "invalid bundle artifact: missing windows".to_string())?;
     if windows.is_empty() {
         return Ok(());
     }
@@ -121,7 +121,7 @@ pub(crate) fn check_bundle_for_prepaint_actions_min_json(
     let windows = bundle
         .get("windows")
         .and_then(|v| v.as_array())
-        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+        .ok_or_else(|| "invalid bundle artifact: missing windows".to_string())?;
     if windows.is_empty() {
         return Ok(());
     }
@@ -216,7 +216,7 @@ pub(crate) fn check_bundle_for_chart_sampling_window_shifts_min_json(
     let windows = bundle
         .get("windows")
         .and_then(|v| v.as_array())
-        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+        .ok_or_else(|| "invalid bundle artifact: missing windows".to_string())?;
     if windows.is_empty() {
         return Ok(());
     }
@@ -332,7 +332,7 @@ pub(crate) fn check_bundle_for_node_graph_cull_window_shifts_min_json(
     let windows = bundle
         .get("windows")
         .and_then(|v| v.as_array())
-        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+        .ok_or_else(|| "invalid bundle artifact: missing windows".to_string())?;
     if windows.is_empty() {
         return Ok(());
     }
@@ -448,7 +448,7 @@ pub(crate) fn check_bundle_for_node_graph_cull_window_shifts_max_json(
     let windows = bundle
         .get("windows")
         .and_then(|v| v.as_array())
-        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+        .ok_or_else(|| "invalid bundle artifact: missing windows".to_string())?;
     if windows.is_empty() {
         return Ok(());
     }

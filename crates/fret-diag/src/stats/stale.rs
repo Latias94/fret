@@ -27,7 +27,7 @@ pub(crate) fn check_bundle_for_stale_paint_json(
     let windows = bundle
         .get("windows")
         .and_then(|v| v.as_array())
-        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+        .ok_or_else(|| "invalid bundle artifact: missing windows".to_string())?;
     if windows.is_empty() {
         return Ok(());
     }
@@ -331,7 +331,7 @@ pub(crate) fn check_bundle_for_stale_scene_json(
     let windows = bundle
         .get("windows")
         .and_then(|v| v.as_array())
-        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+        .ok_or_else(|| "invalid bundle artifact: missing windows".to_string())?;
     if windows.is_empty() {
         return Ok(());
     }

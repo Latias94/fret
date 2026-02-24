@@ -14,7 +14,7 @@ pub(crate) fn check_bundle_for_drag_cache_root_paint_only(
     let windows = bundle
         .get("windows")
         .and_then(|v| v.as_array())
-        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+        .ok_or_else(|| "invalid bundle artifact: missing windows".to_string())?;
     if windows.is_empty() {
         return Ok(());
     }
@@ -58,14 +58,14 @@ pub(crate) fn check_bundle_for_drag_cache_root_paint_only(
 
             let _nodes = semantics
                 .nodes(s)
-                .ok_or_else(|| "invalid bundle.json: missing semantics nodes".to_string())?;
+                .ok_or_else(|| "invalid bundle artifact: missing semantics nodes".to_string())?;
             let parents = semantics_parent_map(&semantics, s);
 
             let roots = s
                 .get("debug")
                 .and_then(|v| v.get("cache_roots"))
                 .and_then(|v| v.as_array())
-                .ok_or_else(|| "invalid bundle.json: missing debug.cache_roots".to_string())?;
+                .ok_or_else(|| "invalid bundle artifact: missing debug.cache_roots".to_string())?;
             let mut cache_roots: std::collections::HashMap<u64, &serde_json::Value> =
                 std::collections::HashMap::new();
             for r in roots {

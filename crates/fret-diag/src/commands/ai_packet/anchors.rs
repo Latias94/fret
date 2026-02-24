@@ -258,4 +258,3 @@ mod tests {
         assert!(pick_candidate_test_ids_for_failed_step(&script).is_empty());
     }
 }
-

@@ -41,4 +41,3 @@ pub(super) fn copy_bundle_schema2_if_present(
 
     Ok(())
 }
-

@@ -56,7 +56,7 @@ pub(crate) fn check_bundle_for_vlist_policy_key_stable_json(
     let windows = bundle
         .get("windows")
         .and_then(|v| v.as_array())
-        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+        .ok_or_else(|| "invalid bundle artifact: missing windows".to_string())?;
     if windows.is_empty() {
         return Ok(());
     }
@@ -156,7 +156,7 @@ pub(crate) fn check_bundle_for_vlist_visible_range_refreshes_min_json(
     let windows = bundle
         .get("windows")
         .and_then(|v| v.as_array())
-        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+        .ok_or_else(|| "invalid bundle artifact: missing windows".to_string())?;
     if windows.is_empty() {
         return Ok(());
     }
@@ -249,7 +249,7 @@ pub(crate) fn check_bundle_for_vlist_visible_range_refreshes_max_json(
     let windows = bundle
         .get("windows")
         .and_then(|v| v.as_array())
-        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+        .ok_or_else(|| "invalid bundle artifact: missing windows".to_string())?;
     if windows.is_empty() {
         return Ok(());
     }
@@ -356,7 +356,7 @@ pub(crate) fn check_bundle_for_vlist_window_shifts_explainable_json(
     let windows = bundle
         .get("windows")
         .and_then(|v| v.as_array())
-        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+        .ok_or_else(|| "invalid bundle artifact: missing windows".to_string())?;
     if windows.is_empty() {
         return Ok(());
     }
@@ -577,7 +577,7 @@ pub(crate) fn check_bundle_for_vlist_window_shifts_non_retained_max_json(
     let windows = bundle
         .get("windows")
         .and_then(|v| v.as_array())
-        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+        .ok_or_else(|| "invalid bundle artifact: missing windows".to_string())?;
     if windows.is_empty() {
         return Ok(());
     }
@@ -705,7 +705,7 @@ pub(crate) fn check_bundle_for_vlist_window_shifts_kind_max_json(
     let windows = bundle
         .get("windows")
         .and_then(|v| v.as_array())
-        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+        .ok_or_else(|| "invalid bundle artifact: missing windows".to_string())?;
     if windows.is_empty() {
         return Ok(());
     }
@@ -719,7 +719,7 @@ pub(crate) fn check_bundle_for_vlist_window_shifts_kind_max_json(
         let snaps = w
             .get("snapshots")
             .and_then(|v| v.as_array())
-            .ok_or_else(|| "invalid bundle.json: missing snapshots".to_string())?;
+            .ok_or_else(|| "invalid bundle artifact: missing snapshots".to_string())?;
 
         for s in snaps {
             let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
@@ -869,7 +869,7 @@ pub(crate) fn check_bundle_for_vlist_window_shifts_have_prepaint_actions_json(
     let windows = bundle
         .get("windows")
         .and_then(|v| v.as_array())
-        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+        .ok_or_else(|| "invalid bundle artifact: missing windows".to_string())?;
     if windows.is_empty() {
         return Ok(());
     }
