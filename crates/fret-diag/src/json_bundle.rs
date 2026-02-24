@@ -243,7 +243,10 @@ impl SemanticsTablePresence {
 
     pub(crate) fn snapshot_has_semantics(&self, snapshot: &Value, default_window: u64) -> bool {
         if let Some(sem) = snapshot_semantics(snapshot) {
-            return !sem.is_null();
+            // Treat explicit nulls as "missing" so schema2 table semantics can still be detected.
+            if !sem.is_null() {
+                return true;
+            }
         }
         let window = snapshot_window_id(snapshot).unwrap_or(default_window);
         let Some(fp) = snapshot_semantics_fingerprint(snapshot) else {
@@ -354,6 +357,38 @@ mod tests {
         assert_eq!(nodes.len(), 1);
         assert_eq!(nodes[0]["id"].as_u64(), Some(1));
         assert_eq!(nodes[0]["test_id"].as_str(), Some("inline"));
+    }
+
+    #[test]
+    fn semantics_table_presence_falls_back_to_table_when_inline_is_explicit_null() {
+        let bundle = json!({
+            "schema_version": 2,
+            "windows": [{
+                "window": 1,
+                "snapshots": [{
+                    "frame_id": 1,
+                    "window": 1,
+                    "semantics_fingerprint": 42,
+                    "debug": { "semantics": null }
+                }]
+            }],
+            "tables": {
+                "semantics": {
+                    "entries": [{
+                        "window": 1,
+                        "semantics_fingerprint": 42,
+                        "semantics": { "nodes": [{ "id": 9, "test_id": "bar" }] }
+                    }]
+                }
+            }
+        });
+
+        let presence = SemanticsTablePresence::new(&bundle);
+        let snap = &bundle["windows"][0]["snapshots"][0];
+        assert!(
+            presence.snapshot_has_semantics(snap, 1),
+            "expected semantics presence via table fallback"
+        );
     }
 
     #[test]
