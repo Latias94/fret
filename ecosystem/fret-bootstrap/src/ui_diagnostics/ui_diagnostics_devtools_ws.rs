@@ -23,6 +23,24 @@ pub(super) struct PendingDevtoolsSemanticsNodeGetRequest {
 }
 
 impl UiDiagnosticsService {
+    pub(super) fn drive_devtools_requests_for_window(
+        &mut self,
+        app: &App,
+        window: AppWindowId,
+        scale_factor: f32,
+        ui: Option<&UiTree<App>>,
+    ) -> bool {
+        #[cfg(feature = "diagnostics-ws")]
+        {
+            return self.drive_devtools_ws_requests_for_window(app, window, scale_factor, ui);
+        }
+        #[cfg(not(feature = "diagnostics-ws"))]
+        {
+            let _ = (app, window, scale_factor, ui);
+            return false;
+        }
+    }
+
     #[cfg(feature = "diagnostics-ws")]
     pub(super) fn ws_is_configured(&self) -> bool {
         self.cfg.devtools_ws_url.is_some() && self.cfg.devtools_token.is_some()

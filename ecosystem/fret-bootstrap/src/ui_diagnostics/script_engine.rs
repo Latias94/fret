@@ -1277,11 +1277,8 @@ impl UiDiagnosticsService {
         self.ensure_ready_file();
         self.poll_script_trigger();
 
-        #[cfg(feature = "diagnostics-ws")]
         let devtools_request_redraw =
-            self.drive_devtools_ws_requests_for_window(app, window, scale_factor, ui.as_deref());
-        #[cfg(not(feature = "diagnostics-ws"))]
-        let devtools_request_redraw = false;
+            self.drive_devtools_requests_for_window(app, window, scale_factor, ui.as_deref());
 
         self.maybe_start_pending_script(app, window);
 

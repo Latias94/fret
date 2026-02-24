@@ -73,7 +73,9 @@ This file tracks tasks for `docs/workstreams/diag-fearless-refactor-v1.md`.
     - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/inspect.rs`
   - [x] Pick flow (run ids + result export + pending resolution):
     - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/pick_flow.rs`
-- [ ] Keep DevTools WS wiring isolated (already split; ensure minimal coupling).
+- [x] Keep DevTools WS wiring isolated (already split; ensure minimal coupling).
+  - Evidence: `ecosystem/fret-bootstrap/src/ui_diagnostics/ui_diagnostics_devtools_ws.rs` (`drive_devtools_requests_for_window`),
+    `ecosystem/fret-bootstrap/src/ui_diagnostics_ws_bridge.rs`.
 
 ## Bundle size & AI loops (Plan 1, schema2-first)
 
