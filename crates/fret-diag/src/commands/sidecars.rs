@@ -94,8 +94,8 @@ pub(crate) fn adjacent_bundle_path_for_sidecar(path: &Path) -> Option<PathBuf> {
     let parent = path.parent()?;
 
     // Common layouts:
-    // - <bundle_dir>/bundle.json or bundle.schema2.json + <bundle_dir>/bundle.index.json
-    // - <bundle_dir>/_root/bundle.json or bundle.schema2.json (packed zip extraction)
+    // - <bundle_dir>/<bundle artifact> + <bundle_dir>/bundle.index.json
+    // - <bundle_dir>/_root/<bundle artifact> (packed zip extraction)
     let bundle = crate::resolve_bundle_artifact_path(parent);
     if bundle.is_file() {
         return Some(bundle);

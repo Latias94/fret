@@ -960,7 +960,7 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
                 const SUGGEST_SCHEMA2_MIN_BYTES: u64 = 64 * 1024 * 1024;
                 if bytes >= SUGGEST_SCHEMA2_MIN_BYTES {
                     warnings.push(Value::String(
-                        "bundle.json is large; consider writing bundle.schema2.json to keep tooling and AI loops fast"
+                        "raw bundle.json is large; consider writing bundle.schema2.json to keep tooling and AI loops fast"
                             .to_string(),
                     ));
                     repairs.push(json!({
