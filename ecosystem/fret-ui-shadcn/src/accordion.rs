@@ -50,6 +50,51 @@ fn trigger_gap(theme: &Theme) -> Px {
         .unwrap_or_else(|| MetricRef::space(Space::N4).resolve(theme))
 }
 
+fn apply_trigger_label_defaults(el: AnyElement, text_style: &TextStyle, fg: Color) -> AnyElement {
+    match el.kind {
+        ElementKind::Text(mut props) => {
+            if props.style.is_none() {
+                props.style = Some(text_style.clone());
+            }
+            if props.color.is_none() {
+                props.color = Some(fg);
+            }
+            props.layout.size.width = Length::Fill;
+            props.layout.size.min_width = Some(Px(0.0));
+            props.wrap = TextWrap::Word;
+            props.overflow = TextOverflow::Clip;
+            AnyElement::new(el.id, ElementKind::Text(props), el.children)
+        }
+        ElementKind::StyledText(mut props) => {
+            if props.style.is_none() {
+                props.style = Some(text_style.clone());
+            }
+            if props.color.is_none() {
+                props.color = Some(fg);
+            }
+            props.layout.size.width = Length::Fill;
+            props.layout.size.min_width = Some(Px(0.0));
+            props.wrap = TextWrap::Word;
+            props.overflow = TextOverflow::Clip;
+            AnyElement::new(el.id, ElementKind::StyledText(props), el.children)
+        }
+        ElementKind::SelectableText(mut props) => {
+            if props.style.is_none() {
+                props.style = Some(text_style.clone());
+            }
+            if props.color.is_none() {
+                props.color = Some(fg);
+            }
+            props.layout.size.width = Length::Fill;
+            props.layout.size.min_width = Some(Px(0.0));
+            props.wrap = TextWrap::Word;
+            props.overflow = TextOverflow::Clip;
+            AnyElement::new(el.id, ElementKind::SelectableText(props), el.children)
+        }
+        _ => el,
+    }
+}
+
 pub use fret_ui_kit::primitives::accordion::{AccordionKind, AccordionOrientation};
 
 type OnValueChange = Arc<dyn Fn(Vec<Arc<str>>) + Send + Sync + 'static>;
@@ -267,9 +312,12 @@ pub mod composable {
                                     &theme,
                                     LayoutRefinement::default().flex_1().min_w_0(),
                                 );
+                                let mut row_layout = LayoutStyle::default();
+                                row_layout.size.width = Length::Fill;
+                                row_layout.size.min_width = Some(Px(0.0));
                                 vec![cx.row(
                                     RowProps {
-                                        layout: LayoutStyle::default(),
+                                        layout: row_layout,
                                         gap: trigger_gap(&theme),
                                         padding: Edges::all(Px(0.0)),
                                         justify: MainAlign::SpaceBetween,
@@ -300,6 +348,10 @@ pub mod composable {
                                         } else {
                                             children
                                         };
+                                        let left_children = left_children
+                                            .into_iter()
+                                            .map(|el| apply_trigger_label_defaults(el, &text_style, fg))
+                                            .collect::<Vec<_>>();
 
                                         vec![
                                             cx.container(
@@ -1093,9 +1145,12 @@ impl AccordionTrigger {
                                 &theme,
                                 LayoutRefinement::default().flex_1().min_w_0(),
                             );
+                            let mut row_layout = LayoutStyle::default();
+                            row_layout.size.width = Length::Fill;
+                            row_layout.size.min_width = Some(Px(0.0));
                             vec![cx.row(
                                 RowProps {
-                                    layout: LayoutStyle::default(),
+                                    layout: row_layout,
                                     gap: trigger_gap(&theme),
                                     padding: Edges::all(Px(0.0)),
                                     justify: MainAlign::SpaceBetween,
@@ -1126,6 +1181,10 @@ impl AccordionTrigger {
                                     } else {
                                         children
                                     };
+                                    let left_children = left_children
+                                        .into_iter()
+                                        .map(|el| apply_trigger_label_defaults(el, &text_style, fg))
+                                        .collect::<Vec<_>>();
 
                                     vec![
                                         cx.container(
