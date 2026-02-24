@@ -170,13 +170,18 @@ pub fn should_dismiss_on_focus_outside<H: UiHost>(
     let Some(focus) = focus_now else {
         return false;
     };
+    // If we don't have a previous focus sample, we can't express a focus change yet.
+    // Avoid treating this as an "outside" event (Radix `onFocusOutside` is edge-triggered).
+    let Some(last_focus) = last_focus else {
+        return false;
+    };
     // During tree construction / overlay synthesis, focus can transiently point at a stale node
     // that is not currently in the tree. Treat this as "unstable focus" and avoid triggering a
     // focus-outside dismissal; the focus will be repaired or reassigned on subsequent frames.
     if ui.node_layer(focus).is_none() {
         return false;
     }
-    if last_focus == Some(focus) {
+    if last_focus == focus {
         return false;
     }
     !focus_is_inside_layer_or_branches(ui, layer_root, focus, branch_roots)
@@ -419,6 +424,131 @@ mod tests {
             layer_root_node,
             outside_node,
             &[branch_root_node]
+        ));
+    }
+
+    #[test]
+    fn should_not_dismiss_on_focus_outside_without_last_focus_sample() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let mut services = FakeServices;
+        let b = bounds();
+
+        let mut layer_root: Option<GlobalElementId> = None;
+        let mut outside: Option<GlobalElementId> = None;
+
+        let focusable = PressableProps {
+            layout: LayoutStyle::default(),
+            focusable: true,
+            ..Default::default()
+        };
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            b,
+            "test",
+            |cx| {
+                vec![
+                    cx.semantics_with_id(SemanticsProps::default(), |cx, id| {
+                        layer_root = Some(id);
+                        Vec::new()
+                    }),
+                    cx.pressable_with_id(focusable, |_cx, _st, id| {
+                        outside = Some(id);
+                        Vec::new()
+                    }),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, b, 1.0);
+
+        let layer_root = layer_root.expect("layer root");
+        let outside = outside.expect("outside");
+
+        let layer_root_node =
+            fret_ui::elements::node_for_element(&mut app, window, layer_root).expect("layer node");
+        let outside_node =
+            fret_ui::elements::node_for_element(&mut app, window, outside).expect("outside node");
+
+        assert!(!should_dismiss_on_focus_outside(
+            &ui,
+            layer_root_node,
+            Some(outside_node),
+            None,
+            &[]
+        ));
+    }
+
+    #[test]
+    fn should_dismiss_on_focus_outside_when_focus_changes_to_outside() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let mut services = FakeServices;
+        let b = bounds();
+
+        let mut layer_root: Option<GlobalElementId> = None;
+        let mut in_layer: Option<GlobalElementId> = None;
+        let mut outside: Option<GlobalElementId> = None;
+
+        let focusable = PressableProps {
+            layout: LayoutStyle::default(),
+            focusable: true,
+            ..Default::default()
+        };
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            b,
+            "test",
+            |cx| {
+                vec![
+                    cx.semantics_with_id(SemanticsProps::default(), |cx, id| {
+                        layer_root = Some(id);
+                        vec![cx.pressable_with_id(focusable.clone(), |_cx, _st, id| {
+                            in_layer = Some(id);
+                            Vec::new()
+                        })]
+                    }),
+                    cx.pressable_with_id(focusable, |_cx, _st, id| {
+                        outside = Some(id);
+                        Vec::new()
+                    }),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, b, 1.0);
+
+        let layer_root = layer_root.expect("layer root");
+        let in_layer = in_layer.expect("in layer");
+        let outside = outside.expect("outside");
+
+        let layer_root_node =
+            fret_ui::elements::node_for_element(&mut app, window, layer_root).expect("layer node");
+        let in_layer_node =
+            fret_ui::elements::node_for_element(&mut app, window, in_layer).expect("in layer node");
+        let outside_node =
+            fret_ui::elements::node_for_element(&mut app, window, outside).expect("outside node");
+
+        assert!(should_dismiss_on_focus_outside(
+            &ui,
+            layer_root_node,
+            Some(outside_node),
+            Some(in_layer_node),
+            &[]
         ));
     }
 }
