@@ -54,7 +54,7 @@ Use `length-percentage-semantics-v1-milestones.md` for phase planning.
 - [x] Audit `ecosystem/fret-ui-shadcn` for px clamping patterns used to patch percent collapse.
   - Outcome: the remaining viewport-dependent math in `fret-ui-shadcn` is limited to overlay placement,
     motion origins, or container-query fallbacks (not percent-sizing collapse workarounds).
-- [ ] Migrate components to native percent/fraction fields:
+- [x] Migrate components to native percent/fraction fields:
   - [x] carousel (basis-full default)
     - Evidence: `ecosystem/fret-ui-shadcn/src/carousel.rs` (basis-full uses `LengthRefinement::Fill`)
     - Gate: `tools/diag-scripts/ui-gallery-carousel-basic-screenshot.json`
