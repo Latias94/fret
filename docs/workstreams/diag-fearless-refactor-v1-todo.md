@@ -130,7 +130,9 @@ This file tracks tasks for `docs/workstreams/diag-fearless-refactor-v1.md`.
 - [ ] Decide how far to push schema2-first:
   - [ ] Decide the runtime emission policy for `bundle.schema2.json` (tooling-derived today):
     - Proposed policy draft: `docs/workstreams/diag-fearless-refactor-v1/schema2-first-decision.md`.
-    - [ ] Implement an opt-in runtime companion artifact (`bundle.schema2.json`) emission path.
+    - [x] Implement an opt-in runtime companion artifact (`bundle.schema2.json`) emission path.
+      - Evidence: `ecosystem/fret-bootstrap/src/ui_diagnostics/config.rs` (`FRET_DIAG_BUNDLE_WRITE_SCHEMA2`),
+        `ecosystem/fret-bootstrap/src/ui_diagnostics/bundle_dump.rs`.
     - [ ] Decide whether scripted runs should default to emitting schema2, and whether raw `bundle.json` can be skipped.
   - [ ] Decide when it is acceptable to stop treating raw `bundle.json` as a required artifact for common flows
     (keep it supported for deep debugging).

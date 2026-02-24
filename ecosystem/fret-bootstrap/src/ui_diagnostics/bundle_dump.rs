@@ -201,7 +201,7 @@ fn dump_schema_v2(
     }
 
     let semantics_table = bundle.tables.semantics.as_ref();
-    finalize_dump(
+    let stats = finalize_dump(
         service,
         exported_unix_ms,
         dir,
@@ -213,5 +213,16 @@ fn dump_schema_v2(
         &bundle.config,
         is_script_dump,
         request_id,
-    )
+    )?;
+
+    if !cfg!(target_arch = "wasm32") && service.cfg.write_bundle_schema2 {
+        // Opt-in compact artifact for schema2-first workflows.
+        //
+        // We intentionally keep this file name stable (`bundle.schema2.json`) so tooling can
+        // consume it directly without reparsing raw `bundle.json`.
+        bundle.apply_semantics_mode_v1(bundle::BundleSemanticsModeV1::Last);
+        let _ = write_json_compact(dir.join("bundle.schema2.json"), &bundle);
+    }
+
+    Some(stats)
 }
