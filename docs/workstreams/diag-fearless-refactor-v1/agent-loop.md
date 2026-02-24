@@ -8,7 +8,7 @@ scope: diagnostics, automation, tooling, agent
 # Agent-friendly diagnostics loop (recommended)
 
 This document captures a **repeatable**, **agent-friendly** workflow for triaging UI diagnostics bundles.
-The goal is to avoid “open a huge `bundle.json`” during first-pass triage by preferring small sidecars.
+The goal is to avoid “open a huge bundle artifact” (especially `bundle.json`) during first-pass triage by preferring small sidecars.
 
 ## Inputs
 
@@ -41,7 +41,7 @@ If you want to share a repro bundle, prefer schema2-only zips (avoid shipping a 
 - Pack:
   - `fretboard diag pack <bundle_dir> --include-all --pack-schema2-only --warmup-frames <n>`
 
-## Step 1: First-pass perf triage (no bundle.json materialization)
+## Step 1: First-pass perf triage (no full bundle materialization)
 
 Use `triage --lite` (frames-index based) to identify the worst frames quickly:
 
@@ -69,7 +69,7 @@ Once you have a candidate frame/window, slice only the relevant snapshot(s):
 - Or, if you have snapshot sequence instead:
   - `fretboard diag slice <bundle_dir> --test-id <test_id> --window <id> --snapshot-seq <seq> --warmup-frames <n>`
 
-## Step 4: Generate an AI packet
+## Step 4: Generate an AI packet (bounded)
 
 To hand off to an AI agent, generate a compact packet directory:
 
@@ -91,6 +91,6 @@ Expected contents include:
 
 If the lite loop points to a specific failure, escalate to heavier artifacts only as needed:
 
-- full `triage.json` (stats-heavy; may require materializing more of `bundle.json`)
+- full `triage.json` (stats-heavy; may require materializing more of a bundle artifact)
 - full `hotspots` (JSON subtree size hotspots)
 - screenshot diffs / renderdoc / tracy traces

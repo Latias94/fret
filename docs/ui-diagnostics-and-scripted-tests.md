@@ -135,9 +135,9 @@ $env:FRET_DIAG=1
 $env:FRET_DIAG_REDACT_TEXT=0
 ```
 
-## AI-first triage recipe (avoid sharing full `bundle.json`)
+## AI-first triage recipe (avoid sharing full bundle artifacts)
 
-When `bundle.json` is too large to share or inspect directly, prefer a bounded artifact set:
+When a bundle artifact is too large to share or inspect directly, prefer a bounded artifact set:
 
 1. Get quick context:
    - `cargo run -p fretboard -- diag meta <bundle_dir|bundle.json|bundle.schema2.json> --meta-report`
