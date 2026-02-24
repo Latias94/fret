@@ -24,13 +24,13 @@ pub(crate) fn cmd_compare(ctx: CompareCmdContext) -> Result<(), String> {
 
     let Some(a_src) = rest.first().cloned() else {
         return Err(
-            "missing bundle A path (try: fretboard diag compare ./a/bundle.json ./b/bundle.json)"
+            "missing bundle A path (try: fretboard diag compare <bundle_a_dir|bundle_a.json|bundle_a.schema2.json> <bundle_b_dir|bundle_b.json|bundle_b.schema2.json>)"
                 .to_string(),
         );
     };
     let Some(b_src) = rest.get(1).cloned() else {
         return Err(
-            "missing bundle B path (try: fretboard diag compare ./a/bundle.json ./b/bundle.json)"
+            "missing bundle B path (try: fretboard diag compare <bundle_a_dir|bundle_a.json|bundle_a.schema2.json> <bundle_b_dir|bundle_b.json|bundle_b.schema2.json>)"
                 .to_string(),
         );
     };

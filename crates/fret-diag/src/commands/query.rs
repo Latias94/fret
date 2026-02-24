@@ -122,7 +122,7 @@ fn resolve_test_ids_index_from_src(
             return Ok((bundle, src.to_path_buf(), v));
         }
 
-        if let Some(bundle_path) = sidecars::adjacent_bundle_json_path_for_sidecar(src) {
+        if let Some(bundle_path) = sidecars::adjacent_bundle_path_for_sidecar(src) {
             let index_path =
                 crate::bundle_index::ensure_test_ids_index_json(&bundle_path, warmup_frames)?;
             let v = try_read_test_ids_index_json(&index_path, warmup_frames)
@@ -136,7 +136,7 @@ fn resolve_test_ids_index_from_src(
         }
 
         return Err(format!(
-            "invalid test_ids.index.json (expected schema_version=1 warmup_frames={warmup_frames}) and no adjacent bundle.json was found to regenerate it\n  index: {}",
+            "invalid test_ids.index.json (expected schema_version=1 warmup_frames={warmup_frames}) and no adjacent bundle artifact was found to regenerate it\n  index: {}",
             src.display()
         ));
     }
@@ -207,7 +207,8 @@ fn resolve_bundle_index_from_src(
             return Ok((bundle, src.to_path_buf(), v));
         }
 
-        // Attempt recovery by regenerating from an adjacent bundle.json.
+        // Attempt recovery by regenerating from an adjacent bundle artifact (bundle.json or
+        // bundle.schema2.json).
         let mut candidates: Vec<PathBuf> = Vec::new();
         if let Some(parent) = src.parent() {
             candidates.push(parent.to_path_buf());
@@ -251,7 +252,7 @@ fn resolve_bundle_index_from_src(
         };
 
         return Err(format!(
-            "bundle.index.json {note} and no adjacent bundle.json was found to regenerate it (tip: run `fretboard diag index <bundle_dir|bundle.json>`)\n  index: {}",
+            "bundle.index.json {note} and no adjacent bundle artifact was found to regenerate it (tip: run `fretboard diag index <bundle_dir|bundle.json|bundle.schema2.json>`)\n  index: {}",
             src.display()
         ));
     }
@@ -728,7 +729,7 @@ fn cmd_query_test_id(
             let maybe_path = crate::resolve_path(workspace_root, PathBuf::from(pattern));
             if looks_like_path(pattern) && (maybe_path.is_file() || maybe_path.is_dir()) {
                 return Err(
-                    "missing pattern (try: fretboard diag query test-id <bundle_dir|bundle.json> <pattern>)"
+                    "missing pattern (try: fretboard diag query test-id <bundle_dir|bundle.json|bundle.schema2.json> <pattern>)"
                         .to_string(),
                 );
             }

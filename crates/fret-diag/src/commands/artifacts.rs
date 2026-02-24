@@ -126,7 +126,7 @@ pub(crate) fn cmd_triage(
 
     let Some(src) = positionals.first().cloned() else {
         return Err(
-            "missing bundle path (try: fretboard diag triage ./target/fret-diag/1234/bundle.json)"
+            "missing bundle path (try: fretboard diag triage <bundle_dir|bundle.json|bundle.schema2.json>)"
                 .to_string(),
         );
     };
@@ -214,7 +214,7 @@ pub(crate) fn cmd_lint(
     }
     let Some(src) = rest.first().cloned() else {
         return Err(
-            "missing bundle path (try: fretboard diag lint ./target/fret-diag/1234/bundle.json)"
+            "missing bundle path (try: fretboard diag lint <bundle_dir|bundle.json|bundle.schema2.json>)"
                 .to_string(),
         );
     };
@@ -271,7 +271,7 @@ pub(crate) fn cmd_test_ids(
     }
     let Some(src) = rest.first().cloned() else {
         return Err(
-            "missing bundle path (try: fretboard diag test-ids ./target/fret-diag/1234/bundle.json)"
+            "missing bundle path (try: fretboard diag test-ids <bundle_dir|bundle.json|bundle.schema2.json>)"
                 .to_string(),
         );
     };
@@ -331,7 +331,7 @@ pub(crate) fn cmd_test_ids_index(
     }
     let Some(src) = rest.first().cloned() else {
         return Err(
-            "missing bundle path (try: fretboard diag test-ids-index ./target/fret-diag/1234/bundle.json)"
+            "missing bundle path (try: fretboard diag test-ids-index <bundle_dir|bundle.json|bundle.schema2.json>)"
                 .to_string(),
         );
     };
@@ -367,7 +367,7 @@ pub(crate) fn cmd_frames_index(
     }
     let Some(src) = rest.first().cloned() else {
         return Err(
-            "missing bundle path (try: fretboard diag frames-index ./target/fret-diag/1234/bundle.json)"
+            "missing bundle path (try: fretboard diag frames-index <bundle_dir|bundle.json|bundle.schema2.json>)"
                 .to_string(),
         );
     };
@@ -408,7 +408,7 @@ pub(crate) fn cmd_meta(
     }
     let Some(src) = rest.first().cloned() else {
         return Err(
-            "missing bundle path (try: fretboard diag meta ./target/fret-diag/1234/bundle.json)"
+            "missing bundle path (try: fretboard diag meta <bundle_dir|bundle.json|bundle.schema2.json>)"
                 .to_string(),
         );
     };
@@ -426,14 +426,14 @@ pub(crate) fn cmd_meta(
     {
         if sidecars::try_read_sidecar_json_v1(&src, "bundle_meta", warmup_frames).is_some() {
             (src.clone(), src.clone())
-        } else if let Some(bundle_path) = sidecars::adjacent_bundle_json_path_for_sidecar(&src) {
+        } else if let Some(bundle_path) = sidecars::adjacent_bundle_path_for_sidecar(&src) {
             let canonical =
                 crate::bundle_index::ensure_bundle_meta_json(&bundle_path, warmup_frames)?;
             let out = crate::default_meta_out_path(&bundle_path);
             (canonical, out)
         } else {
             return Err(format!(
-                "invalid bundle.meta.json (expected schema_version=1 warmup_frames={warmup_frames}) and no adjacent bundle.json was found to regenerate it\n  meta: {}",
+                "invalid bundle.meta.json (expected schema_version=1 warmup_frames={warmup_frames}) and no adjacent bundle artifact was found to regenerate it\n  meta: {}",
                 src.display()
             ));
         }
