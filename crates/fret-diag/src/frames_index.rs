@@ -173,7 +173,7 @@ fn build_frames_index_payload_streaming(
         type Value = ();
 
         fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(f, "bundle.json object")
+            write!(f, "bundle artifact object")
         }
 
         fn visit_map<M>(self, mut map: M) -> Result<(), M::Error>

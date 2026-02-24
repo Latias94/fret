@@ -78,7 +78,7 @@ pub(super) fn try_build_test_id_slice_payload_streaming_inline(
         type Value = ();
 
         fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(f, "bundle.json object")
+            write!(f, "bundle artifact object")
         }
 
         fn visit_map<M>(self, mut map: M) -> Result<(), M::Error>
@@ -568,7 +568,7 @@ pub(super) fn try_build_test_id_slice_payload_streaming_table(
         type Value = ();
 
         fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(f, "bundle.json object")
+            write!(f, "bundle artifact object")
         }
 
         fn visit_map<M>(self, mut map: M) -> Result<(), M::Error>
@@ -969,7 +969,7 @@ fn stream_read_semantics_table_nodes(
         type Value = ();
 
         fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(f, "bundle.json object")
+            write!(f, "bundle artifact object")
         }
 
         fn visit_map<M>(self, mut map: M) -> Result<(), M::Error>
