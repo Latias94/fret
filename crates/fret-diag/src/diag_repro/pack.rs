@@ -28,7 +28,7 @@ pub(super) fn pack_repro_zip(
             .enumerate()
             .map(|(idx, item)| ReproZipBundle {
                 prefix: repro_zip_prefix_for_script(item, idx),
-                bundle_json: item.bundle_json.clone(),
+                bundle_artifact: item.bundle_artifact.clone(),
                 source_script: item.script_path.clone(),
             })
             .collect();

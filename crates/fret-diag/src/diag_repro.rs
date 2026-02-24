@@ -463,7 +463,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
         if let Some(bundle_path) = bundle_path.as_ref() {
             pack_items.push(ReproPackItem {
                 script_path: src.clone(),
-                bundle_json: bundle_path.clone(),
+                bundle_artifact: bundle_path.clone(),
             });
         }
 
@@ -630,7 +630,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
                     serde_json::json!({
                         "zip_prefix": repro_zip_prefix_for_script(item, idx),
                         "script_path": item.script_path.display().to_string(),
-                        "bundle_json": item.bundle_json.display().to_string(),
+                        "bundle_json": item.bundle_artifact.display().to_string(),
                     })
                 })
                 .collect(),

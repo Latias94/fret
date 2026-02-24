@@ -173,7 +173,7 @@ use util::{now_unix_ms, read_json_value, touch, write_json_value, write_script};
 #[derive(Debug, Clone)]
 struct ReproPackItem {
     script_path: PathBuf,
-    bundle_json: PathBuf,
+    bundle_artifact: PathBuf,
 }
 
 #[derive(Debug)]
@@ -3777,7 +3777,7 @@ fn write_evidence_index(
 #[derive(Debug, Clone)]
 struct ReproZipBundle {
     prefix: String,
-    bundle_json: PathBuf,
+    bundle_artifact: PathBuf,
     source_script: PathBuf,
 }
 
@@ -3894,7 +3894,7 @@ fn pack_repro_zip_multi(
     }
 
     for item in bundles {
-        let bundle_dir = resolve_bundle_root_dir(&item.bundle_json)?;
+        let bundle_dir = resolve_bundle_root_dir(&item.bundle_artifact)?;
         if schema2_only {
             let direct_v2 = bundle_dir.join("bundle.schema2.json");
             let root_v2 = bundle_dir.join("_root").join("bundle.schema2.json");
@@ -3959,12 +3959,13 @@ fn pack_repro_zip_multi(
 
         if include_triage {
             let report = bundle_stats_from_path(
-                &item.bundle_json,
+                &item.bundle_artifact,
                 stats_top,
                 sort,
                 BundleStatsOptions { warmup_frames },
             )?;
-            let payload = triage_json_from_stats(&item.bundle_json, &report, sort, warmup_frames);
+            let payload =
+                triage_json_from_stats(&item.bundle_artifact, &report, sort, warmup_frames);
             let bytes = serde_json::to_vec_pretty(&payload).map_err(|e| e.to_string())?;
             let dst = format!("{}/_root/triage.json", item.prefix);
             zip.start_file(dst, options).map_err(|e| e.to_string())?;
@@ -7275,12 +7276,12 @@ mod tests {
         let bundles = vec![
             ReproZipBundle {
                 prefix: "01-a".to_string(),
-                bundle_json: bundle_a_dir.join("bundle.schema2.json"),
+                bundle_artifact: bundle_a_dir.join("bundle.schema2.json"),
                 source_script: script_a.clone(),
             },
             ReproZipBundle {
                 prefix: "02-b".to_string(),
-                bundle_json: bundle_b_dir.join("bundle.schema2.json"),
+                bundle_artifact: bundle_b_dir.join("bundle.schema2.json"),
                 source_script: script_b.clone(),
             },
         ];
