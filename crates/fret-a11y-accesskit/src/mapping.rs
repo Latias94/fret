@@ -1,8 +1,8 @@
 use std::collections::{HashMap, HashSet};
 
 use accesskit::{
-    Action, Node, NodeId, Rect, Role, TextPosition, TextSelection, Toggled, Tree, TreeId,
-    TreeUpdate,
+    Action, Invalid, Live, Node, NodeId, Rect, Role, TextPosition, TextSelection, Toggled, Tree,
+    TreeId, TreeUpdate,
 };
 use fret_core::{SemanticsNode, SemanticsOrientation, SemanticsRole, SemanticsSnapshot};
 
@@ -172,6 +172,46 @@ pub fn tree_update_from_snapshot(snapshot: &SemanticsSnapshot, scale_factor: f64
         if node.flags.read_only {
             out.set_read_only();
         }
+        if node.flags.hidden {
+            out.set_hidden();
+        }
+        if node.flags.visited {
+            out.set_visited();
+        }
+        if node.flags.multiselectable {
+            out.set_multiselectable();
+        }
+        if node.flags.required {
+            out.set_required();
+        }
+        if node.flags.busy {
+            out.set_busy();
+        }
+        if let Some(live) = node.flags.live {
+            let live = match live {
+                fret_core::SemanticsLive::Off => Some(Live::Off),
+                fret_core::SemanticsLive::Polite => Some(Live::Polite),
+                fret_core::SemanticsLive::Assertive => Some(Live::Assertive),
+                _ => None,
+            };
+            if let Some(live) = live {
+                out.set_live(live);
+                if node.flags.live_atomic {
+                    out.set_live_atomic();
+                }
+            }
+        }
+        if let Some(invalid) = node.flags.invalid {
+            let invalid = match invalid {
+                fret_core::SemanticsInvalid::True => Some(Invalid::True),
+                fret_core::SemanticsInvalid::Grammar => Some(Invalid::Grammar),
+                fret_core::SemanticsInvalid::Spelling => Some(Invalid::Spelling),
+                _ => None,
+            };
+            if let Some(invalid) = invalid {
+                out.set_invalid(invalid);
+            }
+        }
         if node.flags.selected {
             out.set_selected(true);
         }
@@ -194,6 +234,16 @@ pub fn tree_update_from_snapshot(snapshot: &SemanticsSnapshot, scale_factor: f64
             } else {
                 Toggled::False
             });
+        } else if let Some(pressed) = node.flags.pressed_state {
+            let pressed = match pressed {
+                fret_core::SemanticsPressedState::False => Some(Toggled::False),
+                fret_core::SemanticsPressedState::True => Some(Toggled::True),
+                fret_core::SemanticsPressedState::Mixed => Some(Toggled::Mixed),
+                _ => None,
+            };
+            if let Some(pressed) = pressed {
+                out.set_toggled(pressed);
+            }
         }
 
         if snapshot.barrier_root.is_some()

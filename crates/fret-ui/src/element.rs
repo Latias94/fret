@@ -4,8 +4,8 @@ use crate::overlay_placement::{Align, AnchoredPanelLayout, AnchoredPanelOptions,
 use fret_core::scene::{BlendMode, Mask, Paint};
 use fret_core::{
     AttributedText, CaretAffinity, Color, Corners, Edges, EffectChain, EffectMode, EffectQuality,
-    ImageId, KeyCode, NodeId, Px, Rect, RenderTargetId, SemanticsOrientation, SemanticsRole, Size,
-    SvgFit, TextAlign, TextOverflow, TextStyle, TextWrap, UvRect, ViewportFit,
+    ImageId, KeyCode, NodeId, Px, Rect, RenderTargetId, SemanticsLive, SemanticsOrientation,
+    SemanticsRole, Size, SvgFit, TextAlign, TextOverflow, TextStyle, TextWrap, UvRect, ViewportFit,
 };
 use fret_runtime::{CommandId, Model};
 use std::sync::Arc;
@@ -245,6 +245,8 @@ pub struct TextInputRegionProps {
     /// When present, selection and composition ranges are interpreted as UTF-8 byte offsets within
     /// this value (ADR 0071).
     pub a11y_value: Option<Arc<str>>,
+    pub a11y_required: bool,
+    pub a11y_invalid: Option<fret_core::SemanticsInvalid>,
     /// Optional selection range (anchor, focus) in UTF-8 byte offsets within `a11y_value`.
     pub a11y_text_selection: Option<(u32, u32)>,
     /// Optional IME composition range (start, end) in UTF-8 byte offsets within `a11y_value`.
@@ -306,6 +308,8 @@ impl Default for TextInputRegionProps {
             ime_cursor_area: None,
             a11y_label: None,
             a11y_value: None,
+            a11y_required: false,
+            a11y_invalid: None,
             a11y_text_selection: None,
             a11y_text_composition: None,
         }
@@ -537,6 +541,15 @@ pub struct SemanticsDecoration {
     pub value: Option<Arc<str>>,
     pub disabled: Option<bool>,
     pub read_only: Option<bool>,
+    pub hidden: Option<bool>,
+    pub visited: Option<bool>,
+    pub multiselectable: Option<bool>,
+    pub busy: Option<bool>,
+    /// Live region setting (ARIA `aria-live`), applied as a semantics flags override.
+    ///
+    /// `Some(None)` clears any live region semantics from the underlying element.
+    pub live: Option<Option<SemanticsLive>>,
+    pub live_atomic: Option<bool>,
     pub selected: Option<bool>,
     pub expanded: Option<bool>,
     /// Tri-state checked override (Some(None) clears; Some(Some(v)) sets to v).
@@ -577,6 +590,12 @@ impl SemanticsDecoration {
             value: other.value.or(self.value),
             disabled: other.disabled.or(self.disabled),
             read_only: other.read_only.or(self.read_only),
+            hidden: other.hidden.or(self.hidden),
+            visited: other.visited.or(self.visited),
+            multiselectable: other.multiselectable.or(self.multiselectable),
+            busy: other.busy.or(self.busy),
+            live: other.live.or(self.live),
+            live_atomic: other.live_atomic.or(self.live_atomic),
             selected: other.selected.or(self.selected),
             expanded: other.expanded.or(self.expanded),
             checked: other.checked.or(self.checked),
@@ -631,6 +650,36 @@ impl SemanticsDecoration {
 
     pub fn read_only(mut self, read_only: bool) -> Self {
         self.read_only = Some(read_only);
+        self
+    }
+
+    pub fn hidden(mut self, hidden: bool) -> Self {
+        self.hidden = Some(hidden);
+        self
+    }
+
+    pub fn visited(mut self, visited: bool) -> Self {
+        self.visited = Some(visited);
+        self
+    }
+
+    pub fn multiselectable(mut self, multiselectable: bool) -> Self {
+        self.multiselectable = Some(multiselectable);
+        self
+    }
+
+    pub fn busy(mut self, busy: bool) -> Self {
+        self.busy = Some(busy);
+        self
+    }
+
+    pub fn live(mut self, live: Option<SemanticsLive>) -> Self {
+        self.live = Some(live);
+        self
+    }
+
+    pub fn live_atomic(mut self, live_atomic: bool) -> Self {
+        self.live_atomic = Some(live_atomic);
         self
     }
 
@@ -774,6 +823,12 @@ pub struct SemanticsProps {
     pub value_editable: Option<bool>,
     pub disabled: bool,
     pub read_only: bool,
+    pub hidden: bool,
+    pub visited: bool,
+    pub multiselectable: bool,
+    pub busy: bool,
+    pub live: Option<SemanticsLive>,
+    pub live_atomic: bool,
     pub selected: bool,
     pub expanded: Option<bool>,
     pub checked: Option<bool>,
@@ -825,6 +880,12 @@ impl Default for SemanticsProps {
             value_editable: None,
             disabled: false,
             read_only: false,
+            hidden: false,
+            visited: false,
+            multiselectable: false,
+            busy: false,
+            live: None,
+            live_atomic: false,
             selected: false,
             expanded: None,
             checked: None,
@@ -1255,10 +1316,19 @@ pub struct PressableA11y {
     /// Select) that should remain interactive for pointer users but should not appear in the
     /// accessibility tree.
     pub hidden: bool,
+    /// Indicates that the pressable represents a visited link.
+    ///
+    /// This is a portable approximation of the "visited link" concept in HTML.
+    pub visited: bool,
+    /// Indicates that this collection supports selecting multiple items.
+    ///
+    /// This is a portable approximation of ARIA `aria-multiselectable`.
+    pub multiselectable: bool,
     pub selected: bool,
     pub expanded: Option<bool>,
     pub checked: Option<bool>,
     pub checked_state: Option<fret_core::SemanticsCheckedState>,
+    pub pressed_state: Option<fret_core::SemanticsPressedState>,
     pub active_descendant: Option<NodeId>,
     /// Declarative-only: element ID of a node which labels this node.
     ///
@@ -1524,6 +1594,8 @@ pub struct TextInputProps {
     pub a11y_role: Option<SemanticsRole>,
     pub test_id: Option<std::sync::Arc<str>>,
     pub placeholder: Option<std::sync::Arc<str>>,
+    pub a11y_required: bool,
+    pub a11y_invalid: Option<fret_core::SemanticsInvalid>,
     pub active_descendant: Option<NodeId>,
     /// Declarative-only: element ID of a node which this text input controls.
     ///
@@ -1549,6 +1621,8 @@ impl TextInputProps {
             a11y_role: None,
             test_id: None,
             placeholder: None,
+            a11y_required: false,
+            a11y_invalid: None,
             active_descendant: None,
             controls_element: None,
             expanded: None,
@@ -1591,6 +1665,8 @@ pub struct TextAreaProps {
     pub focusable: bool,
     pub model: Model<String>,
     pub placeholder: Option<std::sync::Arc<str>>,
+    pub a11y_required: bool,
+    pub a11y_invalid: Option<fret_core::SemanticsInvalid>,
     pub a11y_label: Option<std::sync::Arc<str>>,
     pub test_id: Option<std::sync::Arc<str>>,
     pub chrome: TextAreaStyle,
@@ -1606,6 +1682,8 @@ impl TextAreaProps {
             focusable: true,
             model,
             placeholder: None,
+            a11y_required: false,
+            a11y_invalid: None,
             a11y_label: None,
             test_id: None,
             chrome: TextAreaStyle::default(),

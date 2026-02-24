@@ -7431,6 +7431,23 @@ fn semantics_fingerprint_v1(
         hasher.write_bool(node.flags.focused);
         hasher.write_bool(node.flags.captured);
         hasher.write_bool(node.flags.disabled);
+        hasher.write_bool(node.flags.hidden);
+        hasher.write_bool(node.flags.visited);
+        hasher.write_bool(node.flags.multiselectable);
+        hasher.write_bool(node.flags.busy);
+        match node.flags.live {
+            None => hasher.write_u8(0),
+            Some(live) => {
+                hasher.write_u8(1);
+                hasher.write_u8(match live {
+                    fret_core::SemanticsLive::Off => 0,
+                    fret_core::SemanticsLive::Polite => 1,
+                    fret_core::SemanticsLive::Assertive => 2,
+                    _ => 255,
+                });
+            }
+        }
+        hasher.write_bool(node.flags.live_atomic);
         hasher.write_bool(node.flags.selected);
         hasher.write_bool(node.flags.expanded);
         hasher.write_opt_bool(node.flags.checked);
@@ -7443,6 +7460,29 @@ fn semantics_fingerprint_v1(
                     fret_core::SemanticsCheckedState::True => 1,
                     fret_core::SemanticsCheckedState::Mixed => 2,
                     _ => 3,
+                });
+            }
+        }
+        match node.flags.pressed_state {
+            None => hasher.write_u8(0),
+            Some(state) => {
+                hasher.write_u8(1);
+                hasher.write_u8(match state {
+                    fret_core::SemanticsPressedState::False => 0,
+                    fret_core::SemanticsPressedState::True => 1,
+                    fret_core::SemanticsPressedState::Mixed => 2,
+                });
+            }
+        }
+        hasher.write_bool(node.flags.required);
+        match node.flags.invalid {
+            None => hasher.write_u8(0),
+            Some(state) => {
+                hasher.write_u8(1);
+                hasher.write_u8(match state {
+                    fret_core::SemanticsInvalid::True => 0,
+                    fret_core::SemanticsInvalid::Grammar => 1,
+                    fret_core::SemanticsInvalid::Spelling => 2,
                 });
             }
         }

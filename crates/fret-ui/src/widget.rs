@@ -1,7 +1,8 @@
 use crate::{Theme, UiHost};
 use fret_core::{
     AppWindowId, Corners, Event, NodeId, Point, Rect, Scene, SemanticsCheckedState, SemanticsFlags,
-    SemanticsOrientation, SemanticsRole, Size, Transform2D, UiServices,
+    SemanticsInvalid, SemanticsLive, SemanticsOrientation, SemanticsPressedState, SemanticsRole,
+    Size, Transform2D, UiServices,
 };
 use fret_runtime::{
     CommandId, DefaultAction, DefaultActionSet, Effect, InputContext, Model, ModelId,
@@ -1296,8 +1297,8 @@ impl<'a, H: UiHost> SemanticsCx<'a, H> {
                 self.actions.set_value = editable;
             }
             // Range controls generally surface as stepper semantics on platforms. Prefer
-            // Increment/Decrement for sliders.
-            SemanticsRole::Slider => {
+            // Increment/Decrement for sliders, spin buttons, and splitters.
+            SemanticsRole::Slider | SemanticsRole::SpinButton | SemanticsRole::Splitter => {
                 self.actions.increment = editable;
                 self.actions.decrement = editable;
             }
@@ -1331,6 +1332,18 @@ impl<'a, H: UiHost> SemanticsCx<'a, H> {
         self.flags.read_only = read_only;
     }
 
+    pub fn set_hidden(&mut self, hidden: bool) {
+        self.flags.hidden = hidden;
+    }
+
+    pub fn set_visited(&mut self, visited: bool) {
+        self.flags.visited = visited;
+    }
+
+    pub fn set_multiselectable(&mut self, multiselectable: bool) {
+        self.flags.multiselectable = multiselectable;
+    }
+
     pub fn set_selected(&mut self, selected: bool) {
         self.flags.selected = selected;
     }
@@ -1356,6 +1369,42 @@ impl<'a, H: UiHost> SemanticsCx<'a, H> {
 
     pub fn clear_checked_state(&mut self) {
         self.flags.checked_state = None;
+    }
+
+    pub fn set_pressed_state(&mut self, pressed: Option<SemanticsPressedState>) {
+        self.flags.pressed_state = pressed;
+    }
+
+    pub fn clear_pressed_state(&mut self) {
+        self.flags.pressed_state = None;
+    }
+
+    pub fn set_required(&mut self, required: bool) {
+        self.flags.required = required;
+    }
+
+    pub fn set_invalid(&mut self, invalid: Option<SemanticsInvalid>) {
+        self.flags.invalid = invalid;
+    }
+
+    pub fn clear_invalid(&mut self) {
+        self.flags.invalid = None;
+    }
+
+    pub fn set_busy(&mut self, busy: bool) {
+        self.flags.busy = busy;
+    }
+
+    pub fn set_live(&mut self, live: Option<SemanticsLive>) {
+        self.flags.live = live;
+    }
+
+    pub fn clear_live(&mut self) {
+        self.flags.live = None;
+    }
+
+    pub fn set_live_atomic(&mut self, live_atomic: bool) {
+        self.flags.live_atomic = live_atomic;
     }
 
     pub fn set_active_descendant(&mut self, node: Option<NodeId>) {

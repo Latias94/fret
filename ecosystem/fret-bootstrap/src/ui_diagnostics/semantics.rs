@@ -25,6 +25,61 @@ impl UiCheckedStateV1 {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiPressedStateV1 {
+    False,
+    True,
+    Mixed,
+}
+
+impl UiPressedStateV1 {
+    fn from_semantics_pressed_state(v: fret_core::SemanticsPressedState) -> Self {
+        match v {
+            fret_core::SemanticsPressedState::False => Self::False,
+            fret_core::SemanticsPressedState::True => Self::True,
+            fret_core::SemanticsPressedState::Mixed => Self::Mixed,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiInvalidV1 {
+    True,
+    Grammar,
+    Spelling,
+}
+
+impl UiInvalidV1 {
+    fn from_semantics_invalid(v: fret_core::SemanticsInvalid) -> Self {
+        match v {
+            fret_core::SemanticsInvalid::True => Self::True,
+            fret_core::SemanticsInvalid::Grammar => Self::Grammar,
+            fret_core::SemanticsInvalid::Spelling => Self::Spelling,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiLiveV1 {
+    Off,
+    Polite,
+    Assertive,
+}
+
+impl UiLiveV1 {
+    fn from_semantics_live(v: fret_core::SemanticsLive) -> Option<Self> {
+        match v {
+            fret_core::SemanticsLive::Off => Some(Self::Off),
+            fret_core::SemanticsLive::Polite => Some(Self::Polite),
+            fret_core::SemanticsLive::Assertive => Some(Self::Assertive),
+            _ => None,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiSemanticsSnapshotV1 {
     pub window: u64,
@@ -93,6 +148,14 @@ pub struct UiSemanticsFlagsV1 {
     #[serde(default, skip_serializing_if = "is_false")]
     pub disabled: bool,
     #[serde(default, skip_serializing_if = "is_false")]
+    pub hidden: bool,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub visited: bool,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub multiselectable: bool,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub busy: bool,
+    #[serde(default, skip_serializing_if = "is_false")]
     pub selected: bool,
     #[serde(default, skip_serializing_if = "is_false")]
     pub expanded: bool,
@@ -100,6 +163,16 @@ pub struct UiSemanticsFlagsV1 {
     pub checked: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub checked_state: Option<UiCheckedStateV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pressed_state: Option<UiPressedStateV1>,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub required: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub invalid: Option<UiInvalidV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub live: Option<UiLiveV1>,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub live_atomic: bool,
 }
 
 impl UiSemanticsFlagsV1 {
@@ -107,10 +180,19 @@ impl UiSemanticsFlagsV1 {
         !v.focused
             && !v.captured
             && !v.disabled
+            && !v.hidden
+            && !v.visited
+            && !v.multiselectable
+            && !v.busy
             && !v.selected
             && !v.expanded
             && v.checked.is_none()
             && v.checked_state.is_none()
+            && v.pressed_state.is_none()
+            && !v.required
+            && v.invalid.is_none()
+            && v.live.is_none()
+            && !v.live_atomic
     }
 }
 
@@ -205,6 +287,10 @@ impl UiSemanticsNodeV1 {
                 focused: node.flags.focused,
                 captured: node.flags.captured,
                 disabled: node.flags.disabled,
+                hidden: node.flags.hidden,
+                visited: node.flags.visited,
+                multiselectable: node.flags.multiselectable,
+                busy: node.flags.busy,
                 selected: node.flags.selected,
                 expanded: node.flags.expanded,
                 checked: node.flags.checked,
@@ -212,6 +298,14 @@ impl UiSemanticsNodeV1 {
                     .flags
                     .checked_state
                     .map(UiCheckedStateV1::from_semantics_checked_state),
+                pressed_state: node
+                    .flags
+                    .pressed_state
+                    .map(UiPressedStateV1::from_semantics_pressed_state),
+                required: node.flags.required,
+                invalid: node.flags.invalid.map(UiInvalidV1::from_semantics_invalid),
+                live: node.flags.live.and_then(UiLiveV1::from_semantics_live),
+                live_atomic: node.flags.live_atomic,
             },
             test_id,
             active_descendant: node.active_descendant.map(key_to_u64),

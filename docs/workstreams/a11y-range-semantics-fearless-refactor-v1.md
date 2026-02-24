@@ -2,7 +2,7 @@
 
 Status: Shippable (core contract + AccessKit mapping + shadcn adoption + gates landed; contract locked in ADR 0288; follow-ups tracked below)
 
-Last updated: 2026-02-23
+Last updated: 2026-02-24
 
 ## Motivation
 
@@ -17,6 +17,9 @@ Symptoms before this workstream:
 Update (2026-02-23): The core contract now includes structured numeric + scroll fields, the AccessKit adapter emits them
 best-effort for finite values, `scroll_by` is wired end-to-end for scrollable host widgets, and sliders expose
 Increment/Decrement stepper actions end-to-end (runner + default UI driver hooks).
+
+Update (2026-02-23): Declarative `Pressable` nodes with `role=Slider` also expose stepper actions by default, and can
+publish the structured numeric metadata via `SemanticsDecoration` (e.g. imui slider surfaces).
 
 - A slider/progress often becomes “just text” (e.g. `"50%"`) rather than a role with `aria-valuenow/min/max`-like data.
 - The diagnostics harness’s `set_slider_value` step must parse floats out of `SemanticsNode::value` strings
@@ -83,11 +86,71 @@ Notes:
 Action notes:
 
 - `SemanticsActions.scroll_by` is the portable “scroll by delta” action surface.
-- `SemanticsActions.increment` / `SemanticsActions.decrement` are a portable stepper surface for sliders. In `fret-ui`,
-  `value_editable` on `SemanticsRole::Slider` maps to these actions (instead of `SetValue`).
-- Sliders may also expose a `SetValue` surface; the default `fret-ui-app` driver implements it by translating target
-  values into `Home/End/PageUp/PageDown/ArrowUp/ArrowDown` key sequences. This surface is gated by the runtime: it is
-  only exposed when slider numeric metadata includes `value/min/max/step`.
+- `SemanticsActions.increment` / `SemanticsActions.decrement` are a portable stepper surface for “range-like” controls
+  (slider/spinbutton/splitter). In `fret-ui`, `value_editable` on these roles maps to `increment/decrement` (instead of
+  always exposing `SetValue`).
+- Range-like controls may also expose a `SetValue` surface; the default `fret-ui-app` driver implements it by
+  translating target values into `Home/End/PageUp/PageDown/ArrowUp/ArrowDown` key sequences. This surface is gated by
+  the runtime: it is only exposed when the numeric metadata includes `value/min/max/step`.
+
+## Closure checklist (range/numeric controls)
+
+Use this checklist when implementing or refactoring any “range-like” control (slider, progress, scrollbar-like,
+spinbutton-like) to avoid drifting back into string-only semantics.
+
+### 1) Contract + invariants (mechanism layer)
+
+- [ ] Role is correct (`SemanticsRole::Slider` / `ProgressBar` / `Viewport` / etc.).
+- [ ] Structured numeric metadata is published via `SemanticsNodeExtra.numeric`:
+  - `value`: current value (`Some(f64)`), omitted for indeterminate states (e.g. indeterminate progress).
+  - `min`/`max`: bounds when known; ensure `min <= max`.
+  - `step`: positive step size when the control supports stepper semantics.
+  - `jump`: optional “page” step (e.g. PageUp/PageDown), positive when present.
+- [ ] All numeric fields are finite (no `NaN`/`±Inf`), so `SemanticsNode::validate()` passes.
+
+### 2) Production (UI/runtime wiring)
+
+- [ ] Values are emitted from a real element in the tree (not only from tests):
+  - declarative widgets: use `SemanticsProps` or `AnyElement::attach_semantics(SemanticsDecoration)`.
+  - retained widgets: publish via `Widget::semantics` / `SemanticsCx`.
+- [ ] Prefer `SemanticsDecoration` when you only need a11y stamping on an existing typed element (avoid layout wrappers
+  unless you truly need a semantics node boundary).
+- [ ] For `Pressable`-based sliders:
+  - `PressableA11y.role = Some(SemanticsRole::Slider)`.
+  - Numeric metadata comes from `SemanticsDecoration` (or an explicit `SemanticsProps` wrapper), and stays in sync with
+    the model.
+
+### 3) Actions (adjustable controls)
+
+- [ ] Range-like controls expose stepper actions (portable):
+  - `SemanticsActions.increment` / `decrement` are enabled when the control is editable.
+  - `invoke/click` is suppressed for stepper-like roles (avoid confusing AT).
+- [ ] `SetValue` for range-like controls is only exposed when numeric metadata is sufficient:
+  - `value + min + max + step` present (runtime-gated).
+  - The platform action decoder and UI driver can deterministically apply the target value.
+
+### 4) Adapter mapping (AccessKit)
+
+- [ ] AccessKit mapping emits numeric fields (`numeric_value`, `min_numeric_value`, `max_numeric_value`, `step`, `jump`)
+  best-effort for finite values.
+- [ ] At least one adapter unit test covers the role + numeric fields (or documents a platform limitation).
+
+### 5) Diagnostics + gates
+
+- [ ] Diagnostics/automation prefers structured numeric semantics (no locale-dependent string parsing).
+- [ ] Add at least one stable gate for each new production path:
+  - unit/integration test asserting semantics snapshot fields, or
+  - shadcn semantics snapshot JSON gate, or
+  - a `fretboard diag` script that asserts numeric metadata.
+
+Evidence anchors (examples of “done right”):
+
+- shadcn slider/progress: `ecosystem/fret-ui-shadcn/src/slider.rs`, `ecosystem/fret-ui-shadcn/src/progress.rs`
+- material3 slider: `ecosystem/fret-ui-material3/src/slider.rs`
+- pressable slider actions: `crates/fret-ui/src/declarative/host_widget/semantics.rs`
+- imui slider stamping: `ecosystem/fret-ui-kit/src/imui.rs`
+- gate examples: `crates/fret-ui/src/declarative/tests/semantics.rs`, `ecosystem/fret-imui/src/lib.rs`
+
 ## Additional “mechanismizable” semantics gaps (candidates)
 
 These are **not required** to ship the numeric/range backbone, but they are strong candidates to batch into the same

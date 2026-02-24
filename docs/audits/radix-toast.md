@@ -47,4 +47,7 @@ Fret does not use React context nor DOM events. Toast outcomes are composed via:
 
 ## Gaps / intentional differences
 
-- Deferred: A11y announcement semantics (Radix uses ARIA live region patterns).
+- Pass: Live region semantics are published by the toast viewport overlay root (polite live region), enabling structured
+  announcements without string-only conventions.
+- Deferred: Rich per-toast announcement policy (e.g. assertive vs polite per variant, atomic announcements, relevance
+  semantics) remains ecosystem-owned.

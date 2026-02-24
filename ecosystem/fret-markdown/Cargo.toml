@@ -33,3 +33,6 @@ mdstream = { workspace = true, features = ["pulldown"] }
 mathjax_svg = { workspace = true, optional = true }
 tracing.workspace = true
 merman = { workspace = true, optional = true, features = ["render"] }
+
+[dev-dependencies]
+fret-app = { path = "../../crates/fret-app" }

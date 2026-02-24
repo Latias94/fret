@@ -4,37 +4,74 @@ Last updated: 2026-02-23
 
 ## P0: Pressed semantics (toggle buttons)
 
-- [ ] Confirm AccessKit surface:
+- [x] Confirm AccessKit surface:
   - property shape (`pressed` / `toggled` / role differentiation) and whether “mixed” is supported.
   - action surface expectations (Invoke only vs explicit Toggle).
-- [ ] Add portable contract in `crates/fret-core` (additive, validated where appropriate).
-- [ ] Add `fret-ui` writers:
+- [x] Add portable contract in `crates/fret-core` (additive, validated where appropriate).
+- [x] Add `fret-ui` writers:
   - declarative `Pressable` / shadcn `Toggle` / `ToggleGroup` publish the pressed semantics.
-- [ ] Add `fret-a11y-accesskit` mapping + unit tests.
-- [ ] Add shadcn snapshot gate(s) asserting pressed semantics for:
+- [x] Add `fret-a11y-accesskit` mapping + unit tests.
+- [x] Add shadcn snapshot gate(s) asserting pressed semantics for:
   - a single toggle button,
   - a toggle group item.
-- [ ] Ensure diagnostics snapshots/fingerprint include the new field(s) if they affect determinism.
+- [x] Ensure diagnostics snapshots/fingerprint include the new field(s) if they affect determinism.
 
 ## P0: Required + invalid semantics (forms)
 
-- [ ] Decide contract shape:
+- [x] Decide contract shape:
   - `required: bool` vs `Option<bool>` (unknown vs false),
   - `invalid: bool` vs richer invalid reason (v1 should stay mechanism-only).
-- [ ] Map into AccessKit (if supported) and document fallbacks.
-- [ ] Adopt in shadcn primitives:
+- [x] Map into AccessKit (if supported) and document fallbacks.
+- [x] Adopt in shadcn primitives:
   - input / textarea / select / checkbox (at least one).
-- [ ] Gate via shadcn semantics snapshots and/or a diag script.
+- [x] Gate via shadcn semantics snapshots and/or a diag script.
 
 ## P0: Busy semantics (loading)
 
-- [ ] Decide contract shape (node flag vs extra field) and how it composes with progress numeric semantics.
-- [ ] Map into AccessKit where possible.
-- [ ] Adopt in at least one shadcn component (e.g. command loading state or spinner wrapper).
-- [ ] Gate via snapshot/diag script.
+- [x] Decide contract shape (node flag vs extra field) and how it composes with progress numeric semantics.
+- [x] Map into AccessKit where possible.
+- [x] Adopt in at least one shadcn component (command list/palette loading state).
+- [x] Gate via snapshot/diag script.
+
+## P0: Hidden semantics (exclude from accessibility tree)
+
+- [x] Decide contract shape (node flag) and how it composes with existing role/flag surfaces.
+- [x] Map into AccessKit (`hidden`).
+- [x] Wire declarative `PressableA11y.hidden` without relying on role/action coercion.
+- [x] Gate via snapshot and unit test.
+
+## P0: Visited semantics (links)
+
+- [x] Decide contract shape (node flag) and intended primary role (`Link`).
+- [x] Map into AccessKit (`visited`).
+- [x] Adopt in at least one shadcn component (badge link).
+- [x] Gate via snapshot and unit test.
+
+## P0: Multiselectable semantics (collections)
+
+- [x] Decide contract shape (node flag) and intended primary role (`ListBox`).
+- [x] Map into AccessKit (`multiselectable`).
+- [x] Adopt in at least one shadcn component (combobox chips listbox).
+- [x] Gate via snapshot and unit test.
+
+## P0: Live region semantics (announcements)
+
+- [x] Confirm AccessKit surface (`live` + `live_atomic`).
+- [x] Add portable contract in `crates/fret-core` (`SemanticsFlags.live/live_atomic`).
+- [x] Add `fret-ui` writers (declarative semantics + decoration support).
+- [x] Add `fret-a11y-accesskit` mapping + unit tests.
+- [x] Adopt in the toast viewport overlay root (notification announcements).
+- [x] Gate via a shadcn semantics snapshot.
+- [x] Ensure diagnostics snapshots/fingerprint include the new field(s) if they affect determinism.
+
+## P0: Heading semantics (role + level)
+
+- [x] Add a portable `Heading` role to the `SemanticsRole` contract.
+- [x] Map into AccessKit `Role::Heading` (and reuse the existing `level` property mapping).
+- [x] Adopt in at least one ecosystem surface (shadcn modal titles).
+- [x] Gate via a shadcn semantics snapshot (heading + level).
 
 ## Hygiene
 
-- [ ] Add/refresh ADR(s) for any new hard-to-change surfaces.
-- [ ] Update `docs/adr/IMPLEMENTATION_ALIGNMENT.md` with evidence anchors once a surface is closed.
-
+- [x] Add/refresh ADR(s) for any new hard-to-change surfaces (ADR 0290).
+- [x] Update `docs/adr/IMPLEMENTATION_ALIGNMENT.md` with evidence anchors once a surface is closed.

@@ -54,6 +54,7 @@ pub struct Badge {
     label: Arc<str>,
     variant: BadgeVariant,
     render: Option<BadgeRender>,
+    visited: bool,
     on_activate: Option<OnActivate>,
     test_id: Option<Arc<str>>,
     leading_icon: Option<IconId>,
@@ -84,6 +85,7 @@ impl Badge {
             label: label.into(),
             variant: BadgeVariant::Default,
             render: None,
+            visited: false,
             on_activate: None,
             test_id: None,
             leading_icon: None,
@@ -121,6 +123,12 @@ impl Badge {
         self
     }
 
+    /// Marks the badge's link as visited (when rendered as a link).
+    pub fn visited(mut self, visited: bool) -> Self {
+        self.visited = visited;
+        self
+    }
+
     pub fn on_activate(mut self, on_activate: OnActivate) -> Self {
         self.on_activate = Some(on_activate);
         self
@@ -148,6 +156,7 @@ impl Badge {
             self.label,
             self.variant,
             self.render,
+            self.visited,
             self.on_activate,
             self.test_id,
             self.leading_icon,
@@ -278,6 +287,7 @@ pub fn badge<H: UiHost>(
         label,
         variant,
         None,
+        false,
         None,
         None,
         None,
@@ -293,6 +303,7 @@ fn badge_with_patch<H: UiHost>(
     label: impl Into<Arc<str>>,
     variant: BadgeVariant,
     render: Option<BadgeRender>,
+    visited: bool,
     on_activate: Option<OnActivate>,
     test_id: Option<Arc<str>>,
     leading_icon: Option<IconId>,
@@ -413,6 +424,7 @@ fn badge_with_patch<H: UiHost>(
     };
 
     if render_role.is_some() || render_on_activate.is_some() {
+        let visited = visited && render_role == Some(SemanticsRole::Link);
         return control_chrome_pressable_with_id_props(cx, move |cx, _st, _id| {
             if let Some(on_activate) = render_on_activate.clone() {
                 cx.pressable_on_activate(on_activate);
@@ -428,6 +440,7 @@ fn badge_with_patch<H: UiHost>(
                     role: render_role,
                     label: Some(a11y_label.clone()),
                     test_id: test_id.clone(),
+                    visited,
                     ..Default::default()
                 },
                 ..Default::default()

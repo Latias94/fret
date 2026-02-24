@@ -1,7 +1,7 @@
 use fret_app::App;
 use fret_core::{
     AppWindowId, Event, FrameId, KeyCode, Modifiers, MouseButton, Point, PointerEvent, PointerType,
-    Px, Rect, SemanticsRole, Size as CoreSize, UiServices,
+    Px, Rect, SemanticsPressedState, SemanticsRole, Size as CoreSize, UiServices,
 };
 use fret_runtime::{Effect, Model, TimerToken};
 use fret_ui::ElementContext;
@@ -5487,7 +5487,14 @@ fn radix_web_toggle_click_state_matches_fret() {
         .cloned()
         .expect("semantics snapshot");
     let toggle = find_semantics(&snap, SemanticsRole::Button, "Toggle");
-    assert_eq!(toggle.flags.selected, expected_pressed);
+    assert_eq!(
+        toggle.flags.pressed_state,
+        Some(if expected_pressed {
+            SemanticsPressedState::True
+        } else {
+            SemanticsPressedState::False
+        })
+    );
 }
 
 #[test]
@@ -5589,8 +5596,11 @@ fn radix_web_toggle_group_click_second_item_state_matches_fret() {
         .expect("semantics snapshot");
     let bold = find_semantics(&snap, SemanticsRole::Button, labels[0]);
     let italic = find_semantics(&snap, SemanticsRole::Button, labels[1]);
-    assert_eq!(bold.flags.selected, false);
-    assert_eq!(italic.flags.selected, true);
+    assert_eq!(bold.flags.pressed_state, Some(SemanticsPressedState::False));
+    assert_eq!(
+        italic.flags.pressed_state,
+        Some(SemanticsPressedState::True)
+    );
 }
 
 #[test]

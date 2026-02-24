@@ -1,11 +1,13 @@
 # A11y range/numeric semantics (fearless refactor v1) — Milestones
 
-Last updated: 2026-02-23
+Last updated: 2026-02-24
 
 ## Current progress (2026-02-23)
 
 - M1: Complete (core contract + AccessKit mapping + unit tests).
 - M1.5: Complete (scroll semantics + `scroll_by`, level, read-only, placeholder, url).
+- M1.75: Complete (Scrollbar semantics: `SemanticsRole::ScrollBar` + scroll metadata + AccessKit role mapping + shadcn `ScrollArea` snapshot gate).
+- M1.8: Complete (`SpinButton`/`Meter`/`Splitter` roles: core contract + AccessKit role mapping + shadcn snapshot gates, including resizable `Splitter`).
 - M2: Complete (shadcn slider + progress populate numeric semantics; snapshots gated).
 - M2.25: Complete (slider Increment/Decrement stepper actions exposed; runner + default UI driver hooks wired).
 - M2.5: Complete (best-effort slider `SetValue(NumericValue)` handling via key sequences; runtime-gated exposure + tests).

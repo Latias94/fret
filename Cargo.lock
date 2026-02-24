@@ -2319,6 +2319,7 @@ dependencies = [
 name = "fret-markdown"
 version = "0.1.0"
 dependencies = [
+ "fret-app",
  "fret-authoring",
  "fret-code-view",
  "fret-core",

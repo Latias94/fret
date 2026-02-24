@@ -1402,13 +1402,15 @@ mod tests {
 
     #[test]
     fn toggle_group_multiple_uncontrolled_applies_default_value_once_and_allows_toggle() {
-        fn selected(ui: &UiTree<App>, label: &str) -> bool {
+        fn pressed(ui: &UiTree<App>, label: &str) -> bool {
             ui.semantics_snapshot()
                 .expect("semantics snapshot")
                 .nodes
                 .iter()
                 .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some(label))
-                .is_some_and(|n| n.flags.selected)
+                .is_some_and(|n| {
+                    n.flags.pressed_state == Some(fret_core::SemanticsPressedState::True)
+                })
         }
 
         let window = AppWindowId::default();
@@ -1431,8 +1433,8 @@ mod tests {
             bounds,
             default_value.clone(),
         );
-        assert!(selected(&ui, "alpha"));
-        assert!(selected(&ui, "gamma"));
+        assert!(pressed(&ui, "alpha"));
+        assert!(pressed(&ui, "gamma"));
 
         let focusable = ui
             .first_focusable_descendant_including_declarative(&mut app, window, root)
@@ -1465,8 +1467,8 @@ mod tests {
             bounds,
             default_value.clone(),
         );
-        assert!(!selected(&ui, "alpha"));
-        assert!(selected(&ui, "gamma"));
+        assert!(!pressed(&ui, "alpha"));
+        assert!(pressed(&ui, "gamma"));
 
         // The internal model should not be reset by repeatedly passing the same default value.
         let _ = render_multiple_uncontrolled(
@@ -1477,7 +1479,7 @@ mod tests {
             bounds,
             default_value,
         );
-        assert!(!selected(&ui, "alpha"));
-        assert!(selected(&ui, "gamma"));
+        assert!(!pressed(&ui, "alpha"));
+        assert!(pressed(&ui, "gamma"));
     }
 }

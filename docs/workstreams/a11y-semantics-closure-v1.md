@@ -1,6 +1,6 @@
 # A11y semantics closure (v1)
 
-Status: In progress (doc-first inventory; implementation work queued)
+Status: Shippable (pressed + required/invalid + busy + hidden + visited + multiselectable + live region + heading closed)
 
 Last updated: 2026-02-23
 
@@ -42,28 +42,33 @@ A semantic surface is considered “closed” only when all boxes are checked:
 - Orientation semantics: `SemanticsNodeExtra.orientation` + AccessKit mapping + shadcn slider/progress adoption.
 - Tri-state checked semantics: `SemanticsFlags.checked_state` + AccessKit mapping + shadcn checkbox indeterminate gate
   (ADR 0289).
+- Pressed/toggle-button semantics: `SemanticsFlags.pressed_state` + AccessKit mapping + shadcn toggle adoption
+  (ADR 0290).
+- Required/invalid semantics: `SemanticsFlags.required/invalid` + AccessKit mapping + shadcn input adoption
+  (ADR 0291).
+- Busy/loading semantics: `SemanticsFlags.busy` + AccessKit mapping + shadcn command list/palette adoption
+  (ADR 0292).
+- Hidden semantics: `SemanticsFlags.hidden` + AccessKit mapping + declarative `PressableA11y.hidden` wiring
+  (ADR 0293).
+- Visited semantics: `SemanticsFlags.visited` + AccessKit mapping + shadcn badge link adoption
+  (ADR 0294).
+- Multiselectable semantics: `SemanticsFlags.multiselectable` + AccessKit mapping + shadcn combobox chips adoption
+  (ADR 0295).
+- Live region semantics: `SemanticsFlags.live/live_atomic` + AccessKit mapping + toast viewport adoption
+  (ADR 0296).
+- Heading semantics: `SemanticsRole::Heading` + `extra.level` + AccessKit mapping + shadcn modal title adoption
+  (ADR 0297).
 - Viewport semantics for scroll containers: `SemanticsRole::Viewport` mapping.
-
-### Next P0 candidates (high ROI, low policy surface)
-
-These are common across apps/editors and map directly into platform APIs:
-
-1. **Pressed/toggle-button semantics** (aria-pressed class)
-   - Goal: distinguish toggle buttons from plain buttons, and support “mixed” where applicable.
-2. **Required/invalid semantics** (forms and validation)
-   - Goal: allow AT and automation to reason about validation state without parsing text.
-3. **Busy/loading semantics**
-   - Goal: mark regions/widgets as busy during async loads, decoupled from progress text.
 
 ### P1 candidates (valuable, but may require more policy decisions)
 
-- Heading semantics (role + `level` adoption policy).
+- Heading semantics adoption policy beyond the v1 baseline (which components qualify as headings, and which default levels
+  they should use).
 - More complete text field semantics (autofill hints, input purpose, spellcheck, etc.) depending on adapter support.
-- Live region announcements beyond the current extras (needs explicit contract boundaries).
+- Live region policy surfaces beyond the mechanism contract (e.g. `announce()` APIs, queueing, relevance semantics).
 
 ## Work plan (suggested sequence)
 
 1. Close **pressed** first (smallest cross-cutting surface; easy shadcn adoption).
 2. Close **required/invalid** next (immediately useful for real apps; easy gating).
 3. Close **busy** next (ties into progress/async and reduces string-only “Loading…” patterns).
-
