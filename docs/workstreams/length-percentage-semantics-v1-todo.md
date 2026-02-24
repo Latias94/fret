@@ -1,6 +1,6 @@
 # Length percentage semantics v1 — TODO
 
-Last updated: 2026-02-23
+Last updated: 2026-02-24
 
 This file is the *living checklist* for `length-percentage-semantics-v1`.
 Use `length-percentage-semantics-v1-milestones.md` for phase planning.
@@ -64,6 +64,9 @@ Use `length-percentage-semantics-v1-milestones.md` for phase planning.
     - Evidence: `ecosystem/fret-ui-shadcn/src/drawer.rs` (`DrawerContent` uses `max_h_fraction` vs viewport math)
     - Gate: `ecosystem/fret-ui-shadcn/src/drawer.rs` (`drawer_content_max_height_fraction_clamps_tall_content`)
     - Gate: `tools/diag-scripts/ui-gallery-drawer-docs-smoke.json`
+  - [x] combobox list height clamps that previously duplicated "available height" viewport math
+    - Evidence: `ecosystem/fret-ui-shadcn/src/combobox.rs` (uses `popover_popper_vars(...).available_height`)
+    - Gate: `ecosystem/fret-ui-shadcn/src/combobox.rs` (`combobox_list_respects_theme_max_height_in_tight_viewports`)
 - [ ] Add a gate per migration:
   - [x] a unit test when the invariant is layout-only
   - [x] a diag script when the invariant is “docs-aligned UI outcome”
