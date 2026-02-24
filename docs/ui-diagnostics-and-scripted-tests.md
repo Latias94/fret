@@ -818,10 +818,21 @@ If a selector fails to resolve, the harness will wait and retry on the next fram
 Predicates (v1 MVP):
 
 - `{"kind":"exists","target":<selector>}`
+- `{"kind":"not_exists","target":<selector>}`
 - `{"kind":"focus_is","target":<selector>}`
+- `{"kind":"role_is","target":<selector>,"role":"button"}`
+- `{"kind":"label_contains","target":<selector>,"text":"Search"}`
+- `{"kind":"value_contains","target":<selector>,"text":"foo"}`
+- `{"kind":"pos_in_set_is","target":<selector>,"pos_in_set":2}`
+- `{"kind":"set_size_is","target":<selector>,"set_size":10}`
+- `{"kind":"checked_is","target":<selector>,"checked":true}`
+- `{"kind":"selected_is","target":<selector>,"selected":true}`
 - `{"kind":"visible_in_window","target":<selector>}` (target exists and intersects the window bounds)
 - `{"kind":"bounds_within_window","target":<selector>,"padding_px":0,"eps_px":0}` (target bounds must be fully contained within the window, optionally padded inward; `eps_px` allows a small tolerance for subpixel rounding at non-1.0 DPI)
 - `{"kind":"text_input_ime_cursor_area_within_window","padding_px":0,"eps_px":0}` (focused text input's IME cursor area must be fully contained within the window, optionally padded inward; intended for keyboard-avoidance / caret-visibility gates; requires `diag.text_input_snapshot`)
+
+Note: this list is intentionally incomplete; additional predicate kinds exist for specialized suites.
+The authoritative list lives in `crates/fret-diag-protocol/src/lib.rs` (`UiPredicateV1`).
 
 Docking predicates (require a `WindowInteractionDiagnosticsStore` publisher, typically `docking_arbitration_demo`):
 
