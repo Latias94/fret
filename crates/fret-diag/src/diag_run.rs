@@ -525,22 +525,18 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
             if let Some(bundle_path) = bundle_path.as_ref() {
                 let bundle_dir = resolve_bundle_root_dir(bundle_path)?;
                 let packet_dir = bundle_dir.join("ai.packet");
-                if !packet_dir.is_dir() {
-                    match crate::commands::ai_packet::generate_ai_packet_dir(
-                        bundle_path,
-                        &bundle_dir,
-                        &packet_dir,
-                        pack_defaults.1,
-                        stats_top,
-                        sort_override,
-                        warmup_frames,
-                        None,
-                    ) {
-                        Ok(()) => println!("AI-PACKET {}", packet_dir.display()),
-                        Err(err) => eprintln!("AI-PACKET-ERROR {err}"),
-                    }
-                } else {
-                    println!("AI-PACKET {}", packet_dir.display());
+                match crate::commands::ai_packet::ensure_ai_packet_dir_best_effort(
+                    Some(bundle_path),
+                    &bundle_dir,
+                    &packet_dir,
+                    pack_defaults.1,
+                    stats_top,
+                    sort_override,
+                    warmup_frames,
+                    None,
+                ) {
+                    Ok(()) => println!("AI-PACKET {}", packet_dir.display()),
+                    Err(err) => eprintln!("AI-PACKET-ERROR {err}"),
                 }
             } else {
                 eprintln!(
@@ -839,22 +835,18 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
 
             if ensure_ai_packet {
                 let packet_dir = bundle_dir.join("ai.packet");
-                if !packet_dir.is_dir() {
-                    match crate::commands::ai_packet::generate_ai_packet_dir(
-                        &bundle_path,
-                        &bundle_dir,
-                        &packet_dir,
-                        pack_defaults.1,
-                        stats_top,
-                        sort_override,
-                        warmup_frames,
-                        None,
-                    ) {
-                        Ok(()) => println!("AI-PACKET {}", packet_dir.display()),
-                        Err(err) => eprintln!("AI-PACKET-ERROR {err}"),
-                    }
-                } else {
-                    println!("AI-PACKET {}", packet_dir.display());
+                match crate::commands::ai_packet::ensure_ai_packet_dir_best_effort(
+                    Some(&bundle_path),
+                    &bundle_dir,
+                    &packet_dir,
+                    pack_defaults.1,
+                    stats_top,
+                    sort_override,
+                    warmup_frames,
+                    None,
+                ) {
+                    Ok(()) => println!("AI-PACKET {}", packet_dir.display()),
+                    Err(err) => eprintln!("AI-PACKET-ERROR {err}"),
                 }
             }
 

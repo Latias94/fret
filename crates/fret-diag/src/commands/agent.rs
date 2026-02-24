@@ -146,8 +146,13 @@ pub(crate) fn cmd_agent(
             },
             {
                 "id": "ai_packet",
-                "command": format!("fretboard diag ai-packet {} --warmup-frames {}", bundle_dir.display(), warmup_frames),
-                "why": "Generate a compact packet for an AI agent (includes doctor + lite reports).",
+                "command": format!("fretboard diag ai-packet {} --sidecars-only --warmup-frames {}", bundle_dir.display(), warmup_frames),
+                "why": "Generate a compact packet for an AI agent without reading the bundle artifact (requires existing sidecars).",
+            },
+            {
+                "id": "ai_packet_full_optional",
+                "command": format!("fretboard diag ai-packet {} --include-triage --warmup-frames {}", bundle_dir.display(), warmup_frames),
+                "why": "Optional: generate a richer AI packet (may read the bundle artifact to include triage.json and slices).",
             },
             {
                 "id": "hotspots_json_size_optional",

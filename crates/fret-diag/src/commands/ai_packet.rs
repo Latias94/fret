@@ -351,6 +351,57 @@ pub(crate) fn generate_ai_packet_dir(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn ensure_ai_packet_dir_best_effort(
+    bundle_artifact_hint: Option<&Path>,
+    bundle_dir: &Path,
+    packet_dir: &Path,
+    include_triage: bool,
+    stats_top: usize,
+    sort_override: Option<BundleStatsSort>,
+    warmup_frames: u64,
+    test_id: Option<&str>,
+) -> Result<(), String> {
+    if packet_dir.is_dir() {
+        return Ok(());
+    }
+
+    let bundle_path_opt: Option<PathBuf> =
+        if let Some(hint) = bundle_artifact_hint.filter(|p| p.is_file()) {
+            Some(hint.to_path_buf())
+        } else if bundle_dir.join("bundle.schema2.json").is_file() {
+            Some(bundle_dir.join("bundle.schema2.json"))
+        } else if bundle_dir.join("bundle.json").is_file() {
+            Some(bundle_dir.join("bundle.json"))
+        } else {
+            None
+        };
+
+    if let Some(bundle_path) = bundle_path_opt.as_deref() {
+        generate_ai_packet_dir(
+            bundle_path,
+            bundle_dir,
+            packet_dir,
+            include_triage,
+            stats_top,
+            sort_override,
+            warmup_frames,
+            test_id,
+        )
+    } else {
+        generate_ai_packet_dir_sidecars_only(
+            bundle_path_opt.as_deref(),
+            bundle_dir,
+            packet_dir,
+            include_triage,
+            stats_top,
+            sort_override,
+            warmup_frames,
+            test_id,
+        )
+    }
+}
+
 fn looks_like_path(s: &str) -> bool {
     s.contains('/') || s.contains('\\') || s.ends_with(".json")
 }

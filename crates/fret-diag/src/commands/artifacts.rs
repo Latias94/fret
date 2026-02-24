@@ -69,31 +69,8 @@ pub(crate) fn cmd_pack(
     if ensure_ai_packet || pack_ai_only {
         let packet_dir = bundle_dir.join("ai.packet");
         if !packet_dir.is_dir() {
-            let bundle_path_opt = if bundle_dir.join("bundle.schema2.json").is_file() {
-                Some(bundle_dir.join("bundle.schema2.json"))
-            } else if bundle_dir.join("bundle.json").is_file() {
-                Some(bundle_dir.join("bundle.json"))
-            } else {
-                None
-            };
-
-            if let Some(bundle_path) = bundle_path_opt.as_deref()
-                && bundle_path.is_file()
-            {
-                if let Err(err) = super::ai_packet::generate_ai_packet_dir(
-                    bundle_path,
-                    &bundle_dir,
-                    &packet_dir,
-                    pack_include_triage,
-                    stats_top,
-                    sort_override,
-                    warmup_frames,
-                    None,
-                ) {
-                    eprintln!("ai-packet: failed to generate ai.packet: {err}");
-                }
-            } else if let Err(err) = super::ai_packet::generate_ai_packet_dir_sidecars_only(
-                bundle_path_opt.as_deref(),
+            if let Err(err) = super::ai_packet::ensure_ai_packet_dir_best_effort(
+                None,
                 &bundle_dir,
                 &packet_dir,
                 pack_include_triage,
@@ -104,7 +81,7 @@ pub(crate) fn cmd_pack(
             ) {
                 // Best-effort: pack may still succeed if `ai.packet/` is already present,
                 // or will fail with a clear `--ai-only requires ai.packet` error.
-                eprintln!("ai-packet: failed to generate ai.packet from sidecars: {err}");
+                eprintln!("ai-packet: failed to generate ai.packet: {err}");
             }
         }
     }

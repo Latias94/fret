@@ -43,41 +43,16 @@ pub(super) fn pack_repro_zip(
                     if packet_dir.is_dir() {
                         continue;
                     }
-                    let bundle_path_opt: Option<PathBuf> = if item.bundle_artifact.is_file() {
-                        Some(item.bundle_artifact.clone())
-                    } else if bundle_dir.join("bundle.schema2.json").is_file() {
-                        Some(bundle_dir.join("bundle.schema2.json"))
-                    } else if bundle_dir.join("bundle.json").is_file() {
-                        Some(bundle_dir.join("bundle.json"))
-                    } else {
-                        None
-                    };
-
-                    let res = if let Some(bundle_path) = bundle_path_opt.as_deref() {
-                        crate::commands::ai_packet::generate_ai_packet_dir(
-                            bundle_path,
-                            &bundle_dir,
-                            &packet_dir,
-                            pack_defaults.1,
-                            stats_top,
-                            Some(sort),
-                            warmup_frames,
-                            None,
-                        )
-                    } else {
-                        crate::commands::ai_packet::generate_ai_packet_dir_sidecars_only(
-                            bundle_path_opt.as_deref(),
-                            &bundle_dir,
-                            &packet_dir,
-                            pack_defaults.1,
-                            stats_top,
-                            Some(sort),
-                            warmup_frames,
-                            None,
-                        )
-                    };
-
-                    if let Err(err) = res {
+                    if let Err(err) = crate::commands::ai_packet::ensure_ai_packet_dir_best_effort(
+                        Some(&item.bundle_artifact),
+                        &bundle_dir,
+                        &packet_dir,
+                        pack_defaults.1,
+                        stats_top,
+                        Some(sort),
+                        warmup_frames,
+                        None,
+                    ) {
                         return Ok(PackOutcome {
                             packed_zip: None,
                             overall_error: Some(format!("failed to generate ai.packet: {err}")),
@@ -157,23 +132,22 @@ pub(super) fn pack_repro_zip(
     if pack_ai_only {
         if ensure_ai_packet {
             let packet_dir = bundle_dir.join("ai.packet");
-            if !packet_dir.is_dir() {
-                if let Err(err) = crate::commands::ai_packet::generate_ai_packet_dir(
-                    bundle_path,
-                    &bundle_dir,
-                    &packet_dir,
-                    pack_defaults.1,
-                    stats_top,
-                    Some(sort),
-                    warmup_frames,
-                    None,
-                ) {
-                    return Ok(PackOutcome {
-                        packed_zip: None,
-                        overall_error: Some(format!("failed to generate ai.packet: {err}")),
-                        overall_reason_code: Some("tooling.ai_packet.failed".to_string()),
-                    });
-                }
+            let res = crate::commands::ai_packet::ensure_ai_packet_dir_best_effort(
+                Some(bundle_path),
+                &bundle_dir,
+                &packet_dir,
+                pack_defaults.1,
+                stats_top,
+                Some(sort),
+                warmup_frames,
+                None,
+            );
+            if let Err(err) = res {
+                return Ok(PackOutcome {
+                    packed_zip: None,
+                    overall_error: Some(format!("failed to generate ai.packet: {err}")),
+                    overall_reason_code: Some("tooling.ai_packet.failed".to_string()),
+                });
             }
         }
 
