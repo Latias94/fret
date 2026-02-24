@@ -1,6 +1,10 @@
 use super::super::*;
 use crate::ui::doc_layout::{self, DocSection};
 
+use fret_core::scene::{ColorSpace, GradientStop, LinearGradient, MAX_STOPS, Paint, TileMode};
+use fret_ui::Invalidation;
+use fret_ui::element::LayoutQueryRegionProps;
+
 pub(super) fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     #[derive(Default)]
     struct EmptyPageModels {
@@ -87,33 +91,75 @@ pub(super) fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     };
 
     let background = {
-        let muted = cx.with_theme(|theme| theme.color_token("muted"));
-        let refresh_icon = icon(cx, "lucide.refresh-cw");
-        let refresh_text = cx.text("Refresh");
-        let refresh_button = shadcn::Button::new("Refresh")
-            .variant(shadcn::ButtonVariant::Outline)
-            .children([refresh_icon, refresh_text])
-            .into_element(cx);
+        let region_layout = cx.with_theme(|theme| {
+            decl_style::layout_style(theme, LayoutRefinement::default().w_full().min_h(Px(280.0)))
+        });
 
-        let empty = shadcn::Empty::new([
-            shadcn::empty::EmptyHeader::new([
-                shadcn::empty::EmptyMedia::new([icon(cx, "lucide.bell")])
-                    .variant(shadcn::empty::EmptyMediaVariant::Icon)
+        fret_ui_kit::declarative::container_query_region_with_id(
+            cx,
+            "ui-gallery.empty.background",
+            LayoutQueryRegionProps {
+                layout: region_layout,
+                name: None,
+            },
+            move |cx, region_id| {
+                let theme = Theme::global(&*cx.app).clone();
+                let muted = theme.color_token("muted");
+                let bg = theme.color_token("background");
+
+                let paint = cx
+                    .layout_query_bounds(region_id, Invalidation::Layout)
+                    .map(|rect| {
+                        let mut from = muted;
+                        from.a = (from.a * 0.5).clamp(0.0, 1.0);
+
+                        let mut stops =
+                            [GradientStop::new(0.0, fret_core::Color::TRANSPARENT); MAX_STOPS];
+                        stops[0] = GradientStop::new(0.30, from);
+                        stops[1] = GradientStop::new(1.0, bg);
+
+                        Paint::LinearGradient(LinearGradient {
+                            start: rect.origin,
+                            end: fret_core::Point::new(
+                                rect.origin.x,
+                                Px(rect.origin.y.0 + rect.size.height.0),
+                            ),
+                            tile_mode: TileMode::Clamp,
+                            color_space: ColorSpace::Srgb,
+                            stop_count: 2,
+                            stops,
+                        })
+                    })
+                    .unwrap_or_else(|| Paint::Solid(muted));
+
+                let refresh_icon = doc_layout::icon(cx, "lucide.refresh-cw");
+                let refresh_text = cx.text("Refresh");
+                let refresh_button = shadcn::Button::new("Refresh")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .children([refresh_icon, refresh_text])
+                    .into_element(cx);
+
+                let empty = shadcn::Empty::new([
+                    shadcn::empty::EmptyHeader::new([
+                        shadcn::empty::EmptyMedia::new([doc_layout::icon(cx, "lucide.bell")])
+                            .variant(shadcn::empty::EmptyMediaVariant::Icon)
+                            .into_element(cx),
+                        shadcn::empty::EmptyTitle::new("No Notifications").into_element(cx),
+                        shadcn::empty::EmptyDescription::new(
+                            "You're all caught up. New notifications will appear here.",
+                        )
+                        .into_element(cx),
+                    ])
                     .into_element(cx),
-                shadcn::empty::EmptyTitle::new("No Notifications").into_element(cx),
-                shadcn::empty::EmptyDescription::new(
-                    "You're all caught up. New notifications will appear here.",
-                )
-                .into_element(cx),
-            ])
-            .into_element(cx),
-            shadcn::empty::EmptyContent::new([refresh_button]).into_element(cx),
-        ])
-        .refine_style(ChromeRefinement::default().bg(ColorRef::Color(muted)))
-        .refine_layout(LayoutRefinement::default().w_full().min_h(Px(280.0)))
-        .into_element(cx)
-        .test_id("ui-gallery-empty-background");
-        empty
+                    shadcn::empty::EmptyContent::new([refresh_button]).into_element(cx),
+                ])
+                .refine_style(ChromeRefinement::default().background_paint(paint))
+                .refine_layout(LayoutRefinement::default().w_full().min_h(Px(280.0)))
+                .into_element(cx)
+                .test_id("ui-gallery-empty-background");
+                vec![empty]
+            },
+        )
     };
 
     let avatar = {
@@ -255,7 +301,7 @@ pub(super) fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         cx,
         [
             "Empty page mirrors docs example sequence so parity audit can compare section-by-section.",
-            "Outline/background recipes are currently style approximations because utility-level dashed/gradient tokens are not fully exposed here.",
+            "Outline/background recipes mirror upstream: dashed borders plus a muted-to-background linear gradient (via `Paint`).",
             "Avatar and InputGroup scenarios keep state local to this page and expose stable test IDs for automation.",
         ],
     );
@@ -286,10 +332,12 @@ shadcn::Empty::new([header, content])
                 .description("Muted background recipe for empty states embedded in cards.")
                 .code(
                     "rust",
-                    r#"let muted = cx.with_theme(|theme| theme.color_token("muted"));
+                    r#"// Use `Paint` for element-local gradients (ADR 0233).
+let muted = cx.with_theme(|theme| theme.color_token("muted"));
+let bg = cx.with_theme(|theme| theme.color_token("background"));
 
-shadcn::Empty::new([header, content])
-    .refine_style(ChromeRefinement::default().bg(ColorRef::Color(muted)))
+ shadcn::Empty::new([header, content])
+    .refine_style(ChromeRefinement::default().background_paint(Paint::LinearGradient(...)))
     .into_element(cx);"#,
                 ),
             DocSection::new("Avatar", avatar)

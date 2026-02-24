@@ -8,6 +8,22 @@ pub(super) fn preview_avatar(
 ) -> Vec<AnyElement> {
     let theme = Theme::global(&*cx.app).clone();
 
+    #[derive(Default)]
+    struct AvatarDropdownOpenState {
+        model: Option<Model<bool>>,
+    }
+
+    let dropdown_open = cx.with_state(AvatarDropdownOpenState::default, |st| st.model.clone());
+    let dropdown_open = if let Some(model) = dropdown_open {
+        model
+    } else {
+        let model = cx.app.models_mut().insert(false);
+        cx.with_state(AvatarDropdownOpenState::default, |st| {
+            st.model = Some(model.clone());
+        });
+        model
+    };
+
     let avatar_with_image = |cx: &mut ElementContext<'_, App>,
                              size: shadcn::AvatarSize,
                              fallback_text: &'static str,
@@ -289,6 +305,69 @@ pub(super) fn preview_avatar(
         .test_id("ui-gallery-avatar-group-count")
     };
 
+    let dropdown = {
+        doc_layout::wrap_controls_row(cx, &theme, Space::N4, |cx| {
+            let avatar_image_for_trigger = avatar_image.clone();
+            let trigger = move |cx: &mut ElementContext<'_, App>| {
+                let image =
+                    shadcn::AvatarImage::model(avatar_image_for_trigger.clone()).into_element(cx);
+                let fallback = shadcn::AvatarFallback::new("CN")
+                    .when_image_missing_model(avatar_image_for_trigger.clone())
+                    .delay_ms(120)
+                    .into_element(cx);
+
+                shadcn::Avatar::new([image, fallback])
+                    .size(shadcn::AvatarSize::Default)
+                    .into_element(cx)
+                    .test_id("ui-gallery-avatar-dropdown-trigger")
+            };
+
+            let entries = |_cx: &mut ElementContext<'_, App>| {
+                vec![
+                    shadcn::DropdownMenuEntry::Item(
+                        shadcn::DropdownMenuItem::new("Profile")
+                            .test_id("ui-gallery-avatar-dropdown-item-profile"),
+                    ),
+                    shadcn::DropdownMenuEntry::Item(
+                        shadcn::DropdownMenuItem::new("Settings")
+                            .test_id("ui-gallery-avatar-dropdown-item-settings"),
+                    ),
+                    shadcn::DropdownMenuEntry::Separator,
+                    shadcn::DropdownMenuEntry::Item(
+                        shadcn::DropdownMenuItem::new("Log out")
+                            .variant(shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive)
+                            .test_id("ui-gallery-avatar-dropdown-item-logout"),
+                    ),
+                ]
+            };
+
+            vec![
+                shadcn::DropdownMenu::new(dropdown_open.clone())
+                    .into_element(cx, trigger, entries)
+                    .test_id("ui-gallery-avatar-dropdown"),
+            ]
+        })
+        .test_id("ui-gallery-avatar-dropdown-row")
+    };
+
+    let rtl = {
+        doc_layout::wrap_controls_row(cx, &theme, Space::N4, |cx| {
+            vec![fret_ui_kit::primitives::direction::with_direction_provider(
+                cx,
+                fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
+                |cx| {
+                    avatar_with_image(
+                        cx,
+                        shadcn::AvatarSize::Default,
+                        "CN",
+                        "ui-gallery-avatar-rtl",
+                    )
+                },
+            )]
+        })
+        .test_id("ui-gallery-avatar-rtl")
+    };
+
     let notes = doc_layout::notes(
         cx,
         [
@@ -298,28 +377,30 @@ pub(super) fn preview_avatar(
         ],
     );
 
+    let basic = avatar_with_image(
+        cx,
+        shadcn::AvatarSize::Default,
+        "CN",
+        "ui-gallery-avatar-basic",
+    );
+
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Avatar demo order: Sizes, Fallback, With Badge, Avatar Group, Avatar Group Count.",
+            "Preview aims to match shadcn Avatar docs: Basic, Badge, Group, Sizes, Dropdown, RTL (plus a small Fallback-only extra).",
         ),
         vec![
-            DocSection::new("Sizes", sizes)
-                .description("Upstream: `size=\"sm\" | \"default\" | \"lg\"`.")
-                .code(
-                    "rust",
-                    r#"shadcn::Avatar::new([image, fallback])
-    .size(shadcn::AvatarSize::Lg)
+            DocSection::new("Basic", basic)
+            .description("A basic avatar with an image + fallback.")
+            .code(
+                "rust",
+                r#"let image = shadcn::AvatarImage::model(avatar_image).into_element(cx);
+let fallback = shadcn::AvatarFallback::new("CN").into_element(cx);
+
+shadcn::Avatar::new([image, fallback])
+    .size(shadcn::AvatarSize::Default)
     .into_element(cx);"#,
-                ),
-            DocSection::new("Fallback", fallback)
-                .description("Fallback-only avatars at each size.")
-                .code(
-                    "rust",
-                    r#"shadcn::Avatar::new([shadcn::AvatarFallback::new("CN").into_element(cx)])
-    .size(shadcn::AvatarSize::Sm)
-    .into_element(cx);"#,
-                ),
+            ),
             DocSection::new("With Badge", with_badge)
                 .description(
                     "`AvatarBadge` overlays a status dot or icon at the avatar's bottom-right.",
@@ -355,6 +436,45 @@ let count = shadcn::AvatarGroupCount::new([ui::text(cx, "+3").into_element(cx)])
 
 shadcn::AvatarGroup::new(avatars.into_iter().chain([count]).collect::<Vec<_>>())
     .size(shadcn::AvatarSize::Default)
+    .into_element(cx);"#,
+                ),
+            DocSection::new("Sizes", sizes)
+                .description("Upstream: `size=\"sm\" | \"default\" | \"lg\"`.")
+                .code(
+                    "rust",
+                    r#"shadcn::Avatar::new([image, fallback])
+    .size(shadcn::AvatarSize::Lg)
+    .into_element(cx);"#,
+                ),
+            DocSection::new("Dropdown", dropdown)
+                .description("Use Avatar as a DropdownMenu trigger (shadcn `asChild`-style composition).")
+                .code(
+                    "rust",
+                    r#"let open: Model<bool> = cx.app.models_mut().insert(false);
+
+shadcn::DropdownMenu::new(open).into_element(
+    cx,
+    |cx| shadcn::Avatar::new([/* image + fallback */]).into_element(cx),
+    |_cx| vec![
+        shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new("Profile")),
+        shadcn::DropdownMenuEntry::Separator,
+    ],
+);"#,
+                ),
+            DocSection::new("RTL", rtl)
+                .description("Avatar should behave under an RTL direction provider.")
+                .code(
+                    "rust",
+                    r#"fret_ui_kit::primitives::direction::with_direction_provider(LayoutDirection::Rtl, |cx| {
+    shadcn::Avatar::new([/* ... */]).into_element(cx)
+})"#,
+                ),
+            DocSection::new("Extras: Fallback only", fallback)
+                .description("Fallback-only avatars at each size.")
+                .code(
+                    "rust",
+                    r#"shadcn::Avatar::new([shadcn::AvatarFallback::new("CN").into_element(cx)])
+    .size(shadcn::AvatarSize::Sm)
     .into_element(cx);"#,
                 ),
             DocSection::new("Notes", notes).description("Usage notes."),

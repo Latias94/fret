@@ -995,21 +995,7 @@ impl UiIntoElement for TextBox {
 
             let layout = decl_style::layout_style(theme, layout_refinement);
 
-            let inherited_color = crate::declarative::current_color::inherited_current_color(cx)
-                .as_ref()
-                .map(|c| c.resolve(theme));
-
-            let resolved_color = color_override
-                .as_ref()
-                .map(|c| c.resolve(theme))
-                .or(inherited_color)
-                .or_else(|| {
-                    (preset == TextPreset::Label).then(|| {
-                        theme
-                            .color_by_key("foreground")
-                            .unwrap_or_else(|| theme.color_token("foreground"))
-                    })
-                });
+            let resolved_color = color_override.as_ref().map(|c| c.resolve(theme));
 
             (style, layout, label_line_height, resolved_color)
         };
@@ -1181,13 +1167,7 @@ impl UiIntoElement for RawTextBox {
         let (layout, color) = {
             let theme = Theme::global(&*cx.app);
             let layout = decl_style::layout_style(theme, layout_refinement);
-            let inherited_color = crate::declarative::current_color::inherited_current_color(cx)
-                .as_ref()
-                .map(|c| c.resolve(theme));
-            let color = color_override
-                .as_ref()
-                .map(|c| c.resolve(theme))
-                .or(inherited_color);
+            let color = color_override.as_ref().map(|c| c.resolve(theme));
             (layout, color)
         };
 
@@ -1306,16 +1286,31 @@ mod tests {
         };
 
         fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
-            crate::declarative::current_color::with_current_color_provider(
+            let mut els = crate::declarative::current_color::scope_children(
                 cx,
                 crate::ColorRef::Color(expected),
-                |cx| {
-                    let el = text(cx, "hello").into_element(cx);
-                    let ElementKind::Text(props) = el.kind else {
-                        panic!("expected Text element");
-                    };
-                    assert_eq!(props.color, Some(expected));
-                },
+                |cx| [text(cx, "hello").into_element(cx)],
+            );
+
+            let scope = els
+                .pop()
+                .expect("expected a ForegroundScope wrapper element");
+            assert!(
+                matches!(scope.kind, ElementKind::ForegroundScope(_)),
+                "expected current_color::scope_children(...) to install a ForegroundScope wrapper"
+            );
+
+            let child = scope
+                .children
+                .into_iter()
+                .next()
+                .expect("expected a child element");
+            let ElementKind::Text(props) = child.kind else {
+                panic!("expected Text element");
+            };
+            assert_eq!(
+                props.color, None,
+                "expected text to keep color late-bound for ForegroundScope inheritance"
             );
         });
     }

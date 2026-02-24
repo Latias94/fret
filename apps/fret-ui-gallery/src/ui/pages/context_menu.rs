@@ -374,26 +374,20 @@ pub(super) fn preview_context_menu(
                     vec![
                         shadcn::ContextMenuEntry::Item(
                             shadcn::ContextMenuItem::new("Profile")
-                                .leading(shadcn::icon::icon(
-                                    cx,
-                                    fret_icons::IconId::new_static("lucide.user"),
-                                ))
+                                .leading_icon(fret_icons::IconId::new_static("lucide.user"))
+                                .test_id("ui-gallery-context-menu-icons-profile")
                                 .on_select(CMD_MENU_CONTEXT_ACTION),
                         ),
                         shadcn::ContextMenuEntry::Item(
                             shadcn::ContextMenuItem::new("Settings")
-                                .leading(shadcn::icon::icon(
-                                    cx,
-                                    fret_icons::IconId::new_static("lucide.settings"),
-                                ))
+                                .leading_icon(fret_icons::IconId::new_static("lucide.settings"))
+                                .test_id("ui-gallery-context-menu-icons-settings")
                                 .on_select(CMD_MENU_CONTEXT_ACTION),
                         ),
                         shadcn::ContextMenuEntry::Item(
                             shadcn::ContextMenuItem::new("Download")
-                                .leading(shadcn::icon::icon(
-                                    cx,
-                                    fret_icons::IconId::new_static("lucide.download"),
-                                ))
+                                .leading_icon(fret_icons::IconId::new_static("lucide.download"))
+                                .test_id("ui-gallery-context-menu-icons-download")
                                 .on_select(CMD_MENU_CONTEXT_ACTION),
                         ),
                     ]
@@ -628,13 +622,9 @@ let menu = shadcn::ContextMenu::new(open).into_element(cx, trigger, |_cx| entrie
                 .description("Leading icons for visual scanning.")
                 .code(
                     "rust",
-                    r#"let icon = |cx: &mut ElementContext<'_, App>, id: &'static str| {
-    shadcn::icon::icon(cx, fret_icons::IconId::new_static(id))
-};
-
-shadcn::ContextMenuEntry::Item(
+                    r#"shadcn::ContextMenuEntry::Item(
     shadcn::ContextMenuItem::new("Settings")
-        .leading(icon(cx, "lucide.settings"))
+        .leading_icon(fret_icons::IconId::new_static("lucide.settings"))
         .on_select(CMD_MENU_CONTEXT_ACTION),
 );"#,
                 ),

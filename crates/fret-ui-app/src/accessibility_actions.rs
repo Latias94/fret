@@ -170,7 +170,10 @@ pub fn set_value_numeric(
     if value.is_finite()
         && let Some(snapshot) = ui.semantics_snapshot()
         && let Some(node) = snapshot.nodes.iter().find(|n| n.id == target)
-        && node.role == SemanticsRole::Slider
+        && matches!(
+            node.role,
+            SemanticsRole::Slider | SemanticsRole::SpinButton | SemanticsRole::Splitter
+        )
     {
         let Some(min) = node.extra.numeric.min.filter(|v| v.is_finite()) else {
             set_value_text(ui, app, services, target, &value.to_string());

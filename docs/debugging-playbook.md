@@ -27,7 +27,7 @@ $env:FRET_DIAG=1
 $env:FRET_DIAG_DIR=".fret\\diag"
 
 # Optional: enable screenshot protocol (required for `capture_screenshot` if the app is started outside `fretboard --launch`).
-$env:FRET_DIAG_SCREENSHOTS=1
+$env:FRET_DIAG_GPU_SCREENSHOTS=1
 
 # Run a deterministic scripted repro and auto-pack a shareable zip.
 cargo run -p fretboard -- diag repro tools/diag-scripts/ui-gallery-intro-idle-screenshot.json `

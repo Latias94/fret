@@ -2,19 +2,22 @@ use std::cell::Cell;
 use std::rc::Rc;
 use std::sync::Arc;
 
+use fret_core::{FontWeight, Px};
+use fret_icons::IconId;
 use fret_runtime::Model;
 use fret_ui::element::AnyElement;
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, UiHost};
 use fret_ui_headless::calendar::CalendarMonth;
 use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
-use fret_ui_kit::declarative::{current_color, stack};
 use fret_ui_kit::primitives::popover as radix_popover;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, LengthRefinement, Space};
-use fret_ui_kit::{WidgetStateProperty, ui};
+use fret_ui_kit::{
+    ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, LengthRefinement, Space,
+    WidgetStateProperty,
+};
 use time::{Date, OffsetDateTime, Weekday};
 
-use crate::button::{Button, ButtonSize, ButtonStyle, ButtonVariant, button_text_style};
+use crate::button::{Button, ButtonStyle, ButtonVariant};
 use crate::calendar::Calendar;
 use crate::popover::{Popover, PopoverAlign, PopoverContent, PopoverSide};
 
@@ -185,7 +188,7 @@ impl DatePicker {
             let calendar_icon = fret_icons::IconId::new_static("lucide.calendar");
 
             let selected_value = cx.watch_model(&selected).copied().flatten();
-            let selected_empty = selected_value.is_none();
+            let label_is_placeholder = selected_value.is_none();
             let button_text: Arc<str> = match selected_value {
                 Some(date) => (self.format_selected)(date),
                 None => self.placeholder.clone(),
@@ -198,50 +201,14 @@ impl DatePicker {
                 .into_element(
                     cx,
                     move |cx| {
-                        let theme = Theme::global(&*cx.app).clone();
-                        let theme_for_content = theme.clone();
-                        let calendar_icon_for_content = calendar_icon.clone();
-                        let button_text_for_content = button_text.clone();
-                        let content = stack::hstack(
-                            cx,
-                            stack::HStackProps::default()
-                                .justify_start()
-                                .items_center()
-                                .gap_x(Space::N2)
-                                .layout(LayoutRefinement::default().w_full().min_w_0()),
-                            move |cx| {
-                                let fg = current_color::inherited_current_color(cx).unwrap_or_else(
-                                    || ColorRef::Color(theme_for_content.color_token("foreground")),
-                                );
-                                let mut text_style =
-                                    button_text_style(&theme_for_content, ButtonSize::default());
-                                text_style.weight = fret_core::FontWeight::NORMAL;
-                                let line_height = text_style.line_height.unwrap_or_else(|| {
-                                    theme_for_content.metric_token("font.line_height")
-                                });
-
-                                vec![
-                                    crate::icon::icon(cx, calendar_icon_for_content),
-                                    ui::text(cx, button_text_for_content.clone())
-                                        .text_size_px(text_style.size)
-                                        .fixed_line_box_px(line_height)
-                                        .line_box_in_bounds()
-                                        .font_weight(text_style.weight)
-                                        .nowrap()
-                                        .text_color(fg)
-                                        .into_element(cx),
-                                ]
-                            },
-                        );
-
-                        let mut button = Button::new(button_text)
+                        let mut button = Button::new(button_text.clone())
                             .variant(ButtonVariant::Outline)
-                            // Keep button padding aligned with shadcn's `has-[>svg]:px-*` rule even
-                            // though we render the icon via `children`.
-                            .leading_icon(calendar_icon)
-                            .children([content])
                             .toggle_model(open_trigger.clone())
                             .disabled(self.disabled)
+                            .leading_icon(calendar_icon)
+                            .leading_icon_size(Px(16.0))
+                            .content_justify_start()
+                            .text_weight(FontWeight::NORMAL)
                             .refine_style(trigger_chrome.clone())
                             .refine_layout(
                                 LayoutRefinement::default()
@@ -249,12 +216,13 @@ impl DatePicker {
                                     .merge(trigger_layout.clone()),
                             );
 
-                        if selected_empty {
-                            let muted = ColorRef::Color(theme.color_token("muted-foreground"));
-                            button = button.style(
-                                ButtonStyle::default()
-                                    .foreground(WidgetStateProperty::new(Some(muted))),
-                            );
+                        if label_is_placeholder {
+                            button = button.style(ButtonStyle::default().foreground(
+                                WidgetStateProperty::new(Some(ColorRef::Token {
+                                    key: "muted-foreground",
+                                    fallback: ColorFallback::ThemeTextMuted,
+                                })),
+                            ));
                         }
 
                         button.into_element(cx)

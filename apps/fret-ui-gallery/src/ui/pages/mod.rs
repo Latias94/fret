@@ -199,8 +199,9 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
 pub(super) fn preview_input(
     cx: &mut ElementContext<'_, App>,
     value: Model<String>,
+    file_value: Model<String>,
 ) -> Vec<AnyElement> {
-    input::preview_input(cx, value)
+    input::preview_input(cx, value, file_value)
 }
 
 pub(super) fn preview_input_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {

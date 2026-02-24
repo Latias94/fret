@@ -1,6 +1,6 @@
 # A11y range/numeric semantics (fearless refactor v1) — TODO
 
-Last updated: 2026-02-23
+Last updated: 2026-02-24
 
 ## Contract + docs
 
@@ -22,6 +22,10 @@ These are optional, but high leverage if we want to avoid follow-up “contract 
 - [x] Link URL: add `extra.url` and map to AccessKit `url`.
 - [x] Image semantics: add `SemanticsRole::Image` (and treat `label` as alt text by convention).
 - [x] Tri-state checked semantics: add `SemanticsFlags.checked_state` (`false/true/mixed`) and map to AccessKit toggled state; adopt in shadcn checkbox indeterminate state and gate via semantics snapshots.
+- [x] Scrollbar semantics: add `SemanticsRole::ScrollBar` and publish `extra.scroll` + `scroll_by` actions for the
+  `Scrollbar` mechanism element, mapping into AccessKit `Role::ScrollBar` (ADR 0298).
+- [x] Range-like roles: add `SemanticsRole::{SpinButton,Meter,Splitter}` and map to AccessKit roles for richer portable
+  semantics coverage (gated via shadcn snapshots).
 
 ## Core + runtime plumbing
 
@@ -30,20 +34,31 @@ These are optional, but high leverage if we want to avoid follow-up “contract 
 - [x] Forward extras into the snapshot in `crates/fret-ui/src/tree/ui_tree_semantics.rs`.
 - [x] Add snapshot validation for numeric/scroll invariants via `SemanticsNode::validate()` (finite values, bounds order, out-of-bounds values, positive step/jump, `level` is 1-based).
 - [x] Wire default `fret-bootstrap` UI driver hooks for common a11y actions (text selection, replace selected text, numeric set value, slider stepping).
-- [x] Implement best-effort slider `SetValue` numeric handling via key sequences (Home/End/PageUp/PageDown/ArrowUp/ArrowDown).
+- [x] Implement best-effort range-like `SetValue(NumericValue)` handling via key sequences (Home/End/PageUp/PageDown/ArrowUp/ArrowDown).
 - [x] Scroll containers use `SemanticsRole::Viewport` (instead of `Generic`) for clearer platform mappings.
 
 ## AccessKit adapter
 
 - [x] Emit AccessKit numeric properties when fields are present.
 - [x] Add adapter unit tests covering numeric + extra properties.
-- [x] Expose portable slider stepper actions (`increment`/`decrement`) and map to AccessKit `Increment`/`Decrement`.
+- [x] Expose portable range-like stepper actions (`increment`/`decrement`) and map to AccessKit `Increment`/`Decrement`.
 
 ## Ecosystem adoption (shadcn/Radix alignment)
 
 - [x] Slider: populate numeric value/min/max/step (and jump if chosen) on slider semantics nodes.
 - [x] Progress: populate numeric now/min/max for determinate progress.
 - [x] Update semantics-focused tests in `ecosystem/fret-ui-shadcn/tests/*` to assert numeric fields.
+- [x] ScrollArea: gate `SemanticsRole::ScrollBar` emission via `scroll_area_scrollbar_semantics` snapshot.
+- [x] Range-like roles: gate `SemanticsRole::{SpinButton,Meter}` via `spin_button_numeric_semantics` and
+  `meter_numeric_semantics` snapshots.
+- [x] Resizable splitters: gate `SemanticsRole::Splitter` emission via `resizable_splitter_semantics` snapshot.
+
+## Additional gates
+
+- [x] Gate imui slider semantics: `Pressable(role=Slider)` must expose stepper actions and structured numeric metadata
+  (`min/max/value/step/jump`) when present (via `SemanticsDecoration`).
+- [ ] (Ongoing hygiene) When adding a new range-like control, follow the “Closure checklist (range/numeric controls)” in
+  `docs/workstreams/a11y-range-semantics-fearless-refactor-v1.md` and add at least one gate per new production path.
 
 ## Diagnostics + scripts
 

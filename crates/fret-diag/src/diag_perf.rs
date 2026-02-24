@@ -661,7 +661,7 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
 
                 bundle_path.map(|p| {
                     let run_dir = run_id_artifact_dir(&resolved_out_dir, result.run_id);
-                    let stable = run_dir.join("bundle.json");
+                    let stable = crate::resolve_bundle_artifact_path(&run_dir);
                     if stable.is_file() { stable } else { p }
                 })
             } else {
@@ -735,12 +735,12 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
                     .map(PathBuf::from);
 
                 match bundle_dir {
-                    Some(bundle_dir) => {
-                        Some(resolve_bundle_json_path(&resolved_out_dir.join(bundle_dir)))
-                    }
+                    Some(bundle_dir) => Some(resolve_bundle_artifact_path(
+                        &resolved_out_dir.join(bundle_dir),
+                    )),
                     None => read_latest_pointer(&resolved_out_dir)
                         .or_else(|| find_latest_export_dir(&resolved_out_dir))
-                        .map(|path| resolve_bundle_json_path(path.as_path())),
+                        .map(|path| resolve_bundle_artifact_path(path.as_path())),
                 }
             };
 
@@ -1613,7 +1613,7 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
 
                 bundle_path.map(|p| {
                     let run_dir = run_id_artifact_dir(&resolved_out_dir, result.run_id);
-                    let stable = run_dir.join("bundle.json");
+                    let stable = crate::resolve_bundle_artifact_path(&run_dir);
                     if stable.is_file() { stable } else { p }
                 })
             } else {
@@ -1687,12 +1687,12 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
                     .map(PathBuf::from);
 
                 match bundle_dir {
-                    Some(bundle_dir) => {
-                        Some(resolve_bundle_json_path(&resolved_out_dir.join(bundle_dir)))
-                    }
+                    Some(bundle_dir) => Some(resolve_bundle_artifact_path(
+                        &resolved_out_dir.join(bundle_dir),
+                    )),
                     None => read_latest_pointer(&resolved_out_dir)
                         .or_else(|| find_latest_export_dir(&resolved_out_dir))
-                        .map(|path| resolve_bundle_json_path(path.as_path())),
+                        .map(|path| resolve_bundle_artifact_path(path.as_path())),
                 }
             };
 

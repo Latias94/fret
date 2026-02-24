@@ -164,10 +164,148 @@ struct ChartLayout {
     visual_map: Option<Rect>,
 }
 
+#[derive(Debug, Default, Clone)]
+struct ChartA11yIndex {
+    point_by_series_and_index: BTreeMap<(delinea::SeriesId, u32), (u32, Point)>,
+    indices_by_series: BTreeMap<delinea::SeriesId, Vec<u32>>,
+    series_by_index: BTreeMap<u32, Vec<delinea::SeriesId>>,
+}
+
+impl ChartA11yIndex {
+    fn clear(&mut self) {
+        self.point_by_series_and_index.clear();
+        self.indices_by_series.clear();
+        self.series_by_index.clear();
+    }
+
+    fn point(&self, series: delinea::SeriesId, data_index: u32) -> Option<Point> {
+        self.point_by_series_and_index
+            .get(&(series, data_index))
+            .map(|(_, point)| *point)
+    }
+
+    fn rebuild(
+        &mut self,
+        marks: &delinea::marks::MarkTree,
+        series_rank_by_id: &BTreeMap<delinea::SeriesId, usize>,
+    ) {
+        self.clear();
+
+        let rect_indices_available = marks.arena.rect_data_indices.len() == marks.arena.rects.len();
+        let point_indices_available = marks.arena.data_indices.len() == marks.arena.points.len();
+
+        for node in &marks.nodes {
+            let series = node
+                .source_series
+                .or_else(|| {
+                    let from_layer = delinea::SeriesId::new(node.layer.0);
+                    (from_layer.0 != 0).then_some(from_layer)
+                })
+                .or_else(|| {
+                    let inferred =
+                        delinea::SeriesId::new(node.id.0 >> delinea::ids::MARK_VARIANT_BITS);
+                    (inferred.0 != 0).then_some(inferred)
+                })
+                .unwrap_or_else(|| delinea::SeriesId::new(1));
+
+            match &node.payload {
+                delinea::marks::MarkPayloadRef::Polyline(polyline) => {
+                    let start = polyline.points.start;
+                    let end = polyline.points.end.min(marks.arena.points.len());
+                    for i in start..end {
+                        let point = marks.arena.points[i];
+                        let data_index = if point_indices_available {
+                            marks.arena.data_indices[i]
+                        } else {
+                            u32::try_from(i.saturating_sub(start)).unwrap_or(0)
+                        };
+                        let entry = self
+                            .point_by_series_and_index
+                            .entry((series, data_index))
+                            .or_insert((node.order.0, point));
+                        if node.order.0 > entry.0 {
+                            *entry = (node.order.0, point);
+                        }
+                    }
+                }
+                delinea::marks::MarkPayloadRef::Rect(rects) => {
+                    let start = rects.rects.start;
+                    let end = rects.rects.end.min(marks.arena.rects.len());
+                    for i in start..end {
+                        let rect = marks.arena.rects[i];
+                        let data_index = if rect_indices_available {
+                            marks.arena.rect_data_indices[i]
+                        } else {
+                            u32::try_from(i.saturating_sub(start)).unwrap_or(0)
+                        };
+                        let center = Point::new(
+                            Px(rect.origin.x.0 + rect.size.width.0 * 0.5),
+                            Px(rect.origin.y.0 + rect.size.height.0 * 0.5),
+                        );
+
+                        let entry = self
+                            .point_by_series_and_index
+                            .entry((series, data_index))
+                            .or_insert((node.order.0, center));
+                        if node.order.0 > entry.0 {
+                            *entry = (node.order.0, center);
+                        }
+                    }
+                }
+                delinea::marks::MarkPayloadRef::Points(points) => {
+                    let start = points.points.start;
+                    let end = points.points.end.min(marks.arena.points.len());
+                    for i in start..end {
+                        let point = marks.arena.points[i];
+                        let data_index = if point_indices_available {
+                            marks.arena.data_indices[i]
+                        } else {
+                            u32::try_from(i.saturating_sub(start)).unwrap_or(0)
+                        };
+                        let entry = self
+                            .point_by_series_and_index
+                            .entry((series, data_index))
+                            .or_insert((node.order.0, point));
+                        if node.order.0 > entry.0 {
+                            *entry = (node.order.0, point);
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        for ((series, data_index), _) in &self.point_by_series_and_index {
+            self.indices_by_series
+                .entry(*series)
+                .or_default()
+                .push(*data_index);
+            self.series_by_index
+                .entry(*data_index)
+                .or_default()
+                .push(*series);
+        }
+
+        for indices in self.indices_by_series.values_mut() {
+            indices.sort_unstable();
+            indices.dedup();
+        }
+
+        for series in self.series_by_index.values_mut() {
+            series.sort_by_key(|id| series_rank_by_id.get(id).copied().unwrap_or(usize::MAX));
+            series.dedup();
+        }
+    }
+}
+
 pub struct ChartCanvas {
     engine: ChartCanvasEngine,
     grid_override: Option<delinea::GridId>,
     semantics_test_id: Option<String>,
+    accessibility_layer: bool,
+    a11y_index: ChartA11yIndex,
+    a11y_index_rev: u64,
+    a11y_last_key: Option<(delinea::SeriesId, u32)>,
     mode: ChartCanvasMode,
     style: ChartStyle,
     style_source: ChartStyleSource,
@@ -363,6 +501,10 @@ impl ChartCanvas {
             engine,
             grid_override: None,
             semantics_test_id: None,
+            accessibility_layer: false,
+            a11y_index: ChartA11yIndex::default(),
+            a11y_index_rev: u64::MAX,
+            a11y_last_key: None,
             mode: ChartCanvasMode::Full,
             style: ChartStyle::default(),
             style_source: ChartStyleSource::Theme,
@@ -497,6 +639,10 @@ impl ChartCanvas {
 
     pub fn set_input_map(&mut self, map: ChartInputMap) {
         self.input_map = map;
+    }
+
+    pub fn set_accessibility_layer(&mut self, enabled: bool) {
+        self.accessibility_layer = enabled;
     }
 
     pub fn test_id(mut self, id: impl Into<String>) -> Self {
@@ -1917,6 +2063,288 @@ impl ChartCanvas {
             let point = Self::axis_pointer_hover_point(layout, position);
             self.with_engine_mut(|engine| engine.apply_action(Action::HoverAt { point }));
         }
+    }
+
+    fn ensure_a11y_index(&mut self) {
+        if !self.accessibility_layer {
+            return;
+        }
+
+        let (marks, model) =
+            self.with_engine(|engine| (engine.output().marks.clone(), engine.model().clone()));
+        let marks_rev = marks.revision.0;
+        if self.a11y_index_rev == marks_rev && !self.a11y_index.point_by_series_and_index.is_empty()
+        {
+            return;
+        }
+
+        self.series_rank_by_id.clear();
+        for (i, series_id) in model.series_order.iter().enumerate() {
+            self.series_rank_by_id.insert(*series_id, i);
+        }
+
+        self.a11y_index.rebuild(&marks, &self.series_rank_by_id);
+        self.a11y_index_rev = marks_rev;
+    }
+
+    fn series_row_count(&mut self, series: delinea::SeriesId) -> Option<u32> {
+        self.with_engine_mut(|engine| {
+            let model = engine.model();
+            let series = model.series.get(&series)?;
+            let dataset = model.root_dataset_id(series.dataset);
+            let table = engine.datasets_mut().dataset(dataset)?;
+            u32::try_from(table.row_count()).ok()
+        })
+    }
+
+    fn point_for_series_data_index(
+        &mut self,
+        series: delinea::SeriesId,
+        data_index: u32,
+    ) -> Option<Point> {
+        let layout = self.compute_layout(self.last_bounds);
+        let plot = layout.plot;
+        let plot_w = plot.size.width.0;
+        let plot_h = plot.size.height.0;
+        if plot_w <= 0.0 || plot_h <= 0.0 {
+            return None;
+        }
+
+        let (x_axis, y_axis, x_value, y_value) = self.with_engine_mut(|engine| {
+            let (dataset, x_axis, y_axis, x_col, y_col) = {
+                let model = engine.model();
+                let series = model.series.get(&series)?;
+                let dataset = model.root_dataset_id(series.dataset);
+                let dataset_model = model.datasets.get(&series.dataset)?;
+                let x_col = *dataset_model.fields.get(&series.encode.x)?;
+                let y_col = *dataset_model.fields.get(&series.encode.y)?;
+                Some((dataset, series.x_axis, series.y_axis, x_col, y_col))
+            }?;
+
+            let table = engine.datasets_mut().dataset(dataset)?;
+            let idx = usize::try_from(data_index).ok()?;
+            let x_value = table.column_f64(x_col)?.get(idx).copied()?;
+            let y_value = table.column_f64(y_col)?.get(idx).copied()?;
+
+            Some((x_axis, y_axis, x_value, y_value))
+        })?;
+
+        let x_window = self.current_window_x(x_axis);
+        let y_window = self.current_window_y(y_axis);
+
+        let x_local = Self::px_at_data(x_window, x_value, 0.0, plot_w);
+        let y_local = Self::y_local_for_data_value(y_window, y_value, plot_h);
+        Some(Point::new(
+            Px(plot.origin.x.0 + x_local),
+            Px(plot.origin.y.0 + y_local),
+        ))
+    }
+
+    fn handle_accessibility_navigation_fallback<H: UiHost>(
+        &mut self,
+        cx: &mut EventCx<'_, H>,
+        key: KeyCode,
+    ) -> bool {
+        let series_order = self.with_engine(|engine| engine.model().series_order.clone());
+        if series_order.is_empty() {
+            return false;
+        }
+
+        let engine_hit = self.with_engine(|engine| {
+            engine
+                .output()
+                .axis_pointer
+                .as_ref()
+                .and_then(|o| o.hit)
+                .map(|hit| (hit.series, hit.data_index))
+        });
+
+        let mut current_series = self
+            .a11y_last_key
+            .map(|(s, _)| s)
+            .or_else(|| engine_hit.map(|(s, _)| s));
+        let mut current_index = self
+            .a11y_last_key
+            .map(|(_, i)| i)
+            .or_else(|| engine_hit.map(|(_, i)| i))
+            .unwrap_or(0);
+
+        if current_series
+            .and_then(|s| self.series_row_count(s).filter(|n| *n > 0))
+            .is_none()
+        {
+            current_series = series_order
+                .iter()
+                .copied()
+                .find(|s| self.series_row_count(*s).is_some_and(|n| n > 0));
+        }
+
+        let current_series = match current_series {
+            Some(s) => s,
+            None => return false,
+        };
+
+        let current_row_count = match self.series_row_count(current_series).filter(|n| *n > 0) {
+            Some(n) => n,
+            None => return false,
+        };
+
+        if current_row_count == 0 {
+            return false;
+        }
+        current_index = current_index.min(current_row_count.saturating_sub(1));
+
+        let (next_series, next_index) = match key {
+            KeyCode::ArrowLeft => (current_series, current_index.saturating_sub(1)),
+            KeyCode::ArrowRight => (
+                current_series,
+                (current_index + 1).min(current_row_count.saturating_sub(1)),
+            ),
+            KeyCode::ArrowUp | KeyCode::ArrowDown => {
+                let pos = series_order
+                    .iter()
+                    .position(|s| *s == current_series)
+                    .unwrap_or(0) as i32;
+                let step = if key == KeyCode::ArrowUp { -1 } else { 1 };
+                let mut next_pos = pos + step;
+                let mut next_series = current_series;
+                while next_pos >= 0 && (next_pos as usize) < series_order.len() {
+                    let candidate = series_order[next_pos as usize];
+                    if self.series_row_count(candidate).is_some_and(|n| n > 0) {
+                        next_series = candidate;
+                        break;
+                    }
+                    next_pos += step;
+                }
+
+                let next_row_count = self.series_row_count(next_series).unwrap_or(0);
+                if next_row_count == 0 {
+                    return false;
+                }
+                let next_index = current_index.min(next_row_count.saturating_sub(1));
+                (next_series, next_index)
+            }
+            _ => return false,
+        };
+
+        // Keep layout in sync for point mapping.
+        self.last_bounds = cx.bounds;
+
+        let point = match self.point_for_series_data_index(next_series, next_index) {
+            Some(point) => point,
+            None => return false,
+        };
+
+        let layout = self.compute_layout(cx.bounds);
+        self.refresh_hover_for_axis_pointer(&layout, point);
+        self.last_pointer_pos = Some(point);
+        self.a11y_last_key = Some((next_series, next_index));
+        cx.invalidate_self(Invalidation::Paint);
+        cx.request_redraw();
+        cx.stop_propagation();
+        true
+    }
+
+    fn handle_accessibility_navigation<H: UiHost>(
+        &mut self,
+        cx: &mut EventCx<'_, H>,
+        key: KeyCode,
+    ) -> bool {
+        if !self.accessibility_layer {
+            return false;
+        }
+
+        if !matches!(
+            key,
+            KeyCode::ArrowLeft | KeyCode::ArrowRight | KeyCode::ArrowUp | KeyCode::ArrowDown
+        ) {
+            return false;
+        }
+
+        self.ensure_a11y_index();
+        if self.a11y_index.point_by_series_and_index.is_empty() {
+            return self.handle_accessibility_navigation_fallback(cx, key);
+        }
+
+        let first = self
+            .a11y_index
+            .series_by_index
+            .iter()
+            .next()
+            .and_then(|(data_index, series)| Some((*series.first()?, *data_index)));
+
+        let engine_hit = self.with_engine(|engine| {
+            engine
+                .output()
+                .axis_pointer
+                .as_ref()
+                .and_then(|o| o.hit)
+                .map(|hit| (hit.series, hit.data_index))
+        });
+
+        let current = if self.a11y_last_key.is_none() {
+            first
+        } else {
+            self.a11y_last_key.or(engine_hit).or(first)
+        };
+
+        let (series, data_index) = match current {
+            Some(key) => key,
+            None => return false,
+        };
+
+        let next = match key {
+            KeyCode::ArrowLeft => self
+                .a11y_index
+                .indices_by_series
+                .get(&series)
+                .and_then(|indices| match indices.binary_search(&data_index) {
+                    Ok(pos) | Err(pos) => pos.checked_sub(1).and_then(|i| indices.get(i).copied()),
+                })
+                .map(|next_index| (series, next_index)),
+            KeyCode::ArrowRight => self
+                .a11y_index
+                .indices_by_series
+                .get(&series)
+                .and_then(|indices| match indices.binary_search(&data_index) {
+                    Ok(pos) => indices.get(pos + 1).copied(),
+                    Err(pos) => indices.get(pos).copied(),
+                })
+                .map(|next_index| (series, next_index)),
+            KeyCode::ArrowUp | KeyCode::ArrowDown => self
+                .a11y_index
+                .series_by_index
+                .get(&data_index)
+                .and_then(|series_ids| {
+                    let pos = series_ids.iter().position(|s| *s == series).unwrap_or(0);
+                    let next_pos = match key {
+                        KeyCode::ArrowUp => pos.checked_sub(1),
+                        KeyCode::ArrowDown => (pos + 1 < series_ids.len()).then_some(pos + 1),
+                        _ => None,
+                    }?;
+                    series_ids.get(next_pos).copied().map(|s| (s, data_index))
+                }),
+            _ => None,
+        };
+
+        let (next_series, next_index) = match next {
+            Some(next) => next,
+            None => return false,
+        };
+
+        let point = match self.a11y_index.point(next_series, next_index) {
+            Some(point) => point,
+            None => return false,
+        };
+
+        let layout = self.compute_layout(cx.bounds);
+        self.refresh_hover_for_axis_pointer(&layout, point);
+        self.last_pointer_pos = Some(point);
+        self.a11y_last_key = Some((next_series, next_index));
+        cx.invalidate_self(Invalidation::Paint);
+        cx.request_redraw();
+        cx.stop_propagation();
+        true
     }
 
     fn clear_brush(&mut self) {
@@ -3742,6 +4170,9 @@ impl ChartCanvas {
                 });
             }
         }
+
+        self.a11y_index.rebuild(&marks, &self.series_rank_by_id);
+        self.a11y_index_rev = marks.revision.0;
     }
 }
 
@@ -3751,18 +4182,140 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
 
         if let Some(id) = self.semantics_test_id.as_deref() {
             cx.set_test_id(id);
-            return;
+        } else {
+            match (self.mode, self.grid_override) {
+                (ChartCanvasMode::GridView, Some(grid)) => {
+                    cx.set_test_id(format!("fret-chart-grid-{}", grid.0));
+                }
+                (ChartCanvasMode::GridView, None) => {}
+                (ChartCanvasMode::Overlay, _) => {
+                    cx.set_test_id("fret-chart-overlay");
+                }
+                (ChartCanvasMode::Full, _) => {}
+            }
         }
 
-        match (self.mode, self.grid_override) {
-            (ChartCanvasMode::GridView, Some(grid)) => {
-                cx.set_test_id(format!("fret-chart-grid-{}", grid.0));
+        if self.accessibility_layer {
+            self.ensure_a11y_index();
+            cx.set_focusable(true);
+            cx.set_label("Chart");
+
+            let first = self
+                .a11y_index
+                .series_by_index
+                .iter()
+                .next()
+                .and_then(|(data_index, series)| Some((*series.first()?, *data_index)));
+
+            let engine_hit = self.with_engine(|engine| {
+                engine
+                    .output()
+                    .axis_pointer
+                    .as_ref()
+                    .and_then(|o| o.hit)
+                    .map(|hit| (hit.series, hit.data_index))
+            });
+
+            let series_order = self.with_engine(|engine| engine.model().series_order.clone());
+            let fallback_first = series_order
+                .into_iter()
+                .find(|s| self.series_row_count(*s).is_some_and(|n| n > 0))
+                .map(|s| (s, 0));
+
+            let current = self
+                .a11y_last_key
+                .or(engine_hit)
+                .or(first)
+                .or(fallback_first);
+            if let Some((series, data_index)) = current {
+                if let Some(indices) = self.a11y_index.indices_by_series.get(&series) {
+                    let set_size = u32::try_from(indices.len()).ok().filter(|n| *n > 0);
+                    let pos_in_set = indices
+                        .binary_search(&data_index)
+                        .ok()
+                        .and_then(|pos| u32::try_from(pos + 1).ok());
+
+                    if let (Some(pos_in_set), Some(set_size)) = (pos_in_set, set_size) {
+                        cx.set_collection_position(Some(pos_in_set), Some(set_size));
+                    }
+                } else if let Some(set_size) = self.series_row_count(series).filter(|n| *n > 0) {
+                    let clamped = data_index.min(set_size.saturating_sub(1));
+                    let pos_in_set = clamped.saturating_add(1);
+                    cx.set_collection_position(Some(pos_in_set), Some(set_size));
+                }
             }
-            (ChartCanvasMode::GridView, None) => {}
-            (ChartCanvasMode::Overlay, _) => {
-                cx.set_test_id("fret-chart-overlay");
+
+            let tooltip_text = {
+                let formatter = &self.tooltip_formatter;
+                self.with_engine(|engine| {
+                    let output = engine.output();
+                    let axis_pointer = output.axis_pointer.as_ref()?;
+
+                    let mut parts: Vec<String> = Vec::new();
+                    match &axis_pointer.tooltip {
+                        delinea::TooltipOutput::Item(item) => {
+                            let x_window = output
+                                .axis_windows
+                                .get(&item.x_axis)
+                                .copied()
+                                .unwrap_or_default();
+                            let x_label = engine
+                                .model()
+                                .axes
+                                .get(&item.x_axis)
+                                .and_then(|axis| axis.name.as_deref())
+                                .unwrap_or("X");
+                            let x_value = delinea::engine::axis::format_value_for(
+                                engine.model(),
+                                item.x_axis,
+                                x_window,
+                                item.x_value,
+                            );
+                            parts.push(format!("{x_label}: {x_value}"));
+                        }
+                        delinea::TooltipOutput::Axis(axis) => {
+                            let axis_window = output
+                                .axis_windows
+                                .get(&axis.axis)
+                                .copied()
+                                .unwrap_or_default();
+                            let axis_label = engine
+                                .model()
+                                .axes
+                                .get(&axis.axis)
+                                .and_then(|axis| axis.name.as_deref())
+                                .unwrap_or("Axis");
+                            let axis_value = delinea::engine::axis::format_value_for(
+                                engine.model(),
+                                axis.axis,
+                                axis_window,
+                                axis.axis_value,
+                            );
+                            parts.push(format!("{axis_label}: {axis_value}"));
+                        }
+                    }
+
+                    let lines =
+                        formatter.format_axis_pointer(engine, &output.axis_windows, axis_pointer);
+                    for line in lines {
+                        parts.push(if let Some((left, right)) = line.columns {
+                            format!("{left}: {right}")
+                        } else {
+                            line.text
+                        });
+                    }
+
+                    if parts.is_empty() {
+                        return None;
+                    }
+
+                    Some(parts.join(" | "))
+                })
+            };
+
+            if let Some(value) = tooltip_text {
+                cx.set_value(value);
             }
-            (ChartCanvasMode::Full, _) => {}
         }
     }
 
@@ -3786,6 +4339,11 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     && !modifiers.alt
                     && !modifiers.alt_gr
                     && !modifiers.meta;
+
+                if plain && self.handle_accessibility_navigation(cx, *key) {
+                    return;
+                }
+
                 let lock_mods_ok = !modifiers.alt && !modifiers.alt_gr && !modifiers.meta;
                 let legend_mods_ok =
                     modifiers.ctrl && !modifiers.alt && !modifiers.alt_gr && !modifiers.meta;

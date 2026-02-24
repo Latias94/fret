@@ -426,7 +426,7 @@ impl Kanban {
                 let sm_breakpoint = fret_ui_kit::declarative::viewport_width_at_least(
                     cx,
                     Invalidation::Layout,
-                    fret_ui_kit::declarative::tailwind::SM,
+                    fret_ui_kit::declarative::viewport_tailwind::SM,
                     fret_ui_kit::declarative::ViewportQueryHysteresis::default(),
                 );
                 let board_gap_x = if sm_breakpoint { Space::N4 } else { Space::N3 };

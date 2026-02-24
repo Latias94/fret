@@ -88,7 +88,16 @@ impl ComboboxStyle {
 pub struct ComboboxItem {
     pub value: Arc<str>,
     pub label: Arc<str>,
+    /// Optional structured detail for display, typically rendered as a suffix (e.g. `(React)`).
+    ///
+    /// This is primarily meant to support "object item" adapters without forcing callers to
+    /// pre-format richer labels into a single string.
+    pub detail: Option<Arc<str>>,
     pub disabled: bool,
+    /// Additional strings that participate in cmdk-style filtering/ranking.
+    ///
+    /// This aligns with `CommandItem::keywords(...)` and cmdk's `keywords` prop.
+    pub keywords: Vec<Arc<str>>,
 }
 
 impl ComboboxItem {
@@ -96,8 +105,32 @@ impl ComboboxItem {
         Self {
             value: value.into(),
             label: label.into(),
+            detail: None,
             disabled: false,
+            keywords: Vec::new(),
         }
+    }
+
+    /// Sets a structured detail suffix and appends it to the visible label as `(<detail>)`.
+    ///
+    /// This preserves the existing string-based label contract while letting callers keep the
+    /// underlying data model structured.
+    pub fn detail(mut self, detail: impl Into<Arc<str>>) -> Self {
+        let detail = detail.into();
+        self.detail = Some(detail.clone());
+        self.keywords.push(detail.clone());
+        self.label = Arc::<str>::from(format!("{} ({})", self.label, detail));
+        self
+    }
+
+    /// Additional strings used for cmdk-style filtering/ranking.
+    pub fn keywords<I, S>(mut self, keywords: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<Arc<str>>,
+    {
+        self.keywords = keywords.into_iter().map(Into::into).collect();
+        self
     }
 
     pub fn disabled(mut self, disabled: bool) -> Self {
@@ -158,6 +191,8 @@ pub struct Combobox {
     query: Option<Model<String>>,
     items: Vec<ComboboxItem>,
     groups: Vec<ComboboxGroup>,
+    group_separators: bool,
+    auto_highlight: bool,
     test_id_prefix: Option<Arc<str>>,
     trigger_test_id: Option<Arc<str>>,
     width: Option<Px>,
@@ -192,6 +227,8 @@ impl Combobox {
             query: None,
             items: Vec::new(),
             groups: Vec::new(),
+            group_separators: false,
+            auto_highlight: false,
             test_id_prefix: None,
             trigger_test_id: None,
             width: None,
@@ -287,6 +324,19 @@ impl Combobox {
 
     pub fn groups(mut self, groups: impl IntoIterator<Item = ComboboxGroup>) -> Self {
         self.groups.extend(groups);
+        self
+    }
+
+    /// When enabled, inserts visual separators between `items` and `groups`, and between
+    /// consecutive groups (shadcn `ComboboxSeparator`).
+    pub fn group_separators(mut self, enabled: bool) -> Self {
+        self.group_separators = enabled;
+        self
+    }
+
+    /// Base UI: `autoHighlight`. When enabled, highlights the first enabled option on open/filter.
+    pub fn auto_highlight(mut self, auto_highlight: bool) -> Self {
+        self.auto_highlight = auto_highlight;
         self
     }
 
@@ -433,6 +483,8 @@ impl Combobox {
             self.responsive,
             self.responsive_device_md_breakpoint,
             self.search_enabled,
+            self.group_separators,
+            self.auto_highlight,
             self.show_clear,
             self.trigger_variant,
             self.consume_outside_pointer_events,
@@ -485,6 +537,8 @@ pub fn combobox<H: UiHost>(
         fret_ui_kit::declarative::viewport_tailwind::MD,
         search_enabled,
         false,
+        false,
+        false,
         ComboboxTriggerVariant::default(),
         consume_outside_pointer_events,
         kit_combobox::SelectionCommitPolicy::default(),
@@ -519,6 +573,8 @@ fn combobox_with_patch<H: UiHost>(
     responsive: bool,
     responsive_device_md_breakpoint: Px,
     search_enabled: bool,
+    group_separators: bool,
+    auto_highlight: bool,
     show_clear: bool,
     trigger_variant: ComboboxTriggerVariant,
     consume_outside_pointer_events: bool,
@@ -1129,6 +1185,7 @@ fn combobox_with_patch<H: UiHost>(
 
                                 let mut cmd_item = CommandItem::new(item.label.clone())
                                     .value(item.value.clone())
+                                    .keywords(item.keywords.clone())
                                     .disabled(item_disabled)
                                     .checkmark(is_selected)
                                     .on_select_value_action(move |host, action_cx, reason, value| {
@@ -1162,8 +1219,14 @@ fn combobox_with_patch<H: UiHost>(
                                 .collect();
                             let non_empty_groups_len = non_empty_groups.len();
 
-                            if !items.is_empty() && non_empty_groups_len > 0 {
-                                entries.push(CommandEntry::Separator(CommandSeparator::new()));
+                            if group_separators && !items.is_empty() && non_empty_groups_len > 0 {
+                                let sep = if let Some(prefix) = test_id_prefix.as_deref() {
+                                    CommandSeparator::new()
+                                        .test_id(format!("{prefix}-sep-items-groups"))
+                                } else {
+                                    CommandSeparator::new()
+                                };
+                                entries.push(CommandEntry::Separator(sep));
                             }
 
                             for (idx, group) in non_empty_groups.into_iter().enumerate() {
@@ -1172,8 +1235,14 @@ fn combobox_with_patch<H: UiHost>(
                                 entries.push(CommandEntry::Group(
                                     CommandGroup::new(group_items).heading(group.heading),
                                 ));
-                                if idx + 1 < non_empty_groups_len {
-                                    entries.push(CommandEntry::Separator(CommandSeparator::new()));
+                                if group_separators && idx + 1 < non_empty_groups_len {
+                                    let sep = if let Some(prefix) = test_id_prefix.as_deref() {
+                                        CommandSeparator::new()
+                                            .test_id(format!("{prefix}-sep-group-{idx}"))
+                                    } else {
+                                        CommandSeparator::new()
+                                    };
+                                    entries.push(CommandEntry::Separator(sep));
                                 }
                             }
 
@@ -1187,6 +1256,7 @@ fn combobox_with_patch<H: UiHost>(
                                         .a11y_selected_mode(
                                             crate::command::CommandPaletteA11ySelectedMode::Checked,
                                         )
+                                        .auto_highlight(auto_highlight)
                                         .placeholder(search_placeholder.clone())
                                         .disabled(disabled)
                                         .empty_text(empty_text.clone())
@@ -1266,6 +1336,7 @@ fn combobox_with_patch<H: UiHost>(
 
                                 let mut cmd_item = CommandItem::new(label_text)
                                     .value(item.value.clone())
+                                    .keywords(item.keywords.clone())
                                     .disabled(item_disabled)
                                     .on_select_value_action(move |host, action_cx, reason, value| {
                                         let on_select = kit_combobox::commit_selection_on_activate(
@@ -1300,8 +1371,14 @@ fn combobox_with_patch<H: UiHost>(
                                 .filter(|group| !group.items.is_empty())
                                 .collect();
                             let non_empty_groups_len = non_empty_groups.len();
-                            if !items.is_empty() && non_empty_groups_len > 0 {
-                                entries.push(CommandEntry::Separator(CommandSeparator::new()));
+                            if group_separators && !items.is_empty() && non_empty_groups_len > 0 {
+                                let sep = if let Some(prefix) = test_id_prefix.as_deref() {
+                                    CommandSeparator::new()
+                                        .test_id(format!("{prefix}-sep-items-groups"))
+                                } else {
+                                    CommandSeparator::new()
+                                };
+                                entries.push(CommandEntry::Separator(sep));
                             }
 
                             for (idx, group) in non_empty_groups.into_iter().enumerate() {
@@ -1313,8 +1390,14 @@ fn combobox_with_patch<H: UiHost>(
                                 entries.push(CommandEntry::Group(
                                     CommandGroup::new(group_items).heading(group.heading),
                                 ));
-                                if idx + 1 < non_empty_groups_len {
-                                    entries.push(CommandEntry::Separator(CommandSeparator::new()));
+                                if group_separators && idx + 1 < non_empty_groups_len {
+                                    let sep = if let Some(prefix) = test_id_prefix.as_deref() {
+                                        CommandSeparator::new()
+                                            .test_id(format!("{prefix}-sep-group-{idx}"))
+                                    } else {
+                                        CommandSeparator::new()
+                                    };
+                                    entries.push(CommandEntry::Separator(sep));
                                 }
                             }
 
@@ -1683,6 +1766,7 @@ fn combobox_with_patch<H: UiHost>(
 
                         let mut cmd_item = CommandItem::new(item.label.clone())
                             .value(item.value.clone())
+                            .keywords(item.keywords.clone())
                             .disabled(item_disabled)
                             .checkmark(is_selected)
                             .on_select_value_action(move |host, action_cx, reason, value| {
@@ -1716,8 +1800,13 @@ fn combobox_with_patch<H: UiHost>(
                         .collect();
                     let non_empty_groups_len = non_empty_groups.len();
 
-                    if !items.is_empty() && non_empty_groups_len > 0 {
-                        entries.push(CommandEntry::Separator(CommandSeparator::new()));
+                    if group_separators && !items.is_empty() && non_empty_groups_len > 0 {
+                        let sep = if let Some(prefix) = test_id_prefix.as_deref() {
+                            CommandSeparator::new().test_id(format!("{prefix}-sep-items-groups"))
+                        } else {
+                            CommandSeparator::new()
+                        };
+                        entries.push(CommandEntry::Separator(sep));
                     }
 
                     for (idx, group) in non_empty_groups.into_iter().enumerate() {
@@ -1726,8 +1815,13 @@ fn combobox_with_patch<H: UiHost>(
                         entries.push(CommandEntry::Group(
                             CommandGroup::new(group_items).heading(group.heading),
                         ));
-                        if idx + 1 < non_empty_groups_len {
-                            entries.push(CommandEntry::Separator(CommandSeparator::new()));
+                        if group_separators && idx + 1 < non_empty_groups_len {
+                            let sep = if let Some(prefix) = test_id_prefix.as_deref() {
+                                CommandSeparator::new().test_id(format!("{prefix}-sep-group-{idx}"))
+                            } else {
+                                CommandSeparator::new()
+                            };
+                            entries.push(CommandEntry::Separator(sep));
                         }
                     }
 
@@ -1744,6 +1838,7 @@ fn combobox_with_patch<H: UiHost>(
                             .a11y_selected_mode(
                                 crate::command::CommandPaletteA11ySelectedMode::Checked,
                             )
+                            .auto_highlight(auto_highlight)
                             .placeholder(search_placeholder.clone())
                             .disabled(disabled)
                             .empty_text(empty_text)
@@ -1818,6 +1913,7 @@ fn combobox_with_patch<H: UiHost>(
 
                         let mut cmd_item = CommandItem::new(label_text)
                             .value(item.value.clone())
+                            .keywords(item.keywords.clone())
                             .disabled(item_disabled)
                             .on_select_value_action(move |host, action_cx, reason, value| {
                                 let on_select = kit_combobox::commit_selection_on_activate(
@@ -1852,8 +1948,13 @@ fn combobox_with_patch<H: UiHost>(
                         .filter(|group| !group.items.is_empty())
                         .collect();
                     let non_empty_groups_len = non_empty_groups.len();
-                    if !items.is_empty() && non_empty_groups_len > 0 {
-                        entries.push(CommandEntry::Separator(CommandSeparator::new()));
+                    if group_separators && !items.is_empty() && non_empty_groups_len > 0 {
+                        let sep = if let Some(prefix) = test_id_prefix.as_deref() {
+                            CommandSeparator::new().test_id(format!("{prefix}-sep-items-groups"))
+                        } else {
+                            CommandSeparator::new()
+                        };
+                        entries.push(CommandEntry::Separator(sep));
                     }
 
                     for (idx, group) in non_empty_groups.into_iter().enumerate() {
@@ -1865,8 +1966,13 @@ fn combobox_with_patch<H: UiHost>(
                         entries.push(CommandEntry::Group(
                             CommandGroup::new(group_items).heading(group.heading),
                         ));
-                        if idx + 1 < non_empty_groups_len {
-                            entries.push(CommandEntry::Separator(CommandSeparator::new()));
+                        if group_separators && idx + 1 < non_empty_groups_len {
+                            let sep = if let Some(prefix) = test_id_prefix.as_deref() {
+                                CommandSeparator::new().test_id(format!("{prefix}-sep-group-{idx}"))
+                            } else {
+                                CommandSeparator::new()
+                            };
+                            entries.push(CommandEntry::Separator(sep));
                         }
                     }
 
@@ -1968,6 +2074,17 @@ mod tests {
         fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
             true
         }
+    }
+
+    #[test]
+    fn combobox_item_detail_appends_label_and_keywords() {
+        let item = ComboboxItem::new("next", "Next.js").detail("React");
+        assert_eq!(item.detail.as_deref(), Some("React"));
+        assert_eq!(item.label.as_ref(), "Next.js (React)");
+        assert!(
+            item.keywords.iter().any(|kw| kw.as_ref() == "React"),
+            "expected detail to be included in keywords"
+        );
     }
 
     fn render_frame(

@@ -10,6 +10,7 @@
 //! can inherit the resolved foreground color without each callsite manually threading tokens.
 
 use crate::ColorRef;
+use fret_ui::Theme;
 use fret_ui::{ElementContext, UiHost};
 
 #[derive(Debug, Default)]
@@ -44,6 +45,26 @@ pub fn with_current_color_provider<H: UiHost, R>(
         st.current = prev;
     });
     out
+}
+
+/// Returns a layout-transparent wrapper element that installs `color` as the inherited foreground
+/// for the subtree (v2).
+///
+/// This is the preferred API for new code: it avoids the “pre-built `AnyElement` misses inherited
+/// state” pitfall by encoding the inheritance boundary into the element tree rather than the
+/// build-time `ElementContext` stack.
+#[track_caller]
+pub fn scope_children<H: UiHost, I>(
+    cx: &mut ElementContext<'_, H>,
+    color: ColorRef,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> Vec<fret_ui::element::AnyElement>
+where
+    I: IntoIterator<Item = fret_ui::element::AnyElement>,
+{
+    let theme = Theme::global(&*cx.app);
+    let fg = color.resolve(theme);
+    vec![cx.foreground_scope(fg, f)]
 }
 
 #[cfg(test)]

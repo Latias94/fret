@@ -107,7 +107,7 @@ pub(in crate::ui) fn preview_switch(
                 vec![
                     shadcn::Switch::new(size_small)
                         .a11y_label("Small switch")
-                        .refine_layout(LayoutRefinement::default().w_px(Px(28.0)).h_px(Px(16.0)))
+                        .size(shadcn::SwitchSize::Sm)
                         .test_id("ui-gallery-switch-size-small")
                         .into_element(cx),
                     shadcn::Label::new("Small").into_element(cx),
@@ -379,7 +379,7 @@ pub(in crate::ui) fn preview_switch(
         cx,
         [
             "Preview follows shadcn Switch demo (new-york-v4).",
-            "The Switch surface does not expose a size prop today; the small variant is approximated with layout overrides.",
+            "Switch sizes are controlled via `SwitchSize` to match upstream `size=\"sm\" | \"default\"`.",
             "Use `SwitchStyle` (ADR 0220 override slots) for token-safe styling like checked track background changes.",
         ],
     );
@@ -398,7 +398,7 @@ pub(in crate::ui) fn preview_switch(
                 .code(
                     "rust",
                     r#"shadcn::Switch::new(model)
-    .refine_layout(LayoutRefinement::default().w_px(Px(28.0)).h_px(Px(16.0)))
+    .size(shadcn::SwitchSize::Sm)
     .into_element(cx);"#,
                 ),
             DocSection::new("Airplane Mode", airplane_mode)

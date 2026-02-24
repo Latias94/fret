@@ -176,6 +176,9 @@ pub fn apply_layout_refinement<T: ThemeTokenRead + ?Sized>(
     }
 
     if let Some(flex) = refinement.flex_item {
+        if let Some(order) = flex.order {
+            layout.flex.order = order;
+        }
         if let Some(grow) = flex.grow {
             layout.flex.grow = grow;
         }
@@ -234,7 +237,7 @@ pub fn container_props(
         layout,
         padding,
         background,
-        background_paint: None,
+        background_paint: chrome.background_paint,
         shadow,
         border: Edges::all(border_width),
         border_color,

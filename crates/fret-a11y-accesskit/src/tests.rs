@@ -24,6 +24,11 @@ fn maps_extended_semantics_roles_to_accesskit_roles() {
         map_role(SemanticsRole::ProgressBar),
         Role::ProgressIndicator
     );
+    assert_eq!(map_role(SemanticsRole::ScrollBar), Role::ScrollBar);
+    assert_eq!(map_role(SemanticsRole::SpinButton), Role::SpinButton);
+    assert_eq!(map_role(SemanticsRole::Meter), Role::Meter);
+    assert_eq!(map_role(SemanticsRole::Splitter), Role::Splitter);
+    assert_eq!(map_role(SemanticsRole::Heading), Role::Heading);
     assert_eq!(map_role(SemanticsRole::RadioGroup), Role::RadioGroup);
     assert_eq!(map_role(SemanticsRole::RadioButton), Role::RadioButton);
     assert_eq!(
@@ -343,6 +348,683 @@ fn mixed_checked_state_maps_to_accesskit_toggled_mixed() {
         .expect("checkbox node present");
 
     assert_eq!(checkbox_node.toggled(), Some(accesskit::Toggled::Mixed));
+}
+
+#[test]
+fn pressed_state_maps_to_accesskit_toggled() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(10.0), Px(10.0)),
+    );
+
+    let root = node(1);
+    let toggle = node(2);
+
+    let snapshot = SemanticsSnapshot {
+        window,
+        roots: vec![SemanticsRoot {
+            root,
+            visible: true,
+            blocks_underlay_input: false,
+            hit_testable: true,
+            z_index: 0,
+        }],
+        barrier_root: None,
+        focus_barrier_root: None,
+        focus: None,
+        captured: None,
+        nodes: vec![
+            SemanticsNode {
+                id: root,
+                parent: None,
+                role: SemanticsRole::Window,
+                bounds,
+                flags: SemanticsFlags::default(),
+                test_id: None,
+                active_descendant: None,
+                pos_in_set: None,
+                set_size: None,
+                label: None,
+                value: None,
+                extra: SemanticsNodeExtra::default(),
+                text_selection: None,
+                text_composition: None,
+                actions: SemanticsActions::default(),
+                labelled_by: Vec::new(),
+                described_by: Vec::new(),
+                controls: Vec::new(),
+                inline_spans: Vec::new(),
+            },
+            SemanticsNode {
+                id: toggle,
+                parent: Some(root),
+                role: SemanticsRole::Button,
+                bounds,
+                flags: SemanticsFlags {
+                    pressed_state: Some(fret_core::SemanticsPressedState::Mixed),
+                    ..SemanticsFlags::default()
+                },
+                test_id: None,
+                active_descendant: None,
+                pos_in_set: None,
+                set_size: None,
+                label: Some("Toggle".to_string()),
+                value: None,
+                extra: SemanticsNodeExtra::default(),
+                text_selection: None,
+                text_composition: None,
+                actions: SemanticsActions::default(),
+                labelled_by: Vec::new(),
+                described_by: Vec::new(),
+                controls: Vec::new(),
+                inline_spans: Vec::new(),
+            },
+        ],
+    };
+
+    let update = tree_update_from_snapshot(&snapshot, 1.0);
+    let toggle_id = to_accesskit_id(toggle);
+    let toggle_node = update
+        .nodes
+        .iter()
+        .find_map(|(id, n)| (*id == toggle_id).then_some(n))
+        .expect("toggle node present");
+
+    assert_eq!(toggle_node.toggled(), Some(accesskit::Toggled::Mixed));
+}
+
+#[test]
+fn checked_state_takes_precedence_over_pressed_state() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(10.0), Px(10.0)),
+    );
+
+    let root = node(1);
+    let node = node(2);
+
+    let snapshot = SemanticsSnapshot {
+        window,
+        roots: vec![SemanticsRoot {
+            root,
+            visible: true,
+            blocks_underlay_input: false,
+            hit_testable: true,
+            z_index: 0,
+        }],
+        barrier_root: None,
+        focus_barrier_root: None,
+        focus: None,
+        captured: None,
+        nodes: vec![
+            SemanticsNode {
+                id: root,
+                parent: None,
+                role: SemanticsRole::Window,
+                bounds,
+                flags: SemanticsFlags::default(),
+                test_id: None,
+                active_descendant: None,
+                pos_in_set: None,
+                set_size: None,
+                label: None,
+                value: None,
+                extra: SemanticsNodeExtra::default(),
+                text_selection: None,
+                text_composition: None,
+                actions: SemanticsActions::default(),
+                labelled_by: Vec::new(),
+                described_by: Vec::new(),
+                controls: Vec::new(),
+                inline_spans: Vec::new(),
+            },
+            SemanticsNode {
+                id: node,
+                parent: Some(root),
+                role: SemanticsRole::Checkbox,
+                bounds,
+                flags: SemanticsFlags {
+                    checked_state: Some(fret_core::SemanticsCheckedState::True),
+                    pressed_state: Some(fret_core::SemanticsPressedState::False),
+                    ..SemanticsFlags::default()
+                },
+                test_id: None,
+                active_descendant: None,
+                pos_in_set: None,
+                set_size: None,
+                label: Some("Checkbox".to_string()),
+                value: None,
+                extra: SemanticsNodeExtra::default(),
+                text_selection: None,
+                text_composition: None,
+                actions: SemanticsActions::default(),
+                labelled_by: Vec::new(),
+                described_by: Vec::new(),
+                controls: Vec::new(),
+                inline_spans: Vec::new(),
+            },
+        ],
+    };
+
+    let update = tree_update_from_snapshot(&snapshot, 1.0);
+    let id = to_accesskit_id(node);
+    let mapped = update
+        .nodes
+        .iter()
+        .find_map(|(nid, n)| (*nid == id).then_some(n))
+        .expect("node present");
+
+    assert_eq!(mapped.toggled(), Some(accesskit::Toggled::True));
+}
+
+#[test]
+fn required_and_invalid_flags_are_mapped() {
+    let window = AppWindowId::default();
+    let root = node(1);
+    let input = node(2);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(10.0), Px(10.0)),
+    );
+
+    let snapshot = SemanticsSnapshot {
+        window,
+        roots: vec![SemanticsRoot {
+            root,
+            visible: true,
+            blocks_underlay_input: false,
+            hit_testable: true,
+            z_index: 0,
+        }],
+        barrier_root: None,
+        focus_barrier_root: None,
+        focus: None,
+        captured: None,
+        nodes: vec![
+            SemanticsNode {
+                id: root,
+                parent: None,
+                role: SemanticsRole::Window,
+                bounds,
+                flags: SemanticsFlags::default(),
+                test_id: None,
+                active_descendant: None,
+                pos_in_set: None,
+                set_size: None,
+                label: None,
+                value: None,
+                extra: SemanticsNodeExtra::default(),
+                text_selection: None,
+                text_composition: None,
+                actions: SemanticsActions::default(),
+                labelled_by: Vec::new(),
+                described_by: Vec::new(),
+                controls: Vec::new(),
+                inline_spans: Vec::new(),
+            },
+            SemanticsNode {
+                id: input,
+                parent: Some(root),
+                role: SemanticsRole::TextField,
+                bounds,
+                flags: SemanticsFlags {
+                    required: true,
+                    invalid: Some(fret_core::SemanticsInvalid::True),
+                    ..SemanticsFlags::default()
+                },
+                test_id: None,
+                active_descendant: None,
+                pos_in_set: None,
+                set_size: None,
+                label: Some("Input".to_string()),
+                value: None,
+                extra: SemanticsNodeExtra::default(),
+                text_selection: None,
+                text_composition: None,
+                actions: SemanticsActions::default(),
+                labelled_by: Vec::new(),
+                described_by: Vec::new(),
+                controls: Vec::new(),
+                inline_spans: Vec::new(),
+            },
+        ],
+    };
+
+    let update = tree_update_from_snapshot(&snapshot, 1.0);
+    let input_id = to_accesskit_id(input);
+    let input_node = update
+        .nodes
+        .iter()
+        .find_map(|(id, n)| (*id == input_id).then_some(n))
+        .expect("input node present");
+
+    assert!(input_node.is_required());
+    assert_eq!(input_node.invalid(), Some(accesskit::Invalid::True));
+}
+
+#[test]
+fn busy_flag_is_mapped() {
+    let window = AppWindowId::default();
+    let root = node(1);
+    let region = node(2);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(10.0), Px(10.0)),
+    );
+
+    let snapshot = SemanticsSnapshot {
+        window,
+        roots: vec![SemanticsRoot {
+            root,
+            visible: true,
+            blocks_underlay_input: false,
+            hit_testable: true,
+            z_index: 0,
+        }],
+        barrier_root: None,
+        focus_barrier_root: None,
+        focus: None,
+        captured: None,
+        nodes: vec![
+            SemanticsNode {
+                id: root,
+                parent: None,
+                role: SemanticsRole::Window,
+                bounds,
+                flags: SemanticsFlags::default(),
+                test_id: None,
+                active_descendant: None,
+                pos_in_set: None,
+                set_size: None,
+                label: None,
+                value: None,
+                extra: SemanticsNodeExtra::default(),
+                text_selection: None,
+                text_composition: None,
+                actions: SemanticsActions::default(),
+                labelled_by: Vec::new(),
+                described_by: Vec::new(),
+                controls: Vec::new(),
+                inline_spans: Vec::new(),
+            },
+            SemanticsNode {
+                id: region,
+                parent: Some(root),
+                role: SemanticsRole::Panel,
+                bounds,
+                flags: SemanticsFlags {
+                    busy: true,
+                    ..SemanticsFlags::default()
+                },
+                test_id: None,
+                active_descendant: None,
+                pos_in_set: None,
+                set_size: None,
+                label: Some("Results".to_string()),
+                value: None,
+                extra: SemanticsNodeExtra::default(),
+                text_selection: None,
+                text_composition: None,
+                actions: SemanticsActions::default(),
+                labelled_by: Vec::new(),
+                described_by: Vec::new(),
+                controls: Vec::new(),
+                inline_spans: Vec::new(),
+            },
+        ],
+    };
+
+    let update = tree_update_from_snapshot(&snapshot, 1.0);
+    let region_id = to_accesskit_id(region);
+    let region_node = update
+        .nodes
+        .iter()
+        .find_map(|(id, n)| (*id == region_id).then_some(n))
+        .expect("region node present");
+
+    assert!(region_node.is_busy());
+}
+
+#[test]
+fn hidden_flag_is_mapped() {
+    let window = AppWindowId::default();
+    let root = node(1);
+    let decoration = node(2);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(10.0), Px(10.0)),
+    );
+
+    let snapshot = SemanticsSnapshot {
+        window,
+        roots: vec![SemanticsRoot {
+            root,
+            visible: true,
+            blocks_underlay_input: false,
+            hit_testable: true,
+            z_index: 0,
+        }],
+        barrier_root: None,
+        focus_barrier_root: None,
+        focus: None,
+        captured: None,
+        nodes: vec![
+            SemanticsNode {
+                id: root,
+                parent: None,
+                role: SemanticsRole::Window,
+                bounds,
+                flags: SemanticsFlags::default(),
+                test_id: None,
+                active_descendant: None,
+                pos_in_set: None,
+                set_size: None,
+                label: None,
+                value: None,
+                extra: SemanticsNodeExtra::default(),
+                text_selection: None,
+                text_composition: None,
+                actions: SemanticsActions::default(),
+                labelled_by: Vec::new(),
+                described_by: Vec::new(),
+                controls: Vec::new(),
+                inline_spans: Vec::new(),
+            },
+            SemanticsNode {
+                id: decoration,
+                parent: Some(root),
+                role: SemanticsRole::Button,
+                bounds,
+                flags: SemanticsFlags {
+                    hidden: true,
+                    ..SemanticsFlags::default()
+                },
+                test_id: None,
+                active_descendant: None,
+                pos_in_set: None,
+                set_size: None,
+                label: Some("Decorative".to_string()),
+                value: None,
+                extra: SemanticsNodeExtra::default(),
+                text_selection: None,
+                text_composition: None,
+                actions: SemanticsActions::default(),
+                labelled_by: Vec::new(),
+                described_by: Vec::new(),
+                controls: Vec::new(),
+                inline_spans: Vec::new(),
+            },
+        ],
+    };
+
+    let update = tree_update_from_snapshot(&snapshot, 1.0);
+    let id = to_accesskit_id(decoration);
+    let mapped = update
+        .nodes
+        .iter()
+        .find_map(|(nid, n)| (*nid == id).then_some(n))
+        .expect("node present");
+
+    assert!(mapped.is_hidden());
+}
+
+#[test]
+fn visited_flag_is_mapped() {
+    let window = AppWindowId::default();
+    let root = node(1);
+    let link = node(2);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(10.0), Px(10.0)),
+    );
+
+    let snapshot = SemanticsSnapshot {
+        window,
+        roots: vec![SemanticsRoot {
+            root,
+            visible: true,
+            blocks_underlay_input: false,
+            hit_testable: true,
+            z_index: 0,
+        }],
+        barrier_root: None,
+        focus_barrier_root: None,
+        focus: None,
+        captured: None,
+        nodes: vec![
+            SemanticsNode {
+                id: root,
+                parent: None,
+                role: SemanticsRole::Window,
+                bounds,
+                flags: SemanticsFlags::default(),
+                test_id: None,
+                active_descendant: None,
+                pos_in_set: None,
+                set_size: None,
+                label: None,
+                value: None,
+                extra: SemanticsNodeExtra::default(),
+                text_selection: None,
+                text_composition: None,
+                actions: SemanticsActions::default(),
+                labelled_by: Vec::new(),
+                described_by: Vec::new(),
+                controls: Vec::new(),
+                inline_spans: Vec::new(),
+            },
+            SemanticsNode {
+                id: link,
+                parent: Some(root),
+                role: SemanticsRole::Link,
+                bounds,
+                flags: SemanticsFlags {
+                    visited: true,
+                    ..SemanticsFlags::default()
+                },
+                test_id: None,
+                active_descendant: None,
+                pos_in_set: None,
+                set_size: None,
+                label: Some("Docs".to_string()),
+                value: None,
+                extra: SemanticsNodeExtra::default(),
+                text_selection: None,
+                text_composition: None,
+                actions: SemanticsActions::default(),
+                labelled_by: Vec::new(),
+                described_by: Vec::new(),
+                controls: Vec::new(),
+                inline_spans: Vec::new(),
+            },
+        ],
+    };
+
+    let update = tree_update_from_snapshot(&snapshot, 1.0);
+    let id = to_accesskit_id(link);
+    let mapped = update
+        .nodes
+        .iter()
+        .find_map(|(nid, n)| (*nid == id).then_some(n))
+        .expect("node present");
+
+    assert!(mapped.is_visited());
+}
+
+#[test]
+fn multiselectable_flag_is_mapped() {
+    let window = AppWindowId::default();
+    let root = node(1);
+    let listbox = node(2);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(10.0), Px(10.0)),
+    );
+
+    let snapshot = SemanticsSnapshot {
+        window,
+        roots: vec![SemanticsRoot {
+            root,
+            visible: true,
+            blocks_underlay_input: false,
+            hit_testable: true,
+            z_index: 0,
+        }],
+        barrier_root: None,
+        focus_barrier_root: None,
+        focus: None,
+        captured: None,
+        nodes: vec![
+            SemanticsNode {
+                id: root,
+                parent: None,
+                role: SemanticsRole::Window,
+                bounds,
+                flags: SemanticsFlags::default(),
+                test_id: None,
+                active_descendant: None,
+                pos_in_set: None,
+                set_size: None,
+                label: None,
+                value: None,
+                extra: SemanticsNodeExtra::default(),
+                text_selection: None,
+                text_composition: None,
+                actions: SemanticsActions::default(),
+                labelled_by: Vec::new(),
+                described_by: Vec::new(),
+                controls: Vec::new(),
+                inline_spans: Vec::new(),
+            },
+            SemanticsNode {
+                id: listbox,
+                parent: Some(root),
+                role: SemanticsRole::ListBox,
+                bounds,
+                flags: SemanticsFlags {
+                    multiselectable: true,
+                    ..SemanticsFlags::default()
+                },
+                test_id: None,
+                active_descendant: None,
+                pos_in_set: None,
+                set_size: None,
+                label: Some("List".to_string()),
+                value: None,
+                extra: SemanticsNodeExtra::default(),
+                text_selection: None,
+                text_composition: None,
+                actions: SemanticsActions::default(),
+                labelled_by: Vec::new(),
+                described_by: Vec::new(),
+                controls: Vec::new(),
+                inline_spans: Vec::new(),
+            },
+        ],
+    };
+
+    let update = tree_update_from_snapshot(&snapshot, 1.0);
+    let id = to_accesskit_id(listbox);
+    let mapped = update
+        .nodes
+        .iter()
+        .find_map(|(nid, n)| (*nid == id).then_some(n))
+        .expect("node present");
+
+    assert!(mapped.is_multiselectable());
+}
+
+#[test]
+fn live_region_flags_are_mapped() {
+    let window = AppWindowId::default();
+    let root = node(1);
+    let region = node(2);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(10.0), Px(10.0)),
+    );
+
+    let snapshot = SemanticsSnapshot {
+        window,
+        roots: vec![SemanticsRoot {
+            root,
+            visible: true,
+            blocks_underlay_input: false,
+            hit_testable: true,
+            z_index: 0,
+        }],
+        barrier_root: None,
+        focus_barrier_root: None,
+        focus: None,
+        captured: None,
+        nodes: vec![
+            SemanticsNode {
+                id: root,
+                parent: None,
+                role: SemanticsRole::Window,
+                bounds,
+                flags: SemanticsFlags::default(),
+                test_id: None,
+                active_descendant: None,
+                pos_in_set: None,
+                set_size: None,
+                label: None,
+                value: None,
+                extra: SemanticsNodeExtra::default(),
+                text_selection: None,
+                text_composition: None,
+                actions: SemanticsActions::default(),
+                labelled_by: Vec::new(),
+                described_by: Vec::new(),
+                controls: Vec::new(),
+                inline_spans: Vec::new(),
+            },
+            SemanticsNode {
+                id: region,
+                parent: Some(root),
+                role: SemanticsRole::Panel,
+                bounds,
+                flags: SemanticsFlags {
+                    live: Some(fret_core::SemanticsLive::Polite),
+                    live_atomic: true,
+                    ..SemanticsFlags::default()
+                },
+                test_id: None,
+                active_descendant: None,
+                pos_in_set: None,
+                set_size: None,
+                label: Some("Notifications".to_string()),
+                value: None,
+                extra: SemanticsNodeExtra::default(),
+                text_selection: None,
+                text_composition: None,
+                actions: SemanticsActions::default(),
+                labelled_by: Vec::new(),
+                described_by: Vec::new(),
+                controls: Vec::new(),
+                inline_spans: Vec::new(),
+            },
+        ],
+    };
+
+    let update = tree_update_from_snapshot(&snapshot, 1.0);
+    let region_id = to_accesskit_id(region);
+    let region_node = update
+        .nodes
+        .iter()
+        .find_map(|(id, n)| (*id == region_id).then_some(n))
+        .expect("region node present");
+
+    assert_eq!(region_node.live(), Some(accesskit::Live::Polite));
+    assert!(region_node.is_live_atomic());
 }
 
 #[test]

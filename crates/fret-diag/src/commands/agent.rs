@@ -6,19 +6,19 @@ fn looks_like_path(s: &str) -> bool {
     s.contains('/') || s.contains('\\') || s.ends_with(".json")
 }
 
-fn resolve_bundle_json_path_or_latest(
+fn resolve_bundle_artifact_path_or_latest(
     bundle_arg: Option<&str>,
     workspace_root: &Path,
     out_dir: &Path,
 ) -> Result<PathBuf, String> {
     if let Some(s) = bundle_arg {
         let src = crate::resolve_path(workspace_root, PathBuf::from(s));
-        return Ok(crate::resolve_bundle_json_path(&src));
+        return Ok(crate::resolve_bundle_artifact_path(&src));
     }
     let latest = crate::read_latest_pointer(out_dir)
         .or_else(|| crate::find_latest_export_dir(out_dir))
         .ok_or_else(|| format!("no diagnostics bundle found under {}", out_dir.display()))?;
-    Ok(crate::resolve_bundle_json_path(&latest))
+    Ok(crate::resolve_bundle_artifact_path(&latest))
 }
 
 pub(crate) fn cmd_agent(
@@ -69,7 +69,7 @@ pub(crate) fn cmd_agent(
     }
 
     let bundle_path =
-        resolve_bundle_json_path_or_latest(bundle_arg.as_deref(), workspace_root, out_dir)?;
+        resolve_bundle_artifact_path_or_latest(bundle_arg.as_deref(), workspace_root, out_dir)?;
     let bundle_dir = crate::resolve_bundle_root_dir(&bundle_path)?;
 
     let out = out
@@ -90,7 +90,7 @@ pub(crate) fn cmd_agent(
         "bundle_label": bundle_label,
         "warmup_frames": warmup_frames,
         "notes": [
-            "This plan prioritizes sidecars (frames.index.json) over materializing bundle.json in memory.",
+            "This plan prioritizes sidecars (frames.index.json) over materializing bundle artifacts in memory.",
             "Run doctor first; it is safe to run repeatedly.",
         ],
         "steps": [
@@ -105,9 +105,14 @@ pub(crate) fn cmd_agent(
                 "why": "Self-heal: regenerate missing/invalid sidecars (including frames.index.json).",
             },
             {
+                "id": "doctor_fix_schema2_optional",
+                "command": format!("fretboard diag doctor --fix-schema2 {} --warmup-frames {}", bundle_dir.display(), warmup_frames),
+                "why": "Optional: write bundle.schema2.json for large bundles to keep tooling and AI loops fast.",
+            },
+            {
                 "id": "triage_lite_total",
                 "command": format!("fretboard diag triage --lite {} --warmup-frames {} --metric total", bundle_dir.display(), warmup_frames),
-                "why": "First-pass perf triage (slowest frames) without materializing bundle.json.",
+                "why": "First-pass perf triage (slowest frames) without materializing bundle artifacts.",
             },
             {
                 "id": "triage_lite_layout",
@@ -122,7 +127,7 @@ pub(crate) fn cmd_agent(
             {
                 "id": "hotspots_lite_total",
                 "command": format!("fretboard diag hotspots --lite {} --warmup-frames {} --metric total", bundle_dir.display(), warmup_frames),
-                "why": "Perf hotspots (slow frames) fallback when bundle.json is too large for JSON-size hotspots.",
+                "why": "Perf hotspots (slow frames) fallback when a bundle artifact is too large for JSON-size hotspots.",
             },
             {
                 "id": "slice_targeted",

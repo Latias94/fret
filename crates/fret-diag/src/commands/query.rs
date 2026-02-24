@@ -35,11 +35,11 @@ fn looks_like_path(s: &str) -> bool {
     s.contains('/') || s.contains('\\') || s.ends_with(".json")
 }
 
-fn resolve_latest_bundle_json_path(out_dir: &Path) -> Result<PathBuf, String> {
+fn resolve_latest_bundle_artifact_path(out_dir: &Path) -> Result<PathBuf, String> {
     let latest = crate::read_latest_pointer(out_dir)
         .or_else(|| crate::find_latest_export_dir(out_dir))
         .ok_or_else(|| format!("no diagnostics bundle found under {}", out_dir.display()))?;
-    Ok(crate::resolve_bundle_json_path(&latest))
+    Ok(crate::resolve_bundle_artifact_path(&latest))
 }
 
 fn try_read_test_ids_index_json(path: &Path, warmup_frames: u64) -> Option<serde_json::Value> {
@@ -99,7 +99,7 @@ fn resolve_test_ids_index_from_src(
             }
         }
 
-        let bundle_path = crate::resolve_bundle_json_path(src);
+        let bundle_path = crate::resolve_bundle_artifact_path(src);
         let index_path =
             crate::bundle_index::ensure_test_ids_index_json(&bundle_path, warmup_frames)?;
         let v = try_read_test_ids_index_json(&index_path, warmup_frames)
@@ -122,7 +122,7 @@ fn resolve_test_ids_index_from_src(
             return Ok((bundle, src.to_path_buf(), v));
         }
 
-        if let Some(bundle_path) = sidecars::adjacent_bundle_json_path_for_sidecar(src) {
+        if let Some(bundle_path) = sidecars::adjacent_bundle_path_for_sidecar(src) {
             let index_path =
                 crate::bundle_index::ensure_test_ids_index_json(&bundle_path, warmup_frames)?;
             let v = try_read_test_ids_index_json(&index_path, warmup_frames)
@@ -136,12 +136,12 @@ fn resolve_test_ids_index_from_src(
         }
 
         return Err(format!(
-            "invalid test_ids.index.json (expected schema_version=1 warmup_frames={warmup_frames}) and no adjacent bundle.json was found to regenerate it\n  index: {}",
+            "invalid test_ids.index.json (expected schema_version=1 warmup_frames={warmup_frames}) and no adjacent bundle artifact was found to regenerate it\n  index: {}",
             src.display()
         ));
     }
 
-    let bundle_path = crate::resolve_bundle_json_path(src);
+    let bundle_path = crate::resolve_bundle_artifact_path(src);
     let index_path = crate::bundle_index::ensure_test_ids_index_json(&bundle_path, warmup_frames)?;
     let v = try_read_test_ids_index_json(&index_path, warmup_frames)
         .ok_or_else(|| "invalid test_ids.index.json".to_string())?;
@@ -182,7 +182,7 @@ fn resolve_bundle_index_from_src(
             }
         }
 
-        let bundle_path = crate::resolve_bundle_json_path(src);
+        let bundle_path = crate::resolve_bundle_artifact_path(src);
         let index_path =
             crate::bundle_index::ensure_bundle_index_json(&bundle_path, warmup_frames)?;
         let v = try_read_bundle_index_json(&index_path, warmup_frames)
@@ -207,7 +207,8 @@ fn resolve_bundle_index_from_src(
             return Ok((bundle, src.to_path_buf(), v));
         }
 
-        // Attempt recovery by regenerating from an adjacent bundle.json.
+        // Attempt recovery by regenerating from an adjacent bundle artifact (bundle.json or
+        // bundle.schema2.json).
         let mut candidates: Vec<PathBuf> = Vec::new();
         if let Some(parent) = src.parent() {
             candidates.push(parent.to_path_buf());
@@ -218,7 +219,7 @@ fn resolve_bundle_index_from_src(
             }
         }
         for candidate in candidates {
-            let bundle_path = crate::resolve_bundle_json_path(&candidate);
+            let bundle_path = crate::resolve_bundle_artifact_path(&candidate);
             if !bundle_path.is_file() {
                 continue;
             }
@@ -251,12 +252,12 @@ fn resolve_bundle_index_from_src(
         };
 
         return Err(format!(
-            "bundle.index.json {note} and no adjacent bundle.json was found to regenerate it (tip: run `fretboard diag index <bundle_dir|bundle.json>`)\n  index: {}",
+            "bundle.index.json {note} and no adjacent bundle artifact was found to regenerate it (tip: run `fretboard diag index <bundle_dir|bundle.json|bundle.schema2.json>`)\n  index: {}",
             src.display()
         ));
     }
 
-    let bundle_path = crate::resolve_bundle_json_path(src);
+    let bundle_path = crate::resolve_bundle_artifact_path(src);
     let index_path = crate::bundle_index::ensure_bundle_index_json(&bundle_path, warmup_frames)?;
     let v = try_read_bundle_index_json(&index_path, warmup_frames)
         .ok_or_else(|| "invalid bundle.index.json".to_string())?;
@@ -409,7 +410,7 @@ fn cmd_query_snapshots(
         let src = crate::resolve_path(workspace_root, PathBuf::from(bundle_src));
         resolve_bundle_index_from_src(&src, warmup_frames, step_index.is_some())?
     } else {
-        let bundle_path = resolve_latest_bundle_json_path(out_dir)?;
+        let bundle_path = resolve_latest_bundle_artifact_path(out_dir)?;
         let index_path =
             crate::bundle_index::ensure_bundle_index_json(&bundle_path, warmup_frames)?;
         let index = try_read_bundle_index_json(&index_path, warmup_frames)
@@ -429,11 +430,11 @@ fn cmd_query_snapshots(
         bloom_might_contain: Option<bool>,
     }
 
-    let empty = Vec::new();
     let windows = index
         .get("windows")
         .and_then(|v| v.as_array())
-        .unwrap_or(&empty);
+        .map(|v| v.as_slice())
+        .unwrap_or(&[]);
 
     let step_selector: Option<(u64, Option<u64>, Option<u64>)> = if let Some(step_index) =
         step_index
@@ -442,7 +443,8 @@ fn cmd_query_snapshots(
             .get("script")
             .and_then(|v| v.get("steps"))
             .and_then(|v| v.as_array())
-            .unwrap_or(&empty);
+            .map(|v| v.as_slice())
+            .unwrap_or(&[]);
         let step = steps.iter().find(|s| {
             s.get("step_index")
                 .and_then(|v| v.as_u64())
@@ -450,7 +452,7 @@ fn cmd_query_snapshots(
         });
         let Some(step) = step else {
             return Err(format!(
-                "bundle.index.json is missing script step markers for step_index={step_index} (tip: run `fretboard diag index <out_dir>/<run_id>/bundle.json` so it can see script.result.json)"
+                "bundle.index.json is missing script step markers for step_index={step_index} (tip: run `fretboard diag index <out_dir>/<run_id>` so it can see script.result.json)"
             ));
         };
         let window = step.get("window").and_then(|v| v.as_u64()).ok_or_else(|| {
@@ -479,11 +481,11 @@ fn cmd_query_snapshots(
         {
             continue;
         }
-        let snaps_empty = Vec::new();
         let snaps = w
             .get("snapshots")
             .and_then(|v| v.as_array())
-            .unwrap_or(&snaps_empty);
+            .map(|v| v.as_slice())
+            .unwrap_or(&[]);
         for s in snaps {
             let is_warmup = s
                 .get("is_warmup")
@@ -720,7 +722,7 @@ fn cmd_query_test_id(
         [bundle_src, pattern] => {
             let bundle_src = crate::resolve_path(workspace_root, PathBuf::from(bundle_src));
             (
-                crate::resolve_bundle_json_path(&bundle_src),
+                crate::resolve_bundle_artifact_path(&bundle_src),
                 pattern.to_string(),
             )
         }
@@ -728,12 +730,12 @@ fn cmd_query_test_id(
             let maybe_path = crate::resolve_path(workspace_root, PathBuf::from(pattern));
             if looks_like_path(pattern) && (maybe_path.is_file() || maybe_path.is_dir()) {
                 return Err(
-                    "missing pattern (try: fretboard diag query test-id <bundle_dir|bundle.json> <pattern>)"
+                    "missing pattern (try: fretboard diag query test-id <bundle_dir|bundle.json|bundle.schema2.json> <pattern>)"
                         .to_string(),
                 );
             }
             (
-                resolve_latest_bundle_json_path(out_dir)?,
+                resolve_latest_bundle_artifact_path(out_dir)?,
                 pattern.to_string(),
             )
         }
@@ -744,7 +746,6 @@ fn cmd_query_test_id(
         let src = crate::resolve_path(workspace_root, PathBuf::from(&positionals[0]));
         resolve_test_ids_index_from_src(&src, warmup_frames)?
     } else {
-        let bundle_path = bundle_path;
         let index_path =
             crate::bundle_index::ensure_test_ids_index_json(&bundle_path, warmup_frames)?;
         let index = try_read_test_ids_index_json(&index_path, warmup_frames)
@@ -761,11 +762,11 @@ fn cmd_query_test_id(
         .and_then(|v| v.as_u64())
         .unwrap_or(0);
 
-    let empty = Vec::new();
     let windows = index
         .get("windows")
         .and_then(|v| v.as_array())
-        .unwrap_or(&empty);
+        .map(|v| v.as_slice())
+        .unwrap_or(&[]);
 
     #[derive(Debug, Clone)]
     struct Agg {

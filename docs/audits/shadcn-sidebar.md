@@ -134,6 +134,27 @@ coverage for `sidebar-*` pages.
 - Added targeted tests asserting `href` semantics-value exposure in link paths and explicit
   non-exposure for `as_child` href paths in `ecosystem/fret-ui-shadcn/src/sidebar.rs`.
 
+### Update note (2026-02-23)
+
+- Updated the UI gallery sidebar preview to demonstrate `SidebarProvider` composition (uncontrolled + controlled open model) and a forced-mobile `open_mobile` sheet path, removing the previous "approximation" note.
+  - Preview: `apps/fret-ui-gallery/src/ui/previews/pages/components/composites/sidebar.rs`
+- Added a scripted conformance gate that exercises the sidebar provider keyboard shortcut outcomes in the UI gallery (`Ctrl+B` toggles collapse/expand deterministically on desktop).
+  - Script: `tools/diag-scripts/ui-gallery-sidebar-provider-shortcut-toggle-focus.json`
+  - Suite: `crates/fret-diag/src/diag_suite_scripts.rs`
+- Added a scripted conformance gate that exercises `SidebarProvider` controlled open model composition (external toggle + internal trigger stay in sync).
+  - Script: `tools/diag-scripts/ui-gallery-sidebar-controlled-open-sync.json`
+  - Suite: `crates/fret-diag/src/diag_suite_scripts.rs`
+- Added a scripted conformance gate that exercises the mobile/offcanvas sheet path (`open_mobile`): Escape dismisses the sheet and focus restores to `SidebarTrigger`.
+  - Script: `tools/diag-scripts/ui-gallery-sidebar-mobile-sheet-escape-focus-restore.json`
+  - Suite: `crates/fret-diag/src/diag_suite_scripts.rs`
+- Added a scripted conformance gate that exercises mobile `open_mobile` controlled sync: external open-model toggles and `SidebarTrigger`/Escape dismissal stay in sync.
+  - Script: `tools/diag-scripts/ui-gallery-sidebar-mobile-controlled-open-sync.json`
+  - Suite: `crates/fret-diag/src/diag_suite_scripts.rs`
+- Added a scripted conformance gate that exercises the provider keyboard shortcut in forced-mobile mode (`Ctrl/Cmd+B` toggles the mobile sheet and restores focus).
+  - Script: `tools/diag-scripts/ui-gallery-sidebar-mobile-shortcut-toggle.json`
+  - Suite: `crates/fret-diag/src/diag_suite_scripts.rs`
+- Fixed forced-mobile shortcut toggling when focus is inside the sheet: keymap shortcuts now dispatch into the UI tree command path (when handled) and `SidebarMenuButton` participates in handling `sidebar.toggle` so `Ctrl/Cmd+B` can close the sheet reliably.
+
 ## Component-by-component audit (24/24)
 
 Status legend:
@@ -224,8 +245,7 @@ Impact:
 
 ## Test/gate status and blind spots
 
-- Existing sidebar-targeted gates mostly validate menu-button heights and one dialog portal
-  placement case (`sidebar-13`), not full surface behavior.
+- Existing sidebar-targeted gates validate menu-button heights and portal placement cases (`sidebar-13`), plus core provider choreography via scripted UI gallery gates (shortcut toggle, controlled open sync, and mobile sheet Escape focus restore).
 - This creates a breadth/depth mismatch: key coverage can be high while component parity remains
   partial.
 

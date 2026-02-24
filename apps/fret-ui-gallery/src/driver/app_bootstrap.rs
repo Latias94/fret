@@ -40,6 +40,12 @@ pub(super) fn register_commands_and_menus(app: &mut App) {
             .with_keywords(["settings", "menu", "menubar", "write", "project"]),
     );
     app.commands_mut().register(
+        CommandId::new(CMD_INPUT_PICTURE_BROWSE),
+        CommandMeta::new("Browse Picture (Input demo)")
+            .with_category("Gallery")
+            .with_keywords(["input", "file", "picture", "browse"]),
+    );
+    app.commands_mut().register(
         CommandId::new(CMD_APP_TOGGLE_PREFERENCES_ENABLED),
         CommandMeta::new("Toggle Preferences Enabled (debug)")
             .with_category("Settings")

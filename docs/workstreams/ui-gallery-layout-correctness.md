@@ -49,7 +49,7 @@ Notes:
 
 - Use `fretboard diag run` with an existing script, or add a new `tools/diag-scripts/ui-gallery-*.json`.
 - If the bug is visual, capture pixels too:
-  - `FRET_DIAG_SCREENSHOT=1`: enable screenshot readback and write `frame.bmp` into the most recent bundle dir when a script requests it (via `capture_screenshot`) or when dumping bundles (writes `screenshot.request`).
+  - `FRET_DIAG_BUNDLE_SCREENSHOT=1`: enable screenshot readback and write `frame.bmp` into the most recent bundle dir when a script requests it (via `capture_screenshot`) or when dumping bundles (writes `screenshot.request`).
 - If you need to inspect `SemanticsProps.test_id` / `label` in exported `bundle.json`, disable text redaction:
   - `FRET_DIAG_REDACT_TEXT=0` (default is redaction enabled).
 
@@ -118,15 +118,15 @@ Use `fretboard diag compare`:
 
 ```powershell
 $env:FRET_UI_GALLERY_MAIN_WINDOW_SIZE="800x600"
-cargo run -p fretboard -- diag suite ui-gallery-layout --env FRET_DIAG_SCREENSHOT=1 --launch -- cargo run -p fret-ui-gallery --release
+cargo run -p fretboard -- diag suite ui-gallery-layout --env FRET_DIAG_BUNDLE_SCREENSHOT=1 --launch -- cargo run -p fret-ui-gallery --release
 ```
 
 ### 4.1 Latest Size Matrix Runs
 
-- 2026-01-31: `fretboard diag suite ui-gallery-layout` passes at `800x600`, `960x540`, `1024x768`, `1280x720` (with `--timeout-ms 240000` and `FRET_DIAG_SCREENSHOT=1`).
-- 2026-01-31: `ui-gallery-layout-sweep-extended.json` passes at `800x600`, `960x540`, `1024x768`, `1280x720` (with `--timeout-ms 240000` and `FRET_DIAG_SCREENSHOT=1`).
-- 2026-01-31: `ui-gallery-layout-sweep-extended-chrome.json` passes at `800x600`, `960x540`, `1024x768`, `1280x720` (with `--timeout-ms 240000` and `FRET_DIAG_SCREENSHOT=1`).
-- 2026-01-31: `ui-gallery-layout-sweep-torture.json` passes at `800x600`, `960x540` (with `--timeout-ms 240000` and `FRET_DIAG_SCREENSHOT=1`).
+- 2026-01-31: `fretboard diag suite ui-gallery-layout` passes at `800x600`, `960x540`, `1024x768`, `1280x720` (with `--timeout-ms 240000` and `FRET_DIAG_BUNDLE_SCREENSHOT=1`).
+- 2026-01-31: `ui-gallery-layout-sweep-extended.json` passes at `800x600`, `960x540`, `1024x768`, `1280x720` (with `--timeout-ms 240000` and `FRET_DIAG_BUNDLE_SCREENSHOT=1`).
+- 2026-01-31: `ui-gallery-layout-sweep-extended-chrome.json` passes at `800x600`, `960x540`, `1024x768`, `1280x720` (with `--timeout-ms 240000` and `FRET_DIAG_BUNDLE_SCREENSHOT=1`).
+- 2026-01-31: `ui-gallery-layout-sweep-torture.json` passes at `800x600`, `960x540` (with `--timeout-ms 240000` and `FRET_DIAG_BUNDLE_SCREENSHOT=1`).
 
 ## 5) Work Plan (TODOs + Milestones)
 

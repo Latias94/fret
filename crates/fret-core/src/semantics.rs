@@ -10,6 +10,7 @@ pub enum SemanticsRole {
     Panel,
     Group,
     Toolbar,
+    Heading,
     Dialog,
     AlertDialog,
     Alert,
@@ -19,7 +20,11 @@ pub enum SemanticsRole {
     Checkbox,
     Switch,
     Slider,
+    SpinButton,
     ProgressBar,
+    Meter,
+    ScrollBar,
+    Splitter,
     ComboBox,
     RadioGroup,
     RadioButton,
@@ -71,12 +76,57 @@ pub enum SemanticsCheckedState {
     Mixed,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum SemanticsPressedState {
+    False,
+    True,
+    Mixed,
+}
+
+/// Indicates if a form control has invalid input (ARIA `aria-invalid` class).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum SemanticsInvalid {
+    True,
+    Grammar,
+    Spelling,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum SemanticsLive {
+    Off,
+    Polite,
+    Assertive,
+}
+
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct SemanticsFlags {
     pub focused: bool,
     pub captured: bool,
     pub disabled: bool,
     pub read_only: bool,
+    /// Exclude this node (and its subtree) from the accessibility tree presented to assistive
+    /// technologies.
+    ///
+    /// This is a portable approximation of ARIA `aria-hidden`.
+    pub hidden: bool,
+    /// Indicates that a link has been visited.
+    ///
+    /// This is a portable approximation of the "visited link" concept in HTML.
+    pub visited: bool,
+    /// Indicates that this collection supports selecting multiple items.
+    ///
+    /// This is a portable approximation of ARIA `aria-multiselectable`.
+    pub multiselectable: bool,
+    /// When set, indicates that this node is a live region (ARIA `aria-live`).
+    ///
+    /// `None` means no live region semantics are requested.
+    pub live: Option<SemanticsLive>,
+    /// When true, indicates that updates to this live region should be presented atomically
+    /// (ARIA `aria-atomic`).
+    pub live_atomic: bool,
     pub selected: bool,
     pub expanded: bool,
     /// Legacy binary checked state.
@@ -85,6 +135,16 @@ pub struct SemanticsFlags {
     pub checked: Option<bool>,
     /// Tri-state checked state (None = not checkable / unknown).
     pub checked_state: Option<SemanticsCheckedState>,
+    /// Tri-state pressed state for toggle-button-like widgets (None = not a toggle / unknown).
+    pub pressed_state: Option<SemanticsPressedState>,
+    /// Indicates that a form field is required to be filled in.
+    pub required: bool,
+    /// Indicates that a form control has invalid input.
+    pub invalid: Option<SemanticsInvalid>,
+    /// Indicates that this node (and typically its subtree) is currently busy (e.g. loading).
+    ///
+    /// This is a portable approximation of ARIA `aria-busy`.
+    pub busy: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

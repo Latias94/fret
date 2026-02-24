@@ -26,7 +26,7 @@ pub(crate) fn check_bundle_for_ui_gallery_markdown_editor_source_read_only_block
     let windows = bundle
         .get("windows")
         .and_then(|v| v.as_array())
-        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+        .ok_or_else(|| "invalid bundle artifact: missing windows".to_string())?;
     if windows.is_empty() {
         return Ok(());
     }
@@ -240,7 +240,7 @@ pub(crate) fn check_bundle_for_ui_gallery_markdown_editor_source_disabled_blocks
     let windows = bundle
         .get("windows")
         .and_then(|v| v.as_array())
-        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+        .ok_or_else(|| "invalid bundle artifact: missing windows".to_string())?;
     if windows.is_empty() {
         return Ok(());
     }
@@ -589,7 +589,7 @@ pub(crate) fn check_bundle_for_ui_gallery_markdown_editor_source_soft_wrap_toggl
     let windows = bundle
         .get("windows")
         .and_then(|v| v.as_array())
-        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+        .ok_or_else(|| "invalid bundle artifact: missing windows".to_string())?;
     if windows.is_empty() {
         return Ok(());
     }
@@ -835,7 +835,7 @@ pub(crate) fn check_bundle_for_ui_gallery_markdown_editor_source_word_boundary_j
     let windows = bundle
         .get("windows")
         .and_then(|v| v.as_array())
-        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+        .ok_or_else(|| "invalid bundle artifact: missing windows".to_string())?;
     if windows.is_empty() {
         return Ok(());
     }
@@ -1022,7 +1022,7 @@ pub(crate) fn check_bundle_for_ui_gallery_web_ime_bridge_enabled_json(
     let windows = bundle
         .get("windows")
         .and_then(|v| v.as_array())
-        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+        .ok_or_else(|| "invalid bundle artifact: missing windows".to_string())?;
     if windows.is_empty() {
         return Ok(());
     }
@@ -1199,7 +1199,7 @@ pub(crate) fn check_bundle_for_ui_gallery_markdown_editor_source_line_boundary_t
     let windows = bundle
         .get("windows")
         .and_then(|v| v.as_array())
-        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+        .ok_or_else(|| "invalid bundle artifact: missing windows".to_string())?;
     if windows.is_empty() {
         return Ok(());
     }
@@ -1395,7 +1395,7 @@ pub(crate) fn check_bundle_for_ui_gallery_markdown_editor_source_a11y_compositio
     let windows = bundle
         .get("windows")
         .and_then(|v| v.as_array())
-        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+        .ok_or_else(|| "invalid bundle artifact: missing windows".to_string())?;
     if windows.is_empty() {
         return Ok(());
     }
@@ -1623,7 +1623,7 @@ pub(crate) fn check_bundle_for_ui_gallery_markdown_editor_source_a11y_compositio
     let windows = bundle
         .get("windows")
         .and_then(|v| v.as_array())
-        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+        .ok_or_else(|| "invalid bundle artifact: missing windows".to_string())?;
     if windows.is_empty() {
         return Ok(());
     }
@@ -1886,7 +1886,7 @@ pub(crate) fn check_bundle_for_ui_gallery_markdown_editor_source_soft_wrap_editi
     let windows = bundle
         .get("windows")
         .and_then(|v| v.as_array())
-        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+        .ok_or_else(|| "invalid bundle artifact: missing windows".to_string())?;
     if windows.is_empty() {
         return Ok(());
     }
@@ -3015,7 +3015,7 @@ pub(crate) fn check_bundle_for_ui_gallery_markdown_editor_source_folds_toggle_st
     let windows = bundle
         .get("windows")
         .and_then(|v| v.as_array())
-        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+        .ok_or_else(|| "invalid bundle artifact: missing windows".to_string())?;
     if windows.is_empty() {
         return Ok(());
     }
@@ -3259,7 +3259,7 @@ pub(crate) fn check_bundle_for_ui_gallery_markdown_editor_source_folds_clamp_sel
     let windows = bundle
         .get("windows")
         .and_then(|v| v.as_array())
-        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+        .ok_or_else(|| "invalid bundle artifact: missing windows".to_string())?;
     if windows.is_empty() {
         return Ok(());
     }
@@ -3573,7 +3573,7 @@ pub(crate) fn check_bundle_for_ui_gallery_markdown_editor_source_inlays_toggle_s
     let windows = bundle
         .get("windows")
         .and_then(|v| v.as_array())
-        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+        .ok_or_else(|| "invalid bundle artifact: missing windows".to_string())?;
     if windows.is_empty() {
         return Ok(());
     }
@@ -3817,7 +3817,7 @@ pub(crate) fn check_bundle_for_ui_gallery_markdown_editor_source_inlays_caret_na
     let windows = bundle
         .get("windows")
         .and_then(|v| v.as_array())
-        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+        .ok_or_else(|| "invalid bundle artifact: missing windows".to_string())?;
     if windows.is_empty() {
         return Ok(());
     }

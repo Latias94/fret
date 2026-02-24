@@ -95,6 +95,24 @@ impl ElementHostWidget {
                 if props.read_only {
                     cx.set_read_only(true);
                 }
+                if props.hidden {
+                    cx.set_hidden(true);
+                }
+                if props.visited {
+                    cx.set_visited(true);
+                }
+                if props.multiselectable {
+                    cx.set_multiselectable(true);
+                }
+                if props.busy {
+                    cx.set_busy(true);
+                }
+                if let Some(live) = props.live {
+                    cx.set_live(Some(live));
+                    if props.live_atomic {
+                        cx.set_live_atomic(true);
+                    }
+                }
                 if props.selected {
                     cx.set_selected(true);
                 }
@@ -162,6 +180,8 @@ impl ElementHostWidget {
                 {
                     cx.push_controlled(node);
                 }
+                cx.set_required(props.a11y_required);
+                cx.set_invalid(props.a11y_invalid);
                 input.semantics(cx);
             }
             ElementInstance::TextArea(props) => {
@@ -188,6 +208,8 @@ impl ElementHostWidget {
                 if let Some(test_id) = props.test_id.as_ref() {
                     cx.set_test_id(test_id.as_ref().to_string());
                 }
+                cx.set_required(props.a11y_required);
+                cx.set_invalid(props.a11y_invalid);
                 area.semantics(cx);
             }
             ElementInstance::ResizablePanelGroup(props) => {
@@ -216,14 +238,15 @@ impl ElementHostWidget {
             ElementInstance::Pressable(props) => {
                 if props.a11y.hidden {
                     cx.set_role(SemanticsRole::Generic);
+                    cx.set_hidden(true);
                     if let Some(test_id) = props.a11y.test_id.as_ref() {
                         cx.set_test_id(test_id.as_ref().to_string());
                     }
-                    cx.set_disabled(true);
                     cx.set_focusable(false);
                     cx.set_invokable(false);
                 } else {
-                    cx.set_role(props.a11y.role.unwrap_or(SemanticsRole::Button));
+                    let role = props.a11y.role.unwrap_or(SemanticsRole::Button);
+                    cx.set_role(role);
                     cx.set_level(props.a11y.level);
                     if let Some(label) = props.a11y.label.as_ref() {
                         cx.set_label(label.as_ref().to_string());
@@ -235,6 +258,12 @@ impl ElementHostWidget {
                     if props.a11y.selected {
                         cx.set_selected(true);
                     }
+                    if props.a11y.visited {
+                        cx.set_visited(true);
+                    }
+                    if props.a11y.multiselectable {
+                        cx.set_multiselectable(true);
+                    }
                     if let Some(expanded) = props.a11y.expanded {
                         cx.set_expanded(expanded);
                     }
@@ -243,6 +272,9 @@ impl ElementHostWidget {
                     }
                     if props.a11y.checked.is_some() {
                         cx.set_checked(props.a11y.checked);
+                    }
+                    if props.a11y.pressed_state.is_some() {
+                        cx.set_pressed_state(props.a11y.pressed_state);
                     }
                     if let Some(element) = props.a11y.labelled_by_element
                         && let Some(node) = cx.resolve_declarative_element(element)
@@ -261,7 +293,16 @@ impl ElementHostWidget {
                     }
                     cx.set_disabled(!props.enabled);
                     cx.set_focusable(props.enabled && props.focusable);
-                    cx.set_invokable(props.enabled);
+                    if props.enabled {
+                        if role == SemanticsRole::Slider || role == SemanticsRole::SpinButton {
+                            cx.set_invokable(false);
+                            cx.set_value_editable(true);
+                        } else {
+                            cx.set_invokable(true);
+                        }
+                    } else {
+                        cx.set_invokable(false);
+                    }
                     cx.set_collection_position(props.a11y.pos_in_set, props.a11y.set_size);
                 }
             }
@@ -284,6 +325,8 @@ impl ElementHostWidget {
                 cx.set_value_editable(false);
                 cx.set_read_only(true);
                 cx.set_text_selection_supported(props.enabled);
+                cx.set_required(props.a11y_required);
+                cx.set_invalid(props.a11y_invalid);
 
                 // Only publish ranges when focused, matching TextInput/TextArea behavior.
                 if cx.focus == Some(cx.node) && props.a11y_value.is_some() {
@@ -319,6 +362,7 @@ impl ElementHostWidget {
             | ElementInstance::ExternalDragRegion(_)
             | ElementInstance::HoverRegion(_)
             | ElementInstance::Spinner(_)
+            | ElementInstance::ForegroundScope(_)
             | ElementInstance::Opacity(_)
             | ElementInstance::EffectLayer(_)
             | ElementInstance::MaskLayer(_)
@@ -363,6 +407,32 @@ impl ElementHostWidget {
                     cx.set_scroll_y(Some(offset.y.0 as f64), Some(0.0), Some(max.y.0 as f64));
                 }
             }
+            ElementInstance::Scrollbar(props) => {
+                cx.set_role(SemanticsRole::ScrollBar);
+
+                let handle = props.scroll_handle.clone();
+                let offset = handle.offset();
+                let max = handle.max_offset();
+
+                match props.axis {
+                    crate::element::ScrollbarAxis::Horizontal => {
+                        cx.set_orientation(Some(fret_core::SemanticsOrientation::Horizontal));
+                        cx.set_scroll_x(Some(offset.x.0 as f64), Some(0.0), Some(max.x.0 as f64));
+                        cx.set_scroll_by_supported(max.x.0 > 0.01);
+                    }
+                    crate::element::ScrollbarAxis::Vertical => {
+                        cx.set_orientation(Some(fret_core::SemanticsOrientation::Vertical));
+                        cx.set_scroll_y(Some(offset.y.0 as f64), Some(0.0), Some(max.y.0 as f64));
+                        cx.set_scroll_by_supported(max.y.0 > 0.01);
+                    }
+                }
+
+                if let Some(target) = props.scroll_target
+                    && let Some(node) = cx.resolve_declarative_element(target.0)
+                {
+                    cx.push_controlled(node);
+                }
+            }
             ElementInstance::ViewportSurface(_) => {
                 cx.set_role(SemanticsRole::Viewport);
             }
@@ -389,6 +459,24 @@ impl ElementHostWidget {
             }
             if let Some(read_only) = decoration.read_only {
                 cx.set_read_only(read_only);
+            }
+            if let Some(hidden) = decoration.hidden {
+                cx.set_hidden(hidden);
+            }
+            if let Some(visited) = decoration.visited {
+                cx.set_visited(visited);
+            }
+            if let Some(multiselectable) = decoration.multiselectable {
+                cx.set_multiselectable(multiselectable);
+            }
+            if let Some(busy) = decoration.busy {
+                cx.set_busy(busy);
+            }
+            if let Some(live) = decoration.live {
+                cx.set_live(live);
+            }
+            if let Some(live_atomic) = decoration.live_atomic {
+                cx.set_live_atomic(live_atomic);
             }
             if let Some(selected) = decoration.selected {
                 cx.set_selected(selected);

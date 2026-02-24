@@ -20,7 +20,6 @@ pub(super) fn preview_menubar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
     }
 
     let width = LayoutRefinement::default().w_px(Px(288.0)).min_w_0();
-    let icon = doc_layout::icon;
 
     let view_bookmarks_bar =
         cx.with_state(MenubarModels::default, |st| st.view_bookmarks_bar.clone());
@@ -219,30 +218,51 @@ pub(super) fn preview_menubar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
     };
 
     let with_icons = {
-        let file = MenubarMenu::new("File").entries([
-            MenubarEntry::Item(
-                MenubarItem::new("New File")
-                    .leading(icon(cx, "lucide.file"))
-                    .trailing(MenubarShortcut::new("⌘N").into_element(cx)),
-            ),
-            MenubarEntry::Item(MenubarItem::new("Open Folder").leading(icon(cx, "lucide.folder"))),
-            MenubarEntry::Separator,
-            MenubarEntry::Item(
-                MenubarItem::new("Save")
-                    .leading(icon(cx, "lucide.save"))
-                    .trailing(MenubarShortcut::new("⌘S").into_element(cx)),
-            ),
-        ]);
-        let more = MenubarMenu::new("More").entries([MenubarEntry::Group(MenubarGroup::new([
-            MenubarEntry::Item(MenubarItem::new("Settings").leading(icon(cx, "lucide.settings"))),
-            MenubarEntry::Item(MenubarItem::new("Help").leading(icon(cx, "lucide.info"))),
-            MenubarEntry::Separator,
-            MenubarEntry::Item(
-                MenubarItem::new("Delete")
-                    .leading(icon(cx, "lucide.trash"))
-                    .variant(shadcn::menubar::MenubarItemVariant::Destructive),
-            ),
-        ]))]);
+        let icon_id = |id: &'static str| fret_icons::IconId::new_static(id);
+
+        let file = MenubarMenu::new("File")
+            .test_id("ui-gallery-menubar-with-icons-file")
+            .entries([
+                MenubarEntry::Item(
+                    MenubarItem::new("New File")
+                        .leading_icon(icon_id("lucide.file"))
+                        .test_id("ui-gallery-menubar-with-icons-new-file")
+                        .trailing(MenubarShortcut::new("⌘N").into_element(cx)),
+                ),
+                MenubarEntry::Item(
+                    MenubarItem::new("Open Folder")
+                        .leading_icon(icon_id("lucide.folder"))
+                        .test_id("ui-gallery-menubar-with-icons-open-folder"),
+                ),
+                MenubarEntry::Separator,
+                MenubarEntry::Item(
+                    MenubarItem::new("Save")
+                        .leading_icon(icon_id("lucide.save"))
+                        .test_id("ui-gallery-menubar-with-icons-save")
+                        .trailing(MenubarShortcut::new("⌘S").into_element(cx)),
+                ),
+            ]);
+        let more = MenubarMenu::new("More")
+            .test_id("ui-gallery-menubar-with-icons-more")
+            .entries([MenubarEntry::Group(MenubarGroup::new([
+                MenubarEntry::Item(
+                    MenubarItem::new("Settings")
+                        .leading_icon(icon_id("lucide.settings"))
+                        .test_id("ui-gallery-menubar-with-icons-settings"),
+                ),
+                MenubarEntry::Item(
+                    MenubarItem::new("Help")
+                        .leading_icon(icon_id("lucide.info"))
+                        .test_id("ui-gallery-menubar-with-icons-help"),
+                ),
+                MenubarEntry::Separator,
+                MenubarEntry::Item(
+                    MenubarItem::new("Delete")
+                        .leading_icon(icon_id("lucide.trash"))
+                        .test_id("ui-gallery-menubar-with-icons-delete")
+                        .variant(shadcn::menubar::MenubarItemVariant::Destructive),
+                ),
+            ]))]);
         Menubar::new([file, more])
             .refine_layout(width.clone())
             .into_element(cx)
@@ -358,17 +378,15 @@ Menubar::new([file]).into_element(cx);"#,
                 .max_w(Px(520.0))
                 .code(
                     "rust",
-                    r#"use shadcn::{Menubar, MenubarEntry, MenubarItem, MenubarMenu};
+                    r#"use shadcn::{Menubar, MenubarEntry, MenubarGroup, MenubarItem, MenubarMenu};
 
-let icon = |cx: &mut ElementContext<'_, App>, id: &'static str| {
-    shadcn::icon::icon(cx, fret_icons::IconId::new_static(id))
-};
-
-let file = MenubarMenu::new("File").entries([MenubarEntry::Group(shadcn::MenubarGroup::new([
-    MenubarEntry::Item(MenubarItem::new("Help").leading(icon(cx, "lucide.info"))),
+let file = MenubarMenu::new("File").entries([MenubarEntry::Group(MenubarGroup::new([
+    MenubarEntry::Item(
+        MenubarItem::new("Help").leading_icon(fret_icons::IconId::new_static("lucide.info")),
+    ),
     MenubarEntry::Item(
         MenubarItem::new("Delete")
-            .leading(icon(cx, "lucide.trash"))
+            .leading_icon(fret_icons::IconId::new_static("lucide.trash"))
             .variant(shadcn::menubar::MenubarItemVariant::Destructive),
     ),
 ]))]);

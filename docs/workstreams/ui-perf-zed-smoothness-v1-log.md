@@ -1386,7 +1386,7 @@ Observed churn (sum/max over snapshots in that bundle):
 
 Command (dev; screenshots enabled because the script requests them):
 ```powershell
-FRET_DIAG_RENDERER_PERF=1 FRET_DIAG_SCREENSHOTS=1 cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-overlay-modals-visible.json --dir target/fret-diag-churn-verify5b --timeout-ms 240000 --launch -- target/debug/fret-ui-gallery
+FRET_DIAG_RENDERER_PERF=1 FRET_DIAG_GPU_SCREENSHOTS=1 cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-overlay-modals-visible.json --dir target/fret-diag-churn-verify5b --timeout-ms 240000 --launch -- target/debug/fret-ui-gallery
 ```
 
 Evidence bundle:

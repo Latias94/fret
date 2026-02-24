@@ -72,6 +72,7 @@ pub struct Input {
     a11y_role: Option<SemanticsRole>,
     placeholder: Option<Arc<str>>,
     aria_invalid: bool,
+    aria_required: bool,
     disabled: bool,
     active_descendant: Option<NodeId>,
     expanded: Option<bool>,
@@ -94,6 +95,7 @@ impl Input {
             a11y_role: None,
             placeholder: None,
             aria_invalid: false,
+            aria_required: false,
             disabled: false,
             active_descendant: None,
             expanded: None,
@@ -127,6 +129,11 @@ impl Input {
     /// Apply the upstream `aria-invalid` error state chrome (border + focus ring color).
     pub fn aria_invalid(mut self, aria_invalid: bool) -> Self {
         self.aria_invalid = aria_invalid;
+        self
+    }
+
+    pub fn aria_required(mut self, aria_required: bool) -> Self {
+        self.aria_required = aria_required;
         self
     }
 
@@ -226,6 +233,7 @@ impl Input {
             self.a11y_role,
             self.placeholder,
             self.aria_invalid,
+            self.aria_required,
             self.disabled,
             self.active_descendant,
             self.expanded,
@@ -261,6 +269,7 @@ pub fn input<H: UiHost>(
         placeholder,
         false,
         false,
+        false,
         active_descendant,
         expanded,
         submit_command,
@@ -284,6 +293,7 @@ fn input_with_style_and_submit<H: UiHost>(
     a11y_role: Option<SemanticsRole>,
     placeholder: Option<Arc<str>>,
     aria_invalid: bool,
+    aria_required: bool,
     disabled: bool,
     active_descendant: Option<NodeId>,
     expanded: Option<bool>,
@@ -390,6 +400,8 @@ fn input_with_style_and_submit<H: UiHost>(
     props.a11y_label = a11y_label;
     props.a11y_role = a11y_role;
     props.placeholder = placeholder;
+    props.a11y_required = aria_required;
+    props.a11y_invalid = aria_invalid.then_some(fret_core::SemanticsInvalid::True);
     props.active_descendant = active_descendant;
     props.expanded = expanded;
     props.submit_command = submit_command.clone();

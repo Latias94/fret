@@ -1850,7 +1850,7 @@ impl Tabs {
 
                                         let mut trigger_children = trigger_children;
                                         let content = move |cx: &mut ElementContext<'_, H>| {
-                                            current_color::with_current_color_provider(
+                                            current_color::scope_children(
                                                 cx,
                                                 fg_ref.clone(),
                                                 |cx| {

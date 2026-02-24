@@ -1356,6 +1356,9 @@ impl CommandList {
             // drives highlight via `active_descendant` (ADR 0073).
             let (render_rows, items, _item_groups) =
                 command_palette_render_rows_for_query_with_options(entries, "", false, None);
+            let list_busy = render_rows
+                .iter()
+                .any(|row| matches!(row, CommandPaletteRenderRow::Loading(_)));
 
             let query_for_render: Arc<str> = highlight_query
                 .as_ref()
@@ -1648,7 +1651,7 @@ impl CommandList {
                                             let child = cx.container(props, move |cx| {
                                                 let effective_fg =
                                                     if enabled { fg } else { fg_disabled };
-                                                current_color::with_current_color_provider(
+                                                current_color::scope_children(
                                                     cx,
                                                     ColorRef::Color(effective_fg),
                                                     |cx| {
@@ -1713,7 +1716,11 @@ impl CommandList {
             )])
             .refine_layout(scroll)
             .into_element(cx)
-            .attach_semantics(SemanticsDecoration::default().role(SemanticsRole::ListBox))
+            .attach_semantics(
+                SemanticsDecoration::default()
+                    .role(SemanticsRole::ListBox)
+                    .busy(list_busy),
+            )
         })
     }
 }
@@ -1737,6 +1744,7 @@ pub struct CommandPalette {
     filter: Option<CommandPaletteFilterFn>,
     value: Option<Model<Option<Arc<str>>>>,
     default_value: Option<Arc<str>>,
+    auto_highlight: bool,
     wrap: bool,
     vim_bindings: bool,
     disable_pointer_selection: bool,
@@ -1747,6 +1755,7 @@ pub struct CommandPalette {
     input_expanded: Option<bool>,
     input_test_id: Option<Arc<str>>,
     list_test_id: Option<Arc<str>>,
+    list_multiselectable: bool,
     a11y_selected_mode: CommandPaletteA11ySelectedMode,
     on_value_change: Option<OnValueChange>,
     input_wrapper_h: MetricRef,
@@ -2095,6 +2104,7 @@ impl CommandPalette {
             filter: None,
             value: None,
             default_value: None,
+            auto_highlight: true,
             // cmdk default: no loop unless explicitly enabled via `loop`.
             wrap: false,
             // cmdk default: ctrl+n/j/p/k keybinds enabled.
@@ -2108,6 +2118,7 @@ impl CommandPalette {
             input_expanded: None,
             input_test_id: None,
             list_test_id: None,
+            list_multiselectable: false,
             a11y_selected_mode: CommandPaletteA11ySelectedMode::Active,
             on_value_change: None,
             input_wrapper_h: Px(36.0).into(),
@@ -2197,6 +2208,15 @@ impl CommandPalette {
         self
     }
 
+    /// When enabled, highlights the first enabled option when nothing has been explicitly
+    /// navigated to yet (cmdk default behavior).
+    ///
+    /// Base UI Combobox defaults to `false` and opts in via `autoHighlight`.
+    pub fn auto_highlight(mut self, auto_highlight: bool) -> Self {
+        self.auto_highlight = auto_highlight;
+        self
+    }
+
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
         self
@@ -2273,6 +2293,11 @@ impl CommandPalette {
 
     pub fn list_test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
         self.list_test_id = Some(test_id.into());
+        self
+    }
+
+    pub fn list_multiselectable(mut self, multiselectable: bool) -> Self {
+        self.list_multiselectable = multiselectable;
         self
     }
 
@@ -2370,6 +2395,7 @@ impl CommandPalette {
             let disable_pointer_selection = self.disable_pointer_selection;
             let input_test_id = self.input_test_id.clone();
             let list_test_id = self.list_test_id.clone();
+            let list_multiselectable = self.list_multiselectable;
             let list_id_out_cell = self.list_id_out_cell.clone();
             let a11y_selected_mode = self.a11y_selected_mode;
             let on_value_change = self.on_value_change.clone();
@@ -2390,6 +2416,9 @@ impl CommandPalette {
                     should_filter,
                     filter.as_deref(),
                 );
+            let list_busy = render_rows
+                .iter()
+                .any(|row| matches!(row, CommandPaletteRenderRow::Loading(_)));
 
             let items_fingerprint = {
                 let mut hasher = DefaultHasher::new();
@@ -2495,11 +2524,31 @@ impl CommandPalette {
                 }
             });
 
+            let auto_highlight = self.auto_highlight;
             let cur_active_raw = cx.watch_model(&active).cloned().unwrap_or(None);
             let cur_active = cur_active_raw.clone().map(cmdk_trimmed_arc);
-            let next_active = cur_active
-                .as_ref()
-                .and_then(|v| {
+            let next_active = if auto_highlight {
+                cur_active
+                    .as_ref()
+                    .and_then(|v| {
+                        entries_arc
+                            .iter()
+                            .enumerate()
+                            .find(|(idx, e)| {
+                                disabled_flags.get(*idx).copied() == Some(false)
+                                    && e.value.as_ref() == v.as_ref()
+                            })
+                            .map(|(_, e)| e.value.clone())
+                    })
+                    .or_else(|| {
+                        entries_arc
+                            .iter()
+                            .enumerate()
+                            .find(|(idx, _)| disabled_flags.get(*idx).copied() == Some(false))
+                            .map(|(_, e)| e.value.clone())
+                    })
+            } else {
+                cur_active.as_ref().and_then(|v| {
                     entries_arc
                         .iter()
                         .enumerate()
@@ -2509,13 +2558,7 @@ impl CommandPalette {
                         })
                         .map(|(_, e)| e.value.clone())
                 })
-                .or_else(|| {
-                    entries_arc
-                        .iter()
-                        .enumerate()
-                        .find(|(idx, _)| disabled_flags.get(*idx).copied() == Some(false))
-                        .map(|(_, e)| e.value.clone())
-                });
+            };
             if next_active != cur_active_raw {
                 let _ = cx
                     .app
@@ -2810,7 +2853,7 @@ impl CommandPalette {
 
                                     let child = cx.container(props, move |cx| {
                                         let effective_fg = if enabled { fg } else { fg_disabled };
-                                        current_color::with_current_color_provider(
+                                        current_color::scope_children(
                                             cx,
                                             ColorRef::Color(effective_fg),
                                             |cx| {
@@ -3316,6 +3359,8 @@ impl CommandPalette {
 
             let list = list.attach_semantics(SemanticsDecoration {
                 role: Some(SemanticsRole::ListBox),
+                busy: Some(list_busy),
+                multiselectable: list_multiselectable.then_some(true),
                 labelled_by_element: list_labelled_by,
                 ..Default::default()
             });

@@ -1,7 +1,7 @@
 ---
 title: Diagnostics Fearless Refactor v1 (Milestones)
 status: draft
-date: 2026-02-22
+date: 2026-02-23
 scope: diagnostics, automation, tooling, refactor
 ---
 
@@ -24,6 +24,16 @@ Exit criteria:
 - Extracted modules exist for large check families:
   - `crates/fret-diag/src/stats/ui_gallery_markdown_editor.rs`
   - `crates/fret-diag/src/stats/ui_gallery_code_editor.rs`
+  - `crates/fret-diag/src/stats/ui_gallery_text_gates.rs`
+  - `crates/fret-diag/src/stats/debug_stats_gates.rs`
+  - `crates/fret-diag/src/stats/drag_cache_gates.rs`
+  - `crates/fret-diag/src/stats/hover_layout_checks.rs`
+  - `crates/fret-diag/src/stats/interaction_gates.rs`
+  - `crates/fret-diag/src/stats/gc_gates.rs`
+  - `crates/fret-diag/src/stats/notify_gates.rs`
+  - `crates/fret-diag/src/stats/overlay_gates.rs`
+  - `crates/fret-diag/src/stats/retained_vlist_gates.rs`
+  - `crates/fret-diag/src/stats/view_cache_gates.rs`
 - The `diag perf` subcommand handler is no longer implemented inline in `crates/fret-diag/src/lib.rs`.
   - Evidence: `crates/fret-diag/src/diag_perf.rs`
 - The `diag compare` subcommand handler is no longer implemented inline in `crates/fret-diag/src/lib.rs`.
@@ -32,6 +42,10 @@ Exit criteria:
   - Evidence: `crates/fret-diag/src/diag_stats.rs`
 - The `diag matrix` subcommand handler is no longer implemented inline in `crates/fret-diag/src/lib.rs`.
   - Evidence: `crates/fret-diag/src/diag_matrix.rs`
+- The `diag repeat` subcommand handler is no longer implemented inline in `crates/fret-diag/src/lib.rs`.
+  - Evidence: `crates/fret-diag/src/diag_repeat.rs`
+- The `diag repro` subcommand handler is no longer implemented inline in `crates/fret-diag/src/lib.rs`.
+  - Evidence: `crates/fret-diag/src/diag_repro.rs`
 - `cargo check -p fret-diag` is green.
 
 ## Milestone 2: Sidecar indexes reduce day-to-day pain
@@ -41,6 +55,9 @@ Exit criteria:
 - Tools can locate relevant snapshots without opening full `bundle.json` in memory.
 - Sidecars are documented and versioned.
 - Missing sidecars degrade gracefully (no “hang until timeout”).
+- Bundle artifact inputs are normalized:
+  - CLI tools accept `<bundle_dir|bundle.json|bundle.schema2.json>`,
+  - the offline viewer accepts `bundle.schema2.json` as a primary artifact.
 - A lightweight per-frame index exists for agentic triage:
   - `frames.index.json` (generated via `fretboard diag frames-index` and included in `diag doctor --fix-sidecars` / `diag ai-packet`).
 

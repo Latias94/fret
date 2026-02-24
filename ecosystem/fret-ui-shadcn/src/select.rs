@@ -371,7 +371,7 @@ where
                                         wrap: false,
                                     },
                                     |cx| {
-                                        current_color::with_current_color_provider(
+                                        current_color::scope_children(
                                             cx,
                                             ColorRef::Color(theme.color_token("popover.foreground")),
                                             |cx| {

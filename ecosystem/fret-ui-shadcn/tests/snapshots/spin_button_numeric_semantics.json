@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "semantics": [
+    {
+      "role": "SpinButton",
+      "label": "Font size",
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 0.0,
+          "y": 0.0
+        },
+        "size": {
+          "w": 240.0,
+          "h": 32.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      },
+      "extra": {
+        "numeric": {
+          "value": 12.0,
+          "min": 1.0,
+          "max": 72.0,
+          "step": 1.0,
+          "jump": 10.0
+        }
+      }
+    },
+    {
+      "role": "Window",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 0.0,
+          "y": 0.0
+        },
+        "size": {
+          "w": 320.0,
+          "h": 180.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    }
+  ],
+  "scene_ops": []
+}

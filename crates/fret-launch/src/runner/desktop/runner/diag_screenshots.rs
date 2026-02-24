@@ -53,7 +53,6 @@ impl DiagScreenshotCapture {
     pub(crate) fn from_env() -> Option<Self> {
         let config = Self::read_config_json();
         let enabled = env_flag_default_false("FRET_DIAG_GPU_SCREENSHOTS")
-            || env_flag_default_false("FRET_DIAG_SCREENSHOTS")
             || config
                 .as_ref()
                 .and_then(|v| v.get("screenshots_enabled"))

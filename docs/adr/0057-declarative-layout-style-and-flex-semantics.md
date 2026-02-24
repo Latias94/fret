@@ -49,12 +49,25 @@ authoring layers.
 The vocabulary is designed to cover the minimum Tailwind/shadcn needs:
 
 - **Size**: `width`, `height`, `min_width`, `min_height`, `max_width`, `max_height`
-- **Flex item**: `flex_grow`, `flex_shrink`, `flex_basis`
+- **Flex item**: `order`, `flex_grow`, `flex_shrink`, `flex_basis`
 - **Alignment**: container-level main/cross alignment; optional per-child `align_self`
 - **Overflow**: `clip` / `visible` (for paint/hit-test consistency)
 
 Important: this is **not** a general CSS system. It is a small, typed contract (ADR 0032) suitable
 for editor UIs.
+
+#### Flex item `order` (visual order)
+
+Declarative flex layouts support a CSS-like `order` field for flex items:
+
+- `order` affects **layout only** (visual order inside a flex container).
+- `order` must **not** change the element tree order. In particular:
+  - focus traversal and semantics remain derived from the element tree,
+  - hit-testing and events still route through the same tree IDs.
+
+This is required to align DOM-first component contracts (e.g. shadcn input-group addons) that
+depend on a stable DOM/tab order, while still allowing the visual placement to match upstream
+(`order-first` / `order-last`) outcomes.
 
 ### 2) Defaults are “fit-content” (not “fill available”)
 

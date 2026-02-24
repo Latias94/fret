@@ -4,7 +4,7 @@ This document describes a GPUI/Zed-inspired debugging workflow for Fret UIs, wit
 
 - **Fast diagnosis** (what is under the pointer / why input is blocked / why focus moved)
 - **Deterministic repro** (selector-driven scripted actions)
-- **AI-friendly artifacts** (`bundle.json`, pick results, and stable selectors)
+- **AI-friendly artifacts** (bundle artifacts: `bundle.json` / `bundle.schema2.json`, pick results, and stable selectors)
 
 Scope note:
 
@@ -149,7 +149,7 @@ If a bug is “bounds look right but pixels look wrong”, enable GPU-readback s
 `capture_screenshot`. The bundle viewer can then render screenshots as a background overlay (auto-matched by
 `manifest.json`):
 
-- Enable screenshots: `FRET_DIAG_SCREENSHOTS=1` (see `docs/ui-diagnostics-and-scripted-tests.md`)
+- Enable screenshots: `FRET_DIAG_GPU_SCREENSHOTS=1` (see `docs/ui-diagnostics-and-scripted-tests.md`)
 - Offline viewer: `tools/fret-bundle-viewer`
 
 ## Accessibility (a11y) notes

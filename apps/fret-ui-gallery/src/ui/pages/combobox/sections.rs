@@ -10,6 +10,7 @@ pub(super) fn demo(
         .a11y_label("Combobox demo")
         .width(Px(260.0))
         .placeholder("Select a fruit")
+        .auto_highlight(true)
         .query_model(query.clone())
         .test_id_prefix("ui-gallery-combobox-demo")
         .trigger_test_id("ui-gallery-combobox-demo-trigger")
@@ -36,6 +37,31 @@ pub(super) fn basic_frameworks(
             shadcn::ComboboxItem::new("astro", "Astro"),
         ])
         .into_element(cx)
+}
+
+pub(super) fn auto_highlight(
+    cx: &mut ElementContext<'_, App>,
+    models: &ComboboxModels,
+) -> AnyElement {
+    shadcn::Combobox::new(
+        models.auto_highlight_value.clone(),
+        models.auto_highlight_open.clone(),
+    )
+    .a11y_label("Combobox auto highlight")
+    .width(Px(260.0))
+    .placeholder("Select a framework")
+    .auto_highlight(true)
+    .query_model(models.auto_highlight_query.clone())
+    .test_id_prefix("ui-gallery-combobox-auto-highlight")
+    .trigger_test_id("ui-gallery-combobox-auto-highlight-trigger")
+    .items([
+        shadcn::ComboboxItem::new("next", "Next.js"),
+        shadcn::ComboboxItem::new("svelte", "SvelteKit"),
+        shadcn::ComboboxItem::new("nuxt", "Nuxt.js"),
+        shadcn::ComboboxItem::new("remix", "Remix"),
+        shadcn::ComboboxItem::new("astro", "Astro"),
+    ])
+    .into_element(cx)
 }
 
 pub(super) fn clear_button(
@@ -92,10 +118,10 @@ pub(super) fn custom_items_top(
             .test_id_prefix("ui-gallery-combobox-custom-items")
             .trigger_test_id("ui-gallery-combobox-custom-items-trigger")
             .items([
-                shadcn::ComboboxItem::new("next", "Next.js (React)"),
-                shadcn::ComboboxItem::new("nuxt", "Nuxt.js (Vue)"),
-                shadcn::ComboboxItem::new("svelte", "SvelteKit (Svelte)"),
-                shadcn::ComboboxItem::new("astro", "Astro (Hybrid)"),
+                shadcn::ComboboxItem::new("next", "Next.js").detail("React"),
+                shadcn::ComboboxItem::new("nuxt", "Nuxt.js").detail("Vue"),
+                shadcn::ComboboxItem::new("svelte", "SvelteKit").detail("Svelte"),
+                shadcn::ComboboxItem::new("astro", "Astro").detail("Hybrid"),
             ])
             .into_element(cx);
     let content = stack::vstack(
@@ -217,6 +243,69 @@ pub(super) fn groups(cx: &mut ElementContext<'_, App>, models: &ComboboxModels) 
         },
     );
     content
+}
+
+pub(super) fn groups_with_separator(
+    cx: &mut ElementContext<'_, App>,
+    models: &ComboboxModels,
+) -> AnyElement {
+    let combo = shadcn::Combobox::new(
+        models.groups_sep_value.clone(),
+        models.groups_sep_open.clone(),
+    )
+    .a11y_label("Combobox groups with separator")
+    .width(Px(300.0))
+    .placeholder("Select a timezone")
+    .query_model(models.groups_sep_query.clone())
+    .test_id_prefix("ui-gallery-combobox-groups-separator")
+    .trigger_test_id("ui-gallery-combobox-groups-separator-trigger")
+    .group_separators(true)
+    .groups([
+        shadcn::ComboboxGroup::new(
+            "Americas",
+            [
+                shadcn::ComboboxItem::new("americas-ny", "(GMT-5) New York"),
+                shadcn::ComboboxItem::new("americas-la", "(GMT-8) Los Angeles"),
+                shadcn::ComboboxItem::new("americas-chi", "(GMT-6) Chicago"),
+            ],
+        ),
+        shadcn::ComboboxGroup::new(
+            "Europe",
+            [
+                shadcn::ComboboxItem::new("europe-lon", "(GMT+0) London"),
+                shadcn::ComboboxItem::new("europe-paris", "(GMT+1) Paris"),
+                shadcn::ComboboxItem::new("europe-berlin", "(GMT+1) Berlin"),
+            ],
+        ),
+        shadcn::ComboboxGroup::new(
+            "Asia/Pacific",
+            [
+                shadcn::ComboboxItem::new("asia-tokyo", "(GMT+9) Tokyo"),
+                shadcn::ComboboxItem::new("asia-shanghai", "(GMT+8) Shanghai"),
+                shadcn::ComboboxItem::new("asia-singapore", "(GMT+8) Singapore"),
+            ],
+        ),
+    ])
+    .into_element(cx);
+
+    stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .gap(Space::N2)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full().max_w(Px(340.0))),
+        move |cx| {
+            vec![
+                combo,
+                helpers::state_rows(
+                    cx,
+                    &models.groups_sep_value,
+                    &models.groups_sep_query,
+                    "ui-gallery-combobox-groups-separator",
+                ),
+            ]
+        },
+    )
 }
 
 pub(super) fn popup_trigger(

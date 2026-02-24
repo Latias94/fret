@@ -1,13 +1,19 @@
 use fret_app::App;
 use fret_core::{
     AppWindowId, Color, Corners, Edges, Paint, PathCommand, PathConstraints, PathId, PathMetrics,
-    PathService, PathStyle, Point, Px, Rect, Scene, SceneOp, Size as CoreSize, SvgId, SvgService,
-    TextBlobId, TextConstraints, TextMetrics, TextService, Transform2D, UvRect,
+    PathService, PathStyle, Point, Px, Rect, Scene, SceneOp, SemanticsLive, SemanticsRole,
+    Size as CoreSize, SvgId, SvgService, TextBlobId, TextConstraints, TextMetrics, TextService,
+    Transform2D, UvRect,
 };
-use fret_ui::element::AnyElement;
+use fret_ui::element::{
+    AnyElement, ContainerProps, LayoutStyle, Length, PressableA11y, PressableProps,
+    SemanticsDecoration, SemanticsProps,
+};
 use fret_ui::tree::UiTree;
+use fret_ui_kit::primitives::scroll_area::ScrollAreaType;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 fn is_false(v: &bool) -> bool {
     !*v
@@ -149,12 +155,30 @@ struct SnapSemanticsFlags {
     captured: bool,
     disabled: bool,
     #[serde(default, skip_serializing_if = "is_false")]
+    hidden: bool,
+    #[serde(default, skip_serializing_if = "is_false")]
+    visited: bool,
+    #[serde(default, skip_serializing_if = "is_false")]
+    multiselectable: bool,
+    #[serde(default, skip_serializing_if = "is_false")]
+    busy: bool,
+    #[serde(default, skip_serializing_if = "is_false")]
     read_only: bool,
     selected: bool,
     expanded: bool,
     checked: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     checked_state: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pressed_state: Option<String>,
+    #[serde(default, skip_serializing_if = "is_false")]
+    required: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    invalid: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    live: Option<String>,
+    #[serde(default, skip_serializing_if = "is_false")]
+    live_atomic: bool,
 }
 
 #[derive(Clone, Copy, Debug, Default, Serialize, Deserialize)]
@@ -614,11 +638,20 @@ where
                 focused: n.flags.focused,
                 captured: n.flags.captured,
                 disabled: n.flags.disabled,
+                hidden: n.flags.hidden,
+                visited: n.flags.visited,
+                multiselectable: n.flags.multiselectable,
+                busy: n.flags.busy,
                 read_only: n.flags.read_only,
                 selected: n.flags.selected,
                 expanded: n.flags.expanded,
                 checked: n.flags.checked,
                 checked_state: n.flags.checked_state.map(|v| format!("{v:?}")),
+                pressed_state: n.flags.pressed_state.map(|v| format!("{v:?}")),
+                required: n.flags.required,
+                invalid: n.flags.invalid.map(|v| format!("{v:?}")),
+                live: n.flags.live.map(|v| format!("{v:?}")),
+                live_atomic: n.flags.live_atomic,
             },
             extra: snap_semantics_extra(&n.extra),
         })
@@ -663,6 +696,176 @@ fn snapshot_button_default() {
     );
     snapshot_for_root("button_default", bounds, |cx| {
         vec![fret_ui_shadcn::Button::new("Hello").into_element(cx)]
+    });
+}
+
+#[test]
+fn snapshot_toggle_pressed_semantics() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(320.0), Px(180.0)),
+    );
+    snapshot_for_root("toggle_pressed_semantics", bounds, |cx| {
+        vec![
+            fret_ui_shadcn::Toggle::uncontrolled(true)
+                .a11y_label("Toggle")
+                .label("Hello")
+                .into_element(cx),
+        ]
+    });
+}
+
+#[test]
+fn snapshot_toggle_group_pressed_semantics() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(420.0), Px(180.0)),
+    );
+    snapshot_for_root("toggle_group_pressed_semantics", bounds, |cx| {
+        let items = vec![
+            fret_ui_shadcn::ToggleGroupItem::new("alpha", vec![cx.text("A")]).a11y_label("Alpha"),
+            fret_ui_shadcn::ToggleGroupItem::new("beta", vec![cx.text("B")]).a11y_label("Beta"),
+        ];
+        vec![
+            fret_ui_shadcn::ToggleGroup::multiple_uncontrolled(vec!["alpha"])
+                .items(items)
+                .into_element(cx),
+        ]
+    });
+}
+
+#[test]
+fn snapshot_input_required_invalid_semantics() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(420.0), Px(180.0)),
+    );
+    snapshot_for_root("input_required_invalid_semantics", bounds, |cx| {
+        let model = cx.app.models_mut().insert("Hello".to_string());
+        vec![
+            fret_ui_shadcn::Input::new(model)
+                .a11y_label("Email")
+                .aria_required(true)
+                .aria_invalid(true)
+                .into_element(cx),
+        ]
+    });
+}
+
+#[test]
+fn snapshot_command_list_busy_semantics() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(420.0), Px(240.0)),
+    );
+    snapshot_for_root("command_list_busy_semantics", bounds, |cx| {
+        let entries = vec![
+            fret_ui_shadcn::command::CommandLoading::new("Fetching…").into(),
+            fret_ui_shadcn::command::CommandItem::new("Alpha")
+                .value("alpha")
+                .into(),
+        ];
+        vec![fret_ui_shadcn::command::CommandList::new_entries(entries).into_element(cx)]
+    });
+}
+
+#[test]
+fn snapshot_pressable_hidden_semantics() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(220.0), Px(120.0)),
+    );
+    snapshot_for_root("pressable_hidden_semantics", bounds, |cx| {
+        vec![cx.pressable(
+            PressableProps {
+                enabled: true,
+                focusable: false,
+                a11y: PressableA11y {
+                    hidden: true,
+                    test_id: Some(Arc::from("decorative-hidden")),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            |_cx, _st| Vec::new(),
+        )]
+    });
+}
+
+#[test]
+fn snapshot_badge_link_visited_semantics() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(320.0), Px(180.0)),
+    );
+    snapshot_for_root("badge_link_visited_semantics", bounds, |cx| {
+        vec![
+            fret_ui_shadcn::Badge::new("Docs")
+                .render(fret_ui_shadcn::BadgeRender::Link {
+                    href: Arc::from("https://example.com"),
+                    target: None,
+                    rel: None,
+                })
+                .visited(true)
+                .into_element(cx),
+        ]
+    });
+}
+
+#[test]
+fn snapshot_command_palette_multiselectable_semantics() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(420.0), Px(240.0)),
+    );
+    snapshot_for_root("command_palette_multiselectable_semantics", bounds, |cx| {
+        let query = cx.app.models_mut().insert("".to_string());
+        let items = vec![
+            fret_ui_shadcn::command::CommandItem::new("Alpha")
+                .value("alpha")
+                .into(),
+            fret_ui_shadcn::command::CommandItem::new("Beta")
+                .value("beta")
+                .into(),
+        ];
+        vec![
+            fret_ui_shadcn::command::CommandPalette::new(query, [])
+                .entries(items)
+                .a11y_label("Multi-select listbox")
+                .list_multiselectable(true)
+                .into_element(cx),
+        ]
+    });
+}
+
+#[test]
+fn snapshot_live_region_semantics() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(320.0), Px(180.0)),
+    );
+    snapshot_for_root("live_region_semantics", bounds, |cx| {
+        vec![cx.semantics(
+            SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from("Notifications")),
+                live: Some(SemanticsLive::Polite),
+                live_atomic: true,
+                ..Default::default()
+            },
+            |cx| vec![cx.text("Hello")],
+        )]
+    });
+}
+
+#[test]
+fn snapshot_heading_level_semantics() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(320.0), Px(180.0)),
+    );
+    snapshot_for_root("heading_level_semantics", bounds, |cx| {
+        vec![fret_ui_shadcn::DialogTitle::new("Dialog Title").into_element(cx)]
     });
 }
 
@@ -716,6 +919,120 @@ fn snapshot_progress_numeric_semantics() {
             fret_ui_shadcn::Progress::new(model)
                 .a11y_label("Loading")
                 .range(0.0, 100.0)
+                .into_element(cx),
+        ]
+    });
+}
+
+#[test]
+fn snapshot_spin_button_numeric_semantics() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(320.0), Px(180.0)),
+    );
+    snapshot_for_root("spin_button_numeric_semantics", bounds, |cx| {
+        let mut layout = LayoutStyle::default();
+        layout.size.width = Length::Px(Px(240.0));
+        layout.size.height = Length::Px(Px(32.0));
+
+        let element = cx
+            .container(
+                ContainerProps {
+                    layout,
+                    ..Default::default()
+                },
+                |_cx| Vec::<AnyElement>::new(),
+            )
+            .attach_semantics(
+                SemanticsDecoration::default()
+                    .role(SemanticsRole::SpinButton)
+                    .label("Font size")
+                    .numeric_value(12.0)
+                    .numeric_range(1.0, 72.0)
+                    .numeric_step(1.0)
+                    .numeric_jump(10.0),
+            );
+
+        vec![element]
+    });
+}
+
+#[test]
+fn snapshot_meter_numeric_semantics() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(320.0), Px(180.0)),
+    );
+    snapshot_for_root("meter_numeric_semantics", bounds, |cx| {
+        let mut layout = LayoutStyle::default();
+        layout.size.width = Length::Px(Px(240.0));
+        layout.size.height = Length::Px(Px(16.0));
+
+        let element = cx
+            .container(
+                ContainerProps {
+                    layout,
+                    ..Default::default()
+                },
+                |_cx| Vec::<AnyElement>::new(),
+            )
+            .attach_semantics(
+                SemanticsDecoration::default()
+                    .role(SemanticsRole::Meter)
+                    .label("Disk usage")
+                    .numeric_value(0.42)
+                    .numeric_range(0.0, 1.0),
+            );
+
+        vec![element]
+    });
+}
+
+#[test]
+fn snapshot_resizable_splitter_semantics() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(420.0), Px(180.0)),
+    );
+    snapshot_for_root("resizable_splitter_semantics", bounds, |cx| {
+        let model = cx.app.models_mut().insert(vec![0.5f32, 0.5f32]);
+
+        vec![
+            fret_ui_shadcn::ResizablePanelGroup::new(model)
+                .entries([
+                    fret_ui_shadcn::ResizablePanel::new([cx.text("Left")]).into(),
+                    fret_ui_shadcn::ResizableHandle::new().into(),
+                    fret_ui_shadcn::ResizablePanel::new([cx.text("Right")]).into(),
+                ])
+                .into_element(cx),
+        ]
+    });
+}
+
+#[test]
+fn snapshot_scroll_area_scrollbar_semantics() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(320.0), Px(180.0)),
+    );
+    snapshot_for_root("scroll_area_scrollbar_semantics", bounds, |cx| {
+        let mut content_layout = LayoutStyle::default();
+        content_layout.size.width = Length::Fill;
+        content_layout.size.height = Length::Px(Px(1200.0));
+        content_layout.size.min_width = Some(Px(0.0));
+        content_layout.size.min_height = Some(Px(0.0));
+
+        let content = cx.container(
+            ContainerProps {
+                layout: content_layout,
+                ..Default::default()
+            },
+            |_cx| Vec::<AnyElement>::new(),
+        );
+
+        vec![
+            fret_ui_shadcn::ScrollArea::new([content])
+                .type_(ScrollAreaType::Always)
                 .into_element(cx),
         ]
     });
