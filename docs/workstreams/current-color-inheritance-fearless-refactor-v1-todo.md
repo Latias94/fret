@@ -1,6 +1,6 @@
 # Foreground inheritance (`currentColor`) (fearless refactor v1) — TODO
 
-Last updated: 2026-02-23
+Last updated: 2026-02-24
 
 ## Foundation (authoring glue)
 
@@ -23,6 +23,8 @@ Last updated: 2026-02-23
 - [x] Audit icon-only controls that override `children` to render a single SVG icon and migrate to deferred icon slots where possible.
 - [ ] Menu family provides resolved `fg` (and prefers deferred icon slots):
   - [x] `DropdownMenuItem` provides `currentColor` and supports `leading_icon`.
+  - [x] `ContextMenuItem` supports deferred `leading_icon`.
+  - [x] `MenubarItem` supports deferred `leading_icon`.
   - [ ] `SelectItem` (if/when it grows icon slots)
   - [x] `CommandItem` provides `currentColor` and supports `leading_icon` (add gates + migrate demos)
 - [x] Badge provides resolved `fg`.

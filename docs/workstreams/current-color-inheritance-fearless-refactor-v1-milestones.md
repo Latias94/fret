@@ -1,6 +1,6 @@
 # Foreground inheritance (`currentColor`) (fearless refactor v1) — Milestones
 
-Last updated: 2026-02-23
+Last updated: 2026-02-24
 
 This workstream is a “fearless refactor” because it reduces the need to thread foreground tokens through component
 trees. The goal is that hosts compute a semantic foreground once, and leaf visuals (icons/spinners/text) inherit it
@@ -50,9 +50,13 @@ Evidence anchors:
 ### M4 — Host adoption: Menu family (in progress)
 
 - `DropdownMenuItem` provides `currentColor` and supports `leading_icon`.
+- `ContextMenuItem` supports deferred `leading_icon`.
+- `MenubarItem` supports deferred `leading_icon`.
 - `CommandItem` provides `currentColor` and supports `leading_icon` (including disabled state propagation).
 - Gallery: align Command page with shadcn `command-demo` (icons + disabled item + shortcuts).
 - Gate with light/dark screenshot scripts for both Dropdown Menu and Command demo icon visibility.
+  - Context Menu: `tools/diag-scripts/ui-gallery-context-menu-icons-screenshots-zinc-light.json` + `...-zinc-dark.json`
+  - Menubar: `tools/diag-scripts/ui-gallery-menubar-with-icons-screenshots-zinc-light.json` + `...-zinc-dark.json`
 
 Evidence anchors:
 
@@ -62,6 +66,8 @@ Evidence anchors:
 - `tools/diag-scripts/ui-gallery-dropdown-menu-icons-screenshots.json`
 - `tools/diag-scripts/ui-gallery-command-docs-demo-icons-screenshots.json`
 - `tools/diag-scripts/ui-gallery-command-docs-demo-icons-screenshots-zinc-dark.json`
+- `ecosystem/fret-ui-shadcn/src/context_menu.rs`
+- `ecosystem/fret-ui-shadcn/src/menubar.rs`
 
 ### M4b — Host adoption: Tabs triggers (landed)
 

@@ -5,7 +5,7 @@ use std::sync::Arc;
 use fret_core::{
     Color, Corners, Edges, FontId, FontWeight, Px, Rect, SemanticsRole, Size, TextStyle,
 };
-use fret_icons::ids;
+use fret_icons::{IconId, ids};
 use fret_runtime::{CommandId, Model, WindowCommandGatingSnapshot};
 use fret_ui::action::{OnCloseAutoFocus, OnDismissRequest, OnOpenAutoFocus};
 use fret_ui::element::{
@@ -182,6 +182,7 @@ pub struct MenubarItem {
     pub value: Arc<str>,
     pub inset: bool,
     pub leading: Option<AnyElement>,
+    pub leading_icon: Option<IconId>,
     pub disabled: bool,
     pub close_on_select: bool,
     pub command: Option<CommandId>,
@@ -199,6 +200,7 @@ impl MenubarItem {
             value: label,
             inset: false,
             leading: None,
+            leading_icon: None,
             disabled: false,
             close_on_select: true,
             command: None,
@@ -225,6 +227,12 @@ impl MenubarItem {
 
     pub fn leading(mut self, element: AnyElement) -> Self {
         self.leading = Some(element);
+        self
+    }
+
+    /// Adds a leading icon that is built under the item's resolved foreground color.
+    pub fn leading_icon(mut self, icon: IconId) -> Self {
+        self.leading_icon = Some(icon);
         self
     }
 
@@ -370,6 +378,7 @@ pub struct MenubarCheckboxItem {
     pub value: Arc<str>,
     pub checked: Model<bool>,
     pub leading: Option<AnyElement>,
+    pub leading_icon: Option<IconId>,
     pub disabled: bool,
     pub close_on_select: bool,
     pub command: Option<CommandId>,
@@ -385,6 +394,7 @@ impl MenubarCheckboxItem {
             value: label,
             checked,
             leading: None,
+            leading_icon: None,
             disabled: false,
             close_on_select: false,
             command: None,
@@ -400,6 +410,12 @@ impl MenubarCheckboxItem {
 
     pub fn leading(mut self, element: AnyElement) -> Self {
         self.leading = Some(element);
+        self
+    }
+
+    /// Adds a leading icon that is built under the item's resolved foreground color.
+    pub fn leading_icon(mut self, icon: IconId) -> Self {
+        self.leading_icon = Some(icon);
         self
     }
 
@@ -455,6 +471,7 @@ pub struct MenubarRadioItemSpec {
     pub label: Arc<str>,
     pub value: Arc<str>,
     pub leading: Option<AnyElement>,
+    pub leading_icon: Option<IconId>,
     pub disabled: bool,
     pub close_on_select: bool,
     pub command: Option<CommandId>,
@@ -470,6 +487,7 @@ impl MenubarRadioItemSpec {
             label,
             value,
             leading: None,
+            leading_icon: None,
             disabled: false,
             close_on_select: true,
             command: None,
@@ -480,6 +498,12 @@ impl MenubarRadioItemSpec {
 
     pub fn leading(mut self, element: AnyElement) -> Self {
         self.leading = Some(element);
+        self
+    }
+
+    /// Adds a leading icon that is built under the item's resolved foreground color.
+    pub fn leading_icon(mut self, icon: IconId) -> Self {
+        self.leading_icon = Some(icon);
         self
     }
 
@@ -514,6 +538,7 @@ impl MenubarRadioItemSpec {
             value: self.value,
             group_value,
             leading: self.leading,
+            leading_icon: self.leading_icon,
             disabled: self.disabled,
             close_on_select: self.close_on_select,
             command: self.command,
@@ -530,6 +555,7 @@ pub struct MenubarRadioItem {
     pub value: Arc<str>,
     pub group_value: Model<Option<Arc<str>>>,
     pub leading: Option<AnyElement>,
+    pub leading_icon: Option<IconId>,
     pub disabled: bool,
     pub close_on_select: bool,
     pub command: Option<CommandId>,
@@ -550,6 +576,7 @@ impl MenubarRadioItem {
             value,
             group_value,
             leading: None,
+            leading_icon: None,
             disabled: false,
             close_on_select: true,
             command: None,
@@ -583,6 +610,12 @@ impl MenubarRadioItem {
         self
     }
 
+    /// Adds a leading icon that is built under the item's resolved foreground color.
+    pub fn leading_icon(mut self, icon: IconId) -> Self {
+        self.leading_icon = Some(icon);
+        self
+    }
+
     pub fn trailing(mut self, element: AnyElement) -> Self {
         self.trailing = Some(element);
         self
@@ -606,6 +639,7 @@ fn flatten_entries(into: &mut Vec<MenubarEntry>, entries: Vec<MenubarEntry>) {
 fn menu_row_children<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     label: Arc<str>,
+    leading_icon: Option<IconId>,
     leading: Option<AnyElement>,
     reserve_leading_slot: bool,
     trailing: Option<AnyElement>,
@@ -642,7 +676,8 @@ fn menu_row_children<H: UiHost>(
         },
         move |cx| {
             let has_indicator = indicator_on.is_some();
-            let has_leading_slot = leading.is_some() || reserve_leading_slot;
+            let has_leading_slot =
+                leading.is_some() || leading_icon.is_some() || reserve_leading_slot;
             let mut row: Vec<AnyElement> = Vec::with_capacity(
                 usize::from(has_indicator)
                     + usize::from(has_leading_slot)
@@ -685,6 +720,10 @@ fn menu_row_children<H: UiHost>(
 
             if let Some(l) = leading {
                 row.push(menu_icon_slot(cx, l));
+            } else if let Some(icon) = leading_icon {
+                let icon_el =
+                    decl_icon::icon_with(cx, icon, Some(Px(16.0)), Some(ColorRef::Color(fg)));
+                row.push(menu_icon_slot(cx, icon_el));
             } else if reserve_leading_slot {
                 row.push(menu_icon_slot_empty(cx));
             }
@@ -1518,10 +1557,19 @@ impl MenubarMenuEntries {
                         );
                         let reserve_leading_slot = align_leading_icons
                             && entries.iter().any(|e| match e {
-                                MenubarEntry::Item(item) => item.leading.is_some(),
-                                MenubarEntry::CheckboxItem(item) => item.leading.is_some(),
-                                MenubarEntry::RadioItem(item) => item.leading.is_some(),
-                                MenubarEntry::Submenu(submenu) => submenu.trigger.leading.is_some(),
+                                MenubarEntry::Item(item) => {
+                                    item.leading.is_some() || item.leading_icon.is_some()
+                                }
+                                MenubarEntry::CheckboxItem(item) => {
+                                    item.leading.is_some() || item.leading_icon.is_some()
+                                }
+                                MenubarEntry::RadioItem(item) => {
+                                    item.leading.is_some() || item.leading_icon.is_some()
+                                }
+                                MenubarEntry::Submenu(submenu) => {
+                                    submenu.trigger.leading.is_some()
+                                        || submenu.trigger.leading_icon.is_some()
+                                }
                                 MenubarEntry::Label(_)
                                 | MenubarEntry::Group(_)
                                 | MenubarEntry::RadioGroup(_)
@@ -1799,6 +1847,7 @@ impl MenubarMenuEntries {
                                                                 value,
                                                                 checked,
                                                                 leading,
+                                                                leading_icon,
                                                                 disabled,
                                                                 close_on_select,
                                                                 command,
@@ -1950,6 +1999,7 @@ impl MenubarMenuEntries {
                                                                     let children = menu_row_children(
                                                                         cx,
                                                                         label.clone(),
+                                                                        leading_icon,
                                                                         leading,
                                                                         reserve_leading_slot,
                                                                         trailing,
@@ -1980,6 +2030,7 @@ impl MenubarMenuEntries {
                                                                 value,
                                                                 group_value,
                                                                 leading,
+                                                                leading_icon,
                                                                 disabled,
                                                                 close_on_select,
                                                                 command,
@@ -2136,6 +2187,7 @@ impl MenubarMenuEntries {
                                                                     let children = menu_row_children(
                                                                         cx,
                                                                         label.clone(),
+                                                                        leading_icon,
                                                                         leading,
                                                                         reserve_leading_slot,
                                                                         trailing,
@@ -2174,6 +2226,7 @@ impl MenubarMenuEntries {
                                                                 value,
                                                                 inset,
                                                                 leading,
+                                                                leading_icon,
                                                                 disabled,
                                                                 close_on_select,
                                                                 command,
@@ -2415,6 +2468,7 @@ impl MenubarMenuEntries {
                                                                      let children = menu_row_children(
                                                                           cx,
                                                                           label.clone(),
+                                                                          leading_icon,
                                                                           leading,
                                                                           reserve_leading_slot,
                                                                           trailing,
@@ -2680,11 +2734,18 @@ impl MenubarMenuEntries {
                             let submenu_entries: Vec<MenubarEntry> = submenu_entries_flat;
                                      let reserve_leading_slot = align_leading_icons
                                          && submenu_entries.iter().any(|e| match e {
-                                             MenubarEntry::Item(item) => item.leading.is_some(),
-                                             MenubarEntry::CheckboxItem(item) => item.leading.is_some(),
-                                             MenubarEntry::RadioItem(item) => item.leading.is_some(),
+                                             MenubarEntry::Item(item) => {
+                                                 item.leading.is_some() || item.leading_icon.is_some()
+                                             }
+                                             MenubarEntry::CheckboxItem(item) => {
+                                                 item.leading.is_some() || item.leading_icon.is_some()
+                                             }
+                                             MenubarEntry::RadioItem(item) => {
+                                                 item.leading.is_some() || item.leading_icon.is_some()
+                                             }
                                              MenubarEntry::Submenu(submenu) => {
                                                  submenu.trigger.leading.is_some()
+                                                     || submenu.trigger.leading_icon.is_some()
                                              }
                                              MenubarEntry::Label(_)
                                              | MenubarEntry::Group(_)
@@ -2911,6 +2972,7 @@ impl MenubarMenuEntries {
                                                                             value,
                                                                             checked,
                                                                             leading,
+                                                                            leading_icon,
                                                                             disabled,
                                                                             close_on_select,
                                                                             command,
@@ -3034,6 +3096,7 @@ impl MenubarMenuEntries {
                                                                                 let children = menu_row_children(
                                                                                     cx,
                                                                                     label.clone(),
+                                                                                    leading_icon,
                                                                                     leading,
                                                                                     reserve_leading_slot,
                                                                                     trailing,
@@ -3063,6 +3126,7 @@ impl MenubarMenuEntries {
                                                                             value,
                                                                             group_value,
                                                                             leading,
+                                                                            leading_icon,
                                                                             disabled,
                                                                             close_on_select,
                                                                             command,
@@ -3191,6 +3255,7 @@ impl MenubarMenuEntries {
                                                                                 let children = menu_row_children(
                                                                                     cx,
                                                                                     label.clone(),
+                                                                                    leading_icon,
                                                                                     leading,
                                                                                     reserve_leading_slot,
                                                                                     trailing,
@@ -3220,6 +3285,7 @@ impl MenubarMenuEntries {
                                                                             value,
                                                                             inset,
                                                                             leading,
+                                                                            leading_icon,
                                                                             disabled,
                                                                             close_on_select,
                                                                             command,
@@ -3357,6 +3423,7 @@ impl MenubarMenuEntries {
                                                                                 let children = menu_row_children(
                                                                                     cx,
                                                                                     label.clone(),
+                                                                                    leading_icon,
                                                                                     leading,
                                                                                     reserve_leading_slot,
                                                                                     trailing,

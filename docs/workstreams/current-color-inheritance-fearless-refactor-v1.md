@@ -2,7 +2,7 @@
 
 Status: In progress (workstream)
 
-Last updated: 2026-02-23
+Last updated: 2026-02-24
 
 Milestones: `docs/workstreams/current-color-inheritance-fearless-refactor-v1-milestones.md`
 
@@ -155,7 +155,9 @@ Statuses:
 | Gallery ButtonGroup demo uses deferred icon slots | `fret-ui-gallery` | Landed | `apps/fret-ui-gallery/src/ui/previews/pages/components/basics/button_group.rs` | `tools/diag-scripts/ui-gallery-button-group-demo-screenshots.json` |
 | DropdownMenuItem provides `currentColor` (and `leading_icon`) | `fret-ui-shadcn` | Landed | `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs` | `tools/diag-scripts/ui-gallery-dropdown-menu-icons-screenshots.json` |
 | DropdownMenu checkable items support deferred `leading_icon` | `fret-ui-shadcn` | Landed | `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs` | `tools/diag-scripts/ui-gallery-dropdown-menu-checkable-icons-hover-screenshots-zinc-light.json`<br>`tools/diag-scripts/ui-gallery-dropdown-menu-checkable-icons-hover-screenshots-zinc-dark.json` |
+| ContextMenuItem supports deferred `leading_icon` | `fret-ui-shadcn` | Landed | `ecosystem/fret-ui-shadcn/src/context_menu.rs` | `tools/diag-scripts/ui-gallery-context-menu-icons-screenshots-zinc-light.json`<br>`tools/diag-scripts/ui-gallery-context-menu-icons-screenshots-zinc-dark.json` |
 | CommandItem provides `currentColor` (and `leading_icon`) | `fret-ui-shadcn` | Landed | `ecosystem/fret-ui-shadcn/src/command.rs` | `tools/diag-scripts/ui-gallery-command-docs-demo-icons-screenshots.json` + `tools/diag-scripts/ui-gallery-command-docs-demo-icons-screenshots-zinc-dark.json` |
+| Menubar items support deferred `leading_icon` | `fret-ui-shadcn` | Landed | `ecosystem/fret-ui-shadcn/src/menubar.rs` | `tools/diag-scripts/ui-gallery-menubar-with-icons-screenshots-zinc-light.json`<br>`tools/diag-scripts/ui-gallery-menubar-with-icons-screenshots-zinc-dark.json` |
 | Sidebar icon-only toggle uses deferred icon slot | `fret-ui-shadcn` | Landed | `ecosystem/fret-ui-shadcn/src/sidebar.rs` | (manual) |
 | AI icon-only actions use deferred icon slots | `fret-ui-ai` | Landed | `ecosystem/fret-ui-ai/src/elements/message_actions.rs` | `tools/diag-scripts/ui-gallery-ai-chat-demo-message-actions-icons-screenshots-zinc-light.json`<br>`tools/diag-scripts/ui-gallery-ai-chat-demo-message-actions-icons-screenshots-zinc-dark.json` |
 | Diag gate: primary button icon visibility (via ButtonGroup demo; zinc light/dark) | `fret-ui-gallery` | Landed | `tools/diag-scripts/ui-gallery-button-group-demo-icons-screenshots-zinc-light-dark.json` | `tools/diag-scripts/ui-gallery-button-group-demo-icons-screenshots-zinc-light-dark.json` |

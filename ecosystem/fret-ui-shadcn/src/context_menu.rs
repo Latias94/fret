@@ -5,7 +5,7 @@ use std::sync::{Arc, Mutex};
 
 use fret_core::time::Duration;
 use fret_core::{Edges, Point, Px, Rect, Size, TextStyle};
-use fret_icons::ids;
+use fret_icons::{IconId, ids};
 use fret_runtime::{CommandId, Effect, Model, ModelId, TimerToken, WindowCommandGatingSnapshot};
 use fret_ui::action::{
     OnCloseAutoFocus, OnDismissRequest, OnOpenAutoFocus, PressablePointerUpResult,
@@ -22,6 +22,7 @@ use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::collection_semantics::CollectionSemanticsExt as _;
+use fret_ui_kit::declarative::current_color;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
@@ -279,6 +280,7 @@ pub struct ContextMenuItem {
     pub value: Arc<str>,
     pub inset: bool,
     pub leading: Option<AnyElement>,
+    pub leading_icon: Option<IconId>,
     pub disabled: bool,
     pub close_on_select: bool,
     pub command: Option<CommandId>,
@@ -297,6 +299,7 @@ impl ContextMenuItem {
             value: label,
             inset: false,
             leading: None,
+            leading_icon: None,
             disabled: false,
             close_on_select: true,
             command: None,
@@ -319,7 +322,15 @@ impl ContextMenuItem {
     }
 
     pub fn leading(mut self, element: AnyElement) -> Self {
+        self.leading_icon = None;
         self.leading = Some(element);
+        self
+    }
+
+    /// Prefer this over `leading(icon(cx, ...))` so the icon can inherit the item's `currentColor`.
+    pub fn leading_icon(mut self, icon: IconId) -> Self {
+        self.leading = None;
+        self.leading_icon = Some(icon);
         self
     }
 
@@ -966,6 +977,7 @@ impl ContextMenuRenderEnv {
                 command.as_ref(),
             );
         let leading = item.leading;
+        let leading_icon = item.leading_icon;
         let trailing = item.trailing;
         let variant = item.variant;
         let pad_left = if item.inset {
@@ -1053,6 +1065,7 @@ impl ContextMenuRenderEnv {
                     cx,
                     label.clone(),
                     leading,
+                    leading_icon,
                     reserve_leading_slot,
                     trailing,
                     false,
@@ -1175,6 +1188,7 @@ impl ContextMenuRenderEnv {
                     cx,
                     label.clone(),
                     leading,
+                    None,
                     reserve_leading_slot,
                     trailing,
                     false,
@@ -1303,6 +1317,7 @@ impl ContextMenuRenderEnv {
                     cx,
                     label.clone(),
                     leading,
+                    None,
                     reserve_leading_slot,
                     trailing,
                     false,
@@ -1496,6 +1511,7 @@ impl ContextMenuContentRenderEnv {
                 command.as_ref(),
             );
         let leading = item.leading;
+        let leading_icon = item.leading_icon;
         let trailing = item.trailing;
         let has_submenu = item.submenu.is_some();
         let submenu_row_count_for_hint = item.submenu.as_ref().map(|entries| {
@@ -1648,6 +1664,7 @@ impl ContextMenuContentRenderEnv {
                     cx,
                     label.clone(),
                     leading,
+                    leading_icon,
                     reserve_leading_slot,
                     trailing,
                     has_submenu,
@@ -1764,6 +1781,7 @@ impl ContextMenuContentRenderEnv {
                         cx,
                         label.clone(),
                         leading,
+                        None,
                         reserve_leading_slot,
                         trailing,
                         false,
@@ -1885,6 +1903,7 @@ impl ContextMenuContentRenderEnv {
                         cx,
                         label.clone(),
                         leading,
+                        None,
                         reserve_leading_slot,
                         trailing,
                         false,
@@ -1912,6 +1931,7 @@ fn menu_row_children<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     label: Arc<str>,
     leading: Option<AnyElement>,
+    leading_icon: Option<IconId>,
     reserve_leading_slot: bool,
     trailing: Option<AnyElement>,
     submenu: bool,
@@ -1956,12 +1976,15 @@ fn menu_row_children<H: UiHost>(
             ..Default::default()
         },
         move |cx| {
+            let effective_fg = if disabled { text_disabled } else { row_fg };
             let mut leading = leading;
+            let leading_icon = leading_icon.clone();
             let mut trailing = trailing;
             let has_trailing = trailing.is_some();
             let direction = direction_prim::use_direction_in_scope(cx, None);
             let has_indicator = indicator_on.is_some();
-            let has_leading_slot = leading.is_some() || reserve_leading_slot;
+            let has_leading_slot =
+                leading.is_some() || leading_icon.is_some() || reserve_leading_slot;
             let mut row: Vec<AnyElement> = Vec::with_capacity(
                 usize::from(has_indicator)
                     + usize::from(has_leading_slot)
@@ -1971,109 +1994,105 @@ fn menu_row_children<H: UiHost>(
                     + usize::from(submenu),
             );
 
-            if let Some(is_on) = indicator_on {
-                let indicator_fg = if disabled { text_disabled } else { row_fg };
-                row.push(cx.flex(
+            current_color::with_current_color_provider(cx, ColorRef::Color(effective_fg), |cx| {
+                if let Some(is_on) = indicator_on {
+                    let indicator_fg = effective_fg;
+                    row.push(cx.flex(
+                        FlexProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Px(Px(16.0));
+                                layout.size.height = Length::Px(Px(16.0));
+                                layout.flex.shrink = 0.0;
+                                layout
+                            },
+                            direction: fret_core::Axis::Horizontal,
+                            gap: Px(0.0),
+                            padding: Edges::all(Px(0.0)),
+                            justify: MainAlign::Center,
+                            align: CrossAlign::Center,
+                            wrap: false,
+                        },
+                        move |cx| {
+                            if !is_on {
+                                return Vec::new();
+                            }
+
+                            vec![decl_icon::icon_with(
+                                cx,
+                                ids::ui::CHECK,
+                                Some(Px(16.0)),
+                                Some(ColorRef::Color(indicator_fg)),
+                            )]
+                        },
+                    ));
+                }
+
+                if let Some(l) = leading.take() {
+                    row.push(menu_icon_slot(cx, l));
+                } else if let Some(icon) = leading_icon.clone() {
+                    let icon_el = decl_icon::icon_with(cx, icon, Some(Px(16.0)), None);
+                    row.push(menu_icon_slot(cx, icon_el));
+                } else if reserve_leading_slot {
+                    row.push(menu_icon_slot_empty(cx));
+                }
+
+                let style = text_style.clone();
+                let mut text = ui::text(cx, label.clone())
+                    .layout(LayoutRefinement::default().min_w_0().flex_1())
+                    .text_size_px(style.size)
+                    .font_weight(style.weight)
+                    .nowrap();
+
+                if let Some(line_height) = style.line_height {
+                    text = text.fixed_line_box_px(line_height).line_box_in_bounds();
+                }
+
+                if let Some(letter_spacing_em) = style.letter_spacing_em {
+                    text = text.letter_spacing_em(letter_spacing_em);
+                }
+
+                let mut label_element = text.into_element(cx);
+                if let Some(test_id) = label_test_id.clone() {
+                    label_element = label_element.test_id(test_id);
+                }
+                row.push(label_element);
+
+                if has_trailing || submenu {
+                    row.push(cx.spacer(SpacerProps::default()));
+                }
+                if let Some(mut trailing_element) = trailing.take() {
+                    if let Some(test_id) = trailing_test_id.clone() {
+                        trailing_element = trailing_element.test_id(test_id);
+                    }
+                    row.push(trailing_element);
+                }
+
+                if submenu {
+                    let mut chevron = submenu_chevron_icon(cx, direction, effective_fg);
+                    if let Some(test_id) = submenu_chevron_test_id.clone() {
+                        chevron = chevron.test_id(test_id);
+                    }
+                    row.push(chevron);
+                }
+
+                vec![cx.flex(
                     FlexProps {
                         layout: {
                             let mut layout = LayoutStyle::default();
-                            layout.size.width = Length::Px(Px(16.0));
-                            layout.size.height = Length::Px(Px(16.0));
-                            layout.flex.shrink = 0.0;
+                            layout.size.width = Length::Fill;
                             layout
                         },
                         direction: fret_core::Axis::Horizontal,
-                        gap: Px(0.0),
+                        gap: Px(8.0),
                         padding: Edges::all(Px(0.0)),
-                        justify: MainAlign::Center,
+                        justify: MainAlign::Start,
                         align: CrossAlign::Center,
                         wrap: false,
                     },
-                    move |cx| {
-                        if !is_on {
-                            return Vec::new();
-                        }
-
-                        vec![decl_icon::icon_with(
-                            cx,
-                            ids::ui::CHECK,
-                            Some(Px(16.0)),
-                            Some(ColorRef::Color(indicator_fg)),
-                        )]
-                    },
-                ));
-            }
-
-            if let Some(l) = leading.take() {
-                row.push(menu_icon_slot(cx, l));
-            } else if reserve_leading_slot {
-                row.push(menu_icon_slot_empty(cx));
-            }
-
-            let style = text_style.clone();
-            let mut text = ui::text(cx, label.clone())
-                .layout(LayoutRefinement::default().min_w_0().flex_1())
-                .text_size_px(style.size)
-                .font_weight(style.weight)
-                .nowrap()
-                .text_color(ColorRef::Color(if disabled {
-                    text_disabled
-                } else {
-                    row_fg
-                }));
-
-            if let Some(line_height) = style.line_height {
-                text = text.fixed_line_box_px(line_height).line_box_in_bounds();
-            }
-
-            if let Some(letter_spacing_em) = style.letter_spacing_em {
-                text = text.letter_spacing_em(letter_spacing_em);
-            }
-
-            let mut label_element = text.into_element(cx);
-            if let Some(test_id) = label_test_id.clone() {
-                label_element = label_element.test_id(test_id);
-            }
-            row.push(label_element);
-
-            if has_trailing || submenu {
-                row.push(cx.spacer(SpacerProps::default()));
-            }
-            if let Some(mut trailing_element) = trailing.take() {
-                if let Some(test_id) = trailing_test_id.clone() {
-                    trailing_element = trailing_element.test_id(test_id);
-                }
-                row.push(trailing_element);
-            }
-
-            if submenu {
-                let mut chevron = submenu_chevron_icon(
-                    cx,
-                    direction,
-                    if disabled { text_disabled } else { row_fg },
-                );
-                if let Some(test_id) = submenu_chevron_test_id.clone() {
-                    chevron = chevron.test_id(test_id);
-                }
-                row.push(chevron);
-            }
-
-            vec![cx.flex(
-                FlexProps {
-                    layout: {
-                        let mut layout = LayoutStyle::default();
-                        layout.size.width = Length::Fill;
-                        layout
-                    },
-                    direction: fret_core::Axis::Horizontal,
-                    gap: Px(8.0),
-                    padding: Edges::all(Px(0.0)),
-                    justify: MainAlign::Start,
-                    align: CrossAlign::Center,
-                    wrap: false,
-                },
-                move |_cx| row,
-            )]
+                    move |_cx| row,
+                )]
+            })
         },
     );
 
@@ -2183,7 +2202,7 @@ fn context_menu_submenu_panel<H: UiHost>(
         for entry in entries {
             match entry {
                 ContextMenuEntry::Item(item) => {
-                    if item.leading.is_some() {
+                    if item.leading.is_some() || item.leading_icon.is_some() {
                         return true;
                     }
                 }
@@ -2907,7 +2926,7 @@ impl ContextMenu {
                         for entry in entries {
                             match entry {
                                 ContextMenuEntry::Item(item) => {
-                                    if item.leading.is_some() {
+                                    if item.leading.is_some() || item.leading_icon.is_some() {
                                         return true;
                                     }
                                 }
@@ -3417,6 +3436,7 @@ impl ContextMenu {
                                                                 command.as_ref(),
                                                             );
                                                         let leading = item.leading;
+                                                        let leading_icon = item.leading_icon;
                                                         let trailing = item.trailing;
                                                         let has_submenu = item.submenu.is_some();
                                                         let submenu_estimated_height_unclamped: Option<Px> = None;
@@ -3567,6 +3587,7 @@ impl ContextMenu {
                                                                         cx,
                                                                         label.clone(),
                                                                         leading,
+                                                                        leading_icon,
                                                                         reserve_leading_slot,
                                                                         trailing,
                                                                         has_submenu,
@@ -3672,6 +3693,7 @@ impl ContextMenu {
                                                                         cx,
                                                                         label.clone(),
                                                                         leading,
+                                                                        None,
                                                                         reserve_leading_slot,
                                                                         trailing,
                                                                         false,
@@ -3805,6 +3827,7 @@ impl ContextMenu {
                                                                         cx,
                                                                         label.clone(),
                                                                         leading,
+                                                                        None,
                                                                         reserve_leading_slot,
                                                                         trailing,
                                                                         false,
