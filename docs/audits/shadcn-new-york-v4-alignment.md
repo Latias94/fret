@@ -462,10 +462,24 @@ Recent fixes:
     `web_vs_fret_breadcrumb_dropdown_overlay_placement_matches`, `web_vs_fret_breadcrumb_dropdown_small_viewport_overlay_placement_matches`,
     `web_vs_fret_breadcrumb_responsive_overlay_placement_matches`, `web_vs_fret_breadcrumb_responsive_mobile_drawer_overlay_insets_match`).
 
+### `Avatar`
+
+- Upstream: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/avatar.tsx`
+- Fret: `ecosystem/fret-ui-shadcn/src/avatar.rs`
+- UI gallery: `apps/fret-ui-gallery/src/ui/pages/avatar.rs`
+- Gaps to check:
+  - Trigger composition: using `Avatar` as an overlay trigger should preserve focus restore and pointer hit-testing semantics.
+  - Badge placement: bottom-right dot/icon sizing across `sm`/`default`/`lg`.
+  - Group overlap: `-space-x-2` should match upstream overlap geometry.
+- Conformance gates:
+  - Docs examples: `tools/diag-scripts/ui-gallery-avatar-badge-and-group-count.json`
+  - Dropdown trigger focus restore: `tools/diag-scripts/ui-gallery-avatar-dropdown-escape-focus-restore.json`
+
 ### `Button`
 
 - Upstream: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/button.tsx`
 - Fret: `ecosystem/fret-ui-shadcn/src/button.rs`
+- UI gallery: `apps/fret-ui-gallery/src/ui/pages/button.rs`
 - Gaps to check:
   - Size: `h-9` baseline, icon-only sizing (`size-9`) behavior.
   - Variant mapping: outline uses border + shadow-xs; destructive uses dedicated ring color.
@@ -481,6 +495,7 @@ Conformance gates:
 
 - Chrome: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`web_vs_fret_button_demo_control_chrome_matches`).
 - Focus ring: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`web_vs_fret_button_demo_focus_ring_matches`).
+- Link render semantics (role + activation): `tools/diag-scripts/ui-gallery-button-link-render.json`.
 
 ### `ButtonGroup`
 
