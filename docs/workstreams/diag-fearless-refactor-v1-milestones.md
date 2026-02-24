@@ -84,6 +84,10 @@ Definition of done:
 ### M4.1: Remove `bundle.json`-only assumptions in tooling
 
 - [ ] Ensure post-run checks, suite runners, and error messages consistently talk about “bundle artifacts” (not `bundle.json`).
+  - [x] Core path helpers and a large set of CLI hints now prefer “bundle artifact” terminology.
+  - [x] Tooling outputs that previously wrote `bundle_json` now also write `bundle_artifact` (keeping legacy keys as aliases).
+  - [ ] Finish the remaining sweep (especially in tests and narrow helper modules) and keep it consistent with
+        `docs/workstreams/diag-fearless-refactor-v1/debt-removal.md` (compat key removal policy).
 - [x] Extract bundle/repro zip packing into a dedicated module (reduce churn in `crates/fret-diag/src/lib.rs`).
   - Evidence: `crates/fret-diag/src/pack_zip.rs` (`pack_bundle_dir_to_zip`, `pack_repro_zip_multi`).
 - [x] Extract evidence indexing into a dedicated module (reduce churn in `crates/fret-diag/src/lib.rs`).

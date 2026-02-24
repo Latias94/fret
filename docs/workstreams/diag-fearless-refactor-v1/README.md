@@ -1,7 +1,7 @@
 ---
 title: Diagnostics Fearless Refactor v1
 status: draft
-date: 2026-02-22
+date: 2026-02-24
 scope: diagnostics, automation, tooling, refactor
 ---
 
@@ -87,8 +87,8 @@ Related living docs:
 
 See:
 
-- TODO list: `docs/workstreams/diag-fearless-refactor-v1/todo.md`
-- Milestones: `docs/workstreams/diag-fearless-refactor-v1/milestones.md`
+- TODO list: `docs/workstreams/diag-fearless-refactor-v1-todo.md`
+- Milestones: `docs/workstreams/diag-fearless-refactor-v1-milestones.md`
 - Migration plan: `docs/workstreams/diag-fearless-refactor-v1/migration-plan.md`
 - Sidecar details: `docs/workstreams/diag-fearless-refactor-v1/frames-index.md`
 - Agent loop: `docs/workstreams/diag-fearless-refactor-v1/agent-loop.md`

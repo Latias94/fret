@@ -115,6 +115,9 @@ This file tracks tasks for `docs/workstreams/diag-fearless-refactor-v1.md`.
     - `crates/fret-diag/src/diag_perf_baseline.rs` (`perf-baseline-from-bundles`)
     - `crates/fret-diag/src/lib.rs` (`--diff` arg errors)
     - `crates/fret-diag/src/paths.rs` (integrity failure notes mention raw `bundle.json`)
+  - [ ] Sweep remaining narrow modules and tests that still talk about `bundle.json` when they mean “bundle artifact”:
+    - `crates/fret-diag/src/artifacts.rs` (docs/comments + test expectations)
+    - `crates/fret-diag/src/api.rs` (test fixture filenames `*.bundle.json`)
 - [ ] Decide how far to push schema2-first:
   - [ ] runtime dumps: when should `bundle.schema2.json` be emitted by default (vs tooling-derived only)?
   - [ ] compatibility: when is it acceptable to stop treating `bundle.json` as a required artifact?
