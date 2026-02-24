@@ -153,7 +153,7 @@ pub(crate) fn run_doctor_for_bundle_dir(
                     .push("write bundle.schema2.json from bundle.json (--mode last)".to_string());
             } else {
                 fixes_planned.push(
-                    "write bundle.schema2.json from bundle.json (blocked: missing bundle.json)"
+                    "write bundle.schema2.json from bundle.json (blocked: missing raw bundle.json)"
                         .to_string(),
                 );
             }
@@ -199,8 +199,9 @@ pub(crate) fn run_doctor_for_bundle_dir(
         let schema2_exists = resolve_bundle_schema2_path_no_materialize(&bundle_dir).is_some();
         if !schema2_exists {
             let Some(bundle_json) = resolve_raw_bundle_json_path_no_materialize(&bundle_dir) else {
-                fixes_applied
-                    .push("skipped writing bundle.schema2.json (missing bundle.json)".to_string());
+                fixes_applied.push(
+                    "skipped writing bundle.schema2.json (missing raw bundle.json)".to_string(),
+                );
                 let report = doctor_report_json(&bundle_dir, warmup_frames);
                 return Ok(DoctorRunResult {
                     bundle_dir,
