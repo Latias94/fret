@@ -77,7 +77,8 @@ pub(crate) use paths::{
     default_triage_out_path, expand_script_inputs, resolve_bundle_artifact_path,
     resolve_bundle_artifact_path_no_materialize, resolve_bundle_root_dir,
     resolve_bundle_schema2_artifact_path_no_materialize, resolve_path,
-    wait_for_bundle_artifact_from_script_result, wait_for_bundle_artifact_in_dir,
+    resolve_raw_bundle_artifact_path_no_materialize, wait_for_bundle_artifact_from_script_result,
+    wait_for_bundle_artifact_in_dir,
 };
 
 use compare::{
