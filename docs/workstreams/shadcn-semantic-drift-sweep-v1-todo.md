@@ -23,6 +23,16 @@ Workstream entry:
 - [ ] Collect upstream evidence anchors in `repo-ref/ui` for each responsive decision that differs
   from web parity.
 
+## Responsive decision table (seed)
+
+Note: `repo-ref/` is local state (not committed). See `docs/repo-ref.md`.
+
+| Surface | Fret | Upstream evidence | Query semantics | Decision | Gate |
+| --- | --- | --- | --- | --- | --- |
+| Field: `orientation="responsive"` | `ecosystem/fret-ui-shadcn/src/field.rs` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/field.tsx` (`@container/field-group`, `@md/field-group:*`), `repo-ref/ui/apps/v4/content/docs/components/field.mdx` | Container (panel width) | Keep container queries (ADR 0231) | TODO: add a layout invariant test for `FieldOrientation::Responsive` |
+| AlertDialog footer stacking (`sm:`) | `ecosystem/fret-ui-shadcn/src/alert_dialog.rs` | `repo-ref/ui/apps/v4/registry/base-mira/ui/alert-dialog.tsx` (`sm:flex-row sm:justify-end`) | Viewport (device shell) | Keep viewport queries (ADR 0232) | `ecosystem/fret-ui-shadcn/src/alert_dialog.rs` (test: `alert_dialog_footer_stacks_on_base_viewport_and_rows_on_sm`) |
+| Empty padding (`md:p-12`) | `ecosystem/fret-ui-shadcn/src/empty.rs` | `repo-ref/ui/apps/v4/registry/new-york-v4/ui/empty.tsx` (`p-6 ... md:p-12`) | Container (panel width) | Keep container queries (ADR 0231) | TODO: add a layout invariant test for container padding switch |
+
 ## Responsive drift: DataTable “LG show labels”
 
 - [ ] Confirm upstream behavior and intent:

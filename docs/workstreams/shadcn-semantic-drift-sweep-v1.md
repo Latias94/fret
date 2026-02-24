@@ -115,3 +115,6 @@ This is a sweepable, low-risk refactor as long as callsites do not rely on non-s
 
 - Milestones: `docs/workstreams/shadcn-semantic-drift-sweep-v1-milestones.md`
 - TODO list: `docs/workstreams/shadcn-semantic-drift-sweep-v1-todo.md`
+
+The TODO list also contains a seed “responsive decision table” that records whether a given
+recipe should follow viewport queries (device shell) or container queries (panel width).
