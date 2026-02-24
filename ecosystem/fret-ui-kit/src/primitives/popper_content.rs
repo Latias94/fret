@@ -19,8 +19,8 @@ pub fn popper_wrapper_layout(placed: Rect, wrapper_insets: Edges) -> LayoutStyle
     LayoutStyle {
         position: PositionStyle::Absolute,
         inset: InsetStyle {
-            left: Some(Px(placed.origin.x.0 - wrapper_insets.left.0)),
-            top: Some(Px(placed.origin.y.0 - wrapper_insets.top.0)),
+            left: Some(Px(placed.origin.x.0 - wrapper_insets.left.0)).into(),
+            top: Some(Px(placed.origin.y.0 - wrapper_insets.top.0)).into(),
             ..Default::default()
         },
         size: SizeStyle {
@@ -47,8 +47,8 @@ pub fn popper_wrapper_layout_autosize(origin: Point) -> LayoutStyle {
     LayoutStyle {
         position: PositionStyle::Absolute,
         inset: InsetStyle {
-            left: Some(origin.x),
-            top: Some(origin.y),
+            left: Some(origin.x).into(),
+            top: Some(origin.y).into(),
             ..Default::default()
         },
         overflow: Overflow::Visible,
@@ -64,8 +64,8 @@ pub fn popper_panel_layout(placed: Rect, wrapper_insets: Edges, overflow: Overfl
     LayoutStyle {
         position: PositionStyle::Absolute,
         inset: InsetStyle {
-            left: Some(wrapper_insets.left),
-            top: Some(wrapper_insets.top),
+            left: Some(wrapper_insets.left).into(),
+            top: Some(wrapper_insets.top).into(),
             ..Default::default()
         },
         size: SizeStyle {
@@ -238,8 +238,8 @@ mod tests {
 
         let layout = popper_wrapper_layout(placed, insets);
         assert_eq!(layout.position, PositionStyle::Absolute);
-        assert_eq!(layout.inset.left, Some(Px(6.0)));
-        assert_eq!(layout.inset.top, Some(Px(19.0)));
+        assert_eq!(layout.inset.left, Some(Px(6.0)).into());
+        assert_eq!(layout.inset.top, Some(Px(19.0)).into());
         match layout.size.width {
             Length::Px(px) => assert_eq!(px, Px(36.0)),
             _ => panic!("expected px width"),
@@ -265,8 +265,8 @@ mod tests {
 
         let layout = popper_panel_layout(placed, insets, Overflow::Clip);
         assert_eq!(layout.position, PositionStyle::Absolute);
-        assert_eq!(layout.inset.left, Some(Px(4.0)));
-        assert_eq!(layout.inset.top, Some(Px(1.0)));
+        assert_eq!(layout.inset.left, Some(Px(4.0)).into());
+        assert_eq!(layout.inset.top, Some(Px(1.0)).into());
         match layout.size.width {
             Length::Px(px) => assert_eq!(px, Px(30.0)),
             _ => panic!("expected px width"),

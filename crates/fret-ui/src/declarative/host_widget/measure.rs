@@ -548,10 +548,16 @@ impl ElementHostWidget {
                         continue;
                     }
                     let child_size = cx.measure_in(child, abs_constraints);
-                    let left = style.inset.left.map(|v| v.0);
-                    let right = style.inset.right.map(|v| v.0);
-                    let top = style.inset.top.map(|v| v.0);
-                    let bottom = style.inset.bottom.map(|v| v.0);
+                    let px = |edge: crate::element::InsetEdge| match edge {
+                        crate::element::InsetEdge::Px(px) => Some(px.0),
+                        crate::element::InsetEdge::Auto
+                        | crate::element::InsetEdge::Fill
+                        | crate::element::InsetEdge::Fraction(_) => None,
+                    };
+                    let left = px(style.inset.left);
+                    let right = px(style.inset.right);
+                    let top = px(style.inset.top);
+                    let bottom = px(style.inset.bottom);
 
                     let required_w = match (left, right) {
                         (Some(l), Some(r)) => Px(l + r + child_size.width.0),

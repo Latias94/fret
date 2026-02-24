@@ -50,8 +50,8 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut ImUiFloatingWindowsState) -> 
             let mut props = fret_ui::element::ContainerProps::default();
             props.layout.position = fret_ui::element::PositionStyle::Absolute;
             props.layout.inset = fret_ui::element::InsetStyle {
-                left: Some(Px(480.0)),
-                top: Some(Px(220.0)),
+                left: Some(Px(480.0)).into(),
+                top: Some(Px(220.0)).into(),
                 ..Default::default()
             };
             props.layout.size.width = fret_ui::element::Length::Px(Px(160.0));

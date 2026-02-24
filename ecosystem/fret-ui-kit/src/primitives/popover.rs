@@ -982,8 +982,8 @@ mod tests {
                                     layout: {
                                         let mut layout = LayoutStyle::default();
                                         layout.position = PositionStyle::Absolute;
-                                        layout.inset.left = Some(Px(120.0));
-                                        layout.inset.top = Some(Px(60.0));
+                                        layout.inset.left = Some(Px(100.0)).into();
+                                        layout.inset.top = Some(Px(35.0)).into();
                                         layout.size.width = Length::Px(Px(60.0));
                                         layout.size.height = Length::Px(Px(40.0));
                                         layout
@@ -1000,8 +1000,8 @@ mod tests {
                                     layout: {
                                         let mut layout = LayoutStyle::default();
                                         layout.position = PositionStyle::Absolute;
-                                        layout.inset.left = Some(Px(0.0));
-                                        layout.inset.top = Some(Px(0.0));
+                                        layout.inset.left = Some(Px(100.0)).into();
+                                        layout.inset.top = Some(Px(35.0)).into();
                                         layout.size.width = Length::Px(Px(80.0));
                                         layout.size.height = Length::Px(Px(32.0));
                                         layout
@@ -1052,10 +1052,10 @@ mod tests {
                                 layout: LayoutStyle {
                                     position: PositionStyle::Absolute,
                                     inset: InsetStyle {
-                                        top: Some(Px(80.0)),
-                                        left: Some(Px(160.0)),
-                                        right: None,
-                                        bottom: None,
+                                        top: Some(Px(80.0)).into(),
+                                        left: Some(Px(160.0)).into(),
+                                        right: None.into(),
+                                        bottom: None.into(),
                                     },
                                     size: SizeStyle {
                                         width: Length::Px(Px(20.0)),
@@ -1218,10 +1218,10 @@ mod tests {
                         layout: LayoutStyle {
                             position: PositionStyle::Absolute,
                             inset: InsetStyle {
-                                top: Some(Px(80.0)),
-                                left: Some(Px(160.0)),
-                                right: None,
-                                bottom: None,
+                                top: Some(Px(80.0)).into(),
+                                left: Some(Px(160.0)).into(),
+                                right: None.into(),
+                                bottom: None.into(),
                             },
                             size: SizeStyle {
                                 width: Length::Px(Px(20.0)),

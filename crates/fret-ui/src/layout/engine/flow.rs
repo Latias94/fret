@@ -1062,15 +1062,18 @@ fn style_for_item_in_parent<H: UiHost>(
     }
 
     if layout_style.position == crate::element::PositionStyle::Absolute {
+        let inset_edge_is_set =
+            |edge: crate::element::InsetEdge| !matches!(edge, crate::element::InsetEdge::Auto);
+
         if matches!(layout_style.size.width, crate::element::Length::Fill)
-            && layout_style.inset.left.is_some()
-            && layout_style.inset.right.is_some()
+            && inset_edge_is_set(layout_style.inset.left)
+            && inset_edge_is_set(layout_style.inset.right)
         {
             style.size.width = Dimension::auto();
         }
         if matches!(layout_style.size.height, crate::element::Length::Fill)
-            && layout_style.inset.top.is_some()
-            && layout_style.inset.bottom.is_some()
+            && inset_edge_is_set(layout_style.inset.top)
+            && inset_edge_is_set(layout_style.inset.bottom)
         {
             style.size.height = Dimension::auto();
         }
@@ -1153,10 +1156,10 @@ fn passthrough_wrapper_child<H: UiHost>(
     if layout_style.position != crate::element::PositionStyle::Static {
         return None;
     }
-    if layout_style.inset.left.is_some()
-        || layout_style.inset.right.is_some()
-        || layout_style.inset.top.is_some()
-        || layout_style.inset.bottom.is_some()
+    if !matches!(layout_style.inset.left, crate::element::InsetEdge::Auto)
+        || !matches!(layout_style.inset.right, crate::element::InsetEdge::Auto)
+        || !matches!(layout_style.inset.top, crate::element::InsetEdge::Auto)
+        || !matches!(layout_style.inset.bottom, crate::element::InsetEdge::Auto)
     {
         return None;
     }
@@ -1245,11 +1248,19 @@ fn taffy_lp_from_spacing(
     }
 }
 
-fn taffy_lpa(scale_factor: f32, px: Option<Px>) -> LengthPercentageAuto {
+fn taffy_lpa_from_inset_edge(
+    scale_factor: f32,
+    edge: crate::element::InsetEdge,
+) -> LengthPercentageAuto {
     let sf = sanitize_scale_factor(scale_factor);
-    match px {
-        Some(px) => LengthPercentageAuto::length(px.0 * sf),
-        None => LengthPercentageAuto::auto(),
+    match edge {
+        crate::element::InsetEdge::Px(px) => LengthPercentageAuto::length(px.0 * sf),
+        crate::element::InsetEdge::Fill => LengthPercentageAuto::percent(1.0),
+        crate::element::InsetEdge::Fraction(f) => {
+            let f = if f.is_finite() { f.max(0.0) } else { 0.0 };
+            LengthPercentageAuto::percent(f)
+        }
+        crate::element::InsetEdge::Auto => LengthPercentageAuto::auto(),
     }
 }
 
@@ -1267,10 +1278,10 @@ fn taffy_rect_lpa_from_inset(
         };
     }
     TaffyRect {
-        left: taffy_lpa(scale_factor, inset.left),
-        right: taffy_lpa(scale_factor, inset.right),
-        top: taffy_lpa(scale_factor, inset.top),
-        bottom: taffy_lpa(scale_factor, inset.bottom),
+        left: taffy_lpa_from_inset_edge(scale_factor, inset.left),
+        right: taffy_lpa_from_inset_edge(scale_factor, inset.right),
+        top: taffy_lpa_from_inset_edge(scale_factor, inset.top),
+        bottom: taffy_lpa_from_inset_edge(scale_factor, inset.bottom),
     }
 }
 
@@ -1281,6 +1292,11 @@ fn taffy_lpa_margin_edge(
     let sf = sanitize_scale_factor(scale_factor);
     match edge {
         crate::element::MarginEdge::Px(px) => LengthPercentageAuto::length(px.0 * sf),
+        crate::element::MarginEdge::Fill => LengthPercentageAuto::percent(1.0),
+        crate::element::MarginEdge::Fraction(f) => {
+            let f = if f.is_finite() { f.max(0.0) } else { 0.0 };
+            LengthPercentageAuto::percent(f)
+        }
         crate::element::MarginEdge::Auto => LengthPercentageAuto::auto(),
     }
 }

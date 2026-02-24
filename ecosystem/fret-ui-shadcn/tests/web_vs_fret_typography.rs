@@ -242,7 +242,8 @@ fn web_vs_fret_typography_h2_geometry_light() {
                 padding: Edges {
                     bottom: padding_bottom,
                     ..Edges::all(Px(0.0))
-                },
+                }
+                .into(),
                 border: Edges {
                     bottom: border_bottom,
                     ..Edges::all(Px(0.0))
@@ -618,7 +619,8 @@ fn web_vs_fret_typography_blockquote_geometry_light() {
                 padding: Edges {
                     left: padding_left,
                     ..Edges::all(Px(0.0))
-                },
+                }
+                .into(),
                 border: Edges {
                     left: border_left,
                     ..Edges::all(Px(0.0))
@@ -742,7 +744,8 @@ fn web_vs_fret_typography_inline_code_padding_and_style_light() {
                     right: pr,
                     bottom: pb,
                     left: pl,
-                },
+                }
+                .into(),
                 background: Some(bg),
                 corner_radii: fret_core::Corners::all(Px(4.0)),
                 ..Default::default()
@@ -1017,8 +1020,8 @@ fn web_vs_fret_typography_list_indent_and_gap_light_contract() {
                             layout.size.width = Length::Fill;
                             layout
                         },
-                        gap: li_margin_top,
-                        padding: Edges::all(Px(0.0)),
+                        gap: li_margin_top.into(),
+                        padding: Edges::all(Px(0.0)).into(),
                         justify: MainAlign::Start,
                         align: CrossAlign::Stretch,
                     },

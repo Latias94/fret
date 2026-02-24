@@ -220,10 +220,10 @@ impl ModalNavigationDrawer {
                                             l.size.width = Length::Fill;
                                             l.size.height = Length::Fill;
                                             l.inset = InsetStyle {
-                                                top: Some(Px(0.0)),
-                                                right: Some(Px(0.0)),
-                                                bottom: Some(Px(0.0)),
-                                                left: Some(Px(0.0)),
+                                                top: Some(Px(0.0)).into(),
+                                                right: Some(Px(0.0)).into(),
+                                                bottom: Some(Px(0.0)).into(),
+                                                left: Some(Px(0.0)).into(),
                                             };
                                             l
                                         },
@@ -272,10 +272,10 @@ impl ModalNavigationDrawer {
                                 layout.size.width = Length::Px(drawer_w);
                                 layout.size.height = Length::Fill;
                                 layout.inset = InsetStyle {
-                                    top: Some(Px(0.0)),
-                                    right: None,
-                                    bottom: Some(Px(0.0)),
-                                    left: Some(Px(0.0)),
+                                    top: Some(Px(0.0)).into(),
+                                    right: None.into(),
+                                    bottom: Some(Px(0.0)).into(),
+                                    left: Some(Px(0.0)).into(),
                                 };
                                 layout.overflow = fret_ui::element::Overflow::Visible;
 

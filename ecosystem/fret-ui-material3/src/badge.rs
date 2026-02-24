@@ -179,16 +179,16 @@ fn badge_element<H: UiHost>(
     let mut inset = InsetStyle::default();
     match placement {
         BadgePlacement::TopRight => {
-            inset.top = Some(Px(0.0));
-            inset.right = Some(Px(0.0));
+            inset.top = Some(Px(0.0)).into();
+            inset.right = Some(Px(0.0)).into();
         }
         BadgePlacement::NavigationIcon => {
             let anchor = anchor_size.unwrap_or(Px(24.0));
             let start = Px(anchor.0 * 0.5 + inset_start_px.0);
-            inset.top = Some(inset_top_px);
+            inset.top = Some(inset_top_px).into();
             match layout_direction {
-                LayoutDirection::Ltr => inset.left = Some(start),
-                LayoutDirection::Rtl => inset.right = Some(start),
+                LayoutDirection::Ltr => inset.left = Some(start).into(),
+                LayoutDirection::Rtl => inset.right = Some(start).into(),
             }
         }
     }

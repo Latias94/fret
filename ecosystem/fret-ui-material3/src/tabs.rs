@@ -760,10 +760,10 @@ fn primary_tab_list_indicator<H: UiHost>(
 
         let mut props = fret_ui::element::CanvasProps::default();
         props.layout.position = fret_ui::element::PositionStyle::Absolute;
-        props.layout.inset.top = Some(Px(0.0));
-        props.layout.inset.right = Some(Px(0.0));
-        props.layout.inset.bottom = Some(Px(0.0));
-        props.layout.inset.left = Some(Px(0.0));
+        props.layout.inset.top = Some(Px(0.0)).into();
+        props.layout.inset.right = Some(Px(0.0)).into();
+        props.layout.inset.bottom = Some(Px(0.0)).into();
+        props.layout.inset.left = Some(Px(0.0)).into();
 
         let mut indicator = cx.canvas(props, move |p| {
             if height.value > 0.0 && width.value > 0.0 && color.a > 0.0 {

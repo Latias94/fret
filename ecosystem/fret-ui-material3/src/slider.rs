@@ -1056,8 +1056,8 @@ pub fn slider<H: UiHost>(
 
                 let mut container = ContainerProps::default();
                 container.layout.position = PositionStyle::Absolute;
-                container.layout.inset.left = Some(left);
-                container.layout.inset.top = Some(top);
+                container.layout.inset.left = Some(left).into();
+                container.layout.inset.top = Some(top).into();
                 container.layout.size.width = Length::Px(bubble_w);
                 container.layout.size.height = Length::Px(bubble_h);
                 container.layout.overflow = fret_ui::element::Overflow::Visible;
@@ -1324,8 +1324,8 @@ pub fn range_slider<H: UiHost>(
 
         let mut start_thumb_semantics = SemanticsProps::default();
         start_thumb_semantics.layout.position = PositionStyle::Absolute;
-        start_thumb_semantics.layout.inset.left = Some(start_left);
-        start_thumb_semantics.layout.inset.top = Some(Px(0.0));
+        start_thumb_semantics.layout.inset.left = Some(start_left).into();
+        start_thumb_semantics.layout.inset.top = Some(Px(0.0)).into();
         start_thumb_semantics.layout.size.width = Length::Px(handle_h);
         start_thumb_semantics.layout.size.height = Length::Px(handle_h);
         start_thumb_semantics.role = SemanticsRole::Slider;
@@ -1390,8 +1390,8 @@ pub fn range_slider<H: UiHost>(
 
         let mut end_thumb_semantics = SemanticsProps::default();
         end_thumb_semantics.layout.position = PositionStyle::Absolute;
-        end_thumb_semantics.layout.inset.left = Some(end_left);
-        end_thumb_semantics.layout.inset.top = Some(Px(0.0));
+        end_thumb_semantics.layout.inset.left = Some(end_left).into();
+        end_thumb_semantics.layout.inset.top = Some(Px(0.0)).into();
         end_thumb_semantics.layout.size.width = Length::Px(handle_h);
         end_thumb_semantics.layout.size.height = Length::Px(handle_h);
         end_thumb_semantics.role = SemanticsRole::Slider;
@@ -2116,8 +2116,8 @@ pub fn range_slider<H: UiHost>(
 
                 let mut container = ContainerProps::default();
                 container.layout.position = PositionStyle::Absolute;
-                container.layout.inset.left = Some(left);
-                container.layout.inset.top = Some(top);
+                container.layout.inset.left = Some(left).into();
+                container.layout.inset.top = Some(top).into();
                 container.layout.size.width = Length::Px(bubble_w);
                 container.layout.size.height = Length::Px(bubble_h);
                 container.layout.overflow = fret_ui::element::Overflow::Visible;

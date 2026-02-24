@@ -247,8 +247,8 @@ fn assert_chart_hover_tooltip_size_matches_web(web_name: &str, tooltip_label: &s
                 layout: {
                     let mut layout = LayoutStyle::default();
                     layout.position = fret_ui::element::PositionStyle::Absolute;
-                    layout.inset.left = Some(Px(0.0));
-                    layout.inset.top = Some(Px(0.0));
+                    layout.inset.left = Some(Px(0.0)).into();
+                    layout.inset.top = Some(Px(0.0)).into();
                     layout
                 },
                 role: SemanticsRole::Panel,

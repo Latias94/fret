@@ -98,8 +98,8 @@ fn container_absolute_inset_positions_child() {
                     badge.layout.size.width = crate::element::Length::Px(Px(10.0));
                     badge.layout.size.height = crate::element::Length::Px(Px(10.0));
                     badge.layout.position = crate::element::PositionStyle::Absolute;
-                    badge.layout.inset.top = Some(Px(0.0));
-                    badge.layout.inset.right = Some(Px(0.0));
+                    badge.layout.inset.top = Some(Px(0.0)).into();
+                    badge.layout.inset.right = Some(Px(0.0)).into();
 
                     vec![
                         cx.container(base, |_cx| vec![]),
@@ -158,8 +158,8 @@ fn container_absolute_negative_inset_offsets_outside_parent() {
                     badge.layout.size.width = crate::element::Length::Px(Px(10.0));
                     badge.layout.size.height = crate::element::Length::Px(Px(10.0));
                     badge.layout.position = crate::element::PositionStyle::Absolute;
-                    badge.layout.inset.top = Some(Px(-5.0));
-                    badge.layout.inset.left = Some(Px(-6.0));
+                    badge.layout.inset.top = Some(Px(-5.0)).into();
+                    badge.layout.inset.left = Some(Px(-6.0)).into();
 
                     vec![
                         cx.container(base, |_cx| vec![]),

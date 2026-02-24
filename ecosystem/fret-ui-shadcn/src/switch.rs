@@ -491,8 +491,8 @@ impl Switch {
                     let thumb_layout = LayoutStyle {
                         position: PositionStyle::Absolute,
                         inset: InsetStyle {
-                            top: Some(y),
-                            left: Some(x),
+                            top: Some(y).into(),
+                            left: Some(x).into(),
                             ..Default::default()
                         },
                         size: SizeStyle {

@@ -1140,10 +1140,10 @@ fn absolute_fill_layout() -> LayoutStyle {
     layout.size.width = Length::Fill;
     layout.size.height = Length::Fill;
     layout.inset = fret_ui::element::InsetStyle {
-        top: Some(Px(0.0)),
-        right: Some(Px(0.0)),
-        bottom: Some(Px(0.0)),
-        left: Some(Px(0.0)),
+        top: Some(Px(0.0)).into(),
+        right: Some(Px(0.0)).into(),
+        bottom: Some(Px(0.0)).into(),
+        left: Some(Px(0.0)).into(),
     };
     layout
 }

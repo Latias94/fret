@@ -153,23 +153,27 @@ fn assert_bug_report_form_demo_geometry_matches_web(web_name: &str) {
                     .into_element(cx),
             ])
             .into_element(cx),
-            fret_ui_shadcn::CardFooter::new(vec![cx.row(
-                RowProps {
-                    layout: LayoutStyle::default(),
-                    gap: fret_ui_kit::MetricRef::space(Space::N2).resolve(&Theme::global(&*cx.app)),
-                    justify: MainAlign::End,
-                    align: CrossAlign::Center,
-                    ..Default::default()
-                },
-                move |cx| {
-                    vec![
-                        fret_ui_shadcn::Button::new("Reset")
-                            .variant(fret_ui_shadcn::ButtonVariant::Outline)
-                            .into_element(cx),
-                        fret_ui_shadcn::Button::new("Submit").into_element(cx),
-                    ]
-                },
-            )])
+            fret_ui_shadcn::CardFooter::new(vec![
+                cx.row(
+                    RowProps {
+                        layout: LayoutStyle::default(),
+                        gap: fret_ui_kit::MetricRef::space(Space::N2)
+                            .resolve(&Theme::global(&*cx.app))
+                            .into(),
+                        justify: MainAlign::End,
+                        align: CrossAlign::Center,
+                        ..Default::default()
+                    },
+                    move |cx| {
+                        vec![
+                            fret_ui_shadcn::Button::new("Reset")
+                                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                                .into_element(cx),
+                            fret_ui_shadcn::Button::new("Submit").into_element(cx),
+                        ]
+                    },
+                ),
+            ])
             .into_element(cx),
         ])
         .refine_layout(
@@ -315,23 +319,27 @@ fn assert_single_field_form_card_geometry_matches_web(
                 fret_ui_shadcn::FieldGroup::new(vec![field]).into_element(cx),
             ])
             .into_element(cx),
-            fret_ui_shadcn::CardFooter::new(vec![cx.row(
-                RowProps {
-                    layout: LayoutStyle::default(),
-                    gap: fret_ui_kit::MetricRef::space(Space::N2).resolve(&Theme::global(&*cx.app)),
-                    justify: MainAlign::End,
-                    align: CrossAlign::Center,
-                    ..Default::default()
-                },
-                move |cx| {
-                    vec![
-                        fret_ui_shadcn::Button::new("Reset")
-                            .variant(fret_ui_shadcn::ButtonVariant::Outline)
-                            .into_element(cx),
-                        fret_ui_shadcn::Button::new(primary_action).into_element(cx),
-                    ]
-                },
-            )])
+            fret_ui_shadcn::CardFooter::new(vec![
+                cx.row(
+                    RowProps {
+                        layout: LayoutStyle::default(),
+                        gap: fret_ui_kit::MetricRef::space(Space::N2)
+                            .resolve(&Theme::global(&*cx.app))
+                            .into(),
+                        justify: MainAlign::End,
+                        align: CrossAlign::Center,
+                        ..Default::default()
+                    },
+                    move |cx| {
+                        vec![
+                            fret_ui_shadcn::Button::new("Reset")
+                                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                                .into_element(cx),
+                            fret_ui_shadcn::Button::new(primary_action).into_element(cx),
+                        ]
+                    },
+                ),
+            ])
             .into_element(cx),
         ])
         .refine_layout(

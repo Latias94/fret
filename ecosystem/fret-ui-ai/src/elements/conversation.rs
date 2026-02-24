@@ -327,7 +327,7 @@ impl ConversationTranscript {
                     if let Some(bottom) =
                         theme.metric_by_key("fret.ai.conversation.scroll_button.offset_bottom")
                     {
-                        overlay_layout.inset.bottom = Some(bottom);
+                        overlay_layout.inset.bottom = Some(bottom).into();
                     }
 
                     let button_for_row = button.clone();
@@ -557,7 +557,7 @@ impl Conversation {
                     if let Some(bottom) =
                         theme.metric_by_key("fret.ai.conversation.scroll_button.offset_bottom")
                     {
-                        overlay_layout.inset.bottom = Some(bottom);
+                        overlay_layout.inset.bottom = Some(bottom).into();
                     }
 
                     let button_for_row = button.clone();

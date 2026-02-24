@@ -1278,7 +1278,7 @@ impl NavigationMenu {
                                                     };
                                                     layout.flex.shrink = 0.0;
                                                     layout.position = fret_ui::element::PositionStyle::Relative;
-                                                    layout.inset.top = Some(Px(1.0)); // `top-[1px]`
+                                                    layout.inset.top = Some(Px(1.0)).into(); // `top-[1px]`
                                                     layout.margin.left =
                                                         fret_ui::element::MarginEdge::Px(Px(4.0)); // `ml-1`
                                                     layout
@@ -1870,8 +1870,8 @@ impl NavigationMenu {
 
                                     let mut diamond_layout = LayoutStyle::default();
                                     diamond_layout.position = fret_ui::element::PositionStyle::Absolute;
-                                    diamond_layout.inset.left = Some(Px(diamond_left));
-                                    diamond_layout.inset.top = Some(Px(diamond_top));
+                                    diamond_layout.inset.left = Some(Px(diamond_left)).into();
+                                    diamond_layout.inset.top = Some(Px(diamond_top)).into();
                                     diamond_layout.size = SizeStyle {
                                         width: Length::Px(Px(diamond_size)),
                                         height: Length::Px(Px(diamond_size)),

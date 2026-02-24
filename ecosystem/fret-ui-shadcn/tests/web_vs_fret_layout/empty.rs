@@ -111,8 +111,8 @@ fn web_vs_fret_layout_empty_geometry_matches_web_fixtures() {
                         FlexProps {
                             layout: LayoutStyle::default(),
                             direction: fret_core::Axis::Horizontal,
-                            gap: Px(8.0),
-                            padding: Edges::all(Px(0.0)),
+                            gap: Px(8.0).into(),
+                            padding: Edges::all(Px(0.0)).into(),
                             justify: MainAlign::Start,
                             align: CrossAlign::Center,
                             wrap: false,
@@ -415,7 +415,7 @@ fn web_vs_fret_layout_empty_icon_geometry_matches_web() {
                 vec![cx.grid(
                     GridProps {
                         cols: 2,
-                        gap: Px(gap),
+                        gap: Px(gap).into(),
                         layout: decl_style::layout_style(
                             &theme,
                             LayoutRefinement::default().w_full(),

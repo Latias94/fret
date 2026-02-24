@@ -1125,9 +1125,9 @@ fn render_inline_text_token<H: UiHost>(
 
         let mut line_layout = LayoutStyle::default();
         line_layout.position = PositionStyle::Absolute;
-        line_layout.inset.left = Some(Px(0.0));
-        line_layout.inset.right = Some(Px(0.0));
-        line_layout.inset.top = Some(line_y);
+        line_layout.inset.left = Some(Px(0.0)).into();
+        line_layout.inset.right = Some(Px(0.0)).into();
+        line_layout.inset.top = Some(line_y).into();
         line_layout.size.height = Length::Px(Px(1.0));
 
         let line_el = cx.container(

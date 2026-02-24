@@ -5192,10 +5192,10 @@ fn dialog_scrim_dismisses_without_activating_underlay() {
                                 l.size.width = fret_ui::element::Length::Fill;
                                 l.size.height = fret_ui::element::Length::Fill;
                                 l.inset = fret_ui::element::InsetStyle {
-                                    top: Some(Px(0.0)),
-                                    right: Some(Px(0.0)),
-                                    bottom: Some(Px(0.0)),
-                                    left: Some(Px(0.0)),
+                                    top: Some(Px(0.0)).into(),
+                                    right: Some(Px(0.0)).into(),
+                                    bottom: Some(Px(0.0)).into(),
+                                    left: Some(Px(0.0)).into(),
                                 };
                                 l
                             },
@@ -13697,10 +13697,10 @@ fn select_menu_matches_anchor_width_and_clamps_height_to_available_space() {
                 let mut l = fret_ui::element::LayoutStyle::default();
                 l.position = fret_ui::element::PositionStyle::Absolute;
                 l.inset = fret_ui::element::InsetStyle {
-                    top: Some(Px(200.0)),
-                    left: Some(Px(24.0)),
-                    right: None,
-                    bottom: None,
+                    top: Some(Px(200.0)).into(),
+                    left: Some(Px(24.0)).into(),
+                    right: None.into(),
+                    bottom: None.into(),
                 };
                 l.size.width = fret_ui::element::Length::Px(Px(240.0));
                 l.size.height = fret_ui::element::Length::Auto;

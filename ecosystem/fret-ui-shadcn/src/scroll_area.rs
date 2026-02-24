@@ -355,14 +355,15 @@ impl ScrollAreaRoot {
                             LayoutStyle {
                                 position: PositionStyle::Absolute,
                                 inset: InsetStyle {
-                                    top: Some(Px(0.0)),
-                                    right: Some(Px(0.0)),
+                                    top: Some(Px(0.0)).into(),
+                                    right: Some(Px(0.0)).into(),
                                     bottom: Some(if overflow_x {
                                         scrollbar_width
                                     } else {
                                         Px(0.0)
-                                    }),
-                                    left: None,
+                                    })
+                                    .into(),
+                                    left: None.into(),
                                 },
                                 size: SizeStyle {
                                     width: Length::Px(scrollbar_width),
@@ -374,8 +375,8 @@ impl ScrollAreaRoot {
                             LayoutStyle {
                                 position: PositionStyle::Absolute,
                                 inset: InsetStyle {
-                                    top: Some(Px(0.0)),
-                                    right: Some(Px(0.0)),
+                                    top: Some(Px(0.0)).into(),
+                                    right: Some(Px(0.0)).into(),
                                     ..Default::default()
                                 },
                                 size: SizeStyle {
@@ -428,10 +429,11 @@ impl ScrollAreaRoot {
                             LayoutStyle {
                                 position: PositionStyle::Absolute,
                                 inset: InsetStyle {
-                                    top: None,
-                                    right: Some(if overflow_y { scrollbar_width } else { Px(0.0) }),
-                                    bottom: Some(Px(0.0)),
-                                    left: Some(Px(0.0)),
+                                    top: None.into(),
+                                    right: Some(if overflow_y { scrollbar_width } else { Px(0.0) })
+                                        .into(),
+                                    bottom: Some(Px(0.0)).into(),
+                                    left: Some(Px(0.0)).into(),
                                 },
                                 size: SizeStyle {
                                     height: Length::Px(scrollbar_width),
@@ -443,8 +445,8 @@ impl ScrollAreaRoot {
                             LayoutStyle {
                                 position: PositionStyle::Absolute,
                                 inset: InsetStyle {
-                                    left: Some(Px(0.0)),
-                                    bottom: Some(Px(0.0)),
+                                    left: Some(Px(0.0)).into(),
+                                    bottom: Some(Px(0.0)).into(),
                                     ..Default::default()
                                 },
                                 size: SizeStyle {
@@ -493,8 +495,8 @@ impl ScrollAreaRoot {
                         LayoutStyle {
                             position: PositionStyle::Absolute,
                             inset: InsetStyle {
-                                right: Some(Px(0.0)),
-                                bottom: Some(Px(0.0)),
+                                right: Some(Px(0.0)).into(),
+                                bottom: Some(Px(0.0)).into(),
                                 ..Default::default()
                             },
                             size: SizeStyle {
@@ -508,8 +510,8 @@ impl ScrollAreaRoot {
                         LayoutStyle {
                             position: PositionStyle::Absolute,
                             inset: InsetStyle {
-                                right: Some(Px(0.0)),
-                                bottom: Some(Px(0.0)),
+                                right: Some(Px(0.0)).into(),
+                                bottom: Some(Px(0.0)).into(),
                                 ..Default::default()
                             },
                             size: SizeStyle {

@@ -119,6 +119,9 @@ impl ElementHostWidget {
                 let child_style = layout_style_for_node(cx.app, window, child);
                 let right_margin = match child_style.margin.right {
                     crate::element::MarginEdge::Px(px) => px.0,
+                    crate::element::MarginEdge::Fill | crate::element::MarginEdge::Fraction(_) => {
+                        0.0
+                    }
                     crate::element::MarginEdge::Auto => 0.0,
                 };
                 let x = layout.origin.x.0 - pad_left;
@@ -152,6 +155,7 @@ impl ElementHostWidget {
 
             let margin_px = |edge: crate::element::MarginEdge| match edge {
                 crate::element::MarginEdge::Px(px) => px.0,
+                crate::element::MarginEdge::Fill | crate::element::MarginEdge::Fraction(_) => 0.0,
                 crate::element::MarginEdge::Auto => 0.0,
             };
 

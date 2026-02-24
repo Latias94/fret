@@ -679,8 +679,8 @@ fn fixed_trigger(
                 let mut layout = LayoutStyle::default();
                 layout.size.width = Length::Px(Px(w));
                 layout.size.height = Length::Px(Px(h));
-                layout.inset.left = Some(Px(left));
-                layout.inset.top = Some(Px(top));
+                layout.inset.left = Some(Px(left)).into();
+                layout.inset.top = Some(Px(top)).into();
                 layout.position = PositionStyle::Absolute;
                 layout
             },
@@ -1301,8 +1301,8 @@ fn radix_web_select_item_aligned_geometry_matches_fret() {
 
             let mut trigger_layout = LayoutStyle::default();
             trigger_layout.position = PositionStyle::Absolute;
-            trigger_layout.inset.left = Some(trigger_origin.x);
-            trigger_layout.inset.top = Some(trigger_origin.y);
+            trigger_layout.inset.left = Some(trigger_origin.x).into();
+            trigger_layout.inset.top = Some(trigger_origin.y).into();
 
             vec![cx.container(
                 ContainerProps {
@@ -1379,8 +1379,8 @@ fn radix_web_select_item_aligned_geometry_matches_fret() {
 
                 let mut trigger_layout = LayoutStyle::default();
                 trigger_layout.position = PositionStyle::Absolute;
-                trigger_layout.inset.left = Some(trigger_origin.x);
-                trigger_layout.inset.top = Some(trigger_origin.y);
+                trigger_layout.inset.left = Some(trigger_origin.x).into();
+                trigger_layout.inset.top = Some(trigger_origin.y).into();
 
                 vec![cx.container(
                     ContainerProps {
@@ -2797,8 +2797,8 @@ fn radix_web_menubar_open_geometry_matches_fret() {
 
             let mut origin_layout = LayoutStyle::default();
             origin_layout.position = PositionStyle::Absolute;
-            origin_layout.inset.left = Some(origin.x);
-            origin_layout.inset.top = Some(origin.y);
+            origin_layout.inset.left = Some(origin.x).into();
+            origin_layout.inset.top = Some(origin.y).into();
 
             vec![cx.keyed("menubar-scene", |cx| {
                 cx.container(
@@ -2875,8 +2875,8 @@ fn radix_web_menubar_open_geometry_matches_fret() {
 
             let mut origin_layout = LayoutStyle::default();
             origin_layout.position = PositionStyle::Absolute;
-            origin_layout.inset.left = Some(origin.x);
-            origin_layout.inset.top = Some(origin.y);
+            origin_layout.inset.left = Some(origin.x).into();
+            origin_layout.inset.top = Some(origin.y).into();
 
             vec![cx.keyed("menubar-scene", |cx| {
                 cx.container(
@@ -2952,10 +2952,10 @@ fn radix_web_menubar_open_geometry_matches_fret() {
                 root_layout.size.height = Length::Fill;
                 root_layout.position = PositionStyle::Relative;
 
-                let mut origin_layout = LayoutStyle::default();
-                origin_layout.position = PositionStyle::Absolute;
-                origin_layout.inset.left = Some(origin.x);
-                origin_layout.inset.top = Some(origin.y);
+            let mut origin_layout = LayoutStyle::default();
+            origin_layout.position = PositionStyle::Absolute;
+            origin_layout.inset.left = Some(origin.x).into();
+            origin_layout.inset.top = Some(origin.y).into();
 
                 vec![cx.keyed("menubar-scene", |cx| {
                     cx.container(

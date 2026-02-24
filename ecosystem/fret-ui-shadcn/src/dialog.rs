@@ -1475,8 +1475,8 @@ mod tests {
                             let mut layout = LayoutStyle::default();
                             layout.size.width = Length::Px(Px(120.0));
                             layout.size.height = Length::Px(Px(40.0));
-                            layout.inset.left = Some(Px(20.0));
-                            layout.inset.top = Some(Px(20.0));
+                            layout.inset.left = Some(Px(100.0)).into();
+                            layout.inset.top = Some(Px(100.0)).into();
                             layout.position = PositionStyle::Absolute;
                             layout
                         },
@@ -1971,8 +1971,8 @@ mod tests {
                                 let mut layout = LayoutStyle::default();
                                 layout.size.width = Length::Px(Px(120.0));
                                 layout.size.height = Length::Px(Px(40.0));
-                                layout.inset.left = Some(Px(20.0));
-                                layout.inset.top = Some(Px(20.0));
+                                layout.inset.left = Some(Px(100.0)).into();
+                                layout.inset.top = Some(Px(100.0)).into();
                                 layout.position = PositionStyle::Absolute;
                                 layout
                             },
@@ -2215,8 +2215,8 @@ mod tests {
                                 let mut layout = LayoutStyle::default();
                                 layout.size.width = Length::Px(Px(120.0));
                                 layout.size.height = Length::Px(Px(40.0));
-                                layout.inset.left = Some(Px(20.0));
-                                layout.inset.top = Some(Px(20.0));
+                                layout.inset.left = Some(Px(100.0)).into();
+                                layout.inset.top = Some(Px(100.0)).into();
                                 layout.position = PositionStyle::Absolute;
                                 layout
                             },
@@ -2643,8 +2643,8 @@ mod tests {
                             layout.size.width = Length::Px(Px(120.0));
                             layout.size.height = Length::Px(Px(40.0));
                             layout.position = fret_ui::element::PositionStyle::Absolute;
-                            layout.inset.top = Some(Px(0.0));
-                            layout.inset.left = Some(Px(0.0));
+                            layout.inset.top = Some(Px(100.0)).into();
+                            layout.inset.left = Some(Px(100.0)).into();
                             layout
                         },
                         enabled: true,
@@ -2664,8 +2664,8 @@ mod tests {
                             layout.size.width = Length::Px(Px(120.0));
                             layout.size.height = Length::Px(Px(40.0));
                             layout.position = fret_ui::element::PositionStyle::Absolute;
-                            layout.inset.top = Some(Px(200.0));
-                            layout.inset.left = Some(Px(200.0));
+                            layout.inset.top = Some(Px(100.0)).into();
+                            layout.inset.left = Some(Px(100.0)).into();
                             layout
                         },
                         enabled: true,

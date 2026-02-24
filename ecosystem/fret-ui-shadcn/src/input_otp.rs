@@ -281,10 +281,10 @@ impl InputOtp {
                 input.layout = LayoutStyle {
                     position: PositionStyle::Absolute,
                     inset: InsetStyle {
-                        left: Some(Px(0.0)),
-                        top: Some(Px(0.0)),
-                        right: Some(Px(0.0)),
-                        bottom: Some(Px(0.0)),
+                        left: Some(Px(0.0)).into(),
+                        top: Some(Px(0.0)).into(),
+                        right: Some(Px(0.0)).into(),
+                        bottom: Some(Px(0.0)).into(),
                     },
                     size: SizeStyle {
                         width: Length::Fill,
@@ -435,10 +435,10 @@ impl InputOtp {
                                             layout: LayoutStyle {
                                                 position: PositionStyle::Absolute,
                                                 inset: InsetStyle {
-                                                    left: Some(Px(0.0)),
-                                                    top: Some(Px(0.0)),
-                                                    right: Some(Px(0.0)),
-                                                    bottom: Some(Px(0.0)),
+                                                    left: Some(Px(0.0)).into(),
+                                                    top: Some(Px(0.0)).into(),
+                                                    right: Some(Px(0.0)).into(),
+                                                    bottom: Some(Px(0.0)).into(),
                                                 },
                                                 ..Default::default()
                                             },
@@ -582,10 +582,10 @@ impl InputOtp {
                                         layout: LayoutStyle {
                                             position: PositionStyle::Absolute,
                                             inset: InsetStyle {
-                                                left: Some(left),
-                                                top: Some(top),
-                                                right: None,
-                                                bottom: None,
+                                                left: Some(left).into(),
+                                                top: Some(top).into(),
+                                                right: None.into(),
+                                                bottom: None.into(),
                                             },
                                             size: SizeStyle {
                                                 width: Length::Px(slot_bounds.size.width),

@@ -2231,8 +2231,8 @@ fn web_vs_fret_button_group_input_geometry_and_chrome_match() {
                     fret_ui::element::FlexProps {
                         layout: fret_ui::element::LayoutStyle::default(),
                         direction: fret_core::Axis::Horizontal,
-                        gap: Px(0.0),
-                        padding: fret_core::Edges::all(Px(0.0)),
+                        gap: Px(0.0).into(),
+                        padding: fret_core::Edges::all(Px(0.0)).into(),
                         justify: fret_ui::element::MainAlign::Start,
                         align: fret_ui::element::CrossAlign::Stretch,
                         wrap: false,
@@ -2703,8 +2703,8 @@ fn web_vs_fret_button_group_select_geometry_and_chrome_match() {
                     fret_ui::element::FlexProps {
                         layout: fret_ui::element::LayoutStyle::default(),
                         direction: fret_core::Axis::Horizontal,
-                        gap: Px(0.0),
-                        padding: fret_core::Edges::all(Px(0.0)),
+                        gap: Px(0.0).into(),
+                        padding: fret_core::Edges::all(Px(0.0)).into(),
                         justify: fret_ui::element::MainAlign::Start,
                         align: fret_ui::element::CrossAlign::Stretch,
                         wrap: false,
@@ -2732,8 +2732,8 @@ fn web_vs_fret_button_group_select_geometry_and_chrome_match() {
                     fret_ui::element::FlexProps {
                         layout: fret_ui::element::LayoutStyle::default(),
                         direction: fret_core::Axis::Horizontal,
-                        gap: Px(8.0),
-                        padding: fret_core::Edges::all(Px(0.0)),
+                        gap: Px(8.0).into(),
+                        padding: fret_core::Edges::all(Px(0.0)).into(),
                         justify: fret_ui::element::MainAlign::Start,
                         align: fret_ui::element::CrossAlign::Stretch,
                         wrap: false,
@@ -2930,7 +2930,8 @@ fn web_vs_fret_button_group_input_group_geometry_matches() {
                     right: Px(12.0),
                     bottom: Px(0.0),
                     left: Px(0.0),
-                },
+                }
+                .into(),
                 ..Default::default()
             },
             move |cx| {
@@ -2938,8 +2939,8 @@ fn web_vs_fret_button_group_input_group_geometry_matches() {
                     fret_ui::element::FlexProps {
                         layout: fret_ui::element::LayoutStyle::default(),
                         direction: fret_core::Axis::Horizontal,
-                        gap: Px(0.0),
-                        padding: fret_core::Edges::all(Px(0.0)),
+                        gap: Px(0.0).into(),
+                        padding: fret_core::Edges::all(Px(0.0)).into(),
                         justify: fret_ui::element::MainAlign::Center,
                         align: fret_ui::element::CrossAlign::Center,
                         wrap: false,
@@ -2966,7 +2967,7 @@ fn web_vs_fret_button_group_input_group_geometry_matches() {
                                 fret_ui::element::Length::Px(Px(web_wrapper.rect.h));
                             layout
                         },
-                        padding: fret_core::Edges::all(Px(0.0)),
+                        padding: fret_core::Edges::all(Px(0.0)).into(),
                         background: Some(bg),
                         border: fret_core::Edges::all(Px(1.0)),
                         border_color: Some(border),
@@ -2978,8 +2979,8 @@ fn web_vs_fret_button_group_input_group_geometry_matches() {
                             fret_ui::element::FlexProps {
                                 layout: fret_ui::element::LayoutStyle::default(),
                                 direction: fret_core::Axis::Horizontal,
-                                gap: Px(0.0),
-                                padding: fret_core::Edges::all(Px(0.0)),
+                                gap: Px(0.0).into(),
+                                padding: fret_core::Edges::all(Px(0.0)).into(),
                                 justify: fret_ui::element::MainAlign::Start,
                                 align: fret_ui::element::CrossAlign::Stretch,
                                 wrap: false,
@@ -3002,8 +3003,8 @@ fn web_vs_fret_button_group_input_group_geometry_matches() {
                     fret_ui::element::FlexProps {
                         layout: fret_ui::element::LayoutStyle::default(),
                         direction: fret_core::Axis::Horizontal,
-                        gap: Px(8.0),
-                        padding: fret_core::Edges::all(Px(0.0)),
+                        gap: Px(8.0).into(),
+                        padding: fret_core::Edges::all(Px(0.0)).into(),
                         justify: fret_ui::element::MainAlign::Start,
                         align: fret_ui::element::CrossAlign::Stretch,
                         wrap: false,
@@ -4617,7 +4618,7 @@ fn web_vs_fret_calendar_14_focus_ring_matches_web() {
                         layout.size.height = fret_ui::element::Length::Fill;
                         layout
                     },
-                    padding: fret_core::Edges::all(Px(64.0)),
+                    padding: fret_core::Edges::all(Px(64.0)).into(),
                     ..Default::default()
                 },
                 move |_cx| vec![calendar],
@@ -4707,7 +4708,7 @@ fn web_vs_fret_calendar_14_vp375x320_focus_ring_matches_web() {
                         layout.size.height = fret_ui::element::Length::Fill;
                         layout
                     },
-                    padding: fret_core::Edges::all(Px(64.0)),
+                    padding: fret_core::Edges::all(Px(64.0)).into(),
                     ..Default::default()
                 },
                 move |_cx| vec![calendar],
@@ -4809,7 +4810,7 @@ fn web_vs_fret_calendar_03_focus_ring_matches_web() {
                         layout.size.height = fret_ui::element::Length::Fill;
                         layout
                     },
-                    padding: fret_core::Edges::all(Px(64.0)),
+                    padding: fret_core::Edges::all(Px(64.0)).into(),
                     ..Default::default()
                 },
                 move |_cx| vec![calendar],
@@ -4911,7 +4912,7 @@ fn web_vs_fret_calendar_03_vp375x320_focus_ring_matches_web() {
                         layout.size.height = fret_ui::element::Length::Fill;
                         layout
                     },
-                    padding: fret_core::Edges::all(Px(64.0)),
+                    padding: fret_core::Edges::all(Px(64.0)).into(),
                     ..Default::default()
                 },
                 move |_cx| vec![calendar],
@@ -5024,7 +5025,7 @@ fn web_vs_fret_calendar_04_focus_ring_matches_web() {
                         layout.size.height = fret_ui::element::Length::Fill;
                         layout
                     },
-                    padding: fret_core::Edges::all(Px(64.0)),
+                    padding: fret_core::Edges::all(Px(64.0)).into(),
                     ..Default::default()
                 },
                 move |_cx| vec![calendar],
@@ -5137,7 +5138,7 @@ fn web_vs_fret_calendar_04_vp375x320_focus_ring_matches_web() {
                         layout.size.height = fret_ui::element::Length::Fill;
                         layout
                     },
-                    padding: fret_core::Edges::all(Px(64.0)),
+                    padding: fret_core::Edges::all(Px(64.0)).into(),
                     ..Default::default()
                 },
                 move |_cx| vec![calendar],

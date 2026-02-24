@@ -1608,8 +1608,8 @@ impl MenubarMenuEntries {
                                 LayoutStyle {
                                     position: PositionStyle::Absolute,
                                     inset: InsetStyle {
-                                        left: Some(placed.origin.x),
-                                        top: Some(placed.origin.y),
+                                        left: Some(placed.origin.x).into(),
+                                        top: Some(placed.origin.y).into(),
                                         ..Default::default()
                                     },
                                     size: SizeStyle {

@@ -541,14 +541,15 @@ where
                 let scrollbar_layout = LayoutStyle {
                     position: PositionStyle::Absolute,
                     inset: InsetStyle {
-                        top: Some(Px(0.0)),
-                        right: Some(Px(0.0)),
+                        top: Some(Px(0.0)).into(),
+                        right: Some(Px(0.0)).into(),
                         bottom: Some(if show_scrollbar_x {
                             scrollbar_w
                         } else {
                             Px(0.0)
-                        }),
-                        left: None,
+                        })
+                        .into(),
+                        left: None.into(),
                     },
                     size: SizeStyle {
                         width: Length::Px(scrollbar_w),
@@ -574,14 +575,15 @@ where
                 let scrollbar_layout = LayoutStyle {
                     position: PositionStyle::Absolute,
                     inset: InsetStyle {
-                        top: None,
+                        top: None.into(),
                         right: Some(if show_scrollbar_y {
                             scrollbar_w
                         } else {
                             Px(0.0)
-                        }),
-                        bottom: Some(Px(0.0)),
-                        left: Some(Px(0.0)),
+                        })
+                        .into(),
+                        bottom: Some(Px(0.0)).into(),
+                        left: Some(Px(0.0)).into(),
                     },
                     size: SizeStyle {
                         height: Length::Px(scrollbar_w),
@@ -607,10 +609,10 @@ where
                 let corner_layout = LayoutStyle {
                     position: PositionStyle::Absolute,
                     inset: InsetStyle {
-                        top: None,
-                        right: Some(Px(0.0)),
-                        bottom: Some(Px(0.0)),
-                        left: None,
+                        top: None.into(),
+                        right: Some(Px(0.0)).into(),
+                        bottom: Some(Px(0.0)).into(),
+                        left: None.into(),
                     },
                     size: SizeStyle {
                         width: Length::Px(scrollbar_w),
@@ -690,14 +692,15 @@ where
                 let scrollbar_layout = LayoutStyle {
                     position: PositionStyle::Absolute,
                     inset: InsetStyle {
-                        top: Some(Px(0.0)),
-                        right: Some(Px(0.0)),
+                        top: Some(Px(0.0)).into(),
+                        right: Some(Px(0.0)).into(),
                         bottom: Some(if show_scrollbar_x {
                             scrollbar_w
                         } else {
                             Px(0.0)
-                        }),
-                        left: None,
+                        })
+                        .into(),
+                        left: None.into(),
                     },
                     size: SizeStyle {
                         width: Length::Px(scrollbar_w),
@@ -723,14 +726,15 @@ where
                 let scrollbar_layout = LayoutStyle {
                     position: PositionStyle::Absolute,
                     inset: InsetStyle {
-                        top: None,
+                        top: None.into(),
                         right: Some(if show_scrollbar_y {
                             scrollbar_w
                         } else {
                             Px(0.0)
-                        }),
-                        bottom: Some(Px(0.0)),
-                        left: Some(Px(0.0)),
+                        })
+                        .into(),
+                        bottom: Some(Px(0.0)).into(),
+                        left: Some(Px(0.0)).into(),
                     },
                     size: SizeStyle {
                         height: Length::Px(scrollbar_w),
@@ -756,10 +760,10 @@ where
                 let corner_layout = LayoutStyle {
                     position: PositionStyle::Absolute,
                     inset: InsetStyle {
-                        top: None,
-                        right: Some(Px(0.0)),
-                        bottom: Some(Px(0.0)),
-                        left: None,
+                        top: None.into(),
+                        right: Some(Px(0.0)).into(),
+                        bottom: Some(Px(0.0)).into(),
+                        left: None.into(),
                     },
                     size: SizeStyle {
                         width: Length::Px(scrollbar_w),

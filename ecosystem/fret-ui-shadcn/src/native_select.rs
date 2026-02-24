@@ -453,10 +453,10 @@ pub fn native_select<H: UiHost>(
                             layout: LayoutStyle {
                                 position: PositionStyle::Absolute,
                                 inset: InsetStyle {
-                                    left: None,
-                                    top: Some(icon_top),
-                                    right: Some(icon_right),
-                                    bottom: None,
+                                    left: None.into(),
+                                    top: Some(icon_top).into(),
+                                    right: Some(icon_right).into(),
+                                    bottom: None.into(),
                                 },
                                 size: SizeStyle {
                                     width: Length::Px(icon_size),

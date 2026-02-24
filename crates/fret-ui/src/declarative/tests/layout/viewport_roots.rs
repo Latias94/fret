@@ -1091,10 +1091,10 @@ fn viewport_root_pointer_region_absolute_child_fills_region() {
 
         let mut barrier = crate::element::ContainerProps::default();
         barrier.layout.position = crate::element::PositionStyle::Absolute;
-        barrier.layout.inset.top = Some(Px(0.0));
-        barrier.layout.inset.right = Some(Px(0.0));
-        barrier.layout.inset.bottom = Some(Px(0.0));
-        barrier.layout.inset.left = Some(Px(0.0));
+        barrier.layout.inset.top = Some(Px(0.0)).into();
+        barrier.layout.inset.right = Some(Px(0.0)).into();
+        barrier.layout.inset.bottom = Some(Px(0.0)).into();
+        barrier.layout.inset.left = Some(Px(0.0)).into();
         barrier.layout.size.width = Length::Fill;
         barrier.layout.size.height = Length::Fill;
 
@@ -2231,10 +2231,10 @@ fn viewport_root_wheel_region_absolute_child_fills_region() {
 
         let mut barrier = crate::element::ContainerProps::default();
         barrier.layout.position = crate::element::PositionStyle::Absolute;
-        barrier.layout.inset.top = Some(Px(0.0));
-        barrier.layout.inset.right = Some(Px(0.0));
-        barrier.layout.inset.bottom = Some(Px(0.0));
-        barrier.layout.inset.left = Some(Px(0.0));
+        barrier.layout.inset.top = Some(Px(0.0)).into();
+        barrier.layout.inset.right = Some(Px(0.0)).into();
+        barrier.layout.inset.bottom = Some(Px(0.0)).into();
+        barrier.layout.inset.left = Some(Px(0.0)).into();
         barrier.layout.size.width = Length::Fill;
         barrier.layout.size.height = Length::Fill;
 

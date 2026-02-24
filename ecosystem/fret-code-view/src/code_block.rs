@@ -818,14 +818,15 @@ fn render_code_block_body<H: UiHost + 'static>(
                                 let scrollbar_layout = LayoutStyle {
                                     position: PositionStyle::Absolute,
                                     inset: InsetStyle {
-                                        top: Some(Px(0.0)),
-                                        right: Some(Px(0.0)),
+                                        top: Some(Px(0.0)).into(),
+                                        right: Some(Px(0.0)).into(),
                                         bottom: Some(if scrollbar_x_enabled {
                                             scrollbar_w
                                         } else {
                                             Px(0.0)
-                                        }),
-                                        left: None,
+                                        })
+                                        .into(),
+                                        left: None.into(),
                                     },
                                     size: SizeStyle {
                                         width: Length::Px(scrollbar_w),
@@ -1269,10 +1270,10 @@ fn render_code_block_windowed_lines<H: UiHost + 'static>(
                     let scrollbar_layout = LayoutStyle {
                         position: PositionStyle::Absolute,
                         inset: InsetStyle {
-                            top: None,
-                            right: Some(scrollbar_x_right_inset),
-                            bottom: Some(Px(0.0)),
-                            left: Some(Px(0.0)),
+                            top: None.into(),
+                            right: Some(scrollbar_x_right_inset).into(),
+                            bottom: Some(Px(0.0)).into(),
+                            left: Some(Px(0.0)).into(),
                         },
                         size: SizeStyle {
                             height: Length::Px(scrollbar_w),
@@ -1313,14 +1314,15 @@ fn render_code_block_windowed_lines<H: UiHost + 'static>(
                 let scrollbar_layout = LayoutStyle {
                     position: PositionStyle::Absolute,
                     inset: InsetStyle {
-                        top: Some(Px(0.0)),
-                        right: Some(Px(0.0)),
+                        top: Some(Px(0.0)).into(),
+                        right: Some(Px(0.0)).into(),
                         bottom: Some(if scrollbar_x_enabled {
                             scrollbar_w
                         } else {
                             Px(0.0)
-                        }),
-                        left: None,
+                        })
+                        .into(),
+                        left: None.into(),
                     },
                     size: SizeStyle {
                         width: Length::Px(scrollbar_w),
@@ -1507,10 +1509,10 @@ fn render_code_block_text<H: UiHost>(
             let scrollbar_layout = LayoutStyle {
                 position: PositionStyle::Absolute,
                 inset: InsetStyle {
-                    top: None,
-                    right: Some(scrollbar_x_right_inset),
-                    bottom: Some(Px(0.0)),
-                    left: Some(Px(0.0)),
+                    top: None.into(),
+                    right: Some(scrollbar_x_right_inset).into(),
+                    bottom: Some(Px(0.0)).into(),
+                    left: Some(Px(0.0)).into(),
                 },
                 size: SizeStyle {
                     height: Length::Px(scrollbar_w),

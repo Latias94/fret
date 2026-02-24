@@ -492,8 +492,8 @@ where
                                 layout: fret_ui::element::LayoutStyle {
                                     position: fret_ui::element::PositionStyle::Absolute,
                                     inset: fret_ui::element::InsetStyle {
-                                        left: Some(left),
-                                        top: Some(top),
+                                        left: Some(left).into(),
+                                        top: Some(top).into(),
                                         ..Default::default()
                                     },
                                     ..Default::default()

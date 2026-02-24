@@ -1465,10 +1465,10 @@ pub fn select_modal_barrier_pointer_up_guard<H: UiHost>(
         let mut layout = LayoutStyle::default();
         layout.position = fret_ui::element::PositionStyle::Absolute;
         layout.inset = fret_ui::element::InsetStyle {
-            left: Some(left),
-            right: None,
-            top: Some(top),
-            bottom: None,
+            left: Some(left).into(),
+            right: None.into(),
+            top: Some(top).into(),
+            bottom: None.into(),
         };
         layout.size.width = fret_ui::element::Length::Px(size);
         layout.size.height = fret_ui::element::Length::Px(size);
@@ -2070,8 +2070,8 @@ mod tests {
                 let abs = |rect: Rect| {
                     let mut layout = LayoutStyle::default();
                     layout.position = fret_ui::element::PositionStyle::Absolute;
-                    layout.inset.left = Some(rect.origin.x);
-                    layout.inset.top = Some(rect.origin.y);
+                    layout.inset.left = Some(rect.origin.x).into();
+                    layout.inset.top = Some(rect.origin.y).into();
                     layout.size.width = Length::Px(rect.size.width);
                     layout.size.height = Length::Px(rect.size.height);
                     ContainerProps {

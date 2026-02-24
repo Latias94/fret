@@ -392,10 +392,10 @@ fn scroll_thumb_drag_updates_offset() {
                     let scrollbar_layout = crate::element::LayoutStyle {
                         position: crate::element::PositionStyle::Absolute,
                         inset: crate::element::InsetStyle {
-                            top: Some(Px(0.0)),
-                            right: Some(Px(0.0)),
-                            bottom: Some(Px(0.0)),
-                            left: None,
+                            top: Some(Px(0.0)).into(),
+                            right: Some(Px(0.0)).into(),
+                            bottom: Some(Px(0.0)).into(),
+                            left: None.into(),
                         },
                         size: crate::element::SizeStyle {
                             width: crate::element::Length::Px(Px(10.0)),
@@ -1204,10 +1204,10 @@ fn scroll_thumb_drag_updates_offset_horizontal() {
                     let scrollbar_layout = crate::element::LayoutStyle {
                         position: crate::element::PositionStyle::Absolute,
                         inset: crate::element::InsetStyle {
-                            top: None,
-                            right: Some(Px(0.0)),
-                            bottom: Some(Px(0.0)),
-                            left: Some(Px(0.0)),
+                            top: None.into(),
+                            right: Some(Px(0.0)).into(),
+                            bottom: Some(Px(0.0)).into(),
+                            left: Some(Px(0.0)).into(),
                         },
                         size: crate::element::SizeStyle {
                             height: crate::element::Length::Px(Px(10.0)),

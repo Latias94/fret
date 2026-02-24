@@ -417,10 +417,10 @@ impl DataGridCanvas {
                     let v_layout = LayoutStyle {
                         position: PositionStyle::Absolute,
                         inset: InsetStyle {
-                            top: Some(Px(0.0)),
-                            right: Some(Px(0.0)),
-                            bottom: Some(scrollbar_w),
-                            left: None,
+                            top: Some(Px(0.0)).into(),
+                            right: Some(Px(0.0)).into(),
+                            bottom: Some(scrollbar_w).into(),
+                            left: None.into(),
                         },
                         size: SizeStyle {
                             width: Length::Px(scrollbar_w),
@@ -444,10 +444,10 @@ impl DataGridCanvas {
                     let h_layout = LayoutStyle {
                         position: PositionStyle::Absolute,
                         inset: InsetStyle {
-                            top: None,
-                            right: Some(scrollbar_w),
-                            bottom: Some(Px(0.0)),
-                            left: Some(Px(0.0)),
+                            top: None.into(),
+                            right: Some(scrollbar_w).into(),
+                            bottom: Some(Px(0.0)).into(),
+                            left: Some(Px(0.0)).into(),
                         },
                         size: SizeStyle {
                             height: Length::Px(scrollbar_w),

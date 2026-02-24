@@ -206,10 +206,10 @@ pub fn apply_layout_refinement<T: ThemeTokenRead + ?Sized>(
         left,
     }) = refinement.inset
     {
-        layout.inset.top = top.map(|m| m.resolve(theme));
-        layout.inset.right = right.map(|m| m.resolve(theme));
-        layout.inset.bottom = bottom.map(|m| m.resolve(theme));
-        layout.inset.left = left.map(|m| m.resolve(theme));
+        layout.inset.top = top.map(|m| m.resolve(theme)).unwrap_or_default();
+        layout.inset.right = right.map(|m| m.resolve(theme)).unwrap_or_default();
+        layout.inset.bottom = bottom.map(|m| m.resolve(theme)).unwrap_or_default();
+        layout.inset.left = left.map(|m| m.resolve(theme)).unwrap_or_default();
     }
     if let Some(SizeRefinement {
         width,

@@ -19,8 +19,8 @@ pub(super) fn maybe_push_debug_hud(
         let hud_layout = fret_ui::element::LayoutStyle {
             position: fret_ui::element::PositionStyle::Absolute,
             inset: fret_ui::element::InsetStyle {
-                top: Some(Px(8.0)),
-                right: Some(Px(8.0)),
+                top: Some(Px(8.0)).into(),
+                right: Some(Px(8.0)).into(),
                 ..Default::default()
             },
             size: fret_ui::element::SizeStyle {

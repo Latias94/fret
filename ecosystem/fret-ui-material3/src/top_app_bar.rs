@@ -973,10 +973,10 @@ fn top_app_bar_single_row<H: UiHost>(
             title_layer.layout.size.width = Length::Fill;
             title_layer.layout.size.height = Length::Fill;
             title_layer.layout.position = PositionStyle::Absolute;
-            title_layer.layout.inset.left = Some(side_reserved);
-            title_layer.layout.inset.right = Some(side_reserved);
-            title_layer.layout.inset.top = Some(Px(0.0));
-            title_layer.layout.inset.bottom = Some(Px(0.0));
+            title_layer.layout.inset.left = Some(side_reserved).into();
+            title_layer.layout.inset.right = Some(side_reserved).into();
+            title_layer.layout.inset.top = Some(Px(0.0)).into();
+            title_layer.layout.inset.bottom = Some(Px(0.0)).into();
 
             let mut title_row = FlexProps::default();
             title_row.direction = Axis::Horizontal;

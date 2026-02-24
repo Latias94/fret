@@ -288,10 +288,10 @@ impl AlertDialog {
                             layout: LayoutStyle {
                                 position: PositionStyle::Absolute,
                                 inset: InsetStyle {
-                                    top: Some(top),
-                                    left: Some(left),
-                                    right: None,
-                                    bottom: None,
+                                    top: Some(top).into(),
+                                    left: Some(left).into(),
+                                    right: None.into(),
+                                    bottom: None.into(),
                                 },
                                 size: SizeStyle {
                                     width: Length::Px(content_w),
@@ -1611,8 +1611,8 @@ mod tests {
                             let mut layout = LayoutStyle::default();
                             layout.size.width = Length::Px(Px(120.0));
                             layout.size.height = Length::Px(Px(40.0));
-                            layout.inset.left = Some(Px(20.0));
-                            layout.inset.top = Some(Px(20.0));
+                            layout.inset.left = Some(Px(100.0)).into();
+                            layout.inset.top = Some(Px(100.0)).into();
                             layout.position = fret_ui::element::PositionStyle::Absolute;
                             layout
                         },

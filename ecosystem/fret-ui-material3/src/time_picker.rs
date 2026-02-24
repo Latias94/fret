@@ -1301,13 +1301,13 @@ fn time_input_field<H: UiHost>(
             container.border_color = Some(c);
         }
 
-        let overlay = (hovered && !focused).then(|| {
-            let mut layout = LayoutStyle::default();
-            layout.position = fret_ui::element::PositionStyle::Absolute;
-            layout.inset.top = Some(Px(0.0));
-            layout.inset.right = Some(Px(0.0));
-            layout.inset.bottom = Some(Px(0.0));
-            layout.inset.left = Some(Px(0.0));
+            let overlay = (hovered && !focused).then(|| {
+                let mut layout = LayoutStyle::default();
+                layout.position = fret_ui::element::PositionStyle::Absolute;
+                layout.inset.top = Some(Px(0.0)).into();
+                layout.inset.right = Some(Px(0.0)).into();
+                layout.inset.bottom = Some(Px(0.0)).into();
+                layout.inset.left = Some(Px(0.0)).into();
 
             let c = {
                 let theme = Theme::global(&*cx.app);
@@ -1815,10 +1815,10 @@ fn time_picker_clock_dial<H: UiHost>(
                             layout: {
                                 let mut l = LayoutStyle::default();
                                 l.position = fret_ui::element::PositionStyle::Absolute;
-                                l.inset.top = Some(Px(0.0));
-                                l.inset.right = Some(Px(0.0));
-                                l.inset.bottom = Some(Px(0.0));
-                                l.inset.left = Some(Px(0.0));
+                                l.inset.top = Some(Px(0.0)).into();
+                                l.inset.right = Some(Px(0.0)).into();
+                                l.inset.bottom = Some(Px(0.0)).into();
+                                l.inset.left = Some(Px(0.0)).into();
                                 l.size.width = Length::Fill;
                                 l.size.height = Length::Fill;
                                 l
@@ -1919,8 +1919,8 @@ fn dial_label<H: UiHost>(
             layout: {
                 let mut l = LayoutStyle::default();
                 l.position = fret_ui::element::PositionStyle::Absolute;
-                l.inset.left = Some(Px(x));
-                l.inset.top = Some(Px(y));
+                l.inset.left = Some(Px(x)).into();
+                l.inset.top = Some(Px(y)).into();
                 l.size.width = Length::Px(Px(handle_size));
                 l.size.height = Length::Px(Px(handle_size));
                 l.overflow = Overflow::Visible;
@@ -2723,10 +2723,10 @@ fn absolute_fill_layout() -> LayoutStyle {
     layout.size.width = Length::Fill;
     layout.size.height = Length::Fill;
     layout.inset = fret_ui::element::InsetStyle {
-        top: Some(Px(0.0)),
-        right: Some(Px(0.0)),
-        bottom: Some(Px(0.0)),
-        left: Some(Px(0.0)),
+        top: Some(Px(0.0)).into(),
+        right: Some(Px(0.0)).into(),
+        bottom: Some(Px(0.0)).into(),
+        left: Some(Px(0.0)).into(),
     };
     layout
 }

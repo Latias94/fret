@@ -89,10 +89,10 @@ where
         let overlay_layout = LayoutStyle {
             position: PositionStyle::Absolute,
             inset: InsetStyle {
-                top: Some(fret_core::Px(0.0)),
-                right: Some(fret_core::Px(0.0)),
-                bottom: Some(fret_core::Px(0.0)),
-                left: Some(fret_core::Px(0.0)),
+                top: Some(fret_core::Px(0.0)).into(),
+                right: Some(fret_core::Px(0.0)).into(),
+                bottom: Some(fret_core::Px(0.0)).into(),
+                left: Some(fret_core::Px(0.0)).into(),
             },
             size: SizeStyle {
                 width: Length::Fill,

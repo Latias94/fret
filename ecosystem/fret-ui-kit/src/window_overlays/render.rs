@@ -1992,13 +1992,13 @@ pub fn render<H: UiHost + 'static>(
                                         position: fret_ui::element::PositionStyle::Absolute,
                                         ..Default::default()
                                     };
-                                    wrapper_layout.inset.left = Some(x);
+                                    wrapper_layout.inset.left = Some(x).into();
                                     wrapper_layout.size.width =
                                         fret_ui::element::Length::Px(toast_width);
                                     if is_top {
-                                        wrapper_layout.inset.top = Some(offset_top);
+                                        wrapper_layout.inset.top = Some(offset_top).into();
                                     } else {
-                                        wrapper_layout.inset.bottom = Some(offset_bottom);
+                                        wrapper_layout.inset.bottom = Some(offset_bottom).into();
                                     }
 
                                     let store_for_toasts = store_for_render_state.clone();
@@ -2749,12 +2749,12 @@ pub fn render<H: UiHost + 'static>(
                                                         position: fret_ui::element::PositionStyle::Absolute,
                                                         ..Default::default()
                                                     };
-                                                    toast_layout.inset.left = Some(Px(0.0));
-                                                    toast_layout.inset.right = Some(Px(0.0));
+                                                    toast_layout.inset.left = Some(Px(0.0)).into();
+                                                    toast_layout.inset.right = Some(Px(0.0)).into();
                                                     if is_top {
-                                                        toast_layout.inset.top = Some(Px(0.0));
+                                                        toast_layout.inset.top = Some(Px(0.0)).into();
                                                     } else {
-                                                        toast_layout.inset.bottom = Some(Px(0.0));
+                                                        toast_layout.inset.bottom = Some(Px(0.0)).into();
                                                     }
                                                     toast_layout.size.width =
                                                         fret_ui::element::Length::Px(toast_width_for_stack);

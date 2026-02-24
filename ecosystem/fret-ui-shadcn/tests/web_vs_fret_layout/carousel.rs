@@ -209,7 +209,7 @@ fn carousel_card_content(
             direction: fret_core::Axis::Horizontal,
             justify: MainAlign::Center,
             align: CrossAlign::Center,
-            padding: Edges::all(Px(24.0)),
+            padding: Edges::all(Px(24.0)).into(),
             ..Default::default()
         },
         move |_cx| vec![text],

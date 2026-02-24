@@ -544,8 +544,8 @@ fn hidden_layout(mut layout: LayoutStyle) -> LayoutStyle {
     };
     layout.position = PositionStyle::Absolute;
     layout.inset = InsetStyle {
-        top: Some(Px(0.0)),
-        left: Some(Px(0.0)),
+        top: Some(Px(0.0)).into(),
+        left: Some(Px(0.0)).into(),
         ..Default::default()
     };
     layout.overflow = Overflow::Clip;

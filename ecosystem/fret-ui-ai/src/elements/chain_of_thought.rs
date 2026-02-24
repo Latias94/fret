@@ -542,9 +542,9 @@ impl ChainOfThoughtStep {
                 layout: LayoutStyle {
                     position: fret_ui::element::PositionStyle::Absolute,
                     inset: fret_ui::element::InsetStyle {
-                        top: Some(Px(28.0)),
-                        bottom: Some(Px(0.0)),
-                        left: Some(Px(7.5)),
+                        top: Some(Px(28.0)).into(),
+                        bottom: Some(Px(0.0)).into(),
+                        left: Some(Px(7.5)).into(),
                         ..Default::default()
                     },
                     size: fret_ui::element::SizeStyle {

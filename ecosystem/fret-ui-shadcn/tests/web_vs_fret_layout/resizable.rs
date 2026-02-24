@@ -116,7 +116,7 @@ fn assert_resizable_demo_geometry_matches_web(web_name: &str) {
             let node = cx.container(
                 ContainerProps {
                     layout,
-                    padding: Edges::all(Px(24.0)),
+                    padding: Edges::all(Px(24.0)).into(),
                     ..Default::default()
                 },
                 move |cx| {
@@ -124,8 +124,8 @@ fn assert_resizable_demo_geometry_matches_web(web_name: &str) {
                         FlexProps {
                             layout: LayoutStyle::default(),
                             direction: fret_core::Axis::Horizontal,
-                            gap: Px(0.0),
-                            padding: Edges::all(Px(0.0)),
+                            gap: Px(0.0).into(),
+                            padding: Edges::all(Px(0.0)).into(),
                             justify: MainAlign::Center,
                             align: CrossAlign::Center,
                             wrap: false,
@@ -261,7 +261,7 @@ fn assert_resizable_demo_with_handle_geometry_matches_web(web_name: &str) {
             cx.container(
                 ContainerProps {
                     layout,
-                    padding: Edges::all(Px(24.0)),
+                    padding: Edges::all(Px(24.0)).into(),
                     ..Default::default()
                 },
                 move |cx| vec![ui::text(cx, text).font_semibold().into_element(cx)],
@@ -367,7 +367,7 @@ fn assert_resizable_handle_geometry_matches_web(web_name: &str) {
         let left_box = cx.container(
             ContainerProps {
                 layout: fill_layout,
-                padding: Edges::all(Px(24.0)),
+                padding: Edges::all(Px(24.0)).into(),
                 ..Default::default()
             },
             move |cx| vec![ui::text(cx, "Sidebar").font_semibold().into_element(cx)],
@@ -384,7 +384,7 @@ fn assert_resizable_handle_geometry_matches_web(web_name: &str) {
         let right_box = cx.container(
             ContainerProps {
                 layout: fill_layout,
-                padding: Edges::all(Px(24.0)),
+                padding: Edges::all(Px(24.0)).into(),
                 ..Default::default()
             },
             move |cx| vec![ui::text(cx, "Content").font_semibold().into_element(cx)],
@@ -504,7 +504,7 @@ fn assert_resizable_vertical_geometry_matches_web(web_name: &str) {
         let top_box = cx.container(
             ContainerProps {
                 layout: fill_layout,
-                padding: Edges::all(Px(24.0)),
+                padding: Edges::all(Px(24.0)).into(),
                 ..Default::default()
             },
             move |cx| vec![ui::text(cx, "Header").font_semibold().into_element(cx)],
@@ -521,7 +521,7 @@ fn assert_resizable_vertical_geometry_matches_web(web_name: &str) {
         let bottom_box = cx.container(
             ContainerProps {
                 layout: fill_layout,
-                padding: Edges::all(Px(24.0)),
+                padding: Edges::all(Px(24.0)).into(),
                 ..Default::default()
             },
             move |cx| vec![ui::text(cx, "Content").font_semibold().into_element(cx)],

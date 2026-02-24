@@ -304,10 +304,21 @@ impl ElementHostWidget {
                                 .iter()
                                 .find_map(|(id, size)| (*id == child).then_some(*size))
                                 .unwrap_or(Size::new(Px(0.0), Px(0.0)));
-                            let dx =
-                                inset.left.unwrap_or(Px(0.0)).0 - inset.right.unwrap_or(Px(0.0)).0;
-                            let dy =
-                                inset.top.unwrap_or(Px(0.0)).0 - inset.bottom.unwrap_or(Px(0.0)).0;
+                            let resolve = |edge: crate::element::InsetEdge, basis: Px| -> f32 {
+                                match edge {
+                                    crate::element::InsetEdge::Px(px) => px.0,
+                                    crate::element::InsetEdge::Fill => basis.0.max(0.0),
+                                    crate::element::InsetEdge::Fraction(f) => {
+                                        let f = if f.is_finite() { f.max(0.0) } else { 0.0 };
+                                        (basis.0.max(0.0) * f).max(0.0)
+                                    }
+                                    crate::element::InsetEdge::Auto => 0.0,
+                                }
+                            };
+                            let dx = resolve(inset.left, inner_bounds.size.width)
+                                - resolve(inset.right, inner_bounds.size.width);
+                            let dy = resolve(inset.top, inner_bounds.size.height)
+                                - resolve(inset.bottom, inner_bounds.size.height);
                             let origin = fret_core::Point::new(
                                 Px(inner_bounds.origin.x.0 + dx),
                                 Px(inner_bounds.origin.y.0 + dy),

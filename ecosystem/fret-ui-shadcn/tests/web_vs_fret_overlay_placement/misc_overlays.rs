@@ -58,8 +58,8 @@ fn fret_tooltip_tracks_trigger_when_underlay_scrolls() {
                                             let mut layout = LayoutStyle::default();
                                             layout.position =
                                                 fret_ui::element::PositionStyle::Absolute;
-                                            layout.inset.left = Some(Px(16.0));
-                                            layout.inset.top = Some(Px(160.0));
+                                            layout.inset.left = Some(left).into();
+                                            layout.inset.top = Some(top).into();
                                             layout.size.width = Length::Px(Px(120.0));
                                             layout.size.height = Length::Px(Px(32.0));
                                             layout
@@ -304,8 +304,8 @@ fn fret_popover_tracks_trigger_when_underlay_scrolls() {
                                             let mut layout = LayoutStyle::default();
                                             layout.position =
                                                 fret_ui::element::PositionStyle::Absolute;
-                                            layout.inset.left = Some(Px(16.0));
-                                            layout.inset.top = Some(Px(160.0));
+                                            layout.inset.left = Some(left).into();
+                                            layout.inset.top = Some(top).into();
                                             layout.size.width = Length::Px(Px(120.0));
                                             layout.size.height = Length::Px(Px(32.0));
                                             layout
@@ -550,8 +550,8 @@ fn fret_hover_card_tracks_trigger_when_underlay_scrolls() {
                                 layout: {
                                     let mut layout = LayoutStyle::default();
                                     layout.position = fret_ui::element::PositionStyle::Absolute;
-                                    layout.inset.left = Some(Px(16.0));
-                                    layout.inset.top = Some(Px(160.0));
+                                    layout.inset.left = Some(left).into();
+                                    layout.inset.top = Some(top).into();
                                     layout.size.width = Length::Px(Px(120.0));
                                     layout.size.height = Length::Px(Px(32.0));
                                     layout

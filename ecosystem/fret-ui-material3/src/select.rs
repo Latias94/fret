@@ -1344,9 +1344,9 @@ fn select_trigger_label<H: UiHost>(
 
     let mut layout = fret_ui::element::LayoutStyle::default();
     layout.position = fret_ui::element::PositionStyle::Absolute;
-    layout.inset.top = Some(y);
-    layout.inset.left = Some(x);
-    layout.inset.right = Some(Px(16.0));
+    layout.inset.top = Some(y).into();
+    layout.inset.left = Some(x).into();
+    layout.inset.right = Some(Px(16.0)).into();
     layout.overflow = Overflow::Visible;
 
     let floated = floating_label::is_floated(progress);

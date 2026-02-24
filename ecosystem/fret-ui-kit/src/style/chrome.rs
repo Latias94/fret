@@ -87,10 +87,10 @@ impl MarginRefinement {
 
 #[derive(Debug, Clone, Default)]
 pub struct InsetRefinement {
-    pub top: Option<SignedMetricRef>,
-    pub right: Option<SignedMetricRef>,
-    pub bottom: Option<SignedMetricRef>,
-    pub left: Option<SignedMetricRef>,
+    pub top: Option<InsetEdgeRefinement>,
+    pub right: Option<InsetEdgeRefinement>,
+    pub bottom: Option<InsetEdgeRefinement>,
+    pub left: Option<InsetEdgeRefinement>,
 }
 
 impl InsetRefinement {
@@ -114,6 +114,11 @@ impl InsetRefinement {
 #[derive(Debug, Clone)]
 pub enum MarginEdgeRefinement {
     Px(SignedMetricRef),
+    Fill,
+    /// Fraction of the containing block size (percent sizing).
+    ///
+    /// Expressed as a ratio (e.g. `0.5` for 50%).
+    Fraction(f32),
     Auto,
 }
 
@@ -121,7 +126,31 @@ impl MarginEdgeRefinement {
     pub fn resolve<T: ThemeTokenRead + ?Sized>(&self, theme: &T) -> fret_ui::element::MarginEdge {
         match self {
             Self::Px(m) => fret_ui::element::MarginEdge::Px(m.resolve(theme)),
+            Self::Fill => fret_ui::element::MarginEdge::Fill,
+            Self::Fraction(f) => fret_ui::element::MarginEdge::Fraction(*f),
             Self::Auto => fret_ui::element::MarginEdge::Auto,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum InsetEdgeRefinement {
+    Px(SignedMetricRef),
+    Fill,
+    /// Fraction of the containing block size (percent sizing).
+    ///
+    /// Expressed as a ratio (e.g. `0.5` for 50%).
+    Fraction(f32),
+    Auto,
+}
+
+impl InsetEdgeRefinement {
+    pub fn resolve<T: ThemeTokenRead + ?Sized>(&self, theme: &T) -> fret_ui::element::InsetEdge {
+        match self {
+            Self::Px(m) => fret_ui::element::InsetEdge::Px(m.resolve(theme)),
+            Self::Fill => fret_ui::element::InsetEdge::Fill,
+            Self::Fraction(f) => fret_ui::element::InsetEdge::Fraction(*f),
+            Self::Auto => fret_ui::element::InsetEdge::Auto,
         }
     }
 }
@@ -240,10 +269,10 @@ impl ChromeRefinement {
     pub fn p(mut self, space: Space) -> Self {
         let m = MetricRef::space(space);
         self.padding = Some(PaddingRefinement {
-            top: Some(m.clone()),
-            right: Some(m.clone()),
-            bottom: Some(m.clone()),
-            left: Some(m),
+            top: Some(m.clone()).into(),
+            right: Some(m.clone()).into(),
+            bottom: Some(m.clone()).into(),
+            left: Some(m).into(),
         });
         self
     }

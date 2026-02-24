@@ -34,8 +34,8 @@ fn web_vs_fret_layout_collapsible_demo_trigger_icon_size_matches_web() {
                     ..Default::default()
                 },
                 direction: fret_core::Axis::Horizontal,
-                gap: Px(16.0),
-                padding: Edges::symmetric(Px(16.0), Px(0.0)),
+                gap: Px(16.0).into(),
+                padding: Edges::symmetric(Px(16.0), Px(0.0)).into(),
                 justify: MainAlign::SpaceBetween,
                 align: CrossAlign::Center,
                 wrap: false,
@@ -60,7 +60,7 @@ fn web_vs_fret_layout_collapsible_demo_trigger_icon_size_matches_web() {
                     ..Default::default()
                 },
                 border: Edges::all(Px(1.0)),
-                padding: Edges::symmetric(Px(16.0), Px(8.0)),
+                padding: Edges::symmetric(Px(16.0), Px(8.0)).into(),
                 ..Default::default()
             },
             move |cx| vec![ui::text(cx, "@radix-ui/primitives").into_element(cx)],
@@ -75,7 +75,7 @@ fn web_vs_fret_layout_collapsible_demo_trigger_icon_size_matches_web() {
                     },
                     ..Default::default()
                 },
-                gap: Px(8.0),
+                gap: Px(8.0).into(),
                 ..Default::default()
             },
             move |_cx| vec![header, item],
@@ -88,7 +88,7 @@ fn web_vs_fret_layout_collapsible_demo_trigger_icon_size_matches_web() {
                 cx.column(
                     ColumnProps {
                         layout: LayoutStyle::default(),
-                        gap: Px(8.0),
+                        gap: Px(8.0).into(),
                         ..Default::default()
                     },
                     move |cx| {

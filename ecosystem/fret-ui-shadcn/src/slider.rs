@@ -773,16 +773,16 @@ pub fn slider<H: UiHost>(
                     overflow: Overflow::Clip,
                     inset: if is_horizontal {
                         fret_ui::element::InsetStyle {
-                            left: Some(Px(0.0)),
-                            right: Some(Px(0.0)),
-                            top: Some(Px(track_offset)),
+                            left: Some(Px(0.0)).into(),
+                            right: Some(Px(0.0)).into(),
+                            top: Some(Px(track_offset)).into(),
                             ..Default::default()
                         }
                     } else {
                         fret_ui::element::InsetStyle {
-                            top: Some(Px(0.0)),
-                            bottom: Some(Px(0.0)),
-                            left: Some(Px(track_offset)),
+                            top: Some(Px(0.0)).into(),
+                            bottom: Some(Px(0.0)).into(),
+                            left: Some(Px(track_offset)).into(),
                             ..Default::default()
                         }
                     },
@@ -1236,9 +1236,9 @@ pub fn slider<H: UiHost>(
                                 layout: LayoutStyle {
                                     position: PositionStyle::Absolute,
                                     inset: fret_ui::element::InsetStyle {
-                                        left: Some(Px(0.0)),
-                                        right: Some(Px(0.0)),
-                                        top: Some(Px(track_offset)),
+                                        left: Some(Px(0.0)).into(),
+                                        right: Some(Px(0.0)).into(),
+                                        top: Some(Px(track_offset)).into(),
                                         ..Default::default()
                                     },
                                     size: fret_ui::element::SizeStyle {
@@ -1259,9 +1259,9 @@ pub fn slider<H: UiHost>(
                                 layout: LayoutStyle {
                                     position: PositionStyle::Absolute,
                                     inset: fret_ui::element::InsetStyle {
-                                        top: Some(Px(0.0)),
-                                        bottom: Some(Px(0.0)),
-                                        left: Some(Px(track_offset)),
+                                        top: Some(Px(0.0)).into(),
+                                        bottom: Some(Px(0.0)).into(),
+                                        left: Some(Px(track_offset)).into(),
                                         ..Default::default()
                                     },
                                     size: fret_ui::element::SizeStyle {

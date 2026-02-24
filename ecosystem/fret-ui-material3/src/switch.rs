@@ -891,8 +891,8 @@ fn switch_track<H: UiHost>(
     cx.container(track, move |cx| {
         let mut handle = ContainerProps::default();
         handle.layout.position = fret_ui::element::PositionStyle::Absolute;
-        handle.layout.inset.left = Some(geom.handle_x);
-        handle.layout.inset.top = Some(geom.handle_y);
+        handle.layout.inset.left = Some(geom.handle_x).into();
+        handle.layout.inset.top = Some(geom.handle_y).into();
         handle.layout.size.width = Length::Px(geom.handle_width);
         handle.layout.size.height = Length::Px(geom.handle_height);
         handle.corner_radii = handle_corner_radii;
@@ -1079,10 +1079,10 @@ fn material_switch_icon_layer<H: UiHost>(
 
     let mut layer = ContainerProps::default();
     layer.layout.position = fret_ui::element::PositionStyle::Absolute;
-    layer.layout.inset.top = Some(Px(0.0));
-    layer.layout.inset.right = Some(Px(0.0));
-    layer.layout.inset.bottom = Some(Px(0.0));
-    layer.layout.inset.left = Some(Px(0.0));
+    layer.layout.inset.top = Some(Px(0.0)).into();
+    layer.layout.inset.right = Some(Px(0.0)).into();
+    layer.layout.inset.bottom = Some(Px(0.0)).into();
+    layer.layout.inset.left = Some(Px(0.0)).into();
     layer.layout.size.width = Length::Fill;
     layer.layout.size.height = Length::Fill;
     layer.layout.overflow = Overflow::Visible;

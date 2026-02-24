@@ -110,8 +110,8 @@ pub fn diamond_arrow_element_refined<H: UiHost>(
     let layout = LayoutStyle {
         position: PositionStyle::Absolute,
         inset: InsetStyle {
-            left: Some(left),
-            top: Some(top),
+            left: Some(left).into(),
+            top: Some(top).into(),
             ..Default::default()
         },
         size: SizeStyle {

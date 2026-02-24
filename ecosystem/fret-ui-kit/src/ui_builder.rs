@@ -393,10 +393,10 @@ impl<T: UiSupportsChrome> UiBuilder<T> {
                 left,
             } = paddings.into();
             let mut padding = c.padding.unwrap_or_default();
-            padding.top = Some(top);
-            padding.right = Some(right);
-            padding.bottom = Some(bottom);
-            padding.left = Some(left);
+            padding.top = Some(top).into();
+            padding.right = Some(right).into();
+            padding.bottom = Some(bottom).into();
+            padding.left = Some(left).into();
             c.padding = Some(padding);
             c
         })
@@ -587,10 +587,10 @@ impl<T: UiSupportsLayout> UiBuilder<T> {
                 left,
             } = insets.into();
             let mut inset = l.inset.unwrap_or_default();
-            inset.top = Some(top);
-            inset.right = Some(right);
-            inset.bottom = Some(bottom);
-            inset.left = Some(left);
+            inset.top = Some(crate::style::InsetEdgeRefinement::Px(top));
+            inset.right = Some(crate::style::InsetEdgeRefinement::Px(right));
+            inset.bottom = Some(crate::style::InsetEdgeRefinement::Px(bottom));
+            inset.left = Some(crate::style::InsetEdgeRefinement::Px(left));
             l.inset = Some(inset);
             l
         })
@@ -1408,7 +1408,9 @@ mod tests {
 
         let inset = dummy.layout.inset.expect("expected inset refinement");
         match inset.left {
-            Some(SignedMetricRef::Neg(MetricRef::Token { key, .. })) => {
+            Some(crate::style::InsetEdgeRefinement::Px(SignedMetricRef::Neg(
+                MetricRef::Token { key, .. },
+            ))) => {
                 assert_eq!(key, Space::N1.token_key())
             }
             other => panic!("expected left inset negative token, got {other:?}"),

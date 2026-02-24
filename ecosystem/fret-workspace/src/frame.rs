@@ -55,32 +55,32 @@ pub struct WorkspaceFrame {
 impl WorkspaceFrame {
     pub fn new(center: AnyElement) -> Self {
         Self {
-            top: None,
-            left: None,
+            top: None.into(),
+            left: None.into(),
             center,
-            right: None,
-            bottom: None,
+            right: None.into(),
+            bottom: None.into(),
             background: None,
         }
     }
 
     pub fn top(mut self, top: AnyElement) -> Self {
-        self.top = Some(top);
+        self.top = Some(top).into();
         self
     }
 
     pub fn left(mut self, left: AnyElement) -> Self {
-        self.left = Some(left);
+        self.left = Some(left).into();
         self
     }
 
     pub fn right(mut self, right: AnyElement) -> Self {
-        self.right = Some(right);
+        self.right = Some(right).into();
         self
     }
 
     pub fn bottom(mut self, bottom: AnyElement) -> Self {
-        self.bottom = Some(bottom);
+        self.bottom = Some(bottom).into();
         self
     }
 

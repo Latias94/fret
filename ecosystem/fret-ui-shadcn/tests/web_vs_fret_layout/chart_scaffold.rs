@@ -59,8 +59,8 @@ fn assert_chart_scaffold_geometry_matches_web(web_name: &str, gate_curve: bool) 
                             layout: LayoutStyle {
                                 position: fret_ui::element::PositionStyle::Absolute,
                                 inset: fret_ui::element::InsetStyle {
-                                    left: Some(Px(dx)),
-                                    top: Some(Px(dy)),
+                                    left: Some(Px(dx)).into(),
+                                    top: Some(Px(dy)).into(),
                                     ..Default::default()
                                 },
                                 size: SizeStyle {
@@ -89,8 +89,8 @@ fn assert_chart_scaffold_geometry_matches_web(web_name: &str, gate_curve: bool) 
                             layout: LayoutStyle {
                                 position: fret_ui::element::PositionStyle::Absolute,
                                 inset: fret_ui::element::InsetStyle {
-                                    left: Some(Px(dx)),
-                                    top: Some(Px(dy)),
+                                    left: Some(Px(dx)).into(),
+                                    top: Some(Px(dy)).into(),
                                     ..Default::default()
                                 },
                                 size: SizeStyle {
@@ -118,8 +118,8 @@ fn assert_chart_scaffold_geometry_matches_web(web_name: &str, gate_curve: bool) 
                                 layout: LayoutStyle {
                                     position: fret_ui::element::PositionStyle::Absolute,
                                     inset: fret_ui::element::InsetStyle {
-                                        left: Some(Px(dx)),
-                                        top: Some(Px(dy)),
+                                        left: Some(Px(dx)).into(),
+                                        top: Some(Px(dy)).into(),
                                         ..Default::default()
                                     },
                                     size: SizeStyle {
@@ -150,8 +150,8 @@ fn assert_chart_scaffold_geometry_matches_web(web_name: &str, gate_curve: bool) 
                 layout: LayoutStyle {
                     position: fret_ui::element::PositionStyle::Absolute,
                     inset: fret_ui::element::InsetStyle {
-                        left: Some(Px(web_chart.rect.x)),
-                        top: Some(Px(web_chart.rect.y)),
+                        left: Some(Px(web_chart.rect.x)).into(),
+                        top: Some(Px(web_chart.rect.y)).into(),
                         ..Default::default()
                     },
                     size: SizeStyle {

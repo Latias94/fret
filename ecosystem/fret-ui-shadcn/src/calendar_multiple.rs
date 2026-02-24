@@ -476,8 +476,8 @@ fn calendar_multi_month_view<H: UiHost>(
         let mut layout = LayoutStyle::default();
         layout.size.width = Length::Px(months_span);
         layout.position = fret_ui::element::PositionStyle::Absolute;
-        layout.inset.top = Some(Px(0.0));
-        layout.inset.left = Some(Px(0.0));
+        layout.inset.top = Some(Px(0.0)).into();
+        layout.inset.left = Some(Px(0.0)).into();
 
         cx.flex(
             FlexProps {

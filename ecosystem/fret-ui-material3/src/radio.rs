@@ -949,10 +949,10 @@ fn radio_icon<H: UiHost>(
 
     let mut props = CanvasProps::default();
     props.layout.position = fret_ui::element::PositionStyle::Absolute;
-    props.layout.inset.top = Some(Px(0.0));
-    props.layout.inset.right = Some(Px(0.0));
-    props.layout.inset.bottom = Some(Px(0.0));
-    props.layout.inset.left = Some(Px(0.0));
+    props.layout.inset.top = Some(Px(0.0)).into();
+    props.layout.inset.right = Some(Px(0.0)).into();
+    props.layout.inset.bottom = Some(Px(0.0)).into();
+    props.layout.inset.left = Some(Px(0.0)).into();
 
     cx.canvas(props, move |p| {
         let scale_factor = p.scale_factor();

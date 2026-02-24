@@ -948,10 +948,10 @@ impl TextField {
                             let overlay = {
                                 let mut overlay_layout = fret_ui::element::LayoutStyle::default();
                                 overlay_layout.position = fret_ui::element::PositionStyle::Absolute;
-                                overlay_layout.inset.top = Some(Px(0.0));
-                                overlay_layout.inset.right = Some(Px(0.0));
-                                overlay_layout.inset.bottom = Some(Px(0.0));
-                                overlay_layout.inset.left = Some(Px(0.0));
+                                overlay_layout.inset.top = Some(Px(0.0)).into();
+                                overlay_layout.inset.right = Some(Px(0.0)).into();
+                                overlay_layout.inset.bottom = Some(Px(0.0)).into();
+                                overlay_layout.inset.left = Some(Px(0.0)).into();
 
                                 let mut overlay = ContainerProps::default();
                                 overlay.layout = overlay_layout;
@@ -1097,9 +1097,9 @@ impl TextField {
 
                                     let mut layout = fret_ui::element::LayoutStyle::default();
                                     layout.position = fret_ui::element::PositionStyle::Absolute;
-                                    layout.inset.top = Some(Px(0.0));
-                                    layout.inset.right = Some(Px(0.0));
-                                    layout.inset.bottom = Some(Px(0.0));
+                                    layout.inset.top = Some(Px(0.0)).into();
+                                    layout.inset.right = Some(Px(0.0)).into();
+                                    layout.inset.bottom = Some(Px(0.0)).into();
                                     layout.size.width = Length::Px(Px(48.0));
                                     layout.size.height = Length::Fill;
 
@@ -1271,9 +1271,9 @@ fn text_field_label<H: UiHost>(
 
     let mut layout = fret_ui::element::LayoutStyle::default();
     layout.position = fret_ui::element::PositionStyle::Absolute;
-    layout.inset.top = Some(y);
-    layout.inset.left = Some(x);
-    layout.inset.right = Some(Px(16.0));
+    layout.inset.top = Some(y).into();
+    layout.inset.left = Some(x).into();
+    layout.inset.right = Some(Px(16.0)).into();
     layout.overflow = Overflow::Visible;
 
     let floated = floating_label::is_floated(progress);

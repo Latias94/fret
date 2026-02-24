@@ -213,7 +213,7 @@ fn web_vs_fret_layout_typography_table_cell_geometry_light() {
                 vec![cx.container(
                     ContainerProps {
                         layout: table_layout,
-                        padding: Edges::all(Px(inset)),
+                        padding: Edges::all(Px(inset)).into(),
                         ..Default::default()
                     },
                     move |cx| {
@@ -224,8 +224,8 @@ fn web_vs_fret_layout_typography_table_cell_geometry_light() {
                                     layout.size.width = Length::Fill;
                                     layout
                                 },
-                                gap: Px(0.0),
-                                padding: Edges::all(Px(0.0)),
+                                gap: Px(0.0).into(),
+                                padding: Edges::all(Px(0.0)).into(),
                                 justify: MainAlign::Start,
                                 align: CrossAlign::Stretch,
                             },
@@ -259,7 +259,7 @@ fn web_vs_fret_layout_typography_table_cell_geometry_light() {
 
                                             let row_props = ContainerProps {
                                                 layout: row_layout,
-                                                padding: Edges::all(Px(0.0)),
+                                                padding: Edges::all(Px(0.0)).into(),
                                                 background: is_body_even.then_some(muted),
                                                 shadow: None,
                                                 border: Edges::all(Px(0.0)),
@@ -275,8 +275,8 @@ fn web_vs_fret_layout_typography_table_cell_geometry_light() {
                                                 vec![cx.row(
                                                     RowProps {
                                                         layout: flex_layout,
-                                                        gap: Px(0.0),
-                                                        padding: Edges::all(Px(0.0)),
+                                                        gap: Px(0.0).into(),
+                                                        padding: Edges::all(Px(0.0)).into(),
                                                         justify: MainAlign::Start,
                                                         align: CrossAlign::Stretch,
                                                     },
@@ -326,7 +326,7 @@ fn web_vs_fret_layout_typography_table_cell_geometry_light() {
                                                                             right: Px(16.0),
                                                                             bottom: Px(8.0),
                                                                             left: Px(16.0),
-                                                                        },
+                                                                        }.into(),
                                                                         background: None,
                                                                         shadow: None,
                                                                         border: Edges {
@@ -581,7 +581,7 @@ fn web_vs_fret_layout_typography_table_cell_geometry_dark() {
                     vec![cx.container(
                         ContainerProps {
                             layout: table_layout,
-                            padding: Edges::all(Px(inset)),
+                            padding: Edges::all(Px(inset)).into(),
                             ..Default::default()
                         },
                         move |cx| {
@@ -592,8 +592,8 @@ fn web_vs_fret_layout_typography_table_cell_geometry_dark() {
                                         layout.size.width = Length::Fill;
                                         layout
                                     },
-                                    gap: Px(0.0),
-                                    padding: Edges::all(Px(0.0)),
+                                    gap: Px(0.0).into(),
+                                    padding: Edges::all(Px(0.0)).into(),
                                     justify: MainAlign::Start,
                                     align: CrossAlign::Stretch,
                                 },
@@ -627,7 +627,7 @@ fn web_vs_fret_layout_typography_table_cell_geometry_dark() {
 
                                                 let row_props = ContainerProps {
                                                     layout: row_layout,
-                                                    padding: Edges::all(Px(0.0)),
+                                                    padding: Edges::all(Px(0.0)).into(),
                                                     background: is_body_even.then_some(muted),
                                                     shadow: None,
                                                     border: Edges::all(Px(0.0)),
@@ -643,8 +643,8 @@ fn web_vs_fret_layout_typography_table_cell_geometry_dark() {
                                                     vec![cx.row(
                                                         RowProps {
                                                             layout: flex_layout,
-                                                            gap: Px(0.0),
-                                                            padding: Edges::all(Px(0.0)),
+                                                            gap: Px(0.0).into(),
+                                                            padding: Edges::all(Px(0.0)).into(),
                                                             justify: MainAlign::Start,
                                                             align: CrossAlign::Stretch,
                                                         },
@@ -695,7 +695,7 @@ fn web_vs_fret_layout_typography_table_cell_geometry_dark() {
                                                                                 right: Px(16.0),
                                                                                 bottom: Px(8.0),
                                                                                 left: Px(16.0),
-                                                                            },
+                                                                            }.into(),
                                                                             background: None,
                                                                             shadow: None,
                                                                             border: Edges {
@@ -957,7 +957,8 @@ fn web_vs_fret_layout_typography_h2_geometry_light() {
                 padding: Edges {
                     bottom: padding_bottom,
                     ..Edges::all(Px(0.0))
-                },
+                }
+                .into(),
                 border: Edges {
                     bottom: border_bottom,
                     ..Edges::all(Px(0.0))
@@ -1291,7 +1292,8 @@ fn web_vs_fret_layout_typography_blockquote_geometry_light() {
                 padding: Edges {
                     left: padding_left,
                     ..Edges::all(Px(0.0))
-                },
+                }
+                .into(),
                 border: Edges {
                     left: border_left,
                     ..Edges::all(Px(0.0))
@@ -1377,8 +1379,8 @@ fn web_vs_fret_layout_typography_list_geometry_light() {
                             layout.size.width = Length::Fill;
                             layout
                         },
-                        gap: Px(8.0),
-                        padding: Edges::all(Px(0.0)),
+                        gap: Px(8.0).into(),
+                        padding: Edges::all(Px(0.0)).into(),
                         justify: MainAlign::Start,
                         align: CrossAlign::Stretch,
                     },
@@ -1484,7 +1486,8 @@ fn web_vs_fret_layout_typography_inline_code_padding_and_style_light() {
                     right: pr,
                     bottom: pb,
                     left: pl,
-                },
+                }
+                .into(),
                 background: Some(bg),
                 corner_radii: fret_core::Corners::all(Px(4.0)),
                 ..Default::default()
@@ -1655,7 +1658,8 @@ fn web_vs_fret_layout_typography_demo_geometry_smoke_light() {
                         padding: Edges {
                             bottom: padding_bottom,
                             ..Edges::all(Px(0.0))
-                        },
+                        }
+                        .into(),
                         border: Edges {
                             bottom: border_bottom,
                             ..Edges::all(Px(0.0))
@@ -1740,8 +1744,8 @@ fn web_vs_fret_layout_typography_demo_geometry_smoke_light() {
                             layout.size.width = Length::Fill;
                             layout
                         },
-                        gap: Px(8.0),
-                        padding: Edges::all(Px(0.0)),
+                        gap: Px(8.0).into(),
+                        padding: Edges::all(Px(0.0)).into(),
                         justify: MainAlign::Start,
                         align: CrossAlign::Stretch,
                     },
@@ -1767,8 +1771,8 @@ fn web_vs_fret_layout_typography_demo_geometry_smoke_light() {
                     layout.size.width = Length::Fill;
                     layout
                 },
-                gap: Px(0.0),
-                padding: Edges::all(Px(0.0)),
+                gap: Px(0.0).into(),
+                padding: Edges::all(Px(0.0)).into(),
                 justify: MainAlign::Start,
                 align: CrossAlign::Stretch,
             },

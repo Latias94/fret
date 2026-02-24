@@ -329,6 +329,72 @@ fn min_max_fraction_only_resolve_under_definite_available_space_in_measurement()
 }
 
 #[test]
+fn absolute_inset_fraction_resolves_against_containing_block() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(100.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "absolute-inset-fraction",
+        |cx| {
+            let mut outer = crate::element::ContainerProps::default();
+            outer.layout.size.width = Length::Fill;
+            outer.layout.size.height = Length::Fill;
+            outer.layout.position = crate::element::PositionStyle::Relative;
+
+            let mut child = crate::element::ContainerProps::default();
+            child.layout.position = crate::element::PositionStyle::Absolute;
+            child.layout.inset.left = crate::element::InsetEdge::Fraction(0.25);
+            child.layout.inset.top = crate::element::InsetEdge::Fraction(0.1);
+            child.layout.size.width = Length::Px(Px(20.0));
+            child.layout.size.height = Length::Px(Px(10.0));
+
+            vec![cx.container(outer, move |cx| vec![cx.container(child, |_cx| Vec::new())])]
+        },
+    );
+    ui.set_root(root);
+
+    let outer_node = ui.children(root)[0];
+    let child_node = ui.children(outer_node)[0];
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let child_bounds = ui.debug_node_bounds(child_node).expect("child bounds");
+    assert!(
+        (child_bounds.origin.x.0 - 50.0).abs() < 0.01,
+        "expected left=25% of 200px == 50px, got {:?}",
+        child_bounds.origin.x
+    );
+    assert!(
+        (child_bounds.origin.y.0 - 10.0).abs() < 0.01,
+        "expected top=10% of 100px == 10px, got {:?}",
+        child_bounds.origin.y
+    );
+    assert!(
+        (child_bounds.size.width.0 - 20.0).abs() < 0.01,
+        "expected width=20px, got {:?}",
+        child_bounds.size.width
+    );
+    assert!(
+        (child_bounds.size.height.0 - 10.0).abs() < 0.01,
+        "expected height=10px, got {:?}",
+        child_bounds.size.height
+    );
+}
+
+#[test]
 fn spacing_fraction_only_resolve_under_definite_available_space_in_measurement() {
     use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
 
@@ -1216,6 +1282,70 @@ fn flex_child_negative_margin_shifts_layout() {
 
     assert_eq!(a_bounds.origin.x, Px(0.0));
     assert_eq!(b_bounds.origin.x, Px(5.0));
+}
+
+#[test]
+fn flex_margin_fraction_uses_containing_block_width_for_top() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(100.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp62-flex-margin-fraction",
+        |cx| {
+            vec![cx.flex(
+                crate::element::FlexProps {
+                    direction: fret_core::Axis::Vertical,
+                    gap: Px(0.0).into(),
+                    layout: {
+                        let mut l = crate::element::LayoutStyle::default();
+                        l.size.width = crate::element::Length::Fill;
+                        l.size.height = crate::element::Length::Fill;
+                        l
+                    },
+                    ..Default::default()
+                },
+                |cx| {
+                    let mut a = crate::element::ContainerProps::default();
+                    a.layout.size.width = crate::element::Length::Px(Px(10.0));
+                    a.layout.size.height = crate::element::Length::Px(Px(10.0));
+
+                    let mut b = crate::element::ContainerProps::default();
+                    b.layout.size.width = crate::element::Length::Px(Px(10.0));
+                    b.layout.size.height = crate::element::Length::Px(Px(10.0));
+                    b.layout.margin.left = crate::element::MarginEdge::Fraction(0.25);
+                    b.layout.margin.top = crate::element::MarginEdge::Fraction(0.1);
+
+                    vec![cx.container(a, |_cx| vec![]), cx.container(b, |_cx| vec![])]
+                },
+            )]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let flex_node = ui.children(root)[0];
+    let children = ui.children(flex_node);
+    assert_eq!(children.len(), 2);
+
+    let a_bounds = ui.debug_node_bounds(children[0]).expect("a bounds");
+    let b_bounds = ui.debug_node_bounds(children[1]).expect("b bounds");
+
+    assert_eq!(a_bounds.origin, Point::new(Px(0.0), Px(0.0)));
+    assert_eq!(b_bounds.origin, Point::new(Px(50.0), Px(30.0)));
 }
 
 #[test]

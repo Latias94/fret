@@ -221,8 +221,8 @@ impl PortalNumberEditor {
         column.layout = LayoutStyle {
             position: PositionStyle::Absolute,
             inset: InsetStyle {
-                top: Some(Px(inset_top)),
-                left: Some(Px(inset_left)),
+                top: Some(Px(inset_top)).into(),
+                left: Some(Px(inset_left)).into(),
                 ..Default::default()
             },
             size: SizeStyle {

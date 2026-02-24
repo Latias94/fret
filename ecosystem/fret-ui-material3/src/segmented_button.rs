@@ -687,7 +687,7 @@ fn material_segment_content<H: UiHost>(
 
     if !icon_visible {
         text.layout.position = fret_ui::element::PositionStyle::Relative;
-        text.layout.inset.left = Some(Px(-0.5 * (icon_size.0 + icon_gap.0)));
+        text.layout.inset.left = Some(Px(-0.5 * (icon_size.0 + icon_gap.0))).into();
     }
 
     let icon_slot = {

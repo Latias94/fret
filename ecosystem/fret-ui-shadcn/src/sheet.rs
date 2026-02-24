@@ -387,10 +387,10 @@ impl Sheet {
                     let (inset, size, estimated_motion_distance) = match sheet_side {
                         SheetSide::Right => (
                             InsetStyle {
-                                top: Some(Px(0.0)),
-                                right: Some(Px(0.0)),
-                                bottom: Some(Px(0.0)),
-                                left: None,
+                                top: Some(Px(0.0)).into(),
+                                right: Some(Px(0.0)).into(),
+                                bottom: Some(Px(0.0)).into(),
+                                left: None.into(),
                             },
                             SizeStyle {
                                 width: Length::Px(sheet_w),
@@ -401,10 +401,10 @@ impl Sheet {
                         ),
                         SheetSide::Left => (
                             InsetStyle {
-                                top: Some(Px(0.0)),
-                                right: None,
-                                bottom: Some(Px(0.0)),
-                                left: Some(Px(0.0)),
+                                top: Some(Px(0.0)).into(),
+                                right: None.into(),
+                                bottom: Some(Px(0.0)).into(),
+                                left: Some(Px(0.0)).into(),
                             },
                             SizeStyle {
                                 width: Length::Px(sheet_w),
@@ -415,10 +415,10 @@ impl Sheet {
                         ),
                         SheetSide::Top => (
                             InsetStyle {
-                                top: Some(Px(0.0)),
-                                right: Some(Px(0.0)),
-                                bottom: None,
-                                left: Some(Px(0.0)),
+                                top: Some(Px(0.0)).into(),
+                                right: Some(Px(0.0)).into(),
+                                bottom: None.into(),
+                                left: Some(Px(0.0)).into(),
                             },
                             SizeStyle {
                                 width: Length::Fill,
@@ -434,10 +434,10 @@ impl Sheet {
                         ),
                         SheetSide::Bottom => (
                             InsetStyle {
-                                top: None,
-                                right: Some(Px(0.0)),
-                                bottom: Some(Px(0.0)),
-                                left: Some(Px(0.0)),
+                                top: None.into(),
+                                right: Some(Px(0.0)).into(),
+                                bottom: Some(Px(0.0)).into(),
+                                left: Some(Px(0.0)).into(),
                             },
                             SizeStyle {
                                 width: Length::Fill,
@@ -968,9 +968,14 @@ mod tests {
                 }
             });
 
-        assert_eq!(inset_padding.left.0 - base_padding.left.0, 6.0);
-        assert_eq!(inset_padding.right.0 - base_padding.right.0, 8.0);
-        assert_eq!(inset_padding.bottom.0 - base_padding.bottom.0, 48.0);
+        let px = |l: fret_ui::element::SpacingLength| match l {
+            fret_ui::element::SpacingLength::Px(px) => px.0,
+            other => panic!("expected px spacing length, got {other:?}"),
+        };
+
+        assert_eq!(px(inset_padding.left) - px(base_padding.left), 6.0);
+        assert_eq!(px(inset_padding.right) - px(base_padding.right), 8.0);
+        assert_eq!(px(inset_padding.bottom) - px(base_padding.bottom), 48.0);
     }
 
     #[derive(Default)]
@@ -1384,8 +1389,8 @@ mod tests {
                             let mut layout = LayoutStyle::default();
                             layout.size.width = Length::Px(Px(120.0));
                             layout.size.height = Length::Px(Px(40.0));
-                            layout.inset.left = Some(Px(20.0));
-                            layout.inset.top = Some(Px(20.0));
+                            layout.inset.left = Some(Px(100.0)).into();
+                            layout.inset.top = Some(Px(100.0)).into();
                             layout.position = fret_ui::element::PositionStyle::Absolute;
                             layout
                         },

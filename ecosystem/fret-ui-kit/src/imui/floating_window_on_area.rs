@@ -588,10 +588,10 @@ where
                 let mut layout = LayoutStyle::default();
                 layout.position = PositionStyle::Absolute;
                 layout.inset = InsetStyle {
-                    left: Some(Px(0.0)),
-                    right: Some(Px(0.0)),
-                    top: Some(Px(0.0)),
-                    bottom: Some(Px(0.0)),
+                    left: Some(Px(0.0)).into(),
+                    right: Some(Px(0.0)).into(),
+                    top: Some(Px(0.0)).into(),
+                    bottom: Some(Px(0.0)).into(),
                 };
                 layout.size.width = Length::Fill;
                 layout.size.height = Length::Fill;
@@ -629,9 +629,9 @@ where
                         let mut layout = LayoutStyle::default();
                         layout.position = PositionStyle::Absolute;
                         layout.inset = InsetStyle {
-                            left: Some(Px(0.0)),
-                            top: Some(Px(0.0)),
-                            bottom: Some(Px(0.0)),
+                            left: Some(Px(0.0)).into(),
+                            top: Some(Px(0.0)).into(),
+                            bottom: Some(Px(0.0)).into(),
                             ..Default::default()
                         };
                         layout.size.width = Length::Px(Px(6.0));
@@ -642,9 +642,9 @@ where
                         let mut layout = LayoutStyle::default();
                         layout.position = PositionStyle::Absolute;
                         layout.inset = InsetStyle {
-                            right: Some(Px(0.0)),
-                            top: Some(Px(0.0)),
-                            bottom: Some(Px(0.0)),
+                            right: Some(Px(0.0)).into(),
+                            top: Some(Px(0.0)).into(),
+                            bottom: Some(Px(0.0)).into(),
                             ..Default::default()
                         };
                         layout.size.width = Length::Px(Px(6.0));
@@ -655,9 +655,9 @@ where
                         let mut layout = LayoutStyle::default();
                         layout.position = PositionStyle::Absolute;
                         layout.inset = InsetStyle {
-                            left: Some(Px(0.0)),
-                            right: Some(Px(0.0)),
-                            top: Some(Px(0.0)),
+                            left: Some(Px(0.0)).into(),
+                            right: Some(Px(0.0)).into(),
+                            top: Some(Px(0.0)).into(),
                             ..Default::default()
                         };
                         layout.size.width = Length::Fill;
@@ -668,9 +668,9 @@ where
                         let mut layout = LayoutStyle::default();
                         layout.position = PositionStyle::Absolute;
                         layout.inset = InsetStyle {
-                            left: Some(Px(0.0)),
-                            right: Some(Px(0.0)),
-                            bottom: Some(Px(0.0)),
+                            left: Some(Px(0.0)).into(),
+                            right: Some(Px(0.0)).into(),
+                            bottom: Some(Px(0.0)).into(),
                             ..Default::default()
                         };
                         layout.size.width = Length::Fill;
@@ -681,8 +681,8 @@ where
                         let mut layout = LayoutStyle::default();
                         layout.position = PositionStyle::Absolute;
                         layout.inset = InsetStyle {
-                            left: Some(Px(0.0)),
-                            top: Some(Px(0.0)),
+                            left: Some(Px(0.0)).into(),
+                            top: Some(Px(0.0)).into(),
                             ..Default::default()
                         };
                         layout.size.width = Length::Px(Px(10.0));
@@ -693,8 +693,8 @@ where
                         let mut layout = LayoutStyle::default();
                         layout.position = PositionStyle::Absolute;
                         layout.inset = InsetStyle {
-                            right: Some(Px(0.0)),
-                            top: Some(Px(0.0)),
+                            right: Some(Px(0.0)).into(),
+                            top: Some(Px(0.0)).into(),
                             ..Default::default()
                         };
                         layout.size.width = Length::Px(Px(10.0));
@@ -705,8 +705,8 @@ where
                         let mut layout = LayoutStyle::default();
                         layout.position = PositionStyle::Absolute;
                         layout.inset = InsetStyle {
-                            left: Some(Px(0.0)),
-                            bottom: Some(Px(0.0)),
+                            left: Some(Px(0.0)).into(),
+                            bottom: Some(Px(0.0)).into(),
                             ..Default::default()
                         };
                         layout.size.width = Length::Px(Px(10.0));
@@ -717,8 +717,8 @@ where
                         let mut layout = LayoutStyle::default();
                         layout.position = PositionStyle::Absolute;
                         layout.inset = InsetStyle {
-                            right: Some(Px(0.0)),
-                            bottom: Some(Px(0.0)),
+                            right: Some(Px(0.0)).into(),
+                            bottom: Some(Px(0.0)).into(),
                             ..Default::default()
                         };
                         layout.size.width = Length::Px(Px(10.0));

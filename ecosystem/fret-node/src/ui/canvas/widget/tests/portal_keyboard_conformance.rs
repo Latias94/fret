@@ -82,8 +82,8 @@ fn focused_portal_text_input_prevents_key_events_from_reaching_underlay_root() {
             props.layout = LayoutStyle {
                 position: fret_ui::element::PositionStyle::Absolute,
                 inset: fret_ui::element::InsetStyle {
-                    left: Some(Px(0.0)),
-                    top: Some(Px(0.0)),
+                    left: Some(Px(0.0)).into(),
+                    top: Some(Px(0.0)).into(),
                     ..Default::default()
                 },
                 size: SizeStyle {

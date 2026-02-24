@@ -2386,8 +2386,8 @@ fn render_diag_inspect_overlay(
                 let mut layout = LayoutStyle::default();
                 layout.position = PositionStyle::Absolute;
                 layout.inset = InsetStyle {
-                    top: Some(Px(8.0)),
-                    left: Some(Px(8.0)),
+                    top: Some(Px(8.0)).into(),
+                    left: Some(Px(8.0)).into(),
                     ..Default::default()
                 };
 
@@ -2488,8 +2488,8 @@ fn render_diag_inspect_overlay(
                 let mut layout = LayoutStyle::default();
                 layout.position = PositionStyle::Absolute;
                 layout.inset = InsetStyle {
-                    top: Some(rect.origin.y),
-                    left: Some(rect.origin.x),
+                    top: Some(rect.origin.y).into(),
+                    left: Some(rect.origin.x).into(),
                     ..Default::default()
                 };
                 layout.size = SizeStyle {
@@ -2509,8 +2509,8 @@ fn render_diag_inspect_overlay(
                 let mut label_layout = LayoutStyle::default();
                 label_layout.position = PositionStyle::Absolute;
                 label_layout.inset = InsetStyle {
-                    top: Some(rect.origin.y),
-                    left: Some(rect.origin.x),
+                    top: Some(rect.origin.y).into(),
+                    left: Some(rect.origin.x).into(),
                     ..Default::default()
                 };
 

@@ -323,12 +323,29 @@ pub struct LayoutStyle {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum MarginEdge {
     Px(Px),
+    Fill,
+    Fraction(f32),
     Auto,
 }
 
 impl Default for MarginEdge {
     fn default() -> Self {
         Self::Px(Px(0.0))
+    }
+}
+
+impl From<Px> for MarginEdge {
+    fn from(px: Px) -> Self {
+        Self::Px(px)
+    }
+}
+
+impl From<Option<Px>> for MarginEdge {
+    fn from(px: Option<Px>) -> Self {
+        match px {
+            Some(px) => Self::Px(px),
+            None => Self::Auto,
+        }
     }
 }
 
@@ -371,10 +388,39 @@ pub enum PositionStyle {
 
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct InsetStyle {
-    pub top: Option<Px>,
-    pub right: Option<Px>,
-    pub bottom: Option<Px>,
-    pub left: Option<Px>,
+    pub top: InsetEdge,
+    pub right: InsetEdge,
+    pub bottom: InsetEdge,
+    pub left: InsetEdge,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum InsetEdge {
+    Px(Px),
+    Fill,
+    Fraction(f32),
+    Auto,
+}
+
+impl Default for InsetEdge {
+    fn default() -> Self {
+        Self::Auto
+    }
+}
+
+impl From<Px> for InsetEdge {
+    fn from(px: Px) -> Self {
+        Self::Px(px)
+    }
+}
+
+impl From<Option<Px>> for InsetEdge {
+    fn from(px: Option<Px>) -> Self {
+        match px {
+            Some(px) => Self::Px(px),
+            None => Self::Auto,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq)]

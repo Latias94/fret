@@ -166,8 +166,8 @@ fn lens_panel<H: UiHost>(
 
             let mut label_layout = LayoutStyle::default();
             label_layout.position = PositionStyle::Absolute;
-            label_layout.inset.left = Some(Px(12.0));
-            label_layout.inset.top = Some(Px(12.0));
+            label_layout.inset.left = Some(left).into();
+            label_layout.inset.top = Some(top).into();
 
             let title = cx.text_props(TextProps {
                 layout: Default::default(),
@@ -513,10 +513,10 @@ fn view(
                             stripes_layout.size.height = Length::Fill;
                             stripes_layout.position = PositionStyle::Absolute;
                             stripes_layout.inset = InsetStyle {
-                                top: Some(Px(0.0)),
-                                right: Some(Px(0.0)),
-                                bottom: Some(Px(0.0)),
-                                left: Some(Px(0.0)),
+                                top: Some(Px(0.0)).into(),
+                                right: Some(Px(0.0)).into(),
+                                bottom: Some(Px(0.0)).into(),
+                                left: Some(Px(0.0)).into(),
                             };
 
                             let stripe_w = Px(18.0);
@@ -559,8 +559,8 @@ fn view(
                             blob_layout.position = PositionStyle::Absolute;
                             blob_layout.size.width = Length::Px(Px(140.0));
                             blob_layout.size.height = Length::Px(Px(140.0));
-                            blob_layout.inset.left = Some(Px(110.0 + (t * 0.9).cos() * 120.0));
-                            blob_layout.inset.top = Some(Px(110.0 + (t * 0.7).sin() * 90.0));
+                            blob_layout.inset.left = Some(left).into();
+                            blob_layout.inset.top = Some(top).into();
                             let blob = cx.container(
                                 ContainerProps {
                                     layout: blob_layout,
@@ -577,8 +577,8 @@ fn view(
                             blob2_layout.position = PositionStyle::Absolute;
                             blob2_layout.size.width = Length::Px(Px(220.0));
                             blob2_layout.size.height = Length::Px(Px(180.0));
-                            blob2_layout.inset.right = Some(Px(140.0 + (t * 0.55).sin() * 90.0));
-                            blob2_layout.inset.top = Some(Px(140.0 + (t * 0.65).cos() * 70.0));
+                            blob2_layout.inset.right = Some(right).into();
+                            blob2_layout.inset.top = Some(top).into();
                             let blob2 = cx.container(
                                 ContainerProps {
                                     layout: blob2_layout,
@@ -594,8 +594,8 @@ fn view(
                             // A few sharp, high-contrast cards (helps differentiate refraction from blur).
                             let mut cards_layout = LayoutStyle::default();
                             cards_layout.position = PositionStyle::Absolute;
-                            cards_layout.inset.left = Some(Px(240.0));
-                            cards_layout.inset.top = Some(Px(420.0));
+                            cards_layout.inset.left = Some(left).into();
+                            cards_layout.inset.top = Some(top).into();
                             cards_layout.size.width = Length::Px(Px(760.0));
                             cards_layout.size.height = Length::Px(Px(120.0));
 
@@ -668,8 +668,8 @@ fn view(
                             // without depending on the inspector panel state).
                             let mut hud_layout = LayoutStyle::default();
                             hud_layout.position = PositionStyle::Absolute;
-                            hud_layout.inset.top = Some(Px(16.0));
-                            hud_layout.inset.left = Some(Px(16.0));
+                            hud_layout.inset.top = Some(top).into();
+                            hud_layout.inset.left = Some(left).into();
                             hud_layout.overflow = Overflow::Clip;
 
                             let mut hud_bg = theme_stage.color_token("card");
@@ -814,8 +814,8 @@ fn view(
                             // Lenses (bottom-left).
                             let mut lenses_layout = LayoutStyle::default();
                             lenses_layout.position = PositionStyle::Absolute;
-                            lenses_layout.inset.left = Some(Px(24.0));
-                            lenses_layout.inset.bottom = Some(Px(24.0));
+                            lenses_layout.inset.left = Some(left).into();
+                            lenses_layout.inset.bottom = Some(bottom).into();
                             let lenses = cx.row(
                                 RowProps {
                                     layout: lenses_layout,
@@ -872,9 +872,9 @@ fn view(
                     cx.keyed("liquid_glass.inspector", |cx| {
                         let mut layout = LayoutStyle::default();
                         layout.position = PositionStyle::Absolute;
-                        layout.inset.top = Some(Px(0.0));
-                        layout.inset.right = Some(Px(0.0));
-                        layout.inset.bottom = Some(Px(0.0));
+                        layout.inset.top = Some(top).into();
+                        layout.inset.right = Some(right).into();
+                        layout.inset.bottom = Some(bottom).into();
                         layout.size.width = Length::Px(Px(380.0));
                         layout.size.height = Length::Fill;
                         layout.overflow = Overflow::Clip;

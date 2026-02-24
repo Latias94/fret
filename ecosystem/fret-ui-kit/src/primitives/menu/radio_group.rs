@@ -131,8 +131,8 @@ mod tests {
                 let item_layout = |y: Px| LayoutStyle {
                     position: PositionStyle::Absolute,
                     inset: InsetStyle {
-                        left: Some(Px(20.0)),
-                        top: Some(y),
+                        left: Some(Px(20.0)).into(),
+                        top: Some(y).into(),
                         ..Default::default()
                     },
                     size: SizeStyle {
