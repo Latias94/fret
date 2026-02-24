@@ -64,8 +64,8 @@ pub(crate) use post_run_checks::apply_post_run_checks;
 
 pub(crate) use evidence_index::write_evidence_index;
 pub(crate) use pack_zip::{
-    ReproZipBundle, pack_ai_packet_dir_to_zip, pack_bundle_dir_to_zip, pack_repro_zip_multi,
-    repro_zip_prefix_for_script, zip_safe_component,
+    ReproZipBundle, pack_ai_packet_dir_to_zip, pack_bundle_dir_to_zip, pack_repro_ai_zip_multi,
+    pack_repro_zip_multi, repro_zip_prefix_for_script, zip_safe_component,
 };
 pub(crate) use perf_hint_gate::{
     parse_perf_hint_gate_options, perf_hint_gate_failures_for_triage_json,
@@ -2547,6 +2547,8 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 resolved_script_result_trigger_path: resolved_script_result_trigger_path.clone(),
                 fs_transport_cfg: fs_transport_cfg.clone(),
                 pack_out: pack_out.clone(),
+                ensure_ai_packet,
+                pack_ai_only,
                 pack_include_root_artifacts,
                 pack_include_triage,
                 pack_include_screenshots,

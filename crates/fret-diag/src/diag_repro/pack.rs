@@ -16,6 +16,8 @@ pub(super) fn pack_repro_zip(
     zip_out: &Path,
     pack_defaults: (bool, bool, bool),
     pack_schema2_only: bool,
+    ensure_ai_packet: bool,
+    pack_ai_only: bool,
     with_renderdoc: bool,
     with_tracy: bool,
     stats_top: usize,
@@ -32,6 +34,50 @@ pub(super) fn pack_repro_zip(
                 source_script: item.script_path.clone(),
             })
             .collect();
+
+        if pack_ai_only {
+            if ensure_ai_packet {
+                for item in &bundles {
+                    let bundle_dir = resolve_bundle_root_dir(&item.bundle_artifact)?;
+                    let packet_dir = bundle_dir.join("ai.packet");
+                    if packet_dir.is_dir() {
+                        continue;
+                    }
+                    if let Err(err) = crate::commands::ai_packet::generate_ai_packet_dir(
+                        &item.bundle_artifact,
+                        &bundle_dir,
+                        &packet_dir,
+                        pack_defaults.1,
+                        stats_top,
+                        Some(sort),
+                        warmup_frames,
+                        None,
+                    ) {
+                        return Ok(PackOutcome {
+                            packed_zip: None,
+                            overall_error: Some(format!("failed to generate ai.packet: {err}")),
+                            overall_reason_code: Some("tooling.ai_packet.failed".to_string()),
+                        });
+                    }
+                }
+            }
+
+            if let Err(err) =
+                pack_repro_ai_zip_multi(zip_out, resolved_out_dir, summary_path, &bundles)
+            {
+                return Ok(PackOutcome {
+                    packed_zip: None,
+                    overall_error: Some(format!("failed to pack repro ai-only zip: {err}")),
+                    overall_reason_code: Some("tooling.pack.failed".to_string()),
+                });
+            }
+
+            return Ok(PackOutcome {
+                packed_zip: Some(zip_out.to_path_buf()),
+                overall_error: None,
+                overall_reason_code: None,
+            });
+        }
 
         if let Err(err) = pack_repro_zip_multi(
             zip_out,
@@ -82,6 +128,44 @@ pub(super) fn pack_repro_zip(
             .unwrap_or(resolved_out_dir)
             .to_path_buf()
     };
+
+    if pack_ai_only {
+        if ensure_ai_packet {
+            let packet_dir = bundle_dir.join("ai.packet");
+            if !packet_dir.is_dir() {
+                if let Err(err) = crate::commands::ai_packet::generate_ai_packet_dir(
+                    bundle_path,
+                    &bundle_dir,
+                    &packet_dir,
+                    pack_defaults.1,
+                    stats_top,
+                    Some(sort),
+                    warmup_frames,
+                    None,
+                ) {
+                    return Ok(PackOutcome {
+                        packed_zip: None,
+                        overall_error: Some(format!("failed to generate ai.packet: {err}")),
+                        overall_reason_code: Some("tooling.ai_packet.failed".to_string()),
+                    });
+                }
+            }
+        }
+
+        if let Err(err) = pack_ai_packet_dir_to_zip(&bundle_dir, zip_out, &artifacts_root) {
+            return Ok(PackOutcome {
+                packed_zip: None,
+                overall_error: Some(format!("failed to pack repro ai-only zip: {err}")),
+                overall_reason_code: Some("tooling.pack.failed".to_string()),
+            });
+        }
+
+        return Ok(PackOutcome {
+            packed_zip: Some(zip_out.to_path_buf()),
+            overall_error: None,
+            overall_reason_code: None,
+        });
+    }
 
     if let Err(err) = pack_bundle_dir_to_zip(
         &bundle_dir,

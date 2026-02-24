@@ -77,6 +77,87 @@ pub(crate) fn pack_ai_packet_dir_to_zip(
     Ok(())
 }
 
+pub(crate) fn pack_repro_ai_zip_multi(
+    out_path: &Path,
+    artifacts_root: &Path,
+    summary_path: &Path,
+    bundles: &[ReproZipBundle],
+) -> Result<(), String> {
+    use std::io::Write;
+
+    if let Some(parent) = out_path.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+
+    let file = std::fs::File::create(out_path).map_err(|e| e.to_string())?;
+    let mut zip = zip::ZipWriter::new(file);
+    let options = FileOptions::default()
+        .compression_method(zip::CompressionMethod::Deflated)
+        .unix_permissions(0o644);
+
+    // Always include a machine-readable repro summary.
+    if summary_path.is_file() {
+        let bytes = std::fs::read(summary_path).map_err(|e| e.to_string())?;
+        zip.start_file("_root/repro.summary.json", options)
+            .map_err(|e| e.to_string())?;
+        zip.write_all(&bytes).map_err(|e| e.to_string())?;
+    }
+
+    // Include script sources for offline triage.
+    for (idx, item) in bundles.iter().enumerate() {
+        let bytes = std::fs::read(&item.source_script).map_err(|e| e.to_string())?;
+        let name = item
+            .source_script
+            .file_name()
+            .and_then(|s| s.to_str())
+            .filter(|s| !s.trim().is_empty())
+            .unwrap_or("script.json");
+        let safe = zip_safe_component(name);
+        let dst = format!("_root/scripts/{:02}-{safe}", idx.saturating_add(1));
+        zip.start_file(dst, options).map_err(|e| e.to_string())?;
+        zip.write_all(&bytes).map_err(|e| e.to_string())?;
+    }
+
+    // Include nearby script sources (common for single-script repros).
+    for name in ["script.json", "picked.script.json"] {
+        let src = artifacts_root.join(name);
+        if !src.is_file() {
+            continue;
+        }
+        zip.start_file(format!("_root/{name}"), options)
+            .map_err(|e| e.to_string())?;
+        let mut f = std::fs::File::open(&src).map_err(|e| e.to_string())?;
+        std::io::copy(&mut f, &mut zip).map_err(|e| e.to_string())?;
+    }
+
+    // Pack each script prefix's ai.packet under its `_root/`.
+    for item in bundles {
+        let bundle_dir = crate::resolve_bundle_root_dir(&item.bundle_artifact)?;
+        let packet_dir = bundle_dir.join("ai.packet");
+        if !packet_dir.is_dir() {
+            return Err(format!(
+                "missing ai.packet for repro item {} (tip: fretboard diag ai-packet {} --packet-out {})",
+                item.prefix,
+                bundle_dir.display(),
+                packet_dir.display()
+            ));
+        }
+
+        let zip_prefix = format!("{}/_root/ai.packet", item.prefix);
+        zip_add_dir_filtered(
+            &mut zip,
+            &packet_dir,
+            &packet_dir,
+            &zip_prefix,
+            options,
+            &["json", "md", "txt"],
+        )?;
+    }
+
+    zip.finish().map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn pack_bundle_dir_to_zip(
     bundle_dir: &Path,

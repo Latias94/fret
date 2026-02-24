@@ -19,6 +19,8 @@ pub(crate) struct ReproCmdContext {
     pub resolved_script_result_trigger_path: PathBuf,
     pub fs_transport_cfg: crate::transport::FsDiagTransportConfig,
     pub pack_out: Option<PathBuf>,
+    pub ensure_ai_packet: bool,
+    pub pack_ai_only: bool,
     pub pack_include_root_artifacts: bool,
     pub pack_include_triage: bool,
     pub pack_include_screenshots: bool,
@@ -55,6 +57,8 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
         resolved_script_result_trigger_path: _resolved_script_result_trigger_path,
         fs_transport_cfg,
         pack_out,
+        ensure_ai_packet,
+        pack_ai_only,
         pack_include_root_artifacts,
         pack_include_triage,
         pack_include_screenshots,
@@ -611,7 +615,13 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
 
     let zip_out = pack_out
         .map(|p| resolve_path(&workspace_root, p))
-        .unwrap_or_else(|| resolved_out_dir.join("repro.zip"));
+        .unwrap_or_else(|| {
+            if pack_ai_only {
+                resolved_out_dir.join("repro.ai.zip")
+            } else {
+                resolved_out_dir.join("repro.zip")
+            }
+        });
 
     let mut packed_zip: Option<PathBuf> = None;
     let mut packed_bundle_artifact: Option<PathBuf> = None;
@@ -733,6 +743,8 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
             &zip_out,
             pack_defaults,
             pack_schema2_only,
+            ensure_ai_packet,
+            pack_ai_only,
             with_renderdoc,
             with_tracy,
             stats_top,
