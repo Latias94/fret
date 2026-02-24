@@ -62,27 +62,31 @@ impl BundleStatsSort {
             "bind_group_switches" | "binds" | "renderer_bind_group_switches" => {
                 Ok(Self::RendererBindGroupSwitches)
             }
-            "atlas_upload_bytes" | "text_atlas_upload_bytes" | "renderer_text_atlas_upload_bytes" => {
-                Ok(Self::RendererTextAtlasUploadBytes)
-            }
+            "atlas_upload_bytes"
+            | "text_atlas_upload_bytes"
+            | "renderer_text_atlas_upload_bytes" => Ok(Self::RendererTextAtlasUploadBytes),
             "atlas_evicted_pages"
             | "text_atlas_evicted_pages"
             | "renderer_text_atlas_evicted_pages" => Ok(Self::RendererTextAtlasEvictedPages),
             "svg_upload_bytes" | "renderer_svg_upload_bytes" => Ok(Self::RendererSvgUploadBytes),
-            "image_upload_bytes" | "renderer_image_upload_bytes" => Ok(Self::RendererImageUploadBytes),
-            "svg_cache_misses"
-            | "svg_raster_cache_misses"
-            | "renderer_svg_raster_cache_misses" => Ok(Self::RendererSvgRasterCacheMisses),
+            "image_upload_bytes" | "renderer_image_upload_bytes" => {
+                Ok(Self::RendererImageUploadBytes)
+            }
+            "svg_cache_misses" | "svg_raster_cache_misses" | "renderer_svg_raster_cache_misses" => {
+                Ok(Self::RendererSvgRasterCacheMisses)
+            }
             "svg_evictions"
             | "svg_raster_budget_evictions"
             | "renderer_svg_raster_budget_evictions" => Ok(Self::RendererSvgRasterBudgetEvictions),
-            "intermediate_budget_bytes" | "intermediate_budget" | "renderer_intermediate_budget_bytes" => {
-                Ok(Self::RendererIntermediateBudgetBytes)
-            }
-            "intermediate_in_use_bytes" | "intermediate_in_use" | "renderer_intermediate_in_use_bytes" => {
-                Ok(Self::RendererIntermediateInUseBytes)
-            }
-            "intermediate_peak_bytes" | "intermediate_peak" | "renderer_intermediate_peak_in_use_bytes" => {
+            "intermediate_budget_bytes"
+            | "intermediate_budget"
+            | "renderer_intermediate_budget_bytes" => Ok(Self::RendererIntermediateBudgetBytes),
+            "intermediate_in_use_bytes"
+            | "intermediate_in_use"
+            | "renderer_intermediate_in_use_bytes" => Ok(Self::RendererIntermediateInUseBytes),
+            "intermediate_peak_bytes"
+            | "intermediate_peak"
+            | "renderer_intermediate_peak_in_use_bytes" => {
                 Ok(Self::RendererIntermediatePeakInUseBytes)
             }
             "intermediate_release_targets" | "renderer_intermediate_release_targets" => {
@@ -90,19 +94,23 @@ impl BundleStatsSort {
             }
             "intermediate_allocations"
             | "intermediate_pool_allocations"
-            | "renderer_intermediate_pool_allocations" => Ok(Self::RendererIntermediatePoolAllocations),
-            "intermediate_reuses" | "intermediate_pool_reuses" | "renderer_intermediate_pool_reuses" => {
-                Ok(Self::RendererIntermediatePoolReuses)
+            | "renderer_intermediate_pool_allocations" => {
+                Ok(Self::RendererIntermediatePoolAllocations)
             }
-            "intermediate_releases" | "intermediate_pool_releases" | "renderer_intermediate_pool_releases" => {
-                Ok(Self::RendererIntermediatePoolReleases)
-            }
-            "pool_evictions" | "intermediate_pool_evictions" | "renderer_intermediate_pool_evictions" => {
-                Ok(Self::RendererIntermediatePoolEvictions)
-            }
+            "intermediate_reuses"
+            | "intermediate_pool_reuses"
+            | "renderer_intermediate_pool_reuses" => Ok(Self::RendererIntermediatePoolReuses),
+            "intermediate_releases"
+            | "intermediate_pool_releases"
+            | "renderer_intermediate_pool_releases" => Ok(Self::RendererIntermediatePoolReleases),
+            "pool_evictions"
+            | "intermediate_pool_evictions"
+            | "renderer_intermediate_pool_evictions" => Ok(Self::RendererIntermediatePoolEvictions),
             "intermediate_free_bytes"
             | "intermediate_pool_free_bytes"
-            | "renderer_intermediate_pool_free_bytes" => Ok(Self::RendererIntermediatePoolFreeBytes),
+            | "renderer_intermediate_pool_free_bytes" => {
+                Ok(Self::RendererIntermediatePoolFreeBytes)
+            }
             "intermediate_free_textures"
             | "intermediate_pool_free_textures"
             | "renderer_intermediate_pool_free_textures" => {

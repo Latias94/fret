@@ -199,7 +199,8 @@ pub(crate) fn run_doctor_for_bundle_dir(
         let schema2_exists = resolve_bundle_schema2_path_no_materialize(&bundle_dir).is_some();
         if !schema2_exists {
             let Some(bundle_json) = resolve_raw_bundle_json_path_no_materialize(&bundle_dir) else {
-                fixes_applied.push("skipped writing bundle.schema2.json (missing bundle.json)".to_string());
+                fixes_applied
+                    .push("skipped writing bundle.schema2.json (missing bundle.json)".to_string());
                 let report = doctor_report_json(&bundle_dir, warmup_frames);
                 return Ok(DoctorRunResult {
                     bundle_dir,
@@ -424,7 +425,10 @@ pub(crate) fn cmd_doctor(
     // If the user points at an out-dir root (no bundle artifacts directly), prefer the latest
     // bundle directory so `doctor` produces a useful report without requiring another argument.
     let has_bundleish_artifact = bundle_dir.join("bundle.schema2.json").is_file()
-        || bundle_dir.join("_root").join("bundle.schema2.json").is_file()
+        || bundle_dir
+            .join("_root")
+            .join("bundle.schema2.json")
+            .is_file()
         || bundle_dir.join("bundle.json").is_file()
         || bundle_dir.join("_root").join("bundle.json").is_file()
         || bundle_dir.join("bundle.index.json").is_file()

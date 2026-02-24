@@ -1,10 +1,10 @@
 use std::borrow::Cow;
 use std::path::{Path, PathBuf};
 
+mod bundle_stats_snapshot;
+mod bundle_stats_sort;
 mod debug_stats_gates;
 mod drag_cache_gates;
-mod bundle_stats_sort;
-mod bundle_stats_snapshot;
 mod gc_gates;
 mod hover_layout_checks;
 mod interaction_gates;
@@ -29,7 +29,6 @@ pub(super) use script_runtime::{
 };
 use semantics::{semantics_node_id_for_test_id, semantics_parent_map};
 #[cfg(test)]
-pub(super) use stale::SemanticsChangedRepaintedScan;
 pub(super) use ui_gallery_code_editor::*;
 pub(super) use ui_gallery_markdown_editor::*;
 use wheel_scroll::first_wheel_frame_id_for_window;
@@ -72,9 +71,12 @@ pub(super) use vlist::{
     check_bundle_for_vlist_visible_range_refreshes_min,
     check_bundle_for_vlist_window_shifts_explainable,
     check_bundle_for_vlist_window_shifts_have_prepaint_actions,
-    check_bundle_for_vlist_window_shifts_kind_max, check_bundle_for_vlist_window_shifts_non_retained_max,
+    check_bundle_for_vlist_window_shifts_kind_max,
+    check_bundle_for_vlist_window_shifts_non_retained_max,
 };
-pub(super) use wheel_scroll::{check_bundle_for_wheel_scroll, check_bundle_for_wheel_scroll_hit_changes};
+pub(super) use wheel_scroll::{
+    check_bundle_for_wheel_scroll, check_bundle_for_wheel_scroll_hit_changes,
+};
 pub(super) use windowed_rows::{
     check_bundle_for_windowed_rows_offset_changes_min,
     check_bundle_for_windowed_rows_visible_start_changes_repainted,
@@ -83,7 +85,8 @@ pub(super) use windowed_rows::{
 #[cfg(test)]
 #[allow(unused_imports)]
 pub(super) use debug_stats_gates::{
-    check_bundle_for_chart_sampling_window_shifts_min_json, check_bundle_for_layout_fast_path_min_json,
+    check_bundle_for_chart_sampling_window_shifts_min_json,
+    check_bundle_for_layout_fast_path_min_json,
     check_bundle_for_node_graph_cull_window_shifts_max_json,
     check_bundle_for_node_graph_cull_window_shifts_min_json,
     check_bundle_for_prepaint_actions_min_json,
@@ -116,6 +119,9 @@ pub(super) use stale::{
 };
 #[cfg(test)]
 #[allow(unused_imports)]
+pub(super) use view_cache_gates::check_bundle_for_view_cache_reuse_min_json;
+#[cfg(test)]
+#[allow(unused_imports)]
 pub(super) use vlist::{
     check_bundle_for_vlist_policy_key_stable_json,
     check_bundle_for_vlist_visible_range_refreshes_max_json,
@@ -125,9 +131,6 @@ pub(super) use vlist::{
     check_bundle_for_vlist_window_shifts_kind_max_json,
     check_bundle_for_vlist_window_shifts_non_retained_max_json,
 };
-#[cfg(test)]
-#[allow(unused_imports)]
-pub(super) use view_cache_gates::check_bundle_for_view_cache_reuse_min_json;
 #[cfg(test)]
 #[allow(unused_imports)]
 pub(super) use wheel_scroll::{

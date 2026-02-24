@@ -720,4 +720,3 @@ impl SemanticsIndex {
 // NOTE: Gate checks (retained-vlist keep-alive budget, notify hotspot counters, etc.) intentionally
 // stay in `crates/fret-diag/src/stats.rs` (or dedicated `*_gates.rs` modules). This file is scoped
 // to snapshot-derived helpers used by bundle stats/hotspots reporting.
-
