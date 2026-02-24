@@ -647,6 +647,11 @@ pub fn render<H: UiHost + 'static>(
             bounds,
             &root_name,
             move |cx| {
+                // Modals often branch layout based on viewport-driven breakpoints (Tailwind-style
+                // `sm:`/`md:`). Ensure the modal layer observes viewport size so view-cache reuse
+                // is correctly invalidated when the window resizes.
+                let _ = cx.environment_viewport_bounds(fret_ui::Invalidation::Layout);
+
                 // Overlays can remain mounted while `open=false` during exit motion. Once closed,
                 // the layer should be click-through and should not participate in Escape routing
                 // or dismissal observer passes.

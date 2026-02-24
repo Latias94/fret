@@ -51,7 +51,9 @@ Use `length-percentage-semantics-v1-milestones.md` for phase planning.
 
 ## M4 — Ecosystem migration (remove workarounds)
 
-- [ ] Audit `ecosystem/fret-ui-shadcn` for px clamping patterns used to patch percent collapse.
+- [x] Audit `ecosystem/fret-ui-shadcn` for px clamping patterns used to patch percent collapse.
+  - Outcome: the remaining viewport-dependent math in `fret-ui-shadcn` is limited to overlay placement,
+    motion origins, or container-query fallbacks (not percent-sizing collapse workarounds).
 - [ ] Migrate components to native percent/fraction fields:
   - [x] carousel (basis-full default)
     - Evidence: `ecosystem/fret-ui-shadcn/src/carousel.rs` (basis-full uses `LengthRefinement::Fill`)
@@ -67,17 +69,19 @@ Use `length-percentage-semantics-v1-milestones.md` for phase planning.
   - [x] combobox list height clamps that previously duplicated "available height" viewport math
     - Evidence: `ecosystem/fret-ui-shadcn/src/combobox.rs` (uses `popover_popper_vars(...).available_height`)
     - Gate: `ecosystem/fret-ui-shadcn/src/combobox.rs` (`combobox_list_respects_theme_max_height_in_tight_viewports`)
-- [ ] Add a gate per migration:
+- [x] Add a gate per migration:
   - [x] a unit test when the invariant is layout-only
   - [x] a diag script when the invariant is “docs-aligned UI outcome”
 
 ## Diagnostics / evidence
 
-- [ ] Ensure each milestone has:
-  - [ ] an evidence anchor (file + key helper/function)
-  - [ ] at least one regression gate (test and/or diag script)
+- [x] Ensure each milestone has:
+  - [x] an evidence anchor (file + key helper/function)
+  - [x] at least one regression gate (test and/or diag script)
 
 Known gates in this workstream:
 
 - M0/M1/M2 unit tests: `crates/fret-ui/src/declarative/tests/layout/basics.rs`
 - Carousel basic screenshot gate: `tools/diag-scripts/ui-gallery-carousel-basic-screenshot.json`
+- Sheet escape focus-restore gate: `tools/diag-scripts/ui-gallery-sheet-escape-focus-restore.json`
+- Drawer docs layout smoke gate: `tools/diag-scripts/ui-gallery-drawer-docs-smoke.json`
