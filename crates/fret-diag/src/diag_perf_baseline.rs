@@ -67,7 +67,7 @@ pub(crate) fn cmd_perf_baseline_from_bundles(
         let bundle_path = resolve_bundle_artifact_path(&bundle_src);
         if !bundle_path.is_file() {
             return Err(format!(
-                "bundle path does not contain bundle.json or bundle.schema2.json: {}",
+                "bundle path does not contain a bundle artifact (bundle.json or bundle.schema2.json): {}",
                 bundle_src.display()
             ));
         }

@@ -128,6 +128,9 @@ This file tracks tasks for `docs/workstreams/diag-fearless-refactor-v1.md`.
 - [x] Finish modularizing `diag ai-packet` and remove the temporary monolith module once parity is proven:
   - [x] delete `crates/fret-diag/src/commands/ai_packet/monolith.rs`
   - [x] keep module boundaries stable (`budget`, `anchors`, `slices`, `fs`)
+- [ ] Extract triage JSON generation out of the CLI entrypoint file:
+  - [ ] Move `triage_json_from_stats` into `crates/fret-diag/src/triage_json.rs` and re-export from `crates/fret-diag/src/lib.rs`.
+  - [ ] Keep existing call sites unchanged (`crate::triage_json_from_stats`), and keep tests compiling (move tests only if necessary).
 
 ## Plan 2 (defer until Plan 1 is solid)
 

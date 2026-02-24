@@ -18,15 +18,15 @@ See also:
 
 ### Option 1 (preferred): Sidecar-first + schema v2 adoption
 
-Keep `bundle.json` canonical, but make day-to-day tooling prefer **bounded sidecars**:
+Keep the bundle artifact canonical (`bundle.json` or `bundle.schema2.json`), but make day-to-day tooling prefer **bounded sidecars**:
 
 - `frames.index.json` for per-frame triage and hotspots
 - `bundle.index.json` / `bundle.meta.json` / `test_ids.index.json` for fast selectors and inventories
 
-Adopt `bundle.json` schema v2 features where available (semantics table + per-snapshot fingerprints) so bundles remain small while
+Adopt bundle schema v2 features where available (semantics table + per-snapshot fingerprints) so bundles remain small while
 still supporting selector-driven automation.
 
-This option is compatible with “fearless refactors”: tools can regenerate sidecars from `bundle.json`, and missing/invalid sidecars
+This option is compatible with “fearless refactors”: tools can regenerate sidecars from the bundle artifact, and missing/invalid sidecars
 degrade into clear, actionable errors.
 
 ### Option 2 (later): Chunked bundle format / manifest-first storage

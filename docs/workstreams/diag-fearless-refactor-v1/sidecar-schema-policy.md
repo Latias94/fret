@@ -12,14 +12,14 @@ This note defines how diagnostics **sidecars** evolve over time.
 Sidecars are intentionally treated as **tools/agents accelerators**:
 
 - they are optional,
-- they must be regeneratable from `bundle.json`,
+- they must be regeneratable from the bundle artifact (`bundle.json` or `bundle.schema2.json`),
 - they must evolve forward-compatibly (additive-only by default).
 
 ## Directory placement and packing
 
 For native filesystem dumps:
 
-- Sidecars live next to `bundle.json` in the bundle directory.
+- Sidecars live next to the bundle artifact in the bundle directory.
 
 For packed zip artifacts:
 
@@ -56,7 +56,7 @@ If a change requires altering field meaning, deleting fields, or changing key sh
 - bump `schema_version` for that `kind`, and
 - keep older tools working by either:
   - continuing to write the previous schema for a transition period, or
-  - regenerating on-demand from `bundle.json` when the sidecar schema is unsupported.
+  - regenerating on-demand from the bundle artifact when the sidecar schema is unsupported.
 
 ### Unknown fields must be ignored
 
@@ -68,7 +68,7 @@ Tools must not hang or silently degrade into timeouts when sidecars are missing.
 
 Preferred behavior order:
 
-1. Regenerate sidecars from `bundle.json` (best-effort).
+1. Regenerate sidecars from the bundle artifact (best-effort).
 2. If regeneration is not possible or too expensive, fail fast with guidance:
    - which file is missing,
    - which command regenerates it (e.g. `fretboard diag index <bundle_dir|bundle.json|bundle.schema2.json>`),
@@ -91,6 +91,6 @@ This policy covers only sidecars intended for:
 - test-id discovery,
 - script evidence correlation.
 
-It does not define `bundle.json` itself; that contract is described in:
+It does not define the bundle artifact itself; that contract is described in:
 
 - `docs/workstreams/diag-fearless-refactor-v1/minimum-useful-bundle.md`

@@ -106,10 +106,10 @@ pub(crate) fn run_doctor_for_bundle_dir(
                     && c.get("chunks_bytes_mismatch").and_then(|v| v.as_u64()) == Some(0)
             });
             if can_materialize {
-                fixes_planned.push("materialize bundle.json from manifest chunks".to_string());
+                fixes_planned.push("materialize raw bundle.json from manifest chunks".to_string());
             } else {
                 fixes_planned.push(
-                    "materialize bundle.json from manifest chunks (blocked: incomplete/missing manifest chunks)"
+                    "materialize raw bundle.json from manifest chunks (blocked: incomplete/missing manifest chunks)"
                         .to_string(),
                 );
             }
@@ -149,11 +149,12 @@ pub(crate) fn run_doctor_for_bundle_dir(
         let schema2_exists = resolve_bundle_schema2_path_no_materialize(&bundle_dir).is_some();
         if !schema2_exists {
             if resolve_raw_bundle_json_path_no_materialize(&bundle_dir).is_some() {
-                fixes_planned
-                    .push("write bundle.schema2.json from bundle.json (--mode last)".to_string());
+                fixes_planned.push(
+                    "write bundle.schema2.json from raw bundle.json (--mode last)".to_string(),
+                );
             } else {
                 fixes_planned.push(
-                    "write bundle.schema2.json from bundle.json (blocked: missing raw bundle.json)"
+                    "write bundle.schema2.json from raw bundle.json (blocked: missing raw bundle.json)"
                         .to_string(),
                 );
             }
@@ -178,7 +179,7 @@ pub(crate) fn run_doctor_for_bundle_dir(
                 ) {
                     Ok(Some(out)) => {
                         fixes_applied.push(format!(
-                            "materialized bundle.json from chunks ({})",
+                            "materialized raw bundle.json from chunks ({})",
                             out.display()
                         ));
                         break;
@@ -186,7 +187,7 @@ pub(crate) fn run_doctor_for_bundle_dir(
                     Ok(_) => {}
                     Err(err) => {
                         fixes_applied.push(format!(
-                            "attempted to materialize bundle.json from chunks, but failed ({})",
+                            "attempted to materialize raw bundle.json from chunks, but failed ({})",
                             err
                         ));
                     }
@@ -1002,7 +1003,7 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
             if missing == 0 && bytes_mismatch == 0 {
                 repairs.push(json!({
                     "code": "materialize_bundle_json",
-                    "note": "bundle artifact is missing; manifest chunks look complete, so materialize bundle.json from chunks",
+                    "note": "bundle artifact is missing; manifest chunks look complete, so materialize raw bundle.json from chunks",
                     "command": format!("fretboard diag doctor --fix-bundle-json {} --warmup-frames {}", bundle_dir.display(), warmup_frames),
                 }));
             } else {
