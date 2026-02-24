@@ -3354,7 +3354,9 @@ fn select_impl<H: UiHost>(
                                                 layout: popper_content::popper_panel_layout(
                                                     placed,
                                                     wrapper_insets,
-                                                    Overflow::Clip,
+                                                    // Keep the panel itself unclipped so the Select surface shadow
+                                                    // can extend beyond the panel rect (matching shadcn/ui).
+                                                    Overflow::Visible,
                                                 ),
                                                 enabled: true,
                                                 focusable: true,
