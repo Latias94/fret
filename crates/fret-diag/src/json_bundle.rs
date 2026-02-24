@@ -201,11 +201,6 @@ impl<'a> SemanticsResolver<'a> {
             .or_else(|| entries.get(idx).and_then(|e| e.get("semantic")))
     }
 
-    pub(crate) fn has_table_entry(&self, window: u64, semantics_fingerprint: u64) -> bool {
-        self.by_window_fp
-            .contains_key(&(window, semantics_fingerprint))
-    }
-
     pub(crate) fn table_entries(&self) -> &'a [Value] {
         self.entries.unwrap_or(&[])
     }

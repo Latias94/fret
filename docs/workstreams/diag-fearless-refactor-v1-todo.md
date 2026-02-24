@@ -134,6 +134,8 @@ This file tracks tasks for `docs/workstreams/diag-fearless-refactor-v1.md`.
   - `diag repro ... --ai-only` should be able to generate `ai.packet/` from sidecars per item before packing.
 - [x] Remove repeated ai.packet generation logic from pack/run/repro by centralizing in a single helper.
   - Evidence: `crates/fret-diag/src/commands/ai_packet.rs` (`ensure_ai_packet_dir_best_effort`), used by pack/run/repro.
+- [x] Deduplicate common “looks like a path” + “resolve bundle artifact or latest” CLI parsing helpers across commands.
+  - Evidence: `crates/fret-diag/src/commands/args.rs`, used by `agent`, `ai-packet`, `bundle-v2`, `hotspots`, `slice`.
 - [ ] Decide how far to push schema2-first:
   - [ ] Decide the runtime emission policy for `bundle.schema2.json` (tooling-derived today):
     - Proposed policy draft: `docs/workstreams/diag-fearless-refactor-v1/schema2-first-decision.md`.

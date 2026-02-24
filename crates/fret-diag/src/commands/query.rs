@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
+use super::args::looks_like_path;
 use super::sidecars;
 
 use crate::test_id_bloom::TestIdBloomV1;
@@ -29,10 +30,6 @@ impl QueryMode {
             Self::Glob => "glob",
         }
     }
-}
-
-fn looks_like_path(s: &str) -> bool {
-    s.contains('/') || s.contains('\\') || s.ends_with(".json")
 }
 
 fn resolve_latest_bundle_artifact_path(out_dir: &Path) -> Result<PathBuf, String> {
