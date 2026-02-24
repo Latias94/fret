@@ -34,6 +34,17 @@ pub(crate) fn write_run_id_bundle_json(out_dir: &Path, run_id: u64, bundle_json_
     // Best-effort alias: keep a stable per-run path even when the underlying bundle export directory
     // is timestamp/label-based (filesystem) or message-derived (WS).
     if std::fs::copy(bundle_json_path, &dst).is_ok() {
+        // If the source bundle artifact is schema2, also alias it under the run_id directory so
+        // tooling that prefers schema2 (via `resolve_bundle_artifact_path`) can pick it up.
+        let is_schema2 = bundle_json_path
+            .file_name()
+            .and_then(|s| s.to_str())
+            .map(|s| s.eq_ignore_ascii_case("bundle.schema2.json"))
+            .unwrap_or(false);
+        if is_schema2 {
+            let _ = std::fs::copy(bundle_json_path, dir.join("bundle.schema2.json"));
+        }
+
         // Best-effort sidecars for fast interactive querying (avoid grepping `bundle.json`).
         let _ = crate::bundle_index::ensure_bundle_meta_json(&dst, 0);
         let _ = crate::bundle_index::ensure_test_ids_index_json(&dst, 0);

@@ -1041,7 +1041,7 @@ mod tests {
             ts
         ));
         std::fs::create_dir_all(&dir).expect("create temp dir");
-        let bundle_path = dir.join("bundle.json");
+        let bundle_path = crate::resolve_bundle_artifact_path(&dir);
         std::fs::write(
             &bundle_path,
             r#"{
