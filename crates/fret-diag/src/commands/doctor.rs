@@ -170,7 +170,7 @@ pub(crate) fn run_doctor_for_bundle_dir(
     }
 
     if opts.fix_bundle_json {
-        if resolve_raw_bundle_json_path_no_materialize(&bundle_dir).is_none() {
+        if crate::resolve_bundle_artifact_path_no_materialize(&bundle_dir).is_none() {
             let attempts = [bundle_dir.clone(), bundle_dir.join("_root")];
             for dir in &attempts {
                 match crate::run_artifacts::materialize_bundle_json_from_manifest_chunks_if_missing(
@@ -834,8 +834,8 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
     let (items, required_ok, ok) = doctor_items(bundle_dir, warmup_frames);
     let bundle_artifact = crate::resolve_bundle_artifact_path_no_materialize(bundle_dir);
     let bundle_artifact_bytes = bundle_artifact.as_deref().and_then(file_bytes);
-    let bundle_json = resolve_raw_bundle_json_path_no_materialize(bundle_dir);
-    let bundle_json_bytes = bundle_json.as_deref().and_then(file_bytes);
+    let raw_bundle_json = resolve_raw_bundle_json_path_no_materialize(bundle_dir);
+    let raw_bundle_json_bytes = raw_bundle_json.as_deref().and_then(file_bytes);
     let schema2_exists = resolve_bundle_schema2_path_no_materialize(bundle_dir).is_some();
     let bundle_is_raw_bundle_json = bundle_artifact
         .as_deref()
@@ -941,7 +941,7 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
             }));
         }
         if schema_version == 1 {
-            if let Some(bytes) = bundle_json_bytes {
+            if let Some(bytes) = bundle_artifact_bytes {
                 const SUGGEST_V2_MIN_BYTES: u64 = 64 * 1024 * 1024;
                 if bytes >= SUGGEST_V2_MIN_BYTES {
                     warnings.push(Value::String(
@@ -957,7 +957,7 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
             }
         }
         if schema_version == 2 && !schema2_exists && bundle_is_raw_bundle_json {
-            if let Some(bytes) = bundle_json_bytes {
+            if let Some(bytes) = bundle_artifact_bytes {
                 const SUGGEST_SCHEMA2_MIN_BYTES: u64 = 64 * 1024 * 1024;
                 if bytes >= SUGGEST_SCHEMA2_MIN_BYTES {
                     warnings.push(Value::String(
@@ -972,7 +972,7 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
                 }
             }
         }
-    } else if bundle_json.is_some() {
+    } else if bundle_artifact.is_some() {
         warnings.push(Value::String(
             "bundle is present but schema_version could not be detected from the file prefix"
                 .to_string(),
@@ -1023,7 +1023,7 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
         }
     }
 
-    if let Some(bundle_json_bytes) = bundle_json_bytes {
+    if let Some(bundle_json_bytes) = bundle_artifact_bytes {
         const DEFAULT_MAX_FILE_BYTES: u64 = 512 * 1024 * 1024;
         if bundle_json_bytes > DEFAULT_MAX_FILE_BYTES {
             repairs.push(json!({
@@ -1039,10 +1039,12 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
         "ok": ok,
         "required_ok": required_ok,
         "bundle_dir": bundle_dir.display().to_string(),
-        "bundle_json": bundle_json.as_ref().map(|p| p.display().to_string()),
-        "bundle_json_bytes": bundle_json_bytes,
+        "bundle_json": bundle_artifact.as_ref().map(|p| p.display().to_string()),
+        "bundle_json_bytes": bundle_artifact_bytes,
         "bundle_artifact": bundle_artifact.as_ref().map(|p| p.display().to_string()),
         "bundle_artifact_bytes": bundle_artifact_bytes,
+        "raw_bundle_json": raw_bundle_json.as_ref().map(|p| p.display().to_string()),
+        "raw_bundle_json_bytes": raw_bundle_json_bytes,
         "bundle_schema_version": bundle_schema_version,
         "bundle_schema_error": bundle_schema_error,
         "warmup_frames": warmup_frames,
