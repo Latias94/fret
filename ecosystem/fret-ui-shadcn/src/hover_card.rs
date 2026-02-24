@@ -1362,8 +1362,8 @@ mod tests {
                             let mut layout = LayoutStyle::default();
                             layout.size.width = Length::Px(Px(50.0));
                             layout.size.height = Length::Px(Px(10.0));
-                            layout.inset.top = Some(Px(120.0));
-                            layout.inset.left = Some(Px(240.0));
+                            layout.inset.top = Some(Px(100.0)).into();
+                            layout.inset.left = Some(Px(100.0)).into();
                             layout.position = PositionStyle::Absolute;
                             layout
                         },
@@ -1603,7 +1603,7 @@ mod tests {
                             let mut layout = LayoutStyle::default();
                             layout.size.width = Length::Px(Px(120.0));
                             layout.size.height = Length::Px(Px(40.0));
-                            layout.inset.top = Some(Px(60.0));
+                            layout.inset.top = Some(Px(100.0)).into();
                             layout.position = PositionStyle::Absolute;
                             layout
                         },
@@ -2426,8 +2426,8 @@ mod tests {
                                     layout: {
                                         let mut layout = LayoutStyle::default();
                                         layout.position = PositionStyle::Absolute;
-                                        layout.inset.left = Some(Px(0.0));
-                                        layout.inset.top = Some(Px(0.0));
+                                        layout.inset.left = Some(Px(100.0)).into();
+                                        layout.inset.top = Some(Px(100.0)).into();
                                         layout.size.width = Length::Fill;
                                         layout.size.height = Length::Fill;
                                         layout
@@ -2452,8 +2452,8 @@ mod tests {
                                     layout: {
                                         let mut layout = LayoutStyle::default();
                                         layout.position = PositionStyle::Absolute;
-                                        layout.inset.left = Some(Px(20.0));
-                                        layout.inset.top = Some(Px(20.0));
+                                        layout.inset.left = Some(Px(100.0)).into();
+                                        layout.inset.top = Some(Px(100.0)).into();
                                         layout.size.width = Length::Px(Px(120.0));
                                         layout.size.height = Length::Px(Px(40.0));
                                         layout
@@ -2656,6 +2656,8 @@ mod tests {
         let underlay_clicked = app.models_mut().insert(false);
         let underlay_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
             Rc::new(Cell::new(None));
+        let trigger_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
 
         let mut services = FakeServices::default();
         let bounds = Rect::new(
@@ -2680,6 +2682,7 @@ mod tests {
                 "hover-card-outside-press-click-through",
                 |cx| {
                     let underlay_id_out = underlay_id.clone();
+                    let trigger_id_out = trigger_id.clone();
                     let underlay_clicked = underlay_clicked.clone();
                     let open = open.clone();
 
@@ -2700,8 +2703,8 @@ mod tests {
                                     layout: {
                                         let mut layout = LayoutStyle::default();
                                         layout.position = PositionStyle::Absolute;
-                                        layout.inset.left = Some(Px(600.0));
-                                        layout.inset.top = Some(Px(420.0));
+                                        layout.inset.left = Some(Px(600.0)).into();
+                                        layout.inset.top = Some(Px(400.0)).into();
                                         layout.size.width = Length::Px(Px(160.0));
                                         layout.size.height = Length::Px(Px(80.0));
                                         layout
@@ -2721,13 +2724,13 @@ mod tests {
                                 },
                             );
 
-                            let trigger = cx.pressable(
+                            let trigger = cx.pressable_with_id(
                                 PressableProps {
                                     layout: {
                                         let mut layout = LayoutStyle::default();
                                         layout.position = PositionStyle::Absolute;
-                                        layout.inset.left = Some(Px(0.0));
-                                        layout.inset.top = Some(Px(0.0));
+                                        layout.inset.left = Some(Px(100.0)).into();
+                                        layout.inset.top = Some(Px(100.0)).into();
                                         layout.size.width = Length::Px(Px(120.0));
                                         layout.size.height = Length::Px(Px(40.0));
                                         layout
@@ -2736,7 +2739,10 @@ mod tests {
                                     focusable: true,
                                     ..Default::default()
                                 },
-                                |_cx, _st| Vec::new(),
+                                move |_cx, _st, id| {
+                                    trigger_id_out.set(Some(id));
+                                    Vec::new()
+                                },
                             );
 
                             let content = cx.semantics(
@@ -2782,6 +2788,29 @@ mod tests {
         let underlay_element = underlay_id.get().expect("underlay element id");
         let underlay_node = fret_ui::elements::node_for_element(&mut app, window, underlay_element)
             .expect("underlay node");
+        let trigger_element = trigger_id.get().expect("trigger element id");
+        let trigger_node = fret_ui::elements::node_for_element(&mut app, window, trigger_element)
+            .expect("trigger node");
+        let trigger_bounds = ui.debug_node_bounds(trigger_node).expect("trigger bounds");
+        let trigger_pos = Point::new(
+            Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 * 0.5),
+            Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 * 0.5),
+        );
+        let underlay_bounds = ui
+            .debug_node_bounds(underlay_node)
+            .expect("underlay bounds");
+        let underlay_pos = Point::new(
+            Px(underlay_bounds.origin.x.0 + underlay_bounds.size.width.0 * 0.5),
+            Px(underlay_bounds.origin.y.0 + underlay_bounds.size.height.0 * 0.5),
+        );
+        assert!(
+            underlay_bounds.contains(underlay_pos),
+            "expected underlay_pos to fall inside underlay bounds; underlay_pos={underlay_pos:?} underlay_bounds={underlay_bounds:?}"
+        );
+        assert!(
+            !trigger_bounds.contains(underlay_pos),
+            "expected underlay_pos to fall outside trigger bounds; underlay_pos={underlay_pos:?} trigger_bounds={trigger_bounds:?}"
+        );
 
         // Hover trigger to open (open_delay=0).
         ui.dispatch_event(
@@ -2789,7 +2818,7 @@ mod tests {
             &mut services,
             &Event::Pointer(fret_core::PointerEvent::Move {
                 pointer_id: fret_core::PointerId(0),
-                position: Point::new(Px(12.0), Px(12.0)),
+                position: trigger_pos,
                 buttons: MouseButtons::default(),
                 modifiers: Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
@@ -2804,8 +2833,6 @@ mod tests {
             Some(true),
             "expected hover card to open on hover"
         );
-
-        let underlay_pos = Point::new(Px(680.0), Px(460.0));
         ui.dispatch_event(
             &mut app,
             &mut services,

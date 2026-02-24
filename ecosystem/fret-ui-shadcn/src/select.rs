@@ -544,10 +544,10 @@ where
                     -1.0,
                     show_up,
                     InsetStyle {
-                        left: Some(Px(0.0)),
-                        right: Some(Px(0.0)),
-                        top: Some(Px(0.0)),
-                        bottom: None,
+                        left: Some(Px(0.0)).into(),
+                        right: Some(Px(0.0)).into(),
+                        top: Some(Px(0.0)).into(),
+                        bottom: None.into(),
                     },
                 ) {
                     out.push(btn);
@@ -559,10 +559,10 @@ where
                     1.0,
                     show_down,
                     InsetStyle {
-                        left: Some(Px(0.0)),
-                        right: Some(Px(0.0)),
-                        top: None,
-                        bottom: Some(Px(0.0)),
+                        left: Some(Px(0.0)).into(),
+                        right: Some(Px(0.0)).into(),
+                        top: None.into(),
+                        bottom: Some(Px(0.0)).into(),
                     },
                 ) {
                     out.push(btn);
@@ -2414,8 +2414,8 @@ fn select_impl<H: UiHost>(
                                 layout: {
                                     let mut layout = LayoutStyle::default();
                                     layout.position = PositionStyle::Absolute;
-                                    layout.inset.left = Some(Px(-10000.0));
-                                    layout.inset.top = Some(Px(0.0));
+                                    layout.inset.left = Some(Px(-10000.0)).into();
+                                    layout.inset.top = Some(Px(0.0)).into();
                                     layout
                                 },
                                 // new-york-v4: `SelectViewport` uses `p-1`.
@@ -3316,10 +3316,10 @@ fn select_impl<H: UiHost>(
                                                     let mut layout = LayoutStyle::default();
                                                     layout.position = PositionStyle::Absolute;
                                                     layout.inset = InsetStyle {
-                                                        left: Some(Px(0.0)),
-                                                    right: Some(Px(0.0)),
-                                                    top: Some(Px(0.0)),
-                                                    bottom: Some(Px(0.0)),
+                                                        left: Some(Px(0.0)).into(),
+                                                    right: Some(Px(0.0)).into(),
+                                                    top: Some(Px(0.0)).into(),
+                                                    bottom: Some(Px(0.0)).into(),
                                                 };
                                                 layout.overflow = Overflow::Clip;
                                                 layout
@@ -3850,8 +3850,8 @@ mod tests {
                             let mut layout = LayoutStyle::default();
                             layout.size.width = Length::Px(Px(120.0));
                             layout.size.height = Length::Px(Px(40.0));
-                            layout.inset.top = Some(Px(180.0));
-                            layout.inset.left = Some(Px(240.0));
+                            layout.inset.top = Some(Px(100.0)).into();
+                            layout.inset.left = Some(Px(100.0)).into();
                             layout.position = PositionStyle::Absolute;
                             layout
                         },
@@ -5348,8 +5348,8 @@ mod tests {
                             let mut layout = LayoutStyle::default();
                             layout.size.width = Length::Px(Px(120.0));
                             layout.size.height = Length::Px(Px(40.0));
-                            layout.inset.top = Some(Px(180.0));
-                            layout.inset.left = Some(Px(240.0));
+                            layout.inset.top = Some(Px(100.0)).into();
+                            layout.inset.left = Some(Px(100.0)).into();
                             layout.position = PositionStyle::Absolute;
                             layout
                         },
@@ -5382,7 +5382,7 @@ mod tests {
             "expected select to install a modal barrier root"
         );
 
-        let underlay_point = Point::new(Px(250.0), Px(190.0));
+        let underlay_point = Point::new(Px(110.0), Px(110.0));
         ui.dispatch_event(
             &mut app,
             &mut services,
@@ -5499,7 +5499,7 @@ mod tests {
             "expected modal barrier layer to block underlay input"
         );
 
-        let underlay_point = Point::new(Px(250.0), Px(190.0));
+        let underlay_point = Point::new(Px(110.0), Px(110.0));
         ui.dispatch_event(
             &mut app,
             &mut services,

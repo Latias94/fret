@@ -2987,8 +2987,8 @@ impl ContextMenu {
                     let content_layout = LayoutStyle {
                         position: PositionStyle::Absolute,
                         inset: InsetStyle {
-                            left: Some(placed.origin.x),
-                            top: Some(placed.origin.y),
+                            left: Some(placed.origin.x).into(),
+                            top: Some(placed.origin.y).into(),
                             ..Default::default()
                         },
                         size: SizeStyle {
@@ -4179,6 +4179,12 @@ mod tests {
                                 },
                                 enabled: true,
                                 focusable: true,
+                                a11y: PressableA11y {
+                                    role: Some(SemanticsRole::Button),
+                                    label: Some(Arc::from("Trigger")),
+                                    test_id: Some(Arc::from("trigger")),
+                                    ..Default::default()
+                                },
                                 ..Default::default()
                             },
                             |cx, _st| {
@@ -4617,10 +4623,10 @@ mod tests {
                         layout: {
                             let mut layout = LayoutStyle::default();
                             layout.position = fret_ui::element::PositionStyle::Absolute;
-                            layout.inset.left = Some(Px(0.0));
-                            layout.inset.right = Some(Px(0.0));
-                            layout.inset.top = Some(Px(60.0));
-                            layout.inset.bottom = Some(Px(0.0));
+                            layout.inset.left = Some(Px(0.0)).into();
+                            layout.inset.right = Some(Px(0.0)).into();
+                            layout.inset.top = Some(Px(0.0)).into();
+                            layout.inset.bottom = Some(Px(0.0)).into();
                             layout.size.width = Length::Fill;
                             layout.size.height = Length::Fill;
                             layout
@@ -4654,6 +4660,12 @@ mod tests {
                                 },
                                 enabled: true,
                                 focusable: true,
+                                a11y: PressableA11y {
+                                    role: Some(SemanticsRole::Button),
+                                    label: Some(Arc::from("Trigger")),
+                                    test_id: Some(Arc::from("trigger")),
+                                    ..Default::default()
+                                },
                                 ..Default::default()
                             },
                             |cx, _st| {
@@ -4666,7 +4678,7 @@ mod tests {
 
                 // Keep the context-menu trigger above the underlay so the right-click open gesture
                 // cannot be intercepted by the "underlay" pressable.
-                vec![trigger, underlay]
+                vec![underlay, trigger]
             },
         );
         ui.set_root(root);
@@ -4704,10 +4716,10 @@ mod tests {
                         layout: {
                             let mut layout = LayoutStyle::default();
                             layout.position = fret_ui::element::PositionStyle::Absolute;
-                            layout.inset.left = Some(Px(0.0));
-                            layout.inset.right = Some(Px(0.0));
-                            layout.inset.top = Some(Px(60.0));
-                            layout.inset.bottom = Some(Px(0.0));
+                            layout.inset.left = Some(Px(0.0)).into();
+                            layout.inset.right = Some(Px(0.0)).into();
+                            layout.inset.top = Some(Px(0.0)).into();
+                            layout.inset.bottom = Some(Px(0.0)).into();
                             layout.size.width = Length::Fill;
                             layout.size.height = Length::Fill;
                             layout
@@ -4744,6 +4756,12 @@ mod tests {
                                     },
                                     enabled: true,
                                     focusable: true,
+                                    a11y: PressableA11y {
+                                        role: Some(SemanticsRole::Button),
+                                        label: Some(Arc::from("Trigger")),
+                                        test_id: Some(Arc::from("trigger")),
+                                        ..Default::default()
+                                    },
                                     ..Default::default()
                                 },
                                 |cx, _st| {
@@ -4756,7 +4774,7 @@ mod tests {
 
                 // Keep the context-menu trigger above the underlay so the right-click open gesture
                 // cannot be intercepted by the "underlay" pressable.
-                vec![trigger, underlay]
+                vec![underlay, trigger]
             },
         );
         ui.set_root(root);
@@ -4793,10 +4811,10 @@ mod tests {
                         layout: {
                             let mut layout = LayoutStyle::default();
                             layout.position = fret_ui::element::PositionStyle::Absolute;
-                            layout.inset.left = Some(Px(0.0));
-                            layout.inset.right = Some(Px(0.0));
-                            layout.inset.top = Some(Px(60.0));
-                            layout.inset.bottom = Some(Px(0.0));
+                            layout.inset.left = Some(Px(0.0)).into();
+                            layout.inset.right = Some(Px(0.0)).into();
+                            layout.inset.top = Some(Px(0.0)).into();
+                            layout.inset.bottom = Some(Px(0.0)).into();
                             layout.size.width = Length::Fill;
                             layout.size.height = Length::Fill;
                             layout
@@ -4830,6 +4848,12 @@ mod tests {
                                 },
                                 enabled: true,
                                 focusable: true,
+                                a11y: PressableA11y {
+                                    role: Some(SemanticsRole::Button),
+                                    label: Some(Arc::from("Trigger")),
+                                    test_id: Some(Arc::from("trigger")),
+                                    ..Default::default()
+                                },
                                 ..Default::default()
                             },
                             |cx, _st| {
@@ -4842,7 +4866,7 @@ mod tests {
 
                 // Keep the context-menu trigger above the underlay so the right-click open gesture
                 // cannot be intercepted by the "underlay" pressable.
-                vec![trigger, underlay]
+                vec![underlay, trigger]
             },
         );
         ui.set_root(root);
@@ -4880,10 +4904,10 @@ mod tests {
                         layout: {
                             let mut layout = LayoutStyle::default();
                             layout.position = fret_ui::element::PositionStyle::Absolute;
-                            layout.inset.left = Some(Px(0.0));
-                            layout.inset.right = Some(Px(0.0));
-                            layout.inset.top = Some(Px(60.0));
-                            layout.inset.bottom = Some(Px(0.0));
+                            layout.inset.left = Some(Px(0.0)).into();
+                            layout.inset.right = Some(Px(0.0)).into();
+                            layout.inset.top = Some(Px(0.0)).into();
+                            layout.inset.bottom = Some(Px(0.0)).into();
                             layout.size.width = Length::Fill;
                             layout.size.height = Length::Fill;
                             layout
@@ -4919,6 +4943,12 @@ mod tests {
                                     },
                                     enabled: true,
                                     focusable: true,
+                                    a11y: PressableA11y {
+                                        role: Some(SemanticsRole::Button),
+                                        label: Some(Arc::from("Trigger")),
+                                        test_id: Some(Arc::from("trigger")),
+                                        ..Default::default()
+                                    },
                                     ..Default::default()
                                 },
                                 |cx, _st| {
@@ -4929,7 +4959,7 @@ mod tests {
                         move |_cx| entries.clone(),
                     );
 
-                vec![trigger, underlay]
+                vec![underlay, trigger]
             },
         );
         ui.set_root(root);
@@ -4970,10 +5000,10 @@ mod tests {
                         layout: {
                             let mut layout = LayoutStyle::default();
                             layout.position = fret_ui::element::PositionStyle::Absolute;
-                            layout.inset.left = Some(Px(0.0));
-                            layout.inset.right = Some(Px(0.0));
-                            layout.inset.top = Some(Px(60.0));
-                            layout.inset.bottom = Some(Px(0.0));
+                            layout.inset.left = Some(Px(0.0)).into();
+                            layout.inset.right = Some(Px(0.0)).into();
+                            layout.inset.top = Some(Px(0.0)).into();
+                            layout.inset.bottom = Some(Px(0.0)).into();
                             layout.size.width = Length::Fill;
                             layout.size.height = Length::Fill;
                             layout
@@ -5335,7 +5365,7 @@ mod tests {
         });
 
         let entries = vec![ContextMenuEntry::Item(ContextMenuItem::new("Alpha"))];
-        let root = render_frame_focusable_trigger_with_underlay_and_entries_and_dismiss_handler(
+        let _root = render_frame_focusable_trigger_with_underlay_and_entries_and_dismiss_handler(
             &mut ui,
             &mut app,
             &mut services,
@@ -5347,18 +5377,20 @@ mod tests {
             Some(handler.clone()),
         );
 
-        let trigger = ui
-            .first_focusable_descendant_including_declarative(&mut app, window, root)
-            .expect("focusable trigger");
-        ui.set_focus(Some(trigger));
-
-        let snap0 = ui.semantics_snapshot().expect("semantics snapshot").clone();
+        let snap0 = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger = snap0
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("trigger"))
+            .map(|n| n.id)
+            .expect("trigger node");
         let underlay_node = snap0
             .nodes
             .iter()
             .find(|n| n.test_id.as_deref() == Some("underlay"))
             .map(|n| n.id)
             .expect("underlay node");
+        ui.set_focus(Some(trigger));
 
         let trigger_bounds = ui.debug_node_bounds(trigger).expect("trigger bounds");
         let position = Point::new(
@@ -6089,7 +6121,7 @@ mod tests {
         let mut services = FakeServices::default();
 
         // Frame 1: build the tree and establish stable trigger bounds.
-        let root = render_frame_focusable_trigger_with_underlay(
+        let _root = render_frame_focusable_trigger_with_underlay(
             &mut ui,
             &mut app,
             &mut services,
@@ -6099,9 +6131,13 @@ mod tests {
             underlay_clicked.clone(),
         );
 
-        let trigger = ui
-            .first_focusable_descendant_including_declarative(&mut app, window, root)
-            .expect("focusable trigger");
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("trigger"))
+            .map(|n| n.id)
+            .expect("trigger node");
         ui.set_focus(Some(trigger));
 
         let trigger_bounds = ui.debug_node_bounds(trigger).expect("trigger bounds");
@@ -6177,6 +6213,11 @@ mod tests {
                 click_count: 1,
             }),
         );
+        assert_ne!(
+            ui.captured(),
+            Some(underlay_node),
+            "expected modal context menu to block underlay pointer capture on pointer-down"
+        );
         ui.dispatch_event(
             &mut app,
             &mut services,
@@ -6213,7 +6254,7 @@ mod tests {
         let mut services = FakeServices::default();
 
         // Frame 1: build the tree and establish stable trigger bounds.
-        let root = render_frame_focusable_trigger_with_underlay_modal_and_dismiss_handler(
+        let _root = render_frame_focusable_trigger_with_underlay_modal_and_dismiss_handler(
             &mut ui,
             &mut app,
             &mut services,
@@ -6224,16 +6265,28 @@ mod tests {
             underlay_clicked.clone(),
             None,
         );
-
-        let trigger = ui
-            .first_focusable_descendant_including_declarative(&mut app, window, root)
-            .expect("focusable trigger");
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("trigger"))
+            .map(|n| n.id)
+            .expect("trigger node");
         ui.set_focus(Some(trigger));
 
         let trigger_bounds = ui.debug_node_bounds(trigger).expect("trigger bounds");
         let trigger_pos = Point::new(
             Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 / 2.0),
             Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 / 2.0),
+        );
+        let hit = ui
+            .debug_hit_test(trigger_pos)
+            .hit
+            .expect("expected a hit at trigger_pos");
+        let hit_path = ui.debug_node_path(hit);
+        assert!(
+            hit_path.contains(&trigger),
+            "expected trigger_pos to hit inside the trigger subtree; hit={hit:?} hit_path={hit_path:?} trigger={trigger:?}"
         );
 
         // Right-click to open the context menu (modal=false => click-through).
@@ -6293,6 +6346,14 @@ mod tests {
 
         // Click the underlay: should close via outside-press observer and remain click-through.
         let underlay_pos = Point::new(Px(10.0), Px(230.0));
+        let hit = ui.debug_hit_test(underlay_pos).hit;
+        if hit != Some(underlay_node) {
+            let underlay_bounds = ui.debug_node_bounds(underlay_node);
+            let hit_bounds = hit.and_then(|n| ui.debug_node_bounds(n));
+            panic!(
+                "expected click-through underlay_pos to hit the underlay; hit={hit:?} hit_bounds={hit_bounds:?} underlay_bounds={underlay_bounds:?}"
+            );
+        }
         ui.dispatch_event(
             &mut app,
             &mut services,
@@ -6317,6 +6378,11 @@ mod tests {
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
+        );
+        assert_eq!(
+            ui.captured(),
+            None,
+            "expected underlay pressable to release capture on pointer-up"
         );
 
         assert_eq!(app.models().get_copied(&open), Some(false));
@@ -6352,7 +6418,7 @@ mod tests {
         });
 
         // Frame 1: build the tree and establish stable trigger bounds.
-        let root = render_frame_focusable_trigger_with_underlay_modal_and_dismiss_handler(
+        let _root = render_frame_focusable_trigger_with_underlay_modal_and_dismiss_handler(
             &mut ui,
             &mut app,
             &mut services,
@@ -6363,10 +6429,13 @@ mod tests {
             underlay_clicked.clone(),
             Some(handler.clone()),
         );
-
-        let trigger = ui
-            .first_focusable_descendant_including_declarative(&mut app, window, root)
-            .expect("focusable trigger");
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("trigger"))
+            .map(|n| n.id)
+            .expect("trigger node");
         ui.set_focus(Some(trigger));
 
         let trigger_bounds = ui.debug_node_bounds(trigger).expect("trigger bounds");
@@ -6467,7 +6536,7 @@ mod tests {
         let mut services = FakeServices::default();
 
         // Frame 1: build the tree and establish stable trigger bounds.
-        let root = render_frame_focusable_trigger_with_underlay(
+        let _root = render_frame_focusable_trigger_with_underlay(
             &mut ui,
             &mut app,
             &mut services,
@@ -6477,9 +6546,13 @@ mod tests {
             underlay_clicked.clone(),
         );
 
-        let trigger = ui
-            .first_focusable_descendant_including_declarative(&mut app, window, root)
-            .expect("focusable trigger");
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("trigger"))
+            .map(|n| n.id)
+            .expect("trigger node");
         ui.set_focus(Some(trigger));
 
         let trigger_bounds = ui.debug_node_bounds(trigger).expect("trigger bounds");
@@ -6674,7 +6747,7 @@ mod tests {
         ];
 
         // Frame 1: build the tree and establish stable trigger bounds.
-        let root = render_frame_focusable_trigger_with_underlay_and_entries(
+        let _root = render_frame_focusable_trigger_with_underlay_and_entries(
             &mut ui,
             &mut app,
             &mut services,
@@ -6684,9 +6757,13 @@ mod tests {
             underlay_clicked.clone(),
             entries.clone(),
         );
-        let trigger = ui
-            .first_focusable_descendant_including_declarative(&mut app, window, root)
-            .expect("focusable trigger");
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("trigger"))
+            .map(|n| n.id)
+            .expect("trigger node");
         ui.set_focus(Some(trigger));
 
         let trigger_bounds = ui.debug_node_bounds(trigger).expect("trigger bounds");

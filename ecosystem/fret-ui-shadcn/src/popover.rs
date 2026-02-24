@@ -1565,8 +1565,8 @@ mod tests {
                             let mut layout = LayoutStyle::default();
                             layout.size.width = Length::Px(Px(120.0));
                             layout.size.height = Length::Px(Px(40.0));
-                            layout.inset.top = Some(Px(300.0));
-                            layout.inset.left = Some(Px(400.0));
+                            layout.inset.top = Some(Px(100.0)).into();
+                            layout.inset.left = Some(Px(100.0)).into();
                             layout.position = fret_ui::element::PositionStyle::Absolute;
                             layout
                         },
@@ -1668,8 +1668,8 @@ mod tests {
                             let mut layout = LayoutStyle::default();
                             layout.size.width = Length::Px(Px(120.0));
                             layout.size.height = Length::Px(Px(40.0));
-                            layout.inset.top = Some(Px(300.0));
-                            layout.inset.left = Some(Px(400.0));
+                            layout.inset.top = Some(Px(100.0)).into();
+                            layout.inset.left = Some(Px(100.0)).into();
                             layout.position = fret_ui::element::PositionStyle::Absolute;
                             layout
                         },
@@ -1776,8 +1776,8 @@ mod tests {
                             let mut layout = LayoutStyle::default();
                             layout.size.width = Length::Px(Px(120.0));
                             layout.size.height = Length::Px(Px(40.0));
-                            layout.inset.top = Some(Px(300.0));
-                            layout.inset.left = Some(Px(400.0));
+                            layout.inset.top = Some(Px(100.0)).into();
+                            layout.inset.left = Some(Px(100.0)).into();
                             layout.position = fret_ui::element::PositionStyle::Absolute;
                             layout
                         },
@@ -2223,8 +2223,8 @@ mod tests {
                             let mut layout = LayoutStyle::default();
                             layout.size.width = Length::Px(Px(120.0));
                             layout.size.height = Length::Px(Px(40.0));
-                            layout.inset.top = Some(Px(300.0));
-                            layout.inset.left = Some(Px(400.0));
+                            layout.inset.top = Some(Px(100.0)).into();
+                            layout.inset.left = Some(Px(100.0)).into();
                             layout.position = fret_ui::element::PositionStyle::Absolute;
                             layout
                         },
@@ -2318,6 +2318,8 @@ mod tests {
 
         let open = app.models_mut().insert(true);
         let underlay_activated = app.models_mut().insert(false);
+        let underlay_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
 
         let dismiss_reason: Rc<Cell<Option<fret_ui::action::DismissReason>>> =
             Rc::new(Cell::new(None));
@@ -2344,14 +2346,15 @@ mod tests {
             |cx| {
                 let underlay = {
                     let underlay_activated = underlay_activated.clone();
-                    cx.pressable(
+                    let underlay_id_out = underlay_id_out.clone();
+                    cx.pressable_with_id(
                         PressableProps {
                             layout: {
                                 let mut layout = LayoutStyle::default();
                                 layout.size.width = Length::Px(Px(120.0));
                                 layout.size.height = Length::Px(Px(40.0));
-                                layout.inset.top = Some(Px(300.0));
-                                layout.inset.left = Some(Px(400.0));
+                                layout.inset.top = Some(Px(100.0)).into();
+                                layout.inset.left = Some(Px(100.0)).into();
                                 layout.position = fret_ui::element::PositionStyle::Absolute;
                                 layout
                             },
@@ -2359,7 +2362,8 @@ mod tests {
                             focusable: true,
                             ..Default::default()
                         },
-                        move |cx, _st| {
+                        move |cx, _st, id| {
+                            underlay_id_out.set(Some(id));
                             cx.pressable_set_bool(&underlay_activated, true);
                             vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
                         },
@@ -2404,7 +2408,16 @@ mod tests {
         OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
-        let underlay_point = Point::new(Px(410.0), Px(310.0));
+        let underlay_id = underlay_id_out.get().expect("underlay id");
+        let underlay_node =
+            fret_ui::elements::node_for_element(&mut app, window, underlay_id).expect("underlay");
+        let underlay_bounds = ui
+            .debug_node_bounds(underlay_node)
+            .expect("underlay bounds");
+        let underlay_point = Point::new(
+            Px(underlay_bounds.origin.x.0 + underlay_bounds.size.width.0 * 0.5),
+            Px(underlay_bounds.origin.y.0 + underlay_bounds.size.height.0 * 0.5),
+        );
         ui.dispatch_event(
             &mut app,
             &mut services,
@@ -2613,8 +2626,8 @@ mod tests {
                                                         layout.size.height = Length::Px(Px(40.0));
                                                         layout.position =
                                                         fret_ui::element::PositionStyle::Absolute;
-                                                        layout.inset.top = Some(Px(20.0));
-                                                        layout.inset.left = Some(Px(10.0));
+                                                        layout.inset.top = Some(Px(10.0)).into();
+                                                        layout.inset.left = Some(Px(10.0)).into();
                                                         layout
                                                     },
                                                     enabled: true,
@@ -2756,7 +2769,37 @@ mod tests {
 
         // Click the underlay while the popover is open: should close the popover (observer pass)
         // and still focus the underlay (click-through), without being overridden on close.
-        let click = Point::new(Px(410.0), Px(310.0));
+        let underlay_element_id = underlay_id.get().expect("underlay element id");
+        let underlay_node =
+            fret_ui::elements::node_for_element(&mut app, window, underlay_element_id)
+                .expect("underlay");
+        let underlay_bounds = ui
+            .debug_node_bounds(underlay_node)
+            .expect("underlay bounds");
+        let center_x = Px(underlay_bounds.origin.x.0 + underlay_bounds.size.width.0 * 0.5);
+        let candidates = [
+            Point::new(
+                center_x,
+                Px(underlay_bounds.origin.y.0 + underlay_bounds.size.height.0 - 2.0),
+            ),
+            Point::new(
+                center_x,
+                Px(underlay_bounds.origin.y.0 + underlay_bounds.size.height.0 * 0.75),
+            ),
+            Point::new(center_x, Px(underlay_bounds.origin.y.0 + 2.0)),
+        ];
+        let click = candidates
+            .into_iter()
+            .find(|p| {
+                ui.debug_hit_test(*p)
+                    .hit
+                    .is_some_and(|hit| ui.debug_node_path(hit).contains(&underlay_node))
+            })
+            .unwrap_or_else(|| {
+                panic!(
+                    "expected a point inside the underlay bounds to hit the underlay subtree; underlay_bounds={underlay_bounds:?} candidates={candidates:?}"
+                )
+            });
         let click_debug_before = ui.debug_hit_test(click);
         let click_hit_before = click_debug_before.hit;
         let click_path_before = click_hit_before
@@ -3117,8 +3160,8 @@ mod tests {
                                     let mut layout = LayoutStyle::default();
                                     layout.size.width = Length::Px(Px(50.0));
                                     layout.size.height = Length::Px(Px(10.0));
-                                    layout.inset.top = Some(Px(120.0));
-                                    layout.inset.left = Some(Px(240.0));
+                                    layout.inset.top = Some(Px(100.0)).into();
+                                    layout.inset.left = Some(Px(100.0)).into();
                                     layout.position = fret_ui::element::PositionStyle::Absolute;
                                     layout
                                 },
@@ -3213,7 +3256,7 @@ mod tests {
         assert_eq!(
             anchor_rect,
             Rect::new(
-                Point::new(Px(240.0), Px(120.0)),
+                Point::new(Px(100.0), Px(100.0)),
                 CoreSize::new(Px(50.0), Px(10.0))
             )
         );
@@ -3253,8 +3296,8 @@ mod tests {
                         let mut layout = LayoutStyle::default();
                         layout.size.width = Length::Px(Px(50.0));
                         layout.size.height = Length::Px(Px(10.0));
-                        layout.inset.top = Some(Px(120.0));
-                        layout.inset.left = Some(Px(240.0));
+                        layout.inset.top = Some(Px(100.0)).into();
+                        layout.inset.left = Some(Px(100.0)).into();
                         layout.position = fret_ui::element::PositionStyle::Absolute;
 
                         let anchor = cx.container(
@@ -3391,8 +3434,8 @@ mod tests {
                             let mut layout = LayoutStyle::default();
                             layout.size.width = Length::Px(Px(120.0));
                             layout.size.height = Length::Px(Px(40.0));
-                            layout.inset.top = Some(Px(300.0));
-                            layout.inset.left = Some(Px(400.0));
+                            layout.inset.top = Some(Px(100.0)).into();
+                            layout.inset.left = Some(Px(100.0)).into();
                             layout.position = fret_ui::element::PositionStyle::Absolute;
                             layout
                         },
@@ -3552,8 +3595,8 @@ mod tests {
                             let mut layout = LayoutStyle::default();
                             layout.size.width = Length::Px(Px(120.0));
                             layout.size.height = Length::Px(Px(40.0));
-                            layout.inset.top = Some(Px(300.0));
-                            layout.inset.left = Some(Px(400.0));
+                            layout.inset.top = Some(Px(100.0)).into();
+                            layout.inset.left = Some(Px(100.0)).into();
                             layout.position = fret_ui::element::PositionStyle::Absolute;
                             layout
                         },
@@ -3573,8 +3616,8 @@ mod tests {
                             let mut layout = LayoutStyle::default();
                             layout.size.width = Length::Px(Px(120.0));
                             layout.size.height = Length::Px(Px(40.0));
-                            layout.inset.top = Some(Px(0.0));
-                            layout.inset.left = Some(Px(0.0));
+                            layout.inset.top = Some(Px(100.0)).into();
+                            layout.inset.left = Some(Px(100.0)).into();
                             layout.position = fret_ui::element::PositionStyle::Absolute;
                             layout
                         },
@@ -3720,8 +3763,8 @@ mod tests {
                                 let mut layout = LayoutStyle::default();
                                 layout.size.width = Length::Px(Px(120.0));
                                 layout.size.height = Length::Px(Px(40.0));
-                                layout.inset.top = Some(Px(300.0));
-                                layout.inset.left = Some(Px(400.0));
+                                layout.inset.top = Some(Px(100.0)).into();
+                                layout.inset.left = Some(Px(100.0)).into();
                                 layout.position = fret_ui::element::PositionStyle::Absolute;
                                 layout
                             },
@@ -3938,8 +3981,8 @@ mod tests {
                                     let mut layout = LayoutStyle::default();
                                     layout.size.width = Length::Px(Px(120.0));
                                     layout.size.height = Length::Px(Px(40.0));
-                                    layout.inset.left = Some(Px(20.0));
-                                    layout.inset.top = Some(Px(20.0));
+                                    layout.inset.left = Some(Px(100.0)).into();
+                                    layout.inset.top = Some(Px(100.0)).into();
                                     layout.position = fret_ui::element::PositionStyle::Absolute;
                                     layout
                                 },
@@ -4147,8 +4190,8 @@ mod tests {
                                 let mut layout = LayoutStyle::default();
                                 layout.size.width = Length::Px(Px(120.0));
                                 layout.size.height = Length::Px(Px(40.0));
-                                layout.inset.left = Some(Px(20.0));
-                                layout.inset.top = Some(Px(20.0));
+                                layout.inset.left = Some(Px(100.0)).into();
+                                layout.inset.top = Some(Px(100.0)).into();
                                 layout.position = fret_ui::element::PositionStyle::Absolute;
                                 layout
                             },
@@ -4352,8 +4395,8 @@ mod tests {
                                 let mut layout = LayoutStyle::default();
                                 layout.size.width = Length::Px(Px(120.0));
                                 layout.size.height = Length::Px(Px(40.0));
-                                layout.inset.left = Some(Px(20.0));
-                                layout.inset.top = Some(Px(20.0));
+                                layout.inset.left = Some(Px(100.0)).into();
+                                layout.inset.top = Some(Px(100.0)).into();
                                 layout.position = fret_ui::element::PositionStyle::Absolute;
                                 layout
                             },
@@ -4583,8 +4626,8 @@ mod tests {
                                         let mut layout = LayoutStyle::default();
                                         layout.size.width = Length::Px(Px(120.0));
                                         layout.size.height = Length::Px(Px(40.0));
-                                        layout.inset.left = Some(Px(20.0));
-                                        layout.inset.top = Some(Px(20.0));
+                                        layout.inset.left = Some(Px(100.0)).into();
+                                        layout.inset.top = Some(Px(100.0)).into();
                                         layout.position = fret_ui::element::PositionStyle::Absolute;
                                         layout
                                     },
@@ -5436,8 +5479,8 @@ mod tests {
                             let mut layout = LayoutStyle::default();
                             layout.size.width = Length::Px(Px(120.0));
                             layout.size.height = Length::Px(Px(40.0));
-                            layout.inset.left = Some(Px(40.0));
-                            layout.inset.top = Some(Px(40.0));
+                            layout.inset.left = Some(Px(100.0)).into();
+                            layout.inset.top = Some(Px(100.0)).into();
                             layout.position = fret_ui::element::PositionStyle::Absolute;
                             layout
                         },
@@ -5592,8 +5635,8 @@ mod tests {
                                     let mut layout = LayoutStyle::default();
                                     layout.size.width = Length::Px(Px(120.0));
                                     layout.size.height = Length::Px(Px(40.0));
-                                    layout.inset.left = Some(Px(20.0));
-                                    layout.inset.top = Some(Px(20.0));
+                                    layout.inset.left = Some(Px(100.0)).into();
+                                    layout.inset.top = Some(Px(100.0)).into();
                                     layout.position = fret_ui::element::PositionStyle::Absolute;
                                     layout
                                 },

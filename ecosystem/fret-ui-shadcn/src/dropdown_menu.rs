@@ -918,11 +918,11 @@ fn checkable_menu_row_children<H: UiHost>(
                                 layout: LayoutStyle {
                                     position: fret_ui::element::PositionStyle::Absolute,
                                     inset: fret_ui::element::InsetStyle {
-                                        top: Some(Px(0.0)),
-                                        right: None,
-                                        bottom: Some(Px(0.0)),
+                                        top: Some(Px(0.0)).into(),
+                                        right: None.into(),
+                                        bottom: Some(Px(0.0)).into(),
                                         // new-york-v4: indicator slot uses `left-2`.
-                                        left: Some(pad_x),
+                                        left: Some(pad_x).into(),
                                     },
                                     size: SizeStyle {
                                         width: Length::Px(Px(16.0)),
@@ -1662,8 +1662,8 @@ impl DropdownMenu {
                     let content_layout = LayoutStyle {
                         position: PositionStyle::Absolute,
                         inset: InsetStyle {
-                            left: Some(placed.origin.x),
-                            top: Some(placed.origin.y),
+                            left: Some(placed.origin.x).into(),
+                            top: Some(placed.origin.y).into(),
                             ..Default::default()
                         },
                         size: SizeStyle {
@@ -4239,8 +4239,8 @@ mod tests {
                                             layout.size.height = Length::Px(Px(20.0));
                                             layout.position =
                                                 fret_ui::element::PositionStyle::Absolute;
-                                            layout.inset.top = Some(Px(30.0));
-                                            layout.inset.left = Some(Px(10.0));
+                                            layout.inset.top = Some(Px(100.0)).into();
+                                            layout.inset.left = Some(Px(100.0)).into();
                                             layout
                                         },
                                         ..Default::default()
@@ -4358,8 +4358,8 @@ mod tests {
                                 layout: {
                                     let mut layout = LayoutStyle::default();
                                     layout.position = fret_ui::element::PositionStyle::Absolute;
-                                    layout.inset.left = Some(Px(380.0));
-                                    layout.inset.top = Some(Px(200.0));
+                                    layout.inset.left = Some(Px(100.0)).into();
+                                    layout.inset.top = Some(Px(100.0)).into();
                                     layout.size.width = Length::Px(Px(220.0));
                                     layout.size.height = Length::Px(Px(120.0));
                                     layout
@@ -4388,8 +4388,8 @@ mod tests {
                                                 let mut layout = LayoutStyle::default();
                                                 layout.position =
                                                     fret_ui::element::PositionStyle::Absolute;
-                                                layout.inset.left = Some(Px(0.0));
-                                                layout.inset.top = Some(Px(0.0));
+                                                layout.inset.left = Some(Px(100.0)).into();
+                                                layout.inset.top = Some(Px(100.0)).into();
                                                 layout.size.width = Length::Px(Px(120.0));
                                                 layout.size.height = Length::Px(Px(40.0));
                                                 layout
@@ -4464,8 +4464,8 @@ mod tests {
                                 layout: {
                                     let mut layout = LayoutStyle::default();
                                     layout.position = fret_ui::element::PositionStyle::Absolute;
-                                    layout.inset.left = Some(Px(380.0));
-                                    layout.inset.top = Some(Px(200.0));
+                                    layout.inset.left = Some(Px(100.0)).into();
+                                    layout.inset.top = Some(Px(100.0)).into();
                                     layout.size.width = Length::Px(Px(220.0));
                                     layout.size.height = Length::Px(Px(120.0));
                                     layout
@@ -4489,8 +4489,8 @@ mod tests {
                                                 let mut layout = LayoutStyle::default();
                                                 layout.position =
                                                     fret_ui::element::PositionStyle::Absolute;
-                                                layout.inset.left = Some(Px(0.0));
-                                                layout.inset.top = Some(Px(0.0));
+                                                layout.inset.left = Some(Px(100.0)).into();
+                                                layout.inset.top = Some(Px(100.0)).into();
                                                 layout.size.width = Length::Px(Px(120.0));
                                                 layout.size.height = Length::Px(Px(40.0));
                                                 layout
@@ -5471,7 +5471,6 @@ mod tests {
 
         // Click the underlay while the menu is open: should close via observer pass, but must not
         // activate or focus the underlay (non-click-through dismissal).
-        let position = Point::new(Px(410.0), Px(310.0));
         let underlay_id = underlay_id_out.get().expect("underlay element id");
         let underlay_node =
             fret_ui::elements::node_for_element(&mut app, window, underlay_id).expect("underlay");
@@ -5479,6 +5478,7 @@ mod tests {
         let underlay_bounds = ui
             .debug_node_bounds(underlay_node)
             .expect("underlay bounds");
+        let position = rect_center(underlay_bounds);
         assert!(
             underlay_bounds.contains(position),
             "expected click position to fall inside underlay bounds; pos={position:?} bounds={underlay_bounds:?}"

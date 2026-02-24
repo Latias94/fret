@@ -1188,8 +1188,8 @@ impl Tooltip {
                             layout: LayoutStyle {
                                 position: PositionStyle::Absolute,
                                 inset: InsetStyle {
-                                    left: Some(placed.origin.x),
-                                    top: Some(placed.origin.y),
+                                    left: Some(placed.origin.x).into(),
+                                    top: Some(placed.origin.y).into(),
                                     ..Default::default()
                                 },
                                 size: SizeStyle {
@@ -2215,8 +2215,8 @@ mod tests {
                             layout: {
                                 let mut layout = LayoutStyle::default();
                                 layout.position = fret_ui::element::PositionStyle::Absolute;
-                                layout.inset.left = Some(Px(200.0));
-                                layout.inset.top = Some(Px(200.0));
+                                layout.inset.left = Some(Px(100.0)).into();
+                                layout.inset.top = Some(Px(100.0)).into();
                                 layout.size.width = Length::Px(Px(120.0));
                                 layout.size.height = Length::Px(Px(40.0));
                                 layout
@@ -2271,13 +2271,26 @@ mod tests {
         );
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
+        let trigger_element = trigger_id.get().expect("trigger element id");
+        let trigger_node = fret_ui::elements::node_for_element(&mut app, window, trigger_element)
+            .expect("trigger node");
+        let trigger_bounds = ui.debug_node_bounds(trigger_node).expect("trigger bounds");
+        let trigger_center = Point::new(
+            Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 * 0.5),
+            Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 * 0.5),
+        );
+        let outside_pos = Point::new(
+            Px(bounds.size.width.0 - 10.0),
+            Px(bounds.size.height.0 - 10.0),
+        );
+
         // Ensure pointer starts outside.
         ui.dispatch_event(
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
                 pointer_id: fret_core::PointerId(0),
-                position: Point::new(Px(200.0), Px(200.0)),
+                position: outside_pos,
                 buttons: fret_core::MouseButtons::default(),
                 modifiers: fret_core::Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
@@ -2292,7 +2305,7 @@ mod tests {
                 &mut services,
                 &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
                     pointer_id: fret_core::PointerId(0),
-                    position: Point::new(Px(210.0), Px(210.0)),
+                    position: trigger_center,
                     buttons: fret_core::MouseButtons::default(),
                     modifiers: fret_core::Modifiers::default(),
                     pointer_type: fret_core::PointerType::Mouse,
@@ -2350,7 +2363,7 @@ mod tests {
                 &mut services,
                 &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
                     pointer_id: fret_core::PointerId(0),
-                    position: Point::new(Px(200.0), Px(200.0)),
+                    position: outside_pos,
                     buttons: fret_core::MouseButtons::default(),
                     modifiers: fret_core::Modifiers::default(),
                     pointer_type: fret_core::PointerType::Mouse,
@@ -4718,8 +4731,8 @@ mod tests {
                                 let mut layout = LayoutStyle::default();
                                 layout.size.width = Length::Px(Px(50.0));
                                 layout.size.height = Length::Px(Px(10.0));
-                                layout.inset.top = Some(Px(120.0));
-                                layout.inset.left = Some(Px(240.0));
+                                layout.inset.top = Some(Px(100.0)).into();
+                                layout.inset.left = Some(Px(100.0)).into();
                                 layout.position = fret_ui::element::PositionStyle::Absolute;
                                 layout
                             },
