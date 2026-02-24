@@ -60,8 +60,8 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).expect("create temp dir");
 
-        let a_path = dir.join("a.bundle.json");
-        let b_path = dir.join("b.bundle.json");
+        let a_path = dir.join("a.bundle_artifact.json");
+        let b_path = dir.join("b.bundle_artifact.json");
 
         let bundle = serde_json::json!({
           "schema_version": 1,

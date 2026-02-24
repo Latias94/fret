@@ -117,7 +117,7 @@ This file tracks tasks for `docs/workstreams/diag-fearless-refactor-v1.md`.
     - `crates/fret-diag/src/paths.rs` (integrity failure notes mention raw `bundle.json`)
   - [ ] Sweep remaining narrow modules and tests that still talk about `bundle.json` when they mean “bundle artifact”:
     - [x] `crates/fret-diag/src/artifacts.rs` (docs/comments + test expectations)
-    - `crates/fret-diag/src/api.rs` (test fixture filenames `*.bundle.json`)
+    - [x] `crates/fret-diag/src/api.rs` (test fixture filenames `*.bundle.json`)
     - [x] `apps/fret-devtools-mcp/src/main.rs` (resolve/compare via bundle artifacts, prefer `bundle.schema2.json`)
 - [ ] Decide how far to push schema2-first:
   - [ ] runtime dumps: when should `bundle.schema2.json` be emitted by default (vs tooling-derived only)?
@@ -134,6 +134,7 @@ This file tracks tasks for `docs/workstreams/diag-fearless-refactor-v1.md`.
 - [x] Consolidate semantics traversal helpers in `crates/fret-diag/src/json_bundle.rs`:
   - [x] Treat explicit inline `null` semantics as "missing" (fall back to schema2 semantics table).
   - [x] Centralize semantics table presence scanning for in-place schema conversion.
+  - [x] Centralize the streaming schema2 semantics table reader used by `diag slice`.
   - Evidence: `crates/fret-diag/src/json_bundle.rs` (`SemanticsResolver`, `SemanticsTablePresence`), `crates/fret-diag/src/commands/bundle_v2.rs`.
 
 ## Tooling modularization (reduce single-file blast radius)
