@@ -46,9 +46,10 @@ pub(crate) fn write_run_id_bundle_json(out_dir: &Path, run_id: u64, bundle_json_
         }
 
         // Best-effort sidecars for fast interactive querying (avoid grepping `bundle.json`).
-        let _ = crate::bundle_index::ensure_bundle_meta_json(&dst, 0);
-        let _ = crate::bundle_index::ensure_test_ids_index_json(&dst, 0);
-        let _ = crate::bundle_index::ensure_test_ids_json(&dst, 0, 500);
+        let artifact_for_sidecars = crate::resolve_bundle_artifact_path(&dir);
+        let _ = crate::bundle_index::ensure_bundle_meta_json(&artifact_for_sidecars, 0);
+        let _ = crate::bundle_index::ensure_test_ids_index_json(&artifact_for_sidecars, 0);
+        let _ = crate::bundle_index::ensure_test_ids_json(&artifact_for_sidecars, 0, 500);
 
         let chunks = write_run_id_bundle_json_chunks(out_dir, run_id, &dst);
         if let Ok(chunks) = chunks {
