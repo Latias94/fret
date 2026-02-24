@@ -6142,7 +6142,7 @@ fn run_script_over_transport(
         write_run_id_bundle_json(out_dir, result.run_id, &bundle_path);
         if trace_chrome {
             let run_dir = run_id_artifact_dir(out_dir, result.run_id);
-            let stable_bundle_path = run_dir.join("bundle.json");
+            let stable_bundle_path = crate::resolve_bundle_artifact_path(&run_dir);
             let src = if stable_bundle_path.is_file() {
                 stable_bundle_path
             } else {
