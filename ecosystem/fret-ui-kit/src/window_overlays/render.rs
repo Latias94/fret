@@ -492,6 +492,55 @@ pub fn render<H: UiHost + 'static>(
             .unwrap_or_default()
     });
 
+    struct ModalRequestFrame {
+        req: ModalRequest,
+        keep_alive_children: bool,
+    }
+
+    struct PopoverRequestFrame {
+        req: DismissiblePopoverRequest,
+        keep_alive_children: bool,
+    }
+
+    struct HoverOverlayRequestFrame {
+        req: HoverOverlayRequest,
+        keep_alive_children: bool,
+    }
+
+    struct TooltipRequestFrame {
+        req: TooltipRequest,
+        keep_alive_children: bool,
+    }
+
+    let mut modal_requests: Vec<ModalRequestFrame> = modal_requests
+        .drain(..)
+        .map(|req| ModalRequestFrame {
+            req,
+            keep_alive_children: false,
+        })
+        .collect();
+    let mut popover_requests: Vec<PopoverRequestFrame> = popover_requests
+        .drain(..)
+        .map(|req| PopoverRequestFrame {
+            req,
+            keep_alive_children: false,
+        })
+        .collect();
+    let mut hover_overlay_requests: Vec<HoverOverlayRequestFrame> = hover_overlay_requests
+        .drain(..)
+        .map(|req| HoverOverlayRequestFrame {
+            req,
+            keep_alive_children: false,
+        })
+        .collect();
+    let mut tooltip_requests: Vec<TooltipRequestFrame> = tooltip_requests
+        .drain(..)
+        .map(|req| TooltipRequestFrame {
+            req,
+            keep_alive_children: false,
+        })
+        .collect();
+
     // When view caching skips rerendering the subtree that emits overlay requests, the per-frame
     // request lists will be empty (or missing specific overlays). Keep a cached "declaration"
     // and synthesize requests for overlays that are currently open so overlay behavior remains
@@ -503,21 +552,22 @@ pub fn render<H: UiHost + 'static>(
     //   synthesizing a request.
     // - Without this, scripts that rely on Radix-style overlay semantics can fail when view
     //   caching is enabled (the overlay request vanishes for a frame and the overlay unmounts).
-    let modal_request_ids: HashSet<GlobalElementId> = modal_requests.iter().map(|r| r.id).collect();
+    let modal_request_ids: HashSet<GlobalElementId> =
+        modal_requests.iter().map(|r| r.req.id).collect();
     let popover_request_ids: HashSet<GlobalElementId> =
-        popover_requests.iter().map(|r| r.id).collect();
+        popover_requests.iter().map(|r| r.req.id).collect();
     let hover_request_ids: HashSet<GlobalElementId> =
-        hover_overlay_requests.iter().map(|r| r.id).collect();
+        hover_overlay_requests.iter().map(|r| r.req.id).collect();
     let tooltip_request_ids: HashSet<GlobalElementId> =
-        tooltip_requests.iter().map(|r| r.id).collect();
+        tooltip_requests.iter().map(|r| r.req.id).collect();
     let toast_request_ids: HashSet<GlobalElementId> = toast_requests.iter().map(|r| r.id).collect();
 
     let (extra_modals, extra_popovers, extra_hover_overlays, extra_tooltips, extra_toasts) = app
         .with_global_mut_untracked(WindowOverlays::default, |overlays, app| {
-            let mut modals: Vec<ModalRequest> = Vec::new();
-            let mut popovers: Vec<DismissiblePopoverRequest> = Vec::new();
-            let mut hover_overlays: Vec<HoverOverlayRequest> = Vec::new();
-            let mut tooltips: Vec<TooltipRequest> = Vec::new();
+            let mut modals: Vec<ModalRequestFrame> = Vec::new();
+            let mut popovers: Vec<PopoverRequestFrame> = Vec::new();
+            let mut hover_overlays: Vec<HoverOverlayRequestFrame> = Vec::new();
+            let mut tooltips: Vec<TooltipRequestFrame> = Vec::new();
             let mut toasts: Vec<ToastLayerRequest> = Vec::new();
 
             for ((w, id), req) in overlays.cached_modal_requests.iter() {
@@ -528,9 +578,23 @@ pub fn render<H: UiHost + 'static>(
                 if !open_now {
                     continue;
                 }
-                let mut req = req.clone();
-                req.present = true;
-                modals.push(req);
+                modals.push(ModalRequestFrame {
+                    req: ModalRequest {
+                        id: req.id,
+                        root_name: req.root_name.clone(),
+                        trigger: req.trigger,
+                        close_on_window_focus_lost: req.close_on_window_focus_lost,
+                        close_on_window_resize: req.close_on_window_resize,
+                        open: req.open.clone(),
+                        present: true,
+                        initial_focus: req.initial_focus,
+                        on_open_auto_focus: req.on_open_auto_focus.clone(),
+                        on_close_auto_focus: req.on_close_auto_focus.clone(),
+                        on_dismiss_request: req.on_dismiss_request.clone(),
+                        children: Vec::new(),
+                    },
+                    keep_alive_children: true,
+                });
             }
 
             for ((w, id), req) in overlays.cached_popover_requests.iter() {
@@ -541,9 +605,27 @@ pub fn render<H: UiHost + 'static>(
                 if !open_now {
                     continue;
                 }
-                let mut req = req.clone();
-                req.present = true;
-                popovers.push(req);
+                popovers.push(PopoverRequestFrame {
+                    req: DismissiblePopoverRequest {
+                        id: req.id,
+                        root_name: req.root_name.clone(),
+                        trigger: req.trigger,
+                        dismissable_branches: req.dismissable_branches.clone(),
+                        consume_outside_pointer_events: req.consume_outside_pointer_events,
+                        disable_outside_pointer_events: req.disable_outside_pointer_events,
+                        close_on_window_focus_lost: req.close_on_window_focus_lost,
+                        close_on_window_resize: req.close_on_window_resize,
+                        open: req.open.clone(),
+                        present: true,
+                        initial_focus: req.initial_focus,
+                        on_open_auto_focus: req.on_open_auto_focus.clone(),
+                        on_close_auto_focus: req.on_close_auto_focus.clone(),
+                        on_dismiss_request: req.on_dismiss_request.clone(),
+                        on_pointer_move: req.on_pointer_move.clone(),
+                        children: Vec::new(),
+                    },
+                    keep_alive_children: true,
+                });
             }
 
             // Hover overlays and tooltips participate in view-caching synthesis, but with a short
@@ -562,14 +644,24 @@ pub fn render<H: UiHost + 'static>(
                 if !open_now {
                     continue;
                 }
-                let mut req = req.clone();
-                req.present = true;
-                req.on_pointer_move = overlays
+                let on_pointer_move = overlays
                     .cached_hover_overlay_pointer_move_handlers
                     .get(&(*w, *id))
                     .cloned()
                     .flatten();
-                hover_overlays.push(req);
+                hover_overlays.push(HoverOverlayRequestFrame {
+                    req: HoverOverlayRequest {
+                        id: req.id,
+                        root_name: req.root_name.clone(),
+                        interactive: req.interactive,
+                        trigger: req.trigger,
+                        open: req.open.clone(),
+                        present: true,
+                        on_pointer_move,
+                        children: Vec::new(),
+                    },
+                    keep_alive_children: true,
+                });
             }
 
             for ((w, id), req) in overlays.cached_tooltip_requests.iter() {
@@ -586,9 +678,20 @@ pub fn render<H: UiHost + 'static>(
                 if !open_now {
                     continue;
                 }
-                let mut req = req.clone();
-                req.present = true;
-                tooltips.push(req);
+                tooltips.push(TooltipRequestFrame {
+                    req: TooltipRequest {
+                        id: req.id,
+                        root_name: req.root_name.clone(),
+                        interactive: req.interactive,
+                        trigger: req.trigger,
+                        open: req.open.clone(),
+                        present: true,
+                        on_dismiss_request: req.on_dismiss_request.clone(),
+                        on_pointer_move: req.on_pointer_move.clone(),
+                        children: Vec::new(),
+                    },
+                    keep_alive_children: true,
+                });
             }
 
             for ((w, id), req) in overlays.cached_toast_layer_requests.iter() {
@@ -614,6 +717,8 @@ pub fn render<H: UiHost + 'static>(
     let mut seen_toast_layers: HashSet<GlobalElementId> = HashSet::new();
 
     for req in modal_requests {
+        let keep_alive_children = req.keep_alive_children;
+        let req = req.req;
         if !req.present {
             continue;
         }
@@ -661,7 +766,22 @@ pub fn render<H: UiHost + 'static>(
                         )
                     }));
                 }
-                children
+                let subtree = cx.view_cache_keep_alive(
+                    fret_ui::element::ViewCacheProps {
+                        layout: fret_ui::element::LayoutStyle {
+                            size: fret_ui::element::SizeStyle {
+                                width: fret_ui::element::Length::Fill,
+                                height: fret_ui::element::Length::Fill,
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    keep_alive_children,
+                    move |_cx| children,
+                );
+                vec![subtree]
             },
         );
 
@@ -837,6 +957,8 @@ pub fn render<H: UiHost + 'static>(
     };
 
     for req in popover_requests {
+        let keep_alive_children = req.keep_alive_children;
+        let req = req.req;
         if dock_drag_affects_window {
             if req.present {
                 let _ = app.models_mut().update(&req.open, |v| *v = false);
@@ -924,7 +1046,22 @@ pub fn render<H: UiHost + 'static>(
                         )
                     }));
                 }
-                children
+                let subtree = cx.view_cache_keep_alive(
+                    fret_ui::element::ViewCacheProps {
+                        layout: fret_ui::element::LayoutStyle {
+                            size: fret_ui::element::SizeStyle {
+                                width: fret_ui::element::Length::Fill,
+                                height: fret_ui::element::Length::Fill,
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    keep_alive_children,
+                    move |_cx| children,
+                );
+                vec![subtree]
             },
         );
 
@@ -1404,6 +1541,8 @@ pub fn render<H: UiHost + 'static>(
     }
 
     for req in hover_overlay_requests {
+        let keep_alive_children = req.keep_alive_children;
+        let req = req.req;
         if dock_drag_affects_window {
             continue;
         }
@@ -1420,6 +1559,7 @@ pub fn render<H: UiHost + 'static>(
         let open_now = app.models().get_copied(&req.open).unwrap_or(false);
         let interactive = req.interactive && open_now;
         let on_pointer_move = req.on_pointer_move.clone();
+        let children = req.children;
         let root = fret_ui::declarative::render_dismissible_root_with_hooks(
             ui,
             app,
@@ -1431,7 +1571,22 @@ pub fn render<H: UiHost + 'static>(
                 if let Some(on_pointer_move) = on_pointer_move {
                     cx.dismissible_on_pointer_move(on_pointer_move);
                 }
-                req.children
+                let subtree = cx.view_cache_keep_alive(
+                    fret_ui::element::ViewCacheProps {
+                        layout: fret_ui::element::LayoutStyle {
+                            size: fret_ui::element::SizeStyle {
+                                width: fret_ui::element::Length::Fill,
+                                height: fret_ui::element::Length::Fill,
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    keep_alive_children,
+                    move |_cx| children,
+                );
+                vec![subtree]
             },
         );
 
@@ -1489,6 +1644,8 @@ pub fn render<H: UiHost + 'static>(
     }
 
     for req in tooltip_requests {
+        let keep_alive_children = req.keep_alive_children;
+        let req = req.req;
         if dock_drag_affects_window {
             continue;
         }
@@ -1517,7 +1674,22 @@ pub fn render<H: UiHost + 'static>(
                 if let Some(on_pointer_move) = on_pointer_move {
                     cx.dismissible_on_pointer_move(on_pointer_move);
                 }
-                children
+                let subtree = cx.view_cache_keep_alive(
+                    fret_ui::element::ViewCacheProps {
+                        layout: fret_ui::element::LayoutStyle {
+                            size: fret_ui::element::SizeStyle {
+                                width: fret_ui::element::Length::Fill,
+                                height: fret_ui::element::Length::Fill,
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    keep_alive_children,
+                    move |_cx| children,
+                );
+                vec![subtree]
             },
         );
 
@@ -2605,11 +2777,11 @@ pub fn render<H: UiHost + 'static>(
                                                         move |_cx| content_children,
                                                     );
 
-                                                    let icon = icon.clone();
+                                                    let icon = icon;
                                                     let icon_size = toast_icon_size;
-                                                    let cancel = cancel.clone();
-                                                    let action = action.clone();
-                                                    let close = close.clone();
+                                                    let cancel = cancel;
+                                                    let action = action;
+                                                    let close = close;
                                                     Some(cx.flex(
                                                         fret_ui::element::FlexProps {
                                                             layout: fret_ui::element::LayoutStyle::default(),
@@ -2622,7 +2794,7 @@ pub fn render<H: UiHost + 'static>(
                                                         },
                                                         move |cx| {
                                                             let mut row: Vec<AnyElement> = Vec::new();
-                                                            if let Some(icon) = icon.clone() {
+                                                            if let Some(icon) = icon {
                                                                 row.push(cx.container(
                                                                     fret_ui::element::ContainerProps {
                                                                         layout: {
@@ -2647,15 +2819,15 @@ pub fn render<H: UiHost + 'static>(
                                                                         corner_radii: fret_core::Corners::all(Px(0.0)),
                                                                         snap_to_device_pixels: false,
                                                                     },
-                                                                    move |_cx| vec![icon.clone()],
+                                                                    move |_cx| vec![icon],
                                                                 ));
                                                             }
 
-                                                            row.push(content.clone());
+                                                            row.push(content);
                                                             row.push(cx.spacer(fret_ui::element::SpacerProps { min: Px(0.0), ..Default::default() }));
-                                                            if let Some(el) = cancel.clone() { row.push(el); }
-                                                            if let Some(el) = action.clone() { row.push(el); }
-                                                            if let Some(el) = close.clone() { row.push(el); }
+                                                            if let Some(el) = cancel { row.push(el); }
+                                                            if let Some(el) = action { row.push(el); }
+                                                            if let Some(el) = close { row.push(el); }
                                                             row
                                                         },
                                                     ))
@@ -2799,6 +2971,7 @@ pub fn render<H: UiHost + 'static>(
                                                                 }
                                                             }
 
+                                                            let toast_children = toast_children;
                                                             let toast_el = cx.container(
                                                                 fret_ui::element::ContainerProps {
                                                                     layout: fret_ui::element::LayoutStyle::default(),
@@ -2817,6 +2990,7 @@ pub fn render<H: UiHost + 'static>(
                                                                     snap_to_device_pixels: false,
                                                                 },
                                                                 move |cx| {
+                                                                    let toast_children = toast_children;
                                                                     vec![cx.flex(
                                                                         fret_ui::element::FlexProps {
                                                                             layout: fret_ui::element::LayoutStyle::default(),
@@ -2827,7 +3001,7 @@ pub fn render<H: UiHost + 'static>(
                                                                             align: fret_ui::element::CrossAlign::Stretch,
                                                                             wrap: false,
                                                                         },
-                                                                        move |_cx| toast_children.clone(),
+                                                                        move |_cx| toast_children,
                                                                     )]
                                                                 },
                                                             );
@@ -2836,21 +3010,18 @@ pub fn render<H: UiHost + 'static>(
                                                         },
                                                     );
 
-                                                    let store_for_hooks = store.clone();
-                                                    let toaster_store = store.clone();
-                                                    let toast_pressable_for_hover = toast_pressable.clone();
                                                     let toast_hover = cx.hover_region(
                                                         fret_ui::element::HoverRegionProps::default(),
                                                         move |cx, hovered| {
                                                             let _hovered = hovered || drag_active;
+                                                            let toast_pressable = toast_pressable;
 
-                                                            let store_for_down = store_for_hooks.clone();
-                                                            let toaster_store_for_down = toaster_store.clone();
-                                                            let store_for_move = store_for_hooks.clone();
-                                                            let store_for_up = store_for_hooks.clone();
-                                                            let toaster_store_for_up = toaster_store.clone();
-                                                            let toaster_store_for_cancel = toaster_store.clone();
-                                                            let toast_pressable_for_pointer = toast_pressable_for_hover.clone();
+                                                            let store_for_down = store.clone();
+                                                            let toaster_store_for_down = store.clone();
+                                                            let store_for_move = store.clone();
+                                                            let store_for_up = store.clone();
+                                                            let toaster_store_for_up = store.clone();
+                                                            let toaster_store_for_cancel = store.clone();
 
                                                             vec![cx.pointer_region(
                                                                 fret_ui::element::PointerRegionProps::default(),
@@ -2924,7 +3095,7 @@ pub fn render<H: UiHost + 'static>(
                                                                         },
                                                                     ));
 
-                                                                    vec![toast_pressable_for_pointer.clone()]
+                                                                    vec![toast_pressable]
                                                                 },
                                                             )]
                                                         },
@@ -2964,13 +3135,13 @@ pub fn render<H: UiHost + 'static>(
                 );
 
                 let label = custom_aria_label.clone().or(container_aria_label.clone());
+                let mut decoration = fret_ui::element::SemanticsDecoration::default()
+                    .role(SemanticsRole::Viewport)
+                    .live(Some(fret_core::SemanticsLive::Polite));
                 if let Some(label) = label {
-                    root = root.attach_semantics(
-                        fret_ui::element::SemanticsDecoration::default()
-                            .role(SemanticsRole::Viewport)
-                            .label(label),
-                    );
+                    decoration = decoration.label(label);
                 }
+                root = root.attach_semantics(decoration);
 
                 vec![root]
             },

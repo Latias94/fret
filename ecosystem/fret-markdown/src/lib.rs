@@ -38,6 +38,8 @@ mod open_url;
 mod parse;
 mod pulldown_render;
 #[cfg(test)]
+mod semantics_tests;
+#[cfg(test)]
 mod tests;
 mod theme;
 
@@ -1043,7 +1045,8 @@ fn render_inline_token<H: UiHost>(
                     display_text.clone(),
                 )]
             });
-            return el.attach_semantics(SemanticsDecoration::default().value(href));
+            return el
+                .attach_semantics(SemanticsDecoration::default().url(href.clone()).value(href));
         }
     }
 

@@ -1178,7 +1178,7 @@ struct PopoverHoverSharedState {
 }
 
 /// shadcn/ui `PopoverTrigger` (v4).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct PopoverTrigger {
     child: AnyElement,
     auto_toggle: bool,
@@ -1216,7 +1216,7 @@ impl PopoverTrigger {
 ///
 /// This is a layout-only helper. Use [`Popover::anchor_element`] to wire the anchor element ID
 /// into placement.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct PopoverAnchor {
     child: AnyElement,
 }
@@ -1241,7 +1241,7 @@ fn popover_content_chrome() -> ChromeRefinement {
 }
 
 /// shadcn/ui `PopoverContent` (v4).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct PopoverContent {
     children: Vec<AnyElement>,
     chrome: ChromeRefinement,
@@ -1297,7 +1297,7 @@ impl PopoverContent {
 }
 
 /// shadcn/ui `PopoverHeader` (v4).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct PopoverHeader {
     children: Vec<AnyElement>,
 }

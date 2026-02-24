@@ -89,8 +89,9 @@ pub use scene::{
     SceneValidationErrorKind, SweepGradient, TileMode, UvRect,
 };
 pub use semantics::{
-    SemanticsActions, SemanticsFlags, SemanticsInlineSpan, SemanticsNode, SemanticsRole,
-    SemanticsRoot, SemanticsSnapshot,
+    SemanticsActions, SemanticsCheckedState, SemanticsFlags, SemanticsInlineSpan, SemanticsInvalid,
+    SemanticsLive, SemanticsNode, SemanticsNodeExtra, SemanticsNumeric, SemanticsOrientation,
+    SemanticsPressedState, SemanticsRole, SemanticsRoot, SemanticsScroll, SemanticsSnapshot,
 };
 pub use services::UiServices;
 pub use share::{ShareItem, ShareSheetOutcome};

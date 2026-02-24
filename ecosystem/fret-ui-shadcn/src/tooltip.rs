@@ -418,7 +418,6 @@ impl TooltipProvider {
 ///
 /// Note: This uses a per-window overlay root, so it is not clipped by ancestors with
 /// `overflow: Clip`.
-#[derive(Clone)]
 pub struct Tooltip {
     trigger: AnyElement,
     content: AnyElement,
@@ -944,11 +943,8 @@ impl Tooltip {
                 let _ = cx.app.models_mut().update(&open, |v| *v = update.open);
             }
 
-            let trigger = radix_tooltip::apply_tooltip_trigger_a11y(
-                base_trigger.clone(),
-                update.open,
-                content_id,
-            );
+            let trigger =
+                radix_tooltip::apply_tooltip_trigger_a11y(base_trigger, update.open, content_id);
 
             cx.pressable_add_on_pointer_down_for(
                 trigger_id,
@@ -1299,7 +1295,7 @@ impl Tooltip {
 }
 
 /// shadcn/ui `TooltipTrigger` (v4).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct TooltipTrigger {
     child: AnyElement,
 }
@@ -1318,7 +1314,7 @@ impl TooltipTrigger {
 /// Optional layout-only anchor for advanced tooltip placement recipes.
 ///
 /// Use [`Tooltip::anchor_element`] to wire the anchor element ID into placement.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct TooltipAnchor {
     child: AnyElement,
 }
@@ -1339,7 +1335,7 @@ impl TooltipAnchor {
 }
 
 /// shadcn/ui `TooltipContent` (v4).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct TooltipContent {
     children: Vec<AnyElement>,
     chrome: ChromeRefinement,

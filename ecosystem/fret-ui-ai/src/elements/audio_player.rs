@@ -394,7 +394,7 @@ impl Default for AudioPlayer {
 }
 
 /// Wrapper aligned with AI Elements `AudioPlayerControlBar`.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct AudioPlayerControlBar {
     items: Vec<ButtonGroupItem>,
     test_id: Option<Arc<str>>,

@@ -730,6 +730,11 @@ pub type OnKeyDown = Arc<dyn Fn(&mut dyn UiFocusActionHost, ActionCx, KeyDownCx)
 pub(crate) struct KeyActionHooks {
     pub on_key_down_capture: Option<OnKeyDown>,
     pub on_key_down: Option<OnKeyDown>,
+    /// Key down hook that only fires when the current node is the focus target.
+    ///
+    /// Use this for widgets that want to handle navigation keys only when they are focused,
+    /// without intercepting keys bubbling from focused descendants.
+    pub on_key_down_focused: Option<OnKeyDown>,
 }
 
 pub type OnCommand = Arc<dyn Fn(&mut dyn UiFocusActionHost, ActionCx, CommandId) -> bool + 'static>;

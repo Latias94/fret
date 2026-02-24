@@ -330,7 +330,6 @@ impl ConversationTranscript {
                         overlay_layout.inset.bottom = Some(bottom);
                     }
 
-                    let button_for_row = button.clone();
                     out.push(cx.container(
                         ContainerProps {
                             layout: overlay_layout,
@@ -342,7 +341,7 @@ impl ConversationTranscript {
                                 stack::HStackProps::default()
                                     .layout(LayoutRefinement::default().w_full())
                                     .justify_center(),
-                                move |_cx| vec![button_for_row.clone()],
+                                move |_cx| vec![button],
                             )]
                         },
                     ));
@@ -357,7 +356,7 @@ impl ConversationTranscript {
 /// A scrollable “conversation” container that manages stick-to-bottom behavior for arbitrary children.
 ///
 /// This is a generic composition helper (often used to wrap a transcript + overlays).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Conversation {
     children: Vec<AnyElement>,
     layout: LayoutRefinement,
@@ -560,7 +559,6 @@ impl Conversation {
                         overlay_layout.inset.bottom = Some(bottom);
                     }
 
-                    let button_for_row = button.clone();
                     out.push(cx.container(
                         ContainerProps {
                             layout: overlay_layout,
@@ -572,7 +570,7 @@ impl Conversation {
                                 stack::HStackProps::default()
                                     .layout(LayoutRefinement::default().w_full())
                                     .justify_center(),
-                                move |_cx| vec![button_for_row.clone()],
+                                move |_cx| vec![button],
                             )]
                         },
                     ));

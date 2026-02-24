@@ -4,8 +4,8 @@ use crate::overlay_placement::{Align, AnchoredPanelLayout, AnchoredPanelOptions,
 use fret_core::scene::{BlendMode, Mask, Paint};
 use fret_core::{
     AttributedText, CaretAffinity, Color, Corners, Edges, EffectChain, EffectMode, EffectQuality,
-    ImageId, KeyCode, NodeId, Px, Rect, RenderTargetId, SemanticsRole, Size, SvgFit, TextAlign,
-    TextOverflow, TextStyle, TextWrap, UvRect, ViewportFit,
+    ImageId, KeyCode, NodeId, Px, Rect, RenderTargetId, SemanticsLive, SemanticsOrientation,
+    SemanticsRole, Size, SvgFit, TextAlign, TextOverflow, TextStyle, TextWrap, UvRect, ViewportFit,
 };
 use fret_runtime::{CommandId, Model};
 use std::sync::Arc;
@@ -15,7 +15,11 @@ use crate::{ResizablePanelGroupStyle, SvgSource, TextAreaStyle, TextInputStyle};
 /// Declarative element tree node (ephemeral per frame), keyed by a stable `GlobalElementId`.
 ///
 /// This is the authoring-layer representation described by ADR 0028 / ADR 0039.
-#[derive(Debug, Clone)]
+///
+/// Note: `AnyElement` is intentionally move-only. Reusing the same `AnyElement` value in multiple
+/// places (e.g. via cloning) can create duplicate `GlobalElementId`s within a single frame, which
+/// violates the element-tree contract and can lead to downstream traversal issues.
+#[derive(Debug)]
 pub struct AnyElement {
     pub id: GlobalElementId,
     pub kind: ElementKind,
@@ -241,6 +245,8 @@ pub struct TextInputRegionProps {
     /// When present, selection and composition ranges are interpreted as UTF-8 byte offsets within
     /// this value (ADR 0071).
     pub a11y_value: Option<Arc<str>>,
+    pub a11y_required: bool,
+    pub a11y_invalid: Option<fret_core::SemanticsInvalid>,
     /// Optional selection range (anchor, focus) in UTF-8 byte offsets within `a11y_value`.
     pub a11y_text_selection: Option<(u32, u32)>,
     /// Optional IME composition range (start, end) in UTF-8 byte offsets within `a11y_value`.
@@ -302,6 +308,8 @@ impl Default for TextInputRegionProps {
             ime_cursor_area: None,
             a11y_label: None,
             a11y_value: None,
+            a11y_required: false,
+            a11y_invalid: None,
             a11y_text_selection: None,
             a11y_text_composition: None,
         }
@@ -444,6 +452,11 @@ pub enum Length {
     #[default]
     Auto,
     Px(Px),
+    /// Fraction of the containing block size (percent sizing).
+    ///
+    /// This is expressed as a ratio (e.g. `0.5` for 50%). When the containing block size is not
+    /// definite, this should behave like `Auto` (CSS-like percent sizing semantics).
+    Fraction(f32),
     Fill,
 }
 
@@ -533,10 +546,36 @@ pub struct SemanticsDecoration {
     pub test_id: Option<Arc<str>>,
     pub value: Option<Arc<str>>,
     pub disabled: Option<bool>,
+    pub read_only: Option<bool>,
+    pub hidden: Option<bool>,
+    pub visited: Option<bool>,
+    pub multiselectable: Option<bool>,
+    pub busy: Option<bool>,
+    /// Live region setting (ARIA `aria-live`), applied as a semantics flags override.
+    ///
+    /// `Some(None)` clears any live region semantics from the underlying element.
+    pub live: Option<Option<SemanticsLive>>,
+    pub live_atomic: Option<bool>,
     pub selected: Option<bool>,
     pub expanded: Option<bool>,
     /// Tri-state checked override (Some(None) clears; Some(Some(v)) sets to v).
     pub checked: Option<Option<bool>>,
+    pub placeholder: Option<Arc<str>>,
+    pub url: Option<Arc<str>>,
+    /// Optional hierarchy level for outline/tree semantics (1-based).
+    pub level: Option<u32>,
+    pub orientation: Option<SemanticsOrientation>,
+    pub numeric_value: Option<f64>,
+    pub min_numeric_value: Option<f64>,
+    pub max_numeric_value: Option<f64>,
+    pub numeric_value_step: Option<f64>,
+    pub numeric_value_jump: Option<f64>,
+    pub scroll_x: Option<f64>,
+    pub scroll_x_min: Option<f64>,
+    pub scroll_x_max: Option<f64>,
+    pub scroll_y: Option<f64>,
+    pub scroll_y_min: Option<f64>,
+    pub scroll_y_max: Option<f64>,
     /// Declarative-only: element ID of the active descendant for composite widgets.
     pub active_descendant_element: Option<u64>,
     /// Declarative-only: element ID of a node which labels this node (`aria-labelledby`).
@@ -556,9 +595,31 @@ impl SemanticsDecoration {
             test_id: other.test_id.or(self.test_id),
             value: other.value.or(self.value),
             disabled: other.disabled.or(self.disabled),
+            read_only: other.read_only.or(self.read_only),
+            hidden: other.hidden.or(self.hidden),
+            visited: other.visited.or(self.visited),
+            multiselectable: other.multiselectable.or(self.multiselectable),
+            busy: other.busy.or(self.busy),
+            live: other.live.or(self.live),
+            live_atomic: other.live_atomic.or(self.live_atomic),
             selected: other.selected.or(self.selected),
             expanded: other.expanded.or(self.expanded),
             checked: other.checked.or(self.checked),
+            placeholder: other.placeholder.or(self.placeholder),
+            url: other.url.or(self.url),
+            level: other.level.or(self.level),
+            orientation: other.orientation.or(self.orientation),
+            numeric_value: other.numeric_value.or(self.numeric_value),
+            min_numeric_value: other.min_numeric_value.or(self.min_numeric_value),
+            max_numeric_value: other.max_numeric_value.or(self.max_numeric_value),
+            numeric_value_step: other.numeric_value_step.or(self.numeric_value_step),
+            numeric_value_jump: other.numeric_value_jump.or(self.numeric_value_jump),
+            scroll_x: other.scroll_x.or(self.scroll_x),
+            scroll_x_min: other.scroll_x_min.or(self.scroll_x_min),
+            scroll_x_max: other.scroll_x_max.or(self.scroll_x_max),
+            scroll_y: other.scroll_y.or(self.scroll_y),
+            scroll_y_min: other.scroll_y_min.or(self.scroll_y_min),
+            scroll_y_max: other.scroll_y_max.or(self.scroll_y_max),
             active_descendant_element: other
                 .active_descendant_element
                 .or(self.active_descendant_element),
@@ -593,6 +654,41 @@ impl SemanticsDecoration {
         self
     }
 
+    pub fn read_only(mut self, read_only: bool) -> Self {
+        self.read_only = Some(read_only);
+        self
+    }
+
+    pub fn hidden(mut self, hidden: bool) -> Self {
+        self.hidden = Some(hidden);
+        self
+    }
+
+    pub fn visited(mut self, visited: bool) -> Self {
+        self.visited = Some(visited);
+        self
+    }
+
+    pub fn multiselectable(mut self, multiselectable: bool) -> Self {
+        self.multiselectable = Some(multiselectable);
+        self
+    }
+
+    pub fn busy(mut self, busy: bool) -> Self {
+        self.busy = Some(busy);
+        self
+    }
+
+    pub fn live(mut self, live: Option<SemanticsLive>) -> Self {
+        self.live = Some(live);
+        self
+    }
+
+    pub fn live_atomic(mut self, live_atomic: bool) -> Self {
+        self.live_atomic = Some(live_atomic);
+        self
+    }
+
     pub fn selected(mut self, selected: bool) -> Self {
         self.selected = Some(selected);
         self
@@ -605,6 +701,61 @@ impl SemanticsDecoration {
 
     pub fn checked(mut self, checked: Option<bool>) -> Self {
         self.checked = Some(checked);
+        self
+    }
+
+    pub fn placeholder(mut self, placeholder: impl Into<Arc<str>>) -> Self {
+        self.placeholder = Some(placeholder.into());
+        self
+    }
+
+    pub fn url(mut self, url: impl Into<Arc<str>>) -> Self {
+        self.url = Some(url.into());
+        self
+    }
+
+    pub fn level(mut self, level: u32) -> Self {
+        self.level = Some(level);
+        self
+    }
+
+    pub fn orientation(mut self, orientation: SemanticsOrientation) -> Self {
+        self.orientation = Some(orientation);
+        self
+    }
+
+    pub fn numeric_value(mut self, value: f64) -> Self {
+        self.numeric_value = Some(value);
+        self
+    }
+
+    pub fn numeric_range(mut self, min: f64, max: f64) -> Self {
+        self.min_numeric_value = Some(min);
+        self.max_numeric_value = Some(max);
+        self
+    }
+
+    pub fn numeric_step(mut self, step: f64) -> Self {
+        self.numeric_value_step = Some(step);
+        self
+    }
+
+    pub fn numeric_jump(mut self, jump: f64) -> Self {
+        self.numeric_value_jump = Some(jump);
+        self
+    }
+
+    pub fn scroll_x(mut self, x: f64, min: f64, max: f64) -> Self {
+        self.scroll_x = Some(x);
+        self.scroll_x_min = Some(min);
+        self.scroll_x_max = Some(max);
+        self
+    }
+
+    pub fn scroll_y(mut self, y: f64, min: f64, max: f64) -> Self {
+        self.scroll_y = Some(y);
+        self.scroll_y_min = Some(min);
+        self.scroll_y_max = Some(max);
         self
     }
 
@@ -647,12 +798,43 @@ pub struct SemanticsProps {
     /// This MUST NOT be mapped into platform accessibility name/label fields by default.
     pub test_id: Option<Arc<str>>,
     pub value: Option<Arc<str>>,
+    pub placeholder: Option<Arc<str>>,
+    pub url: Option<Arc<str>>,
+    /// Optional hierarchy level for outline/tree semantics (1-based).
+    pub level: Option<u32>,
+    pub orientation: Option<SemanticsOrientation>,
+    pub numeric_value: Option<f64>,
+    pub min_numeric_value: Option<f64>,
+    pub max_numeric_value: Option<f64>,
+    pub numeric_value_step: Option<f64>,
+    pub numeric_value_jump: Option<f64>,
+    pub scroll_x: Option<f64>,
+    pub scroll_x_min: Option<f64>,
+    pub scroll_x_max: Option<f64>,
+    pub scroll_y: Option<f64>,
+    pub scroll_y_min: Option<f64>,
+    pub scroll_y_max: Option<f64>,
     /// Whether this semantics wrapper participates in focus traversal.
     ///
     /// Note: this is intentionally separate from pointer hit-testing. `Semantics` remains
     /// input-transparent; use `Pressable` when you need pointer-driven focus.
     pub focusable: bool,
+    /// Overrides whether this node supports `SetValue` actions (text or numeric).
+    ///
+    /// For `TextField` roles, this surfaces as the platform's "set value" action surface.
+    ///
+    /// For `Slider` roles, this is interpreted as stepper semantics and maps to
+    /// Increment/Decrement actions. `SetValue` for sliders is derived conservatively by the
+    /// runtime when sufficient numeric metadata is present.
+    pub value_editable: Option<bool>,
     pub disabled: bool,
+    pub read_only: bool,
+    pub hidden: bool,
+    pub visited: bool,
+    pub multiselectable: bool,
+    pub busy: bool,
+    pub live: Option<SemanticsLive>,
+    pub live_atomic: bool,
     pub selected: bool,
     pub expanded: Option<bool>,
     pub checked: Option<bool>,
@@ -685,8 +867,31 @@ impl Default for SemanticsProps {
             label: None,
             test_id: None,
             value: None,
+            placeholder: None,
+            url: None,
+            level: None,
+            orientation: None,
+            numeric_value: None,
+            min_numeric_value: None,
+            max_numeric_value: None,
+            numeric_value_step: None,
+            numeric_value_jump: None,
+            scroll_x: None,
+            scroll_x_min: None,
+            scroll_x_max: None,
+            scroll_y: None,
+            scroll_y_min: None,
+            scroll_y_max: None,
             focusable: false,
+            value_editable: None,
             disabled: false,
+            read_only: false,
+            hidden: false,
+            visited: false,
+            multiselectable: false,
+            busy: false,
+            live: None,
+            live_atomic: false,
             selected: false,
             expanded: None,
             checked: None,
@@ -1105,6 +1310,8 @@ impl Default for RovingFocusProps {
 pub struct PressableA11y {
     pub role: Option<SemanticsRole>,
     pub label: Option<Arc<str>>,
+    /// Optional hierarchy level for outline/tree semantics (1-based).
+    pub level: Option<u32>,
     /// Debug/test-only identifier for deterministic automation.
     ///
     /// This MUST NOT be mapped into platform accessibility name/label fields by default.
@@ -1115,9 +1322,19 @@ pub struct PressableA11y {
     /// Select) that should remain interactive for pointer users but should not appear in the
     /// accessibility tree.
     pub hidden: bool,
+    /// Indicates that the pressable represents a visited link.
+    ///
+    /// This is a portable approximation of the "visited link" concept in HTML.
+    pub visited: bool,
+    /// Indicates that this collection supports selecting multiple items.
+    ///
+    /// This is a portable approximation of ARIA `aria-multiselectable`.
+    pub multiselectable: bool,
     pub selected: bool,
     pub expanded: Option<bool>,
     pub checked: Option<bool>,
+    pub checked_state: Option<fret_core::SemanticsCheckedState>,
+    pub pressed_state: Option<fret_core::SemanticsPressedState>,
     pub active_descendant: Option<NodeId>,
     /// Declarative-only: element ID of a node which labels this node.
     ///
@@ -1383,6 +1600,8 @@ pub struct TextInputProps {
     pub a11y_role: Option<SemanticsRole>,
     pub test_id: Option<std::sync::Arc<str>>,
     pub placeholder: Option<std::sync::Arc<str>>,
+    pub a11y_required: bool,
+    pub a11y_invalid: Option<fret_core::SemanticsInvalid>,
     pub active_descendant: Option<NodeId>,
     /// Declarative-only: element ID of a node which this text input controls.
     ///
@@ -1408,6 +1627,8 @@ impl TextInputProps {
             a11y_role: None,
             test_id: None,
             placeholder: None,
+            a11y_required: false,
+            a11y_invalid: None,
             active_descendant: None,
             controls_element: None,
             expanded: None,
@@ -1450,6 +1671,8 @@ pub struct TextAreaProps {
     pub focusable: bool,
     pub model: Model<String>,
     pub placeholder: Option<std::sync::Arc<str>>,
+    pub a11y_required: bool,
+    pub a11y_invalid: Option<fret_core::SemanticsInvalid>,
     pub a11y_label: Option<std::sync::Arc<str>>,
     pub test_id: Option<std::sync::Arc<str>>,
     pub chrome: TextAreaStyle,
@@ -1465,6 +1688,8 @@ impl TextAreaProps {
             focusable: true,
             model,
             placeholder: None,
+            a11y_required: false,
+            a11y_invalid: None,
             a11y_label: None,
             test_id: None,
             chrome: TextAreaStyle::default(),
@@ -2211,7 +2436,7 @@ pub trait IntoElement {
 /// forcing callers into `Vec<AnyElement>` as the only option.
 ///
 /// This type is commonly used as a view return value (e.g. `ViewElements` in `fret-bootstrap`).
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Default)]
 pub struct Elements(pub Vec<AnyElement>);
 
 impl Elements {

@@ -110,6 +110,12 @@ To support robust slider automation and improve accessibility alignment:
 
 This must not leak into styling/policy; it is a semantics/a11y-aligned contract.
 
+Update (2026-02-23): This contract is implemented via a portable structured surface
+`SemanticsNodeExtra.numeric` (ADR 0288). The AccessKit adapter emits numeric properties when present, and diagnostics
+prefer the structured numeric surface for `set_slider_value` (string parsing remains as a fallback for older widgets).
+Evidence: `crates/fret-core/src/semantics.rs`, `crates/fret-a11y-accesskit/src/mapping.rs`,
+`ecosystem/fret-bootstrap/src/ui_diagnostics.rs`, and shadcn gates in `ecosystem/fret-ui-shadcn/tests/snapshots/*numeric*`.
+
 ### 5) Performance query surface (bundles)
 
 Bundles SHOULD expose enough data for automated triage:
@@ -170,5 +176,4 @@ Known gaps:
   exports as strict regression gates, nor auto-record Tracy captures to a `.tracy` file.
 - Process footprint sampling is best-effort and can be sensitive to sampling cadence (CPU usage is diff-based).
 - High-level intent actions (Script schema v2 steps) exist, but are still early and will evolve (selectors/predicates and
-  range-control semantics are still being refined).
-- Range control semantics value (to enable robust `set_slider_value`) is still an open contract item.
+  selectors/predicates are still being refined).

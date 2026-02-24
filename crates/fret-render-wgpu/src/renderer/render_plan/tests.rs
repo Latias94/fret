@@ -2,7 +2,10 @@
 
 use super::super::intermediate_pool::estimate_texture_bytes;
 use super::super::render_plan_effects as effects;
-use super::super::{EffectMarker, EffectMarkerKind};
+use super::super::{
+    ClipPathMaskDraw, EffectMarker, EffectMarkerKind, OrderedDraw, PathDraw, QuadDraw,
+    QuadPipelineKey,
+};
 use super::*;
 
 fn strip_releases(passes: &[RenderPlanPass]) -> Vec<&RenderPlanPass> {
@@ -10,6 +13,95 @@ fn strip_releases(passes: &[RenderPlanPass]) -> Vec<&RenderPlanPass> {
         .iter()
         .filter(|p| !matches!(p, RenderPlanPass::ReleaseTarget(_)))
         .collect()
+}
+
+fn apply_single_step_effect_with_scissor(
+    step: fret_core::EffectStep,
+    mode: fret_core::EffectMode,
+    scissor: ScissorRect,
+) -> Vec<RenderPlanPass> {
+    let mut passes: Vec<RenderPlanPass> = Vec::new();
+    effects::apply_chain_in_place(
+        &mut passes,
+        &[],
+        PlanTarget::Intermediate0,
+        mode,
+        fret_core::EffectChain::from_steps(&[step]),
+        fret_core::EffectQuality::Auto,
+        scissor,
+        None,
+        &[],
+        effects::EffectCompileCtx {
+            viewport_size: (100, 100),
+            format: wgpu::TextureFormat::Bgra8UnormSrgb,
+            intermediate_budget_bytes: u64::MAX,
+            clear: wgpu::Color::TRANSPARENT,
+        },
+    );
+    passes
+}
+
+fn first_output_write(passes: &[RenderPlanPass]) -> Option<&RenderPlanPass> {
+    passes.iter().find(|p| match p {
+        RenderPlanPass::SceneDrawRange(p) => p.target == PlanTarget::Output,
+        RenderPlanPass::PathMsaaBatch(p) => p.target == PlanTarget::Output,
+        RenderPlanPass::PathClipMask(_) => false,
+        RenderPlanPass::FullscreenBlit(p) => p.dst == PlanTarget::Output,
+        RenderPlanPass::CompositePremul(p) => p.dst == PlanTarget::Output,
+        RenderPlanPass::ScaleNearest(p) => p.dst == PlanTarget::Output,
+        RenderPlanPass::Blur(p) => p.dst == PlanTarget::Output,
+        RenderPlanPass::BackdropWarp(p) => p.dst == PlanTarget::Output,
+        RenderPlanPass::ColorAdjust(p) => p.dst == PlanTarget::Output,
+        RenderPlanPass::ColorMatrix(p) => p.dst == PlanTarget::Output,
+        RenderPlanPass::AlphaThreshold(p) => p.dst == PlanTarget::Output,
+        RenderPlanPass::DropShadow(p) => p.dst == PlanTarget::Output,
+        RenderPlanPass::ClipMask(_) => false,
+        RenderPlanPass::ReleaseTarget(_) => false,
+    })
+}
+
+fn assert_first_output_write_is_clear(passes: &[RenderPlanPass]) {
+    let pass = first_output_write(passes).expect("expected at least one Output write");
+    match pass {
+        RenderPlanPass::SceneDrawRange(p) => {
+            assert!(matches!(p.load, wgpu::LoadOp::Clear(_)));
+        }
+        RenderPlanPass::PathMsaaBatch(p) => {
+            assert!(matches!(p.load, wgpu::LoadOp::Clear(_)));
+        }
+        RenderPlanPass::FullscreenBlit(p) => {
+            assert!(matches!(p.load, wgpu::LoadOp::Clear(_)));
+        }
+        RenderPlanPass::CompositePremul(p) => {
+            assert!(matches!(p.load, wgpu::LoadOp::Clear(_)));
+        }
+        RenderPlanPass::ScaleNearest(p) => {
+            assert!(matches!(p.load, wgpu::LoadOp::Clear(_)));
+        }
+        RenderPlanPass::Blur(p) => {
+            assert!(matches!(p.load, wgpu::LoadOp::Clear(_)));
+        }
+        RenderPlanPass::BackdropWarp(p) => {
+            assert!(matches!(p.load, wgpu::LoadOp::Clear(_)));
+        }
+        RenderPlanPass::ColorAdjust(p) => {
+            assert!(matches!(p.load, wgpu::LoadOp::Clear(_)));
+        }
+        RenderPlanPass::ColorMatrix(p) => {
+            assert!(matches!(p.load, wgpu::LoadOp::Clear(_)));
+        }
+        RenderPlanPass::AlphaThreshold(p) => {
+            assert!(matches!(p.load, wgpu::LoadOp::Clear(_)));
+        }
+        RenderPlanPass::DropShadow(p) => {
+            assert!(matches!(p.load, wgpu::LoadOp::Clear(_)));
+        }
+        RenderPlanPass::PathClipMask(_)
+        | RenderPlanPass::ClipMask(_)
+        | RenderPlanPass::ReleaseTarget(_) => {
+            unreachable!("first_output_write filtered these out")
+        }
+    }
 }
 
 #[test]
@@ -63,6 +155,62 @@ fn debug_validate_rejects_path_msaa_batch_before_init() {
     let err = validate_plan_target_lifetimes(&[pass]).unwrap_err();
     assert!(err.contains("writes Intermediate0"), "{err}");
     assert!(err.contains("LoadOp::Load"), "{err}");
+}
+
+#[test]
+fn compile_for_scene_path_msaa_batch_initializes_output_via_empty_clear_pass() {
+    let mut encoding = SceneEncoding::default();
+    encoding.ordered_draws.push(OrderedDraw::Path(PathDraw {
+        scissor: ScissorRect {
+            x: 1,
+            y: 2,
+            w: 3,
+            h: 4,
+        },
+        uniform_index: 0,
+        first_vertex: 0,
+        vertex_count: 0,
+        paint_index: 0,
+    }));
+
+    let viewport_size = (64, 64);
+    let plan = RenderPlan::compile_for_scene(
+        &encoding,
+        viewport_size,
+        wgpu::TextureFormat::Bgra8UnormSrgb,
+        wgpu::Color::TRANSPARENT,
+        4,
+        DebugPostprocess::None,
+        u64::MAX,
+    );
+
+    let core = strip_releases(&plan.passes);
+    assert_eq!(core.len(), 2);
+
+    let RenderPlanPass::SceneDrawRange(scene) = core[0] else {
+        panic!("expected SceneDrawRange init pass");
+    };
+    assert_eq!(scene.target, PlanTarget::Output);
+    assert!(matches!(scene.load, wgpu::LoadOp::Clear(_)));
+    assert_eq!(scene.draw_range, 0..0);
+
+    let RenderPlanPass::PathMsaaBatch(batch) = core[1] else {
+        panic!("expected PathMsaaBatch pass");
+    };
+    assert_eq!(batch.target, PlanTarget::Output);
+    assert!(matches!(batch.load, wgpu::LoadOp::Load));
+    assert_eq!(batch.draw_range, 0..1);
+    assert_eq!(
+        batch.union_scissor.0,
+        ScissorRect {
+            x: 1,
+            y: 2,
+            w: 3,
+            h: 4,
+        }
+    );
+
+    assert_first_output_write_is_clear(&plan.passes);
 }
 
 #[test]
@@ -214,6 +362,178 @@ fn insert_early_releases_inserts_release_after_last_use() {
 }
 
 #[test]
+fn scissored_color_adjust_preserves_outside_region_via_pre_blit() {
+    let scissor = ScissorRect {
+        x: 10,
+        y: 11,
+        w: 20,
+        h: 21,
+    };
+    let passes = apply_single_step_effect_with_scissor(
+        fret_core::EffectStep::ColorAdjust {
+            saturation: 1.0,
+            brightness: 1.0,
+            contrast: 1.0,
+        },
+        fret_core::EffectMode::FilterContent,
+        scissor,
+    );
+
+    assert_eq!(passes.len(), 2);
+    let RenderPlanPass::FullscreenBlit(pre) = passes[0] else {
+        panic!("expected pre-blit");
+    };
+    assert_eq!(pre.src, PlanTarget::Intermediate0);
+    assert_eq!(pre.dst, PlanTarget::Intermediate1);
+    assert_eq!(pre.dst_scissor, None);
+    assert!(matches!(pre.load, wgpu::LoadOp::Clear(_)));
+
+    let RenderPlanPass::ColorAdjust(pass) = passes[1] else {
+        panic!("expected ColorAdjust pass");
+    };
+    assert_eq!(pass.src, PlanTarget::Intermediate1);
+    assert_eq!(pass.dst, PlanTarget::Intermediate0);
+    assert_eq!(pass.dst_scissor.map(|s| s.0), Some(scissor));
+    assert!(matches!(pass.load, wgpu::LoadOp::Load));
+}
+
+#[test]
+fn scissored_color_matrix_preserves_outside_region_via_pre_blit() {
+    let scissor = ScissorRect {
+        x: 2,
+        y: 3,
+        w: 70,
+        h: 31,
+    };
+    let passes = apply_single_step_effect_with_scissor(
+        fret_core::EffectStep::ColorMatrix { m: [0.0; 20] },
+        fret_core::EffectMode::FilterContent,
+        scissor,
+    );
+
+    assert_eq!(passes.len(), 2);
+    assert!(matches!(passes[0], RenderPlanPass::FullscreenBlit(_)));
+    let RenderPlanPass::ColorMatrix(pass) = passes[1] else {
+        panic!("expected ColorMatrix pass");
+    };
+    assert_eq!(pass.dst_scissor.map(|s| s.0), Some(scissor));
+    assert!(matches!(pass.load, wgpu::LoadOp::Load));
+}
+
+#[test]
+fn scissored_alpha_threshold_preserves_outside_region_via_pre_blit() {
+    let scissor = ScissorRect {
+        x: 8,
+        y: 9,
+        w: 10,
+        h: 11,
+    };
+    let passes = apply_single_step_effect_with_scissor(
+        fret_core::EffectStep::AlphaThreshold {
+            cutoff: 0.5,
+            soft: 0.25,
+        },
+        fret_core::EffectMode::FilterContent,
+        scissor,
+    );
+
+    assert_eq!(passes.len(), 2);
+    assert!(matches!(passes[0], RenderPlanPass::FullscreenBlit(_)));
+    let RenderPlanPass::AlphaThreshold(pass) = passes[1] else {
+        panic!("expected AlphaThreshold pass");
+    };
+    assert_eq!(pass.dst_scissor.map(|s| s.0), Some(scissor));
+    assert!(matches!(pass.load, wgpu::LoadOp::Load));
+}
+
+#[test]
+fn scissored_backdrop_warp_preserves_outside_region_via_pre_blit() {
+    let scissor = ScissorRect {
+        x: 1,
+        y: 1,
+        w: 33,
+        h: 44,
+    };
+    let warp = fret_core::scene::BackdropWarpV1 {
+        strength_px: fret_core::Px(10.0),
+        scale_px: fret_core::Px(12.0),
+        phase: 0.0,
+        chromatic_aberration_px: fret_core::Px(0.0),
+        kind: fret_core::scene::BackdropWarpKindV1::Wave,
+    };
+    let passes = apply_single_step_effect_with_scissor(
+        fret_core::EffectStep::BackdropWarpV1(warp),
+        fret_core::EffectMode::Backdrop,
+        scissor,
+    );
+
+    assert_eq!(passes.len(), 2);
+    assert!(matches!(passes[0], RenderPlanPass::FullscreenBlit(_)));
+    let RenderPlanPass::BackdropWarp(pass) = passes[1] else {
+        panic!("expected BackdropWarp pass");
+    };
+    assert_eq!(pass.dst_scissor.map(|s| s.0), Some(scissor));
+    assert!(matches!(pass.load, wgpu::LoadOp::Load));
+}
+
+#[test]
+fn scissored_drop_shadow_restores_original_outside_region() {
+    let scissor = ScissorRect {
+        x: 6,
+        y: 7,
+        w: 80,
+        h: 10,
+    };
+    let shadow = fret_core::scene::DropShadowV1 {
+        offset_px: fret_core::Point::new(fret_core::Px(2.0), fret_core::Px(3.0)),
+        blur_radius_px: fret_core::Px(8.0),
+        downsample: 1,
+        color: fret_core::Color {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+            a: 1.0,
+        },
+    };
+
+    let passes = apply_single_step_effect_with_scissor(
+        fret_core::EffectStep::DropShadowV1(shadow),
+        fret_core::EffectMode::FilterContent,
+        scissor,
+    );
+
+    let pre_blit = passes
+        .iter()
+        .find_map(|p| match p {
+            RenderPlanPass::FullscreenBlit(p) if p.dst == PlanTarget::Intermediate1 => Some(*p),
+            _ => None,
+        })
+        .expect("expected preserve-original pre-blit to Intermediate1");
+    assert_eq!(pre_blit.src, PlanTarget::Intermediate0);
+    assert!(matches!(pre_blit.load, wgpu::LoadOp::Clear(_)));
+
+    let restore = passes
+        .iter()
+        .find_map(|p| match p {
+            RenderPlanPass::FullscreenBlit(p) if p.src == PlanTarget::Intermediate1 => Some(*p),
+            _ => None,
+        })
+        .expect("expected restore blit from Intermediate1 to srcdst");
+    assert_eq!(restore.dst, PlanTarget::Intermediate0);
+    assert!(matches!(restore.load, wgpu::LoadOp::Clear(_)));
+
+    let RenderPlanPass::DropShadow(pass) = passes
+        .last()
+        .expect("expected at least one pass for drop shadow")
+    else {
+        panic!("expected final DropShadow pass");
+    };
+    assert_eq!(pass.dst, PlanTarget::Intermediate0);
+    assert_eq!(pass.dst_scissor.map(|s| s.0), Some(scissor));
+    assert!(matches!(pass.load, wgpu::LoadOp::Load));
+}
+
+#[test]
 fn compile_for_scene_none_targets_output() {
     let encoding = SceneEncoding::default();
     let plan = RenderPlan::compile_for_scene(
@@ -231,6 +551,8 @@ fn compile_for_scene_none_targets_output() {
         panic!("expected SceneDrawRange pass");
     };
     assert_eq!(pass.target, PlanTarget::Output);
+    assert!(matches!(pass.load, wgpu::LoadOp::Clear(_)));
+    assert_first_output_write_is_clear(&plan.passes);
 }
 
 #[test]
@@ -267,6 +589,8 @@ fn compile_for_scene_offscreen_blit_adds_fullscreen_blit() {
             .any(|p| matches!(p, RenderPlanPass::ReleaseTarget(PlanTarget::Intermediate0))),
         "expected ReleaseTarget(Intermediate0)"
     );
+
+    assert_first_output_write_is_clear(&plan.passes);
 }
 
 #[test]
@@ -374,6 +698,8 @@ fn compile_for_scene_pixelate_adds_scale_chain_then_blit() {
     assert!(releases.contains(&PlanTarget::Intermediate0));
     assert!(releases.contains(&PlanTarget::Intermediate1));
     assert!(releases.contains(&PlanTarget::Intermediate2));
+
+    assert_first_output_write_is_clear(&plan.passes);
 }
 
 #[test]
@@ -419,6 +745,8 @@ fn compile_for_scene_backdrop_color_adjust_emits_mask_target_when_budget_allows(
         .filter(|p| matches!(p, RenderPlanPass::ClipMask(_)))
         .count();
     assert_eq!(count, 1);
+
+    assert_first_output_write_is_clear(&plan.passes);
 }
 
 #[test]
@@ -476,6 +804,8 @@ fn compile_for_scene_backdrop_blur_caps_clip_mask_tier_when_forced_to_quarter() 
         .collect();
     assert!(!clip_mask_tiers.is_empty());
     assert!(clip_mask_tiers.iter().all(|t| *t == PlanTarget::Mask2));
+
+    assert_first_output_write_is_clear(&plan.passes);
 }
 
 #[test]
@@ -521,6 +851,135 @@ fn compile_for_scene_filter_content_composite_does_not_allocate_clip_mask() {
         .filter(|p| matches!(p, RenderPlanPass::ClipMask(_)))
         .count();
     assert_eq!(count, 0);
+
+    assert_first_output_write_is_clear(&plan.passes);
+}
+
+#[test]
+fn compile_for_scene_composite_group_preserves_output_clear_guardrail() {
+    let viewport_size = (100, 100);
+    let scissor = ScissorRect::full(viewport_size.0, viewport_size.1);
+
+    let mut encoding = SceneEncoding::default();
+    encoding.effect_markers = vec![
+        EffectMarker {
+            draw_ix: 0,
+            kind: EffectMarkerKind::CompositeGroupPush {
+                scissor,
+                uniform_index: 0,
+                mode: fret_core::BlendMode::Add,
+                quality: fret_core::EffectQuality::Auto,
+                opacity: 1.0,
+            },
+        },
+        EffectMarker {
+            draw_ix: 1,
+            kind: EffectMarkerKind::CompositeGroupPop,
+        },
+    ];
+    encoding.ordered_draws.push(OrderedDraw::Quad(QuadDraw {
+        scissor,
+        uniform_index: 0,
+        first_instance: 0,
+        instance_count: 0,
+        pipeline: QuadPipelineKey {
+            fill_kind: 0,
+            border_kind: 0,
+            border_present: false,
+            dash_enabled: false,
+            fill_material_sampled: false,
+            border_material_sampled: false,
+        },
+    }));
+
+    let plan = RenderPlan::compile_for_scene(
+        &encoding,
+        viewport_size,
+        wgpu::TextureFormat::Bgra8UnormSrgb,
+        wgpu::Color::TRANSPARENT,
+        1,
+        DebugPostprocess::None,
+        u64::MAX,
+    );
+
+    assert!(
+        plan.passes.iter().any(|p| matches!(
+            p,
+            RenderPlanPass::CompositePremul(p)
+                if p.blend_mode == fret_core::BlendMode::Add
+        )),
+        "expected at least one CompositePremul(Add) pass"
+    );
+    assert!(plan.degradations.is_empty(), "unexpected degradations");
+    assert_first_output_write_is_clear(&plan.passes);
+}
+
+#[test]
+fn compile_for_scene_clip_path_preserves_output_clear_guardrail() {
+    let viewport_size = (64, 64);
+    let scissor = ScissorRect::full(viewport_size.0, viewport_size.1);
+
+    let mut encoding = SceneEncoding::default();
+    encoding.effect_markers = vec![
+        EffectMarker {
+            draw_ix: 0,
+            kind: EffectMarkerKind::ClipPathPush {
+                scissor,
+                uniform_index: 0,
+                mask_draw_index: 0,
+            },
+        },
+        EffectMarker {
+            draw_ix: 1,
+            kind: EffectMarkerKind::ClipPathPop,
+        },
+    ];
+    encoding.clip_path_masks.push(ClipPathMaskDraw {
+        scissor,
+        uniform_index: 0,
+        first_vertex: 0,
+        vertex_count: 0,
+        cache_key: 123,
+    });
+    encoding.ordered_draws.push(OrderedDraw::Quad(QuadDraw {
+        scissor,
+        uniform_index: 0,
+        first_instance: 0,
+        instance_count: 0,
+        pipeline: QuadPipelineKey {
+            fill_kind: 0,
+            border_kind: 0,
+            border_present: false,
+            dash_enabled: false,
+            fill_material_sampled: false,
+            border_material_sampled: false,
+        },
+    }));
+
+    let plan = RenderPlan::compile_for_scene(
+        &encoding,
+        viewport_size,
+        wgpu::TextureFormat::Bgra8UnormSrgb,
+        wgpu::Color::TRANSPARENT,
+        1,
+        DebugPostprocess::None,
+        u64::MAX,
+    );
+
+    assert!(
+        plan.passes
+            .iter()
+            .any(|p| matches!(p, RenderPlanPass::PathClipMask(_))),
+        "expected at least one PathClipMask pass"
+    );
+    assert!(
+        plan.passes.iter().any(|p| matches!(
+            p,
+            RenderPlanPass::CompositePremul(p) if p.mask.is_some()
+        )),
+        "expected at least one CompositePremul pass with a mask"
+    );
+    assert_first_output_write_is_clear(&plan.passes);
 }
 
 #[test]
@@ -623,6 +1082,8 @@ fn compile_for_scene_blur_emits_separable_passes() {
     assert!(releases.contains(&PlanTarget::Intermediate0));
     assert!(releases.contains(&PlanTarget::Intermediate1));
     assert!(releases.contains(&PlanTarget::Intermediate2));
+
+    assert_first_output_write_is_clear(&plan.passes);
 }
 
 #[test]
@@ -818,4 +1279,6 @@ fn blur_scissor_is_mapped_per_pass_dst_size() {
             h: 50
         })
     );
+
+    assert_first_output_write_is_clear(&plan.passes);
 }

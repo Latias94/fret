@@ -256,6 +256,95 @@ fn eval_predicate(
             };
             node.flags.selected == *selected
         }
+        UiPredicateV1::SemanticsNumericApproxEq {
+            target,
+            field,
+            value,
+            eps,
+        } => {
+            let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
+            else {
+                return false;
+            };
+            let got = match field {
+                fret_diag_protocol::UiSemanticsNumericFieldV1::Value => node.extra.numeric.value,
+                fret_diag_protocol::UiSemanticsNumericFieldV1::Min => node.extra.numeric.min,
+                fret_diag_protocol::UiSemanticsNumericFieldV1::Max => node.extra.numeric.max,
+                fret_diag_protocol::UiSemanticsNumericFieldV1::Step => node.extra.numeric.step,
+                fret_diag_protocol::UiSemanticsNumericFieldV1::Jump => node.extra.numeric.jump,
+            };
+            let Some(got) = got else {
+                return false;
+            };
+            let want = *value;
+            let eps = eps.abs();
+            got.is_finite() && want.is_finite() && eps.is_finite() && (got - want).abs() <= eps
+        }
+        UiPredicateV1::SemanticsScrollIsFinite { target, field } => {
+            let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
+            else {
+                return false;
+            };
+            let got = match field {
+                fret_diag_protocol::UiSemanticsScrollFieldV1::X => node.extra.scroll.x,
+                fret_diag_protocol::UiSemanticsScrollFieldV1::XMin => node.extra.scroll.x_min,
+                fret_diag_protocol::UiSemanticsScrollFieldV1::XMax => node.extra.scroll.x_max,
+                fret_diag_protocol::UiSemanticsScrollFieldV1::Y => node.extra.scroll.y,
+                fret_diag_protocol::UiSemanticsScrollFieldV1::YMin => node.extra.scroll.y_min,
+                fret_diag_protocol::UiSemanticsScrollFieldV1::YMax => node.extra.scroll.y_max,
+            };
+            got.is_some_and(|v| v.is_finite())
+        }
+        UiPredicateV1::SemanticsScrollApproxEq {
+            target,
+            field,
+            value,
+            eps,
+        } => {
+            let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
+            else {
+                return false;
+            };
+            let got = match field {
+                fret_diag_protocol::UiSemanticsScrollFieldV1::X => node.extra.scroll.x,
+                fret_diag_protocol::UiSemanticsScrollFieldV1::XMin => node.extra.scroll.x_min,
+                fret_diag_protocol::UiSemanticsScrollFieldV1::XMax => node.extra.scroll.x_max,
+                fret_diag_protocol::UiSemanticsScrollFieldV1::Y => node.extra.scroll.y,
+                fret_diag_protocol::UiSemanticsScrollFieldV1::YMin => node.extra.scroll.y_min,
+                fret_diag_protocol::UiSemanticsScrollFieldV1::YMax => node.extra.scroll.y_max,
+            };
+            let Some(got) = got else {
+                return false;
+            };
+            let want = *value;
+            let eps = eps.abs();
+            got.is_finite() && want.is_finite() && eps.is_finite() && (got - want).abs() <= eps
+        }
+        UiPredicateV1::SemanticsScrollNotApproxEq {
+            target,
+            field,
+            value,
+            eps,
+        } => {
+            let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
+            else {
+                return false;
+            };
+            let got = match field {
+                fret_diag_protocol::UiSemanticsScrollFieldV1::X => node.extra.scroll.x,
+                fret_diag_protocol::UiSemanticsScrollFieldV1::XMin => node.extra.scroll.x_min,
+                fret_diag_protocol::UiSemanticsScrollFieldV1::XMax => node.extra.scroll.x_max,
+                fret_diag_protocol::UiSemanticsScrollFieldV1::Y => node.extra.scroll.y,
+                fret_diag_protocol::UiSemanticsScrollFieldV1::YMin => node.extra.scroll.y_min,
+                fret_diag_protocol::UiSemanticsScrollFieldV1::YMax => node.extra.scroll.y_max,
+            };
+            let Some(got) = got else {
+                return false;
+            };
+            let want = *value;
+            let eps = eps.abs();
+            got.is_finite() && want.is_finite() && eps.is_finite() && (got - want).abs() > eps
+        }
         UiPredicateV1::TextCompositionIs { target, composing } => {
             let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
             else {

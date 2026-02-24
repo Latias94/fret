@@ -1,0 +1,121 @@
+{
+  "version": 1,
+  "semantics": [
+    {
+      "role": "TextField",
+      "label": "Email",
+      "value": "Hello",
+      "bounds": {
+        "origin": {
+          "x": 0.0,
+          "y": 0.0
+        },
+        "size": {
+          "w": 420.0,
+          "h": 32.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null,
+        "required": true,
+        "invalid": "True"
+      }
+    },
+    {
+      "role": "Window",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 0.0,
+          "y": 0.0
+        },
+        "size": {
+          "w": 420.0,
+          "h": 180.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    }
+  ],
+  "scene_ops": [
+    {
+      "kind": "Quad",
+      "rect": {
+        "origin": {
+          "x": 0.0,
+          "y": 0.0
+        },
+        "size": {
+          "w": 420.0,
+          "h": 32.0
+        }
+      },
+      "background": {
+        "r": 0.018,
+        "g": 0.02,
+        "b": 0.027,
+        "a": 1.0
+      },
+      "border": {
+        "top": 1.0,
+        "right": 1.0,
+        "bottom": 1.0,
+        "left": 1.0
+      },
+      "border_color": {
+        "r": 0.799,
+        "g": 0.072,
+        "b": 0.045,
+        "a": 1.0
+      },
+      "corner_radii": {
+        "top_left": 8.0,
+        "top_right": 8.0,
+        "bottom_right": 8.0,
+        "bottom_left": 8.0
+      }
+    },
+    {
+      "kind": "PushClipRect",
+      "rect": {
+        "origin": {
+          "x": 0.0,
+          "y": 0.0
+        },
+        "size": {
+          "w": 420.0,
+          "h": 32.0
+        }
+      }
+    },
+    {
+      "kind": "Text",
+      "origin": {
+        "x": 12.0,
+        "y": 19.0
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.73,
+        "b": 0.815,
+        "a": 1.0
+      }
+    },
+    {
+      "kind": "PopClip"
+    }
+  ]
+}

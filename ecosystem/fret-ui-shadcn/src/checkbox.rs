@@ -640,6 +640,10 @@ mod tests {
             .iter()
             .find(|n| n.role == fret_core::SemanticsRole::Checkbox)
             .expect("checkbox semantics node");
+        assert_eq!(
+            node.flags.checked_state,
+            Some(fret_core::SemanticsCheckedState::False)
+        );
         assert_eq!(node.flags.checked, Some(false));
 
         let checkbox_node = ui.children(root)[0];
@@ -783,6 +787,10 @@ mod tests {
             .iter()
             .find(|n| n.role == fret_core::SemanticsRole::Checkbox)
             .expect("checkbox semantics node");
+        assert_eq!(
+            node.flags.checked_state,
+            Some(fret_core::SemanticsCheckedState::Mixed)
+        );
         assert_eq!(node.flags.checked, None);
 
         let checkbox_node = ui.children(root)[0];
@@ -841,6 +849,10 @@ mod tests {
             .find(|n| n.role == fret_core::SemanticsRole::Checkbox)
             .expect("checkbox semantics node");
         assert_eq!(node.flags.checked, Some(true));
+        assert_eq!(
+            node.flags.checked_state,
+            Some(fret_core::SemanticsCheckedState::True)
+        );
     }
 
     #[test]

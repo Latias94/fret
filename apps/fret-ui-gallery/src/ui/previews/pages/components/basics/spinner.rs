@@ -26,7 +26,6 @@ pub(in crate::ui) fn preview_spinner(cx: &mut ElementContext<'_, App>) -> Vec<An
     };
 
     let theme = Theme::global(&*cx.app).snapshot();
-    let icon = doc_layout::icon;
 
     let sizes = {
         let small = shadcn::Spinner::new()
@@ -137,7 +136,7 @@ pub(in crate::ui) fn preview_spinner(cx: &mut ElementContext<'_, App>) -> Vec<An
 
         let learn_more = shadcn::Button::new("Learn more")
             .variant(shadcn::ButtonVariant::Link)
-            .children([icon(cx, "lucide.arrow-right")])
+            .trailing_icon(fret_icons::IconId::new_static("lucide.arrow-right"))
             .into_element(cx);
 
         shadcn::Empty::new([
@@ -193,15 +192,14 @@ pub(in crate::ui) fn preview_spinner(cx: &mut ElementContext<'_, App>) -> Vec<An
                         shadcn::Spinner::new().into_element(cx),
                         shadcn::typography::muted(cx, "Validating..."),
                         shadcn::InputGroupButton::new("")
+                            .a11y_label("Send")
                             .size(shadcn::InputGroupButtonSize::IconSm)
-                            .children([shadcn::icon::icon(
-                                cx,
-                                fret_icons::IconId::new_static("lucide.arrow-up"),
-                            )])
+                            .icon(fret_icons::IconId::new_static("lucide.arrow-up"))
                             .into_element(cx),
                     ]
                 },
-            )])
+            )
+            .test_id("ui-gallery-spinner-extras-textarea-actions")])
             .refine_layout(LayoutRefinement::default().w_full())
             .into_element(cx);
 

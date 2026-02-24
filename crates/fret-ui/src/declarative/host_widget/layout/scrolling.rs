@@ -132,6 +132,10 @@ impl ElementHostWidget {
         let desired_w = match props.layout.size.width {
             Length::Px(px) => Px(px.0.max(0.0)),
             Length::Fill => cx.available.width,
+            Length::Fraction(f) => {
+                let f = if f.is_finite() { f.max(0.0) } else { 0.0 };
+                Px((cx.available.width.0 * f).max(0.0))
+            }
             Length::Auto => match axis {
                 fret_core::Axis::Vertical => cx.available.width,
                 fret_core::Axis::Horizontal => {
@@ -142,6 +146,10 @@ impl ElementHostWidget {
         let desired_h = match props.layout.size.height {
             Length::Px(px) => Px(px.0.max(0.0)),
             Length::Fill => cx.available.height,
+            Length::Fraction(f) => {
+                let f = if f.is_finite() { f.max(0.0) } else { 0.0 };
+                Px((cx.available.height.0 * f).max(0.0))
+            }
             Length::Auto => match axis {
                 fret_core::Axis::Vertical => {
                     Px(content_extent.0.min(cx.available.height.0.max(0.0)))

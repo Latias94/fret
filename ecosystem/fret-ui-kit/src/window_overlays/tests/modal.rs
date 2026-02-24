@@ -517,27 +517,36 @@ fn modal_restores_focus_to_trigger_while_closing_but_still_present() {
         fret_ui::elements::node_for_element(&mut app, window, trigger).expect("trigger node");
     ui.set_focus(Some(trigger_node));
 
+    fn build_modal_children<H: fret_ui::UiHost>(
+        cx: &mut fret_ui::ElementContext<'_, H>,
+        focusable_out: Option<&mut Option<GlobalElementId>>,
+    ) -> Vec<fret_ui::element::AnyElement> {
+        vec![cx.pressable_with_id(
+            PressableProps {
+                layout: {
+                    let mut layout = LayoutStyle::default();
+                    layout.size.width = Length::Px(Px(80.0));
+                    layout.size.height = Length::Px(Px(32.0));
+                    layout
+                },
+                enabled: true,
+                focusable: true,
+                ..Default::default()
+            },
+            move |_cx, _st, id| {
+                if let Some(out) = focusable_out {
+                    *out = Some(id);
+                }
+                Vec::new()
+            },
+        )]
+    }
+
     let modal_id = GlobalElementId(0xabc);
     let mut modal_focusable: Option<GlobalElementId> = None;
     let modal_children =
         fret_ui::elements::with_element_cx(&mut app, window, bounds, "modal-child", |cx| {
-            vec![cx.pressable_with_id(
-                PressableProps {
-                    layout: {
-                        let mut layout = LayoutStyle::default();
-                        layout.size.width = Length::Px(Px(80.0));
-                        layout.size.height = Length::Px(Px(32.0));
-                        layout
-                    },
-                    enabled: true,
-                    focusable: true,
-                    ..Default::default()
-                },
-                |_cx, _st, id| {
-                    modal_focusable = Some(id);
-                    Vec::new()
-                },
-            )]
+            build_modal_children(cx, Some(&mut modal_focusable))
         });
     let modal_focusable = modal_focusable.expect("modal focusable element id");
 
@@ -552,6 +561,10 @@ fn modal_restores_focus_to_trigger_while_closing_but_still_present() {
         open.clone(),
     );
 
+    let modal_children_for_open =
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "modal-child", |cx| {
+            build_modal_children(cx, None)
+        });
     request_modal_for_window(
         &mut app,
         window,
@@ -567,7 +580,7 @@ fn modal_restores_focus_to_trigger_while_closing_but_still_present() {
             on_open_auto_focus: None,
             on_close_auto_focus: None,
             on_dismiss_request: None,
-            children: modal_children.clone(),
+            children: modal_children_for_open,
         },
     );
 
@@ -642,27 +655,36 @@ fn modal_close_auto_focus_handler_can_prevent_default_restore() {
     );
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
+    fn build_modal_children<H: fret_ui::UiHost>(
+        cx: &mut fret_ui::ElementContext<'_, H>,
+        focusable_out: Option<&mut Option<GlobalElementId>>,
+    ) -> Vec<fret_ui::element::AnyElement> {
+        vec![cx.pressable_with_id(
+            PressableProps {
+                layout: {
+                    let mut layout = LayoutStyle::default();
+                    layout.size.width = Length::Px(Px(80.0));
+                    layout.size.height = Length::Px(Px(32.0));
+                    layout
+                },
+                enabled: true,
+                focusable: true,
+                ..Default::default()
+            },
+            move |_cx, _st, id| {
+                if let Some(out) = focusable_out {
+                    *out = Some(id);
+                }
+                Vec::new()
+            },
+        )]
+    }
+
     let modal_id = GlobalElementId(0xabc);
     let mut modal_focusable: Option<GlobalElementId> = None;
     let modal_children =
         fret_ui::elements::with_element_cx(&mut app, window, bounds, "modal-child", |cx| {
-            vec![cx.pressable_with_id(
-                PressableProps {
-                    layout: {
-                        let mut layout = LayoutStyle::default();
-                        layout.size.width = Length::Px(Px(80.0));
-                        layout.size.height = Length::Px(Px(32.0));
-                        layout
-                    },
-                    enabled: true,
-                    focusable: true,
-                    ..Default::default()
-                },
-                |_cx, _st, id| {
-                    modal_focusable = Some(id);
-                    Vec::new()
-                },
-            )]
+            build_modal_children(cx, Some(&mut modal_focusable))
         });
     let modal_focusable = modal_focusable.expect("modal focusable element id");
 
@@ -679,6 +701,10 @@ fn modal_close_auto_focus_handler_can_prevent_default_restore() {
         bounds,
         open.clone(),
     );
+    let modal_children_for_open =
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "modal-child", |cx| {
+            build_modal_children(cx, None)
+        });
     request_modal_for_window(
         &mut app,
         window,
@@ -694,7 +720,7 @@ fn modal_close_auto_focus_handler_can_prevent_default_restore() {
             on_open_auto_focus: None,
             on_close_auto_focus: Some(on_close_auto_focus.clone()),
             on_dismiss_request: None,
-            children: modal_children.clone(),
+            children: modal_children_for_open,
         },
     );
     render(&mut ui, &mut app, &mut services, window, bounds);
@@ -770,30 +796,42 @@ fn modal_initial_focus_is_only_applied_on_opening_edge() {
     let mut a: Option<GlobalElementId> = None;
     let mut b: Option<GlobalElementId> = None;
 
+    fn build_modal_children<H: fret_ui::UiHost>(
+        cx: &mut fret_ui::ElementContext<'_, H>,
+        a_out: Option<&mut Option<GlobalElementId>>,
+        b_out: Option<&mut Option<GlobalElementId>>,
+    ) -> Vec<fret_ui::element::AnyElement> {
+        let props = PressableProps {
+            layout: {
+                let mut layout = LayoutStyle::default();
+                layout.size.width = Length::Px(Px(80.0));
+                layout.size.height = Length::Px(Px(32.0));
+                layout
+            },
+            enabled: true,
+            focusable: true,
+            ..Default::default()
+        };
+
+        vec![
+            cx.pressable_with_id(props.clone(), move |_cx, _st, id| {
+                if let Some(out) = a_out {
+                    *out = Some(id);
+                }
+                Vec::new()
+            }),
+            cx.pressable_with_id(props, move |_cx, _st, id| {
+                if let Some(out) = b_out {
+                    *out = Some(id);
+                }
+                Vec::new()
+            }),
+        ]
+    }
+
     let modal_children =
         fret_ui::elements::with_element_cx(&mut app, window, bounds, "modal-child", |cx| {
-            let props = PressableProps {
-                layout: {
-                    let mut layout = LayoutStyle::default();
-                    layout.size.width = Length::Px(Px(80.0));
-                    layout.size.height = Length::Px(Px(32.0));
-                    layout
-                },
-                enabled: true,
-                focusable: true,
-                ..Default::default()
-            };
-
-            vec![
-                cx.pressable_with_id(props.clone(), |_cx, _st, id| {
-                    a = Some(id);
-                    Vec::new()
-                }),
-                cx.pressable_with_id(props, |_cx, _st, id| {
-                    b = Some(id);
-                    Vec::new()
-                }),
-            ]
+            build_modal_children(cx, Some(&mut a), Some(&mut b))
         });
     let a = a.expect("focusable a element id");
     let b = b.expect("focusable b element id");
@@ -809,6 +847,10 @@ fn modal_initial_focus_is_only_applied_on_opening_edge() {
         open.clone(),
     );
 
+    let modal_children_for_open =
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "modal-child", |cx| {
+            build_modal_children(cx, None, None)
+        });
     request_modal_for_window(
         &mut app,
         window,
@@ -824,7 +866,7 @@ fn modal_initial_focus_is_only_applied_on_opening_edge() {
             on_open_auto_focus: None,
             on_close_auto_focus: None,
             on_dismiss_request: None,
-            children: modal_children.clone(),
+            children: modal_children_for_open,
         },
     );
     render(&mut ui, &mut app, &mut services, window, bounds);
@@ -902,27 +944,36 @@ fn modal_reasserts_focus_when_focus_leaves_modal_layer_while_open() {
         fret_ui::elements::node_for_element(&mut app, window, trigger).expect("trigger node");
     ui.set_focus(Some(trigger_node));
 
+    fn build_modal_children<H: fret_ui::UiHost>(
+        cx: &mut fret_ui::ElementContext<'_, H>,
+        focusable_out: Option<&mut Option<GlobalElementId>>,
+    ) -> Vec<fret_ui::element::AnyElement> {
+        vec![cx.pressable_with_id(
+            PressableProps {
+                layout: {
+                    let mut layout = LayoutStyle::default();
+                    layout.size.width = Length::Px(Px(80.0));
+                    layout.size.height = Length::Px(Px(32.0));
+                    layout
+                },
+                enabled: true,
+                focusable: true,
+                ..Default::default()
+            },
+            move |_cx, _st, id| {
+                if let Some(out) = focusable_out {
+                    *out = Some(id);
+                }
+                Vec::new()
+            },
+        )]
+    }
+
     let modal_id = GlobalElementId(0xabc);
     let mut modal_focusable: Option<GlobalElementId> = None;
     let modal_children =
         fret_ui::elements::with_element_cx(&mut app, window, bounds, "modal-child", |cx| {
-            vec![cx.pressable_with_id(
-                PressableProps {
-                    layout: {
-                        let mut layout = LayoutStyle::default();
-                        layout.size.width = Length::Px(Px(80.0));
-                        layout.size.height = Length::Px(Px(32.0));
-                        layout
-                    },
-                    enabled: true,
-                    focusable: true,
-                    ..Default::default()
-                },
-                |_cx, _st, id| {
-                    modal_focusable = Some(id);
-                    Vec::new()
-                },
-            )]
+            build_modal_children(cx, Some(&mut modal_focusable))
         });
     let modal_focusable = modal_focusable.expect("modal focusable element id");
 
@@ -936,6 +987,10 @@ fn modal_reasserts_focus_when_focus_leaves_modal_layer_while_open() {
         bounds,
         open.clone(),
     );
+    let modal_children_for_open =
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "modal-child", |cx| {
+            build_modal_children(cx, None)
+        });
     request_modal_for_window(
         &mut app,
         window,
@@ -951,7 +1006,7 @@ fn modal_reasserts_focus_when_focus_leaves_modal_layer_while_open() {
             on_open_auto_focus: None,
             on_close_auto_focus: None,
             on_dismiss_request: None,
-            children: modal_children.clone(),
+            children: modal_children_for_open,
         },
     );
     render(&mut ui, &mut app, &mut services, window, bounds);

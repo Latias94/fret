@@ -5,7 +5,6 @@ use fret_icons::IconId;
 use fret_ui::action::OnActivate;
 use fret_ui::element::{AnyElement, SemanticsProps};
 use fret_ui::{ElementContext, UiHost};
-use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::{Justify, LayoutRefinement, Space};
 use fret_ui_shadcn::{
@@ -14,7 +13,6 @@ use fret_ui_shadcn::{
 
 use crate::model::MessageRole;
 
-#[derive(Clone)]
 /// A row container for per-message action buttons (AI Elements `MessageActions`-style).
 pub struct MessageActions {
     children: Vec<AnyElement>,
@@ -177,7 +175,7 @@ impl MessageActionTemplate {
 
     pub fn into_action<H: UiHost + 'static>(
         &self,
-        cx: &mut ElementContext<'_, H>,
+        _cx: &mut ElementContext<'_, H>,
         message_test_id_prefix: Option<&str>,
     ) -> MessageAction {
         let mut action = MessageAction::new(self.label.clone())
@@ -195,19 +193,19 @@ impl MessageActionTemplate {
             action = action.test_id(Arc::<str>::from(format!("{prefix}action-{}", self.id)));
         }
         if let Some(icon) = self.icon.clone() {
-            action = action.children([decl_icon::icon(cx, icon)]);
+            action = action.icon(icon);
         }
 
         action
     }
 }
 
-#[derive(Clone)]
 /// A single action button with an optional tooltip (AI Elements `MessageAction`-style).
 pub struct MessageAction {
     tooltip: Option<Arc<str>>,
     tooltip_panel_test_id: Option<Arc<str>>,
     label: Arc<str>,
+    icon: Option<IconId>,
     children: Vec<AnyElement>,
     on_activate: Option<OnActivate>,
     disabled: bool,
@@ -225,6 +223,7 @@ impl std::fmt::Debug for MessageAction {
                 &self.tooltip_panel_test_id.as_deref(),
             )
             .field("label", &self.label.as_ref())
+            .field("icon", &self.icon)
             .field("children_len", &self.children.len())
             .field("has_on_activate", &self.on_activate.is_some())
             .field("disabled", &self.disabled)
@@ -241,6 +240,7 @@ impl MessageAction {
             tooltip: None,
             tooltip_panel_test_id: None,
             label: label.into(),
+            icon: None,
             children: Vec::new(),
             on_activate: None,
             disabled: false,
@@ -248,6 +248,11 @@ impl MessageAction {
             variant: ButtonVariant::Ghost,
             size: ButtonSize::IconSm,
         }
+    }
+
+    pub fn icon(mut self, icon: IconId) -> Self {
+        self.icon = Some(icon);
+        self
     }
 
     pub fn tooltip(mut self, tooltip: impl Into<Arc<str>>) -> Self {
@@ -263,6 +268,14 @@ impl MessageAction {
         self
     }
 
+    /// Sets custom button children.
+    ///
+    /// Prefer `MessageAction::icon(...)` when you want an icon-only action button.
+    ///
+    /// Note: passing a prebuilt icon element via `children(...)` can bypass host-provided
+    /// `currentColor` inheritance because the element is constructed outside the button scope.
+    /// Use deferred icon slots (`icon`) to ensure the icon is built under the correct
+    /// foreground provider.
     pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
         self.children = children.into_iter().collect();
         self
@@ -296,11 +309,25 @@ impl MessageAction {
     pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let tooltip_text = self.tooltip.clone();
 
-        let mut btn = Button::new(self.label.clone())
-            .variant(self.variant)
-            .size(self.size)
-            .disabled(self.disabled)
-            .children(self.children);
+        let mut btn = if !self.children.is_empty() {
+            Button::new(self.label.clone())
+                .variant(self.variant)
+                .size(self.size)
+                .disabled(self.disabled)
+                .children(self.children)
+        } else if let Some(icon) = self.icon.clone() {
+            Button::new("")
+                .a11y_label(self.label.clone())
+                .variant(self.variant)
+                .size(self.size)
+                .disabled(self.disabled)
+                .icon(icon)
+        } else {
+            Button::new(self.label.clone())
+                .variant(self.variant)
+                .size(self.size)
+                .disabled(self.disabled)
+        };
         if let Some(on_activate) = self.on_activate {
             btn = btn.on_activate(on_activate);
         }

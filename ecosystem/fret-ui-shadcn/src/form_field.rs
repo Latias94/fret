@@ -33,7 +33,7 @@ impl Default for FormErrorVisibility {
 /// - `FormControl` (required)
 /// - `FormDescription` (optional)
 /// - `FormMessage` (optional; controlled by `FormErrorVisibility`)
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct FormField {
     form_state: Model<FormState>,
     id: FormFieldId,

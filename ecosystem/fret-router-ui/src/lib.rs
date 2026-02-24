@@ -706,7 +706,7 @@ where
         cx.pressable_on_hover_change(on_hover);
         (props, children)
     })
-    .attach_semantics(SemanticsDecoration::default().value(href))
+    .attach_semantics(SemanticsDecoration::default().url(href.clone()).value(href))
 }
 
 /// Build a router link pressable and stamp a diagnostics `test_id`.

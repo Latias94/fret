@@ -19,7 +19,7 @@ pub enum AlertVariant {
     Destructive,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Alert {
     children: Vec<AnyElement>,
     variant: AlertVariant,
@@ -27,7 +27,7 @@ pub struct Alert {
     layout: LayoutRefinement,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct AlertAction {
     children: Vec<AnyElement>,
     layout: LayoutRefinement,

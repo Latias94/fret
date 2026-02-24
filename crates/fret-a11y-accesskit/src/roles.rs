@@ -1,0 +1,51 @@
+use accesskit::Role;
+use fret_core::SemanticsRole;
+
+pub(crate) fn map_role(role: SemanticsRole) -> Role {
+    match role {
+        SemanticsRole::Generic => Role::GenericContainer,
+        SemanticsRole::Window => Role::Pane,
+        SemanticsRole::Panel => Role::Pane,
+        SemanticsRole::Group => Role::Group,
+        SemanticsRole::Toolbar => Role::Toolbar,
+        SemanticsRole::Heading => Role::Heading,
+        SemanticsRole::Dialog => Role::Dialog,
+        SemanticsRole::AlertDialog => Role::AlertDialog,
+        SemanticsRole::Alert => Role::Alert,
+        SemanticsRole::Button => Role::Button,
+        SemanticsRole::Link => Role::Link,
+        SemanticsRole::Image => Role::Image,
+        SemanticsRole::Checkbox => Role::CheckBox,
+        SemanticsRole::Switch => Role::Switch,
+        SemanticsRole::Slider => Role::Slider,
+        SemanticsRole::SpinButton => Role::SpinButton,
+        SemanticsRole::ProgressBar => Role::ProgressIndicator,
+        SemanticsRole::Meter => Role::Meter,
+        SemanticsRole::ScrollBar => Role::ScrollBar,
+        SemanticsRole::Splitter => Role::Splitter,
+        SemanticsRole::ComboBox => Role::ComboBox,
+        SemanticsRole::RadioGroup => Role::RadioGroup,
+        SemanticsRole::RadioButton => Role::RadioButton,
+        SemanticsRole::TabList => Role::TabList,
+        SemanticsRole::Tab => Role::Tab,
+        SemanticsRole::TabPanel => Role::TabPanel,
+        SemanticsRole::MenuBar => Role::MenuBar,
+        SemanticsRole::Menu => Role::Menu,
+        SemanticsRole::MenuItem => Role::MenuItem,
+        SemanticsRole::MenuItemCheckbox => Role::MenuItemCheckBox,
+        SemanticsRole::MenuItemRadio => Role::MenuItemRadio,
+        SemanticsRole::Tooltip => Role::Tooltip,
+        SemanticsRole::Text => Role::Label,
+        SemanticsRole::TextField => Role::TextInput,
+        SemanticsRole::List => Role::List,
+        SemanticsRole::ListItem => Role::ListItem,
+        // AccessKit does not currently expose a dedicated "separator" role; map to a safe
+        // structural container role.
+        SemanticsRole::Separator => Role::Group,
+        SemanticsRole::ListBox => Role::ListBox,
+        SemanticsRole::ListBoxOption => Role::ListBoxOption,
+        SemanticsRole::TreeItem => Role::TreeItem,
+        SemanticsRole::Viewport => Role::ScrollView,
+        _ => Role::GenericContainer,
+    }
+}

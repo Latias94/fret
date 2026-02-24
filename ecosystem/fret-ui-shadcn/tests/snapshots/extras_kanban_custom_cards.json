@@ -122,29 +122,6 @@
       "value": null,
       "bounds": {
         "origin": {
-          "x": 0.0,
-          "y": 0.0
-        },
-        "size": {
-          "w": 920.0,
-          "h": 0.0
-        }
-      },
-      "flags": {
-        "focused": false,
-        "captured": false,
-        "disabled": false,
-        "selected": false,
-        "expanded": false,
-        "checked": null
-      }
-    },
-    {
-      "role": "Generic",
-      "label": null,
-      "value": null,
-      "bounds": {
-        "origin": {
           "x": 1.0,
           "y": 1.0
         },
@@ -1267,6 +1244,37 @@
       }
     },
     {
+      "role": "Viewport",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 0.0,
+          "y": 0.0
+        },
+        "size": {
+          "w": 920.0,
+          "h": 0.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      },
+      "extra": {
+        "orientation": "Horizontal",
+        "scroll": {
+          "x": 0.0,
+          "x_min": 0.0,
+          "x_max": 0.0
+        }
+      }
+    },
+    {
       "role": "Window",
       "label": null,
       "value": null,
@@ -1696,25 +1704,6 @@
       }
     },
     {
-      "kind": "PushClipRRect",
-      "rect": {
-        "origin": {
-          "x": 22.0,
-          "y": 36.0
-        },
-        "size": {
-          "w": 236.0,
-          "h": 22.0
-        }
-      },
-      "corner_radii": {
-        "top_left": 999.0,
-        "top_right": 999.0,
-        "bottom_right": 999.0,
-        "bottom_left": 999.0
-      }
-    },
-    {
       "kind": "Text",
       "origin": {
         "x": 31.0,
@@ -1726,9 +1715,6 @@
         "b": 0.815,
         "a": 1.0
       }
-    },
-    {
-      "kind": "PopClip"
     },
     {
       "kind": "Quad",
@@ -1929,25 +1915,6 @@
       }
     },
     {
-      "kind": "PushClipRRect",
-      "rect": {
-        "origin": {
-          "x": 22.0,
-          "y": 106.0
-        },
-        "size": {
-          "w": 236.0,
-          "h": 22.0
-        }
-      },
-      "corner_radii": {
-        "top_left": 999.0,
-        "top_right": 999.0,
-        "bottom_right": 999.0,
-        "bottom_left": 999.0
-      }
-    },
-    {
       "kind": "Text",
       "origin": {
         "x": 31.0,
@@ -1959,9 +1926,6 @@
         "b": 0.815,
         "a": 1.0
       }
-    },
-    {
-      "kind": "PopClip"
     },
     {
       "kind": "PopClip"
@@ -2361,25 +2325,6 @@
       }
     },
     {
-      "kind": "PushClipRRect",
-      "rect": {
-        "origin": {
-          "x": 318.0,
-          "y": 36.0
-        },
-        "size": {
-          "w": 236.0,
-          "h": 22.0
-        }
-      },
-      "corner_radii": {
-        "top_left": 999.0,
-        "top_right": 999.0,
-        "bottom_right": 999.0,
-        "bottom_left": 999.0
-      }
-    },
-    {
       "kind": "Text",
       "origin": {
         "x": 327.0,
@@ -2391,9 +2336,6 @@
         "b": 0.815,
         "a": 1.0
       }
-    },
-    {
-      "kind": "PopClip"
     },
     {
       "kind": "Quad",
@@ -2594,25 +2536,6 @@
       }
     },
     {
-      "kind": "PushClipRRect",
-      "rect": {
-        "origin": {
-          "x": 318.0,
-          "y": 106.0
-        },
-        "size": {
-          "w": 236.0,
-          "h": 22.0
-        }
-      },
-      "corner_radii": {
-        "top_left": 999.0,
-        "top_right": 999.0,
-        "bottom_right": 999.0,
-        "bottom_left": 999.0
-      }
-    },
-    {
       "kind": "Text",
       "origin": {
         "x": 327.0,
@@ -2624,9 +2547,6 @@
         "b": 0.815,
         "a": 1.0
       }
-    },
-    {
-      "kind": "PopClip"
     },
     {
       "kind": "PopClip"
@@ -3026,25 +2946,6 @@
       }
     },
     {
-      "kind": "PushClipRRect",
-      "rect": {
-        "origin": {
-          "x": 614.0,
-          "y": 36.0
-        },
-        "size": {
-          "w": 236.0,
-          "h": 22.0
-        }
-      },
-      "corner_radii": {
-        "top_left": 999.0,
-        "top_right": 999.0,
-        "bottom_right": 999.0,
-        "bottom_left": 999.0
-      }
-    },
-    {
       "kind": "Text",
       "origin": {
         "x": 623.0,
@@ -3056,9 +2957,6 @@
         "b": 0.815,
         "a": 1.0
       }
-    },
-    {
-      "kind": "PopClip"
     },
     {
       "kind": "PopClip"

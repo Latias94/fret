@@ -534,6 +534,151 @@ pub(in crate::ui) fn preview_magic_patterns(cx: &mut ElementContext<'_, App>) ->
     ]
 }
 
+pub(in crate::ui) fn preview_magic_patterns_torture(
+    cx: &mut ElementContext<'_, App>,
+) -> Vec<AnyElement> {
+    let base = cx.with_theme(|theme| theme.color_token("card"));
+    let border = cx.with_theme(|theme| theme.color_token("border"));
+    let ring = cx.with_theme(|theme| theme.color_token("ring"));
+
+    let dot_color = {
+        let mut c = ring;
+        c.a = (c.a * 0.14).clamp(0.0, 1.0);
+        c
+    };
+    let grid_color = {
+        let mut c = border;
+        c.a = (c.a * 0.85).clamp(0.0, 1.0);
+        c
+    };
+    let stripes = {
+        let mut c = ring;
+        c.a = (c.a * 0.14).clamp(0.0, 1.0);
+        c
+    };
+
+    let cols: u32 = 5;
+    let rows: u32 = 4;
+
+    let mut panel_layout = LayoutStyle::default();
+    panel_layout.size.width = Length::Px(Px(300.0));
+    panel_layout.size.height = Length::Px(Px(220.0));
+
+    let mut grid_rows: Vec<AnyElement> = Vec::new();
+    for row in 0..rows {
+        let mut panels: Vec<AnyElement> = Vec::new();
+        for col in 0..cols {
+            let seed = row
+                .saturating_mul(cols)
+                .saturating_add(col)
+                .saturating_add(1);
+            let kind = seed % 3;
+            let panel = match kind {
+                0 => magic::dot_pattern(
+                    cx,
+                    magic::DotPatternProps {
+                        layout: panel_layout,
+                        base,
+                        dots: dot_color,
+                        seed,
+                        ..Default::default()
+                    },
+                    |_cx| Vec::new(),
+                ),
+                1 => magic::grid_pattern(
+                    cx,
+                    magic::GridPatternProps {
+                        layout: panel_layout,
+                        base,
+                        lines: grid_color,
+                        seed,
+                        ..Default::default()
+                    },
+                    |_cx| Vec::new(),
+                ),
+                _ => magic::stripe_pattern(
+                    cx,
+                    magic::StripePatternProps {
+                        layout: panel_layout,
+                        base,
+                        stripes,
+                        motion: magic::PatternMotionProps {
+                            enabled: true,
+                            scroll_px_per_s: (140.0, 0.0),
+                        },
+                        seed,
+                        ..Default::default()
+                    },
+                    |_cx| Vec::new(),
+                ),
+            };
+            panels.push(panel);
+        }
+
+        grid_rows.push(stack::hstack(
+            cx,
+            stack::HStackProps::default()
+                .gap(Space::N4)
+                .layout(LayoutRefinement::default().w_full())
+                .items_start(),
+            |_cx| panels,
+        ));
+    }
+
+    let surface_grid = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .gap(Space::N4)
+            .layout(LayoutRefinement::default().w_full())
+            .items_start(),
+        |cx| {
+            let mut out = Vec::with_capacity(1 + grid_rows.len());
+            out.push(
+                shadcn::typography::p(cx, "Material grid (animated stripes)")
+                    .test_id("ui-gallery-magic-patterns-torture-label"),
+            );
+            out.extend(grid_rows);
+            out
+        },
+    );
+
+    vec![
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap(Space::N6)
+                .layout(LayoutRefinement::default().w_full())
+                .items_start(),
+            |cx| {
+                vec![
+                    shadcn::typography::h4(cx, "Patterns (fill-rate torture)"),
+                    shadcn::typography::p(
+                        cx,
+                        "A large animated Tier B material surface intended for WebGPU perf evidence collection.",
+                    ),
+                    cx.container(
+                        ContainerProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Fill;
+                                layout.size.height = Length::Px(Px(980.0));
+                                layout
+                            },
+                            border: Edges::all(Px(1.0)),
+                            border_color: Some(border),
+                            corner_radii: Corners::all(Px(16.0)),
+                            ..Default::default()
+                        },
+                        |_cx| vec![surface_grid],
+                    )
+                    .test_id("ui-gallery-magic-patterns-torture"),
+                ]
+            },
+        )
+        .test_id("ui-gallery-magic-patterns-torture-root"),
+    ]
+}
+
 pub(in crate::ui) fn preview_magic_sparkles_text(
     cx: &mut ElementContext<'_, App>,
 ) -> Vec<AnyElement> {

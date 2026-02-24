@@ -1,12 +1,11 @@
 use fret_core::{Corners, Edges, Px};
 use fret_runtime::Model;
-use fret_ui::element::{AnyElement, ContainerProps, ResizablePanelGroupProps};
+use fret_ui::element::{AnyElement, ContainerProps, ResizablePanelGroupProps, SemanticsDecoration};
 use fret_ui::{ElementContext, ResizablePanelGroupStyle, Theme, UiHost};
 use fret_ui_kit::LayoutRefinement;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::recipes::resizable as resizable_recipe;
 
-#[derive(Clone)]
 pub struct ResizablePanel {
     min_px: Px,
     layout: LayoutRefinement,
@@ -100,7 +99,7 @@ impl ResizableHandle {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum ResizableEntry {
     Panel(ResizablePanel),
     Handle(ResizableHandle),
@@ -118,7 +117,6 @@ impl From<ResizableHandle> for ResizableEntry {
     }
 }
 
-#[derive(Clone)]
 pub struct ResizablePanelGroup {
     axis: fret_core::Axis,
     model: Model<Vec<f32>>,
@@ -220,10 +218,7 @@ fn resizable_panel_group_with_entries<H: UiHost>(
             }
         }
     }
-    if saw_handles && panels.len() >= 2 {
-        // We currently don't render per-handle elements; handles are painted by the runtime group.
-        // This keeps the shadcn taxonomy surface while preserving a runtime-owned drag contract.
-    }
+    let panels_len = panels.len();
 
     if with_handle {
         // shadcn/ui's `withHandle` adds a visible grip. Fret currently paints a uniform handle,
@@ -232,7 +227,56 @@ fn resizable_panel_group_with_entries<H: UiHost>(
     }
 
     let min_px: Vec<Px> = panels.iter().map(|p| p.min_px).collect();
-    let children: Vec<AnyElement> = panels.into_iter().map(|p| p.into_element(cx)).collect();
+
+    let weights = cx.app.models().get_cloned(&model).unwrap_or_default();
+    let total_weight: f32 = weights.iter().copied().filter(|v| v.is_finite()).sum();
+
+    let handle_orientation = match axis {
+        // Horizontal panel layout => vertical splitter handle line.
+        fret_core::Axis::Horizontal => fret_core::SemanticsOrientation::Vertical,
+        // Vertical panel layout => horizontal splitter handle line.
+        fret_core::Axis::Vertical => fret_core::SemanticsOrientation::Horizontal,
+    };
+
+    let mut children: Vec<AnyElement> = Vec::new();
+    for (panel_ix, panel) in panels.into_iter().enumerate() {
+        children.push(panel.into_element(cx));
+
+        if saw_handles && panels_len >= 2 && panel_ix + 1 < panels_len {
+            let handle_ix = panel_ix;
+
+            let value = if total_weight.is_finite() && total_weight > 0.0 {
+                let mut prefix = 0.0f32;
+                for w in weights.iter().take(handle_ix + 1) {
+                    if w.is_finite() {
+                        prefix += *w;
+                    }
+                }
+                Some((prefix / total_weight) as f64)
+            } else {
+                None
+            };
+
+            let mut decoration = SemanticsDecoration::default()
+                .role(fret_core::SemanticsRole::Splitter)
+                .orientation(handle_orientation)
+                .test_id(format!("resizable.splitter.{handle_ix}"))
+                .label("Resize");
+
+            if let Some(value) = value {
+                decoration = decoration
+                    .numeric_value(value)
+                    .numeric_range(0.0, 1.0)
+                    .numeric_step(0.01)
+                    .numeric_jump(0.1);
+            }
+
+            let handle = cx
+                .hit_test_gate(false, |_cx| Vec::<AnyElement>::new())
+                .attach_semantics(decoration);
+            children.push(handle);
+        }
+    }
 
     let root_layout = {
         let mut root_layout = layout;

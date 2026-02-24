@@ -1,7 +1,8 @@
 use crate::{Theme, UiHost};
 use fret_core::{
-    AppWindowId, Corners, Event, NodeId, Point, Rect, Scene, SemanticsFlags, SemanticsRole, Size,
-    Transform2D, UiServices,
+    AppWindowId, Corners, Event, NodeId, Point, Rect, Scene, SemanticsCheckedState, SemanticsFlags,
+    SemanticsInvalid, SemanticsLive, SemanticsOrientation, SemanticsPressedState, SemanticsRole,
+    Size, Transform2D, UiServices,
 };
 use fret_runtime::{
     CommandId, DefaultAction, DefaultActionSet, Effect, InputContext, Model, ModelId,
@@ -1178,6 +1179,7 @@ pub struct SemanticsCx<'a, H: UiHost> {
     pub(crate) label: &'a mut Option<String>,
     pub(crate) value: &'a mut Option<String>,
     pub(crate) test_id: &'a mut Option<String>,
+    pub(crate) extra: &'a mut fret_core::SemanticsNodeExtra,
     pub(crate) text_selection: &'a mut Option<(u32, u32)>,
     pub(crate) text_composition: &'a mut Option<(u32, u32)>,
     pub(crate) actions: &'a mut fret_core::SemanticsActions,
@@ -1215,6 +1217,55 @@ impl<'a, H: UiHost> SemanticsCx<'a, H> {
         *self.value = Some(value.into());
     }
 
+    pub fn set_placeholder<T: Into<String>>(&mut self, placeholder: Option<T>) {
+        self.extra.placeholder = placeholder.map(Into::into);
+    }
+
+    pub fn set_url<T: Into<String>>(&mut self, url: Option<T>) {
+        self.extra.url = url.map(Into::into);
+    }
+
+    pub fn set_level(&mut self, level: Option<u32>) {
+        self.extra.level = level;
+    }
+
+    pub fn set_orientation(&mut self, orientation: Option<SemanticsOrientation>) {
+        self.extra.orientation = orientation;
+    }
+
+    pub fn clear_orientation(&mut self) {
+        self.extra.orientation = None;
+    }
+
+    pub fn set_numeric_value(&mut self, value: Option<f64>) {
+        self.extra.numeric.value = value;
+    }
+
+    pub fn set_numeric_range(&mut self, min: Option<f64>, max: Option<f64>) {
+        self.extra.numeric.min = min;
+        self.extra.numeric.max = max;
+    }
+
+    pub fn set_numeric_step(&mut self, step: Option<f64>) {
+        self.extra.numeric.step = step;
+    }
+
+    pub fn set_numeric_jump(&mut self, jump: Option<f64>) {
+        self.extra.numeric.jump = jump;
+    }
+
+    pub fn set_scroll_x(&mut self, x: Option<f64>, min: Option<f64>, max: Option<f64>) {
+        self.extra.scroll.x = x;
+        self.extra.scroll.x_min = min;
+        self.extra.scroll.x_max = max;
+    }
+
+    pub fn set_scroll_y(&mut self, y: Option<f64>, min: Option<f64>, max: Option<f64>) {
+        self.extra.scroll.y = y;
+        self.extra.scroll.y_min = min;
+        self.extra.scroll.y_max = max;
+    }
+
     pub fn set_text_selection(&mut self, anchor: u32, focus: u32) {
         *self.text_selection = Some((anchor, focus));
     }
@@ -1240,7 +1291,33 @@ impl<'a, H: UiHost> SemanticsCx<'a, H> {
     }
 
     pub fn set_value_editable(&mut self, editable: bool) {
-        self.actions.set_value = editable;
+        match *self.role {
+            // Text controls use AccessKit's `SetValue` / `ReplaceSelectedText` action surfaces.
+            SemanticsRole::TextField => {
+                self.actions.set_value = editable;
+            }
+            // Range controls generally surface as stepper semantics on platforms. Prefer
+            // Increment/Decrement for sliders, spin buttons, and splitters.
+            SemanticsRole::Slider | SemanticsRole::SpinButton | SemanticsRole::Splitter => {
+                self.actions.increment = editable;
+                self.actions.decrement = editable;
+            }
+            _ => {
+                self.actions.set_value = editable;
+            }
+        }
+    }
+
+    pub fn set_increment_supported(&mut self, supported: bool) {
+        self.actions.increment = supported;
+    }
+
+    pub fn set_decrement_supported(&mut self, supported: bool) {
+        self.actions.decrement = supported;
+    }
+
+    pub fn set_scroll_by_supported(&mut self, supported: bool) {
+        self.actions.scroll_by = supported;
     }
 
     pub fn set_text_selection_supported(&mut self, supported: bool) {
@@ -1249,6 +1326,22 @@ impl<'a, H: UiHost> SemanticsCx<'a, H> {
 
     pub fn set_disabled(&mut self, disabled: bool) {
         self.flags.disabled = disabled;
+    }
+
+    pub fn set_read_only(&mut self, read_only: bool) {
+        self.flags.read_only = read_only;
+    }
+
+    pub fn set_hidden(&mut self, hidden: bool) {
+        self.flags.hidden = hidden;
+    }
+
+    pub fn set_visited(&mut self, visited: bool) {
+        self.flags.visited = visited;
+    }
+
+    pub fn set_multiselectable(&mut self, multiselectable: bool) {
+        self.flags.multiselectable = multiselectable;
     }
 
     pub fn set_selected(&mut self, selected: bool) {
@@ -1261,6 +1354,57 @@ impl<'a, H: UiHost> SemanticsCx<'a, H> {
 
     pub fn set_checked(&mut self, checked: Option<bool>) {
         self.flags.checked = checked;
+    }
+
+    pub fn set_checked_state(&mut self, checked: Option<SemanticsCheckedState>) {
+        self.flags.checked_state = checked;
+        match checked {
+            Some(SemanticsCheckedState::True) => self.flags.checked = Some(true),
+            Some(SemanticsCheckedState::False) => self.flags.checked = Some(false),
+            Some(SemanticsCheckedState::Mixed) => self.flags.checked = None,
+            None => {}
+            _ => {}
+        }
+    }
+
+    pub fn clear_checked_state(&mut self) {
+        self.flags.checked_state = None;
+    }
+
+    pub fn set_pressed_state(&mut self, pressed: Option<SemanticsPressedState>) {
+        self.flags.pressed_state = pressed;
+    }
+
+    pub fn clear_pressed_state(&mut self) {
+        self.flags.pressed_state = None;
+    }
+
+    pub fn set_required(&mut self, required: bool) {
+        self.flags.required = required;
+    }
+
+    pub fn set_invalid(&mut self, invalid: Option<SemanticsInvalid>) {
+        self.flags.invalid = invalid;
+    }
+
+    pub fn clear_invalid(&mut self) {
+        self.flags.invalid = None;
+    }
+
+    pub fn set_busy(&mut self, busy: bool) {
+        self.flags.busy = busy;
+    }
+
+    pub fn set_live(&mut self, live: Option<SemanticsLive>) {
+        self.flags.live = live;
+    }
+
+    pub fn clear_live(&mut self) {
+        self.flags.live = None;
+    }
+
+    pub fn set_live_atomic(&mut self, live_atomic: bool) {
+        self.flags.live_atomic = live_atomic;
     }
 
     pub fn set_active_descendant(&mut self, node: Option<NodeId>) {
@@ -1553,6 +1697,13 @@ pub trait Widget<H: UiHost> {
     ) -> bool {
         false
     }
+    /// Whether this node supports direct "scroll-by" requests (typically for accessibility).
+    fn can_scroll_by(&self) -> bool {
+        false
+    }
+    fn scroll_by(&mut self, _cx: &mut ScrollByCx<'_, H>, _delta: Point) -> ScrollByResult {
+        ScrollByResult::NotHandled
+    }
     /// Whether this node can scroll a focused descendant into view.
     ///
     /// This is a mechanism-only capability used by `UiTree` to implement a minimal
@@ -1582,6 +1733,22 @@ pub trait Widget<H: UiHost> {
         cx.paint_children();
     }
     fn semantics(&mut self, _cx: &mut SemanticsCx<'_, H>) {}
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub enum ScrollByResult {
+    #[default]
+    NotHandled,
+    Handled {
+        did_scroll: bool,
+    },
+}
+
+pub struct ScrollByCx<'a, H: UiHost> {
+    pub app: &'a mut H,
+    pub node: NodeId,
+    pub window: Option<AppWindowId>,
+    pub bounds: Rect,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]

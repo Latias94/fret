@@ -17,10 +17,10 @@ pub(in super::super) fn encode_image(
     if opacity <= 0.0 || group_opacity <= 0.0 {
         return;
     }
-    if renderer.images.get(image).is_none() {
+    if renderer.gpu_resources.image_view(image).is_none() {
         return;
     }
-    let Some(source_px_size) = renderer.images.size_px(image) else {
+    let Some(source_px_size) = renderer.gpu_resources.image_size_px(image) else {
         return;
     };
     let Some(mapped) = fret_core::scene::map_image_object_fit(rect, source_px_size, fit) else {
@@ -47,7 +47,7 @@ pub(in super::super) fn encode_image(
     let first_vertex = state.viewport_vertices.len() as u32;
     let o = (opacity.clamp(0.0, 1.0) * group_opacity).clamp(0.0, 1.0);
     let premul = matches!(
-        renderer.images.alpha_mode(image),
+        renderer.gpu_resources.image_alpha_mode(image),
         Some(AlphaMode::Premultiplied)
     );
     let premul_flag = if premul { 1.0 } else { 0.0 };
@@ -117,7 +117,7 @@ pub(in super::super) fn encode_image_region(
     if opacity <= 0.0 || group_opacity <= 0.0 {
         return;
     }
-    if renderer.images.get(image).is_none() {
+    if renderer.gpu_resources.image_view(image).is_none() {
         return;
     }
     let (x, y, w, h) = rect_to_pixels(rect, state.scale_factor);
@@ -140,7 +140,7 @@ pub(in super::super) fn encode_image_region(
     let first_vertex = state.viewport_vertices.len() as u32;
     let o = (opacity.clamp(0.0, 1.0) * group_opacity).clamp(0.0, 1.0);
     let premul = matches!(
-        renderer.images.alpha_mode(image),
+        renderer.gpu_resources.image_alpha_mode(image),
         Some(AlphaMode::Premultiplied)
     );
     let premul_flag = if premul { 1.0 } else { 0.0 };

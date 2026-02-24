@@ -94,7 +94,7 @@ impl BoundResizablePanelGroup {
         app: &H,
         bounds: Rect,
         children_len: usize,
-    ) -> (Vec<Rect>, Vec<Rect>, Vec<f32>, Vec<f32>, f32) {
+    ) -> (usize, bool, Vec<Rect>, Vec<Rect>, Vec<f32>, Vec<f32>, f32) {
         let raw = match app.models().try_get_cloned(&self.model) {
             Ok(Some(v)) => v,
             Ok(None) => {
@@ -117,16 +117,35 @@ impl BoundResizablePanelGroup {
                 Vec::new()
             }
         };
+
+        // `ResizablePanelGroup` can optionally include per-handle children (for semantics or
+        // additional decorations) in the pattern:
+        // `[panel0, handle0, panel1, handle1, ..., panelN]`.
+        //
+        // Infer the intended panel count from the fractions model when available; this avoids
+        // ambiguity when `children_len == 3` (either 3 panels, or 2 panels + 1 handle child).
+        let mut panel_count = if raw.len() >= 2 {
+            raw.len()
+        } else {
+            children_len
+        };
+        let has_handle_children = children_len == panel_count.saturating_mul(2).saturating_sub(1);
+        if !has_handle_children && children_len != panel_count {
+            panel_count = children_len;
+        }
+
         let layout = compute_resizable_panel_group_layout(
             self.axis,
             bounds,
-            children_len,
+            panel_count,
             raw,
             self.style.gap,
             self.style.hit_thickness,
             &self.min_px,
         );
         (
+            panel_count,
+            has_handle_children,
             layout.panel_rects,
             layout.handle_hit_rects,
             layout.handle_centers,
@@ -157,13 +176,24 @@ impl<H: UiHost> Widget<H> for BoundResizablePanelGroup {
             return;
         }
 
-        let (_panel_rects, handle_rects, handle_centers, sizes, avail) =
-            self.compute_layout(cx.app, cx.bounds, children_len);
+        let (
+            panel_count,
+            _has_handle_children,
+            _panel_rects,
+            handle_rects,
+            handle_centers,
+            sizes,
+            avail,
+        ) = self.compute_layout(cx.app, cx.bounds, children_len);
         self.last_handle_rects = handle_rects;
         self.last_handle_centers = handle_centers;
         self.last_sizes = sizes;
 
-        let mins = self.effective_min_px(children_len, avail);
+        if panel_count < 2 {
+            return;
+        }
+
+        let mins = self.effective_min_px(panel_count, avail);
 
         match pe {
             fret_core::PointerEvent::Move { position, .. } => {
@@ -278,23 +308,70 @@ impl<H: UiHost> Widget<H> for BoundResizablePanelGroup {
 
         self.last_bounds = cx.bounds;
         let children_len = cx.children.len();
-        let (panel_rects, handle_rects, handle_centers, sizes, _avail) =
-            self.compute_layout(cx.app, cx.bounds, children_len);
+        let (
+            panel_count,
+            has_handle_children,
+            panel_rects,
+            handle_rects,
+            handle_centers,
+            sizes,
+            _avail,
+        ) = self.compute_layout(cx.app, cx.bounds, children_len);
         self.last_handle_rects = handle_rects;
         self.last_handle_centers = handle_centers;
         self.last_sizes = sizes;
 
+        if panel_count < 1 {
+            return cx.available;
+        }
+
         // Avoid registering viewport roots during "probe" layout passes (important for
         // scroll/virtualized descendants).
         if cx.pass_kind == crate::layout_pass::LayoutPassKind::Final {
-            for (&child, &rect) in cx.children.iter().zip(panel_rects.iter()) {
+            for (panel_ix, &rect) in panel_rects.iter().enumerate() {
+                let child_ix = if has_handle_children {
+                    panel_ix.saturating_mul(2)
+                } else {
+                    panel_ix
+                };
+                let Some(&child) = cx.children.get(child_ix) else {
+                    continue;
+                };
                 let _ = cx.layout_viewport_root(child, rect);
+            }
+
+            if has_handle_children {
+                for (handle_ix, &rect) in self.last_handle_rects.iter().enumerate() {
+                    let child_ix = handle_ix.saturating_mul(2).saturating_add(1);
+                    let Some(&child) = cx.children.get(child_ix) else {
+                        continue;
+                    };
+                    let _ = cx.layout_in(child, rect);
+                }
             }
             return cx.available;
         }
 
-        for (&child, &rect) in cx.children.iter().zip(panel_rects.iter()) {
+        for (panel_ix, &rect) in panel_rects.iter().enumerate() {
+            let child_ix = if has_handle_children {
+                panel_ix.saturating_mul(2)
+            } else {
+                panel_ix
+            };
+            let Some(&child) = cx.children.get(child_ix) else {
+                continue;
+            };
             let _ = cx.layout_in(child, rect);
+        }
+
+        if has_handle_children {
+            for (handle_ix, &rect) in self.last_handle_rects.iter().enumerate() {
+                let child_ix = handle_ix.saturating_mul(2).saturating_add(1);
+                let Some(&child) = cx.children.get(child_ix) else {
+                    continue;
+                };
+                let _ = cx.layout_in(child, rect);
+            }
         }
 
         cx.available

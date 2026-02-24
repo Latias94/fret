@@ -510,7 +510,7 @@ impl Dialog {
 }
 
 /// shadcn/ui `DialogContent` (v4).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct DialogContent {
     children: Vec<AnyElement>,
     chrome: ChromeRefinement,
@@ -727,7 +727,7 @@ impl DialogClose {
 }
 
 /// shadcn/ui `DialogHeader` (v4).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct DialogHeader {
     children: Vec<AnyElement>,
 }
@@ -751,7 +751,7 @@ impl DialogHeader {
 }
 
 /// shadcn/ui `DialogFooter` (v4).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct DialogFooter {
     children: Vec<AnyElement>,
 }
@@ -817,7 +817,12 @@ impl DialogTitle {
             .text_color(ColorRef::Color(fg))
             .wrap(TextWrap::Word)
             .overflow(TextOverflow::Clip)
-            .into_element(cx);
+            .into_element(cx)
+            .attach_semantics(
+                SemanticsDecoration::default()
+                    .role(SemanticsRole::Heading)
+                    .level(2),
+            );
         crate::a11y_modal::register_modal_title(cx.app, title.id);
         title
     }
@@ -3923,8 +3928,9 @@ mod tests {
             .nodes
             .iter()
             .find(|n| {
-                n.role == fret_core::SemanticsRole::Text
+                n.role == fret_core::SemanticsRole::Heading
                     && n.label.as_deref() == Some("Dialog Title")
+                    && n.extra.level == Some(2)
             })
             .expect("title semantics node");
         let description = snap

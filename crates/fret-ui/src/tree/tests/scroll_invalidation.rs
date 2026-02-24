@@ -95,6 +95,85 @@ fn scroll_wheel_invalidation_is_hit_test_only() {
 }
 
 #[test]
+fn accessibility_scroll_by_invalidation_is_hit_test_only() {
+    let mut app = crate::test_host::TestHost::new();
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let mut services = FakeUiServices;
+
+    let scroll_handle = crate::scroll::ScrollHandle::default();
+
+    let root = declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "scroll-by",
+        |cx| {
+            let handle = scroll_handle.clone();
+            let mut scroll_layout = crate::element::LayoutStyle::default();
+            scroll_layout.size.width = crate::element::Length::Fill;
+            scroll_layout.size.height = crate::element::Length::Fill;
+            scroll_layout.overflow = crate::element::Overflow::Clip;
+
+            vec![cx.scroll(
+                crate::element::ScrollProps {
+                    layout: scroll_layout,
+                    axis: crate::element::ScrollAxis::Y,
+                    scroll_handle: Some(handle),
+                    ..Default::default()
+                },
+                |cx| {
+                    vec![cx.column(crate::element::ColumnProps::default(), |cx| {
+                        (0..100)
+                            .map(|i| cx.text(format!("row-{i}")))
+                            .collect::<Vec<_>>()
+                    })]
+                },
+            )]
+        },
+    );
+
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let scroll_node = ui.children(root)[0];
+
+    let ids: Vec<NodeId> = ui.nodes.keys().collect();
+    for id in ids {
+        ui.test_clear_node_invalidations(id);
+    }
+
+    assert!(
+        ui.scroll_by(&mut app, scroll_node, Point::new(Px(0.0), Px(60.0))),
+        "expected scroll_by to scroll"
+    );
+
+    assert!(
+        scroll_handle.offset().y.0 > 0.01,
+        "expected scroll_by to update scroll offset"
+    );
+
+    let scroll_flags = ui.nodes[scroll_node].invalidation;
+    assert!(
+        !scroll_flags.layout,
+        "expected scroll_by to avoid layout invalidation"
+    );
+    assert!(
+        scroll_flags.hit_test && scroll_flags.paint,
+        "expected scroll_by to invalidate hit-test + paint"
+    );
+}
+
+#[test]
 fn virtual_list_wheel_scroll_is_hit_test_only_within_overscan_window() {
     let mut app = crate::test_host::TestHost::new();
     let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();

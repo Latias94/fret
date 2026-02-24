@@ -515,7 +515,7 @@ pub struct NavigationMenuViewportOverlayRequestArgs {
     pub width_tracks_anchor: bool,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct NavigationMenuViewportOverlayRenderOutput {
     pub opacity: f32,
     pub transform: Transform2D,

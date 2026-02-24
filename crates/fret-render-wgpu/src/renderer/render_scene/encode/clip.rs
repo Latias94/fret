@@ -1,4 +1,4 @@
-use super::state::{ClipPop, EncodeState, bounds_of_quad_points, transform_quad_points_px};
+use super::state::{EncodeState, bounds_of_quad_points, transform_quad_points_px};
 use super::*;
 
 use fret_core::geometry::Corners;

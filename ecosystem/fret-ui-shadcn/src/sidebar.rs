@@ -772,7 +772,7 @@ impl SidebarProvider {
 ///
 /// This is implemented as a declarative composition surface (not a retained widget), so it can
 /// fully participate in Tailwind-like layout/style refinements.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Sidebar {
     children: Vec<AnyElement>,
     collapsed: bool,
@@ -1324,10 +1324,11 @@ impl SidebarTrigger {
                 }))
             };
 
-        let mut trigger = Button::new("Toggle Sidebar")
+        let mut trigger = Button::new("")
+            .a11y_label("Toggle Sidebar")
             .variant(ButtonVariant::Ghost)
             .size(ButtonSize::Icon)
-            .children([decl_icon::icon(cx, IconId::new_static("lucide.panel-left"))])
+            .icon(IconId::new_static("lucide.panel-left"))
             .disabled(self.disabled)
             .refine_style(self.chrome)
             .refine_layout(
@@ -1514,7 +1515,7 @@ impl SidebarRail {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct SidebarInset {
     children: Vec<AnyElement>,
     chrome: ChromeRefinement,
@@ -1743,7 +1744,7 @@ impl SidebarSeparator {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct SidebarHeader {
     children: Vec<AnyElement>,
 }
@@ -1769,7 +1770,7 @@ impl SidebarHeader {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct SidebarFooter {
     children: Vec<AnyElement>,
 }
@@ -1795,7 +1796,7 @@ impl SidebarFooter {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct SidebarContent {
     children: Vec<AnyElement>,
     collapsed: bool,
@@ -1850,7 +1851,7 @@ impl SidebarContent {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct SidebarGroup {
     children: Vec<AnyElement>,
 }
@@ -1947,7 +1948,6 @@ impl SidebarGroupLabel {
     }
 }
 
-#[derive(Clone)]
 pub struct SidebarGroupAction {
     label: Arc<str>,
     children: Vec<AnyElement>,
@@ -2160,13 +2160,12 @@ impl SidebarGroupAction {
                 chrome.merge(user_chrome.clone()),
                 content_layout.clone(),
             );
-            let children = children.clone();
             vec![cx.container(props, move |_cx| children)]
         })
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct SidebarGroupContent {
     children: Vec<AnyElement>,
     chrome: ChromeRefinement,
@@ -2207,7 +2206,7 @@ impl SidebarGroupContent {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct SidebarMenu {
     children: Vec<AnyElement>,
 }
@@ -2240,7 +2239,7 @@ impl SidebarMenu {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct SidebarMenuItem {
     children: Vec<AnyElement>,
     open: bool,
@@ -2320,6 +2319,11 @@ impl SidebarMenuItem {
 
     pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
         self.children = children.into_iter().collect();
+        self
+    }
+
+    pub fn extend_children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children.extend(children);
         self
     }
 
@@ -2435,7 +2439,6 @@ impl SidebarMenuItem {
     }
 }
 
-#[derive(Clone)]
 pub struct SidebarMenuAction {
     label: Arc<str>,
     children: Vec<AnyElement>,
@@ -2674,7 +2677,6 @@ impl SidebarMenuAction {
                 chrome.merge(user_chrome.clone()),
                 content_layout.clone(),
             );
-            let children = children.clone();
             vec![cx.container(props, move |_cx| children)]
         })
     }
@@ -2905,7 +2907,7 @@ impl SidebarMenuSkeleton {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct SidebarMenuSub {
     children: Vec<AnyElement>,
     collapsed: bool,
@@ -2981,7 +2983,7 @@ impl SidebarMenuSub {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct SidebarMenuSubItem {
     children: Vec<AnyElement>,
     test_id: Option<Arc<str>>,
@@ -3038,7 +3040,6 @@ impl SidebarMenuSubItem {
     }
 }
 
-#[derive(Clone)]
 pub struct SidebarMenuSubButton {
     label: Arc<str>,
     children: Option<Vec<AnyElement>>,
@@ -3208,7 +3209,7 @@ impl SidebarMenuSubButton {
             SemanticsRole::Button
         };
         let href_for_semantics = if !as_child { href.clone() } else { None };
-        let slot_children = self.children.clone();
+        let slot_children = self.children;
         let disabled = self.disabled
             || on_click
                 .as_ref()
@@ -3298,10 +3299,10 @@ impl SidebarMenuSubButton {
                     ..Default::default()
                 };
 
-                let slot_children = slot_children.clone();
+                let slot_children = slot_children;
                 vec![cx.flex(row, move |cx| {
                     if as_child {
-                        if let Some(children) = slot_children.clone() {
+                        if let Some(children) = slot_children {
                             return children;
                         }
                     }
@@ -3362,7 +3363,6 @@ impl SidebarMenuSubButton {
     }
 }
 
-#[derive(Clone)]
 pub struct SidebarMenuButton {
     label: Arc<str>,
     children: Option<Vec<AnyElement>>,
@@ -3506,6 +3506,7 @@ impl SidebarMenuButton {
         &self,
         cx: &mut ElementContext<'_, H>,
         expanded_progress: f32,
+        slot_children: Option<Vec<AnyElement>>,
     ) -> AnyElement {
         let (ring, pressable_layout) = {
             let theme = Theme::global(&*cx.app);
@@ -3541,7 +3542,6 @@ impl SidebarMenuButton {
             SemanticsRole::Button
         };
         let href_for_semantics = if !as_child { href.clone() } else { None };
-        let slot_children = self.children.clone();
         let disabled = self.disabled
             || on_click
                 .as_ref()
@@ -3660,10 +3660,10 @@ impl SidebarMenuButton {
                 let label = label.clone();
                 let icon = icon.clone();
                 let label_opacity = expanded_progress;
-                let slot_children = slot_children.clone();
+                let slot_children = slot_children;
                 vec![cx.flex(row, move |cx| {
                     if as_child {
-                        if let Some(children) = slot_children.clone() {
+                        if let Some(children) = slot_children {
                             return children;
                         }
                     }
@@ -3741,7 +3741,8 @@ impl SidebarMenuButton {
 
         let motion = sidebar_collapse_motion(cx, collapsed);
         let expanded_progress = motion.progress;
-        let button = this.build_button(cx, expanded_progress);
+        let slot_children = this.children.take();
+        let button = this.build_button(cx, expanded_progress, slot_children);
 
         if !collapsed || expanded_progress > 0.01 {
             return button;
@@ -4579,9 +4580,7 @@ mod tests {
                     .placeholder("Search")
                     .into_element(cx);
                 let separator = SidebarSeparator::new().into_element(cx);
-                vec![cx.container(ContainerProps::default(), move |_cx| {
-                    vec![input.clone(), separator.clone()]
-                })]
+                vec![cx.container(ContainerProps::default(), move |_cx| vec![input, separator])]
             },
         );
         ui.set_root(root);
@@ -4730,8 +4729,7 @@ mod tests {
                 let button = SidebarMenuButton::new("Inbox")
                     .test_id("sidebar-menu-button")
                     .into_element(cx);
-                let item = SidebarMenuItem::new(button.clone())
-                    .children([button])
+                let item = SidebarMenuItem::new(button)
                     .test_id("sidebar-menu-item")
                     .into_element(cx);
                 let menu = SidebarMenu::new([item]).into_element(cx);
@@ -5092,8 +5090,8 @@ mod tests {
                         .size(size)
                         .test_id("sidebar-menu-action")
                         .into_element(cx);
-                    let item = SidebarMenuItem::new(button.clone())
-                        .children([button, action])
+                    let item = SidebarMenuItem::new(button)
+                        .extend_children([action])
                         .into_element(cx);
                     let menu = SidebarMenu::new([item]).into_element(cx);
                     vec![menu]
@@ -5162,8 +5160,8 @@ mod tests {
                         let action = SidebarMenuAction::new(Vec::<AnyElement>::new())
                             .test_id(test_id)
                             .into_element(cx);
-                        let item = SidebarMenuItem::new(button.clone())
-                            .children([button, action])
+                        let item = SidebarMenuItem::new(button)
+                            .extend_children([action])
                             .into_element(cx);
                         vec![SidebarMenu::new([item]).into_element(cx)]
                     })
@@ -5248,8 +5246,8 @@ mod tests {
                         let badge = SidebarMenuBadge::new("12")
                             .test_id("sidebar-menu-badge")
                             .into_element(cx);
-                        let item = SidebarMenuItem::new(button.clone())
-                            .children([button, action, badge])
+                        let item = SidebarMenuItem::new(button)
+                            .extend_children([action, badge])
                             .into_element(cx);
 
                         let menu = SidebarMenu::new([item]).into_element(cx);
@@ -5676,9 +5674,9 @@ mod tests {
                     .show_on_hover(true)
                     .test_id("sidebar-menu-action")
                     .into_element(cx);
-                let item = SidebarMenuItem::new(button.clone())
+                let item = SidebarMenuItem::new(button)
                     .open(true)
-                    .children([button, action])
+                    .extend_children([action])
                     .test_id("sidebar-menu-item")
                     .into_element(cx);
                 let menu = SidebarMenu::new([item]).into_element(cx);
@@ -5857,8 +5855,8 @@ mod tests {
                     .on_activate(on_activate)
                     .test_id("sidebar-menu-action")
                     .into_element(cx);
-                let item = SidebarMenuItem::new(button.clone())
-                    .children([button, action])
+                let item = SidebarMenuItem::new(button)
+                    .extend_children([action])
                     .into_element(cx);
                 let menu = SidebarMenu::new([item]).into_element(cx);
                 vec![menu]
@@ -6481,8 +6479,7 @@ mod tests {
                 let sub_button = SidebarMenuSubButton::new("Child")
                     .test_id("sidebar-menu-sub-button")
                     .into_element(cx);
-                let sub_item = SidebarMenuSubItem::new(sub_button.clone())
-                    .children([sub_button])
+                let sub_item = SidebarMenuSubItem::new(sub_button)
                     .test_id("sidebar-menu-sub-item")
                     .into_element(cx);
                 let sub_menu = SidebarMenuSub::new([sub_item]).into_element(cx);

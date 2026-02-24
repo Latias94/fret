@@ -5,11 +5,14 @@ pub use crate::children;
 
 use smallvec::SmallVec;
 
-use fret_core::{Axis, Edges, FontId, FontWeight, Px, TextAlign, TextOverflow, TextWrap};
+use fret_core::{
+    AttributedText, Axis, Edges, FontId, FontWeight, Px, TextAlign, TextOverflow, TextSpan,
+    TextWrap,
+};
 use fret_ui::element::{
     AnyElement, ContainerProps, FlexProps, InsetStyle, LayoutStyle, Length, Overflow,
     PositionStyle, ScrollAxis, ScrollProps, ScrollbarAxis, ScrollbarProps, ScrollbarStyle,
-    SizeStyle, StackProps, TextProps,
+    SelectableTextProps, SizeStyle, StackProps, TextProps,
 };
 use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -898,6 +901,7 @@ pub struct TextBox {
     pub(crate) layout: LayoutRefinement,
     pub(crate) text: Arc<str>,
     pub(crate) preset: TextPreset,
+    pub(crate) selectable: bool,
     pub(crate) font_override: Option<FontId>,
     pub(crate) size_override: Option<Px>,
     pub(crate) line_height_override: Option<Px>,
@@ -926,6 +930,7 @@ impl TextBox {
             layout: LayoutRefinement::default(),
             text: text.into(),
             preset,
+            selectable: false,
             font_override: None,
             size_override: None,
             line_height_override: None,
@@ -971,6 +976,7 @@ impl UiIntoElement for TextBox {
             overflow,
             align,
             vertical_placement_override,
+            selectable,
         } = self;
 
         let (mut style, mut layout, default_label_line_height, resolved_color) = {
@@ -989,9 +995,14 @@ impl UiIntoElement for TextBox {
 
             let layout = decl_style::layout_style(theme, layout_refinement);
 
+            let inherited_color = crate::declarative::current_color::inherited_current_color(cx)
+                .as_ref()
+                .map(|c| c.resolve(theme));
+
             let resolved_color = color_override
                 .as_ref()
                 .map(|c| c.resolve(theme))
+                .or(inherited_color)
                 .or_else(|| {
                     (preset == TextPreset::Label).then(|| {
                         theme
@@ -1041,16 +1052,32 @@ impl UiIntoElement for TextBox {
             layout.size.height = Length::Px(line_height);
         }
 
-        cx.text_props(TextProps {
-            layout,
-            text,
-            style: Some(style),
-            color: resolved_color,
-            wrap,
-            overflow,
-            align,
-            ink_overflow: ink_overflow_override.unwrap_or_default(),
-        })
+        if selectable {
+            let spans: Arc<[TextSpan]> = Arc::from([TextSpan::new(text.len())]);
+            let rich = AttributedText::new(text, spans);
+            cx.selectable_text_props(SelectableTextProps {
+                layout,
+                rich,
+                style: Some(style),
+                color: resolved_color,
+                wrap,
+                overflow,
+                align,
+                ink_overflow: ink_overflow_override.unwrap_or_default(),
+                interactive_spans: Arc::from([]),
+            })
+        } else {
+            cx.text_props(TextProps {
+                layout,
+                text,
+                style: Some(style),
+                color: resolved_color,
+                wrap,
+                overflow,
+                align,
+                ink_overflow: ink_overflow_override.unwrap_or_default(),
+            })
+        }
     }
 }
 
@@ -1074,6 +1101,26 @@ pub fn text_block<H: UiHost>(
     content: impl Into<Arc<str>>,
 ) -> UiBuilder<TextBox> {
     text(cx, content).w_full()
+}
+
+/// Returns a patchable selectable text builder (drag-to-select + `edit.copy`).
+///
+/// Prefer this for read-only values (paths/IDs/snippets) and documentation-like content.
+/// Avoid using it inside pressable/clickable rows: it intentionally captures left-drag selection
+/// gestures and stops propagation (use a dedicated copy button instead).
+pub fn selectable_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> UiBuilder<TextBox> {
+    crate::ui::text(cx, text).selectable_on()
+}
+
+/// Returns a patchable selectable block text builder (full-width; drag-to-select + `edit.copy`).
+pub fn selectable_text_block<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    content: impl Into<Arc<str>>,
+) -> UiBuilder<TextBox> {
+    selectable_text(cx, content).w_full()
 }
 
 /// Returns a patchable label builder (single-line, medium weight).
@@ -1134,7 +1181,13 @@ impl UiIntoElement for RawTextBox {
         let (layout, color) = {
             let theme = Theme::global(&*cx.app);
             let layout = decl_style::layout_style(theme, layout_refinement);
-            let color = color_override.as_ref().map(|c| c.resolve(theme));
+            let inherited_color = crate::declarative::current_color::inherited_current_color(cx)
+                .as_ref()
+                .map(|c| c.resolve(theme));
+            let color = color_override
+                .as_ref()
+                .map(|c| c.resolve(theme))
+                .or(inherited_color);
             (layout, color)
         };
 
@@ -1164,6 +1217,9 @@ mod tests {
     use super::*;
     use crate::UiExt;
     use crate::{LengthRefinement, MetricRef};
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Rect, Size};
+    use fret_ui::element::ElementKind;
 
     // Compile-only: ensure `ui::*` layout constructors accept `UiIntoElement` children
     // (e.g. `UiBuilder<TextBox>`) without requiring call-site `.into_element(cx)`.
@@ -1213,5 +1269,54 @@ mod tests {
         let padding = stack.chrome.padding.expect("expected padding refinement");
         assert!(matches!(padding.left, Some(MetricRef::Token { .. })));
         assert!(stack.layout.size.is_some());
+    }
+
+    #[test]
+    fn text_box_selectable_renders_selectable_text_element() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let el = text(cx, "hello").selectable_on().into_element(cx);
+            assert!(
+                matches!(el.kind, ElementKind::SelectableText(_)),
+                "expected ui::text(...).selectable_on() to render a SelectableText element"
+            );
+        });
+    }
+
+    #[test]
+    fn text_inherits_current_color_when_available() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        let expected = fret_core::Color {
+            r: 0.25,
+            g: 0.5,
+            b: 0.75,
+            a: 1.0,
+        };
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            crate::declarative::current_color::with_current_color_provider(
+                cx,
+                crate::ColorRef::Color(expected),
+                |cx| {
+                    let el = text(cx, "hello").into_element(cx);
+                    let ElementKind::Text(props) = el.kind else {
+                        panic!("expected Text element");
+                    };
+                    assert_eq!(props.color, Some(expected));
+                },
+            );
+        });
     }
 }

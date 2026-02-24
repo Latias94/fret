@@ -4,31 +4,33 @@ use crate::ui::doc_layout::{self, DocSection};
 
 pub(super) fn preview_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let theme = Theme::global(&*cx.app).snapshot();
-
     let outline_fg = ColorRef::Color(theme.color_token("foreground"));
-
-    let icon = |cx: &mut ElementContext<'_, App>, name: &'static str, fg: ColorRef| {
-        shadcn::icon::icon_with(cx, fret_icons::IconId::new_static(name), None, Some(fg))
-    };
 
     let variants = {
         doc_layout::wrap_controls_row_snapshot(cx, &theme, Space::N2, |cx| {
             vec![
-                shadcn::Button::new("Default").into_element(cx),
+                shadcn::Button::new("Default")
+                    .test_id("ui-gallery-button-variant-default")
+                    .into_element(cx),
                 shadcn::Button::new("Secondary")
                     .variant(shadcn::ButtonVariant::Secondary)
+                    .test_id("ui-gallery-button-variant-secondary")
                     .into_element(cx),
                 shadcn::Button::new("Destructive")
                     .variant(shadcn::ButtonVariant::Destructive)
+                    .test_id("ui-gallery-button-variant-destructive")
                     .into_element(cx),
                 shadcn::Button::new("Outline")
                     .variant(shadcn::ButtonVariant::Outline)
+                    .test_id("ui-gallery-button-variant-outline")
                     .into_element(cx),
                 shadcn::Button::new("Ghost")
                     .variant(shadcn::ButtonVariant::Ghost)
+                    .test_id("ui-gallery-button-variant-ghost")
                     .into_element(cx),
                 shadcn::Button::new("Link")
                     .variant(shadcn::ButtonVariant::Link)
+                    .test_id("ui-gallery-button-variant-link")
                     .into_element(cx),
             ]
         })
@@ -68,7 +70,8 @@ pub(super) fn preview_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
                     shadcn::Button::new("")
                         .variant(shadcn::ButtonVariant::Outline)
                         .size(icon_size)
-                        .children([icon(cx, "lucide.arrow-up-right", outline_fg.clone())])
+                        .a11y_label("Open")
+                        .icon(fret_icons::IconId::new_static("lucide.arrow-up-right"))
                         .into_element(cx),
                 ]
             })
@@ -112,17 +115,20 @@ pub(super) fn preview_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
                 shadcn::Button::new("")
                     .variant(shadcn::ButtonVariant::Outline)
                     .size(shadcn::ButtonSize::IconSm)
-                    .children([icon(cx, "lucide.arrow-up-right", outline_fg.clone())])
+                    .a11y_label("Open")
+                    .icon(fret_icons::IconId::new_static("lucide.arrow-up-right"))
                     .into_element(cx),
                 shadcn::Button::new("")
                     .variant(shadcn::ButtonVariant::Outline)
                     .size(shadcn::ButtonSize::Icon)
-                    .children([icon(cx, "lucide.arrow-up-right", outline_fg.clone())])
+                    .a11y_label("Open")
+                    .icon(fret_icons::IconId::new_static("lucide.arrow-up-right"))
                     .into_element(cx),
                 shadcn::Button::new("")
                     .variant(shadcn::ButtonVariant::Outline)
                     .size(shadcn::ButtonSize::IconLg)
-                    .children([icon(cx, "lucide.arrow-up-right", outline_fg.clone())])
+                    .a11y_label("Open")
+                    .icon(fret_icons::IconId::new_static("lucide.arrow-up-right"))
                     .into_element(cx),
             ]
         })
@@ -133,16 +139,7 @@ pub(super) fn preview_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
         shadcn::Button::new("New Branch")
             .variant(shadcn::ButtonVariant::Outline)
             .size(shadcn::ButtonSize::Sm)
-            .children([
-                icon(cx, "lucide.git-branch", outline_fg.clone())
-                    .test_id("ui-gallery-button-with-icon-icon"),
-                ui::text(cx, "New Branch")
-                    .font_medium()
-                    .nowrap()
-                    .text_color(outline_fg.clone())
-                    .into_element(cx)
-                    .test_id("ui-gallery-button-with-icon-label"),
-            ])
+            .leading_icon(fret_icons::IconId::new_static("lucide.git-branch"))
             .into_element(cx)
             .test_id("ui-gallery-button-with-icon")
     };
@@ -225,9 +222,10 @@ pub(super) fn preview_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
                 .code(
                     "rust",
                     r#"shadcn::Button::new("")
+    .a11y_label("Open")
     .variant(shadcn::ButtonVariant::Outline)
     .size(shadcn::ButtonSize::Icon)
-    .children([shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.arrow-up-right"))])
+    .icon(fret_icons::IconId::new_static("lucide.arrow-up-right"))
     .into_element(cx);"#,
                 ),
             DocSection::new("With Icon", with_icon)
@@ -236,7 +234,7 @@ pub(super) fn preview_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
                     "rust",
                     r#"shadcn::Button::new("New Branch")
     .variant(shadcn::ButtonVariant::Outline)
-    .children([shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.git-branch"))])
+    .leading_icon(fret_icons::IconId::new_static("lucide.git-branch"))
     .into_element(cx);"#,
                 ),
             DocSection::new("Loading", loading)

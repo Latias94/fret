@@ -3,17 +3,14 @@ use super::super::*;
 use crate::ui::doc_layout::{self, DocSection};
 
 pub(super) fn preview_toggle_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    let icon_item = |cx: &mut ElementContext<'_, App>, value: &'static str, label: &'static str| {
-        shadcn::ToggleGroupItem::new(
+    let icon_item = |value: &'static str, label: &'static str| {
+        shadcn::ToggleGroupItem::icon(
             value,
-            [shadcn::icon::icon(
-                cx,
-                fret_icons::IconId::new_static(match value {
-                    "bold" => "lucide.bold",
-                    "italic" => "lucide.italic",
-                    _ => "lucide.underline",
-                }),
-            )],
+            IconId::new_static(match value {
+                "bold" => "lucide.bold",
+                "italic" => "lucide.italic",
+                _ => "lucide.underline",
+            }),
         )
         .a11y_label(label)
     };
@@ -25,9 +22,9 @@ pub(super) fn preview_toggle_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
     let demo = shadcn::ToggleGroup::multiple_uncontrolled(["bold", "italic"])
         .variant(shadcn::ToggleVariant::Outline)
         .items([
-            icon_item(cx, "bold", "Toggle bold"),
-            icon_item(cx, "italic", "Toggle italic"),
-            icon_item(cx, "underline", "Toggle underline"),
+            icon_item("bold", "Toggle bold"),
+            icon_item("italic", "Toggle italic"),
+            icon_item("underline", "Toggle underline"),
         ])
         .into_element(cx)
         .test_id("ui-gallery-toggle-group-demo");
@@ -129,9 +126,9 @@ pub(super) fn preview_toggle_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
         .orientation(fret_ui_kit::primitives::toggle_group::ToggleGroupOrientation::Vertical)
         .spacing(Space::N1)
         .items([
-            icon_item(cx, "bold", "Toggle bold"),
-            icon_item(cx, "italic", "Toggle italic"),
-            icon_item(cx, "underline", "Toggle underline"),
+            icon_item("bold", "Toggle bold"),
+            icon_item("italic", "Toggle italic"),
+            icon_item("underline", "Toggle underline"),
         ])
         .into_element(cx)
         .test_id("ui-gallery-toggle-group-vertical");
@@ -140,9 +137,9 @@ pub(super) fn preview_toggle_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
         .disabled(true)
         .variant(shadcn::ToggleVariant::Outline)
         .items([
-            icon_item(cx, "bold", "Toggle bold"),
-            icon_item(cx, "italic", "Toggle italic"),
-            icon_item(cx, "underline", "Toggle underline"),
+            icon_item("bold", "Toggle bold"),
+            icon_item("italic", "Toggle italic"),
+            icon_item("underline", "Toggle underline"),
         ])
         .into_element(cx)
         .test_id("ui-gallery-toggle-group-disabled");
@@ -183,8 +180,12 @@ pub(super) fn preview_toggle_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
                     r#"shadcn::ToggleGroup::multiple_uncontrolled(["bold", "italic"])
     .variant(shadcn::ToggleVariant::Outline)
     .items([
-        shadcn::ToggleGroupItem::new("bold", [shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.bold"))]),
-        shadcn::ToggleGroupItem::new("italic", [shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.italic"))]),
+        shadcn::ToggleGroupItem::icon("bold", IconId::new_static("lucide.bold"))
+            .a11y_label("Toggle bold"),
+        shadcn::ToggleGroupItem::icon("italic", IconId::new_static("lucide.italic"))
+            .a11y_label("Toggle italic"),
+        shadcn::ToggleGroupItem::icon("underline", IconId::new_static("lucide.underline"))
+            .a11y_label("Toggle underline"),
     ])
     .into_element(cx);"#,
                 ),

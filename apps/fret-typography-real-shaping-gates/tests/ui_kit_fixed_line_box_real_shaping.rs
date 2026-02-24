@@ -1,4 +1,4 @@
-use fret_core::{FontId, Px, TextConstraints, TextOverflow, TextWrap};
+use fret_core::{FontId, Px, TextConstraints, TextInputRef, TextOverflow, TextWrap};
 use fret_render_text::parley_shaper::ParleyShaper;
 
 fn shaper_with_bundled_fonts() -> ParleyShaper {
@@ -33,7 +33,7 @@ fn fixed_line_box_keeps_metrics_height_and_baseline_stable_across_fallback_runs(
     let scale = fret_render_text::effective_text_scale_factor(constraints.scale_factor);
 
     let mut baseline_for = |text: &str| {
-        let input = fret_core::TextInputRef::plain(text, &style);
+        let input = TextInputRef::plain(text, &style);
         let wrapped =
             fret_render_text::wrapper::wrap_with_constraints(&mut shaper, input, constraints);
         let prepared = fret_render_text::prepare_layout::prepare_layout_from_wrapped(

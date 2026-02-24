@@ -284,7 +284,7 @@ pub(super) fn paint_to_gpu(
 
             state.material_paints_used = state.material_paints_used.saturating_add(1);
             if is_new_distinct {
-                state.material_seen.push(id);
+                state.material_seen.insert(id);
                 *state.material_distinct = state.material_seen.len() as u64;
             }
 

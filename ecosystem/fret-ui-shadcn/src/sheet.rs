@@ -538,7 +538,7 @@ impl Sheet {
 }
 
 /// shadcn/ui `SheetContent` (v4).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct SheetContent {
     children: Vec<AnyElement>,
     chrome: ChromeRefinement,
@@ -679,7 +679,7 @@ impl SheetContent {
 }
 
 /// shadcn/ui `SheetHeader` (v4).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct SheetHeader {
     children: Vec<AnyElement>,
 }
@@ -703,7 +703,7 @@ impl SheetHeader {
 }
 
 /// shadcn/ui `SheetFooter` (v4).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct SheetFooter {
     children: Vec<AnyElement>,
 }

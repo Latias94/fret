@@ -7,6 +7,7 @@ use fret_ui::SvgSource;
 use fret_ui::element::SvgIconProps;
 use fret_ui::{ElementContext, Theme, UiHost};
 
+use super::current_color;
 use super::style;
 use crate::{ColorRef, LayoutRefinement};
 
@@ -127,6 +128,7 @@ pub fn icon_with<H: UiHost>(
         let theme = Theme::global(&*cx.app);
         let size = size.unwrap_or(Px(16.0));
         let color: Color = color
+            .or_else(|| current_color::inherited_current_color(cx))
             .map(|c| c.resolve(theme))
             .or_else(|| theme.color_by_key("muted-foreground"))
             .unwrap_or_else(|| theme.color_token("muted-foreground"));
@@ -252,5 +254,40 @@ mod tests {
         let mut panicking_services = FakeUiServices::default();
         let _ = props.svg.resolve(&mut panicking_services);
         assert!(panicking_services.registered.is_empty());
+    }
+
+    #[test]
+    fn icon_inherits_current_color_when_available() {
+        let icon_id = IconId::new_static("ui.close");
+
+        let mut app = fret_app::App::new();
+        let mut runtime = ElementRuntime::default();
+        let window = fret_core::AppWindowId::default();
+        let bounds = Rect::new(
+            fret_core::Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+            Size::new(fret_core::Px(100.0), fret_core::Px(100.0)),
+        );
+        let mut cx =
+            ElementContext::new_for_root_name(&mut app, &mut runtime, window, bounds, "test");
+
+        let expected = Color {
+            r: 0.25,
+            g: 0.5,
+            b: 0.75,
+            a: 1.0,
+        };
+
+        super::current_color::with_current_color_provider(
+            &mut cx,
+            ColorRef::Color(expected),
+            |cx| {
+                let el = icon(cx, icon_id);
+                let fret_ui::element::ElementKind::SvgIcon(props) = el.kind else {
+                    panic!("expected SvgIcon element");
+                };
+
+                assert_eq!(props.color, expected);
+            },
+        );
     }
 }

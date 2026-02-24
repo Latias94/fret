@@ -11,6 +11,10 @@ pub enum LengthRefinement {
     #[default]
     Auto,
     Px(MetricRef),
+    /// Fraction of the containing block size (percent sizing).
+    ///
+    /// Expressed as a ratio (e.g. `0.5` for 50%).
+    Fraction(f32),
     Fill,
 }
 
@@ -623,9 +627,33 @@ impl LayoutRefinement {
         self.w(LengthRefinement::Fill)
     }
 
+    /// Shorthand for `width: <fraction>` of the containing block.
+    ///
+    /// Example: `w_fraction(0.5)` == 50% width.
+    pub fn w_fraction(self, fraction: f32) -> Self {
+        self.w(LengthRefinement::Fraction(fraction))
+    }
+
+    /// Shorthand for `width: <percent>%` of the containing block.
+    pub fn w_percent(self, percent: f32) -> Self {
+        self.w_fraction(percent / 100.0)
+    }
+
     /// Shorthand for `height: 100%` of the containing block (percent sizing).
     pub fn h_full(self) -> Self {
         self.h(LengthRefinement::Fill)
+    }
+
+    /// Shorthand for `height: <fraction>` of the containing block.
+    ///
+    /// Example: `h_fraction(0.5)` == 50% height.
+    pub fn h_fraction(self, fraction: f32) -> Self {
+        self.h(LengthRefinement::Fraction(fraction))
+    }
+
+    /// Shorthand for `height: <percent>%` of the containing block.
+    pub fn h_percent(self, percent: f32) -> Self {
+        self.h_fraction(percent / 100.0)
     }
 
     pub fn size_full(self) -> Self {
@@ -653,6 +681,16 @@ impl LayoutRefinement {
     pub fn basis(mut self, basis: LengthRefinement) -> Self {
         self.ensure_flex_item_mut().basis = Some(basis);
         self
+    }
+
+    /// Shorthand for `flex-basis: <fraction>` of the containing block size (main axis).
+    pub fn basis_fraction(self, fraction: f32) -> Self {
+        self.basis(LengthRefinement::Fraction(fraction))
+    }
+
+    /// Shorthand for `flex-basis: <percent>%` of the containing block size (main axis).
+    pub fn basis_percent(self, percent: f32) -> Self {
+        self.basis_fraction(percent / 100.0)
     }
 
     pub fn basis_px(self, basis: impl Into<MetricRef>) -> Self {

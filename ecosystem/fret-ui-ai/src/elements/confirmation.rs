@@ -73,7 +73,7 @@ fn hidden<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 }
 
 /// Confirmation root aligned with AI Elements `Confirmation`.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Confirmation {
     approval: Option<ToolUiPartApproval>,
     state: ToolUiPartState,
@@ -150,7 +150,7 @@ impl ConfirmationTitle {
 }
 
 /// Slot that only renders when approval is requested (`approval-requested`).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct ConfirmationRequest {
     state: ToolUiPartState,
     children: Vec<AnyElement>,
@@ -190,7 +190,7 @@ impl ConfirmationRequest {
 }
 
 /// Slot that only renders when approved and in response states.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct ConfirmationAccepted {
     approval: Option<ToolUiPartApproval>,
     state: ToolUiPartState,
@@ -237,7 +237,7 @@ impl ConfirmationAccepted {
 }
 
 /// Slot that only renders when rejected and in response states.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct ConfirmationRejected {
     approval: Option<ToolUiPartApproval>,
     state: ToolUiPartState,
@@ -284,7 +284,7 @@ impl ConfirmationRejected {
 }
 
 /// Actions slot aligned with AI Elements `ConfirmationActions`.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct ConfirmationActions {
     state: ToolUiPartState,
     children: Vec<AnyElement>,

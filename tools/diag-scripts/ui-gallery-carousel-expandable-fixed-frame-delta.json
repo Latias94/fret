@@ -46,6 +46,13 @@
     },
 
     { "type": "wait_frames", "n": 10 },
+    {
+      "type": "wait_bounds_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-carousel-expandable-item-3" },
+      "stable_frames": 6,
+      "max_move_px": 1.0,
+      "timeout_frames": 600
+    },
     { "type": "capture_bundle", "label": "ui-gallery-carousel-expandable-before" },
 
     {

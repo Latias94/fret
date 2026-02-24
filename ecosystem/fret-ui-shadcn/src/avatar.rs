@@ -56,7 +56,7 @@ pub enum AvatarSize {
 ///
 /// This is a fixed-size, overflow-clipped, fully-rounded container intended to host exactly one
 /// `AvatarImage` and one `AvatarFallback` (order controls paint stacking).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Avatar {
     children: Vec<AnyElement>,
     size: AvatarSize,
@@ -125,7 +125,7 @@ impl Avatar {
 /// shadcn/ui `AvatarBadge`.
 ///
 /// Positioned at the bottom-right of the current `Avatar` size scope.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Default)]
 pub struct AvatarBadge {
     children: Vec<AnyElement>,
     chrome: ChromeRefinement,
@@ -203,9 +203,11 @@ impl AvatarBadge {
                     wrap: false,
                 },
                 move |cx| {
-                    if children.is_empty() {
+                    let mut children = Some(children);
+                    if children.as_ref().is_some_and(|c| c.is_empty()) {
                         Vec::new()
                     } else {
+                        let children = children.take().unwrap_or_default();
                         vec![cx.container(
                             {
                                 let theme = Theme::global(&*cx.app);
@@ -217,7 +219,7 @@ impl AvatarBadge {
                                         .h_px(MetricRef::Px(icon_px)),
                                 )
                             },
-                            move |_cx| children.clone(),
+                            move |_cx| children,
                         )]
                     }
                 },
@@ -230,7 +232,7 @@ impl AvatarBadge {
 ///
 /// Overlap wrapper (`-space-x-2` in Tailwind) + installs a size scope so `AvatarGroupCount` can
 /// match the intended avatar size.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct AvatarGroup {
     children: Vec<AnyElement>,
     size: Option<AvatarSize>,
@@ -285,7 +287,7 @@ impl AvatarGroup {
                                 LayoutRefinement::default().ml_neg(Space::N2),
                             )
                         },
-                        move |_cx| vec![child.clone()],
+                        move |_cx| vec![child],
                     ));
                 }
             }
@@ -301,7 +303,7 @@ impl AvatarGroup {
                         align: CrossAlign::Center,
                         wrap: false,
                     },
-                    move |_cx| out.clone(),
+                    move |_cx| out,
                 )]
             })
         };
@@ -315,7 +317,7 @@ impl AvatarGroup {
 }
 
 /// shadcn/ui `AvatarGroupCount`.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Default)]
 pub struct AvatarGroupCount {
     children: Vec<AnyElement>,
     chrome: ChromeRefinement,
@@ -380,6 +382,7 @@ impl AvatarGroupCount {
 
         let children = self.children;
         cx.container(props, move |cx| {
+            let mut children = Some(children);
             vec![cx.flex(
                 FlexProps {
                     layout: LayoutStyle::default(),
@@ -391,7 +394,7 @@ impl AvatarGroupCount {
                     wrap: false,
                 },
                 move |cx| {
-                    if children.is_empty() {
+                    if children.as_ref().is_some_and(|c| c.is_empty()) {
                         vec![
                             ui::text(cx, "+3")
                                 .text_size_px(text_px)
@@ -400,7 +403,7 @@ impl AvatarGroupCount {
                                 .into_element(cx),
                         ]
                     } else {
-                        children.clone()
+                        children.take().unwrap_or_default()
                     }
                 },
             )]

@@ -233,7 +233,7 @@ impl EnvironmentVariables {
 }
 
 /// Header wrapper aligned with AI Elements `EnvironmentVariablesHeader`.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct EnvironmentVariablesHeader {
     children: Vec<AnyElement>,
     test_id: Option<Arc<str>>,
@@ -473,7 +473,7 @@ impl EnvironmentVariablesToggle {
 }
 
 /// Content wrapper aligned with AI Elements `EnvironmentVariablesContent`.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct EnvironmentVariablesContent {
     children: Vec<AnyElement>,
     test_id: Option<Arc<str>>,
@@ -594,7 +594,7 @@ impl EnvironmentVariable {
 }
 
 /// Group aligned with AI Elements `EnvironmentVariableGroup`.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct EnvironmentVariableGroup {
     children: Vec<AnyElement>,
 }

@@ -238,7 +238,7 @@ pub(in crate::ui) fn preview_data_table_torture(
         stack::VStackProps::default()
             .layout(LayoutRefinement::default().w_full())
             .gap(Space::N2),
-        |cx| {
+        move |cx| {
             vec![
                 cx.text("Goal: baseline perf harness for a virtualized business table (TanStack-aligned headless engine + VirtualList)."),
                 cx.text("Use scripted scroll + bundle stats to validate cache-root reuse and prepaint-driven windowing refactors."),
@@ -272,7 +272,7 @@ pub(in crate::ui) fn preview_data_table_torture(
                         .label(status_filter_text.clone())
                         .test_id("ui-gallery-data-table-torture-status-filter"),
                 ),
-                toolbar.clone().into_element(cx),
+                toolbar.into_element(cx),
             ]
         },
     );

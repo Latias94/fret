@@ -8,8 +8,8 @@
 //! - `true` (checked)
 //! - `"indeterminate"`
 //!
-//! Fret represents this via [`CheckedState`], and maps it onto the semantics tree using
-//! `checked: Option<bool>` where `None` represents indeterminate.
+//! Fret represents this via [`CheckedState`]. Indeterminate is mapped onto the semantics tree
+//! using `checked_state: Mixed`, while `checked: Option<bool>` remains as a legacy binary surface.
 
 use std::sync::Arc;
 
@@ -56,10 +56,13 @@ pub fn toggle_optional_bool(value: Option<bool>) -> Option<bool> {
 
 /// A11y metadata for a Radix-style checkbox pressable.
 pub fn checkbox_a11y(label: Option<Arc<str>>, state: CheckedState) -> PressableA11y {
+    let checked_state = state.to_semantics_checked_state();
+    let checked = state.to_semantics_checked();
     PressableA11y {
         role: Some(fret_core::SemanticsRole::Checkbox),
         label,
-        checked: state.to_semantics_checked(),
+        checked,
+        checked_state,
         ..Default::default()
     }
 }

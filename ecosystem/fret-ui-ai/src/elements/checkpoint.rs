@@ -15,7 +15,7 @@ use fret_ui_shadcn::{
 };
 
 /// Checkpoint row aligned with AI Elements `Checkpoint`.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Checkpoint {
     children: Vec<AnyElement>,
     test_id: Option<Arc<str>>,
@@ -139,7 +139,6 @@ impl CheckpointIcon {
 }
 
 /// Trigger button aligned with AI Elements `CheckpointTrigger`.
-#[derive(Clone)]
 pub struct CheckpointTrigger {
     children: Vec<AnyElement>,
     a11y_label: Arc<str>,

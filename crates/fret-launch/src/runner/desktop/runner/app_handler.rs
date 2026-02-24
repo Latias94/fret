@@ -2243,6 +2243,32 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     continue;
                 }
 
+                if let Some((target, action)) = accessibility::stepper_target_from_action(&req) {
+                    let services = Self::ui_services_mut(&mut self.renderer, &mut self.no_services);
+                    match action {
+                        accessibility::StepperAction::Decrement => {
+                            self.driver.accessibility_decrement(
+                                &mut self.app,
+                                services,
+                                app_window,
+                                &mut state.user,
+                                target,
+                            );
+                        }
+                        accessibility::StepperAction::Increment => {
+                            self.driver.accessibility_increment(
+                                &mut self.app,
+                                services,
+                                app_window,
+                                &mut state.user,
+                                target,
+                            );
+                        }
+                    }
+                    self.app.request_redraw(app_window);
+                    continue;
+                }
+
                 if let Some((target, data)) = accessibility::set_value_from_action(&req) {
                     let services = Self::ui_services_mut(&mut self.renderer, &mut self.no_services);
                     match data {
@@ -2276,6 +2302,21 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         .accessibility_snapshot(&mut self.app, app_window, &mut state.user)
                 });
                 if let Some(snapshot) = snapshot {
+                    if let Some((target, data)) =
+                        accessibility::scroll_by_from_action(&req, &snapshot)
+                    {
+                        self.driver.accessibility_scroll_by(
+                            &mut self.app,
+                            app_window,
+                            &mut state.user,
+                            target,
+                            data.dx,
+                            data.dy,
+                        );
+                        self.app.request_redraw(app_window);
+                        continue;
+                    }
+
                     if let Some((target, value)) =
                         accessibility::replace_selected_text_from_action(&req, &snapshot)
                     {

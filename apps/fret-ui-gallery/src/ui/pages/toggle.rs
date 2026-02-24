@@ -12,10 +12,8 @@ pub(super) fn preview_toggle(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
                     .variant(shadcn::ToggleVariant::Outline)
                     .size(shadcn::ToggleSize::Sm)
                     .a11y_label("Toggle bookmark")
-                    .children([
-                        shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.bookmark")),
-                        cx.text("Bookmark"),
-                    ])
+                    .leading_icon(IconId::new_static("lucide.bookmark"))
+                    .label("Bookmark")
                     .into_element(cx)
                     .test_id("ui-gallery-toggle-demo-bookmark"),
             ]
@@ -31,19 +29,15 @@ pub(super) fn preview_toggle(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
                 shadcn::Toggle::uncontrolled(false)
                     .variant(shadcn::ToggleVariant::Outline)
                     .a11y_label("Toggle italic")
-                    .children([
-                        shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.italic")),
-                        cx.text("Italic"),
-                    ])
+                    .leading_icon(IconId::new_static("lucide.italic"))
+                    .label("Italic")
                     .into_element(cx)
                     .test_id("ui-gallery-toggle-outline-italic"),
                 shadcn::Toggle::uncontrolled(false)
                     .variant(shadcn::ToggleVariant::Outline)
                     .a11y_label("Toggle bold")
-                    .children([
-                        shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.bold")),
-                        cx.text("Bold"),
-                    ])
+                    .leading_icon(IconId::new_static("lucide.bold"))
+                    .label("Bold")
                     .into_element(cx)
                     .test_id("ui-gallery-toggle-outline-bold"),
             ]
@@ -58,10 +52,8 @@ pub(super) fn preview_toggle(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
             vec![
                 shadcn::Toggle::uncontrolled(false)
                     .a11y_label("Toggle italic with text")
-                    .children([
-                        shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.italic")),
-                        cx.text("Italic"),
-                    ])
+                    .leading_icon(IconId::new_static("lucide.italic"))
+                    .label("Italic")
                     .into_element(cx),
             ]
         },
@@ -122,10 +114,8 @@ pub(super) fn preview_toggle(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
             .variant(shadcn::ToggleVariant::Outline)
             .size(shadcn::ToggleSize::Sm)
             .a11y_label("Toggle bookmark rtl")
-            .children([
-                shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.bookmark")),
-                cx.text("Bookmark"),
-            ])
+            .leading_icon(IconId::new_static("lucide.bookmark"))
+            .label("Bookmark")
             .into_element(cx)
     })
     .test_id("ui-gallery-toggle-rtl");
@@ -156,10 +146,8 @@ pub(super) fn preview_toggle(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
     .variant(shadcn::ToggleVariant::Outline)
     .size(shadcn::ToggleSize::Sm)
     .a11y_label("Toggle bookmark")
-    .children([
-        shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.bookmark")),
-        cx.text("Bookmark"),
-    ])
+    .leading_icon(IconId::new_static("lucide.bookmark"))
+    .label("Bookmark")
     .into_element(cx);"#,
                 ),
             DocSection::new("Outline", outline)
@@ -170,10 +158,8 @@ pub(super) fn preview_toggle(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
                     r#"shadcn::Toggle::uncontrolled(false)
     .variant(shadcn::ToggleVariant::Outline)
     .a11y_label("Toggle bold")
-    .children([
-        shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.bold")),
-        cx.text("Bold"),
-    ])
+    .leading_icon(IconId::new_static("lucide.bold"))
+    .label("Bold")
     .into_element(cx);"#,
                 ),
             DocSection::new("With Text", with_text)
@@ -183,10 +169,8 @@ pub(super) fn preview_toggle(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
                     "rust",
                     r#"shadcn::Toggle::uncontrolled(false)
     .a11y_label("Toggle italic with text")
-    .children([
-        shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.italic")),
-        cx.text("Italic"),
-    ])
+    .leading_icon(IconId::new_static("lucide.italic"))
+    .label("Italic")
     .into_element(cx);"#,
                 ),
             DocSection::new("Size", size)
@@ -230,7 +214,10 @@ pub(super) fn preview_toggle(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
                     r#"fret_ui_kit::primitives::direction::with_direction_provider(
     cx,
     fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-    |cx| shadcn::Toggle::uncontrolled(false).children([cx.text("Bookmark")]).into_element(cx),
+    |cx| shadcn::Toggle::uncontrolled(false)
+        .leading_icon(IconId::new_static("lucide.bookmark"))
+        .label("Bookmark")
+        .into_element(cx),
 );"#,
                 ),
             DocSection::new("Notes", notes)

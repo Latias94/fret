@@ -1689,6 +1689,8 @@ impl CodeEditor {
                 ime_cursor_area,
                 a11y_label: Some(Arc::clone(&a11y_label)),
                 a11y_value,
+                a11y_required: false,
+                a11y_invalid: None,
                 a11y_text_selection,
                 a11y_text_composition,
             };

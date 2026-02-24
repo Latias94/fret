@@ -136,7 +136,7 @@ fn drawer_drag_snap_height(drawer_height: Px, side: DrawerSide) -> Px {
 }
 
 /// shadcn/ui `DrawerContent` (v4).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct DrawerContent {
     children: Vec<AnyElement>,
     chrome: ChromeRefinement,
@@ -325,7 +325,7 @@ impl DrawerContent {
 }
 
 /// shadcn/ui `DrawerHeader` (v4).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct DrawerHeader {
     children: Vec<AnyElement>,
 }
@@ -362,7 +362,7 @@ impl DrawerHeader {
 }
 
 /// shadcn/ui `DrawerFooter` (v4).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct DrawerFooter {
     children: Vec<AnyElement>,
 }
@@ -1013,7 +1013,7 @@ fn drawer_drag_hit_test(bounds: fret_core::Rect, position: Point) -> bool {
 }
 
 /// shadcn/ui `DrawerTrigger` (v4).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct DrawerTrigger {
     child: AnyElement,
 }

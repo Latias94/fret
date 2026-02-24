@@ -6,7 +6,7 @@ use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Empty {
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
@@ -113,7 +113,7 @@ impl Empty {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct EmptyHeader {
     layout: LayoutRefinement,
     children: Vec<AnyElement>,
@@ -167,7 +167,7 @@ pub enum EmptyMediaVariant {
     Icon,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct EmptyMedia {
     variant: EmptyMediaVariant,
     chrome: ChromeRefinement,
@@ -315,7 +315,7 @@ impl EmptyDescription {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct EmptyContent {
     layout: LayoutRefinement,
     children: Vec<AnyElement>,

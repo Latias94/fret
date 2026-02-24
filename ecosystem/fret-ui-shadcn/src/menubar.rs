@@ -5,7 +5,7 @@ use std::sync::Arc;
 use fret_core::{
     Color, Corners, Edges, FontId, FontWeight, Px, Rect, SemanticsRole, Size, TextStyle,
 };
-use fret_icons::ids;
+use fret_icons::{IconId, ids};
 use fret_runtime::{CommandId, Model, WindowCommandGatingSnapshot};
 use fret_ui::action::{OnCloseAutoFocus, OnDismissRequest, OnOpenAutoFocus};
 use fret_ui::element::{
@@ -73,53 +73,95 @@ fn menu_panel_desired_size(
     let mut height = Px(10.0);
     let mut max_row_width = 0.0f32;
 
-    for entry in entries {
-        match entry {
-            MenubarEntry::Separator => {
-                // new-york-v4: `Separator` uses `-mx-1 my-1` (1px line + 4px + 4px).
-                height.0 += 9.0;
+    fn visit_entries(
+        entries: &[MenubarEntry],
+        row_height: Px,
+        font_size: Px,
+        pad_x: Px,
+        pad_x_inset: Px,
+        height: &mut Px,
+        max_row_width: &mut f32,
+    ) {
+        for entry in entries {
+            match entry {
+                MenubarEntry::Separator => {
+                    // new-york-v4: `Separator` uses `-mx-1 my-1` (1px line + 4px + 4px).
+                    height.0 += 9.0;
+                }
+                MenubarEntry::Label(label) => {
+                    height.0 += row_height.0;
+                    let pad_left = if label.inset { pad_x_inset } else { pad_x };
+                    let row_w =
+                        pad_left.0 + estimate_text_width(&label.text, font_size).0 + pad_x.0;
+                    *max_row_width = max_row_width.max(row_w);
+                }
+                MenubarEntry::Item(item) => {
+                    height.0 += row_height.0;
+                    let pad_left = if item.inset { pad_x_inset } else { pad_x };
+                    let row_w =
+                        pad_left.0 + estimate_text_width(&item.label, font_size).0 + pad_x.0;
+                    *max_row_width = max_row_width.max(row_w);
+                }
+                MenubarEntry::CheckboxItem(item) => {
+                    height.0 += row_height.0;
+                    let pad_left = pad_x_inset;
+                    let row_w =
+                        pad_left.0 + estimate_text_width(&item.label, font_size).0 + pad_x.0;
+                    *max_row_width = max_row_width.max(row_w);
+                }
+                MenubarEntry::RadioItem(item) => {
+                    height.0 += row_height.0;
+                    let pad_left = pad_x_inset;
+                    let row_w =
+                        pad_left.0 + estimate_text_width(&item.label, font_size).0 + pad_x.0;
+                    *max_row_width = max_row_width.max(row_w);
+                }
+                MenubarEntry::Submenu(submenu) => {
+                    height.0 += row_height.0;
+                    let pad_left = if submenu.trigger.inset {
+                        pad_x_inset
+                    } else {
+                        pad_x
+                    };
+                    let chevron_w = 16.0;
+                    let row_w = pad_left.0
+                        + estimate_text_width(&submenu.trigger.label, font_size).0
+                        + pad_x.0
+                        + chevron_w;
+                    *max_row_width = max_row_width.max(row_w);
+                }
+                MenubarEntry::Group(group) => {
+                    visit_entries(
+                        &group.entries,
+                        row_height,
+                        font_size,
+                        pad_x,
+                        pad_x_inset,
+                        height,
+                        max_row_width,
+                    );
+                }
+                MenubarEntry::RadioGroup(group) => {
+                    for item in &group.items {
+                        height.0 += row_height.0;
+                        let pad_left = pad_x_inset;
+                        let row_w =
+                            pad_left.0 + estimate_text_width(&item.label, font_size).0 + pad_x.0;
+                        *max_row_width = max_row_width.max(row_w);
+                    }
+                }
             }
-            MenubarEntry::Label(label) => {
-                height.0 += row_height.0;
-                let pad_left = if label.inset { pad_x_inset } else { pad_x };
-                let row_w = pad_left.0 + estimate_text_width(&label.text, font_size).0 + pad_x.0;
-                max_row_width = max_row_width.max(row_w);
-            }
-            MenubarEntry::Item(item) => {
-                height.0 += row_height.0;
-                let pad_left = if item.inset { pad_x_inset } else { pad_x };
-                let row_w = pad_left.0 + estimate_text_width(&item.label, font_size).0 + pad_x.0;
-                max_row_width = max_row_width.max(row_w);
-            }
-            MenubarEntry::CheckboxItem(item) => {
-                height.0 += row_height.0;
-                let pad_left = pad_x_inset;
-                let row_w = pad_left.0 + estimate_text_width(&item.label, font_size).0 + pad_x.0;
-                max_row_width = max_row_width.max(row_w);
-            }
-            MenubarEntry::RadioItem(item) => {
-                height.0 += row_height.0;
-                let pad_left = pad_x_inset;
-                let row_w = pad_left.0 + estimate_text_width(&item.label, font_size).0 + pad_x.0;
-                max_row_width = max_row_width.max(row_w);
-            }
-            MenubarEntry::Submenu(submenu) => {
-                height.0 += row_height.0;
-                let pad_left = if submenu.trigger.inset {
-                    pad_x_inset
-                } else {
-                    pad_x
-                };
-                let chevron_w = 16.0;
-                let row_w = pad_left.0
-                    + estimate_text_width(&submenu.trigger.label, font_size).0
-                    + pad_x.0
-                    + chevron_w;
-                max_row_width = max_row_width.max(row_w);
-            }
-            MenubarEntry::Group(_) | MenubarEntry::RadioGroup(_) => {}
         }
     }
+    visit_entries(
+        entries,
+        row_height,
+        font_size,
+        pad_x,
+        pad_x_inset,
+        &mut height,
+        &mut max_row_width,
+    );
 
     // new-york-v4: content uses `p-1` + `border` with border-box sizing.
     let chrome_x = 10.0;
@@ -134,12 +176,13 @@ pub enum MenubarItemVariant {
     Destructive,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct MenubarItem {
     pub label: Arc<str>,
     pub value: Arc<str>,
     pub inset: bool,
     pub leading: Option<AnyElement>,
+    pub leading_icon: Option<IconId>,
     pub disabled: bool,
     pub close_on_select: bool,
     pub command: Option<CommandId>,
@@ -157,6 +200,7 @@ impl MenubarItem {
             value: label,
             inset: false,
             leading: None,
+            leading_icon: None,
             disabled: false,
             close_on_select: true,
             command: None,
@@ -183,6 +227,12 @@ impl MenubarItem {
 
     pub fn leading(mut self, element: AnyElement) -> Self {
         self.leading = Some(element);
+        self
+    }
+
+    /// Adds a leading icon that is built under the item's resolved foreground color.
+    pub fn leading_icon(mut self, icon: IconId) -> Self {
+        self.leading_icon = Some(icon);
         self
     }
 
@@ -222,23 +272,22 @@ impl MenubarItem {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct MenubarSubmenu {
     pub trigger: MenubarItem,
-    pub entries: Arc<[MenubarEntry]>,
+    pub entries: Vec<MenubarEntry>,
 }
 
 impl MenubarSubmenu {
     pub fn new(trigger: MenubarItem, entries: impl IntoIterator<Item = MenubarEntry>) -> Self {
-        let entries: Vec<MenubarEntry> = entries.into_iter().collect();
         Self {
             trigger,
-            entries: Arc::from(entries.into_boxed_slice()),
+            entries: entries.into_iter().collect(),
         }
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum MenubarEntry {
     Item(MenubarItem),
     CheckboxItem(MenubarCheckboxItem),
@@ -275,7 +324,7 @@ impl MenubarLabel {
 ///
 /// In the upstream DOM implementation, this is a structural wrapper. In Fret, we currently treat
 /// it as a transparent grouping node and simply flatten its entries for rendering/navigation.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct MenubarGroup {
     pub entries: Vec<MenubarEntry>,
 }
@@ -323,12 +372,13 @@ impl MenubarShortcut {
 }
 
 /// shadcn/ui `MenubarCheckboxItem` (v4).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct MenubarCheckboxItem {
     pub label: Arc<str>,
     pub value: Arc<str>,
     pub checked: Model<bool>,
     pub leading: Option<AnyElement>,
+    pub leading_icon: Option<IconId>,
     pub disabled: bool,
     pub close_on_select: bool,
     pub command: Option<CommandId>,
@@ -344,6 +394,7 @@ impl MenubarCheckboxItem {
             value: label,
             checked,
             leading: None,
+            leading_icon: None,
             disabled: false,
             close_on_select: false,
             command: None,
@@ -359,6 +410,12 @@ impl MenubarCheckboxItem {
 
     pub fn leading(mut self, element: AnyElement) -> Self {
         self.leading = Some(element);
+        self
+    }
+
+    /// Adds a leading icon that is built under the item's resolved foreground color.
+    pub fn leading_icon(mut self, icon: IconId) -> Self {
+        self.leading_icon = Some(icon);
         self
     }
 
@@ -389,7 +446,7 @@ impl MenubarCheckboxItem {
 }
 
 /// shadcn/ui `MenubarRadioGroup` (v4).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct MenubarRadioGroup {
     pub value: Model<Option<Arc<str>>>,
     pub items: Vec<MenubarRadioItemSpec>,
@@ -409,11 +466,12 @@ impl MenubarRadioGroup {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct MenubarRadioItemSpec {
     pub label: Arc<str>,
     pub value: Arc<str>,
     pub leading: Option<AnyElement>,
+    pub leading_icon: Option<IconId>,
     pub disabled: bool,
     pub close_on_select: bool,
     pub command: Option<CommandId>,
@@ -429,6 +487,7 @@ impl MenubarRadioItemSpec {
             label,
             value,
             leading: None,
+            leading_icon: None,
             disabled: false,
             close_on_select: true,
             command: None,
@@ -439,6 +498,12 @@ impl MenubarRadioItemSpec {
 
     pub fn leading(mut self, element: AnyElement) -> Self {
         self.leading = Some(element);
+        self
+    }
+
+    /// Adds a leading icon that is built under the item's resolved foreground color.
+    pub fn leading_icon(mut self, icon: IconId) -> Self {
+        self.leading_icon = Some(icon);
         self
     }
 
@@ -473,6 +538,7 @@ impl MenubarRadioItemSpec {
             value: self.value,
             group_value,
             leading: self.leading,
+            leading_icon: self.leading_icon,
             disabled: self.disabled,
             close_on_select: self.close_on_select,
             command: self.command,
@@ -483,12 +549,13 @@ impl MenubarRadioItemSpec {
 }
 
 /// shadcn/ui `MenubarRadioItem` (v4).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct MenubarRadioItem {
     pub label: Arc<str>,
     pub value: Arc<str>,
     pub group_value: Model<Option<Arc<str>>>,
     pub leading: Option<AnyElement>,
+    pub leading_icon: Option<IconId>,
     pub disabled: bool,
     pub close_on_select: bool,
     pub command: Option<CommandId>,
@@ -509,6 +576,7 @@ impl MenubarRadioItem {
             value,
             group_value,
             leading: None,
+            leading_icon: None,
             disabled: false,
             close_on_select: true,
             command: None,
@@ -542,6 +610,12 @@ impl MenubarRadioItem {
         self
     }
 
+    /// Adds a leading icon that is built under the item's resolved foreground color.
+    pub fn leading_icon(mut self, icon: IconId) -> Self {
+        self.leading_icon = Some(icon);
+        self
+    }
+
     pub fn trailing(mut self, element: AnyElement) -> Self {
         self.trailing = Some(element);
         self
@@ -565,6 +639,7 @@ fn flatten_entries(into: &mut Vec<MenubarEntry>, entries: Vec<MenubarEntry>) {
 fn menu_row_children<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     label: Arc<str>,
+    leading_icon: Option<IconId>,
     leading: Option<AnyElement>,
     reserve_leading_slot: bool,
     trailing: Option<AnyElement>,
@@ -601,7 +676,8 @@ fn menu_row_children<H: UiHost>(
         },
         move |cx| {
             let has_indicator = indicator_on.is_some();
-            let has_leading_slot = leading.is_some() || reserve_leading_slot;
+            let has_leading_slot =
+                leading.is_some() || leading_icon.is_some() || reserve_leading_slot;
             let mut row: Vec<AnyElement> = Vec::with_capacity(
                 usize::from(has_indicator)
                     + usize::from(has_leading_slot)
@@ -642,8 +718,12 @@ fn menu_row_children<H: UiHost>(
                 ));
             }
 
-            if let Some(l) = leading.clone() {
+            if let Some(l) = leading {
                 row.push(menu_icon_slot(cx, l));
+            } else if let Some(icon) = leading_icon {
+                let icon_el =
+                    decl_icon::icon_with(cx, icon, Some(Px(16.0)), Some(ColorRef::Color(fg)));
+                row.push(menu_icon_slot(cx, icon_el));
             } else if reserve_leading_slot {
                 row.push(menu_icon_slot_empty(cx));
             }
@@ -667,7 +747,7 @@ fn menu_row_children<H: UiHost>(
             }
             row.push(label_text.into_element(cx));
 
-            if let Some(t) = trailing.clone() {
+            if let Some(t) = trailing {
                 row.push(t);
             }
 
@@ -689,7 +769,7 @@ fn menu_row_children<H: UiHost>(
                     align: CrossAlign::Center,
                     wrap: false,
                 },
-                move |_cx| row.clone(),
+                move |_cx| row,
             )]
         },
     );
@@ -719,7 +799,7 @@ fn menu_icon_slot<H: UiHost>(cx: &mut ElementContext<'_, H>, element: AnyElement
             align: CrossAlign::Center,
             wrap: false,
         },
-        move |_cx| vec![element.clone()],
+        move |_cx| vec![element],
     )
 }
 
@@ -780,7 +860,6 @@ fn submenu_chevron_right_text<H: UiHost>(
     )
 }
 
-#[derive(Clone)]
 pub struct Menubar {
     menus: Vec<MenubarMenuEntries>,
     modal: bool,
@@ -1056,7 +1135,6 @@ fn with_menubar_provider_state<H: UiHost, R>(
     out
 }
 
-#[derive(Clone)]
 pub struct MenubarMenu {
     label: Arc<str>,
     disabled: bool,
@@ -1096,10 +1174,9 @@ impl MenubarMenu {
     }
 
     pub fn entries(self, entries: impl IntoIterator<Item = MenubarEntry>) -> MenubarMenuEntries {
-        let entries: Vec<MenubarEntry> = entries.into_iter().collect();
         MenubarMenuEntries {
             menu: self,
-            entries: Arc::from(entries.into_boxed_slice()),
+            entries: entries.into_iter().collect(),
             modal: false,
             align_leading_icons: true,
             on_dismiss_request: None,
@@ -1129,10 +1206,9 @@ impl MenubarMenu {
     }
 }
 
-#[derive(Clone)]
 pub struct MenubarMenuEntries {
     menu: MenubarMenu,
-    entries: Arc<[MenubarEntry]>,
+    entries: Vec<MenubarEntry>,
     modal: bool,
     align_leading_icons: bool,
     on_dismiss_request: Option<OnDismissRequest>,
@@ -1183,14 +1259,17 @@ impl MenubarMenuEntries {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let group = cx.root_id();
-        let key = self.menu.label.clone();
-        let entries = self.entries.clone();
-        let modal = self.modal;
-        let align_leading_icons = self.align_leading_icons;
-        let on_dismiss_request = self.on_dismiss_request.clone();
-        let on_open_auto_focus = self.on_open_auto_focus.clone();
-        let on_close_auto_focus = self.on_close_auto_focus.clone();
-        cx.keyed(key, |cx| {
+        let MenubarMenuEntries {
+            menu,
+            entries,
+            modal,
+            align_leading_icons,
+            on_dismiss_request,
+            on_open_auto_focus,
+            on_close_auto_focus,
+        } = self;
+        let key = menu.label.clone();
+        cx.keyed(key, move |cx| {
             let group_active = menubar_trigger_row::ensure_group_active_model(cx, group);
             let trigger_registry = menubar_trigger_row::ensure_group_registry_model(cx, group);
 
@@ -1217,7 +1296,7 @@ impl MenubarMenuEntries {
             };
 
             let theme = Theme::global(&*cx.app).clone();
-            let enabled = !(self.menu.disabled || menubar_disabled_in_scope(cx));
+            let enabled = !(menu.disabled || menubar_disabled_in_scope(cx));
 
             let radius = MetricRef::radius(Radius::Sm).resolve(&theme);
             let ring = decl_style::focus_ring(&theme, radius);
@@ -1232,8 +1311,8 @@ impl MenubarMenuEntries {
                 typography::fixed_line_box_style(FontId::ui(), font_size, font_line_height);
             text_style.weight = FontWeight::MEDIUM;
 
-            let label = self.menu.label.clone();
-            let test_id = self.menu.test_id.clone();
+            let label = menu.label.clone();
+            let test_id = menu.test_id.clone();
 
             control_chrome_pressable_with_id_props(cx, |cx, st, trigger_id| {
                 let (patient_click_sticky, patient_click_timer) =
@@ -1385,9 +1464,9 @@ impl MenubarMenuEntries {
                 };
 
                 if overlay_presence.present && enabled {
-                    let side_offset = self.menu.side_offset;
-                    let window_margin = self.menu.window_margin;
-                    let typeahead_timeout_ticks = self.menu.typeahead_timeout_ticks;
+                    let side_offset = menu.side_offset;
+                    let window_margin = menu.window_margin;
+                    let typeahead_timeout_ticks = menu.typeahead_timeout_ticks;
                     let (on_dismiss_request, on_close_auto_focus) =
                         menu::root::menu_close_auto_focus_guard_hooks(
                             cx,
@@ -1399,7 +1478,6 @@ impl MenubarMenuEntries {
                     let group_active = group_active;
                     let open_for_overlay = open.clone();
                     let text_style = text_style.clone();
-                    let entries = entries.clone();
                     let trigger_registry_for_overlay = trigger_registry.clone();
                     let content_focus_id: Rc<Cell<Option<GlobalElementId>>> =
                         Rc::new(Cell::new(None));
@@ -1430,8 +1508,8 @@ impl MenubarMenuEntries {
                         );
 
                         let mut flat: Vec<MenubarEntry> = Vec::new();
-                        flatten_entries(&mut flat, entries.iter().cloned().collect());
-                        let entries: Arc<[MenubarEntry]> = Arc::from(flat.into_boxed_slice());
+                        flatten_entries(&mut flat, entries);
+                        let mut entries: Vec<MenubarEntry> = flat;
 
                         let pad_y = MetricRef::space(Space::N1p5).resolve(&theme);
                         let pad_x = MetricRef::space(Space::N2).resolve(&theme);
@@ -1479,10 +1557,19 @@ impl MenubarMenuEntries {
                         );
                         let reserve_leading_slot = align_leading_icons
                             && entries.iter().any(|e| match e {
-                                MenubarEntry::Item(item) => item.leading.is_some(),
-                                MenubarEntry::CheckboxItem(item) => item.leading.is_some(),
-                                MenubarEntry::RadioItem(item) => item.leading.is_some(),
-                                MenubarEntry::Submenu(submenu) => submenu.trigger.leading.is_some(),
+                                MenubarEntry::Item(item) => {
+                                    item.leading.is_some() || item.leading_icon.is_some()
+                                }
+                                MenubarEntry::CheckboxItem(item) => {
+                                    item.leading.is_some() || item.leading_icon.is_some()
+                                }
+                                MenubarEntry::RadioItem(item) => {
+                                    item.leading.is_some() || item.leading_icon.is_some()
+                                }
+                                MenubarEntry::Submenu(submenu) => {
+                                    submenu.trigger.leading.is_some()
+                                        || submenu.trigger.leading_icon.is_some()
+                                }
                                 MenubarEntry::Label(_)
                                 | MenubarEntry::Group(_)
                                 | MenubarEntry::RadioGroup(_)
@@ -1584,12 +1671,31 @@ impl MenubarMenuEntries {
                         let submenu_chrome =
                             crate::ui_builder_ext::surfaces::menu_sub_style_chrome().rounded(Radius::Md);
 
+                        let mut submenu_entries_by_value: std::collections::HashMap<
+                            Arc<str>,
+                            Vec<MenubarEntry>,
+                        > = std::collections::HashMap::new();
+                        let mut entries_for_content: Vec<MenubarEntry> =
+                            Vec::with_capacity(entries.len());
+                        for entry in entries {
+                            match entry {
+                                MenubarEntry::Submenu(mut submenu) => {
+                                    submenu_entries_by_value.insert(
+                                        submenu.trigger.value.clone(),
+                                        std::mem::take(&mut submenu.entries),
+                                    );
+                                    entries_for_content.push(MenubarEntry::Submenu(submenu));
+                                }
+                                other => entries_for_content.push(other),
+                            }
+                        }
+
+                        let submenu_entries_by_value_for_content = &submenu_entries_by_value;
+
                         let open_for_submenu = open_for_overlay.clone();
                         let submenu_for_content = submenu.clone();
                         let submenu_for_panel = submenu.clone();
                         let submenu_for_panel_for_content = submenu_for_panel.clone();
-                        let entries_for_content = entries.clone();
-                        let entries_for_submenu = entries.clone();
                         let group_active_for_content = group_active.clone();
                         let group_active_for_submenu = group_active.clone();
                         let text_style_for_content = text_style.clone();
@@ -1663,13 +1769,14 @@ impl MenubarMenuEntries {
                                               typeahead_timeout_ticks,
                                               submenu_for_panel_for_content.clone(),
                                               move |cx| {
+                                                  let entries_for_content = entries_for_content;
                                                   let mut out: Vec<AnyElement> =
                                                       Vec::with_capacity(entries_for_content.len());
 
                                                   let mut item_ix: usize = 0;
 
                                                  for (idx, entry) in
-                                                     entries_for_content.iter().enumerate()
+                                                     entries_for_content.into_iter().enumerate()
                                                 {
                                                                  match entry {
                                                                      MenubarEntry::Separator => {
@@ -1735,21 +1842,25 @@ impl MenubarMenuEntries {
 
                                                             let focusable =
                                                                 active.is_some_and(|a| a == idx);
-                                                            let label = item.label.clone();
-                                                            let value = item.value.clone();
-                                                            let checked = item.checked.clone();
-                                                            let a11y_label = item.a11y_label.clone();
-                                                            let command = item.command.clone();
-                                                            let item_enabled = !item.disabled
+                                                            let MenubarCheckboxItem {
+                                                                label,
+                                                                value,
+                                                                checked,
+                                                                leading,
+                                                                leading_icon,
+                                                                disabled,
+                                                                close_on_select,
+                                                                command,
+                                                                a11y_label,
+                                                                trailing,
+                                                            } = item;
+                                                            let item_enabled = !disabled
                                                                 && enabled
                                                                 && !crate::command_gating::command_is_disabled_by_gating(
                                                                     &*cx.app,
                                                                     &gating,
                                                                     command.as_ref(),
                                                                 );
-                                                            let trailing = item.trailing.clone();
-                                                            let leading = item.leading.clone();
-                                                            let close_on_select = item.close_on_select;
                                                             let open = open_for_overlay.clone();
                                                             let group_active =
                                                                 group_active_for_content.clone();
@@ -1848,7 +1959,7 @@ impl MenubarMenuEntries {
                                                                     let bg = *bg_prop.resolve(states);
                                                                     let fg = *fg_prop.resolve(states);
 
-                                                                    let trailing = trailing.clone().or_else(|| {
+                                                                    let trailing = trailing.or_else(|| {
                                                                         command.as_ref().and_then(|cmd| {
                                                                             command_shortcut_label(
                                                                                 cx,
@@ -1888,7 +1999,8 @@ impl MenubarMenuEntries {
                                                                     let children = menu_row_children(
                                                                         cx,
                                                                         label.clone(),
-                                                                        leading.clone(),
+                                                                        leading_icon,
+                                                                        leading,
                                                                         reserve_leading_slot,
                                                                         trailing,
                                                                         Some(checked_now),
@@ -1913,21 +2025,25 @@ impl MenubarMenuEntries {
 
                                                             let focusable =
                                                                 active.is_some_and(|a| a == idx);
-                                                            let label = item.label.clone();
-                                                            let value = item.value.clone();
-                                                            let group_value = item.group_value.clone();
-                                                            let a11y_label = item.a11y_label.clone();
-                                                            let command = item.command.clone();
-                                                            let item_enabled = !item.disabled
+                                                            let MenubarRadioItem {
+                                                                label,
+                                                                value,
+                                                                group_value,
+                                                                leading,
+                                                                leading_icon,
+                                                                disabled,
+                                                                close_on_select,
+                                                                command,
+                                                                a11y_label,
+                                                                trailing,
+                                                            } = item;
+                                                            let item_enabled = !disabled
                                                                 && enabled
                                                                 && !crate::command_gating::command_is_disabled_by_gating(
                                                                     &*cx.app,
                                                                     &gating,
                                                                     command.as_ref(),
                                                                 );
-                                                            let trailing = item.trailing.clone();
-                                                            let leading = item.leading.clone();
-                                                            let close_on_select = item.close_on_select;
                                                             let open = open_for_overlay.clone();
                                                             let group_active =
                                                                 group_active_for_content.clone();
@@ -2031,7 +2147,7 @@ impl MenubarMenuEntries {
                                                                     let bg = *bg_prop.resolve(states);
                                                                     let fg = *fg_prop.resolve(states);
 
-                                                                    let trailing = trailing.clone().or_else(|| {
+                                                                    let trailing = trailing.or_else(|| {
                                                                         command.as_ref().and_then(|cmd| {
                                                                             command_shortcut_label(
                                                                                 cx,
@@ -2071,7 +2187,8 @@ impl MenubarMenuEntries {
                                                                     let children = menu_row_children(
                                                                         cx,
                                                                         label.clone(),
-                                                                        leading.clone(),
+                                                                        leading_icon,
+                                                                        leading,
                                                                         reserve_leading_slot,
                                                                         trailing,
                                                                         Some(is_selected),
@@ -2104,40 +2221,36 @@ impl MenubarMenuEntries {
 
                                                              let focusable =
                                                                  active.is_some_and(|a| a == idx);
-                                                             let label = item.label.clone();
-                                                               let a11y_label =
-                                                                    item.a11y_label.clone();
-                                                                let command = item.command.clone();
-                                                            let item_enabled = !item.disabled
+                                                            let MenubarItem {
+                                                                label,
+                                                                value,
+                                                                inset,
+                                                                leading,
+                                                                leading_icon,
+                                                                disabled,
+                                                                close_on_select,
+                                                                command,
+                                                                a11y_label,
+                                                                test_id,
+                                                                trailing,
+                                                                variant,
+                                                            } = item;
+                                                            let item_enabled = !disabled
                                                                 && enabled
                                                                 && !crate::command_gating::command_is_disabled_by_gating(
                                                                     &*cx.app,
                                                                     &gating,
                                                                     command.as_ref(),
                                                                 );
-                                                               let trailing = item.trailing.clone();
-                                                               let leading = item.leading.clone();
-                                                               let close_on_select = item.close_on_select;
-                                                             let variant = item.variant;
                                                                let open = open_for_overlay.clone();
                                                                let group_active =
                                                                    group_active_for_content.clone();
                                                              let text_style =
                                                                  text_style_for_content.clone();
-                                                              let has_submenu =
-                                                                   matches!(entry, MenubarEntry::Submenu(_));
-                                                              let submenu_desired_for_hint =
-                                                                  if let MenubarEntry::Submenu(submenu) = entry {
-                                                                      let mut flat: Vec<MenubarEntry> =
-                                                                          Vec::new();
-                                                                      flatten_entries(
-                                                                          &mut flat,
-                                                                          submenu
-                                                                              .entries
-                                                                              .iter()
-                                                                              .cloned()
-                                                                              .collect(),
-                                                                      );
+                                                              let has_submenu = submenu_entries_by_value_for_content
+                                                                  .contains_key(value.as_ref());
+                                                              let submenu_desired_for_hint = has_submenu
+                                                                  .then(|| {
                                                                       let submenu_max_h = theme
                                                                           .metric_by_key(
                                                                               "component.menubar.max_height",
@@ -2148,37 +2261,50 @@ impl MenubarMenuEntries {
                                                                               ))
                                                                           })
                                                                           .unwrap_or(outer.size.height);
-                                                                      let desired = menu_panel_desired_size(
-                                                                          &flat,
-                                                                          Px(128.0),
-                                                                          font_size,
-                                                                          font_line_height,
-                                                                          pad_x,
-                                                                          pad_x_inset,
-                                                                          pad_y,
-                                                                      );
-                                                                      Some(Size::new(
+                                                                      let desired = submenu_entries_by_value_for_content
+                                                                          .get(value.as_ref())
+                                                                          .map(|submenu_entries| {
+                                                                              menu_panel_desired_size(
+                                                                                  submenu_entries,
+                                                                                  Px(128.0),
+                                                                                  font_size,
+                                                                                  font_line_height,
+                                                                                  pad_x,
+                                                                                  pad_x_inset,
+                                                                                  pad_y,
+                                                                              )
+                                                                          })
+                                                                          .unwrap_or_else(|| {
+                                                                              menu_panel_desired_size(
+                                                                                  &[],
+                                                                                  Px(128.0),
+                                                                                  font_size,
+                                                                                  font_line_height,
+                                                                                  pad_x,
+                                                                                  pad_x_inset,
+                                                                                  pad_y,
+                                                                              )
+                                                                          });
+                                                                      Size::new(
                                                                           desired.width,
                                                                           Px(desired
                                                                               .height
                                                                               .0
                                                                               .min(submenu_max_h.0)),
-                                                                      ))
-                                                                  } else {
-                                                                      None
-                                                                  };
+                                                                      )
+                                                                  });
 
                                                                let submenu_for_item =
                                                                    submenu_for_content.clone();
                                                                let trigger_registry =
                                                                    trigger_registry_for_overlay_for_content.clone();
-                                                               let value = item.value.clone();
-                                                               let test_id = item.test_id.clone();
-                                                               let chrome_test_id = test_id
-                                                                   .clone()
-                                                                   .map(|id| Arc::<str>::from(format!("{id}.chrome")));
-                                                                let pad_left =
-                                                                    if item.inset { pad_x_inset } else { pad_x };
+                                                               let value = value.clone();
+                                                                let test_id = test_id.clone();
+                                                                let chrome_test_id = test_id
+                                                                    .clone()
+                                                                    .map(|id| Arc::<str>::from(format!("{id}.chrome")));
+                                                                 let pad_left =
+                                                                     if inset { pad_x_inset } else { pad_x };
                                                             let _theme = theme.clone();
                                                                 let overlay_root_name_for_controls =
                                                                     overlay_root_name_for_controls.clone();
@@ -2322,9 +2448,9 @@ impl MenubarMenuEntries {
                                                                     };
 
                                                                     let trailing = if has_submenu {
-                                                                        trailing.clone()
+                                                                        trailing
                                                                     } else {
-                                                                        trailing.clone().or_else(|| {
+                                                                        trailing.or_else(|| {
                                                                             command.as_ref().and_then(|cmd| {
                                                                                 command_shortcut_label(
                                                                                     cx,
@@ -2340,12 +2466,13 @@ impl MenubarMenuEntries {
                                                                     };
 
                                                                      let children = menu_row_children(
-                                                                         cx,
-                                                                         label.clone(),
-                                                                         leading.clone(),
-                                                                         reserve_leading_slot,
-                                                                         trailing,
-                                                                         None,
+                                                                          cx,
+                                                                          label.clone(),
+                                                                          leading_icon,
+                                                                          leading,
+                                                                          reserve_leading_slot,
+                                                                          trailing,
+                                                                          None,
                                                                          has_submenu,
                                                                          bg,
                                                                          fg,
@@ -2523,23 +2650,10 @@ impl MenubarMenuEntries {
                             .flatten();
                         let desired = submenu_open_value
                             .as_deref()
-                            .and_then(|open_value| {
-                                entries_for_submenu.iter().find_map(|entry| {
-                                    let MenubarEntry::Submenu(submenu) = entry else {
-                                        return None;
-                                    };
-                                    (submenu.trigger.value.as_ref() == open_value)
-                                        .then_some(submenu.entries.clone())
-                                })
-                            })
+                            .and_then(|open_value| submenu_entries_by_value.get(open_value))
                             .map(|submenu_entries| {
-                                let mut flat: Vec<MenubarEntry> = Vec::new();
-                                flatten_entries(
-                                    &mut flat,
-                                    submenu_entries.iter().cloned().collect::<Vec<_>>(),
-                                );
                                 menu_panel_desired_size(
-                                    &flat,
+                                    submenu_entries,
                                     Px(128.0),
                                     font_size,
                                     font_line_height,
@@ -2610,29 +2724,28 @@ impl MenubarMenuEntries {
                             };
 
                             let placed = geometry.floating;
-                            let submenu_entries = entries_for_submenu.iter().find_map(|e| {
-                                let MenubarEntry::Submenu(submenu) = e else {
-                                    return None;
-                                };
-                                (submenu.trigger.value.as_ref() == open_value.as_ref())
-                                    .then_some(submenu.entries.clone())
-                            });
-
-                            if let Some(submenu_entries) = submenu_entries {
-                                    let mut flat: Vec<MenubarEntry> = Vec::new();
-                                    flatten_entries(
-                                        &mut flat,
-                                        submenu_entries.iter().cloned().collect(),
-                                    );
-                                    let submenu_entries: Arc<[MenubarEntry]> =
-                                        Arc::from(flat.into_boxed_slice());
+                            let Some(submenu_entries) =
+                                submenu_entries_by_value.remove(open_value.as_ref())
+                            else {
+                                return (children, Some(dismissible_on_pointer_move));
+                            };
+                            let mut submenu_entries_flat: Vec<MenubarEntry> = Vec::new();
+                            flatten_entries(&mut submenu_entries_flat, submenu_entries);
+                            let submenu_entries: Vec<MenubarEntry> = submenu_entries_flat;
                                      let reserve_leading_slot = align_leading_icons
                                          && submenu_entries.iter().any(|e| match e {
-                                             MenubarEntry::Item(item) => item.leading.is_some(),
-                                             MenubarEntry::CheckboxItem(item) => item.leading.is_some(),
-                                             MenubarEntry::RadioItem(item) => item.leading.is_some(),
+                                             MenubarEntry::Item(item) => {
+                                                 item.leading.is_some() || item.leading_icon.is_some()
+                                             }
+                                             MenubarEntry::CheckboxItem(item) => {
+                                                 item.leading.is_some() || item.leading_icon.is_some()
+                                             }
+                                             MenubarEntry::RadioItem(item) => {
+                                                 item.leading.is_some() || item.leading_icon.is_some()
+                                             }
                                              MenubarEntry::Submenu(submenu) => {
                                                  submenu.trigger.leading.is_some()
+                                                     || submenu.trigger.leading_icon.is_some()
                                              }
                                              MenubarEntry::Label(_)
                                              | MenubarEntry::Group(_)
@@ -2722,7 +2835,7 @@ impl MenubarMenuEntries {
                                         ..Default::default()
                                     };
 
-                                    let submenu_entries_for_panel = submenu_entries.clone();
+                                    let submenu_entries_for_panel = submenu_entries;
                                     let open_for_submenu = open_for_submenu.clone();
                                     let group_active = group_active_for_submenu.clone();
                                     let trigger_registry_for_switch =
@@ -2783,12 +2896,14 @@ impl MenubarMenuEntries {
                                                                      &*cx.app,
                                                                      cx.window,
                                                                  );
+                                                             let submenu_entries_for_panel =
+                                                                 submenu_entries_for_panel;
                                                              let mut out: Vec<AnyElement> =
                                                                  Vec::with_capacity(submenu_entries_for_panel.len());
                                                              let mut item_ix: usize = 0;
 
                                                             for (idx, entry) in
-                                                                submenu_entries_for_panel.iter().enumerate()
+                                                                submenu_entries_for_panel.into_iter().enumerate()
                                                             {
                                                                 match entry {
                                                                     MenubarEntry::Separator => {
@@ -2852,25 +2967,29 @@ impl MenubarMenuEntries {
                                                                         item_ix = item_ix.saturating_add(1);
 
                                                                         let focusable = active.is_some_and(|a| a == idx);
-                                                                        let label = item.label.clone();
-                                                                        let a11y_label = item.a11y_label.clone();
-                                                                        let command = item.command.clone();
-                                                                        let item_enabled = !item.disabled
+                                                                        let MenubarCheckboxItem {
+                                                                            label,
+                                                                            value,
+                                                                            checked,
+                                                                            leading,
+                                                                            leading_icon,
+                                                                            disabled,
+                                                                            close_on_select,
+                                                                            command,
+                                                                            a11y_label,
+                                                                            trailing,
+                                                                        } = item;
+                                                                        let item_enabled = !disabled
                                                                             && !crate::command_gating::command_is_disabled_by_gating(
                                                                                 &*cx.app,
                                                                                 &gating,
                                                                                 command.as_ref(),
                                                                             );
-                                                                        let trailing = item.trailing.clone();
-                                                                        let leading = item.leading.clone();
-                                                                        let close_on_select = item.close_on_select;
                                                                         let open = open_for_submenu.clone();
                                                                         let group_active = group_active.clone();
                                                                         let trigger_registry =
                                                                             trigger_registry_for_items.clone();
                                                                         let submenu_for_key = submenu_models_for_panel.clone();
-                                                                        let value = item.value.clone();
-                                                                        let checked = item.checked.clone();
                                                                         let text_style = text_style.clone();
 
                                                                         let theme = theme.clone();
@@ -2937,7 +3056,7 @@ impl MenubarMenuEntries {
                                                                                 let bg = *bg_prop.resolve(states);
                                                                                 let fg = *fg_prop.resolve(states);
 
-                                                                                let trailing = trailing.clone().or_else(|| {
+                                                                                let trailing = trailing.or_else(|| {
                                                                                     command.as_ref().and_then(|cmd| {
                                                                                         command_shortcut_label(
                                                                                             cx,
@@ -2977,7 +3096,8 @@ impl MenubarMenuEntries {
                                                                                 let children = menu_row_children(
                                                                                     cx,
                                                                                     label.clone(),
-                                                                                    leading.clone(),
+                                                                                    leading_icon,
+                                                                                    leading,
                                                                                     reserve_leading_slot,
                                                                                     trailing,
                                                                                     Some(checked_now),
@@ -3001,25 +3121,29 @@ impl MenubarMenuEntries {
                                                                         item_ix = item_ix.saturating_add(1);
 
                                                                         let focusable = active.is_some_and(|a| a == idx);
-                                                                        let label = item.label.clone();
-                                                                        let a11y_label = item.a11y_label.clone();
-                                                                        let command = item.command.clone();
-                                                                        let item_enabled = !item.disabled
+                                                                        let MenubarRadioItem {
+                                                                            label,
+                                                                            value,
+                                                                            group_value,
+                                                                            leading,
+                                                                            leading_icon,
+                                                                            disabled,
+                                                                            close_on_select,
+                                                                            command,
+                                                                            a11y_label,
+                                                                            trailing,
+                                                                        } = item;
+                                                                        let item_enabled = !disabled
                                                                             && !crate::command_gating::command_is_disabled_by_gating(
                                                                                 &*cx.app,
                                                                                 &gating,
                                                                                 command.as_ref(),
                                                                             );
-                                                                        let trailing = item.trailing.clone();
-                                                                        let leading = item.leading.clone();
-                                                                        let close_on_select = item.close_on_select;
                                                                         let open = open_for_submenu.clone();
                                                                         let group_active = group_active.clone();
                                                                         let trigger_registry =
                                                                             trigger_registry_for_items.clone();
                                                                         let submenu_for_key = submenu_models_for_panel.clone();
-                                                                        let value = item.value.clone();
-                                                                        let group_value = item.group_value.clone();
                                                                         let text_style = text_style.clone();
 
                                                                         let theme = theme.clone();
@@ -3091,7 +3215,7 @@ impl MenubarMenuEntries {
                                                                                 let bg = *bg_prop.resolve(states);
                                                                                 let fg = *fg_prop.resolve(states);
 
-                                                                                let trailing = trailing.clone().or_else(|| {
+                                                                                let trailing = trailing.or_else(|| {
                                                                                     command.as_ref().and_then(|cmd| {
                                                                                         command_shortcut_label(
                                                                                             cx,
@@ -3131,7 +3255,8 @@ impl MenubarMenuEntries {
                                                                                 let children = menu_row_children(
                                                                                     cx,
                                                                                     label.clone(),
-                                                                                    leading.clone(),
+                                                                                    leading_icon,
+                                                                                    leading,
                                                                                     reserve_leading_slot,
                                                                                     trailing,
                                                                                     Some(is_selected),
@@ -3155,31 +3280,36 @@ impl MenubarMenuEntries {
                                                                         item_ix = item_ix.saturating_add(1);
 
                                                                         let focusable = active.is_some_and(|a| a == idx);
-                                                                        let label = item.label.clone();
-                                                                        let a11y_label = item.a11y_label.clone();
-                                                                        let test_id = item.test_id.clone();
+                                                                        let MenubarItem {
+                                                                            label,
+                                                                            value,
+                                                                            inset,
+                                                                            leading,
+                                                                            leading_icon,
+                                                                            disabled,
+                                                                            close_on_select,
+                                                                            command,
+                                                                            a11y_label,
+                                                                            test_id,
+                                                                            trailing,
+                                                                            variant,
+                                                                        } = item;
                                                                         let chrome_test_id = test_id
                                                                             .clone()
                                                                             .map(|id| Arc::<str>::from(format!("{id}.chrome")));
-                                                                        let command = item.command.clone();
-                                                                        let item_enabled = !item.disabled
+                                                                        let item_enabled = !disabled
                                                                             && !crate::command_gating::command_is_disabled_by_gating(
                                                                                 &*cx.app,
                                                                                 &gating,
                                                                                 command.as_ref(),
                                                                             );
-                                                                        let trailing = item.trailing.clone();
-                                                                        let leading = item.leading.clone();
-                                                                        let close_on_select = item.close_on_select;
-                                                                        let variant = item.variant;
                                                                         let open = open_for_submenu.clone();
                                                                         let group_active = group_active.clone();
                                                                         let trigger_registry =
                                                                             trigger_registry_for_items.clone();
                                                                         let submenu_for_key = submenu_models_for_panel.clone();
-                                                                        let value = item.value.clone();
                                                                         let pad_left =
-                                                                            if item.inset { pad_x_inset } else { pad_x };
+                                                                            if inset { pad_x_inset } else { pad_x };
                                                                         let text_style = text_style.clone();
 
                                                                         let theme = theme.clone();
@@ -3249,7 +3379,7 @@ impl MenubarMenuEntries {
                                                                                 let bg = *bg_prop.resolve(states);
                                                                                 let fg = *fg_prop.resolve(states);
 
-                                                                                let trailing = trailing.clone().or_else(|| {
+                                                                                let trailing = trailing.or_else(|| {
                                                                                     command.as_ref().and_then(|cmd| {
                                                                                         command_shortcut_label(
                                                                                             cx,
@@ -3293,7 +3423,8 @@ impl MenubarMenuEntries {
                                                                                 let children = menu_row_children(
                                                                                     cx,
                                                                                     label.clone(),
-                                                                                    leading.clone(),
+                                                                                    leading_icon,
+                                                                                    leading,
                                                                                     reserve_leading_slot,
                                                                                     trailing,
                                                                                     None,
@@ -3369,7 +3500,6 @@ impl MenubarMenuEntries {
                                     );
 
                                     children.push(submenu_panel);
-                            }
                         }
 
                         (children, Some(dismissible_on_pointer_move))
