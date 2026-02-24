@@ -244,6 +244,7 @@ impl DatePickerWithPresets {
                             false,
                         )
                         .placeholder("Select")
+                        .refine_layout(LayoutRefinement::default().w_full().min_w_0())
                         .position(SelectPosition::Popper)
                         .on_value_change({
                             let selected = selected.clone();

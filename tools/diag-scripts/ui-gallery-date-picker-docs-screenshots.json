@@ -1,0 +1,154 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "UI Gallery: Date Picker docs screenshots",
+    "tags": ["ui-gallery", "date-picker", "shadcn", "screenshots"],
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "timeout_frames": 1800,
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-date-picker-demo" }
+      }
+    },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-date-picker-demo" },
+      "delta_x": 0.0,
+      "delta_y": -120.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 4.0,
+      "timeout_frames": 600
+    },
+    { "type": "capture_bundle", "label": "ui-gallery-date-picker-docs-00-demo" },
+    { "type": "capture_screenshot", "label": "ui-gallery-date-picker-docs-00-demo" },
+
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-date-picker-simple" }
+    },
+    {
+      "type": "wait_until",
+      "timeout_frames": 1800,
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "2024-02-01" } }
+    },
+    { "type": "capture_bundle", "label": "ui-gallery-date-picker-docs-00-demo-open" },
+    { "type": "capture_screenshot", "label": "ui-gallery-date-picker-docs-00-demo-open" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 8 },
+
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-date-picker-range" }
+    },
+    {
+      "type": "wait_until",
+      "timeout_frames": 1800,
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "2024-02-13" }
+      }
+    },
+    { "type": "capture_bundle", "label": "ui-gallery-date-picker-docs-01-range-open" },
+    { "type": "capture_screenshot", "label": "ui-gallery-date-picker-docs-01-range-open" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 8 },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-date-picker-with-presets" },
+      "delta_x": 0.0,
+      "delta_y": -120.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 4.0,
+      "timeout_frames": 600
+    },
+    { "type": "capture_bundle", "label": "ui-gallery-date-picker-docs-10-with-presets" },
+    { "type": "capture_screenshot", "label": "ui-gallery-date-picker-docs-10-with-presets" },
+
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-date-picker-with-presets" }
+    },
+    {
+      "type": "wait_until",
+      "timeout_frames": 1800,
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "2024-02-01" } }
+    },
+    { "type": "capture_bundle", "label": "ui-gallery-date-picker-docs-11-with-presets-open" },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-date-picker-docs-11-with-presets-open"
+    },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 8 },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-date-picker-input" },
+      "delta_x": 0.0,
+      "delta_y": -120.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 4.0,
+      "timeout_frames": 600
+    },
+    { "type": "capture_bundle", "label": "ui-gallery-date-picker-docs-20-input" },
+    { "type": "capture_screenshot", "label": "ui-gallery-date-picker-docs-20-input" },
+
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-date-picker-input-trigger" }
+    },
+    {
+      "type": "wait_until",
+      "timeout_frames": 600,
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-date-picker-input-calendar" }
+      }
+    },
+    { "type": "capture_bundle", "label": "ui-gallery-date-picker-docs-21-input-open" },
+    { "type": "capture_screenshot", "label": "ui-gallery-date-picker-docs-21-input-open" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 8 },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-date-picker-time" },
+      "delta_x": 0.0,
+      "delta_y": -120.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 4.0,
+      "timeout_frames": 600
+    },
+    { "type": "capture_bundle", "label": "ui-gallery-date-picker-docs-30-time" },
+    { "type": "capture_screenshot", "label": "ui-gallery-date-picker-docs-30-time" },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-date-picker-rtl" },
+      "delta_x": 0.0,
+      "delta_y": -120.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 4.0,
+      "timeout_frames": 600
+    },
+    { "type": "capture_bundle", "label": "ui-gallery-date-picker-docs-40-rtl" },
+    { "type": "capture_screenshot", "label": "ui-gallery-date-picker-docs-40-rtl" }
+  ]
+}
