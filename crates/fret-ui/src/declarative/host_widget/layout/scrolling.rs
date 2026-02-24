@@ -971,62 +971,16 @@ impl ElementHostWidget {
                 // Best-effort: reuse the last measured max-child size while deferring the expensive
                 // unbounded probe during interactive resize/unstable frames.
                 //
-                // However, when content *shrinks* (e.g. filtering a nav list) we must avoid
-                // pinning the scroll extent to the previous frame's larger probe result, otherwise
-                // users can scroll into blank space until the unbounded probe runs again.
+                // Correctness note:
                 //
-                // To keep this cheap, when the cached probe indicates overflow, do a bounded
-                // measure pass (viewport constraints) for single-child scroll nodes and clamp the
-                // probed extent *only when we can prove the content now fits within the viewport*.
+                // When content shrinks (e.g. filtering a nav list) we must avoid pinning the scroll
+                // extent to the previous frame's larger probe result, otherwise users can scroll
+                // into blank space until the unbounded probe runs again.
                 //
-                // This preserves the "never under-report overflow" intent for the common case
-                // (bounded measure == viewport size) while fixing the "stale oversized extent"
-                // failure mode.
-                let mut max_child = last_max_child;
-                if cx.children.len() == 1
-                    && (props.axis.scroll_x() || props.axis.scroll_y())
-                    && available.width.0 > 0.0
-                    && available.height.0 > 0.0
-                {
-                    let wants_clamp_x =
-                        props.axis.scroll_x() && max_child.width.0 > available.width.0 + 0.5;
-                    let wants_clamp_y =
-                        props.axis.scroll_y() && max_child.height.0 > available.height.0 + 0.5;
-                    if wants_clamp_x || wants_clamp_y {
-                        let bounded_constraints = LayoutConstraints::new(
-                            LayoutSize::new(None, None),
-                            LayoutSize::new(
-                                AvailableSpace::Definite(available.width),
-                                AvailableSpace::Definite(available.height),
-                            ),
-                        );
-                        let child = cx.children[0];
-                        let bounded = cx.measure_in(child, bounded_constraints);
-
-                        let mut changed = false;
-                        if wants_clamp_x && bounded.width.0 + 0.5 < available.width.0 {
-                            max_child.width = Px(max_child.width.0.min(bounded.width.0.max(0.0)));
-                            changed = true;
-                        }
-                        if wants_clamp_y && bounded.height.0 + 0.5 < available.height.0 {
-                            max_child.height =
-                                Px(max_child.height.0.min(bounded.height.0.max(0.0)));
-                            changed = true;
-                        }
-
-                        if changed {
-                            crate::elements::with_element_state(
-                                &mut *cx.app,
-                                window,
-                                self.element,
-                                ScrollLayoutProbeCacheState::default,
-                                |state| state.last_max_child = max_child,
-                            );
-                        }
-                    }
-                }
-
-                max_child
+                // The layout pass below opportunistically observes the post-layout child bounds
+                // and clamps the cached extent downward (when it can be proven smaller) without
+                // performing an additional deep measure walk.
+                last_max_child
             } else {
                 // Fallback: if we have no cached max-child size yet, scan the last measured child
                 // sizes and avoid a deep measure walk on this frame. Persist the result so future
@@ -1126,8 +1080,8 @@ impl ElementHostWidget {
         // This matches DOM behavior (the scrollable content box is at least the viewport size),
         // and prevents `Length::Fill` descendants from collapsing when we probe with
         // `AvailableSpace::MaxContent` on the scroll axis.
-        let content_w = Px(content_w.0.max(desired.width.0.max(0.0)));
-        let content_h = Px(content_h.0.max(desired.height.0.max(0.0)));
+        let mut content_w = Px(content_w.0.max(desired.width.0.max(0.0)));
+        let mut content_h = Px(content_h.0.max(desired.height.0.max(0.0)));
 
         // Avoid mutating the imperative handle during "probe" layout passes that use an
         // effectively-unbounded available space, otherwise scroll position can be clamped to zero
@@ -1215,6 +1169,72 @@ impl ElementHostWidget {
         }
         if let Some(started) = layout_started {
             t_layout_children = started.elapsed();
+        }
+
+        if !is_probe_layout && defer_this_frame {
+            // In deferred-probe mode, the cached `last_max_child` can temporarily overestimate the
+            // true scroll extent after content shrinks, which can allow scrolling into blank
+            // space.
+            //
+            // Opportunistically use the post-layout child bounds as an upper bound for the true
+            // extent and clamp downward when possible (without triggering an extra deep
+            // measurement walk).
+            let mut observed = Size::new(Px(0.0), Px(0.0));
+            for &child in cx.children {
+                let Some(bounds) = cx.tree.node_bounds(child) else {
+                    continue;
+                };
+                let right =
+                    (bounds.origin.x.0 + bounds.size.width.0 - content_bounds.origin.x.0).max(0.0);
+                let bottom =
+                    (bounds.origin.y.0 + bounds.size.height.0 - content_bounds.origin.y.0).max(0.0);
+                observed.width = Px(observed.width.0.max(right));
+                observed.height = Px(observed.height.0.max(bottom));
+            }
+
+            let mut changed = false;
+            if props.axis.scroll_x()
+                && observed.width.0 > 0.0
+                && observed.width.0 + 0.5 < content_w.0
+            {
+                content_w = Px(observed.width.0.max(desired.width.0.max(0.0)));
+                changed = true;
+            }
+            if props.axis.scroll_y()
+                && observed.height.0 > 0.0
+                && observed.height.0 + 0.5 < content_h.0
+            {
+                content_h = Px(observed.height.0.max(desired.height.0.max(0.0)));
+                changed = true;
+            }
+
+            if changed {
+                handle.set_content_size_internal(Size::new(content_w, content_h));
+                let prev = handle.offset();
+                handle.set_offset_internal(prev);
+
+                cx.tree
+                    .debug_record_scroll_node_telemetry(UiDebugScrollNodeTelemetry {
+                        node: cx.node,
+                        element: Some(self.element),
+                        axis: match props.axis {
+                            crate::element::ScrollAxis::X => UiDebugScrollAxis::X,
+                            crate::element::ScrollAxis::Y => UiDebugScrollAxis::Y,
+                            crate::element::ScrollAxis::Both => UiDebugScrollAxis::Both,
+                        },
+                        offset: handle.offset(),
+                        viewport: handle.viewport_size(),
+                        content: handle.content_size(),
+                    });
+
+                crate::elements::with_element_state(
+                    &mut *cx.app,
+                    window,
+                    self.element,
+                    ScrollLayoutProbeCacheState::default,
+                    |state| state.last_max_child = Size::new(content_w, content_h),
+                );
+            }
         }
 
         if let Some(cfg) = profile_cfg
