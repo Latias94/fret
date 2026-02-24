@@ -1524,6 +1524,25 @@ impl DropdownMenu {
                     true
                 }),
             );
+
+            // Pointer/activation open (Radix `DropdownMenuTrigger` click/Enter/Space).
+            //
+            // Note: menu trigger helpers intentionally do not wire Enter/Space because many
+            // trigger surfaces implement those through pressable activation hooks. Here we
+            // *do* wire activation so `DropdownMenu` is usable without an explicit Trigger
+            // component.
+            let open_for_trigger_activate = self.open.clone();
+            cx.pressable_add_on_activate_for(
+                trigger_id,
+                Arc::new(move |host, _acx, _reason| {
+                    if disabled {
+                        return;
+                    }
+                    let _ = host
+                        .models_mut()
+                        .update(&open_for_trigger_activate, |v| *v = !*v);
+                }),
+            );
             let overlay_root_name = menu::dropdown_menu_root_name(overlay_id);
             let overlay_root_name_for_controls: Arc<str> = Arc::from(overlay_root_name.clone());
             let content_id_for_trigger =
@@ -5189,6 +5208,90 @@ mod tests {
             "expected trigger to control menu content; controls={:?} content={:?}",
             trigger_sem.controls,
             menu_content.id
+        );
+    }
+
+    #[test]
+    fn dropdown_menu_clicking_trigger_opens_menu() {
+        use fret_core::MouseButton;
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let trigger_id_out = app.models_mut().insert(None);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let build_entries = || vec![DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha"))];
+
+        // Frame 1: closed, establish trigger bounds and install activation wiring.
+        let (_, trigger_id) = render_frame_focusable_trigger_capture_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            trigger_id_out.clone(),
+            build_entries(),
+        );
+        let trigger_node =
+            fret_ui::elements::node_for_element(&mut app, window, trigger_id).expect("trigger");
+        let trigger_bounds = ui.debug_node_bounds(trigger_node).expect("trigger bounds");
+        let click_pos = rect_center(trigger_bounds);
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: click_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: click_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        assert_eq!(app.models().get_copied(&open), Some(true));
+
+        // Frame 2: menu content is mounted.
+        let _ = render_frame_focusable_trigger_capture_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open,
+            trigger_id_out,
+            build_entries(),
+        );
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap.nodes.iter().any(|n| {
+                n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Alpha")
+            }),
+            "expected menu item to exist after opening via trigger activation"
         );
     }
 

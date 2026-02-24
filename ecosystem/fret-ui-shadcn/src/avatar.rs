@@ -54,8 +54,12 @@ pub enum AvatarSize {
 
 /// shadcn/ui `Avatar` root.
 ///
-/// This is a fixed-size, overflow-clipped, fully-rounded container intended to host exactly one
-/// `AvatarImage` and one `AvatarFallback` (order controls paint stacking).
+/// This is a fixed-size, fully-rounded container intended to host exactly one `AvatarImage` and
+/// one `AvatarFallback` (order controls paint stacking).
+///
+/// Note: The root does not clip overflow by default, matching shadcn's `radix-nova` avatar styling
+/// where `AvatarImage` handles rounding/clipping and `AvatarBadge` can paint its ring outside the
+/// avatar circle.
 #[derive(Debug)]
 pub struct Avatar {
     children: Vec<AnyElement>,
@@ -109,12 +113,11 @@ impl Avatar {
                 .h_px(MetricRef::space(size))
                 .flex_shrink_0();
 
-            let mut props = decl_style::container_props(
+            let props = decl_style::container_props(
                 &theme,
                 base_chrome.merge(self.chrome),
                 base_layout.merge(self.layout),
             );
-            props.layout.overflow = Overflow::Clip;
 
             let children = self.children;
             cx.container(props, move |_cx| children)
@@ -502,7 +505,14 @@ impl AvatarImage {
                     .aspect_ratio(1.0)
                     .merge(self.layout);
 
-                let wrapper = decl_style::container_props(&theme, self.chrome, layout);
+                let mut wrapper = decl_style::container_props(
+                    &theme,
+                    ChromeRefinement::default()
+                        .rounded(Radius::Full)
+                        .merge(self.chrome),
+                    layout,
+                );
+                wrapper.layout.overflow = Overflow::Clip;
                 let opacity = self.opacity.clamp(0.0, 1.0);
                 let mut image_layout = LayoutStyle::default();
                 image_layout.size = SizeStyle {
