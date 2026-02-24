@@ -196,6 +196,7 @@ mod command_hooks;
 mod core;
 mod element_state_gc;
 mod environment_queries;
+mod foreground_inheritance;
 mod identity;
 mod interactions;
 mod layout;

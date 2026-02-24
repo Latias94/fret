@@ -309,6 +309,21 @@ impl ElementHostWidget {
                     None,
                 );
             }
+            ElementInstance::ForegroundScope(props) => {
+                let prev = cx.paint_style;
+                let mut next = prev;
+                if let Some(fg) = props.foreground {
+                    next.foreground = Some(fg);
+                }
+
+                cx.paint_style = next;
+                paint_children_clipped_if(
+                    cx,
+                    matches!(props.layout.overflow, Overflow::Clip),
+                    None,
+                );
+                cx.paint_style = prev;
+            }
             ElementInstance::Opacity(props) => {
                 let opacity = props.opacity.clamp(0.0, 1.0);
                 if opacity <= 0.0 {
@@ -503,6 +518,7 @@ impl ElementHostWidget {
                 let input = props.build_text_input_with_style(style.clone());
                 let color = props
                     .color
+                    .or(cx.paint_style.foreground)
                     .or_else(|| cx.theme().color_by_key("foreground"))
                     .unwrap_or(cx.theme().colors.text_primary);
                 let max_width =
@@ -734,6 +750,7 @@ impl ElementHostWidget {
                 let input = props.build_text_input_with_style(style.clone());
                 let color = props
                     .color
+                    .or(cx.paint_style.foreground)
                     .or_else(|| cx.theme().color_by_key("foreground"))
                     .unwrap_or(cx.theme().colors.text_primary);
                 let max_width =
@@ -979,6 +996,7 @@ impl ElementHostWidget {
                 let input = props.build_text_input_with_style(style.clone());
                 let color = props
                     .color
+                    .or(cx.paint_style.foreground)
                     .or_else(|| cx.theme().color_by_key("foreground"))
                     .unwrap_or(cx.theme().colors.text_primary);
                 let max_width =
@@ -1641,6 +1659,7 @@ impl ElementHostWidget {
                         child_bounds,
                         cx.scene,
                         cx.scale_factor,
+                        cx.paint_style,
                         accumulated,
                     );
                     cx.scene.push(SceneOp::PopClip);
@@ -1714,7 +1733,13 @@ impl ElementHostWidget {
             }
             ElementInstance::SvgIcon(props) => {
                 let opacity = props.opacity.clamp(0.0, 1.0);
-                if opacity <= 0.0 || props.color.a <= 0.0 {
+                let color = if props.inherit_color {
+                    cx.paint_style.foreground.unwrap_or(props.color)
+                } else {
+                    props.color
+                };
+
+                if opacity <= 0.0 || color.a <= 0.0 {
                     return;
                 }
 
@@ -1724,14 +1749,16 @@ impl ElementHostWidget {
                     rect: cx.bounds,
                     svg,
                     fit: props.fit,
-                    color: props.color,
+                    color,
                     opacity,
                 });
             }
             ElementInstance::Spinner(props) => {
+                let inherited_fg = cx.paint_style.foreground;
                 let theme = cx.theme();
                 let base = props
                     .color
+                    .or(inherited_fg)
                     .or_else(|| theme.color_by_key("muted-foreground"))
                     .unwrap_or_else(|| theme.color(crate::ThemeColorKey::MutedForeground));
 

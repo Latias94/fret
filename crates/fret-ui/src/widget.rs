@@ -939,6 +939,7 @@ pub struct PaintCx<'a, H: UiHost> {
     pub children: &'a [NodeId],
     pub bounds: Rect,
     pub scale_factor: f32,
+    pub(crate) paint_style: crate::tree::paint_style::PaintStyleState,
     pub accumulated_transform: Transform2D,
     pub children_render_transform: Option<Transform2D>,
     pub services: &'a mut dyn UiServices,
@@ -948,6 +949,11 @@ pub struct PaintCx<'a, H: UiHost> {
 }
 
 impl<'a, H: UiHost> PaintCx<'a, H> {
+    /// Returns the nearest inherited foreground color for the current paint traversal (v2).
+    pub fn inherited_foreground(&self) -> Option<fret_core::Color> {
+        self.paint_style.foreground
+    }
+
     pub fn prepaint_output<T: std::any::Any>(&mut self) -> Option<&T> {
         self.tree.prepaint_output(self.node)
     }
@@ -1136,6 +1142,7 @@ impl<'a, H: UiHost> PaintCx<'a, H> {
             bounds,
             self.scene,
             self.scale_factor,
+            self.paint_style,
             accumulated,
         );
 

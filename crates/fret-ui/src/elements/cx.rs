@@ -26,13 +26,13 @@ use crate::action::{
 use crate::canvas::{CanvasPaintHooks, CanvasPainter, OnCanvasPaint};
 use crate::element::{
     AnyElement, CanvasProps, ColumnProps, CompositeGroupProps, ContainerProps, EffectLayerProps,
-    ElementKind, FlexProps, FocusTraversalGateProps, GridProps, HitTestGateProps, HoverRegionProps,
-    ImageProps, InteractivityGateProps, LayoutQueryRegionProps, LayoutStyle, MaskLayerProps,
-    OpacityProps, PointerRegionProps, PressableProps, PressableState, ResizablePanelGroupProps,
-    RowProps, ScrollProps, ScrollbarProps, SelectableTextProps, SpacerProps, SpinnerProps,
-    StackProps, StyledTextProps, SvgIconProps, TextAreaProps, TextInputProps, TextProps,
-    ViewportSurfaceProps, VirtualListOptions, VirtualListProps, VirtualListState,
-    VisualTransformProps,
+    ElementKind, FlexProps, FocusTraversalGateProps, ForegroundScopeProps, GridProps,
+    HitTestGateProps, HoverRegionProps, ImageProps, InteractivityGateProps, LayoutQueryRegionProps,
+    LayoutStyle, MaskLayerProps, OpacityProps, PointerRegionProps, PressableProps, PressableState,
+    ResizablePanelGroupProps, RowProps, ScrollProps, ScrollbarProps, SelectableTextProps,
+    SpacerProps, SpinnerProps, StackProps, StyledTextProps, SvgIconProps, TextAreaProps,
+    TextInputProps, TextProps, ViewportSurfaceProps, VirtualListOptions, VirtualListProps,
+    VirtualListState, VisualTransformProps,
 };
 use crate::overlay_placement::{AnchoredPanelLayoutTrace, Side};
 use crate::widget::Invalidation;
@@ -1191,6 +1191,41 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             let built = f(cx);
             let children = cx.collect_children(built);
             cx.new_any_element(id, ElementKind::Opacity(props), children)
+        })
+    }
+
+    #[track_caller]
+    pub fn foreground_scope<I>(
+        &mut self,
+        foreground: fret_core::Color,
+        f: impl FnOnce(&mut Self) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.foreground_scope_props(
+            ForegroundScopeProps {
+                foreground: Some(foreground),
+                ..Default::default()
+            },
+            f,
+        )
+    }
+
+    #[track_caller]
+    pub fn foreground_scope_props<I>(
+        &mut self,
+        props: ForegroundScopeProps,
+        f: impl FnOnce(&mut Self) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let built = f(cx);
+            let children = cx.collect_children(built);
+            cx.new_any_element(id, ElementKind::ForegroundScope(props), children)
         })
     }
 

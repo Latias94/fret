@@ -58,6 +58,7 @@ impl ElementHostWidget {
             ElementInstance::HitTestGate(_) => false,
             ElementInstance::FocusTraversalGate(_) => false,
             ElementInstance::DismissibleLayer(_) => false,
+            ElementInstance::ForegroundScope(_) => false,
             ElementInstance::Opacity(_) => false,
             ElementInstance::EffectLayer(_) => false,
             ElementInstance::MaskLayer(_) => false,
@@ -86,6 +87,7 @@ impl ElementHostWidget {
             ElementInstance::HitTestGate(p) => p.hit_test,
             ElementInstance::FocusTraversalGate(_) => true,
             ElementInstance::DismissibleLayer(_) => true,
+            ElementInstance::ForegroundScope(_) => true,
             ElementInstance::EffectLayer(_) => true,
             ElementInstance::MaskLayer(_) => true,
             ElementInstance::CompositeGroup(_) => true,
@@ -154,6 +156,7 @@ impl ElementHostWidget {
             ElementInstance::InternalDragRegion(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::ExternalDragRegion(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::DismissibleLayer(p) => matches!(p.layout.overflow, Overflow::Clip),
+            ElementInstance::ForegroundScope(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::Stack(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::Flex(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::RovingFlex(p) => matches!(p.flex.layout.overflow, Overflow::Clip),
@@ -347,6 +350,17 @@ impl ElementHostWidget {
                 self.layout_positioned_container_impl(cx, window, props.layout)
             }
             ElementInstance::LayoutQueryRegion(props) => {
+                if let Some(size) = try_layout_children_from_engine_or_manual_absolute(
+                    cx,
+                    window,
+                    Rect::new(cx.bounds.origin, cx.available),
+                ) {
+                    return size;
+                }
+
+                self.layout_positioned_container_impl(cx, window, props.layout)
+            }
+            ElementInstance::ForegroundScope(props) => {
                 if let Some(size) = try_layout_children_from_engine_or_manual_absolute(
                     cx,
                     window,

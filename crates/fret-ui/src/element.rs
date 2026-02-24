@@ -120,6 +120,15 @@ pub enum ElementKind {
     /// This is intended to support editor-grade "disabled but hoverable" surfaces (e.g. tooltips
     /// over disabled items) without requiring authors to restructure hit-testing.
     FocusTraversalGate(FocusTraversalGateProps),
+    /// A paint- and input-transparent wrapper that installs a subtree-local foreground color.
+    ///
+    /// This is the declarative equivalent of CSS `currentColor` inheritance or Flutter's
+    /// `IconTheme`/`DefaultTextStyle` *foreground* behavior: descendants that opt into inheriting
+    /// foreground color can resolve it from the nearest `ForegroundScope`.
+    ///
+    /// Note: v2 only covers foreground color. A richer text-style stack (font/size/weight/etc.)
+    /// can be layered on later without changing the element tree contract.
+    ForegroundScope(ForegroundScopeProps),
     Opacity(OpacityProps),
     /// A scoped post-processing effect group wrapper (ADR 0117).
     EffectLayer(EffectLayerProps),
@@ -998,6 +1007,25 @@ impl Default for OpacityProps {
         Self {
             layout: LayoutStyle::default(),
             opacity: 1.0,
+        }
+    }
+}
+
+/// A paint-only foreground scope wrapper (v2).
+///
+/// This is intentionally layout-only + paint-only: it does not imply semantics beyond its
+/// children, and it is input-transparent (hit-test passes through).
+#[derive(Debug, Clone, Copy)]
+pub struct ForegroundScopeProps {
+    pub layout: LayoutStyle,
+    pub foreground: Option<Color>,
+}
+
+impl Default for ForegroundScopeProps {
+    fn default() -> Self {
+        Self {
+            layout: LayoutStyle::default(),
+            foreground: None,
         }
     }
 }
@@ -1894,6 +1922,10 @@ pub struct SvgIconProps {
     pub svg: SvgSource,
     pub fit: SvgFit,
     pub color: Color,
+    /// When true, the icon will use the nearest inherited foreground (if present) during paint.
+    ///
+    /// When no foreground is inherited, `color` is used as the fallback.
+    pub inherit_color: bool,
     pub opacity: f32,
 }
 
@@ -1909,6 +1941,7 @@ impl SvgIconProps {
                 b: 1.0,
                 a: 1.0,
             },
+            inherit_color: false,
             opacity: 1.0,
         }
     }
