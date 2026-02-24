@@ -39,7 +39,7 @@ If you want to share a repro bundle, prefer schema2-only zips (avoid shipping a 
 - Ensure schema2 exists (or let `--bundle-doctor fix` handle it when possible):
   - `fretboard diag doctor --fix-schema2 <bundle_dir> --warmup-frames <n>`
 - Pack:
-  - `fretboard diag pack <bundle_dir> --include-all --pack-schema2-only`
+  - `fretboard diag pack <bundle_dir> --include-all --pack-schema2-only --warmup-frames <n>`
 
 ## Step 1: First-pass perf triage (no bundle.json materialization)
 

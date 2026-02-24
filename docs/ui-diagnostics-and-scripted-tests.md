@@ -185,6 +185,9 @@ Workflow tip:
 - You can also open a `.zip` that contains `bundle.json` or `bundle.schema2.json` anywhere inside it (handy for sharing a full repro directory).
 - To generate a shareable `.zip` for the latest bundle: `cargo run -p fretboard -- diag pack`
 - To include nearby artifacts (`script.json`, `script.result.json`, `pick.result.json`), `triage.json`, and screenshots (when present): `cargo run -p fretboard -- diag pack --include-all`
+- Prefer bounded share zips when schema2 exists (avoids shipping a huge `bundle.json`):
+  - `cargo run -p fretboard -- diag pack --include-all --pack-schema2-only --warmup-frames <n>`
+  - If needed: `cargo run -p fretboard -- diag doctor --fix-schema2 <bundle_dir> --warmup-frames <n>`
 - The bundle viewer surfaces these zip artifacts (and lets you copy/download them) when they are present under `_root/`.
 - To generate a machine-readable `triage.json` next to a bundle: `cargo run -p fretboard -- diag triage <bundle_dir|bundle.json|bundle.schema2.json>`
 - To generate (or refresh) a cached bundle metadata sidecar (`bundle.meta.json`): `cargo run -p fretboard -- diag meta <bundle_dir|bundle.json|bundle.schema2.json> --json`
@@ -313,7 +316,7 @@ Script shrinking (automated minimal repro):
    Or run it and wait for a pass/fail result (CI-friendly):
 
    - `cargo run -p fretboard -- diag run .\\script.json`
-   - To also pack the most recent bundle (plus optional artifacts) into a shareable `.zip`: `cargo run -p fretboard -- diag run .\\script.json --pack --include-all`
+   - To also pack the most recent bundle (plus optional artifacts) into a shareable `.zip` (bounded by default when schema2 exists): `cargo run -p fretboard -- diag run .\\script.json --bundle-doctor fix --pack --include-all --pack-schema2-only`
 
    Or run a pre-defined suite (the app must be running):
 
