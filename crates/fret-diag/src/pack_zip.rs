@@ -1052,4 +1052,96 @@ mod tests {
             "ai-only zip must not include bundle.schema2.json"
         );
     }
+
+    #[test]
+    fn pack_repro_ai_zip_multi_packs_only_ai_packet_and_scripts() {
+        let root = unique_temp_root("fret-diag-pack-repro-ai-only");
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).expect("create temp root");
+
+        let artifacts_root = root.join("artifacts");
+        std::fs::create_dir_all(&artifacts_root).expect("create artifacts root");
+
+        let summary_path = artifacts_root.join("repro.summary.json");
+        std::fs::write(&summary_path, "{\"schema_version\":1}").expect("write summary");
+
+        let make_bundle = |name: &str| -> (PathBuf, PathBuf) {
+            let dir = root.join(name);
+            std::fs::create_dir_all(&dir).expect("create bundle dir");
+            std::fs::write(
+                dir.join("bundle.schema2.json"),
+                "{\"schema_version\":2,\"windows\":[]}",
+            )
+            .expect("write bundle.schema2.json");
+
+            let packet_dir = dir.join("ai.packet");
+            std::fs::create_dir_all(&packet_dir).expect("create ai.packet dir");
+            std::fs::write(
+                packet_dir.join("doctor.json"),
+                "{\"schema_version\":1,\"ok\":true}",
+            )
+            .expect("write doctor.json");
+
+            let script = root.join(format!("{name}.json"));
+            std::fs::write(&script, "{\"schema_version\":1,\"steps\":[]}").expect("write script");
+            (dir.join("bundle.schema2.json"), script)
+        };
+
+        let (bundle_a, script_a) = make_bundle("a");
+        let (bundle_b, script_b) = make_bundle("b");
+
+        let bundles = vec![
+            ReproZipBundle {
+                prefix: "01-a".to_string(),
+                bundle_artifact: bundle_a,
+                source_script: script_a,
+            },
+            ReproZipBundle {
+                prefix: "02-b".to_string(),
+                bundle_artifact: bundle_b,
+                source_script: script_b,
+            },
+        ];
+
+        let out_path = root.join("repro.ai.zip");
+        pack_repro_ai_zip_multi(&out_path, &artifacts_root, &summary_path, &bundles)
+            .expect("pack repro.ai zip");
+
+        let f = std::fs::File::open(out_path).expect("open out zip");
+        let mut zip = zip::ZipArchive::new(f).expect("open zip archive");
+        let names: Vec<String> = (0..zip.len())
+            .map(|i| zip.by_index(i).expect("zip entry").name().to_string())
+            .collect();
+
+        assert!(
+            names.iter().any(|n| n == "_root/repro.summary.json"),
+            "expected _root/repro.summary.json in zip"
+        );
+        assert!(
+            names.iter().any(|n| n == "_root/scripts/01-a.json"),
+            "expected _root/scripts/01-a.json in zip"
+        );
+        assert!(
+            names.iter().any(|n| n == "_root/scripts/02-b.json"),
+            "expected _root/scripts/02-b.json in zip"
+        );
+
+        for prefix in ["01-a", "02-b"] {
+            assert!(
+                names
+                    .iter()
+                    .any(|n| n == &format!("{prefix}/_root/ai.packet/doctor.json")),
+                "{prefix} expected ai.packet/doctor.json under _root"
+            );
+        }
+
+        assert!(
+            !names.iter().any(|n| n.ends_with("/bundle.json")),
+            "repro.ai zip must not include bundle.json"
+        );
+        assert!(
+            !names.iter().any(|n| n.ends_with("/bundle.schema2.json")),
+            "repro.ai zip must not include bundle.schema2.json"
+        );
+    }
 }
