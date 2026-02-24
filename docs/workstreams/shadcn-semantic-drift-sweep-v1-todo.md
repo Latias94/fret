@@ -41,10 +41,10 @@ Workstream entry:
   - [ ] `tools/diag-scripts/*.json` scenario that resizes a panel / window and asserts stable
      element placements via `test_id`.
 
-## Theme metadata drift: remove `theme.name.contains("/dark")`
+## Theme metadata drift: remove theme-name heuristics
 
 - [x] Inventory all callsites using theme-name heuristics:
-  - [x] `ecosystem/fret-ui-shadcn/src/*` (search: `name.contains("/dark")`).
+  - [x] `ecosystem/fret-ui-shadcn/src/*` (search: `theme.name.`).
 - [x] Choose a stable strategy:
   - [x] Add a theme metadata field to `ThemeConfig` + `Theme` (app/theme-owned).
   - [ ] Prefer explicit token keys for “dark variant” values and remove heuristics.

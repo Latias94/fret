@@ -62,9 +62,9 @@ Implementation note:
   - Evidence: `fret_ui_shadcn::DataTableToolbarResponsiveQuery` in
     `ecosystem/fret-ui-shadcn/src/data_table_recipes.rs`.
 
-### 2) Theme metadata heuristics
+### 2) Theme metadata heuristics (remove theme-name coupling)
 
-We had multiple uses of `theme.name.contains("/dark")` to decide “dark-mode variant” behavior (e.g.
+We had multiple uses of `theme.name.*` heuristics to decide “dark-mode variant” behavior (e.g.
 invalid rings using `destructive/20` vs `destructive/40`, inactive tab foreground).
 
 This is brittle:
