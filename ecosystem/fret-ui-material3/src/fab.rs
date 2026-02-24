@@ -511,8 +511,8 @@ fn material_fab_chrome<H: UiHost>(
 ) -> AnyElement {
     let mut props = ContainerProps::default();
     props.layout.overflow = Overflow::Clip;
-    props.layout.size.min_width = Some(container);
-    props.layout.size.min_height = Some(container);
+    props.layout.size.min_width = Some(Length::Px(container));
+    props.layout.size.min_height = Some(Length::Px(container));
     props.background = Some(background);
     props.shadow = shadow;
     props.corner_radii = corner_radii;
@@ -560,13 +560,14 @@ fn material_extended_fab_chrome<H: UiHost>(
         let mut props = FlexProps::default();
         props.layout = layout;
         props.direction = Axis::Horizontal;
-        props.gap = Px(0.0);
+        props.gap = Px(0.0).into();
         props.padding = Edges {
             left: pad_left,
             right: pad_right,
             top: Px(0.0),
             bottom: Px(0.0),
-        };
+        }
+        .into();
         props.justify = MainAlign::Center;
         props.align = CrossAlign::Center;
         props.wrap = false;
@@ -595,7 +596,7 @@ fn material_fab_content<H: UiHost>(
     props.layout.size.width = Length::Fill;
     props.layout.size.height = Length::Fill;
     props.direction = Axis::Horizontal;
-    props.gap = Px(0.0);
+    props.gap = Px(0.0).into();
     props.justify = MainAlign::Center;
     props.align = CrossAlign::Center;
     props.wrap = false;
@@ -634,7 +635,7 @@ fn material_extended_fab_content<H: UiHost>(
 
     let mut props = FlexProps::default();
     props.direction = Axis::Horizontal;
-    props.gap = Px(0.0);
+    props.gap = Px(0.0).into();
     props.justify = MainAlign::Center;
     props.align = CrossAlign::Center;
     props.wrap = false;

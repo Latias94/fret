@@ -39,7 +39,7 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
                 direction: fret_core::Axis::Horizontal,
                 justify: MainAlign::Center,
                 align: CrossAlign::Center,
-                padding: Edges::all(Px(24.0)),
+                padding: Edges::all(Px(24.0)).into(),
                 ..Default::default()
             },
             move |_cx| vec![number],
@@ -132,8 +132,8 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
                 direction: fret_core::Axis::Vertical,
                 justify: MainAlign::Center,
                 align: CrossAlign::Center,
-                gap,
-                padding: Edges::all(Px(24.0)),
+                gap: gap.into(),
+                padding: Edges::all(Px(24.0)).into(),
                 ..Default::default()
             },
             move |_cx| children,
@@ -277,8 +277,8 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
                     direction: fret_core::Axis::Vertical,
                     justify: MainAlign::Center,
                     align: CrossAlign::Center,
-                    gap,
-                    padding: Edges::all(Px(24.0)),
+                    gap: gap.into(),
+                    padding: Edges::all(Px(24.0)).into(),
                     ..Default::default()
                 },
                 move |cx| {
@@ -330,7 +330,7 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
                     direction: fret_core::Axis::Vertical,
                     justify: MainAlign::Center,
                     align: CrossAlign::Center,
-                    padding: Edges::all(Px(24.0)),
+                    padding: Edges::all(Px(24.0)).into(),
                     ..Default::default()
                 },
                 move |cx| {

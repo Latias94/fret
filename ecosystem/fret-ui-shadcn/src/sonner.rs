@@ -67,7 +67,7 @@ impl Default for Toaster {
             margin: Some(Px(24.0)),
             offset: None,
             mobile_offset: Some(ToastOffset::all(Px(16.0))),
-            gap: Some(Px(14.0)),
+            gap: Some(Px(14.0)).into(),
             toast_min_width: Some(Px(356.0)),
             toast_max_width: Some(Px(356.0)),
             // Sonner does not enforce a max toast count; it only collapses the viewport via

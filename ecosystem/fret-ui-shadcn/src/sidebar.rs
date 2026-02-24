@@ -1717,8 +1717,8 @@ impl SidebarSeparator {
                 layout.size = fret_ui::element::SizeStyle {
                     width: fret_ui::element::Length::Fill,
                     height: fret_ui::element::Length::Px(thickness),
-                    min_height: Some(thickness),
-                    max_height: Some(thickness),
+                    min_height: Some(fret_ui::element::Length::Px(thickness)),
+                    max_height: Some(fret_ui::element::Length::Px(thickness)),
                     ..layout.size
                 };
             }
@@ -1726,8 +1726,8 @@ impl SidebarSeparator {
                 layout.size = fret_ui::element::SizeStyle {
                     width: fret_ui::element::Length::Px(thickness),
                     height: fret_ui::element::Length::Fill,
-                    min_width: Some(thickness),
-                    max_width: Some(thickness),
+                    min_width: Some(fret_ui::element::Length::Px(thickness)),
+                    max_width: Some(fret_ui::element::Length::Px(thickness)),
                     ..layout.size
                 };
             }
@@ -1834,7 +1834,7 @@ impl SidebarContent {
         decl_scroll::overflow_scrollbar(cx, layout, move |cx| {
             let col = FlexProps {
                 direction: fret_core::Axis::Vertical,
-                gap,
+                gap: gap.into(),
                 layout: fret_ui::element::LayoutStyle {
                     size: fret_ui::element::SizeStyle {
                         width: fret_ui::element::Length::Fill,
@@ -2221,12 +2221,12 @@ impl SidebarMenu {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let props = FlexProps {
             direction: fret_core::Axis::Vertical,
-            gap: Px(4.0),
+            gap: Px(4.0).into(),
             layout: fret_ui::element::LayoutStyle {
                 size: fret_ui::element::SizeStyle {
                     width: fret_ui::element::Length::Fill,
                     height: fret_ui::element::Length::Auto,
-                    min_width: Some(Px(0.0)),
+                    min_width: Some(fret_ui::element::Length::Px(Px(0.0))),
                     ..Default::default()
                 },
                 ..Default::default()
@@ -3284,10 +3284,10 @@ impl SidebarMenuSubButton {
             let mut chrome = cx.container(props, move |cx| {
                 let row = FlexProps {
                     direction: fret_core::Axis::Horizontal,
-                    gap,
+                    gap: gap.into(),
                     align: CrossAlign::Center,
                     justify: MainAlign::Start,
-                    padding: Edges::all(gap),
+                    padding: Edges::all(gap).into(),
                     layout: fret_ui::element::LayoutStyle {
                         size: fret_ui::element::SizeStyle {
                             width: fret_ui::element::Length::Fill,
@@ -3642,10 +3642,10 @@ impl SidebarMenuButton {
             let mut chrome = cx.container(props, move |cx| {
                 let row = FlexProps {
                     direction: fret_core::Axis::Horizontal,
-                    gap: inner_gap,
+                    gap: inner_gap.into(),
                     align: CrossAlign::Center,
                     justify: MainAlign::Start,
-                    padding: Edges::all(inner_gap), // `p-2`
+                    padding: Edges::all(inner_gap).into(), // `p-2`
                     layout: fret_ui::element::LayoutStyle {
                         size: fret_ui::element::SizeStyle {
                             width: fret_ui::element::Length::Fill,

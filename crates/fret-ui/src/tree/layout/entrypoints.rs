@@ -579,6 +579,10 @@ impl<H: UiHost> UiTree<H> {
                     st.clear_stale_interaction_targets_for_frame(frame_id);
                 });
             }
+            // Keep cross-frame `bounds_for_element(...)` queries in sync with the latest layout.
+            // These bounds are used by component-layer policies (e.g. overlay placement) and are
+            // expected to reflect the most recent layout pass.
+            self.sync_element_bounds_cache_after_layout(app);
         }
 
         if pass_kind == LayoutPassKind::Final {

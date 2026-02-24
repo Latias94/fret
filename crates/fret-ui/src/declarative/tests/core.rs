@@ -498,8 +498,8 @@ fn mask_layer_is_paint_only_for_hit_testing_by_default() {
                 overflow,
                 ..Default::default()
             };
-            mask_layout.inset.left = Some(Px(0.0));
-            mask_layout.inset.top = Some(Px(0.0));
+            mask_layout.inset.left = Some(Px(0.0)).into();
+            mask_layout.inset.top = Some(Px(0.0)).into();
             mask_layout.size.width = Length::Px(Px(20.0));
             mask_layout.size.height = Length::Px(Px(20.0));
 
@@ -511,8 +511,8 @@ fn mask_layer_is_paint_only_for_hit_testing_by_default() {
             vec![cx.mask_layer_props(mask_props, |cx| {
                 let mut pressable_props = crate::element::PressableProps::default();
                 pressable_props.layout.position = crate::element::PositionStyle::Absolute;
-                pressable_props.layout.inset.left = Some(Px(30.0));
-                pressable_props.layout.inset.top = Some(Px(0.0));
+                pressable_props.layout.inset.left = Some(Px(30.0)).into();
+                pressable_props.layout.inset.top = Some(Px(0.0)).into();
                 pressable_props.layout.size.width = Length::Px(Px(20.0));
                 pressable_props.layout.size.height = Length::Px(Px(20.0));
 
@@ -614,16 +614,16 @@ fn hit_test_gate_is_layout_transparent_for_intrinsic_sizing() {
         |cx| {
             let mut container_props = crate::element::ContainerProps::default();
             container_props.layout.position = crate::element::PositionStyle::Absolute;
-            container_props.layout.inset.left = Some(Px(10.0));
-            container_props.layout.inset.top = Some(Px(10.0));
+            container_props.layout.inset.left = Some(Px(10.0)).into();
+            container_props.layout.inset.top = Some(Px(30.0)).into();
 
             let container = cx.container(container_props, |cx| vec![cx.text("x")]);
 
             let gate_layout = crate::element::LayoutStyle {
                 position: crate::element::PositionStyle::Absolute,
                 inset: crate::element::InsetStyle {
-                    left: Some(Px(10.0)),
-                    top: Some(Px(30.0)),
+                    left: Some(Px(10.0)).into(),
+                    top: Some(Px(30.0)).into(),
                     ..Default::default()
                 },
                 ..Default::default()

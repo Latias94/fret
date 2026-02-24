@@ -252,7 +252,7 @@ impl Tabs {
 
             let mut props = RovingFlexProps::default();
             props.flex.direction = Axis::Horizontal;
-            props.flex.gap = Px(0.0);
+            props.flex.gap = Px(0.0).into();
             props.flex.justify = MainAlign::Start;
             props.flex.align = fret_ui::element::CrossAlign::Stretch;
             props.roving = fret_ui::element::RovingFocusProps {
@@ -606,8 +606,9 @@ fn material_primary_tab<H: UiHost>(
                         top: Px(0.0),
                         bottom: Px(0.0),
                     }
+                    .into()
                 } else {
-                    Edges::all(Px(0.0))
+                    Edges::all(Px(0.0)).into()
                 };
 
                 let mut chrome = cx.flex(row, move |_cx| vec![ink, label_el]);
@@ -759,10 +760,10 @@ fn primary_tab_list_indicator<H: UiHost>(
 
         let mut props = fret_ui::element::CanvasProps::default();
         props.layout.position = fret_ui::element::PositionStyle::Absolute;
-        props.layout.inset.top = Some(Px(0.0));
-        props.layout.inset.right = Some(Px(0.0));
-        props.layout.inset.bottom = Some(Px(0.0));
-        props.layout.inset.left = Some(Px(0.0));
+        props.layout.inset.top = Some(Px(0.0)).into();
+        props.layout.inset.right = Some(Px(0.0)).into();
+        props.layout.inset.bottom = Some(Px(0.0)).into();
+        props.layout.inset.left = Some(Px(0.0)).into();
 
         let mut indicator = cx.canvas(props, move |p| {
             if height.value > 0.0 && width.value > 0.0 && color.a > 0.0 {

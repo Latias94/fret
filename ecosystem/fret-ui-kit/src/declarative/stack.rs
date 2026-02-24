@@ -98,7 +98,7 @@ where
     cx.row(
         RowProps {
             layout,
-            gap,
+            gap: gap.into(),
             justify: props.justify.to_main_align(),
             align: props.items.to_cross_align(),
             ..Default::default()
@@ -217,7 +217,7 @@ where
     cx.column(
         ColumnProps {
             layout,
-            gap,
+            gap: gap.into(),
             justify: props.justify.to_main_align(),
             align: props.items.to_cross_align(),
             ..Default::default()

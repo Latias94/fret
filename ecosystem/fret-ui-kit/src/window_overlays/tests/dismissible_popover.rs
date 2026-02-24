@@ -182,8 +182,8 @@ fn dismissible_popover_does_not_close_on_inside_press() {
                 layout: LayoutStyle {
                     position: PositionStyle::Absolute,
                     inset: fret_ui::element::InsetStyle {
-                        top: Some(Px(40.0)),
-                        left: Some(Px(40.0)),
+                        top: Some(Px(40.0)).into(),
+                        left: Some(Px(40.0)).into(),
                         ..Default::default()
                     },
                     size: fret_ui::element::SizeStyle {

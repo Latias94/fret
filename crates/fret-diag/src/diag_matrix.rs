@@ -97,6 +97,12 @@ pub(crate) fn cmd_matrix(ctx: MatrixCmdContext) -> Result<(), String> {
     //   assumptions onto non-overlay scripts (e.g. virtual-list torture).
     let mut matrix_base_env = launch_env.clone();
     let _ = ensure_env_var(&mut matrix_base_env, "FRET_DIAG_RENDERER_PERF", "1");
+    if reuse_gate.is_some() || reuse_stable_gate.is_some() {
+        // View-cache reuse gates depend on cache-root debug records, which are only produced when
+        // the app enables UiTree debug collection. UI gallery disables debug in perf mode unless
+        // `FRET_UI_DEBUG_STATS` is set.
+        let _ = ensure_env_var(&mut matrix_base_env, "FRET_UI_DEBUG_STATS", "1");
+    }
 
     let shell_reuse_enabled = matrix_base_env.iter().any(|(k, v)| {
         (k.as_str() == "FRET_UI_GALLERY_VIEW_CACHE_SHELL")

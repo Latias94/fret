@@ -327,7 +327,7 @@ where
 
                             vec![cx.container(
                                 ContainerProps {
-                                    padding: Edges::symmetric(row_px, row_py),
+                                    padding: Edges::symmetric(row_px, row_py).into(),
                                     background: bg,
                                     ..Default::default()
                                 },
@@ -484,7 +484,7 @@ where
 
                             vec![cx.container(
                                 ContainerProps {
-                                    padding: Edges::symmetric(row_px, row_py),
+                                    padding: Edges::symmetric(row_px, row_py).into(),
                                     background: bg,
                                     ..Default::default()
                                 },

@@ -456,16 +456,17 @@ fn assist_chip_content<H: UiHost>(
     props.justify = MainAlign::Center;
     props.align = CrossAlign::Center;
     props.gap = if leading_icon.is_some() {
-        ICON_LABEL_SPACE
+        ICON_LABEL_SPACE.into()
     } else {
-        Px(0.0)
+        Px(0.0).into()
     };
     props.padding = Edges {
         left: padding_left,
         right: TRAILING_SPACE,
         top: Px(0.0),
         bottom: Px(0.0),
-    };
+    }
+    .into();
     props.layout.size.height = Length::Px(height);
 
     cx.flex(props, move |cx| {

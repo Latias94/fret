@@ -574,13 +574,14 @@ fn chip_content<H: UiHost>(
     props.direction = Axis::Horizontal;
     props.justify = MainAlign::Center;
     props.align = CrossAlign::Center;
-    props.gap = Px(0.0);
+    props.gap = Px(0.0).into();
     props.padding = Edges {
         left: padding_left,
         right: padding_right,
         top: Px(0.0),
         bottom: Px(0.0),
-    };
+    }
+    .into();
     props.layout.size.height = Length::Px(height);
     props.layout.position = PositionStyle::Relative;
 
@@ -708,10 +709,10 @@ fn trailing_icon_touch_target_overlay<H: UiHost>(
             let top = Px((chip_height.0 - min_touch.0) * 0.5);
             let width = Px(size.0 + 16.0);
 
-            layout.inset.top = Some(top);
+            layout.inset.top = Some(top).into();
             // In flex layout, absolute positioning uses the content rect (excluding padding).
             // Offset by the chip's trailing padding so the touch target covers the visible edge.
-            layout.inset.right = Some(Px(-8.0));
+            layout.inset.right = Some(Px(-8.0)).into();
             layout.size.width = Length::Px(width);
             layout.size.height = Length::Px(min_touch);
 

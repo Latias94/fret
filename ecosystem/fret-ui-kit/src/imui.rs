@@ -2740,10 +2740,10 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 let mut props = fret_ui::element::ContainerProps::default();
                 props.layout.position = PositionStyle::Absolute;
                 props.layout.inset = InsetStyle {
-                    left: Some(Px(0.0)),
-                    right: Some(Px(0.0)),
-                    top: Some(Px(0.0)),
-                    bottom: Some(Px(0.0)),
+                    left: Some(Px(0.0)).into(),
+                    right: Some(Px(0.0)).into(),
+                    top: Some(Px(0.0)).into(),
+                    bottom: Some(Px(0.0)).into(),
                 };
                 props.layout.overflow = Overflow::Visible;
                 props.layout.size.width = Length::Fill;
@@ -2905,8 +2905,8 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 props.layout = LayoutStyle {
                     position: PositionStyle::Absolute,
                     inset: InsetStyle {
-                        left: Some(final_position.x),
-                        top: Some(final_position.y),
+                        left: Some(final_position.x).into(),
+                        top: Some(final_position.y).into(),
                         ..Default::default()
                     },
                     overflow: Overflow::Visible,
@@ -3121,8 +3121,8 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     semantics.layout = LayoutStyle {
                         position: PositionStyle::Absolute,
                         inset: InsetStyle {
-                            left: Some(layout.rect.origin.x),
-                            top: Some(layout.rect.origin.y),
+                            left: Some(layout.rect.origin.x).into(),
+                            top: Some(layout.rect.origin.y).into(),
                             ..Default::default()
                         },
                         overflow: Overflow::Visible,
@@ -3276,10 +3276,10 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     let mut stack = fret_ui::element::StackProps::default();
                     stack.layout.position = PositionStyle::Absolute;
                     stack.layout.inset = InsetStyle {
-                        left: Some(Px(0.0)),
-                        right: Some(Px(0.0)),
-                        top: Some(Px(0.0)),
-                        bottom: Some(Px(0.0)),
+                        left: Some(Px(0.0)).into(),
+                        right: Some(Px(0.0)).into(),
+                        top: Some(Px(0.0)).into(),
+                        bottom: Some(Px(0.0)).into(),
                     };
                     stack.layout.size.width = Length::Fill;
                     stack.layout.size.height = Length::Fill;
@@ -3291,10 +3291,10 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                                 let mut props = ContainerProps::default();
                                 props.layout.position = PositionStyle::Absolute;
                                 props.layout.inset = InsetStyle {
-                                    left: Some(Px(0.0)),
-                                    right: Some(Px(0.0)),
-                                    top: Some(Px(0.0)),
-                                    bottom: Some(Px(0.0)),
+                                    left: Some(Px(0.0)).into(),
+                                    right: Some(Px(0.0)).into(),
+                                    top: Some(Px(0.0)).into(),
+                                    bottom: Some(Px(0.0)).into(),
                                 };
                                 props.layout.size.width = Length::Fill;
                                 props.layout.size.height = Length::Fill;
@@ -3311,8 +3311,8 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                             semantics.layout = LayoutStyle {
                                 position: PositionStyle::Absolute,
                                 inset: InsetStyle {
-                                    left: Some(left),
-                                    top: Some(top),
+                                    left: Some(left).into(),
+                                    top: Some(top).into(),
                                     ..Default::default()
                                 },
                                 size: fret_ui::element::SizeStyle {
@@ -3497,10 +3497,10 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 props.layout = LayoutStyle {
                     position: PositionStyle::Absolute,
                     inset: InsetStyle {
-                        left: Some(Px(0.0)),
-                        right: Some(Px(0.0)),
-                        top: Some(Px(0.0)),
-                        bottom: Some(Px(0.0)),
+                        left: Some(Px(0.0)).into(),
+                        right: Some(Px(0.0)).into(),
+                        top: Some(Px(0.0)).into(),
+                        bottom: Some(Px(0.0)).into(),
                     },
                     size: fret_ui::element::SizeStyle {
                         width: Length::Fill,
@@ -5584,8 +5584,8 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 window_props.layout = LayoutStyle {
                     position: PositionStyle::Absolute,
                     inset: InsetStyle {
-                        left: Some(position.x),
-                        top: Some(position.y),
+                        left: Some(position.x).into(),
+                        top: Some(position.y).into(),
                         ..Default::default()
                     },
                     overflow: Overflow::Visible,
@@ -5821,9 +5821,9 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                                 let mut layout = LayoutStyle::default();
                                 layout.position = PositionStyle::Absolute;
                                 layout.inset = InsetStyle {
-                                    left: Some(Px(0.0)),
-                                    top: Some(Px(0.0)),
-                                    bottom: Some(Px(0.0)),
+                                    left: Some(Px(0.0)).into(),
+                                    top: Some(Px(0.0)).into(),
+                                    bottom: Some(Px(0.0)).into(),
                                     ..Default::default()
                                 };
                                 layout.size.width = Length::Px(Px(6.0));
@@ -5834,9 +5834,9 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                                 let mut layout = LayoutStyle::default();
                                 layout.position = PositionStyle::Absolute;
                                 layout.inset = InsetStyle {
-                                    right: Some(Px(0.0)),
-                                    top: Some(Px(0.0)),
-                                    bottom: Some(Px(0.0)),
+                                    right: Some(Px(0.0)).into(),
+                                    top: Some(Px(0.0)).into(),
+                                    bottom: Some(Px(0.0)).into(),
                                     ..Default::default()
                                 };
                                 layout.size.width = Length::Px(Px(6.0));
@@ -5847,9 +5847,9 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                                 let mut layout = LayoutStyle::default();
                                 layout.position = PositionStyle::Absolute;
                                 layout.inset = InsetStyle {
-                                    left: Some(Px(0.0)),
-                                    right: Some(Px(0.0)),
-                                    top: Some(Px(0.0)),
+                                    left: Some(Px(0.0)).into(),
+                                    right: Some(Px(0.0)).into(),
+                                    top: Some(Px(0.0)).into(),
                                     ..Default::default()
                                 };
                                 layout.size.width = Length::Fill;
@@ -5860,9 +5860,9 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                                 let mut layout = LayoutStyle::default();
                                 layout.position = PositionStyle::Absolute;
                                 layout.inset = InsetStyle {
-                                    left: Some(Px(0.0)),
-                                    right: Some(Px(0.0)),
-                                    bottom: Some(Px(0.0)),
+                                    left: Some(Px(0.0)).into(),
+                                    right: Some(Px(0.0)).into(),
+                                    bottom: Some(Px(0.0)).into(),
                                     ..Default::default()
                                 };
                                 layout.size.width = Length::Fill;
@@ -5873,8 +5873,8 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                                 let mut layout = LayoutStyle::default();
                                 layout.position = PositionStyle::Absolute;
                                 layout.inset = InsetStyle {
-                                    left: Some(Px(0.0)),
-                                    top: Some(Px(0.0)),
+                                    left: Some(Px(0.0)).into(),
+                                    top: Some(Px(0.0)).into(),
                                     ..Default::default()
                                 };
                                 layout.size.width = Length::Px(Px(10.0));
@@ -5885,8 +5885,8 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                                 let mut layout = LayoutStyle::default();
                                 layout.position = PositionStyle::Absolute;
                                 layout.inset = InsetStyle {
-                                    right: Some(Px(0.0)),
-                                    top: Some(Px(0.0)),
+                                    right: Some(Px(0.0)).into(),
+                                    top: Some(Px(0.0)).into(),
                                     ..Default::default()
                                 };
                                 layout.size.width = Length::Px(Px(10.0));
@@ -5897,8 +5897,8 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                                 let mut layout = LayoutStyle::default();
                                 layout.position = PositionStyle::Absolute;
                                 layout.inset = InsetStyle {
-                                    left: Some(Px(0.0)),
-                                    bottom: Some(Px(0.0)),
+                                    left: Some(Px(0.0)).into(),
+                                    bottom: Some(Px(0.0)).into(),
                                     ..Default::default()
                                 };
                                 layout.size.width = Length::Px(Px(10.0));
@@ -5909,8 +5909,8 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                                 let mut layout = LayoutStyle::default();
                                 layout.position = PositionStyle::Absolute;
                                 layout.inset = InsetStyle {
-                                    right: Some(Px(0.0)),
-                                    bottom: Some(Px(0.0)),
+                                    right: Some(Px(0.0)).into(),
+                                    bottom: Some(Px(0.0)).into(),
                                     ..Default::default()
                                 };
                                 layout.size.width = Length::Px(Px(10.0));

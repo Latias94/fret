@@ -752,6 +752,11 @@ pub fn render<H: UiHost + 'static>(
             bounds,
             &root_name,
             move |cx| {
+                // Modals often branch layout based on viewport-driven breakpoints (Tailwind-style
+                // `sm:`/`md:`). Ensure the modal layer observes viewport size so view-cache reuse
+                // is correctly invalidated when the window resizes.
+                let _ = cx.environment_viewport_bounds(fret_ui::Invalidation::Layout);
+
                 // Overlays can remain mounted while `open=false` during exit motion. Once closed,
                 // the layer should be click-through and should not participate in Escape routing
                 // or dismissal observer passes.
@@ -2164,13 +2169,13 @@ pub fn render<H: UiHost + 'static>(
                                         position: fret_ui::element::PositionStyle::Absolute,
                                         ..Default::default()
                                     };
-                                    wrapper_layout.inset.left = Some(x);
+                                    wrapper_layout.inset.left = Some(x).into();
                                     wrapper_layout.size.width =
                                         fret_ui::element::Length::Px(toast_width);
                                     if is_top {
-                                        wrapper_layout.inset.top = Some(offset_top);
+                                        wrapper_layout.inset.top = Some(offset_top).into();
                                     } else {
-                                        wrapper_layout.inset.bottom = Some(offset_bottom);
+                                        wrapper_layout.inset.bottom = Some(offset_bottom).into();
                                     }
 
                                     let store_for_toasts = store_for_render_state.clone();
@@ -2410,7 +2415,8 @@ pub fn render<H: UiHost + 'static>(
                                                                         right: button_pad_x,
                                                                         bottom: button_pad_y,
                                                                         left: button_pad_x,
-                                                                    },
+                                                                    }
+                                                                    .into(),
                                                                     background: bg,
                                                                     background_paint: None,
                                                                     shadow: None,
@@ -2507,7 +2513,8 @@ pub fn render<H: UiHost + 'static>(
                                                                             right: button_pad_x,
                                                                             bottom: button_pad_y,
                                                                             left: button_pad_x,
-                                                                        },
+                                                                        }
+                                                                        .into(),
                                                                         background: button_bg,
                                                                         background_paint: None,
                                                                         shadow: None,
@@ -2589,7 +2596,8 @@ pub fn render<H: UiHost + 'static>(
                                                                             right: button_pad_x,
                                                                             bottom: button_pad_y,
                                                                             left: button_pad_x,
-                                                                        },
+                                                                        }
+                                                                        .into(),
                                                                         background: bg,
                                                                         background_paint: None,
                                                                         shadow: None,
@@ -2769,8 +2777,8 @@ pub fn render<H: UiHost + 'static>(
                                                     let content = cx.column(
                                                         fret_ui::element::ColumnProps {
                                                             layout: fret_ui::element::LayoutStyle::default(),
-                                                            gap: Px(2.0),
-                                                            padding: fret_core::Edges::all(Px(0.0)),
+                                                            gap: Px(2.0).into(),
+                                                            padding: fret_core::Edges::all(Px(0.0)).into(),
                                                             justify: fret_ui::element::MainAlign::Start,
                                                             align: fret_ui::element::CrossAlign::Start,
                                                         },
@@ -2786,8 +2794,8 @@ pub fn render<H: UiHost + 'static>(
                                                         fret_ui::element::FlexProps {
                                                             layout: fret_ui::element::LayoutStyle::default(),
                                                             direction: fret_core::Axis::Horizontal,
-                                                            gap: Px(6.0),
-                                                            padding: fret_core::Edges::all(Px(0.0)),
+                                                            gap: Px(6.0).into(),
+                                                            padding: fret_core::Edges::all(Px(0.0)).into(),
                                                             justify: fret_ui::element::MainAlign::Start,
                                                             align: fret_ui::element::CrossAlign::Center,
                                                             wrap: false,
@@ -2805,7 +2813,7 @@ pub fn render<H: UiHost + 'static>(
                                                                                 fret_ui::element::Length::Px(icon_size);
                                                                             layout
                                                                         },
-                                                                        padding: fret_core::Edges::all(Px(0.0)),
+                                                                        padding: fret_core::Edges::all(Px(0.0)).into(),
                                                                         background: None,
                                                                         background_paint: None,
                                                                         shadow: None,
@@ -2918,12 +2926,12 @@ pub fn render<H: UiHost + 'static>(
                                                         position: fret_ui::element::PositionStyle::Absolute,
                                                         ..Default::default()
                                                     };
-                                                    toast_layout.inset.left = Some(Px(0.0));
-                                                    toast_layout.inset.right = Some(Px(0.0));
+                                                    toast_layout.inset.left = Some(Px(0.0)).into();
+                                                    toast_layout.inset.right = Some(Px(0.0)).into();
                                                     if is_top {
-                                                        toast_layout.inset.top = Some(Px(0.0));
+                                                        toast_layout.inset.top = Some(Px(0.0)).into();
                                                     } else {
-                                                        toast_layout.inset.bottom = Some(Px(0.0));
+                                                        toast_layout.inset.bottom = Some(Px(0.0)).into();
                                                     }
                                                     toast_layout.size.width =
                                                         fret_ui::element::Length::Px(toast_width_for_stack);
@@ -2975,7 +2983,7 @@ pub fn render<H: UiHost + 'static>(
                                                             let toast_el = cx.container(
                                                                 fret_ui::element::ContainerProps {
                                                                     layout: fret_ui::element::LayoutStyle::default(),
-                                                                    padding: toast_padding,
+                                                                    padding: toast_padding.into(),
                                                                     background: Some(bg),
                                                                     background_paint: None,
                                                                     shadow,
@@ -2995,8 +3003,8 @@ pub fn render<H: UiHost + 'static>(
                                                                         fret_ui::element::FlexProps {
                                                                             layout: fret_ui::element::LayoutStyle::default(),
                                                                             direction: fret_core::Axis::Vertical,
-                                                                            gap: fret_core::Px(4.0),
-                                                                            padding: fret_core::Edges::all(fret_core::Px(0.0)),
+                                                                            gap: fret_core::Px(4.0).into(),
+                                                                            padding: fret_core::Edges::all(fret_core::Px(0.0)).into(),
                                                                             justify: fret_ui::element::MainAlign::Start,
                                                                             align: fret_ui::element::CrossAlign::Stretch,
                                                                             wrap: false,

@@ -163,7 +163,7 @@ impl DropdownMenuItem {
             leading: None,
             leading_icon: None,
             content: None,
-            padding: None,
+            padding: None.into(),
             estimated_height: None,
             disabled: false,
             close_on_select: true,
@@ -758,8 +758,8 @@ fn menu_structural_group<H: UiHost>(
                     layout
                 },
                 direction: fret_core::Axis::Vertical,
-                gap: Px(0.0),
-                padding: Edges::all(Px(0.0)),
+                gap: Px(0.0).into(),
+                padding: Edges::all(Px(0.0)).into(),
                 justify: MainAlign::Start,
                 align: CrossAlign::Stretch,
                 wrap: false,
@@ -950,155 +950,160 @@ fn checkable_menu_row_children<H: UiHost>(
     let effective_fg = if disabled { text_disabled } else { row_fg };
     let indicator_fg = effective_fg;
 
-    vec![cx.container(
-        ContainerProps {
-            layout: {
-                let mut layout = LayoutStyle::default();
-                layout.size.width = Length::Fill;
-                layout
+    vec![
+        cx.container(
+            ContainerProps {
+                layout: {
+                    let mut layout = LayoutStyle::default();
+                    layout.size.width = Length::Fill;
+                    layout
+                },
+                padding: Edges {
+                    top: pad_y,
+                    right: pad_x,
+                    bottom: pad_y,
+                    // new-york-v4: checkbox/radio items use `pl-8`.
+                    left: pad_x_inset,
+                }
+                .into(),
+                background: Some(row_bg),
+                corner_radii: fret_core::Corners::all(radius_sm),
+                ..Default::default()
             },
-            padding: Edges {
-                top: pad_y,
-                right: pad_x,
-                bottom: pad_y,
-                // new-york-v4: checkbox/radio items use `pl-8`.
-                left: pad_x_inset,
-            },
-            background: Some(row_bg),
-            corner_radii: fret_core::Corners::all(radius_sm),
-            ..Default::default()
-        },
-        move |cx| {
-            current_color::scope_children(cx, ColorRef::Color(effective_fg), |cx| {
-                let indicator = cx.container(
-                    ContainerProps {
-                        layout: LayoutStyle {
-                            position: fret_ui::element::PositionStyle::Absolute,
-                            inset: fret_ui::element::InsetStyle {
-                                top: Some(Px(0.0)),
-                                right: None,
-                                bottom: Some(Px(0.0)),
-                                // new-york-v4: indicator slot uses `left-2`.
-                                left: Some(pad_x),
-                            },
-                            size: SizeStyle {
-                                width: Length::Px(Px(16.0)),
-                                height: Length::Fill,
+            move |cx| {
+                current_color::scope_children(cx, ColorRef::Color(effective_fg), |cx| {
+                    let indicator = cx.container(
+                        ContainerProps {
+                            layout: LayoutStyle {
+                                position: fret_ui::element::PositionStyle::Absolute,
+                                inset: fret_ui::element::InsetStyle {
+                                    top: Some(Px(0.0)).into(),
+                                    right: None.into(),
+                                    bottom: Some(Px(0.0)).into(),
+                                    // new-york-v4: indicator slot uses `left-2`.
+                                    left: Some(pad_x).into(),
+                                },
+                                size: SizeStyle {
+                                    width: Length::Px(Px(16.0)),
+                                    height: Length::Fill,
+                                    ..Default::default()
+                                },
                                 ..Default::default()
                             },
                             ..Default::default()
                         },
-                        ..Default::default()
-                    },
-                    move |cx| {
-                        vec![cx.flex(
-                            FlexProps {
-                                layout: LayoutStyle::default(),
-                                direction: fret_core::Axis::Horizontal,
-                                gap: Px(0.0),
-                                padding: Edges::all(Px(0.0)),
-                                justify: MainAlign::Center,
-                                align: CrossAlign::Center,
-                                wrap: false,
-                            },
-                            move |cx| {
-                                if !indicator_on {
-                                    return Vec::new();
-                                }
+                        move |cx| {
+                            vec![cx.flex(
+                                FlexProps {
+                                    layout: LayoutStyle::default(),
+                                    direction: fret_core::Axis::Horizontal,
+                                    gap: Px(0.0).into(),
+                                    padding: Edges::all(Px(0.0)).into(),
+                                    justify: MainAlign::Center,
+                                    align: CrossAlign::Center,
+                                    wrap: false,
+                                },
+                                move |cx| {
+                                    if !indicator_on {
+                                        return Vec::new();
+                                    }
 
-                                match indicator_kind {
-                                    CheckableIndicatorKind::Check => vec![decl_icon::icon_with(
-                                        cx,
-                                        ids::ui::CHECK,
-                                        Some(Px(16.0)),
-                                        Some(ColorRef::Color(indicator_fg)),
-                                    )],
-                                    CheckableIndicatorKind::RadioDot => vec![cx.container(
-                                        ContainerProps {
-                                            layout: {
-                                                let mut layout = LayoutStyle::default();
-                                                layout.size.width = Length::Px(Px(8.0));
-                                                layout.size.height = Length::Px(Px(8.0));
-                                                layout
+                                    match indicator_kind {
+                                        CheckableIndicatorKind::Check => {
+                                            vec![decl_icon::icon_with(
+                                                cx,
+                                                ids::ui::CHECK,
+                                                Some(Px(16.0)),
+                                                Some(ColorRef::Color(indicator_fg)),
+                                            )]
+                                        }
+                                        CheckableIndicatorKind::RadioDot => vec![cx.container(
+                                            ContainerProps {
+                                                layout: {
+                                                    let mut layout = LayoutStyle::default();
+                                                    layout.size.width = Length::Px(Px(8.0));
+                                                    layout.size.height = Length::Px(Px(8.0));
+                                                    layout
+                                                },
+                                                padding: Edges::all(Px(0.0)).into(),
+                                                background: Some(indicator_fg),
+                                                shadow: None,
+                                                border: Edges::all(Px(0.0)),
+                                                border_color: None,
+                                                corner_radii: fret_core::Corners::all(Px(999.0)),
+                                                ..Default::default()
                                             },
-                                            padding: Edges::all(Px(0.0)),
-                                            background: Some(indicator_fg),
-                                            shadow: None,
-                                            border: Edges::all(Px(0.0)),
-                                            border_color: None,
-                                            corner_radii: fret_core::Corners::all(Px(999.0)),
-                                            ..Default::default()
-                                        },
-                                        |_cx| Vec::new(),
-                                    )],
-                                }
-                            },
-                        )]
-                    },
-                );
-
-                let mut row: Vec<AnyElement> = Vec::with_capacity(
-                    2 + usize::from(
-                        leading.is_some() || leading_icon.is_some() || reserve_leading_slot,
-                    ) + usize::from(trailing.is_some()),
-                );
-
-                if let Some(l) = leading {
-                    row.push(menu_icon_slot(cx, l));
-                } else if let Some(icon) = leading_icon {
-                    let icon_el = decl_icon::icon_with(cx, icon, Some(Px(16.0)), None);
-                    row.push(menu_icon_slot(cx, icon_el));
-                } else if reserve_leading_slot {
-                    row.push(menu_icon_slot_empty(cx));
-                }
-
-                let style = text_style.clone();
-                let mut text = ui::text(cx, label.clone())
-                    .layout(LayoutRefinement::default().min_w_0().flex_1())
-                    .text_size_px(style.size)
-                    .font_weight(style.weight)
-                    .nowrap()
-                    .text_color(ColorRef::Color(if disabled {
-                        text_disabled
-                    } else {
-                        row_fg
-                    }));
-
-                if let Some(line_height) = style.line_height {
-                    text = text.fixed_line_box_px(line_height).line_box_in_bounds();
-                }
-
-                if let Some(letter_spacing_em) = style.letter_spacing_em {
-                    text = text.letter_spacing_em(letter_spacing_em);
-                }
-
-                row.push(text.into_element(cx));
-
-                if let Some(t) = trailing {
-                    row.push(t);
-                }
-
-                let content = cx.flex(
-                    FlexProps {
-                        layout: {
-                            let mut layout = LayoutStyle::default();
-                            layout.size.width = Length::Fill;
-                            layout
+                                            |_cx| Vec::new(),
+                                        )],
+                                    }
+                                },
+                            )]
                         },
-                        direction: fret_core::Axis::Horizontal,
-                        gap: Px(8.0),
-                        padding: Edges::all(Px(0.0)),
-                        justify: MainAlign::Start,
-                        align: CrossAlign::Center,
-                        wrap: false,
-                    },
-                    move |_cx| row,
-                );
+                    );
 
-                vec![content, indicator]
-            })
-        },
-    )]
+                    let mut row: Vec<AnyElement> = Vec::with_capacity(
+                        2 + usize::from(
+                            leading.is_some() || leading_icon.is_some() || reserve_leading_slot,
+                        ) + usize::from(trailing.is_some()),
+                    );
+
+                    if let Some(l) = leading {
+                        row.push(menu_icon_slot(cx, l));
+                    } else if let Some(icon) = leading_icon {
+                        let icon_el = decl_icon::icon_with(cx, icon, Some(Px(16.0)), None);
+                        row.push(menu_icon_slot(cx, icon_el));
+                    } else if reserve_leading_slot {
+                        row.push(menu_icon_slot_empty(cx));
+                    }
+
+                    let style = text_style.clone();
+                    let mut text = ui::text(cx, label.clone())
+                        .layout(LayoutRefinement::default().min_w_0().flex_1())
+                        .text_size_px(style.size)
+                        .font_weight(style.weight)
+                        .nowrap()
+                        .text_color(ColorRef::Color(if disabled {
+                            text_disabled
+                        } else {
+                            row_fg
+                        }));
+
+                    if let Some(line_height) = style.line_height {
+                        text = text.fixed_line_box_px(line_height).line_box_in_bounds();
+                    }
+
+                    if let Some(letter_spacing_em) = style.letter_spacing_em {
+                        text = text.letter_spacing_em(letter_spacing_em);
+                    }
+
+                    row.push(text.into_element(cx));
+
+                    if let Some(t) = trailing {
+                        row.push(t);
+                    }
+
+                    let content = cx.flex(
+                        FlexProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Fill;
+                                layout
+                            },
+                            direction: fret_core::Axis::Horizontal,
+                            gap: Px(8.0).into(),
+                            padding: Edges::all(Px(0.0)).into(),
+                            justify: MainAlign::Start,
+                            align: CrossAlign::Center,
+                            wrap: false,
+                        },
+                        move |_cx| row,
+                    );
+
+                    vec![content, indicator]
+                })
+            },
+        ),
+    ]
 }
 
 fn submenu_chevron_right_text<H: UiHost>(
@@ -1122,8 +1127,8 @@ fn submenu_chevron_right_text<H: UiHost>(
                 layout
             },
             direction: fret_core::Axis::Horizontal,
-            gap: Px(0.0),
-            padding: Edges::all(Px(0.0)),
+            gap: Px(0.0).into(),
+            padding: Edges::all(Px(0.0)).into(),
             justify: MainAlign::Center,
             align: CrossAlign::Center,
             wrap: false,
@@ -1150,8 +1155,8 @@ fn menu_icon_slot<H: UiHost>(cx: &mut ElementContext<'_, H>, element: AnyElement
                 layout
             },
             direction: fret_core::Axis::Horizontal,
-            gap: Px(0.0),
-            padding: Edges::all(Px(0.0)),
+            gap: Px(0.0).into(),
+            padding: Edges::all(Px(0.0)).into(),
             justify: MainAlign::Center,
             align: CrossAlign::Center,
             wrap: false,
@@ -1171,8 +1176,8 @@ fn menu_icon_slot_empty<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement
                 layout
             },
             direction: fret_core::Axis::Horizontal,
-            gap: Px(0.0),
-            padding: Edges::all(Px(0.0)),
+            gap: Px(0.0).into(),
+            padding: Edges::all(Px(0.0)).into(),
             justify: MainAlign::Center,
             align: CrossAlign::Center,
             wrap: false,
@@ -1742,8 +1747,8 @@ impl DropdownMenu {
                     let content_layout = LayoutStyle {
                         position: PositionStyle::Absolute,
                         inset: InsetStyle {
-                            left: Some(placed.origin.x),
-                            top: Some(placed.origin.y),
+                            left: Some(placed.origin.x).into(),
+                            top: Some(placed.origin.y).into(),
                             ..Default::default()
                         },
                         size: SizeStyle {
@@ -1846,8 +1851,8 @@ impl DropdownMenu {
                                                             layout
                                                         },
                                                         direction: fret_core::Axis::Vertical,
-                                                        gap: Px(0.0),
-                                                        padding: Edges::all(Px(0.0)),
+                                                        gap: Px(0.0).into(),
+                                                        padding: Edges::all(Px(0.0)).into(),
                                                         justify: MainAlign::Start,
                                                         align: CrossAlign::Stretch,
                                                         wrap: false,
@@ -1984,7 +1989,7 @@ impl DropdownMenu {
                                                                     right: pad_x,
                                                                     bottom: pad_y,
                                                                     left: pad_left,
-                                                                },
+                                                                }.into(),
                                                                 ..Default::default()
                                                             },
                                                             move |cx| {
@@ -2050,7 +2055,7 @@ impl DropdownMenu {
                                                                         fret_ui::element::MarginEdge::Px(Px(4.0));
                                                                     layout
                                                                 },
-                                                                padding: Edges::all(Px(0.0)),
+                                                                padding: Edges::all(Px(0.0)).into(),
                                                                 background: Some(border),
                                                                         ..Default::default()
                                                                     },
@@ -2125,7 +2130,7 @@ impl DropdownMenu {
                                                                             layout.size.width =
                                                                                 Length::Fill;
                                                                             layout.size.min_height =
-                                                                                Some(Px(28.0));
+                                                                                Some(Length::Px(Px(28.0)));
                                                                             layout
                                                                         },
                                                                         enabled: !disabled,
@@ -2272,7 +2277,7 @@ impl DropdownMenu {
                                                                             layout.size.width =
                                                                                 Length::Fill;
                                                                             layout.size.min_height =
-                                                                                Some(Px(28.0));
+                                                                                Some(Length::Px(Px(28.0)));
                                                                             layout
                                                                         },
                                                                         enabled: !disabled,
@@ -2468,10 +2473,12 @@ impl DropdownMenu {
                                                                     layout: {
                                                                         let mut layout = LayoutStyle::default();
                                                                         layout.size.width = Length::Fill;
-                                                                        layout.size.min_height = Some(row_height);
+                                                                        layout.size.min_height =
+                                                                            Some(Length::Px(row_height));
                                                                         if let Some(h) = estimated_height {
                                                                             layout.size.height = Length::Px(h);
-                                                                            layout.size.min_height = Some(h);
+                                                                            layout.size.min_height =
+                                                                                Some(Length::Px(h));
                                                                         }
                                                                         layout
                                                                     },
@@ -2536,7 +2543,7 @@ impl DropdownMenu {
                                                                                      layout.size.width = Length::Fill;
                                                                                      layout
                                                                                  },
-                                                                                 padding: row_padding,
+                                                                                 padding: row_padding.into(),
                                                                                  background: Some(row_bg),
                                                                                  corner_radii: fret_core::Corners::all(radius_sm),
                                                                                  ..Default::default()
@@ -2631,8 +2638,8 @@ impl DropdownMenu {
                                                                                         },
                                                                                         direction:
                                                                                             fret_core::Axis::Horizontal,
-                                                                                        gap: Px(8.0),
-                                                                                        padding: Edges::all(Px(0.0)),
+                                                                                        gap: Px(8.0).into(),
+                                                                                        padding: Edges::all(Px(0.0)).into(),
                                                                                         justify: MainAlign::Start,
                                                                                         align: CrossAlign::Center,
                                                                                         wrap: false,
@@ -2998,7 +3005,7 @@ impl DropdownMenu {
                                                                             right: pad_x,
                                                                             bottom: pad_y,
                                                                             left: pad_left,
-                                                                        },
+                                                                        }.into(),
                                                                         ..Default::default()
                                                                     },
                                                                     move |cx| {
@@ -3076,7 +3083,7 @@ impl DropdownMenu {
                                                                                 );
                                                                             layout
                                                                         },
-                                                                        padding: Edges::all(Px(0.0)),
+                                                                        padding: Edges::all(Px(0.0)).into(),
                                                                         background: Some(border),
                                                                         ..Default::default()
                                                                     },
@@ -3135,7 +3142,7 @@ impl DropdownMenu {
                                                                                 layout: {
                                                                                     let mut layout = LayoutStyle::default();
                                                                                     layout.size.width = Length::Fill;
-                                                                                    layout.size.min_height = Some(Px(28.0));
+                                                                                    layout.size.min_height = Some(Length::Px(Px(28.0)));
                                                                                     layout
                                                                                 },
                                                                                 enabled: !disabled,
@@ -3262,7 +3269,7 @@ impl DropdownMenu {
                                                                                 layout: {
                                                                                     let mut layout = LayoutStyle::default();
                                                                                     layout.size.width = Length::Fill;
-                                                                                    layout.size.min_height = Some(Px(28.0));
+                                                                                    layout.size.min_height = Some(Length::Px(Px(28.0)));
                                                                                     layout
                                                                                 },
                                                                                 enabled: !disabled,
@@ -3381,7 +3388,7 @@ impl DropdownMenu {
                                                                                 layout: {
                                                                                     let mut layout = LayoutStyle::default();
                                                                                     layout.size.width = Length::Fill;
-                                                                                    layout.size.min_height = Some(Px(28.0));
+                                                                                    layout.size.min_height = Some(Length::Px(Px(28.0)));
                                                                                     layout
                                                                                 },
                                                                                 enabled: !disabled,
@@ -3442,7 +3449,7 @@ impl DropdownMenu {
                                                                                         right: pad_x,
                                                                                         bottom: pad_y,
                                                                                         left: pad_left,
-                                                                                    },
+                                                                                    }.into(),
                                                                                     background: Some(row_bg),
                                                                                     corner_radii: fret_core::Corners::all(radius_sm),
                                                                                     ..Default::default()
@@ -3495,8 +3502,8 @@ impl DropdownMenu {
                                                                                                 layout
                                                                                             },
                                                                                             direction: fret_core::Axis::Horizontal,
-                                                                                            gap: Px(8.0),
-                                                                                            padding: Edges::all(Px(0.0)),
+                                                                                            gap: Px(8.0).into(),
+                                                                                            padding: Edges::all(Px(0.0)).into(),
                                                                                             justify: MainAlign::Start,
                                                                                             align: CrossAlign::Center,
                                                                                             wrap: false,
@@ -3564,8 +3571,8 @@ impl DropdownMenu {
                                                             flex: FlexProps {
                                                                 layout: LayoutStyle::default(),
                                                                 direction: fret_core::Axis::Vertical,
-                                                                gap: Px(0.0),
-                                                                padding: Edges::all(Px(0.0)),
+                                                                gap: Px(0.0).into(),
+                                                                padding: Edges::all(Px(0.0)).into(),
                                                                 justify: MainAlign::Start,
                                                                 align: CrossAlign::Stretch,
                                                                 wrap: false,
@@ -4209,62 +4216,66 @@ mod tests {
             "dropdown-menu-dir",
             move |cx| {
                 direction_prim::with_direction_provider(cx, dir, |cx| {
-                    vec![cx.container(
-                        ContainerProps {
-                            padding: Edges {
-                                top: Px(100.0),
-                                right: Px(0.0),
-                                bottom: Px(0.0),
-                                left: Px(500.0),
+                    vec![
+                        cx.container(
+                            ContainerProps {
+                                padding: Edges {
+                                    top: Px(100.0),
+                                    right: Px(0.0),
+                                    bottom: Px(0.0),
+                                    left: Px(500.0),
+                                }
+                                .into(),
+                                ..Default::default()
                             },
-                            ..Default::default()
-                        },
-                        move |cx| {
-                            let trigger_id_out = trigger_id_out_for_render.clone();
-                            // See `render_frame_focusable_trigger_capture_id`: we need a non-modal
-                            // menu so trigger semantics remain visible while open.
-                            vec![
-                                DropdownMenu::new(open)
-                                    .modal(false)
-                                    .arrow(false)
-                                    .into_element(
-                                        cx,
-                                        move |cx| {
-                                            cx.pressable_with_id_props(move |cx, _st, id| {
-                                                let _ = cx
-                                                    .app
-                                                    .models_mut()
-                                                    .update(&trigger_id_out, |v| *v = Some(id));
-                                                (
-                                                    PressableProps {
-                                                        layout: {
-                                                            let mut layout = LayoutStyle::default();
-                                                            layout.size.width =
-                                                                Length::Px(Px(120.0));
-                                                            layout.size.height =
-                                                                Length::Px(Px(40.0));
-                                                            layout
-                                                        },
-                                                        enabled: true,
-                                                        focusable: true,
-                                                        a11y: PressableA11y {
-                                                            label: Some(Arc::from("Trigger")),
+                            move |cx| {
+                                let trigger_id_out = trigger_id_out_for_render.clone();
+                                // See `render_frame_focusable_trigger_capture_id`: we need a non-modal
+                                // menu so trigger semantics remain visible while open.
+                                vec![
+                                    DropdownMenu::new(open)
+                                        .modal(false)
+                                        .arrow(false)
+                                        .into_element(
+                                            cx,
+                                            move |cx| {
+                                                cx.pressable_with_id_props(move |cx, _st, id| {
+                                                    let _ = cx
+                                                        .app
+                                                        .models_mut()
+                                                        .update(&trigger_id_out, |v| *v = Some(id));
+                                                    (
+                                                        PressableProps {
+                                                            layout: {
+                                                                let mut layout =
+                                                                    LayoutStyle::default();
+                                                                layout.size.width =
+                                                                    Length::Px(Px(120.0));
+                                                                layout.size.height =
+                                                                    Length::Px(Px(40.0));
+                                                                layout
+                                                            },
+                                                            enabled: true,
+                                                            focusable: true,
+                                                            a11y: PressableA11y {
+                                                                label: Some(Arc::from("Trigger")),
+                                                                ..Default::default()
+                                                            },
                                                             ..Default::default()
                                                         },
-                                                        ..Default::default()
-                                                    },
-                                                    vec![cx.container(
-                                                        ContainerProps::default(),
-                                                        |_cx| Vec::new(),
-                                                    )],
-                                                )
-                                            })
-                                        },
-                                        move |_cx| entries,
-                                    ),
-                            ]
-                        },
-                    )]
+                                                        vec![cx.container(
+                                                            ContainerProps::default(),
+                                                            |_cx| Vec::new(),
+                                                        )],
+                                                    )
+                                                })
+                                            },
+                                            move |_cx| entries,
+                                        ),
+                                ]
+                            },
+                        ),
+                    ]
                 })
             },
         );
@@ -4405,8 +4416,8 @@ mod tests {
                                             layout.size.height = Length::Px(Px(20.0));
                                             layout.position =
                                                 fret_ui::element::PositionStyle::Absolute;
-                                            layout.inset.top = Some(Px(30.0));
-                                            layout.inset.left = Some(Px(10.0));
+                                            layout.inset.top = Some(Px(100.0)).into();
+                                            layout.inset.left = Some(Px(100.0)).into();
                                             layout
                                         },
                                         ..Default::default()
@@ -4524,8 +4535,8 @@ mod tests {
                                 layout: {
                                     let mut layout = LayoutStyle::default();
                                     layout.position = fret_ui::element::PositionStyle::Absolute;
-                                    layout.inset.left = Some(Px(380.0));
-                                    layout.inset.top = Some(Px(200.0));
+                                    layout.inset.left = Some(Px(100.0)).into();
+                                    layout.inset.top = Some(Px(100.0)).into();
                                     layout.size.width = Length::Px(Px(220.0));
                                     layout.size.height = Length::Px(Px(120.0));
                                     layout
@@ -4554,8 +4565,8 @@ mod tests {
                                                 let mut layout = LayoutStyle::default();
                                                 layout.position =
                                                     fret_ui::element::PositionStyle::Absolute;
-                                                layout.inset.left = Some(Px(0.0));
-                                                layout.inset.top = Some(Px(0.0));
+                                                layout.inset.left = Some(Px(100.0)).into();
+                                                layout.inset.top = Some(Px(100.0)).into();
                                                 layout.size.width = Length::Px(Px(120.0));
                                                 layout.size.height = Length::Px(Px(40.0));
                                                 layout
@@ -4630,8 +4641,8 @@ mod tests {
                                 layout: {
                                     let mut layout = LayoutStyle::default();
                                     layout.position = fret_ui::element::PositionStyle::Absolute;
-                                    layout.inset.left = Some(Px(380.0));
-                                    layout.inset.top = Some(Px(200.0));
+                                    layout.inset.left = Some(Px(100.0)).into();
+                                    layout.inset.top = Some(Px(100.0)).into();
                                     layout.size.width = Length::Px(Px(220.0));
                                     layout.size.height = Length::Px(Px(120.0));
                                     layout
@@ -4655,8 +4666,8 @@ mod tests {
                                                 let mut layout = LayoutStyle::default();
                                                 layout.position =
                                                     fret_ui::element::PositionStyle::Absolute;
-                                                layout.inset.left = Some(Px(0.0));
-                                                layout.inset.top = Some(Px(0.0));
+                                                layout.inset.left = Some(Px(100.0)).into();
+                                                layout.inset.top = Some(Px(100.0)).into();
                                                 layout.size.width = Length::Px(Px(120.0));
                                                 layout.size.height = Length::Px(Px(40.0));
                                                 layout
@@ -5723,7 +5734,6 @@ mod tests {
 
         // Click the underlay while the menu is open: should close via observer pass, but must not
         // activate or focus the underlay (non-click-through dismissal).
-        let position = Point::new(Px(410.0), Px(310.0));
         let underlay_id = underlay_id_out.get().expect("underlay element id");
         let underlay_node =
             fret_ui::elements::node_for_element(&mut app, window, underlay_id).expect("underlay");
@@ -5731,6 +5741,7 @@ mod tests {
         let underlay_bounds = ui
             .debug_node_bounds(underlay_node)
             .expect("underlay bounds");
+        let position = rect_center(underlay_bounds);
         assert!(
             underlay_bounds.contains(position),
             "expected click position to fall inside underlay bounds; pos={position:?} bounds={underlay_bounds:?}"

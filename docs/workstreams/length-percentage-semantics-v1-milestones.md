@@ -35,6 +35,10 @@ Allow constraints like “max-width: 50%” without requiring per-component view
 - Declarative bridge resolves them with the v1 rule.
 - A unit test proves constraints do not collapse under intrinsic measurement.
 
+**Status**
+
+Done (see `docs/workstreams/length-percentage-semantics-v1-todo.md` for evidence anchors).
+
 ## M2 — Percent sizing for spacing (padding + gap)
 
 **Goal**
@@ -47,6 +51,10 @@ Enable web-like “padding: 5%” and percent gaps for layout-driven recipes.
 - Authoring shorthands exist (`padding_percent`, `gap_percent`, or equivalent).
 - At least one unit test proves correct behavior under both definite and intrinsic measurement.
 
+**Status**
+
+Done (see `docs/workstreams/length-percentage-semantics-v1-todo.md` for evidence anchors).
+
 ## M3 — Percent sizing for positioning (inset + margin)
 
 **Goal**
@@ -58,6 +66,10 @@ Enable percent-based positioning for overlays and editor UI chrome, without ad-h
 - `inset` and `margin` can express percent/fraction (preserving `auto` where meaningful).
 - A unit test proves basic percent inset outcomes.
 
+**Status**
+
+Done (see `docs/workstreams/length-percentage-semantics-v1-todo.md` for evidence anchors).
+
 ## M4 — Ecosystem migration + cleanup
 
 **Goal**
@@ -68,4 +80,3 @@ Remove recipe-layer workarounds and make shadcn components match upstream docs b
 
 - At least one shadcn component removes an ad-hoc px clamp in favor of native percent/fraction semantics.
 - A diag script gate exists for the migrated component page in UI gallery.
-

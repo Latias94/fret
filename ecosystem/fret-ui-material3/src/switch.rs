@@ -695,7 +695,8 @@ impl Switch {
                             right: Px(0.0),
                             bottom: size.track_y_offset,
                             left: Px(0.0),
-                        };
+                        }
+                        .into();
                         outer.corner_radii = Corners::all(Px(0.0));
 
                         let chrome = cx.container(outer, move |_cx| vec![overlay, track]);
@@ -890,8 +891,8 @@ fn switch_track<H: UiHost>(
     cx.container(track, move |cx| {
         let mut handle = ContainerProps::default();
         handle.layout.position = fret_ui::element::PositionStyle::Absolute;
-        handle.layout.inset.left = Some(geom.handle_x);
-        handle.layout.inset.top = Some(geom.handle_y);
+        handle.layout.inset.left = Some(geom.handle_x).into();
+        handle.layout.inset.top = Some(geom.handle_y).into();
         handle.layout.size.width = Length::Px(geom.handle_width);
         handle.layout.size.height = Length::Px(geom.handle_height);
         handle.corner_radii = handle_corner_radii;
@@ -909,8 +910,8 @@ fn switch_track<H: UiHost>(
                 FlexProps {
                     layout,
                     direction: Axis::Horizontal,
-                    gap: Px(0.0),
-                    padding: Edges::all(Px(0.0)),
+                    gap: Px(0.0).into(),
+                    padding: Edges::all(Px(0.0)).into(),
                     justify: MainAlign::Center,
                     align: CrossAlign::Center,
                     wrap: false,
@@ -1078,10 +1079,10 @@ fn material_switch_icon_layer<H: UiHost>(
 
     let mut layer = ContainerProps::default();
     layer.layout.position = fret_ui::element::PositionStyle::Absolute;
-    layer.layout.inset.top = Some(Px(0.0));
-    layer.layout.inset.right = Some(Px(0.0));
-    layer.layout.inset.bottom = Some(Px(0.0));
-    layer.layout.inset.left = Some(Px(0.0));
+    layer.layout.inset.top = Some(Px(0.0)).into();
+    layer.layout.inset.right = Some(Px(0.0)).into();
+    layer.layout.inset.bottom = Some(Px(0.0)).into();
+    layer.layout.inset.left = Some(Px(0.0)).into();
     layer.layout.size.width = Length::Fill;
     layer.layout.size.height = Length::Fill;
     layer.layout.overflow = Overflow::Visible;
@@ -1093,8 +1094,8 @@ fn material_switch_icon_layer<H: UiHost>(
             FlexProps {
                 layout,
                 direction: Axis::Horizontal,
-                gap: Px(0.0),
-                padding: Edges::all(Px(0.0)),
+                gap: Px(0.0).into(),
+                padding: Edges::all(Px(0.0)).into(),
                 justify: MainAlign::Center,
                 align: CrossAlign::Center,
                 wrap: false,

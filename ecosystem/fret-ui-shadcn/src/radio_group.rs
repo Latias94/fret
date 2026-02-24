@@ -384,8 +384,9 @@ impl RadioGroup {
                         gap: match orientation {
                             RadioGroupOrientation::Vertical => gap_y,
                             RadioGroupOrientation::Horizontal => gap_x,
-                        },
-                        padding: Edges::all(Px(0.0)),
+                        }
+                        .into(),
+                        padding: Edges::all(Px(0.0)).into(),
                         justify: MainAlign::Start,
                         align: match orientation {
                             RadioGroupOrientation::Vertical => {
@@ -522,7 +523,7 @@ impl RadioGroup {
                                         );
                                         let icon_props = ContainerProps {
                                             layout: icon_layout,
-                                            padding: Edges::all(Px(0.0)),
+                                            padding: Edges::all(Px(0.0)).into(),
                                             background: None,
                                             shadow: Some(decl_style::shadow_xs(&theme, radius)),
                                             border: Edges::all(Px(1.0)),
@@ -558,7 +559,7 @@ impl RadioGroup {
                                         );
                                         let indicator_props = ContainerProps {
                                             layout: indicator_layout,
-                                            padding: Edges::all(Px(0.0)),
+                                            padding: Edges::all(Px(0.0)).into(),
                                             background: Some(dot),
                                             shadow: None,
                                             border: Edges::all(Px(0.0)),
@@ -595,8 +596,8 @@ impl RadioGroup {
                                                             .size_full(),
                                                     ),
                                                     direction: fret_core::Axis::Horizontal,
-                                                    gap: Px(0.0),
-                                                    padding: Edges::all(Px(0.0)),
+                                                    gap: Px(0.0).into(),
+                                                    padding: Edges::all(Px(0.0)).into(),
                                                     justify: MainAlign::Center,
                                                     align: CrossAlign::Center,
                                                     wrap: false,
@@ -629,8 +630,8 @@ impl RadioGroup {
                                             FlexProps {
                                                 layout: row_layout,
                                                 direction: fret_core::Axis::Horizontal,
-                                                gap: gap_x,
-                                                padding: Edges::all(Px(0.0)),
+                                                gap: gap_x.into(),
+                                                padding: Edges::all(Px(0.0)).into(),
                                                 justify,
                                                 align,
                                                 wrap: false,

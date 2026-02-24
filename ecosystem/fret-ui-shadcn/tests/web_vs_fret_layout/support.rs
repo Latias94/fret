@@ -199,7 +199,8 @@ pub(super) fn render_fret_calendar_range_scene(
                     top: Px(config.origin_y),
                     right: Px(0.0),
                     bottom: Px(0.0),
-                },
+                }
+                .into(),
                 ..Default::default()
             },
             move |_cx| vec![calendar],

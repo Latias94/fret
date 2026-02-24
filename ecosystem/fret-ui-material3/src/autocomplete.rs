@@ -1089,11 +1089,11 @@ fn autocomplete_listbox_panel<H: UiHost>(
 
                 let mut props = FlexProps::default();
                 props.direction = Axis::Vertical;
-                props.gap = Px(0.0);
+                props.gap = Px(0.0).into();
                 props.justify = MainAlign::Start;
                 props.align = CrossAlign::Stretch;
                 props.layout.size.width = Length::Fill;
-                props.padding = Edges::all(vertical_padding);
+                props.padding = Edges::all(vertical_padding).into();
                 vec![cx.flex(props, move |cx| {
                     let mut out: Vec<AnyElement> = Vec::with_capacity(items.len());
                     let count = items.len();
@@ -1235,7 +1235,7 @@ fn autocomplete_listbox_panel<H: UiHost>(
                             let child = cx.container(
                                 ContainerProps {
                                     layout: child_layout,
-                                    padding: Edges::all(Px(12.0)),
+                                    padding: Edges::all(Px(12.0)).into(),
                                     background: (active || selected).then_some(selected_bg),
                                     ..Default::default()
                                 },

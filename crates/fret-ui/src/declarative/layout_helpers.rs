@@ -27,8 +27,25 @@ pub(super) fn layout_positioned_child<H: UiHost>(
             let _ = cx.layout_in(child, base);
         }
         PositionedLayoutStyle::Relative(inset) => {
-            let dx = inset.left.unwrap_or(Px(0.0)).0 - inset.right.unwrap_or(Px(0.0)).0;
-            let dy = inset.top.unwrap_or(Px(0.0)).0 - inset.bottom.unwrap_or(Px(0.0)).0;
+            let resolve = |edge: crate::element::InsetEdge, basis: Px| -> Px {
+                match edge {
+                    crate::element::InsetEdge::Px(px) => px,
+                    crate::element::InsetEdge::Fill => Px(basis.0.max(0.0)),
+                    crate::element::InsetEdge::Fraction(f) => {
+                        let f = if f.is_finite() { f.max(0.0) } else { 0.0 };
+                        Px((basis.0.max(0.0) * f).max(0.0))
+                    }
+                    crate::element::InsetEdge::Auto => Px(0.0),
+                }
+            };
+
+            let left = resolve(inset.left, base.size.width);
+            let right = resolve(inset.right, base.size.width);
+            let top = resolve(inset.top, base.size.height);
+            let bottom = resolve(inset.bottom, base.size.height);
+
+            let dx = left.0 - right.0;
+            let dy = top.0 - bottom.0;
             let origin = fret_core::Point::new(Px(base.origin.x.0 + dx), Px(base.origin.y.0 + dy));
             let bounds = Rect::new(origin, base.size);
             cx.solve_barrier_child_root_if_needed(child, bounds);
@@ -37,33 +54,50 @@ pub(super) fn layout_positioned_child<H: UiHost>(
         PositionedLayoutStyle::Absolute(inset) => {
             let measured = cx.layout_in_probe(child, base);
 
-            let left = inset.left.unwrap_or(Px(0.0));
-            let right = inset.right.unwrap_or(Px(0.0));
-            let top = inset.top.unwrap_or(Px(0.0));
-            let bottom = inset.bottom.unwrap_or(Px(0.0));
+            let resolve = |edge: crate::element::InsetEdge, basis: Px| -> Option<Px> {
+                match edge {
+                    crate::element::InsetEdge::Px(px) => Some(px),
+                    crate::element::InsetEdge::Fill => Some(Px(basis.0.max(0.0))),
+                    crate::element::InsetEdge::Fraction(f) => {
+                        let f = if f.is_finite() { f.max(0.0) } else { 0.0 };
+                        Some(Px((basis.0.max(0.0) * f).max(0.0)))
+                    }
+                    crate::element::InsetEdge::Auto => None,
+                }
+            };
 
-            let w = if inset.left.is_some() && inset.right.is_some() {
-                Px((base.size.width.0 - left.0 - right.0).max(0.0))
+            let left = resolve(inset.left, base.size.width);
+            let right = resolve(inset.right, base.size.width);
+            let top = resolve(inset.top, base.size.height);
+            let bottom = resolve(inset.bottom, base.size.height);
+
+            let left_px = left.unwrap_or(Px(0.0));
+            let right_px = right.unwrap_or(Px(0.0));
+            let top_px = top.unwrap_or(Px(0.0));
+            let bottom_px = bottom.unwrap_or(Px(0.0));
+
+            let w = if left.is_some() && right.is_some() {
+                Px((base.size.width.0 - left_px.0 - right_px.0).max(0.0))
             } else {
                 Px(measured.width.0.min(base.size.width.0.max(0.0)).max(0.0))
             };
-            let h = if inset.top.is_some() && inset.bottom.is_some() {
-                Px((base.size.height.0 - top.0 - bottom.0).max(0.0))
+            let h = if top.is_some() && bottom.is_some() {
+                Px((base.size.height.0 - top_px.0 - bottom_px.0).max(0.0))
             } else {
                 Px(measured.height.0.min(base.size.height.0.max(0.0)).max(0.0))
             };
 
-            let x = if inset.left.is_some() {
-                left
-            } else if inset.right.is_some() {
-                Px((base.size.width.0 - right.0 - w.0).max(0.0))
+            let x = if left.is_some() {
+                left_px
+            } else if right.is_some() {
+                Px((base.size.width.0 - right_px.0 - w.0).max(0.0))
             } else {
                 Px(0.0)
             };
-            let y = if inset.top.is_some() {
-                top
-            } else if inset.bottom.is_some() {
-                Px((base.size.height.0 - bottom.0 - h.0).max(0.0))
+            let y = if top.is_some() {
+                top_px
+            } else if bottom.is_some() {
+                Px((base.size.height.0 - bottom_px.0 - h.0).max(0.0))
             } else {
                 Px(0.0)
             };
@@ -86,35 +120,52 @@ pub(super) fn layout_absolute_child_with_probe_bounds<H: UiHost>(
 ) {
     let measured = cx.layout_in_probe(child, probe);
 
-    let left = inset.left.unwrap_or(Px(0.0));
-    let right = inset.right.unwrap_or(Px(0.0));
-    let top = inset.top.unwrap_or(Px(0.0));
-    let bottom = inset.bottom.unwrap_or(Px(0.0));
+    let resolve = |edge: crate::element::InsetEdge, basis: Px| -> Option<Px> {
+        match edge {
+            crate::element::InsetEdge::Px(px) => Some(px),
+            crate::element::InsetEdge::Fill => Some(Px(basis.0.max(0.0))),
+            crate::element::InsetEdge::Fraction(f) => {
+                let f = if f.is_finite() { f.max(0.0) } else { 0.0 };
+                Some(Px((basis.0.max(0.0) * f).max(0.0)))
+            }
+            crate::element::InsetEdge::Auto => None,
+        }
+    };
 
-    let w = if inset.left.is_some() && inset.right.is_some() {
-        Px((base.size.width.0 - left.0 - right.0).max(0.0))
+    let left = resolve(inset.left, base.size.width);
+    let right = resolve(inset.right, base.size.width);
+    let top = resolve(inset.top, base.size.height);
+    let bottom = resolve(inset.bottom, base.size.height);
+
+    let left_px = left.unwrap_or(Px(0.0));
+    let right_px = right.unwrap_or(Px(0.0));
+    let top_px = top.unwrap_or(Px(0.0));
+    let bottom_px = bottom.unwrap_or(Px(0.0));
+
+    let w = if left.is_some() && right.is_some() {
+        Px((base.size.width.0 - left_px.0 - right_px.0).max(0.0))
     } else {
         Px(measured.width.0.max(0.0))
     };
 
-    let h = if inset.top.is_some() && inset.bottom.is_some() {
-        Px((base.size.height.0 - top.0 - bottom.0).max(0.0))
+    let h = if top.is_some() && bottom.is_some() {
+        Px((base.size.height.0 - top_px.0 - bottom_px.0).max(0.0))
     } else {
         Px(measured.height.0.max(0.0))
     };
 
-    let x = if inset.left.is_some() {
-        left
-    } else if inset.right.is_some() {
-        Px((base.size.width.0 - right.0 - w.0).max(0.0))
+    let x = if left.is_some() {
+        left_px
+    } else if right.is_some() {
+        Px((base.size.width.0 - right_px.0 - w.0).max(0.0))
     } else {
         Px(0.0)
     };
 
-    let y = if inset.top.is_some() {
-        top
-    } else if inset.bottom.is_some() {
-        Px((base.size.height.0 - bottom.0 - h.0).max(0.0))
+    let y = if top.is_some() {
+        top_px
+    } else if bottom.is_some() {
+        Px((base.size.height.0 - bottom_px.0 - h.0).max(0.0))
     } else {
         Px(0.0)
     };
@@ -126,6 +177,18 @@ pub(super) fn layout_absolute_child_with_probe_bounds<H: UiHost>(
 }
 
 pub(super) fn clamp_to_constraints(mut size: Size, style: LayoutStyle, available: Size) -> Size {
+    let resolve_constraint = |l: Length, base: Px| -> Option<Px> {
+        match l {
+            Length::Auto => None,
+            Length::Px(px) => Some(Px(px.0.max(0.0))),
+            Length::Fill => Some(Px(base.0.max(0.0))),
+            Length::Fraction(f) => {
+                let f = if f.is_finite() { f.max(0.0) } else { 0.0 };
+                Some(Px((base.0 * f).max(0.0)))
+            }
+        }
+    };
+
     let width_auto = matches!(style.size.width, Length::Auto);
     let height_auto = matches!(style.size.height, Length::Auto);
 
@@ -148,16 +211,32 @@ pub(super) fn clamp_to_constraints(mut size: Size, style: LayoutStyle, available
         Length::Auto => {}
     }
 
-    if let Some(min_w) = style.size.min_width {
+    if let Some(min_w) = style
+        .size
+        .min_width
+        .and_then(|l| resolve_constraint(l, available.width))
+    {
         size.width = Px(size.width.0.max(min_w.0.max(0.0)));
     }
-    if let Some(min_h) = style.size.min_height {
+    if let Some(min_h) = style
+        .size
+        .min_height
+        .and_then(|l| resolve_constraint(l, available.height))
+    {
         size.height = Px(size.height.0.max(min_h.0.max(0.0)));
     }
-    if let Some(max_w) = style.size.max_width {
+    if let Some(max_w) = style
+        .size
+        .max_width
+        .and_then(|l| resolve_constraint(l, available.width))
+    {
         size.width = Px(size.width.0.min(max_w.0.max(0.0)));
     }
-    if let Some(max_h) = style.size.max_height {
+    if let Some(max_h) = style
+        .size
+        .max_height
+        .and_then(|l| resolve_constraint(l, available.height))
+    {
         size.height = Px(size.height.0.min(max_h.0.max(0.0)));
     }
 
@@ -174,16 +253,32 @@ pub(super) fn clamp_to_constraints(mut size: Size, style: LayoutStyle, available
             size.width = Px((size.height.0 * ratio).max(0.0));
         }
 
-        if let Some(min_w) = style.size.min_width {
+        if let Some(min_w) = style
+            .size
+            .min_width
+            .and_then(|l| resolve_constraint(l, available.width))
+        {
             size.width = Px(size.width.0.max(min_w.0.max(0.0)));
         }
-        if let Some(min_h) = style.size.min_height {
+        if let Some(min_h) = style
+            .size
+            .min_height
+            .and_then(|l| resolve_constraint(l, available.height))
+        {
             size.height = Px(size.height.0.max(min_h.0.max(0.0)));
         }
-        if let Some(max_w) = style.size.max_width {
+        if let Some(max_w) = style
+            .size
+            .max_width
+            .and_then(|l| resolve_constraint(l, available.width))
+        {
             size.width = Px(size.width.0.min(max_w.0.max(0.0)));
         }
-        if let Some(max_h) = style.size.max_height {
+        if let Some(max_h) = style
+            .size
+            .max_height
+            .and_then(|l| resolve_constraint(l, available.height))
+        {
             size.height = Px(size.height.0.min(max_h.0.max(0.0)));
         }
 

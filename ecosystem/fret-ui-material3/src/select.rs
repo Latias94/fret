@@ -1047,7 +1047,8 @@ fn select_trigger_element<H: UiHost>(
                     right: Px(12.0),
                     top: Px(0.0),
                     bottom: Px(0.0),
-                };
+                }
+                .into();
 
                 let mut chrome = ContainerProps::default();
                 chrome.layout.size.width = Length::Fill;
@@ -1116,7 +1117,7 @@ fn select_trigger_element<H: UiHost>(
                             left.direction = Axis::Horizontal;
                             left.justify = MainAlign::Start;
                             left.align = CrossAlign::Center;
-                            left.gap = if has_leading_icon { Px(16.0) } else { Px(0.0) };
+                            left.gap = if has_leading_icon { Px(16.0) } else { Px(0.0) }.into();
 
                             vec![cx.flex(left, move |_cx| {
                                 let mut out = Vec::new();
@@ -1191,7 +1192,7 @@ fn select_trigger_element<H: UiHost>(
         props.layout.size.width = Length::Fill;
         props.layout.overflow = Overflow::Visible;
         props.direction = Axis::Vertical;
-        props.gap = Px(4.0);
+        props.gap = Px(4.0).into();
         props.align = CrossAlign::Start;
         props.justify = MainAlign::Start;
         props.wrap = false;
@@ -1343,9 +1344,9 @@ fn select_trigger_label<H: UiHost>(
 
     let mut layout = fret_ui::element::LayoutStyle::default();
     layout.position = fret_ui::element::PositionStyle::Absolute;
-    layout.inset.top = Some(y);
-    layout.inset.left = Some(x);
-    layout.inset.right = Some(Px(16.0));
+    layout.inset.top = Some(y).into();
+    layout.inset.left = Some(x).into();
+    layout.inset.right = Some(Px(16.0)).into();
     layout.overflow = Overflow::Visible;
 
     let floated = floating_label::is_floated(progress);
@@ -1354,7 +1355,7 @@ fn select_trigger_label<H: UiHost>(
     if variant == SelectVariant::Outlined {
         let patch_padding_x = Px(4.0);
         let patch_padding_y = Px((outline_width.0 + 1.0).max(0.0));
-        patch.padding = if floated {
+        patch.padding = (if floated {
             Edges {
                 top: patch_padding_y,
                 right: patch_padding_x,
@@ -1363,7 +1364,8 @@ fn select_trigger_label<H: UiHost>(
             }
         } else {
             Edges::all(Px(0.0))
-        };
+        })
+        .into();
         patch.background = floated.then_some(input_bg);
     }
     patch.layout = layout;
@@ -1708,7 +1710,7 @@ fn select_listbox_panel<H: UiHost>(
 
     let mut roving = RovingFlexProps::default();
     roving.flex.direction = Axis::Vertical;
-    roving.flex.gap = Px(0.0);
+    roving.flex.gap = Px(0.0).into();
     roving.flex.align = CrossAlign::Stretch;
     roving.flex.justify = MainAlign::Start;
     roving.roving = fret_ui::element::RovingFocusProps {
@@ -1774,7 +1776,8 @@ fn select_listbox_panel<H: UiHost>(
                                     right: Px(0.0),
                                     bottom: Px(8.0),
                                     left: Px(0.0),
-                                },
+                                }
+                                .into(),
                                 layout: {
                                     let mut l = fret_ui::element::LayoutStyle::default();
                                     l.size.width = Length::Fill;
@@ -2103,7 +2106,7 @@ fn select_list_item<H: UiHost>(
                 } else {
                     CrossAlign::Center
                 };
-                row.gap = Px(8.0);
+                row.gap = Px(8.0).into();
                 row.padding = Edges {
                     left: Px(12.0),
                     right: Px(12.0),
@@ -2117,7 +2120,8 @@ fn select_list_item<H: UiHost>(
                     } else {
                         Px(0.0)
                     },
-                };
+                }
+                .into();
 
                 let mut chrome = cx.container(chrome, move |cx| {
                     vec![cx.flex(row, move |cx| {
@@ -2154,7 +2158,7 @@ fn select_list_item<H: UiHost>(
                             column.direction = Axis::Vertical;
                             column.justify = MainAlign::Start;
                             column.align = CrossAlign::Stretch;
-                            column.gap = Px(2.0);
+                            column.gap = Px(2.0).into();
                             column.layout.size.width = Length::Fill;
                             column.layout.overflow = Overflow::Clip;
                             column.layout.flex.grow = 1.0;
@@ -2167,7 +2171,7 @@ fn select_list_item<H: UiHost>(
                                 second_row.direction = Axis::Horizontal;
                                 second_row.justify = MainAlign::Start;
                                 second_row.align = CrossAlign::Center;
-                                second_row.gap = Px(8.0);
+                                second_row.gap = Px(8.0).into();
                                 second_row.layout.size.width = Length::Fill;
                                 second_row.layout.overflow = Overflow::Clip;
 

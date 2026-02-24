@@ -625,8 +625,8 @@ impl CalendarRange {
                                         ..Default::default()
                                     },
                                     direction: fret_core::Axis::Horizontal,
-                                    gap: day_col_gap,
-                                    padding: fret_core::Edges::all(Px(0.0)),
+                                    gap: day_col_gap.into(),
+                                    padding: fret_core::Edges::all(Px(0.0)).into(),
                                     justify: MainAlign::Start,
                                     align: fret_ui::element::CrossAlign::Start,
                                     wrap: true,
@@ -784,8 +784,8 @@ impl CalendarRange {
                                             ..Default::default()
                                         },
                                         direction: fret_core::Axis::Vertical,
-                                        gap: Px(0.0),
-                                        padding: fret_core::Edges::all(Px(0.0)),
+                                        gap: Px(0.0).into(),
+                                        padding: fret_core::Edges::all(Px(0.0)).into(),
                                         justify: MainAlign::Start,
                                         align: fret_ui::element::CrossAlign::Start,
                                         wrap: false,
@@ -830,8 +830,8 @@ impl CalendarRange {
                                             ..Default::default()
                                         },
                                         direction: fret_core::Axis::Horizontal,
-                                        gap: Px(0.0),
-                                        padding: fret_core::Edges::all(Px(0.0)),
+                                        gap: Px(0.0).into(),
+                                        padding: fret_core::Edges::all(Px(0.0)).into(),
                                         justify: MainAlign::Start,
                                         align: fret_ui::element::CrossAlign::Start,
                                         wrap: false,
@@ -960,15 +960,15 @@ fn calendar_range_multi_month_view<H: UiHost>(
         let mut layout = LayoutStyle::default();
         layout.size.width = Length::Px(months_span);
         layout.position = fret_ui::element::PositionStyle::Absolute;
-        layout.inset.top = Some(Px(0.0));
-        layout.inset.left = Some(Px(0.0));
+        layout.inset.top = Some(Px(0.0)).into();
+        layout.inset.left = Some(Px(0.0)).into();
 
         cx.flex(
             FlexProps {
                 layout,
                 direction: fret_core::Axis::Horizontal,
-                gap: decl_style::space(theme, Space::N1),
-                padding: fret_core::Edges::all(Px(0.0)),
+                gap: decl_style::space(theme, Space::N1).into(),
+                padding: fret_core::Edges::all(Px(0.0)).into(),
                 justify: MainAlign::SpaceBetween,
                 align: fret_ui::element::CrossAlign::Center,
                 wrap: false,
@@ -1174,13 +1174,14 @@ fn calendar_range_month_view<H: UiHost>(
                 ..Default::default()
             },
             direction: fret_core::Axis::Horizontal,
-            gap: Px(0.0),
+            gap: Px(0.0).into(),
             padding: fret_core::Edges {
                 left: day_size,
                 right: day_size,
                 top: Px(0.0),
                 bottom: Px(0.0),
-            },
+            }
+            .into(),
             justify: MainAlign::Center,
             align: fret_ui::element::CrossAlign::Center,
             wrap: false,
@@ -1204,8 +1205,8 @@ fn calendar_range_month_view<H: UiHost>(
                 ..Default::default()
             },
             direction: fret_core::Axis::Horizontal,
-            gap: Px(0.0),
-            padding: fret_core::Edges::all(Px(0.0)),
+            gap: Px(0.0).into(),
+            padding: fret_core::Edges::all(Px(0.0)).into(),
             justify: MainAlign::Start,
             align: fret_ui::element::CrossAlign::Center,
             wrap: false,
@@ -1254,8 +1255,8 @@ fn calendar_range_month_view<H: UiHost>(
                 ..Default::default()
             },
             direction: fret_core::Axis::Horizontal,
-            gap: Px(0.0),
-            padding: fret_core::Edges::all(Px(0.0)),
+            gap: Px(0.0).into(),
+            padding: fret_core::Edges::all(Px(0.0)).into(),
             justify: MainAlign::Start,
             align: fret_ui::element::CrossAlign::Start,
             wrap: true,
@@ -1408,8 +1409,8 @@ fn calendar_range_month_view<H: UiHost>(
                     ..Default::default()
                 },
                 direction: fret_core::Axis::Vertical,
-                gap: Px(0.0),
-                padding: fret_core::Edges::all(Px(0.0)),
+                gap: Px(0.0).into(),
+                padding: fret_core::Edges::all(Px(0.0)).into(),
                 justify: MainAlign::Start,
                 align: fret_ui::element::CrossAlign::Start,
                 wrap: false,
@@ -1445,8 +1446,8 @@ fn calendar_range_month_view<H: UiHost>(
                     ..Default::default()
                 },
                 direction: fret_core::Axis::Horizontal,
-                gap: Px(0.0),
-                padding: fret_core::Edges::all(Px(0.0)),
+                gap: Px(0.0).into(),
+                padding: fret_core::Edges::all(Px(0.0)).into(),
                 justify: MainAlign::Start,
                 align: fret_ui::element::CrossAlign::Start,
                 wrap: false,
@@ -1792,8 +1793,8 @@ fn calendar_range_day_cell<H: UiHost>(
                         ..Default::default()
                     },
                     direction: fret_core::Axis::Vertical,
-                    gap: Px(0.0),
-                    padding: fret_core::Edges::all(Px(0.0)),
+                    gap: Px(0.0).into(),
+                    padding: fret_core::Edges::all(Px(0.0)).into(),
                     justify: MainAlign::Center,
                     align: fret_ui::element::CrossAlign::Center,
                     wrap: false,

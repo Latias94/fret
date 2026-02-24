@@ -1102,8 +1102,8 @@ impl NavigationMenu {
             let list_props = FlexProps {
                 layout: LayoutStyle::default(),
                 direction: fret_core::Axis::Horizontal,
-                gap: Px(4.0), // Tailwind `space-x-1`
-                padding: Edges::all(Px(0.0)),
+                gap: Px(4.0).into(), // Tailwind `space-x-1`
+                padding: Edges::all(Px(0.0)).into(),
                 justify: MainAlign::Center,
                 align: fret_ui::element::CrossAlign::Center,
                 wrap: true,
@@ -1186,7 +1186,7 @@ impl NavigationMenu {
                                             right: trigger_pad_x,
                                             bottom: trigger_pad_y,
                                             left: trigger_pad_x,
-                                        },
+                                        }.into(),
                                         background: bg,
                                         shadow: None,
                                         border: Edges::all(Px(0.0)),
@@ -1221,8 +1221,8 @@ impl NavigationMenu {
                                         FlexProps {
                                             layout: LayoutStyle::default(),
                                             direction: fret_core::Axis::Horizontal,
-                                            gap: Px(0.0),
-                                            padding: Edges::all(Px(0.0)),
+                                            gap: Px(0.0).into(),
+                                            padding: Edges::all(Px(0.0)).into(),
                                             justify: MainAlign::Center,
                                             align: fret_ui::element::CrossAlign::Center,
                                             wrap: false,
@@ -1277,7 +1277,7 @@ impl NavigationMenu {
                                                 right: trigger_pad_x,
                                                 bottom: trigger_pad_y,
                                                 left: trigger_pad_x,
-                                            },
+                                            }.into(),
                                             background: bg,
                                             shadow: None,
                                             border: Edges::all(Px(0.0)),
@@ -1330,7 +1330,7 @@ impl NavigationMenu {
                                                     };
                                                     layout.flex.shrink = 0.0;
                                                     layout.position = fret_ui::element::PositionStyle::Relative;
-                                                    layout.inset.top = Some(Px(1.0)); // `top-[1px]`
+                                                    layout.inset.top = Some(Px(1.0)).into(); // `top-[1px]`
                                                     layout.margin.left =
                                                         fret_ui::element::MarginEdge::Px(Px(4.0)); // `ml-1`
                                                     layout
@@ -1374,8 +1374,8 @@ impl NavigationMenu {
                                             FlexProps {
                                                 layout: LayoutStyle::default(),
                                                 direction: fret_core::Axis::Horizontal,
-                                                gap: Px(0.0),
-                                                padding: Edges::all(Px(0.0)),
+                                                gap: Px(0.0).into(),
+                                                padding: Edges::all(Px(0.0)).into(),
                                                 justify: MainAlign::Center,
                                                 align: fret_ui::element::CrossAlign::Center,
                                                 wrap: false,
@@ -1509,7 +1509,7 @@ impl NavigationMenu {
                             overflow: fret_ui::element::Overflow::Visible,
                             ..Default::default()
                         },
-                        padding: Edges::all(Px(0.0)),
+                        padding: Edges::all(Px(0.0)).into(),
                         background: Some(viewport_bg),
                         shadow: Some(viewport_shadow),
                         border: Edges::all(Px(1.0)),
@@ -1523,7 +1523,7 @@ impl NavigationMenu {
                             overflow: fret_ui::element::Overflow::Visible,
                             ..Default::default()
                         },
-                        padding: Edges::all(Px(0.0)),
+                        padding: Edges::all(Px(0.0)).into(),
                         background: Some(viewport_bg),
                         shadow: Some(viewport_shadow),
                         border: Edges::all(Px(1.0)),
@@ -1706,7 +1706,7 @@ impl NavigationMenu {
                                             cx.container(
                                                 ContainerProps {
                                                     layout: body_layout,
-                                                    padding: content_padding,
+                                                    padding: content_padding.into(),
                                                     ..Default::default()
                                                 },
                                                 move |_cx| children,
@@ -1766,7 +1766,7 @@ impl NavigationMenu {
                                                 cx.container(
                                                     ContainerProps {
                                                         layout: body_layout,
-                                                        padding: content_padding,
+                                                        padding: content_padding.into(),
                                                         ..Default::default()
                                                     },
                                                     {
@@ -1785,7 +1785,7 @@ impl NavigationMenu {
                                                 cx.container(
                                                     ContainerProps {
                                                         layout: body_layout,
-                                                        padding: content_padding,
+                                                        padding: content_padding.into(),
                                                         ..Default::default()
                                                     },
                                                     {
@@ -1922,8 +1922,8 @@ impl NavigationMenu {
 
                                     let mut diamond_layout = LayoutStyle::default();
                                     diamond_layout.position = fret_ui::element::PositionStyle::Absolute;
-                                    diamond_layout.inset.left = Some(Px(diamond_left));
-                                    diamond_layout.inset.top = Some(Px(diamond_top));
+                                    diamond_layout.inset.left = Some(Px(diamond_left)).into();
+                                    diamond_layout.inset.top = Some(Px(diamond_top)).into();
                                     diamond_layout.size = SizeStyle {
                                         width: Length::Px(Px(diamond_size)),
                                         height: Length::Px(Px(diamond_size)),
@@ -1949,7 +1949,7 @@ impl NavigationMenu {
                                             vec![cx.container(
                                                 ContainerProps {
                                                     layout,
-                                                    padding: Edges::all(Px(0.0)),
+                                                    padding: Edges::all(Px(0.0)).into(),
                                                     background: Some(viewport_border),
                                                     shadow: Some(indicator_diamond_shadow),
                                                     border: Edges::all(Px(0.0)),
@@ -3113,33 +3113,35 @@ mod tests {
             );
             let mut services = FakeServices::default();
 
-            let render_frame =
-                |ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices| {
-                    bump_frame(app);
-                    OverlayController::begin_frame(app, window);
-                    let model_for_render = model.clone();
-                    let root = fret_ui::declarative::render_root(
-                        ui,
-                        app,
-                        services,
-                        window,
-                        bounds,
-                        "navigation-menu-dir",
-                        move |cx| {
-                            direction_prim::with_direction_provider(cx, dir, |cx| {
-                                let theme = Theme::global(&*cx.app).clone();
-                                let region_props = LayoutQueryRegionProps {
-                                    layout: decl_style::layout_style(
-                                        &theme,
-                                        LayoutRefinement::default().w_full().min_w_0(),
-                                    ),
-                                    name: None,
-                                };
+            let render_frame = |ui: &mut UiTree<App>,
+                                app: &mut App,
+                                services: &mut FakeServices| {
+                bump_frame(app);
+                OverlayController::begin_frame(app, window);
+                let model_for_render = model.clone();
+                let root = fret_ui::declarative::render_root(
+                    ui,
+                    app,
+                    services,
+                    window,
+                    bounds,
+                    "navigation-menu-dir",
+                    move |cx| {
+                        direction_prim::with_direction_provider(cx, dir, |cx| {
+                            let theme = Theme::global(&*cx.app).clone();
+                            let region_props = LayoutQueryRegionProps {
+                                layout: decl_style::layout_style(
+                                    &theme,
+                                    LayoutRefinement::default().w_full().min_w_0(),
+                                ),
+                                name: None,
+                            };
 
-                                vec![cx.layout_query_region_with_id(
-                                    region_props,
-                                    move |cx, region_id| {
-                                        vec![cx.container(
+                            vec![cx.layout_query_region_with_id(
+                                region_props,
+                                move |cx, region_id| {
+                                    vec![
+                                        cx.container(
                                             ContainerProps {
                                                 layout: LayoutStyle {
                                                     size: SizeStyle {
@@ -3153,7 +3155,8 @@ mod tests {
                                                     right: Px(0.0),
                                                     bottom: Px(0.0),
                                                     left: Px(500.0),
-                                                },
+                                                }
+                                                .into(),
                                                 ..Default::default()
                                             },
                                             move |cx| {
@@ -3176,17 +3179,18 @@ mod tests {
                                                         .into_element(cx),
                                                 ]
                                             },
-                                        )]
-                                    },
-                                )]
-                            })
-                        },
-                    );
-                    ui.set_root(root);
-                    OverlayController::render(ui, app, services, window, bounds);
-                    ui.request_semantics_snapshot();
-                    ui.layout_all(app, services, bounds, 1.0);
-                };
+                                        ),
+                                    ]
+                                },
+                            )]
+                        })
+                    },
+                );
+                ui.set_root(root);
+                OverlayController::render(ui, app, services, window, bounds);
+                ui.request_semantics_snapshot();
+                ui.layout_all(app, services, bounds, 1.0);
+            };
 
             // Three frames:
             // - frame 1 establishes trigger/root bounds,

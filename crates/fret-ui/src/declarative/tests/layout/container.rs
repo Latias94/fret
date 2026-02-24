@@ -98,8 +98,8 @@ fn container_absolute_inset_positions_child() {
                     badge.layout.size.width = crate::element::Length::Px(Px(10.0));
                     badge.layout.size.height = crate::element::Length::Px(Px(10.0));
                     badge.layout.position = crate::element::PositionStyle::Absolute;
-                    badge.layout.inset.top = Some(Px(0.0));
-                    badge.layout.inset.right = Some(Px(0.0));
+                    badge.layout.inset.top = Some(Px(0.0)).into();
+                    badge.layout.inset.right = Some(Px(0.0)).into();
 
                     vec![
                         cx.container(base, |_cx| vec![]),
@@ -158,8 +158,8 @@ fn container_absolute_negative_inset_offsets_outside_parent() {
                     badge.layout.size.width = crate::element::Length::Px(Px(10.0));
                     badge.layout.size.height = crate::element::Length::Px(Px(10.0));
                     badge.layout.position = crate::element::PositionStyle::Absolute;
-                    badge.layout.inset.top = Some(Px(-5.0));
-                    badge.layout.inset.left = Some(Px(-6.0));
+                    badge.layout.inset.top = Some(Px(-5.0)).into();
+                    badge.layout.inset.left = Some(Px(-6.0)).into();
 
                     vec![
                         cx.container(base, |_cx| vec![]),
@@ -200,7 +200,7 @@ fn container_applies_padding_and_paints_background() {
         |cx| {
             vec![cx.container(
                 crate::element::ContainerProps {
-                    padding: fret_core::Edges::symmetric(Px(4.0), Px(6.0)),
+                    padding: fret_core::Edges::symmetric(Px(4.0), Px(6.0)).into(),
                     background: Some(Color {
                         r: 1.0,
                         g: 0.0,
@@ -318,7 +318,7 @@ fn container_shrink_wraps_to_max_child_under_definite_parent_bounds() {
         "mvp50-container-shrink-wraps",
         |cx| {
             let outer = crate::element::ContainerProps {
-                padding: fret_core::Edges::all(Px(2.0)),
+                padding: fret_core::Edges::all(Px(2.0)).into(),
                 ..crate::element::ContainerProps::default()
             };
 
@@ -364,12 +364,12 @@ fn container_nested_chains_do_not_trigger_extra_engine_solves_when_clean() {
         "container-nested-clean-solves",
         |cx| {
             let outer = crate::element::ContainerProps {
-                padding: fret_core::Edges::all(Px(2.0)),
+                padding: fret_core::Edges::all(Px(2.0)).into(),
                 ..Default::default()
             };
 
             let inner = crate::element::ContainerProps {
-                padding: fret_core::Edges::all(Px(1.0)),
+                padding: fret_core::Edges::all(Px(1.0)).into(),
                 ..Default::default()
             };
 

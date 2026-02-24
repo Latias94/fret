@@ -369,7 +369,7 @@ impl Dialog {
                                     },
                                     ..Default::default()
                                 },
-                                padding: Edges::all(Px(0.0)),
+                                padding: Edges::all(Px(0.0)).into(),
                                 background: Some(overlay_color),
                                 shadow: None,
                                 border: Edges::all(Px(0.0)),
@@ -434,7 +434,7 @@ impl Dialog {
                             flex: FlexProps {
                                 layout: centered_layout,
                                 direction: fret_core::Axis::Vertical,
-                                padding: Edges::all(window_padding_px),
+                                padding: Edges::all(window_padding_px).into(),
                                 justify: MainAlign::Center,
                                 align: CrossAlign::Center,
                                 ..Default::default()
@@ -561,7 +561,10 @@ impl DialogContent {
             .size
             .as_ref()
             .and_then(|s| s.max_width.as_ref())
-            .map(|m| m.resolve(&theme))
+            .and_then(|m| match m {
+                fret_ui_kit::LengthRefinement::Px(metric) => Some(metric.resolve(&theme)),
+                _ => None,
+            })
         {
             crate::a11y_modal::register_modal_content_max_width(cx.app, max_w);
         }
@@ -1662,8 +1665,8 @@ mod tests {
                             let mut layout = LayoutStyle::default();
                             layout.size.width = Length::Px(Px(120.0));
                             layout.size.height = Length::Px(Px(40.0));
-                            layout.inset.left = Some(Px(20.0));
-                            layout.inset.top = Some(Px(20.0));
+                            layout.inset.left = Some(Px(100.0)).into();
+                            layout.inset.top = Some(Px(100.0)).into();
                             layout.position = PositionStyle::Absolute;
                             layout
                         },
@@ -2158,8 +2161,8 @@ mod tests {
                                 let mut layout = LayoutStyle::default();
                                 layout.size.width = Length::Px(Px(120.0));
                                 layout.size.height = Length::Px(Px(40.0));
-                                layout.inset.left = Some(Px(20.0));
-                                layout.inset.top = Some(Px(20.0));
+                                layout.inset.left = Some(Px(100.0)).into();
+                                layout.inset.top = Some(Px(100.0)).into();
                                 layout.position = PositionStyle::Absolute;
                                 layout
                             },
@@ -2402,8 +2405,8 @@ mod tests {
                                 let mut layout = LayoutStyle::default();
                                 layout.size.width = Length::Px(Px(120.0));
                                 layout.size.height = Length::Px(Px(40.0));
-                                layout.inset.left = Some(Px(20.0));
-                                layout.inset.top = Some(Px(20.0));
+                                layout.inset.left = Some(Px(100.0)).into();
+                                layout.inset.top = Some(Px(100.0)).into();
                                 layout.position = PositionStyle::Absolute;
                                 layout
                             },
@@ -2830,8 +2833,8 @@ mod tests {
                             layout.size.width = Length::Px(Px(120.0));
                             layout.size.height = Length::Px(Px(40.0));
                             layout.position = fret_ui::element::PositionStyle::Absolute;
-                            layout.inset.top = Some(Px(0.0));
-                            layout.inset.left = Some(Px(0.0));
+                            layout.inset.top = Some(Px(100.0)).into();
+                            layout.inset.left = Some(Px(100.0)).into();
                             layout
                         },
                         enabled: true,
@@ -2851,8 +2854,8 @@ mod tests {
                             layout.size.width = Length::Px(Px(120.0));
                             layout.size.height = Length::Px(Px(40.0));
                             layout.position = fret_ui::element::PositionStyle::Absolute;
-                            layout.inset.top = Some(Px(200.0));
-                            layout.inset.left = Some(Px(200.0));
+                            layout.inset.top = Some(Px(100.0)).into();
+                            layout.inset.left = Some(Px(100.0)).into();
                             layout
                         },
                         enabled: true,

@@ -3,7 +3,7 @@ use fret_ui::ElementContext;
 use fret_ui::UiHost;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, Length, MainAlign, Overflow, PressableProps,
-    PressableState,
+    PressableState, SpacingLength,
 };
 use fret_ui::elements::GlobalElementId;
 use std::sync::Arc;
@@ -20,8 +20,12 @@ fn normalize_control_chrome_sizing(
     // Without this, shadcn-style controls that apply `min-height` + `py-*` would inflate:
     // the chrome node enforces the min-height, then adds padding on top (e.g. `h-9` becomes
     // 52px).
-    let pad_x = chrome_props.padding.left.0 + chrome_props.padding.right.0;
-    let pad_y = chrome_props.padding.top.0 + chrome_props.padding.bottom.0;
+    let spacing_px = |v: SpacingLength| match v {
+        SpacingLength::Px(px) => px.0.max(0.0),
+        SpacingLength::Fill | SpacingLength::Fraction(_) => 0.0,
+    };
+    let pad_x = spacing_px(chrome_props.padding.left) + spacing_px(chrome_props.padding.right);
+    let pad_y = spacing_px(chrome_props.padding.top) + spacing_px(chrome_props.padding.bottom);
     let border_x = chrome_props.border.left.0 + chrome_props.border.right.0;
     let border_y = chrome_props.border.top.0 + chrome_props.border.bottom.0;
     let inset_x = pad_x + border_x;
@@ -47,18 +51,18 @@ fn normalize_control_chrome_sizing(
         child_size.height = Length::Fill;
     }
 
-    if let Some(min_h) = parent_size.min_height {
-        child_size.min_height = Some(shrink_px(min_h, inset_y));
+    if let Some(Length::Px(min_h)) = parent_size.min_height {
+        child_size.min_height = Some(Length::Px(shrink_px(min_h, inset_y)));
     }
-    if let Some(max_h) = parent_size.max_height {
-        child_size.max_height = Some(shrink_px(max_h, inset_y));
+    if let Some(Length::Px(max_h)) = parent_size.max_height {
+        child_size.max_height = Some(Length::Px(shrink_px(max_h, inset_y)));
     }
 
-    if let Some(min_w) = parent_size.min_width {
-        child_size.min_width = Some(shrink_px(min_w, inset_x));
+    if let Some(Length::Px(min_w)) = parent_size.min_width {
+        child_size.min_width = Some(Length::Px(shrink_px(min_w, inset_x)));
     }
-    if let Some(max_w) = parent_size.max_width {
-        child_size.max_width = Some(shrink_px(max_w, inset_x));
+    if let Some(Length::Px(max_w)) = parent_size.max_width {
+        child_size.max_width = Some(Length::Px(shrink_px(max_w, inset_x)));
     }
 }
 
@@ -232,22 +236,34 @@ mod tests {
     #[test]
     fn control_chrome_shrinks_min_max_constraints_by_padding_and_border() {
         let mut pressable = PressableProps::default();
-        pressable.layout.size.min_width = Some(fret_core::Px(40.0));
-        pressable.layout.size.max_width = Some(fret_core::Px(50.0));
-        pressable.layout.size.min_height = Some(fret_core::Px(20.0));
-        pressable.layout.size.max_height = Some(fret_core::Px(30.0));
+        pressable.layout.size.min_width = Some(Length::Px(fret_core::Px(40.0)));
+        pressable.layout.size.max_width = Some(Length::Px(fret_core::Px(50.0)));
+        pressable.layout.size.min_height = Some(Length::Px(fret_core::Px(20.0)));
+        pressable.layout.size.max_height = Some(Length::Px(fret_core::Px(30.0)));
 
         let mut chrome = ContainerProps::default();
-        chrome.padding = fret_core::Edges::all(fret_core::Px(2.0));
-        chrome.border = fret_core::Edges::all(fret_core::Px(1.0));
+        chrome.padding = fret_core::Edges::all(fret_core::Px(2.0)).into();
+        chrome.border = fret_core::Edges::all(fret_core::Px(1.0)).into();
 
         normalize_control_chrome_sizing(&pressable, &mut chrome);
 
         // inset = (pad_left + pad_right) + (border_left + border_right) = (2+2) + (1+1) = 6
-        assert_eq!(chrome.layout.size.min_width, Some(fret_core::Px(34.0)));
-        assert_eq!(chrome.layout.size.max_width, Some(fret_core::Px(44.0)));
-        assert_eq!(chrome.layout.size.min_height, Some(fret_core::Px(14.0)));
-        assert_eq!(chrome.layout.size.max_height, Some(fret_core::Px(24.0)));
+        assert_eq!(
+            chrome.layout.size.min_width,
+            Some(Length::Px(fret_core::Px(34.0)))
+        );
+        assert_eq!(
+            chrome.layout.size.max_width,
+            Some(Length::Px(fret_core::Px(44.0)))
+        );
+        assert_eq!(
+            chrome.layout.size.min_height,
+            Some(Length::Px(fret_core::Px(14.0)))
+        );
+        assert_eq!(
+            chrome.layout.size.max_height,
+            Some(Length::Px(fret_core::Px(24.0)))
+        );
     }
 
     #[test]
@@ -434,7 +450,7 @@ mod tests {
                             pressable.layout.size.height = Length::Fill;
 
                             let mut chrome = ContainerProps::default();
-                            chrome.padding = fret_core::Edges::all(fret_core::Px(6.0));
+                            chrome.padding = fret_core::Edges::all(fret_core::Px(6.0)).into();
                             chrome.corner_radii = fret_core::Corners::all(fret_core::Px(8.0));
                             chrome.background = Some(fret_core::Color::TRANSPARENT);
 

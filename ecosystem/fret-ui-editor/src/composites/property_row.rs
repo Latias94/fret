@@ -190,7 +190,7 @@ impl PropertyRow {
         let label_w = self.options.label_width.unwrap_or(Px(160.0));
         let mut layout = self.options.layout;
         if layout.size.min_height.is_none() {
-            layout.size.min_height = Some(density.row_height);
+            layout.size.min_height = Some(Length::Px(density.row_height));
         }
 
         let reset = self.reset.clone();
@@ -310,7 +310,7 @@ impl PropertyRow {
                                 size: SizeStyle {
                                     width: Length::Px(label_w),
                                     height: Length::Auto,
-                                    min_height: Some(density.row_height),
+                                    min_height: Some(Length::Px(density.row_height)),
                                     ..Default::default()
                                 },
                                 flex: FlexItemStyle {
@@ -334,7 +334,7 @@ impl PropertyRow {
                                 size: SizeStyle {
                                     width: Length::Fill,
                                     height: Length::Auto,
-                                    min_height: Some(density.row_height),
+                                    min_height: Some(Length::Px(density.row_height)),
                                     ..Default::default()
                                 },
                                 flex: FlexItemStyle {
@@ -383,7 +383,7 @@ impl PropertyRow {
                                     size: SizeStyle {
                                         width: Length::Fill,
                                         height: Length::Auto,
-                                        min_height: Some(density.row_height),
+                                        min_height: Some(Length::Px(density.row_height)),
                                         ..Default::default()
                                     },
                                     ..Default::default()
@@ -402,7 +402,7 @@ impl PropertyRow {
                                             size: SizeStyle {
                                                 width: Length::Fill,
                                                 height: Length::Auto,
-                                                min_height: Some(density.row_height),
+                                                min_height: Some(Length::Px(density.row_height)),
                                                 ..Default::default()
                                             },
                                             flex: FlexItemStyle {
@@ -437,7 +437,7 @@ impl PropertyRow {
                                     size: SizeStyle {
                                         width: Length::Fill,
                                         height: Length::Auto,
-                                        min_height: Some(density.row_height),
+                                        min_height: Some(Length::Px(density.row_height)),
                                         ..Default::default()
                                     },
                                     ..Default::default()

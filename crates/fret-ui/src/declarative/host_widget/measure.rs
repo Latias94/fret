@@ -26,6 +26,18 @@ fn clamp_to_constraints_in_measure(
     style: LayoutStyle,
     constraints: LayoutConstraints,
 ) -> Size {
+    let resolve_constraint = |l: Length, available: AvailableSpace| -> Option<Px> {
+        match l {
+            Length::Auto => None,
+            Length::Px(px) => Some(Px(px.0.max(0.0))),
+            Length::Fill => available.definite().map(|px| Px(px.0.max(0.0))),
+            Length::Fraction(f) => available.definite().map(|px| {
+                let f = if f.is_finite() { f.max(0.0) } else { 0.0 };
+                Px((px.0 * f).max(0.0))
+            }),
+        }
+    };
+
     match style.size.width {
         Length::Px(px) => size.width = Px(px.0.max(0.0)),
         Length::Fill => {
@@ -57,16 +69,32 @@ fn clamp_to_constraints_in_measure(
         Length::Auto => {}
     }
 
-    if let Some(min_w) = style.size.min_width {
+    if let Some(min_w) = style
+        .size
+        .min_width
+        .and_then(|l| resolve_constraint(l, constraints.available.width))
+    {
         size.width = Px(size.width.0.max(min_w.0.max(0.0)));
     }
-    if let Some(min_h) = style.size.min_height {
+    if let Some(min_h) = style
+        .size
+        .min_height
+        .and_then(|l| resolve_constraint(l, constraints.available.height))
+    {
         size.height = Px(size.height.0.max(min_h.0.max(0.0)));
     }
-    if let Some(max_w) = style.size.max_width {
+    if let Some(max_w) = style
+        .size
+        .max_width
+        .and_then(|l| resolve_constraint(l, constraints.available.width))
+    {
         size.width = Px(size.width.0.min(max_w.0.max(0.0)));
     }
-    if let Some(max_h) = style.size.max_height {
+    if let Some(max_h) = style
+        .size
+        .max_height
+        .and_then(|l| resolve_constraint(l, constraints.available.height))
+    {
         size.height = Px(size.height.0.min(max_h.0.max(0.0)));
     }
 
@@ -114,6 +142,7 @@ fn fallback_measure_flex<H: UiHost>(
     cx: &mut MeasureCx<'_, H>,
     inner_available: LayoutSize<AvailableSpace>,
     props: &FlexProps,
+    gap_main: f32,
     pad_w: f32,
     pad_h: f32,
 ) -> Size {
@@ -121,7 +150,6 @@ fn fallback_measure_flex<H: UiHost>(
 
     let mut main = 0.0f32;
     let mut cross = 0.0f32;
-    let gap = props.gap.0.max(0.0);
 
     for (i, &child) in cx.children.iter().enumerate() {
         let size = cx.measure_in(child, child_constraints);
@@ -131,7 +159,7 @@ fn fallback_measure_flex<H: UiHost>(
         };
 
         if i > 0 {
-            main = (main + gap).max(0.0);
+            main = (main + gap_main).max(0.0);
         }
         main = (main + main_delta).max(0.0);
         cross = cross.max(cross_delta);
@@ -164,6 +192,18 @@ fn taffy_dimension_for_available(length: Length, available: AvailableSpace) -> D
             }
             AvailableSpace::MinContent | AvailableSpace::MaxContent => Dimension::auto(),
         },
+    }
+}
+
+fn spacing_px_for_basis(length: crate::element::SpacingLength, basis: Option<Px>) -> f32 {
+    let basis = basis.map(|px| px.0.max(0.0)).unwrap_or(0.0);
+    match length {
+        crate::element::SpacingLength::Px(px) => px.0.max(0.0),
+        crate::element::SpacingLength::Fill => basis,
+        crate::element::SpacingLength::Fraction(f) => {
+            let f = if f.is_finite() { f.max(0.0) } else { 0.0 };
+            (basis * f).max(0.0)
+        }
     }
 }
 
@@ -511,10 +551,16 @@ impl ElementHostWidget {
                         continue;
                     }
                     let child_size = cx.measure_in(child, abs_constraints);
-                    let left = style.inset.left.map(|v| v.0);
-                    let right = style.inset.right.map(|v| v.0);
-                    let top = style.inset.top.map(|v| v.0);
-                    let bottom = style.inset.bottom.map(|v| v.0);
+                    let px = |edge: crate::element::InsetEdge| match edge {
+                        crate::element::InsetEdge::Px(px) => Some(px.0),
+                        crate::element::InsetEdge::Auto
+                        | crate::element::InsetEdge::Fill
+                        | crate::element::InsetEdge::Fraction(_) => None,
+                    };
+                    let left = px(style.inset.left);
+                    let right = px(style.inset.right);
+                    let top = px(style.inset.top);
+                    let bottom = px(style.inset.bottom);
 
                     let required_w = match (left, right) {
                         (Some(l), Some(r)) => Px(l + r + child_size.width.0),
@@ -557,10 +603,15 @@ impl ElementHostWidget {
     ) -> Size {
         // Tailwind/shadcn assume `box-sizing: border-box` by default. Model borders as part of the
         // container's layout insets so auto-sized containers match web geometry.
-        let pad_left = props.padding.left.0.max(0.0) + props.border.left.0.max(0.0);
-        let pad_right = props.padding.right.0.max(0.0) + props.border.right.0.max(0.0);
-        let pad_top = props.padding.top.0.max(0.0) + props.border.top.0.max(0.0);
-        let pad_bottom = props.padding.bottom.0.max(0.0) + props.border.bottom.0.max(0.0);
+        let padding_basis = cx.constraints.available.width.definite();
+        let pad_left =
+            spacing_px_for_basis(props.padding.left, padding_basis) + props.border.left.0.max(0.0);
+        let pad_right = spacing_px_for_basis(props.padding.right, padding_basis)
+            + props.border.right.0.max(0.0);
+        let pad_top =
+            spacing_px_for_basis(props.padding.top, padding_basis) + props.border.top.0.max(0.0);
+        let pad_bottom = spacing_px_for_basis(props.padding.bottom, padding_basis)
+            + props.border.bottom.0.max(0.0);
         let pad_w = pad_left + pad_right;
         let pad_h = pad_top + pad_bottom;
 
@@ -584,7 +635,16 @@ impl ElementHostWidget {
         let layout_constraints =
             normalize_text_measure_constraints(cx.constraints, props.layout.size.width, props.wrap);
         let max_width = text_max_width_for_constraints(layout_constraints, props.wrap);
-        let max_width = match (max_width, props.layout.size.max_width) {
+        let max_width_constraint = props.layout.size.max_width.and_then(|l| match l {
+            Length::Auto => None,
+            Length::Px(px) => Some(Px(px.0.max(0.0))),
+            Length::Fill => layout_constraints.available.width.definite(),
+            Length::Fraction(f) => layout_constraints.available.width.definite().map(|px| {
+                let f = if f.is_finite() { f.max(0.0) } else { 0.0 };
+                Px((px.0 * f).max(0.0))
+            }),
+        });
+        let max_width = match (max_width, max_width_constraint) {
             (Some(a), Some(b)) => Some(Px(a.0.min(b.0))),
             (None, Some(b)) => Some(b),
             (other, None) => other,
@@ -651,7 +711,16 @@ impl ElementHostWidget {
         let layout_constraints =
             normalize_text_measure_constraints(cx.constraints, props.layout.size.width, props.wrap);
         let max_width = text_max_width_for_constraints(layout_constraints, props.wrap);
-        let max_width = match (max_width, props.layout.size.max_width) {
+        let max_width_constraint = props.layout.size.max_width.and_then(|l| match l {
+            Length::Auto => None,
+            Length::Px(px) => Some(Px(px.0.max(0.0))),
+            Length::Fill => layout_constraints.available.width.definite(),
+            Length::Fraction(f) => layout_constraints.available.width.definite().map(|px| {
+                let f = if f.is_finite() { f.max(0.0) } else { 0.0 };
+                Px((px.0 * f).max(0.0))
+            }),
+        });
+        let max_width = match (max_width, max_width_constraint) {
             (Some(a), Some(b)) => Some(Px(a.0.min(b.0))),
             (None, Some(b)) => Some(b),
             (other, None) => other,
@@ -718,7 +787,16 @@ impl ElementHostWidget {
         let layout_constraints =
             normalize_text_measure_constraints(cx.constraints, props.layout.size.width, props.wrap);
         let max_width = text_max_width_for_constraints(layout_constraints, props.wrap);
-        let max_width = match (max_width, props.layout.size.max_width) {
+        let max_width_constraint = props.layout.size.max_width.and_then(|l| match l {
+            Length::Auto => None,
+            Length::Px(px) => Some(Px(px.0.max(0.0))),
+            Length::Fill => layout_constraints.available.width.definite(),
+            Length::Fraction(f) => layout_constraints.available.width.definite().map(|px| {
+                let f = if f.is_finite() { f.max(0.0) } else { 0.0 };
+                Px((px.0 * f).max(0.0))
+            }),
+        });
+        let max_width = match (max_width, max_width_constraint) {
             (Some(a), Some(b)) => Some(Px(a.0.min(b.0))),
             (None, Some(b)) => Some(b),
             (other, None) => other,
@@ -1109,26 +1187,36 @@ impl ElementHostWidget {
         window: AppWindowId,
         props: FlexProps,
     ) -> Size {
-        let max_dimension = |available: AvailableSpace, max: Option<Px>, pad: f32| -> Dimension {
-            let max = max.map(|px| (px.0 - pad).max(0.0));
-            match (available, max) {
-                (AvailableSpace::Definite(px), Some(max)) => {
-                    Dimension::length(px.0.max(0.0).min(max))
+        let max_dimension =
+            |available: AvailableSpace, max: Option<Length>, pad: f32| -> Dimension {
+                let max = max.and_then(|l| match l {
+                    Length::Auto => None,
+                    Length::Px(px) => Some((px.0 - pad).max(0.0)),
+                    Length::Fill => available.definite().map(|px| px.0.max(0.0)),
+                    Length::Fraction(f) => available.definite().map(|px| {
+                        let f = if f.is_finite() { f.max(0.0) } else { 0.0 };
+                        (px.0 * f).max(0.0)
+                    }),
+                });
+                match (available, max) {
+                    (AvailableSpace::Definite(px), Some(max)) => {
+                        Dimension::length(px.0.max(0.0).min(max))
+                    }
+                    (AvailableSpace::Definite(px), None) => Dimension::length(px.0.max(0.0)),
+                    (AvailableSpace::MinContent | AvailableSpace::MaxContent, Some(max)) => {
+                        Dimension::length(max)
+                    }
+                    (AvailableSpace::MinContent | AvailableSpace::MaxContent, None) => {
+                        Dimension::auto()
+                    }
                 }
-                (AvailableSpace::Definite(px), None) => Dimension::length(px.0.max(0.0)),
-                (AvailableSpace::MinContent | AvailableSpace::MaxContent, Some(max)) => {
-                    Dimension::length(max)
-                }
-                (AvailableSpace::MinContent | AvailableSpace::MaxContent, None) => {
-                    Dimension::auto()
-                }
-            }
-        };
+            };
 
-        let pad_left = props.padding.left.0.max(0.0);
-        let pad_right = props.padding.right.0.max(0.0);
-        let pad_top = props.padding.top.0.max(0.0);
-        let pad_bottom = props.padding.bottom.0.max(0.0);
+        let padding_basis = cx.constraints.available.width.definite();
+        let pad_left = spacing_px_for_basis(props.padding.left, padding_basis);
+        let pad_right = spacing_px_for_basis(props.padding.right, padding_basis);
+        let pad_top = spacing_px_for_basis(props.padding.top, padding_basis);
+        let pad_bottom = spacing_px_for_basis(props.padding.bottom, padding_basis);
         let pad_w = pad_left + pad_right;
         let pad_h = pad_top + pad_bottom;
 
@@ -1136,6 +1224,12 @@ impl ElementHostWidget {
             cx.constraints.available.width.shrink_by(pad_w),
             cx.constraints.available.height.shrink_by(pad_h),
         );
+        let gap_w = spacing_px_for_basis(props.gap, inner_available.width.definite());
+        let gap_h = spacing_px_for_basis(props.gap, inner_available.height.definite());
+        let gap_main = match props.direction {
+            fret_core::Axis::Horizontal => gap_w,
+            fret_core::Axis::Vertical => gap_h,
+        };
 
         let root_style = TaffyStyle {
             display: Display::Flex,
@@ -1151,8 +1245,8 @@ impl ElementHostWidget {
             justify_content: Some(super::super::taffy_layout::taffy_justify(props.justify)),
             align_items: Some(super::super::taffy_layout::taffy_align_items(props.align)),
             gap: TaffySize {
-                width: LengthPercentage::length(props.gap.0.max(0.0)),
-                height: LengthPercentage::length(props.gap.0.max(0.0)),
+                width: LengthPercentage::length(gap_w),
+                height: LengthPercentage::length(gap_h),
             },
             size: TaffySize {
                 width: match props.layout.size.width {
@@ -1215,7 +1309,7 @@ impl ElementHostWidget {
             Ok(root) => root,
             Err(err) => {
                 warn_taffy_error_once("new_leaf(root)", err);
-                return fallback_measure_flex(cx, inner_available, &props, pad_w, pad_h);
+                return fallback_measure_flex(cx, inner_available, &props, gap_main, pad_w, pad_h);
             }
         };
 
@@ -1230,8 +1324,24 @@ impl ElementHostWidget {
                     None
                 }
             });
-            let mut min_w = layout_style.size.min_width.map(|p| p.0);
-            let mut min_h = layout_style.size.min_height.map(|p| p.0);
+            let mut min_w = layout_style.size.min_width.and_then(|l| match l {
+                Length::Auto => None,
+                Length::Px(px) => Some(px.0.max(0.0)),
+                Length::Fill => inner_available.width.definite().map(|px| px.0.max(0.0)),
+                Length::Fraction(f) => inner_available.width.definite().map(|px| {
+                    let f = if f.is_finite() { f.max(0.0) } else { 0.0 };
+                    (px.0 * f).max(0.0)
+                }),
+            });
+            let mut min_h = layout_style.size.min_height.and_then(|l| match l {
+                Length::Auto => None,
+                Length::Px(px) => Some(px.0.max(0.0)),
+                Length::Fill => inner_available.height.definite().map(|px| px.0.max(0.0)),
+                Length::Fraction(f) => inner_available.height.definite().map(|px| {
+                    let f = if f.is_finite() { f.max(0.0) } else { 0.0 };
+                    (px.0 * f).max(0.0)
+                }),
+            });
             if let Some(min) = spacer_min {
                 let min = min.0.max(0.0);
                 match props.direction {
@@ -1270,12 +1380,12 @@ impl ElementHostWidget {
                     width: layout_style
                         .size
                         .max_width
-                        .map(|p| Dimension::length(p.0))
+                        .map(|l| taffy_dimension_for_available(l, inner_available.width))
                         .unwrap_or_else(Dimension::auto),
                     height: layout_style
                         .size
                         .max_height
-                        .map(|p| Dimension::length(p.0))
+                        .map(|l| taffy_dimension_for_available(l, inner_available.height))
                         .unwrap_or_else(Dimension::auto),
                 },
                 margin: super::super::taffy_layout::taffy_rect_lpa_from_margin_edges(
@@ -1308,14 +1418,21 @@ impl ElementHostWidget {
                 Ok(node) => node,
                 Err(err) => {
                     warn_taffy_error_once("new_leaf_with_context(child)", err);
-                    return fallback_measure_flex(cx, inner_available, &props, pad_w, pad_h);
+                    return fallback_measure_flex(
+                        cx,
+                        inner_available,
+                        &props,
+                        gap_main,
+                        pad_w,
+                        pad_h,
+                    );
                 }
             };
             child_nodes.push(node);
         }
         if let Err(err) = taffy.set_children(root, &child_nodes) {
             warn_taffy_error_once("set_children(root)", err);
-            return fallback_measure_flex(cx, inner_available, &props, pad_w, pad_h);
+            return fallback_measure_flex(cx, inner_available, &props, gap_main, pad_w, pad_h);
         }
 
         let mut measure_cache: std::collections::HashMap<
@@ -1362,14 +1479,14 @@ impl ElementHostWidget {
             })
         {
             warn_taffy_error_once("compute_layout_with_measure(root)", err);
-            return fallback_measure_flex(cx, inner_available, &props, pad_w, pad_h);
+            return fallback_measure_flex(cx, inner_available, &props, gap_main, pad_w, pad_h);
         }
 
         let root_layout = match taffy.layout(root) {
             Ok(layout) => layout,
             Err(err) => {
                 warn_taffy_error_once("layout(root)", err);
-                return fallback_measure_flex(cx, inner_available, &props, pad_w, pad_h);
+                return fallback_measure_flex(cx, inner_available, &props, gap_main, pad_w, pad_h);
             }
         };
         let inner_size = Size::new(
@@ -1389,10 +1506,11 @@ impl ElementHostWidget {
         window: AppWindowId,
         props: crate::element::GridProps,
     ) -> Size {
-        let pad_left = props.padding.left.0.max(0.0);
-        let pad_right = props.padding.right.0.max(0.0);
-        let pad_top = props.padding.top.0.max(0.0);
-        let pad_bottom = props.padding.bottom.0.max(0.0);
+        let padding_basis = cx.constraints.available.width.definite();
+        let pad_left = spacing_px_for_basis(props.padding.left, padding_basis);
+        let pad_right = spacing_px_for_basis(props.padding.right, padding_basis);
+        let pad_top = spacing_px_for_basis(props.padding.top, padding_basis);
+        let pad_bottom = spacing_px_for_basis(props.padding.bottom, padding_basis);
         let pad_w = pad_left + pad_right;
         let pad_h = pad_top + pad_bottom;
 
@@ -1400,14 +1518,16 @@ impl ElementHostWidget {
             cx.constraints.available.width.shrink_by(pad_w),
             cx.constraints.available.height.shrink_by(pad_h),
         );
+        let gap_w = spacing_px_for_basis(props.gap, inner_available.width.definite());
+        let gap_h = spacing_px_for_basis(props.gap, inner_available.height.definite());
 
         let root_style = TaffyStyle {
             display: Display::Grid,
             justify_content: Some(super::super::taffy_layout::taffy_justify(props.justify)),
             align_items: Some(super::super::taffy_layout::taffy_align_items(props.align)),
             gap: TaffySize {
-                width: LengthPercentage::length(props.gap.0.max(0.0)),
-                height: LengthPercentage::length(props.gap.0.max(0.0)),
+                width: LengthPercentage::length(gap_w),
+                height: LengthPercentage::length(gap_h),
             },
             size: TaffySize {
                 width: match props.layout.size.width {
@@ -1501,24 +1621,24 @@ impl ElementHostWidget {
                     width: layout_style
                         .size
                         .min_width
-                        .map(|p| Dimension::length(p.0))
+                        .map(|l| taffy_dimension_for_available(l, inner_available.width))
                         .unwrap_or_else(Dimension::auto),
                     height: layout_style
                         .size
                         .min_height
-                        .map(|p| Dimension::length(p.0))
+                        .map(|l| taffy_dimension_for_available(l, inner_available.height))
                         .unwrap_or_else(Dimension::auto),
                 },
                 max_size: TaffySize {
                     width: layout_style
                         .size
                         .max_width
-                        .map(|p| Dimension::length(p.0))
+                        .map(|l| taffy_dimension_for_available(l, inner_available.width))
                         .unwrap_or_else(Dimension::auto),
                     height: layout_style
                         .size
                         .max_height
-                        .map(|p| Dimension::length(p.0))
+                        .map(|l| taffy_dimension_for_available(l, inner_available.height))
                         .unwrap_or_else(Dimension::auto),
                 },
                 margin: super::super::taffy_layout::taffy_rect_lpa_from_margin_edges(

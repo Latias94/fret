@@ -46,8 +46,8 @@ fn interactivity_gate_can_make_subtree_inert_without_unmounting() {
                         crate::element::FlexProps {
                             layout: crate::element::LayoutStyle::default(),
                             direction: fret_core::Axis::Horizontal,
-                            gap: Px(0.0),
-                            padding: Edges::all(Px(0.0)),
+                            gap: Px(0.0).into(),
+                            padding: Edges::all(Px(0.0)).into(),
                             justify: crate::element::MainAlign::Start,
                             align: crate::element::CrossAlign::Start,
                             wrap: false,

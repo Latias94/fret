@@ -2,8 +2,8 @@ use fret_core::Px;
 use fret_ui::element::PositionStyle;
 
 use super::{
-    InsetRefinement, MarginEdgeRefinement, MarginRefinement, MetricRef, OverflowRefinement,
-    SignedMetricRef, Space,
+    InsetEdgeRefinement, InsetRefinement, MarginEdgeRefinement, MarginRefinement, MetricRef,
+    OverflowRefinement, SignedMetricRef, Space,
 };
 
 #[derive(Debug, Clone, Default)]
@@ -22,10 +22,10 @@ pub enum LengthRefinement {
 pub struct SizeRefinement {
     pub width: Option<LengthRefinement>,
     pub height: Option<LengthRefinement>,
-    pub min_width: Option<MetricRef>,
-    pub min_height: Option<MetricRef>,
-    pub max_width: Option<MetricRef>,
-    pub max_height: Option<MetricRef>,
+    pub min_width: Option<LengthRefinement>,
+    pub min_height: Option<LengthRefinement>,
+    pub max_width: Option<LengthRefinement>,
+    pub max_height: Option<LengthRefinement>,
 }
 
 impl SizeRefinement {
@@ -161,32 +161,67 @@ impl LayoutRefinement {
 
     pub fn inset(mut self, space: Space) -> Self {
         self.ensure_position_for_inset();
-        let m = SignedMetricRef::pos(MetricRef::space(space));
+        let m = InsetEdgeRefinement::Px(SignedMetricRef::pos(MetricRef::space(space)));
         self.inset = Some(InsetRefinement {
-            top: Some(m.clone()),
-            right: Some(m.clone()),
-            bottom: Some(m.clone()),
-            left: Some(m),
+            top: Some(m.clone()).into(),
+            right: Some(m.clone()).into(),
+            bottom: Some(m.clone()).into(),
+            left: Some(m).into(),
         });
         self
     }
 
     pub fn inset_px(mut self, px: Px) -> Self {
         self.ensure_position_for_inset();
-        let m = SignedMetricRef::pos(px.into());
+        let m = InsetEdgeRefinement::Px(SignedMetricRef::pos(px.into()));
         self.inset = Some(InsetRefinement {
-            top: Some(m.clone()),
-            right: Some(m.clone()),
-            bottom: Some(m.clone()),
-            left: Some(m),
+            top: Some(m.clone()).into(),
+            right: Some(m.clone()).into(),
+            bottom: Some(m.clone()).into(),
+            left: Some(m).into(),
         });
         self
+    }
+
+    /// Shorthand for `inset: 100%` of the containing block (percent sizing).
+    pub fn inset_full(mut self) -> Self {
+        self.ensure_position_for_inset();
+        let m = InsetEdgeRefinement::Fill;
+        self.inset = Some(InsetRefinement {
+            top: Some(m.clone()).into(),
+            right: Some(m.clone()).into(),
+            bottom: Some(m.clone()).into(),
+            left: Some(m).into(),
+        });
+        self
+    }
+
+    /// Shorthand for `inset: <fraction>` of the containing block.
+    ///
+    /// Example: `inset_fraction(0.5)` == 50%.
+    pub fn inset_fraction(mut self, fraction: f32) -> Self {
+        self.ensure_position_for_inset();
+        let m = InsetEdgeRefinement::Fraction(fraction);
+        self.inset = Some(InsetRefinement {
+            top: Some(m.clone()).into(),
+            right: Some(m.clone()).into(),
+            bottom: Some(m.clone()).into(),
+            left: Some(m).into(),
+        });
+        self
+    }
+
+    /// Shorthand for `inset: <percent>%` of the containing block.
+    pub fn inset_percent(self, percent: f32) -> Self {
+        self.inset_fraction(percent / 100.0)
     }
 
     pub fn top(mut self, space: Space) -> Self {
         self.ensure_position_for_inset();
         let mut inset = self.inset.unwrap_or_default();
-        inset.top = Some(SignedMetricRef::pos(MetricRef::space(space)));
+        inset.top = Some(InsetEdgeRefinement::Px(SignedMetricRef::pos(
+            MetricRef::space(space),
+        )));
         self.inset = Some(inset);
         self
     }
@@ -194,15 +229,40 @@ impl LayoutRefinement {
     pub fn top_px(mut self, px: Px) -> Self {
         self.ensure_position_for_inset();
         let mut inset = self.inset.unwrap_or_default();
-        inset.top = Some(SignedMetricRef::pos(px.into()));
+        inset.top = Some(InsetEdgeRefinement::Px(SignedMetricRef::pos(px.into())));
         self.inset = Some(inset);
         self
+    }
+
+    /// Shorthand for `top: 100%` of the containing block (percent sizing).
+    pub fn top_full(mut self) -> Self {
+        self.ensure_position_for_inset();
+        let mut inset = self.inset.unwrap_or_default();
+        inset.top = Some(InsetEdgeRefinement::Fill);
+        self.inset = Some(inset);
+        self
+    }
+
+    /// Shorthand for `top: <fraction>` of the containing block.
+    pub fn top_fraction(mut self, fraction: f32) -> Self {
+        self.ensure_position_for_inset();
+        let mut inset = self.inset.unwrap_or_default();
+        inset.top = Some(InsetEdgeRefinement::Fraction(fraction));
+        self.inset = Some(inset);
+        self
+    }
+
+    /// Shorthand for `top: <percent>%` of the containing block.
+    pub fn top_percent(self, percent: f32) -> Self {
+        self.top_fraction(percent / 100.0)
     }
 
     pub fn top_neg(mut self, space: Space) -> Self {
         self.ensure_position_for_inset();
         let mut inset = self.inset.unwrap_or_default();
-        inset.top = Some(SignedMetricRef::neg(MetricRef::space(space)));
+        inset.top = Some(InsetEdgeRefinement::Px(SignedMetricRef::neg(
+            MetricRef::space(space),
+        )));
         self.inset = Some(inset);
         self
     }
@@ -210,7 +270,7 @@ impl LayoutRefinement {
     pub fn top_neg_px(mut self, px: impl Into<MetricRef>) -> Self {
         self.ensure_position_for_inset();
         let mut inset = self.inset.unwrap_or_default();
-        inset.top = Some(SignedMetricRef::neg(px.into()));
+        inset.top = Some(InsetEdgeRefinement::Px(SignedMetricRef::neg(px.into())));
         self.inset = Some(inset);
         self
     }
@@ -218,7 +278,9 @@ impl LayoutRefinement {
     pub fn right(mut self, space: Space) -> Self {
         self.ensure_position_for_inset();
         let mut inset = self.inset.unwrap_or_default();
-        inset.right = Some(SignedMetricRef::pos(MetricRef::space(space)));
+        inset.right = Some(InsetEdgeRefinement::Px(SignedMetricRef::pos(
+            MetricRef::space(space),
+        )));
         self.inset = Some(inset);
         self
     }
@@ -226,15 +288,40 @@ impl LayoutRefinement {
     pub fn right_px(mut self, px: Px) -> Self {
         self.ensure_position_for_inset();
         let mut inset = self.inset.unwrap_or_default();
-        inset.right = Some(SignedMetricRef::pos(px.into()));
+        inset.right = Some(InsetEdgeRefinement::Px(SignedMetricRef::pos(px.into())));
         self.inset = Some(inset);
         self
+    }
+
+    /// Shorthand for `right: 100%` of the containing block (percent sizing).
+    pub fn right_full(mut self) -> Self {
+        self.ensure_position_for_inset();
+        let mut inset = self.inset.unwrap_or_default();
+        inset.right = Some(InsetEdgeRefinement::Fill);
+        self.inset = Some(inset);
+        self
+    }
+
+    /// Shorthand for `right: <fraction>` of the containing block.
+    pub fn right_fraction(mut self, fraction: f32) -> Self {
+        self.ensure_position_for_inset();
+        let mut inset = self.inset.unwrap_or_default();
+        inset.right = Some(InsetEdgeRefinement::Fraction(fraction));
+        self.inset = Some(inset);
+        self
+    }
+
+    /// Shorthand for `right: <percent>%` of the containing block.
+    pub fn right_percent(self, percent: f32) -> Self {
+        self.right_fraction(percent / 100.0)
     }
 
     pub fn right_neg(mut self, space: Space) -> Self {
         self.ensure_position_for_inset();
         let mut inset = self.inset.unwrap_or_default();
-        inset.right = Some(SignedMetricRef::neg(MetricRef::space(space)));
+        inset.right = Some(InsetEdgeRefinement::Px(SignedMetricRef::neg(
+            MetricRef::space(space),
+        )));
         self.inset = Some(inset);
         self
     }
@@ -242,7 +329,7 @@ impl LayoutRefinement {
     pub fn right_neg_px(mut self, px: impl Into<MetricRef>) -> Self {
         self.ensure_position_for_inset();
         let mut inset = self.inset.unwrap_or_default();
-        inset.right = Some(SignedMetricRef::neg(px.into()));
+        inset.right = Some(InsetEdgeRefinement::Px(SignedMetricRef::neg(px.into())));
         self.inset = Some(inset);
         self
     }
@@ -250,7 +337,9 @@ impl LayoutRefinement {
     pub fn bottom(mut self, space: Space) -> Self {
         self.ensure_position_for_inset();
         let mut inset = self.inset.unwrap_or_default();
-        inset.bottom = Some(SignedMetricRef::pos(MetricRef::space(space)));
+        inset.bottom = Some(InsetEdgeRefinement::Px(SignedMetricRef::pos(
+            MetricRef::space(space),
+        )));
         self.inset = Some(inset);
         self
     }
@@ -258,15 +347,40 @@ impl LayoutRefinement {
     pub fn bottom_px(mut self, px: Px) -> Self {
         self.ensure_position_for_inset();
         let mut inset = self.inset.unwrap_or_default();
-        inset.bottom = Some(SignedMetricRef::pos(px.into()));
+        inset.bottom = Some(InsetEdgeRefinement::Px(SignedMetricRef::pos(px.into())));
         self.inset = Some(inset);
         self
+    }
+
+    /// Shorthand for `bottom: 100%` of the containing block (percent sizing).
+    pub fn bottom_full(mut self) -> Self {
+        self.ensure_position_for_inset();
+        let mut inset = self.inset.unwrap_or_default();
+        inset.bottom = Some(InsetEdgeRefinement::Fill);
+        self.inset = Some(inset);
+        self
+    }
+
+    /// Shorthand for `bottom: <fraction>` of the containing block.
+    pub fn bottom_fraction(mut self, fraction: f32) -> Self {
+        self.ensure_position_for_inset();
+        let mut inset = self.inset.unwrap_or_default();
+        inset.bottom = Some(InsetEdgeRefinement::Fraction(fraction));
+        self.inset = Some(inset);
+        self
+    }
+
+    /// Shorthand for `bottom: <percent>%` of the containing block.
+    pub fn bottom_percent(self, percent: f32) -> Self {
+        self.bottom_fraction(percent / 100.0)
     }
 
     pub fn bottom_neg(mut self, space: Space) -> Self {
         self.ensure_position_for_inset();
         let mut inset = self.inset.unwrap_or_default();
-        inset.bottom = Some(SignedMetricRef::neg(MetricRef::space(space)));
+        inset.bottom = Some(InsetEdgeRefinement::Px(SignedMetricRef::neg(
+            MetricRef::space(space),
+        )));
         self.inset = Some(inset);
         self
     }
@@ -274,7 +388,7 @@ impl LayoutRefinement {
     pub fn bottom_neg_px(mut self, px: impl Into<MetricRef>) -> Self {
         self.ensure_position_for_inset();
         let mut inset = self.inset.unwrap_or_default();
-        inset.bottom = Some(SignedMetricRef::neg(px.into()));
+        inset.bottom = Some(InsetEdgeRefinement::Px(SignedMetricRef::neg(px.into())));
         self.inset = Some(inset);
         self
     }
@@ -282,7 +396,9 @@ impl LayoutRefinement {
     pub fn left(mut self, space: Space) -> Self {
         self.ensure_position_for_inset();
         let mut inset = self.inset.unwrap_or_default();
-        inset.left = Some(SignedMetricRef::pos(MetricRef::space(space)));
+        inset.left = Some(InsetEdgeRefinement::Px(SignedMetricRef::pos(
+            MetricRef::space(space),
+        )));
         self.inset = Some(inset);
         self
     }
@@ -290,15 +406,40 @@ impl LayoutRefinement {
     pub fn left_px(mut self, px: Px) -> Self {
         self.ensure_position_for_inset();
         let mut inset = self.inset.unwrap_or_default();
-        inset.left = Some(SignedMetricRef::pos(px.into()));
+        inset.left = Some(InsetEdgeRefinement::Px(SignedMetricRef::pos(px.into())));
         self.inset = Some(inset);
         self
+    }
+
+    /// Shorthand for `left: 100%` of the containing block (percent sizing).
+    pub fn left_full(mut self) -> Self {
+        self.ensure_position_for_inset();
+        let mut inset = self.inset.unwrap_or_default();
+        inset.left = Some(InsetEdgeRefinement::Fill);
+        self.inset = Some(inset);
+        self
+    }
+
+    /// Shorthand for `left: <fraction>` of the containing block.
+    pub fn left_fraction(mut self, fraction: f32) -> Self {
+        self.ensure_position_for_inset();
+        let mut inset = self.inset.unwrap_or_default();
+        inset.left = Some(InsetEdgeRefinement::Fraction(fraction));
+        self.inset = Some(inset);
+        self
+    }
+
+    /// Shorthand for `left: <percent>%` of the containing block.
+    pub fn left_percent(self, percent: f32) -> Self {
+        self.left_fraction(percent / 100.0)
     }
 
     pub fn left_neg(mut self, space: Space) -> Self {
         self.ensure_position_for_inset();
         let mut inset = self.inset.unwrap_or_default();
-        inset.left = Some(SignedMetricRef::neg(MetricRef::space(space)));
+        inset.left = Some(InsetEdgeRefinement::Px(SignedMetricRef::neg(
+            MetricRef::space(space),
+        )));
         self.inset = Some(inset);
         self
     }
@@ -306,7 +447,7 @@ impl LayoutRefinement {
     pub fn left_neg_px(mut self, px: impl Into<MetricRef>) -> Self {
         self.ensure_position_for_inset();
         let mut inset = self.inset.unwrap_or_default();
-        inset.left = Some(SignedMetricRef::neg(px.into()));
+        inset.left = Some(InsetEdgeRefinement::Px(SignedMetricRef::neg(px.into())));
         self.inset = Some(inset);
         self
     }
@@ -314,10 +455,10 @@ impl LayoutRefinement {
     pub fn m(mut self, space: Space) -> Self {
         let m = MarginEdgeRefinement::Px(SignedMetricRef::pos(MetricRef::space(space)));
         self.margin = Some(MarginRefinement {
-            top: Some(m.clone()),
-            right: Some(m.clone()),
-            bottom: Some(m.clone()),
-            left: Some(m),
+            top: Some(m.clone()).into(),
+            right: Some(m.clone()).into(),
+            bottom: Some(m.clone()).into(),
+            left: Some(m).into(),
         });
         self
     }
@@ -325,10 +466,10 @@ impl LayoutRefinement {
     pub fn m_px(mut self, px: Px) -> Self {
         let m = MarginEdgeRefinement::Px(SignedMetricRef::pos(px.into()));
         self.margin = Some(MarginRefinement {
-            top: Some(m.clone()),
-            right: Some(m.clone()),
-            bottom: Some(m.clone()),
-            left: Some(m),
+            top: Some(m.clone()).into(),
+            right: Some(m.clone()).into(),
+            bottom: Some(m.clone()).into(),
+            left: Some(m).into(),
         });
         self
     }
@@ -336,10 +477,10 @@ impl LayoutRefinement {
     pub fn m_neg(mut self, space: Space) -> Self {
         let m = MarginEdgeRefinement::Px(SignedMetricRef::neg(MetricRef::space(space)));
         self.margin = Some(MarginRefinement {
-            top: Some(m.clone()),
-            right: Some(m.clone()),
-            bottom: Some(m.clone()),
-            left: Some(m),
+            top: Some(m.clone()).into(),
+            right: Some(m.clone()).into(),
+            bottom: Some(m.clone()).into(),
+            left: Some(m).into(),
         });
         self
     }
@@ -347,10 +488,10 @@ impl LayoutRefinement {
     pub fn m_auto(mut self) -> Self {
         let a = MarginEdgeRefinement::Auto;
         self.margin = Some(MarginRefinement {
-            top: Some(a.clone()),
-            right: Some(a.clone()),
-            bottom: Some(a.clone()),
-            left: Some(a),
+            top: Some(a.clone()).into(),
+            right: Some(a.clone()).into(),
+            bottom: Some(a.clone()).into(),
+            left: Some(a).into(),
         });
         self
     }
@@ -567,8 +708,9 @@ impl LayoutRefinement {
         self.flex_item.as_mut().expect("flex_item exists")
     }
 
+    /// Shorthand for `min-width: <px>`.
     pub fn min_w(mut self, width: impl Into<MetricRef>) -> Self {
-        self.ensure_size_mut().min_width = Some(width.into());
+        self.ensure_size_mut().min_width = Some(LengthRefinement::Px(width.into()));
         self
     }
 
@@ -576,13 +718,48 @@ impl LayoutRefinement {
         self.min_w(MetricRef::space(width))
     }
 
+    /// Shorthand for `min-width: 100%` of the containing block.
+    pub fn min_w_full(mut self) -> Self {
+        self.ensure_size_mut().min_width = Some(LengthRefinement::Fill);
+        self
+    }
+
+    /// Shorthand for `min-width: <fraction>` of the containing block.
+    pub fn min_w_fraction(mut self, fraction: f32) -> Self {
+        self.ensure_size_mut().min_width = Some(LengthRefinement::Fraction(fraction));
+        self
+    }
+
+    /// Shorthand for `min-width: <percent>%` of the containing block.
+    pub fn min_w_percent(self, percent: f32) -> Self {
+        self.min_w_fraction(percent / 100.0)
+    }
+
+    /// Shorthand for `min-height: <px>`.
     pub fn min_h(mut self, height: impl Into<MetricRef>) -> Self {
-        self.ensure_size_mut().min_height = Some(height.into());
+        self.ensure_size_mut().min_height = Some(LengthRefinement::Px(height.into()));
         self
     }
 
     pub fn min_h_space(self, height: Space) -> Self {
         self.min_h(MetricRef::space(height))
+    }
+
+    /// Shorthand for `min-height: 100%` of the containing block.
+    pub fn min_h_full(mut self) -> Self {
+        self.ensure_size_mut().min_height = Some(LengthRefinement::Fill);
+        self
+    }
+
+    /// Shorthand for `min-height: <fraction>` of the containing block.
+    pub fn min_h_fraction(mut self, fraction: f32) -> Self {
+        self.ensure_size_mut().min_height = Some(LengthRefinement::Fraction(fraction));
+        self
+    }
+
+    /// Shorthand for `min-height: <percent>%` of the containing block.
+    pub fn min_h_percent(self, percent: f32) -> Self {
+        self.min_h_fraction(percent / 100.0)
     }
 
     /// Shorthand for `min-width: 0px`.
@@ -660,8 +837,9 @@ impl LayoutRefinement {
         self.w_full().h_full()
     }
 
+    /// Shorthand for `max-width: <px>`.
     pub fn max_w(mut self, width: impl Into<MetricRef>) -> Self {
-        self.ensure_size_mut().max_width = Some(width.into());
+        self.ensure_size_mut().max_width = Some(LengthRefinement::Px(width.into()));
         self
     }
 
@@ -669,13 +847,48 @@ impl LayoutRefinement {
         self.max_w(MetricRef::space(width))
     }
 
+    /// Shorthand for `max-width: 100%` of the containing block.
+    pub fn max_w_full(mut self) -> Self {
+        self.ensure_size_mut().max_width = Some(LengthRefinement::Fill);
+        self
+    }
+
+    /// Shorthand for `max-width: <fraction>` of the containing block.
+    pub fn max_w_fraction(mut self, fraction: f32) -> Self {
+        self.ensure_size_mut().max_width = Some(LengthRefinement::Fraction(fraction));
+        self
+    }
+
+    /// Shorthand for `max-width: <percent>%` of the containing block.
+    pub fn max_w_percent(self, percent: f32) -> Self {
+        self.max_w_fraction(percent / 100.0)
+    }
+
+    /// Shorthand for `max-height: <px>`.
     pub fn max_h(mut self, height: impl Into<MetricRef>) -> Self {
-        self.ensure_size_mut().max_height = Some(height.into());
+        self.ensure_size_mut().max_height = Some(LengthRefinement::Px(height.into()));
         self
     }
 
     pub fn max_h_space(self, height: Space) -> Self {
         self.max_h(MetricRef::space(height))
+    }
+
+    /// Shorthand for `max-height: 100%` of the containing block.
+    pub fn max_h_full(mut self) -> Self {
+        self.ensure_size_mut().max_height = Some(LengthRefinement::Fill);
+        self
+    }
+
+    /// Shorthand for `max-height: <fraction>` of the containing block.
+    pub fn max_h_fraction(mut self, fraction: f32) -> Self {
+        self.ensure_size_mut().max_height = Some(LengthRefinement::Fraction(fraction));
+        self
+    }
+
+    /// Shorthand for `max-height: <percent>%` of the containing block.
+    pub fn max_h_percent(self, percent: f32) -> Self {
+        self.max_h_fraction(percent / 100.0)
     }
 
     pub fn basis(mut self, basis: LengthRefinement) -> Self {

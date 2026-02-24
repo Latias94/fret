@@ -190,7 +190,7 @@ impl EnumSelect {
 
         let mut trigger_layout = self.options.layout;
         if trigger_layout.size.min_height.is_none() {
-            trigger_layout.size.min_height = Some(density.row_height);
+            trigger_layout.size.min_height = Some(Length::Px(density.row_height));
         }
 
         let trigger_model = self.model.clone();

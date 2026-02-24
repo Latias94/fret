@@ -204,7 +204,7 @@ pub fn blockquote<H: UiHost>(
     let (layout, border_color, muted, base_style) = {
         let theme = Theme::global(&*cx.app);
         let mut layout = decl_style::layout_style(theme, LayoutRefinement::default().w_full());
-        layout.size.min_width = Some(Px(0.0));
+        layout.size.min_width = Some(Length::Px(Px(0.0)));
         let border_color = theme.color_token("border");
         let muted = muted_color(theme);
         let base_style = base_text_style(theme);
@@ -217,7 +217,8 @@ pub fn blockquote<H: UiHost>(
             top: Px(8.0),
             right: Px(0.0),
             bottom: Px(8.0),
-        },
+        }
+        .into(),
         background: None,
         shadow: None,
         border: Edges {
@@ -258,8 +259,8 @@ pub fn list<H: UiHost>(
         FlexProps {
             layout,
             direction: fret_core::Axis::Vertical,
-            gap: Px(6.0),
-            padding: Edges::all(Px(0.0)),
+            gap: Px(6.0).into(),
+            padding: Edges::all(Px(0.0)).into(),
             justify: MainAlign::Start,
             align: CrossAlign::Stretch,
             wrap: false,
@@ -275,8 +276,8 @@ pub fn list<H: UiHost>(
                         FlexProps {
                             layout: row_layout,
                             direction: fret_core::Axis::Horizontal,
-                            gap: Px(8.0),
-                            padding: Edges::all(Px(0.0)),
+                            gap: Px(8.0).into(),
+                            padding: Edges::all(Px(0.0)).into(),
                             justify: MainAlign::Start,
                             align: CrossAlign::Start,
                             wrap: false,

@@ -498,8 +498,8 @@ fn web_vs_fret_layout_breadcrumb_dropdown_trigger_geometry() {
                                             FlexProps {
                                                 layout: Default::default(),
                                                 direction: fret_core::Axis::Horizontal,
-                                                gap: Px(4.0),
-                                                padding: Edges::all(Px(0.0)),
+                                                gap: Px(4.0).into(),
+                                                padding: Edges::all(Px(0.0)).into(),
                                                 justify: MainAlign::Start,
                                                 align: CrossAlign::Center,
                                                 wrap: false,

@@ -565,6 +565,14 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         push_env_if_missing(&mut run_launch_env, &key, &value);
     }
     let _ = ensure_env_var(&mut run_launch_env, "FRET_DIAG_RENDERER_PERF", "1");
+    if check_view_cache_reuse_min.is_some_and(|v| v > 0)
+        || check_view_cache_reuse_stable_min.is_some_and(|v| v > 0)
+    {
+        // View-cache reuse gates depend on cache-root debug records, which are only produced when
+        // the app enables UiTree debug collection. UI gallery disables debug in perf mode unless
+        // `FRET_UI_DEBUG_STATS` is set.
+        let _ = ensure_env_var(&mut run_launch_env, "FRET_UI_DEBUG_STATS", "1");
+    }
     let mut child = maybe_launch_demo(
         &launch,
         &run_launch_env,

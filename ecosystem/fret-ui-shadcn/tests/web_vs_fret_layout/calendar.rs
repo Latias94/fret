@@ -276,24 +276,27 @@ fn web_vs_fret_layout_calendar_hijri_day_grid_geometry_and_a11y_labels_match_web
             cal = cal.cell_size(cell_size);
         }
 
-        vec![cx.container(
-            ContainerProps {
-                layout: {
-                    let mut layout = LayoutStyle::default();
-                    layout.size.width = Length::Fill;
-                    layout.size.height = Length::Fill;
-                    layout
+        vec![
+            cx.container(
+                ContainerProps {
+                    layout: {
+                        let mut layout = LayoutStyle::default();
+                        layout.size.width = Length::Fill;
+                        layout.size.height = Length::Fill;
+                        layout
+                    },
+                    padding: fret_core::Edges {
+                        left: Px(web_origin_x),
+                        top: Px(web_origin_y),
+                        right: Px(0.0),
+                        bottom: Px(0.0),
+                    }
+                    .into(),
+                    ..Default::default()
                 },
-                padding: fret_core::Edges {
-                    left: Px(web_origin_x),
-                    top: Px(web_origin_y),
-                    right: Px(0.0),
-                    bottom: Px(0.0),
-                },
-                ..Default::default()
-            },
-            move |cx| vec![cal.into_element(cx)],
-        )]
+                move |cx| vec![cal.into_element(cx)],
+            ),
+        ]
     });
 
     let prev = find_semantics(
@@ -698,24 +701,27 @@ fn assert_calendar_single_month_variant_geometry_matches_web(web_name: &str) {
                     if let Some(today) = web_today {
                         calendar = calendar.today(today);
                     }
-                    vec![cx.container(
-                        ContainerProps {
-                            layout: {
-                                let mut layout = LayoutStyle::default();
-                                layout.size.width = Length::Fill;
-                                layout.size.height = Length::Fill;
-                                layout
+                    vec![
+                        cx.container(
+                            ContainerProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Fill;
+                                    layout.size.height = Length::Fill;
+                                    layout
+                                },
+                                padding: fret_core::Edges {
+                                    left: Px(web_origin_x),
+                                    top: Px(web_origin_y),
+                                    right: Px(0.0),
+                                    bottom: Px(0.0),
+                                }
+                                .into(),
+                                ..Default::default()
                             },
-                            padding: fret_core::Edges {
-                                left: Px(web_origin_x),
-                                top: Px(web_origin_y),
-                                right: Px(0.0),
-                                bottom: Px(0.0),
-                            },
-                            ..Default::default()
-                        },
-                        move |cx| vec![calendar.into_element(cx)],
-                    )]
+                            move |cx| vec![calendar.into_element(cx)],
+                        ),
+                    ]
                 }
                 _ if web_is_range_mode => {
                     let (min, max) = web_selected_dates.iter().fold(
@@ -739,24 +745,27 @@ fn assert_calendar_single_month_variant_geometry_matches_web(web_name: &str) {
                     if let Some(today) = web_today {
                         calendar = calendar.today(today);
                     }
-                    vec![cx.container(
-                        ContainerProps {
-                            layout: {
-                                let mut layout = LayoutStyle::default();
-                                layout.size.width = Length::Fill;
-                                layout.size.height = Length::Fill;
-                                layout
+                    vec![
+                        cx.container(
+                            ContainerProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Fill;
+                                    layout.size.height = Length::Fill;
+                                    layout
+                                },
+                                padding: fret_core::Edges {
+                                    left: Px(web_origin_x),
+                                    top: Px(web_origin_y),
+                                    right: Px(0.0),
+                                    bottom: Px(0.0),
+                                }
+                                .into(),
+                                ..Default::default()
                             },
-                            padding: fret_core::Edges {
-                                left: Px(web_origin_x),
-                                top: Px(web_origin_y),
-                                right: Px(0.0),
-                                bottom: Px(0.0),
-                            },
-                            ..Default::default()
-                        },
-                        move |cx| vec![calendar.into_element(cx)],
-                    )]
+                            move |cx| vec![calendar.into_element(cx)],
+                        ),
+                    ]
                 }
                 _ => {
                     let selected: Model<Vec<time::Date>> =
@@ -773,24 +782,27 @@ fn assert_calendar_single_month_variant_geometry_matches_web(web_name: &str) {
                     if let Some(today) = web_today {
                         calendar = calendar.today(today);
                     }
-                    vec![cx.container(
-                        ContainerProps {
-                            layout: {
-                                let mut layout = LayoutStyle::default();
-                                layout.size.width = Length::Fill;
-                                layout.size.height = Length::Fill;
-                                layout
+                    vec![
+                        cx.container(
+                            ContainerProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Fill;
+                                    layout.size.height = Length::Fill;
+                                    layout
+                                },
+                                padding: fret_core::Edges {
+                                    left: Px(web_origin_x),
+                                    top: Px(web_origin_y),
+                                    right: Px(0.0),
+                                    bottom: Px(0.0),
+                                }
+                                .into(),
+                                ..Default::default()
                             },
-                            padding: fret_core::Edges {
-                                left: Px(web_origin_x),
-                                top: Px(web_origin_y),
-                                right: Px(0.0),
-                                bottom: Px(0.0),
-                            },
-                            ..Default::default()
-                        },
-                        move |cx| vec![calendar.into_element(cx)],
-                    )]
+                            move |cx| vec![calendar.into_element(cx)],
+                        ),
+                    ]
                 }
             }
         });
@@ -1129,24 +1141,27 @@ fn assert_calendar_multi_month_variant_geometry_matches_web(web_name: &str) {
                     if let Some(today) = web_today {
                         calendar = calendar.today(today);
                     }
-                    vec![cx.container(
-                        ContainerProps {
-                            layout: {
-                                let mut layout = LayoutStyle::default();
-                                layout.size.width = Length::Fill;
-                                layout.size.height = Length::Fill;
-                                layout
+                    vec![
+                        cx.container(
+                            ContainerProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Fill;
+                                    layout.size.height = Length::Fill;
+                                    layout
+                                },
+                                padding: fret_core::Edges {
+                                    left: Px(web_origin_x),
+                                    top: Px(web_origin_y),
+                                    right: Px(0.0),
+                                    bottom: Px(0.0),
+                                }
+                                .into(),
+                                ..Default::default()
                             },
-                            padding: fret_core::Edges {
-                                left: Px(web_origin_x),
-                                top: Px(web_origin_y),
-                                right: Px(0.0),
-                                bottom: Px(0.0),
-                            },
-                            ..Default::default()
-                        },
-                        move |cx| vec![calendar.into_element(cx)],
-                    )]
+                            move |cx| vec![calendar.into_element(cx)],
+                        ),
+                    ]
                 }
                 _ if web_is_range_mode => {
                     let (min, max) = web_selected_dates.iter().fold(
@@ -1181,24 +1196,27 @@ fn assert_calendar_multi_month_variant_geometry_matches_web(web_name: &str) {
                     if let Some(today) = web_today {
                         calendar = calendar.today(today);
                     }
-                    vec![cx.container(
-                        ContainerProps {
-                            layout: {
-                                let mut layout = LayoutStyle::default();
-                                layout.size.width = Length::Fill;
-                                layout.size.height = Length::Fill;
-                                layout
+                    vec![
+                        cx.container(
+                            ContainerProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Fill;
+                                    layout.size.height = Length::Fill;
+                                    layout
+                                },
+                                padding: fret_core::Edges {
+                                    left: Px(web_origin_x),
+                                    top: Px(web_origin_y),
+                                    right: Px(0.0),
+                                    bottom: Px(0.0),
+                                }
+                                .into(),
+                                ..Default::default()
                             },
-                            padding: fret_core::Edges {
-                                left: Px(web_origin_x),
-                                top: Px(web_origin_y),
-                                right: Px(0.0),
-                                bottom: Px(0.0),
-                            },
-                            ..Default::default()
-                        },
-                        move |cx| vec![calendar.into_element(cx)],
-                    )]
+                            move |cx| vec![calendar.into_element(cx)],
+                        ),
+                    ]
                 }
                 _ => {
                     let selected: Model<Vec<time::Date>> =
@@ -1231,24 +1249,27 @@ fn assert_calendar_multi_month_variant_geometry_matches_web(web_name: &str) {
                         calendar = calendar.today(today);
                     }
 
-                    vec![cx.container(
-                        ContainerProps {
-                            layout: {
-                                let mut layout = LayoutStyle::default();
-                                layout.size.width = Length::Fill;
-                                layout.size.height = Length::Fill;
-                                layout
+                    vec![
+                        cx.container(
+                            ContainerProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Fill;
+                                    layout.size.height = Length::Fill;
+                                    layout
+                                },
+                                padding: fret_core::Edges {
+                                    left: Px(web_origin_x),
+                                    top: Px(web_origin_y),
+                                    right: Px(0.0),
+                                    bottom: Px(0.0),
+                                }
+                                .into(),
+                                ..Default::default()
                             },
-                            padding: fret_core::Edges {
-                                left: Px(web_origin_x),
-                                top: Px(web_origin_y),
-                                right: Px(0.0),
-                                bottom: Px(0.0),
-                            },
-                            ..Default::default()
-                        },
-                        move |cx| vec![calendar.into_element(cx)],
-                    )]
+                            move |cx| vec![calendar.into_element(cx)],
+                        ),
+                    ]
                 }
             }
         });
@@ -1531,7 +1552,8 @@ fn web_vs_fret_layout_calendar_01_background_matches_web() {
                     top: Px(web_origin_y),
                     right: Px(0.0),
                     bottom: Px(0.0),
-                },
+                }
+                .into(),
                 ..Default::default()
             },
             move |_cx| vec![calendar],
@@ -1694,7 +1716,8 @@ fn web_vs_fret_layout_calendar_14_selected_day_background_matches_web() {
                     top: Px(web_origin_y),
                     right: Px(0.0),
                     bottom: Px(0.0),
-                },
+                }
+                .into(),
                 ..Default::default()
             },
             move |_cx| vec![calendar],
@@ -1869,7 +1892,8 @@ fn web_vs_fret_layout_calendar_14_vp375x320_selected_day_background_matches_web(
                     top: Px(web_origin_y),
                     right: Px(0.0),
                     bottom: Px(0.0),
-                },
+                }
+                .into(),
                 ..Default::default()
             },
             move |_cx| vec![calendar],
@@ -2070,7 +2094,8 @@ fn web_vs_fret_layout_calendar_14_hover_day_background_matches_web() {
                     top: Px(web_origin_y),
                     right: Px(0.0),
                     bottom: Px(0.0),
-                },
+                }
+                .into(),
                 ..Default::default()
             },
             move |_cx| vec![calendar],
@@ -2318,7 +2343,8 @@ fn web_vs_fret_layout_calendar_14_vp375x320_hover_day_background_matches_web() {
                     top: Px(web_origin_y),
                     right: Px(0.0),
                     bottom: Px(0.0),
-                },
+                }
+                .into(),
                 ..Default::default()
             },
             move |_cx| vec![calendar],
@@ -2549,7 +2575,8 @@ fn web_vs_fret_layout_calendar_14_selected_day_text_rect_matches_web() {
                     top: Px(web_origin_y),
                     right: Px(0.0),
                     bottom: Px(0.0),
-                },
+                }
+                .into(),
                 ..Default::default()
             },
             move |_cx| vec![calendar],
@@ -2769,7 +2796,8 @@ fn web_vs_fret_layout_calendar_14_vp375x320_selected_day_text_rect_matches_web()
                     top: Px(web_origin_y),
                     right: Px(0.0),
                     bottom: Px(0.0),
-                },
+                }
+                .into(),
                 ..Default::default()
             },
             move |_cx| vec![calendar],

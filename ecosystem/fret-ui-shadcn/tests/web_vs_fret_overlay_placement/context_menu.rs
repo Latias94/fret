@@ -62,8 +62,8 @@ fn fret_context_menu_does_not_move_when_underlay_scrolls() {
                                             let mut layout = LayoutStyle::default();
                                             layout.position =
                                                 fret_ui::element::PositionStyle::Absolute;
-                                            layout.inset.left = Some(Px(16.0));
-                                            layout.inset.top = Some(Px(160.0));
+                                            layout.inset.left = Some(left).into();
+                                            layout.inset.top = Some(top).into();
                                             layout.size.width = Length::Px(Px(160.0));
                                             layout.size.height = Length::Px(Px(32.0));
                                             layout

@@ -53,7 +53,7 @@ impl ResizablePanel {
 
         let props = ContainerProps {
             layout,
-            padding: Edges::all(Px(0.0)),
+            padding: Edges::all(Px(0.0)).into(),
             background: None,
             shadow: None,
             border: Edges::all(Px(0.0)),

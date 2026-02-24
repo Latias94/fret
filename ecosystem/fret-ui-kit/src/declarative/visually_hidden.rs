@@ -22,8 +22,8 @@ where
             layout: LayoutStyle {
                 position: PositionStyle::Absolute,
                 inset: InsetStyle {
-                    left: Some(Px(0.0)),
-                    top: Some(Px(0.0)),
+                    left: Some(Px(0.0)).into(),
+                    top: Some(Px(0.0)).into(),
                     ..Default::default()
                 },
                 size: SizeStyle {
@@ -51,8 +51,8 @@ pub fn visually_hidden_label<H: UiHost>(
             layout: LayoutStyle {
                 position: PositionStyle::Absolute,
                 inset: InsetStyle {
-                    left: Some(Px(0.0)),
-                    top: Some(Px(0.0)),
+                    left: Some(Px(0.0)).into(),
+                    top: Some(Px(0.0)).into(),
                     ..Default::default()
                 },
                 size: SizeStyle {

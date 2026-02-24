@@ -58,10 +58,16 @@ impl ElementHostWidget {
 
             for (child, inset) in absolute_children.iter().copied() {
                 let child_size = cx.measure_in(child, abs_constraints);
-                let left = inset.left.map(|v| v.0);
-                let right = inset.right.map(|v| v.0);
-                let top = inset.top.map(|v| v.0);
-                let bottom = inset.bottom.map(|v| v.0);
+                let px = |edge: crate::element::InsetEdge| match edge {
+                    crate::element::InsetEdge::Px(px) => Some(px.0),
+                    crate::element::InsetEdge::Auto
+                    | crate::element::InsetEdge::Fill
+                    | crate::element::InsetEdge::Fraction(_) => None,
+                };
+                let left = px(inset.left);
+                let right = px(inset.right);
+                let top = px(inset.top);
+                let bottom = px(inset.bottom);
 
                 let required_w = match (left, right) {
                     (Some(l), Some(r)) => Px(l + r + child_size.width.0),
@@ -150,10 +156,16 @@ impl ElementHostWidget {
             let child_size = cx.measure_in(child, child_measure_constraints);
 
             let required = if child_style.position == crate::element::PositionStyle::Absolute {
-                let left = child_style.inset.left.map(|v| v.0);
-                let right = child_style.inset.right.map(|v| v.0);
-                let top = child_style.inset.top.map(|v| v.0);
-                let bottom = child_style.inset.bottom.map(|v| v.0);
+                let px = |edge: crate::element::InsetEdge| match edge {
+                    crate::element::InsetEdge::Px(px) => Some(px.0),
+                    crate::element::InsetEdge::Auto
+                    | crate::element::InsetEdge::Fill
+                    | crate::element::InsetEdge::Fraction(_) => None,
+                };
+                let left = px(child_style.inset.left);
+                let right = px(child_style.inset.right);
+                let top = px(child_style.inset.top);
+                let bottom = px(child_style.inset.bottom);
 
                 let required_w = match (left, right) {
                     (Some(l), Some(r)) => Px(l + r + child_size.width.0),

@@ -298,8 +298,8 @@ impl ScrollAreaRoot {
             if matches!(layout.size.height, Length::Auto) && layout.size.max_height.is_none() {
                 layout.size.height = Length::Fill;
             }
-            layout.size.min_width.get_or_insert(Px(0.0));
-            layout.size.min_height.get_or_insert(Px(0.0));
+            layout.size.min_width.get_or_insert(Length::Px(Px(0.0)));
+            layout.size.min_height.get_or_insert(Length::Px(Px(0.0)));
             let shrinkwrap_height_via_max_h =
                 matches!(layout.size.height, Length::Auto) && layout.size.max_height.is_some();
             vec![cx.stack_props(StackProps { layout }, move |cx| {
@@ -314,8 +314,8 @@ impl ScrollAreaRoot {
                 } else {
                     Length::Fill
                 };
-                scroll_layout.size.min_width = Some(Px(0.0));
-                scroll_layout.size.min_height = Some(Px(0.0));
+                scroll_layout.size.min_width = Some(Length::Px(Px(0.0)));
+                scroll_layout.size.min_height = Some(Length::Px(Px(0.0)));
                 scroll_layout.overflow = Overflow::Clip;
 
                 let scroll = cx.scroll(
@@ -354,14 +354,15 @@ impl ScrollAreaRoot {
                             LayoutStyle {
                                 position: PositionStyle::Absolute,
                                 inset: InsetStyle {
-                                    top: Some(Px(0.0)),
-                                    right: Some(Px(0.0)),
+                                    top: Some(Px(0.0)).into(),
+                                    right: Some(Px(0.0)).into(),
                                     bottom: Some(if overflow_x {
                                         scrollbar_width
                                     } else {
                                         Px(0.0)
-                                    }),
-                                    left: None,
+                                    })
+                                    .into(),
+                                    left: None.into(),
                                 },
                                 size: SizeStyle {
                                     width: Length::Px(scrollbar_width),
@@ -373,8 +374,8 @@ impl ScrollAreaRoot {
                             LayoutStyle {
                                 position: PositionStyle::Absolute,
                                 inset: InsetStyle {
-                                    top: Some(Px(0.0)),
-                                    right: Some(Px(0.0)),
+                                    top: Some(Px(0.0)).into(),
+                                    right: Some(Px(0.0)).into(),
                                     ..Default::default()
                                 },
                                 size: SizeStyle {
@@ -427,10 +428,11 @@ impl ScrollAreaRoot {
                             LayoutStyle {
                                 position: PositionStyle::Absolute,
                                 inset: InsetStyle {
-                                    top: None,
-                                    right: Some(if overflow_y { scrollbar_width } else { Px(0.0) }),
-                                    bottom: Some(Px(0.0)),
-                                    left: Some(Px(0.0)),
+                                    top: None.into(),
+                                    right: Some(if overflow_y { scrollbar_width } else { Px(0.0) })
+                                        .into(),
+                                    bottom: Some(Px(0.0)).into(),
+                                    left: Some(Px(0.0)).into(),
                                 },
                                 size: SizeStyle {
                                     height: Length::Px(scrollbar_width),
@@ -442,8 +444,8 @@ impl ScrollAreaRoot {
                             LayoutStyle {
                                 position: PositionStyle::Absolute,
                                 inset: InsetStyle {
-                                    left: Some(Px(0.0)),
-                                    bottom: Some(Px(0.0)),
+                                    left: Some(Px(0.0)).into(),
+                                    bottom: Some(Px(0.0)).into(),
                                     ..Default::default()
                                 },
                                 size: SizeStyle {
@@ -492,8 +494,8 @@ impl ScrollAreaRoot {
                         LayoutStyle {
                             position: PositionStyle::Absolute,
                             inset: InsetStyle {
-                                right: Some(Px(0.0)),
-                                bottom: Some(Px(0.0)),
+                                right: Some(Px(0.0)).into(),
+                                bottom: Some(Px(0.0)).into(),
                                 ..Default::default()
                             },
                             size: SizeStyle {
@@ -507,8 +509,8 @@ impl ScrollAreaRoot {
                         LayoutStyle {
                             position: PositionStyle::Absolute,
                             inset: InsetStyle {
-                                right: Some(Px(0.0)),
-                                bottom: Some(Px(0.0)),
+                                right: Some(Px(0.0)).into(),
+                                bottom: Some(Px(0.0)).into(),
                                 ..Default::default()
                             },
                             size: SizeStyle {

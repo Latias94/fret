@@ -22,10 +22,15 @@ pub(crate) fn taffy_position(position: crate::element::PositionStyle) -> TaffyPo
     }
 }
 
-fn taffy_lpa(px: Option<Px>) -> LengthPercentageAuto {
-    match px {
-        Some(px) => LengthPercentageAuto::length(px.0),
-        None => LengthPercentageAuto::auto(),
+fn taffy_lpa_from_inset_edge(edge: crate::element::InsetEdge) -> LengthPercentageAuto {
+    match edge {
+        crate::element::InsetEdge::Px(px) => LengthPercentageAuto::length(px.0),
+        crate::element::InsetEdge::Fill => LengthPercentageAuto::percent(1.0),
+        crate::element::InsetEdge::Fraction(f) => {
+            let f = if f.is_finite() { f.max(0.0) } else { 0.0 };
+            LengthPercentageAuto::percent(f)
+        }
+        crate::element::InsetEdge::Auto => LengthPercentageAuto::auto(),
     }
 }
 
@@ -42,16 +47,21 @@ pub(crate) fn taffy_rect_lpa_from_inset(
         };
     }
     TaffyRect {
-        left: taffy_lpa(inset.left),
-        right: taffy_lpa(inset.right),
-        top: taffy_lpa(inset.top),
-        bottom: taffy_lpa(inset.bottom),
+        left: taffy_lpa_from_inset_edge(inset.left),
+        right: taffy_lpa_from_inset_edge(inset.right),
+        top: taffy_lpa_from_inset_edge(inset.top),
+        bottom: taffy_lpa_from_inset_edge(inset.bottom),
     }
 }
 
 fn taffy_lpa_margin_edge(edge: crate::element::MarginEdge) -> LengthPercentageAuto {
     match edge {
         crate::element::MarginEdge::Px(px) => LengthPercentageAuto::length(px.0),
+        crate::element::MarginEdge::Fill => LengthPercentageAuto::percent(1.0),
+        crate::element::MarginEdge::Fraction(f) => {
+            let f = if f.is_finite() { f.max(0.0) } else { 0.0 };
+            LengthPercentageAuto::percent(f)
+        }
         crate::element::MarginEdge::Auto => LengthPercentageAuto::auto(),
     }
 }

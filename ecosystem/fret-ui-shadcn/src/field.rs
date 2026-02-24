@@ -311,14 +311,14 @@ impl FieldSet {
             cx.column(
                 ColumnProps {
                     layout,
-                    gap: outer_gap,
+                    gap: outer_gap.into(),
                     ..Default::default()
                 },
                 move |cx| {
                     let rest = cx.column(
                         ColumnProps {
                             layout: rest_layout,
-                            gap,
+                            gap: gap.into(),
                             ..Default::default()
                         },
                         move |cx| {
@@ -359,7 +359,7 @@ impl FieldSet {
             cx.column(
                 ColumnProps {
                     layout,
-                    gap,
+                    gap: gap.into(),
                     ..Default::default()
                 },
                 move |cx| {
@@ -509,7 +509,7 @@ impl FieldGroup {
         Self {
             children,
             slot: FieldGroupSlot::default(),
-            gap: None,
+            gap: None.into(),
             layout: LayoutRefinement::default(),
         }
     }
@@ -557,7 +557,7 @@ impl FieldGroup {
         let column = cx.column(
             ColumnProps {
                 layout,
-                gap,
+                gap: gap.into(),
                 ..Default::default()
             },
             move |_cx| children,
@@ -606,7 +606,7 @@ impl FieldContent {
         cx.column(
             ColumnProps {
                 layout,
-                gap,
+                gap: gap.into(),
                 ..Default::default()
             },
             move |_cx| children,
@@ -1290,7 +1290,7 @@ impl Field {
                             FieldOrientation::Vertical => cx.column(
                                 ColumnProps {
                                     layout: inner_layout.clone(),
-                                    gap,
+                                    gap: gap.into(),
                                     ..Default::default()
                                 },
                                 move |cx| {
@@ -1321,7 +1321,7 @@ impl Field {
                             FieldOrientation::Horizontal => cx.row(
                                 RowProps {
                                     layout: inner_layout,
-                                    gap,
+                                    gap: gap.into(),
                                     justify: MainAlign::Start,
                                     align: align_horizontal,
                                     ..Default::default()
@@ -1337,7 +1337,7 @@ impl Field {
                                     cx.row(
                                         RowProps {
                                             layout: inner_layout,
-                                            gap,
+                                            gap: gap.into(),
                                             justify: MainAlign::Start,
                                             align: align_horizontal,
                                             ..Default::default()
@@ -1348,7 +1348,7 @@ impl Field {
                                     cx.column(
                                         ColumnProps {
                                             layout: inner_layout.clone(),
-                                            gap,
+                                            gap: gap.into(),
                                             ..Default::default()
                                         },
                                         move |cx| {

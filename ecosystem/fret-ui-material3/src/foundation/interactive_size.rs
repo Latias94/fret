@@ -28,8 +28,8 @@ pub fn enforce_minimum_interactive_size(layout: &mut LayoutStyle, theme: &Theme)
     if min.0 <= 0.0 {
         return;
     }
-    layout.size.min_width = Some(min);
-    layout.size.min_height = Some(min);
+    layout.size.min_width = Some(Length::Px(min));
+    layout.size.min_height = Some(Length::Px(min));
 }
 
 pub fn centered_fill<H: UiHost>(cx: &mut ElementContext<'_, H>, child: AnyElement) -> AnyElement {

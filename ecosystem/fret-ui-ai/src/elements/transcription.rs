@@ -204,8 +204,8 @@ impl Transcription {
             FlexProps {
                 layout: decl_style::layout_style(&theme, layout),
                 direction: fret_core::Axis::Horizontal,
-                gap: Px(4.0),
-                padding: Edges::all(Px(0.0)),
+                gap: Px(4.0).into(),
+                padding: Edges::all(Px(0.0)).into(),
                 justify: fret_ui::element::MainAlign::Start,
                 align: fret_ui::element::CrossAlign::Start,
                 wrap: true,

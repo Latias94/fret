@@ -127,7 +127,7 @@ impl ItemGroup {
         Self {
             kind: ItemGroupKind::Column,
             layout: LayoutRefinement::default().w_full(),
-            gap: None,
+            gap: None.into(),
             children,
         }
     }
@@ -160,7 +160,7 @@ impl ItemGroup {
             ItemGroupKind::Column => cx.column(
                 ColumnProps {
                     layout,
-                    gap,
+                    gap: gap.into(),
                     ..Default::default()
                 },
                 move |_cx| children,
@@ -169,7 +169,7 @@ impl ItemGroup {
                 GridProps {
                     layout,
                     cols,
-                    gap,
+                    gap: gap.into(),
                     ..Default::default()
                 },
                 move |_cx| children,
@@ -310,8 +310,8 @@ impl ItemMedia {
                 FlexProps {
                     layout: inner_layout,
                     direction: fret_core::Axis::Horizontal,
-                    gap,
-                    padding: Edges::all(Px(0.0)),
+                    gap: gap.into(),
+                    padding: Edges::all(Px(0.0)).into(),
                     justify: MainAlign::Center,
                     align: CrossAlign::Center,
                     wrap: false,
@@ -340,7 +340,7 @@ impl ItemContent {
                 .min_w_0()
                 .overflow_hidden(),
             children,
-            gap: None,
+            gap: None.into(),
             justify: MainAlign::Start,
             align: CrossAlign::Stretch,
         }
@@ -381,8 +381,8 @@ impl ItemContent {
             FlexProps {
                 layout,
                 direction: fret_core::Axis::Vertical,
-                gap,
-                padding: Edges::all(Px(0.0)),
+                gap: gap.into(),
+                padding: Edges::all(Px(0.0)).into(),
                 justify: self.justify,
                 align: self.align,
                 wrap: false,
@@ -425,8 +425,8 @@ impl ItemActions {
             FlexProps {
                 layout,
                 direction: fret_core::Axis::Horizontal,
-                gap,
-                padding: Edges::all(Px(0.0)),
+                gap: gap.into(),
+                padding: Edges::all(Px(0.0)).into(),
                 justify: MainAlign::Start,
                 align: CrossAlign::Center,
                 wrap: false,
@@ -471,8 +471,8 @@ impl ItemHeader {
             FlexProps {
                 layout,
                 direction: fret_core::Axis::Horizontal,
-                gap,
-                padding: Edges::all(Px(0.0)),
+                gap: gap.into(),
+                padding: Edges::all(Px(0.0)).into(),
                 justify: MainAlign::SpaceBetween,
                 align: CrossAlign::Center,
                 wrap: false,
@@ -517,8 +517,8 @@ impl ItemFooter {
             FlexProps {
                 layout,
                 direction: fret_core::Axis::Horizontal,
-                gap,
-                padding: Edges::all(Px(0.0)),
+                gap: gap.into(),
+                padding: Edges::all(Px(0.0)).into(),
                 justify: MainAlign::SpaceBetween,
                 align: CrossAlign::Center,
                 wrap: false,
@@ -889,8 +889,8 @@ impl Item {
                         FlexProps {
                             layout: inner_layout,
                             direction: fret_core::Axis::Horizontal,
-                            gap,
-                            padding: Edges::all(Px(0.0)),
+                            gap: gap.into(),
+                            padding: Edges::all(Px(0.0)).into(),
                             justify: MainAlign::Start,
                             align: CrossAlign::Center,
                             wrap: true,
@@ -929,8 +929,8 @@ impl Item {
                     FlexProps {
                         layout: inner_layout,
                         direction: fret_core::Axis::Horizontal,
-                        gap,
-                        padding: Edges::all(Px(0.0)),
+                        gap: gap.into(),
+                        padding: Edges::all(Px(0.0)).into(),
                         justify: MainAlign::Start,
                         align: CrossAlign::Center,
                         wrap: true,

@@ -90,8 +90,8 @@ fn assert_chart_tooltip_rect_matches_web(
                 layout: {
                     let mut layout = LayoutStyle::default();
                     layout.position = fret_ui::element::PositionStyle::Absolute;
-                    layout.inset.left = Some(Px(web_tooltip.rect.x));
-                    layout.inset.top = Some(Px(web_tooltip.rect.y));
+                    layout.inset.left = Some(Px(0.0)).into();
+                    layout.inset.top = Some(Px(0.0)).into();
                     layout
                 },
                 role: SemanticsRole::Panel,
@@ -183,8 +183,8 @@ fn assert_chart_legend_rect_matches_web(web_name: &str) {
                 layout: {
                     let mut layout = LayoutStyle::default();
                     layout.position = fret_ui::element::PositionStyle::Absolute;
-                    layout.inset.left = Some(Px(web_legend.rect.x));
-                    layout.inset.top = Some(Px(web_legend.rect.y));
+                    layout.inset.left = Some(Px(0.0)).into();
+                    layout.inset.top = Some(Px(0.0)).into();
                     layout.size.width = Length::Px(Px(web_legend.rect.w));
                     layout
                 },
@@ -252,8 +252,8 @@ fn assert_chart_pie_legend_rect_matches_web(web_name: &str) {
                 layout: {
                     let mut layout = LayoutStyle::default();
                     layout.position = fret_ui::element::PositionStyle::Absolute;
-                    layout.inset.left = Some(Px(web_legend.rect.x));
-                    layout.inset.top = Some(Px(web_legend.rect.y));
+                    layout.inset.left = Some(Px(0.0)).into();
+                    layout.inset.top = Some(Px(0.0)).into();
                     layout.size.width = Length::Px(Px(web_legend.rect.w));
                     layout
                 },
@@ -362,7 +362,7 @@ fn chart_tooltip_demo_panel<H: fret_ui::UiHost>(
 
         let label_col = cx.column(
             ColumnProps {
-                gap: gap_1p5,
+                gap: gap_1p5.into(),
                 align: CrossAlign::Start,
                 ..Default::default()
             },
@@ -409,8 +409,8 @@ fn chart_tooltip_demo_panel<H: fret_ui::UiHost>(
                     layout
                 },
                 direction: fret_core::Axis::Horizontal,
-                gap: Px(0.0),
-                padding: Edges::all(Px(0.0)),
+                gap: Px(0.0).into(),
+                padding: Edges::all(Px(0.0)).into(),
                 justify: MainAlign::SpaceBetween,
                 align: if nest_label {
                     CrossAlign::End
@@ -428,8 +428,8 @@ fn chart_tooltip_demo_panel<H: fret_ui::UiHost>(
             FlexProps {
                 layout: LayoutStyle::default(),
                 direction: fret_core::Axis::Horizontal,
-                gap: gap_2,
-                padding: Edges::all(Px(0.0)),
+                gap: gap_2.into(),
+                padding: Edges::all(Px(0.0)).into(),
                 justify: MainAlign::Start,
                 align: match indicator {
                     fret_ui_shadcn::ChartTooltipIndicator::Dot => CrossAlign::Center,
@@ -447,7 +447,7 @@ fn chart_tooltip_demo_panel<H: fret_ui::UiHost>(
 
     let items_column = cx.column(
         ColumnProps {
-            gap: gap_1p5,
+            gap: gap_1p5.into(),
             align: CrossAlign::Stretch,
             ..Default::default()
         },
@@ -479,7 +479,7 @@ fn chart_tooltip_demo_panel<H: fret_ui::UiHost>(
     let content = if !hide_label && !nest_label {
         cx.column(
             ColumnProps {
-                gap: gap_1p5,
+                gap: gap_1p5.into(),
                 align: CrossAlign::Start,
                 ..Default::default()
             },
@@ -561,8 +561,8 @@ fn web_vs_fret_layout_chart_tooltip_demo_geometry_matches_web() {
                         ..Default::default()
                     },
                     direction: fret_core::Axis::Horizontal,
-                    gap: Px(0.0),
-                    padding: Edges::all(Px(16.0)),
+                    gap: Px(0.0).into(),
+                    padding: Edges::all(Px(16.0)).into(),
                     justify,
                     align,
                     wrap: false,
@@ -652,7 +652,7 @@ fn web_vs_fret_layout_chart_tooltip_demo_geometry_matches_web() {
         let grid = cx.grid(
             GridProps {
                 cols: 2,
-                gap: Px(0.0),
+                gap: Px(0.0).into(),
                 layout: LayoutStyle {
                     size: SizeStyle {
                         width: Length::Px(Px(web_root.rect.w)),
@@ -1118,8 +1118,8 @@ fn web_vs_fret_layout_chart_bar_default_bar_rects_match_web() {
                 layout: LayoutStyle {
                     position: fret_ui::element::PositionStyle::Absolute,
                     inset: fret_ui::element::InsetStyle {
-                        left: Some(Px(web_chart.rect.x)),
-                        top: Some(Px(web_chart.rect.y)),
+                        left: Some(Px(web_chart.rect.x)).into(),
+                        top: Some(Px(web_chart.rect.y)).into(),
                         ..Default::default()
                     },
                     size: SizeStyle {
@@ -1142,8 +1142,8 @@ fn web_vs_fret_layout_chart_bar_default_bar_rects_match_web() {
                             layout: LayoutStyle {
                                 position: fret_ui::element::PositionStyle::Absolute,
                                 inset: fret_ui::element::InsetStyle {
-                                    left: Some(Px(rect.origin.x.0 - web_chart.rect.x)),
-                                    top: Some(Px(rect.origin.y.0 - web_chart.rect.y)),
+                                    left: Some(Px(rect.origin.x.0 - web_chart.rect.x)).into(),
+                                    top: Some(Px(rect.origin.y.0 - web_chart.rect.y)).into(),
                                     ..Default::default()
                                 },
                                 size: SizeStyle {

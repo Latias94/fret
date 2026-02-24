@@ -73,7 +73,7 @@ where
 
         let inner = ContainerProps {
             layout: inner_layout,
-            padding: Edges::symmetric(chrome.padding_x, chrome.padding_y),
+            padding: Edges::symmetric(chrome.padding_x, chrome.padding_y).into(),
             background: Some(chrome.background),
             border: Edges::all(chrome.border_width),
             border_color: Some(chrome.border_color),
@@ -89,10 +89,10 @@ where
         let overlay_layout = LayoutStyle {
             position: PositionStyle::Absolute,
             inset: InsetStyle {
-                top: Some(fret_core::Px(0.0)),
-                right: Some(fret_core::Px(0.0)),
-                bottom: Some(fret_core::Px(0.0)),
-                left: Some(fret_core::Px(0.0)),
+                top: Some(fret_core::Px(0.0)).into(),
+                right: Some(fret_core::Px(0.0)).into(),
+                bottom: Some(fret_core::Px(0.0)).into(),
+                left: Some(fret_core::Px(0.0)).into(),
             },
             size: SizeStyle {
                 width: Length::Fill,

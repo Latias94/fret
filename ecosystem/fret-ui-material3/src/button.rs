@@ -365,7 +365,7 @@ fn material_button_chrome_props(
     let mut props = ContainerProps::default();
     props.background = background;
     props.corner_radii = corner_radii;
-    props.layout.size.min_height = Some(size.container_height);
+    props.layout.size.min_height = Some(Length::Px(size.container_height));
     if let Some(outline) = outline {
         props.border = Edges::all(outline.width);
         props.border_color = Some(outline.color);
@@ -400,13 +400,14 @@ fn material_button_content<H: UiHost>(
         FlexProps {
             layout,
             direction: Axis::Horizontal,
-            gap: Px(0.0),
+            gap: Px(0.0).into(),
             padding: Edges {
                 left: size.leading_space,
                 right: size.trailing_space,
                 top: Px(0.0),
                 bottom: Px(0.0),
-            },
+            }
+            .into(),
             justify: MainAlign::Center,
             align: CrossAlign::Center,
             wrap: false,

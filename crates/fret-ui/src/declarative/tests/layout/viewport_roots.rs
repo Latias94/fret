@@ -673,7 +673,7 @@ fn viewport_root_nested_flow_is_solved_once() {
                 ..Default::default()
             },
             direction: fret_core::Axis::Horizontal,
-            gap: Px(4.0),
+            gap: Px(4.0).into(),
             ..Default::default()
         };
 
@@ -763,7 +763,7 @@ fn viewport_root_hover_region_wraps_flow_in_engine_tree() {
                 ..Default::default()
             },
             direction: fret_core::Axis::Horizontal,
-            gap: Px(4.0),
+            gap: Px(4.0).into(),
             ..Default::default()
         };
 
@@ -777,7 +777,7 @@ fn viewport_root_hover_region_wraps_flow_in_engine_tree() {
                 ..Default::default()
             },
             direction: fret_core::Axis::Horizontal,
-            gap: Px(4.0),
+            gap: Px(4.0).into(),
             ..Default::default()
         };
 
@@ -882,7 +882,7 @@ fn viewport_root_pointer_region_wraps_flow_in_engine_tree() {
                 ..Default::default()
             },
             direction: fret_core::Axis::Horizontal,
-            gap: Px(4.0),
+            gap: Px(4.0).into(),
             ..Default::default()
         };
 
@@ -1091,10 +1091,10 @@ fn viewport_root_pointer_region_absolute_child_fills_region() {
 
         let mut barrier = crate::element::ContainerProps::default();
         barrier.layout.position = crate::element::PositionStyle::Absolute;
-        barrier.layout.inset.top = Some(Px(0.0));
-        barrier.layout.inset.right = Some(Px(0.0));
-        barrier.layout.inset.bottom = Some(Px(0.0));
-        barrier.layout.inset.left = Some(Px(0.0));
+        barrier.layout.inset.top = Some(Px(0.0)).into();
+        barrier.layout.inset.right = Some(Px(0.0)).into();
+        barrier.layout.inset.bottom = Some(Px(0.0)).into();
+        barrier.layout.inset.left = Some(Px(0.0)).into();
         barrier.layout.size.width = Length::Fill;
         barrier.layout.size.height = Length::Fill;
 
@@ -1924,7 +1924,7 @@ fn viewport_root_wheel_region_wraps_flow_in_engine_tree() {
                 ..Default::default()
             },
             direction: fret_core::Axis::Horizontal,
-            gap: Px(4.0),
+            gap: Px(4.0).into(),
             ..Default::default()
         };
 
@@ -2231,10 +2231,10 @@ fn viewport_root_wheel_region_absolute_child_fills_region() {
 
         let mut barrier = crate::element::ContainerProps::default();
         barrier.layout.position = crate::element::PositionStyle::Absolute;
-        barrier.layout.inset.top = Some(Px(0.0));
-        barrier.layout.inset.right = Some(Px(0.0));
-        barrier.layout.inset.bottom = Some(Px(0.0));
-        barrier.layout.inset.left = Some(Px(0.0));
+        barrier.layout.inset.top = Some(Px(0.0)).into();
+        barrier.layout.inset.right = Some(Px(0.0)).into();
+        barrier.layout.inset.bottom = Some(Px(0.0)).into();
+        barrier.layout.inset.left = Some(Px(0.0)).into();
         barrier.layout.size.width = Length::Fill;
         barrier.layout.size.height = Length::Fill;
 
@@ -2320,7 +2320,7 @@ fn viewport_root_roving_flex_is_in_engine_tree() {
         roving.flex.layout.size.width = Length::Fill;
         roving.flex.layout.size.height = Length::Auto;
         roving.flex.direction = fret_core::Axis::Horizontal;
-        roving.flex.gap = Px(4.0);
+        roving.flex.gap = Px(4.0).into();
 
         vec![cx.flex(outer, |cx| {
             vec![cx.roving_flex(roving, |cx| vec![cx.text("hello")])]
@@ -2409,7 +2409,7 @@ fn viewport_root_anchored_wraps_flow_in_engine_tree() {
                 ..Default::default()
             },
             direction: fret_core::Axis::Horizontal,
-            gap: Px(4.0),
+            gap: Px(4.0).into(),
             ..Default::default()
         };
 
@@ -2513,7 +2513,7 @@ fn overlay_root_dismissible_layer_precomputes_child_flow_islands() {
                     ..Default::default()
                 },
                 direction: fret_core::Axis::Horizontal,
-                gap: Px(4.0),
+                gap: Px(4.0).into(),
                 ..Default::default()
             };
 
@@ -2594,7 +2594,7 @@ fn overlay_root_scroll_precomputes_child_flow_islands() {
                     ..Default::default()
                 },
                 direction: fret_core::Axis::Horizontal,
-                gap: Px(4.0),
+                gap: Px(4.0).into(),
                 ..Default::default()
             };
 
@@ -2654,7 +2654,7 @@ fn fixed_split_registers_viewport_roots_to_avoid_widget_fallback_solves() {
             vec![cx.flex(
                 crate::element::FlexProps {
                     direction: fret_core::Axis::Horizontal,
-                    gap: Px(0.0),
+                    gap: Px(0.0).into(),
                     layout: {
                         let mut l = crate::element::LayoutStyle::default();
                         l.size.width = Length::Fill;

@@ -810,8 +810,8 @@ fn pointer_capture_multiple_roots_hides_hover_overlays_and_tooltips() {
                         LayoutStyle {
                             position: PositionStyle::Absolute,
                             inset: InsetStyle {
-                                left: Some(Px(200.0)),
-                                top: Some(Px(0.0)),
+                                left: Some(Px(200.0)).into(),
+                                top: Some(Px(0.0)).into(),
                                 ..Default::default()
                             },
                             size: SizeStyle {

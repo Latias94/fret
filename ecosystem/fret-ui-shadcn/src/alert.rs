@@ -54,10 +54,10 @@ impl AlertAction {
         let mut layout = LayoutStyle::default();
         layout.position = PositionStyle::Absolute;
         layout.inset = InsetStyle {
-            top: Some(inset),
-            right: Some(inset),
-            bottom: None,
-            left: None,
+            top: Some(inset).into(),
+            right: Some(inset).into(),
+            bottom: None.into(),
+            left: None.into(),
         };
         layout.size.width = Length::Auto;
         layout.size.height = Length::Auto;

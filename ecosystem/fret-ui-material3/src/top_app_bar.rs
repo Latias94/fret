@@ -575,7 +575,8 @@ impl TopAppBar {
                 right: Px(4.0),
                 top: Px(0.0),
                 bottom: Px(0.0),
-            };
+            }
+            .into();
 
             let sem = SemanticsProps {
                 role: SemanticsRole::Toolbar,
@@ -934,8 +935,8 @@ fn slot_container<H: UiHost>(
     children: Vec<AnyElement>,
 ) -> AnyElement {
     let mut props = ContainerProps::default();
-    props.layout.size.min_width = Some(min_width);
-    props.layout.size.min_height = Some(Px(48.0));
+    props.layout.size.min_width = Some(Length::Px(min_width));
+    props.layout.size.min_height = Some(Length::Px(Px(48.0)));
     cx.container(props, move |_cx| children)
 }
 
@@ -1010,10 +1011,10 @@ fn top_app_bar_single_row<H: UiHost>(
             title_layer.layout.size.width = Length::Fill;
             title_layer.layout.size.height = Length::Fill;
             title_layer.layout.position = PositionStyle::Absolute;
-            title_layer.layout.inset.left = Some(side_reserved);
-            title_layer.layout.inset.right = Some(side_reserved);
-            title_layer.layout.inset.top = Some(Px(0.0));
-            title_layer.layout.inset.bottom = Some(Px(0.0));
+            title_layer.layout.inset.left = Some(side_reserved).into();
+            title_layer.layout.inset.right = Some(side_reserved).into();
+            title_layer.layout.inset.top = Some(Px(0.0)).into();
+            title_layer.layout.inset.bottom = Some(Px(0.0)).into();
 
             let mut title_row = FlexProps::default();
             title_row.direction = Axis::Horizontal;
@@ -1158,7 +1159,8 @@ fn top_app_bar_two_rows<H: UiHost>(
             right: Px(12.0),
             top: Px(0.0),
             bottom: bottom_padding,
-        };
+        }
+        .into();
 
         let expanded_title = top_app_bar_title_element_for_variant(
             cx,

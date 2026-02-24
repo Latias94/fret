@@ -76,8 +76,8 @@ fn web_vs_fret_layout_avatar_demo_geometry() {
             FlexProps {
                 layout: LayoutStyle::default(),
                 direction: fret_core::Axis::Horizontal,
-                gap: Px(0.0),
-                padding: fret_core::Edges::all(Px(0.0)),
+                gap: Px(0.0).into(),
+                padding: fret_core::Edges::all(Px(0.0)).into(),
                 justify: MainAlign::Start,
                 align: CrossAlign::Center,
                 wrap: false,
@@ -97,8 +97,8 @@ fn web_vs_fret_layout_avatar_demo_geometry() {
                     ..Default::default()
                 },
                 direction: fret_core::Axis::Horizontal,
-                gap: Px(48.0),
-                padding: fret_core::Edges::all(Px(0.0)),
+                gap: Px(48.0).into(),
+                padding: fret_core::Edges::all(Px(0.0)).into(),
                 justify: MainAlign::Start,
                 align: CrossAlign::Center,
                 wrap: false,
@@ -430,8 +430,8 @@ fn web_vs_fret_layout_empty_avatar_group_geometry() {
             FlexProps {
                 layout: LayoutStyle::default(),
                 direction: fret_core::Axis::Horizontal,
-                gap: Px(0.0),
-                padding: fret_core::Edges::all(Px(0.0)),
+                gap: Px(0.0).into(),
+                padding: fret_core::Edges::all(Px(0.0)).into(),
                 justify: MainAlign::Start,
                 align: CrossAlign::Center,
                 wrap: false,

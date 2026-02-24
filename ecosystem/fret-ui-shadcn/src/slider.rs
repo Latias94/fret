@@ -788,16 +788,16 @@ pub fn slider<H: UiHost>(
                     overflow: Overflow::Clip,
                     inset: if is_horizontal {
                         fret_ui::element::InsetStyle {
-                            left: Some(Px(0.0)),
-                            right: Some(Px(0.0)),
-                            top: Some(Px(track_offset)),
+                            left: Some(Px(0.0)).into(),
+                            right: Some(Px(0.0)).into(),
+                            top: Some(Px(track_offset)).into(),
                             ..Default::default()
                         }
                     } else {
                         fret_ui::element::InsetStyle {
-                            top: Some(Px(0.0)),
-                            bottom: Some(Px(0.0)),
-                            left: Some(Px(track_offset)),
+                            top: Some(Px(0.0)).into(),
+                            bottom: Some(Px(0.0)).into(),
+                            left: Some(Px(track_offset)).into(),
                             ..Default::default()
                         }
                     },
@@ -816,7 +816,7 @@ pub fn slider<H: UiHost>(
                     },
                     ..Default::default()
                 },
-                padding: Edges::all(Px(0.0)),
+                padding: Edges::all(Px(0.0)).into(),
                 background: Some(track_bg),
                 shadow: None,
                 border: track_border,
@@ -895,8 +895,8 @@ pub fn slider<H: UiHost>(
                                         },
                                         ..Default::default()
                                     },
-                                    gap: Px(0.0),
-                                    padding: Edges::all(Px(0.0)),
+                                    gap: Px(0.0).into(),
+                                    padding: Edges::all(Px(0.0)).into(),
                                     justify: MainAlign::Start,
                                     align: CrossAlign::Stretch,
                                 },
@@ -925,8 +925,8 @@ pub fn slider<H: UiHost>(
                                         },
                                         ..Default::default()
                                     },
-                                    gap: Px(0.0),
-                                    padding: Edges::all(Px(0.0)),
+                                    gap: Px(0.0).into(),
+                                    padding: Edges::all(Px(0.0)).into(),
                                     justify: MainAlign::Start,
                                     align: CrossAlign::Stretch,
                                 },
@@ -1220,7 +1220,7 @@ pub fn slider<H: UiHost>(
 
                                     let thumb = ContainerProps {
                                         layout: layout_fill,
-                                        padding: Edges::all(Px(0.0)),
+                                        padding: Edges::all(Px(0.0)).into(),
                                         background: Some(bg),
                                         shadow: None,
                                         border: thumb_border,
@@ -1242,7 +1242,7 @@ pub fn slider<H: UiHost>(
                                         .resolve(&theme);
                                     let ring = ContainerProps {
                                         layout: layout_fill,
-                                        padding: Edges::all(Px(0.0)),
+                                        padding: Edges::all(Px(0.0)).into(),
                                         background: Some(Color::TRANSPARENT),
                                         shadow: None,
                                         border: Edges::all(Px(2.0)),
@@ -1272,9 +1272,9 @@ pub fn slider<H: UiHost>(
                                 layout: LayoutStyle {
                                     position: PositionStyle::Absolute,
                                     inset: fret_ui::element::InsetStyle {
-                                        left: Some(Px(0.0)),
-                                        right: Some(Px(0.0)),
-                                        top: Some(Px(track_offset)),
+                                        left: Some(Px(0.0)).into(),
+                                        right: Some(Px(0.0)).into(),
+                                        top: Some(Px(track_offset)).into(),
                                         ..Default::default()
                                     },
                                     size: fret_ui::element::SizeStyle {
@@ -1284,8 +1284,8 @@ pub fn slider<H: UiHost>(
                                     },
                                     ..Default::default()
                                 },
-                                gap: Px(0.0),
-                                padding: Edges::all(Px(0.0)),
+                                gap: Px(0.0).into(),
+                                padding: Edges::all(Px(0.0)).into(),
                                 justify: MainAlign::Start,
                                 align: CrossAlign::Center,
                             };
@@ -1295,9 +1295,9 @@ pub fn slider<H: UiHost>(
                                 layout: LayoutStyle {
                                     position: PositionStyle::Absolute,
                                     inset: fret_ui::element::InsetStyle {
-                                        top: Some(Px(0.0)),
-                                        bottom: Some(Px(0.0)),
-                                        left: Some(Px(track_offset)),
+                                        top: Some(Px(0.0)).into(),
+                                        bottom: Some(Px(0.0)).into(),
+                                        left: Some(Px(track_offset)).into(),
                                         ..Default::default()
                                     },
                                     size: fret_ui::element::SizeStyle {
@@ -1307,8 +1307,8 @@ pub fn slider<H: UiHost>(
                                     },
                                     ..Default::default()
                                 },
-                                gap: Px(0.0),
-                                padding: Edges::all(Px(0.0)),
+                                gap: Px(0.0).into(),
+                                padding: Edges::all(Px(0.0)).into(),
                                 justify: MainAlign::Start,
                                 align: CrossAlign::Center,
                             };

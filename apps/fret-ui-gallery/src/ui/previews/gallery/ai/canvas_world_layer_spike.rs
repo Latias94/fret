@@ -615,9 +615,9 @@ pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
                     let mut handle_props = PointerRegionProps::default();
                     handle_props.layout.position = fret_ui::element::PositionStyle::Absolute;
                     handle_props.layout.inset = fret_ui::element::InsetStyle {
-                        top: Some(Px(0.0)),
-                        left: Some(Px(0.0)),
-                        right: Some(Px(0.0)),
+                        top: Some(Px(0.0)).into(),
+                        left: Some(Px(0.0)).into(),
+                        right: Some(Px(0.0)).into(),
                         ..Default::default()
                     };
                     handle_props.layout.size.width = Length::Fill;
@@ -754,8 +754,8 @@ pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
                     let mut source_handle_props = PointerRegionProps::default();
                     source_handle_props.layout.position = fret_ui::element::PositionStyle::Absolute;
                     source_handle_props.layout.inset = fret_ui::element::InsetStyle {
-                        top: Some(Px(56.0)),
-                        right: Some(Px(0.0)),
+                        top: Some(Px(56.0)).into(),
+                        right: Some(Px(0.0)).into(),
                         ..Default::default()
                     };
                     source_handle_props.layout.size.width = Length::Px(Px(20.0));
@@ -974,8 +974,8 @@ pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
 
                 let mut wrapper = fret_ui::element::LayoutQueryRegionProps::default();
                 wrapper.layout.position = fret_ui::element::PositionStyle::Absolute;
-                wrapper.layout.inset.left = Some(a_left);
-                wrapper.layout.inset.top = Some(a_top);
+                wrapper.layout.inset.left = Some(a_left).into();
+                wrapper.layout.inset.top = Some(a_top).into();
                 wrapper.layout.size.width = Length::Px(Px(260.0));
 
                 cx.layout_query_region(wrapper, move |_cx| [item])
@@ -1012,9 +1012,9 @@ pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
                     let mut handle_props = PointerRegionProps::default();
                     handle_props.layout.position = fret_ui::element::PositionStyle::Absolute;
                     handle_props.layout.inset = fret_ui::element::InsetStyle {
-                        top: Some(Px(0.0)),
-                        left: Some(Px(0.0)),
-                        right: Some(Px(0.0)),
+                        top: Some(Px(0.0)).into(),
+                        left: Some(Px(0.0)).into(),
+                        right: Some(Px(0.0)).into(),
                         ..Default::default()
                     };
                     handle_props.layout.size.width = Length::Fill;
@@ -1151,8 +1151,8 @@ pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
                     let mut target_handle_props = PointerRegionProps::default();
                     target_handle_props.layout.position = fret_ui::element::PositionStyle::Absolute;
                     target_handle_props.layout.inset = fret_ui::element::InsetStyle {
-                        top: Some(Px(56.0)),
-                        left: Some(Px(0.0)),
+                        top: Some(Px(56.0)).into(),
+                        left: Some(Px(0.0)).into(),
                         ..Default::default()
                     };
                     target_handle_props.layout.size.width = Length::Px(Px(20.0));
@@ -1174,8 +1174,8 @@ pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
 
                 let mut wrapper = fret_ui::element::LayoutQueryRegionProps::default();
                 wrapper.layout.position = fret_ui::element::PositionStyle::Absolute;
-                wrapper.layout.inset.left = Some(b_left);
-                wrapper.layout.inset.top = Some(b_top);
+                wrapper.layout.inset.left = Some(b_left).into();
+                wrapper.layout.inset.top = Some(b_top).into();
                 wrapper.layout.size.width = Length::Px(Px(260.0));
 
                 cx.layout_query_region(wrapper, move |_cx| [item])
@@ -1220,8 +1220,8 @@ pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
             let mut connect_region_props = PointerRegionProps::default();
             connect_region_props.layout.position = fret_ui::element::PositionStyle::Absolute;
             connect_region_props.layout.inset = fret_ui::element::InsetStyle {
-                top: Some(Px(0.0)),
-                left: Some(Px(0.0)),
+                top: Some(Px(0.0)).into(),
+                left: Some(Px(0.0)).into(),
                 ..Default::default()
             };
 
@@ -1273,8 +1273,8 @@ pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
                     (0.0, 0.0, 0.0, 0.0, false)
                 };
 
-            connect_region_props.layout.inset.left = Some(Px(connect_left_px));
-            connect_region_props.layout.inset.top = Some(Px(connect_top_px));
+            connect_region_props.layout.inset.left = Some(Px(connect_left_px)).into();
+            connect_region_props.layout.inset.top = Some(Px(connect_top_px)).into();
             connect_region_props.layout.size.width = Length::Px(Px(connect_w_px));
             connect_region_props.layout.size.height = Length::Px(Px(connect_h_px));
             connect_region_props.enabled = connect_enabled;
@@ -1409,8 +1409,8 @@ pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
             overlay_region.pointer_region.layout.position =
                 fret_ui::element::PositionStyle::Absolute;
             overlay_region.pointer_region.layout.inset = fret_ui::element::InsetStyle {
-                top: Some(Px(12.0)),
-                left: Some(Px(12.0)),
+                top: Some(Px(12.0)).into(),
+                left: Some(Px(12.0)).into(),
                 ..Default::default()
             };
 
@@ -1673,8 +1673,8 @@ pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
 
             let mut anchor_layout = fret_ui::element::LayoutStyle::default();
             anchor_layout.position = fret_ui::element::PositionStyle::Absolute;
-            anchor_layout.inset.right = Some(Px(12.0));
-            anchor_layout.inset.bottom = Some(Px(12.0));
+            anchor_layout.inset.right = Some(Px(12.0)).into();
+            anchor_layout.inset.bottom = Some(Px(12.0)).into();
             anchor_layout.size.width = fret_ui::element::Length::Px(Px(20.0));
             anchor_layout.size.height = fret_ui::element::Length::Px(Px(20.0));
             let anchor = cx
@@ -1724,8 +1724,8 @@ pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
                 .map(|(left, top, w, h)| {
                     let mut layout = fret_ui::element::LayoutStyle::default();
                     layout.position = fret_ui::element::PositionStyle::Absolute;
-                    layout.inset.left = Some(left);
-                    layout.inset.top = Some(top);
+                    layout.inset.left = Some(left).into();
+                    layout.inset.top = Some(top).into();
                     layout.size.width = Length::Px(w);
                     layout.size.height = Length::Px(h);
                     cx.container(

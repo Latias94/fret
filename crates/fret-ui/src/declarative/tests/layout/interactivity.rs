@@ -181,7 +181,7 @@ fn attach_semantics_is_layout_transparent_for_flex_items() {
             right_props.layout.flex.grow = 1.0;
             right_props.layout.flex.shrink = 1.0;
             right_props.layout.flex.basis = crate::element::Length::Px(Px(0.0));
-            right_props.layout.size.min_width = Some(Px(0.0));
+            right_props.layout.size.min_width = Some(crate::element::Length::Px(Px(0.0)));
 
             let mut right = cx.text_props(right_props);
             if decorate {
@@ -878,7 +878,7 @@ fn pressable_dispatches_click_command_when_released_over_self() {
                     }));
                     vec![cx.container(
                         crate::element::ContainerProps {
-                            padding: fret_core::Edges::all(Px(4.0)),
+                            padding: fret_core::Edges::all(Px(4.0)).into(),
                             ..Default::default()
                         },
                         |cx| vec![cx.text("hi")],

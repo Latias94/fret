@@ -172,7 +172,7 @@ impl PropertyGroup {
                         size: SizeStyle {
                             width: Length::Fill,
                             height: Length::Auto,
-                            min_height: Some(Px(header_height.0.max(0.0))),
+                            min_height: Some(Length::Px(Px(header_height.0.max(0.0)))),
                             ..Default::default()
                         },
                         ..Default::default()

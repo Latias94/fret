@@ -65,8 +65,8 @@ fn fret_select_tracks_trigger_when_underlay_scrolls() {
                                 layout: {
                                     let mut layout = LayoutStyle::default();
                                     layout.position = fret_ui::element::PositionStyle::Absolute;
-                                    layout.inset.left = Some(Px(16.0));
-                                    layout.inset.top = Some(Px(160.0));
+                                    layout.inset.left = Some(left).into();
+                                    layout.inset.top = Some(top).into();
                                     layout.size.width = Length::Px(Px(280.0));
                                     layout
                                 },

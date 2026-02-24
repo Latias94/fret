@@ -73,7 +73,7 @@ pub(crate) fn editor_input_group_frame_with_overrides<H: UiHost>(
     ) -> Vec<AnyElement>,
 ) -> AnyElement {
     if layout.size.min_height.is_none() {
-        layout.size.min_height = Some(density.row_height);
+        layout.size.min_height = Some(Length::Px(density.row_height));
     }
 
     let theme = Theme::global(&*cx.app);

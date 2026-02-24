@@ -148,7 +148,7 @@ impl ColorEdit {
                 size: SizeStyle {
                     width: Length::Fill,
                     height: Length::Auto,
-                    min_height: Some(density.row_height),
+                    min_height: Some(Length::Px(density.row_height)),
                     ..Default::default()
                 },
                 ..Default::default()
@@ -325,7 +325,7 @@ impl ColorEdit {
 
         let mut root_layout = self.options.layout;
         if root_layout.size.min_height.is_none() {
-            root_layout.size.min_height = Some(density.row_height);
+            root_layout.size.min_height = Some(Length::Px(density.row_height));
         }
 
         let mut el = cx.flex(

@@ -12,7 +12,7 @@ fn flex_row_wrap_label(cx: &mut ElementContext<'_, App>, text: &'static str) -> 
     props.layout.flex.grow = 1.0;
     props.layout.flex.shrink = 1.0;
     props.layout.flex.basis = Length::Px(Px(0.0));
-    props.layout.size.min_width = Some(Px(0.0));
+    props.layout.size.min_width = Some(Length::Px(Px(0.0)));
     cx.text_props(props)
 }
 

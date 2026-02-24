@@ -137,8 +137,8 @@ pub(in crate::ui) fn wrap_row(
         fret_ui::element::FlexProps {
             layout,
             direction: fret_core::Axis::Horizontal,
-            gap,
-            padding: Edges::all(Px(0.0)),
+            gap: gap.into(),
+            padding: Edges::all(Px(0.0)).into(),
             justify: fret_ui::element::MainAlign::Start,
             align,
             wrap: true,
@@ -175,8 +175,8 @@ pub(in crate::ui) fn wrap_row_snapshot(
         fret_ui::element::FlexProps {
             layout,
             direction: fret_core::Axis::Horizontal,
-            gap,
-            padding: Edges::all(Px(0.0)),
+            gap: gap.into(),
+            padding: Edges::all(Px(0.0)).into(),
             justify: fret_ui::element::MainAlign::Start,
             align,
             wrap: true,
@@ -291,7 +291,7 @@ where
                 let mut layout = fret_ui::element::LayoutStyle::default();
                 layout.flex.grow = 1.0;
                 layout.flex.shrink = 1.0;
-                layout.size.min_width = Some(Px(0.0));
+                layout.size.min_width = Some(fret_ui::element::Length::Px(Px(0.0)));
                 layout
             },
             text: text.into(),

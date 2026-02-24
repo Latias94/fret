@@ -43,9 +43,9 @@ pub fn pending_shortcut_hint_overlay<H: UiHost>(
 
     let mut layout = LayoutStyle::default();
     layout.position = fret_ui::element::PositionStyle::Absolute;
-    layout.inset.top = Some(top_inset);
-    layout.inset.left = Some(fret_core::Px(0.0));
-    layout.inset.right = Some(fret_core::Px(0.0));
+    layout.inset.top = Some(top).into();
+    layout.inset.left = Some(left).into();
+    layout.inset.right = Some(right).into();
     layout.size.width = Length::Px(fret_core::Px(520.0));
     layout.margin = MarginEdges {
         left: MarginEdge::Auto,

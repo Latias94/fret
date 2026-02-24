@@ -134,7 +134,7 @@ where
             overflow: Overflow::Visible,
             ..props.layout
         },
-        padding: props.padding,
+        padding: props.padding.into(),
         corner_radii: props.corner_radii,
         background: props.background,
         border: props.border,
@@ -188,8 +188,8 @@ where
                         vec![cx.row(
                             RowProps {
                                 layout: row_layout,
-                                gap,
-                                padding: Edges::all(Px(0.0)),
+                                gap: gap.into(),
+                                padding: Edges::all(Px(0.0)).into(),
                                 justify: fret_ui::element::MainAlign::Center,
                                 align: fret_ui::element::CrossAlign::Center,
                             },

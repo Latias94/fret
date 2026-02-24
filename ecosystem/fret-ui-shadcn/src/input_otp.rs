@@ -341,10 +341,10 @@ impl InputOtp {
                 input.layout = LayoutStyle {
                     position: PositionStyle::Absolute,
                     inset: InsetStyle {
-                        left: Some(Px(0.0)),
-                        top: Some(Px(0.0)),
-                        right: Some(Px(0.0)),
-                        bottom: Some(Px(0.0)),
+                        left: Some(Px(0.0)).into(),
+                        top: Some(Px(0.0)).into(),
+                        right: Some(Px(0.0)).into(),
+                        bottom: Some(Px(0.0)).into(),
                     },
                     size: SizeStyle {
                         width: Length::Fill,
@@ -440,7 +440,7 @@ impl InputOtp {
                                     },
                                     ..Default::default()
                                 },
-                                padding: Edges::all(Px(0.0)),
+                                padding: Edges::all(Px(0.0)).into(),
                                 background: Some(bg),
                                 shadow: Some(decl_style::shadow_xs(&theme, radius)),
                                 border: slot_border,
@@ -462,8 +462,8 @@ impl InputOtp {
                                             ..Default::default()
                                         },
                                         direction: Axis::Horizontal,
-                                        gap: Px(0.0),
-                                        padding: Edges::all(Px(0.0)),
+                                        gap: Px(0.0).into(),
+                                        padding: Edges::all(Px(0.0)).into(),
                                         justify: MainAlign::Center,
                                         align: CrossAlign::Center,
                                         wrap: false,
@@ -497,10 +497,10 @@ impl InputOtp {
                                             layout: LayoutStyle {
                                                 position: PositionStyle::Absolute,
                                                 inset: InsetStyle {
-                                                    left: Some(Px(0.0)),
-                                                    top: Some(Px(0.0)),
-                                                    right: Some(Px(0.0)),
-                                                    bottom: Some(Px(0.0)),
+                                                    left: Some(Px(0.0)).into(),
+                                                    top: Some(Px(0.0)).into(),
+                                                    right: Some(Px(0.0)).into(),
+                                                    bottom: Some(Px(0.0)).into(),
                                                 },
                                                 ..Default::default()
                                             },
@@ -518,8 +518,8 @@ impl InputOtp {
                                                         ..Default::default()
                                                     },
                                                     direction: Axis::Horizontal,
-                                                    gap: Px(0.0),
-                                                    padding: Edges::all(Px(0.0)),
+                                                    gap: Px(0.0).into(),
+                                                    padding: Edges::all(Px(0.0)).into(),
                                                     justify: MainAlign::Center,
                                                     align: CrossAlign::Center,
                                                     wrap: false,
@@ -566,8 +566,8 @@ impl InputOtp {
                         FlexProps {
                             layout: LayoutStyle::default(),
                             direction: Axis::Horizontal,
-                            gap: slot_gap,
-                            padding: Edges::all(Px(0.0)),
+                            gap: slot_gap.into(),
+                            padding: Edges::all(Px(0.0)).into(),
                             justify: MainAlign::Start,
                             align: CrossAlign::Center,
                             wrap: false,
@@ -587,8 +587,8 @@ impl InputOtp {
                                     ..Default::default()
                                 },
                                 direction: Axis::Horizontal,
-                                gap: Px(0.0),
-                                padding: Edges::all(Px(0.0)),
+                                gap: Px(0.0).into(),
+                                padding: Edges::all(Px(0.0)).into(),
                                 justify: MainAlign::Center,
                                 align: CrossAlign::Center,
                                 wrap: false,
@@ -609,8 +609,8 @@ impl InputOtp {
                     FlexProps {
                         layout: LayoutStyle::default(),
                         direction: Axis::Horizontal,
-                        gap: container_gap,
-                        padding: Edges::all(Px(0.0)),
+                        gap: container_gap.into(),
+                        padding: Edges::all(Px(0.0)).into(),
                         justify: MainAlign::Start,
                         align: CrossAlign::Center,
                         wrap: false,
@@ -644,10 +644,10 @@ impl InputOtp {
                                         layout: LayoutStyle {
                                             position: PositionStyle::Absolute,
                                             inset: InsetStyle {
-                                                left: Some(left),
-                                                top: Some(top),
-                                                right: None,
-                                                bottom: None,
+                                                left: Some(left).into(),
+                                                top: Some(top).into(),
+                                                right: None.into(),
+                                                bottom: None.into(),
                                             },
                                             size: SizeStyle {
                                                 width: Length::Px(slot_bounds.size.width),

@@ -206,7 +206,7 @@ where
 
         let mut layout = opts.layout;
         if layout.size.min_height.is_none() {
-            layout.size.min_height = Some(density.row_height);
+            layout.size.min_height = Some(Length::Px(density.row_height));
         }
 
         let pressable = cx.pressable(

@@ -93,7 +93,7 @@ impl MiniSearchBox {
             size: SizeStyle {
                 width: Length::Fill,
                 height: Length::Fill,
-                min_height: Some(density.row_height),
+                min_height: Some(Length::Px(density.row_height)),
                 ..Default::default()
             },
             ..Default::default()

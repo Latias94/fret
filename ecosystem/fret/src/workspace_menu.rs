@@ -657,7 +657,7 @@ pub fn menubar_from_runtime_with_focus_handle<H: UiHost>(
             vec![cx.container(
                 ContainerProps {
                     layout: LayoutStyle::default(),
-                    padding: Edges::all(Px(0.0)),
+                    padding: Edges::all(Px(0.0)).into(),
                     background: Some(bg),
                     shadow: None,
                     border: Edges::all(Px(1.0)),
@@ -672,8 +672,8 @@ pub fn menubar_from_runtime_with_focus_handle<H: UiHost>(
                             flex: FlexProps {
                                 layout: LayoutStyle::default(),
                                 direction: fret_core::Axis::Horizontal,
-                                gap: Px(1.0),
-                                padding: Edges::all(Px(0.0)),
+                                gap: Px(1.0).into(),
+                                padding: Edges::all(Px(0.0)).into(),
                                 justify: MainAlign::Start,
                                 align: CrossAlign::Center,
                                 wrap: false,
@@ -898,7 +898,8 @@ fn render_menu_from_runtime<H: UiHost>(
                     right: pad,
                     bottom: Px(4.0),
                     left: pad,
-                },
+                }
+                .into(),
                 background: trigger_bg,
                 shadow: None,
                 border: Edges::all(Px(0.0)),
@@ -1008,7 +1009,7 @@ fn request_menu_overlay<H: UiHost>(
                 placed,
                 move |layout| ContainerProps {
                     layout,
-                    padding: Edges::all(Px(4.0)),
+                    padding: Edges::all(Px(4.0)).into(),
                     background: Some(bg),
                     shadow: None,
                     border: Edges::all(Px(1.0)),
@@ -1038,8 +1039,8 @@ fn request_menu_overlay<H: UiHost>(
                                     flex: FlexProps {
                                         layout: LayoutStyle::default(),
                                         direction: fret_core::Axis::Vertical,
-                                        gap: Px(0.0),
-                                        padding: Edges::all(Px(0.0)),
+                                        gap: Px(0.0).into(),
+                                        padding: Edges::all(Px(0.0)).into(),
                                         justify: MainAlign::Start,
                                         align: CrossAlign::Stretch,
                                         wrap: false,
@@ -1121,7 +1122,7 @@ fn request_menu_overlay<H: UiHost>(
                             labelled_by_element,
                             move |layout| ContainerProps {
                                 layout,
-                                padding: Edges::all(Px(4.0)),
+                                padding: Edges::all(Px(4.0)).into(),
                                 background: Some(bg),
                                 shadow: None,
                                 border: Edges::all(Px(1.0)),
@@ -1139,8 +1140,8 @@ fn request_menu_overlay<H: UiHost>(
                                             flex: FlexProps {
                                                 layout: LayoutStyle::default(),
                                                 direction: fret_core::Axis::Vertical,
-                                                gap: Px(0.0),
-                                                padding: Edges::all(Px(0.0)),
+                                                gap: Px(0.0).into(),
+                                                padding: Edges::all(Px(0.0)).into(),
                                                 justify: MainAlign::Start,
                                                 align: CrossAlign::Stretch,
                                                 wrap: false,
@@ -1368,7 +1369,7 @@ fn render_menu_item<H: UiHost>(
 
         let mut layout = LayoutStyle::default();
         layout.size.width = Length::Fill;
-        layout.size.min_height = Some(Px(28.0));
+        layout.size.min_height = Some(Length::Px(Px(28.0)));
 
         let (role, checked) = match item.toggle {
             Some(toggle) => match toggle.kind {
@@ -1468,8 +1469,8 @@ fn render_menu_item<H: UiHost>(
                 FlexProps {
                     layout,
                     direction: fret_core::Axis::Horizontal,
-                    gap: Px(0.0),
-                    padding: Edges::all(Px(0.0)),
+                    gap: Px(0.0).into(),
+                    padding: Edges::all(Px(0.0)).into(),
                     justify: MainAlign::Center,
                     align: CrossAlign::Center,
                     wrap: false,
@@ -1522,7 +1523,8 @@ fn render_menu_item<H: UiHost>(
                 right: pad,
                 bottom: Px(4.0),
                 left: pad,
-            },
+            }
+            .into(),
             background: bg,
             shadow: None,
             border: Edges::all(Px(0.0)),
@@ -1538,8 +1540,8 @@ fn render_menu_item<H: UiHost>(
                 FlexProps {
                     layout: inner_layout,
                     direction: fret_core::Axis::Horizontal,
-                    gap: Px(8.0),
-                    padding: Edges::all(Px(0.0)),
+                    gap: Px(8.0).into(),
+                    padding: Edges::all(Px(0.0)).into(),
                     justify: MainAlign::SpaceBetween,
                     align: CrossAlign::Center,
                     wrap: false,
@@ -1554,8 +1556,8 @@ fn render_menu_item<H: UiHost>(
                         FlexProps {
                             layout: LayoutStyle::default(),
                             direction: fret_core::Axis::Horizontal,
-                            gap: Px(8.0),
-                            padding: Edges::all(Px(0.0)),
+                            gap: Px(8.0).into(),
+                            padding: Edges::all(Px(0.0)).into(),
                             justify: MainAlign::Start,
                             align: CrossAlign::Center,
                             wrap: false,

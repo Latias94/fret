@@ -169,8 +169,8 @@ fn render_base_with_trigger_and_underlay(
                                 LayoutStyle {
                                     position: PositionStyle::Absolute,
                                     inset: InsetStyle {
-                                        left: Some(Px(0.0)),
-                                        top: Some(Px(0.0)),
+                                        left: Some(Px(0.0)).into(),
+                                        top: Some(Px(0.0)).into(),
                                         ..Default::default()
                                     },
                                     size: SizeStyle {
@@ -197,8 +197,8 @@ fn render_base_with_trigger_and_underlay(
                                 LayoutStyle {
                                     position: PositionStyle::Absolute,
                                     inset: InsetStyle {
-                                        left: Some(Px(0.0)),
-                                        top: Some(Px(120.0)),
+                                        left: Some(Px(0.0)).into(),
+                                        top: Some(Px(120.0)).into(),
                                         ..Default::default()
                                     },
                                     size: SizeStyle {
@@ -262,8 +262,8 @@ fn render_base_with_compound_trigger(
                         layout: LayoutStyle {
                             position: PositionStyle::Absolute,
                             inset: InsetStyle {
-                                left: Some(Px(0.0)),
-                                top: Some(Px(0.0)),
+                                left: Some(Px(0.0)).into(),
+                                top: Some(Px(0.0)).into(),
                                 ..Default::default()
                             },
                             size: SizeStyle {
@@ -282,8 +282,8 @@ fn render_base_with_compound_trigger(
                                     layout: LayoutStyle {
                                         position: PositionStyle::Absolute,
                                         inset: InsetStyle {
-                                            left: Some(Px(0.0)),
-                                            top: Some(Px(0.0)),
+                                            left: Some(Px(0.0)).into(),
+                                            top: Some(Px(0.0)).into(),
                                             ..Default::default()
                                         },
                                         size: SizeStyle {
@@ -308,8 +308,8 @@ fn render_base_with_compound_trigger(
                                     layout: LayoutStyle {
                                         position: PositionStyle::Absolute,
                                         inset: InsetStyle {
-                                            left: Some(Px(112.0)),
-                                            top: Some(Px(0.0)),
+                                            left: Some(Px(112.0)).into(),
+                                            top: Some(Px(0.0)).into(),
                                             ..Default::default()
                                         },
                                         size: SizeStyle {
@@ -379,8 +379,8 @@ fn render_base_with_trigger_and_underlay_pointer_move(
                             LayoutStyle {
                                 position: PositionStyle::Absolute,
                                 inset: InsetStyle {
-                                    left: Some(Px(0.0)),
-                                    top: Some(Px(0.0)),
+                                    left: Some(Px(0.0)).into(),
+                                    top: Some(Px(0.0)).into(),
                                     ..Default::default()
                                 },
                                 size: SizeStyle {
@@ -408,8 +408,8 @@ fn render_base_with_trigger_and_underlay_pointer_move(
                             LayoutStyle {
                                 position: PositionStyle::Absolute,
                                 inset: InsetStyle {
-                                    left: Some(Px(0.0)),
-                                    top: Some(Px(120.0)),
+                                    left: Some(Px(0.0)).into(),
+                                    top: Some(Px(120.0)).into(),
                                     ..Default::default()
                                 },
                                 size: SizeStyle {
@@ -499,8 +499,8 @@ fn render_base_with_trigger_and_underlay_pressable_wheel(
                             LayoutStyle {
                                 position: PositionStyle::Absolute,
                                 inset: InsetStyle {
-                                    left: Some(Px(0.0)),
-                                    top: Some(Px(0.0)),
+                                    left: Some(Px(0.0)).into(),
+                                    top: Some(Px(0.0)).into(),
                                     ..Default::default()
                                 },
                                 size: SizeStyle {
@@ -528,8 +528,8 @@ fn render_base_with_trigger_and_underlay_pressable_wheel(
                             LayoutStyle {
                                 position: PositionStyle::Absolute,
                                 inset: InsetStyle {
-                                    left: Some(Px(0.0)),
-                                    top: Some(Px(120.0)),
+                                    left: Some(Px(0.0)).into(),
+                                    top: Some(Px(120.0)).into(),
                                     ..Default::default()
                                 },
                                 size: SizeStyle {
@@ -610,8 +610,8 @@ fn render_base_with_trigger_and_capture_underlay(
                             LayoutStyle {
                                 position: PositionStyle::Absolute,
                                 inset: InsetStyle {
-                                    left: Some(Px(0.0)),
-                                    top: Some(Px(0.0)),
+                                    left: Some(Px(0.0)).into(),
+                                    top: Some(Px(0.0)).into(),
                                     ..Default::default()
                                 },
                                 size: SizeStyle {
@@ -639,8 +639,8 @@ fn render_base_with_trigger_and_capture_underlay(
                             LayoutStyle {
                                 position: PositionStyle::Absolute,
                                 inset: InsetStyle {
-                                    left: Some(Px(0.0)),
-                                    top: Some(Px(120.0)),
+                                    left: Some(Px(0.0)).into(),
+                                    top: Some(Px(120.0)).into(),
                                     ..Default::default()
                                 },
                                 size: SizeStyle {

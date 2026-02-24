@@ -410,7 +410,7 @@ pub fn native_select<H: UiHost>(
                     },
                     ..Default::default()
                 },
-                padding: Edges::all(Px(0.0)),
+                padding: Edges::all(Px(0.0)).into(),
                 background: None,
                 shadow: Some(decl_style::shadow_xs(&theme_for_trigger, resolved.radius)),
                 border: Edges::all(Px(0.0)),
@@ -441,7 +441,8 @@ pub fn native_select<H: UiHost>(
                                 right: Px(36.0),
                                 top: py,
                                 bottom: py,
-                            },
+                            }
+                            .into(),
                             background: Some(resolved.background),
                             shadow: None,
                             border: Edges::all(resolved.border_width),
@@ -482,10 +483,10 @@ pub fn native_select<H: UiHost>(
                             layout: LayoutStyle {
                                 position: PositionStyle::Absolute,
                                 inset: InsetStyle {
-                                    left: None,
-                                    top: Some(icon_top),
-                                    right: Some(icon_right),
-                                    bottom: None,
+                                    left: None.into(),
+                                    top: Some(icon_top).into(),
+                                    right: Some(icon_right).into(),
+                                    bottom: None.into(),
                                 },
                                 size: SizeStyle {
                                     width: Length::Px(icon_size),
@@ -494,7 +495,7 @@ pub fn native_select<H: UiHost>(
                                 },
                                 ..Default::default()
                             },
-                            padding: Edges::all(Px(0.0)),
+                            padding: Edges::all(Px(0.0)).into(),
                             background: None,
                             shadow: None,
                             border: Edges::all(Px(0.0)),

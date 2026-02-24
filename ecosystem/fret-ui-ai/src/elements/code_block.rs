@@ -385,7 +385,7 @@ impl CodeBlockCopyButton {
             chrome_props.background = Some(bg);
             chrome_props.corner_radii = fret_core::Corners::all(radius);
             chrome_props.border = Edges::all(Px(0.0));
-            chrome_props.padding = Edges::all(Px(0.0));
+            chrome_props.padding = Edges::all(Px(0.0)).into();
 
             (props, chrome_props, move |cx| {
                 let row = fret_ui_kit::declarative::stack::hstack(

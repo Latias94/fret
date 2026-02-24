@@ -48,7 +48,7 @@ fn tab_list_semantics_layout() -> LayoutStyle {
     // This mirrors Tailwind's `w-full min-w-0 flex-shrink` rule of thumb.
     let mut layout = LayoutStyle::default();
     layout.size.width = Length::Fill;
-    layout.size.min_width = Some(Px(0.0));
+    layout.size.min_width = Some(Length::Px(Px(0.0)));
     layout.flex.shrink = 1.0;
     layout
 }
@@ -57,7 +57,7 @@ fn row_layout(height: Px) -> LayoutStyle {
     let mut layout = LayoutStyle::default();
     layout.size.width = Length::Fill;
     layout.size.height = Length::Px(height);
-    layout.size.min_width = Some(Px(0.0));
+    layout.size.min_width = Some(Length::Px(Px(0.0)));
     layout.flex.shrink = 1.0;
     layout
 }
@@ -123,7 +123,7 @@ fn fixed_square_layout(size: Px) -> LayoutStyle {
 
 fn fill_grow_layout() -> LayoutStyle {
     let mut layout = fill_layout();
-    layout.size.min_width = Some(Px(0.0));
+    layout.size.min_width = Some(Length::Px(Px(0.0)));
     layout.flex.grow = 1.0;
     layout.flex.shrink = 1.0;
     layout
@@ -516,7 +516,7 @@ impl WorkspaceTabStrip {
                 let root = cx.container(
                         ContainerProps {
                             layout: row_layout(self.height),
-                            padding: Edges::all(Px(2.0)),
+                            padding: Edges::all(Px(2.0)).into(),
                             background: bar_bg,
                             border: Edges {
                                 bottom: Px(1.0),
@@ -534,8 +534,8 @@ impl WorkspaceTabStrip {
                                     FlexProps {
                                         layout: tab_strip_scroll_content_layout(),
                                         direction: fret_core::Axis::Horizontal,
-                                        gap: Px(2.0),
-                                        padding: Edges::all(Px(0.0)),
+                                        gap: Px(2.0).into(),
+                                        padding: Edges::all(Px(0.0)).into(),
                                         justify: MainAlign::Start,
                                         align: CrossAlign::Center,
                                         wrap: false,
@@ -1045,7 +1045,8 @@ impl WorkspaceTabStrip {
                                                                     right: Px(6.0),
                                                                     top: Px(4.0),
                                                                     bottom: Px(4.0),
-                                                                },
+                                                                }
+                                                                .into(),
                                                                 background: bg,
                                                                 border: indicator_border,
                                                                 border_color: indicator_border_color,
@@ -1068,7 +1069,7 @@ impl WorkspaceTabStrip {
                                                                         },
                                                                         direction:
                                                                             fret_core::Axis::Horizontal,
-                                                                        gap: Px(6.0),
+                                                                        gap: Px(6.0).into(),
                                                                         justify: MainAlign::Start,
                                                                         align: CrossAlign::Center,
                                                                         ..Default::default()
@@ -1095,7 +1096,7 @@ impl WorkspaceTabStrip {
                                                                                     let mut layout =
                                                                                         LayoutStyle::default();
                                                                                     layout.size.max_width =
-                                                                                        Some(tab_max_width);
+                                                                                        Some(Length::Px(tab_max_width));
                                                                                     layout
                                                                                 },
                                                                                 text: label,
@@ -1488,7 +1489,7 @@ impl WorkspaceTabStrip {
                                 FlexProps {
                                     layout: fill_layout(),
                                     direction: fret_core::Axis::Horizontal,
-                                    gap: Px(2.0),
+                                    gap: Px(2.0).into(),
                                     justify: MainAlign::Start,
                                     align: CrossAlign::Center,
                                     ..Default::default()

@@ -37,7 +37,7 @@ fn selectable_text_drag_autoscrolls_scroll_container() {
                 |cx| {
                     vec![cx.column(
                         crate::element::ColumnProps {
-                            gap: Px(0.0),
+                            gap: Px(0.0).into(),
                             ..Default::default()
                         },
                         |cx| {
@@ -615,7 +615,7 @@ fn selectable_text_double_click_respects_window_text_boundary_mode_under_scroll_
                 |cx| {
                     vec![cx.column(
                         crate::element::ColumnProps {
-                            gap: Px(0.0),
+                            gap: Px(0.0).into(),
                             ..Default::default()
                         },
                         |cx| {

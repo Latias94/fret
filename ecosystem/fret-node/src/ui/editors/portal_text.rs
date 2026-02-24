@@ -117,12 +117,12 @@ impl PortalTextEditor {
             layout.node_window.origin.y.0 + style.node_header_height + style.node_padding;
 
         let mut column = ColumnProps::default();
-        column.gap = Px(ui.gap);
+        column.gap = Px(ui.gap).into();
         column.layout = LayoutStyle {
             position: PositionStyle::Absolute,
             inset: InsetStyle {
-                top: Some(Px(inset_top)),
-                left: Some(Px(inset_left)),
+                top: Some(Px(inset_top)).into(),
+                left: Some(Px(inset_left)).into(),
                 ..Default::default()
             },
             size: SizeStyle {
@@ -146,7 +146,7 @@ impl PortalTextEditor {
 
             let input_row = if show_stepper {
                 let mut row = RowProps::default();
-                row.gap = Px(ui.gap);
+                row.gap = Px(ui.gap).into();
                 row.layout.size.width = Length::Fill;
 
                 cx.row(row, |cx| {
@@ -157,8 +157,8 @@ impl PortalTextEditor {
                     props.layout.size.width = Length::Fill;
 
                     let mut btn_col = ColumnProps::default();
-                    btn_col.gap = Px(2.0);
-                    btn_col.padding = Edges::all(Px(0.0));
+                    btn_col.gap = Px(2.0).into();
+                    btn_col.padding = Edges::all(Px(0.0)).into();
                     btn_col.layout.size.width = Length::Px(Px(ui.stepper_button.size));
 
                     let mut minus = PressableProps::default();
