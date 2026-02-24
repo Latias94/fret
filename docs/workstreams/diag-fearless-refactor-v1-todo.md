@@ -128,8 +128,12 @@ This file tracks tasks for `docs/workstreams/diag-fearless-refactor-v1.md`.
 - [x] Add a bounded share zip mode that packs only AI artifacts (no full bundle artifact):
   - `diag pack <bundle_dir> --ai-only` (packs `ai.packet/` + nearby script sources)
 - [ ] Decide how far to push schema2-first:
-  - [ ] runtime dumps: when should `bundle.schema2.json` be emitted by default (vs tooling-derived only)?
-  - [ ] compatibility: when is it acceptable to stop treating `bundle.json` as a required artifact?
+  - [ ] Decide the runtime emission policy for `bundle.schema2.json` (tooling-derived today):
+    - Proposed policy draft: `docs/workstreams/diag-fearless-refactor-v1/schema2-first-decision.md`.
+    - [ ] Implement an opt-in runtime companion artifact (`bundle.schema2.json`) emission path.
+    - [ ] Decide whether scripted runs should default to emitting schema2, and whether raw `bundle.json` can be skipped.
+  - [ ] Decide when it is acceptable to stop treating raw `bundle.json` as a required artifact for common flows
+    (keep it supported for deep debugging).
 
 ## Schema migration hygiene
 

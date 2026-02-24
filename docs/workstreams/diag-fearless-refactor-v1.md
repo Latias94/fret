@@ -50,6 +50,8 @@ Today, diagnostics is powerful but the “fearless refactor” tax is high:
 ## Current state (as of 2026-02-24)
 
 - Runtime exports schema v2 bundles by default (semantics are deduplicated via `tables.semantics`).
+  - Note: the on-disk artifact is still named `bundle.json`. The companion file name `bundle.schema2.json` is a **tooling-derived**
+    compact artifact today (see below).
 - Older bundles may still be schema v1 (inline-only semantics, no tables); tooling remains compatible.
 - Tooling can:
   - convert bundles (`fretboard diag bundle-v2`) for measurement/compat,
@@ -63,6 +65,8 @@ Today, diagnostics is powerful but the “fearless refactor” tax is high:
   `diag query snapshots --test-id ...` fast without loading the full bundle.
 - Runtime script dumps include `script.result.json`, and `bundle.index.json` may include additive `script.steps` markers for
   mapping `step_index` to a snapshot selector without re-parsing the full bundle.
+
+See: `docs/workstreams/diag-fearless-refactor-v1/schema2-first-decision.md` for the schema2-first policy draft and exit criteria.
 
 ## Plan: two-phase evolution (preferred order)
 
