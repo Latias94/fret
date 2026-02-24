@@ -109,9 +109,9 @@ This file tracks tasks for `docs/workstreams/diag-fearless-refactor-v1.md`.
 
 ## Tooling modularization (reduce single-file blast radius)
 
-- [ ] Finish modularizing `diag ai-packet` and remove the temporary monolith module once parity is proven:
-  - [ ] delete `crates/fret-diag/src/commands/ai_packet/monolith.rs`
-  - [ ] keep module boundaries stable (`budget`, `anchors`, `slices`, `fs`)
+- [x] Finish modularizing `diag ai-packet` and remove the temporary monolith module once parity is proven:
+  - [x] delete `crates/fret-diag/src/commands/ai_packet/monolith.rs`
+  - [x] keep module boundaries stable (`budget`, `anchors`, `slices`, `fs`)
 
 ## Plan 2 (defer until Plan 1 is solid)
 
