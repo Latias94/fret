@@ -55,8 +55,8 @@ Note: `repo-ref/` is local state (not committed). See `docs/repo-ref.md`.
 - [x] Add a regression gate for the chosen behavior:
   - [x] unit test (layout invariant), and/or
     - Evidence: `ecosystem/fret-ui-shadcn/tests/data_table_toolbar_faceted_responsive.rs`
-  - [ ] `tools/diag-scripts/*.json` scenario that resizes a panel / window and asserts stable
-     element placements via `test_id`.
+  - [x] `tools/diag-scripts/ui-gallery-data-table-toolbar-faceted-responsive.json` (window resize;
+    asserts `data-table-toolbar-faceted-status-badge-*` invariants via `test_id`).
 
 ## Theme metadata drift: remove theme-name heuristics
 
