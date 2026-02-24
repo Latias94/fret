@@ -42,10 +42,15 @@ current pain for in-tree workflows.
 - `diag doctor` is the first step in every scripted repro loop.
 - `diag triage --lite` / `diag hotspots --lite` are the default first-pass tools.
 - `diag ai-packet` always includes lite reports and does not fail hard when heavy reports cannot be produced.
+- Shareable repro zips default to bounded artifacts when available:
+  - `diag pack|run|suite|repro --include-all --pack-schema2-only` (avoid shipping a huge raw `bundle.json`).
+  - Ensure canonical sidecars (`bundle.meta.json`, `bundle.index.json`, `test_ids.index.json`, `frames.index.json`) are packed
+    under `/_root/` so AI loops can stay fast without materializing large bundles.
 
 Exit criteria:
 
 - maintainers can triage “huge bundles” without opening `bundle.json` in memory.
+- a typical repro can be shared as a small zip without losing the ability to run lite triage offline.
 
 ### Phase B: Consolidate semantics traversal
 
@@ -60,6 +65,8 @@ Exit criteria:
 
 - Make module boundaries in `ecosystem/fret-bootstrap/src/ui_diagnostics/` and `crates/fret-diag/src/stats/` stick.
 - Delete transitional forwarders/wrappers that exist only due to historical file layout.
+- Keep the CLI entrypoint (`crates/fret-diag/src/lib.rs`) thin by extracting cohesive helpers into dedicated modules (zip packing,
+  evidence indexing, subcommand handlers).
 
 Exit criteria:
 
