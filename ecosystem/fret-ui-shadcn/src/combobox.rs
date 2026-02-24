@@ -18,7 +18,9 @@ use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::combobox as kit_combobox;
 use fret_ui_kit::primitives::controllable_state;
+use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::popover as radix_popover;
+use fret_ui_kit::primitives::popper;
 use fret_ui_kit::{
     ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, MetricRef, OverrideSlot, Radius,
     ShadowPreset, Size, Space, WidgetState, WidgetStateProperty, WidgetStates,
@@ -1629,23 +1631,30 @@ fn combobox_with_patch<H: UiHost>(
                     // trigger. This models the Radix popper "available height" variables used by
                     // shadcn/cmdk (`--radix-*-content-available-height`) and prevents the listbox
                     // from overflowing tight windows.
-                    //
-                    // We bias towards "the side with more room" so the popover placement solver
-                    // can flip when needed without the listbox exceeding the window bounds.
-                    let outer = cx.environment_viewport_bounds(fret_ui::Invalidation::Layout);
-                    let side_offset = Px(4.0);
-                    let outer_top = outer.origin.y.0;
-                    let outer_bottom = outer_top + outer.size.height.0.max(0.0);
-                    let anchor_top = anchor.origin.y.0;
-                    let anchor_bottom = anchor_top + anchor.size.height.0.max(0.0);
-                    let available_above = Px((anchor_top - outer_top - side_offset.0).max(0.0));
-                    let available_below =
-                        Px((outer_bottom - anchor_bottom - side_offset.0).max(0.0));
-                    let available_main = if available_above.0 > available_below.0 {
-                        available_above
-                    } else {
-                        available_below
-                    };
+                    let window_margin = theme
+                        .metric_by_key("component.popover.window_margin")
+                        .unwrap_or(Px(0.0));
+                    let outer = fret_ui_kit::overlay::outer_bounds_with_window_margin_for_environment(
+                        cx,
+                        fret_ui::Invalidation::Layout,
+                        window_margin,
+                    );
+                    let direction = direction_prim::use_direction_in_scope(cx, None);
+                    let placement = popper::PopperContentPlacement::new(
+                        direction,
+                        popper::Side::Bottom,
+                        popper::Align::Center,
+                        Px(4.0),
+                    )
+                    .with_shift_cross_axis(true)
+                    .with_sticky(popper::StickyMode::Partial);
+                    let available_main = radix_popover::popover_popper_vars(
+                        outer,
+                        anchor,
+                        desired_w,
+                        placement,
+                    )
+                    .available_height;
                     // CommandPalette includes a fixed-height search row above the list.
                     let header_estimate = Px(48.0);
                     let max_list_h = Px(
