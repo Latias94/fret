@@ -24,6 +24,8 @@ Terminology:
   - This conversion applies a semantics mode (currently `last`) and prunes the semantics table to referenced entries.
 - Most day-to-day triage can avoid materializing raw `bundle.json` by using sidecars and AI packets:
   - `bundle.meta.json`, `bundle.index.json`, `test_ids.index.json`, `frames.index.json`, `ai.packet/`, `--ai-only` zips.
+  - Tooling should treat sidecars as *bundle-artifact scoped*; when the bundle artifact path changes (e.g. switching from
+    `bundle.json` to `bundle.schema2.json`), sidecars should be regenerated to avoid mismatches.
 
 ## Goals
 

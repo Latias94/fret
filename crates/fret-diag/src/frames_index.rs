@@ -89,6 +89,7 @@ pub(crate) fn ensure_frames_index_json(
     warmup_frames: u64,
 ) -> Result<PathBuf, String> {
     let out = default_frames_index_path(bundle_path);
+    let expected_bundle = bundle_path.display().to_string();
     if out.is_file() {
         if let Some(existing) = read_frames_index_json_v1(&out, warmup_frames) {
             let kind_ok = existing.get("kind").and_then(|v| v.as_str()) == Some(FRAMES_INDEX_KIND);
@@ -96,7 +97,9 @@ pub(crate) fn ensure_frames_index_json(
                 == Some(FRAMES_INDEX_SCHEMA_VERSION);
             let warmup_ok =
                 existing.get("warmup_frames").and_then(|v| v.as_u64()) == Some(warmup_frames);
-            if kind_ok && schema_ok && warmup_ok {
+            let bundle_ok =
+                existing.get("bundle").and_then(|v| v.as_str()) == Some(&expected_bundle);
+            if kind_ok && schema_ok && warmup_ok && bundle_ok {
                 return Ok(out);
             }
         }
