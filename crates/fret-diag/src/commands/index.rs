@@ -54,14 +54,14 @@ pub(crate) fn cmd_index(
         if direct.is_file() && try_read_bundle_index_json(&direct, warmup_frames).is_some() {
             (direct.clone(), direct)
         } else {
-            let bundle_path = crate::resolve_bundle_json_path(&src);
+            let bundle_path = crate::resolve_bundle_artifact_path(&src);
             let canonical =
                 crate::bundle_index::ensure_bundle_index_json(&bundle_path, warmup_frames)?;
             let out = crate::bundle_index::default_bundle_index_path(&bundle_path);
             (canonical, out)
         }
     } else {
-        let bundle_path = crate::resolve_bundle_json_path(&src);
+        let bundle_path = crate::resolve_bundle_artifact_path(&src);
         let canonical = crate::bundle_index::ensure_bundle_index_json(&bundle_path, warmup_frames)?;
         let out = crate::bundle_index::default_bundle_index_path(&bundle_path);
         (canonical, out)

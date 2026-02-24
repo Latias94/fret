@@ -73,7 +73,7 @@ pub(crate) fn dispatch_simple(
                 }
 
                 let src = crate::resolve_path(workspace_root, PathBuf::from(src));
-                let bundle_path = crate::resolve_bundle_json_path(&src);
+                let bundle_path = crate::resolve_bundle_artifact_path(&src);
                 let bundle_dir = crate::resolve_bundle_root_dir(&bundle_path)?;
                 let out = trace_out
                     .map(|p| crate::resolve_path(workspace_root, p))

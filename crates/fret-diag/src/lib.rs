@@ -63,9 +63,9 @@ pub(crate) use post_run_checks::apply_post_run_checks;
 
 pub(crate) use paths::{
     default_lint_out_path, default_meta_out_path, default_pack_out_path, default_test_ids_out_path,
-    default_triage_out_path, expand_script_inputs, resolve_bundle_json_path,
-    resolve_bundle_root_dir, resolve_path, wait_for_bundle_json_from_script_result,
-    wait_for_bundle_json_in_dir,
+    default_triage_out_path, expand_script_inputs, resolve_bundle_artifact_path,
+    resolve_bundle_root_dir, resolve_path, wait_for_bundle_artifact_from_script_result,
+    wait_for_bundle_artifact_in_dir,
 };
 
 use compare::{
@@ -2858,7 +2858,7 @@ pub(crate) fn pack_bundle_dir_to_zip(
         ));
     }
 
-    let bundle_artifact = crate::resolve_bundle_json_path(bundle_dir);
+    let bundle_artifact = crate::resolve_bundle_artifact_path(bundle_dir);
     if !bundle_artifact.is_file() {
         return Err(format!(
             "bundle_dir does not contain bundle.json or bundle.schema2.json: {}",
@@ -5603,7 +5603,7 @@ fn materialize_devtools_bundle_dumped(
             } else {
                 runtime_out_dir.join(dumped_dir)
             };
-            let runtime_bundle_path = resolve_bundle_json_path(&runtime_dir);
+            let runtime_bundle_path = resolve_bundle_artifact_path(&runtime_dir);
 
             if runtime_bundle_path != bundle_path || !bundle_path.is_file() {
                 let bytes = std::fs::read(&runtime_bundle_path).map_err(|e| {
@@ -6297,14 +6297,18 @@ fn run_script_suite_collect_bundles(
             ));
         }
 
-        let bundle_path =
-            wait_for_bundle_json_from_script_result(&paths.out_dir, &result, timeout_ms, poll_ms)
-                .ok_or_else(|| {
-                format!(
-                    "script passed but no bundle artifact was found (required for matrix): {}",
-                    src.display()
-                )
-            })?;
+        let bundle_path = wait_for_bundle_artifact_from_script_result(
+            &paths.out_dir,
+            &result,
+            timeout_ms,
+            poll_ms,
+        )
+        .ok_or_else(|| {
+            format!(
+                "script passed but no bundle artifact was found (required for matrix): {}",
+                src.display()
+            )
+        })?;
 
         if let Some(min) = check_view_cache_reuse_stable_min
             && min > 0
@@ -7007,7 +7011,7 @@ mod tests {
     use util::json_pointer_set;
 
     #[test]
-    fn resolve_bundle_json_path_prefers_run_id_dir_from_script_result() {
+    fn resolve_bundle_artifact_path_prefers_run_id_dir_from_script_result() {
         let root = std::env::temp_dir().join(format!(
             "fret-diag-resolve-bundle-run-id-{}",
             SystemTime::now()
@@ -7029,12 +7033,12 @@ mod tests {
         std::fs::write(root.join("script.result.json"), br#"{"run_id":777}"#)
             .expect("write script.result.json");
 
-        let resolved = resolve_bundle_json_path(&root);
+        let resolved = resolve_bundle_artifact_path(&root);
         assert_eq!(resolved, run_id_dir.join("bundle.json"));
     }
 
     #[test]
-    fn resolve_bundle_json_path_prefers_run_id_schema2_from_script_result() {
+    fn resolve_bundle_artifact_path_prefers_run_id_schema2_from_script_result() {
         let root = std::env::temp_dir().join(format!(
             "fret-diag-resolve-bundle-run-id-schema2-{}",
             SystemTime::now()
@@ -7056,7 +7060,7 @@ mod tests {
         std::fs::write(root.join("script.result.json"), br#"{"run_id":777}"#)
             .expect("write script.result.json");
 
-        let resolved = resolve_bundle_json_path(&root);
+        let resolved = resolve_bundle_artifact_path(&root);
         assert_eq!(resolved, run_id_dir.join("bundle.schema2.json"));
     }
 
@@ -7099,7 +7103,7 @@ mod tests {
     }
 
     #[test]
-    fn resolve_bundle_json_path_records_integrity_failure_reason_code_on_chunk_hash_mismatch() {
+    fn resolve_bundle_artifact_path_records_integrity_failure_reason_code_on_chunk_hash_mismatch() {
         let root = std::env::temp_dir().join(format!(
             "fret-diag-resolve-bundle-chunks-integrity-{}",
             SystemTime::now()
@@ -7165,7 +7169,7 @@ mod tests {
         )
         .expect("write manifest.json");
 
-        let _ = resolve_bundle_json_path(&run_id_dir);
+        let _ = resolve_bundle_artifact_path(&run_id_dir);
 
         let bytes =
             std::fs::read(run_id_dir.join("script.result.json")).expect("read script.result.json");

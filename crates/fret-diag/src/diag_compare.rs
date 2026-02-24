@@ -40,8 +40,8 @@ pub(crate) fn cmd_compare(ctx: CompareCmdContext) -> Result<(), String> {
 
     let a_src = resolve_path(&workspace_root, PathBuf::from(a_src));
     let b_src = resolve_path(&workspace_root, PathBuf::from(b_src));
-    let a_bundle_path = resolve_bundle_json_path(&a_src);
-    let b_bundle_path = resolve_bundle_json_path(&b_src);
+    let a_bundle_path = resolve_bundle_artifact_path(&a_src);
+    let b_bundle_path = resolve_bundle_artifact_path(&b_src);
 
     let report = compare_bundles(
         &a_bundle_path,

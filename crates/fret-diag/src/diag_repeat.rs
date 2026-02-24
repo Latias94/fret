@@ -368,7 +368,7 @@ pub(crate) fn cmd_repeat(ctx: RepeatCmdContext) -> Result<(), String> {
                     })
                     .and_then(|p| {
                         if p.is_dir() {
-                            wait_for_bundle_json_in_dir(&p, timeout_ms, poll_ms)
+                            wait_for_bundle_artifact_in_dir(&p, timeout_ms, poll_ms)
                         } else if p.is_file() {
                             Some(p)
                         } else {

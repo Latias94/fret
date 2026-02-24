@@ -169,7 +169,7 @@ pub(crate) fn record_tooling_artifact_integrity_failure_for_dir(dir: &Path, err:
     );
 }
 
-pub(crate) fn resolve_bundle_json_path(path: &Path) -> PathBuf {
+pub(crate) fn resolve_bundle_artifact_path(path: &Path) -> PathBuf {
     if !path.is_dir() {
         return path.to_path_buf();
     }
@@ -250,7 +250,7 @@ pub(crate) fn resolve_bundle_json_path(path: &Path) -> PathBuf {
     direct
 }
 
-pub(crate) fn wait_for_bundle_json_from_script_result(
+pub(crate) fn wait_for_bundle_artifact_from_script_result(
     out_dir: &Path,
     result: &crate::stats::ScriptResultSummary,
     timeout_ms: u64,
@@ -279,7 +279,7 @@ pub(crate) fn wait_for_bundle_json_from_script_result(
             .or_else(|| crate::compare::read_latest_pointer(out_dir))
             .or_else(|| crate::compare::find_latest_export_dir(out_dir));
         if let Some(dir) = dir {
-            let bundle_path = resolve_bundle_json_path(&dir);
+            let bundle_path = resolve_bundle_artifact_path(&dir);
             if bundle_path.is_file() {
                 return Some(bundle_path);
             }
@@ -289,7 +289,7 @@ pub(crate) fn wait_for_bundle_json_from_script_result(
     None
 }
 
-pub(crate) fn wait_for_bundle_json_in_dir(
+pub(crate) fn wait_for_bundle_artifact_in_dir(
     bundle_dir: &Path,
     timeout_ms: u64,
     poll_ms: u64,
@@ -297,7 +297,7 @@ pub(crate) fn wait_for_bundle_json_in_dir(
     use std::time::{Duration, Instant};
 
     let deadline = Instant::now() + Duration::from_millis(timeout_ms.clamp(250, 5_000));
-    let bundle_path = resolve_bundle_json_path(bundle_dir);
+    let bundle_path = resolve_bundle_artifact_path(bundle_dir);
     while Instant::now() < deadline {
         if bundle_path.is_file() {
             return Some(bundle_path.clone());

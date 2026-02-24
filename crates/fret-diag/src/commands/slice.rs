@@ -298,19 +298,19 @@ fn sanitize_test_id_for_filename(test_id: &str) -> String {
     crate::util::sanitize_for_filename(test_id, 80, "test_id")
 }
 
-fn resolve_bundle_json_path_or_latest(
+fn resolve_bundle_artifact_path_or_latest(
     bundle_arg: Option<&str>,
     workspace_root: &Path,
     out_dir: &Path,
 ) -> Result<PathBuf, String> {
     if let Some(s) = bundle_arg {
         let src = crate::resolve_path(workspace_root, PathBuf::from(s));
-        return Ok(crate::resolve_bundle_json_path(&src));
+        return Ok(crate::resolve_bundle_artifact_path(&src));
     }
     let latest = crate::read_latest_pointer(out_dir)
         .or_else(|| crate::find_latest_export_dir(out_dir))
         .ok_or_else(|| format!("no diagnostics bundle found under {}", out_dir.display()))?;
-    Ok(crate::resolve_bundle_json_path(&latest))
+    Ok(crate::resolve_bundle_artifact_path(&latest))
 }
 
 struct BundleIndexSnapshotMatch {
@@ -903,7 +903,7 @@ pub(crate) fn cmd_slice(
     if let (Some(step_index), Some(bundle_arg)) = (step_index, bundle_arg.as_deref()) {
         let src = crate::resolve_path(workspace_root, PathBuf::from(bundle_arg));
         if src.is_dir() {
-            let bundle_path = crate::resolve_bundle_json_path(&src);
+            let bundle_path = crate::resolve_bundle_artifact_path(&src);
             let idx = if bundle_path.is_file() {
                 read_bundle_index_for_step_index(&bundle_path, warmup_frames)
                     .ok()
@@ -994,7 +994,7 @@ pub(crate) fn cmd_slice(
     }
 
     let bundle_path =
-        resolve_bundle_json_path_or_latest(bundle_arg.as_deref(), workspace_root, out_dir)?;
+        resolve_bundle_artifact_path_or_latest(bundle_arg.as_deref(), workspace_root, out_dir)?;
 
     if let Some(step_index) = step_index {
         let bundle_index = read_bundle_index_for_step_index(&bundle_path, warmup_frames)?;

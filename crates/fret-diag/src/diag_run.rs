@@ -752,7 +752,7 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
             || check_retained_vlist_keep_alive_reuse_min.is_some()
             || check_retained_vlist_keep_alive_budget.is_some())
         {
-            let bundle_path = wait_for_bundle_json_from_script_result(
+            let bundle_path = wait_for_bundle_artifact_from_script_result(
                 &resolved_out_dir,
                 &result,
                 timeout_ms,
@@ -781,7 +781,7 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         }
 
     if wants_pack {
-        let mut bundle_path = wait_for_bundle_json_from_script_result(
+        let mut bundle_path = wait_for_bundle_artifact_from_script_result(
             &resolved_out_dir,
             &result,
             timeout_ms,
@@ -789,7 +789,7 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         );
         if bundle_path.is_none() {
             let _ = touch(&resolved_trigger_path);
-            bundle_path = wait_for_bundle_json_from_script_result(
+            bundle_path = wait_for_bundle_artifact_from_script_result(
                 &resolved_out_dir,
                 &result,
                 timeout_ms,

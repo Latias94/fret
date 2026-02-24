@@ -419,7 +419,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
             label
         };
 
-        let mut bundle_path = wait_for_bundle_json_from_script_result(
+        let mut bundle_path = wait_for_bundle_artifact_from_script_result(
             &resolved_out_dir,
             &result,
             timeout_ms,

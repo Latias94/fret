@@ -1624,7 +1624,7 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
                 } else {
                     resolved_out_dir.join(bundle_dir)
                 };
-                let bundle_path = wait_for_bundle_json_in_dir(&bundle_dir, timeout_ms, poll_ms)
+                let bundle_path = wait_for_bundle_artifact_in_dir(&bundle_dir, timeout_ms, poll_ms)
                     .ok_or_else(|| {
                         format!(
                             "suite lint is enabled but bundle.json was not found in time: {}",
@@ -1854,7 +1854,7 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
             || (builtin_suite == Some(BuiltinSuite::UiGallery) && is_gc_liveness_script);
 
         if result.stage.as_deref() == Some("passed") && wants_post_run_checks_for_script {
-            let bundle_path = wait_for_bundle_json_from_script_result(
+            let bundle_path = wait_for_bundle_artifact_from_script_result(
                 &resolved_out_dir,
                 &result,
                 timeout_ms,

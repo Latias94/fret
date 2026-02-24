@@ -96,7 +96,7 @@ pub(crate) fn adjacent_bundle_path_for_sidecar(path: &Path) -> Option<PathBuf> {
     // Common layouts:
     // - <bundle_dir>/bundle.json or bundle.schema2.json + <bundle_dir>/bundle.index.json
     // - <bundle_dir>/_root/bundle.json or bundle.schema2.json (packed zip extraction)
-    let bundle = crate::resolve_bundle_json_path(parent);
+    let bundle = crate::resolve_bundle_artifact_path(parent);
     if bundle.is_file() {
         return Some(bundle);
     }
@@ -104,7 +104,7 @@ pub(crate) fn adjacent_bundle_path_for_sidecar(path: &Path) -> Option<PathBuf> {
     // Best-effort: if the sidecar is under `_root/`, also try the bundle dir.
     if parent.file_name().and_then(|s| s.to_str()) == Some("_root") {
         if let Some(grandparent) = parent.parent() {
-            let bundle = crate::resolve_bundle_json_path(grandparent);
+            let bundle = crate::resolve_bundle_artifact_path(grandparent);
             if bundle.is_file() {
                 return Some(bundle);
             }

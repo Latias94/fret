@@ -138,7 +138,7 @@ pub(crate) fn cmd_triage(
     }
 
     let src = crate::resolve_path(workspace_root, PathBuf::from(src));
-    let bundle_path = crate::resolve_bundle_json_path(&src);
+    let bundle_path = crate::resolve_bundle_artifact_path(&src);
 
     let payload = if lite {
         let index_path = crate::frames_index::default_frames_index_path(&bundle_path);
@@ -223,7 +223,7 @@ pub(crate) fn cmd_lint(
     }
 
     let src = crate::resolve_path(workspace_root, PathBuf::from(src));
-    let bundle_path = crate::resolve_bundle_json_path(&src);
+    let bundle_path = crate::resolve_bundle_artifact_path(&src);
 
     let report = lint_bundle_from_path(
         &bundle_path,
@@ -280,7 +280,7 @@ pub(crate) fn cmd_test_ids(
     }
 
     let src = crate::resolve_path(workspace_root, PathBuf::from(src));
-    let bundle_path = crate::resolve_bundle_json_path(&src);
+    let bundle_path = crate::resolve_bundle_artifact_path(&src);
 
     let out = test_ids_out
         .map(|p| crate::resolve_path(workspace_root, p))
@@ -340,7 +340,7 @@ pub(crate) fn cmd_test_ids_index(
     }
 
     let src = crate::resolve_path(workspace_root, PathBuf::from(src));
-    let bundle_path = crate::resolve_bundle_json_path(&src);
+    let bundle_path = crate::resolve_bundle_artifact_path(&src);
     let out = crate::bundle_index::ensure_test_ids_index_json(&bundle_path, warmup_frames)?;
 
     if stats_json {
@@ -376,7 +376,7 @@ pub(crate) fn cmd_frames_index(
     }
 
     let src = crate::resolve_path(workspace_root, PathBuf::from(src));
-    let bundle_path = crate::resolve_bundle_json_path(&src);
+    let bundle_path = crate::resolve_bundle_artifact_path(&src);
     let out = crate::frames_index::ensure_frames_index_json(&bundle_path, warmup_frames)?;
 
     if stats_json {
@@ -450,7 +450,7 @@ pub(crate) fn cmd_meta(
             {
                 (root.clone(), root)
             } else {
-                let bundle_path = crate::resolve_bundle_json_path(&src);
+                let bundle_path = crate::resolve_bundle_artifact_path(&src);
                 let canonical =
                     crate::bundle_index::ensure_bundle_meta_json(&bundle_path, warmup_frames)?;
                 let out = crate::default_meta_out_path(&bundle_path);
@@ -458,7 +458,7 @@ pub(crate) fn cmd_meta(
             }
         }
     } else {
-        let bundle_path = crate::resolve_bundle_json_path(&src);
+        let bundle_path = crate::resolve_bundle_artifact_path(&src);
         let canonical = crate::bundle_index::ensure_bundle_meta_json(&bundle_path, warmup_frames)?;
         let out = crate::default_meta_out_path(&bundle_path);
         (canonical, out)
