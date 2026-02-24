@@ -90,6 +90,8 @@ Definition of done:
   - Evidence: `crates/fret-diag/src/evidence_index.rs` (`write_evidence_index`).
 - [x] Add bundle-artifact aliases to repro summary JSON (keep older `*_bundle_json` keys for compatibility).
   - Evidence: `crates/fret-diag/src/diag_repro.rs` (`selected_bundle_artifact`, `packed_bundle_artifact`, `bundle_artifact` in `packed_bundles`).
+- [x] Add bundle-artifact aliases to `diag repeat` output JSON (keep older `bundle_json` key for compatibility).
+  - Evidence: `crates/fret-diag/src/diag_repeat.rs` (`bundle_artifact`).
 - [x] Add one regression test that a schema2-only bundle dir is accepted where we claim it is.
   - Evidence: `crates/fret-diag/src/pack_zip.rs` (`pack_bundle_dir_to_zip_accepts_schema2_only`).
 - [x] Add a schema2-only packing option for shareable zips.
