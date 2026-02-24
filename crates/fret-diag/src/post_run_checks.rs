@@ -192,8 +192,8 @@ pub(crate) fn apply_post_run_checks(
 
         loop {
             let from_latest = compare::read_latest_pointer(out_dir).map(normalize_bundle_path);
-            let from_scan = compare::find_latest_export_dir(out_dir)
-                .map(|dir| normalize_bundle_path(dir));
+            let from_scan =
+                compare::find_latest_export_dir(out_dir).map(|dir| normalize_bundle_path(dir));
 
             let candidate = match (from_latest, from_scan) {
                 (Some(a), Some(b)) => match (path_ts(&a), path_ts(&b)) {

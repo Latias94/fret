@@ -615,7 +615,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
     let mut packed_bundle_json: Option<PathBuf> = None;
     if let Some(bundle_path) = selected_bundle_path.as_ref() {
         let bundle_dir = resolve_bundle_root_dir(bundle_path)?;
-        packed_bundle_json = Some(bundle_dir.join("bundle.json"));
+        packed_bundle_json = Some(crate::resolve_bundle_artifact_path(&bundle_dir));
     }
 
     let multi_pack = pack_items.len() > 1;
