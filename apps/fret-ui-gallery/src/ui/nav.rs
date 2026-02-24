@@ -238,3 +238,52 @@ pub(crate) fn sidebar_view(
 
     container
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const ITEM: PageSpec = PageSpec::new(
+        "hit_test_torture",
+        "Hit Test (Torture)",
+        "Hit Test / Spatial Index Harness",
+        "fret-ui (hit testing)",
+        "ui_gallery.nav.select.hit_test_torture",
+        &[
+            "hit_test",
+            "pointer",
+            "dispatch",
+            "performance",
+            "gpui-parity",
+        ],
+    );
+
+    #[test]
+    fn nav_search_matches_empty_query() {
+        assert!(matches_query("", &ITEM));
+        assert!(matches_query("   ", &ITEM));
+    }
+
+    #[test]
+    fn nav_search_matches_case_insensitive_substrings() {
+        assert!(matches_query("HIT", &ITEM));
+        assert!(matches_query("torture", &ITEM));
+        assert!(matches_query("FRET-UI", &ITEM));
+        assert!(matches_query("gpui", &ITEM));
+    }
+
+    #[test]
+    fn nav_search_matches_normalized_tokens_across_separators() {
+        assert!(matches_query("hit test", &ITEM));
+        assert!(matches_query("hit-test", &ITEM));
+        assert!(matches_query("hit_test", &ITEM));
+        assert!(matches_query("gpuiparity", &ITEM));
+        assert!(matches_query("gpui parity", &ITEM));
+    }
+
+    #[test]
+    fn nav_search_rejects_non_matching_terms() {
+        assert!(!matches_query("accordion", &ITEM));
+        assert!(!matches_query("chart", &ITEM));
+    }
+}

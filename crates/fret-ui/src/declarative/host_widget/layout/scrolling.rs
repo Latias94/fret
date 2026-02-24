@@ -970,7 +970,63 @@ impl ElementHostWidget {
             if last_max_child != Size::default() {
                 // Best-effort: reuse the last measured max-child size while deferring the expensive
                 // unbounded probe during interactive resize/unstable frames.
-                last_max_child
+                //
+                // However, when content *shrinks* (e.g. filtering a nav list) we must avoid
+                // pinning the scroll extent to the previous frame's larger probe result, otherwise
+                // users can scroll into blank space until the unbounded probe runs again.
+                //
+                // To keep this cheap, when the cached probe indicates overflow, do a bounded
+                // measure pass (viewport constraints) for single-child scroll nodes and clamp the
+                // probed extent *only when we can prove the content now fits within the viewport*.
+                //
+                // This preserves the "never under-report overflow" intent for the common case
+                // (bounded measure == viewport size) while fixing the "stale oversized extent"
+                // failure mode.
+                let mut max_child = last_max_child;
+                if cx.children.len() == 1
+                    && (props.axis.scroll_x() || props.axis.scroll_y())
+                    && available.width.0 > 0.0
+                    && available.height.0 > 0.0
+                {
+                    let wants_clamp_x =
+                        props.axis.scroll_x() && max_child.width.0 > available.width.0 + 0.5;
+                    let wants_clamp_y =
+                        props.axis.scroll_y() && max_child.height.0 > available.height.0 + 0.5;
+                    if wants_clamp_x || wants_clamp_y {
+                        let bounded_constraints = LayoutConstraints::new(
+                            LayoutSize::new(None, None),
+                            LayoutSize::new(
+                                AvailableSpace::Definite(available.width),
+                                AvailableSpace::Definite(available.height),
+                            ),
+                        );
+                        let child = cx.children[0];
+                        let bounded = cx.measure_in(child, bounded_constraints);
+
+                        let mut changed = false;
+                        if wants_clamp_x && bounded.width.0 + 0.5 < available.width.0 {
+                            max_child.width = Px(max_child.width.0.min(bounded.width.0.max(0.0)));
+                            changed = true;
+                        }
+                        if wants_clamp_y && bounded.height.0 + 0.5 < available.height.0 {
+                            max_child.height =
+                                Px(max_child.height.0.min(bounded.height.0.max(0.0)));
+                            changed = true;
+                        }
+
+                        if changed {
+                            crate::elements::with_element_state(
+                                &mut *cx.app,
+                                window,
+                                self.element,
+                                ScrollLayoutProbeCacheState::default,
+                                |state| state.last_max_child = max_child,
+                            );
+                        }
+                    }
+                }
+
+                max_child
             } else {
                 // Fallback: if we have no cached max-child size yet, scan the last measured child
                 // sizes and avoid a deep measure walk on this frame. Persist the result so future
