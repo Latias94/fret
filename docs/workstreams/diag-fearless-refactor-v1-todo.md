@@ -96,11 +96,14 @@ This file tracks tasks for `docs/workstreams/diag-fearless-refactor-v1.md`.
   - [x] Packing includes canonical sidecars under `_root/` (even when the bundle dir is relocated):
     - [x] `diag pack --include-all` (and repro multi-pack with `--include-all`).
     - [x] Includes `frames.index.json` to support `triage --lite` without materializing large bundles.
+- [x] Reduce CLI entrypoint churn by isolating zip packing logic:
+  - `crates/fret-diag/src/pack_zip.rs`
 - [x] Add a short “AI-first” recipe to `docs/ui-diagnostics-and-scripted-tests.md` that links to:
   - `diag meta`, `diag index`, `diag query`, `diag slice`, `diag ai-packet`.
 - [ ] Finish the “bundle artifact” naming sweep so common failure messages and CLI hints do not assume `bundle.json`.
   - [x] Rename internal helpers away from `*_bundle_json_*` naming:
     - `crates/fret-diag/src/paths.rs` (`resolve_bundle_artifact_path`, `wait_for_bundle_artifact_*`)
+  - [x] Ensure `diag doctor` distinguishes raw `bundle.json` from the resolved bundle artifact in `doctor.json`.
 - [ ] Decide how far to push schema2-first:
   - [ ] runtime dumps: when should `bundle.schema2.json` be emitted by default (vs tooling-derived only)?
   - [ ] compatibility: when is it acceptable to stop treating `bundle.json` as a required artifact?
