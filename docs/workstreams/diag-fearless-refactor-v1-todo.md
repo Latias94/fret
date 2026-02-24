@@ -1,7 +1,7 @@
 ---
 title: Diag Fearless Refactor v1 (TODO)
 status: draft
-date: 2026-02-21
+date: 2026-02-24
 scope: diagnostics, automation, bundle-schema, refactor
 ---
 
@@ -75,7 +75,7 @@ This file tracks tasks for `docs/workstreams/diag-fearless-refactor-v1.md`.
     - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/pick_flow.rs`
 - [ ] Keep DevTools WS wiring isolated (already split; ensure minimal coupling).
 
-## Bundle size & AI loops (Plan 1)
+## Bundle size & AI loops (Plan 1, schema2-first)
 
 - [x] Document recommended defaults for AI loops (env presets) and keep them consistent across tooling and runtime:
   - `docs/ui-diagnostics-and-scripted-tests.md` (AI presets)
@@ -93,6 +93,10 @@ This file tracks tasks for `docs/workstreams/diag-fearless-refactor-v1.md`.
     - [x] `diag query snapshots` / `diag slice` read `bundle.index.json` when present (selection + semantics presence)
 - [x] Add a short “AI-first” recipe to `docs/ui-diagnostics-and-scripted-tests.md` that links to:
   - `diag meta`, `diag index`, `diag query`, `diag slice`, `diag ai-packet`.
+- [ ] Finish the “bundle artifact” naming sweep so common failure messages and CLI hints do not assume `bundle.json`.
+- [ ] Decide how far to push schema2-first:
+  - [ ] runtime dumps: when should `bundle.schema2.json` be emitted by default (vs tooling-derived only)?
+  - [ ] compatibility: when is it acceptable to stop treating `bundle.json` as a required artifact?
 
 ## Schema migration hygiene
 
@@ -102,6 +106,12 @@ This file tracks tasks for `docs/workstreams/diag-fearless-refactor-v1.md`.
   - [ ] Decide when to flip manual dump defaults to v2 (owner decision).
   - [ ] Decide deprecation messaging + migration recipes for older v1 repros.
 - [ ] Add one regression guard that prevents re-introducing forked protocol types in the runtime runner.
+
+## Tooling modularization (reduce single-file blast radius)
+
+- [ ] Finish modularizing `diag ai-packet` and remove the temporary monolith module once parity is proven:
+  - [ ] delete `crates/fret-diag/src/commands/ai_packet/monolith.rs`
+  - [ ] keep module boundaries stable (`budget`, `anchors`, `slices`, `fs`)
 
 ## Plan 2 (defer until Plan 1 is solid)
 
