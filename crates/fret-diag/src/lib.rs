@@ -3897,8 +3897,9 @@ fn pack_repro_zip_multi(
             let root_v2 = bundle_dir.join("_root").join("bundle.schema2.json");
             if !direct_v2.is_file() && !root_v2.is_file() {
                 return Err(format!(
-                    "--pack-schema2-only requires bundle.schema2.json (bundle_dir={})",
-                    bundle_dir.display()
+                    "--pack-schema2-only requires bundle.schema2.json (tip: fretboard diag doctor --fix-schema2 {} --warmup-frames {})",
+                    bundle_dir.display(),
+                    warmup_frames
                 ));
             }
         }
@@ -3911,6 +3912,32 @@ fn pack_repro_zip_multi(
             options,
             schema2_only,
         )?;
+
+        if include_root_artifacts || include_triage {
+            let bundle_artifact = crate::resolve_bundle_artifact_path(&bundle_dir);
+            let meta_path =
+                crate::bundle_index::ensure_bundle_meta_json(&bundle_artifact, warmup_frames)?;
+            let bundle_index_path =
+                crate::bundle_index::ensure_bundle_index_json(&bundle_artifact, warmup_frames)?;
+            let test_ids_index_path =
+                crate::bundle_index::ensure_test_ids_index_json(&bundle_artifact, warmup_frames)?;
+            let test_ids_path =
+                crate::bundle_index::ensure_test_ids_json(&bundle_artifact, warmup_frames, 500)?;
+
+            for (src, rel) in [
+                (meta_path, "bundle.meta.json"),
+                (bundle_index_path, "bundle.index.json"),
+                (test_ids_index_path, "test_ids.index.json"),
+                (test_ids_path, "test_ids.json"),
+            ] {
+                if src.is_file() {
+                    let dst = format!("{}/_root/{rel}", item.prefix);
+                    zip.start_file(dst, options).map_err(|e| e.to_string())?;
+                    let mut f = std::fs::File::open(&src).map_err(|e| e.to_string())?;
+                    std::io::copy(&mut f, &mut zip).map_err(|e| e.to_string())?;
+                }
+            }
+        }
 
         if include_screenshots {
             let bundle_name = bundle_dir
@@ -7199,6 +7226,87 @@ mod tests {
                 .is_err(),
             "raw bundle.json chunks should be skipped when packing schema2-only"
         );
+    }
+
+    #[test]
+    fn pack_repro_zip_multi_includes_sidecars_under_root() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-pack-repro-multi-sidecars-{}",
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).expect("create temp root");
+
+        let artifacts_root = root.join("artifacts");
+        std::fs::create_dir_all(&artifacts_root).expect("create artifacts_root");
+
+        let summary_path = artifacts_root.join("repro.summary.json");
+        std::fs::write(&summary_path, br#"{}"#).expect("write repro.summary.json");
+
+        let scripts_dir = root.join("scripts");
+        std::fs::create_dir_all(&scripts_dir).expect("create scripts dir");
+        let script_a = scripts_dir.join("a.json");
+        let script_b = scripts_dir.join("b.json");
+        std::fs::write(&script_a, br#"{"schema_version":1,"kind":"noop","steps":[]}"#)
+            .expect("write a.json");
+        std::fs::write(&script_b, br#"{"schema_version":1,"kind":"noop","steps":[]}"#)
+            .expect("write b.json");
+
+        let bundle_a_dir = root.join("bundle_a");
+        let bundle_b_dir = root.join("bundle_b");
+        std::fs::create_dir_all(&bundle_a_dir).expect("create bundle_a dir");
+        std::fs::create_dir_all(&bundle_b_dir).expect("create bundle_b dir");
+
+        let minimal_bundle = br#"{"schema_version":2,"windows":[]}"#;
+        std::fs::write(bundle_a_dir.join("bundle.schema2.json"), minimal_bundle)
+            .expect("write bundle_a bundle.schema2.json");
+        std::fs::write(bundle_b_dir.join("bundle.schema2.json"), minimal_bundle)
+            .expect("write bundle_b bundle.schema2.json");
+
+        let bundles = vec![
+            ReproZipBundle {
+                prefix: "01-a".to_string(),
+                bundle_json: bundle_a_dir.join("bundle.schema2.json"),
+                source_script: script_a.clone(),
+            },
+            ReproZipBundle {
+                prefix: "02-b".to_string(),
+                bundle_json: bundle_b_dir.join("bundle.schema2.json"),
+                source_script: script_b.clone(),
+            },
+        ];
+
+        let out_zip = root.join("repro.zip");
+        pack_repro_zip_multi(
+            &out_zip,
+            true,
+            false,
+            false,
+            true,
+            false,
+            false,
+            &artifacts_root,
+            &summary_path,
+            &bundles,
+            10,
+            BundleStatsSort::Invalidation,
+            0,
+        )
+        .expect("pack repro zip should succeed");
+
+        let f = std::fs::File::open(&out_zip).expect("open zip output");
+        let mut zip = zip::ZipArchive::new(f).expect("open zip archive");
+        zip.by_name("01-a/_root/bundle.meta.json")
+            .expect("bundle.meta.json should be present under _root");
+        zip.by_name("01-a/_root/bundle.index.json")
+            .expect("bundle.index.json should be present under _root");
+        zip.by_name("01-a/_root/test_ids.index.json")
+            .expect("test_ids.index.json should be present under _root");
+        zip.by_name("01-a/_root/test_ids.json")
+            .expect("test_ids.json should be present under _root");
     }
 
     #[test]
