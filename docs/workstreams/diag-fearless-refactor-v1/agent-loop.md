@@ -32,13 +32,15 @@ Note:
 
 - When using `diag run` / `diag suite` / `diag perf`, `--bundle-doctor fix` will also attempt the schema2 repair (when `bundle.json` exists).
 
-## Optional: Pack a small shareable zip (schema2-only)
+## Optional: Pack a bounded share zip
 
-If you want to share a repro bundle, prefer schema2-only zips (avoid shipping a huge `bundle.json`):
+If you want to share a repro bundle, prefer bounded zips:
 
 - Ensure schema2 exists (or let `--bundle-doctor fix` handle it when possible):
   - `fretboard diag doctor --fix-schema2 <bundle_dir> --warmup-frames <n>`
-- Pack:
+- Preferred (AI-first, bounded; does not ship full bundle artifacts):
+  - `fretboard diag pack <bundle_dir> --ai-only --warmup-frames <n>`
+- Compat (offline viewer-friendly; includes bundle artifact):
   - `fretboard diag pack <bundle_dir> --include-all --pack-schema2-only --warmup-frames <n>`
 
 ## Step 1: First-pass perf triage (no full bundle materialization)

@@ -75,7 +75,8 @@ This workstream follows the repo preference: **finish “Plan 1” before “Pla
 - Make schema v2 + semantics-table the default for runtime-produced bundles.
 - Prefer `FRET_DIAG_BUNDLE_SEMANTICS_MODE=last|changed` for script runs and AI loops.
 - Keep shareable zips bounded when `bundle.schema2.json` is available:
-  - `diag run|suite|repro --bundle-doctor fix --pack --include-all --pack-schema2-only`
+  - Preferred (bounded AI handoff): `diag run|suite|repro --bundle-doctor fix --pack --ai-only`
+  - Compat (offline viewer-friendly, includes bundle artifact): `diag run|suite|repro --bundle-doctor fix --pack --include-all --pack-schema2-only`
 - Treat indexes and slices as the default review/debug units:
   - `bundle.index.json` for “jump to the right snapshot quickly”,
   - `test_ids.index.json` for fast `test_id` discovery,

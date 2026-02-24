@@ -43,7 +43,8 @@ current pain for in-tree workflows.
 - `diag triage --lite` / `diag hotspots --lite` are the default first-pass tools.
 - `diag ai-packet` always includes lite reports and does not fail hard when heavy reports cannot be produced.
 - Shareable repro zips default to bounded artifacts when available:
-  - `diag pack|run|suite|repro --include-all --pack-schema2-only` (avoid shipping a huge raw `bundle.json`).
+  - Preferred (bounded AI handoff): `diag pack|run|suite|repro --ai-only`.
+  - Compat (offline viewer-friendly, includes bundle artifact): `diag pack|run|suite|repro --include-all --pack-schema2-only`.
   - Ensure canonical sidecars (`bundle.meta.json`, `bundle.index.json`, `test_ids.index.json`, `frames.index.json`) are packed
     under `/_root/` so AI loops can stay fast without materializing large bundles.
 
