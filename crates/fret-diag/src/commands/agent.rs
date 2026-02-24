@@ -90,7 +90,7 @@ pub(crate) fn cmd_agent(
         "bundle_label": bundle_label,
         "warmup_frames": warmup_frames,
         "notes": [
-            "This plan prioritizes sidecars (frames.index.json) over materializing bundle.json in memory.",
+            "This plan prioritizes sidecars (frames.index.json) over materializing bundle artifacts in memory.",
             "Run doctor first; it is safe to run repeatedly.",
         ],
         "steps": [
@@ -112,7 +112,7 @@ pub(crate) fn cmd_agent(
             {
                 "id": "triage_lite_total",
                 "command": format!("fretboard diag triage --lite {} --warmup-frames {} --metric total", bundle_dir.display(), warmup_frames),
-                "why": "First-pass perf triage (slowest frames) without materializing bundle.json.",
+                "why": "First-pass perf triage (slowest frames) without materializing bundle artifacts.",
             },
             {
                 "id": "triage_lite_layout",

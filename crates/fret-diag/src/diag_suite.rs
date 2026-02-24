@@ -1627,7 +1627,7 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
                 let bundle_path = wait_for_bundle_artifact_in_dir(&bundle_dir, timeout_ms, poll_ms)
                     .ok_or_else(|| {
                         format!(
-                            "suite lint is enabled but bundle.json was not found in time: {}",
+                            "suite lint is enabled but no bundle artifact was found in time: {}",
                             bundle_dir.display()
                         )
                     })?;
