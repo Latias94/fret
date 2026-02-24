@@ -6748,15 +6748,15 @@ fn check_out_dir_for_pixels_changed(
         }
 
         let bundle_dir = out_dir.join(&bundle_dir_name);
-        let bundle_json_path = crate::resolve_bundle_artifact_path(&bundle_dir);
-        if !bundle_json_path.is_file() {
+        let bundle_artifact_path = crate::resolve_bundle_artifact_path(&bundle_dir);
+        if !bundle_artifact_path.is_file() {
             continue;
         }
 
         let bundle = if let Some(b) = bundles_cache.get(&bundle_dir_name) {
             b.clone()
         } else {
-            let bytes = std::fs::read(&bundle_json_path).map_err(|e| e.to_string())?;
+            let bytes = std::fs::read(&bundle_artifact_path).map_err(|e| e.to_string())?;
             let bundle: serde_json::Value =
                 serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
             bundles_cache.insert(bundle_dir_name.clone(), bundle.clone());
