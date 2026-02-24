@@ -6,6 +6,7 @@ pub(in crate::ui) fn preview_button_group(cx: &mut ElementContext<'_, App>) -> V
     #[derive(Default)]
     struct ButtonGroupModels {
         search_value: Option<Model<String>>,
+        url_value: Option<Model<String>>,
         message_value: Option<Model<String>>,
         amount_value: Option<Model<String>>,
         dropdown_open: Option<Model<bool>>,
@@ -22,6 +23,18 @@ pub(in crate::ui) fn preview_button_group(cx: &mut ElementContext<'_, App>) -> V
             let model = cx.app.models_mut().insert(String::new());
             cx.with_state(ButtonGroupModels::default, |st| {
                 st.search_value = Some(model.clone());
+            });
+            model
+        }
+    };
+
+    let url_value = cx.with_state(ButtonGroupModels::default, |st| st.url_value.clone());
+    let url_value = match url_value {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(String::new());
+            cx.with_state(ButtonGroupModels::default, |st| {
+                st.url_value = Some(model.clone());
             });
             model
         }
@@ -269,9 +282,7 @@ pub(in crate::ui) fn preview_button_group(cx: &mut ElementContext<'_, App>) -> V
             .variant(shadcn::ButtonVariant::Secondary)
             .size(shadcn::ButtonSize::Sm)
             .into(),
-        shadcn::Separator::new()
-            .orientation(shadcn::SeparatorOrientation::Vertical)
-            .into(),
+        shadcn::ButtonGroupSeparator::new().into(),
         shadcn::Button::new("Paste")
             .variant(shadcn::ButtonVariant::Secondary)
             .size(shadcn::ButtonSize::Sm)
@@ -284,9 +295,7 @@ pub(in crate::ui) fn preview_button_group(cx: &mut ElementContext<'_, App>) -> V
         shadcn::Button::new("Button")
             .variant(shadcn::ButtonVariant::Secondary)
             .into(),
-        shadcn::Separator::new()
-            .orientation(shadcn::SeparatorOrientation::Vertical)
-            .into(),
+        shadcn::ButtonGroupSeparator::new().into(),
         shadcn::Button::new("")
             .a11y_label("Add")
             .variant(shadcn::ButtonVariant::Secondary)
@@ -296,6 +305,19 @@ pub(in crate::ui) fn preview_button_group(cx: &mut ElementContext<'_, App>) -> V
     ])
     .into_element(cx)
     .test_id("ui-gallery-button-group-split");
+
+    let text = shadcn::ButtonGroup::new([
+        shadcn::ButtonGroupText::new("https://").into(),
+        shadcn::Input::new(url_value.clone())
+            .a11y_label("URL")
+            .placeholder("example")
+            .refine_layout(LayoutRefinement::default().w_px(Px(220.0)).min_w_0())
+            .into_element(cx)
+            .into(),
+        shadcn::ButtonGroupText::new(".com").into(),
+    ])
+    .into_element(cx)
+    .test_id("ui-gallery-button-group-text");
 
     let flex_1 = shadcn::ButtonGroup::new([
         shadcn::Button::new("Overview")
@@ -483,7 +505,7 @@ pub(in crate::ui) fn preview_button_group(cx: &mut ElementContext<'_, App>) -> V
         cx,
         [
             "Preview follows shadcn ButtonGroup demo (new-york-v4).",
-            "Fret currently uses `Separator` between group items; upstream also exposes `ButtonGroupSeparator` / `ButtonGroupText` variants.",
+            "Fret provides `ButtonGroupSeparator` / `ButtonGroupText` to match upstream docs recipes.",
         ],
     );
 
@@ -634,9 +656,7 @@ shadcn::ButtonGroup::new([digits.into(), nav.into()]).into_element(cx);"#,
                     "rust",
                     r#"shadcn::ButtonGroup::new([
     shadcn::Button::new("Copy").variant(shadcn::ButtonVariant::Secondary).into(),
-    shadcn::Separator::new()
-        .orientation(shadcn::SeparatorOrientation::Vertical)
-        .into(),
+    shadcn::ButtonGroupSeparator::new().into(),
     shadcn::Button::new("Paste").variant(shadcn::ButtonVariant::Secondary).into(),
 ])
 .into_element(cx);"#,
@@ -647,15 +667,28 @@ shadcn::ButtonGroup::new([digits.into(), nav.into()]).into_element(cx);"#,
                     "rust",
                     r#"shadcn::ButtonGroup::new([
     shadcn::Button::new("Button").variant(shadcn::ButtonVariant::Secondary).into(),
-    shadcn::Separator::new()
-        .orientation(shadcn::SeparatorOrientation::Vertical)
-        .into(),
+    shadcn::ButtonGroupSeparator::new().into(),
     shadcn::Button::new("")
         .a11y_label("Add")
         .variant(shadcn::ButtonVariant::Secondary)
         .size(shadcn::ButtonSize::Icon)
         .icon(fret_icons::IconId::new_static("lucide.plus"))
         .into(),
+])
+.into_element(cx);"#,
+                ),
+            DocSection::new("Text", text)
+                .test_id_prefix("ui-gallery-button-group-text")
+                .code(
+                    "rust",
+                    r#"shadcn::ButtonGroup::new([
+    shadcn::ButtonGroupText::new("https://").into(),
+    shadcn::Input::new(model)
+        .a11y_label("URL")
+        .placeholder("example")
+        .into_element(cx)
+        .into(),
+    shadcn::ButtonGroupText::new(".com").into(),
 ])
 .into_element(cx);"#,
                 ),
