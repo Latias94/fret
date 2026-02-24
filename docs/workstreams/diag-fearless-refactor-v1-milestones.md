@@ -67,13 +67,14 @@ Definition of done:
 ### M4: Plan 1 closure for AI loops (schema2-first)
 
 - [ ] Ensure “AI packet” is the default shareable artifact path for triage.
-- [ ] Ensure sidecars (`bundle.meta.json`, `bundle.index.json`, `test_ids.index.json`) are consistently available
+- [ ] Ensure sidecars (`bundle.meta.json`, `bundle.index.json`, `test_ids.index.json`, `frames.index.json`) are consistently available
   in pack/repro flows.
   - [x] Runtime writes canonical sidecars on native dumps.
   - [x] Runtime `bundle.index.json` includes a bounded `test_id` bloom (`test_id_bloom_hex`) on tail snapshots for fast `--test-id` triage.
   - [x] Runtime `bundle.index.json` includes bounded `semantics_blooms` keyed by `(window, semantics_fingerprint, semantics_source)` to support `--test-id` triage beyond the tail snapshots.
   - [x] Runtime `bundle.index.json` may include additive script step markers (`script.steps`) when `script.result.json` is present.
   - [x] `diag pack --include-all` includes sidecars under `_root/` (even when the bundle dir is relocated).
+  - [x] `diag repro` multi-pack includes the same sidecars under each script prefix’s `_root/`.
 
 Definition of done:
 
