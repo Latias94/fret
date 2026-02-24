@@ -6636,7 +6636,8 @@ fn check_out_dir_for_pixels_changed(
             continue;
         }
 
-        let bundle_json_path = out_dir.join(&bundle_dir_name).join("bundle.json");
+        let bundle_dir = out_dir.join(&bundle_dir_name);
+        let bundle_json_path = crate::resolve_bundle_artifact_path(&bundle_dir);
         if !bundle_json_path.is_file() {
             continue;
         }
