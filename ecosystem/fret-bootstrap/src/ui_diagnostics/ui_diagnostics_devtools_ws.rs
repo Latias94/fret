@@ -217,18 +217,18 @@ impl UiDiagnosticsService {
                 return false;
             }
 
-            let req = serde_json::json!({
-                "schema_version": 1,
-                "out_dir": self.cfg.out_dir.to_string_lossy(),
-                "bundle_dir_name": bundle_dir_name.clone(),
-                "request_id": pending.request_id_str.clone(),
-                "windows": [{
-                    "window": pending.window_ffi,
-                    "tick_id": app.tick_id().0,
-                    "frame_id": app.frame_id().0,
-                    "scale_factor": scale_factor as f64,
-                }]
-            });
+            let req = DiagScreenshotRequestV1 {
+                schema_version: 1,
+                out_dir: self.cfg.out_dir.to_string_lossy().to_string(),
+                bundle_dir_name: bundle_dir_name.clone(),
+                request_id: Some(pending.request_id_str.clone()),
+                windows: vec![DiagScreenshotWindowRequestV1 {
+                    window: pending.window_ffi,
+                    tick_id: app.tick_id().0,
+                    frame_id: app.frame_id().0,
+                    scale_factor: scale_factor as f64,
+                }],
+            };
 
             let write_ok = serde_json::to_vec_pretty(&req).ok().is_some_and(|bytes| {
                 if let Some(parent) = self.cfg.screenshot_request_path.parent() {

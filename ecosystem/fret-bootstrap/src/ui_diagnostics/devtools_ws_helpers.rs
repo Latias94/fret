@@ -1,3 +1,5 @@
+use fret_diag_protocol::DiagScreenshotResultFileV1;
+
 #[cfg(feature = "diagnostics-ws")]
 fn build_semantics_node_get_ack_v1(
     snapshot: Option<&fret_core::SemanticsSnapshot>,
@@ -69,15 +71,11 @@ fn screenshot_request_completed(path: &Path, request_id: &str, window_ffi: u64) 
     let Ok(bytes) = std::fs::read(path) else {
         return false;
     };
-    let Ok(root) = serde_json::from_slice::<serde_json::Value>(&bytes) else {
+    let Ok(root) = serde_json::from_slice::<DiagScreenshotResultFileV1>(&bytes) else {
         return false;
     };
-    let Some(completed) = root.get("completed").and_then(|v| v.as_array()) else {
-        return false;
-    };
-    completed.iter().any(|entry| {
-        entry.get("request_id").and_then(|v| v.as_str()) == Some(request_id)
-            && entry.get("window").and_then(|v| v.as_u64()) == Some(window_ffi)
+    root.completed.iter().any(|entry| {
+        entry.request_id.as_deref() == Some(request_id) && entry.window == window_ffi
     })
 }
 
@@ -88,13 +86,9 @@ fn read_screenshot_result_entry(
     window_ffi: u64,
 ) -> Option<serde_json::Value> {
     let bytes = std::fs::read(path).ok()?;
-    let root = serde_json::from_slice::<serde_json::Value>(&bytes).ok()?;
-    let completed = root.get("completed").and_then(|v| v.as_array())?;
-    completed
-        .iter()
-        .find(|entry| {
-            entry.get("request_id").and_then(|v| v.as_str()) == Some(request_id)
-                && entry.get("window").and_then(|v| v.as_u64()) == Some(window_ffi)
-        })
-        .cloned()
+    let root = serde_json::from_slice::<DiagScreenshotResultFileV1>(&bytes).ok()?;
+    let found = root.completed.iter().find(|entry| {
+        entry.request_id.as_deref() == Some(request_id) && entry.window == window_ffi
+    })?;
+    serde_json::to_value(found).ok()
 }

@@ -2,6 +2,10 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
+use fret_diag_protocol::{
+    DiagScreenshotRequestV1, DiagScreenshotResultEntryV1, DiagScreenshotResultFileV1,
+};
+
 #[derive(Debug, Clone)]
 struct PendingCapture {
     out_dir: PathBuf,
@@ -137,24 +141,32 @@ impl DiagScreenshotCapture {
             Err(_) => return,
         };
 
-        let req = match parse_request_json(&bytes) {
-            Ok(r) => r,
+        let req: DiagScreenshotRequestV1 = match serde_json::from_slice(&bytes) {
+            Ok(v) => v,
             Err(err) => {
                 tracing::warn!(error = %err, "diag screenshot: failed to parse request");
                 return;
             }
         };
+        if req.schema_version != 1 {
+            tracing::warn!(
+                schema_version = req.schema_version,
+                "diag screenshot: unsupported schema_version"
+            );
+            return;
+        }
 
+        let out_dir = PathBuf::from(&req.out_dir);
         for item in req.windows {
             self.pending_by_window_ffi.insert(
-                item.window_ffi,
+                item.window,
                 PendingCapture {
-                    out_dir: req.out_dir.clone(),
+                    out_dir: out_dir.clone(),
                     bundle_dir_name: req.bundle_dir_name.clone(),
                     request_id: req.request_id.clone(),
                     tick_id: item.tick_id,
                     frame_id: item.frame_id,
-                    scale_factor: item.scale_factor,
+                    scale_factor: item.scale_factor as f32,
                 },
             );
         }
@@ -340,85 +352,6 @@ impl DiagScreenshotCapture {
 }
 
 #[derive(Debug, Clone)]
-struct ParsedRequest {
-    out_dir: PathBuf,
-    bundle_dir_name: String,
-    request_id: Option<String>,
-    windows: Vec<ParsedWindowRequest>,
-}
-
-#[derive(Debug, Clone)]
-struct ParsedWindowRequest {
-    window_ffi: u64,
-    tick_id: u64,
-    frame_id: u64,
-    scale_factor: f32,
-}
-
-fn parse_request_json(bytes: &[u8]) -> Result<ParsedRequest, String> {
-    let v: serde_json::Value =
-        serde_json::from_slice(bytes).map_err(|e| format!("invalid json: {e}"))?;
-    let schema = v
-        .get("schema_version")
-        .and_then(|v| v.as_u64())
-        .ok_or_else(|| "missing schema_version".to_string())?;
-    if schema != 1 {
-        return Err(format!("unsupported schema_version: {schema}"));
-    }
-
-    let out_dir = v
-        .get("out_dir")
-        .and_then(|v| v.as_str())
-        .ok_or_else(|| "missing out_dir".to_string())?;
-    let bundle_dir_name = v
-        .get("bundle_dir_name")
-        .and_then(|v| v.as_str())
-        .ok_or_else(|| "missing bundle_dir_name".to_string())?;
-    let request_id = v
-        .get("request_id")
-        .and_then(|v| v.as_str())
-        .map(|s| s.to_string());
-    let windows = v
-        .get("windows")
-        .and_then(|v| v.as_array())
-        .ok_or_else(|| "missing windows".to_string())?;
-
-    let mut parsed_windows = Vec::new();
-    for w in windows {
-        let window_ffi = w
-            .get("window")
-            .and_then(|v| v.as_u64())
-            .ok_or_else(|| "windows[i].window missing".to_string())?;
-        let tick_id = w
-            .get("tick_id")
-            .and_then(|v| v.as_u64())
-            .ok_or_else(|| "windows[i].tick_id missing".to_string())?;
-        let frame_id = w
-            .get("frame_id")
-            .and_then(|v| v.as_u64())
-            .ok_or_else(|| "windows[i].frame_id missing".to_string())?;
-        let scale_factor = w
-            .get("scale_factor")
-            .and_then(|v| v.as_f64())
-            .unwrap_or(1.0) as f32;
-
-        parsed_windows.push(ParsedWindowRequest {
-            window_ffi,
-            tick_id,
-            frame_id,
-            scale_factor,
-        });
-    }
-
-    Ok(ParsedRequest {
-        out_dir: PathBuf::from(out_dir),
-        bundle_dir_name: bundle_dir_name.to_string(),
-        request_id,
-        windows: parsed_windows,
-    })
-}
-
-#[derive(Debug, Clone)]
 struct ManifestEntry {
     file_name: String,
     window_ffi: u64,
@@ -508,66 +441,46 @@ struct ResultEntry {
 }
 
 fn update_result(path: &Path, trigger_path: &Path, entry: ResultEntry) -> Result<(), String> {
-    let mut root: serde_json::Value = if path.is_file() {
+    let mut root: DiagScreenshotResultFileV1 = if path.is_file() {
         let bytes = std::fs::read(path).map_err(|e| e.to_string())?;
-        serde_json::from_slice(&bytes).unwrap_or_else(|_| serde_json::json!({}))
+        serde_json::from_slice(&bytes).unwrap_or_default()
     } else {
-        serde_json::json!({})
+        DiagScreenshotResultFileV1::default()
     };
 
-    if root
-        .get("schema_version")
-        .and_then(|v| v.as_u64())
-        .unwrap_or(1)
-        != 1
-    {
-        root = serde_json::json!({});
+    if root.schema_version != 1 {
+        root = DiagScreenshotResultFileV1::default();
     }
 
-    if !root.is_object() {
-        root = serde_json::json!({});
-    }
-
-    if root.get("schema_version").is_none() {
-        root["schema_version"] = serde_json::json!(1);
-    }
     let now_unix_ms = std::time::SystemTime::now()
         .duration_since(std::time::SystemTime::UNIX_EPOCH)
         .map(|d| d.as_millis() as u64)
         .unwrap_or_default();
-    root["updated_unix_ms"] = serde_json::json!(now_unix_ms);
-
-    if !root.get("completed").is_some_and(|v| v.is_array()) {
-        root["completed"] = serde_json::json!([]);
-    }
-    let completed = root
-        .get_mut("completed")
-        .and_then(|v| v.as_array_mut())
-        .ok_or_else(|| "diag screenshot: invalid result completed".to_string())?;
+    root.schema_version = 1;
+    root.updated_unix_ms = Some(now_unix_ms);
 
     if let Some(ref request_id) = entry.request_id {
-        completed.retain(|v| {
-            v.get("request_id").and_then(|x| x.as_str()) != Some(request_id.as_str())
-                || v.get("window").and_then(|x| x.as_u64()) != Some(entry.window_ffi)
+        root.completed.retain(|v| {
+            v.request_id.as_deref() != Some(request_id.as_str()) || v.window != entry.window_ffi
         });
     }
 
-    completed.push(serde_json::json!({
-        "request_id": entry.request_id,
-        "bundle_dir_name": entry.bundle_dir_name,
-        "window": entry.window_ffi,
-        "tick_id": entry.tick_id,
-        "frame_id": entry.frame_id,
-        "scale_factor": entry.scale_factor,
-        "file": entry.file,
-        "width_px": entry.width_px,
-        "height_px": entry.height_px,
-        "completed_unix_ms": now_unix_ms,
-    }));
+    root.completed.push(DiagScreenshotResultEntryV1 {
+        request_id: entry.request_id,
+        bundle_dir_name: entry.bundle_dir_name,
+        window: entry.window_ffi,
+        tick_id: entry.tick_id,
+        frame_id: entry.frame_id,
+        scale_factor: entry.scale_factor,
+        file: entry.file,
+        width_px: entry.width_px,
+        height_px: entry.height_px,
+        completed_unix_ms: now_unix_ms,
+    });
 
-    if completed.len() > 200 {
-        let drain = completed.len().saturating_sub(200);
-        completed.drain(0..drain);
+    if root.completed.len() > 200 {
+        let drain = root.completed.len().saturating_sub(200);
+        root.completed.drain(0..drain);
     }
 
     let bytes = serde_json::to_vec_pretty(&root).map_err(|e| e.to_string())?;

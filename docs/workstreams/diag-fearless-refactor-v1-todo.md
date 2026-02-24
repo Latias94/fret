@@ -138,7 +138,10 @@ This file tracks tasks for `docs/workstreams/diag-fearless-refactor-v1.md`.
     - `docs/workstreams/diag-fearless-refactor-v1.md`
   - [ ] Decide when to flip manual dump defaults to v2 (owner decision).
   - [ ] Decide deprecation messaging + migration recipes for older v1 repros.
-- [ ] Add one regression guard that prevents re-introducing forked protocol types in the runtime runner.
+- [x] Add one regression guard that prevents re-introducing forked protocol types in the runtime runner.
+  - Evidence: `crates/fret-diag-protocol/src/lib.rs` (`DiagScreenshotRequestV1` / `DiagScreenshotResultFileV1`),
+    `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps.rs` (request writer),
+    `crates/fret-launch/src/runner/desktop/runner/diag_screenshots.rs` (reader + result writer).
 - [x] Consolidate semantics traversal helpers in `crates/fret-diag/src/json_bundle.rs`:
   - [x] Treat explicit inline `null` semantics as "missing" (fall back to schema2 semantics table).
   - [x] Centralize semantics table presence scanning for in-place schema conversion.

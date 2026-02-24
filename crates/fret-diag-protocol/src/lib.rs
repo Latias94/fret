@@ -1572,6 +1572,69 @@ pub struct DevtoolsScreenshotResultV1 {
     pub entry: Option<serde_json::Value>,
 }
 
+/// GPU screenshot request written by the in-app diagnostics runtime, consumed by desktop runners.
+///
+/// This is the transport between:
+///
+/// - `ecosystem/fret-bootstrap` (writer; script steps + DevTools WS bridge), and
+/// - `crates/fret-launch` (reader; runner-owned GPU readback + PNG encoding).
+///
+/// Keeping this schema in `fret-diag-protocol` avoids "forked" JSON parsing logic across crates.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DiagScreenshotRequestV1 {
+    pub schema_version: u32,
+    pub out_dir: String,
+    pub bundle_dir_name: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub request_id: Option<String>,
+    #[serde(default)]
+    pub windows: Vec<DiagScreenshotWindowRequestV1>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DiagScreenshotWindowRequestV1 {
+    pub window: u64,
+    pub tick_id: u64,
+    pub frame_id: u64,
+    #[serde(default = "serde_default_one_f64")]
+    pub scale_factor: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DiagScreenshotResultFileV1 {
+    #[serde(default = "default_diag_screenshot_schema_version")]
+    pub schema_version: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub updated_unix_ms: Option<u64>,
+    #[serde(default)]
+    pub completed: Vec<DiagScreenshotResultEntryV1>,
+}
+
+impl Default for DiagScreenshotResultFileV1 {
+    fn default() -> Self {
+        Self {
+            schema_version: default_diag_screenshot_schema_version(),
+            updated_unix_ms: None,
+            completed: Vec::new(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DiagScreenshotResultEntryV1 {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub request_id: Option<String>,
+    pub bundle_dir_name: String,
+    pub window: u64,
+    pub tick_id: u64,
+    pub frame_id: u64,
+    pub scale_factor: f32,
+    pub file: String,
+    pub width_px: u32,
+    pub height_px: u32,
+    pub completed_unix_ms: u64,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiArtifactStatsV1 {
     pub schema_version: u32,
@@ -2220,6 +2283,14 @@ fn serde_default_true() -> bool {
     true
 }
 
+fn serde_default_one_f64() -> f64 {
+    1.0
+}
+
+fn default_diag_screenshot_schema_version() -> u32 {
+    1
+}
+
 fn is_zero_u64(v: &u64) -> bool {
     *v == 0
 }
@@ -2309,5 +2380,38 @@ mod tests {
             roundtrip,
             UiPredicateV1::BoundsCenterApproxEqual { .. }
         ));
+    }
+
+    #[test]
+    fn diag_screenshot_request_round_trips_and_defaults_scale_factor() {
+        let json = serde_json::json!({
+            "schema_version": 1,
+            "out_dir": "target/fret-diag",
+            "bundle_dir_name": "1700000-bundle",
+            "request_id": "req-1",
+            "windows": [{
+                "window": 123,
+                "tick_id": 1,
+                "frame_id": 2
+            }]
+        });
+        let parsed: DiagScreenshotRequestV1 = serde_json::from_value(json).unwrap();
+        assert_eq!(parsed.schema_version, 1);
+        assert_eq!(parsed.windows.len(), 1);
+        assert_eq!(parsed.windows[0].scale_factor, 1.0);
+
+        let value = serde_json::to_value(parsed).unwrap();
+        assert_eq!(value["schema_version"].as_u64(), Some(1));
+    }
+
+    #[test]
+    fn diag_screenshot_result_defaults_schema_version_to_1() {
+        let value = serde_json::json!({
+            "updated_unix_ms": 1700000,
+            "completed": [],
+        });
+        let parsed: DiagScreenshotResultFileV1 = serde_json::from_value(value).unwrap();
+        assert_eq!(parsed.schema_version, 1);
+        assert_eq!(DiagScreenshotResultFileV1::default().schema_version, 1);
     }
 }
