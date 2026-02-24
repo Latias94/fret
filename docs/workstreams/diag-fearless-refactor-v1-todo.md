@@ -122,6 +122,8 @@ This file tracks tasks for `docs/workstreams/diag-fearless-refactor-v1.md`.
 - [x] Add a convenience `--ai-packet` flag to generate `ai.packet/` alongside common workflows:
   - `diag run <script.json> --ai-packet` (writes `<bundle_dir>/ai.packet/`)
   - `diag pack <bundle_dir> --ai-packet` (best-effort ensure before zipping)
+- [ ] Add a bounded share zip mode that packs only AI artifacts (no full bundle artifact):
+  - `diag pack <bundle_dir> --ai-only` (packs `ai.packet/` + nearby script sources)
 - [ ] Decide how far to push schema2-first:
   - [ ] runtime dumps: when should `bundle.schema2.json` be emitted by default (vs tooling-derived only)?
   - [ ] compatibility: when is it acceptable to stop treating `bundle.json` as a required artifact?
