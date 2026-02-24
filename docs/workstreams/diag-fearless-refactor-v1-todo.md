@@ -184,3 +184,15 @@ This file tracks tasks for `docs/workstreams/diag-fearless-refactor-v1.md`.
 - [ ] Prototype manifest-first chunked bundle layout (snapshots/logs/semantics split).
 - [ ] Add a compatibility materializer to emit `bundle.json` from the manifest.
 - [ ] Add packing/hashing conventions and a `diag pack` integration path.
+
+## Debt removal (remove the baggage)
+
+Keep this section aligned with:
+
+- `docs/workstreams/diag-fearless-refactor-v1/debt-removal.md`
+- `docs/workstreams/diag-fearless-refactor-v1/redundancy-removal-checklist.md`
+
+- [ ] Start removing medium-risk compatibility outputs (after a deprecation window):
+  - stop writing legacy JSON alias keys (keep reading them longer),
+  - reduce flag alias sprawl where it hurts discoverability.
+- [ ] Decide the “raw bundle.json optional” policy for scripted runs (high risk; requires exit criteria).

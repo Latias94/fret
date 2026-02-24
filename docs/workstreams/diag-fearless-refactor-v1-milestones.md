@@ -114,3 +114,14 @@ Definition of done:
 Definition of done:
 
 - At least one workflow produces a manifest bundle and can materialize `bundle.json` on demand.
+
+### M6: Debt removal kickoff (risk-tiered)
+
+- [ ] Maintain a risk-tiered checklist and land low-risk removals continuously.
+  - Checklist: `docs/workstreams/diag-fearless-refactor-v1/redundancy-removal-checklist.md`
+  - Debt policy: `docs/workstreams/diag-fearless-refactor-v1/debt-removal.md`
+
+Definition of done:
+
+- Low-risk redundancy removals are mostly complete (no duplicated “latest bundle” / “ai.packet ensure” logic scattered around).
+- Medium-risk removals have explicit deprecation windows and exit criteria (documented).

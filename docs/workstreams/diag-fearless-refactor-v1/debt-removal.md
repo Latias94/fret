@@ -99,6 +99,8 @@ Evidence anchors:
 This list stays intentionally short and actionable. When a compatibility layer is removed, add the
 commit hash + evidence anchor(s) here.
 
+- See also: `docs/workstreams/diag-fearless-refactor-v1/redundancy-removal-checklist.md` (risk-tiered removal plan).
+
 - Legacy schema-v1-only traversal helpers in tooling once all in-tree dumps default to schema v2.
 - Remaining `bundle.json`-only assumptions in CLI tooling once the bundle-artifact sweep is complete
   (error messages, help text, and path resolution should accept `<bundle_dir|bundle.json|bundle.schema2.json>`).
