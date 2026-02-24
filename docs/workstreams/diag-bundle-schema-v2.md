@@ -97,4 +97,4 @@ See:
 Operational notes:
 
 - `bundle.meta.json` now includes semantics table metrics (inline vs table-resolved counts, table entries, unique keys).
-- Use `cargo run -p fretboard -- diag meta <bundle_dir|bundle.json> --meta-report` to print a compact human summary.
+- Use `cargo run -p fretboard -- diag meta <bundle_dir|bundle.json|bundle.schema2.json> --meta-report` to print a compact human summary.

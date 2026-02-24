@@ -73,7 +73,7 @@ If you enable `fret_render_wgpu=trace`, you should also see renderer internals n
 - Pipeline creation misses (only when a pipeline is created / rebuilt):
   - `fret.renderer.pipeline.create.*` (e.g. `quad`, `text`, `path_msaa`, `blur`, `composite`)
 
-## Correlating Tracy with `diag perf` / `bundle.json`
+## Correlating Tracy with `diag perf` / bundle artifacts
 
 Recommended workflow:
 
