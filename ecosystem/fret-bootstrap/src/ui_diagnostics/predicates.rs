@@ -281,6 +281,34 @@ fn eval_predicate(
             };
             node.role == want
         }
+        UiPredicateV1::LabelContains { target, text } => {
+            let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
+            else {
+                return false;
+            };
+            node.label.as_deref().is_some_and(|label| label.contains(text))
+        }
+        UiPredicateV1::ValueContains { target, text } => {
+            let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
+            else {
+                return false;
+            };
+            node.value.as_deref().is_some_and(|value| value.contains(text))
+        }
+        UiPredicateV1::PosInSetIs { target, pos_in_set } => {
+            let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
+            else {
+                return false;
+            };
+            node.pos_in_set == Some(*pos_in_set)
+        }
+        UiPredicateV1::SetSizeIs { target, set_size } => {
+            let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
+            else {
+                return false;
+            };
+            node.set_size == Some(*set_size)
+        }
         UiPredicateV1::CheckedIs { target, checked } => {
             let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
             else {
