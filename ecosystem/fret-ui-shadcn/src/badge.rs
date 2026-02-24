@@ -356,7 +356,7 @@ fn badge_with_patch<H: UiHost>(
         .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
     let content_children = move |cx: &mut ElementContext<'_, H>| {
-        current_color::with_current_color_provider(cx, ColorRef::Color(fg), |cx| {
+        current_color::scope_children(cx, ColorRef::Color(fg), |cx| {
             let label = ui::text(cx, label_for_content.clone())
                 .text_size_px(text_px)
                 .fixed_line_box_px(line_height)

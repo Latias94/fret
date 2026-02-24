@@ -694,22 +694,6 @@ impl ContextMenuRadioItem {
     }
 }
 
-fn flatten_entries(into: &mut Vec<ContextMenuEntry>, entries: Vec<ContextMenuEntry>) {
-    for entry in entries {
-        match entry {
-            ContextMenuEntry::Group(group) => flatten_entries(into, group.entries),
-            ContextMenuEntry::RadioGroup(group) => {
-                for item in group.items {
-                    into.push(ContextMenuEntry::RadioItem(
-                        item.into_item(group.value.clone()),
-                    ));
-                }
-            }
-            other => into.push(other),
-        }
-    }
-}
-
 fn estimated_menu_panel_height_for_entries(
     entries: &[ContextMenuEntry],
     row_height: Px,
@@ -1994,7 +1978,7 @@ fn menu_row_children<H: UiHost>(
                     + usize::from(submenu),
             );
 
-            current_color::with_current_color_provider(cx, ColorRef::Color(effective_fg), |cx| {
+            current_color::scope_children(cx, ColorRef::Color(effective_fg), |cx| {
                 if let Some(is_on) = indicator_on {
                     let indicator_fg = effective_fg;
                     row.push(cx.flex(

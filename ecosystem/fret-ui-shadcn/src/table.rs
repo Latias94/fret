@@ -376,7 +376,7 @@ fn assign_grid_column_starts<I>(cells: I) -> Elements
 where
     I: IntoIterator<Item = AnyElement>,
 {
-    let mut cells: Vec<AnyElement> = cells.into_iter().collect();
+    let cells: Vec<AnyElement> = cells.into_iter().collect();
 
     fn grid_span(cell: &AnyElement) -> u16 {
         match &cell.kind {

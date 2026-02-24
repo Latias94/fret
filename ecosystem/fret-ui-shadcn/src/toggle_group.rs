@@ -823,42 +823,36 @@ impl ToggleGroup {
                             }));
 
                             let content = move |cx: &mut ElementContext<'_, H>| {
-                                current_color::with_current_color_provider(
-                                    cx,
-                                    fg_ref.clone(),
-                                    |cx| {
-                                        let mut content_children: Vec<AnyElement> =
-                                            Vec::with_capacity(styled_children.len() + 2);
-                                        if let Some(icon) = leading_icon.clone() {
-                                            content_children.push(decl_icon::icon(cx, icon));
-                                        }
-                                        content_children.extend(styled_children);
-                                        if let Some(icon) = trailing_icon.clone() {
-                                            content_children.push(decl_icon::icon(cx, icon));
-                                        }
+                                current_color::scope_children(cx, fg_ref.clone(), |cx| {
+                                    let mut content_children: Vec<AnyElement> =
+                                        Vec::with_capacity(styled_children.len() + 2);
+                                    if let Some(icon) = leading_icon.clone() {
+                                        content_children.push(decl_icon::icon(cx, icon));
+                                    }
+                                    content_children.extend(styled_children);
+                                    if let Some(icon) = trailing_icon.clone() {
+                                        content_children.push(decl_icon::icon(cx, icon));
+                                    }
 
-                                        vec![cx.flex(
-                                            FlexProps {
-                                                layout: {
-                                                    let mut layout =
-                                                        fret_ui::element::LayoutStyle::default();
-                                                    layout.size.width =
-                                                        fret_ui::element::Length::Fill;
-                                                    layout.size.height =
-                                                        fret_ui::element::Length::Fill;
-                                                    layout
-                                                },
-                                                direction: fret_core::Axis::Horizontal,
-                                                gap: inner_gap,
-                                                padding: Edges::all(Px(0.0)),
-                                                justify: MainAlign::Center,
-                                                align: CrossAlign::Center,
-                                                wrap: false,
+                                    vec![cx.flex(
+                                        FlexProps {
+                                            layout: {
+                                                let mut layout =
+                                                    fret_ui::element::LayoutStyle::default();
+                                                layout.size.width = fret_ui::element::Length::Fill;
+                                                layout.size.height = fret_ui::element::Length::Fill;
+                                                layout
                                             },
-                                            move |_cx| content_children,
-                                        )]
-                                    },
-                                )
+                                            direction: fret_core::Axis::Horizontal,
+                                            gap: inner_gap,
+                                            padding: Edges::all(Px(0.0)),
+                                            justify: MainAlign::Center,
+                                            align: CrossAlign::Center,
+                                            wrap: false,
+                                        },
+                                        move |_cx| content_children,
+                                    )]
+                                })
                             };
 
                             (

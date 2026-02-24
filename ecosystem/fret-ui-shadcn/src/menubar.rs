@@ -1509,7 +1509,7 @@ impl MenubarMenuEntries {
 
                         let mut flat: Vec<MenubarEntry> = Vec::new();
                         flatten_entries(&mut flat, entries);
-                        let mut entries: Vec<MenubarEntry> = flat;
+                        let entries: Vec<MenubarEntry> = flat;
 
                         let pad_y = MetricRef::space(Space::N1p5).resolve(&theme);
                         let pad_x = MetricRef::space(Space::N2).resolve(&theme);

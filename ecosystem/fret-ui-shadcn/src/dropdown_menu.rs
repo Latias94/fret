@@ -969,7 +969,7 @@ fn checkable_menu_row_children<H: UiHost>(
             ..Default::default()
         },
         move |cx| {
-            current_color::with_current_color_provider(cx, ColorRef::Color(effective_fg), |cx| {
+            current_color::scope_children(cx, ColorRef::Color(effective_fg), |cx| {
                 let indicator = cx.container(
                     ContainerProps {
                         layout: LayoutStyle {
@@ -2533,7 +2533,7 @@ impl DropdownMenu {
                                                                         let mut trailing = trailing;
                                                                         let leading_icon = leading_icon;
 
-                                                                        current_color::with_current_color_provider(
+                                                                        current_color::scope_children(
                                                                             cx,
                                                                             ColorRef::Color(effective_fg),
                                                                             |cx| {

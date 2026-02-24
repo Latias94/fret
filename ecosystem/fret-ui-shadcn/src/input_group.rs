@@ -1170,77 +1170,73 @@ impl InputGroupButton {
                 };
 
                 let content = move |cx: &mut ElementContext<'_, H>| {
-                    current_color::with_current_color_provider(
-                        cx,
-                        fret_ui_kit::ColorRef::Color(fg),
-                        |cx| {
-                            let icon_px = Px(16.0);
+                    current_color::scope_children(cx, fret_ui_kit::ColorRef::Color(fg), |cx| {
+                        let icon_px = Px(16.0);
 
-                            let mut row = Vec::new();
-                            if let Some(icon) = icon {
+                        let mut row = Vec::new();
+                        if let Some(icon) = icon {
+                            row.push(decl_icon::icon_with(cx, icon, Some(icon_px), None));
+                        } else {
+                            if let Some(icon) = leading_icon {
                                 row.push(decl_icon::icon_with(cx, icon, Some(icon_px), None));
-                            } else {
-                                if let Some(icon) = leading_icon {
-                                    row.push(decl_icon::icon_with(cx, icon, Some(icon_px), None));
-                                }
-
-                                if !label.is_empty() {
-                                    let mut style = typography::fixed_line_box_style(
-                                        FontId::ui(),
-                                        text_px,
-                                        line_height,
-                                    );
-                                    style.weight = FontWeight::MEDIUM;
-                                    row.push(cx.text_props(TextProps {
-                                        layout: LayoutStyle {
-                                            size: fret_ui::element::SizeStyle {
-                                                width: Length::Auto,
-                                                height: Length::Px(line_height),
-                                                ..Default::default()
-                                            },
-                                            ..Default::default()
-                                        },
-                                        text: label,
-                                        style: Some(style),
-                                        color: Some(fg),
-                                        wrap: TextWrap::None,
-                                        overflow: TextOverflow::Clip,
-                                        align: fret_core::TextAlign::Start,
-                                        ink_overflow: Default::default(),
-                                    }));
-                                }
-                                row.extend(children);
-
-                                if let Some(icon) = trailing_icon {
-                                    row.push(decl_icon::icon_with(cx, icon, Some(icon_px), None));
-                                }
                             }
 
-                            vec![cx.flex(
-                                FlexProps {
+                            if !label.is_empty() {
+                                let mut style = typography::fixed_line_box_style(
+                                    FontId::ui(),
+                                    text_px,
+                                    line_height,
+                                );
+                                style.weight = FontWeight::MEDIUM;
+                                row.push(cx.text_props(TextProps {
                                     layout: LayoutStyle {
                                         size: fret_ui::element::SizeStyle {
-                                            width: if fill_content_width {
-                                                Length::Fill
-                                            } else {
-                                                Length::Auto
-                                            },
-                                            height: Length::Fill,
+                                            width: Length::Auto,
+                                            height: Length::Px(line_height),
                                             ..Default::default()
                                         },
                                         ..Default::default()
                                     },
-                                    direction: Axis::Horizontal,
-                                    gap,
-                                    padding: Edges::all(Px(0.0)),
-                                    justify: fret_ui::element::MainAlign::Center,
-                                    align: fret_ui::element::CrossAlign::Center,
-                                    wrap: false,
+                                    text: label,
+                                    style: Some(style),
+                                    color: Some(fg),
+                                    wrap: TextWrap::None,
+                                    overflow: TextOverflow::Clip,
+                                    align: fret_core::TextAlign::Start,
+                                    ink_overflow: Default::default(),
+                                }));
+                            }
+                            row.extend(children);
+
+                            if let Some(icon) = trailing_icon {
+                                row.push(decl_icon::icon_with(cx, icon, Some(icon_px), None));
+                            }
+                        }
+
+                        vec![cx.flex(
+                            FlexProps {
+                                layout: LayoutStyle {
+                                    size: fret_ui::element::SizeStyle {
+                                        width: if fill_content_width {
+                                            Length::Fill
+                                        } else {
+                                            Length::Auto
+                                        },
+                                        height: Length::Fill,
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
                                 },
-                                move |_cx| row,
-                            )]
-                        },
-                    )
+                                direction: Axis::Horizontal,
+                                gap,
+                                padding: Edges::all(Px(0.0)),
+                                justify: fret_ui::element::MainAlign::Center,
+                                align: fret_ui::element::CrossAlign::Center,
+                                wrap: false,
+                            },
+                            move |_cx| row,
+                        )]
+                    })
                 };
 
                 (pressable_props, chrome_props, content)

@@ -1651,7 +1651,7 @@ impl CommandList {
                                             let child = cx.container(props, move |cx| {
                                                 let effective_fg =
                                                     if enabled { fg } else { fg_disabled };
-                                                current_color::with_current_color_provider(
+                                                current_color::scope_children(
                                                     cx,
                                                     ColorRef::Color(effective_fg),
                                                     |cx| {
@@ -2828,7 +2828,7 @@ impl CommandPalette {
 
                                     let child = cx.container(props, move |cx| {
                                         let effective_fg = if enabled { fg } else { fg_disabled };
-                                        current_color::with_current_color_provider(
+                                        current_color::scope_children(
                                             cx,
                                             ColorRef::Color(effective_fg),
                                             |cx| {

@@ -767,7 +767,7 @@ impl Button {
                 };
 
                 let content_children = move |cx: &mut ElementContext<'_, H>| {
-                    current_color::with_current_color_provider(cx, fg.clone(), |cx| {
+                    current_color::scope_children(cx, fg.clone(), |cx| {
                         let gap = if is_icon {
                             Space::N0
                         } else {
