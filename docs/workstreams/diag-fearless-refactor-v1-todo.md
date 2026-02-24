@@ -106,6 +106,7 @@ This file tracks tasks for `docs/workstreams/diag-fearless-refactor-v1.md`.
   - [x] Rename internal helpers away from `*_bundle_json_*` naming:
     - `crates/fret-diag/src/paths.rs` (`resolve_bundle_artifact_path`, `wait_for_bundle_artifact_*`)
   - [x] Ensure `diag doctor` distinguishes raw `bundle.json` from the resolved bundle artifact in `doctor.json`.
+  - [x] Add bundle-artifact aliases to `repro.summary.json` (keep older `*_bundle_json` keys for compatibility).
 - [ ] Decide how far to push schema2-first:
   - [ ] runtime dumps: when should `bundle.schema2.json` be emitted by default (vs tooling-derived only)?
   - [ ] compatibility: when is it acceptable to stop treating `bundle.json` as a required artifact?
