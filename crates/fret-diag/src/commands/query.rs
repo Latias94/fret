@@ -430,6 +430,124 @@ fn cmd_query_snapshots(
         bloom_might_contain: Option<bool>,
     }
 
+    fn best_effort_verify_semantics_in_bundle_index(
+        index_path: &Path,
+        warmup_frames: u64,
+        rows: &[SnapRow],
+    ) -> Vec<String> {
+        // Keep this cheap and safe: avoid opening very large bundles, and cap the number of verified
+        // snapshots. The query command should stay sidecar-first.
+        const MAX_VERIFY_BUNDLE_BYTES: u64 = 64 * 1024 * 1024;
+        const MAX_VERIFY_ROWS: usize = 10;
+
+        let Some(bundle_path) = sidecars::adjacent_bundle_path_for_sidecar(index_path) else {
+            return vec![format!(
+                "skipped semantics verification: no adjacent bundle artifact found for index: {}",
+                index_path.display()
+            )];
+        };
+
+        let bundle_bytes = std::fs::metadata(&bundle_path)
+            .map(|m| m.len())
+            .unwrap_or(0);
+        if bundle_bytes > MAX_VERIFY_BUNDLE_BYTES {
+            return vec![format!(
+                "skipped semantics verification: bundle artifact is large (bytes={} > {})\n  bundle: {}",
+                bundle_bytes,
+                MAX_VERIFY_BUNDLE_BYTES,
+                bundle_path.display()
+            )];
+        }
+
+        let bytes = match std::fs::read(&bundle_path) {
+            Ok(v) => v,
+            Err(err) => {
+                return vec![format!(
+                    "skipped semantics verification: failed to read bundle artifact: {err}\n  bundle: {}",
+                    bundle_path.display()
+                )];
+            }
+        };
+        let bundle: serde_json::Value = match serde_json::from_slice(&bytes) {
+            Ok(v) => v,
+            Err(err) => {
+                return vec![format!(
+                    "skipped semantics verification: failed to parse bundle artifact: {err}\n  bundle: {}",
+                    bundle_path.display()
+                )];
+            }
+        };
+
+        let semantics = crate::json_bundle::SemanticsResolver::new(&bundle);
+
+        let windows = bundle
+            .get("windows")
+            .and_then(|v| v.as_array())
+            .map(|v| v.as_slice())
+            .unwrap_or(&[]);
+
+        let mut warnings: Vec<String> = Vec::new();
+        for r in rows.iter().take(MAX_VERIFY_ROWS) {
+            let Some(window_obj) = windows.iter().find(|w| {
+                w.get("window")
+                    .and_then(|v| v.as_u64())
+                    .is_some_and(|w| w == r.window)
+            }) else {
+                continue;
+            };
+            let snaps = window_obj
+                .get("snapshots")
+                .and_then(|v| v.as_array())
+                .map(|v| v.as_slice())
+                .unwrap_or(&[]);
+
+            let snap = if let Some(seq) = r.window_snapshot_seq {
+                snaps
+                    .iter()
+                    .find(|s| crate::json_bundle::snapshot_window_snapshot_seq(s) == Some(seq))
+            } else if let Some(fid) = r.frame_id {
+                snaps
+                    .iter()
+                    .find(|s| crate::json_bundle::snapshot_frame_id(s) == fid)
+            } else {
+                None
+            };
+            let Some(snap) = snap else {
+                continue;
+            };
+
+            let actual_has_semantics = semantics.nodes(snap).is_some();
+            let actual_source = if crate::json_bundle::snapshot_semantics_nodes(snap).is_some() {
+                Some("inline")
+            } else if actual_has_semantics {
+                Some("table")
+            } else {
+                Some("none")
+            };
+
+            let index_source = r.semantics_source.as_deref().unwrap_or("unknown");
+            if r.has_semantics != actual_has_semantics
+                || index_source != actual_source.unwrap_or("")
+            {
+                warnings.push(format!(
+                    "bundle.index.json semantics mismatch for window={} frame_id={:?} snapshot_seq={:?} (warmup_frames={warmup_frames})\n  index: has_semantics={} semantics_source={}\n  bundle: has_semantics={} semantics_source={}\n  hint: regenerate sidecars via `fretboard diag index <bundle_dir|bundle.json|bundle.schema2.json> --warmup-frames {warmup_frames}`",
+                    r.window,
+                    r.frame_id,
+                    r.window_snapshot_seq,
+                    r.has_semantics,
+                    index_source,
+                    actual_has_semantics,
+                    actual_source.unwrap_or("unknown"),
+                ));
+            }
+            if warnings.len() >= 5 {
+                break;
+            }
+        }
+
+        warnings
+    }
+
     let windows = index
         .get("windows")
         .and_then(|v| v.as_array())
@@ -590,12 +708,19 @@ fn cmd_query_snapshots(
         rows.truncate(top);
     }
 
+    let warnings = if stats_json {
+        best_effort_verify_semantics_in_bundle_index(&index_path, warmup_frames, &rows)
+    } else {
+        Vec::new()
+    };
+
     let payload = serde_json::json!({
         "schema_version": 1,
         "kind": "query.snapshots",
         "bundle": bundle_label,
         "index": index_path.display().to_string(),
         "warmup_frames": warmup_frames,
+        "warnings": warnings,
         "top": top,
         "window": window_id,
         "non_warmup_only": non_warmup_only,

@@ -913,9 +913,19 @@ pub(super) fn try_build_test_id_slice_payload_streaming_table(
 
     let nodes = stream_read_semantics_table_nodes(bundle_path, found_snapshot.window, expected_fp)?;
     let Some(nodes) = nodes else {
+        let bundle_dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
         return Err(format!(
-            "bundle semantics_source=table but no matching semantics table entry found (window={} semantics_fingerprint={expected_fp})",
-            found_snapshot.window
+            "bundle.index.json indicates semantics_source=table, but the bundle artifact has no matching semantics table entry \
+(window={} semantics_fingerprint={expected_fp}).\n\
+  bundle: {}\n\
+  hint: try regenerating schema2 and sidecars:\n\
+    - fretboard diag doctor --fix-schema2 {} --warmup-frames {warmup_frames}\n\
+    - fretboard diag index {} --warmup-frames {warmup_frames}\n\
+  if this came from a share zip, re-extract/re-capture to ensure the schema2 bundle includes tables.semantics.entries.",
+            found_snapshot.window,
+            bundle_path.display(),
+            bundle_dir.display(),
+            bundle_dir.display(),
         ));
     };
 
