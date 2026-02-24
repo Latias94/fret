@@ -39,6 +39,7 @@ impl UiPressedStateV1 {
             fret_core::SemanticsPressedState::False => Self::False,
             fret_core::SemanticsPressedState::True => Self::True,
             fret_core::SemanticsPressedState::Mixed => Self::Mixed,
+            _ => Self::Mixed,
         }
     }
 }
@@ -57,6 +58,7 @@ impl UiInvalidV1 {
             fret_core::SemanticsInvalid::True => Self::True,
             fret_core::SemanticsInvalid::Grammar => Self::Grammar,
             fret_core::SemanticsInvalid::Spelling => Self::Spelling,
+            _ => Self::True,
         }
     }
 }

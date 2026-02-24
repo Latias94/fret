@@ -7471,6 +7471,7 @@ fn semantics_fingerprint_v1(
                     fret_core::SemanticsPressedState::False => 0,
                     fret_core::SemanticsPressedState::True => 1,
                     fret_core::SemanticsPressedState::Mixed => 2,
+                    _ => 255,
                 });
             }
         }
@@ -7483,6 +7484,7 @@ fn semantics_fingerprint_v1(
                     fret_core::SemanticsInvalid::True => 0,
                     fret_core::SemanticsInvalid::Grammar => 1,
                     fret_core::SemanticsInvalid::Spelling => 2,
+                    _ => 255,
                 });
             }
         }
