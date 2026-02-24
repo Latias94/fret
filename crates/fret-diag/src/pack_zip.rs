@@ -891,4 +891,84 @@ mod tests {
             );
         }
     }
+
+    #[test]
+    fn pack_ai_packet_dir_to_zip_packs_only_bounded_ai_artifacts() {
+        let root = unique_temp_root("fret-diag-pack-ai-only");
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).expect("create temp root");
+
+        let bundle_dir = root.join("bundle");
+        let packet_dir = bundle_dir.join("ai.packet");
+        std::fs::create_dir_all(&packet_dir).expect("create ai.packet dir");
+        std::fs::write(
+            packet_dir.join("bundle.meta.json"),
+            "{\"schema_version\":1}",
+        )
+        .expect("write bundle.meta.json");
+        std::fs::write(packet_dir.join("doctor.json"), "{\"schema_version\":1}")
+            .expect("write doctor.json");
+        std::fs::write(bundle_dir.join("bundle.json"), "{\"schema_version\":2}")
+            .expect("write raw bundle.json");
+        std::fs::write(
+            bundle_dir.join("bundle.schema2.json"),
+            "{\"schema_version\":2}",
+        )
+        .expect("write bundle.schema2.json");
+
+        let artifacts_root = root.join("artifacts");
+        std::fs::create_dir_all(&artifacts_root).expect("create artifacts root");
+        std::fs::write(
+            artifacts_root.join("repro.summary.json"),
+            "{\"schema_version\":1}",
+        )
+        .expect("write repro.summary.json");
+        std::fs::write(
+            artifacts_root.join("script.json"),
+            "{\"schema_version\":1,\"steps\":[]}",
+        )
+        .expect("write script.json");
+
+        let out_path = root.join("ai.zip");
+        pack_ai_packet_dir_to_zip(&bundle_dir, &out_path, &artifacts_root)
+            .expect("pack ai-only zip");
+
+        let f = std::fs::File::open(out_path).expect("open out zip");
+        let mut zip = zip::ZipArchive::new(f).expect("open zip archive");
+        let names: Vec<String> = (0..zip.len())
+            .map(|i| zip.by_index(i).expect("zip entry").name().to_string())
+            .collect();
+
+        assert!(
+            names
+                .iter()
+                .any(|n| n.ends_with("/_root/ai.packet/bundle.meta.json")),
+            "expected ai.packet/bundle.meta.json in zip"
+        );
+        assert!(
+            names
+                .iter()
+                .any(|n| n.ends_with("/_root/ai.packet/doctor.json")),
+            "expected ai.packet/doctor.json in zip"
+        );
+        assert!(
+            names
+                .iter()
+                .any(|n| n.ends_with("/_root/repro.summary.json")),
+            "expected repro.summary.json in zip"
+        );
+        assert!(
+            names.iter().any(|n| n.ends_with("/_root/script.json")),
+            "expected script.json in zip"
+        );
+
+        assert!(
+            !names.iter().any(|n| n.ends_with("/bundle.json")),
+            "ai-only zip must not include bundle.json"
+        );
+        assert!(
+            !names.iter().any(|n| n.ends_with("/bundle.schema2.json")),
+            "ai-only zip must not include bundle.schema2.json"
+        );
+    }
 }
