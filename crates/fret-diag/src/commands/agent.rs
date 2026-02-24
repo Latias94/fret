@@ -111,8 +111,13 @@ pub(crate) fn cmd_agent(
             },
             {
                 "id": "pack_schema2_only_optional",
+                "command": format!("fretboard diag pack {} --ai-only --warmup-frames {}", bundle_dir.display(), warmup_frames),
+                "why": "Optional: pack a bounded shareable zip for AI triage (ai.packet only; avoids shipping full bundle artifacts).",
+            },
+            {
+                "id": "pack_schema2_only_compat_optional",
                 "command": format!("fretboard diag pack {} --include-all --pack-schema2-only --warmup-frames {}", bundle_dir.display(), warmup_frames),
-                "why": "Optional: pack a small shareable zip (schema2-only; avoids shipping a huge bundle artifact).",
+                "why": "Optional (compat): pack a schema2-only zip that still includes the bundle artifact (useful for offline viewer workflows).",
             },
             {
                 "id": "triage_lite_total",

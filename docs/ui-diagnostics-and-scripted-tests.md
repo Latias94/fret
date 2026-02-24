@@ -212,6 +212,8 @@ Prefer sharing **bounded artifacts** over the full `bundle.json` (especially in 
     - `cargo run -p fretboard -- diag pack <bundle_dir> --ai-only`
   - For a multi-script repro run, pack a bounded `repro.ai.zip`:
     - `cargo run -p fretboard -- diag repro <suite|script.json...> --ai-only`
+  - Agent plan JSON (includes recommended bounded commands like `diag pack --ai-only`):
+    - `cargo run -p fretboard -- diag agent <bundle_dir|bundle.json|bundle.schema2.json>`
 - Focus on a specific target when possible (writes a bounded `slice.*.json` alongside the packet):
   - `cargo run -p fretboard -- diag ai-packet <bundle_dir|bundle.json|bundle.schema2.json> --test-id <test_id> --packet-out <dir>`
 - If you only need a semantics-focused subset, slice directly:
