@@ -6,12 +6,9 @@ pub(super) fn state_rows(
     query: &Model<String>,
     test_id_prefix: &'static str,
 ) -> AnyElement {
-    let selected = cx
-        .app
-        .models()
-        .read(value, |v| v.clone())
-        .ok()
-        .flatten()
+    let selected: Arc<str> = cx
+        .get_model_cloned(value, Invalidation::Layout)
+        .unwrap_or_default()
         .unwrap_or_else(|| Arc::<str>::from("<none>"));
     let query_text = cx
         .get_model_cloned(query, Invalidation::Layout)
@@ -22,7 +19,7 @@ pub(super) fn state_rows(
         stack::VStackProps::default()
             .gap(Space::N1)
             .items_start()
-            .layout(LayoutRefinement::default().w_full()),
+            .layout(LayoutRefinement::default().w_full().min_w_0()),
         |cx| {
             vec![
                 shadcn::typography::muted(cx, format!("Selected: {selected}"))
