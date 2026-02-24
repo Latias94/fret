@@ -170,7 +170,7 @@ pub(crate) fn run_doctor_for_bundle_dir(
     }
 
     if opts.fix_bundle_json {
-        if resolve_bundle_artifact_path_no_materialize(&bundle_dir).is_none() {
+        if crate::resolve_bundle_artifact_path_no_materialize(&bundle_dir).is_none() {
             let attempts = [bundle_dir.clone(), bundle_dir.join("_root")];
             for dir in &attempts {
                 match crate::run_artifacts::materialize_bundle_json_from_manifest_chunks_if_missing(
@@ -237,7 +237,8 @@ pub(crate) fn run_doctor_for_bundle_dir(
     }
 
     if opts.fix_sidecars {
-        let bundle_json = resolve_bundle_artifact_path_no_materialize(&bundle_dir).ok_or_else(|| {
+        let bundle_json =
+            crate::resolve_bundle_artifact_path_no_materialize(&bundle_dir).ok_or_else(|| {
             "unable to regenerate sidecars: missing bundle.json or bundle.schema2.json (tip: re-run with --fix-bundle-json, or provide a bundle dir that contains one of those files)".to_string()
         })?;
         let _ = crate::bundle_index::ensure_bundle_meta_json(&bundle_json, warmup_frames)
@@ -660,26 +661,6 @@ fn doctor_items(bundle_dir: &Path, warmup_frames: u64) -> (Vec<DoctorItem>, bool
     (items, required_ok, ok)
 }
 
-fn resolve_bundle_artifact_path_no_materialize(bundle_dir: &Path) -> Option<PathBuf> {
-    let direct_v2 = bundle_dir.join("bundle.schema2.json");
-    if direct_v2.is_file() {
-        return Some(direct_v2);
-    }
-    let direct = bundle_dir.join("bundle.json");
-    if direct.is_file() {
-        return Some(direct);
-    }
-    let root_v2 = bundle_dir.join("_root").join("bundle.schema2.json");
-    if root_v2.is_file() {
-        return Some(root_v2);
-    }
-    let root = bundle_dir.join("_root").join("bundle.json");
-    if root.is_file() {
-        return Some(root);
-    }
-    None
-}
-
 fn resolve_raw_bundle_json_path_no_materialize(bundle_dir: &Path) -> Option<PathBuf> {
     let direct = bundle_dir.join("bundle.json");
     if direct.is_file() {
@@ -852,7 +833,7 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
     let bundle_dir = normalized.as_path();
 
     let (items, required_ok, ok) = doctor_items(bundle_dir, warmup_frames);
-    let bundle_json = resolve_bundle_artifact_path_no_materialize(bundle_dir);
+    let bundle_json = crate::resolve_bundle_artifact_path_no_materialize(bundle_dir);
     let bundle_json_bytes = bundle_json.as_deref().and_then(file_bytes);
     let schema2_exists = resolve_bundle_schema2_path_no_materialize(bundle_dir).is_some();
     let bundle_is_raw_bundle_json = bundle_json
