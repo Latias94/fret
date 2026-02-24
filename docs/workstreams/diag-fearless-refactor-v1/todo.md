@@ -197,6 +197,7 @@ scope: diagnostics, automation, tooling, refactor
 - [x] Add `diag hotspots --lite` as a frames-index-based fallback when `bundle.json` is too large to analyze as JSON.
 - [x] Include lite reports in `diag ai-packet` (so agents can start from `triage.lite.json` / `hotspots.lite.json`).
 - [x] Optionally include `bundle.schema2.json` in `diag ai-packet` (when present and within budget).
+- [x] Ensure `diag perf-baseline-from-bundles` accepts `bundle.schema2.json` inputs (and reports correct errors).
 - [x] Publish an explicit migration plan (Option 1 first, Option 2 later).
   - `docs/workstreams/diag-fearless-refactor-v1/migration-plan.md`
 - [ ] Prefer structured evidence diffs over screenshot diffs where possible.
