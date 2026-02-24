@@ -53,11 +53,18 @@ Use `length-percentage-semantics-v1-milestones.md` for phase planning.
 
 - [ ] Audit `ecosystem/fret-ui-shadcn` for px clamping patterns used to patch percent collapse.
 - [ ] Migrate components to native percent/fraction fields:
-  - [ ] carousel (basis-full default)
-  - [ ] overlay roots / sheets / drawers that currently rely on explicit px extents
+  - [x] carousel (basis-full default)
+    - Evidence: `ecosystem/fret-ui-shadcn/src/carousel.rs` (basis-full uses `LengthRefinement::Fill`)
+    - Gate: `tools/diag-scripts/ui-gallery-carousel-basic-screenshot.json`
+  - [x] overlay roots / sheets that currently rely on explicit px extents
+    - Evidence: `ecosystem/fret-ui-shadcn/src/sheet.rs` (remove viewport clamp; use `Length::Fill`/`Length::Fraction` max constraints)
+    - Gate: `ecosystem/fret-ui-shadcn/src/sheet.rs` (`sheet_bottom_auto_max_height_fraction_clamps_tall_content_with_edge_gap`)
+    - Gate: `tools/diag-scripts/ui-gallery-sheet-escape-focus-restore.json`
+  - [ ] drawers that currently rely on explicit px extents
+    - Note: `DrawerContent` still uses viewport-derived `max-height` today; migrate after we have a robust “percent max-height clamps content bounds” pattern.
 - [ ] Add a gate per migration:
-  - [ ] a unit test when the invariant is layout-only
-  - [ ] a diag script when the invariant is “docs-aligned UI outcome”
+  - [x] a unit test when the invariant is layout-only
+  - [x] a diag script when the invariant is “docs-aligned UI outcome”
 
 ## Diagnostics / evidence
 
