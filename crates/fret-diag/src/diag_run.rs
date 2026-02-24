@@ -552,7 +552,7 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
                 }
             } else {
                 eprintln!(
-                    "PACK-ERROR no bundle.json captured over DevTools WS (ensure bundles are embedded or the runtime bundle dir is accessible)"
+                    "PACK-ERROR no bundle artifact captured over DevTools WS (ensure bundles are embedded or the runtime bundle dir is accessible)"
                 );
             }
         }
@@ -835,7 +835,7 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
             }
         } else {
             eprintln!(
-                "PACK-ERROR no bundle.json found (add `capture_bundle` or enable script auto-dumps)"
+                "PACK-ERROR no bundle artifact found (add `capture_bundle` or enable script auto-dumps)"
             );
         }
     }

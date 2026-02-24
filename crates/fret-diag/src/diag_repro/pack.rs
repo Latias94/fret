@@ -64,7 +64,7 @@ pub(super) fn pack_repro_zip(
         return Ok(PackOutcome {
             packed_zip: None,
             overall_error: Some(
-                "no bundle.json found (add `capture_bundle` or enable script auto-dumps)"
+                "no bundle artifact found (add `capture_bundle` or enable script auto-dumps)"
                     .to_string(),
             ),
             overall_reason_code: Some("tooling.bundle_missing".to_string()),

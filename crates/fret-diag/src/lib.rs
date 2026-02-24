@@ -2861,7 +2861,7 @@ pub(crate) fn pack_bundle_dir_to_zip(
     let bundle_artifact = crate::resolve_bundle_artifact_path(bundle_dir);
     if !bundle_artifact.is_file() {
         return Err(format!(
-            "bundle_dir does not contain bundle.json or bundle.schema2.json: {}",
+            "bundle_dir does not contain a bundle artifact (bundle.json or bundle.schema2.json): {}",
             bundle_dir.display()
         ));
     }
