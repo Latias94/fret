@@ -574,7 +574,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
                     overall_reason_code =
                         Some("tooling.bundle_missing_for_post_run_checks".to_string());
                     overall_error = Some(
-                        "script passed but no bundle.json was found (required for post-run checks)"
+                        "script passed but no bundle artifact was found (required for post-run checks)"
                             .to_string(),
                     );
                     break;

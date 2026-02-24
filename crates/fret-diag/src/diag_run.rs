@@ -504,7 +504,7 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         {
             let Some(bundle_path) = bundle_path.as_ref() else {
                 return Err(
-                    "script passed but no bundle.json was captured (required for post-run checks)"
+                    "script passed but no bundle artifact was captured (required for post-run checks)"
                         .to_string(),
                 );
             };
@@ -759,7 +759,7 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
                 poll_ms,
             )
             .ok_or_else(|| {
-                "script passed but no bundle.json was found (required for post-run checks)"
+                "script passed but no bundle artifact was found (required for post-run checks)"
                     .to_string()
             })?;
 

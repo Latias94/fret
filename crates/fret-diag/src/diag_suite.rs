@@ -1862,7 +1862,7 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
             )
             .ok_or_else(|| {
                 format!(
-                    "script passed but no bundle.json was found (required for post-run checks): {}",
+                    "script passed but no bundle artifact was found (required for post-run checks): {}",
                     src.display()
                 )
             })?;

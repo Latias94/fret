@@ -2944,13 +2944,14 @@ pub(crate) fn pack_bundle_dir_to_zip(
     }
 
     if include_root_artifacts || include_triage {
-        let meta_path = crate::bundle_index::ensure_bundle_meta_json(&bundle_json, warmup_frames)?;
+        let meta_path =
+            crate::bundle_index::ensure_bundle_meta_json(&bundle_artifact, warmup_frames)?;
         let bundle_index_path =
-            crate::bundle_index::ensure_bundle_index_json(&bundle_json, warmup_frames)?;
+            crate::bundle_index::ensure_bundle_index_json(&bundle_artifact, warmup_frames)?;
         let test_ids_index_path =
-            crate::bundle_index::ensure_test_ids_index_json(&bundle_json, warmup_frames)?;
+            crate::bundle_index::ensure_test_ids_index_json(&bundle_artifact, warmup_frames)?;
         let test_ids_path =
-            crate::bundle_index::ensure_test_ids_json(&bundle_json, warmup_frames, 500)?;
+            crate::bundle_index::ensure_test_ids_json(&bundle_artifact, warmup_frames, 500)?;
 
         for (src, rel) in [
             (meta_path, "bundle.meta.json"),
@@ -6300,7 +6301,7 @@ fn run_script_suite_collect_bundles(
             wait_for_bundle_json_from_script_result(&paths.out_dir, &result, timeout_ms, poll_ms)
                 .ok_or_else(|| {
                 format!(
-                    "script passed but no bundle.json was found (required for matrix): {}",
+                    "script passed but no bundle artifact was found (required for matrix): {}",
                     src.display()
                 )
             })?;
