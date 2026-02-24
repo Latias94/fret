@@ -614,10 +614,10 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
         .unwrap_or_else(|| resolved_out_dir.join("repro.zip"));
 
     let mut packed_zip: Option<PathBuf> = None;
-    let mut packed_bundle_json: Option<PathBuf> = None;
+    let mut packed_bundle_artifact: Option<PathBuf> = None;
     if let Some(bundle_path) = selected_bundle_path.as_ref() {
         let bundle_dir = resolve_bundle_root_dir(bundle_path)?;
-        packed_bundle_json = Some(crate::resolve_bundle_artifact_path(&bundle_dir));
+        packed_bundle_artifact = Some(crate::resolve_bundle_artifact_path(&bundle_dir));
     }
 
     let multi_pack = pack_items.len() > 1;
@@ -631,6 +631,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
                         "zip_prefix": repro_zip_prefix_for_script(item, idx),
                         "script_path": item.script_path.display().to_string(),
                         "bundle_json": item.bundle_artifact.display().to_string(),
+                        "bundle_artifact": item.bundle_artifact.display().to_string(),
                     })
                 })
                 .collect(),
@@ -689,8 +690,10 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
             "check_file": if capabilities_check_path.is_file() { Some("check.capabilities.json") } else { None },
         }),
         "scripts": run_rows,
+        "selected_bundle_artifact": selected_bundle_path.as_ref().map(|p| p.display().to_string()),
         "selected_bundle_json": selected_bundle_path.as_ref().map(|p| p.display().to_string()),
-        "packed_bundle_json": packed_bundle_json.as_ref().map(|p| p.display().to_string()),
+        "packed_bundle_artifact": packed_bundle_artifact.as_ref().map(|p| p.display().to_string()),
+        "packed_bundle_json": packed_bundle_artifact.as_ref().map(|p| p.display().to_string()),
         "packed_bundles": packed_bundles,
         "repro_zip": Some(zip_out.display().to_string()),
         "resources": serde_json::json!({
@@ -788,7 +791,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
         eprintln!("WARN failed to write evidence index: {err}");
     }
 
-    if let Some(path) = packed_bundle_json.as_ref() {
+    if let Some(path) = packed_bundle_artifact.as_ref() {
         println!("BUNDLE {}", path.display());
     }
     if let Some(path) = packed_zip.as_ref() {
