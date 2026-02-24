@@ -201,7 +201,6 @@ fn status_badge<H: UiHost>(
 }
 
 /// Root surface aligned with AI Elements `TestResults`.
-#[derive(Clone)]
 pub struct TestResults {
     summary: Option<TestResultsSummaryData>,
     children: Option<Vec<AnyElement>>,
@@ -313,7 +312,7 @@ impl TestResults {
 }
 
 /// Header wrapper aligned with AI Elements `TestResultsHeader`.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct TestResultsHeader {
     children: Vec<AnyElement>,
     test_id: Option<Arc<str>>,
@@ -687,7 +686,7 @@ impl TestResultsProgress {
 }
 
 /// Content wrapper aligned with AI Elements `TestResultsContent`.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct TestResultsContent {
     children: Vec<AnyElement>,
     test_id: Option<Arc<str>>,
@@ -706,7 +705,7 @@ fn status_icon<H: UiHost>(
 }
 
 /// Test suite disclosure root aligned with AI Elements `TestSuite`.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct TestSuite {
     default_open: bool,
     header: TestSuiteName,
@@ -762,8 +761,8 @@ impl TestSuite {
             .refine_style(base_chrome.merge(self.chrome))
             .into_element_with_open_model(
                 cx,
-                move |cx, open_model, is_open| header.clone().into_trigger(cx, open_model, is_open),
-                move |cx| content.clone().into_element(cx),
+                move |cx, open_model, is_open| header.into_trigger(cx, open_model, is_open),
+                move |cx| content.into_element(cx),
             )
     }
 }
@@ -967,7 +966,7 @@ impl TestSuiteName {
 }
 
 /// Collapsible content wrapper aligned with AI Elements `TestSuiteContent`.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct TestSuiteContent {
     children: Vec<AnyElement>,
     test_id: Option<Arc<str>>,
@@ -976,7 +975,6 @@ pub struct TestSuiteContent {
 }
 
 /// Test row aligned with AI Elements `Test`.
-#[derive(Clone)]
 pub struct Test {
     name: Arc<str>,
     status: TestStatusKind,
@@ -1062,10 +1060,11 @@ impl Test {
         let chrome = self.chrome;
         let test_id = self.test_id;
 
+        let children = self.children;
         let theme_for_content = theme.clone();
         let name_for_content = name.clone();
         let content_factory = move |cx: &mut ElementContext<'_, H>| {
-            if let Some(children) = self.children.clone() {
+            if let Some(children) = children {
                 return stack::hstack(
                     cx,
                     stack::HStackProps::default()
@@ -1188,7 +1187,7 @@ impl Test {
 }
 
 /// Error wrapper aligned with AI Elements `TestError`.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct TestError {
     children: Vec<AnyElement>,
     layout: LayoutRefinement,

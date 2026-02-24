@@ -9,6 +9,36 @@ use wasm_bindgen::JsCast as _;
 #[cfg(feature = "client-wasm")]
 use wasm_bindgen::prelude::*;
 
+#[cfg(feature = "client-wasm")]
+fn wasm_client_log_enabled() -> bool {
+    let Some(window) = web_sys::window() else {
+        return false;
+    };
+    js_sys::Reflect::get(
+        window.as_ref(),
+        &JsValue::from_str("__FRET_DEVTOOLS_WS_CLIENT_LOG"),
+    )
+    .ok()
+    .and_then(|v| v.as_bool())
+    .unwrap_or(false)
+}
+
+#[cfg(feature = "client-wasm")]
+fn wasm_log(line: &str) {
+    if !wasm_client_log_enabled() {
+        return;
+    }
+    web_sys::console::log_1(&JsValue::from_str(line));
+}
+
+#[cfg(feature = "client-wasm")]
+fn wasm_warn(line: &str) {
+    if !wasm_client_log_enabled() {
+        return;
+    }
+    web_sys::console::warn_1(&JsValue::from_str(line));
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ClientKindV1 {
     NativeApp,
@@ -75,6 +105,7 @@ struct WasmInner {
     _on_message: Closure<dyn FnMut(web_sys::MessageEvent)>,
     _on_error: Closure<dyn FnMut(web_sys::ErrorEvent)>,
     _on_close: Closure<dyn FnMut(web_sys::CloseEvent)>,
+    _hello_tick: Closure<dyn FnMut()>,
 }
 
 impl DevtoolsWsClient {
@@ -91,29 +122,37 @@ impl DevtoolsWsClient {
             default_session_id: Mutex::new(None),
         });
 
-        let ws_url =
-            append_token_query_param_simple(&cfg.ws_url, &cfg.token, "fret_devtools_token");
-        let ws = web_sys::WebSocket::new(&ws_url).map_err(|_| "WebSocket::new failed")?;
-
-        let state_open = Arc::clone(&state);
-        let cfg_open = cfg.clone();
-        let ws_open = ws.clone();
-        let on_open = Closure::wrap(Box::new(move |_e: web_sys::Event| {
-            let hello = DiagTransportMessageV1 {
+        // Queue hello before creating the socket so it can't be lost if `onopen` is missed due to
+        // a fast OPEN transition. The hello message must be the first thing we send so the server
+        // can create a session_id and we can capture it via hello_ack.
+        if let Ok(mut outbox) = state.outbox.lock() {
+            outbox.push_back(DiagTransportMessageV1 {
                 schema_version: 1,
                 r#type: "hello".to_string(),
                 session_id: None,
                 request_id: Some(1),
                 payload: serde_json::json!({
-                    "client_kind": cfg_open.client_kind.as_str(),
-                    "client_version": cfg_open.client_version,
-                    "capabilities": cfg_open.capabilities,
+                    "client_kind": cfg.client_kind.as_str(),
+                    "client_version": cfg.client_version.clone(),
+                    "capabilities": cfg.capabilities.clone(),
                 }),
-            };
-            if let Ok(text) = serde_json::to_string(&hello) {
-                let _ = ws_open.send_with_str(&text);
-            }
+            });
+        }
+        wasm_log("fret-diag-ws: queued hello");
 
+        let ws_url =
+            append_token_query_param_simple(&cfg.ws_url, &cfg.token, "fret_devtools_token");
+        let ws = web_sys::WebSocket::new(&ws_url).map_err(|_| "WebSocket::new failed")?;
+
+        wasm_log(&format!(
+            "fret-diag-ws: connect_wasm ready_state={} (0=CONNECTING,1=OPEN,2=CLOSING,3=CLOSED)",
+            ws.ready_state()
+        ));
+
+        let state_open = Arc::clone(&state);
+        let ws_open = ws.clone();
+        let on_open = Closure::wrap(Box::new(move |_e: web_sys::Event| {
+            wasm_log("fret-diag-ws: onopen");
             flush_wasm_outbox(&ws_open, &state_open);
         }) as Box<dyn FnMut(web_sys::Event)>);
         ws.set_onopen(Some(on_open.as_ref().unchecked_ref()));
@@ -126,6 +165,13 @@ impl DevtoolsWsClient {
             let Ok(msg) = serde_json::from_str::<DiagTransportMessageV1>(&text) else {
                 return;
             };
+            if wasm_client_log_enabled() {
+                wasm_log(&format!(
+                    "fret-diag-ws: onmessage type={} session_id={}",
+                    msg.r#type,
+                    msg.session_id.as_deref().unwrap_or("<none>")
+                ));
+            }
             maybe_capture_session_id(&state_message, &msg);
             if let Ok(mut inbox) = state_message.inbox.lock() {
                 inbox.push_back(msg);
@@ -142,14 +188,62 @@ impl DevtoolsWsClient {
         ws.set_onmessage(Some(on_message.as_ref().unchecked_ref()));
 
         let on_error = Closure::wrap(Box::new(move |_e: web_sys::ErrorEvent| {
-            // Best-effort: errors are surfaced via close/reconnect at higher layers.
+            wasm_warn("fret-diag-ws: onerror");
         }) as Box<dyn FnMut(web_sys::ErrorEvent)>);
         ws.set_onerror(Some(on_error.as_ref().unchecked_ref()));
 
         let on_close = Closure::wrap(Box::new(move |_e: web_sys::CloseEvent| {
-            // Best-effort: callers can re-create the client to reconnect.
+            wasm_warn("fret-diag-ws: onclose");
         }) as Box<dyn FnMut(web_sys::CloseEvent)>);
         ws.set_onclose(Some(on_close.as_ref().unchecked_ref()));
+
+        // Retry flushing the outbox until the socket is OPEN. This covers fast OPEN transitions
+        // where `onopen` may be missed, and "idle UI" cases where the app isn't ticking frames yet.
+        //
+        // The timer self-cancels once the outbox is empty.
+        let ws_tick = ws.clone();
+        let state_tick = Arc::clone(&state);
+        let interval_handle = std::rc::Rc::new(std::cell::Cell::new(None::<i32>));
+        let interval_handle_tick = std::rc::Rc::clone(&interval_handle);
+        let hello_tick = Closure::wrap(Box::new(move || {
+            if wasm_client_log_enabled() {
+                let pending = state_tick.outbox.lock().ok().map(|q| q.len()).unwrap_or(0);
+                if pending > 0 {
+                    wasm_log(&format!(
+                        "fret-diag-ws: tick ready_state={} pending={}",
+                        ws_tick.ready_state(),
+                        pending
+                    ));
+                }
+            }
+            flush_wasm_outbox(&ws_tick, &state_tick);
+            if ws_tick.ready_state() != web_sys::WebSocket::OPEN {
+                return;
+            }
+            let is_empty = state_tick.outbox.lock().ok().is_some_and(|q| q.is_empty());
+            if !is_empty {
+                return;
+            }
+            let Some(id) = interval_handle_tick.get() else {
+                return;
+            };
+            if let Some(window) = web_sys::window() {
+                window.clear_interval_with_handle(id);
+            }
+            interval_handle_tick.set(None);
+        }) as Box<dyn FnMut()>);
+        if let Some(window) = web_sys::window() {
+            if let Ok(id) = window.set_interval_with_callback_and_timeout_and_arguments_0(
+                hello_tick.as_ref().unchecked_ref(),
+                50,
+            ) {
+                interval_handle.set(Some(id));
+            }
+        }
+
+        // If the socket is already OPEN (or becomes OPEN before `onopen` is observed), flush the
+        // queued hello immediately.
+        flush_wasm_outbox(&ws, &state);
 
         Ok(Self {
             state,
@@ -159,6 +253,7 @@ impl DevtoolsWsClient {
                 _on_message: on_message,
                 _on_error: on_error,
                 _on_close: on_close,
+                _hello_tick: hello_tick,
             }),
         })
     }
@@ -293,7 +388,13 @@ impl DevtoolsWsClient {
                         Err(err) => {
                             let is_timeout = matches!(
                                 err,
-                                tungstenite::Error::Io(ref io) if io.kind() == std::io::ErrorKind::TimedOut
+                                tungstenite::Error::Io(ref io)
+                                    if matches!(
+                                        io.kind(),
+                                        std::io::ErrorKind::TimedOut
+                                            | std::io::ErrorKind::WouldBlock
+                                            | std::io::ErrorKind::Interrupted
+                                    )
                             );
                             if is_timeout {
                                 continue;
@@ -366,7 +467,18 @@ fn flush_wasm_outbox(ws: &web_sys::WebSocket, state: &Arc<State>) {
         let Ok(text) = serde_json::to_string(&msg) else {
             continue;
         };
-        let _ = ws.send_with_str(&text);
+        if wasm_client_log_enabled() {
+            wasm_log(&format!(
+                "fret-diag-ws: send type={} bytes={}",
+                msg.r#type,
+                text.len()
+            ));
+        }
+        if ws.send_with_str(&text).is_err() {
+            wasm_warn("fret-diag-ws: send_with_str failed (re-queue)");
+            outbox.push_front(msg);
+            break;
+        }
     }
 }
 

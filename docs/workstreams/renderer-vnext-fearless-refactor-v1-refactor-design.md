@@ -30,6 +30,24 @@ We optimize for:
 4. wasm/WebGPU remains supported (Naga + optional browser/Tint validation).
 5. No new crate boundary violations (keep `wgpu` out of contract crates).
 
+## 1.1) Slice points (what we refactor vs freeze)
+
+This workstream is “fearless” in implementation, but conservative in contract.
+
+We intentionally slice the problem along stable seams:
+
+- **Contract seam (frozen without an ADR):**
+  - `crates/fret-core` scene semantics (`SceneOp`, clip/mask/effect stacks, `Paint`/`MaterialId` budgets + degradations).
+  - Any semantic change must be introduced via a small ADR and guarded by the smallest possible conformance test.
+- **Backend surface seam (frozen for apps):**
+  - Public renderer entrypoints and config flags remain stable; refactors happen behind them.
+- **Internal structure seam (free to refactor):**
+  - `crates/fret-render-wgpu` internals may be reorganized aggressively (encode/plan/execute, GPU globals/buffers/caches),
+    as long as gates pass and observable output remains equivalent.
+- **Evidence seam (perf-driven changes):**
+  - Key-space growth (pipeline variants, bind-group layout shape changes, new per-draw payloads) is only allowed when a
+    reproducible perf bundle shows the hotspot and the mitigation is bounded.
+
 ## 2) Target internal decomposition (wgpu backend)
 
 The `Renderer` type remains the public surface for the backend crate, but delegates to internal
@@ -127,4 +145,3 @@ For each stage:
 - Evidence anchors (1–3) pointing to key code paths.
 - Commands used for gates.
 - If perf is relevant, record a small headless baseline diff (same flags/frames).
-

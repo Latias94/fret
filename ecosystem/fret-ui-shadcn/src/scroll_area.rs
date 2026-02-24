@@ -47,7 +47,7 @@ fn shadcn_scrollbar_corner_bg(theme: &Theme) -> Color {
 ///
 /// In Fret, scrollbars are explicit runtime primitives (`Scroll` + `Scrollbar`). This module
 /// exposes a composable, Radix-shaped surface while keeping the existing compact builder API.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct ScrollAreaViewport {
     children: Vec<AnyElement>,
     axis: ScrollAxis,
@@ -149,7 +149,6 @@ pub struct ScrollAreaCorner;
 
 /// A composable, Radix/shadcn-shaped scroll-area surface (`Root` / `Viewport` / `Scrollbar` /
 /// `Corner`).
-#[derive(Clone)]
 pub struct ScrollAreaRoot {
     viewport: ScrollAreaViewport,
     scrollbars: Vec<ScrollAreaScrollbar>,
@@ -562,7 +561,7 @@ impl ScrollAreaRoot {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct ScrollArea {
     children: Vec<AnyElement>,
     axis: ScrollAxis,

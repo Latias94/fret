@@ -37,6 +37,7 @@ mod node_storage;
 mod observation;
 mod paint;
 mod paint_cache;
+pub(crate) mod paint_style;
 mod prepaint;
 mod profiling;
 mod propagation_depth;

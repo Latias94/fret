@@ -1,18 +1,23 @@
 use std::sync::Arc;
 
 use fret_core::{Color, Corners, Edges, Px};
+use fret_icons::IconId;
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, CrossAlign, FlexProps, MainAlign, PressableProps, RovingFlexProps, RovingFocusProps,
+    AnyElement, CrossAlign, FlexProps, MainAlign, PressableProps, RovingFlexProps,
+    RovingFocusProps, SpinnerProps, SvgIconProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
+use fret_ui_kit::declarative::current_color;
+use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverrideSlot, Radius, Space,
-    WidgetState, WidgetStateProperty, WidgetStates, resolve_override_slot_opt,
+    WidgetState, WidgetStateProperty, WidgetStates, resolve_override_slot,
+    resolve_override_slot_opt,
 };
 
 use crate::toggle::{ToggleSize, ToggleVariant};
@@ -41,6 +46,24 @@ fn toggle_border(theme: &Theme) -> Color {
         .unwrap_or_else(|| theme.color_token("border"))
 }
 
+fn toggle_fg(theme: &Theme) -> Color {
+    theme
+        .color_by_key("foreground")
+        .unwrap_or_else(|| theme.color_token("foreground"))
+}
+
+fn toggle_fg_muted(theme: &Theme) -> Color {
+    theme
+        .color_by_key("muted-foreground")
+        .unwrap_or_else(|| theme.color_token("muted-foreground"))
+}
+
+fn toggle_fg_accent(theme: &Theme) -> Color {
+    theme
+        .color_by_key("accent-foreground")
+        .unwrap_or_else(|| theme.color_token("accent-foreground"))
+}
+
 fn toggle_ring_color(theme: &Theme) -> Color {
     theme
         .color_by_key("ring")
@@ -64,6 +87,48 @@ fn toggle_group_item_pad_x(theme: &Theme) -> Px {
 
 pub use fret_ui_kit::primitives::toggle_group::{ToggleGroupKind, ToggleGroupOrientation};
 
+fn apply_item_inherited_style(
+    mut element: AnyElement,
+    fg: Color,
+    default_icon_color: Color,
+) -> AnyElement {
+    match &mut element.kind {
+        fret_ui::element::ElementKind::Text(props) => {
+            props.color.get_or_insert(fg);
+        }
+        fret_ui::element::ElementKind::SvgIcon(SvgIconProps { color, .. }) => {
+            // Heuristic:
+            // - Older callsites may build an `SvgIcon` with the default white color.
+            // - `declarative::icon::icon(...)` built outside a `currentColor` provider resolves
+            //   `muted-foreground` eagerly.
+            //
+            // In a toggle group item, both shapes should track the item's foreground by default.
+            let is_default_white = *color
+                == Color {
+                    r: 1.0,
+                    g: 1.0,
+                    b: 1.0,
+                    a: 1.0,
+                };
+            let is_default_muted_fg = *color == default_icon_color;
+            if is_default_white || is_default_muted_fg {
+                *color = fg;
+            }
+        }
+        fret_ui::element::ElementKind::Spinner(SpinnerProps { color, .. }) => {
+            color.get_or_insert(fg);
+        }
+        _ => {}
+    }
+
+    element.children = element
+        .children
+        .into_iter()
+        .map(|child| apply_item_inherited_style(child, fg, default_icon_color))
+        .collect();
+    element
+}
+
 #[derive(Clone)]
 enum ToggleGroupModel {
     Single {
@@ -76,10 +141,11 @@ enum ToggleGroupModel {
     },
 }
 
-#[derive(Clone)]
 pub struct ToggleGroupItem {
     value: Arc<str>,
     children: Vec<AnyElement>,
+    leading_icon: Option<IconId>,
+    trailing_icon: Option<IconId>,
     disabled: bool,
     a11y_label: Option<Arc<str>>,
     test_id: Option<Arc<str>>,
@@ -102,10 +168,30 @@ impl ToggleGroupItem {
         Self {
             value: value.into(),
             children: children.into_iter().collect(),
+            leading_icon: None,
+            trailing_icon: None,
             disabled: false,
             a11y_label: None,
             test_id: None,
         }
+    }
+
+    /// Icon-only convenience constructor (common in shadcn ToggleGroup docs).
+    ///
+    /// The icon is stored as an `IconId` and built by the ToggleGroup host so it can inherit the
+    /// resolved item foreground via `currentColor`.
+    pub fn icon(value: impl Into<Arc<str>>, icon: IconId) -> Self {
+        Self::new(value, std::iter::empty::<AnyElement>()).leading_icon(icon)
+    }
+
+    pub fn leading_icon(mut self, icon: IconId) -> Self {
+        self.leading_icon = Some(icon);
+        self
+    }
+
+    pub fn trailing_icon(mut self, icon: IconId) -> Self {
+        self.trailing_icon = Some(icon);
+        self
     }
 
     pub fn disabled(mut self, disabled: bool) -> Self {
@@ -128,6 +214,7 @@ impl ToggleGroupItem {
 #[derive(Debug, Clone, Default)]
 pub struct ToggleGroupStyle {
     pub item_background: OverrideSlot<ColorRef>,
+    pub item_foreground: OverrideSlot<ColorRef>,
     pub item_border_color: OverrideSlot<ColorRef>,
 }
 
@@ -137,6 +224,14 @@ impl ToggleGroupStyle {
         item_background: WidgetStateProperty<Option<ColorRef>>,
     ) -> Self {
         self.item_background = Some(item_background);
+        self
+    }
+
+    pub fn item_foreground(
+        mut self,
+        item_foreground: WidgetStateProperty<Option<ColorRef>>,
+    ) -> Self {
+        self.item_foreground = Some(item_foreground);
         self
     }
 
@@ -152,6 +247,9 @@ impl ToggleGroupStyle {
         if other.item_background.is_some() {
             self.item_background = other.item_background;
         }
+        if other.item_foreground.is_some() {
+            self.item_foreground = other.item_foreground;
+        }
         if other.item_border_color.is_some() {
             self.item_border_color = other.item_border_color;
         }
@@ -159,7 +257,6 @@ impl ToggleGroupStyle {
     }
 }
 
-#[derive(Clone)]
 pub struct ToggleGroup {
     model: ToggleGroupModel,
     items: Vec<ToggleGroupItem>,
@@ -461,6 +558,7 @@ impl ToggleGroup {
 
         let ToggleGroupStyle {
             item_background,
+            item_foreground,
             item_border_color,
         } = style_override;
 
@@ -469,11 +567,29 @@ impl ToggleGroup {
             ToggleVariant::Outline => bg_on,
         };
 
+        let hover_fg = match variant {
+            ToggleVariant::Default => toggle_fg_muted(&theme),
+            ToggleVariant::Outline => toggle_fg_accent(&theme),
+        };
+
         let default_item_background = WidgetStateProperty::new(None)
             .when(WidgetStates::HOVERED, Some(ColorRef::Color(hover_bg)))
             .when(WidgetStates::ACTIVE, Some(ColorRef::Color(hover_bg)))
             .when(WidgetStates::SELECTED, Some(ColorRef::Color(bg_on)))
             .when(WidgetStates::DISABLED, None);
+
+        let default_item_foreground = {
+            let fg = toggle_fg(&theme);
+            let fg_disabled = alpha_mul(fg, 0.5);
+            WidgetStateProperty::new(ColorRef::Color(fg))
+                .when(WidgetStates::HOVERED, ColorRef::Color(hover_fg))
+                .when(WidgetStates::ACTIVE, ColorRef::Color(hover_fg))
+                .when(
+                    WidgetStates::SELECTED,
+                    ColorRef::Color(toggle_fg_accent(&theme)),
+                )
+                .when(WidgetStates::DISABLED, ColorRef::Color(fg_disabled))
+        };
 
         let default_item_border_color = WidgetStateProperty::new(None)
             .when(
@@ -483,6 +599,7 @@ impl ToggleGroup {
             .when(WidgetStates::DISABLED, None);
 
         let item_background_override = item_background;
+        let item_foreground_override = item_foreground;
         let item_border_color_override = item_border_color;
 
         let mut group_props = decl_style::container_props(&theme, chrome, layout);
@@ -510,8 +627,10 @@ impl ToggleGroup {
 
         cx.container(group_props, move |cx| {
             let item_background_override = item_background_override.clone();
+            let item_foreground_override = item_foreground_override.clone();
             let item_border_color_override = item_border_color_override.clone();
             let default_item_background = default_item_background.clone();
+            let default_item_foreground = default_item_foreground.clone();
             let default_item_border_color = default_item_border_color.clone();
 
             let flex = FlexProps {
@@ -618,6 +737,8 @@ impl ToggleGroup {
                         a11y.test_id = Some(test_id);
                     }
                     let children = item.children;
+                    let leading_icon = item.leading_icon;
+                    let trailing_icon = item.trailing_icon;
                     let model_single = model_single.clone();
                     let model_multi = model_multi.clone();
                     let pressable_layout = {
@@ -633,8 +754,10 @@ impl ToggleGroup {
 
                     let item_theme = theme.clone();
                     let item_background_override = item_background_override.clone();
+                    let item_foreground_override = item_foreground_override.clone();
                     let item_border_color_override = item_border_color_override.clone();
                     let default_item_background = default_item_background.clone();
+                    let default_item_foreground = default_item_foreground.clone();
                     let default_item_border_color = default_item_border_color.clone();
                     let inner_gap = inner_gap;
 
@@ -666,6 +789,14 @@ impl ToggleGroup {
                             let mut states = WidgetStates::from_pressable(cx, st, enabled);
                             states.set(WidgetState::Selected, on);
 
+                            let fg_ref = resolve_override_slot(
+                                item_foreground_override.as_ref(),
+                                &default_item_foreground,
+                                states,
+                            );
+                            let fg = fg_ref.resolve(&item_theme);
+                            let default_icon_color = toggle_fg_muted(&item_theme);
+
                             let mut chrome_props = base_props;
                             if let Some(bg) = resolve_override_slot_opt(
                                 item_background_override.as_ref(),
@@ -683,25 +814,46 @@ impl ToggleGroup {
                                 chrome_props.border_color = Some(border_color.resolve(&item_theme));
                             }
 
+                            let mut styled_children: Vec<AnyElement> = Vec::with_capacity(
+                                leading_icon.is_some() as usize
+                                    + children.len()
+                                    + trailing_icon.is_some() as usize,
+                            );
+                            styled_children.extend(children.into_iter().map(|child| {
+                                apply_item_inherited_style(child, fg, default_icon_color)
+                            }));
+
                             let content = move |cx: &mut ElementContext<'_, H>| {
-                                vec![cx.flex(
-                                    FlexProps {
-                                        layout: {
-                                            let mut layout =
-                                                fret_ui::element::LayoutStyle::default();
-                                            layout.size.width = fret_ui::element::Length::Fill;
-                                            layout.size.height = fret_ui::element::Length::Fill;
-                                            layout
+                                current_color::scope_children(cx, fg_ref.clone(), |cx| {
+                                    let mut content_children: Vec<AnyElement> =
+                                        Vec::with_capacity(styled_children.len() + 2);
+                                    if let Some(icon) = leading_icon.clone() {
+                                        content_children.push(decl_icon::icon(cx, icon));
+                                    }
+                                    content_children.extend(styled_children);
+                                    if let Some(icon) = trailing_icon.clone() {
+                                        content_children.push(decl_icon::icon(cx, icon));
+                                    }
+
+                                    vec![cx.flex(
+                                        FlexProps {
+                                            layout: {
+                                                let mut layout =
+                                                    fret_ui::element::LayoutStyle::default();
+                                                layout.size.width = fret_ui::element::Length::Fill;
+                                                layout.size.height = fret_ui::element::Length::Fill;
+                                                layout
+                                            },
+                                            direction: fret_core::Axis::Horizontal,
+                                            gap: inner_gap.into(),
+                                            padding: Edges::all(Px(0.0)).into(),
+                                            justify: MainAlign::Center,
+                                            align: CrossAlign::Center,
+                                            wrap: false,
                                         },
-                                        direction: fret_core::Axis::Horizontal,
-                                        gap: inner_gap.into(),
-                                        padding: Edges::all(Px(0.0)).into(),
-                                        justify: MainAlign::Center,
-                                        align: CrossAlign::Center,
-                                        wrap: false,
-                                    },
-                                    move |_cx| children,
-                                )]
+                                        move |_cx| content_children,
+                                    )]
+                                })
                             };
 
                             (
@@ -1245,13 +1397,15 @@ mod tests {
 
     #[test]
     fn toggle_group_multiple_uncontrolled_applies_default_value_once_and_allows_toggle() {
-        fn selected(ui: &UiTree<App>, label: &str) -> bool {
+        fn pressed(ui: &UiTree<App>, label: &str) -> bool {
             ui.semantics_snapshot()
                 .expect("semantics snapshot")
                 .nodes
                 .iter()
                 .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some(label))
-                .is_some_and(|n| n.flags.selected)
+                .is_some_and(|n| {
+                    n.flags.pressed_state == Some(fret_core::SemanticsPressedState::True)
+                })
         }
 
         let window = AppWindowId::default();
@@ -1274,8 +1428,8 @@ mod tests {
             bounds,
             default_value.clone(),
         );
-        assert!(selected(&ui, "alpha"));
-        assert!(selected(&ui, "gamma"));
+        assert!(pressed(&ui, "alpha"));
+        assert!(pressed(&ui, "gamma"));
 
         let focusable = ui
             .first_focusable_descendant_including_declarative(&mut app, window, root)
@@ -1308,8 +1462,8 @@ mod tests {
             bounds,
             default_value.clone(),
         );
-        assert!(!selected(&ui, "alpha"));
-        assert!(selected(&ui, "gamma"));
+        assert!(!pressed(&ui, "alpha"));
+        assert!(pressed(&ui, "gamma"));
 
         // The internal model should not be reset by repeatedly passing the same default value.
         let _ = render_multiple_uncontrolled(
@@ -1320,7 +1474,7 @@ mod tests {
             bounds,
             default_value,
         );
-        assert!(!selected(&ui, "alpha"));
-        assert!(selected(&ui, "gamma"));
+        assert!(!pressed(&ui, "alpha"));
+        assert!(pressed(&ui, "gamma"));
     }
 }

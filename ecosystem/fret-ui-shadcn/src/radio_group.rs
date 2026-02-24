@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use fret_core::window::ColorScheme;
 use fret_core::{
     Color, Corners, Edges, FontId, FontWeight, Point, Px, Rect, Size, TextOverflow, TextStyle,
     TextWrap,
@@ -92,7 +93,7 @@ pub enum RadioGroupItemVariant {
     ChoiceCard,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct RadioGroupItem {
     pub value: Arc<str>,
     pub label: Arc<str>,
@@ -185,7 +186,6 @@ impl RadioGroupStyle {
     }
 }
 
-#[derive(Clone)]
 pub struct RadioGroup {
     model: Option<Model<Option<Arc<str>>>>,
     default_value: Option<Arc<str>>,
@@ -327,8 +327,7 @@ impl RadioGroup {
 
             let group_disabled = disabled;
             let group_label = a11y_label.clone();
-            let items = items.clone();
-            let style_override = style.clone();
+            let style_override = style;
             let model = radio_group_prim::radio_group_use_model(cx, model.clone(), || {
                 default_value.clone()
             })
@@ -338,15 +337,16 @@ impl RadioGroup {
 
             let selected: Option<Arc<str>> = cx.watch_model(&model).cloned().flatten();
             let values: Vec<Arc<str>> = items.iter().map(|i| i.value.clone()).collect();
-            let disabled: Vec<bool> = items.iter().map(|i| group_disabled || i.disabled).collect();
+            let disabled_by_idx: Vec<bool> =
+                items.iter().map(|i| group_disabled || i.disabled).collect();
             let active = roving_focus_group::active_index_from_str_keys(
                 &values,
                 selected.as_deref(),
-                &disabled,
+                &disabled_by_idx,
             );
 
             let values_arc: Arc<[Arc<str>]> = Arc::from(values.into_boxed_slice());
-            let disabled_arc: Arc<[bool]> = Arc::from(disabled.clone().into_boxed_slice());
+            let disabled_arc: Arc<[bool]> = Arc::from(disabled_by_idx.clone().into_boxed_slice());
             let set_size = u32::try_from(items.len())
                 .ok()
                 .and_then(|n| (n > 0).then_some(n));
@@ -405,8 +405,8 @@ impl RadioGroup {
                 },
                 move |cx| {
                     let mut out = Vec::with_capacity(items.len());
-                    for (idx, item) in items.iter().cloned().enumerate() {
-                        let item_disabled = disabled.get(idx).copied().unwrap_or(true);
+                    for (idx, item) in items.into_iter().enumerate() {
+                        let item_disabled = disabled_by_idx.get(idx).copied().unwrap_or(true);
                         let item_enabled = !item_disabled;
                         let tab_stop = active.is_some_and(|a| a == idx);
                         let aria_invalid = item.aria_invalid;
@@ -415,7 +415,7 @@ impl RadioGroup {
                         let radius = Px((icon.0 * 0.5).max(0.0));
                         let mut ring_style = decl_style::focus_ring(&theme, radius);
                         if aria_invalid {
-                            let ring_key = if theme.name.contains("/dark") {
+                            let ring_key = if theme.color_scheme == Some(ColorScheme::Dark) {
                                 "destructive/40"
                             } else {
                                 "destructive/20"
@@ -425,16 +425,18 @@ impl RadioGroup {
                                 .or_else(|| theme.color_by_key("destructive/20"))
                                 .unwrap_or_else(|| theme.color_token("destructive"));
                         }
-                        let a11y_label = item.label.clone();
-                        let value = item.value.clone();
-                        let item_children = item.children.clone();
+                        let a11y_label = item.label;
+                        let value = item.value;
+                        let item_children = item.children;
+                        let has_custom_children = item_children.is_some();
                         let text_style = text_style.clone();
                         let root_for_item = root_for_items.clone();
                         let style_override = style_override.clone();
                         let default_icon_border_color = default_icon_border_color.clone();
                         let default_label_color = default_label_color.clone();
                         let default_indicator_color = default_indicator_color.clone();
-                        out.push(cx.keyed(value.clone(), move |cx| {
+                        let key = value.clone();
+                        out.push(cx.keyed(key, move |cx| {
                             radio_group_prim::RadioGroupItem::new(value)
                                 .label(a11y_label.clone())
                                 .disabled(!item_enabled)
@@ -446,7 +448,7 @@ impl RadioGroup {
                                     &root_for_item,
                                     PressableProps {
                                         layout: if !fit_width
-                                            || (item_children.is_some()
+                                            || (has_custom_children
                                                 && orientation == RadioGroupOrientation::Vertical
                                                 && matches!(
                                                     item_variant,
@@ -636,33 +638,28 @@ impl RadioGroup {
                                             },
                                             move |cx| {
                                                 let mut out = Vec::new();
+                                                let mut label_children =
+                                                    if let Some(children) = item_children {
+                                                        children
+                                                    } else {
+                                                        vec![cx.text_props(label_props)]
+                                                    };
 
                                                 match item_variant {
                                                     RadioGroupItemVariant::Default => {
-                                                        if let Some(children) =
-                                                            item_children.clone()
-                                                        {
-                                                            out.extend(children);
-                                                        } else {
-                                                            out.push(cx.text_props(label_props));
-                                                        }
                                                         if is_rtl {
-                                                            out.push(icon_element.clone());
+                                                            out.append(&mut label_children);
+                                                            out.push(icon_element);
                                                         } else {
-                                                            out.insert(0, icon_element.clone());
+                                                            out.push(icon_element);
+                                                            out.append(&mut label_children);
                                                         }
                                                     }
                                                     RadioGroupItemVariant::ChoiceCard => {
-                                                        if let Some(children) =
-                                                            item_children.clone()
-                                                        {
-                                                            out.extend(children);
-                                                        } else {
-                                                            out.push(cx.text_props(label_props));
-                                                        }
-                                                        out.push(icon_element.clone());
+                                                        out.append(&mut label_children);
+                                                        out.push(icon_element);
                                                     }
-                                                }
+                                                };
 
                                                 out
                                             },
@@ -671,7 +668,9 @@ impl RadioGroup {
                                         match item_variant {
                                             RadioGroupItemVariant::Default => vec![item_content],
                                             RadioGroupItemVariant::ChoiceCard => {
-                                                let bg_alpha = if theme.name.contains("/dark") {
+                                                let bg_alpha = if theme.color_scheme
+                                                    == Some(ColorScheme::Dark)
+                                                {
                                                     0.10
                                                 } else {
                                                     0.05
@@ -824,10 +823,6 @@ mod tests {
         });
 
         let model = app.models_mut().insert(Some(Arc::from("b")));
-        let items = vec![
-            RadioGroupItem::new("a", "Alpha"),
-            RadioGroupItem::new("b", "Beta"),
-        ];
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -846,8 +841,8 @@ mod tests {
                 vec![
                     RadioGroup::new(model.clone())
                         .a11y_label("Options")
-                        .item(items[0].clone())
-                        .item(items[1].clone())
+                        .item(RadioGroupItem::new("a", "Alpha"))
+                        .item(RadioGroupItem::new("b", "Beta"))
                         .into_element(cx),
                 ]
             },
@@ -940,10 +935,6 @@ mod tests {
         });
 
         let model = app.models_mut().insert(Some(Arc::from("invalid")));
-        let items = vec![
-            RadioGroupItem::new("valid", "Valid"),
-            RadioGroupItem::new("invalid", "Invalid").aria_invalid(true),
-        ];
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -962,8 +953,8 @@ mod tests {
                 vec![
                     RadioGroup::new(model.clone())
                         .a11y_label("Options")
-                        .item(items[0].clone())
-                        .item(items[1].clone())
+                        .item(RadioGroupItem::new("valid", "Valid"))
+                        .item(RadioGroupItem::new("invalid", "Invalid").aria_invalid(true))
                         .into_element(cx),
                 ]
             },
@@ -1036,8 +1027,6 @@ mod tests {
         });
 
         let model = app.models_mut().insert(Some(Arc::from("beta")));
-        let items =
-            vec![RadioGroupItem::new("beta", "Beta").variant(RadioGroupItemVariant::ChoiceCard)];
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -1056,7 +1045,10 @@ mod tests {
                 vec![
                     RadioGroup::new(model.clone())
                         .a11y_label("Options")
-                        .item(items[0].clone())
+                        .item(
+                            RadioGroupItem::new("beta", "Beta")
+                                .variant(RadioGroupItemVariant::ChoiceCard),
+                        )
                         .into_element(cx),
                 ]
             },
@@ -1113,12 +1105,6 @@ mod tests {
         });
 
         let model = app.models_mut().insert(Some(Arc::from("pro")));
-        let items = vec![
-            RadioGroupItem::new("plus", "Plus").variant(RadioGroupItemVariant::ChoiceCard),
-            RadioGroupItem::new("pro", "Pro").variant(RadioGroupItemVariant::ChoiceCard),
-            RadioGroupItem::new("enterprise", "Enterprise")
-                .variant(RadioGroupItemVariant::ChoiceCard),
-        ];
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -1138,9 +1124,18 @@ mod tests {
                     RadioGroup::new(model.clone())
                         .a11y_label("Plans")
                         .refine_layout(LayoutRefinement::default().w_full().max_w(Px(384.0)))
-                        .item(items[0].clone())
-                        .item(items[1].clone())
-                        .item(items[2].clone())
+                        .item(
+                            RadioGroupItem::new("plus", "Plus")
+                                .variant(RadioGroupItemVariant::ChoiceCard),
+                        )
+                        .item(
+                            RadioGroupItem::new("pro", "Pro")
+                                .variant(RadioGroupItemVariant::ChoiceCard),
+                        )
+                        .item(
+                            RadioGroupItem::new("enterprise", "Enterprise")
+                                .variant(RadioGroupItemVariant::ChoiceCard),
+                        )
                         .into_element(cx),
                 ]
             },
@@ -1204,10 +1199,6 @@ mod tests {
         });
 
         let model = app.models_mut().insert(Some(Arc::from("b")));
-        let items = vec![
-            RadioGroupItem::new("a", "Alpha"),
-            RadioGroupItem::new("b", "Beta"),
-        ];
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -1226,8 +1217,8 @@ mod tests {
                 vec![
                     RadioGroup::new(model.clone())
                         .a11y_label("Options")
-                        .item(items[0].clone())
-                        .item(items[1].clone())
+                        .item(RadioGroupItem::new("a", "Alpha"))
+                        .item(RadioGroupItem::new("b", "Beta"))
                         .into_element(cx),
                 ]
             },

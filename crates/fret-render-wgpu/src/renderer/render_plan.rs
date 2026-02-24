@@ -369,6 +369,16 @@ impl RenderPlan {
 
     #[cfg(not(debug_assertions))]
     pub(super) fn debug_validate(&self) {}
+
+    #[cfg(debug_assertions)]
+    pub(super) fn debug_validate_first_output_write_is_clear(&self) {
+        if let Err(message) = validate_plan_first_output_write_is_clear(&self.passes) {
+            panic!("RenderPlan validation failed: {message}");
+        }
+    }
+
+    #[cfg(not(debug_assertions))]
+    pub(super) fn debug_validate_first_output_write_is_clear(&self) {}
 }
 
 #[cfg(debug_assertions)]
@@ -920,6 +930,84 @@ fn validate_plan_scissors(passes: &[RenderPlanPass]) -> Result<(), String> {
     }
 
     Ok(())
+}
+
+#[cfg(debug_assertions)]
+fn validate_plan_first_output_write_is_clear(passes: &[RenderPlanPass]) -> Result<(), String> {
+    fn output_write_load(pass: &RenderPlanPass) -> Option<wgpu::LoadOp<wgpu::Color>> {
+        match *pass {
+            RenderPlanPass::SceneDrawRange(SceneDrawRangePass { target, load, .. })
+                if target == PlanTarget::Output =>
+            {
+                Some(load)
+            }
+            RenderPlanPass::PathMsaaBatch(PathMsaaBatchPass { target, load, .. })
+                if target == PlanTarget::Output =>
+            {
+                Some(load)
+            }
+            RenderPlanPass::FullscreenBlit(FullscreenBlitPass { dst, load, .. })
+                if dst == PlanTarget::Output =>
+            {
+                Some(load)
+            }
+            RenderPlanPass::CompositePremul(CompositePremulPass { dst, load, .. })
+                if dst == PlanTarget::Output =>
+            {
+                Some(load)
+            }
+            RenderPlanPass::ScaleNearest(ScaleNearestPass { dst, load, .. })
+                if dst == PlanTarget::Output =>
+            {
+                Some(load)
+            }
+            RenderPlanPass::Blur(BlurPass { dst, load, .. }) if dst == PlanTarget::Output => {
+                Some(load)
+            }
+            RenderPlanPass::BackdropWarp(BackdropWarpPass { dst, load, .. })
+                if dst == PlanTarget::Output =>
+            {
+                Some(load)
+            }
+            RenderPlanPass::ColorAdjust(ColorAdjustPass { dst, load, .. })
+                if dst == PlanTarget::Output =>
+            {
+                Some(load)
+            }
+            RenderPlanPass::ColorMatrix(ColorMatrixPass { dst, load, .. })
+                if dst == PlanTarget::Output =>
+            {
+                Some(load)
+            }
+            RenderPlanPass::AlphaThreshold(AlphaThresholdPass { dst, load, .. })
+                if dst == PlanTarget::Output =>
+            {
+                Some(load)
+            }
+            RenderPlanPass::DropShadow(DropShadowPass { dst, load, .. })
+                if dst == PlanTarget::Output =>
+            {
+                Some(load)
+            }
+            _ => None,
+        }
+    }
+
+    let Some((pass_index, load)) = passes
+        .iter()
+        .enumerate()
+        .find_map(|(ix, p)| output_write_load(p).map(|load| (ix, load)))
+    else {
+        return Err("plan contains no Output writes".to_string());
+    };
+
+    if matches!(load, wgpu::LoadOp::Clear(_)) {
+        Ok(())
+    } else {
+        Err(format!(
+            "pass[{pass_index}] first Output write uses LoadOp::Load; prefer LoadOp::Clear for deterministic output"
+        ))
+    }
 }
 
 fn estimate_plan_peak_intermediate_bytes(

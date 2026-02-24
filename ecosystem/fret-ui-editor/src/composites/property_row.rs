@@ -212,6 +212,7 @@ impl PropertyRow {
                             ..Default::default()
                         },
                         flex: FlexItemStyle {
+                            order: 0,
                             grow: 0.0,
                             shrink: 0.0,
                             basis: Length::Px(density.hit_thickness),
@@ -313,6 +314,7 @@ impl PropertyRow {
                                     ..Default::default()
                                 },
                                 flex: FlexItemStyle {
+                                    order: 0,
                                     grow: 0.0,
                                     shrink: 0.0,
                                     basis: Length::Px(label_w),
@@ -336,6 +338,7 @@ impl PropertyRow {
                                     ..Default::default()
                                 },
                                 flex: FlexItemStyle {
+                                    order: 0,
                                     grow: 1.0,
                                     shrink: 1.0,
                                     basis: Length::Fill,
@@ -403,6 +406,7 @@ impl PropertyRow {
                                                 ..Default::default()
                                             },
                                             flex: FlexItemStyle {
+                                                order: 0,
                                                 grow: 1.0,
                                                 shrink: 1.0,
                                                 basis: Length::Px(Px(0.0)),

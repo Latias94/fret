@@ -1,7 +1,7 @@
 ---
 title: Diagnostics Fearless Refactor v1 (TODO)
 status: draft
-date: 2026-02-22
+date: 2026-02-23
 scope: diagnostics, automation, tooling, refactor
 ---
 
@@ -15,11 +15,100 @@ scope: diagnostics, automation, tooling, refactor
 - [x] Extract the per-frame driver (`UiDiagnosticsService::drive_script_for_window`) out of
       `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into `ecosystem/fret-bootstrap/src/ui_diagnostics/script_engine.rs`.
   - Keep the public entrypoint signature stable.
-- [ ] Define a stable “module boundary” inside `ecosystem/fret-bootstrap/src/ui_diagnostics/`:
-  - script execution / state / step handlers,
-  - bundle dumping + sidecar writers,
-  - DevTools WS bridge wiring.
+- [x] Define a stable “module boundary” inside `ecosystem/fret-bootstrap/src/ui_diagnostics/`:
+  - Script execution / state / step handlers: `script_engine.rs`, `script_types.rs`, `script_steps_*.rs`.
+  - Trace recording helpers: `trace_helpers.rs`, `*_trace_recording.rs`.
+  - Predicate evaluation: `predicates.rs`.
+  - Bundle dumping + sidecar writers: `bundle.rs`, `bundle_dump*.rs`, `bundle_index.rs`, `bundle_sidecars.rs`.
+  - DevTools WS bridge wiring: `ui_diagnostics_devtools_ws.rs`, `devtools_ws_helpers.rs`.
+  - Common glue/utilities: `path_utils.rs`, `json_utils.rs`, `touch_stamp.rs`, `input_event_synthesis.rs`.
+- [x] Continue shrinking churny sections by moving DevTools WS request state types into the DevTools WS module
+      (keeps `ui_diagnostics.rs` lighter and changes localized).
+- [x] Extract bundle dump policy helpers into `ecosystem/fret-bootstrap/src/ui_diagnostics/bundle_dump_policy.rs`.
 - [x] Keep a regression gate: `cargo check -p fret-ui-gallery` after each extraction step.
+- [x] Extract snapshot recording helpers out of `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into
+      `ecosystem/fret-bootstrap/src/ui_diagnostics/snapshot_recording.rs`.
+- [x] Extract snapshot types out of `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into
+      `ecosystem/fret-bootstrap/src/ui_diagnostics/snapshot_types.rs`.
+- [x] Extract resource cache/perf snapshot types out of `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into
+      `ecosystem/fret-bootstrap/src/ui_diagnostics/snapshot_types.rs`.
+- [x] Extract resource cache stats helpers out of `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into
+      `ecosystem/fret-bootstrap/src/ui_diagnostics/snapshot_recording.rs`.
+- [x] Extract `resource_caches` recording logic out of `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into
+      `ecosystem/fret-bootstrap/src/ui_diagnostics/snapshot_recording.rs`.
+- [x] Extract `UiTreeDebugSnapshotV1::from_tree` out of `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into
+      `ecosystem/fret-bootstrap/src/ui_diagnostics/debug_snapshot_impl.rs` (via `include!`) to reduce churn.
+- [x] Extract debug snapshot types out of `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into
+      `ecosystem/fret-bootstrap/src/ui_diagnostics/debug_snapshot_types.rs` (via `include!`) to reduce churn.
+- [x] Extract docking diagnostics out of `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into
+      `ecosystem/fret-bootstrap/src/ui_diagnostics/docking_diagnostics.rs` (via `include!`) to reduce churn.
+- [x] Extract viewport input types out of `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into
+      `ecosystem/fret-bootstrap/src/ui_diagnostics/viewport_input_types.rs` (via `include!`) to reduce churn.
+- [x] Extract virtual list diagnostics out of `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into
+      `ecosystem/fret-bootstrap/src/ui_diagnostics/virtual_list_diagnostics.rs` (via `include!`) to reduce churn.
+- [x] Extract scroll handle diagnostics out of `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into
+      `ecosystem/fret-bootstrap/src/ui_diagnostics/scroll_handle_diagnostics.rs` (via `include!`) to reduce churn.
+- [x] Extract prepaint diagnostics out of `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into
+      `ecosystem/fret-bootstrap/src/ui_diagnostics/prepaint_diagnostics.rs` (via `include!`) to reduce churn.
+- [x] Consolidate overlay synthesis diagnostics into `ecosystem/fret-bootstrap/src/ui_diagnostics/overlay_synthesis_diagnostics.rs`
+      (via `include!`) so overlay types no longer live in multiple places inside `ui_diagnostics.rs`.
+- [x] Extract command gating trace out of `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into
+      `ecosystem/fret-bootstrap/src/ui_diagnostics/command_gating_trace.rs` (via `include!`) to reduce churn.
+- [x] Extract layer + overlay policy diagnostics out of `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into
+      `ecosystem/fret-bootstrap/src/ui_diagnostics/layer_diagnostics.rs` (via `include!`) to reduce churn.
+- [x] Extract hit-test snapshot types out of `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into
+      `ecosystem/fret-bootstrap/src/ui_diagnostics/hit_test_diagnostics.rs` (via `include!`) to reduce churn.
+- [x] Extract element runtime diagnostics out of `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into
+      `ecosystem/fret-bootstrap/src/ui_diagnostics/element_runtime_diagnostics.rs` (via `include!`) to reduce churn.
+- [x] Extract removed subtree diagnostics out of `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into
+      `ecosystem/fret-bootstrap/src/ui_diagnostics/removed_subtree_diagnostics.rs` (via `include!`) to reduce churn.
+- [x] Extract invalidation diagnostics out of `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into
+      `ecosystem/fret-bootstrap/src/ui_diagnostics/invalidation_diagnostics.rs` (via `include!`) to reduce churn.
+- [x] Extract model/global change diagnostics out of `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into
+      `ecosystem/fret-bootstrap/src/ui_diagnostics/model_global_change_diagnostics.rs` (via `include!`) to reduce churn.
+- [x] Extract layout/paint hotspot diagnostics out of `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into
+      `ecosystem/fret-bootstrap/src/ui_diagnostics/layout_paint_hotspot_diagnostics.rs` (via `include!`) to reduce churn.
+- [x] Extract cache root diagnostics out of `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into
+      `ecosystem/fret-bootstrap/src/ui_diagnostics/cache_root_diagnostics.rs` (via `include!`) to reduce churn.
+- [x] Extract frame stats out of `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into
+      `ecosystem/fret-bootstrap/src/ui_diagnostics/frame_stats.rs` (via `include!`) to reduce churn.
+- [x] Extract diagnostics service out of `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into
+      `ecosystem/fret-bootstrap/src/ui_diagnostics/service.rs` (via `include!`) to reduce churn.
+- [x] Extract pick/script output types out of `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into
+      `ecosystem/fret-bootstrap/src/ui_diagnostics/pick_output_types.rs` (via `include!`) to reduce churn.
+- [x] Extract recorded event + geometry types out of `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into
+      `ecosystem/fret-bootstrap/src/ui_diagnostics/recorded_event_types.rs` (via `include!`) to reduce churn.
+- [x] Extract UI thread CPU-time sampler out of `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into
+      `ecosystem/fret-bootstrap/src/ui_diagnostics/ui_thread_cpu_time.rs` (via `mod` + `#[path]`) to reduce churn.
+- [x] Extract semantics fingerprint helpers out of `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into
+      `ecosystem/fret-bootstrap/src/ui_diagnostics/fingerprint.rs` (via `include!`) to reduce churn.
+- [x] Extract label/format helpers out of `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into
+      `ecosystem/fret-bootstrap/src/ui_diagnostics/labels.rs` (via `include!`) to reduce churn.
+- [x] Extract truncation helpers out of `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into
+      `ecosystem/fret-bootstrap/src/ui_diagnostics/truncation.rs` (via `include!`) to reduce churn.
+- [x] Extract JSON + small util helpers out of `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into
+      `ecosystem/fret-bootstrap/src/ui_diagnostics/json_utils.rs` (via `include!`) to reduce churn.
+- [x] Extract filesystem/path helpers out of `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into
+      `ecosystem/fret-bootstrap/src/ui_diagnostics/path_utils.rs` (via `include!`) to reduce churn.
+- [x] Extract touch + pointer helpers out of `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into
+      `ecosystem/fret-bootstrap/src/ui_diagnostics/touch_stamp.rs` (via `include!`) to reduce churn.
+- [x] Extract selector/hit-test/bounds trace limits + helpers out of `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into
+      `ecosystem/fret-bootstrap/src/ui_diagnostics/trace_helpers.rs` (via `mod` + `use`) to reduce churn.
+- [x] Extract input event synthesis helpers (pointer/key/shortcut parsing) out of `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into
+      `ecosystem/fret-bootstrap/src/ui_diagnostics/input_event_synthesis.rs` (via `include!`) to reduce churn.
+- [x] Extract overlay placement trace recording + conversion helpers out of `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into
+      `ecosystem/fret-bootstrap/src/ui_diagnostics/overlay_placement_trace_recording.rs` (via `include!`) to reduce churn.
+- [x] Extract focus + IME trace recording helpers out of `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into
+      `ecosystem/fret-bootstrap/src/ui_diagnostics/focus_and_ime_trace_recording.rs` (via `include!`) to reduce churn.
+- [x] Extract hit-test trace recording helpers out of `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into
+      `ecosystem/fret-bootstrap/src/ui_diagnostics/hit_test_trace_recording.rs` (via `include!`) to reduce churn.
+- [x] Extract selector resolution trace helpers out of `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into
+      `ecosystem/fret-bootstrap/src/ui_diagnostics/selector_resolution_trace_recording.rs` (via `include!`) to reduce churn.
+- [x] Extract window target + geometry helpers out of `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into
+      `ecosystem/fret-bootstrap/src/ui_diagnostics/window_target_and_geometry_helpers.rs` (via `include!`) to reduce churn.
+- [x] Extract DevTools WS helpers (semantics node get ack + screenshot result loading) out of
+      `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` into `ecosystem/fret-bootstrap/src/ui_diagnostics/devtools_ws_helpers.rs`
+      (via `include!`) to reduce churn.
 
 ## M1b: Make `fret-diag` stats less monolithic (mechanical moves)
 
@@ -30,19 +119,35 @@ scope: diagnostics, automation, tooling, refactor
 
 ## M1c: Make `fret-diag` CLI subcommands less monolithic (mechanical moves)
 
+- [x] Extract `diag run` command handler out of `crates/fret-diag/src/lib.rs` into `crates/fret-diag/src/diag_run.rs`.
+- [x] Extract `diag suite` command handler out of `crates/fret-diag/src/lib.rs` into `crates/fret-diag/src/diag_suite.rs`.
+- [x] Extract `diag repeat` command handler out of `crates/fret-diag/src/lib.rs` into `crates/fret-diag/src/diag_repeat.rs`.
+- [x] Extract `diag repro` command handler out of `crates/fret-diag/src/lib.rs` into `crates/fret-diag/src/diag_repro.rs`.
+- [x] Split `diag repro` helpers into dedicated submodules under `crates/fret-diag/src/diag_repro/` (launch/renderdoc/packing/summary/scripts).
 - [x] Extract `diag perf` command handler out of `crates/fret-diag/src/lib.rs` into `crates/fret-diag/src/diag_perf.rs`.
 - [x] Extract `diag compare` command handler out of `crates/fret-diag/src/lib.rs` into `crates/fret-diag/src/diag_compare.rs`.
 - [x] Extract `diag stats` command handler out of `crates/fret-diag/src/lib.rs` into `crates/fret-diag/src/diag_stats.rs`.
 - [x] Extract `diag matrix` command handler out of `crates/fret-diag/src/lib.rs` into `crates/fret-diag/src/diag_matrix.rs`.
+- [x] Shrink post-run check call sites by using the `apply_post_run_checks(..., &diag_run::RunChecks, ...)` entrypoint (migrate `diag run` / `diag suite` / `diag repro`).
+- [x] Remove redundant `SuiteChecks` type (reuse `diag_run::RunChecks` for suite command wiring).
+- [x] Extract post-run checks plumbing out of `crates/fret-diag/src/lib.rs` into `crates/fret-diag/src/post_run_checks.rs`.
 - [ ] Continue extracting large subcommands into dedicated modules (keep `lib.rs` as CLI wiring + shared helpers):
-  - `diag run` (context assembly + orchestration),
-  - `diag suite` (suite execution + reporting),
-  - `diag repro` (orchestration + evidence/report formatting).
+  - `diag pack` / `diag ai-packet` follow-ups if they become churn hotspots.
+
+- [ ] Reduce churn in `lib.rs` context assembly:
+  - move large check-struct literal assembly into helper fns (so adding a new check is localized),
+  - keep `lib.rs` as “arg parsing + dispatch only”.
 
 ## M2: Shrink + index artifacts (sidecars over monolithic JSON)
 
 - [x] Define the “minimum useful bundle” contract (what must be in `bundle.json` vs what can be in sidecars).
   - `docs/workstreams/diag-fearless-refactor-v1/minimum-useful-bundle.md`
+- [x] Reduce default bundle size by defaulting non-script dumps to `FRET_DIAG_BUNDLE_SEMANTICS_MODE=changed` (script dumps still default to `last`).
+- [x] Reduce default bundle size further by defaulting non-script dumps to schema v2 (dedup semantics via `tables.semantics`).
+- [x] Cap non-script dump semantics nodes by default (via `FRET_DIAG_BUNDLE_DUMP_MAX_SEMANTICS_NODES`, defaulting to 10,000).
+- [x] Optional: export only `test_id` semantics nodes plus their ancestors (via `FRET_DIAG_BUNDLE_DUMP_SEMANTICS_TEST_IDS_ONLY`).
+- [x] Apply dump-time semantics policies to schema v2 `tables.semantics` entries (not just inline `debug.semantics`).
+- [x] Prune schema v2 semantics tables to only referenced snapshots after applying semantics mode (avoid retaining dropped frames).
 - [x] Add query-friendly indexes (sidecars) for tools/agents (implemented in `ecosystem/fret-bootstrap/src/ui_diagnostics/bundle_dump.rs`):
   - `bundle.index.json` (snapshot selectors, semantics fingerprints, test-id bloom),
   - `bundle.meta.json` (bundle-level counters + uniqueness summaries),
@@ -70,14 +175,20 @@ scope: diagnostics, automation, tooling, refactor
   - Related: `fretboard diag test-ids-index <bundle>` (explicit generator for `test_ids.index.json`).
   - Bonus: `diag ai-packet` now writes `doctor.json` into the packet for agent-friendly preflight.
   - Agent ergonomics: `diag doctor --fix` can materialize `bundle.json` from manifest chunks (when present) and regenerate common sidecars (including `frames.index.json`).
+  - Agent ergonomics: `diag doctor --fix-schema2` can write `bundle.schema2.json` from `bundle.json` (when present).
   - Agent ergonomics: `diag doctor --fix-dry-run` prints/exports a plan without writing files.
   - CI/agents: `diag doctor --check` (required sidecars) / `--check-all` (all listed sidecars) exits non-zero when unmet.
   - Repair guidance: `doctor.json` includes `repairs[]` with concrete commands like `--fix-bundle-json` / `--fix-sidecars` for self-healing loops.
+  - [x] Accept `bundle.schema2.json` as a primary bundle artifact (so `--fix-sidecars` works even when the directory only contains schema2).
 - [x] Add `--bundle-doctor` integration for `diag run` / `diag suite` / `diag perf` (per-bundle preflight).
   - Modes: `check` / `check-all` / `fix` / `fix-dry-run`.
+  - [x] In `--bundle-doctor fix` / `fix-dry-run`, also attempt schema2 repair (writes `bundle.schema2.json` from `bundle.json` when missing).
   - Evidence anchors:
     - `crates/fret-diag/src/lib.rs`
     - `crates/fret-diag/src/commands/doctor.rs`
+- [x] Normalize bundle artifact path handling in run/post-run consumers (prefer `resolve_bundle_artifact_path`, avoid hard-coded `join("bundle.json")` reads).
+- [x] Update the offline bundle viewer and docs to accept `bundle.schema2.json` as a primary artifact (prefer schema2 when both exist in a zip).
+- [ ] Continue the sweep: remove remaining hard-coded `bundle.json` reads across `crates/fret-diag` tooling and gates (prefer shared helpers).
 
 ## M3: Tooling + AI loop
 
@@ -88,10 +199,18 @@ scope: diagnostics, automation, tooling, refactor
 - [x] Add `diag triage --lite` as the default-first entrypoint for huge bundles (frames-index based).
 - [x] Add `diag hotspots --lite` as a frames-index-based fallback when `bundle.json` is too large to analyze as JSON.
 - [x] Include lite reports in `diag ai-packet` (so agents can start from `triage.lite.json` / `hotspots.lite.json`).
+- [x] Optionally include `bundle.schema2.json` in `diag ai-packet` (when present and within budget).
+- [x] Split `diag ai-packet` implementation into modules to reduce churn hotspots:
+  - `crates/fret-diag/src/commands/ai_packet/budget.rs`
+  - `crates/fret-diag/src/commands/ai_packet/anchors.rs`
+  - `crates/fret-diag/src/commands/ai_packet/slices.rs`
+  - `crates/fret-diag/src/commands/ai_packet/fs.rs`
+- [x] Ensure `diag perf-baseline-from-bundles` accepts `bundle.schema2.json` inputs (and reports correct errors).
 - [x] Publish an explicit migration plan (Option 1 first, Option 2 later).
   - `docs/workstreams/diag-fearless-refactor-v1/migration-plan.md`
 - [ ] Prefer structured evidence diffs over screenshot diffs where possible.
-- [ ] Document a recommended script authoring style for stability (selectors first, bounded waits).
+- [x] Document a recommended script authoring style for stability (selectors first, bounded waits).
+  - `docs/workstreams/diag-fearless-refactor-v1/script-authoring-style.md`
 
 ## M4: Remove debt (finish migration, delete redundant code)
 
@@ -103,19 +222,50 @@ diagnostics stack stays easy to evolve.
   - Bundle dumping + sidecar writers live under `bundle_dump.rs` / `bundle_index.rs`.
   - DevTools WS wiring lives under `ui_diagnostics_devtools_ws.rs`.
 - [ ] Delete transitional glue after migration:
+  - [x] Remove the old inline `diag repro` implementation from `crates/fret-diag/src/lib.rs` after extraction (no redundant copies).
   - remove duplicated per-step dispatch code from the old location(s),
   - avoid “forwarder wrappers” that exist only because of historical file layout.
+  - remove the temporary `diag ai-packet` monolith copy after parity is verified:
+    - `crates/fret-diag/src/commands/ai_packet/monolith.rs`
+- [x] Delete the legacy `apply_post_run_checks(...)` mega-signature once all callers are on `diag_run::RunChecks`.
 - [ ] Remove redundant semantics traversal helpers in gates:
   - prefer `crate::json_bundle::SemanticsResolver` + shared helpers (no `debug.semantics.nodes` re-greps).
-- [ ] Publish and enforce a bundle schema compatibility matrix (v1/v2) for in-tree workflows.
-  - Doc home: `docs/workstreams/diag-fearless-refactor-v1/migration-plan.md`
-  - Tooling: `diag doctor` should warn when bundles are produced with legacy-only knobs or unexpected schema versions.
+- [x] Audit result: no remaining `debug.semantics` path-digging in `crates/fret-diag` (use `SemanticsResolver` + helpers).
+  - Evidence anchors:
+    - `crates/fret-diag/src/json_bundle.rs`
+    - `crates/fret-diag/src/stats/semantics.rs`
+- [x] Fix `diag bundle-v2` semantics mode behavior for schema v2 bundles that are semantics-table-only (no inline semantics):
+  - apply mode decisions based on resolved semantics (inline or `tables.semantics`),
+  - prune `tables.semantics.entries[]` to the post-mode referenced set (avoid dropping all semantics by accident).
+- [x] Publish and enforce a bundle schema compatibility matrix (v1/v2) for in-tree workflows.
+  - Doc home: `docs/workstreams/diag-fearless-refactor-v1/schema-compat-matrix.md`
+  - Tooling: `diag doctor` warns on unexpected/missing bundle schema versions and suggests concrete repairs.
 - [ ] Reduce “stats mega-module” churn permanently:
   - keep `crates/fret-diag/src/stats.rs` as a small index/exports surface,
   - large check families stay in `crates/fret-diag/src/stats/*.rs`.
+  - [x] Split the largest bundle-stats blocks out of `crates/fret-diag/src/stats.rs` (mechanical move to reduce churn):
+    - `crates/fret-diag/src/stats/bundle_stats_sort.rs`
+    - `crates/fret-diag/src/stats/bundle_stats_report.inc.rs`
+    - `crates/fret-diag/src/stats/bundle_stats_compute.inc.rs`
+    - `crates/fret-diag/src/stats/bundle_stats_snapshot.rs`
+  - [x] Move retained vlist keep-alive gates into `crates/fret-diag/src/stats/retained_vlist_gates.rs`.
+  - [x] Replace `check_*` forwarder wrappers in `crates/fret-diag/src/stats.rs` with re-exports (and widen the gate/check
+    function visibility to `pub(crate)` in `crates/fret-diag/src/stats/*.rs`).
 - [ ] Audit and remove dead/legacy code paths once consumers have migrated:
   - legacy env knobs that are no longer used,
   - legacy schema compatibility layers that are no longer needed for in-tree workflows.
+
+### Debt removal checklist
+
+- [x] Migrate tooling and docs to canonical screenshot env vars:
+  - `FRET_DIAG_GPU_SCREENSHOTS` (script-driven screenshots)
+  - `FRET_DIAG_BUNDLE_SCREENSHOT` (bundle `frame.bmp`)
+- [x] Remove legacy screenshot env aliases from runtime parsing:
+  - `FRET_DIAG_SCREENSHOTS`
+  - `FRET_DIAG_SCREENSHOT`
+- [x] Remove legacy fixed delta env alias:
+  - `FRET_DIAG_FRAME_DELTA_MS`
+- [x] Remove schema-v1 bundle emission from the runtime (schema v2 only).
 
 ## Evidence anchors (keep updated as implementation changes)
 
@@ -125,3 +275,30 @@ diagnostics stack stays easy to evolve.
 - `crates/fret-diag/src/stats.rs`
 - `crates/fret-diag/src/stats/ui_gallery_markdown_editor.rs`
 - `crates/fret-diag/src/stats/ui_gallery_code_editor.rs`
+
+## Notes (2026-02-23)
+
+- [x] Extract selector/hit-test/bounds trace helpers into `ecosystem/fret-bootstrap/src/ui_diagnostics/trace_helpers.rs`.
+- [x] Extract input event synthesis helpers into `ecosystem/fret-bootstrap/src/ui_diagnostics/input_event_synthesis.rs`.
+- [x] Extract overlay placement trace recording helpers into `ecosystem/fret-bootstrap/src/ui_diagnostics/overlay_placement_trace_recording.rs`.
+- [x] Extract focus + IME trace recording helpers into `ecosystem/fret-bootstrap/src/ui_diagnostics/focus_and_ime_trace_recording.rs`.
+- [x] Extract hit-test trace recording helpers into `ecosystem/fret-bootstrap/src/ui_diagnostics/hit_test_trace_recording.rs`.
+- [x] Extract selector resolution trace helpers into `ecosystem/fret-bootstrap/src/ui_diagnostics/selector_resolution_trace_recording.rs`.
+- [x] Extract window target + geometry helpers into `ecosystem/fret-bootstrap/src/ui_diagnostics/window_target_and_geometry_helpers.rs`.
+- [x] Extract DevTools WS helpers into `ecosystem/fret-bootstrap/src/ui_diagnostics/devtools_ws_helpers.rs`.
+- [x] Move `sanitize_path_for_bundle` into `ecosystem/fret-bootstrap/src/ui_diagnostics/path_utils.rs`.
+- [x] Extract docking + predicate evaluation helpers into `ecosystem/fret-bootstrap/src/ui_diagnostics/predicates.rs`.
+- [x] Extract sidecar writing helpers out of `bundle_dump.rs` into
+      `ecosystem/fret-bootstrap/src/ui_diagnostics/bundle_sidecars.rs` to reduce dump churn.
+- [x] Consolidate small touch-stamp + pointer helpers into the dedicated helper files (`touch_stamp.rs`, `input_event_synthesis.rs`).
+- [x] Move script failure reason-code mapping into `ecosystem/fret-bootstrap/src/ui_diagnostics/labels.rs`.
+- [x] Split schema-specific dump logic into `dump_schema_v1` / `dump_schema_v2` helpers to keep
+      `dump_bundle_with_options` mostly about option resolution + dispatch.
+- [x] Factor dump finalization (write bundle.json, WS notify, sidecars, counters) into a shared helper
+      to reduce v1/v2 duplication.
+- [x] Reuse `UiArtifactStatsV1` directly as the dump return value (remove intermediate count structs).
+- [x] Migrate `diag bundle-v2` conversion to shared semantics helpers (`json_bundle::snapshot_semantics`) and
+      prune `tables.semantics` after applying semantics mode (avoid oversized converted bundles).
+- [x] Extract `build_semantics_table_entries_from_windows` helper into `crates/fret-diag/src/json_bundle.rs` to
+      avoid repeating v1→v2 semantics table construction logic.
+- [x] Update `fret-diag` lints to resolve semantics via `json_bundle::SemanticsResolver` so schema v2 bundles are linted correctly.

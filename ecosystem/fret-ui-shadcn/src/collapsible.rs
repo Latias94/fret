@@ -265,7 +265,6 @@ impl Collapsible {
     }
 }
 
-#[derive(Clone)]
 pub struct CollapsibleTrigger {
     open: Model<bool>,
     disabled: bool,
@@ -329,7 +328,6 @@ impl CollapsibleTrigger {
     }
 }
 
-#[derive(Clone)]
 pub struct CollapsibleContent {
     chrome: ChromeRefinement,
     layout: LayoutRefinement,

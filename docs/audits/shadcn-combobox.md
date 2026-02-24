@@ -50,6 +50,12 @@ Base UI combobox lifecycle semantics.
 - Pass: Opening auto-focuses the command input, and combobox semantics are reported on the editable surface.
 - Pass: Trigger chrome aligns with shadcn outline-button intent while preserving combobox semantics.
 
+### Item modeling (structured metadata)
+
+- Pass: `ComboboxItem::detail(...)` supports structured suffix metadata (e.g. `Next.js (React)`) without forcing callers
+  to pre-format richer labels.
+- Pass: `ComboboxItem::keywords(...)` is forwarded to cmdk-style filtering via `CommandItem::keywords(...)`.
+
 ## Known gaps
 
 - Gap: Base UI callbacks include cancellable event details; Fret currently exposes reason metadata
@@ -65,3 +71,4 @@ Base UI combobox lifecycle semantics.
 - `cargo nextest run -p fret-ui-shadcn combobox_open_change_events_emit_change_and_complete_after_settle`
 - `cargo nextest run -p fret-ui-shadcn combobox_open_change_events_complete_without_animation`
 - `cargo nextest run -p fret-ui-shadcn combobox_open_change_reason_maps_dismiss_reasons`
+- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-combobox-custom-items-detail-filter-react.json --launch -- cargo run -p fret-ui-gallery`

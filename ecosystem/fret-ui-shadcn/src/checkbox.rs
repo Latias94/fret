@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use fret_core::window::ColorScheme;
 use fret_core::{Axis, Color, Corners, Edges, Px};
 use fret_icons::ids;
 use fret_runtime::{CommandId, Model};
@@ -280,7 +281,7 @@ impl Checkbox {
             };
             let mut ring = decl_style::focus_ring(&theme, radius);
             ring.color = if aria_invalid {
-                let ring_key = if theme.name.contains("/dark") {
+                let ring_key = if theme.color_scheme == Some(ColorScheme::Dark) {
                     "destructive/40"
                 } else {
                     "destructive/20"
@@ -640,6 +641,10 @@ mod tests {
             .iter()
             .find(|n| n.role == fret_core::SemanticsRole::Checkbox)
             .expect("checkbox semantics node");
+        assert_eq!(
+            node.flags.checked_state,
+            Some(fret_core::SemanticsCheckedState::False)
+        );
         assert_eq!(node.flags.checked, Some(false));
 
         let checkbox_node = ui.children(root)[0];
@@ -783,6 +788,10 @@ mod tests {
             .iter()
             .find(|n| n.role == fret_core::SemanticsRole::Checkbox)
             .expect("checkbox semantics node");
+        assert_eq!(
+            node.flags.checked_state,
+            Some(fret_core::SemanticsCheckedState::Mixed)
+        );
         assert_eq!(node.flags.checked, None);
 
         let checkbox_node = ui.children(root)[0];
@@ -841,6 +850,10 @@ mod tests {
             .find(|n| n.role == fret_core::SemanticsRole::Checkbox)
             .expect("checkbox semantics node");
         assert_eq!(node.flags.checked, Some(true));
+        assert_eq!(
+            node.flags.checked_state,
+            Some(fret_core::SemanticsCheckedState::True)
+        );
     }
 
     #[test]

@@ -1,7 +1,7 @@
 ---
 title: Diag Fearless Refactor v1 (Milestones)
 status: draft
-date: 2026-02-21
+date: 2026-02-24
 scope: diagnostics, automation, bundle-schema, refactor
 ---
 
@@ -12,7 +12,7 @@ This file tracks milestones for `docs/workstreams/diag-fearless-refactor-v1.md`.
 Conventions:
 
 - keep changes additive and compatibility-first (fearless refactor prerequisite),
-- prefer bounded artifacts (index/slice/packet) over grepping full `bundle.json`,
+- prefer bounded artifacts (`bundle.schema2.json` / index / slice / packet) over grepping full `bundle.json`,
 - keep a fast gate green after each milestone (recommended: `cargo check -p fret-ui-gallery`).
 
 ## Milestones
@@ -64,7 +64,7 @@ Definition of done:
 
 - Inspect/pick code paths are independently editable without touching bundle/schema code.
 
-### M4: Plan 1 closure for AI loops
+### M4: Plan 1 closure for AI loops (schema2-first)
 
 - [ ] Ensure “AI packet” is the default shareable artifact path for triage.
 - [ ] Ensure sidecars (`bundle.meta.json`, `bundle.index.json`, `test_ids.index.json`) are consistently available
@@ -78,6 +78,12 @@ Definition of done:
 Definition of done:
 
 - A typical scripted failure can be debugged from an AI packet without opening the full `bundle.json`.
+- Tooling accepts `bundle.schema2.json` in all common “bundle path” entry points (pack/repro/suite/triage/stats).
+
+### M4.1: Remove `bundle.json`-only assumptions in tooling
+
+- [ ] Ensure post-run checks, suite runners, and error messages consistently talk about “bundle artifacts” (not `bundle.json`).
+- [ ] Add one regression test that a schema2-only bundle dir is accepted where we claim it is.
 
 ### M5: Plan 2 prototype (deferred)
 

@@ -183,7 +183,7 @@ impl Plan {
 }
 
 /// Header wrapper aligned with AI Elements `PlanHeader`.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct PlanHeader {
     children: Vec<AnyElement>,
     test_id: Option<Arc<str>>,
@@ -306,7 +306,7 @@ impl PlanDescription {
 }
 
 /// Action slot aligned with AI Elements `PlanAction`.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct PlanAction {
     children: Vec<AnyElement>,
     test_id: Option<Arc<str>>,
@@ -402,7 +402,7 @@ impl PlanTrigger {
 }
 
 /// Collapsible content wrapper aligned with AI Elements `PlanContent`.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct PlanContent {
     children: Vec<AnyElement>,
     test_id: Option<Arc<str>>,
@@ -446,7 +446,7 @@ impl PlanContent {
 }
 
 /// Footer wrapper aligned with AI Elements `PlanFooter`.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct PlanFooter {
     children: Vec<AnyElement>,
     test_id: Option<Arc<str>>,

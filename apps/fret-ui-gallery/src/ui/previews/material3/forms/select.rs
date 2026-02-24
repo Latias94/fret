@@ -320,7 +320,7 @@ pub(in crate::ui) fn preview_material3_select(cx: &mut ElementContext<'_, App>) 
             let transform =
                 fret_core::Transform2D::translation(fret_core::Point::new(Px(12.0), Px(6.0)))
                     * fret_core::Transform2D::scale_uniform(0.92);
-            vec![cx.visual_transform(transform, |_cx| vec![transformed_select.clone()])]
+            vec![cx.visual_transform(transform, move |_cx| vec![transformed_select])]
         },
     );
 

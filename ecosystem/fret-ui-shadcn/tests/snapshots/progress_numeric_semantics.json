@@ -1,0 +1,217 @@
+{
+  "version": 1,
+  "semantics": [
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": -108.8,
+          "y": 0.0
+        },
+        "size": {
+          "w": 320.0,
+          "h": 8.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": -108.8,
+          "y": 0.0
+        },
+        "size": {
+          "w": 320.0,
+          "h": 8.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "ProgressBar",
+      "label": "Loading",
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 0.0,
+          "y": 0.0
+        },
+        "size": {
+          "w": 320.0,
+          "h": 8.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      },
+      "extra": {
+        "orientation": "Horizontal",
+        "numeric": {
+          "value": 66.0,
+          "min": 0.0,
+          "max": 100.0
+        }
+      }
+    },
+    {
+      "role": "Window",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 0.0,
+          "y": 0.0
+        },
+        "size": {
+          "w": 320.0,
+          "h": 180.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    }
+  ],
+  "scene_ops": [
+    {
+      "kind": "Quad",
+      "rect": {
+        "origin": {
+          "x": 0.0,
+          "y": 0.0
+        },
+        "size": {
+          "w": 320.0,
+          "h": 8.0
+        }
+      },
+      "background": {
+        "r": 0.047,
+        "g": 0.258,
+        "b": 1.0,
+        "a": 0.2
+      },
+      "border": {
+        "top": 0.0,
+        "right": 0.0,
+        "bottom": 0.0,
+        "left": 0.0
+      },
+      "border_color": {
+        "r": 0.0,
+        "g": 0.0,
+        "b": 0.0,
+        "a": 0.0
+      },
+      "corner_radii": {
+        "top_left": 4.0,
+        "top_right": 4.0,
+        "bottom_right": 4.0,
+        "bottom_left": 4.0
+      }
+    },
+    {
+      "kind": "PushClipRRect",
+      "rect": {
+        "origin": {
+          "x": 0.0,
+          "y": 0.0
+        },
+        "size": {
+          "w": 320.0,
+          "h": 8.0
+        }
+      },
+      "corner_radii": {
+        "top_left": 4.0,
+        "top_right": 4.0,
+        "bottom_right": 4.0,
+        "bottom_left": 4.0
+      }
+    },
+    {
+      "kind": "PushTransform",
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        1.0,
+        -108.8,
+        0.0
+      ]
+    },
+    {
+      "kind": "Quad",
+      "rect": {
+        "origin": {
+          "x": 0.0,
+          "y": 0.0
+        },
+        "size": {
+          "w": 320.0,
+          "h": 8.0
+        }
+      },
+      "background": {
+        "r": 0.047,
+        "g": 0.258,
+        "b": 1.0,
+        "a": 1.0
+      },
+      "border": {
+        "top": 0.0,
+        "right": 0.0,
+        "bottom": 0.0,
+        "left": 0.0
+      },
+      "border_color": {
+        "r": 0.0,
+        "g": 0.0,
+        "b": 0.0,
+        "a": 0.0
+      },
+      "corner_radii": {
+        "top_left": 4.0,
+        "top_right": 4.0,
+        "bottom_right": 4.0,
+        "bottom_left": 4.0
+      }
+    },
+    {
+      "kind": "PopTransform"
+    },
+    {
+      "kind": "PopClip"
+    }
+  ]
+}

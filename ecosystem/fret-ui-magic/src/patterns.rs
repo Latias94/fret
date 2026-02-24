@@ -71,14 +71,17 @@ fn resolve_pattern_motion<H: UiHost>(
         .and_then(|svc| svc.snapshot(cx.window));
 
     let (vx, vy) = motion.scroll_px_per_s;
-    let can_animate = !prefers_reduced_motion && clock.is_some() && (vx != 0.0 || vy != 0.0);
+    // Bootstrap note: the per-window frame clock snapshot is recorded during paint.
+    // If we require it to exist before requesting frames, the first mount cannot start animation
+    // on otherwise-idle screens (a common case for web perf evidence pages).
+    let wants_motion = !prefers_reduced_motion && (vx != 0.0 || vy != 0.0);
 
-    set_continuous_frames(cx, can_animate);
-    if can_animate {
+    set_continuous_frames(cx, wants_motion);
+    if wants_motion {
         cx.notify_for_animation_frame();
     }
 
-    let Some(clock) = clock.filter(|_| can_animate) else {
+    let Some(clock) = clock.filter(|_| wants_motion) else {
         return (0.0, (0.0, 0.0));
     };
 

@@ -2,7 +2,9 @@
 //!
 //! Upstream reference: `@radix-ui/react-toast` (`repo-ref/primitives/packages/react/toast`).
 //!
-//! Fret does not model DOM portals or ARIA live region announcement yet. This module focuses on
+//! Fret does not model DOM portals. Live region announcements are modeled via the semantics
+//! contract (`SemanticsFlags.live` / `live_atomic`) and are published by the toast viewport
+//! overlay root. This module focuses on
 //! the reusable core outcomes:
 //! - a per-window toast store with upsert-by-id
 //! - a viewport root installed as a window overlay layer

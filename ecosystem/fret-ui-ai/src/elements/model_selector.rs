@@ -89,7 +89,6 @@ pub type ModelSelectorDialog = CommandDialog;
 ///
 /// In upstream React this is `DialogTrigger`. In Fret we model it as a pressable wrapper that sets
 /// the provided `open` model to `true`.
-#[derive(Clone)]
 pub struct ModelSelectorTrigger {
     open: Model<bool>,
     child: AnyElement,
@@ -158,7 +157,6 @@ impl ModelSelectorTrigger {
 /// AI Elements-aligned `ModelSelectorContent`.
 ///
 /// Upstream applies "no border + p-0" and renders the title as `sr-only`.
-#[derive(Clone)]
 pub struct ModelSelectorContent {
     title: Arc<str>,
     children: Vec<AnyElement>,
@@ -375,7 +373,6 @@ impl ModelSelectorLogo {
 /// Upstream uses negative spacing (`-space-x-1`) to overlap the logos. Fret currently does not
 /// expose negative gap at the stack level, so we render a tight row (apps can customize with
 /// transforms if needed).
-#[derive(Clone)]
 pub struct ModelSelectorLogoGroup {
     children: Vec<AnyElement>,
     test_id: Option<Arc<str>>,

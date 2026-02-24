@@ -345,7 +345,7 @@ impl PackageInfo {
     }
 }
 
-#[derive(Clone, Default)]
+#[derive(Default)]
 pub struct PackageInfoHeader {
     children: Vec<AnyElement>,
     layout: LayoutRefinement,
@@ -726,7 +726,7 @@ impl PackageInfoDescription {
     }
 }
 
-#[derive(Clone, Default)]
+#[derive(Default)]
 pub struct PackageInfoContent {
     children: Vec<AnyElement>,
     layout: LayoutRefinement,
@@ -774,7 +774,7 @@ impl PackageInfoContent {
     }
 }
 
-#[derive(Clone, Default)]
+#[derive(Default)]
 pub struct PackageInfoDependencies {
     children: Vec<AnyElement>,
     layout: LayoutRefinement,

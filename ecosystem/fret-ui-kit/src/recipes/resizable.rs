@@ -1,10 +1,5 @@
-use fret_core::{Color, Px};
+use fret_core::Px;
 use fret_ui::{ResizablePanelGroupStyle, Theme};
-
-fn alpha_mul(mut c: Color, mul: f32) -> Color {
-    c.a = (c.a * mul).clamp(0.0, 1.0);
-    c
-}
 
 /// Component-layer default chrome for the runtime `ResizablePanelGroup` mechanism.
 ///
@@ -17,7 +12,7 @@ pub fn default_resizable_panel_group_style(theme: &Theme) -> ResizablePanelGroup
         .or_else(|| theme.color_by_key("input"))
         .unwrap_or(theme.snapshot().colors.panel_border);
 
-    let mut style = ResizablePanelGroupStyle {
+    ResizablePanelGroupStyle {
         gap: theme
             .metric_by_key("component.resizable.gap")
             .unwrap_or(Px(0.0)),
@@ -29,11 +24,10 @@ pub fn default_resizable_panel_group_style(theme: &Theme) -> ResizablePanelGroup
             .map(|p| p.0.max(1.0))
             .unwrap_or(1.0),
         handle_color,
+        // shadcn/ui uses `bg-border` for the handle line (no extra opacity multiplier).
+        handle_alpha: 1.0,
+        handle_hover_alpha: 1.0,
+        handle_drag_alpha: 1.0,
         ..Default::default()
-    };
-
-    // A slightly softer default alpha tends to match shadcn-ish dividers.
-    style.handle_color = alpha_mul(style.handle_color, 0.9);
-
-    style
+    }
 }

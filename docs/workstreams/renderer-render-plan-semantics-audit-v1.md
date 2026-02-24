@@ -36,7 +36,10 @@ Definition: “initialized in the current frame” (v1)
 - `PlanTarget::Output` is intentionally treated as “externally initialized” by the runtime:
   - debug validation does not track `Output` initialization/liveness,
   - and `LoadOp::Load` into `Output` is therefore permitted by the validator.
-  - For deterministic output (tests, diagnostics, refactors), prefer ensuring the first write to `Output` uses `LoadOp::Clear`.
+  - For deterministic output (tests, diagnostics, refactors), ensure the first write to `Output` uses `LoadOp::Clear`.
+    - Guardrail: unit tests assert the plan’s first `Output` write is `Clear` for the common plan shapes.
+    - Optional runtime guardrail (debug-only): set `FRET_RENDER_PLAN_STRICT_OUTPUT_CLEAR=1` to panic if the plan’s first `Output` write uses
+      `LoadOp::Load` (useful when refactoring without running tests).
 
 Guardrail:
 - `RenderPlan::debug_validate()` (debug-only) must remain enabled at `render_scene_execute` call sites.
@@ -47,6 +50,22 @@ Guardrail:
 - `LoadOp::Load` means the pass composes into existing `dst` content and therefore requires a prior initialization within the frame (or a defined surface content for `Output`).
 - `ClipMask` always clears its destination mask target (it is an initialization pass).
 - `PathMsaaBatch` always composites with `LoadOp::Load` into its destination target.
+
+Scissored in-place effect preservation (v1)
+
+Some effect passes are intentionally executed *in place* (write back into the same `srcdst` target) while also being **scissored** to a smaller
+region. In this pattern, **outside-region content must remain untouched**, which implies:
+
+- the effect pass uses `LoadOp::Load`,
+- `dst_scissor` is set (dst-local),
+- and the plan compiler must preserve the outside region by using a scratch target to stage the original content (typically a pre-blit) before
+  the scissored `LoadOp::Load` pass runs.
+
+This is relied on by scissored postprocess steps such as:
+
+- `ColorAdjust`, `ColorMatrix`, `AlphaThreshold` (single-scratch in-place),
+- `BackdropWarp` (single-scratch in-place),
+- and `DropShadow` (two-scratch pattern with an explicit restore + composite step).
 
 ### 3) Coordinate spaces
 
@@ -116,9 +135,12 @@ This section is intentionally terse: it is meant to be a checklist for refactors
 - `PathMsaaBatch`
   - Clears an internal MSAA intermediate, then composites into its `target` using `LoadOp::Load`.
   - Therefore requires `target` to be initialized earlier in the frame.
+  - Plan compiler guardrail: if `PathMsaaBatch` is the first “real” draw in a scope, the compiler emits an (optionally empty) `SceneDrawRange`
+    pass with `LoadOp::Clear` to initialize the destination target, so `PathMsaaBatch(load=Load)` never relies on undefined prior surface
+    contents (including `Output`).
   - Uses absolute (render-space) scissors mapped against `target_origin`/`target_size`.
 - `PathClipMask`
-  - Writes a mask target (`Mask*`) with an explicit `load`.
+  - Writes a mask target (`Mask*`) and always clears to transparent (initialization pass).
   - Uses an absolute (render-space) `scissor` that must intersect `dst_origin`/`dst_size`.
 - `ClipMask`
   - Writes a mask target and always clears to transparent.
@@ -134,6 +156,9 @@ This section is intentionally terse: it is meant to be a checklist for refactors
   - Reads `src`, writes `dst` with an explicit `load`.
   - `dst_scissor` is local to the destination target.
   - When `mask` is present, it must be an upscale pass and `mask_uniform_index` must be set.
+  - Common patterns:
+    - Downsample into scratch uses `LoadOp::Clear` (does not depend on prior `dst` contents).
+    - In-place scissored upscales use `LoadOp::Load` and therefore require the destination to be initialized within the frame.
 - `Blur`, `BackdropWarp`, `ColorAdjust`, `ColorMatrix`, `AlphaThreshold`, `DropShadow`
   - Read `src`, write `dst` with an explicit `load`.
   - `dst_scissor` is local to the destination target.
@@ -141,22 +166,32 @@ This section is intentionally terse: it is meant to be a checklist for refactors
 - `ReleaseTarget`
   - Ends the lifetime of an intermediate/mask target; future reads/writes must not assume the previous contents.
 
+## Scale/scissor mapping notes (v1)
+
+This section records the scissor mapping rules we rely on for scale-related passes so refactors can't accidentally change rounding or coverage.
+
+- `ScaleNearest` (downsample, nearest-style)
+  - When a scissor is carried into a downsampled target, we use integer-division mapping with floor/ceil edges:
+    - see `map_scissor_downsample_nearest(scissor, scale, dst_size)`.
+  - The mapping must be coverage-monotonic (never expands beyond the mapped bounds).
+- `ScaleNearest` (general resize mapping)
+  - When a scissor is carried between arbitrary sizes, we use floor start + ceil end mapping:
+    - see `map_scissor_to_size(scissor, src_size, dst_size)`.
+  - The mapping must be coverage-monotonic (never expands beyond the mapped bounds).
+
 ## Ambiguities / TODO (v1)
 
 This section is deliberately explicit: these are areas where the current implementation *may* be correct, but where we want tighter documentation
 or stronger guardrails before larger internal refactors.
 
-- `PathMsaaBatch` initialization rules:
-  - We rely on `LoadOp::Load` semantics for the composite step; the remaining ambiguity is *which* pass is expected to initialize the destination
-    target in each supported plan shape (and whether any shape relies on `Output` prior contents rather than an explicit clear).
 - `ClipMask` clear/load assumptions:
   - Guardrail: debug validation rejects non-`Clear` `ClipMask` passes (this is treated as an invariant for refactors).
 - Mask sampling and `MaskRef.viewport_rect` mapping:
   - Keep the mapping matrix above in sync with validation and recorders.
   - If a pass’s shader semantics changes (e.g. `CompositePremul` starts requiring `mask_uniform_index`), update both the validator and the matrix.
 - Scissor mapping across scale chains:
-  - We have unit tests that assert non-expansion across downsample steps; we still want a small doc table that records the exact mapping rules
-    (integer division / rounding behavior) for each scale-related pass so refactors can’t accidentally change them.
+  - Guardrail: unit tests assert non-expansion across downsample steps.
+  - Keep the mapping notes above in sync with the actual helper functions used by the compiler.
 
 ## Evidence / gates
 

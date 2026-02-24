@@ -1515,6 +1515,7 @@ fn ime_cursor_area_reflects_scroll_offset_in_paint_space() {
             scale_factor: 1.0,
             accumulated_transform: fret_core::Transform2D::IDENTITY,
             children_render_transform: None,
+            paint_style: Default::default(),
             services,
             observe_model: &mut observe_model,
             observe_global: &mut observe_global,

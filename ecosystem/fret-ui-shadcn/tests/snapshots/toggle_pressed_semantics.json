@@ -1,0 +1,195 @@
+{
+  "version": 1,
+  "semantics": [
+    {
+      "role": "Button",
+      "label": "Toggle",
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 0.0,
+          "y": 0.0
+        },
+        "size": {
+          "w": 36.0,
+          "h": 36.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null,
+        "pressed_state": "True"
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 0.0,
+          "y": 0.0
+        },
+        "size": {
+          "w": 28.0,
+          "h": 36.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 9.0,
+          "y": 1.0
+        },
+        "size": {
+          "w": 10.0,
+          "h": 34.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Text",
+      "label": "Hello",
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 9.0,
+          "y": 10.0
+        },
+        "size": {
+          "w": 10.0,
+          "h": 16.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Window",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 0.0,
+          "y": 0.0
+        },
+        "size": {
+          "w": 320.0,
+          "h": 180.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    }
+  ],
+  "scene_ops": [
+    {
+      "kind": "Quad",
+      "rect": {
+        "origin": {
+          "x": 0.0,
+          "y": 0.0
+        },
+        "size": {
+          "w": 28.0,
+          "h": 36.0
+        }
+      },
+      "background": {
+        "r": 0.037,
+        "g": 0.045,
+        "b": 0.061,
+        "a": 1.0
+      },
+      "border": {
+        "top": 1.0,
+        "right": 1.0,
+        "bottom": 1.0,
+        "left": 1.0
+      },
+      "border_color": {
+        "r": 0.0,
+        "g": 0.0,
+        "b": 0.0,
+        "a": 0.0
+      },
+      "corner_radii": {
+        "top_left": 8.0,
+        "top_right": 8.0,
+        "bottom_right": 8.0,
+        "bottom_left": 8.0
+      }
+    },
+    {
+      "kind": "PushClipRRect",
+      "rect": {
+        "origin": {
+          "x": 0.0,
+          "y": 0.0
+        },
+        "size": {
+          "w": 28.0,
+          "h": 36.0
+        }
+      },
+      "corner_radii": {
+        "top_left": 8.0,
+        "top_right": 8.0,
+        "bottom_right": 8.0,
+        "bottom_left": 8.0
+      }
+    },
+    {
+      "kind": "Text",
+      "origin": {
+        "x": 9.0,
+        "y": 21.0
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.73,
+        "b": 0.815,
+        "a": 1.0
+      }
+    },
+    {
+      "kind": "PopClip"
+    }
+  ]
+}

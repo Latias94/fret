@@ -312,7 +312,6 @@ impl Default for ToastLayerStyle {
     }
 }
 
-#[derive(Clone)]
 pub struct DismissiblePopoverRequest {
     pub id: GlobalElementId,
     pub root_name: String,
@@ -334,6 +333,45 @@ pub struct DismissiblePopoverRequest {
     pub on_dismiss_request: Option<OnDismissRequest>,
     pub on_pointer_move: Option<OnDismissiblePointerMove>,
     pub children: Vec<AnyElement>,
+}
+
+#[derive(Clone)]
+pub(super) struct CachedDismissiblePopoverDecl {
+    pub id: GlobalElementId,
+    pub root_name: String,
+    pub trigger: GlobalElementId,
+    pub dismissable_branches: Vec<GlobalElementId>,
+    pub consume_outside_pointer_events: bool,
+    pub disable_outside_pointer_events: bool,
+    pub close_on_window_focus_lost: bool,
+    pub close_on_window_resize: bool,
+    pub open: Model<bool>,
+    pub initial_focus: Option<GlobalElementId>,
+    pub on_open_auto_focus: Option<OnOpenAutoFocus>,
+    pub on_close_auto_focus: Option<OnCloseAutoFocus>,
+    pub on_dismiss_request: Option<OnDismissRequest>,
+    pub on_pointer_move: Option<OnDismissiblePointerMove>,
+}
+
+impl From<&DismissiblePopoverRequest> for CachedDismissiblePopoverDecl {
+    fn from(req: &DismissiblePopoverRequest) -> Self {
+        Self {
+            id: req.id,
+            root_name: req.root_name.clone(),
+            trigger: req.trigger,
+            dismissable_branches: req.dismissable_branches.clone(),
+            consume_outside_pointer_events: req.consume_outside_pointer_events,
+            disable_outside_pointer_events: req.disable_outside_pointer_events,
+            close_on_window_focus_lost: req.close_on_window_focus_lost,
+            close_on_window_resize: req.close_on_window_resize,
+            open: req.open.clone(),
+            initial_focus: req.initial_focus,
+            on_open_auto_focus: req.on_open_auto_focus.clone(),
+            on_close_auto_focus: req.on_close_auto_focus.clone(),
+            on_dismiss_request: req.on_dismiss_request.clone(),
+            on_pointer_move: req.on_pointer_move.clone(),
+        }
+    }
 }
 
 impl std::fmt::Debug for DismissiblePopoverRequest {
@@ -368,7 +406,6 @@ impl std::fmt::Debug for DismissiblePopoverRequest {
     }
 }
 
-#[derive(Clone)]
 pub struct ModalRequest {
     pub id: GlobalElementId,
     pub root_name: String,
@@ -382,6 +419,37 @@ pub struct ModalRequest {
     pub on_close_auto_focus: Option<OnCloseAutoFocus>,
     pub on_dismiss_request: Option<OnDismissRequest>,
     pub children: Vec<AnyElement>,
+}
+
+#[derive(Clone)]
+pub(super) struct CachedModalDecl {
+    pub id: GlobalElementId,
+    pub root_name: String,
+    pub trigger: Option<GlobalElementId>,
+    pub close_on_window_focus_lost: bool,
+    pub close_on_window_resize: bool,
+    pub open: Model<bool>,
+    pub initial_focus: Option<GlobalElementId>,
+    pub on_open_auto_focus: Option<OnOpenAutoFocus>,
+    pub on_close_auto_focus: Option<OnCloseAutoFocus>,
+    pub on_dismiss_request: Option<OnDismissRequest>,
+}
+
+impl From<&ModalRequest> for CachedModalDecl {
+    fn from(req: &ModalRequest) -> Self {
+        Self {
+            id: req.id,
+            root_name: req.root_name.clone(),
+            trigger: req.trigger,
+            close_on_window_focus_lost: req.close_on_window_focus_lost,
+            close_on_window_resize: req.close_on_window_resize,
+            open: req.open.clone(),
+            initial_focus: req.initial_focus,
+            on_open_auto_focus: req.on_open_auto_focus.clone(),
+            on_close_auto_focus: req.on_close_auto_focus.clone(),
+            on_dismiss_request: req.on_dismiss_request.clone(),
+        }
+    }
 }
 
 impl std::fmt::Debug for ModalRequest {
@@ -406,7 +474,6 @@ impl std::fmt::Debug for ModalRequest {
     }
 }
 
-#[derive(Clone)]
 pub struct HoverOverlayRequest {
     pub id: GlobalElementId,
     pub root_name: String,
@@ -420,6 +487,27 @@ pub struct HoverOverlayRequest {
     pub present: bool,
     pub on_pointer_move: Option<OnDismissiblePointerMove>,
     pub children: Vec<AnyElement>,
+}
+
+#[derive(Clone)]
+pub(super) struct CachedHoverOverlayDecl {
+    pub id: GlobalElementId,
+    pub root_name: String,
+    pub interactive: bool,
+    pub trigger: GlobalElementId,
+    pub open: Model<bool>,
+}
+
+impl From<&HoverOverlayRequest> for CachedHoverOverlayDecl {
+    fn from(req: &HoverOverlayRequest) -> Self {
+        Self {
+            id: req.id,
+            root_name: req.root_name.clone(),
+            interactive: req.interactive,
+            trigger: req.trigger,
+            open: req.open.clone(),
+        }
+    }
 }
 
 impl std::fmt::Debug for HoverOverlayRequest {
@@ -437,7 +525,6 @@ impl std::fmt::Debug for HoverOverlayRequest {
     }
 }
 
-#[derive(Clone)]
 pub struct TooltipRequest {
     pub id: GlobalElementId,
     pub root_name: String,
@@ -452,6 +539,31 @@ pub struct TooltipRequest {
     pub on_dismiss_request: Option<OnDismissRequest>,
     pub on_pointer_move: Option<OnDismissiblePointerMove>,
     pub children: Vec<AnyElement>,
+}
+
+#[derive(Clone)]
+pub(super) struct CachedTooltipDecl {
+    pub id: GlobalElementId,
+    pub root_name: String,
+    pub interactive: bool,
+    pub trigger: Option<GlobalElementId>,
+    pub open: Model<bool>,
+    pub on_dismiss_request: Option<OnDismissRequest>,
+    pub on_pointer_move: Option<OnDismissiblePointerMove>,
+}
+
+impl From<&TooltipRequest> for CachedTooltipDecl {
+    fn from(req: &TooltipRequest) -> Self {
+        Self {
+            id: req.id,
+            root_name: req.root_name.clone(),
+            interactive: req.interactive,
+            trigger: req.trigger,
+            open: req.open.clone(),
+            on_dismiss_request: req.on_dismiss_request.clone(),
+            on_pointer_move: req.on_pointer_move.clone(),
+        }
+    }
 }
 
 impl std::fmt::Debug for TooltipRequest {

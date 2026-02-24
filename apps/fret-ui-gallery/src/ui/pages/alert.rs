@@ -69,20 +69,6 @@ pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     );
 
     let action = {
-        let action = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .justify_end(),
-            |cx| {
-                ui::children![cx;
-                    shadcn::Button::new("Enable")
-                        .variant(shadcn::ButtonVariant::Outline)
-                        .size(shadcn::ButtonSize::Sm),
-                ]
-            },
-        );
-
         shadcn::Alert::new([
             shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.moon")),
             shadcn::AlertTitle::new("Dark mode is now available").into_element(cx),
@@ -90,7 +76,12 @@ pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                 "Enable it in profile settings to reduce eye strain during long sessions.",
             )
             .into_element(cx),
-            action,
+            shadcn::AlertAction::new([shadcn::Button::new("Enable")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .into_element(cx)
+                .test_id("ui-gallery-alert-action-enable")])
+            .into_element(cx),
         ])
         .refine_layout(LayoutRefinement::default().w_full().max_w(Px(520.0)))
         .into_element(cx)
@@ -147,7 +138,6 @@ pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             "API reference: `ecosystem/fret-ui-shadcn/src/alert.rs` and `ecosystem/fret-ui-shadcn/src/alert_dialog.rs`.",
             "Keep alert copy concise and action-oriented; reserve longer guidance for Dialog or Sheet.",
             "Use `Destructive` only for high-risk or blocking failures to preserve visual hierarchy.",
-            "Current gallery uses an inline action row to approximate shadcn `AlertAction` behavior.",
             "Validate RTL + narrow layout so icon/title/description remain readable in editor sidebars.",
         ],
     );
@@ -199,29 +189,21 @@ pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
 .into_element(cx);"#,
                 ),
             DocSection::new("Action", action)
-                .description("Inline action row composed inside the alert.")
+                .description("Use `AlertAction` to pin a top-right action inside the alert.")
                 .max_w(Px(720.0))
                 .code(
                     "rust",
-                    r#"let action_row = stack::hstack(
-    cx,
-    stack::HStackProps::default()
-        .layout(LayoutRefinement::default().w_full())
-        .justify_end(),
-    |cx| {
-        ui::children![cx;
-            shadcn::Button::new("Enable")
-                .variant(shadcn::ButtonVariant::Outline)
-                .size(shadcn::ButtonSize::Sm),
-        ]
-    },
-);
-
-shadcn::Alert::new([
+                    r#"shadcn::Alert::new([
     shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.moon")),
     shadcn::AlertTitle::new("Dark mode is now available").into_element(cx),
     shadcn::AlertDescription::new("...").into_element(cx),
-    action_row,
+    shadcn::AlertAction::new([
+        shadcn::Button::new("Enable")
+            .variant(shadcn::ButtonVariant::Outline)
+            .size(shadcn::ButtonSize::Sm)
+            .into_element(cx),
+    ])
+    .into_element(cx),
 ])
 .into_element(cx);"#,
                 ),

@@ -64,10 +64,10 @@ pub(crate) fn cmd_perf_baseline_from_bundles(
 
     for raw in rest.iter().skip(1) {
         let bundle_src = resolve_path(&workspace_root, PathBuf::from(raw));
-        let bundle_path = resolve_bundle_json_path(&bundle_src);
+        let bundle_path = resolve_bundle_artifact_path(&bundle_src);
         if !bundle_path.is_file() {
             return Err(format!(
-                "bundle path does not contain bundle.json: {}",
+                "bundle path does not contain bundle.json or bundle.schema2.json: {}",
                 bundle_src.display()
             ));
         }

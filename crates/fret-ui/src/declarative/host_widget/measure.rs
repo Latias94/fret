@@ -380,6 +380,9 @@ impl ElementHostWidget {
             ElementInstance::Pressable(props) => {
                 self.measure_passthrough_box(cx, window, props.layout)
             }
+            ElementInstance::ForegroundScope(props) => {
+                self.measure_passthrough_box(cx, window, props.layout)
+            }
             ElementInstance::Opacity(props) => {
                 self.measure_passthrough_box(cx, window, props.layout)
             }

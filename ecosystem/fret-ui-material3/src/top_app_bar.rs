@@ -130,6 +130,11 @@ impl TopAppBarScrollBehavior {
             TopAppBarScrollBehaviorKind::Pinned => (expanded_height, 0.0, initial_offset_y),
             TopAppBarScrollBehaviorKind::ExitUntilCollapsed => {
                 if !can_scroll_y {
+                    if let Some(state_rc) = self.exit_until_collapsed_state.as_ref() {
+                        let mut state = state_rc.borrow_mut();
+                        state.last_offset_y = Some(initial_offset_y);
+                        state.idle_frames = 0;
+                    }
                     return TopAppBarScrollLayout {
                         scrolled: false,
                         container_height: expanded_height,
@@ -168,6 +173,14 @@ impl TopAppBarScrollBehavior {
             }
             TopAppBarScrollBehaviorKind::EnterAlways => {
                 if !can_scroll_y {
+                    if let Some(state_rc) = self.enter_always_state.as_ref() {
+                        let mut state = state_rc.borrow_mut();
+                        state.last_offset_y = Some(initial_offset_y);
+                        state.idle_frames = 0;
+                        let tick = state.tick;
+                        let height_offset = state.height_offset;
+                        state.settle.reset(tick, height_offset);
+                    }
                     return TopAppBarScrollLayout {
                         scrolled: false,
                         container_height: expanded_height,
@@ -672,7 +685,15 @@ mod tests {
         // Reverse scroll direction should bring the app bar back.
         handle.set_offset(Point::new(Px(0.0), Px(30.0)));
         let layout = behavior.resolve_layout(expanded, collapsed);
-        assert!((layout.container_height.0 - 34.0).abs() < 0.01);
+        assert!(
+            (layout.container_height.0 - 34.0).abs() < 0.01,
+            "expected ~34, got {} (offset_y={}, max_offset_y={}, viewport_h={}, content_h={})",
+            layout.container_height.0,
+            handle.offset().y.0,
+            handle.max_offset().y.0,
+            handle.viewport_size().height.0,
+            handle.content_size().height.0
+        );
 
         // Large deltas can collapse fully.
         handle.set_offset(Point::new(Px(0.0), Px(10_000.0)));
@@ -734,11 +755,25 @@ mod tests {
         handle.set_content_size(Size::new(Px(100.0), Px(100.0)));
         let layout = behavior.resolve_layout(expanded, collapsed);
         assert_eq!(layout.container_height, expanded);
+        assert!(
+            handle.offset().y.0 <= 0.01,
+            "expected non-scrollable content to clamp the scroll offset to 0, got {}",
+            handle.offset().y.0
+        );
 
-        // Switch back to scrollable; the behavior should continue smoothly.
+        // Switch back to scrollable; the behavior should continue smoothly once scrolling resumes.
         handle.set_content_size(Size::new(Px(100.0), Px(400.0)));
+        handle.set_offset(Point::new(Px(0.0), Px(30.0)));
         let layout = behavior.resolve_layout(expanded, collapsed);
-        assert!((layout.container_height.0 - 34.0).abs() < 0.01);
+        assert!(
+            (layout.container_height.0 - 34.0).abs() < 0.01,
+            "expected ~34 after re-enabling scroll, got {} (offset_y={}, max_offset_y={}, viewport_h={}, content_h={})",
+            layout.container_height.0,
+            handle.offset().y.0,
+            handle.max_offset().y.0,
+            handle.viewport_size().height.0,
+            handle.content_size().height.0
+        );
     }
 
     #[test]
@@ -938,11 +973,14 @@ fn top_app_bar_single_row<H: UiHost>(
         .map(|action| top_app_bar_icon_button(cx, action, trailing_color))
         .collect();
 
-    let title =
-        top_app_bar_title_element_for_variant(cx, bar.title.clone(), title_style, title_color);
-
     match bar.variant {
         TopAppBarVariant::SmallCentered => {
+            let title = top_app_bar_title_element_for_variant(
+                cx,
+                bar.title.clone(),
+                title_style,
+                title_color,
+            );
             let leading_reserved = if leading.is_some() { Px(48.0) } else { Px(0.0) };
             let trailing_reserved = Px((trailing_buttons.len() as f32) * 48.0);
             let side_reserved = Px(leading_reserved.0.max(trailing_reserved.0));
@@ -987,7 +1025,7 @@ fn top_app_bar_single_row<H: UiHost>(
             title_row.layout.size.height = Length::Fill;
 
             let title_overlay = cx.container(title_layer, move |cx| {
-                vec![cx.flex(title_row, move |_cx| vec![title.clone()])]
+                vec![cx.flex(title_row, move |_cx| vec![title])]
             });
 
             let mut stack_props = StackProps::default();
@@ -997,6 +1035,12 @@ fn top_app_bar_single_row<H: UiHost>(
             cx.stack_props(stack_props, move |_cx| vec![icons, title_overlay])
         }
         _ => {
+            let title = top_app_bar_title_element_for_variant(
+                cx,
+                bar.title.clone(),
+                title_style,
+                title_color,
+            );
             let mut row = FlexProps::default();
             row.direction = Axis::Horizontal;
             row.align = CrossAlign::Center;
@@ -1015,7 +1059,7 @@ fn top_app_bar_single_row<H: UiHost>(
             title_container_props.justify = MainAlign::Start;
             title_container_props.wrap = false;
             title_container_props.layout = title_layout;
-            let title_container = cx.flex(title_container_props, move |_cx| vec![title.clone()]);
+            let title_container = cx.flex(title_container_props, move |_cx| vec![title]);
 
             let leading_slot = match leading {
                 Some(btn) => slot_container(cx, Px(48.0), vec![btn]),
@@ -1053,19 +1097,6 @@ fn top_app_bar_two_rows<H: UiHost>(
         .map(|action| top_app_bar_icon_button(cx, action, trailing_color))
         .collect();
 
-    let expanded_title = top_app_bar_title_element_for_variant(
-        cx,
-        bar.title.clone(),
-        expanded_title_style,
-        expanded_title_color,
-    );
-    let collapsed_title = top_app_bar_title_element_for_variant(
-        cx,
-        bar.title.clone(),
-        collapsed_title_style,
-        collapsed_title_color,
-    );
-
     let mut column = FlexProps::default();
     column.direction = Axis::Vertical;
     column.align = CrossAlign::Stretch;
@@ -1097,8 +1128,14 @@ fn top_app_bar_two_rows<H: UiHost>(
         title_container.justify = MainAlign::Start;
         title_container.wrap = false;
         title_container.layout = title_layout;
+        let collapsed_title = top_app_bar_title_element_for_variant(
+            cx,
+            bar.title.clone(),
+            collapsed_title_style,
+            collapsed_title_color,
+        );
         let middle = cx.flex(title_container, move |cx| {
-            vec![cx.opacity(collapsed_fraction, |_cx| vec![collapsed_title.clone()])]
+            vec![cx.opacity(collapsed_fraction, move |_cx| vec![collapsed_title])]
         });
 
         let trailing_slot = slot_container(cx, Px(0.0), trailing_buttons);
@@ -1125,6 +1162,12 @@ fn top_app_bar_two_rows<H: UiHost>(
         }
         .into();
 
+        let expanded_title = top_app_bar_title_element_for_variant(
+            cx,
+            bar.title.clone(),
+            expanded_title_style,
+            expanded_title_color,
+        );
         cx.container(wrapper, move |cx| {
             let mut row = FlexProps::default();
             row.direction = Axis::Horizontal;
@@ -1134,7 +1177,7 @@ fn top_app_bar_two_rows<H: UiHost>(
             row.layout.size.width = Length::Fill;
             row.layout.size.height = Length::Fill;
             vec![cx.flex(row, move |cx| {
-                vec![cx.opacity(1.0 - collapsed_fraction, |_cx| vec![expanded_title.clone()])]
+                vec![cx.opacity(1.0 - collapsed_fraction, move |_cx| vec![expanded_title])]
             })]
         })
     };

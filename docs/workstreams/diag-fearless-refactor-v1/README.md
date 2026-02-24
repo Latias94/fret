@@ -32,14 +32,24 @@ Related living docs:
   `ecosystem/fret-bootstrap/src/ui_diagnostics/script_engine.rs`.
 - `fret-diag` CLI dispatch remains centralized, but larger subcommands are being extracted into dedicated modules to reduce churn in
   `crates/fret-diag/src/lib.rs`:
+  - `crates/fret-diag/src/diag_run.rs` (extracted `diag run` command handler)
+  - `crates/fret-diag/src/diag_suite.rs` (extracted `diag suite` command handler)
+  - `crates/fret-diag/src/diag_repeat.rs` (extracted `diag repeat` command handler)
   - `crates/fret-diag/src/diag_perf.rs` (extracted `diag perf` command handler)
   - `crates/fret-diag/src/diag_compare.rs` (extracted `diag compare` command handler)
   - `crates/fret-diag/src/diag_stats.rs` (extracted `diag stats` command handler)
   - `crates/fret-diag/src/diag_matrix.rs` (extracted `diag matrix` command handler)
+  - `crates/fret-diag/src/diag_repro.rs` (extracted `diag repro` command handler)
 - `crates/fret-diag/src/stats.rs` remains large, but UI gallery checks have started moving into dedicated submodules under
   `crates/fret-diag/src/stats/`:
   - `crates/fret-diag/src/stats/ui_gallery_markdown_editor.rs`
   - `crates/fret-diag/src/stats/ui_gallery_code_editor.rs`
+  - `crates/fret-diag/src/stats/ui_gallery_text_gates.rs`
+- To reduce churn while larger modularization is in flight, some of the largest bundle-stats blocks were split out of
+  `crates/fret-diag/src/stats.rs` into dedicated files (currently via `include!`):
+  - `crates/fret-diag/src/stats/bundle_stats_sort.rs`
+  - `crates/fret-diag/src/stats/bundle_stats_report.inc.rs`
+  - `crates/fret-diag/src/stats/bundle_stats_compute.inc.rs`
 - `fret-diag` CLI commands treat sidecars as optional accelerators:
   - validate `kind` / `schema_version` / `warmup_frames`,
   - accept `_root/` bundle layouts,
@@ -74,3 +84,4 @@ See:
 - Migration plan: `docs/workstreams/diag-fearless-refactor-v1/migration-plan.md`
 - Sidecar details: `docs/workstreams/diag-fearless-refactor-v1/frames-index.md`
 - Agent loop: `docs/workstreams/diag-fearless-refactor-v1/agent-loop.md`
+- Debt removal: `docs/workstreams/diag-fearless-refactor-v1/debt-removal.md`

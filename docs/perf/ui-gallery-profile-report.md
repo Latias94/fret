@@ -48,7 +48,14 @@ cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-virtual-list-t
 Then inspect the resulting bundle:
 
 ```powershell
-cargo run -p fretboard -- diag stats target/fret-diag/<timestamp>/bundle.json --sort time --top 1 --json
+cargo run -p fretboard -- diag stats target/fret-diag/<timestamp> --sort time --top 1 --json
+```
+
+Tip: you can also pass the bundle directory itself, or a schema2 view when present:
+
+```powershell
+cargo run -p fretboard -- diag stats target/fret-diag/<timestamp> --sort time --top 1 --json
+cargo run -p fretboard -- diag stats target/fret-diag/<timestamp>/bundle.schema2.json --sort time --top 1 --json
 ```
 
 ## Evidence (what the tools currently show)

@@ -117,8 +117,13 @@ pub(crate) fn ui_gallery_overlay_steady_suite_scripts() -> [&'static str; 4] {
     ]
 }
 
-pub(crate) fn ui_gallery_date_picker_suite_scripts() -> [&'static str; 1] {
-    ["tools/diag-scripts/ui-gallery-date-picker-range-roving-skips-disabled.json"]
+pub(crate) fn ui_gallery_date_picker_suite_scripts() -> [&'static str; 4] {
+    [
+        "tools/diag-scripts/ui-gallery-date-picker-range-roving-skips-disabled.json",
+        "tools/diag-scripts/ui-gallery-date-picker-input-open-calendar.json",
+        "tools/diag-scripts/ui-gallery-date-picker-dropdowns-mobile-drawer.json",
+        "tools/diag-scripts/ui-gallery-date-picker-nested-caption-select-scroll-clamp.json",
+    ]
 }
 
 pub(crate) fn ui_gallery_text_ime_suite_scripts() -> [&'static str; 1] {
@@ -135,7 +140,7 @@ pub(crate) fn ui_gallery_text_wrap_suite_scripts() -> [&'static str; 5] {
     ]
 }
 
-pub(crate) fn ui_gallery_combobox_suite_scripts() -> [&'static str; 12] {
+pub(crate) fn ui_gallery_combobox_suite_scripts() -> [&'static str; 15] {
     [
         "tools/diag-scripts/ui-gallery-combobox-open-select-focus-restore.json",
         "tools/diag-scripts/ui-gallery-combobox-keyboard-commit-apple.json",
@@ -149,6 +154,9 @@ pub(crate) fn ui_gallery_combobox_suite_scripts() -> [&'static str; 12] {
         "tools/diag-scripts/ui-gallery-combobox-popup-trigger.json",
         "tools/diag-scripts/ui-gallery-combobox-multiple-chips.json",
         "tools/diag-scripts/ui-gallery-combobox-groups-filter-select-paris.json",
+        "tools/diag-scripts/ui-gallery-combobox-groups-separator-smoke.json",
+        "tools/diag-scripts/ui-gallery-combobox-auto-highlight-first-match.json",
+        "tools/diag-scripts/ui-gallery-combobox-auto-highlight-disabled-none-on-open.json",
     ]
 }
 
@@ -167,12 +175,14 @@ pub(crate) fn ui_gallery_select_suite_scripts() -> [&'static str; 10] {
     ]
 }
 
-pub(crate) fn ui_gallery_shadcn_conformance_suite_scripts() -> [&'static str; 18] {
-    [
+pub(crate) fn ui_gallery_shadcn_conformance_suite_scripts() -> Vec<&'static str> {
+    vec![
         "tools/diag-scripts/ui-gallery-accordion-demo-shipping-initial-open-height.json",
         "tools/diag-scripts/ui-gallery-accordion-returns-first-open-height.json",
+        "tools/diag-scripts/ui-gallery-accordion-basic-long-text-wraps.json",
         "tools/diag-scripts/ui-gallery-alert-dialog-least-destructive-initial-focus.json",
         "tools/diag-scripts/ui-gallery-breadcrumb-dot-separator-single-line.json",
+        "tools/diag-scripts/ui-gallery-breadcrumb-links-semantic-link.json",
         "tools/diag-scripts/ui-gallery-card-description-no-early-wrap.json",
         "tools/diag-scripts/ui-gallery-collapsible-demo-first-open-height.json",
         "tools/diag-scripts/ui-gallery-dialog-docs-order-smoke.json",
@@ -184,9 +194,22 @@ pub(crate) fn ui_gallery_shadcn_conformance_suite_scripts() -> [&'static str; 18
         "tools/diag-scripts/ui-gallery-tooltip-hovercard-scroll-clamp.json",
         "tools/diag-scripts/ui-gallery-tooltip-repeat-hover.json",
         "tools/diag-scripts/ui-gallery-combobox-open-select-focus-restore.json",
+        "tools/diag-scripts/ui-gallery-combobox-custom-items-detail-filter-react.json",
+        "tools/diag-scripts/ui-gallery-chart-accessibility-layer-keyboard.json",
         "tools/diag-scripts/ui-gallery-button-with-icon-non-overlap.json",
+        "tools/diag-scripts/ui-gallery-button-link-render.json",
         "tools/diag-scripts/ui-gallery-input-group-text-non-overlap.json",
+        "tools/diag-scripts/ui-gallery-input-group-addon-after-control-tab-focus.json",
+        "tools/diag-scripts/ui-gallery-empty-background-gradient-screenshot.json",
+        "tools/diag-scripts/ui-gallery-input-file-browse-mocked.json",
+        "tools/diag-scripts/ui-gallery-input-otp-docs-smoke.json",
         "tools/diag-scripts/ui-gallery-badge-link-render.json",
+        "tools/diag-scripts/ui-gallery-avatar-dropdown-escape-focus-restore.json",
+        "tools/diag-scripts/ui-gallery-sidebar-provider-shortcut-toggle-focus.json",
+        "tools/diag-scripts/ui-gallery-sidebar-controlled-open-sync.json",
+        "tools/diag-scripts/ui-gallery-sidebar-mobile-sheet-escape-focus-restore.json",
+        "tools/diag-scripts/ui-gallery-sidebar-mobile-controlled-open-sync.json",
+        "tools/diag-scripts/ui-gallery-sidebar-mobile-shortcut-toggle.json",
     ]
 }
 

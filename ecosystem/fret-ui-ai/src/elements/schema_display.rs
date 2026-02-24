@@ -221,7 +221,7 @@ impl SchemaProperty {
 }
 
 /// Schema display root aligned with AI Elements `schema-display.tsx`.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct SchemaDisplay {
     method: HttpMethod,
     path: Arc<str>,
@@ -449,7 +449,7 @@ impl SchemaDisplay {
 }
 
 /// Header row wrapper (`border-b`, padding) aligned with AI Elements `SchemaDisplayHeader`.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct SchemaDisplayHeader {
     children: Vec<AnyElement>,
     layout: LayoutRefinement,
@@ -698,7 +698,7 @@ impl SchemaDisplayDescription {
 }
 
 /// Content wrapper aligned with AI Elements `SchemaDisplayContent` (`divide-y`).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct SchemaDisplayContent {
     sections: Vec<AnyElement>,
     layout: LayoutRefinement,

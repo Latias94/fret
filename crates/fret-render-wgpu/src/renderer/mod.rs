@@ -1,6 +1,4 @@
-use crate::images::ImageRegistry;
 use crate::svg::SvgRenderer;
-use crate::targets::RenderTargetRegistry;
 use crate::text::TextSystem;
 pub(super) use fret_core::{
     geometry::{Point, Px, Rect, Size, Transform2D},
@@ -15,8 +13,11 @@ use std::sync::Arc;
 mod bind_group_builders;
 mod bind_group_caches;
 mod clip_path_mask_cache;
+mod gpu_effect_params;
 mod gpu_globals;
 mod gpu_pipelines;
+mod gpu_registries;
+mod gpu_resources;
 mod gpu_textures;
 mod path;
 mod revisioned_cache;
@@ -36,21 +37,24 @@ mod render_plan_dump;
 mod render_plan_effects;
 mod render_scene;
 mod resources;
+mod scene_encoding_cache;
 mod services;
 mod shaders;
 mod svg;
 #[cfg(test)]
 mod tests;
 
-use bind_group_caches::BindGroupCaches;
 use clip_path_mask_cache::*;
 use fullscreen::*;
+use gpu_effect_params::GpuEffectParams;
 use gpu_globals::GpuGlobals;
 use gpu_pipelines::GpuPipelines;
+use gpu_resources::GpuResources;
 use gpu_textures::GpuTextures;
 use intermediate_pool::*;
 use path::*;
 use render_plan::*;
+use scene_encoding_cache::SceneEncodingCache;
 use types::*;
 pub use types::{IntermediatePerfSnapshot, RenderPerfSnapshot, SvgPerfSnapshot};
 use uniform_resources::UniformResources;
@@ -74,8 +78,18 @@ pub struct Renderer {
     adapter: wgpu::Adapter,
     uniform_bind_group: wgpu::BindGroup,
     uniforms: UniformResources,
+    viewport_uniform_bytes_scratch: Vec<u8>,
+    render_space_bytes_scratch: Vec<u8>,
+    plan_quad_vertices_scratch: Vec<ViewportVertex>,
+    plan_quad_vertex_bases_scratch: Vec<Option<u32>>,
+    render_plan_scene_draw_range_passes_scratch: Vec<u32>,
+    render_plan_path_msaa_batch_passes_scratch: Vec<u32>,
+    render_plan_segment_report_scratch: Vec<RenderPlanSegmentReport>,
+    render_plan_dump_scratch: render_plan_dump::RenderPlanJsonDumpScratch,
+    render_plan_strict_output_clear: bool,
     globals: GpuGlobals,
     textures: GpuTextures,
+    effect_params: GpuEffectParams,
     pipelines: GpuPipelines,
 
     quad_instances: buffers::StorageRingBuffer<QuadInstance>,
@@ -87,48 +101,6 @@ pub struct Renderer {
     viewport_vertices: buffers::RingBuffer<ViewportVertex>,
 
     text_vertices: buffers::RingBuffer<TextVertex>,
-
-    clip_mask_param_buffer: wgpu::Buffer,
-    clip_mask_param_bind_group: wgpu::BindGroup,
-    clip_mask_param_bind_group_layout: wgpu::BindGroupLayout,
-
-    scale_param_buffer: wgpu::Buffer,
-    scale_param_stride: u64,
-    scale_param_capacity: usize,
-
-    backdrop_warp_param_buffer: wgpu::Buffer,
-
-    color_adjust_pipeline_format: Option<wgpu::TextureFormat>,
-    color_adjust_pipeline: Option<wgpu::RenderPipeline>,
-    color_adjust_masked_pipeline: Option<wgpu::RenderPipeline>,
-    color_adjust_mask_pipeline: Option<wgpu::RenderPipeline>,
-    color_adjust_bind_group_layout: Option<wgpu::BindGroupLayout>,
-    color_adjust_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
-    color_adjust_param_buffer: wgpu::Buffer,
-
-    color_matrix_pipeline_format: Option<wgpu::TextureFormat>,
-    color_matrix_pipeline: Option<wgpu::RenderPipeline>,
-    color_matrix_masked_pipeline: Option<wgpu::RenderPipeline>,
-    color_matrix_mask_pipeline: Option<wgpu::RenderPipeline>,
-    color_matrix_bind_group_layout: Option<wgpu::BindGroupLayout>,
-    color_matrix_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
-    color_matrix_param_buffer: wgpu::Buffer,
-
-    alpha_threshold_pipeline_format: Option<wgpu::TextureFormat>,
-    alpha_threshold_pipeline: Option<wgpu::RenderPipeline>,
-    alpha_threshold_masked_pipeline: Option<wgpu::RenderPipeline>,
-    alpha_threshold_mask_pipeline: Option<wgpu::RenderPipeline>,
-    alpha_threshold_bind_group_layout: Option<wgpu::BindGroupLayout>,
-    alpha_threshold_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
-    alpha_threshold_param_buffer: wgpu::Buffer,
-
-    drop_shadow_pipeline_format: Option<wgpu::TextureFormat>,
-    drop_shadow_pipeline: Option<wgpu::RenderPipeline>,
-    drop_shadow_masked_pipeline: Option<wgpu::RenderPipeline>,
-    drop_shadow_mask_pipeline: Option<wgpu::RenderPipeline>,
-    drop_shadow_bind_group_layout: Option<wgpu::BindGroupLayout>,
-    drop_shadow_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
-    drop_shadow_param_buffer: wgpu::Buffer,
 
     path_vertices: buffers::RingBuffer<PathVertex>,
 
@@ -187,19 +159,9 @@ pub struct Renderer {
     intermediate_perf: IntermediatePerfStats,
     intermediate_pool: IntermediatePool,
 
-    render_targets: RenderTargetRegistry,
-    images: ImageRegistry,
+    gpu_resources: GpuResources,
 
-    bind_group_caches: BindGroupCaches,
-    render_target_revisions: HashMap<fret_core::RenderTargetId, u64>,
-    render_targets_generation: u64,
-
-    image_revisions: HashMap<fret_core::ImageId, u64>,
-    images_generation: u64,
-
-    scene_encoding_cache_key: Option<SceneEncodingCacheKey>,
-    scene_encoding_cache: SceneEncoding,
-    scene_encoding_scratch: SceneEncoding,
+    scene_encoding_cache: SceneEncodingCache,
 
     materials: SlotMap<fret_core::MaterialId, MaterialEntry>,
     materials_by_desc: HashMap<fret_core::MaterialDescriptor, fret_core::MaterialId>,

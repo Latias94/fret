@@ -70,7 +70,7 @@ gate on iOS Simulator, including screenshot capture.
 ```bash
 SIMCTL_CHILD_FRET_DIAG=1 \
 SIMCTL_CHILD_FRET_DIAG_DIR="${diag_dir}" \
-SIMCTL_CHILD_FRET_DIAG_SCREENSHOTS=1 \
+SIMCTL_CHILD_FRET_DIAG_GPU_SCREENSHOTS=1 \
 xcrun simctl launch --terminate-running-process <udid> dev.fret.ui-gallery
 ```
 

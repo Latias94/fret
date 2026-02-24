@@ -66,20 +66,6 @@ pub(in crate::ui) fn preview_tabs(
                 ),
         );
 
-    let tab_trigger_with_icon =
-        |cx: &mut ElementContext<'_, App>, icon: &'static str, label: &'static str| {
-            stack::hstack(
-                cx,
-                stack::HStackProps::default().gap(Space::N1).items_center(),
-                |cx| {
-                    vec![
-                        shadcn::icon::icon(cx, fret_icons::IconId::new_static(icon)),
-                        cx.text(label),
-                    ]
-                },
-            )
-        };
-
     let demo = {
         let field = |cx: &mut ElementContext<'_, App>,
                      label: &'static str,
@@ -198,9 +184,9 @@ pub(in crate::ui) fn preview_tabs(
         .refine_layout(LayoutRefinement::default().w_full().max_w(Px(460.0)))
         .items([
             shadcn::TabsItem::new("preview", "Preview", Vec::<AnyElement>::new())
-                .trigger_child(tab_trigger_with_icon(cx, "lucide.app-window", "Preview")),
+                .trigger_leading_icon(IconId::new_static("lucide.app-window")),
             shadcn::TabsItem::new("code", "Code", Vec::<AnyElement>::new())
-                .trigger_child(tab_trigger_with_icon(cx, "lucide.code", "Code")),
+                .trigger_leading_icon(IconId::new_static("lucide.code")),
         ])
         .into_element(cx)
         .test_id("ui-gallery-tabs-icons");
@@ -211,9 +197,9 @@ pub(in crate::ui) fn preview_tabs(
         .refine_layout(LayoutRefinement::default().w_full().max_w(Px(460.0)))
         .items([
             shadcn::TabsItem::new("preview", "Preview", Vec::<AnyElement>::new())
-                .trigger_child(tab_trigger_with_icon(cx, "lucide.app-window", "Preview")),
+                .trigger_leading_icon(IconId::new_static("lucide.app-window")),
             shadcn::TabsItem::new("code", "Code", Vec::<AnyElement>::new())
-                .trigger_child(tab_trigger_with_icon(cx, "lucide.code", "Code")),
+                .trigger_leading_icon(IconId::new_static("lucide.code")),
         ])
         .into_element(cx)
         .test_id("ui-gallery-tabs-line");
@@ -223,9 +209,9 @@ pub(in crate::ui) fn preview_tabs(
         .refine_layout(LayoutRefinement::default().w_full().max_w(Px(460.0)))
         .items([
             shadcn::TabsItem::new("preview", "Preview", Vec::<AnyElement>::new())
-                .trigger_child(tab_trigger_with_icon(cx, "lucide.app-window", "Preview")),
+                .trigger_leading_icon(IconId::new_static("lucide.app-window")),
             shadcn::TabsItem::new("code", "Code", Vec::<AnyElement>::new())
-                .trigger_child(tab_trigger_with_icon(cx, "lucide.code", "Code")),
+                .trigger_leading_icon(IconId::new_static("lucide.code")),
         ])
         .into_element(cx)
         .test_id("ui-gallery-tabs-vertical");
@@ -237,9 +223,9 @@ pub(in crate::ui) fn preview_tabs(
         .refine_layout(LayoutRefinement::default().w_full().max_w(Px(460.0)))
         .items([
             shadcn::TabsItem::new("preview", "Preview", Vec::<AnyElement>::new())
-                .trigger_child(tab_trigger_with_icon(cx, "lucide.app-window", "Preview")),
+                .trigger_leading_icon(IconId::new_static("lucide.app-window")),
             shadcn::TabsItem::new("code", "Code", Vec::<AnyElement>::new())
-                .trigger_child(tab_trigger_with_icon(cx, "lucide.code", "Code")),
+                .trigger_leading_icon(IconId::new_static("lucide.code")),
         ])
         .into_element(cx)
         .test_id("ui-gallery-tabs-vertical-line");
@@ -335,8 +321,12 @@ pub(in crate::ui) fn preview_tabs(
                 .max_w(Px(760.0))
                 .code(
                     "rust",
-                    r#"shadcn::TabsItem::new("preview", "Preview", Vec::<AnyElement>::new())
-    .trigger_child(icon_row)"#,
+                    r#"shadcn::Tabs::uncontrolled(Some("preview")).items([
+    shadcn::TabsItem::new("preview", "Preview", Vec::<AnyElement>::new())
+        .trigger_leading_icon(IconId::new_static("lucide.app-window")),
+    shadcn::TabsItem::new("code", "Code", Vec::<AnyElement>::new())
+        .trigger_leading_icon(IconId::new_static("lucide.code")),
+]);"#,
                 ),
             DocSection::new("Line", line)
                 .description("Line-style list with transparent background.")

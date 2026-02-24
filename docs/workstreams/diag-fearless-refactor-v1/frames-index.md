@@ -8,15 +8,15 @@ scope: diagnostics, artifacts, indexing, agent
 # frames.index.json
 
 `frames.index.json` is a lightweight, regeneratable sidecar intended for **agent-friendly triage**
-without reading or materializing large parts of `bundle.json`.
+without reading or materializing large parts of the bundle artifact (`bundle.json` / `bundle.schema2.json`).
 
-It is generated from `bundle.json` via:
+It is generated from bundle artifacts via:
 
-- `fretboard diag frames-index <bundle_dir|bundle.json> --warmup-frames <n>`
+- `fretboard diag frames-index <bundle_dir|bundle.json|bundle.schema2.json> --warmup-frames <n>`
 - or indirectly via `fretboard diag doctor --fix-sidecars ...`
 - and is included in `fretboard diag ai-packet ...` (subject to packet budgets).
-- and is used by `fretboard diag triage --lite ...` to avoid loading full `bundle.json` into memory.
-- and is used by `fretboard diag hotspots --lite ...` to provide a “slow frames” report without materializing `bundle.json`.
+- and is used by `fretboard diag triage --lite ...` to avoid loading full bundle artifacts into memory.
+- and is used by `fretboard diag hotspots --lite ...` to provide a “slow frames” report without materializing bundle artifacts.
 
 ## What it contains
 

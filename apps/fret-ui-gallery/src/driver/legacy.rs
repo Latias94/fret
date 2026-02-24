@@ -27,6 +27,7 @@ use fret_workspace::commands::{
     CMD_WORKSPACE_TAB_CLOSE, CMD_WORKSPACE_TAB_CLOSE_PREFIX, CMD_WORKSPACE_TAB_NEXT,
     CMD_WORKSPACE_TAB_PREV,
 };
+use fret_icons::IconRegistry;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
@@ -68,6 +69,12 @@ struct DebugHudState {
 struct PendingTaffyDumpRequest {
     root_label_filter: Option<Arc<str>>,
     filename_tag: Arc<str>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum UiGalleryFileDialogKind {
+    LoadFonts,
+    InputPicture,
 }
 
 #[derive(Default)]
@@ -134,6 +141,7 @@ struct UiGalleryWindowState {
     root: Option<fret_core::NodeId>,
     debug_hud: DebugHudState,
     pending_taffy_dump: Option<PendingTaffyDumpRequest>,
+    pending_file_dialog: Option<UiGalleryFileDialogKind>,
     page_router: Router<UiGalleryRouteId, UiGalleryHistory>,
     selected_page: Model<Arc<str>>,
     workspace_tabs: Model<Vec<Arc<str>>>,
@@ -149,6 +157,7 @@ struct UiGalleryWindowState {
     applied_motion_preset_theme_preset: Option<Arc<str>>,
     view_cache_enabled: Model<bool>,
     view_cache_cache_shell: Model<bool>,
+    view_cache_cache_content: Model<bool>,
     view_cache_inner_enabled: Model<bool>,
     view_cache_popover_open: Model<bool>,
     view_cache_continuous: Model<bool>,
@@ -229,6 +238,7 @@ struct UiGalleryWindowState {
     material3_menu_open: Model<bool>,
     text_input: Model<String>,
     text_area: Model<String>,
+    input_file_value: Model<String>,
     dropdown_open: Model<bool>,
     context_menu_open: Model<bool>,
     context_menu_edge_open: Model<bool>,
@@ -253,6 +263,7 @@ impl UiGalleryWindowState {
             motion_preset_open: self.motion_preset_open.clone(),
             view_cache_enabled: self.view_cache_enabled.clone(),
             view_cache_cache_shell: self.view_cache_cache_shell.clone(),
+            view_cache_cache_content: self.view_cache_cache_content.clone(),
             view_cache_inner_enabled: self.view_cache_inner_enabled.clone(),
             view_cache_popover_open: self.view_cache_popover_open.clone(),
             view_cache_continuous: self.view_cache_continuous.clone(),
@@ -310,6 +321,7 @@ impl UiGalleryWindowState {
             material3_menu_open: self.material3_menu_open.clone(),
             text_input: self.text_input.clone(),
             text_area: self.text_area.clone(),
+            input_file_value: self.input_file_value.clone(),
             dropdown_open: self.dropdown_open.clone(),
             context_menu_open: self.context_menu_open.clone(),
             context_menu_edge_open: self.context_menu_edge_open.clone(),
@@ -1097,6 +1109,7 @@ impl UiGalleryDriver {
         let material3_menu_open = app.models_mut().insert(false);
         let text_input = app.models_mut().insert(String::new());
         let text_area = app.models_mut().insert(String::new());
+        let input_file_value = app.models_mut().insert(String::new());
         let dropdown_open = app.models_mut().insert(false);
         let context_menu_open = app.models_mut().insert(false);
         let context_menu_edge_open = app.models_mut().insert(false);
@@ -1118,25 +1131,61 @@ impl UiGalleryDriver {
             !(v == "0" || v == "false" || v == "no" || v == "off")
         };
 
-        let view_cache_enabled = app
+        let config_bool = |env_name: &str, _query_name: &str, default: bool| {
+            #[cfg(target_arch = "wasm32")]
+            {
+                if let Some(v) = bool_from_window_query(_query_name) {
+                    return v;
+                }
+            }
+            env_bool(env_name, default)
+        };
+
+        let view_cache_enabled_value =
+            config_bool("FRET_UI_GALLERY_VIEW_CACHE", "fret_ui_gallery_view_cache", false);
+        let view_cache_enabled = app.models_mut().insert(view_cache_enabled_value);
+
+        // On web targets, env vars are not available and evidence runs often rely on URL flags.
+        // If view-cache mode is explicitly enabled, default to caching the gallery shell as well,
+        // unless the shell flag is explicitly overridden.
+        let view_cache_shell_default = if cfg!(target_arch = "wasm32") {
+            view_cache_enabled_value
+        } else {
+            false
+        };
+        let view_cache_cache_shell_value = config_bool(
+            "FRET_UI_GALLERY_VIEW_CACHE_SHELL",
+            "fret_ui_gallery_view_cache_shell",
+            view_cache_shell_default,
+        );
+        let view_cache_cache_shell = app.models_mut().insert(view_cache_cache_shell_value);
+        let view_cache_cache_content = app
             .models_mut()
-            .insert(env_bool("FRET_UI_GALLERY_VIEW_CACHE", false));
-        let view_cache_cache_shell = app
-            .models_mut()
-            .insert(env_bool("FRET_UI_GALLERY_VIEW_CACHE_SHELL", false));
+            .insert(config_bool(
+                "FRET_UI_GALLERY_VIEW_CACHE_CONTENT",
+                "fret_ui_gallery_view_cache_content",
+                true,
+            ));
         let view_cache_inner_enabled = app
             .models_mut()
-            .insert(env_bool("FRET_UI_GALLERY_VIEW_CACHE_INNER", true));
+            .insert(config_bool(
+                "FRET_UI_GALLERY_VIEW_CACHE_INNER",
+                "fret_ui_gallery_view_cache_inner",
+                true,
+            ));
         let view_cache_popover_open = app.models_mut().insert(false);
         let view_cache_continuous = app
             .models_mut()
-            .insert(env_bool("FRET_UI_GALLERY_VIEW_CACHE_CONTINUOUS", false));
+            .insert(config_bool(
+                "FRET_UI_GALLERY_VIEW_CACHE_CONTINUOUS",
+                "fret_ui_gallery_view_cache_continuous",
+                false,
+            ));
         let view_cache_counter = app.models_mut().insert(0u64);
 
         // Perf suites set `FRET_DIAG_RENDERER_PERF=1`. Avoid enabling the inspector/debug HUD by
         // default in that mode because it perturbs steady-state perf measurements.
-        let perf_mode =
-            std::env::var_os("FRET_DIAG_RENDERER_PERF").is_some_and(|v| !v.is_empty());
+        let perf_mode = std::env::var_os("FRET_DIAG_RENDERER_PERF").is_some_and(|v| !v.is_empty());
         let inspector_enabled = app.models_mut().insert(
             std::env::var_os("FRET_UI_GALLERY_INSPECTOR").is_some_and(|v| !v.is_empty())
                 || std::env::var_os("FRET_UI_DEBUG_STATS").is_some_and(|v| !v.is_empty())
@@ -1146,7 +1195,11 @@ impl UiGalleryDriver {
 
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
-        ui.set_view_cache_enabled(env_bool("FRET_UI_GALLERY_VIEW_CACHE", false));
+        ui.set_view_cache_enabled(config_bool(
+            "FRET_UI_GALLERY_VIEW_CACHE",
+            "fret_ui_gallery_view_cache",
+            false,
+        ));
         ui.set_debug_enabled(
             std::env::var_os("FRET_UI_DEBUG_STATS").is_some_and(|v| !v.is_empty())
                 || (!perf_mode && std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty())),
@@ -1159,6 +1212,7 @@ impl UiGalleryDriver {
             root: None,
             debug_hud: DebugHudState::default(),
             pending_taffy_dump: None,
+            pending_file_dialog: None,
             page_router,
             selected_page,
             workspace_tabs,
@@ -1174,6 +1228,7 @@ impl UiGalleryDriver {
             applied_motion_preset_theme_preset: None,
             view_cache_enabled,
             view_cache_cache_shell,
+            view_cache_cache_content,
             view_cache_inner_enabled,
             view_cache_popover_open,
             view_cache_continuous,
@@ -1252,6 +1307,7 @@ impl UiGalleryDriver {
             material3_menu_open,
             text_input,
             text_area,
+            input_file_value,
             dropdown_open,
             context_menu_open,
             context_menu_edge_open,
@@ -1751,6 +1807,7 @@ impl UiGalleryDriver {
                 }
             }
             CMD_CODE_EDITOR_LOAD_FONTS => {
+                state.pending_file_dialog = Some(UiGalleryFileDialogKind::LoadFonts);
                 app.push_effect(Effect::FileDialogOpen {
                     window,
                     options: FileDialogOptions {
@@ -1769,6 +1826,43 @@ impl UiGalleryDriver {
 
                 let _ = app.models_mut().update(&state.last_action, |v| {
                     *v = Arc::<str>::from("code_editor.load_fonts");
+                });
+            }
+            CMD_INPUT_PICTURE_BROWSE => {
+                let diag_mode = std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty());
+
+                if diag_mode {
+                    let _ = app.models_mut().update(&state.input_file_value, |v| {
+                        *v = String::from("avatar.png");
+                    });
+                    let _ = app.models_mut().update(&state.last_action, |v| {
+                        *v = Arc::<str>::from("input.picture.browse.mocked");
+                    });
+                    app.request_redraw(window);
+                    return true;
+                }
+
+                state.pending_file_dialog = Some(UiGalleryFileDialogKind::InputPicture);
+                app.push_effect(Effect::FileDialogOpen {
+                    window,
+                    options: FileDialogOptions {
+                        title: Some("Choose picture".to_string()),
+                        multiple: false,
+                        filters: vec![FileDialogFilter {
+                            name: "Images".to_string(),
+                            extensions: vec![
+                                "png".to_string(),
+                                "jpg".to_string(),
+                                "jpeg".to_string(),
+                                "gif".to_string(),
+                                "webp".to_string(),
+                            ],
+                        }],
+                    },
+                });
+
+                let _ = app.models_mut().update(&state.last_action, |v| {
+                    *v = Arc::<str>::from("input.picture.browse");
                 });
             }
             CMD_CODE_EDITOR_DUMP_TAFFY => {
@@ -2315,6 +2409,74 @@ impl UiGalleryDriver {
     }
 }
 
+#[cfg(target_arch = "wasm32")]
+fn bool_from_window_query(key: &str) -> Option<bool> {
+    let Some(window) = web_sys::window() else {
+        return None;
+    };
+
+    let location = window.location();
+    let search = location.search().unwrap_or_default();
+    let hash = location.hash().unwrap_or_default();
+
+    fn parse_query_params(query: &str) -> Option<web_sys::UrlSearchParams> {
+        let query = query.trim();
+        if query.is_empty() {
+            return None;
+        }
+        let query = query.trim_start_matches('?');
+        web_sys::UrlSearchParams::new_with_str(query).ok()
+    }
+
+    fn parse_hash_query_params(hash: &str) -> Option<web_sys::UrlSearchParams> {
+        let hash = hash.trim();
+        if hash.is_empty() {
+            return None;
+        }
+
+        let hash = hash.trim_start_matches('#');
+        let query = hash.split_once('?').map(|(_, q)| q).unwrap_or(hash);
+        parse_query_params(query)
+    }
+
+    fn parse_bool(v: Option<String>) -> Option<bool> {
+        let v = v?;
+        let v = v.trim().to_ascii_lowercase();
+        if v.is_empty() {
+            return Some(true);
+        }
+        match v.as_str() {
+            "1" | "true" | "yes" | "on" => Some(true),
+            "0" | "false" | "no" | "off" => Some(false),
+            _ => None,
+        }
+    }
+
+    if let Some(params) = parse_query_params(&search) {
+        if let Some(v) = parse_bool(params.get(key)) {
+            return Some(v);
+        }
+    }
+
+    if let Some(params) = parse_hash_query_params(&hash) {
+        if let Some(v) = parse_bool(params.get(key)) {
+            return Some(v);
+        }
+    }
+
+    let global_key = format!("__{}", key.to_ascii_uppercase());
+    if let Ok(v) = js_sys::Reflect::get(window.as_ref(), &wasm_bindgen::JsValue::from_str(&global_key)) {
+        if let Some(b) = v.as_bool() {
+            return Some(b);
+        }
+        if let Some(s) = v.as_string() {
+            return parse_bool(Some(s));
+        }
+    }
+
+    None
+}
+
 pub fn build_app() -> App {
     fn ui_gallery_project_root() -> std::path::PathBuf {
         let raw = std::env::var_os("FRET_UI_GALLERY_PROJECT_ROOT")
@@ -2343,6 +2505,12 @@ pub fn build_app() -> App {
         shadcn::shadcn_themes::ShadcnBaseColor::Zinc,
         shadcn::shadcn_themes::ShadcnColorScheme::Light,
     );
+
+    app.with_global_mut(IconRegistry::default, |icons, app| {
+        fret_icons_lucide::register_icons(icons);
+        let frozen = icons.freeze_or_default_with_context("fret_ui_gallery.build_app");
+        app.set_global(frozen);
+    });
 
     let project_root = ui_gallery_project_root();
     let config_paths = LayeredConfigPaths::for_project_root(&project_root);
@@ -2429,7 +2597,6 @@ pub fn run() -> anyhow::Result<()> {
         .with_default_config_files_for_root(&project_root)?
         .with_config_files_watcher_for_root(Duration::from_millis(500), &project_root)
         .with_ui_assets_budgets(64 * 1024 * 1024, 4096, 16 * 1024 * 1024, 4096)
-        .with_lucide_icons()
         .preload_icon_svgs_on_gpu_ready()
         .run()
         .map_err(anyhow::Error::from)
@@ -2460,7 +2627,6 @@ pub fn run_with_event_loop(event_loop: winit::event_loop::EventLoop) -> anyhow::
         .with_default_config_files_for_root(&project_root)?
         .with_config_files_watcher_for_root(Duration::from_millis(500), &project_root)
         .with_ui_assets_budgets(64 * 1024 * 1024, 4096, 16 * 1024 * 1024, 4096)
-        .with_lucide_icons()
         .preload_icon_svgs_on_gpu_ready()
         .into_inner()
         .with_event_loop(event_loop)
@@ -3091,18 +3257,44 @@ impl WinitAppDriver for UiGalleryDriver {
         }
 
         match event {
-            Event::FileDialogSelection(selection) => {
-                app.push_effect(Effect::FileDialogReadAllWithLimits {
-                    window,
-                    token: selection.token,
-                    limits: ExternalDropReadLimits {
-                        max_total_bytes: 128 * 1024 * 1024,
-                        max_file_bytes: 128 * 1024 * 1024,
-                        max_files: 8,
-                    },
-                });
-            }
+            Event::FileDialogSelection(selection) => match state.pending_file_dialog {
+                Some(UiGalleryFileDialogKind::LoadFonts) => {
+                    app.push_effect(Effect::FileDialogReadAllWithLimits {
+                        window,
+                        token: selection.token,
+                        limits: ExternalDropReadLimits {
+                            max_total_bytes: 128 * 1024 * 1024,
+                            max_file_bytes: 128 * 1024 * 1024,
+                            max_files: 8,
+                        },
+                    });
+                }
+                Some(UiGalleryFileDialogKind::InputPicture) => {
+                    let name = selection.files.first().map(|f| f.name.clone());
+                    let _ = app.models_mut().update(&state.input_file_value, |v| {
+                        *v = name.unwrap_or_default();
+                    });
+                    app.push_effect(Effect::FileDialogRelease {
+                        token: selection.token,
+                    });
+                    state.pending_file_dialog = None;
+                    app.request_redraw(window);
+                }
+                None => {
+                    app.push_effect(Effect::FileDialogRelease {
+                        token: selection.token,
+                    });
+                }
+            },
             Event::FileDialogData(data) => {
+                if state.pending_file_dialog != Some(UiGalleryFileDialogKind::LoadFonts) {
+                    state.pending_file_dialog = None;
+                    let mut host = UiActionHostAdapter { app };
+                    host.push_effect(Effect::FileDialogRelease { token: data.token });
+                    host.request_redraw(window);
+                    return;
+                }
+
                 let is_font_blob = |bytes: &[u8]| -> bool {
                     bytes.starts_with(b"OTTO")
                         || bytes.starts_with(b"ttcf")
@@ -3157,15 +3349,21 @@ impl WinitAppDriver for UiGalleryDriver {
                 }
 
                 host.push_effect(Effect::FileDialogRelease { token: data.token });
+                state.pending_file_dialog = None;
                 host.request_redraw(window);
             }
             Event::FileDialogCanceled => {
                 let sonner = shadcn::Sonner::global(app);
                 let mut host = UiActionHostAdapter { app };
+                let title = match state.pending_file_dialog.take() {
+                    Some(UiGalleryFileDialogKind::LoadFonts) => "Load fonts canceled",
+                    Some(UiGalleryFileDialogKind::InputPicture) => "Choose file canceled",
+                    None => "File dialog canceled",
+                };
                 sonner.toast_message(
                     &mut host,
                     window,
-                    "Load fonts canceled",
+                    title,
                     shadcn::ToastMessageOptions::new()
                         .description("The file dialog completed without a selection."),
                 );
@@ -3594,15 +3792,15 @@ impl WinitAppDriver for UiGalleryDriver {
             UiDiagnosticsService::default,
             |svc: &mut UiDiagnosticsService, app| {
                 let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
-	                svc.record_snapshot(
-	                    app,
-	                    window,
-	                    bounds,
-	                    scale_factor,
-	                    &mut state.ui,
-	                    element_runtime,
-	                    scene,
-	                );
+                svc.record_snapshot(
+                    app,
+                    window,
+                    bounds,
+                    scale_factor,
+                    &mut state.ui,
+                    element_runtime,
+                    scene,
+                );
                 let _ = svc.maybe_dump_if_triggered();
                 if svc.is_enabled() {
                     app.push_effect(Effect::RequestAnimationFrame(window));

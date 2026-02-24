@@ -227,7 +227,7 @@ before continuing component surface work:
         per-step auto dumps).
       - Verified: `target/fret-diag-select-dialog-a11y-parity2` (PASS run_id=1770122235926)
     - `tools/diag-scripts/ui-gallery-material3-select-overlay-parity-screenshots.json` (fretboard screenshots)
-      - Requires: `FRET_DIAG_SCREENSHOTS=1`
+      - Requires: `FRET_DIAG_GPU_SCREENSHOTS=1`
       - Coverage: default / override, unclamped width floor on/off, rich options, transformed menu positioning.
       - Verified: `target/fret-diag-select-overlay-parity8` (PASS run_id=1770114240224)
     - `tools/diag-scripts/ui-gallery-material3-select-menu-width-floor-screenshots.json` (fretboard screenshots)

@@ -105,7 +105,18 @@ pub fn resolve_restore_focus_node<H: UiHost>(
     if let Some(trigger) = trigger
         && let Some(trigger_node) = fret_ui::elements::node_for_element(app, window, trigger)
     {
-        return Some(trigger_node);
+        let trigger_focusable =
+            ui.first_focusable_ancestor_including_declarative(app, window, trigger_node)
+                == Some(trigger_node);
+        if trigger_focusable {
+            return Some(trigger_node);
+        }
+
+        if let Some(descendant) =
+            ui.first_focusable_descendant_including_declarative(app, window, trigger_node)
+        {
+            return Some(descendant);
+        }
     }
 
     if let Some(node) = restore_focus
@@ -324,6 +335,71 @@ mod tests {
 
         assert_eq!(
             resolve_restore_focus_node(&ui, &mut app, window, None, Some(other_node)),
+            Some(other_node)
+        );
+    }
+
+    #[test]
+    fn resolve_restore_focus_skips_non_focusable_trigger() {
+        fn bounds() -> Rect {
+            Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(200.0), Px(120.0)),
+            )
+        }
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let mut services = FakeServices;
+        let b = bounds();
+
+        let mut trigger: Option<GlobalElementId> = None;
+        let mut other: Option<GlobalElementId> = None;
+
+        let trigger_props = PressableProps {
+            layout: LayoutStyle::default(),
+            focusable: false,
+            ..Default::default()
+        };
+        let other_props = PressableProps {
+            layout: LayoutStyle::default(),
+            focusable: true,
+            ..Default::default()
+        };
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            b,
+            "test",
+            |cx| {
+                vec![
+                    cx.pressable_with_id(trigger_props, |_cx, _st, id| {
+                        trigger = Some(id);
+                        Vec::new()
+                    }),
+                    cx.pressable_with_id(other_props, |_cx, _st, id| {
+                        other = Some(id);
+                        Vec::new()
+                    }),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, b, 1.0);
+
+        let trigger = trigger.expect("trigger id");
+        let other = other.expect("other id");
+        let other_node =
+            fret_ui::elements::node_for_element(&mut app, window, other).expect("other node");
+
+        assert_eq!(
+            resolve_restore_focus_node(&ui, &mut app, window, Some(trigger), Some(other_node)),
             Some(other_node)
         );
     }

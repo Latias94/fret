@@ -1,10 +1,12 @@
 use std::collections::HashMap;
 use std::sync::OnceLock;
 
+use serde::{Deserialize, Serialize};
+
 use crate::time::{Duration, Instant};
 use crate::{AppWindowId, Color, Edges, Event, FrameId, Point, Rect, Size};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ColorScheme {
     Light,
     Dark,
@@ -275,7 +277,6 @@ impl WindowFrameClockService {
     ///
     /// Env var precedence:
     /// - `FRET_DIAG_FIXED_FRAME_DELTA_MS` (preferred)
-    /// - `FRET_DIAG_FRAME_DELTA_MS` (legacy alias)
     /// - `FRET_FRAME_CLOCK_FIXED_DELTA_MS` (generic)
     pub fn fixed_delta_from_env() -> Option<Duration> {
         static FIXED: OnceLock<Option<Duration>> = OnceLock::new();
@@ -283,11 +284,6 @@ impl WindowFrameClockService {
             let value = std::env::var("FRET_DIAG_FIXED_FRAME_DELTA_MS")
                 .ok()
                 .filter(|v| !v.trim().is_empty())
-                .or_else(|| {
-                    std::env::var("FRET_DIAG_FRAME_DELTA_MS")
-                        .ok()
-                        .filter(|v| !v.trim().is_empty())
-                })
                 .or_else(|| {
                     std::env::var("FRET_FRAME_CLOCK_FIXED_DELTA_MS")
                         .ok()

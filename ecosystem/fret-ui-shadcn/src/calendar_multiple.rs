@@ -309,22 +309,30 @@ impl CalendarMultiple {
             region_props,
             move |cx, region_id| {
                 let is_row = if number_of_months > 1 {
-                    // Container queries are read from last-committed bounds. In single-pass layout
-                    // environments (e.g. snapshot tests), the region width can be temporarily
-                    // unknown. Fall back to the viewport width so the initial layout matches the
-                    // web Tailwind breakpoint behavior when the calendar is effectively
-                    // unconstrained by a smaller container.
-                    let default_when_unknown =
+                    if matches!(
+                        surface_slot_in_scope(cx),
+                        Some(ShadcnSurfaceSlot::PopoverContent)
+                    ) {
                         cx.environment_viewport_width(Invalidation::Layout).0
-                            >= fret_ui_kit::declarative::container_queries::tailwind::MD.0;
-                    fret_ui_kit::declarative::container_width_at_least(
-                        cx,
-                        region_id,
-                        Invalidation::Layout,
-                        default_when_unknown,
-                        fret_ui_kit::declarative::container_queries::tailwind::MD,
-                        fret_ui_kit::declarative::ContainerQueryHysteresis::default(),
-                    )
+                            >= fret_ui_kit::declarative::container_queries::tailwind::MD.0
+                    } else {
+                        // Container queries are read from last-committed bounds. In single-pass layout
+                        // environments (e.g. snapshot tests), the region width can be temporarily
+                        // unknown. Fall back to the viewport width so the initial layout matches the
+                        // web Tailwind breakpoint behavior when the calendar is effectively
+                        // unconstrained by a smaller container.
+                        let default_when_unknown =
+                            cx.environment_viewport_width(Invalidation::Layout).0
+                                >= fret_ui_kit::declarative::container_queries::tailwind::MD.0;
+                        fret_ui_kit::declarative::container_width_at_least(
+                            cx,
+                            region_id,
+                            Invalidation::Layout,
+                            default_when_unknown,
+                            fret_ui_kit::declarative::container_queries::tailwind::MD,
+                            fret_ui_kit::declarative::ContainerQueryHysteresis::default(),
+                        )
+                    }
                 } else {
                     false
                 };

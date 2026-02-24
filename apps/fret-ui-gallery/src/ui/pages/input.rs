@@ -5,6 +5,7 @@ use crate::ui::doc_layout::{self, DocSection};
 pub(super) fn preview_input(
     cx: &mut ElementContext<'_, App>,
     value: Model<String>,
+    file_value: Model<String>,
 ) -> Vec<AnyElement> {
     #[derive(Default)]
     struct InputPageModels {
@@ -13,7 +14,6 @@ pub(super) fn preview_input(
         fieldgroup_email: Option<Model<String>>,
         disabled_value: Option<Model<String>>,
         invalid_value: Option<Model<String>>,
-        file_value: Option<Model<String>>,
         inline_value: Option<Model<String>>,
         grid_first: Option<Model<String>>,
         grid_last: Option<Model<String>>,
@@ -36,7 +36,6 @@ pub(super) fn preview_input(
         fieldgroup_email,
         disabled_value,
         invalid_value,
-        file_value,
         inline_value,
         grid_first,
         grid_last,
@@ -58,7 +57,6 @@ pub(super) fn preview_input(
             st.fieldgroup_email.clone(),
             st.disabled_value.clone(),
             st.invalid_value.clone(),
-            st.file_value.clone(),
             st.inline_value.clone(),
             st.grid_first.clone(),
             st.grid_last.clone(),
@@ -82,7 +80,6 @@ pub(super) fn preview_input(
         fieldgroup_email,
         disabled_value,
         invalid_value,
-        file_value,
         inline_value,
         grid_first,
         grid_last,
@@ -103,7 +100,6 @@ pub(super) fn preview_input(
         fieldgroup_email,
         disabled_value,
         invalid_value,
-        file_value,
         inline_value,
         grid_first,
         grid_last,
@@ -125,7 +121,6 @@ pub(super) fn preview_input(
             Some(fieldgroup_email),
             Some(disabled_value),
             Some(invalid_value),
-            Some(file_value),
             Some(inline_value),
             Some(grid_first),
             Some(grid_last),
@@ -146,7 +141,6 @@ pub(super) fn preview_input(
             fieldgroup_email,
             disabled_value,
             invalid_value,
-            file_value,
             inline_value,
             grid_first,
             grid_last,
@@ -171,7 +165,6 @@ pub(super) fn preview_input(
                 .models_mut()
                 .insert(String::from("disabled@example.com"));
             let invalid_value = cx.app.models_mut().insert(String::from("bad-email"));
-            let file_value = cx.app.models_mut().insert(String::new());
             let inline_value = cx.app.models_mut().insert(String::new());
             let grid_first = cx.app.models_mut().insert(String::new());
             let grid_last = cx.app.models_mut().insert(String::new());
@@ -193,7 +186,6 @@ pub(super) fn preview_input(
                 st.fieldgroup_email = Some(fieldgroup_email.clone());
                 st.disabled_value = Some(disabled_value.clone());
                 st.invalid_value = Some(invalid_value.clone());
-                st.file_value = Some(file_value.clone());
                 st.inline_value = Some(inline_value.clone());
                 st.grid_first = Some(grid_first.clone());
                 st.grid_last = Some(grid_last.clone());
@@ -216,7 +208,6 @@ pub(super) fn preview_input(
                 fieldgroup_email,
                 disabled_value,
                 invalid_value,
-                file_value,
                 inline_value,
                 grid_first,
                 grid_last,
@@ -334,8 +325,17 @@ pub(super) fn preview_input(
     };
 
     let file = {
-        let content = shadcn::Field::new([
-            shadcn::FieldLabel::new("Picture").into_element(cx),
+        let selected = cx
+            .app
+            .models()
+            .read(&file_value, |v: &String| v.clone())
+            .ok()
+            .unwrap_or_default();
+        let selected = selected.trim();
+
+        let mut children = Vec::new();
+        children.push(shadcn::FieldLabel::new("Picture").into_element(cx));
+        children.push(
             shadcn::ButtonGroup::new([
                 shadcn::Input::new(file_value)
                     .a11y_label("Picture path")
@@ -344,18 +344,28 @@ pub(super) fn preview_input(
                     .into(),
                 shadcn::Button::new("Browse")
                     .variant(shadcn::ButtonVariant::Outline)
+                    .on_click(CMD_INPUT_PICTURE_BROWSE)
+                    .test_id("ui-gallery-input-file-browse")
                     .into_element(cx)
                     .into(),
             ])
             .into_element(cx),
-            shadcn::FieldDescription::new(
-                "File input is approximated via text + browse button in current API.",
-            )
-            .into_element(cx),
-        ])
-        .refine_layout(max_w_xs.clone())
-        .into_element(cx)
-        .test_id("ui-gallery-input-file");
+        );
+        children.push(
+            shadcn::FieldDescription::new("Native file picking uses a file dialog.")
+                .into_element(cx),
+        );
+        if !selected.is_empty() {
+            children.push(
+                shadcn::typography::muted(cx, format!("Selected file: {selected}"))
+                    .test_id("ui-gallery-input-file-selected"),
+            );
+        }
+
+        let content = shadcn::Field::new(children)
+            .refine_layout(max_w_xs.clone())
+            .into_element(cx)
+            .test_id("ui-gallery-input-file");
         content
     };
 
@@ -607,7 +617,8 @@ pub(super) fn preview_input(
         cx,
         [
             "API reference: `ecosystem/fret-ui-shadcn/src/input.rs` (Input), `ecosystem/fret-ui-shadcn/src/input_group.rs` (InputGroup), `ecosystem/fret-ui-shadcn/src/button_group.rs` (ButtonGroup).",
-            "Native file input type is currently approximated using input + browse button composition.",
+            "Native file inputs are authored as Input + Browse button composition (Fret does not mirror DOM `type=\"file\"`).",
+            "Diagnostics runs (`FRET_DIAG=1`) mock the file picker so scripted gates stay deterministic.",
             "Required styling is represented by label affordance because dedicated required visuals are not built into current Input API.",
             "Keep `ui-gallery-input-basic` stable for IME routing regression scripts.",
         ],
@@ -696,9 +707,8 @@ pub(super) fn preview_input(
 .invalid(true)
 .into_element(cx);"#,
                 ),
-            DocSection::new("File", file).description(
-                "File input is approximated via text + browse button composition in current API.",
-            )
+            DocSection::new("File", file)
+                .description("Native file picking uses a file dialog; diagnostics runs mock it.")
             .code(
                 "rust",
                 r#"shadcn::ButtonGroup::new([
@@ -709,6 +719,7 @@ pub(super) fn preview_input(
         .into(),
     shadcn::Button::new("Browse")
         .variant(shadcn::ButtonVariant::Outline)
+        .on_click(CMD_INPUT_PICTURE_BROWSE)
         .into_element(cx)
         .into(),
 ])

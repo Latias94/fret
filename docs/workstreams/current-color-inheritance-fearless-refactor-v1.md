@@ -2,7 +2,9 @@
 
 Status: In progress (workstream)
 
-Last updated: 2026-02-23
+Last updated: 2026-02-24
+
+Milestones: `docs/workstreams/current-color-inheritance-fearless-refactor-v1-milestones.md`
 
 ## Motivation
 
@@ -150,10 +152,25 @@ Statuses:
 | Spinner inheritance | `fret-ui-shadcn` | Landed | `ecosystem/fret-ui-shadcn/src/spinner.rs` | existing shadcn tests (smoke) |
 | Button provides `currentColor` | `fret-ui-shadcn` | Landed | `ecosystem/fret-ui-shadcn/src/button.rs` | web-vs-fret button tests |
 | Button deferred icon slots (`leading_icon` / `trailing_icon` / `icon`) | `fret-ui-shadcn` | Landed | `ecosystem/fret-ui-shadcn/src/button.rs` | gallery + button goldens |
-| DropdownMenuItem provides `currentColor` (and `leading_icon`) | `fret-ui-shadcn` | In progress | `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs` | `tools/diag-scripts/ui-gallery-dropdown-menu-icons-screenshots.json` |
-| CommandItem provides `currentColor` (and `leading_icon`) | `fret-ui-shadcn` | In progress | `ecosystem/fret-ui-shadcn/src/command.rs` | (TBD: diag + targeted test) |
-| Badge provides `currentColor` | `fret-ui-shadcn` | Planned | `ecosystem/fret-ui-shadcn/src/badge.rs` | targeted test |
-| Text defaults inherit `currentColor` | `fret-ui-kit` | Planned | (TBD: `declarative/text.rs` or `ui::text`) | unit test + gallery gate |
+| Gallery ButtonGroup demo uses deferred icon slots | `fret-ui-gallery` | Landed | `apps/fret-ui-gallery/src/ui/previews/pages/components/basics/button_group.rs` | `tools/diag-scripts/ui-gallery-button-group-demo-screenshots.json` |
+| DropdownMenuItem provides `currentColor` (and `leading_icon`) | `fret-ui-shadcn` | Landed | `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs` | `tools/diag-scripts/ui-gallery-dropdown-menu-icons-screenshots.json` |
+| DropdownMenu checkable items support deferred `leading_icon` | `fret-ui-shadcn` | Landed | `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs` | `tools/diag-scripts/ui-gallery-dropdown-menu-checkable-icons-hover-screenshots-zinc-light.json`<br>`tools/diag-scripts/ui-gallery-dropdown-menu-checkable-icons-hover-screenshots-zinc-dark.json` |
+| ContextMenuItem supports deferred `leading_icon` | `fret-ui-shadcn` | Landed | `ecosystem/fret-ui-shadcn/src/context_menu.rs` | `tools/diag-scripts/ui-gallery-context-menu-icons-screenshots-zinc-light.json`<br>`tools/diag-scripts/ui-gallery-context-menu-icons-screenshots-zinc-dark.json` |
+| CommandItem provides `currentColor` (and `leading_icon`) | `fret-ui-shadcn` | Landed | `ecosystem/fret-ui-shadcn/src/command.rs` | `tools/diag-scripts/ui-gallery-command-docs-demo-icons-screenshots.json` + `tools/diag-scripts/ui-gallery-command-docs-demo-icons-screenshots-zinc-dark.json` |
+| Menubar items support deferred `leading_icon` | `fret-ui-shadcn` | Landed | `ecosystem/fret-ui-shadcn/src/menubar.rs` | `tools/diag-scripts/ui-gallery-menubar-with-icons-screenshots-zinc-light.json`<br>`tools/diag-scripts/ui-gallery-menubar-with-icons-screenshots-zinc-dark.json` |
+| Sidebar icon-only toggle uses deferred icon slot | `fret-ui-shadcn` | Landed | `ecosystem/fret-ui-shadcn/src/sidebar.rs` | (manual) |
+| AI icon-only actions use deferred icon slots | `fret-ui-ai` | Landed | `ecosystem/fret-ui-ai/src/elements/message_actions.rs` | `tools/diag-scripts/ui-gallery-ai-chat-demo-message-actions-icons-screenshots-zinc-light.json`<br>`tools/diag-scripts/ui-gallery-ai-chat-demo-message-actions-icons-screenshots-zinc-dark.json` |
+| Diag gate: primary button icon visibility (via ButtonGroup demo; zinc light/dark) | `fret-ui-gallery` | Landed | `tools/diag-scripts/ui-gallery-button-group-demo-icons-screenshots-zinc-light-dark.json` | `tools/diag-scripts/ui-gallery-button-group-demo-icons-screenshots-zinc-light-dark.json` |
+| Badge provides `currentColor` (and icon slots) | `fret-ui-shadcn` | Landed | `ecosystem/fret-ui-shadcn/src/badge.rs` | unit test |
+| Text defaults inherit `currentColor` | `fret-ui-kit` | Landed | `ecosystem/fret-ui-kit/src/ui.rs` | unit test |
+| Tabs triggers provide `currentColor` (and prefer deferred icon slots) | `fret-ui-shadcn` | Landed | `ecosystem/fret-ui-shadcn/src/tabs.rs` | `tools/diag-scripts/ui-gallery-tabs-icons-screenshots-zinc-light-dark.json` |
+| Diag gate: tabs trigger icon visibility (zinc light/dark) | `fret-ui-gallery` | Landed | `tools/diag-scripts/ui-gallery-tabs-icons-screenshots-zinc-light-dark.json` | `tools/diag-scripts/ui-gallery-tabs-icons-screenshots-zinc-light-dark.json` |
+| ToggleGroup items provide `currentColor` (and prefer deferred icon slots) | `fret-ui-shadcn` | Landed | `ecosystem/fret-ui-shadcn/src/toggle_group.rs` | `tools/diag-scripts/ui-gallery-toggle-group-demo-icons-screenshots-zinc-light-dark.json` |
+| Diag gate: toggle group demo icon visibility (zinc light/dark) | `fret-ui-gallery` | Landed | `tools/diag-scripts/ui-gallery-toggle-group-demo-icons-screenshots-zinc-light-dark.json` | `tools/diag-scripts/ui-gallery-toggle-group-demo-icons-screenshots-zinc-light-dark.json` |
+| Toggle provides `currentColor` (and prefers deferred icon slots) | `fret-ui-shadcn` | Landed | `ecosystem/fret-ui-shadcn/src/toggle.rs` | `tools/diag-scripts/ui-gallery-toggle-demo-icons-screenshots-zinc-light-dark.json` |
+| Diag gate: toggle demo icon visibility (zinc light/dark) | `fret-ui-gallery` | Landed | `tools/diag-scripts/ui-gallery-toggle-demo-icons-screenshots-zinc-light-dark.json` | `tools/diag-scripts/ui-gallery-toggle-demo-icons-screenshots-zinc-light-dark.json` |
+| Select scroll arrows icon foreground | `fret-ui-shadcn` | Landed | `ecosystem/fret-ui-shadcn/src/select.rs` | `tools/diag-scripts/ui-gallery-shadcn-select-scroll-arrows-icons-screenshots-zinc-light-dark.json` |
+| InputGroupButton provides `currentColor` (and icon slots) | `fret-ui-shadcn` | Landed | `ecosystem/fret-ui-shadcn/src/input_group.rs` | `tools/diag-scripts/ui-gallery-spinner-extras-input-group-button-icon-screenshots-zinc-light.json`<br>`tools/diag-scripts/ui-gallery-spinner-extras-input-group-button-icon-screenshots-zinc-dark.json` |
 | Gallery usage cleanup | `fret-ui-gallery` | Planned | (TBD: per-page) | diag screenshot gate(s) |
 
 ## Migration plan

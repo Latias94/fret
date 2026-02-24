@@ -570,7 +570,6 @@ impl CommandShortcut {
     }
 }
 
-#[derive(Clone)]
 pub struct Command {
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
@@ -821,7 +820,6 @@ impl CommandInput {
     }
 }
 
-#[derive(Clone)]
 pub struct CommandItem {
     label: Arc<str>,
     value: Arc<str>,
@@ -969,7 +967,6 @@ impl CommandItem {
 }
 
 /// shadcn/ui `CommandGroup` (v4).
-#[derive(Clone)]
 pub struct CommandGroup {
     heading: Option<Arc<str>>,
     items: Vec<CommandItem>,
@@ -1233,9 +1230,12 @@ impl CommandLoading {
 
         let mut a11y = SemanticsDecoration::default()
             .role(SemanticsRole::ProgressBar)
-            .label(text_for_semantics);
+            .label(text_for_semantics)
+            .numeric_range(0.0, 100.0);
         if let Some(progress) = progress {
-            a11y = a11y.value(Arc::<str>::from(format!("{progress}%")));
+            a11y = a11y
+                .value(Arc::<str>::from(format!("{progress}%")))
+                .numeric_value(progress as f64);
         }
         row = row.attach_semantics(a11y);
         if let Some(test_id) = test_id {
@@ -1245,7 +1245,6 @@ impl CommandLoading {
     }
 }
 
-#[derive(Clone)]
 pub enum CommandEntry {
     Item(CommandItem),
     Group(CommandGroup),
@@ -1277,7 +1276,6 @@ impl From<CommandSeparator> for CommandEntry {
     }
 }
 
-#[derive(Clone)]
 pub struct CommandList {
     entries: Vec<CommandEntry>,
     disabled: bool,
@@ -1361,6 +1359,9 @@ impl CommandList {
             // drives highlight via `active_descendant` (ADR 0073).
             let (render_rows, items, _item_groups) =
                 command_palette_render_rows_for_query_with_options(entries, "", false, None);
+            let list_busy = render_rows
+                .iter()
+                .any(|row| matches!(row, CommandPaletteRenderRow::Loading(_)));
 
             let query_for_render: Arc<str> = highlight_query
                 .as_ref()
@@ -1380,15 +1381,20 @@ impl CommandList {
 
             let disabled_flags: Vec<bool> = items
                 .iter()
-                .map(|i| {
+                .map(|item| {
+                    let Some(item) = item.as_ref() else {
+                        return true;
+                    };
                     disabled
-                        || i.disabled
-                        || (i.command.is_none()
-                            && i.on_select.is_none()
-                            && i.on_select_value.is_none())
+                        || item.disabled
+                        || (item.command.is_none()
+                            && item.on_select.is_none()
+                            && item.on_select_value.is_none())
                 })
                 .collect();
             let tab_stop = roving_focus_group::first_enabled(&disabled_flags);
+
+            let mut items = items;
 
             let roving = RovingFocusProps {
                 enabled: !disabled,
@@ -1397,7 +1403,18 @@ impl CommandList {
                 ..Default::default()
             };
 
-            let (row_gap, pad_x, pad_y, radius, ring, bg_hover, fg, text_style, item_layout) = {
+            let (
+                row_gap,
+                pad_x,
+                pad_y,
+                radius,
+                ring,
+                bg_hover,
+                fg,
+                fg_disabled,
+                text_style,
+                item_layout,
+            ) = {
                 let theme = Theme::global(&*cx.app);
                 let row_h = MetricRef::space(Space::N8).resolve(theme);
                 let row_gap = MetricRef::space(Space::N2).resolve(theme);
@@ -1408,6 +1425,7 @@ impl CommandList {
                 let ring = decl_style::focus_ring(theme, radius);
                 let bg_hover = item_bg_hover(theme);
                 let fg = theme.color_token("foreground");
+                let fg_disabled = alpha_mul(fg, 0.5);
                 let text_style = item_text_style(theme);
                 let item_layout = decl_style::layout_style(
                     theme,
@@ -1421,6 +1439,7 @@ impl CommandList {
                     ring,
                     bg_hover,
                     fg,
+                    fg_disabled,
                     text_style,
                     item_layout,
                 )
@@ -1550,7 +1569,7 @@ impl CommandList {
                                 out.push(loading.into_element(cx));
                             }
                             CommandPaletteRenderRow::Item(idx) => {
-                                let Some(item) = items.get(idx).cloned() else {
+                                let Some(item) = items.get_mut(idx).and_then(Option::take) else {
                                     continue;
                                 };
 
@@ -1637,9 +1656,11 @@ impl CommandList {
                                             };
 
                                             let child = cx.container(props, move |cx| {
-                                                current_color::with_current_color_provider(
+                                                let effective_fg =
+                                                    if enabled { fg } else { fg_disabled };
+                                                current_color::scope_children(
                                                     cx,
-                                                    ColorRef::Color(fg),
+                                                    ColorRef::Color(effective_fg),
                                                     |cx| {
                                                         vec![cx.row(
                                                             RowProps {
@@ -1670,7 +1691,7 @@ impl CommandList {
                                                                             cx,
                                                                             label.clone(),
                                                                             query_for_row.as_ref(),
-                                                                            fg,
+                                                                            effective_fg,
                                                                             text_style.clone(),
                                                                         ),
                                                                     );
@@ -1702,7 +1723,11 @@ impl CommandList {
             )])
             .refine_layout(scroll)
             .into_element(cx)
-            .attach_semantics(SemanticsDecoration::default().role(SemanticsRole::ListBox))
+            .attach_semantics(
+                SemanticsDecoration::default()
+                    .role(SemanticsRole::ListBox)
+                    .busy(list_busy),
+            )
         })
     }
 }
@@ -1718,7 +1743,6 @@ pub enum CommandPaletteA11ySelectedMode {
     Checked,
 }
 
-#[derive(Clone)]
 pub struct CommandPalette {
     model: Model<String>,
     entries: Vec<CommandEntry>,
@@ -1727,6 +1751,7 @@ pub struct CommandPalette {
     filter: Option<CommandPaletteFilterFn>,
     value: Option<Model<Option<Arc<str>>>>,
     default_value: Option<Arc<str>>,
+    auto_highlight: bool,
     wrap: bool,
     vim_bindings: bool,
     disable_pointer_selection: bool,
@@ -1737,6 +1762,7 @@ pub struct CommandPalette {
     input_expanded: Option<bool>,
     input_test_id: Option<Arc<str>>,
     list_test_id: Option<Arc<str>>,
+    list_multiselectable: bool,
     a11y_selected_mode: CommandPaletteA11ySelectedMode,
     on_value_change: Option<OnValueChange>,
     input_wrapper_h: MetricRef,
@@ -1756,7 +1782,6 @@ pub struct CommandPalette {
     pub(crate) list_id_out_cell: Option<Rc<Cell<Option<GlobalElementId>>>>,
 }
 
-#[derive(Clone)]
 enum CommandPaletteRenderRow {
     Heading(Arc<str>),
     GroupPad,
@@ -1772,10 +1797,9 @@ fn command_palette_render_rows_for_query_with_options(
     filter: Option<&CommandPaletteFilter>,
 ) -> (
     Vec<CommandPaletteRenderRow>,
-    Vec<CommandItem>,
+    Vec<Option<CommandItem>>,
     Vec<Option<u32>>,
 ) {
-    #[derive(Clone)]
     enum PendingRow {
         Heading(Arc<str>),
         Separator(CommandSeparator),
@@ -2030,6 +2054,7 @@ fn command_palette_render_rows_for_query_with_options(
         })
         .collect();
 
+    let items = items.into_iter().map(Some).collect();
     (render_rows, items, item_groups)
 }
 
@@ -2086,6 +2111,7 @@ impl CommandPalette {
             filter: None,
             value: None,
             default_value: None,
+            auto_highlight: true,
             // cmdk default: no loop unless explicitly enabled via `loop`.
             wrap: false,
             // cmdk default: ctrl+n/j/p/k keybinds enabled.
@@ -2099,6 +2125,7 @@ impl CommandPalette {
             input_expanded: None,
             input_test_id: None,
             list_test_id: None,
+            list_multiselectable: false,
             a11y_selected_mode: CommandPaletteA11ySelectedMode::Active,
             on_value_change: None,
             input_wrapper_h: Px(36.0).into(),
@@ -2188,6 +2215,15 @@ impl CommandPalette {
         self
     }
 
+    /// When enabled, highlights the first enabled option when nothing has been explicitly
+    /// navigated to yet (cmdk default behavior).
+    ///
+    /// Base UI Combobox defaults to `false` and opts in via `autoHighlight`.
+    pub fn auto_highlight(mut self, auto_highlight: bool) -> Self {
+        self.auto_highlight = auto_highlight;
+        self
+    }
+
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
         self
@@ -2264,6 +2300,11 @@ impl CommandPalette {
 
     pub fn list_test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
         self.list_test_id = Some(test_id.into());
+        self
+    }
+
+    pub fn list_multiselectable(mut self, multiselectable: bool) -> Self {
+        self.list_multiselectable = multiselectable;
         self
     }
 
@@ -2361,6 +2402,7 @@ impl CommandPalette {
             let disable_pointer_selection = self.disable_pointer_selection;
             let input_test_id = self.input_test_id.clone();
             let list_test_id = self.list_test_id.clone();
+            let list_multiselectable = self.list_multiselectable;
             let list_id_out_cell = self.list_id_out_cell.clone();
             let a11y_selected_mode = self.a11y_selected_mode;
             let on_value_change = self.on_value_change.clone();
@@ -2374,20 +2416,23 @@ impl CommandPalette {
                 .unwrap_or_default();
             let query_for_render: Arc<str> = Arc::from(query.as_str());
 
-            let (render_rows, items, item_groups) =
+            let (render_rows, mut items, item_groups) =
                 command_palette_render_rows_for_query_with_options(
                     self.entries,
                     query.as_str(),
                     should_filter,
                     filter.as_deref(),
                 );
+            let list_busy = render_rows
+                .iter()
+                .any(|row| matches!(row, CommandPaletteRenderRow::Loading(_)));
 
             let items_fingerprint = {
                 let mut hasher = DefaultHasher::new();
                 query.as_str().hash(&mut hasher);
                 render_rows.len().hash(&mut hasher);
                 for row in &render_rows {
-                    match row.clone() {
+                    match row {
                         CommandPaletteRenderRow::Heading(h) => {
                             "heading".hash(&mut hasher);
                             h.as_ref().hash(&mut hasher);
@@ -2410,11 +2455,11 @@ impl CommandPalette {
                         }
                         CommandPaletteRenderRow::Item(idx) => {
                             "item".hash(&mut hasher);
-                            if let Some(item) = items.get(idx) {
+                            if let Some(item) = items.get(*idx).and_then(|item| item.as_ref()) {
                                 item.label.as_ref().hash(&mut hasher);
                                 item.value.as_ref().hash(&mut hasher);
                                 item_groups
-                                    .get(idx)
+                                    .get(*idx)
                                     .copied()
                                     .flatten()
                                     .unwrap_or(u32::MAX)
@@ -2439,18 +2484,30 @@ impl CommandPalette {
 
             let (entries, disabled_flags): (Vec<PaletteEntry>, Vec<bool>) = items
                 .iter()
-                .map(|i| {
+                .map(|item| {
+                    let Some(item) = item.as_ref() else {
+                        return (
+                            PaletteEntry {
+                                value: Arc::from(""),
+                                command: None,
+                                on_select: None,
+                                on_select_value: None,
+                                disabled: true,
+                            },
+                            true,
+                        );
+                    };
                     let disabled = disabled
-                        || i.disabled
-                        || (i.command.is_none()
-                            && i.on_select.is_none()
-                            && i.on_select_value.is_none());
+                        || item.disabled
+                        || (item.command.is_none()
+                            && item.on_select.is_none()
+                            && item.on_select_value.is_none());
                     (
                         PaletteEntry {
-                            value: i.value.clone(),
-                            command: i.command.clone(),
-                            on_select: i.on_select.clone(),
-                            on_select_value: i.on_select_value.clone(),
+                            value: item.value.clone(),
+                            command: item.command.clone(),
+                            on_select: item.on_select.clone(),
+                            on_select_value: item.on_select_value.clone(),
                             disabled,
                         },
                         disabled,
@@ -2474,11 +2531,31 @@ impl CommandPalette {
                 }
             });
 
+            let auto_highlight = self.auto_highlight;
             let cur_active_raw = cx.watch_model(&active).cloned().unwrap_or(None);
             let cur_active = cur_active_raw.clone().map(cmdk_trimmed_arc);
-            let next_active = cur_active
-                .as_ref()
-                .and_then(|v| {
+            let next_active = if auto_highlight {
+                cur_active
+                    .as_ref()
+                    .and_then(|v| {
+                        entries_arc
+                            .iter()
+                            .enumerate()
+                            .find(|(idx, e)| {
+                                disabled_flags.get(*idx).copied() == Some(false)
+                                    && e.value.as_ref() == v.as_ref()
+                            })
+                            .map(|(_, e)| e.value.clone())
+                    })
+                    .or_else(|| {
+                        entries_arc
+                            .iter()
+                            .enumerate()
+                            .find(|(idx, _)| disabled_flags.get(*idx).copied() == Some(false))
+                            .map(|(_, e)| e.value.clone())
+                    })
+            } else {
+                cur_active.as_ref().and_then(|v| {
                     entries_arc
                         .iter()
                         .enumerate()
@@ -2488,13 +2565,7 @@ impl CommandPalette {
                         })
                         .map(|(_, e)| e.value.clone())
                 })
-                .or_else(|| {
-                    entries_arc
-                        .iter()
-                        .enumerate()
-                        .find(|(idx, _)| disabled_flags.get(*idx).copied() == Some(false))
-                        .map(|(_, e)| e.value.clone())
-                });
+            };
             if next_active != cur_active_raw {
                 let _ = cx
                     .app
@@ -2536,6 +2607,9 @@ impl CommandPalette {
             let active_idx = next_active.as_ref().and_then(|active_value| {
                 items.iter().enumerate().find_map(|(idx, item)| {
                     let enabled = disabled_flags.get(idx).copied() == Some(false);
+                    let Some(item) = item.as_ref() else {
+                        return None;
+                    };
                     if enabled && item.value.as_ref() == active_value.as_ref() {
                         Some(idx)
                     } else {
@@ -2642,7 +2716,7 @@ impl CommandPalette {
                     }
                     CommandPaletteRenderRow::Loading(loading) => loading.into_element(cx),
                     CommandPaletteRenderRow::Item(idx) => {
-                        let Some(item) = items.get(idx).cloned() else {
+                        let Some(item) = items.get_mut(idx).and_then(Option::take) else {
                             return cx.container(ContainerProps::default(), |_cx| Vec::new());
                         };
 
@@ -2670,6 +2744,7 @@ impl CommandPalette {
                             let command = item.command;
                             let on_select = item.on_select.clone();
                             let on_select_value = item.on_select_value.clone();
+                            let leading_icon = item.leading_icon.clone();
                             let children = item.children;
                             let text_style = text_style.clone();
 
@@ -2786,35 +2861,16 @@ impl CommandPalette {
                                     };
 
                                     let child = cx.container(props, move |cx| {
-                                        vec![cx.row(
-                                            RowProps {
-                                                layout: {
-                                                    let mut layout = LayoutStyle::default();
-                                                    layout.size.width = Length::Fill;
-                                                    layout
-                                                },
-                                                gap: row_gap.into(),
-                                                padding: Edges::all(Px(0.0)).into(),
-                                                justify: MainAlign::Start,
-                                                align: CrossAlign::Center,
-                                            },
-                                            move |cx| {
-                                                if !children.is_empty() {
-                                                    return children;
-                                                }
-
-                                                let fg = if enabled { fg } else { fg_disabled };
-
-                                                let left = cx.row(
+                                        let effective_fg = if enabled { fg } else { fg_disabled };
+                                        current_color::scope_children(
+                                            cx,
+                                            ColorRef::Color(effective_fg),
+                                            |cx| {
+                                                vec![cx.row(
                                                     RowProps {
                                                         layout: {
                                                             let mut layout = LayoutStyle::default();
                                                             layout.size.width = Length::Fill;
-                                                            layout.size.min_width =
-                                                                Some(Length::Px(Px(0.0)));
-                                                            layout.flex.grow = 1.0;
-                                                            layout.flex.shrink = 1.0;
-                                                            layout.flex.basis = Length::Px(Px(0.0));
                                                             layout
                                                         },
                                                         gap: row_gap.into(),
@@ -2823,44 +2879,93 @@ impl CommandPalette {
                                                         align: CrossAlign::Center,
                                                     },
                                                     move |cx| {
-                                                        let mut out = Vec::with_capacity(2);
-                                                        if show_checkmark {
-                                                            let icon = decl_icon::icon_with(
-                                                                cx,
-                                                                ids::ui::CHECK,
-                                                                Some(Px(16.0)),
-                                                                Some(ColorRef::Color(fg)),
-                                                            );
-                                                            let icon = cx.opacity(
-                                                                if checked { 1.0 } else { 0.0 },
-                                                                move |_cx| vec![icon],
-                                                            );
-                                                            out.push(icon);
+                                                        if !children.is_empty() {
+                                                            return children;
                                                         }
 
-                                                        out.push(cmdk_highlighted_label(
-                                                            cx,
-                                                            label.clone(),
-                                                            query_for_row.as_ref(),
-                                                            fg,
-                                                            text_style.clone(),
-                                                        ));
+                                                        let left = cx.row(
+                                                            RowProps {
+                                                                layout: {
+                                                                    let mut layout =
+                                                                        LayoutStyle::default();
+                                                                    layout.size.width =
+                                                                        Length::Fill;
+                                                                    layout.size.min_width =
+                                                                        Some(Px(0.0));
+                                                                    layout.flex.grow = 1.0;
+                                                                    layout.flex.shrink = 1.0;
+                                                                    layout.flex.basis =
+                                                                        Length::Px(Px(0.0));
+                                                                    layout
+                                                                },
+                                                                gap: row_gap.into(),
+                                                                padding: Edges::all(Px(0.0))
+                                                                    .into(),
+                                                                justify: MainAlign::Start,
+                                                                align: CrossAlign::Center,
+                                                            },
+                                                            move |cx| {
+                                                                let mut out: Vec<AnyElement> =
+                                                                    Vec::with_capacity(
+                                                                        usize::from(show_checkmark)
+                                                                            + usize::from(
+                                                                                leading_icon
+                                                                                    .is_some(),
+                                                                            )
+                                                                            + 1,
+                                                                    );
 
-                                                        out
+                                                                if show_checkmark {
+                                                                    let icon = decl_icon::icon_with(
+                                                                        cx,
+                                                                        ids::ui::CHECK,
+                                                                        Some(Px(16.0)),
+                                                                        None,
+                                                                    );
+                                                                    let icon = cx.opacity(
+                                                                        if checked {
+                                                                            1.0
+                                                                        } else {
+                                                                            0.0
+                                                                        },
+                                                                        move |_cx| vec![icon],
+                                                                    );
+                                                                    out.push(icon);
+                                                                }
+
+                                                                if let Some(icon) =
+                                                                    leading_icon.clone()
+                                                                {
+                                                                    out.push(decl_icon::icon(
+                                                                        cx, icon,
+                                                                    ));
+                                                                }
+
+                                                                out.push(cmdk_highlighted_label(
+                                                                    cx,
+                                                                    label.clone(),
+                                                                    query_for_row.as_ref(),
+                                                                    effective_fg,
+                                                                    text_style.clone(),
+                                                                ));
+
+                                                                out
+                                                            },
+                                                        );
+
+                                                        if let Some(shortcut) = shortcut.clone() {
+                                                            vec![
+                                                                left,
+                                                                CommandShortcut::new(shortcut)
+                                                                    .into_element(cx),
+                                                            ]
+                                                        } else {
+                                                            vec![left]
+                                                        }
                                                     },
-                                                );
-
-                                                if let Some(shortcut) = shortcut.clone() {
-                                                    vec![
-                                                        left,
-                                                        CommandShortcut::new(shortcut)
-                                                            .into_element(cx),
-                                                    ]
-                                                } else {
-                                                    vec![left]
-                                                }
+                                                )]
                                             },
-                                        )]
+                                        )
                                     });
 
                                     let mut chrome = child;
@@ -3268,6 +3373,8 @@ impl CommandPalette {
 
             let list = list.attach_semantics(SemanticsDecoration {
                 role: Some(SemanticsRole::ListBox),
+                busy: Some(list_busy),
+                multiselectable: list_multiselectable.then_some(true),
                 labelled_by_element: list_labelled_by,
                 ..Default::default()
             });
@@ -3285,7 +3392,6 @@ impl CommandPalette {
     }
 }
 
-#[derive(Clone)]
 pub struct CommandDialog {
     open: Model<bool>,
     query: Model<String>,
@@ -3937,8 +4043,6 @@ mod tests {
         let reasons: Arc<std::sync::Mutex<Vec<(bool, CommandDialogOpenChangeReason)>>> =
             Arc::new(std::sync::Mutex::new(Vec::new()));
 
-        let items = vec![CommandItem::new("Alpha")];
-
         let bounds = bounds();
         let mut services = FakeServices::default();
 
@@ -3960,18 +4064,22 @@ mod tests {
                 "cmdk-dialog-reason",
                 |cx| {
                     vec![
-                        CommandDialog::new(open.clone(), query.clone(), items.clone())
-                            .close_on_select(true)
-                            .on_open_change_with_reason(Some(Arc::new({
-                                let reasons = reasons.clone();
-                                move |is_open, reason| {
-                                    reasons
-                                        .lock()
-                                        .expect("reasons lock")
-                                        .push((is_open, reason));
-                                }
-                            })))
-                            .into_element(cx, |cx| crate::Button::new("Open").into_element(cx)),
+                        CommandDialog::new(
+                            open.clone(),
+                            query.clone(),
+                            vec![CommandItem::new("Alpha")],
+                        )
+                        .close_on_select(true)
+                        .on_open_change_with_reason(Some(Arc::new({
+                            let reasons = reasons.clone();
+                            move |is_open, reason| {
+                                reasons
+                                    .lock()
+                                    .expect("reasons lock")
+                                    .push((is_open, reason));
+                            }
+                        })))
+                        .into_element(cx, |cx| crate::Button::new("Open").into_element(cx)),
                     ]
                 },
             );
@@ -4226,19 +4334,21 @@ mod tests {
         let query = app.models_mut().insert(String::new());
         let selected_value = app.models_mut().insert(None::<Arc<str>>);
 
-        let items = vec![
-            CommandItem::new("Alpha")
-                .value("alpha-id")
-                .on_select_value_action({
-                    let selected_value = selected_value.clone();
-                    move |host, action_cx, _reason, value| {
-                        let _ = host.models_mut().update(&selected_value, |cur| {
-                            *cur = Some(value.clone());
-                        });
-                        host.request_redraw(action_cx.window);
-                    }
-                }),
-        ];
+        let build_items = || {
+            vec![
+                CommandItem::new("Alpha")
+                    .value("alpha-id")
+                    .on_select_value_action({
+                        let selected_value = selected_value.clone();
+                        move |host, action_cx, _reason, value| {
+                            let _ = host.models_mut().update(&selected_value, |cur| {
+                                *cur = Some(value.clone());
+                            });
+                            host.request_redraw(action_cx.window);
+                        }
+                    }),
+            ]
+        };
 
         let bounds = bounds();
         let mut services = FakeServices::default();
@@ -4251,7 +4361,7 @@ mod tests {
             bounds,
             open.clone(),
             query.clone(),
-            items.clone(),
+            build_items(),
             false,
         );
 
@@ -4273,7 +4383,7 @@ mod tests {
             bounds,
             open.clone(),
             query.clone(),
-            items,
+            build_items(),
             false,
         );
 
@@ -4305,7 +4415,7 @@ mod tests {
             }
         });
 
-        let items = vec![CommandItem::new("Alpha").on_select_action(on_select)];
+        let build_items = || vec![CommandItem::new("Alpha").on_select_action(on_select.clone())];
 
         let bounds = bounds();
         let mut services = FakeServices::default();
@@ -4318,7 +4428,7 @@ mod tests {
             bounds,
             open.clone(),
             query.clone(),
-            items.clone(),
+            build_items(),
             true,
         );
 
@@ -4340,7 +4450,7 @@ mod tests {
             bounds,
             open.clone(),
             query.clone(),
-            items,
+            build_items(),
             true,
         );
 
@@ -4368,7 +4478,7 @@ mod tests {
             }
         });
 
-        let items = vec![CommandItem::new("Alpha").on_select_action(on_select)];
+        let build_items = || vec![CommandItem::new("Alpha").on_select_action(on_select.clone())];
 
         let bounds = bounds();
         let mut services = FakeServices::default();
@@ -4381,7 +4491,7 @@ mod tests {
             bounds,
             open.clone(),
             query.clone(),
-            items.clone(),
+            build_items(),
             false,
         );
 
@@ -4403,7 +4513,7 @@ mod tests {
             bounds,
             open.clone(),
             query.clone(),
-            items,
+            build_items(),
             false,
         );
 
@@ -4431,9 +4541,11 @@ mod tests {
         );
         let mut services = FakeServices::default();
 
-        let items: Vec<CommandItem> = (0..80)
-            .map(|i| CommandItem::new(format!("Item {i}")))
-            .collect();
+        let build_items = || {
+            (0..80)
+                .map(|i| CommandItem::new(format!("Item {i}")))
+                .collect::<Vec<_>>()
+        };
 
         // First frame: mount overlay/content.
         let _ = render_dialog_frame(
@@ -4444,7 +4556,7 @@ mod tests {
             bounds,
             open.clone(),
             query.clone(),
-            items.clone(),
+            build_items(),
             true,
         );
         // Second/third frame: settle overlay layout and list metrics.
@@ -4456,7 +4568,7 @@ mod tests {
             bounds,
             open.clone(),
             query.clone(),
-            items.clone(),
+            build_items(),
             true,
         );
         let _ = render_dialog_frame(
@@ -4467,7 +4579,7 @@ mod tests {
             bounds,
             open,
             query,
-            items,
+            build_items(),
             true,
         );
 
@@ -4599,7 +4711,10 @@ mod tests {
         root
     }
 
-    fn row_signatures(rows: &[CommandPaletteRenderRow], items: &[CommandItem]) -> Vec<String> {
+    fn row_signatures(
+        rows: &[CommandPaletteRenderRow],
+        items: &[Option<CommandItem>],
+    ) -> Vec<String> {
         rows.iter()
             .map(|row| match row {
                 CommandPaletteRenderRow::Heading(h) => format!("H:{h}"),
@@ -4609,6 +4724,7 @@ mod tests {
                 CommandPaletteRenderRow::Item(idx) => {
                     let label = items
                         .get(*idx)
+                        .and_then(|i| i.as_ref())
                         .map(|i| i.label.as_ref())
                         .unwrap_or("<missing>");
                     format!("I:{label}")
@@ -4700,10 +4816,12 @@ mod tests {
         );
         let mut services = FakeServices::default();
 
-        let items = vec![
-            CommandItem::new("Alpha").on_select(CommandId::new("alpha")),
-            CommandItem::new("Beta").on_select(CommandId::new("beta")),
-        ];
+        let build_items = || {
+            vec![
+                CommandItem::new("Alpha").on_select(CommandId::new("alpha")),
+                CommandItem::new("Beta").on_select(CommandId::new("beta")),
+            ]
+        };
 
         let root = render_frame(
             &mut ui,
@@ -4712,7 +4830,7 @@ mod tests {
             window,
             bounds,
             model.clone(),
-            items.clone(),
+            build_items(),
         );
 
         let input = ui
@@ -4738,7 +4856,7 @@ mod tests {
             window,
             bounds,
             model.clone(),
-            items,
+            build_items(),
         );
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
 
@@ -4808,11 +4926,13 @@ mod tests {
         });
         let on_value_change_opt = Some(on_value_change.clone());
 
-        let items = vec![
-            CommandItem::new("Alpha").on_select(CommandId::new("alpha")),
-            CommandItem::new("Beta").on_select(CommandId::new("beta")),
-            CommandItem::new("Gamma").on_select(CommandId::new("gamma")),
-        ];
+        let build_items = || {
+            vec![
+                CommandItem::new("Alpha").on_select(CommandId::new("alpha")),
+                CommandItem::new("Beta").on_select(CommandId::new("beta")),
+                CommandItem::new("Gamma").on_select(CommandId::new("gamma")),
+            ]
+        };
 
         let root = render_frame_with_value_and_on_value_change(
             &mut ui,
@@ -4823,7 +4943,7 @@ mod tests {
             model.clone(),
             value.clone(),
             on_value_change_opt.clone(),
-            items.clone(),
+            build_items(),
         );
 
         let input = ui
@@ -4856,7 +4976,7 @@ mod tests {
             model,
             value.clone(),
             on_value_change_opt,
-            items,
+            build_items(),
         );
 
         let seen = seen.lock().unwrap_or_else(|e| e.into_inner()).clone();
@@ -4888,10 +5008,12 @@ mod tests {
         );
         let mut services = FakeServices::default();
 
-        let items = vec![
-            CommandItem::new("Alpha").on_select(CommandId::new("alpha")),
-            CommandItem::new("Beta").on_select(CommandId::new("beta")),
-        ];
+        let build_items = || {
+            vec![
+                CommandItem::new("Alpha").on_select(CommandId::new("alpha")),
+                CommandItem::new("Beta").on_select(CommandId::new("beta")),
+            ]
+        };
 
         let root = render_frame_with_value(
             &mut ui,
@@ -4901,7 +5023,7 @@ mod tests {
             bounds,
             query.clone(),
             selected.clone(),
-            items.clone(),
+            build_items(),
         );
 
         let input = ui
@@ -4917,7 +5039,7 @@ mod tests {
             bounds,
             query,
             selected.clone(),
-            items,
+            build_items(),
         );
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
 
@@ -4964,10 +5086,12 @@ mod tests {
         );
         let mut services = FakeServices::default();
 
-        let items = vec![
-            CommandItem::new("Alpha").on_select(CommandId::new("alpha")),
-            CommandItem::new("Beta").on_select(CommandId::new("beta")),
-        ];
+        let build_items = || {
+            vec![
+                CommandItem::new("Alpha").on_select(CommandId::new("alpha")),
+                CommandItem::new("Beta").on_select(CommandId::new("beta")),
+            ]
+        };
 
         let root = render_frame_with_value(
             &mut ui,
@@ -4977,7 +5101,7 @@ mod tests {
             bounds,
             query.clone(),
             selected.clone(),
-            items.clone(),
+            build_items(),
         );
 
         let input = ui
@@ -5003,7 +5127,7 @@ mod tests {
             bounds,
             query,
             selected.clone(),
-            items,
+            build_items(),
         );
 
         assert_eq!(
@@ -5032,11 +5156,10 @@ mod tests {
         let (_rows, items, _groups) =
             command_palette_render_rows_for_query_with_options(entries, "zzz", true, None);
 
-        assert!(
-            items
-                .iter()
-                .any(|item| item.value.as_ref() == "force-mounted")
-        );
+        assert!(items.iter().any(|item| {
+            item.as_ref()
+                .is_some_and(|item| item.value.as_ref() == "force-mounted")
+        }));
     }
 
     #[test]
@@ -5117,11 +5240,13 @@ mod tests {
         );
         let mut services = FakeServices::default();
 
-        let items: Vec<CommandItem> = (0..12)
-            .map(|i| {
-                CommandItem::new(format!("Item {i}")).on_select(CommandId::new(format!("i{i}")))
-            })
-            .collect();
+        let build_items = || {
+            (0..12)
+                .map(|i| {
+                    CommandItem::new(format!("Item {i}")).on_select(CommandId::new(format!("i{i}")))
+                })
+                .collect::<Vec<_>>()
+        };
 
         let root = render_frame(
             &mut ui,
@@ -5130,7 +5255,7 @@ mod tests {
             window,
             bounds,
             model.clone(),
-            items.clone(),
+            build_items(),
         );
 
         let input = ui
@@ -5158,7 +5283,7 @@ mod tests {
             window,
             bounds,
             model,
-            items,
+            build_items(),
         );
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
@@ -5205,11 +5330,13 @@ mod tests {
         );
         let mut services = FakeServices::default();
 
-        let items = vec![
-            CommandItem::new("Alpha").on_select(CommandId::new("alpha")),
-            CommandItem::new("Beta").on_select(CommandId::new("beta")),
-            CommandItem::new("Gamma").on_select(CommandId::new("gamma")),
-        ];
+        let build_items = || {
+            vec![
+                CommandItem::new("Alpha").on_select(CommandId::new("alpha")),
+                CommandItem::new("Beta").on_select(CommandId::new("beta")),
+                CommandItem::new("Gamma").on_select(CommandId::new("gamma")),
+            ]
+        };
 
         let root = render_frame(
             &mut ui,
@@ -5218,7 +5345,7 @@ mod tests {
             window,
             bounds,
             model.clone(),
-            items.clone(),
+            build_items(),
         );
 
         let input = ui
@@ -5328,7 +5455,7 @@ mod tests {
             window,
             bounds,
             model.clone(),
-            items,
+            build_items(),
         );
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
         if debug {
@@ -5388,11 +5515,13 @@ mod tests {
         );
         let mut services = FakeServices::default();
 
-        let items = vec![
-            CommandItem::new("Alpha").on_select(CommandId::new("alpha")),
-            CommandItem::new("Beta").on_select(CommandId::new("beta")),
-            CommandItem::new("Gamma").on_select(CommandId::new("gamma")),
-        ];
+        let build_items = || {
+            vec![
+                CommandItem::new("Alpha").on_select(CommandId::new("alpha")),
+                CommandItem::new("Beta").on_select(CommandId::new("beta")),
+                CommandItem::new("Gamma").on_select(CommandId::new("gamma")),
+            ]
+        };
 
         let root = render_frame_disable_pointer_selection(
             &mut ui,
@@ -5401,7 +5530,7 @@ mod tests {
             window,
             bounds,
             model.clone(),
-            items.clone(),
+            build_items(),
             true,
         );
 
@@ -5440,7 +5569,7 @@ mod tests {
             window,
             bounds,
             model.clone(),
-            items,
+            build_items(),
             true,
         );
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
@@ -5481,11 +5610,13 @@ mod tests {
         );
         let mut services = FakeServices::default();
 
-        let items = vec![
-            CommandItem::new("Alpha").on_select(CommandId::new("alpha")),
-            CommandItem::new("Beta").on_select(CommandId::new("beta")),
-            CommandItem::new("Gamma").on_select(CommandId::new("gamma")),
-        ];
+        let build_items = || {
+            vec![
+                CommandItem::new("Alpha").on_select(CommandId::new("alpha")),
+                CommandItem::new("Beta").on_select(CommandId::new("beta")),
+                CommandItem::new("Gamma").on_select(CommandId::new("gamma")),
+            ]
+        };
 
         let root = render_frame(
             &mut ui,
@@ -5494,7 +5625,7 @@ mod tests {
             window,
             bounds,
             model.clone(),
-            items.clone(),
+            build_items(),
         );
 
         let input = ui
@@ -5522,7 +5653,7 @@ mod tests {
             window,
             bounds,
             model.clone(),
-            items,
+            build_items(),
         );
 
         // Reorder items and ensure highlight stays on the same value (not the same index).

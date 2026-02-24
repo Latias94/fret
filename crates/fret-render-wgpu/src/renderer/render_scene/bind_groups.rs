@@ -13,23 +13,12 @@ impl Renderer {
             };
 
             let target = draw.target;
-            let Some(view) = self.render_targets.get(target) else {
-                continue;
-            };
-
-            let revision = self
-                .render_target_revisions
-                .get(&target)
-                .copied()
-                .unwrap_or(0);
-            self.bind_group_caches
-                .ensure_viewport_sampler_texture_bind_group(
+            self.gpu_resources
+                .ensure_viewport_sampler_texture_bind_group_for_target(
                     device,
                     &self.globals.viewport_bind_group_layout,
                     &self.globals.viewport_sampler,
-                    view,
                     target,
-                    revision,
                 );
         }
     }
@@ -45,20 +34,13 @@ impl Renderer {
                 OrderedDraw::Mask(draw) => draw.image,
                 _ => continue,
             };
-            let Some(view) = self.images.get(image) else {
-                continue;
-            };
-
-            let revision = self.image_revisions.get(&image).copied().unwrap_or(0);
-            self.bind_group_caches
-                .ensure_image_sampler_texture_bind_groups(
+            self.gpu_resources
+                .ensure_image_sampler_texture_bind_groups_for_image(
                     device,
                     &self.globals.viewport_bind_group_layout,
                     &self.globals.viewport_sampler,
                     &self.globals.image_sampler_nearest,
-                    view,
                     image,
-                    revision,
                 );
         }
     }
@@ -80,20 +62,13 @@ impl Renderer {
 
         for &sel in uniform_mask_images.iter().flatten() {
             let image = sel.image;
-            let Some(view) = self.images.get(image) else {
-                continue;
-            };
-
-            let image_revision = self.image_revisions.get(&image).copied().unwrap_or(0);
-            self.bind_group_caches
-                .ensure_uniform_mask_image_override_bind_groups(
+            self.gpu_resources
+                .ensure_uniform_mask_image_override_bind_groups_for_image(
                     device,
                     &globals,
                     &self.globals.mask_image_sampler,
                     &self.globals.mask_image_sampler_nearest,
-                    view,
                     image,
-                    image_revision,
                     self.uniforms.revision(),
                 );
         }

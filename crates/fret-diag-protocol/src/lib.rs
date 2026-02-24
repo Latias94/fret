@@ -950,6 +950,26 @@ pub enum UiPredicateV1 {
         target: UiSelectorV1,
         role: String,
     },
+    /// True when the target exists and its semantics `label` contains `text` as a substring.
+    LabelContains {
+        target: UiSelectorV1,
+        text: String,
+    },
+    /// True when the target exists and its semantics `value` contains `text` as a substring.
+    ValueContains {
+        target: UiSelectorV1,
+        text: String,
+    },
+    /// True when the target exists and its semantics `pos_in_set` equals `pos_in_set`.
+    PosInSetIs {
+        target: UiSelectorV1,
+        pos_in_set: u32,
+    },
+    /// True when the target exists and its semantics `set_size` equals `set_size`.
+    SetSizeIs {
+        target: UiSelectorV1,
+        set_size: u32,
+    },
     CheckedIs {
         target: UiSelectorV1,
         checked: bool,
@@ -957,6 +977,44 @@ pub enum UiPredicateV1 {
     SelectedIs {
         target: UiSelectorV1,
         selected: bool,
+    },
+    /// True when the target exists and its structured semantics numeric field is approximately
+    /// equal to the specified value.
+    ///
+    /// This is intended for range controls (slider/progress-like semantics) which should prefer
+    /// `SemanticsNode.extra.numeric.*` over locale-dependent `value` strings.
+    SemanticsNumericApproxEq {
+        target: UiSelectorV1,
+        field: UiSemanticsNumericFieldV1,
+        value: f64,
+        #[serde(default)]
+        eps: f64,
+    },
+    /// True when the target exists and its structured semantics scroll field is present and finite.
+    ///
+    /// This is a lightweight gate to ensure `SemanticsNode.extra.scroll.*` is emitted for scroll
+    /// containers.
+    SemanticsScrollIsFinite {
+        target: UiSelectorV1,
+        field: UiSemanticsScrollFieldV1,
+    },
+    /// True when the target exists and its structured semantics scroll field is approximately
+    /// equal to the specified value.
+    SemanticsScrollApproxEq {
+        target: UiSelectorV1,
+        field: UiSemanticsScrollFieldV1,
+        value: f64,
+        #[serde(default)]
+        eps: f64,
+    },
+    /// True when the target exists and its structured semantics scroll field is not approximately
+    /// equal to the specified value.
+    SemanticsScrollNotApproxEq {
+        target: UiSelectorV1,
+        field: UiSemanticsScrollFieldV1,
+        value: f64,
+        #[serde(default)]
+        eps: f64,
     },
     /// True when the target exists and its semantics reports whether it currently has an IME
     /// composition range.
@@ -1016,6 +1074,15 @@ pub enum UiPredicateV1 {
         container: UiSelectorV1,
         /// The expected active item (highlighted option / row).
         item: UiSelectorV1,
+    },
+    /// True when there is no active item (neither roving focus nor `active_descendant`).
+    ///
+    /// This is primarily intended for combobox/listbox recipes that should not implicitly
+    /// highlight the first option on open unless `auto_highlight` is enabled.
+    ActiveItemIsNone {
+        /// Container node used for composite focus + `active_descendant` models (typically the
+        /// focused input or listbox root).
+        container: UiSelectorV1,
     },
     BarrierRoots {
         #[serde(default)]
@@ -1336,6 +1403,27 @@ pub enum UiPredicateV1 {
     DockGraphSignatureFingerprint64Is {
         fingerprint64: u64,
     },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiSemanticsNumericFieldV1 {
+    Value,
+    Min,
+    Max,
+    Step,
+    Jump,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiSemanticsScrollFieldV1 {
+    X,
+    XMin,
+    XMax,
+    Y,
+    YMin,
+    YMax,
 }
 
 #[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]

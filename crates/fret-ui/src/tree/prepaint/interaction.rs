@@ -49,7 +49,13 @@ impl<H: UiHost> UiTree<H> {
         let child_transform = self
             .node_children_render_transform(node)
             .unwrap_or(Transform2D::IDENTITY);
-        let key = PaintCacheKey::new(bounds, scale_factor, theme_revision, child_transform);
+        let key = PaintCacheKey::new(
+            bounds,
+            scale_factor,
+            theme_revision,
+            crate::tree::paint_style::PaintStyleState::default(),
+            child_transform,
+        );
 
         if is_view_cache_root && is_manual_cache_root {
             let contained_layout = self

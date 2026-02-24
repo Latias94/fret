@@ -31,6 +31,8 @@ the `new-york-v4` registry implementation in `repo-ref/ui`.
   `BreadcrumbSeparator::Icon { icon: ids::ui::SLASH, size: 14px }`.
 - Pass: Ellipsis uses a `size-9` box (≈ `36x36`) with a centered lucide `MoreHorizontal` icon at `size-4`
   (≈ `16px`), matching `BreadcrumbEllipsis`.
+- Pass: Link items can attach `SemanticsRole::Link` + `value=href` when configured, and can fall back to
+  `Effect::OpenUrl` when no explicit `on_activate` hook is provided.
 - Pass: Responsive truncation (`max-w-20 truncate md:max-w-none`) is representable via
   `BreadcrumbLink::truncate(true)` / `BreadcrumbPage::truncate(true)` combined with a `max_w` layout
   refinement (tests gate the mobile outcome).

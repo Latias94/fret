@@ -93,6 +93,20 @@ const NAV_MENU_SAFE_CORRIDOR_BUFFER: Px = Px(5.0);
 type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
 type OnValueChange = Arc<dyn Fn(Option<Arc<str>>) + Send + Sync + 'static>;
 
+/// Controls which query source drives the upstream Tailwind `md:*` breakpoint behavior.
+///
+/// Upstream shadcn/ui recipes use viewport breakpoints (`md:`) by default. In editor-grade layouts
+/// (docking / resizable panels), it can be desirable to drive the same behavior from local
+/// container width instead (ADR 0231).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum NavigationMenuMdBreakpointQuery {
+    /// Match upstream Tailwind viewport breakpoint behavior (web parity).
+    #[default]
+    Viewport,
+    /// Drive the breakpoint from a container query region (ADR 0231).
+    Container,
+}
+
 #[derive(Default)]
 struct NavigationMenuValueChangeCallbackState {
     initialized: bool,
@@ -209,6 +223,36 @@ fn nav_menu_indicator_diamond_size(theme: &Theme) -> Px {
         .unwrap_or(Px(8.0))
 }
 
+fn nav_menu_md_breakpoint<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    query: NavigationMenuMdBreakpointQuery,
+    region_id: GlobalElementId,
+) -> bool {
+    match query {
+        NavigationMenuMdBreakpointQuery::Viewport => {
+            fret_ui_kit::declarative::viewport_width_at_least(
+                cx,
+                Invalidation::Layout,
+                fret_ui_kit::declarative::viewport_tailwind::MD,
+                fret_ui_kit::declarative::ViewportQueryHysteresis::default(),
+            )
+        }
+        NavigationMenuMdBreakpointQuery::Container => {
+            fret_ui_kit::declarative::container_breakpoints(
+                cx,
+                region_id,
+                Invalidation::Layout,
+                false,
+                &[(
+                    fret_ui_kit::declarative::container_queries::tailwind::MD,
+                    true,
+                )],
+                fret_ui_kit::declarative::ContainerQueryHysteresis::default(),
+            )
+        }
+    }
+}
+
 /// shadcn/ui `NavigationMenuViewport` (v4).
 ///
 /// In upstream shadcn, the root optionally mounts a viewport element as a sibling of the list.
@@ -264,7 +308,7 @@ impl NavigationMenuIndicator {
 ///
 /// In the upstream DOM implementation this is an element; in Fret this is a "spec" that provides
 /// trigger children for [`NavigationMenuItem`].
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Default)]
 pub struct NavigationMenuTrigger {
     children: Vec<AnyElement>,
 }
@@ -292,7 +336,7 @@ impl NavigationMenuTrigger {
 /// root-dismiss-on-select behavior. Fret does not use implicit context objects, so this wrapper
 /// requires the navigation menu `model` and closes it on selection (unless the click is modified
 /// with Ctrl/Meta, matching Radix semantics).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct NavigationMenuLink {
     model: Model<Option<Arc<str>>>,
     children: Vec<AnyElement>,
@@ -362,7 +406,7 @@ impl NavigationMenuLink {
         let command = self.command;
         let label = self.label.clone();
         let test_id = self.test_id.clone();
-        let children = std::rc::Rc::new(self.children);
+        let children = self.children;
         let dismiss_on_ctrl_or_meta = self.dismiss_on_ctrl_or_meta;
 
         let fallback_input_ctx = navigation_menu_input_context(&*cx.app);
@@ -434,7 +478,7 @@ impl NavigationMenuLink {
                 ..Default::default()
             };
 
-            (pressable, children.as_ref().clone())
+            (pressable, children)
         })
     }
 }
@@ -443,7 +487,7 @@ impl NavigationMenuLink {
 ///
 /// In the upstream DOM implementation this is an element; in Fret this is a "spec" that provides
 /// viewport content for [`NavigationMenuItem`].
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Default)]
 pub struct NavigationMenuContent {
     children: Vec<AnyElement>,
 }
@@ -465,7 +509,7 @@ impl NavigationMenuContent {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct NavigationMenuItem {
     value: Arc<str>,
     label: Arc<str>,
@@ -527,7 +571,7 @@ impl NavigationMenuItem {
 ///
 /// In the upstream DOM implementation this is a structural wrapper. In Fret it is a named
 /// container for `NavigationMenuItem` specs so recipes read closer to shadcn docs.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Default)]
 pub struct NavigationMenuList {
     items: Vec<NavigationMenuItem>,
 }
@@ -583,7 +627,6 @@ impl NavigationMenuStyle {
     }
 }
 
-#[derive(Clone)]
 pub struct NavigationMenu {
     model: Option<Model<Option<Arc<str>>>>,
     default_value: Option<Arc<str>>,
@@ -592,6 +635,7 @@ pub struct NavigationMenu {
     viewport: bool,
     indicator: bool,
     viewport_test_id: Option<Arc<str>>,
+    md_breakpoint_query: NavigationMenuMdBreakpointQuery,
     /// Optional override for which query region drives responsive variants (ADR 0231).
     ///
     /// When unset, the component uses its own internal region wrapper. When set, the caller must
@@ -613,6 +657,7 @@ impl std::fmt::Debug for NavigationMenu {
             .field("items_len", &self.items.len())
             .field("disabled", &self.disabled)
             .field("viewport", &self.viewport)
+            .field("md_breakpoint_query", &self.md_breakpoint_query)
             .field("chrome", &self.chrome)
             .field("layout", &self.layout)
             .field("config", &self.config)
@@ -635,6 +680,7 @@ impl NavigationMenu {
             viewport: true,
             indicator: false,
             viewport_test_id: None,
+            md_breakpoint_query: NavigationMenuMdBreakpointQuery::Viewport,
             query_region: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
@@ -654,6 +700,7 @@ impl NavigationMenu {
             viewport: true,
             indicator: false,
             viewport_test_id: None,
+            md_breakpoint_query: NavigationMenuMdBreakpointQuery::Viewport,
             query_region: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
@@ -683,8 +730,19 @@ impl NavigationMenu {
     ///
     /// This is primarily intended for editor-grade layouts where the navigation menu lives inside
     /// a resizable panel/dock split and should adapt to the local container width.
+    ///
+    /// Note: this is only consulted when [`NavigationMenu::md_breakpoint_query`] is set to
+    /// [`NavigationMenuMdBreakpointQuery::Container`].
     pub fn container_query_region(mut self, region: GlobalElementId) -> Self {
         self.query_region = Some(region);
+        self
+    }
+
+    /// Controls which query source drives the upstream Tailwind `md:*` breakpoint behavior.
+    ///
+    /// Default: [`NavigationMenuMdBreakpointQuery::Viewport`] (web parity).
+    pub fn md_breakpoint_query(mut self, query: NavigationMenuMdBreakpointQuery) -> Self {
+        self.md_breakpoint_query = query;
         self
     }
 
@@ -798,11 +856,12 @@ impl NavigationMenu {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let controlled_model = self.model;
         let default_value = self.default_value;
-        let items = self.items;
+        let mut items = self.items;
         let menu_disabled = self.disabled;
         let viewport_enabled = self.viewport;
         let indicator_enabled = self.indicator;
         let viewport_test_id = self.viewport_test_id;
+        let md_breakpoint_query = self.md_breakpoint_query;
         let query_region_override = self.query_region;
         let chrome = self.chrome;
         let layout = self.layout;
@@ -1038,14 +1097,8 @@ impl NavigationMenu {
                 &values,
             );
 
-            let md_breakpoint = fret_ui_kit::declarative::container_breakpoints(
-                cx,
-                region_id_for_queries,
-                Invalidation::Layout,
-                false,
-                &[(fret_ui_kit::declarative::container_queries::tailwind::MD, true)],
-                fret_ui_kit::declarative::ContainerQueryHysteresis::default(),
-            );
+            let md_breakpoint =
+                nav_menu_md_breakpoint(cx, md_breakpoint_query, region_id_for_queries);
             let list_props = FlexProps {
                 layout: LayoutStyle::default(),
                 direction: fret_core::Axis::Horizontal,
@@ -1057,7 +1110,7 @@ impl NavigationMenu {
                 ..Default::default()
             };
 
-            let items_for_children = items.clone();
+            let items_for_children = &mut items;
             let value_for_viewport = value_model.clone();
             let trigger_text_style_for_list = trigger_text_style.clone();
             let nav_ctx_for_list = nav_ctx.clone();
@@ -1068,9 +1121,8 @@ impl NavigationMenu {
 
             let list = cx.flex(list_props, move |cx| {
                 items_for_children
-                    .iter()
+                    .iter_mut()
                     .map(|item| {
-                        let item = item.clone();
                         let item_value = item.value.clone();
                         let label = item.label.clone();
                         let disabled = menu_disabled || item.disabled;
@@ -1085,7 +1137,10 @@ impl NavigationMenu {
                         let default_trigger_fg = default_trigger_fg_for_list.clone();
                         let style_override = style_for_list.clone();
 
-                        cx.keyed(item_value.clone(), |cx| {
+                        let trigger_children = item.trigger.take();
+                        let content_is_empty = item.content.is_empty();
+                        let item_label = item.label.clone();
+                        cx.keyed(item_value.clone(), move |cx| {
                             let trigger_text_style = trigger_text_style_for_item.clone();
 
                             let mut pressable = PressableProps::default();
@@ -1104,14 +1159,12 @@ impl NavigationMenu {
                                 ..Default::default()
                             };
 
-                            let trigger_children = item.trigger.clone();
-                            let item_label = item.label.clone();
-                            if item.content.is_empty() {
+                            if content_is_empty {
                                 // shadcn/ui demo uses a `NavigationMenuLink` for items with no
                                 // content (e.g. "Docs"), styled via `navigationMenuTriggerStyle()`.
                                 // These should behave like a link (no chevron, no open/close).
                                 let trigger_text_style = trigger_text_style.clone();
-                                let trigger_children = trigger_children.clone();
+                                let trigger_children = trigger_children;
 
                                 return cx.pressable(pressable, move |cx, st| {
                                     let hovered = st.hovered && !st.pressed;
@@ -1142,8 +1195,7 @@ impl NavigationMenu {
                                         ..Default::default()
                                     };
 
-                                    let content_children =
-                                        trigger_children.clone().unwrap_or_else(|| {
+                                    let content_children = trigger_children.unwrap_or_else(|| {
                                             let style = trigger_text_style.clone();
                                             let mut label = ui::label(cx, item_label.clone())
                                                 .text_size_px(style.size)
@@ -1235,7 +1287,7 @@ impl NavigationMenu {
                                         };
 
                                         let content_children =
-                                            trigger_children.clone().unwrap_or_else(|| {
+                                            trigger_children.unwrap_or_else(|| {
                                                 let style = trigger_text_style.clone();
                                                 let mut label = ui::label(cx, item_label.clone())
                                                     .text_size_px(style.size)
@@ -1345,12 +1397,12 @@ impl NavigationMenu {
                     .collect::<Vec<_>>()
             });
 
-            let viewport = active_idx
-                .and_then(|idx| items.get(idx))
-                .map(|active| active.content.clone())
+            let viewport_children = active_idx
+                .and_then(|idx| items.get_mut(idx))
+                .map(|active| std::mem::take(&mut active.content))
                 .unwrap_or_default();
 
-            let has_content = !viewport.is_empty();
+            let has_content = !viewport_children.is_empty();
             let is_open = selected_local.is_some() && has_content && open_for_motion;
             let overlay_presence = OverlayPresence {
                 present: motion.present && has_content,
@@ -1380,8 +1432,8 @@ impl NavigationMenu {
             let content_switch = radix_navigation_menu::navigation_menu_content_switch(transition)
                 .map(|sw| {
                     let from_children = items
-                        .get(sw.from_idx)
-                        .map(|it| it.content.clone())
+                        .get_mut(sw.from_idx)
+                        .map(|it| std::mem::take(&mut it.content))
                         .unwrap_or_default();
                     (sw.progress, sw.forward, from_children)
                 });
@@ -1447,8 +1499,8 @@ impl NavigationMenu {
 
                 let root_state_for_viewport = root_state.clone();
                 let value_for_hover = value_for_viewport.clone();
-                let viewport_children = viewport.clone();
-                let content_switch = content_switch.clone();
+                let viewport_children_for_panel = viewport_children;
+                let content_switch_for_panel = content_switch;
                 let content_switch_slide_px = content_switch_slide_px;
 
                 let mut panel_props = if viewport_enabled {
@@ -1578,8 +1630,8 @@ impl NavigationMenu {
                         let root_state_for_hover = root_state_for_viewport.clone();
                         let value_for_hover = value_for_hover.clone();
                         let panel_props = panel_props;
-                        let viewport_children = viewport_children;
-                        let content_switch = content_switch;
+                        let viewport_children = viewport_children_for_panel;
+                        let content_switch = content_switch_for_panel;
                         let content_switch_slide_px = content_switch_slide_px;
                         let content_padding = content_padding;
                         let indicator_diamond_shadow = indicator_diamond_shadow;
@@ -1641,9 +1693,9 @@ impl NavigationMenu {
                                     };
 
                                     vec![cx.container(clip_props, move |cx| {
-                                    let Some((t, forward, from_children)) = content_switch.clone()
+                                    let Some((t, forward, from_children)) = content_switch
                                     else {
-                                        let children = viewport_children.clone();
+                                        let children = viewport_children;
                                         let viewport_enabled_for_body = viewport_enabled_for_registry;
                                         let md_breakpoint_for_body = md_breakpoint_for_registry;
                                         let body = cx.keyed("viewport-body", move |cx| {
@@ -1678,7 +1730,7 @@ impl NavigationMenu {
                                         return vec![body];
                                     };
 
-                                    let to_children = viewport_children.clone();
+                                    let to_children = viewport_children;
                                     let t = t.clamp(0.0, 1.0);
                                     let slide = content_switch_slide_px.0;
 
@@ -1718,7 +1770,7 @@ impl NavigationMenu {
                                                         ..Default::default()
                                                     },
                                                     {
-                                                        let from_children = from_children.clone();
+                                                        let from_children = from_children;
                                                         move |_cx| from_children
                                                     },
                                                 )
@@ -1737,7 +1789,7 @@ impl NavigationMenu {
                                                         ..Default::default()
                                                     },
                                                     {
-                                                        let to_children = to_children.clone();
+                                                        let to_children = to_children;
                                                         move |_cx| to_children
                                                     },
                                                 )
@@ -2220,6 +2272,167 @@ mod tests {
 
         let completed = navigation_menu_open_change_complete_event(&mut state, false, false, false);
         assert_eq!(completed, Some(false));
+    }
+
+    #[derive(Clone, Copy, Debug, Default)]
+    struct NavigationMenuRenderedWidths {
+        container_width: Option<Px>,
+        viewport_panel_width: Option<Px>,
+    }
+
+    fn render_menu_and_get_rendered_widths(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut FakeServices,
+        window: AppWindowId,
+        bounds: Rect,
+        model: Model<Option<Arc<str>>>,
+        md_breakpoint_query: NavigationMenuMdBreakpointQuery,
+        settle_frames: usize,
+    ) -> NavigationMenuRenderedWidths {
+        let mut widths = NavigationMenuRenderedWidths::default();
+        let settle_frames = settle_frames.max(1);
+
+        for _ in 0..settle_frames {
+            let model_for_frame = model.clone();
+            let md_breakpoint_query_for_frame = md_breakpoint_query;
+
+            bump_frame(app);
+            OverlayController::begin_frame(app, window);
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "navigation-menu-breakpoint",
+                move |cx| {
+                    let menu_width = Px(400.0);
+                    let content_width = Px(720.0);
+
+                    let wrapper = ContainerProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(menu_width);
+                            layout.size.height = Length::Fill;
+                            layout
+                        },
+                        ..Default::default()
+                    };
+
+                    let wrapper = cx.container(wrapper, move |cx| {
+                        let items = vec![NavigationMenuItem::new(
+                            "alpha",
+                            "Alpha",
+                            vec![cx.container(
+                                ContainerProps {
+                                    layout: {
+                                        let mut layout = LayoutStyle::default();
+                                        layout.size.width = Length::Px(content_width);
+                                        layout.size.height = Length::Px(Px(40.0));
+                                        layout
+                                    },
+                                    ..Default::default()
+                                },
+                                |_cx| Vec::<AnyElement>::new(),
+                            )],
+                        )];
+
+                        vec![
+                            NavigationMenu::new(model_for_frame.clone())
+                                .items(items)
+                                .viewport_test_id("nav.viewport")
+                                .md_breakpoint_query(md_breakpoint_query_for_frame)
+                                .refine_layout(LayoutRefinement::default().w_full())
+                                .into_element(cx),
+                        ]
+                    });
+
+                    vec![wrapper.attach_semantics(
+                        SemanticsDecoration::default().test_id(Arc::<str>::from("nav.container")),
+                    )]
+                },
+            );
+            ui.set_root(root);
+            OverlayController::render(ui, app, services, window, bounds);
+            ui.request_semantics_snapshot();
+            ui.layout_all(app, services, bounds, 1.0);
+
+            if let Some(snap) = ui.semantics_snapshot() {
+                widths.container_width = snap
+                    .nodes
+                    .iter()
+                    .find(|n| n.test_id.as_deref() == Some("nav.container"))
+                    .map(|n| n.bounds.size.width);
+                widths.viewport_panel_width = snap
+                    .nodes
+                    .iter()
+                    .find(|n| n.test_id.as_deref() == Some("nav.viewport"))
+                    .map(|n| n.bounds.size.width);
+            }
+        }
+
+        widths
+    }
+
+    #[test]
+    fn navigation_menu_md_breakpoint_query_can_follow_viewport_or_container_width() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(Some(Arc::<str>::from("alpha")));
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(1000.0), Px(320.0)),
+        );
+        let mut services = FakeServices::default();
+
+        // Some widths depend on committed element bounds (observed across frames). Render a few
+        // frames to let overlays open and measurements settle.
+        let settle_frames = 5;
+
+        let viewport_widths = render_menu_and_get_rendered_widths(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            NavigationMenuMdBreakpointQuery::Viewport,
+            settle_frames,
+        );
+        let container_w = viewport_widths
+            .container_width
+            .expect("expected container semantics node");
+        let panel_w_viewport = viewport_widths
+            .viewport_panel_width
+            .expect("expected viewport panel semantics node (viewport query)");
+
+        let container_widths = render_menu_and_get_rendered_widths(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            NavigationMenuMdBreakpointQuery::Container,
+            settle_frames,
+        );
+        let panel_w_container = container_widths
+            .viewport_panel_width
+            .expect("expected viewport panel semantics node (container query)");
+
+        assert!(
+            panel_w_viewport.0 > container_w.0 + 200.0,
+            "expected viewport-md sizing to follow content width; got {panel_w_viewport:?}",
+        );
+        assert!(
+            (panel_w_container.0 - container_w.0).abs() <= 2.0,
+            "expected container-md sizing to keep mobile w-full behavior (anchor width {container_w:?}); got {panel_w_container:?}",
+        );
     }
 
     #[test]

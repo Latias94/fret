@@ -693,6 +693,8 @@ impl WinitAppDriver for EffectsDemoDriver {
                     line_height_policy: Default::default(),
                     letter_spacing_em: None,
                     vertical_placement: TextVerticalPlacement::CenterMetricsBox,
+                    leading_distribution: Default::default(),
+                    strut_style: Default::default(),
                 };
                 let constraints = TextConstraints {
                     max_width: Some(Px(w - pad * 2.0)),

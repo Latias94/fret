@@ -228,6 +228,7 @@ fn page_preview(
     let motion_preset_open = models.motion_preset_open.clone();
     let view_cache_enabled = models.view_cache_enabled.clone();
     let view_cache_cache_shell = models.view_cache_cache_shell.clone();
+    let view_cache_cache_content = models.view_cache_cache_content.clone();
     let view_cache_inner_enabled = models.view_cache_inner_enabled.clone();
     let view_cache_popover_open = models.view_cache_popover_open.clone();
     let view_cache_continuous = models.view_cache_continuous.clone();
@@ -284,6 +285,7 @@ fn page_preview(
     let material3_menu_open = models.material3_menu_open.clone();
     let text_input = models.text_input.clone();
     let text_area = models.text_area.clone();
+    let input_file_value = models.input_file_value.clone();
     let dropdown_open = models.dropdown_open.clone();
     let context_menu_open = models.context_menu_open.clone();
     let context_menu_edge_open = models.context_menu_edge_open.clone();
@@ -312,6 +314,7 @@ fn page_preview(
             theme,
             view_cache_enabled,
             view_cache_cache_shell,
+            view_cache_cache_content,
             view_cache_inner_enabled,
             view_cache_popover_open,
             view_cache_continuous,
@@ -476,6 +479,7 @@ fn page_preview(
         PAGE_MAGIC_BORDER_BEAM => preview_magic_border_beam(cx),
         PAGE_MAGIC_DOCK => preview_magic_dock(cx),
         PAGE_MAGIC_PATTERNS => preview_magic_patterns(cx),
+        PAGE_MAGIC_PATTERNS_TORTURE => preview_magic_patterns_torture(cx),
         PAGE_MAGIC_SPARKLES_TEXT => preview_magic_sparkles_text(cx),
         PAGE_MAGIC_BLOOM => preview_magic_bloom(cx),
         PAGE_FIELD => preview_field(cx),
@@ -532,7 +536,7 @@ fn page_preview(
         PAGE_EMPTY => preview_empty(cx),
         PAGE_FORM => preview_forms(cx, text_input, text_area, checkbox, switch),
         PAGE_HOVER_CARD => preview_hover_card(cx),
-        PAGE_INPUT => preview_input(cx, text_input),
+        PAGE_INPUT => preview_input(cx, text_input, input_file_value),
         PAGE_INPUT_GROUP => preview_input_group(cx),
         PAGE_INPUT_OTP => preview_input_otp(cx),
         PAGE_ITEM => preview_item(cx),

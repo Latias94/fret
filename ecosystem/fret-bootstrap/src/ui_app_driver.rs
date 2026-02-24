@@ -273,6 +273,15 @@ impl<S> UiAppDriver<S> {
             hooks.accessibility_focus = Some(ui_app_accessibility_focus::<S>);
             hooks.accessibility_invoke = Some(ui_app_accessibility_invoke::<S>);
             hooks.accessibility_set_value_text = Some(ui_app_accessibility_set_value_text::<S>);
+            hooks.accessibility_set_value_numeric =
+                Some(ui_app_accessibility_set_value_numeric::<S>);
+            hooks.accessibility_decrement = Some(ui_app_accessibility_decrement::<S>);
+            hooks.accessibility_increment = Some(ui_app_accessibility_increment::<S>);
+            hooks.accessibility_scroll_by = Some(ui_app_accessibility_scroll_by::<S>);
+            hooks.accessibility_set_text_selection =
+                Some(ui_app_accessibility_set_text_selection::<S>);
+            hooks.accessibility_replace_selected_text =
+                Some(ui_app_accessibility_replace_selected_text::<S>);
 
             hooks.viewport_input = Some(ui_app_viewport_input::<S>);
             hooks.dock_op = Some(ui_app_dock_op::<S>);
@@ -2710,6 +2719,96 @@ fn ui_app_accessibility_set_value_text<S>(
     value: &str,
 ) {
     fret_ui_app::accessibility_actions::set_value_text(&mut state.ui, app, services, target, value);
+}
+
+fn ui_app_accessibility_set_value_numeric<S>(
+    _driver: &mut UiAppDriver<S>,
+    app: &mut App,
+    services: &mut dyn UiServices,
+    _window: AppWindowId,
+    state: &mut UiAppWindowState<S>,
+    target: NodeId,
+    value: f64,
+) {
+    fret_ui_app::accessibility_actions::set_value_numeric(
+        &mut state.ui,
+        app,
+        services,
+        target,
+        value,
+    );
+}
+
+fn ui_app_accessibility_decrement<S>(
+    _driver: &mut UiAppDriver<S>,
+    app: &mut App,
+    services: &mut dyn UiServices,
+    _window: AppWindowId,
+    state: &mut UiAppWindowState<S>,
+    target: NodeId,
+) {
+    fret_ui_app::accessibility_actions::decrement(&mut state.ui, app, services, target);
+}
+
+fn ui_app_accessibility_increment<S>(
+    _driver: &mut UiAppDriver<S>,
+    app: &mut App,
+    services: &mut dyn UiServices,
+    _window: AppWindowId,
+    state: &mut UiAppWindowState<S>,
+    target: NodeId,
+) {
+    fret_ui_app::accessibility_actions::increment(&mut state.ui, app, services, target);
+}
+
+fn ui_app_accessibility_scroll_by<S>(
+    _driver: &mut UiAppDriver<S>,
+    app: &mut App,
+    _window: AppWindowId,
+    state: &mut UiAppWindowState<S>,
+    target: NodeId,
+    dx: f64,
+    dy: f64,
+) {
+    fret_ui_app::accessibility_actions::scroll_by(&mut state.ui, app, target, dx, dy);
+}
+
+fn ui_app_accessibility_set_text_selection<S>(
+    _driver: &mut UiAppDriver<S>,
+    app: &mut App,
+    services: &mut dyn UiServices,
+    _window: AppWindowId,
+    state: &mut UiAppWindowState<S>,
+    target: NodeId,
+    anchor: u32,
+    focus: u32,
+) {
+    fret_ui_app::accessibility_actions::set_text_selection(
+        &mut state.ui,
+        app,
+        services,
+        target,
+        anchor,
+        focus,
+    );
+}
+
+fn ui_app_accessibility_replace_selected_text<S>(
+    _driver: &mut UiAppDriver<S>,
+    app: &mut App,
+    services: &mut dyn UiServices,
+    _window: AppWindowId,
+    state: &mut UiAppWindowState<S>,
+    target: NodeId,
+    value: &str,
+) {
+    fret_ui_app::accessibility_actions::replace_selected_text(
+        &mut state.ui,
+        app,
+        services,
+        target,
+        value,
+    );
 }
 
 fn ui_app_viewport_input<S>(driver: &mut UiAppDriver<S>, app: &mut App, event: ViewportInputEvent) {

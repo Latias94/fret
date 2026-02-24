@@ -47,9 +47,9 @@ Defaults if unclear:
   - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-intro-idle-screenshot.json --env FRET_DIAG_GPU_SCREENSHOTS=1 --pack --launch -- cargo run -p fret-ui-gallery --release`
 
 - Fast “don’t grep bundle.json” triage helpers (native or web-exported bundles):
-  - Summary sidecar (cached): `cargo run -p fretboard -- diag meta <bundle_dir|bundle.json> --json`
-  - Find the right `test_id` quickly (cached index): `cargo run -p fretboard -- diag query test-id [<bundle_dir|bundle.json>] <pattern> --mode contains --top 50`
-  - Export a minimal shareable slice for one target (instead of copying bundle fragments): `cargo run -p fretboard -- diag slice [<bundle_dir|bundle.json>] --test-id <test_id>`
+  - Summary sidecar (cached): `cargo run -p fretboard -- diag meta <bundle_dir|bundle.json|bundle.schema2.json> --json`
+  - Find the right `test_id` quickly (cached index): `cargo run -p fretboard -- diag query test-id [<bundle_dir|bundle.json|bundle.schema2.json>] <pattern> --mode contains --top 50`
+  - Export a minimal shareable slice for one target (instead of copying bundle fragments): `cargo run -p fretboard -- diag slice [<bundle_dir|bundle.json|bundle.schema2.json>] --test-id <test_id>`
   - Python fallback (bounded output; useful when you only have a `bundle.json` and cannot run `fretboard`):
     - PowerShell:
       ```powershell
@@ -88,7 +88,7 @@ Defaults if unclear:
     - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-intro-idle-screenshot.json --devtools-ws-url ws://127.0.0.1:7331/ --devtools-token <token>`
     - Notes:
       - `--launch/--reuse-launch` is not supported with `--devtools-ws-url` (you run the web app separately).
-      - `--pack` is not supported with `--devtools-ws-url` yet; run `fretboard diag pack <bundle_dir|bundle.json>` after.
+      - `--pack` is not supported with `--devtools-ws-url` yet; run `fretboard diag pack <bundle_dir|bundle.json|bundle.schema2.json>` after.
       - `capture_bundle` steps do not currently auto-materialize a local `bundle.json` in this mode; prefer `fret-diag-export` when you need the bundle artifact.
 
 ## Workflow
@@ -108,8 +108,8 @@ Defaults if unclear:
 3. Ensure diagnostics are enabled in the running app.
    - If you run via `fretboard diag run ... --launch -- <cmd...>`, the launcher injects `FRET_DIAG=1` for you.
    - Otherwise, set `FRET_DIAG=1` in the target environment.
-   - If the script uses `capture_screenshot`: also enable GPU screenshots (`FRET_DIAG_GPU_SCREENSHOTS=1`, alias: `FRET_DIAG_SCREENSHOTS=1`).
-   - If you want a best-effort BMP screenshot alongside bundle dumps (manual `diag poke` / auto-dumps): set `FRET_DIAG_SCREENSHOT=1`.
+   - If the script uses `capture_screenshot`: also enable GPU screenshots (`FRET_DIAG_GPU_SCREENSHOTS=1`).
+   - If you want a best-effort BMP screenshot alongside bundle dumps (manual `diag poke` / auto-dumps): set `FRET_DIAG_BUNDLE_SCREENSHOT=1`.
    - While authoring scripts, consider disabling text redaction: `FRET_DIAG_REDACT_TEXT=0`.
    - Full env reference: `docs/ui-diagnostics-and-scripted-tests.md`
 4. Run the script via `fretboard` and collect artifacts.
@@ -125,7 +125,7 @@ Defaults if unclear:
    - If you need pixel diffs, add `capture_screenshot` steps and use `--check-pixels-changed <test_id>`.
 6. Package and share.
    - `fretboard diag pack --include-screenshots` (bundle + screenshots)
-   - `fretboard diag triage <bundle_dir|bundle.json> --json` (machine-readable summary)
+   - `fretboard diag triage <bundle_dir|bundle.json|bundle.schema2.json> --json` (machine-readable summary)
    - Note: packed bundles include cached sidecars under `_root/` when available (`bundle.meta.json`, `test_ids.index.json`, `test_ids.json`).
 7. Compare before/after runs for regressions.
    - `fretboard diag compare <bundle_a> <bundle_b> --json`
@@ -189,7 +189,7 @@ Good in-tree examples to copy from:
 If you add `capture_screenshot`, require screenshot capability and enable screenshots:
 
 - Script: add `diag.screenshot_png` to `meta.required_capabilities`
-- Native/filesystem: set `FRET_DIAG_GPU_SCREENSHOTS=1` (alias: `FRET_DIAG_SCREENSHOTS=1`)
+- Native/filesystem: set `FRET_DIAG_GPU_SCREENSHOTS=1`
 
 ## Capabilities & fail-fast gating
 
@@ -239,9 +239,9 @@ Reason-code first triage:
 
 Use these when you’re trying to quickly find a selector or share a small artifact:
 
-- `fretboard diag meta <bundle_dir|bundle.json> [--warmup-frames <n>] [--json]` (cached summary)
-- `fretboard diag query test-id [<bundle_dir|bundle.json>] <pattern> [--mode <contains|prefix|glob>] [--top <n>] [--case-sensitive] [--json]` (cached index)
-- `fretboard diag slice [<bundle_dir|bundle.json>] --test-id <test_id> [--frame-id <n>] [--window <id>] [--max-matches <n>] [--max-ancestors <n>] [--json]` (minimal export)
+- `fretboard diag meta <bundle_dir|bundle.json|bundle.schema2.json> [--warmup-frames <n>] [--json]` (cached summary)
+- `fretboard diag query test-id [<bundle_dir|bundle.json|bundle.schema2.json>] <pattern> [--mode <contains|prefix|glob>] [--top <n>] [--case-sensitive] [--json]` (cached index)
+- `fretboard diag slice [<bundle_dir|bundle.json|bundle.schema2.json>] --test-id <test_id> [--frame-id <n>] [--window <id>] [--max-matches <n>] [--max-ancestors <n>] [--json]` (minimal export)
 
 ## Component conformance playbooks (reference)
 
@@ -285,7 +285,7 @@ Where the code lives:
 
 ## Common pitfalls
 
-- Scripts that call `capture_screenshot` without `FRET_DIAG_GPU_SCREENSHOTS=1` (or the legacy alias).
+- Scripts that call `capture_screenshot` without `FRET_DIAG_GPU_SCREENSHOTS=1`.
 - Targeting pixels/coordinates instead of `test_id`/semantics selectors (scripts become brittle).
 - Running the “wrong” binary that isn’t wired through the diagnostics driver (no bundle/script execution).
 - Debugging an interaction bug with only geometry snapshots: add scripted steps + focused assertions.

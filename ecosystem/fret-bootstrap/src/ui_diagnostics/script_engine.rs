@@ -1279,7 +1279,7 @@ impl UiDiagnosticsService {
 
         #[cfg(feature = "diagnostics-ws")]
         let devtools_request_redraw =
-            self.drive_devtools_ws_requests_for_window(app, window, scale_factor, ui);
+            self.drive_devtools_ws_requests_for_window(app, window, scale_factor, ui.as_deref());
         #[cfg(not(feature = "diagnostics-ws"))]
         let devtools_request_redraw = false;
 

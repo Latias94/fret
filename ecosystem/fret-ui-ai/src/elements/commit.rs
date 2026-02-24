@@ -111,7 +111,7 @@ impl CopyFeedbackRef {
 }
 
 /// Commit disclosure root aligned with AI Elements `commit.tsx`.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Commit {
     default_open: bool,
     header: CommitHeader,
@@ -167,14 +167,13 @@ impl Commit {
             .refine_style(base_chrome.merge(self.chrome))
             .into_element_with_open_model(
                 cx,
-                move |cx, open_model, is_open| header.clone().into_trigger(cx, open_model, is_open),
-                move |cx| content.clone().into_element(cx),
+                move |cx, open_model, is_open| header.into_trigger(cx, open_model, is_open),
+                move |cx| content.into_element(cx),
             )
     }
 }
 
 /// Commit disclosure header row (Collapsible trigger).
-#[derive(Clone)]
 pub struct CommitHeader {
     children: Vec<AnyElement>,
     test_id: Option<Arc<str>>,
@@ -226,18 +225,23 @@ impl CommitHeader {
     ) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
+        let children = self.children;
+        let test_id = self.test_id;
+        let layout = self.layout;
+        let chrome = self.chrome;
+
         let row = stack::hstack(
             cx,
             stack::HStackProps::default()
-                .layout(self.layout)
+                .layout(layout)
                 .gap(Space::N4)
                 .items_center()
                 .justify_between(),
-            move |_cx| self.children.clone(),
+            move |_cx| children,
         );
 
         let row = cx.container(
-            decl_style::container_props(&theme, self.chrome, LayoutRefinement::default()),
+            decl_style::container_props(&theme, chrome, LayoutRefinement::default()),
             move |_cx| vec![row],
         );
 
@@ -245,7 +249,7 @@ impl CommitHeader {
             .a11y_label("Toggle commit details")
             .into_element(cx, is_open);
 
-        let Some(test_id) = self.test_id else {
+        let Some(test_id) = test_id else {
             return trigger;
         };
         trigger.attach_semantics(
@@ -257,7 +261,7 @@ impl CommitHeader {
 }
 
 /// Commit disclosure content wrapper (`CollapsibleContent`).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct CommitContent {
     children: Vec<AnyElement>,
     test_id: Option<Arc<str>>,
@@ -405,7 +409,7 @@ impl CommitMessage {
 }
 
 /// Metadata row aligned with AI Elements `CommitMetadata`.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct CommitMetadata {
     children: Vec<AnyElement>,
     layout: LayoutRefinement,
@@ -475,7 +479,7 @@ impl CommitSeparator {
 }
 
 /// Vertical info column aligned with AI Elements `CommitInfo`.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct CommitInfo {
     children: Vec<AnyElement>,
 }
@@ -499,7 +503,7 @@ impl CommitInfo {
 }
 
 /// Author row aligned with AI Elements `CommitAuthor`.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct CommitAuthor {
     children: Vec<AnyElement>,
 }
@@ -597,7 +601,7 @@ fn relative_days_label(date: SystemTime) -> String {
 }
 
 /// Actions row aligned with AI Elements `CommitActions`.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct CommitActions {
     children: Vec<AnyElement>,
 }
@@ -855,7 +859,7 @@ impl CommitCopyButton {
 }
 
 /// Wrapper aligned with AI Elements `CommitFiles`.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct CommitFiles {
     children: Vec<AnyElement>,
     test_id: Option<Arc<str>>,
@@ -895,7 +899,7 @@ impl CommitFiles {
 }
 
 /// Wrapper aligned with AI Elements `CommitFile`.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct CommitFile {
     children: Vec<AnyElement>,
     test_id: Option<Arc<str>>,
@@ -947,7 +951,7 @@ impl CommitFile {
                         .gap(Space::N2)
                         .items_center()
                         .justify_between(),
-                    move |_cx| children.clone(),
+                    move |_cx| children,
                 );
                 vec![cx.container(props, move |_cx| vec![row])]
             },
@@ -965,7 +969,7 @@ impl CommitFile {
 }
 
 /// Wrapper aligned with AI Elements `CommitFileInfo`.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct CommitFileInfo {
     children: Vec<AnyElement>,
 }
@@ -1151,7 +1155,7 @@ impl CommitFilePath {
 }
 
 /// Wrapper aligned with AI Elements `CommitFileChanges`.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct CommitFileChanges {
     children: Vec<AnyElement>,
 }

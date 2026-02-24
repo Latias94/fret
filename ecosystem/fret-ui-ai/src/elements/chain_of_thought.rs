@@ -207,7 +207,6 @@ impl Default for ChainOfThoughtStepStatus {
     }
 }
 
-#[derive(Clone)]
 pub struct ChainOfThoughtHeader {
     children: Option<Vec<AnyElement>>,
     test_id: Option<Arc<str>>,
@@ -303,7 +302,7 @@ impl ChainOfThoughtHeader {
                     Some(ColorRef::Color(fg)),
                 );
 
-                let label = if let Some(children) = children.clone() {
+                let label = if let Some(children) = children {
                     cx.stack_props(
                         fret_ui::element::StackProps {
                             layout: decl_style::layout_style(
@@ -369,7 +368,6 @@ impl ChainOfThoughtHeader {
     }
 }
 
-#[derive(Clone)]
 pub struct ChainOfThoughtContent {
     children: Vec<AnyElement>,
     test_id: Option<Arc<str>>,
@@ -453,7 +451,6 @@ impl ChainOfThoughtContent {
     }
 }
 
-#[derive(Clone)]
 pub struct ChainOfThoughtStep {
     label: Arc<str>,
     description: Option<Arc<str>>,
@@ -627,7 +624,6 @@ impl ChainOfThoughtStep {
     }
 }
 
-#[derive(Clone)]
 pub struct ChainOfThoughtSearchResults {
     children: Vec<AnyElement>,
     test_id: Option<Arc<str>>,
@@ -688,7 +684,6 @@ impl ChainOfThoughtSearchResults {
     }
 }
 
-#[derive(Clone)]
 pub struct ChainOfThoughtSearchResult {
     label: Arc<str>,
     children: Vec<AnyElement>,
@@ -737,7 +732,6 @@ impl ChainOfThoughtSearchResult {
     }
 }
 
-#[derive(Clone)]
 pub struct ChainOfThoughtImage {
     children: Vec<AnyElement>,
     caption: Option<Arc<str>>,

@@ -146,7 +146,16 @@ pub(super) fn try_key_hook<H: UiHost>(
         |hooks| match cx.input_ctx.dispatch_phase {
             fret_runtime::InputDispatchPhase::Capture => hooks.on_key_down_capture.clone(),
             fret_runtime::InputDispatchPhase::Preview
-            | fret_runtime::InputDispatchPhase::Bubble => hooks.on_key_down.clone(),
+            | fret_runtime::InputDispatchPhase::Bubble => {
+                if cx.focus == Some(cx.node) {
+                    hooks
+                        .on_key_down_focused
+                        .clone()
+                        .or_else(|| hooks.on_key_down.clone())
+                } else {
+                    hooks.on_key_down.clone()
+                }
+            }
         },
     );
 

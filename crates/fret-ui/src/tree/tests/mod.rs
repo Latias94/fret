@@ -240,6 +240,7 @@ mod prevent_default;
 mod scroll_into_view;
 mod scroll_invalidation;
 mod semantics_focus_shortcuts;
+mod semantics_slider_set_value_gate;
 mod stack_safety;
 mod transforms;
 mod view_cache;

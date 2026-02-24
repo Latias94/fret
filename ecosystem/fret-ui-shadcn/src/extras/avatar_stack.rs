@@ -11,7 +11,7 @@ use crate::avatar::AvatarFallback as ShadcnAvatarFallback;
 use crate::test_id::attach_test_id;
 
 /// Input item for [`AvatarStack`].
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum AvatarStackItem {
     Avatar(ShadcnAvatar),
     Element(AnyElement),
@@ -36,7 +36,7 @@ impl From<AnyElement> for AvatarStackItem {
 ///
 /// Upstream inspiration (MIT):
 /// - `repo-ref/kibo/packages/avatar-stack`
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct AvatarStack {
     items: Vec<AvatarStackItem>,
     size: Px,

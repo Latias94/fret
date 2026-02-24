@@ -2,12 +2,13 @@ use std::cell::Cell;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use fret_core::{Color, FontWeight, KeyCode, Px, TextOverflow, TextStyle, TextWrap};
+use fret_core::{Color, FontWeight, KeyCode, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap};
 use fret_icons::ids;
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, FlexProps, LayoutQueryRegionProps, LayoutStyle, Length, MainAlign, Overflow,
-    PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps, TextProps,
+    AnyElement, CrossAlign, FlexProps, LayoutQueryRegionProps, LayoutStyle, Length, MainAlign,
+    Overflow, PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps, SemanticFlexProps,
+    TextProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
@@ -536,31 +537,40 @@ impl Calendar {
             name: None,
         };
 
-        // Tailwind `md:` breakpoints are viewport-driven on the web, but in editor-grade layouts
-        // the calendar should adapt to the width of its local container (panel resize), not the
-        // global window.
+        // Tailwind `md:` breakpoints are viewport-driven on the web. For editor-grade layouts the
+        // calendar generally adapts to its local container width (panel resize), but when mounted
+        // inside PopoverContent we prefer viewport breakpoints to avoid circular sizing (the
+        // popover panel width depends on the calendar's month layout).
         fret_ui_kit::declarative::container_query_region_with_id(
             cx,
             "shadcn.calendar",
             region_props,
             move |cx, region_id| {
                 let is_row = if number_of_months > 1 {
-                    // Container queries are read from last-committed bounds. In single-pass layout
-                    // environments (e.g. snapshot tests), the region width can be temporarily
-                    // unknown. Fall back to the viewport width so the initial layout matches the
-                    // web Tailwind breakpoint behavior when the calendar is effectively
-                    // unconstrained by a smaller container.
-                    let default_when_unknown =
+                    if matches!(
+                        surface_slot_in_scope(cx),
+                        Some(ShadcnSurfaceSlot::PopoverContent)
+                    ) {
                         cx.environment_viewport_width(Invalidation::Layout).0
-                            >= fret_ui_kit::declarative::container_queries::tailwind::MD.0;
-                    fret_ui_kit::declarative::container_width_at_least(
-                        cx,
-                        region_id,
-                        Invalidation::Layout,
-                        default_when_unknown,
-                        fret_ui_kit::declarative::container_queries::tailwind::MD,
-                        fret_ui_kit::declarative::ContainerQueryHysteresis::default(),
-                    )
+                            >= fret_ui_kit::declarative::container_queries::tailwind::MD.0
+                    } else {
+                        // Container queries are read from last-committed bounds. In single-pass layout
+                        // environments (e.g. snapshot tests), the region width can be temporarily
+                        // unknown. Fall back to the viewport width so the initial layout matches the
+                        // web Tailwind breakpoint behavior when the calendar is effectively
+                        // unconstrained by a smaller container.
+                        let default_when_unknown =
+                            cx.environment_viewport_width(Invalidation::Layout).0
+                                >= fret_ui_kit::declarative::container_queries::tailwind::MD.0;
+                        fret_ui_kit::declarative::container_width_at_least(
+                            cx,
+                            region_id,
+                            Invalidation::Layout,
+                            default_when_unknown,
+                            fret_ui_kit::declarative::container_queries::tailwind::MD,
+                            fret_ui_kit::declarative::ContainerQueryHysteresis::default(),
+                        )
+                    }
                 } else {
                     false
                 };
@@ -831,111 +841,139 @@ impl Calendar {
                                                 .map(|b| (b.0.year, b.1.year))
                                                 .unwrap_or((today_year - 10, today_year + 10));
 
-                                            let month_select = Select::new_controllable::<
-                                                H,
-                                                Arc<str>,
-                                            >(
-                                                cx,
-                                                Some(month_value.clone()),
-                                                None::<Arc<str>>,
-                                                None,
-                                                false,
-                                            )
-                                            .position(SelectPosition::Popper)
-                                            .on_value_change(move |host, _acx, raw| {
-                                                let Ok(month_num) = raw.parse::<u8>() else {
-                                                    return;
-                                                };
-                                                let Ok(month) = Month::try_from(month_num) else {
-                                                    return;
-                                                };
-
-                                                let cur_year = host
-                                                    .models_mut()
-                                                    .read(&month_model, |m| m.year)
-                                                    .ok()
-                                                    .unwrap_or(today_year);
-                                                let cand = CalendarMonth::new(cur_year, month);
-                                                let next = month_bounds.map_or(cand, |b| {
-                                                    clamp_start_month(cand, b, 1)
+                                            let month_trigger_test_id =
+                                                test_id_prefix_for_header.as_ref().map(|p| {
+                                                    Arc::<str>::from(format!(
+                                                        "{p}.caption-month-trigger"
+                                                    ))
                                                 });
+                                            let mut month_select =
+                                                Select::new_controllable::<H, Arc<str>>(
+                                                    cx,
+                                                    Some(month_value.clone()),
+                                                    None::<Arc<str>>,
+                                                    None,
+                                                    false,
+                                                );
+                                            if let Some(test_id) = month_trigger_test_id {
+                                                month_select =
+                                                    month_select.trigger_test_id(test_id);
+                                            }
 
-                                                let _ = host
-                                                    .models_mut()
-                                                    .update(&month_model, |m| *m = next);
-                                                let _ = host.models_mut().update(
-                                                    &month_value_for_month,
-                                                    |v| {
-                                                        *v = Some(Arc::from(
-                                                            month_number(next.month).to_string(),
-                                                        ));
-                                                    },
-                                                );
-                                                let _ = host.models_mut().update(
-                                                    &year_value_for_month,
-                                                    |v| {
-                                                        *v = Some(Arc::from(next.year.to_string()));
-                                                    },
-                                                );
-                                            })
-                                            .items([
-                                                SelectItem::new(
-                                                    "1",
-                                                    locale.month_name(Month::January),
-                                                ),
-                                                SelectItem::new(
-                                                    "2",
-                                                    locale.month_name(Month::February),
-                                                ),
-                                                SelectItem::new(
-                                                    "3",
-                                                    locale.month_name(Month::March),
-                                                ),
-                                                SelectItem::new(
-                                                    "4",
-                                                    locale.month_name(Month::April),
-                                                ),
-                                                SelectItem::new("5", locale.month_name(Month::May)),
-                                                SelectItem::new(
-                                                    "6",
-                                                    locale.month_name(Month::June),
-                                                ),
-                                                SelectItem::new(
-                                                    "7",
-                                                    locale.month_name(Month::July),
-                                                ),
-                                                SelectItem::new(
-                                                    "8",
-                                                    locale.month_name(Month::August),
-                                                ),
-                                                SelectItem::new(
-                                                    "9",
-                                                    locale.month_name(Month::September),
-                                                ),
-                                                SelectItem::new(
-                                                    "10",
-                                                    locale.month_name(Month::October),
-                                                ),
-                                                SelectItem::new(
-                                                    "11",
-                                                    locale.month_name(Month::November),
-                                                ),
-                                                SelectItem::new(
-                                                    "12",
-                                                    locale.month_name(Month::December),
-                                                ),
-                                            ])
-                                            .into_element(cx);
+                                            let month_select = month_select
+                                                .position(SelectPosition::Popper)
+                                                .on_value_change(move |host, _acx, raw| {
+                                                    let Ok(month_num) = raw.parse::<u8>() else {
+                                                        return;
+                                                    };
+                                                    let Ok(month) = Month::try_from(month_num)
+                                                    else {
+                                                        return;
+                                                    };
+
+                                                    let cur_year = host
+                                                        .models_mut()
+                                                        .read(&month_model, |m| m.year)
+                                                        .ok()
+                                                        .unwrap_or(today_year);
+                                                    let cand = CalendarMonth::new(cur_year, month);
+                                                    let next = month_bounds.map_or(cand, |b| {
+                                                        clamp_start_month(cand, b, 1)
+                                                    });
+
+                                                    let _ = host
+                                                        .models_mut()
+                                                        .update(&month_model, |m| *m = next);
+                                                    let _ = host.models_mut().update(
+                                                        &month_value_for_month,
+                                                        |v| {
+                                                            *v = Some(Arc::from(
+                                                                month_number(next.month)
+                                                                    .to_string(),
+                                                            ));
+                                                        },
+                                                    );
+                                                    let _ = host.models_mut().update(
+                                                        &year_value_for_month,
+                                                        |v| {
+                                                            *v = Some(Arc::from(
+                                                                next.year.to_string(),
+                                                            ));
+                                                        },
+                                                    );
+                                                })
+                                                .items([
+                                                    SelectItem::new(
+                                                        "1",
+                                                        locale.month_name(Month::January),
+                                                    ),
+                                                    SelectItem::new(
+                                                        "2",
+                                                        locale.month_name(Month::February),
+                                                    ),
+                                                    SelectItem::new(
+                                                        "3",
+                                                        locale.month_name(Month::March),
+                                                    ),
+                                                    SelectItem::new(
+                                                        "4",
+                                                        locale.month_name(Month::April),
+                                                    ),
+                                                    SelectItem::new(
+                                                        "5",
+                                                        locale.month_name(Month::May),
+                                                    ),
+                                                    SelectItem::new(
+                                                        "6",
+                                                        locale.month_name(Month::June),
+                                                    ),
+                                                    SelectItem::new(
+                                                        "7",
+                                                        locale.month_name(Month::July),
+                                                    ),
+                                                    SelectItem::new(
+                                                        "8",
+                                                        locale.month_name(Month::August),
+                                                    ),
+                                                    SelectItem::new(
+                                                        "9",
+                                                        locale.month_name(Month::September),
+                                                    ),
+                                                    SelectItem::new(
+                                                        "10",
+                                                        locale.month_name(Month::October),
+                                                    ),
+                                                    SelectItem::new(
+                                                        "11",
+                                                        locale.month_name(Month::November),
+                                                    ),
+                                                    SelectItem::new(
+                                                        "12",
+                                                        locale.month_name(Month::December),
+                                                    ),
+                                                ])
+                                                .into_element(cx);
 
                                             let year_model = month_model_header.clone();
-                                            let year_select =
+                                            let year_trigger_test_id =
+                                                test_id_prefix_for_header.as_ref().map(|p| {
+                                                    Arc::<str>::from(format!(
+                                                        "{p}.caption-year-trigger"
+                                                    ))
+                                                });
+                                            let mut year_select =
                                                 Select::new_controllable::<H, Arc<str>>(
                                                     cx,
                                                     Some(year_value.clone()),
                                                     None::<Arc<str>>,
                                                     None,
                                                     false,
-                                                )
+                                                );
+                                            if let Some(test_id) = year_trigger_test_id {
+                                                year_select = year_select.trigger_test_id(test_id);
+                                            }
+
+                                            let year_select = year_select
                                                 .position(SelectPosition::Popper)
                                                 .on_value_change(move |host, _acx, raw| {
                                                     let Ok(year) = raw.parse::<i32>() else {
@@ -1029,17 +1067,27 @@ impl Calendar {
                                     move |_cx| vec![title_el],
                                 );
 
-                                let nav_bar = stack::hstack(
-                                    cx,
-                                    stack::HStackProps::default()
-                                        .gap(Space::N2)
-                                        .layout(
-                                            LayoutRefinement::default()
-                                                .w_px(MetricRef::Px(month_width))
-                                                .h_px(MetricRef::Px(day_size)),
-                                        )
-                                        .items_center()
-                                        .justify_between(),
+                                let nav_bar_gap = decl_style::space(&theme, Space::N2);
+                                let nav_bar = cx.semantic_flex(
+                                    SemanticFlexProps {
+                                        role: SemanticsRole::Generic,
+                                        flex: FlexProps {
+                                            layout: LayoutStyle {
+                                                size: fret_ui::element::SizeStyle {
+                                                    width: Length::Px(month_width),
+                                                    height: Length::Px(day_size),
+                                                    ..Default::default()
+                                                },
+                                                ..Default::default()
+                                            },
+                                            direction: fret_core::Axis::Horizontal,
+                                            gap: nav_bar_gap,
+                                            padding: fret_core::Edges::all(Px(0.0)),
+                                            justify: MainAlign::SpaceBetween,
+                                            align: CrossAlign::Center,
+                                            wrap: false,
+                                        },
+                                    },
                                     move |_cx| vec![prev, next],
                                 );
 
@@ -2187,10 +2235,15 @@ fn calendar_day_cell<H: UiHost>(
     let day = date.day();
     let day_text: Arc<str> = Arc::from(day.to_string());
     let date_label = locale.day_aria_label(date, today, selected);
-    let test_id: Arc<str> = if let Some(prefix) = test_id_prefix {
-        Arc::from(format!("{prefix}:{date}"))
+    let base_test_id = if let Some(prefix) = test_id_prefix {
+        format!("{prefix}:{date}")
     } else {
-        Arc::from(date.to_string())
+        date.to_string()
+    };
+    let test_id: Arc<str> = if in_month {
+        Arc::from(base_test_id)
+    } else {
+        Arc::from(format!("{base_test_id}:outside"))
     };
 
     let text_sm_px = theme

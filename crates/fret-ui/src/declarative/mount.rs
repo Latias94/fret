@@ -13,6 +13,92 @@ fn keep_alive_view_cache_scratch_disabled() -> bool {
     crate::runtime_config::ui_runtime_config().keep_alive_view_cache_scratch_disabled
 }
 
+fn validate_element_tree_unique_ids_enabled() -> (bool, bool) {
+    let strict = crate::strict_runtime::strict_runtime_enabled();
+    let cfg = crate::runtime_config::ui_runtime_config();
+    let enabled = strict
+        || cfg.validate_element_tree_unique_ids
+        || cfg.validate_element_tree_unique_ids_panic;
+    let should_panic = strict || cfg.validate_element_tree_unique_ids_panic;
+    (enabled, should_panic)
+}
+
+pub(super) fn element_tree_duplicate_ids(elements: &[AnyElement]) -> Vec<GlobalElementId> {
+    let mut seen: HashSet<GlobalElementId> = HashSet::new();
+    let mut duplicates: HashSet<GlobalElementId> = HashSet::new();
+    let mut stack: Vec<&AnyElement> = Vec::new();
+    stack.extend(elements.iter());
+
+    while let Some(el) = stack.pop() {
+        if !seen.insert(el.id) {
+            duplicates.insert(el.id);
+        }
+        stack.extend(el.children.iter());
+    }
+
+    let mut out: Vec<GlobalElementId> = duplicates.into_iter().collect();
+    out.sort_by_key(|id| id.0);
+    out
+}
+
+fn debug_path_for_element(
+    runtime: &crate::elements::ElementRuntime,
+    window: AppWindowId,
+    element: GlobalElementId,
+) -> Option<String> {
+    #[cfg(feature = "diagnostics")]
+    {
+        runtime.debug_path_for_element(window, element)
+    }
+    #[cfg(not(feature = "diagnostics"))]
+    {
+        let _ = (runtime, window, element);
+        None
+    }
+}
+
+fn validate_element_tree_unique_ids_or_log(
+    window: AppWindowId,
+    root_name: &str,
+    frame_id: fret_runtime::FrameId,
+    runtime: &crate::elements::ElementRuntime,
+    elements: &[AnyElement],
+) {
+    let (enabled, should_panic) = validate_element_tree_unique_ids_enabled();
+    if !enabled {
+        return;
+    }
+
+    let duplicates = element_tree_duplicate_ids(elements);
+    if duplicates.is_empty() {
+        return;
+    }
+
+    let mut msg = String::new();
+    use std::fmt::Write;
+    let _ = writeln!(
+        &mut msg,
+        "duplicate element ids detected while building declarative element tree: window={window:?} root_name={root_name:?} frame_id={}",
+        frame_id.0
+    );
+    for (idx, id) in duplicates.iter().take(12).enumerate() {
+        let path = debug_path_for_element(runtime, window, *id);
+        let _ = writeln!(&mut msg, "  {idx}. element={id:?} debug_path={path:?}");
+    }
+    if duplicates.len() > 12 {
+        let _ = writeln!(&mut msg, "  ... ({} more)", duplicates.len() - 12);
+    }
+    let _ = writeln!(
+        &mut msg,
+        "hint: this usually means the same AnyElement value was reused in multiple places (e.g. via .clone()), or the same keyed element id was produced twice under one parent"
+    );
+
+    if should_panic {
+        panic!("{msg}");
+    }
+    tracing::error!("{msg}");
+}
+
 #[cfg(feature = "unstable-retained-bridge")]
 #[derive(Default)]
 struct RetainedSubtreeHostState {
@@ -212,7 +298,11 @@ where
             cx.dismissible_clear_on_dismiss_request();
             cx.dismissible_clear_on_pointer_move();
             let built = render(&mut cx);
-            cx.collect_children(built)
+            let children = cx.collect_children(built);
+            validate_element_tree_unique_ids_or_log(
+                window, root_name, frame_id, &*runtime, &children,
+            );
+            children
         });
 
     app.with_global_mut_untracked(crate::elements::ElementRuntime::new, |runtime, app| {
@@ -1319,6 +1409,7 @@ fn mount_element<H: UiHost + 'static>(
         ElementKind::InteractivityGate(p) => ElementInstance::InteractivityGate(p),
         ElementKind::HitTestGate(p) => ElementInstance::HitTestGate(p),
         ElementKind::FocusTraversalGate(p) => ElementInstance::FocusTraversalGate(p),
+        ElementKind::ForegroundScope(p) => ElementInstance::ForegroundScope(p),
         ElementKind::Opacity(p) => ElementInstance::Opacity(p),
         ElementKind::EffectLayer(p) => ElementInstance::EffectLayer(p),
         ElementKind::MaskLayer(p) => ElementInstance::MaskLayer(p),

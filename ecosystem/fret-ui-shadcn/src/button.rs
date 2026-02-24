@@ -13,8 +13,9 @@ use fret_ui_kit::declarative::current_color;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
 use fret_ui_kit::{
-    ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, OverrideSlot, ShadowPreset,
-    Size as ComponentSize, Space, WidgetStateProperty, WidgetStates, resolve_override_slot, ui,
+    ChromeRefinement, ColorFallback, ColorRef, Justify, LayoutRefinement, OverrideSlot,
+    ShadowPreset, Size as ComponentSize, Space, WidgetStateProperty, WidgetStates,
+    resolve_override_slot, ui,
 };
 
 #[derive(Debug, Clone, Default)]
@@ -315,13 +316,15 @@ pub(crate) fn button_text_style(theme: &Theme, size: ButtonSize) -> TextStyle {
     style
 }
 
-#[derive(Clone)]
 pub struct Button {
     label: Arc<str>,
     a11y_label: Option<Arc<str>>,
     children: Vec<AnyElement>,
     leading_icon: Option<IconId>,
     trailing_icon: Option<IconId>,
+    leading_icon_size: Option<Px>,
+    content_justify: Justify,
+    text_weight_override: Option<FontWeight>,
     command: Option<CommandId>,
     on_activate: Option<OnActivate>,
     on_hover_change: Option<OnHoverChange>,
@@ -383,6 +386,9 @@ impl Button {
             children: Vec::new(),
             leading_icon: None,
             trailing_icon: None,
+            leading_icon_size: None,
+            content_justify: Justify::Center,
+            text_weight_override: None,
             command: None,
             on_activate: None,
             on_hover_change: None,
@@ -393,7 +399,9 @@ impl Button {
             variant: ButtonVariant::default(),
             size: ButtonSize::default(),
             chrome: ChromeRefinement::default(),
-            layout: fret_ui_kit::LayoutRefinement::default(),
+            // Match shadcn/ui `Button` base class `shrink-0`: buttons should not collapse when used
+            // inside wrapping control rows.
+            layout: fret_ui_kit::LayoutRefinement::default().flex_shrink_0(),
             style: ButtonStyle::default(),
             border_override: None,
             border_width_override: BorderWidthOverride::default(),
@@ -430,6 +438,25 @@ impl Button {
     pub fn icon(mut self, icon: IconId) -> Self {
         self.leading_icon = Some(icon);
         self.trailing_icon = None;
+        self
+    }
+
+    pub fn leading_icon_size(mut self, size: Px) -> Self {
+        self.leading_icon_size = Some(size);
+        self
+    }
+
+    pub fn content_justify(mut self, justify: Justify) -> Self {
+        self.content_justify = justify;
+        self
+    }
+
+    pub fn content_justify_start(self) -> Self {
+        self.content_justify(Justify::Start)
+    }
+
+    pub fn text_weight(mut self, weight: FontWeight) -> Self {
+        self.text_weight_override = Some(weight);
         self
     }
 
@@ -635,7 +662,7 @@ impl Button {
             let corner_radii_override = self.corner_radii_override;
             let text_style = button_text_style(&theme, self.size);
             let text_px = text_style.size;
-            let text_weight = text_style.weight;
+            let text_weight = self.text_weight_override.unwrap_or(text_style.weight);
             let text_line_height = text_style
                 .line_height
                 .unwrap_or_else(|| theme.metric_token("font.line_height"));
@@ -648,6 +675,8 @@ impl Button {
             let visible_label = self.label;
             let leading_icon = self.leading_icon;
             let trailing_icon = self.trailing_icon;
+            let leading_icon_size = self.leading_icon_size;
+            let content_justify = self.content_justify;
 
             let pressable = control_chrome_pressable_with_id_props(cx, move |cx, st, _id| {
                 cx.pressable_dispatch_command_if_enabled_opt(command);
@@ -766,7 +795,7 @@ impl Button {
                 };
 
                 let content_children = move |cx: &mut ElementContext<'_, H>| {
-                    current_color::with_current_color_provider(cx, fg.clone(), |cx| {
+                    current_color::scope_children(cx, fg.clone(), |cx| {
                         let gap = if is_icon {
                             Space::N0
                         } else {
@@ -776,15 +805,17 @@ impl Button {
                             }
                         };
 
-                        let content = if children.is_empty() {
+                        let mut children = Some(children);
+                        let content = if children.as_ref().is_some_and(|c| c.is_empty()) {
                             let mut content = Vec::with_capacity(
                                 usize::from(leading_icon.is_some())
                                     + usize::from(!visible_label.is_empty())
                                     + usize::from(trailing_icon.is_some()),
                             );
 
+                            let icon_px = leading_icon_size.unwrap_or(Px(16.0));
                             if let Some(icon) = leading_icon.clone() {
-                                content.push(crate::icon::icon(cx, icon));
+                                content.push(crate::icon::icon_with(cx, icon, Some(icon_px), None));
                             }
 
                             if !visible_label.is_empty() {
@@ -801,18 +832,18 @@ impl Button {
                             }
 
                             if let Some(icon) = trailing_icon.clone() {
-                                content.push(crate::icon::icon(cx, icon));
+                                content.push(crate::icon::icon_with(cx, icon, Some(icon_px), None));
                             }
 
                             content
                         } else {
-                            children.clone()
+                            children.take().unwrap_or_default()
                         };
 
                         vec![fret_ui_kit::declarative::stack::hstack(
                             cx,
                             fret_ui_kit::declarative::stack::HStackProps::default()
-                                .justify_center()
+                                .justify(content_justify)
                                 .items_center()
                                 .gap_x(gap),
                             |_cx| content,
@@ -851,9 +882,7 @@ mod tests {
     use fret_ui::element::{ContainerProps, ElementKind, LayoutStyle, Length, SizeStyle};
     use fret_ui::elements;
     use fret_ui::tree::UiTree;
-    use std::cell::RefCell;
     use std::collections::HashMap;
-    use std::rc::Rc;
 
     struct FakeServices;
 
@@ -930,9 +959,6 @@ mod tests {
         );
         let mut services = FakeServices;
 
-        let captured: Rc<RefCell<Option<AnyElement>>> = Rc::new(RefCell::new(None));
-        let captured_for_view = captured.clone();
-
         let root = fret_ui::declarative::render_root(
             &mut ui,
             &mut app,
@@ -940,42 +966,38 @@ mod tests {
             window,
             bounds,
             "outline-icon-button-shadow-and-ring-follow-rounded-full",
-            move |cx| {
+            |cx| {
                 let el = Button::new("Next")
                     .variant(ButtonVariant::Outline)
                     .size(ButtonSize::IconSm)
                     .test_id("test-outline-icon-button")
                     .refine_style(ChromeRefinement::default().rounded(fret_ui_kit::Radius::Full))
                     .into_element(cx);
-                *captured_for_view.borrow_mut() = Some(el.clone());
+                let ElementKind::Pressable(pressable) = &el.kind else {
+                    panic!("expected pressable root, got {:?}", el.kind);
+                };
+                let ring = pressable.focus_ring.as_ref().expect("focus ring");
+                assert!(
+                    ring.corner_radii.top_left.0 >= 900.0,
+                    "expected rounded-full focus ring, got {:?}",
+                    ring.corner_radii
+                );
+
+                let chrome = el.children.first().expect("chrome child");
+                let ElementKind::Container(chrome_props) = &chrome.kind else {
+                    panic!("expected chrome container, got {:?}", chrome.kind);
+                };
+                let shadow = chrome_props.shadow.as_ref().expect("outline shadow");
+                assert!(
+                    shadow.corner_radii.top_left.0 >= 900.0,
+                    "expected rounded-full shadow, got {:?}",
+                    shadow.corner_radii
+                );
+
                 vec![el]
             },
         );
         ui.set_root(root);
-
-        let el = captured.borrow().clone().expect("captured element");
-        let pressable = match el.kind {
-            ElementKind::Pressable(props) => props,
-            other => panic!("expected pressable root, got {other:?}"),
-        };
-        let ring = pressable.focus_ring.expect("focus ring");
-        assert!(
-            ring.corner_radii.top_left.0 >= 900.0,
-            "expected rounded-full focus ring, got {:?}",
-            ring.corner_radii
-        );
-
-        let chrome = el.children.first().expect("chrome child");
-        let chrome_props = match &chrome.kind {
-            ElementKind::Container(props) => props,
-            other => panic!("expected chrome container, got {other:?}"),
-        };
-        let shadow = chrome_props.shadow.as_ref().expect("outline shadow");
-        assert!(
-            shadow.corner_radii.top_left.0 >= 900.0,
-            "expected rounded-full shadow, got {:?}",
-            shadow.corner_radii
-        );
     }
 
     #[test]
@@ -1124,8 +1146,30 @@ mod tests {
     }
 
     #[test]
+    fn button_default_layout_does_not_flex_shrink() {
+        let mut app = App::new();
+        let window = AppWindowId::default();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(400.0), Px(200.0)),
+        );
+
+        let element =
+            elements::with_element_cx(&mut app, window, bounds, "button-flex-shrink", |cx| {
+                Button::new("Default").into_element(cx)
+            });
+
+        let ElementKind::Pressable(props) = &element.kind else {
+            panic!("expected button to render as a Pressable");
+        };
+
+        assert_eq!(props.layout.flex.shrink, 0.0);
+    }
+
+    #[test]
     fn outline_button_border_uses_ring_color_when_focused() {
-        use std::cell::{Cell, RefCell};
+        use std::cell::Cell;
         use std::rc::Rc;
 
         use fret_runtime::FrameId;
@@ -1146,7 +1190,6 @@ mod tests {
         let ring = theme.color_token("ring");
 
         let id_out: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
-        let rendered_out: Rc<RefCell<Option<AnyElement>>> = Rc::new(RefCell::new(None));
 
         fn render_outline_frame(
             ui: &mut UiTree<App>,
@@ -1155,7 +1198,7 @@ mod tests {
             window: AppWindowId,
             bounds: Rect,
             id_out: Rc<Cell<Option<GlobalElementId>>>,
-            rendered_out: Rc<RefCell<Option<AnyElement>>>,
+            expect_border_color: Option<Color>,
         ) {
             // Keep the render closure's callsite stable across frames so element identity is
             // stable under `#[track_caller]`-anchored IDs.
@@ -1171,7 +1214,16 @@ mod tests {
                         .variant(ButtonVariant::Outline)
                         .into_element(cx);
                     id_out.set(Some(el.id));
-                    rendered_out.borrow_mut().replace(el.clone());
+                    if let Some(ring) = expect_border_color {
+                        let chrome = el
+                            .children
+                            .first()
+                            .expect("expected pressable to contain chrome container");
+                        let ElementKind::Container(props) = &chrome.kind else {
+                            panic!("expected chrome container element");
+                        };
+                        assert_eq!(props.border_color, Some(ring));
+                    }
                     vec![el]
                 },
             );
@@ -1187,7 +1239,7 @@ mod tests {
             window,
             bounds,
             id_out.clone(),
-            rendered_out.clone(),
+            None,
         );
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
@@ -1214,26 +1266,9 @@ mod tests {
             window,
             bounds,
             id_out.clone(),
-            rendered_out.clone(),
+            Some(ring),
         );
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
-
-        let el = rendered_out
-            .borrow_mut()
-            .take()
-            .expect("rendered element captured");
-        let ElementKind::Pressable(_pressable) = &el.kind else {
-            panic!("expected button root element to be Pressable");
-        };
-
-        let chrome = el
-            .children
-            .first()
-            .expect("expected pressable to contain chrome container");
-        let ElementKind::Container(props) = &chrome.kind else {
-            panic!("expected chrome container element");
-        };
-        assert_eq!(props.border_color, Some(ring));
     }
 
     #[test]

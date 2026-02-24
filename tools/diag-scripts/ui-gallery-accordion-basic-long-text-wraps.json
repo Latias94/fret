@@ -51,16 +51,14 @@
       "timeout_frames": 600
     },
 
-    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-content-scroll" }, "delta_y": 480.0 },
-    { "type": "wait_frames", "n": 10 },
-    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-content-scroll" }, "delta_y": 480.0 },
-    { "type": "wait_frames", "n": 10 },
-
     {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-accordion-basic-item-1-content" }
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-accordion-demo-long-item-2-trigger"
+        }
       },
       "timeout_frames": 600
     },
@@ -69,10 +67,28 @@
     {
       "type": "wait_until",
       "predicate": {
+        "kind": "bounds_max_size",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-accordion-demo-long-item-2-trigger"
+        },
+        "max_w_px": 700.0,
+        "max_h_px": 160.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 300
+    },
+
+    {
+      "type": "wait_until",
+      "predicate": {
         "kind": "bounds_min_size",
-        "target": { "kind": "test_id", "id": "ui-gallery-accordion-basic-item-1-content" },
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-accordion-demo-long-item-2-trigger"
+        },
         "min_w_px": 200.0,
-        "min_h_px": 44.0,
+        "min_h_px": 68.0,
         "eps_px": 1.0
       },
       "timeout_frames": 300

@@ -226,7 +226,8 @@ impl Renderer {
         {
             return;
         }
-        self.bind_group_caches
+        self.gpu_resources
+            .caches_mut()
             .invalidate_uniform_mask_image_override_bind_groups();
         self.rebuild_uniform_bind_group(device, "fret uniforms bind group (resized)");
     }
@@ -235,34 +236,18 @@ impl Renderer {
         if !self.uniforms.ensure_render_space_capacity(device, needed) {
             return;
         }
-        self.bind_group_caches
+        self.gpu_resources
+            .caches_mut()
             .invalidate_uniform_mask_image_override_bind_groups();
         self.rebuild_uniform_bind_group(device, "fret uniforms bind group (resized render space)");
-    }
-
-    pub(super) fn ensure_scale_param_capacity(&mut self, device: &wgpu::Device, needed: usize) {
-        if needed <= self.scale_param_capacity {
-            return;
-        }
-
-        let new_capacity = needed
-            .next_power_of_two()
-            .max(self.scale_param_capacity.saturating_mul(2).max(1));
-        let scale_param_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("fret scale params buffer (resized)"),
-            size: self.scale_param_stride * new_capacity as u64,
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-        self.scale_param_buffer = scale_param_buffer;
-        self.scale_param_capacity = new_capacity;
     }
 
     pub(super) fn ensure_clip_capacity(&mut self, device: &wgpu::Device, needed: usize) {
         if !self.uniforms.ensure_clip_capacity(device, needed) {
             return;
         }
-        self.bind_group_caches
+        self.gpu_resources
+            .caches_mut()
             .invalidate_uniform_mask_image_override_bind_groups();
         self.rebuild_uniform_bind_group(device, "fret uniforms bind group (resized clip buffer)");
     }
@@ -271,7 +256,8 @@ impl Renderer {
         if !self.uniforms.ensure_mask_capacity(device, needed) {
             return;
         }
-        self.bind_group_caches
+        self.gpu_resources
+            .caches_mut()
             .invalidate_uniform_mask_image_override_bind_groups();
         self.rebuild_uniform_bind_group(device, "fret uniforms bind group (resized mask buffer)");
     }

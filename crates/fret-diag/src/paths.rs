@@ -169,14 +169,24 @@ pub(crate) fn record_tooling_artifact_integrity_failure_for_dir(dir: &Path, err:
     );
 }
 
-pub(crate) fn resolve_bundle_json_path(path: &Path) -> PathBuf {
+pub(crate) fn resolve_bundle_artifact_path(path: &Path) -> PathBuf {
     if !path.is_dir() {
         return path.to_path_buf();
+    }
+
+    let direct_v2 = path.join("bundle.schema2.json");
+    if direct_v2.is_file() {
+        return direct_v2;
     }
 
     let direct = path.join("bundle.json");
     if direct.is_file() {
         return direct;
+    }
+
+    let root_v2 = path.join("_root").join("bundle.schema2.json");
+    if root_v2.is_file() {
+        return root_v2;
     }
 
     let root = path.join("_root").join("bundle.json");
@@ -198,8 +208,13 @@ pub(crate) fn resolve_bundle_json_path(path: &Path) -> PathBuf {
     }
 
     if let Some(run_id) = crate::util::read_script_result_run_id(&path.join("script.result.json")) {
-        let run_id_bundle =
-            crate::run_artifacts::run_id_artifact_dir(path, run_id).join("bundle.json");
+        let run_id_dir = crate::run_artifacts::run_id_artifact_dir(path, run_id);
+        let run_id_schema2 = run_id_dir.join("bundle.schema2.json");
+        if run_id_schema2.is_file() {
+            return run_id_schema2;
+        }
+
+        let run_id_bundle = run_id_dir.join("bundle.json");
         if run_id_bundle.is_file() {
             return run_id_bundle;
         }
@@ -222,6 +237,10 @@ pub(crate) fn resolve_bundle_json_path(path: &Path) -> PathBuf {
     if let Some(dir) = crate::compare::read_latest_pointer(path)
         .or_else(|| crate::compare::find_latest_export_dir(path))
     {
+        let nested_v2 = dir.join("bundle.schema2.json");
+        if nested_v2.is_file() {
+            return nested_v2;
+        }
         let nested = dir.join("bundle.json");
         if nested.is_file() {
             return nested;
@@ -231,7 +250,7 @@ pub(crate) fn resolve_bundle_json_path(path: &Path) -> PathBuf {
     direct
 }
 
-pub(crate) fn wait_for_bundle_json_from_script_result(
+pub(crate) fn wait_for_bundle_artifact_from_script_result(
     out_dir: &Path,
     result: &crate::stats::ScriptResultSummary,
     timeout_ms: u64,
@@ -241,10 +260,14 @@ pub(crate) fn wait_for_bundle_json_from_script_result(
 
     let deadline = Instant::now() + Duration::from_millis(timeout_ms.clamp(250, 5_000));
     while Instant::now() < deadline {
-        let run_id_bundle_path =
-            crate::run_artifacts::run_id_artifact_dir(out_dir, result.run_id).join("bundle.json");
-        if run_id_bundle_path.is_file() {
-            return Some(run_id_bundle_path);
+        let run_id_dir = crate::run_artifacts::run_id_artifact_dir(out_dir, result.run_id);
+        let run_id_schema2 = run_id_dir.join("bundle.schema2.json");
+        if run_id_schema2.is_file() {
+            return Some(run_id_schema2);
+        }
+        let run_id_bundle_json = run_id_dir.join("bundle.json");
+        if run_id_bundle_json.is_file() {
+            return Some(run_id_bundle_json);
         }
 
         let dir = result
@@ -256,7 +279,7 @@ pub(crate) fn wait_for_bundle_json_from_script_result(
             .or_else(|| crate::compare::read_latest_pointer(out_dir))
             .or_else(|| crate::compare::find_latest_export_dir(out_dir));
         if let Some(dir) = dir {
-            let bundle_path = resolve_bundle_json_path(&dir);
+            let bundle_path = resolve_bundle_artifact_path(&dir);
             if bundle_path.is_file() {
                 return Some(bundle_path);
             }
@@ -266,7 +289,7 @@ pub(crate) fn wait_for_bundle_json_from_script_result(
     None
 }
 
-pub(crate) fn wait_for_bundle_json_in_dir(
+pub(crate) fn wait_for_bundle_artifact_in_dir(
     bundle_dir: &Path,
     timeout_ms: u64,
     poll_ms: u64,
@@ -274,7 +297,7 @@ pub(crate) fn wait_for_bundle_json_in_dir(
     use std::time::{Duration, Instant};
 
     let deadline = Instant::now() + Duration::from_millis(timeout_ms.clamp(250, 5_000));
-    let bundle_path = resolve_bundle_json_path(bundle_dir);
+    let bundle_path = resolve_bundle_artifact_path(bundle_dir);
     while Instant::now() < deadline {
         if bundle_path.is_file() {
             return Some(bundle_path.clone());

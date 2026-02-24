@@ -1,6 +1,6 @@
 # Renderer vNext Fearless Refactor v1
 
-Status: Active (living workstream notes; ADRs remain the source of truth)
+Status: Maintenance (core landed; keep guardrails green; ADRs remain the source of truth)
 
 Tracking files:
 
@@ -10,11 +10,12 @@ Tracking files:
 
 Related semantic workstreams (drafts; 3-doc format):
 
+- `docs/workstreams/renderer-render-plan-semantics-audit-v1.md`
 - `docs/workstreams/renderer-effect-backdrop-warp-v1.md`
 - `docs/workstreams/renderer-drop-shadow-effect-v1.md`
 - `docs/workstreams/renderer-clip-mask-closure-v1.md`
 
-Current status (as of 2026-02-19):
+Current status (as of 2026-02-23):
 
 - WebGPU/Tint uniformity closure landed (browser smoke verified).
 - Quad shader now uses bounded pipeline variants (WGSL `override` constants) to recover perf after uniformity fixes.
@@ -45,6 +46,7 @@ Current status (as of 2026-02-19):
 - A cheap headless perf gate exists and has a checked-in baseline:
   - `python3 tools/perf/headless_svg_atlas_stress_gate.py`
   - `docs/workstreams/perf-baselines/svg-atlas-stress-headless.windows-local.v1.json`
+  - Guardrails (macOS local): `docs/workstreams/renderer-vnext-fearless-refactor-v1-milestones.md` (2026-02-23 record)
 
 - Clip-path slow-path caching closure landed:
   - clip-path mask intermediates are cached and reused via GPU copy (budgeted + deterministic eviction),

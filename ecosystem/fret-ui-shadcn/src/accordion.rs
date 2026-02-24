@@ -50,6 +50,51 @@ fn trigger_gap(theme: &Theme) -> Px {
         .unwrap_or_else(|| MetricRef::space(Space::N4).resolve(theme))
 }
 
+fn apply_trigger_label_defaults(el: AnyElement, text_style: &TextStyle, fg: Color) -> AnyElement {
+    match el.kind {
+        ElementKind::Text(mut props) => {
+            if props.style.is_none() {
+                props.style = Some(text_style.clone());
+            }
+            if props.color.is_none() {
+                props.color = Some(fg);
+            }
+            props.layout.size.width = Length::Fill;
+            props.layout.size.min_width = Some(Px(0.0));
+            props.wrap = TextWrap::Word;
+            props.overflow = TextOverflow::Clip;
+            AnyElement::new(el.id, ElementKind::Text(props), el.children)
+        }
+        ElementKind::StyledText(mut props) => {
+            if props.style.is_none() {
+                props.style = Some(text_style.clone());
+            }
+            if props.color.is_none() {
+                props.color = Some(fg);
+            }
+            props.layout.size.width = Length::Fill;
+            props.layout.size.min_width = Some(Px(0.0));
+            props.wrap = TextWrap::Word;
+            props.overflow = TextOverflow::Clip;
+            AnyElement::new(el.id, ElementKind::StyledText(props), el.children)
+        }
+        ElementKind::SelectableText(mut props) => {
+            if props.style.is_none() {
+                props.style = Some(text_style.clone());
+            }
+            if props.color.is_none() {
+                props.color = Some(fg);
+            }
+            props.layout.size.width = Length::Fill;
+            props.layout.size.min_width = Some(Px(0.0));
+            props.wrap = TextWrap::Word;
+            props.overflow = TextOverflow::Clip;
+            AnyElement::new(el.id, ElementKind::SelectableText(props), el.children)
+        }
+        _ => el,
+    }
+}
+
 pub use fret_ui_kit::primitives::accordion::{AccordionKind, AccordionOrientation};
 
 type OnValueChange = Arc<dyn Fn(Vec<Arc<str>>) + Send + Sync + 'static>;
@@ -100,7 +145,6 @@ pub mod composable {
         },
     }
 
-    #[derive(Clone)]
     pub struct AccordionTrigger {
         disabled: bool,
         a11y_label: Option<Arc<str>>,
@@ -268,9 +312,12 @@ pub mod composable {
                                     &theme,
                                     LayoutRefinement::default().flex_1().min_w_0(),
                                 );
+                                let mut row_layout = LayoutStyle::default();
+                                row_layout.size.width = Length::Fill;
+                                row_layout.size.min_width = Some(Px(0.0));
                                 vec![cx.row(
                                     RowProps {
-                                        layout: LayoutStyle::default(),
+                                        layout: row_layout,
                                         gap: trigger_gap(&theme).into(),
                                         padding: Edges::all(Px(0.0)).into(),
                                         justify: MainAlign::SpaceBetween,
@@ -301,6 +348,10 @@ pub mod composable {
                                         } else {
                                             children
                                         };
+                                        let left_children = left_children
+                                            .into_iter()
+                                            .map(|el| apply_trigger_label_defaults(el, &text_style, fg))
+                                            .collect::<Vec<_>>();
 
                                         vec![
                                             cx.container(
@@ -327,7 +378,6 @@ pub mod composable {
         }
     }
 
-    #[derive(Clone)]
     pub struct AccordionContent {
         test_id: Option<Arc<str>>,
         chrome: ChromeRefinement,
@@ -406,7 +456,6 @@ pub mod composable {
         }
     }
 
-    #[derive(Clone)]
     pub struct AccordionItem {
         value: Arc<str>,
         trigger: Option<AccordionTrigger>,
@@ -473,7 +522,6 @@ pub mod composable {
         }
     }
 
-    #[derive(Clone)]
     pub struct AccordionRoot {
         model: AccordionModel,
         items: Vec<AccordionItem>,
@@ -767,7 +815,6 @@ pub mod composable {
 
                                 let theme = theme.clone();
                                 let value = item.value.clone();
-                                let content = content.clone();
                                 let content_test_id = content.test_id.clone();
                                 let item_test_id = item.test_id.clone();
 
@@ -855,7 +902,7 @@ pub mod composable {
                                                     layout: LayoutStyle::default(),
                                                     opacity: motion_for_wrapper.wrapper_opacity,
                                                 },
-                                                move |cx| vec![content.clone().into_element(cx)],
+                                                move |cx| vec![content.into_element(cx)],
                                             )];
 
                                             let wrapper_kind =
@@ -933,7 +980,6 @@ enum AccordionModel {
     },
 }
 
-#[derive(Clone)]
 pub struct AccordionTrigger {
     disabled: bool,
     a11y_label: Option<Arc<str>>,
@@ -1099,9 +1145,12 @@ impl AccordionTrigger {
                                 &theme,
                                 LayoutRefinement::default().flex_1().min_w_0(),
                             );
+                            let mut row_layout = LayoutStyle::default();
+                            row_layout.size.width = Length::Fill;
+                            row_layout.size.min_width = Some(Px(0.0));
                             vec![cx.row(
                                 RowProps {
-                                    layout: LayoutStyle::default(),
+                                    layout: row_layout,
                                     gap: trigger_gap(&theme).into(),
                                     padding: Edges::all(Px(0.0)).into(),
                                     justify: MainAlign::SpaceBetween,
@@ -1132,6 +1181,10 @@ impl AccordionTrigger {
                                     } else {
                                         children
                                     };
+                                    let left_children = left_children
+                                        .into_iter()
+                                        .map(|el| apply_trigger_label_defaults(el, &text_style, fg))
+                                        .collect::<Vec<_>>();
 
                                     vec![
                                         cx.container(
@@ -1158,7 +1211,6 @@ impl AccordionTrigger {
     }
 }
 
-#[derive(Clone)]
 pub struct AccordionContent {
     test_id: Option<Arc<str>>,
     chrome: ChromeRefinement,
@@ -1237,7 +1289,6 @@ impl AccordionContent {
     }
 }
 
-#[derive(Clone)]
 pub struct AccordionItem {
     value: Arc<str>,
     trigger: AccordionTrigger,
@@ -1298,7 +1349,6 @@ impl AccordionItem {
     }
 }
 
-#[derive(Clone)]
 pub struct Accordion {
     model: AccordionModel,
     items: Vec<AccordionItem>,
@@ -1644,7 +1694,6 @@ impl Accordion {
                                 let motion_for_wrapper = motion.clone();
                                 let motion_for_update = motion.clone();
                                 let theme_for_wrapper = theme.clone();
-                                let content = content.clone();
 
                                 let (content_id, wrapper_el) =
                                     cx.keyed(("accordion-content", value.clone()), move |cx| {
@@ -1665,7 +1714,7 @@ impl Accordion {
                                                 layout: LayoutStyle::default(),
                                                 opacity: motion_for_wrapper.wrapper_opacity,
                                             },
-                                            move |cx| vec![content.clone().into_element(cx)],
+                                            move |cx| vec![content.into_element(cx)],
                                         )];
 
                                         let wrapper_kind = if motion_for_wrapper.wants_measurement {

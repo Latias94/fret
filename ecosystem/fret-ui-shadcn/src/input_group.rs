@@ -1,9 +1,11 @@
 use std::sync::Arc;
 
 use crate::button::{ButtonVariant, variant_colors};
+use fret_core::window::ColorScheme;
 use fret_core::{
     Axis, Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextWrap,
 };
+use fret_icons::IconId;
 use fret_runtime::{CommandId, Model};
 use fret_ui::action::OnKeyDown;
 use fret_ui::element::{
@@ -14,6 +16,8 @@ use fret_ui::{ElementContext, TextAreaStyle, TextInputStyle, Theme, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
+use fret_ui_kit::declarative::current_color;
+use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
 use fret_ui_kit::typography;
@@ -34,7 +38,6 @@ pub enum InputGroupControlKind {
     Textarea,
 }
 
-#[derive(Clone)]
 pub struct InputGroup {
     model: Model<String>,
     control: InputGroupControlKind,
@@ -308,7 +311,12 @@ impl InputGroup {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let is_block_layout = !self.block_start.is_empty() || !self.block_end.is_empty();
+        // Treat textarea-driven groups as block layouts by default, matching the upstream shadcn
+        // contract (`has-[>textarea]:h-auto`) and avoiding an "inline textarea" configuration that
+        // would ignore block addon alignment.
+        let is_block_layout = self.control == InputGroupControlKind::Textarea
+            || !self.block_start.is_empty()
+            || !self.block_end.is_empty();
 
         let (
             resolved,
@@ -358,7 +366,7 @@ impl InputGroup {
 
                 if self.aria_invalid {
                     let border_color = theme.color_token("destructive");
-                    let ring_key = if theme.name.contains("/dark") {
+                    let ring_key = if theme.color_scheme == Some(ColorScheme::Dark) {
                         "destructive/40"
                     } else {
                         "destructive/20"
@@ -448,6 +456,67 @@ impl InputGroup {
                 ..Default::default()
             },
             |cx| {
+                let build_inline_addon =
+                    |cx: &mut ElementContext<'_, H>,
+                     children: Vec<AnyElement>,
+                     is_start: bool,
+                     has_button: bool,
+                     has_kbd: bool| {
+                        let mut layout = LayoutRefinement::default()
+                            .flex_none()
+                            .order(if is_start { -1 } else { 1 });
+                        if has_button {
+                            layout = if is_start {
+                                layout.ml_neg(Space::N2)
+                            } else {
+                                layout.mr_neg(Space::N2)
+                            };
+                        } else if has_kbd {
+                            layout = if is_start {
+                                layout.ml_neg(Space::N1p5)
+                            } else {
+                                layout.mr_neg(Space::N1p5)
+                            };
+                        }
+
+                        let (layout, gap) = {
+                            let theme = Theme::global(&*cx.app);
+                            (
+                                decl_style::layout_style(theme, layout),
+                                fret_ui_kit::MetricRef::space(Space::N2).resolve(theme),
+                            )
+                        };
+
+                        let padding = if is_start {
+                            Edges {
+                                top: addon_py,
+                                right: Px(0.0),
+                                bottom: addon_py,
+                                left: addon_pl,
+                            }
+                        } else {
+                            Edges {
+                                top: addon_py,
+                                right: addon_pl,
+                                bottom: addon_py,
+                                left: Px(0.0),
+                            }
+                        };
+
+                        cx.flex(
+                            FlexProps {
+                                layout,
+                                direction: Axis::Horizontal,
+                                gap,
+                                padding,
+                                justify: fret_ui::element::MainAlign::Center,
+                                align: fret_ui::element::CrossAlign::Center,
+                                wrap: false,
+                            },
+                            |_cx| children,
+                        )
+                    };
+
                 if is_block_layout {
                     let control_el = match control {
                         InputGroupControlKind::Input => {
@@ -534,11 +603,61 @@ impl InputGroup {
                         }
                     };
 
+                    let control_id = control_el.id;
                     if let Some(handler) = control_on_key_down {
                         // Run before the control's internal key handling so callers can
                         // consume keys like Enter/Backspace and prevent default behavior.
-                        cx.key_prepend_on_key_down_for(control_el.id, handler);
+                        cx.key_prepend_on_key_down_for(control_id, handler);
                     }
+
+                    let inline_start = (control == InputGroupControlKind::Input
+                        && !leading.is_empty())
+                    .then(|| {
+                        build_inline_addon(cx, leading, true, leading_has_button, leading_has_kbd)
+                    });
+
+                    let inline_end = (control == InputGroupControlKind::Input
+                        && !trailing.is_empty())
+                    .then(|| {
+                        build_inline_addon(
+                            cx,
+                            trailing,
+                            false,
+                            trailing_has_button,
+                            trailing_has_kbd,
+                        )
+                    });
+
+                    let control_row_layout = {
+                        let theme = Theme::global(&*cx.app);
+                        decl_style::layout_style(
+                            theme,
+                            LayoutRefinement::default().w_full().min_w_0(),
+                        )
+                    };
+
+                    let control_row = cx.flex(
+                        FlexProps {
+                            layout: control_row_layout,
+                            direction: Axis::Horizontal,
+                            gap: Px(0.0),
+                            padding: Edges::all(Px(0.0)),
+                            justify: fret_ui::element::MainAlign::Start,
+                            align: fret_ui::element::CrossAlign::Center,
+                            wrap: false,
+                        },
+                        move |_cx| {
+                            let mut children = Vec::new();
+                            children.push(control_el);
+                            if let Some(inline_start) = inline_start {
+                                children.push(inline_start);
+                            }
+                            if let Some(inline_end) = inline_end {
+                                children.push(inline_end);
+                            }
+                            children
+                        },
+                    );
 
                     let block_start = (!block_start.is_empty()).then(|| {
                         let px_3 = addon_pl;
@@ -550,7 +669,7 @@ impl InputGroup {
                                 fret_ui_kit::MetricRef::space(Space::N2p5).resolve(theme),
                                 decl_style::layout_style(
                                     theme,
-                                    LayoutRefinement::default().w_full().min_w_0(),
+                                    LayoutRefinement::default().w_full().min_w_0().order(-1),
                                 ),
                             )
                         };
@@ -616,7 +735,7 @@ impl InputGroup {
                                 fret_ui_kit::MetricRef::space(Space::N2p5).resolve(theme),
                                 decl_style::layout_style(
                                     theme,
-                                    LayoutRefinement::default().w_full().min_w_0(),
+                                    LayoutRefinement::default().w_full().min_w_0().order(1),
                                 ),
                             )
                         };
@@ -686,10 +805,10 @@ impl InputGroup {
                         },
                         move |_cx| {
                             let mut children = Vec::new();
+                            children.push(control_row);
                             if let Some(block_start) = block_start {
                                 children.push(block_start);
                             }
-                            children.push(control_el);
                             if let Some(block_end) = block_end {
                                 children.push(block_end);
                             }
@@ -727,8 +846,8 @@ impl InputGroup {
                     chrome.preedit_color = chrome.text_color;
                     chrome.preedit_underline_color = chrome.text_color;
 
-                    let mut input = TextInputProps::new(model);
-                    input.a11y_label = a11y_label;
+                    let mut input = TextInputProps::new(model.clone());
+                    input.a11y_label = a11y_label.clone();
                     input.test_id = control_test_id.clone();
                     input.submit_command = submit_command;
                     input.cancel_command = cancel_command;
@@ -746,82 +865,32 @@ impl InputGroup {
                         )
                     };
 
+                    let control_el = cx.text_input(input);
+
+                    if let Some(handler) = control_on_key_down {
+                        // Run before the control's internal key handling so callers can
+                        // consume keys like Enter/Backspace and prevent default behavior.
+                        cx.key_prepend_on_key_down_for(control_el.id, handler);
+                    }
+
+                    let leading = (!leading.is_empty()).then(|| {
+                        build_inline_addon(cx, leading, true, leading_has_button, leading_has_kbd)
+                    });
+
+                    let trailing = (!trailing.is_empty()).then(|| {
+                        build_inline_addon(
+                            cx,
+                            trailing,
+                            false,
+                            trailing_has_button,
+                            trailing_has_kbd,
+                        )
+                    });
+
                     let flex_layout = {
                         let theme = Theme::global(&*cx.app);
                         decl_style::layout_style(theme, LayoutRefinement::default().size_full())
                     };
-
-                    let leading = (!leading.is_empty()).then(|| {
-                        let layout = if leading_has_button {
-                            LayoutRefinement::default().flex_none().ml_neg(Space::N2)
-                        } else if leading_has_kbd {
-                            LayoutRefinement::default().flex_none().ml_neg(Space::N1p5)
-                        } else {
-                            LayoutRefinement::default().flex_none()
-                        };
-                        let (layout, gap) = {
-                            let theme = Theme::global(&*cx.app);
-                            (
-                                decl_style::layout_style(theme, layout),
-                                fret_ui_kit::MetricRef::space(Space::N2).resolve(theme),
-                            )
-                        };
-                        cx.flex(
-                            FlexProps {
-                                layout,
-                                direction: Axis::Horizontal,
-                                gap: gap.into(),
-                                padding: Edges {
-                                    top: addon_py,
-                                    right: Px(0.0),
-                                    bottom: addon_py,
-                                    left: addon_pl,
-                                }
-                                .into(),
-                                justify: fret_ui::element::MainAlign::Center,
-                                align: fret_ui::element::CrossAlign::Center,
-                                wrap: false,
-                            },
-                            |_cx| leading,
-                        )
-                    });
-
-                    let trailing = (!trailing.is_empty()).then(|| {
-                        let layout = if trailing_has_button {
-                            LayoutRefinement::default().flex_none().mr_neg(Space::N2)
-                        } else if trailing_has_kbd {
-                            LayoutRefinement::default().flex_none().mr_neg(Space::N1p5)
-                        } else {
-                            LayoutRefinement::default().flex_none()
-                        };
-                        let (layout, gap) = {
-                            let theme = Theme::global(&*cx.app);
-                            (
-                                decl_style::layout_style(theme, layout),
-                                fret_ui_kit::MetricRef::space(Space::N2).resolve(theme),
-                            )
-                        };
-                        cx.flex(
-                            FlexProps {
-                                layout,
-                                direction: Axis::Horizontal,
-                                gap: gap.into(),
-                                padding: Edges {
-                                    top: addon_py,
-                                    right: addon_pl,
-                                    bottom: addon_py,
-                                    left: Px(0.0),
-                                }
-                                .into(),
-                                justify: fret_ui::element::MainAlign::Center,
-                                align: fret_ui::element::CrossAlign::Center,
-                                wrap: false,
-                            },
-                            |_cx| trailing,
-                        )
-                    });
-
-                    let input = cx.text_input(input);
 
                     vec![cx.flex(
                         FlexProps {
@@ -835,10 +904,10 @@ impl InputGroup {
                         },
                         move |_cx| {
                             let mut children = Vec::new();
+                            children.push(control_el);
                             if let Some(leading) = leading {
                                 children.push(leading);
                             }
-                            children.push(input);
                             if let Some(trailing) = trailing {
                                 children.push(trailing);
                             }
@@ -937,10 +1006,14 @@ pub enum InputGroupButtonSize {
     IconSm,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct InputGroupButton {
     label: Arc<str>,
     children: Vec<AnyElement>,
+    test_id: Option<Arc<str>>,
+    icon: Option<IconId>,
+    leading_icon: Option<IconId>,
+    trailing_icon: Option<IconId>,
     command: Option<CommandId>,
     disabled: bool,
     variant: ButtonVariant,
@@ -955,6 +1028,10 @@ impl InputGroupButton {
         Self {
             label: label.into(),
             children: Vec::new(),
+            test_id: None,
+            icon: None,
+            leading_icon: None,
+            trailing_icon: None,
             command: None,
             disabled: false,
             variant: ButtonVariant::Ghost,
@@ -970,6 +1047,32 @@ impl InputGroupButton {
         I: IntoIterator<Item = AnyElement>,
     {
         self.children = children.into_iter().collect();
+        self
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+
+    /// Sets an icon-only affordance rendered under the button's `currentColor` scope.
+    ///
+    /// When set, the label and `children` are ignored for the visual content (but can still be
+    /// used as the accessibility label via `a11y_label`).
+    pub fn icon(mut self, icon: IconId) -> Self {
+        self.icon = Some(icon);
+        self
+    }
+
+    /// Adds a leading icon rendered under the button's `currentColor` scope.
+    pub fn leading_icon(mut self, icon: IconId) -> Self {
+        self.leading_icon = Some(icon);
+        self
+    }
+
+    /// Adds a trailing icon rendered under the button's `currentColor` scope.
+    pub fn trailing_icon(mut self, icon: IconId) -> Self {
+        self.trailing_icon = Some(icon);
         self
     }
 
@@ -1095,6 +1198,10 @@ impl InputGroupButton {
             let label = self.label;
             let a11y_label = self.a11y_label;
             let children = self.children;
+            let test_id = self.test_id;
+            let icon = self.icon;
+            let leading_icon = self.leading_icon;
+            let trailing_icon = self.trailing_icon;
             let fill_content_width = matches!(
                 self.size,
                 InputGroupButtonSize::IconXs | InputGroupButtonSize::IconSm
@@ -1124,6 +1231,7 @@ impl InputGroupButton {
                     a11y: PressableA11y {
                         role: Some(fret_core::SemanticsRole::Button),
                         label: Some(a11y_label.clone().unwrap_or_else(|| label.clone())),
+                        test_id: test_id.clone(),
                         ..Default::default()
                     },
                 };
@@ -1147,54 +1255,73 @@ impl InputGroupButton {
                 };
 
                 let content = move |cx: &mut ElementContext<'_, H>| {
-                    let mut row = Vec::new();
-                    if !label.is_empty() {
-                        let mut style =
-                            typography::fixed_line_box_style(FontId::ui(), text_px, line_height);
-                        style.weight = FontWeight::MEDIUM;
-                        row.push(cx.text_props(TextProps {
-                            layout: LayoutStyle {
-                                size: fret_ui::element::SizeStyle {
-                                    width: Length::Auto,
-                                    height: Length::Px(line_height),
-                                    ..Default::default()
-                                },
-                                ..Default::default()
-                            },
-                            text: label,
-                            style: Some(style),
-                            color: Some(fg),
-                            wrap: TextWrap::None,
-                            overflow: TextOverflow::Clip,
-                            align: fret_core::TextAlign::Start,
-                            ink_overflow: Default::default(),
-                        }));
-                    }
-                    row.extend(children);
+                    current_color::scope_children(cx, fret_ui_kit::ColorRef::Color(fg), |cx| {
+                        let icon_px = Px(16.0);
 
-                    vec![cx.flex(
-                        FlexProps {
-                            layout: LayoutStyle {
-                                size: fret_ui::element::SizeStyle {
-                                    width: if fill_content_width {
-                                        Length::Fill
-                                    } else {
-                                        Length::Auto
+                        let mut row = Vec::new();
+                        if let Some(icon) = icon {
+                            row.push(decl_icon::icon_with(cx, icon, Some(icon_px), None));
+                        } else {
+                            if let Some(icon) = leading_icon {
+                                row.push(decl_icon::icon_with(cx, icon, Some(icon_px), None));
+                            }
+
+                            if !label.is_empty() {
+                                let mut style = typography::fixed_line_box_style(
+                                    FontId::ui(),
+                                    text_px,
+                                    line_height,
+                                );
+                                style.weight = FontWeight::MEDIUM;
+                                row.push(cx.text_props(TextProps {
+                                    layout: LayoutStyle {
+                                        size: fret_ui::element::SizeStyle {
+                                            width: Length::Auto,
+                                            height: Length::Px(line_height),
+                                            ..Default::default()
+                                        },
+                                        ..Default::default()
                                     },
-                                    height: Length::Fill,
+                                    text: label,
+                                    style: Some(style),
+                                    color: Some(fg),
+                                    wrap: TextWrap::None,
+                                    overflow: TextOverflow::Clip,
+                                    align: fret_core::TextAlign::Start,
+                                    ink_overflow: Default::default(),
+                                }));
+                            }
+                            row.extend(children);
+
+                            if let Some(icon) = trailing_icon {
+                                row.push(decl_icon::icon_with(cx, icon, Some(icon_px), None));
+                            }
+                        }
+
+                        vec![cx.flex(
+                            FlexProps {
+                                layout: LayoutStyle {
+                                    size: fret_ui::element::SizeStyle {
+                                        width: if fill_content_width {
+                                            Length::Fill
+                                        } else {
+                                            Length::Auto
+                                        },
+                                        height: Length::Fill,
+                                        ..Default::default()
+                                    },
                                     ..Default::default()
                                 },
-                                ..Default::default()
+                                direction: Axis::Horizontal,
+                                gap: gap.into(),
+                                padding: Edges::all(Px(0.0)).into(),
+                                justify: fret_ui::element::MainAlign::Center,
+                                align: fret_ui::element::CrossAlign::Center,
+                                wrap: false,
                             },
-                            direction: Axis::Horizontal,
-                            gap: gap.into(),
-                            padding: Edges::all(Px(0.0)).into(),
-                            justify: fret_ui::element::MainAlign::Center,
-                            align: fret_ui::element::CrossAlign::Center,
-                            wrap: false,
-                        },
-                        move |_cx| row,
-                    )]
+                            move |_cx| row,
+                        )]
+                    })
                 };
 
                 (pressable_props, chrome_props, content)

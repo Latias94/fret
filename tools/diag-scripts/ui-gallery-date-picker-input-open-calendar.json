@@ -1,0 +1,46 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "UI Gallery: Date Picker input opens calendar popover",
+    "tags": ["ui-gallery", "date-picker", "shadcn"],
+    "required_capabilities": ["diag.script_v2"]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "timeout_frames": 1800,
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-date-picker-input-trigger" }
+      }
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-date-picker-input-trigger" },
+      "delta_x": 0.0,
+      "delta_y": -120.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 4.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-date-picker-input-trigger" }
+    },
+    {
+      "type": "wait_until",
+      "timeout_frames": 600,
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-date-picker-input-calendar" }
+      }
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-date-picker-input-open-calendar"
+    }
+  ]
+}

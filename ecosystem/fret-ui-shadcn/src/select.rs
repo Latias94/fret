@@ -1,5 +1,6 @@
 use crate::popper_arrow::{self, DiamondArrowStyle};
 use crate::test_id::attach_test_id;
+use fret_core::window::ColorScheme;
 use fret_core::{Color, Corners, Edges, FontId, FontWeight, Point, Px, SemanticsRole, TextStyle};
 use fret_icons::ids;
 use fret_runtime::{Effect, Model, TimerToken};
@@ -15,6 +16,7 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
 use fret_ui_kit::declarative::chrome as decl_chrome;
 use fret_ui_kit::declarative::collection_semantics::CollectionSemanticsExt as _;
+use fret_ui_kit::declarative::current_color;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::overlay_motion;
@@ -370,18 +372,18 @@ where
                                         wrap: false,
                                     },
                                     |cx| {
-                                        vec![decl_icon::icon_with(
+                                        current_color::scope_children(
                                             cx,
-                                            icon,
-                                            Some(Px(16.0)),
-                                            Some(ColorRef::Color(
-                                                theme
-                                                    .color_by_key("muted-foreground")
-                                                    .unwrap_or_else(|| {
-                                                        theme.color_token("muted-foreground")
-                                                    }),
-                                            )),
-                                        )]
+                                            ColorRef::Color(theme.color_token("popover.foreground")),
+                                            |cx| {
+                                                vec![decl_icon::icon_with(
+                                                    cx,
+                                                    icon,
+                                                    Some(Px(16.0)),
+                                                    None,
+                                                )]
+                                            },
+                                        )
                                     },
                                 )]
                             },
@@ -1292,7 +1294,7 @@ fn select_impl<H: UiHost>(
             border = border_color;
             border_focus = border_color;
 
-            let ring_key = if theme.name.contains("/dark") {
+            let ring_key = if theme.color_scheme == Some(ColorScheme::Dark) {
                 "destructive/40"
             } else {
                 "destructive/20"
@@ -2122,6 +2124,7 @@ fn select_impl<H: UiHost>(
                     let desired_h = Px(desired_content_h.0 + chrome_extra_y.0);
                     let desired = fret_core::Size::new(desired_w, desired_h);
 
+                    let item_aligned_inputs_snapshot = item_aligned_inputs;
                     let mut resolved = radix_select::select_resolve_content_placement_from_elements(
                         cx,
                         anchor,
@@ -2129,7 +2132,7 @@ fn select_impl<H: UiHost>(
                         desired,
                         popper_placement,
                         arrow.then_some(arrow_size),
-                        item_aligned_inputs,
+                        item_aligned_inputs_snapshot,
                     );
                     let mut item_aligned_layout_is_cached_fallback = false;
                     let mut item_aligned_layout_locked_this_frame = false;
@@ -2242,7 +2245,11 @@ fn select_impl<H: UiHost>(
                         );
                     }
 
-                    let opacity = motion.opacity;
+                    let warmup_invisible = position == SelectPosition::ItemAligned
+                        && is_open
+                        && item_aligned_inputs_snapshot.is_none()
+                        && last_item_aligned_layout.is_none();
+                    let opacity = if warmup_invisible { 0.0 } else { motion.opacity };
                     let scale = motion.scale;
                     let transform = overlay_motion::shadcn_popper_presence_transform(
                         motion_side,
@@ -3011,11 +3018,17 @@ fn select_impl<H: UiHost>(
                                                                                     )
                                                                                     .resolve(&theme);
 
+                                                                                    let indicator_fg = if item_disabled {
+                                                                                        alpha_mul(fg_muted, 0.8)
+                                                                                    } else {
+                                                                                        fg_muted
+                                                                                    };
+
                                                                                     let icon = decl_icon::icon_with(
                                                                                         cx,
                                                                                         ids::ui::CHECK,
                                                                                         Some(Px(16.0)),
-                                                                                        Some(ColorRef::Color(fg)),
+                                                                                        Some(ColorRef::Color(indicator_fg)),
                                                                                     );
                                                                                     let icon = cx.opacity(
                                                                                         if is_selected { 1.0 } else { 0.0 },
@@ -3141,7 +3154,7 @@ fn select_impl<H: UiHost>(
                                                                                                             align: CrossAlign::Center,
                                                                                                             wrap: false,
                                                                                                         },
-                                                                                                        |_cx| vec![icon.clone()],
+                                                                                                        move |_cx| vec![icon],
                                                                                                     )]
                                                                                                 },
                                                                                             );
@@ -3340,7 +3353,9 @@ fn select_impl<H: UiHost>(
                                                 layout: popper_content::popper_panel_layout(
                                                     placed,
                                                     wrapper_insets,
-                                                    Overflow::Clip,
+                                                    // Keep the panel itself unclipped so the Select surface shadow
+                                                    // can extend beyond the panel rect (matching shadcn/ui).
+                                                    Overflow::Visible,
                                                 ),
                                                 enabled: true,
                                                 focusable: true,

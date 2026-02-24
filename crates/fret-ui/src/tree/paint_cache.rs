@@ -6,6 +6,11 @@ pub(super) struct PaintCacheKey {
     height_bits: u32,
     scale_factor_bits: u32,
     theme_revision: u64,
+    fg_present: bool,
+    fg_r_bits: u32,
+    fg_g_bits: u32,
+    fg_b_bits: u32,
+    fg_a_bits: u32,
     child_a_bits: u32,
     child_b_bits: u32,
     child_c_bits: u32,
@@ -19,13 +24,32 @@ impl PaintCacheKey {
         bounds: Rect,
         scale_factor: f32,
         theme_revision: u64,
+        paint_style: crate::tree::paint_style::PaintStyleState,
         child_transform: Transform2D,
     ) -> Self {
+        let (fg_present, fg_r_bits, fg_g_bits, fg_b_bits, fg_a_bits) =
+            if let Some(fg) = paint_style.foreground {
+                (
+                    true,
+                    fg.r.to_bits(),
+                    fg.g.to_bits(),
+                    fg.b.to_bits(),
+                    fg.a.to_bits(),
+                )
+            } else {
+                (false, 0, 0, 0, 0)
+            };
+
         Self {
             width_bits: bounds.size.width.0.to_bits(),
             height_bits: bounds.size.height.0.to_bits(),
             scale_factor_bits: scale_factor.to_bits(),
             theme_revision,
+            fg_present,
+            fg_r_bits,
+            fg_g_bits,
+            fg_b_bits,
+            fg_a_bits,
             child_a_bits: child_transform.a.to_bits(),
             child_b_bits: child_transform.b.to_bits(),
             child_c_bits: child_transform.c.to_bits(),

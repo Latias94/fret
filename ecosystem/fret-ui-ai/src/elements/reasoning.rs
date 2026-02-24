@@ -238,7 +238,6 @@ impl Reasoning {
     }
 }
 
-#[derive(Clone)]
 pub struct ReasoningTrigger {
     children: Option<Vec<AnyElement>>,
     test_id: Option<Arc<str>>,
@@ -329,7 +328,7 @@ impl ReasoningTrigger {
                     Some(ColorRef::Color(fg)),
                 );
 
-                let thinking = if let Some(children) = children.clone() {
+                let thinking = if let Some(children) = children {
                     cx.stack_props(
                         fret_ui::element::StackProps {
                             layout: fret_ui_kit::declarative::style::layout_style(

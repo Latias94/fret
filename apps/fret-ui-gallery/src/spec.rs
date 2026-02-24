@@ -187,6 +187,7 @@ pub(crate) const PAGE_MAGIC_CARD: &str = "magic_card";
 pub(crate) const PAGE_MAGIC_BORDER_BEAM: &str = "magic_border_beam";
 pub(crate) const PAGE_MAGIC_DOCK: &str = "magic_dock";
 pub(crate) const PAGE_MAGIC_PATTERNS: &str = "magic_patterns";
+pub(crate) const PAGE_MAGIC_PATTERNS_TORTURE: &str = "magic_patterns_torture";
 pub(crate) const PAGE_MAGIC_SPARKLES_TEXT: &str = "magic_sparkles_text";
 pub(crate) const PAGE_MAGIC_BLOOM: &str = "magic_bloom";
 pub(crate) const PAGE_SKELETON: &str = "skeleton";
@@ -410,6 +411,8 @@ pub(crate) const CMD_NAV_MAGIC_LENS: &str = "ui_gallery.nav.select.magic_lens";
 pub(crate) const CMD_NAV_MAGIC_BORDER_BEAM: &str = "ui_gallery.nav.select.magic_border_beam";
 pub(crate) const CMD_NAV_MAGIC_DOCK: &str = "ui_gallery.nav.select.magic_dock";
 pub(crate) const CMD_NAV_MAGIC_PATTERNS: &str = "ui_gallery.nav.select.magic_patterns";
+pub(crate) const CMD_NAV_MAGIC_PATTERNS_TORTURE: &str =
+    "ui_gallery.nav.select.magic_patterns_torture";
 pub(crate) const CMD_NAV_MAGIC_SPARKLES_TEXT: &str = "ui_gallery.nav.select.magic_sparkles_text";
 pub(crate) const CMD_NAV_MAGIC_BLOOM: &str = "ui_gallery.nav.select.magic_bloom";
 pub(crate) const CMD_NAV_SKELETON: &str = "ui_gallery.nav.select.skeleton";
@@ -567,6 +570,7 @@ pub(crate) const CMD_SHELL_SHARE_SHEET_SMOKE: &str = "ui_gallery.shell.share_she
 
 pub(crate) const CMD_CODE_EDITOR_LOAD_FONTS: &str = "ui_gallery.code_editor.load_fonts";
 pub(crate) const CMD_CODE_EDITOR_DUMP_TAFFY: &str = "ui_gallery.code_editor.dump_taffy";
+pub(crate) const CMD_INPUT_PICTURE_BROWSE: &str = "ui_gallery.input.picture.browse";
 
 #[derive(Clone, Copy)]
 pub(crate) struct PageSpec {
@@ -2098,6 +2102,21 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-magic",
                 CMD_NAV_MAGIC_PATTERNS,
                 &["magic", "patterns", "materials", "tier-b"],
+            ),
+            PageSpec::new(
+                PAGE_MAGIC_PATTERNS_TORTURE,
+                "Patterns (Torture)",
+                "Patterns (Tier B materials, fill-rate torture)",
+                "fret-ui-magic",
+                CMD_NAV_MAGIC_PATTERNS_TORTURE,
+                &[
+                    "magic",
+                    "patterns",
+                    "materials",
+                    "tier-b",
+                    "performance",
+                    "torture",
+                ],
             ),
             PageSpec::new(
                 PAGE_MAGIC_SPARKLES_TEXT,

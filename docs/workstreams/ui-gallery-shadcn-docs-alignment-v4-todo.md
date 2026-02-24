@@ -131,7 +131,7 @@ Component checklist (canonical order from `radix/meta.json`):
   - Could not reproduce for `SidebarMenuButton` rows via scripted diagnostics.
   - Evidence:
     - `tools/diag-scripts/ui-gallery-nav-disabled-scan.json`: 0 disabled `ui-gallery-nav-*` rows in semantics.
-    - `tools/diag-scripts/ui-gallery-nav-hover-inconsistency-screenshots.json` + `FRET_DIAG_SCREENSHOT=1`: hover vs baseline crops differ for `intro/layout/card/accordion`.
+    - `tools/diag-scripts/ui-gallery-nav-hover-inconsistency-screenshots.json` + `FRET_DIAG_BUNDLE_SCREENSHOT=1`: hover vs baseline crops differ for `intro/layout/card/accordion`.
   - Likely explanations:
     - hovering the group headings (plain text, not pressable),
     - a different sidebar surface (e.g. the `Sidebar` component demo) rather than the gallery nav.

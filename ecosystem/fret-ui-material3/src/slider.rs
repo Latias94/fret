@@ -494,6 +494,20 @@ pub fn slider<H: UiHost>(
     semantics.test_id = test_id;
     semantics.focusable = !disabled;
     semantics.disabled = disabled;
+    if value_now.is_finite() {
+        semantics.numeric_value = Some(value_now as f64);
+    }
+    if min.is_finite() {
+        semantics.min_numeric_value = Some(min as f64);
+    }
+    if max.is_finite() {
+        semantics.max_numeric_value = Some(max as f64);
+    }
+    if step.is_finite() && step > 0.0 {
+        semantics.numeric_value_step = Some(step as f64);
+        semantics.numeric_value_jump = Some((step * 10.0) as f64);
+    }
+    semantics.value_editable = Some(!disabled);
 
     #[derive(Default)]
     struct DerivedValueString {
@@ -1334,6 +1348,20 @@ pub fn range_slider<H: UiHost>(
         start_thumb_semantics.focusable = enabled;
         start_thumb_semantics.disabled = !enabled;
         start_thumb_semantics.value = Some(start_value_text);
+        if values_now[0].is_finite() {
+            start_thumb_semantics.numeric_value = Some(values_now[0] as f64);
+        }
+        if min.is_finite() {
+            start_thumb_semantics.min_numeric_value = Some(min as f64);
+        }
+        if max.is_finite() {
+            start_thumb_semantics.max_numeric_value = Some(max as f64);
+        }
+        if step.is_finite() && step > 0.0 {
+            start_thumb_semantics.numeric_value_step = Some(step as f64);
+            start_thumb_semantics.numeric_value_jump = Some((step * 10.0) as f64);
+        }
+        start_thumb_semantics.value_editable = Some(enabled);
 
         let start_thumb = cx.semantics_with_id(start_thumb_semantics, |cx, semantics_id| {
             start_thumb_id = Some(semantics_id);
@@ -1400,6 +1428,20 @@ pub fn range_slider<H: UiHost>(
         end_thumb_semantics.focusable = enabled;
         end_thumb_semantics.disabled = !enabled;
         end_thumb_semantics.value = Some(end_value_text);
+        if values_now[1].is_finite() {
+            end_thumb_semantics.numeric_value = Some(values_now[1] as f64);
+        }
+        if min.is_finite() {
+            end_thumb_semantics.min_numeric_value = Some(min as f64);
+        }
+        if max.is_finite() {
+            end_thumb_semantics.max_numeric_value = Some(max as f64);
+        }
+        if step.is_finite() && step > 0.0 {
+            end_thumb_semantics.numeric_value_step = Some(step as f64);
+            end_thumb_semantics.numeric_value_jump = Some((step * 10.0) as f64);
+        }
+        end_thumb_semantics.value_editable = Some(enabled);
 
         let end_thumb = cx.semantics_with_id(end_thumb_semantics, |cx, semantics_id| {
             end_thumb_id = Some(semantics_id);

@@ -1,10 +1,20 @@
 use fret_app::{App, Model};
 use fret_ui::ElementContext;
 use fret_ui::element::AnyElement;
+use fret_ui::element::{Length, TextProps};
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use std::sync::Arc;
 
 use crate::spec::*;
+
+fn flex_row_wrap_label(cx: &mut ElementContext<'_, App>, text: &'static str) -> AnyElement {
+    let mut props = TextProps::new(text);
+    props.layout.flex.grow = 1.0;
+    props.layout.flex.shrink = 1.0;
+    props.layout.flex.basis = Length::Px(Px(0.0));
+    props.layout.size.min_width = Some(Px(0.0));
+    cx.text_props(props)
+}
 
 pub(super) fn push_settings_sheet(
     cx: &mut ElementContext<'_, App>,
@@ -111,7 +121,8 @@ pub(super) fn push_settings_sheet(
                                                         .a11y_label("Can Undo")
                                                         .disabled(true)
                                                         .into_element(cx),
-                                                        cx.text(
+                                                        flex_row_wrap_label(
+                                                            cx,
                                                             "edit.can_undo (enables OS/in-window Undo)",
                                                         ),
                                                     ]
@@ -130,7 +141,8 @@ pub(super) fn push_settings_sheet(
                                                         .a11y_label("Can Redo")
                                                         .disabled(true)
                                                         .into_element(cx),
-                                                        cx.text(
+                                                        flex_row_wrap_label(
+                                                            cx,
                                                             "edit.can_redo (enables OS/in-window Redo)",
                                                         ),
                                                     ]

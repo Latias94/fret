@@ -55,6 +55,22 @@ impl Default for MeasuredSizeState {
     }
 }
 
+#[derive(Debug, Default, Clone, Copy)]
+struct MeasuredHeightEndpointHoldState {
+    last_open_requested: bool,
+    opening_hold_pending: bool,
+    closing_hold_pending: bool,
+}
+
+fn zero_height_wrapper_refinement() -> LayoutRefinement {
+    LayoutRefinement::default()
+        .w_full()
+        .min_w_0()
+        .min_h(Px(0.0))
+        .h_px(Px(0.0))
+        .overflow_hidden()
+}
+
 /// Read the last cached open height for a collapsible content subtree.
 pub fn last_measured_height_for<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -210,6 +226,21 @@ pub fn measured_height_motion_for_root<H: UiHost>(
     let wants_measurement = open && !has_measurement;
     let open_for_motion = open && has_measurement;
 
+    let (opening_hold_pending, closing_hold_pending) = cx.with_state(
+        MeasuredHeightEndpointHoldState::default,
+        |st: &mut MeasuredHeightEndpointHoldState| {
+            let prev_open = st.last_open_requested;
+            if open && !prev_open {
+                st.opening_hold_pending = true;
+            }
+            if !open && prev_open {
+                st.closing_hold_pending = true;
+            }
+            st.last_open_requested = open;
+            (st.opening_hold_pending, st.closing_hold_pending)
+        },
+    );
+
     let transition = crate::declarative::transition::drive_transition_with_durations_and_easing(
         cx,
         open_for_motion,
@@ -240,6 +271,46 @@ pub fn measured_height_motion_for_root<H: UiHost>(
         last_height,
     );
 
+    // Transition timelines intentionally do not emit an endpoint frame at `progress=0` for closes
+    // (they jump from `1/N` to unmounted). For measured-height wrappers this can be visually
+    // noticeable as a last-moment "snap" when content disappears. Hold a single zero-height frame
+    // at the start of opening and the end of closing to better match CSS keyframe endpoints.
+    if open && opening_hold_pending && has_measurement && transition.animating {
+        cx.with_state(
+            MeasuredHeightEndpointHoldState::default,
+            |st: &mut MeasuredHeightEndpointHoldState| st.opening_hold_pending = false,
+        );
+        cx.request_frame();
+        return MeasuredHeightMotionOutput {
+            state_id,
+            open,
+            open_for_motion,
+            wants_measurement,
+            transition,
+            should_render,
+            wrapper_refinement: zero_height_wrapper_refinement(),
+            wrapper_opacity: 1.0,
+        };
+    }
+
+    if !open && closing_hold_pending && !transition.present {
+        cx.with_state(
+            MeasuredHeightEndpointHoldState::default,
+            |st: &mut MeasuredHeightEndpointHoldState| st.closing_hold_pending = false,
+        );
+        cx.request_frame();
+        return MeasuredHeightMotionOutput {
+            state_id,
+            open,
+            open_for_motion,
+            wants_measurement,
+            transition,
+            should_render: true,
+            wrapper_refinement: zero_height_wrapper_refinement(),
+            wrapper_opacity: 1.0,
+        };
+    }
+
     MeasuredHeightMotionOutput {
         state_id,
         open,
@@ -268,6 +339,21 @@ pub fn measured_height_motion_for_root_with_cubic_bezier<H: UiHost>(
     let has_measurement = last_height.0 > 0.0;
     let wants_measurement = open && !has_measurement;
     let open_for_motion = open && has_measurement;
+
+    let (opening_hold_pending, closing_hold_pending) = cx.with_state(
+        MeasuredHeightEndpointHoldState::default,
+        |st: &mut MeasuredHeightEndpointHoldState| {
+            let prev_open = st.last_open_requested;
+            if open && !prev_open {
+                st.opening_hold_pending = true;
+            }
+            if !open && prev_open {
+                st.closing_hold_pending = true;
+            }
+            st.last_open_requested = open;
+            (st.opening_hold_pending, st.closing_hold_pending)
+        },
+    );
 
     let transition =
         crate::declarative::transition::drive_transition_with_durations_and_cubic_bezier(
@@ -299,6 +385,42 @@ pub fn measured_height_motion_for_root_with_cubic_bezier<H: UiHost>(
         transition,
         last_height,
     );
+
+    if open && opening_hold_pending && has_measurement && transition.animating {
+        cx.with_state(
+            MeasuredHeightEndpointHoldState::default,
+            |st: &mut MeasuredHeightEndpointHoldState| st.opening_hold_pending = false,
+        );
+        cx.request_frame();
+        return MeasuredHeightMotionOutput {
+            state_id,
+            open,
+            open_for_motion,
+            wants_measurement,
+            transition,
+            should_render,
+            wrapper_refinement: zero_height_wrapper_refinement(),
+            wrapper_opacity: 1.0,
+        };
+    }
+
+    if !open && closing_hold_pending && !transition.present {
+        cx.with_state(
+            MeasuredHeightEndpointHoldState::default,
+            |st: &mut MeasuredHeightEndpointHoldState| st.closing_hold_pending = false,
+        );
+        cx.request_frame();
+        return MeasuredHeightMotionOutput {
+            state_id,
+            open,
+            open_for_motion,
+            wants_measurement,
+            transition,
+            should_render: true,
+            wrapper_refinement: zero_height_wrapper_refinement(),
+            wrapper_opacity: 1.0,
+        };
+    }
 
     MeasuredHeightMotionOutput {
         state_id,

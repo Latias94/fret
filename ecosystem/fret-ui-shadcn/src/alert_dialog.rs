@@ -350,7 +350,7 @@ impl AlertDialog {
 }
 
 /// shadcn/ui `AlertDialogTrigger` (v4).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct AlertDialogTrigger {
     child: AnyElement,
 }
@@ -374,7 +374,7 @@ pub enum AlertDialogContentSize {
     Sm,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct AlertDialogContent {
     children: Vec<AnyElement>,
     size: AlertDialogContentSize,
@@ -475,7 +475,7 @@ impl AlertDialogContent {
 }
 
 /// shadcn/ui `AlertDialogHeader` (v4).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct AlertDialogHeader {
     media: Option<AnyElement>,
     children: Vec<AnyElement>,
@@ -577,7 +577,7 @@ impl AlertDialogHeader {
 }
 
 /// shadcn/ui `AlertDialogMedia` (v4).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct AlertDialogMedia {
     child: AnyElement,
     chrome: ChromeRefinement,
@@ -638,7 +638,7 @@ impl AlertDialogMedia {
 }
 
 /// shadcn/ui `AlertDialogFooter` (v4).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct AlertDialogFooter {
     children: Vec<AnyElement>,
 }
@@ -764,7 +764,12 @@ impl AlertDialogTitle {
             .text_color(ColorRef::Color(fg))
             .wrap(TextWrap::Word)
             .overflow(TextOverflow::Clip)
-            .into_element(cx);
+            .into_element(cx)
+            .attach_semantics(
+                SemanticsDecoration::default()
+                    .role(SemanticsRole::Heading)
+                    .level(2),
+            );
         crate::a11y_modal::register_modal_title(cx.app, title.id);
         title
     }
@@ -2586,8 +2591,9 @@ mod tests {
             .nodes
             .iter()
             .find(|n| {
-                n.role == fret_core::SemanticsRole::Text
+                n.role == fret_core::SemanticsRole::Heading
                     && n.label.as_deref() == Some("AlertDialog Title")
+                    && n.extra.level == Some(2)
             })
             .expect("title semantics node");
         let description = snap

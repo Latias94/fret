@@ -450,6 +450,7 @@ fn render_pulldown_heading<H: UiHost>(
     let (text, explicit_id) =
         crate::parse::split_trailing_heading_id(&plain_text_from_events(slice));
     let info = HeadingInfo { level, text };
+    let semantics_label = info.text.clone();
     let test_id =
         crate::anchors::heading_anchor_test_id_with_id(&info.text, explicit_id.as_deref());
 
@@ -458,7 +459,14 @@ fn render_pulldown_heading<H: UiHost>(
     } else {
         render_heading_inline(cx, theme, markdown_theme, components, info, slice)
     };
-    el.attach_semantics(SemanticsDecoration::default().test_id(test_id))
+
+    el.attach_semantics(
+        SemanticsDecoration::default()
+            .role(SemanticsRole::Heading)
+            .label(semantics_label)
+            .level(u32::from(level))
+            .test_id(test_id),
+    )
 }
 
 fn render_pulldown_code_block<H: UiHost + 'static>(

@@ -244,6 +244,7 @@ impl<H: UiHost> UiTree<H> {
                 let mut set_size: Option<u32> = None;
                 let mut label: Option<String> = None;
                 let mut value: Option<String> = None;
+                let mut extra = fret_core::SemanticsNodeExtra::default();
                 let mut test_id: Option<String> = None;
                 let mut text_selection: Option<(u32, u32)> = None;
                 let mut text_composition: Option<(u32, u32)> = None;
@@ -255,6 +256,9 @@ impl<H: UiHost> UiTree<H> {
                     focus: is_focusable || is_text_input,
                     invoke: false,
                     set_value: is_text_input,
+                    decrement: false,
+                    increment: false,
+                    scroll_by: false,
                     set_text_selection: is_text_input,
                 };
 
@@ -274,6 +278,7 @@ impl<H: UiHost> UiTree<H> {
                         label: &mut label,
                         value: &mut value,
                         test_id: &mut test_id,
+                        extra: &mut extra,
                         text_selection: &mut text_selection,
                         text_composition: &mut text_composition,
                         actions: &mut actions,
@@ -286,6 +291,28 @@ impl<H: UiHost> UiTree<H> {
                         inline_spans: &mut inline_spans,
                     };
                     widget.semantics(&mut cx);
+                }
+
+                // Derive a conservative slider `SetValue` surface.
+                //
+                // Rationale: many assistive technology stacks issue `SetValue(NumericValue)` for
+                // sliders. However, this should only be exposed when we have enough structured
+                // numeric metadata to act on it deterministically.
+                if (role == SemanticsRole::Slider
+                    || role == SemanticsRole::SpinButton
+                    || role == SemanticsRole::Splitter)
+                    && (actions.increment || actions.decrement)
+                {
+                    let numeric = extra.numeric;
+                    let has_range = numeric.min.is_some() && numeric.max.is_some();
+                    let has_value = numeric.value.is_some();
+                    let has_step = numeric.step.is_some_and(|v| v.is_finite() && v > 0.0);
+                    actions.set_value = has_range && has_value && has_step;
+                } else if role == SemanticsRole::Slider
+                    || role == SemanticsRole::SpinButton
+                    || role == SemanticsRole::Splitter
+                {
+                    actions.set_value = false;
                 }
 
                 if pos_in_set.is_some_and(|p| p == 0) {
@@ -313,6 +340,7 @@ impl<H: UiHost> UiTree<H> {
                     set_size,
                     label,
                     value,
+                    extra,
                     text_selection,
                     text_composition,
                     actions,

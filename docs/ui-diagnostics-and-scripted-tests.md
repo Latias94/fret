@@ -52,25 +52,33 @@ Implementation pointers (where the code lives today):
 4. Locate the most recent bundle directory:
 
    - `cargo run -p fretboard -- diag latest`
-   - The bundle file is `bundle.json` under that directory.
+   - The full bundle file is `bundle.json` under that directory.
+   - Tooling may also write a compact schema2 view: `bundle.schema2.json` (preferred by tooling when present).
 
 By default bundles go under `target/fret-diag/<timestamp>/` and `target/fret-diag/latest.txt` is updated.
 
-## Bundle schema defaults (v1 vs v2, semantics mode)
+## Bundle schema (v2) and semantics mode
 
-The runtime can export two bundle schema versions:
+The runtime now always exports `bundle.json` schema v2:
 
-- `bundle.json` schema v1: inline-only semantics (no tables).
 - `bundle.json` schema v2: semantics tables (`tables.semantics`) + per-snapshot fingerprints.
+
+Legacy note:
+
+- Older bundles may still be schema v1 (inline-only semantics, no tables).
+- Tooling remains compatible: `fretboard diag meta/query/slice/stats/compare` resolve semantics from either inline
+  semantics or the schema-v2 semantics table.
+- If you want to “upgrade” a schema v1 bundle (or write a compact schema2 view for a large schema v2 bundle), run
+  `cargo run -p fretboard -- diag bundle-v2 <bundle_dir>` (writes `bundle.schema2.json`, and directory-based tooling will
+  prefer it when present).
 
 Defaults:
 
-- Manual dumps default to schema v1 and semantics mode `all`.
-- Script dumps default to schema v2 and semantics mode `last` (to keep bundles smaller while still preserving at least one full semantics snapshot).
+- Manual dumps default to semantics mode `changed`.
+- Script dumps default to semantics mode `last` (keep bundles smaller while still preserving at least one full semantics snapshot).
 
-Overrides (for both manual and script dumps):
+Overrides (both manual and script dumps):
 
-- `FRET_DIAG_BUNDLE_SCHEMA_VERSION=1|2`
 - `FRET_DIAG_BUNDLE_SEMANTICS_MODE=all|changed|last|off`
 
 ## Sidecars (index/meta/test-id index)
@@ -105,7 +113,6 @@ Minimal “AI triage” preset (portable defaults; copy/paste in PowerShell):
 
 ```powershell
 $env:FRET_DIAG=1
-$env:FRET_DIAG_BUNDLE_SCHEMA_VERSION=2
 $env:FRET_DIAG_BUNDLE_SEMANTICS_MODE="last"
 $env:FRET_DIAG_SCRIPT_DUMP_MAX_SNAPSHOTS=30
 $env:FRET_DIAG_BUNDLE_JSON_FORMAT="compact"
@@ -115,7 +122,6 @@ More aggressive “small bundles” preset (trade off semantics richness; best f
 
 ```powershell
 $env:FRET_DIAG=1
-$env:FRET_DIAG_BUNDLE_SCHEMA_VERSION=2
 $env:FRET_DIAG_BUNDLE_SEMANTICS_MODE="changed"
 $env:FRET_DIAG_SEMANTICS_TEST_IDS_ONLY=1
 $env:FRET_DIAG_MAX_SEMANTICS_NODES=20000
@@ -134,21 +140,21 @@ $env:FRET_DIAG_REDACT_TEXT=0
 When `bundle.json` is too large to share or inspect directly, prefer a bounded artifact set:
 
 1. Get quick context:
-   - `cargo run -p fretboard -- diag meta <bundle_dir|bundle.json> --meta-report`
+   - `cargo run -p fretboard -- diag meta <bundle_dir|bundle.json|bundle.schema2.json> --meta-report`
 2. Find a stable selector (usually `test_id`):
-   - `cargo run -p fretboard -- diag query test-id <bundle_dir|bundle.json> <pattern> --top 50`
+   - `cargo run -p fretboard -- diag query test-id <bundle_dir|bundle.json|bundle.schema2.json> <pattern> --top 50`
    - Optional: find the best snapshot quickly:
-     - `cargo run -p fretboard -- diag index <bundle_dir|bundle.json> --json`
-     - `cargo run -p fretboard -- diag slice <bundle_dir|bundle.json> --test-id <test_id>`
+     - `cargo run -p fretboard -- diag index <bundle_dir|bundle.json|bundle.schema2.json> --json`
+     - `cargo run -p fretboard -- diag slice <bundle_dir|bundle.json|bundle.schema2.json> --test-id <test_id>`
 3. Export a compact packet for AI / code review:
-   - `cargo run -p fretboard -- diag ai-packet <bundle_dir|bundle.json> --test-id <test_id> --packet-out <dir>`
+   - `cargo run -p fretboard -- diag ai-packet <bundle_dir|bundle.json|bundle.schema2.json> --test-id <test_id> --packet-out <dir>`
 
 ## Optional: dump a frame screenshot alongside the bundle
 
 If you suspect a **rendering** regression (e.g. semantics + layout look correct but pixels look blank),
 enable bundle screenshots:
 
-- `FRET_DIAG_SCREENSHOT=1`
+- `FRET_DIAG_BUNDLE_SCREENSHOT=1`
 
 When a bundle is dumped, the runner writes `frame.bmp` into the bundle directory (same folder as
 `bundle.json`).
@@ -163,7 +169,7 @@ Notes:
 
 ## Offline bundle viewer (optional)
 
-This repo includes an offline web viewer for `bundle.json` at `tools/fret-bundle-viewer`.
+This repo includes an offline web viewer for bundle artifacts (`bundle.json` / `bundle.schema2.json`) at `tools/fret-bundle-viewer`.
 
 ```powershell
 $env:HTTP_PROXY='http://127.0.0.1:10809'
@@ -175,17 +181,17 @@ pnpm -C tools/fret-bundle-viewer dev
 
 Workflow tip:
 
-- Drag the `bundle.json` file from `target/fret-diag/.../bundle.json` into the viewer (or use the file picker).
-- You can also open a `.zip` that contains a `bundle.json` anywhere inside it (handy for sharing a full repro directory).
+- Drag `bundle.json` (or `bundle.schema2.json`) from `target/fret-diag/.../` into the viewer (or use the file picker).
+- You can also open a `.zip` that contains `bundle.json` or `bundle.schema2.json` anywhere inside it (handy for sharing a full repro directory).
 - To generate a shareable `.zip` for the latest bundle: `cargo run -p fretboard -- diag pack`
 - To include nearby artifacts (`script.json`, `script.result.json`, `pick.result.json`), `triage.json`, and screenshots (when present): `cargo run -p fretboard -- diag pack --include-all`
 - The bundle viewer surfaces these zip artifacts (and lets you copy/download them) when they are present under `_root/`.
-- To generate a machine-readable `triage.json` next to a bundle: `cargo run -p fretboard -- diag triage <bundle_dir|bundle.json>`
-- To generate (or refresh) a cached bundle metadata sidecar (`bundle.meta.json`): `cargo run -p fretboard -- diag meta <bundle_dir|bundle.json> --json`
-- To print a compact human meta report (semantics inline vs table + table size indicators): `cargo run -p fretboard -- diag meta <bundle_dir|bundle.json> --meta-report`
+- To generate a machine-readable `triage.json` next to a bundle: `cargo run -p fretboard -- diag triage <bundle_dir|bundle.json|bundle.schema2.json>`
+- To generate (or refresh) a cached bundle metadata sidecar (`bundle.meta.json`): `cargo run -p fretboard -- diag meta <bundle_dir|bundle.json|bundle.schema2.json> --json`
+- To print a compact human meta report (semantics inline vs table + table size indicators): `cargo run -p fretboard -- diag meta <bundle_dir|bundle.json|bundle.schema2.json> --meta-report`
 - To include `triage.json` in a share zip: `cargo run -p fretboard -- diag pack --include-triage`
 - To include screenshots in a share zip: `cargo run -p fretboard -- diag pack --include-screenshots` (packs `target/fret-diag/screenshots/<bundle_timestamp>/` into `_root/screenshots/` when available)
-- If you’re sharing via chat, “Paste JSON” is a fast way to load a copied `bundle.json` payload without files.
+- If you’re sharing via chat, “Paste JSON” is a fast way to load a copied `bundle.json` / `bundle.schema2.json` payload without files.
 - Use “Export triage.json” when you want a small, machine-readable artifact for AI triage (selection + bounded debug artifacts).
 
 ## AI-first sharing (recommended)
@@ -193,11 +199,13 @@ Workflow tip:
 Prefer sharing **bounded artifacts** over the full `bundle.json` (especially in AI loops):
 
 - Generate an “AI packet” directory (includes `bundle.meta.json`, `bundle.index.json`, `test_ids.index.json`, and a budget report):
-  - `cargo run -p fretboard -- diag ai-packet <bundle_dir|bundle.json> --packet-out <dir>`
+  - `cargo run -p fretboard -- diag ai-packet <bundle_dir|bundle.json|bundle.schema2.json> --packet-out <dir>`
+  - If `bundle.schema2.json` is present, the packet may also include it (within the packet budget).
+    - To generate it: `cargo run -p fretboard -- diag doctor --fix-schema2 <bundle_dir> --warmup-frames <n>`
 - Focus on a specific target when possible (writes a bounded `slice.*.json` alongside the packet):
-  - `cargo run -p fretboard -- diag ai-packet <bundle_dir|bundle.json> --test-id <test_id> --packet-out <dir>`
+  - `cargo run -p fretboard -- diag ai-packet <bundle_dir|bundle.json|bundle.schema2.json> --test-id <test_id> --packet-out <dir>`
 - If you only need a semantics-focused subset, slice directly:
-  - `cargo run -p fretboard -- diag slice <bundle_dir|bundle.json> --test-id <test_id> --out <path>`
+  - `cargo run -p fretboard -- diag slice <bundle_dir|bundle.json|bundle.schema2.json> --test-id <test_id> --out <path>`
 
 ## DevTools GUI (preview)
 
@@ -317,8 +325,8 @@ Script shrinking (automated minimal repro):
 Screenshot note:
 
 - `capture_screenshot` requires the **on-demand PNG screenshot protocol**:
-  - Enable via `FRET_DIAG_SCREENSHOTS=1` (default disabled).
-  - This is distinct from `FRET_DIAG_SCREENSHOT=1`, which only writes `frame.bmp` during bundle dumps.
+  - Enable via `FRET_DIAG_GPU_SCREENSHOTS=1` (default disabled).
+  - This is distinct from `FRET_DIAG_BUNDLE_SCREENSHOT=1`, which only writes `frame.bmp` during bundle dumps.
 
 ## Quick Start (scripted perf triage)
 
@@ -536,9 +544,6 @@ Core:
 - `FRET_DIAG=1`: enable diagnostics collection.
 - `FRET_DIAG_DIR=...`: output directory (default `target/fret-diag`).
 - `FRET_DIAG_BUNDLE_JSON_FORMAT=pretty`: write pretty-printed `bundle.json` (default: compact/minified).
-- `FRET_DIAG_BUNDLE_SCHEMA_VERSION=1|2`: choose the `bundle.json` schema version (default: `2` for script-driven dumps; `1` for manual dumps).
-  - Schema v2 adds `tables.semantics.entries[]` to deduplicate exported semantics snapshots by `(window, semantics_fingerprint)`.
-  - Details + migration notes: `docs/workstreams/diag-bundle-schema-v2.md`.
 - `FRET_DIAG_CONFIG_PATH=...`: optional JSON config file (schema v1) for diagnostics runtime settings and paths.
   - Tooling writes `<dir>/diag.config.json` by default when launching via `fretboard diag run/suite/repro --launch`.
   - When an env var is set, it overrides the config file (compat-first manual escape hatch).
@@ -555,7 +560,7 @@ Semantics export:
 - `FRET_DIAG_MAX_SEMANTICS_NODES=...`: cap the number of exported semantics nodes per snapshot (default 50000).
 - `FRET_DIAG_SEMANTICS_TEST_IDS_ONLY=1`: export only semantics nodes that have a `test_id` (keeps bundles small for large UIs; default disabled).
 - `FRET_DIAG_BUNDLE_SEMANTICS_MODE=all|changed|last|off`: controls how often bundles include semantics snapshots.
-  - `all`: include semantics on every snapshot (default for manual dumps).
+  - `all`: include semantics on every snapshot.
   - `changed`: include semantics only when `semantics_fingerprint` changes (always keeps the last snapshot's semantics).
   - `last`: include semantics only on the last snapshot (default for script-driven dumps; useful for AI triage and very large UIs).
   - `off`: never include semantics in bundles (perf captures where semantics isn't needed).
@@ -585,9 +590,8 @@ Script harness:
 Screenshot capture:
 
 - Requires the running app to enable the `fret-launch/diag-screenshots` feature (runner-side readback + PNG encode).
-- `FRET_DIAG_SCREENSHOTS=1`: enable GPU readback screenshots (default disabled).
+- `FRET_DIAG_GPU_SCREENSHOTS=1`: enable GPU readback screenshots (default disabled).
   - Alternatively, set `screenshots_enabled=true` in the `FRET_DIAG_CONFIG_PATH` config file.
-- `FRET_DIAG_GPU_SCREENSHOTS=1`: alias for `FRET_DIAG_SCREENSHOTS` (preferred name; old name remains supported).
 - `FRET_DIAG_SCREENSHOT_REQUEST_PATH=...`: screenshot request JSON path (default `<dir>/screenshots.request.json`).
 - `FRET_DIAG_SCREENSHOT_TRIGGER_PATH=...`: screenshot request trigger file (default `<dir>/screenshots.touch`).
 - `FRET_DIAG_SCREENSHOT_RESULT_PATH=...`: screenshot completion log JSON path (default `<dir>/screenshots.result.json`).
@@ -597,8 +601,7 @@ The screenshot completion log is append-only (bounded) and includes a `request_i
 
 Bundle screenshots (frame dump):
 
-- `FRET_DIAG_SCREENSHOT=1`: write `frame.bmp` into each bundle directory when dumping `bundle.json`.
-- `FRET_DIAG_BUNDLE_SCREENSHOT=1`: alias for `FRET_DIAG_SCREENSHOT` (preferred name; old name remains supported).
+- `FRET_DIAG_BUNDLE_SCREENSHOT=1`: write `frame.bmp` into each bundle directory when dumping `bundle.json`.
 
 Picking:
 
@@ -687,7 +690,7 @@ Recent additions:
 Notes:
 
 - `capture_bundle` always writes a new `bundle.json` directory.
-  - When `FRET_DIAG_SCREENSHOTS=1`, the dump includes a screenshot and the step waits until it is written (so downstream automation can rely on it deterministically).
+  - When `FRET_DIAG_GPU_SCREENSHOTS=1`, the dump includes a screenshot and the step waits until it is written (so downstream automation can rely on it deterministically).
   - If you want an explicit screenshot step, follow with `capture_screenshot`.
   - Optional `max_snapshots` caps how many snapshots are included in this export (clamped to `FRET_DIAG_MAX_SNAPSHOTS`).
 - `capture_screenshot` requests a screenshot for the **most recent bundle directory** (`last_dump_dir`) and waits for completion (up to `timeout_frames`, default 300). If no bundle exists yet, the harness creates one first.
@@ -816,10 +819,21 @@ If a selector fails to resolve, the harness will wait and retry on the next fram
 Predicates (v1 MVP):
 
 - `{"kind":"exists","target":<selector>}`
+- `{"kind":"not_exists","target":<selector>}`
 - `{"kind":"focus_is","target":<selector>}`
+- `{"kind":"role_is","target":<selector>,"role":"button"}`
+- `{"kind":"label_contains","target":<selector>,"text":"Search"}`
+- `{"kind":"value_contains","target":<selector>,"text":"foo"}`
+- `{"kind":"pos_in_set_is","target":<selector>,"pos_in_set":2}`
+- `{"kind":"set_size_is","target":<selector>,"set_size":10}`
+- `{"kind":"checked_is","target":<selector>,"checked":true}`
+- `{"kind":"selected_is","target":<selector>,"selected":true}`
 - `{"kind":"visible_in_window","target":<selector>}` (target exists and intersects the window bounds)
 - `{"kind":"bounds_within_window","target":<selector>,"padding_px":0,"eps_px":0}` (target bounds must be fully contained within the window, optionally padded inward; `eps_px` allows a small tolerance for subpixel rounding at non-1.0 DPI)
 - `{"kind":"text_input_ime_cursor_area_within_window","padding_px":0,"eps_px":0}` (focused text input's IME cursor area must be fully contained within the window, optionally padded inward; intended for keyboard-avoidance / caret-visibility gates; requires `diag.text_input_snapshot`)
+
+Note: this list is intentionally incomplete; additional predicate kinds exist for specialized suites.
+The authoritative list lives in `crates/fret-diag-protocol/src/lib.rs` (`UiPredicateV1`).
 
 Docking predicates (require a `WindowInteractionDiagnosticsStore` publisher, typically `docking_arbitration_demo`):
 

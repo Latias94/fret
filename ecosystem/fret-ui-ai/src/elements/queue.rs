@@ -79,7 +79,6 @@ fn rich_strikethrough(text: &Arc<str>, strike_color: Color) -> AttributedText {
     AttributedText::new(Arc::clone(text), Arc::<[TextSpan]>::from([span]))
 }
 
-#[derive(Clone)]
 /// AI Elements-aligned `Queue` surface.
 pub struct Queue {
     children: Vec<AnyElement>,
@@ -276,7 +275,6 @@ impl QueueSection {
     }
 }
 
-#[derive(Clone)]
 /// AI Elements-aligned section header trigger (`QueueSectionTrigger`).
 pub struct QueueSectionTrigger {
     open: Model<bool>,
@@ -353,7 +351,7 @@ impl QueueSectionTrigger {
                     .layout(LayoutRefinement::default().w_full().min_w_0())
                     .items(Items::Center)
                     .justify_between(),
-                move |_cx| children.clone(),
+                move |_cx| children,
             );
 
             vec![cx.container(props, move |_cx| vec![row])]
@@ -375,7 +373,6 @@ impl QueueSectionTrigger {
     }
 }
 
-#[derive(Clone)]
 /// AI Elements-aligned label content (`QueueSectionLabel`).
 pub struct QueueSectionLabel {
     label: Arc<str>,
@@ -512,7 +509,6 @@ impl QueueSectionLabel {
     }
 }
 
-#[derive(Clone)]
 /// AI Elements-aligned collapsible content area (`QueueSectionContent`).
 pub struct QueueSectionContent {
     children: Vec<AnyElement>,
@@ -557,7 +553,6 @@ impl QueueSectionContent {
     }
 }
 
-#[derive(Clone)]
 /// AI Elements-aligned scrollable list container (`QueueList`).
 pub struct QueueList {
     children: Vec<AnyElement>,
@@ -1010,7 +1005,6 @@ impl QueueItemDescription {
     }
 }
 
-#[derive(Clone)]
 /// AI Elements-aligned actions container (`QueueItemActions`).
 pub struct QueueItemActions {
     children: Vec<AnyElement>,
@@ -1053,7 +1047,6 @@ impl QueueItemActions {
 
 pub type OnQueueItemActionActivate = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx) + 'static>;
 
-#[derive(Clone)]
 /// AI Elements-aligned action button (`QueueItemAction`).
 pub struct QueueItemAction {
     label: Arc<str>,
@@ -1180,7 +1173,6 @@ impl QueueItemAction {
     }
 }
 
-#[derive(Clone)]
 /// AI Elements-aligned attachment row (`QueueItemAttachment`).
 pub struct QueueItemAttachment {
     children: Vec<AnyElement>,

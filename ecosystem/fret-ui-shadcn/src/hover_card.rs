@@ -200,7 +200,6 @@ struct HoverCardSharedState {
 /// - `HoverRegion` (hover tracking)
 /// - cross-frame geometry queries (`elements::bounds_for_element`)
 /// - placement solver (`overlay_placement`)
-#[derive(Clone)]
 pub struct HoverCard {
     open: Option<Model<bool>>,
     default_open: bool,
@@ -844,7 +843,7 @@ impl HoverCard {
 
                 let pointer_down_on_content_model = pointer_down_on_content.clone();
                 let interaction_lease_model = interaction_lease.clone();
-                let content_for_panel = content.clone();
+                let content_for_panel = content;
                 let wrapper = cx.hover_region(
                     HoverRegionProps {
                         layout: popper_content::popper_wrapper_layout(placed, wrapper_insets),
@@ -969,7 +968,7 @@ impl HoverCard {
                                     },
                                 ));
 
-                                vec![content_for_panel.clone()]
+                                vec![content_for_panel]
                             },
                         );
 
@@ -1030,7 +1029,7 @@ impl HoverCard {
 ///
 /// In the DOM this is a context-aware wrapper that does not impose layout. In Fret's declarative
 /// authoring, the trigger is expressed as the first child passed to `HoverCard::new(...)`.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct HoverCardTrigger {
     child: AnyElement,
 }
@@ -1049,7 +1048,7 @@ impl HoverCardTrigger {
 /// Optional layout-only anchor for advanced hover card placement recipes.
 ///
 /// Use [`HoverCard::anchor_element`] to wire the anchor element ID into placement.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct HoverCardAnchor {
     child: AnyElement,
 }
@@ -1070,7 +1069,7 @@ impl HoverCardAnchor {
 }
 
 /// shadcn/ui `HoverCardContent` (v4).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct HoverCardContent {
     children: Vec<AnyElement>,
     chrome: ChromeRefinement,

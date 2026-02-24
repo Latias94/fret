@@ -147,25 +147,28 @@ impl UniformResources {
         true
     }
 
-    pub(super) fn write_viewport_uniforms(
+    pub(super) fn write_viewport_uniforms_into(
         &self,
         queue: &wgpu::Queue,
         uniforms: &[super::ViewportUniform],
+        uniform_bytes_scratch: &mut Vec<u8>,
     ) -> usize {
         if uniforms.is_empty() {
             return 0;
         }
 
         let uniform_size = std::mem::size_of::<super::ViewportUniform>() as u64;
-        let mut uniform_bytes = vec![0u8; (self.uniform_stride * uniforms.len() as u64) as usize];
+        let uniform_bytes_len = (self.uniform_stride * uniforms.len() as u64) as usize;
+        uniform_bytes_scratch.clear();
+        uniform_bytes_scratch.resize(uniform_bytes_len, 0u8);
         for (i, u) in uniforms.iter().enumerate() {
             let offset = (self.uniform_stride * i as u64) as usize;
-            uniform_bytes[offset..offset + uniform_size as usize]
+            uniform_bytes_scratch[offset..offset + uniform_size as usize]
                 .copy_from_slice(bytemuck::bytes_of(u));
         }
 
-        queue.write_buffer(&self.uniform_buffer, 0, &uniform_bytes);
-        uniform_bytes.len()
+        queue.write_buffer(&self.uniform_buffer, 0, uniform_bytes_scratch);
+        uniform_bytes_scratch.len()
     }
 
     pub(super) fn write_clips(

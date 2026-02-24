@@ -1,6 +1,10 @@
-use fret_core::{Edges, Px};
+use std::sync::Arc;
+
+use fret_core::{Edges, Px, SemanticsOrientation, SemanticsRole};
 use fret_runtime::Model;
-use fret_ui::element::{AnyElement, FractionalRenderTransformProps, LayoutStyle, Length};
+use fret_ui::element::{
+    AnyElement, FractionalRenderTransformProps, LayoutStyle, Length, SemanticsDecoration,
+};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
@@ -21,6 +25,7 @@ pub struct Progress {
     min: f32,
     max: f32,
     mirror_in_rtl: bool,
+    a11y_label: Option<Arc<str>>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
 }
@@ -32,6 +37,7 @@ impl Progress {
             min: 0.0,
             max: 100.0,
             mirror_in_rtl: false,
+            a11y_label: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
         }
@@ -47,6 +53,7 @@ impl Progress {
             min: 0.0,
             max: 100.0,
             mirror_in_rtl: false,
+            a11y_label: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
         }
@@ -61,9 +68,15 @@ impl Progress {
             min: 0.0,
             max: 100.0,
             mirror_in_rtl: false,
+            a11y_label: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
         }
+    }
+
+    pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.a11y_label = Some(label.into());
+        self
     }
 
     pub fn range(mut self, min: f32, max: f32) -> Self {
@@ -110,6 +123,7 @@ impl Progress {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             let mirror_in_rtl = self.mirror_in_rtl;
+            let a11y_label = self.a11y_label.clone();
             let theme = Theme::global(&*cx.app).clone();
             let height = theme
                 .metric_by_key("component.progress.height")
@@ -147,7 +161,7 @@ impl Progress {
             // `container_props` uses a resolved radius; override with `component.progress.radius` if present.
             track_props.corner_radii = fret_core::Corners::all(radius);
 
-            cx.container(track_props, move |cx| {
+            let mut out = cx.container(track_props, move |cx| {
                 // Match the upstream DOM structure:
                 // - the indicator is full-width (`w-full`)
                 // - it is shifted with a translate so the left edge is clipped by the track's
@@ -190,7 +204,24 @@ impl Progress {
                         )]
                     },
                 )]
-            })
+            });
+
+            let mut semantics = SemanticsDecoration::default()
+                .role(SemanticsRole::ProgressBar)
+                .orientation(SemanticsOrientation::Horizontal);
+            if let Some(label) = a11y_label {
+                semantics = semantics.label(label);
+            }
+            if self.min.is_finite() && self.max.is_finite() {
+                semantics = semantics.numeric_range(self.min as f64, self.max as f64);
+            }
+            if let Some(value) = v
+                && value.is_finite()
+            {
+                semantics = semantics.numeric_value(value as f64);
+            }
+            out = out.attach_semantics(semantics);
+            out
         })
     }
 }

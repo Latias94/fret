@@ -4362,6 +4362,33 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 ..Default::default()
             };
 
+            let a11y_current = cx
+                .read_model(&model, fret_ui::Invalidation::Paint, |_app, v| {
+                    slider_clamp_and_snap(*v, min, max, step)
+                })
+                .unwrap_or_else(|_| slider_clamp_and_snap(min, min, max, step));
+            let (a11y_min, a11y_max) = slider_normalize_range(min, max);
+            let a11y_step = slider_step_or_default(step);
+
+            let mut a11y = fret_ui::element::SemanticsDecoration::default()
+                .role(SemanticsRole::Slider)
+                .orientation(fret_core::SemanticsOrientation::Horizontal)
+                .value(crate::headless::slider::format_semantics_value(
+                    a11y_current,
+                ));
+
+            if a11y_current.is_finite() {
+                a11y = a11y.numeric_value(a11y_current as f64);
+            }
+            if a11y_min.is_finite() && a11y_max.is_finite() {
+                a11y = a11y.numeric_range(a11y_min as f64, a11y_max as f64);
+            }
+            if a11y_step.is_finite() && a11y_step > 0.0 {
+                a11y = a11y
+                    .numeric_step(a11y_step as f64)
+                    .numeric_jump((a11y_step * 10.0) as f64);
+            }
+
             let label_for_visuals = label.clone();
             cx.pressable_with_id(props, move |cx, state, id| {
                 cx.pressable_clear_on_pointer_down();
@@ -4518,6 +4545,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
 
                 vec![cx.text(Arc::from(format!("{label_for_visuals}: {current:.2}")))]
             })
+            .attach_semantics(a11y)
         });
 
         self.add(element);

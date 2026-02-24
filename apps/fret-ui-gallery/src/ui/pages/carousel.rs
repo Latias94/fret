@@ -382,7 +382,7 @@ shadcn::Carousel::new(items)
     .into_element(cx);"#,
                 ),
             DocSection::new("Align Start", align_start)
-                .description("Fixed basis to approximate the upstream responsive layout.")
+                .description("Fixed basis (basis-1/2) to mirror the docs layout deterministically.")
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-carousel-align-start")
                 .code(

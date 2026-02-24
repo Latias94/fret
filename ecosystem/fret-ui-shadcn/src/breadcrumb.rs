@@ -1,15 +1,33 @@
 use std::sync::Arc;
 
-use fret_core::{Color, FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
+use fret_core::{Color, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap};
 use fret_icons::{IconId, ids};
-use fret_runtime::{CommandId, WindowCommandGatingSnapshot};
-use fret_ui::element::{AnyElement, CrossAlign, FlexProps, MainAlign, PressableProps};
+use fret_runtime::{CommandId, Effect, WindowCommandGatingSnapshot};
+use fret_ui::action::OnActivate;
+use fret_ui::element::{
+    AnyElement, CrossAlign, FlexProps, MainAlign, PressableKeyActivation, PressableProps,
+    SemanticsDecoration,
+};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space, ui};
+
+fn open_url_on_activate(
+    url: Arc<str>,
+    target: Option<Arc<str>>,
+    rel: Option<Arc<str>>,
+) -> OnActivate {
+    Arc::new(move |host, _acx, _reason| {
+        host.push_effect(Effect::OpenUrl {
+            url: url.to_string(),
+            target: target.as_ref().map(|v| v.to_string()),
+            rel: rel.as_ref().map(|v| v.to_string()),
+        });
+    })
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum BreadcrumbItemKind {
@@ -158,14 +176,35 @@ fn breadcrumb_with_patch<H: UiHost>(
     })
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct BreadcrumbItem {
     kind: BreadcrumbItemKind,
     label: Arc<str>,
     command: Option<CommandId>,
+    on_activate: Option<OnActivate>,
+    href: Option<Arc<str>>,
+    target: Option<Arc<str>>,
+    rel: Option<Arc<str>>,
     disabled: bool,
     truncate: bool,
     layout: LayoutRefinement,
+}
+
+impl std::fmt::Debug for BreadcrumbItem {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("BreadcrumbItem")
+            .field("kind", &self.kind)
+            .field("label", &self.label)
+            .field("command", &self.command)
+            .field("on_activate", &self.on_activate.is_some())
+            .field("href", &self.href)
+            .field("target", &self.target)
+            .field("rel", &self.rel)
+            .field("disabled", &self.disabled)
+            .field("truncate", &self.truncate)
+            .field("layout", &self.layout)
+            .finish()
+    }
 }
 
 impl BreadcrumbItem {
@@ -174,6 +213,10 @@ impl BreadcrumbItem {
             kind: BreadcrumbItemKind::Link,
             label: label.into(),
             command: None,
+            on_activate: None,
+            href: None,
+            target: None,
+            rel: None,
             disabled: false,
             truncate: false,
             layout: LayoutRefinement::default(),
@@ -185,6 +228,10 @@ impl BreadcrumbItem {
             kind: BreadcrumbItemKind::Ellipsis,
             label: Arc::from("…"),
             command: None,
+            on_activate: None,
+            href: None,
+            target: None,
+            rel: None,
             disabled: true,
             truncate: false,
             layout: LayoutRefinement::default(),
@@ -193,6 +240,26 @@ impl BreadcrumbItem {
 
     pub fn on_click(mut self, command: impl Into<CommandId>) -> Self {
         self.command = Some(command.into());
+        self
+    }
+
+    pub fn on_activate(mut self, on_activate: OnActivate) -> Self {
+        self.on_activate = Some(on_activate);
+        self
+    }
+
+    pub fn href(mut self, href: impl Into<Arc<str>>) -> Self {
+        self.href = Some(href.into());
+        self
+    }
+
+    pub fn target(mut self, target: impl Into<Arc<str>>) -> Self {
+        self.target = Some(target.into());
+        self
+    }
+
+    pub fn rel(mut self, rel: impl Into<Arc<str>>) -> Self {
+        self.rel = Some(rel.into());
         self
     }
 
@@ -239,16 +306,42 @@ impl BreadcrumbItem {
                     return breadcrumb_text(cx, self.label, base_style, muted, truncate, layout);
                 }
 
-                let Some(command) = self.command else {
+                let command = self.command.clone();
+                let href_for_action = self.href.clone();
+                let href_for_semantics = self.href.clone();
+                let target = self.target.clone();
+                let rel = self.rel.clone();
+                let on_activate = self.on_activate.clone();
+                let should_fallback_open_url = command.is_none() && on_activate.is_none();
+                let navigate_handler: Option<OnActivate> = if let Some(on_activate) = on_activate {
+                    Some(on_activate)
+                } else if should_fallback_open_url {
+                    href_for_action
+                        .clone()
+                        .map(|url| open_url_on_activate(url, target.clone(), rel.clone()))
+                } else {
+                    None
+                };
+
+                if command.is_none() && navigate_handler.is_none() {
                     // Non-clickable link-like text (shadcn allows `<a>` without a URL).
                     return breadcrumb_link_text(
                         cx, self.label, base_style, muted, fg, false, truncate, layout,
                     );
-                };
+                }
 
                 let label = self.label.clone();
-                cx.pressable(PressableProps::default(), move |cx, st| {
-                    cx.pressable_dispatch_command_if_enabled(command.clone());
+                let mut props = PressableProps::default();
+                props.key_activation = PressableKeyActivation::EnterOnly;
+                props.a11y.role = Some(SemanticsRole::Link);
+                props.a11y.label = Some(label.clone());
+                let mut element = cx.pressable(props, move |cx, st| {
+                    if let Some(command) = command.clone() {
+                        cx.pressable_dispatch_command_if_enabled(command);
+                    }
+                    if let Some(handler) = navigate_handler.clone() {
+                        cx.pressable_on_activate(handler);
+                    }
                     vec![breadcrumb_link_text(
                         cx,
                         label.clone(),
@@ -259,7 +352,11 @@ impl BreadcrumbItem {
                         truncate,
                         layout,
                     )]
-                })
+                });
+                if let Some(href) = href_for_semantics {
+                    element = element.attach_semantics(SemanticsDecoration::default().value(href));
+                }
+                element
             }
         }
     }
@@ -573,13 +670,33 @@ pub mod primitives {
         }
     }
 
-    #[derive(Debug, Clone)]
+    #[derive(Clone)]
     pub struct BreadcrumbLink {
         label: Arc<str>,
         command: Option<CommandId>,
+        on_activate: Option<OnActivate>,
+        href: Option<Arc<str>>,
+        target: Option<Arc<str>>,
+        rel: Option<Arc<str>>,
         truncate: bool,
         chrome: ChromeRefinement,
         layout: LayoutRefinement,
+    }
+
+    impl std::fmt::Debug for BreadcrumbLink {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            f.debug_struct("BreadcrumbLink")
+                .field("label", &self.label)
+                .field("command", &self.command)
+                .field("on_activate", &self.on_activate.is_some())
+                .field("href", &self.href)
+                .field("target", &self.target)
+                .field("rel", &self.rel)
+                .field("truncate", &self.truncate)
+                .field("chrome", &self.chrome)
+                .field("layout", &self.layout)
+                .finish()
+        }
     }
 
     impl BreadcrumbLink {
@@ -587,6 +704,10 @@ pub mod primitives {
             Self {
                 label: label.into(),
                 command: None,
+                on_activate: None,
+                href: None,
+                target: None,
+                rel: None,
                 truncate: false,
                 chrome: ChromeRefinement::default(),
                 layout: LayoutRefinement::default(),
@@ -595,6 +716,26 @@ pub mod primitives {
 
         pub fn on_click(mut self, command: impl Into<CommandId>) -> Self {
             self.command = Some(command.into());
+            self
+        }
+
+        pub fn on_activate(mut self, on_activate: OnActivate) -> Self {
+            self.on_activate = Some(on_activate);
+            self
+        }
+
+        pub fn href(mut self, href: impl Into<Arc<str>>) -> Self {
+            self.href = Some(href.into());
+            self
+        }
+
+        pub fn target(mut self, target: impl Into<Arc<str>>) -> Self {
+            self.target = Some(target.into());
+            self
+        }
+
+        pub fn rel(mut self, rel: impl Into<Arc<str>>) -> Self {
+            self.rel = Some(rel.into());
             self
         }
 
@@ -642,11 +783,35 @@ pub mod primitives {
 
             let chrome = self.chrome;
             let layout = self.layout;
-            if let Some(command) = self.command
-                && !disabled_by_gating
+            let command = self.command.clone();
+            let href_for_action = self.href.clone();
+            let href_for_semantics = self.href.clone();
+            let target = self.target.clone();
+            let rel = self.rel.clone();
+            let on_activate = self.on_activate.clone();
+            let should_fallback_open_url = command.is_none() && on_activate.is_none();
+
+            if (command.is_some() && !disabled_by_gating)
+                || href_for_action.is_some()
+                || on_activate.is_some()
             {
-                cx.pressable(PressableProps::default(), move |cx, st| {
-                    cx.pressable_dispatch_command_if_enabled(command.clone());
+                let mut props = PressableProps::default();
+                props.key_activation = PressableKeyActivation::EnterOnly;
+                props.a11y.role = Some(SemanticsRole::Link);
+                props.a11y.label = Some(label.clone());
+
+                let mut element = cx.pressable(props, move |cx, st| {
+                    cx.pressable_dispatch_command_if_enabled_opt(command.clone());
+                    if let Some(on_activate) = on_activate.clone() {
+                        cx.pressable_on_activate(on_activate);
+                    } else if should_fallback_open_url && let Some(href) = href_for_action.clone() {
+                        cx.pressable_on_activate(open_url_on_activate(
+                            href,
+                            target.clone(),
+                            rel.clone(),
+                        ));
+                    }
+
                     let color = if st.hovered { fg } else { muted };
                     vec![cx.container(
                         {
@@ -672,7 +837,13 @@ pub mod primitives {
                             vec![text.into_element(cx)]
                         },
                     )]
-                })
+                });
+
+                if let Some(href) = href_for_semantics {
+                    element = element.attach_semantics(SemanticsDecoration::default().value(href));
+                }
+
+                element
             } else {
                 let props = {
                     let theme = Theme::global(&*cx.app);
@@ -919,5 +1090,127 @@ pub mod primitives {
                 vec![cx.flex(props, move |_cx| vec![icon])]
             })
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Rect, Size};
+    use fret_ui::UiTree;
+
+    use crate::shadcn_themes::{ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york_v4};
+
+    #[derive(Default)]
+    struct FakeServices;
+
+    impl fret_core::TextService for FakeServices {
+        fn prepare(
+            &mut self,
+            _input: &fret_core::TextInput,
+            _constraints: fret_core::TextConstraints,
+        ) -> (fret_core::TextBlobId, fret_core::TextMetrics) {
+            (
+                fret_core::TextBlobId::default(),
+                fret_core::TextMetrics {
+                    size: fret_core::Size::new(Px(0.0), Px(0.0)),
+                    baseline: Px(0.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: fret_core::TextBlobId) {}
+    }
+
+    impl fret_core::PathService for FakeServices {
+        fn prepare(
+            &mut self,
+            _commands: &[fret_core::PathCommand],
+            _style: fret_core::PathStyle,
+            _constraints: fret_core::PathConstraints,
+        ) -> (fret_core::PathId, fret_core::PathMetrics) {
+            (
+                fret_core::PathId::default(),
+                fret_core::PathMetrics::default(),
+            )
+        }
+
+        fn release(&mut self, _path: fret_core::PathId) {}
+    }
+
+    impl fret_core::SvgService for FakeServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> fret_core::SvgId {
+            fret_core::SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
+            true
+        }
+    }
+
+    impl fret_core::MaterialService for FakeServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Ok(fret_core::MaterialId::default())
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+            true
+        }
+    }
+
+    #[test]
+    fn breadcrumb_item_href_attaches_link_value_semantics() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices::default();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(640.0), Px(120.0)),
+        );
+
+        let href: Arc<str> = Arc::from("https://example.com");
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-breadcrumb-href-semantics",
+            |cx| {
+                vec![
+                    Breadcrumb::new()
+                        .items([
+                            BreadcrumbItem::new("Home")
+                                .href(href.clone())
+                                .on_activate(Arc::new(|_host, _acx, _reason| {})),
+                            BreadcrumbItem::new("Breadcrumb"),
+                        ])
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui
+            .semantics_snapshot()
+            .cloned()
+            .expect("expected semantics snapshot");
+        let node = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::Link && n.label.as_deref() == Some("Home"))
+            .expect("expected Home breadcrumb link semantics node");
+        assert_eq!(node.value.as_deref(), Some("https://example.com"));
     }
 }

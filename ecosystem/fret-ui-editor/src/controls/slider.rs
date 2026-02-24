@@ -567,6 +567,7 @@ where
                                         ..Default::default()
                                     },
                                     flex: FlexItemStyle {
+                                        order: 0,
                                         grow: 1.0,
                                         shrink: 1.0,
                                         basis: Length::Px(Px(0.0)),
@@ -593,6 +594,7 @@ where
                                                         ..Default::default()
                                                     },
                                                     flex: FlexItemStyle {
+                                                        order: 0,
                                                         grow,
                                                         shrink: 1.0,
                                                         basis: Length::Px(Px(0.0)),
@@ -634,6 +636,7 @@ where
                                                 ..Default::default()
                                             },
                                             flex: FlexItemStyle {
+                                                order: 0,
                                                 grow: 0.0,
                                                 shrink: 0.0,
                                                 basis: Length::Px(thumb_d),
@@ -686,6 +689,7 @@ where
                                         ..Default::default()
                                     },
                                     flex: FlexItemStyle {
+                                        order: 0,
                                         grow: 0.0,
                                         shrink: 0.0,
                                         basis: Length::Px(value_width),
@@ -710,6 +714,7 @@ where
                                     ..Default::default()
                                 },
                                 flex: FlexItemStyle {
+                                    order: 0,
                                     grow: 1.0,
                                     shrink: 1.0,
                                     basis: Length::Px(Px(0.0)),

@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use fret_core::window::ColorScheme;
 use fret_core::{Color, Corners, CursorIcon, Edges, FontId, MouseButton, Px};
 use fret_runtime::Model;
 use fret_ui::element::{
@@ -59,6 +60,7 @@ pub struct Textarea {
     a11y_label: Option<Arc<str>>,
     placeholder: Option<Arc<str>>,
     aria_invalid: bool,
+    aria_required: bool,
     disabled: bool,
     min_height: Px,
     resizable: bool,
@@ -93,6 +95,7 @@ impl Textarea {
             a11y_label: None,
             placeholder: None,
             aria_invalid: false,
+            aria_required: false,
             disabled: false,
             min_height: Px(64.0),
             resizable: true,
@@ -115,6 +118,11 @@ impl Textarea {
 
     pub fn aria_invalid(mut self, aria_invalid: bool) -> Self {
         self.aria_invalid = aria_invalid;
+        self
+    }
+
+    pub fn aria_required(mut self, aria_required: bool) -> Self {
+        self.aria_required = aria_required;
         self
     }
 
@@ -163,6 +171,7 @@ impl Textarea {
             self.a11y_label,
             self.placeholder,
             self.aria_invalid,
+            self.aria_required,
             self.disabled,
             self.min_height,
             self.resizable,
@@ -180,6 +189,7 @@ pub fn textarea<H: UiHost>(
     a11y_label: Option<Arc<str>>,
     placeholder: Option<Arc<str>>,
     aria_invalid: bool,
+    aria_required: bool,
     disabled: bool,
     min_height: Px,
     resizable: bool,
@@ -221,7 +231,7 @@ pub fn textarea<H: UiHost>(
         let border_color = theme.color_token("destructive");
         chrome.border_color = border_color;
         if let Some(mut ring) = chrome.focus_ring.take() {
-            let ring_key = if theme.name.contains("/dark") {
+            let ring_key = if theme.color_scheme == Some(ColorScheme::Dark) {
                 "destructive/40"
             } else {
                 "destructive/20"
@@ -241,6 +251,8 @@ pub fn textarea<H: UiHost>(
     props.focusable = !disabled;
     props.a11y_label = a11y_label;
     props.placeholder = placeholder;
+    props.a11y_required = aria_required;
+    props.a11y_invalid = aria_invalid.then_some(fret_core::SemanticsInvalid::True);
     props.chrome = chrome;
     props.text_style = text_style;
     props.min_height = min_height;

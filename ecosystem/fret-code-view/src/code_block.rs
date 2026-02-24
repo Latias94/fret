@@ -172,7 +172,7 @@ pub enum CodeBlockHeaderBackground {
     Secondary,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct CodeBlockHeaderSlots {
     pub show_language: bool,
     pub left: Vec<AnyElement>,
@@ -216,7 +216,7 @@ impl CodeBlockHeaderSlots {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct CodeBlock {
     code: Arc<str>,
     language: Option<Arc<str>>,
@@ -539,7 +539,7 @@ pub fn code_block_with_header_slots<H: UiHost + 'static>(
                             cx,
                             &theme,
                             language,
-                            &header,
+                            header,
                             options.header_divider,
                             options.header_background,
                             if options.show_copy_button
@@ -598,7 +598,7 @@ fn render_code_block_header<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
     language: Option<&str>,
-    header: &CodeBlockHeaderSlots,
+    header: CodeBlockHeaderSlots,
     divider: bool,
     background: CodeBlockHeaderBackground,
     copy: Option<CopyButtonInHeader>,
@@ -657,10 +657,10 @@ fn render_code_block_header<H: UiHost>(
                         ink_overflow: TextInkOverflow::None,
                     }));
                 }
-                left.extend(header.left.iter().cloned());
+                left.extend(header.left);
 
                 let mut right = Vec::new();
-                right.extend(header.right.iter().cloned());
+                right.extend(header.right);
                 if let Some(copy) = copy {
                     let el = render_copy_button(cx, theme, copy.feedback, copy.code);
                     right.push(cx.opacity(if copy.visible { 1.0 } else { 0.0 }, |_cx| vec![el]));

@@ -7,19 +7,19 @@ impl Renderer {
         device: &wgpu::Device,
         format: wgpu::TextureFormat,
     ) {
-        if self.color_matrix_pipeline_format == Some(format)
-            && self.color_matrix_pipeline.is_some()
-            && self.color_matrix_masked_pipeline.is_some()
-            && self.color_matrix_bind_group_layout.is_some()
-            && self.color_matrix_mask_pipeline.is_some()
-            && self.color_matrix_mask_bind_group_layout.is_some()
+        if self.pipelines.color_matrix_pipeline_format == Some(format)
+            && self.pipelines.color_matrix_pipeline.is_some()
+            && self.pipelines.color_matrix_masked_pipeline.is_some()
+            && self.pipelines.color_matrix_bind_group_layout.is_some()
+            && self.pipelines.color_matrix_mask_pipeline.is_some()
+            && self.pipelines.color_matrix_mask_bind_group_layout.is_some()
         {
             return;
         }
 
         let create_span = tracing::enabled!(tracing::Level::TRACE)
             .then(|| {
-                let reason = if self.color_matrix_pipeline_format != Some(format) {
+                let reason = if self.pipelines.color_matrix_pipeline_format != Some(format) {
                     "format_changed"
                 } else {
                     "missing"
@@ -244,11 +244,48 @@ impl Renderer {
             cache: None,
         });
 
-        self.color_matrix_pipeline_format = Some(format);
-        self.color_matrix_bind_group_layout = Some(bind_group_layout);
-        self.color_matrix_mask_bind_group_layout = Some(mask_bind_group_layout);
-        self.color_matrix_pipeline = Some(pipeline);
-        self.color_matrix_masked_pipeline = Some(masked_pipeline);
-        self.color_matrix_mask_pipeline = Some(mask_pipeline);
+        self.pipelines.color_matrix_pipeline_format = Some(format);
+        self.pipelines.color_matrix_bind_group_layout = Some(bind_group_layout);
+        self.pipelines.color_matrix_mask_bind_group_layout = Some(mask_bind_group_layout);
+        self.pipelines.color_matrix_pipeline = Some(pipeline);
+        self.pipelines.color_matrix_masked_pipeline = Some(masked_pipeline);
+        self.pipelines.color_matrix_mask_pipeline = Some(mask_pipeline);
+    }
+
+    pub(in crate::renderer) fn color_matrix_bind_group_layout_ref(&self) -> &wgpu::BindGroupLayout {
+        self.pipelines
+            .color_matrix_bind_group_layout
+            .as_ref()
+            .expect("color-matrix bind group layout must exist")
+    }
+
+    pub(in crate::renderer) fn color_matrix_mask_bind_group_layout_ref(
+        &self,
+    ) -> &wgpu::BindGroupLayout {
+        self.pipelines
+            .color_matrix_mask_bind_group_layout
+            .as_ref()
+            .expect("color-matrix mask bind group layout must exist")
+    }
+
+    pub(in crate::renderer) fn color_matrix_pipeline_ref(&self) -> &wgpu::RenderPipeline {
+        self.pipelines
+            .color_matrix_pipeline
+            .as_ref()
+            .expect("color-matrix pipeline must exist")
+    }
+
+    pub(in crate::renderer) fn color_matrix_masked_pipeline_ref(&self) -> &wgpu::RenderPipeline {
+        self.pipelines
+            .color_matrix_masked_pipeline
+            .as_ref()
+            .expect("color-matrix masked pipeline must exist")
+    }
+
+    pub(in crate::renderer) fn color_matrix_mask_pipeline_ref(&self) -> &wgpu::RenderPipeline {
+        self.pipelines
+            .color_matrix_mask_pipeline
+            .as_ref()
+            .expect("color-matrix mask pipeline must exist")
     }
 }

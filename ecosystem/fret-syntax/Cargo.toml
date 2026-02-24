@@ -83,6 +83,10 @@ lang-zig = ["dep:tree-sitter-zig"]
 
 [dependencies]
 thiserror.workspace = true
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+# Tree-sitter currently requires a C toolchain. We disable it on wasm targets to avoid requiring
+# a WebAssembly-capable clang backend.
 tree-sitter.workspace = true
 tree-sitter-highlight.workspace = true
 

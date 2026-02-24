@@ -42,7 +42,7 @@ fn no_shrink_layout() -> LayoutStyle {
     layout
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct WorkspaceFrame {
     top: Option<AnyElement>,
     left: Option<AnyElement>,
@@ -159,7 +159,7 @@ impl WorkspaceFrame {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct WorkspaceTopBar {
     height: Px,
     padding: Edges,
@@ -279,7 +279,7 @@ impl WorkspaceTopBar {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct WorkspaceStatusBar {
     height: Px,
     padding: Edges,

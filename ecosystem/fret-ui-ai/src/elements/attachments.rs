@@ -228,7 +228,7 @@ fn media_category_icon(category: AttachmentMediaCategory) -> IconId {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Attachments {
     variant: AttachmentVariant,
     children: Vec<AnyElement>,
@@ -894,12 +894,13 @@ impl AttachmentRemove {
 
         let id = self.id.clone();
         let mut btn = Button::new("")
+            .a11y_label("Remove attachment")
             .variant(ButtonVariant::Ghost)
             .size(match self.variant {
                 AttachmentVariant::List => ButtonSize::Icon,
                 AttachmentVariant::Grid | AttachmentVariant::Inline => ButtonSize::IconSm,
             })
-            .children([decl_icon::icon(cx, IconId::new("lucide.x"))])
+            .icon(IconId::new("lucide.x"))
             .on_activate(Arc::new(move |host, action_cx, _reason| {
                 on_remove(host, action_cx, id.clone());
                 host.notify(action_cx);
@@ -920,7 +921,7 @@ impl AttachmentRemove {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct AttachmentEmpty {
     children: Vec<AnyElement>,
     test_id: Option<Arc<str>>,

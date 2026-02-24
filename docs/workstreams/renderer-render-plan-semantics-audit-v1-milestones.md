@@ -22,6 +22,38 @@ Completion criteria:
 - At least 3 targeted tests cover the most failure-prone semantics (lifetime/load/scissor mapping).
 - Tests are stable and do not require large golden assets.
 
+Progress record (Pass-by-pass semantics checklist + scale/scissor mapping notes):
+
+- Date: 2026-02-23
+- Status: Landed (docs)
+- Evidence anchors:
+  - `docs/workstreams/renderer-render-plan-semantics-audit-v1.md` (Pass semantics summary, Scale/scissor mapping notes)
+  - `docs/workstreams/renderer-render-plan-semantics-audit-v1-todo.md` (audit item checked)
+
+Progress record (Scissored in-place effect preservation tests):
+
+- Date: 2026-02-23
+- Status: Landed (unit tests)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan/tests.rs` (`scissored_*` tests)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` (in-place patterns + `LoadOp::Load`)
+
+Progress record (PathMsaaBatch init pass shape test):
+
+- Date: 2026-02-23
+- Status: Landed (unit test)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan/tests.rs` (`compile_for_scene_path_msaa_batch_initializes_output_via_empty_clear_pass`)
+  - `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs` (`flush_scene_range` before `PathMsaaBatch`)
+
+Progress record (First Output write is Clear test):
+
+- Date: 2026-02-23
+- Status: Landed (unit test)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan/tests.rs` (`assert_first_output_write_is_clear`)
+  - `docs/workstreams/renderer-render-plan-semantics-audit-v1.md` (Target lifetimes: determinism note)
+
 ## M3 — Plan diagnostics for refactors
 
 Completion criteria:

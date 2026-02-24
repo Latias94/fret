@@ -17,7 +17,7 @@ pub(in super::super) fn encode_mask_image(
     if opacity <= 0.0 || group_opacity <= 0.0 || color.a <= 0.0 {
         return;
     }
-    if renderer.images.get(image).is_none() {
+    if renderer.gpu_resources.image_view(image).is_none() {
         return;
     }
     let (x, y, w, h) = rect_to_pixels(rect, state.scale_factor);

@@ -24,14 +24,14 @@ use crate::test_id::attach_test_id;
 ///
 /// Upstream inspiration (MIT):
 /// - `repo-ref/kibo/packages/relative-time`
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct RelativeTime {
     kind: RelativeTimeKind,
     test_id: Option<Arc<str>>,
     layout: LayoutRefinement,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 enum RelativeTimeKind {
     StaticChildren(Vec<AnyElement>),
     Clock(RelativeTimeClock),

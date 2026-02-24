@@ -20,13 +20,17 @@ use crate::declarative::action_hooks::ActionHooksExt as _;
 
 /// A11y metadata for a toggle-like pressable.
 ///
-/// Note: Radix uses `aria-pressed` to represent the "on" state. Fret currently maps this to the
-/// `selected` outcome on a button-like semantics role.
+/// Note: Radix uses `aria-pressed` to represent the "on" state. Fret models this using a
+/// portable tri-state pressed semantics surface (`pressed_state`) on a button-like role.
 pub fn toggle_a11y(label: Option<Arc<str>>, pressed: bool) -> PressableA11y {
     PressableA11y {
         role: Some(SemanticsRole::Button),
         label,
-        selected: pressed,
+        pressed_state: Some(if pressed {
+            fret_core::SemanticsPressedState::True
+        } else {
+            fret_core::SemanticsPressedState::False
+        }),
         ..Default::default()
     }
 }

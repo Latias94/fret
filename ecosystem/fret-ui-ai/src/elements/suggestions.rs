@@ -15,7 +15,6 @@ use fret_ui_shadcn::{Button, ButtonSize, ButtonVariant};
 
 pub type OnSuggestionClick = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, Arc<str>) + 'static>;
 
-#[derive(Clone)]
 /// Horizontally scrollable suggestions row aligned with AI Elements `suggestion.tsx`.
 pub struct Suggestions {
     children: Vec<AnyElement>,

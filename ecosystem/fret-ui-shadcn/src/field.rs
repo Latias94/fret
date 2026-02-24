@@ -234,13 +234,10 @@ pub enum FieldOrientation {
     Vertical,
     Horizontal,
     /// Matches the upstream `orientation="responsive"` variant (container-query driven in web).
-    ///
-    /// In Fret we currently approximate the `@md/field-group` container query with a viewport-width
-    /// breakpoint at `768px` (`md`).
     Responsive,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct FieldSet {
     children: Vec<AnyElement>,
     layout: LayoutRefinement,
@@ -498,7 +495,7 @@ pub enum FieldGroupSlot {
     CheckboxGroup,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct FieldGroup {
     children: Vec<AnyElement>,
     slot: FieldGroupSlot,
@@ -585,7 +582,7 @@ where
     FieldGroup::new(f(cx)).into_element(cx)
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct FieldContent {
     children: Vec<AnyElement>,
 }
@@ -673,7 +670,7 @@ impl FieldTitle {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct FieldLabel {
     text: Arc<str>,
     layout: LayoutRefinement,
@@ -764,7 +761,7 @@ impl FieldLabel {
         };
 
         let field_state = field_state_prim::use_field_state_in_scope(cx, None);
-        let fg = if let Some(fg) = self.text_color.clone() {
+        let fg = if let Some(fg) = self.text_color {
             fg
         } else if field_state.invalid {
             ColorRef::Color(Theme::global(&*cx.app).color_token("destructive"))
@@ -772,8 +769,8 @@ impl FieldLabel {
             ColorRef::Color(default_fg)
         };
 
-        let wrap_children = self.children.clone();
-        let Some(for_control) = self.for_control.clone() else {
+        let wrap_children = self.children;
+        let Some(for_control) = self.for_control else {
             let align = match direction_prim::use_direction_in_scope(cx, None) {
                 direction_prim::LayoutDirection::Rtl => TextAlign::End,
                 direction_prim::LayoutDirection::Ltr => TextAlign::Start,
@@ -815,7 +812,7 @@ impl FieldLabel {
         };
 
         let theme = Theme::global(&*cx.app).clone();
-        let pressable_layout_default = if self.children.is_some() {
+        let pressable_layout_default = if wrap_children.is_some() {
             LayoutRefinement::default().w_full().min_w_0()
         } else {
             LayoutRefinement::default().flex_1().min_w_0()
@@ -827,7 +824,6 @@ impl FieldLabel {
         let fg = fg.clone();
         let test_id = self.test_id.clone();
         let render_text = self.render_text;
-        let wrap_children = wrap_children.clone();
 
         let el = cx.pressable_with_id_props(move |cx, _st, id| {
             let _ = cx.app.models_mut().update(&control_registry, |reg| {
@@ -926,7 +922,7 @@ impl FieldLabel {
                 ..Default::default()
             };
 
-            let children: Vec<AnyElement> = if let Some(children) = wrap_children.clone() {
+            let children: Vec<AnyElement> = if let Some(children) = wrap_children {
                 let theme = Theme::global(&*cx.app);
                 let border = theme.color_token("border");
                 let wrapper = decl_style::container_props(
@@ -1185,7 +1181,7 @@ impl Default for FieldSeparator {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Field {
     orientation: FieldOrientation,
     children: Vec<AnyElement>,
@@ -1333,10 +1329,8 @@ impl Field {
                                 move |_cx| children,
                             ),
                             FieldOrientation::Responsive => {
-                                let children_row = children.clone();
-                                let children_col = children;
                                 if md_breakpoint {
-                                    let children_row = children_row
+                                    let children_row = children
                                         .into_iter()
                                         .map(responsive_md_width_auto)
                                         .collect::<Vec<_>>();
@@ -1359,8 +1353,8 @@ impl Field {
                                         },
                                         move |cx| {
                                             // Upstream `FieldDescription` includes `nth-last-2:-mt-1`.
-                                            let len = children_col.len();
-                                            children_col
+                                            let len = children.len();
+                                            children
                                                 .into_iter()
                                                 .enumerate()
                                                 .map(|(idx, child)| {

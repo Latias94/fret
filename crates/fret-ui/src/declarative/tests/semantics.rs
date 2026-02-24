@@ -235,6 +235,224 @@ fn declarative_text_input_region_answers_platform_text_input_queries_in_utf16() 
 }
 
 #[test]
+fn pressable_slider_exposes_stepper_actions_when_numeric_metadata_is_present() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(80.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "a11y-pressable-slider-actions",
+        |cx| {
+            let mut props = crate::element::PressableProps::default();
+            props.enabled = true;
+            props.focusable = true;
+            props.layout.size.width = Length::Px(Px(200.0));
+            props.layout.size.height = Length::Px(Px(24.0));
+            props.a11y = crate::element::PressableA11y {
+                role: Some(fret_core::SemanticsRole::Slider),
+                label: Some(Arc::from("Volume")),
+                ..Default::default()
+            };
+
+            let a11y = crate::element::SemanticsDecoration::default()
+                .orientation(fret_core::SemanticsOrientation::Horizontal)
+                .numeric_value(50.0)
+                .numeric_range(0.0, 100.0)
+                .numeric_step(1.0)
+                .numeric_jump(10.0);
+
+            vec![
+                cx.pressable(props, |_cx, _state| Vec::new())
+                    .attach_semantics(a11y),
+            ]
+        },
+    );
+    ui.set_root(root);
+
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    let node = snap
+        .nodes
+        .iter()
+        .find(|n| {
+            n.role == fret_core::SemanticsRole::Slider && n.label.as_deref() == Some("Volume")
+        })
+        .expect("expected a Slider semantics node");
+
+    assert!(node.actions.increment, "expected Increment to be exposed");
+    assert!(node.actions.decrement, "expected Decrement to be exposed");
+    assert!(
+        node.actions.set_value,
+        "expected SetValue to be gated on for slider with numeric metadata"
+    );
+    assert!(
+        !node.actions.invoke,
+        "expected Click to be suppressed for slider"
+    );
+
+    assert_eq!(node.extra.numeric.value, Some(50.0));
+    assert_eq!(node.extra.numeric.min, Some(0.0));
+    assert_eq!(node.extra.numeric.max, Some(100.0));
+    assert_eq!(node.extra.numeric.step, Some(1.0));
+    assert_eq!(node.extra.numeric.jump, Some(10.0));
+}
+
+#[test]
+fn pressable_spin_button_exposes_stepper_actions_when_numeric_metadata_is_present() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(80.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "a11y-pressable-spin-button-actions",
+        |cx| {
+            let mut props = crate::element::PressableProps::default();
+            props.enabled = true;
+            props.focusable = true;
+            props.layout.size.width = Length::Px(Px(200.0));
+            props.layout.size.height = Length::Px(Px(24.0));
+            props.a11y = crate::element::PressableA11y {
+                role: Some(fret_core::SemanticsRole::SpinButton),
+                label: Some(Arc::from("Font size")),
+                ..Default::default()
+            };
+
+            let a11y = crate::element::SemanticsDecoration::default()
+                .numeric_value(12.0)
+                .numeric_range(1.0, 72.0)
+                .numeric_step(1.0)
+                .numeric_jump(10.0);
+
+            vec![
+                cx.pressable(props, |_cx, _state| Vec::new())
+                    .attach_semantics(a11y),
+            ]
+        },
+    );
+    ui.set_root(root);
+
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    let node = snap
+        .nodes
+        .iter()
+        .find(|n| {
+            n.role == fret_core::SemanticsRole::SpinButton
+                && n.label.as_deref() == Some("Font size")
+        })
+        .expect("expected a SpinButton semantics node");
+
+    assert!(node.actions.increment, "expected Increment to be exposed");
+    assert!(node.actions.decrement, "expected Decrement to be exposed");
+    assert!(
+        node.actions.set_value,
+        "expected SetValue to be gated on for spin button with numeric metadata"
+    );
+    assert!(
+        !node.actions.invoke,
+        "expected Click to be suppressed for spin button"
+    );
+
+    assert_eq!(node.extra.numeric.value, Some(12.0));
+    assert_eq!(node.extra.numeric.min, Some(1.0));
+    assert_eq!(node.extra.numeric.max, Some(72.0));
+    assert_eq!(node.extra.numeric.step, Some(1.0));
+    assert_eq!(node.extra.numeric.jump, Some(10.0));
+}
+
+#[test]
+fn declarative_scrollbar_emits_role_and_scroll_metadata() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(160.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let handle = crate::scroll::ScrollHandle::default();
+    handle.set_viewport_size(fret_core::Size::new(Px(100.0), Px(100.0)));
+    handle.set_content_size(fret_core::Size::new(Px(100.0), Px(220.0)));
+    handle.set_offset(fret_core::Point::new(Px(0.0), Px(40.0)));
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "a11y-scrollbar",
+        |cx| {
+            vec![cx.scrollbar(crate::element::ScrollbarProps {
+                layout: crate::element::LayoutStyle {
+                    size: crate::element::SizeStyle {
+                        width: Length::Px(Px(12.0)),
+                        height: Length::Px(Px(120.0)),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                axis: crate::element::ScrollbarAxis::Vertical,
+                scroll_target: None,
+                scroll_handle: handle.clone(),
+                style: crate::element::ScrollbarStyle::default(),
+            })]
+        },
+    );
+    ui.set_root(root);
+
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    let node = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == fret_core::SemanticsRole::ScrollBar)
+        .expect("expected a ScrollBar semantics node");
+
+    assert_eq!(
+        node.extra.orientation,
+        Some(fret_core::SemanticsOrientation::Vertical)
+    );
+    assert!(node.actions.scroll_by, "expected scroll-by action surface");
+    assert_eq!(node.extra.scroll.y, Some(40.0));
+    assert_eq!(node.extra.scroll.y_min, Some(0.0));
+    assert_eq!(node.extra.scroll.y_max, Some(120.0));
+}
+
+#[test]
 fn declarative_text_input_region_utf16_queries_are_deterministic_for_mixed_scripts_and_surrogates()
 {
     let mut app = TestHost::new();
@@ -1124,6 +1342,76 @@ fn declarative_pressable_focusable_controls_focus_traversal() {
     let focusable = ui
         .first_focusable_descendant_including_declarative(&mut app, window, root)
         .expect("focusable pressable");
+    assert_eq!(focusable, second_node);
+    assert_ne!(focusable, first_node);
+}
+
+#[test]
+fn declarative_semantics_focusable_controls_focus_traversal() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let mut first_id: Option<crate::GlobalElementId> = None;
+    let mut second_id: Option<crate::GlobalElementId> = None;
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "a11y-semantics-focusable",
+        |cx| {
+            let mut props = crate::element::SemanticsProps::default();
+            props.role = fret_core::SemanticsRole::List;
+            props.layout.size.width = Length::Px(Px(80.0));
+            props.layout.size.height = Length::Px(Px(32.0));
+            props.focusable = false;
+
+            let first = cx.semantics_with_id(props, |cx, id| {
+                first_id = Some(id);
+                vec![cx.text("first")]
+            });
+
+            let mut props2 = crate::element::SemanticsProps::default();
+            props2.role = fret_core::SemanticsRole::List;
+            props2.layout.size.width = Length::Px(Px(80.0));
+            props2.layout.size.height = Length::Px(Px(32.0));
+            props2.focusable = true;
+
+            let second = cx.semantics_with_id(props2, |cx, id| {
+                second_id = Some(id);
+                vec![cx.text("second")]
+            });
+
+            vec![cx.row(crate::element::RowProps::default(), move |_cx| {
+                vec![first, second]
+            })]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let first_id = first_id.expect("first element id");
+    let second_id = second_id.expect("second element id");
+
+    let first_node =
+        crate::elements::node_for_element(&mut app, window, first_id).expect("first node");
+    let second_node =
+        crate::elements::node_for_element(&mut app, window, second_id).expect("second node");
+
+    let focusable = ui
+        .first_focusable_descendant_including_declarative(&mut app, window, root)
+        .expect("focusable semantics");
     assert_eq!(focusable, second_node);
     assert_ne!(focusable, first_node);
 }

@@ -1,0 +1,21 @@
+[package]
+name = "fret-typography-real-shaping-gates"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+publish = false
+
+[dev-dependencies]
+fret-app = { path = "../../crates/fret-app" }
+fret-core = { path = "../../crates/fret-core" }
+fret-fonts = { path = "../../crates/fret-fonts", features = ["bootstrap-subset", "emoji", "cjk-lite"] }
+fret-render-text = { path = "../../crates/fret-render-text" }
+fret-ui = { path = "../../crates/fret-ui" }
+fret-ui-kit = { path = "../../ecosystem/fret-ui-kit" }
+fret-ui-material3 = { path = "../../ecosystem/fret-ui-material3" }
+

@@ -5,7 +5,7 @@ use super::{
     ThemeTokenRead,
 };
 use crate::Corners4;
-use fret_core::scene::DashPatternV1;
+use fret_core::scene::{DashPatternV1, Paint};
 
 #[derive(Debug, Clone, Default)]
 pub struct PaddingRefinement {
@@ -169,6 +169,7 @@ pub struct ChromeRefinement {
     pub shadow: Option<ShadowPreset>,
     pub border_width: Option<MetricRef>,
     pub background: Option<ColorRef>,
+    pub background_paint: Option<Paint>,
     pub border_color: Option<ColorRef>,
     pub border_dash: Option<DashPatternV1>,
     pub text_color: Option<ColorRef>,
@@ -235,6 +236,11 @@ impl ChromeRefinement {
         }
         if other.background.is_some() {
             self.background = other.background;
+            self.background_paint = None;
+        }
+        if other.background_paint.is_some() {
+            self.background_paint = other.background_paint;
+            self.background = None;
         }
         if other.border_color.is_some() {
             self.border_color = other.border_color;
@@ -499,6 +505,13 @@ impl ChromeRefinement {
 
     pub fn bg(mut self, color: ColorRef) -> Self {
         self.background = Some(color);
+        self.background_paint = None;
+        self
+    }
+
+    pub fn background_paint(mut self, paint: Paint) -> Self {
+        self.background_paint = Some(paint);
+        self.background = None;
         self
     }
 

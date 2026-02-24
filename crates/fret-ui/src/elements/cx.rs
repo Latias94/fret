@@ -26,13 +26,13 @@ use crate::action::{
 use crate::canvas::{CanvasPaintHooks, CanvasPainter, OnCanvasPaint};
 use crate::element::{
     AnyElement, CanvasProps, ColumnProps, CompositeGroupProps, ContainerProps, EffectLayerProps,
-    ElementKind, FlexProps, FocusTraversalGateProps, GridProps, HitTestGateProps, HoverRegionProps,
-    ImageProps, InteractivityGateProps, LayoutQueryRegionProps, LayoutStyle, MaskLayerProps,
-    OpacityProps, PointerRegionProps, PressableProps, PressableState, ResizablePanelGroupProps,
-    RowProps, ScrollProps, ScrollbarProps, SelectableTextProps, SpacerProps, SpinnerProps,
-    StackProps, StyledTextProps, SvgIconProps, TextAreaProps, TextInputProps, TextProps,
-    ViewportSurfaceProps, VirtualListOptions, VirtualListProps, VirtualListState,
-    VisualTransformProps,
+    ElementKind, FlexProps, FocusTraversalGateProps, ForegroundScopeProps, GridProps,
+    HitTestGateProps, HoverRegionProps, ImageProps, InteractivityGateProps, LayoutQueryRegionProps,
+    LayoutStyle, MaskLayerProps, OpacityProps, PointerRegionProps, PressableProps, PressableState,
+    ResizablePanelGroupProps, RowProps, ScrollProps, ScrollbarProps, SelectableTextProps,
+    SpacerProps, SpinnerProps, StackProps, StyledTextProps, SvgIconProps, TextAreaProps,
+    TextInputProps, TextProps, ViewportSurfaceProps, VirtualListOptions, VirtualListProps,
+    VirtualListState, VisualTransformProps,
 };
 use crate::overlay_placement::{AnchoredPanelLayoutTrace, Side};
 use crate::widget::Invalidation;
@@ -1025,6 +1025,75 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         })
     }
 
+    /// Explicit keep-alive cache root for cases where the element producer may be skipped by view caching.
+    ///
+    /// This mirrors the "reuse" side of `view_cache(...)`, but makes the decision explicit:
+    /// - When `keep_alive=true`, the subtree is kept alive even if `f` is not executed.
+    /// - When `keep_alive=false`, `f` is always executed (no implicit reuse).
+    ///
+    /// This is a mechanism-layer escape hatch intended for overlay synthesis and similar systems
+    /// that must preserve subtree liveness when the normal authoring closure does not run.
+    #[track_caller]
+    pub fn view_cache_keep_alive<I>(
+        &mut self,
+        props: crate::element::ViewCacheProps,
+        keep_alive: bool,
+        f: impl FnOnce(&mut Self) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.scope(|cx| {
+            let id = cx.root_id();
+
+            let theme_revision = Theme::global(&*cx.app).revision();
+            let scale_factor = cx
+                .app
+                .global::<WindowMetricsService>()
+                .and_then(|svc| svc.scale_factor(cx.window))
+                .unwrap_or(1.0);
+            let scale_bits = scale_factor.to_bits();
+
+            if keep_alive {
+                cx.window_state.mark_view_cache_reuse_root(id);
+                cx.window_state.touch_view_cache_state_keys_if_recorded(id);
+                cx.window_state
+                    .touch_observed_models_for_element_if_recorded(id);
+                cx.window_state
+                    .touch_observed_globals_for_element_if_recorded(id);
+                cx.window_state
+                    .touch_observed_environment_for_element_if_recorded(id);
+                cx.window_state
+                    .touch_observed_layout_queries_for_element_if_recorded(id);
+
+                // Preserve the previously-recorded key (if any); this root is being kept alive
+                // explicitly rather than via normal key-matched reuse.
+                let _ = (theme_revision, scale_bits);
+                return cx.new_any_element(id, ElementKind::ViewCache(props), Vec::new());
+            }
+
+            cx.window_state.begin_view_cache_scope(id);
+            let built = f(cx);
+            let children = cx.collect_children(built);
+            cx.window_state.end_view_cache_scope(id);
+
+            let deps_key_next = (
+                cx.window_state.environment_deps_fingerprint_next(id),
+                cx.window_state.layout_query_deps_fingerprint_next(id),
+            );
+            let key = stable_hash(&(
+                theme_revision,
+                scale_bits,
+                props.cache_key,
+                deps_key_next.0,
+                deps_key_next.1,
+            ));
+            cx.window_state.set_view_cache_key(id, key);
+
+            cx.new_any_element(id, ElementKind::ViewCache(props), children)
+        })
+    }
+
     #[track_caller]
     pub fn focus_scope_with_id<I>(
         &mut self,
@@ -1122,6 +1191,41 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             let built = f(cx);
             let children = cx.collect_children(built);
             cx.new_any_element(id, ElementKind::Opacity(props), children)
+        })
+    }
+
+    #[track_caller]
+    pub fn foreground_scope<I>(
+        &mut self,
+        foreground: fret_core::Color,
+        f: impl FnOnce(&mut Self) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.foreground_scope_props(
+            ForegroundScopeProps {
+                foreground: Some(foreground),
+                ..Default::default()
+            },
+            f,
+        )
+    }
+
+    #[track_caller]
+    pub fn foreground_scope_props<I>(
+        &mut self,
+        props: ForegroundScopeProps,
+        f: impl FnOnce(&mut Self) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let built = f(cx);
+            let children = cx.collect_children(built);
+            cx.new_any_element(id, ElementKind::ForegroundScope(props), children)
         })
     }
 
@@ -2319,6 +2423,12 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         });
     }
 
+    pub fn key_on_key_down_focused_for(&mut self, element: GlobalElementId, handler: OnKeyDown) {
+        self.with_state_for(element, KeyActionHooks::default, |hooks| {
+            hooks.on_key_down_focused = Some(handler);
+        });
+    }
+
     pub fn key_add_on_key_down_for(&mut self, element: GlobalElementId, handler: OnKeyDown) {
         self.with_state_for(element, KeyActionHooks::default, |hooks| {
             hooks.on_key_down = match hooks.on_key_down.clone() {
@@ -2350,6 +2460,12 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     pub fn key_clear_on_key_down_for(&mut self, element: GlobalElementId) {
         self.with_state_for(element, KeyActionHooks::default, |hooks| {
             hooks.on_key_down = None;
+        });
+    }
+
+    pub fn key_clear_on_key_down_focused_for(&mut self, element: GlobalElementId) {
+        self.with_state_for(element, KeyActionHooks::default, |hooks| {
+            hooks.on_key_down_focused = None;
         });
     }
 

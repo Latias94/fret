@@ -78,7 +78,7 @@ fn apply_table_cell_text_defaults(mut child: AnyElement) -> AnyElement {
 /// Upstream wraps `<table>` in a horizontally scrollable container. Fret does not support
 /// horizontal scrolling in the core Scroll primitive yet; for now, `Table` is a layout + styling
 /// facade. Wrap it in a `ScrollArea` if you need clipping/scroll behavior.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Table {
     children: Vec<AnyElement>,
     chrome: ChromeRefinement,
@@ -124,7 +124,7 @@ impl Table {
 }
 
 /// shadcn/ui `TableHeader` (`thead`).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct TableHeader {
     children: Vec<AnyElement>,
 }
@@ -154,7 +154,7 @@ impl TableHeader {
 }
 
 /// shadcn/ui `TableBody` (`tbody`).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct TableBody {
     children: Vec<AnyElement>,
 }
@@ -184,7 +184,7 @@ impl TableBody {
 }
 
 /// shadcn/ui `TableFooter` (`tfoot`).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct TableFooter {
     children: Vec<AnyElement>,
 }
@@ -228,7 +228,6 @@ impl TableFooter {
 /// shadcn/ui `TableRow` (`tr`).
 ///
 /// This is implemented as a `Pressable` wrapper for hover/selected background parity.
-#[derive(Clone)]
 pub struct TableRow {
     cols: u16,
     children: Vec<AnyElement>,
@@ -355,7 +354,6 @@ impl TableRow {
                 (props, grid_layout)
             };
 
-            let row_children = children.clone();
             vec![cx.container(props, move |cx| {
                 let grid = GridProps {
                     cols,
@@ -367,8 +365,8 @@ impl TableRow {
                     ..Default::default()
                 };
 
-                let cells = assign_grid_column_starts(row_children.clone());
-                vec![cx.grid(grid, move |_cx| cells.clone())]
+                let cells = assign_grid_column_starts(children);
+                vec![cx.grid(grid, move |_cx| cells)]
             })]
         })
     }
@@ -378,7 +376,7 @@ fn assign_grid_column_starts<I>(cells: I) -> Elements
 where
     I: IntoIterator<Item = AnyElement>,
 {
-    let mut cells: Vec<AnyElement> = cells.into_iter().collect();
+    let cells: Vec<AnyElement> = cells.into_iter().collect();
 
     fn grid_span(cell: &AnyElement) -> u16 {
         match &cell.kind {
@@ -410,14 +408,15 @@ where
     }
 
     let mut col: i16 = 1;
-    for cell in &mut cells {
-        let span = grid_span(cell);
+    let mut out: Vec<AnyElement> = Vec::with_capacity(cells.len());
+    for cell in cells {
+        let span = grid_span(&cell);
         let start = col;
-        *cell = set_grid_start(cell.clone(), start);
+        out.push(set_grid_start(cell, start));
         col = col.saturating_add(span as i16);
     }
 
-    cells.into()
+    out.into()
 }
 
 /// shadcn/ui `TableHead` (`th`).
@@ -503,7 +502,7 @@ impl TableHead {
 }
 
 /// shadcn/ui `TableCell` (`td`).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct TableCell {
     child: AnyElement,
     col_span: Option<u16>,
@@ -570,7 +569,7 @@ impl TableCell {
                     align: CrossAlign::Center,
                     wrap: false,
                 },
-                move |cx| vec![cx.container(wrapper_props.clone(), move |_cx| vec![child.clone()])],
+                move |cx| vec![cx.container(wrapper_props, move |_cx| vec![child])],
             )]
         })
     }

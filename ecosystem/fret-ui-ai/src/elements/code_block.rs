@@ -21,7 +21,6 @@ use fret_ui_kit::{ColorRef, LayoutRefinement};
 /// This is a policy/composition layer:
 /// - apps own effects (except for local clipboard copy),
 /// - the component exposes stable selectors for diag automation.
-#[derive(Clone)]
 pub struct CodeBlock {
     code: Arc<str>,
     language: Option<Arc<str>>,

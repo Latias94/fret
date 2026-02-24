@@ -28,6 +28,4 @@ time.workspace = true
 
 [dev-dependencies]
 fret-app = { path = "../../crates/fret-app" }
-fret-fonts = { path = "../../crates/fret-fonts", features = ["emoji"] }
-fret-render-text = { path = "../../crates/fret-render-text" }
 serde_json.workspace = true

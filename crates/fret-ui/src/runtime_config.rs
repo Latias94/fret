@@ -47,6 +47,8 @@ pub(crate) struct UiRuntimeEnvConfig {
 
     pub(crate) validate_semantics: bool,
     pub(crate) validate_semantics_panic: bool,
+    pub(crate) validate_element_tree_unique_ids: bool,
+    pub(crate) validate_element_tree_unique_ids_panic: bool,
 
     pub(crate) layout_all_profile: bool,
     pub(crate) layout_profile: bool,
@@ -163,6 +165,9 @@ impl UiRuntimeEnvConfig {
 
         let validate_semantics = env_present("FRET_VALIDATE_SEMANTICS");
         let validate_semantics_panic = env_present("FRET_VALIDATE_SEMANTICS_PANIC");
+        let validate_element_tree_unique_ids = env_present("FRET_VALIDATE_ELEMENT_TREE_UNIQUE_IDS");
+        let validate_element_tree_unique_ids_panic =
+            env_present("FRET_VALIDATE_ELEMENT_TREE_UNIQUE_IDS_PANIC");
 
         let layout_all_profile = env_enabled("FRET_LAYOUT_ALL_PROFILE");
         let layout_profile = env_enabled("FRET_LAYOUT_PROFILE");
@@ -297,6 +302,8 @@ impl UiRuntimeEnvConfig {
             paint_cache_allow_hit_test_only,
             validate_semantics,
             validate_semantics_panic,
+            validate_element_tree_unique_ids,
+            validate_element_tree_unique_ids_panic,
             layout_all_profile,
             layout_profile,
             layout_engine_sweep_policy,

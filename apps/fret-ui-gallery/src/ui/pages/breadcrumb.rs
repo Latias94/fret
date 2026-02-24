@@ -71,7 +71,10 @@ pub(super) fn preview_breadcrumb(
                         |cx| {
                             vec![
                                 shadcn::breadcrumb::primitives::BreadcrumbLink::new("Home")
-                                    .into_element(cx),
+                                    .href("/home")
+                                    .on_click(CMD_APP_OPEN)
+                                    .into_element(cx)
+                                    .test_id("ui-gallery-breadcrumb-dropdown-home-link"),
                             ]
                         },
                     );
@@ -184,7 +187,11 @@ pub(super) fn preview_breadcrumb(
 
     let link_component = shadcn::Breadcrumb::new()
         .items([
-            shadcn::BreadcrumbItem::new("Home (router link)")
+            shadcn::BreadcrumbItem::new("Home")
+                .href("https://example.com")
+                // Keep this example deterministic under automation by default.
+                // Remove to allow `Effect::OpenUrl` fallback.
+                .on_activate(Arc::new(|_host, _acx, _reason| {}))
                 .truncate(true)
                 .refine_layout(trunc_layout.clone()),
             shadcn::BreadcrumbItem::new("Components"),
@@ -306,7 +313,7 @@ pub(super) fn preview_breadcrumb(
         [
             "Prefer short, task-oriented labels and keep only the current page as non-clickable text.",
             "Use separators and collapse strategy (`BreadcrumbItem::ellipsis`) to keep paths readable in narrow sidebars.",
-            "Current dropdown and router-link samples are visual approximations; full `asChild` composition can be added in a follow-up primitive demo.",
+            "Dropdown and router-link samples use typed pressables/links (ADR 0115 avoids general Slot/`asChild` prop merging).",
             "Validate RTL with long labels to ensure truncation and separator spacing remain stable.",
         ],
     );
@@ -403,13 +410,15 @@ shadcn::breadcrumb::primitives::Breadcrumb::new().into_element(cx, |cx| {
                     "rust",
                     r#"let trunc = LayoutRefinement::default().max_w(Px(112.0));
 
-shadcn::Breadcrumb::new().items([
-    shadcn::BreadcrumbItem::new("Home (router link)")
+ shadcn::Breadcrumb::new().items([
+    shadcn::BreadcrumbItem::new("Home")
+        .href("https://example.com")
+        .on_activate(Arc::new(|_host, _acx, _reason| {}))
         .truncate(true)
         .refine_layout(trunc),
     shadcn::BreadcrumbItem::new("Components"),
     shadcn::BreadcrumbItem::new("Breadcrumb"),
-]);"#,
+ ]);"#,
                 ),
             DocSection::new("RTL", rtl)
                 .title_test_id("ui-gallery-breadcrumb-section-title-rtl")

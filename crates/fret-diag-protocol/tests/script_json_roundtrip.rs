@@ -52,6 +52,25 @@ fn script_v1_roundtrip_active_item_is_predicate() {
 }
 
 #[test]
+fn script_v1_roundtrip_active_item_is_none_predicate() {
+    assert_script_v1_roundtrip(
+        r#"{
+  "schema_version": 1,
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "active_item_is_none",
+        "container": { "kind": "test_id", "id": "listbox" }
+      },
+      "timeout_frames": 1
+    }
+  ]
+}"#,
+    );
+}
+
+#[test]
 fn script_v2_roundtrip_command_palette_shortcut_primary() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-command-palette-shortcut-primary.json"

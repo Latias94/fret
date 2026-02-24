@@ -1,6 +1,6 @@
 # Foreground inheritance (`currentColor`) (fearless refactor v1) — TODO
 
-Last updated: 2026-02-23
+Last updated: 2026-02-24
 
 ## Foundation (authoring glue)
 
@@ -20,24 +20,34 @@ Last updated: 2026-02-23
 
 - [x] `shadcn::Button` provides resolved `fg` to subtree.
 - [x] `shadcn::Button` supports deferred icon slots (`leading_icon` / `trailing_icon` / `icon`).
+- [x] Audit icon-only controls that override `children` to render a single SVG icon and migrate to deferred icon slots where possible.
 - [ ] Menu family provides resolved `fg` (and prefers deferred icon slots):
   - [x] `DropdownMenuItem` provides `currentColor` and supports `leading_icon`.
+  - [x] `ContextMenuItem` supports deferred `leading_icon`.
+  - [x] `MenubarItem` supports deferred `leading_icon`.
   - [ ] `SelectItem` (if/when it grows icon slots)
-  - [ ] `CommandItem` provides `currentColor` and supports `leading_icon` (add gates + migrate demos)
-- [ ] Badge provides resolved `fg`.
-- [ ] Tabs triggers / pill-like controls provide resolved `fg`.
+  - [x] `CommandItem` provides `currentColor` and supports `leading_icon` (add gates + migrate demos)
+- [x] Badge provides resolved `fg`.
+- [x] Tabs triggers / pill-like controls provide resolved `fg` (prefer deferred icon slots for trigger icons).
+- [x] ToggleGroup items / pill-like controls provide resolved `fg` (prefer deferred icon slots for icon-only groups).
+- [x] Toggle provides resolved `fg` (prefer deferred icon slots for icons).
+- [x] `InputGroupButton` provides resolved `fg` (and supports deferred icon slots).
 
 ## Text adoption (the big win after icons)
 
-- [ ] Decide the minimal text surface that should inherit `currentColor`:
-  - [ ] `fret-ui-kit::ui::text(...)` default color?
-  - [ ] `declarative::text` wrappers?
-  - [ ] a separate `currentTextStyle` provider (v2)?
-- [ ] Implement the chosen default (inherit-first, theme fallback second).
-- [ ] Add a focused unit test proving “button sets fg → text inherits fg”.
+- [x] Decide the minimal text surface that should inherit `currentColor`:
+  - [x] `fret-ui-kit::ui::text(...)` default color (via `ui::TextBox` + `ui::RawTextBox`).
+  - [ ] `declarative::text` wrappers? (defer)
+  - [ ] a separate `currentTextStyle` provider (v2)? (defer)
+- [x] Implement the chosen default (inherit-first, theme fallback second).
+- [x] Add a focused unit test proving text inherits `currentColor`.
 
 ## Gallery + docs cleanups
 
+- [x] ButtonGroup gallery page: migrate icon usage to deferred `Button` icon slots (no manual fg threading).
+- [x] Avoid building icons outside `Button`'s `currentColor` scope (use `leading_icon` / `trailing_icon` / `icon`):
+  - [x] Spinner preview: `Learn more` uses `trailing_icon` (arrow-right).
+  - [x] Item docs snippet: icon-only action uses `Button::icon(...)`.
 - [ ] Remove manual `*_fg` threading in gallery pages where inheritance is now sufficient.
 - [ ] Add one “copy/paste ready” snippet per component page where code previously relied on local variables.
 
@@ -45,10 +55,23 @@ Last updated: 2026-02-23
 
 - [x] Add a Button Group diag script capturing Demo preview + Code.
 - [x] Add a Dropdown Menu icons diag script (zinc/light + zinc/dark) to gate leading-icon foreground inheritance.
-- [ ] Add a “primary button + icon” diag script that asserts the icon is visible:
-  - [ ] capture screenshot in zinc/light and zinc/dark presets
+- [x] Add Command docs demo icons screenshot scripts (zinc/light + zinc/dark) to gate `CommandItem::leading_icon` inheritance.
+- [x] Add a “primary button + icon” diag script that asserts the icon is visible:
+  - [x] capture screenshot in zinc/light and zinc/dark presets (`tools/diag-scripts/ui-gallery-button-group-demo-icons-screenshots-zinc-light-dark.json`)
   - [ ] (optional) pixel-change assertion for the icon bounds
-- [ ] Add a “menu item with leading icon + disabled/active” diag script.
+- [x] Add a Tabs icons screenshot script (zinc/light + zinc/dark) to gate trigger icon visibility (`tools/diag-scripts/ui-gallery-tabs-icons-screenshots-zinc-light-dark.json`).
+- [x] Add a Toggle Group demo icons screenshot script (zinc/light + zinc/dark) to gate icon-only item visibility (`tools/diag-scripts/ui-gallery-toggle-group-demo-icons-screenshots-zinc-light-dark.json`).
+- [x] Add a Toggle demo icons screenshot script (zinc/light + zinc/dark) to gate icon + label foreground inheritance (`tools/diag-scripts/ui-gallery-toggle-demo-icons-screenshots-zinc-light-dark.json`).
+- [x] Add a shadcn Select scroll arrows icons screenshot script (zinc/light + zinc/dark) to gate popover-foreground icon contrast (`tools/diag-scripts/ui-gallery-shadcn-select-scroll-arrows-icons-screenshots-zinc-light-dark.json`).
+- [x] Add Spinner extras InputGroupButton icon screenshot scripts (zinc/light + zinc/dark) to gate icon foreground inheritance:
+  - `tools/diag-scripts/ui-gallery-spinner-extras-input-group-button-icon-screenshots-zinc-light.json`
+  - `tools/diag-scripts/ui-gallery-spinner-extras-input-group-button-icon-screenshots-zinc-dark.json`
+- [x] Add a “menu item with leading icon + disabled/active” diag script:
+  - `tools/diag-scripts/ui-gallery-dropdown-menu-checkable-icons-hover-screenshots-zinc-light.json`
+  - `tools/diag-scripts/ui-gallery-dropdown-menu-checkable-icons-hover-screenshots-zinc-dark.json`
+- [x] Add Button loading foreground screenshot scripts (zinc/light + zinc/dark):
+  - `tools/diag-scripts/ui-gallery-button-loading-screenshots-zinc-light.json`
+  - `tools/diag-scripts/ui-gallery-button-loading-screenshots-zinc-dark.json`
 
 ## Cross-cutting checks
 

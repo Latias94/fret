@@ -255,6 +255,7 @@ pub fn tree_view_with_renderer<H: UiHost>(
                         depth: entry.depth,
                         has_children: entry.has_children,
                     };
+                    let a11y_level = u32::try_from(entry.depth.saturating_add(1)).ok();
 
                     let bg = if is_selected { Some(row_active) } else { None };
                     let enabled = !entry.disabled;
@@ -272,6 +273,7 @@ pub fn tree_view_with_renderer<H: UiHost>(
                             a11y: PressableA11y {
                                 role: Some(SemanticsRole::TreeItem),
                                 label: Some(entry.label.clone()),
+                                level: a11y_level,
                                 selected: is_selected,
                                 ..Default::default()
                             },
@@ -456,6 +458,7 @@ fn tree_view_retained_impl<H: UiHost + 'static>(
                         depth: entry.depth,
                         has_children: entry.has_children,
                     };
+                    let a11y_level = u32::try_from(entry.depth.saturating_add(1)).ok();
 
                     let bg = if is_selected { Some(row_active) } else { None };
                     let enabled = !entry.disabled;
@@ -480,6 +483,7 @@ fn tree_view_retained_impl<H: UiHost + 'static>(
                             a11y: PressableA11y {
                                 role: Some(SemanticsRole::TreeItem),
                                 label: Some(entry.label.clone()),
+                                level: a11y_level,
                                 selected: is_selected,
                                 test_id: debug_test_id.clone(),
                                 ..Default::default()

@@ -178,6 +178,9 @@ impl Renderer {
             vertex_bytes: self.perf.vertex_bytes,
             scene_encoding_cache_hits: self.perf.scene_encoding_cache_hits,
             scene_encoding_cache_misses: self.perf.scene_encoding_cache_misses,
+            scene_encoding_cache_last_miss_reasons: self
+                .perf
+                .scene_encoding_cache_last_miss_reasons,
             material_quad_ops: self.perf.material_quad_ops,
             material_sampled_quad_ops: self.perf.material_sampled_quad_ops,
             material_distinct: self.perf.material_distinct,

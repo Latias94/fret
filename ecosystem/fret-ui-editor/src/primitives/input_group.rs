@@ -113,6 +113,7 @@ pub(crate) fn editor_input_group_inset<H: UiHost>(
                 ..Default::default()
             },
             flex: FlexItemStyle {
+                order: 0,
                 grow: 1.0,
                 shrink: 1.0,
                 basis: Length::Px(Px(0.0)),

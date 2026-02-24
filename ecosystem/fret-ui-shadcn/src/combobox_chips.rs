@@ -685,7 +685,7 @@ fn combobox_chips_with_patch<H: UiHost>(
                                                                 ))
                                                                 .truncate()
                                                                 .into_element(cx),
-                                                            remove.clone(),
+                                                            remove,
                                                         ]
                                                     },
                                                 )]
@@ -823,6 +823,7 @@ fn combobox_chips_with_patch<H: UiHost>(
                         .input_expanded(true)
                         .input_id_out_cell(search_input_id.clone())
                         .a11y_selected_mode(CommandPaletteA11ySelectedMode::Checked)
+                        .list_multiselectable(true)
                         .placeholder(search_placeholder.clone())
                         .disabled(disabled)
                         .empty_text(empty_text.clone())

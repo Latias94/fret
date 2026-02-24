@@ -123,7 +123,7 @@ pub use accordion::{
     AccordionTrigger, accordion_multiple, accordion_multiple_uncontrolled, accordion_single,
     accordion_single_uncontrolled,
 };
-pub use alert::{Alert, AlertDescription, AlertTitle, AlertVariant};
+pub use alert::{Alert, AlertAction, AlertDescription, AlertTitle, AlertVariant};
 pub use alert_dialog::{
     AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogContentSize,
     AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogMedia,
@@ -136,7 +136,9 @@ pub use avatar::{
 pub use badge::{Badge, BadgeRender, BadgeVariant, badge};
 pub use breadcrumb::{Breadcrumb, BreadcrumbItem, BreadcrumbSeparator};
 pub use button::{Button, ButtonRender, ButtonSize, ButtonVariant};
-pub use button_group::{ButtonGroup, ButtonGroupItem, ButtonGroupOrientation};
+pub use button_group::{
+    ButtonGroup, ButtonGroupItem, ButtonGroupOrientation, ButtonGroupSeparator, ButtonGroupText,
+};
 pub use calendar::{Calendar, CalendarCaptionLayout};
 pub use calendar_hijri::CalendarHijri;
 pub use calendar_multiple::CalendarMultiple;
@@ -188,6 +190,7 @@ pub use data_table_controls::{
     DataTableColumnOption, DataTableGlobalFilterInput, DataTableRowState, DataTableViewOptionItem,
     DataTableViewOptions,
 };
+pub use data_table_recipes::DataTableToolbarResponsiveQuery;
 pub use data_table_recipes::{DataTableFacetedFilterOption, DataTablePagination, DataTableToolbar};
 pub use date_picker::DatePicker;
 pub use date_picker_with_presets::DatePickerWithPresets;
@@ -286,7 +289,7 @@ pub use sonner::{
     ToastPromiseUnwrapError, ToastRequest, ToastVariant, Toaster,
 };
 pub use spinner::Spinner;
-pub use switch::{Switch, switch};
+pub use switch::{Switch, SwitchSize, switch};
 pub use table::{
     Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TableRow,
 };

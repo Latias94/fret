@@ -177,6 +177,18 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`UiFrameStatsV1`)
     - `crates/fret-diag/src/stats.rs` (`BundleStatsSnapshotRow`)
     - `crates/fret-diag/src/lib.rs` (`diag perf --json` output)
+- [x] REN-VNEXT-web-001 Keep the WebGPU evidence harness buildable on `wasm32-unknown-unknown`:
+  - Motivation: `REN-VNEXT-webgpu-004` requires exporting `diag perf` bundles from a real browser WebGPU run, so the
+    web runner must compile reliably.
+  - Landed:
+    - Disable Tree-sitter highlighting on wasm targets (avoid requiring a WebAssembly-capable C toolchain).
+    - Fix `diagnostics-ws` path to pass `Option<&UiTree<_>>` (read-only) rather than `Option<&mut UiTree<_>>`.
+  - Evidence:
+    - `ecosystem/fret-syntax/Cargo.toml` (target-gated Tree-sitter deps)
+    - `ecosystem/fret-syntax/src/lib.rs` (`highlight()` returns `Unavailable` on wasm)
+    - `ecosystem/fret-bootstrap/src/ui_diagnostics/script_engine.rs` (`ui.as_deref()`)
+  - Gates (2026-02-23):
+    - `cargo check -p fret-ui-gallery-web --target wasm32-unknown-unknown`
 - [ ] REN-VNEXT-webgpu-004 If perf evidence warrants, add bounded `MaterialTileMode` pipeline variants:
   - Note: “tile mode” here refers to the material-kind selector channel in the quad shader (see `material_eval`),
     not gradient tile modes (which are sanitized/degraded today).
@@ -184,6 +196,9 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - Only proceed if material work is measurably hot in at least one reproducible bundle:
       - `fretboard diag perf` (or a GPU profiler) shows the quad fragment shader is a top hotspot and `material_eval` dominates.
       - Use `top_renderer_material_*` counters from `fretboard diag perf --json` (added in `REN-VNEXT-diag-001`) to keep this quantitative.
+    - Evidence script (native + web export friendly):
+      - Native: `tools/diag-scripts/ui-gallery-magic-patterns-torture-perf-steady.json`
+      - Web (devtools-ws + trunk): `tools/diag-scripts/ui-gallery-magic-patterns-torture-perf-steady-web.json`
     - And the current bounded variants are insufficient (confirmed by one of):
       - `material_sampled_quad_ops` is high relative to `quad_draw_calls` in the headless gate’s `headless_renderer_perf_materials`
         output and wall time regresses in `fret-quad-material-stress` on the same machine.
@@ -193,6 +208,30 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Status note (2026-02-15): `diag perf ui-gallery-steady` shows renderer encode is not a dominant contributor on the native Vulkan path
     (see `docs/workstreams/renderer-vnext-fearless-refactor-v1-milestones.md`). Keep this item pending until a WebGPU-specific bundle/profiler
     shows `material_eval` dominates and the existing bounded variants are insufficient.
+  - Status note (2026-02-23): exported a Web runner bundle for `magic_patterns_torture` and triaged it:
+    - `fretboard diag stats` shows p95 total ≈ 9.9ms with `paint` dominating (≈ 5.4ms) and `layout` next (≈ 4.1ms).
+    - `renderer_encode_scene_us` p95 ≈ 1.3ms (not a top hotspot in this workload).
+    - View-cache reuse was off (`cache_roots=0`, `cache_roots_reused=0`), and paint cache misses were high (`paint_cache_misses≈1150`).
+    Keep `REN-VNEXT-webgpu-004` pending until a bundle/profiler shows quad fragment material eval dominates (or we otherwise eliminate paint-side costs first).
+  - Status note (2026-02-23): web view-cache evidence harness is now reliable and produces reuse on `wasm32`:
+    - View-cache harness (off): `.fret/diag/exports/1771841870144-bundle` (`view_cache_active=false`, `view_cache_roots_total=1`).
+    - View-cache harness (on): `.fret/diag/exports/1771842156088-bundle` (`view_cache_active=true`, `view_cache_roots_total=2`, `view_cache_roots_reused=2` steady-state).
+    - Recommended evidence URL flags for WebGPU perf bundles: enable `fret_ui_gallery_view_cache=1`, `fret_ui_gallery_view_cache_shell=1`,
+      `fret_ui_gallery_view_cache_content=1`, and `fret_ui_gallery_view_cache_continuous=1` so DevTools WS scripts can progress even when the
+      page is otherwise idle.
+  - Status note (2026-02-23): re-exported `magic_patterns_torture` under web view-cache flags (shell-only caching, animation preserved):
+    - Bundle: `.fret/diag/exports/1771842539046-bundle`
+    - `fretboard diag stats`: avg total ≈ 4.9ms, p95 total ≈ 5.2ms; `paint` still dominates but shell reuse is active (`cache_roots=1`, `cache_roots_reused=1`).
+    - Perf baselines:
+      - `docs/workstreams/perf-baselines/ui-gallery-magic-patterns-torture-no-view-cache.web-local.v1.json`
+      - `docs/workstreams/perf-baselines/ui-gallery-magic-patterns-torture-view-cache-shell.web-local.v1.json`
+  - Status note (2026-02-23): exported `code_editor_torture` under the same web harness:
+    - Bundle (view-cache off): `.fret/diag/exports/1771847658648-bundle`
+    - Bundle (view-cache on, shell-only): `.fret/diag/exports/1771847993928-bundle`
+    - `fretboard diag triage` indicates steady-state is still dominated by `paint` and `layout`; shell-only caching does not materially reduce code editor cost.
+    - Perf baselines:
+      - `docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-no-view-cache.web-local.v1.json`
+      - `docs/workstreams/perf-baselines/ui-gallery-code-editor-torture-view-cache-sidebar.web-local.v1.json`
 - [x] REN-VNEXT-clean-001 Remove dead/legacy shader branches once variants cover all active cases.
   - Landed: quad shader skips inner-border SDF work when `FRET_BORDER_PRESENT=0` (compile-time override),
     keeping WebGPU uniformity rules satisfied while reducing waste in borderless variants.
@@ -214,7 +253,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Evidence:
     - `docs/adr/0201-renderer-internals-modularization-and-gates-v1.md`
     - `docs/adr/IMPLEMENTATION_ALIGNMENT.md` (row update)
-- [~] REN-VNEXT-refactor-010 Stage 1: centralize stable GPU globals (material catalog view/sampler, etc.).
+- [x] REN-VNEXT-refactor-010 Stage 1: centralize stable GPU globals (material catalog view/sampler, etc.).
   - Landed (step 1): reduce bind-group rebuild churn by making “stable sampler + linear/nearest pair” explicit and reusing renderer-owned globals
     in uniform bind groups.
   - Evidence:
@@ -274,12 +313,17 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `crates/fret-render-wgpu/src/renderer/gpu_pipelines.rs` (backdrop-warp pipeline cache fields)
     - `crates/fret-render-wgpu/src/renderer/pipelines/backdrop_warp.rs` (`ensure_backdrop_warp_pipeline`, `*_ref`)
     - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/backdrop_warp.rs` (uses `*_ref`)
+  - Landed (step 12): move effect pipeline caches into `GpuPipelines` (color-adjust, color-matrix, alpha-threshold, drop-shadow).
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/gpu_pipelines.rs` (effect pipeline cache fields)
+    - `crates/fret-render-wgpu/src/renderer/pipelines/{color_adjust,color_matrix,alpha_threshold,drop_shadow}.rs` (ensure + `*_ref`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` (uses `*_ref`)
   - Gates:
     - `cargo test -p fret-render-wgpu --lib`
     - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
   - Goal: reduce churn in bind group rebuild paths and make ownership explicit.
   - Gate: `cargo test -p fret-render-wgpu --lib` + `cargo test -p fret-render-wgpu shaders_validate_for_webgpu`
-- [~] REN-VNEXT-refactor-020 Stage 2: consolidate GPU buffer lifecycle management (capacity growth + dependent bind group rebuilds).
+- [x] REN-VNEXT-refactor-020 Stage 2: consolidate GPU buffer lifecycle management (capacity growth + dependent bind group rebuilds).
   - Goal: one place to reason about “recreate buffer → rebuild bind group → invalidate caches”.
   - Landed (step 1): centralize uniform-dependent buffer replacement so every resize flows through a single rebuild+invalidate path.
   - Evidence:
@@ -295,8 +339,16 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `crates/fret-render-wgpu/src/renderer/uniform_resources.rs` (`UniformResources`)
     - `crates/fret-render-wgpu/src/renderer/mod.rs` (`Renderer::uniforms`)
     - `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (writes to `uniforms.*_buffer`)
+  - Landed (step 4): extract effect parameter buffers (clip-mask params, scale-nearest params, effect uniform params) into `GpuEffectParams`.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/gpu_effect_params.rs` (`GpuEffectParams`)
+    - `crates/fret-render-wgpu/src/renderer/mod.rs` (`Renderer::effect_params`)
+    - `crates/fret-render-wgpu/src/renderer/resources.rs` (`GpuEffectParams` init)
+    - `crates/fret-render-wgpu/src/renderer/pipelines/clip_mask.rs` (layout uses `effect_params`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (scale-param capacity via `effect_params`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/{scale_nearest,backdrop_warp,effects}.rs` (buffer uses)
   - Gate: run the anchor conformance set listed in ADR 0201.
-- [~] REN-VNEXT-refactor-030 Stage 3: extract bind group caches as explicit services with local invalidation.
+- [x] REN-VNEXT-refactor-030 Stage 3: extract bind group caches as explicit services with local invalidation.
   - Goal: isolate `image_bind_groups`, `viewport_bind_groups`, and mask-image override bind groups behind a single cache facade.
   - Landed (step 1): move viewport/image sampler+texture bind group caching behind `BindGroupCaches` methods (no recorder-side closures).
   - Evidence:
@@ -310,6 +362,232 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Evidence:
     - `crates/fret-render-wgpu/src/renderer/bind_group_caches.rs` (`BindGroupCaches` contract doc, `invalidate_all`)
   - Gate: run the anchor conformance set listed in ADR 0201.
+
+- [x] REN-VNEXT-refactor-040 Stage 4: extract image/render-target registries + revision/generation tracking into an explicit subsystem.
+  - Goal: keep “resource registry mutation → revision/generation bump → bind group cache invalidation” localized and reviewable.
+  - Landed (step 1): move registry state (`ImageRegistry`, `RenderTargetRegistry`) + revision/generation counters into `GpuRegistries`.
+  - Landed (step 2): move revision/generation bump rules behind `GpuRegistries` mutation helpers (register/update/unregister).
+  - Landed (step 3): co-locate registry mutations + bind-group cache invalidation in `GpuResources` to make the change chain explicit.
+  - Landed (step 4): route resource reads and bind-group preparation through `GpuResources` APIs (fields are private; no call-site map poking).
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/gpu_registries.rs` (`GpuRegistries`)
+    - `crates/fret-render-wgpu/src/renderer/gpu_resources.rs` (`GpuResources`)
+    - `crates/fret-render-wgpu/src/renderer/mod.rs` (`Renderer::gpu_resources`)
+    - `crates/fret-render-wgpu/src/renderer/resources.rs` (register/update/unregister call sites)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/bind_groups.rs` (`ensure_*_for_*` calls)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (scene encoding cache key uses generations)
+  - Gates:
+    - `cargo test -p fret-render-wgpu --lib`
+    - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+- [x] REN-VNEXT-refactor-050 Stage 5: extract scene encoding cache as an explicit subsystem.
+  - Goal: make the encode-cache ownership (`key/cache/scratch`) reviewable and keep the allocation-reuse semantics stable.
+  - Landed (step 1): move cache bookkeeping into `SceneEncodingCache` and update call sites in `render_scene/execute`.
+  - Landed (step 2): move the cache hit/miss paths + perf accounting into a single helper to keep behavior drift-free.
+  - Landed (step 3): isolate cache key construction + encoding acquisition helpers in a dedicated `render_scene` module.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/scene_encoding_cache.rs` (`SceneEncodingCache`)
+    - `crates/fret-render-wgpu/src/renderer/mod.rs` (`Renderer::scene_encoding_cache`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/encoding_cache.rs` (`build_scene_encoding_cache_key`, `acquire_scene_encoding_for_frame`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (call sites)
+    - `crates/fret-render-wgpu/src/renderer/tests.rs` (cache busts on text quality changes)
+  - Gates:
+    - `cargo test -p fret-render-wgpu --lib`
+    - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+- [x] REN-VNEXT-refactor-060 Stage 6: extract debug postprocess selection into a dedicated helper.
+  - Goal: keep debug-only plan mutations localized while preserving existing degrade/budget semantics and perf counters.
+  - Landed (step 1): move debug postprocess selection to `Renderer::pick_debug_postprocess`.
+  - Landed (step 2): move plan compilation + tracing/perf accounting behind a single helper.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/render_scene/debug_postprocess.rs` (`pick_debug_postprocess`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (call site)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/plan_compile.rs` (`compile_render_plan_for_scene`)
+  - Gates:
+    - `cargo test -p fret-render-wgpu --lib`
+    - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+- [x] REN-VNEXT-refactor-070 Stage 7: extract per-frame plan dispatch into a dedicated helper.
+  - Goal: isolate command-encoder / frame-target lifetime + pass recording loop to keep `render_scene_execute` orchestrative.
+  - Landed (step 1): move pass recording + encoder finish + intermediate release tracking into `Renderer::dispatch_render_plan`.
+  - Landed (step 2): move render-space uniform packing + upload behind a dedicated helper.
+  - Landed (step 3): move per-frame geometry uploads (instances/paints/vertices + quad vertex bases) behind a single helper.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/render_scene/dispatch.rs` (`dispatch_render_plan`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (call site)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/render_space_upload.rs` (`upload_render_space_uniforms_for_plan`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/uploads.rs` (`upload_frame_geometry`)
+  - Gates:
+    - `cargo test -p fret-render-wgpu --lib`
+    - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+- [x] REN-VNEXT-refactor-080 Stage 8: extract effect pipeline setup into a dedicated helper.
+  - Goal: isolate per-plan pass scanning + `ensure_*` effect pipelines + capacity ensures to keep `execute` linear.
+  - Landed (step 1): move effect pipeline selection + scale params/render space capacity behind `Renderer::ensure_effect_pipelines_for_plan`.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/render_scene/effect_pipelines.rs` (`ensure_effect_pipelines_for_plan`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (call site)
+  - Gates:
+    - `cargo test -p fret-render-wgpu --lib`
+    - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+- [x] REN-VNEXT-refactor-090 Stage 9: extract per-frame uniform uploads + bind group preparation into a dedicated helper.
+  - Goal: keep uniform/clips/masks uploads + bind-group prep drift-free while further linearizing `execute`.
+  - Landed (step 1): move uniform/clips/masks capacity + writes + bind-group prep behind `Renderer::upload_frame_uniforms_and_prepare_bind_groups`.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/render_scene/frame_bindings.rs` (`upload_frame_uniforms_and_prepare_bind_groups`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (call site)
+  - Gates:
+    - `cargo test -p fret-render-wgpu --lib`
+    - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+- [x] REN-VNEXT-refactor-100 Stage 10: extract render plan diagnostics and perf reporting into a dedicated helper.
+  - Goal: keep plan degradation accounting + segment report drift-free while reducing `execute` surface area.
+  - Landed (step 1): move render plan perf counters, segment report update, and plan dump behind `Renderer::record_render_plan_diagnostics_for_frame`.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/render_scene/plan_reporting.rs` (`record_render_plan_diagnostics_for_frame`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (call site)
+  - Gates:
+    - `cargo test -p fret-render-wgpu --lib`
+    - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+- [x] REN-VNEXT-refactor-110 Stage 11: extract frame perf aggregation + snapshot into a dedicated helper.
+  - Goal: isolate the “frame perf → aggregated perf + last-frame snapshot” bookkeeping while keeping accounting drift-free.
+  - Landed (step 1): move SVG/memory snapshots, aggregated perf accumulation, and `last_frame_perf` construction behind `Renderer::finalize_frame_perf_after_dispatch`.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/render_scene/perf_finalize.rs` (`finalize_frame_perf_after_dispatch`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (call site)
+  - Gates:
+    - `cargo test -p fret-render-wgpu --lib`
+    - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+- [x] REN-VNEXT-refactor-120 Stage 12: extract per-frame text + svg preparation into dedicated helpers.
+  - Goal: keep tracing/perf accounting stable while making `execute` a linear “prepare → encode → compile → upload → dispatch” driver.
+  - Landed (step 1): move text prepare + atlas snapshot behind `Renderer::prepare_text_for_frame`.
+  - Landed (step 2): move SVG ops prepare + perf snapshot behind `Renderer::prepare_svg_for_frame`.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/render_scene/frame_prepare.rs` (`prepare_text_for_frame`, `prepare_svg_for_frame`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (call sites)
+  - Gates:
+    - `cargo test -p fret-render-wgpu --lib`
+    - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+- [x] REN-VNEXT-refactor-130 Stage 13: extract frame-level pipeline ensures into a dedicated helper.
+  - Goal: isolate “ensure core pipelines + compute path MSAA samples” without changing tracing/perf semantics.
+  - Landed (step 1): move `ensure_*` pipeline calls and path-samples selection behind `Renderer::ensure_frame_pipelines_and_path_samples`.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/render_scene/frame_pipelines.rs` (`ensure_frame_pipelines_and_path_samples`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (call site)
+  - Gates:
+    - `cargo test -p fret-render-wgpu --lib`
+    - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+- [x] REN-VNEXT-refactor-140 Stage 14: extract per-frame perf initialization into a dedicated helper.
+  - Goal: keep upload/ingest pending counters initialization drift-free while further linearizing `execute`.
+  - Landed (step 1): move per-frame perf initialization behind `Renderer::begin_frame_perf_collection`.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/render_scene/frame_perf_init.rs` (`begin_frame_perf_collection`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (call site)
+  - Gates:
+    - `cargo test -p fret-render-wgpu --lib`
+    - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+- [x] REN-VNEXT-refactor-150 Stage 15: reuse a renderer-owned scratch buffer for per-frame RenderSpace uniform uploads.
+  - Goal: avoid per-frame heap allocations for RenderSpace uniform bytes without changing per-pass RenderSpace semantics.
+  - Landed (step 1): store a `Vec<u8>` scratch buffer on `Renderer` and reuse it in `upload_render_space_uniforms_for_plan`.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/render_scene/render_space_upload.rs` (`upload_render_space_uniforms_for_plan`)
+    - `crates/fret-render-wgpu/src/renderer/mod.rs` (`Renderer::render_space_bytes_scratch`)
+  - Gates:
+    - `cargo test -p fret-render-wgpu --lib`
+    - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+- [x] REN-VNEXT-refactor-160 Stage 16: reuse a renderer-owned scratch buffer for per-frame viewport uniform uploads.
+  - Goal: avoid per-frame heap allocations for viewport uniform bytes without changing uniform stride/layout semantics.
+  - Landed (step 1): add `UniformResources::write_viewport_uniforms_into` and reuse a `Renderer`-owned scratch buffer.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/uniform_resources.rs` (`write_viewport_uniforms_into`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/frame_bindings.rs` (call site)
+    - `crates/fret-render-wgpu/src/renderer/mod.rs` (`Renderer::viewport_uniform_bytes_scratch`)
+  - Gates:
+    - `cargo test -p fret-render-wgpu --lib`
+    - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+- [x] REN-VNEXT-refactor-170 Stage 17: reuse renderer-owned scratch for plan quad vertices/bases used by non-fullscreen quad passes.
+  - Goal: avoid per-frame heap allocations for plan-derived quad vertices and per-pass `base` indices.
+  - Landed (step 1): build vertices + bases into `Renderer` scratch, upload once, and return the bases `Vec` to the caller so it can be
+    returned to the renderer after dispatch.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/render_scene/quad_vertices.rs` (`build_plan_quad_vertices_into`, `upload_plan_quad_vertices`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (returns bases to scratch after dispatch)
+    - `crates/fret-render-wgpu/src/renderer/mod.rs` (`Renderer::{plan_quad_vertices_scratch,plan_quad_vertex_bases_scratch}`)
+  - Gates:
+    - `cargo test -p fret-render-wgpu --lib`
+    - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+- [x] REN-VNEXT-refactor-180 Stage 18: reuse renderer-owned scratch for per-frame segment pass counts + segment report.
+  - Goal: avoid per-frame heap allocations in perf-only render-plan diagnostics while keeping segment-drift metrics stable.
+  - Landed (step 1): store scratch vectors on `Renderer` and swap the segment report with the last-frame report for reuse.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/render_scene/plan_reporting.rs` (`record_render_plan_diagnostics_for_frame`)
+    - `crates/fret-render-wgpu/src/renderer/mod.rs` (`Renderer::{render_plan_*_scratch}`)
+  - Gates:
+    - `cargo test -p fret-render-wgpu --lib`
+    - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+- [x] REN-VNEXT-refactor-190 Stage 19: reuse renderer-owned scratch for RenderPlan JSON dump bytes.
+  - Goal: avoid per-dump allocation when `FRET_RENDERPLAN_DUMP*` is enabled (debugging/tracing runs).
+  - Landed (step 1): serialize JSON into a `Renderer`-owned byte scratch via `serde_json::to_writer_pretty`.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` (`maybe_dump_render_plan_json`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/plan_reporting.rs` (call site)
+    - `crates/fret-render-wgpu/src/renderer/mod.rs` (`Renderer::render_plan_dump_scratch`)
+  - Gates:
+    - `cargo test -p fret-render-wgpu --lib`
+    - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+- [x] REN-VNEXT-refactor-200 Stage 20: reuse renderer-owned scratch for RenderPlan JSON dump vectors.
+  - Goal: avoid per-dump heap allocations for segment/pass/effect/degradation lists when `FRET_RENDERPLAN_DUMP*` is enabled.
+  - Landed (step 1): store a `Renderer`-owned `RenderPlanJsonDumpScratch` and serialize from slice-backed dump views.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` (`RenderPlanJsonDumpScratch`, `maybe_dump_render_plan_json`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/plan_reporting.rs` (call site)
+    - `crates/fret-render-wgpu/src/renderer/mod.rs` (`Renderer::render_plan_dump_scratch`)
+  - Gates:
+    - `cargo test -p fret-render-wgpu --lib`
+    - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+- [x] REN-VNEXT-refactor-210 Stage 21: remove per-dump String allocations in RenderPlan JSON dump.
+  - Goal: reduce dump-time heap churn by using `&'static str` for stable labels (targets, modes, axes, degradation names).
+  - Landed (step 1): encode stable dump labels as `&'static str` while keeping JSON shape and field names unchanged.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` (`JsonDumpPass`, `JsonDumpMaskRef`, `JsonDumpDegradation`)
+  - Gates:
+    - `python3 tools/check_layering.py`
+    - `cargo test -p fret-render-wgpu --lib`
+    - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+- [x] REN-VNEXT-refactor-220 Stage 22: reuse SceneEncoding-owned scratch for per-frame encode stacks.
+  - Goal: avoid per-frame heap allocations in `EncodeState` (scissor/clip/mask/transform/opacity/material_seen stacks).
+  - Landed (step 1): store encode scratch vectors on `SceneEncoding` and borrow them from `EncodeState::new`.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/types.rs` (`SceneEncoding` scratch fields, `ClipPop`, `MaskPop`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/encode/state.rs` (`EncodeState::new`)
+  - Gates:
+    - `python3 tools/check_layering.py`
+    - `cargo test -p fret-render-wgpu --lib`
+    - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+- [x] REN-VNEXT-refactor-230 Stage 23: speed up material distinct tracking during encode.
+  - Goal: avoid `Vec::contains` linear scans per `Paint::Material` encode and keep distinct-budget checks fast.
+  - Landed (step 1): replace the distinct-seen scratch with a reused `HashSet<MaterialId>` stored on `SceneEncoding`.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/types.rs` (`SceneEncoding::encode_material_seen_scratch`)
+    - `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/paint.rs` (`Paint::Material` path)
+  - Gates:
+    - `python3 tools/check_layering.py`
+    - `cargo test -p fret-render-wgpu --lib`
+    - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
 
 ## M7 — Post-v1 semantic expansions (deferred backlog)
 
@@ -467,9 +745,11 @@ milestones) when implementation begins.
 ## Always-run guardrails (before/after each milestone)
 
 - [~] REN-VNEXT-guard-001 Keep `python3 tools/check_layering.py` green for all intermediate steps.
-  - Last run: 2026-02-16, commit `246030f3`.
+  - Last run: 2026-02-23, commit `77fe5ff03` (macOS local).
 - [~] REN-VNEXT-guard-002 Add/extend at least one renderer conformance test per new contract.
   - Status: satisfied through M5 (sampling hints gate) and stroke v2 (join/cap/dash conformance gate landed).
+  - Last run (macOS local, 2026-02-23, commit `77fe5ff03`):
+    - `cargo nextest run -p fret-render-wgpu --test affine_clip_conformance --test viewport_surface_metadata_conformance --test paint_gradient_conformance --test mask_gradient_conformance --test composite_group_conformance --test materials_conformance --test materials_sampled_conformance --test clip_path_conformance --test mask_image_conformance --test text_paint_conformance`
 - [~] REN-VNEXT-guard-003 Record a perf snapshot baseline and keep “worst bundles” attachable to milestones.
   - Last capture: 2026-02-15, commit `c4f08adb`.
   - Evidence: `docs/workstreams/renderer-vnext-fearless-refactor-v1-milestones.md` (Perf snapshot record).
