@@ -100,6 +100,8 @@ This file tracks tasks for `docs/workstreams/diag-fearless-refactor-v1.md`.
   - `crates/fret-diag/src/pack_zip.rs`
 - [x] Reduce CLI entrypoint churn by isolating evidence indexing:
   - `crates/fret-diag/src/evidence_index.rs`
+- [x] Reduce CLI entrypoint churn by isolating perf-hint gating helpers:
+  - `crates/fret-diag/src/perf_hint_gate.rs`
 - [x] Add a short “AI-first” recipe to `docs/ui-diagnostics-and-scripted-tests.md` that links to:
   - `diag meta`, `diag index`, `diag query`, `diag slice`, `diag ai-packet`.
 - [ ] Finish the “bundle artifact” naming sweep so common failure messages and CLI hints do not assume `bundle.json`.

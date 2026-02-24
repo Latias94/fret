@@ -88,6 +88,8 @@ Definition of done:
   - Evidence: `crates/fret-diag/src/pack_zip.rs` (`pack_bundle_dir_to_zip`, `pack_repro_zip_multi`).
 - [x] Extract evidence indexing into a dedicated module (reduce churn in `crates/fret-diag/src/lib.rs`).
   - Evidence: `crates/fret-diag/src/evidence_index.rs` (`write_evidence_index`).
+- [x] Extract perf-hint gating helpers into a dedicated module (reduce churn in `crates/fret-diag/src/lib.rs`).
+  - Evidence: `crates/fret-diag/src/perf_hint_gate.rs` (`parse_perf_hint_gate_options`, `perf_hint_gate_failures_for_triage_json`).
 - [x] Add bundle-artifact aliases to repro summary JSON (keep older `*_bundle_json` keys for compatibility).
   - Evidence: `crates/fret-diag/src/diag_repro.rs` (`selected_bundle_artifact`, `packed_bundle_artifact`, `bundle_artifact` in `packed_bundles`).
 - [x] Add bundle-artifact aliases to `diag repeat` output JSON (keep older `bundle_json` key for compatibility).
