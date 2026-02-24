@@ -159,28 +159,61 @@ pub(crate) fn cmd_ai_packet(
             packet_dir.display()
         ));
     }
-    std::fs::create_dir_all(&packet_dir).map_err(|e| e.to_string())?;
 
-    let meta_path = crate::bundle_index::ensure_bundle_meta_json(&bundle_path, warmup_frames)?;
+    generate_ai_packet_dir(
+        &bundle_path,
+        &bundle_dir,
+        &packet_dir,
+        include_triage,
+        stats_top,
+        sort_override,
+        warmup_frames,
+        test_id.as_deref(),
+    )?;
+
+    println!("{}", packet_dir.display());
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn generate_ai_packet_dir(
+    bundle_path: &Path,
+    bundle_dir: &Path,
+    packet_dir: &Path,
+    include_triage: bool,
+    stats_top: usize,
+    sort_override: Option<BundleStatsSort>,
+    warmup_frames: u64,
+    test_id: Option<&str>,
+) -> Result<(), String> {
+    if packet_dir.is_file() {
+        return Err(format!(
+            "ai.packet output must be a directory, got file: {}",
+            packet_dir.display()
+        ));
+    }
+    std::fs::create_dir_all(packet_dir).map_err(|e| e.to_string())?;
+
+    let meta_path = crate::bundle_index::ensure_bundle_meta_json(bundle_path, warmup_frames)?;
     let test_ids_index_path =
-        crate::bundle_index::ensure_test_ids_index_json(&bundle_path, warmup_frames)?;
+        crate::bundle_index::ensure_test_ids_index_json(bundle_path, warmup_frames)?;
     let bundle_index_path =
-        crate::bundle_index::ensure_bundle_index_json(&bundle_path, warmup_frames)?;
+        crate::bundle_index::ensure_bundle_index_json(bundle_path, warmup_frames)?;
     let frames_index_path =
-        crate::frames_index::ensure_frames_index_json(&bundle_path, warmup_frames)?;
+        crate::frames_index::ensure_frames_index_json(bundle_path, warmup_frames)?;
 
-    fs::copy_file_named(&meta_path, &packet_dir, "bundle.meta.json")?;
-    fs::copy_file_named(&test_ids_index_path, &packet_dir, "test_ids.index.json")?;
-    fs::copy_file_named(&bundle_index_path, &packet_dir, "bundle.index.json")?;
-    fs::copy_file_named(&frames_index_path, &packet_dir, "frames.index.json")?;
+    fs::copy_file_named(&meta_path, packet_dir, "bundle.meta.json")?;
+    fs::copy_file_named(&test_ids_index_path, packet_dir, "test_ids.index.json")?;
+    fs::copy_file_named(&bundle_index_path, packet_dir, "bundle.index.json")?;
+    fs::copy_file_named(&frames_index_path, packet_dir, "frames.index.json")?;
 
-    fs::copy_bundle_schema2_if_present(&bundle_path, &bundle_dir, &packet_dir)?;
+    fs::copy_bundle_schema2_if_present(bundle_path, bundle_dir, packet_dir)?;
 
     if let Some(frames_index) =
         crate::frames_index::read_frames_index_json_v1(&frames_index_path, warmup_frames)
     {
         let triage_lite = crate::frames_index::triage_lite_json_from_frames_index(
-            &bundle_path,
+            bundle_path,
             &frames_index_path,
             &frames_index,
             warmup_frames,
@@ -190,7 +223,7 @@ pub(crate) fn cmd_ai_packet(
         budget::write_json_compact(&packet_dir.join("triage.lite.json"), &triage_lite)?;
 
         let hotspots_lite = crate::hotspots_lite::hotspots_lite_json_from_frames_index(
-            &bundle_path,
+            bundle_path,
             &frames_index_path,
             &frames_index,
             warmup_frames,
@@ -202,28 +235,28 @@ pub(crate) fn cmd_ai_packet(
 
     fs::copy_if_present(
         &bundle_dir.join("script.result.json"),
-        &packet_dir,
+        packet_dir,
         "script.result.json",
     )?;
     fs::copy_if_present(
         &bundle_dir.join("manifest.json"),
-        &packet_dir,
+        packet_dir,
         "manifest.json",
     )?;
 
     crate::util::write_json_value(
         &packet_dir.join("doctor.json"),
-        &doctor::doctor_report_json(&bundle_path, warmup_frames),
+        &doctor::doctor_report_json(bundle_path, warmup_frames),
     )?;
 
-    anchors::write_packet_anchors_if_possible(&packet_dir)?;
+    anchors::write_packet_anchors_if_possible(packet_dir)?;
 
     let mut failed_step_slices_report: Option<AiPacketFailedStepSlicesReportV1> = None;
     if test_id.is_none() {
         failed_step_slices_report = slices::write_anchor_slices_if_possible(
-            &bundle_path,
+            bundle_path,
             warmup_frames,
-            &packet_dir,
+            packet_dir,
             AiPacketBudgetConfig::default().max_slice_bytes,
         )?;
     }
@@ -231,14 +264,14 @@ pub(crate) fn cmd_ai_packet(
     if include_triage {
         let sort = sort_override.unwrap_or(BundleStatsSort::Invalidation);
         match bundle_stats_from_path(
-            &bundle_path,
+            bundle_path,
             stats_top,
             sort,
             BundleStatsOptions { warmup_frames },
         ) {
             Ok(report) => {
                 let payload =
-                    crate::triage_json_from_stats(&bundle_path, &report, sort, warmup_frames);
+                    crate::triage_json_from_stats(bundle_path, &report, sort, warmup_frames);
                 crate::util::write_json_value(&packet_dir.join("triage.json"), &payload)?;
             }
             Err(err) => {
@@ -262,12 +295,12 @@ pub(crate) fn cmd_ai_packet(
         }
     }
 
-    if let Some(test_id) = &test_id {
+    if let Some(test_id) = test_id {
         let budget_cfg = AiPacketBudgetConfig::default();
         let payload = slices::build_slice_payload_with_budget(
-            &bundle_path,
+            bundle_path,
             warmup_frames,
-            test_id.as_str(),
+            test_id,
             budget_cfg.max_slice_bytes,
         )?;
         let stem = crate::util::sanitize_for_filename(test_id, 80, "test_id");
@@ -285,11 +318,10 @@ pub(crate) fn cmd_ai_packet(
         failed_step_slices: failed_step_slices_report,
         ..Default::default()
     };
-    let enforce_res = budget::enforce_ai_packet_budgets(&packet_dir, &mut report);
-    budget::write_packet_budget_report(&packet_dir, &report)?;
+    let enforce_res = budget::enforce_ai_packet_budgets(packet_dir, &mut report);
+    budget::write_packet_budget_report(packet_dir, &report)?;
     enforce_res?;
 
-    println!("{}", packet_dir.display());
     Ok(())
 }
 

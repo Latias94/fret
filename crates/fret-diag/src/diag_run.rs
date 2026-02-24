@@ -104,6 +104,7 @@ pub(crate) struct RunChecks {
 #[derive(Debug, Clone)]
 pub(crate) struct RunCmdContext {
     pub pack_after_run: bool,
+    pub ensure_ai_packet: bool,
     pub rest: Vec<String>,
     pub workspace_root: PathBuf,
     pub resolved_out_dir: PathBuf,
@@ -140,6 +141,7 @@ pub(crate) struct RunCmdContext {
 pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
     let RunCmdContext {
         pack_after_run,
+        ensure_ai_packet,
         rest,
         workspace_root,
         resolved_out_dir,
@@ -294,11 +296,12 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         }
     }
 
-    let wants_pack = pack_after_run
+    let wants_pack_zip = pack_after_run
         || pack_out.is_some()
         || pack_include_root_artifacts
         || pack_include_triage
         || pack_include_screenshots;
+    let wants_post_run_bundle = wants_pack_zip || ensure_ai_packet;
 
     let mut pack_defaults = (
         pack_include_root_artifacts,
@@ -439,7 +442,7 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
             &resolved_out_dir,
             &connected,
             script_json,
-            wants_post_run_checks || wants_pack,
+            wants_post_run_checks || wants_pack_zip || ensure_ai_packet,
             trace_chrome,
             Some("diag-run"),
             None,
@@ -518,7 +521,35 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
             )?;
         }
 
-        if wants_pack {
+        if ensure_ai_packet {
+            if let Some(bundle_path) = bundle_path.as_ref() {
+                let bundle_dir = resolve_bundle_root_dir(bundle_path)?;
+                let packet_dir = bundle_dir.join("ai.packet");
+                if !packet_dir.is_dir() {
+                    match crate::commands::ai_packet::generate_ai_packet_dir(
+                        bundle_path,
+                        &bundle_dir,
+                        &packet_dir,
+                        pack_defaults.1,
+                        stats_top,
+                        sort_override,
+                        warmup_frames,
+                        None,
+                    ) {
+                        Ok(()) => println!("AI-PACKET {}", packet_dir.display()),
+                        Err(err) => eprintln!("AI-PACKET-ERROR {err}"),
+                    }
+                } else {
+                    println!("AI-PACKET {}", packet_dir.display());
+                }
+            } else {
+                eprintln!(
+                    "AI-PACKET-ERROR no bundle artifact captured over DevTools WS (ensure bundles are embedded or the runtime bundle dir is accessible)"
+                );
+            }
+        }
+
+        if wants_pack_zip {
             if let Some(bundle_path) = bundle_path.as_ref() {
                 let bundle_dir = resolve_bundle_root_dir(bundle_path)?;
                 let out = pack_out
@@ -633,7 +664,7 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         &resolved_out_dir,
         &connected,
         script_json,
-        wants_pack,
+        wants_post_run_bundle,
         trace_chrome,
         Some("diag-run"),
         None,
@@ -783,7 +814,7 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
             )?;
         }
 
-    if wants_pack {
+    if wants_post_run_bundle {
         let mut bundle_path = wait_for_bundle_artifact_from_script_result(
             &resolved_out_dir,
             &result,
@@ -805,41 +836,65 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
                 run_bundle_doctor_for_bundle_path(&bundle_path, bundle_doctor_mode, warmup_frames)?;
             }
             let bundle_dir = resolve_bundle_root_dir(&bundle_path)?;
-            let out = pack_out
-                .clone()
-                .map(|p| resolve_path(&workspace_root, p))
-                .unwrap_or_else(|| default_pack_out_path(&resolved_out_dir, &bundle_dir));
 
-            let artifacts_root = if bundle_dir.starts_with(&resolved_out_dir) {
-                resolved_out_dir.clone()
-            } else {
-                bundle_dir
-                    .parent()
-                    .unwrap_or(&resolved_out_dir)
-                    .to_path_buf()
-            };
+            if ensure_ai_packet {
+                let packet_dir = bundle_dir.join("ai.packet");
+                if !packet_dir.is_dir() {
+                    match crate::commands::ai_packet::generate_ai_packet_dir(
+                        &bundle_path,
+                        &bundle_dir,
+                        &packet_dir,
+                        pack_defaults.1,
+                        stats_top,
+                        sort_override,
+                        warmup_frames,
+                        None,
+                    ) {
+                        Ok(()) => println!("AI-PACKET {}", packet_dir.display()),
+                        Err(err) => eprintln!("AI-PACKET-ERROR {err}"),
+                    }
+                } else {
+                    println!("AI-PACKET {}", packet_dir.display());
+                }
+            }
 
-            if let Err(err) = pack_bundle_dir_to_zip(
-                &bundle_dir,
-                &out,
-                pack_defaults.0,
-                pack_defaults.1,
-                pack_defaults.2,
-                pack_schema2_only,
-                false,
-                false,
-                &artifacts_root,
-                stats_top,
-                sort_override.unwrap_or(BundleStatsSort::Invalidation),
-                warmup_frames,
-            ) {
-                eprintln!("PACK-ERROR {err}");
-            } else {
-                println!("PACK {}", out.display());
+            if wants_pack_zip {
+                let out = pack_out
+                    .clone()
+                    .map(|p| resolve_path(&workspace_root, p))
+                    .unwrap_or_else(|| default_pack_out_path(&resolved_out_dir, &bundle_dir));
+
+                let artifacts_root = if bundle_dir.starts_with(&resolved_out_dir) {
+                    resolved_out_dir.clone()
+                } else {
+                    bundle_dir
+                        .parent()
+                        .unwrap_or(&resolved_out_dir)
+                        .to_path_buf()
+                };
+
+                if let Err(err) = pack_bundle_dir_to_zip(
+                    &bundle_dir,
+                    &out,
+                    pack_defaults.0,
+                    pack_defaults.1,
+                    pack_defaults.2,
+                    pack_schema2_only,
+                    false,
+                    false,
+                    &artifacts_root,
+                    stats_top,
+                    sort_override.unwrap_or(BundleStatsSort::Invalidation),
+                    warmup_frames,
+                ) {
+                    eprintln!("PACK-ERROR {err}");
+                } else {
+                    println!("PACK {}", out.display());
+                }
             }
         } else {
             eprintln!(
-                "PACK-ERROR no bundle artifact found (add `capture_bundle` or enable script auto-dumps)"
+                "POST-RUN-ERROR no bundle artifact found (add `capture_bundle` or enable script auto-dumps)"
             );
         }
     }

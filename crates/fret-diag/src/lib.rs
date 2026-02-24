@@ -379,6 +379,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut pack_include_screenshots: bool = false;
     let mut pack_after_run: bool = false;
     let mut pack_schema2_only: bool = false;
+    let mut ensure_ai_packet: bool = false;
     let mut triage_out: Option<PathBuf> = None;
     let mut lint_out: Option<PathBuf> = None;
     let mut meta_out: Option<PathBuf> = None;
@@ -626,6 +627,10 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     return Err("missing value for --packet-out".to_string());
                 };
                 ai_packet_out = Some(PathBuf::from(v));
+                i += 1;
+            }
+            "--ai-packet" => {
+                ensure_ai_packet = true;
                 i += 1;
             }
             "--include-root-artifacts" => {
@@ -2316,6 +2321,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
         &resolved_trigger_path,
         trace_out.clone(),
         &pack_out,
+        ensure_ai_packet,
         pack_include_root_artifacts,
         pack_include_triage,
         pack_include_screenshots,
@@ -2458,6 +2464,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
         "run" => {
             diag_run::cmd_run(diag_run::RunCmdContext {
                 pack_after_run,
+                ensure_ai_packet,
                 rest: rest.clone(),
                 workspace_root: workspace_root.clone(),
                 resolved_out_dir: resolved_out_dir.clone(),

@@ -11,6 +11,7 @@ pub(crate) fn cmd_pack(
     workspace_root: &Path,
     out_dir: &Path,
     pack_out: Option<PathBuf>,
+    ensure_ai_packet: bool,
     pack_include_root_artifacts: bool,
     pack_include_triage: bool,
     pack_include_screenshots: bool,
@@ -48,6 +49,25 @@ pub(crate) fn cmd_pack(
     } else {
         bundle_dir.parent().unwrap_or(out_dir).to_path_buf()
     };
+
+    if ensure_ai_packet {
+        let bundle_path = crate::resolve_bundle_artifact_path(&bundle_dir);
+        let packet_dir = bundle_dir.join("ai.packet");
+        if !packet_dir.is_dir() && bundle_path.is_file() {
+            if let Err(err) = super::ai_packet::generate_ai_packet_dir(
+                &bundle_path,
+                &bundle_dir,
+                &packet_dir,
+                pack_include_triage,
+                stats_top,
+                sort_override,
+                warmup_frames,
+                None,
+            ) {
+                eprintln!("ai-packet: failed to generate ai.packet: {err}");
+            }
+        }
+    }
 
     crate::pack_bundle_dir_to_zip(
         &bundle_dir,
