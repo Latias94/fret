@@ -50,8 +50,10 @@ Today, diagnostics is powerful but the “fearless refactor” tax is high:
 ## Current state (as of 2026-02-24)
 
 - Runtime exports schema v2 bundles by default (semantics are deduplicated via `tables.semantics`).
-  - Note: the on-disk artifact is still named `bundle.json`. The companion file name `bundle.schema2.json` is a **tooling-derived**
-    compact artifact today (see below).
+  - Note: the on-disk artifact is still named `bundle.json`.
+  - `bundle.schema2.json` is available as a compact companion artifact:
+    - default: tooling-derived via `diag doctor --fix-schema2`,
+    - opt-in at capture time: `FRET_DIAG_BUNDLE_WRITE_SCHEMA2=1` (and some schema2/AI-focused launched tooling flows auto-enable it).
 - Older bundles may still be schema v1 (inline-only semantics, no tables); tooling remains compatible.
 - Tooling can:
   - convert bundles (`fretboard diag bundle-v2`) for measurement/compat,
