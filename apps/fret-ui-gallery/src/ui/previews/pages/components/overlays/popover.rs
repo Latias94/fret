@@ -94,9 +94,11 @@ pub(in crate::ui) fn preview_popover(
             .into_element(
                 cx,
                 |cx| {
-                    shadcn::Button::new("Open popover")
+                    let trigger = shadcn::Button::new("Open popover")
                         .variant(shadcn::ButtonVariant::Outline)
                         .into_element(cx)
+                        .test_id("ui-gallery-popover-demo-trigger");
+                    shadcn::PopoverTrigger::new(trigger).into_element(cx)
                 },
                 |cx| {
                     let row =
@@ -158,6 +160,7 @@ pub(in crate::ui) fn preview_popover(
                     shadcn::PopoverContent::new([header, fields])
                         .refine_layout(LayoutRefinement::default().w_px(Px(320.0)))
                         .into_element(cx)
+                        .test_id("ui-gallery-popover-demo-content")
                 },
             );
         centered(cx, popover).test_id("ui-gallery-popover-demo")
@@ -169,9 +172,11 @@ pub(in crate::ui) fn preview_popover(
             .into_element(
                 cx,
                 |cx| {
-                    shadcn::Button::new("Open Popover")
+                    let trigger = shadcn::Button::new("Open Popover")
                         .variant(shadcn::ButtonVariant::Outline)
                         .into_element(cx)
+                        .test_id("ui-gallery-popover-basic-trigger");
+                    shadcn::PopoverTrigger::new(trigger).into_element(cx)
                 },
                 |cx| {
                     shadcn::PopoverContent::new([shadcn::PopoverHeader::new([
@@ -181,6 +186,7 @@ pub(in crate::ui) fn preview_popover(
                     ])
                     .into_element(cx)])
                     .into_element(cx)
+                    .test_id("ui-gallery-popover-basic-content")
                 },
             );
         centered(cx, popover).test_id("ui-gallery-popover-basic")
@@ -201,15 +207,18 @@ pub(in crate::ui) fn preview_popover(
                         .into_element(
                             cx,
                             |cx| {
-                                shadcn::Button::new("Start")
+                                let trigger = shadcn::Button::new("Start")
                                     .variant(shadcn::ButtonVariant::Outline)
                                     .size(shadcn::ButtonSize::Sm)
                                     .into_element(cx)
+                                    .test_id("ui-gallery-popover-align-start-trigger");
+                                shadcn::PopoverTrigger::new(trigger).into_element(cx)
                             },
                             |cx| {
                                 shadcn::PopoverContent::new([cx.text("Aligned to start")])
                                     .refine_layout(LayoutRefinement::default().w_px(Px(160.0)))
                                     .into_element(cx)
+                                    .test_id("ui-gallery-popover-align-start-content")
                             },
                         ),
                     shadcn::Popover::new_controllable(cx, None, false)
@@ -217,15 +226,18 @@ pub(in crate::ui) fn preview_popover(
                         .into_element(
                             cx,
                             |cx| {
-                                shadcn::Button::new("Center")
+                                let trigger = shadcn::Button::new("Center")
                                     .variant(shadcn::ButtonVariant::Outline)
                                     .size(shadcn::ButtonSize::Sm)
                                     .into_element(cx)
+                                    .test_id("ui-gallery-popover-align-center-trigger");
+                                shadcn::PopoverTrigger::new(trigger).into_element(cx)
                             },
                             |cx| {
                                 shadcn::PopoverContent::new([cx.text("Aligned to center")])
                                     .refine_layout(LayoutRefinement::default().w_px(Px(160.0)))
                                     .into_element(cx)
+                                    .test_id("ui-gallery-popover-align-center-content")
                             },
                         ),
                     shadcn::Popover::new_controllable(cx, None, false)
@@ -233,15 +245,18 @@ pub(in crate::ui) fn preview_popover(
                         .into_element(
                             cx,
                             |cx| {
-                                shadcn::Button::new("End")
+                                let trigger = shadcn::Button::new("End")
                                     .variant(shadcn::ButtonVariant::Outline)
                                     .size(shadcn::ButtonSize::Sm)
                                     .into_element(cx)
+                                    .test_id("ui-gallery-popover-align-end-trigger");
+                                shadcn::PopoverTrigger::new(trigger).into_element(cx)
                             },
                             |cx| {
                                 shadcn::PopoverContent::new([cx.text("Aligned to end")])
                                     .refine_layout(LayoutRefinement::default().w_px(Px(160.0)))
                                     .into_element(cx)
+                                    .test_id("ui-gallery-popover-align-end-content")
                             },
                         ),
                 ]
@@ -256,9 +271,11 @@ pub(in crate::ui) fn preview_popover(
             .into_element(
                 cx,
                 |cx| {
-                    shadcn::Button::new("Open Popover")
+                    let trigger = shadcn::Button::new("Open Popover")
                         .variant(shadcn::ButtonVariant::Outline)
                         .into_element(cx)
+                        .test_id("ui-gallery-popover-with-form-trigger");
+                    shadcn::PopoverTrigger::new(trigger).into_element(cx)
                 },
                 |cx| {
                     shadcn::PopoverContent::new([
@@ -295,6 +312,7 @@ pub(in crate::ui) fn preview_popover(
                     ])
                     .refine_layout(LayoutRefinement::default().w_px(Px(256.0)))
                     .into_element(cx)
+                    .test_id("ui-gallery-popover-with-form-content")
                 },
             );
         centered(cx, popover).test_id("ui-gallery-popover-with-form")
@@ -308,9 +326,10 @@ pub(in crate::ui) fn preview_popover(
                     .into_element(
                         cx,
                         |cx| {
-                            shadcn::Button::new(label)
+                            let trigger = shadcn::Button::new(label)
                                 .variant(shadcn::ButtonVariant::Outline)
-                                .into_element(cx)
+                                .into_element(cx);
+                            shadcn::PopoverTrigger::new(trigger).into_element(cx)
                         },
                         |cx| {
                             shadcn::PopoverContent::new([shadcn::PopoverHeader::new([
@@ -343,33 +362,12 @@ pub(in crate::ui) fn preview_popover(
                 },
             );
 
-            let logical = stack::hstack_build(
-                cx,
-                stack::HStackProps::default()
-                    .gap(Space::N2)
-                    .items_center()
-                    .layout(LayoutRefinement::default().w_full())
-                    .justify_center(),
-                |cx, out| {
-                    for (id, label, side) in [
-                        (
-                            "inline-start",
-                            "بداية السطر",
-                            shadcn::PopoverSide::InlineStart,
-                        ),
-                        ("inline-end", "نهاية السطر", shadcn::PopoverSide::InlineEnd),
-                    ] {
-                        out.push(cx.keyed(id, |cx| popover(cx, label, side)));
-                    }
-                },
-            );
-
             stack::vstack(
                 cx,
                 stack::VStackProps::default()
                     .gap(Space::N4)
                     .layout(LayoutRefinement::default().w_full()),
-                move |_cx| [physical, logical],
+                move |_cx| [physical],
             )
         })
         .test_id("ui-gallery-popover-rtl")
@@ -397,24 +395,16 @@ pub(in crate::ui) fn preview_popover(
     .align(shadcn::PopoverAlign::Start)
     .into_element(
         cx,
-        |cx| shadcn::Button::new("Open popover")
-            .variant(shadcn::ButtonVariant::Outline)
-            .into_element(cx),
+        |cx| {
+            let trigger = shadcn::Button::new("Open popover")
+                .variant(shadcn::ButtonVariant::Outline)
+                .into_element(cx);
+            shadcn::PopoverTrigger::new(trigger).into_element(cx)
+        },
         |cx| shadcn::PopoverContent::new([/* content */])
             .refine_layout(LayoutRefinement::default().w_px(Px(320.0)))
             .into_element(cx),
     );"#,
-                ),
-            DocSection::new("RTL", rtl)
-                .max_w(Px(760.0))
-                .test_id_prefix("ui-gallery-popover-rtl")
-                .code(
-                    "rust",
-                    r#"doc_layout::rtl(cx, |cx| {
-    shadcn::Popover::new_controllable(cx, None, false)
-        .side(shadcn::PopoverSide::InlineStart)
-        .into_element(cx, trigger, content)
-});"#,
                 ),
             DocSection::new("Basic", basic)
                 .max_w(Px(760.0))
@@ -423,7 +413,11 @@ pub(in crate::ui) fn preview_popover(
                     "rust",
                     r#"shadcn::Popover::new_controllable(cx, None, false)
     .align(shadcn::PopoverAlign::Start)
-    .into_element(cx, trigger, content);"#,
+    .into_element(
+        cx,
+        |cx| shadcn::PopoverTrigger::new(trigger).into_element(cx),
+        content,
+    );"#,
                 ),
             DocSection::new("Align", align)
                 .max_w(Px(980.0))
@@ -432,7 +426,11 @@ pub(in crate::ui) fn preview_popover(
                     "rust",
                     r#"shadcn::Popover::new_controllable(cx, None, false)
     .align(shadcn::PopoverAlign::End)
-    .into_element(cx, trigger, content);"#,
+    .into_element(
+        cx,
+        |cx| shadcn::PopoverTrigger::new(trigger).into_element(cx),
+        content,
+    );"#,
                 ),
             DocSection::new("With Form", with_form)
                 .max_w(Px(760.0))
@@ -444,6 +442,21 @@ pub(in crate::ui) fn preview_popover(
     shadcn::FieldGroup::new([/* fields */]).into_element(cx),
 ])
 .into_element(cx);"#,
+                ),
+            DocSection::new("RTL", rtl)
+                .max_w(Px(760.0))
+                .test_id_prefix("ui-gallery-popover-rtl")
+                .code(
+                    "rust",
+                    r#"doc_layout::rtl(cx, |cx| {
+    shadcn::Popover::new_controllable(cx, None, false)
+        .side(shadcn::PopoverSide::Left)
+        .into_element(
+            cx,
+            |cx| shadcn::PopoverTrigger::new(trigger).into_element(cx),
+            content,
+        )
+});"#,
                 ),
             DocSection::new("Notes", notes).max_w(Px(820.0)),
         ],
