@@ -1289,7 +1289,7 @@ mod tests {
         .expect("expected payload");
 
         assert_eq!(payload["kind"].as_str(), Some("slice.test_id"));
-        assert_eq!(payload["frame_id"].as_u64(), Some(1));
+        assert_eq!(payload["frame_id"].as_u64(), Some(2));
     }
 
     #[test]

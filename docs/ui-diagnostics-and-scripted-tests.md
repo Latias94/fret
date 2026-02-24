@@ -204,6 +204,10 @@ Prefer sharing **bounded artifacts** over the full `bundle.json` (especially in 
 
 - Generate an “AI packet” directory (includes `bundle.meta.json`, `bundle.index.json`, `test_ids.index.json`, and a budget report):
   - `cargo run -p fretboard -- diag ai-packet <bundle_dir|bundle.json|bundle.schema2.json> --packet-out <dir>`
+  - If you already have sidecars but cannot read the bundle artifact (too large / unavailable), you can build a packet
+    without reading the bundle:
+    - `cargo run -p fretboard -- diag ai-packet <bundle_dir> --sidecars-only --packet-out <dir>`
+    - Requires the sidecars (`bundle.meta.json`, `bundle.index.json`, `test_ids.index.json`, `frames.index.json`) to already exist.
   - If `bundle.schema2.json` is present, the packet may also include it (within the packet budget).
     - To generate it: `cargo run -p fretboard -- diag doctor --fix-schema2 <bundle_dir> --warmup-frames <n>`
 - Convenience: generate `ai.packet/` next to a bundle dir during common workflows:

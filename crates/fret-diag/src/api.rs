@@ -72,7 +72,7 @@ mod tests {
               "frame_id": 1,
               "debug": {
                 "scene_fingerprint": 1,
-                "semantics": null
+                "semantics": { "nodes": [{ "id": 1, "test_id": "root", "role": "group" }] }
               }
             }]
           }]

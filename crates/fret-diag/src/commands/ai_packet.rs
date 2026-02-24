@@ -99,6 +99,7 @@ pub(crate) fn cmd_ai_packet(
 
     let mut bundle_arg: Option<String> = None;
     let mut test_id: Option<String> = None;
+    let mut sidecars_only: bool = false;
 
     let mut i: usize = 0;
     while i < rest.len() {
@@ -109,6 +110,10 @@ pub(crate) fn cmd_ai_packet(
                     return Err("missing value for --test-id".to_string());
                 };
                 test_id = Some(v);
+                i += 1;
+            }
+            "--sidecars-only" => {
+                sidecars_only = true;
                 i += 1;
             }
             other if other.starts_with("--") => {
@@ -136,9 +141,16 @@ pub(crate) fn cmd_ai_packet(
         }
     }
 
-    let bundle_path =
-        resolve_bundle_artifact_path_or_latest(bundle_arg.as_deref(), workspace_root, out_dir)?;
-    let bundle_dir = crate::resolve_bundle_root_dir(&bundle_path)?;
+    let (bundle_path, bundle_dir) = if sidecars_only {
+        let dir = resolve_bundle_dir_or_latest(bundle_arg.as_deref(), workspace_root, out_dir)?;
+        let bundle_path = resolve_bundle_artifact_path_if_present(&dir);
+        (bundle_path, dir)
+    } else {
+        let bundle_path =
+            resolve_bundle_artifact_path_or_latest(bundle_arg.as_deref(), workspace_root, out_dir)?;
+        let bundle_dir = crate::resolve_bundle_root_dir(&bundle_path)?;
+        (Some(bundle_path), bundle_dir)
+    };
 
     let packet_dir = packet_out
         .map(|p| crate::resolve_path(workspace_root, p))
@@ -160,16 +172,30 @@ pub(crate) fn cmd_ai_packet(
         ));
     }
 
-    generate_ai_packet_dir(
-        &bundle_path,
-        &bundle_dir,
-        &packet_dir,
-        include_triage,
-        stats_top,
-        sort_override,
-        warmup_frames,
-        test_id.as_deref(),
-    )?;
+    if sidecars_only {
+        generate_ai_packet_dir_sidecars_only(
+            bundle_path.as_deref(),
+            &bundle_dir,
+            &packet_dir,
+            include_triage,
+            stats_top,
+            sort_override,
+            warmup_frames,
+            test_id.as_deref(),
+        )?;
+    } else {
+        let bundle_path = bundle_path.expect("bundle_path must exist when !sidecars_only");
+        generate_ai_packet_dir(
+            &bundle_path,
+            &bundle_dir,
+            &packet_dir,
+            include_triage,
+            stats_top,
+            sort_override,
+            warmup_frames,
+            test_id.as_deref(),
+        )?;
+    }
 
     println!("{}", packet_dir.display());
     Ok(())
@@ -329,6 +355,196 @@ fn looks_like_path(s: &str) -> bool {
     s.contains('/') || s.contains('\\') || s.ends_with(".json")
 }
 
+fn resolve_bundle_artifact_path_if_present(bundle_dir: &Path) -> Option<PathBuf> {
+    let schema2 = bundle_dir.join("bundle.schema2.json");
+    if schema2.is_file() {
+        return Some(schema2);
+    }
+    let raw = bundle_dir.join("bundle.json");
+    if raw.is_file() {
+        return Some(raw);
+    }
+    None
+}
+
+fn resolve_bundle_dir_or_latest(
+    bundle_arg: Option<&str>,
+    workspace_root: &Path,
+    out_dir: &Path,
+) -> Result<PathBuf, String> {
+    if let Some(s) = bundle_arg {
+        let src = crate::resolve_path(workspace_root, PathBuf::from(s));
+        if src.is_file() {
+            return crate::resolve_bundle_root_dir(&src);
+        }
+        return Ok(src);
+    }
+    let latest = crate::read_latest_pointer(out_dir)
+        .or_else(|| crate::find_latest_export_dir(out_dir))
+        .ok_or_else(|| format!("no diagnostics bundle found under {}", out_dir.display()))?;
+    Ok(latest)
+}
+
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn generate_ai_packet_dir_sidecars_only(
+    bundle_path: Option<&Path>,
+    bundle_dir: &Path,
+    packet_dir: &Path,
+    include_triage: bool,
+    _stats_top: usize,
+    _sort_override: Option<BundleStatsSort>,
+    warmup_frames: u64,
+    test_id: Option<&str>,
+) -> Result<(), String> {
+    if packet_dir.is_file() {
+        return Err(format!(
+            "ai.packet output must be a directory, got file: {}",
+            packet_dir.display()
+        ));
+    }
+    std::fs::create_dir_all(packet_dir).map_err(|e| e.to_string())?;
+
+    let meta_path = bundle_dir.join("bundle.meta.json");
+    let test_ids_index_path = bundle_dir.join("test_ids.index.json");
+    let bundle_index_path = bundle_dir.join("bundle.index.json");
+    let frames_index_path = bundle_dir.join("frames.index.json");
+
+    let required = [
+        (&meta_path, "bundle.meta.json"),
+        (&test_ids_index_path, "test_ids.index.json"),
+        (&bundle_index_path, "bundle.index.json"),
+        (&frames_index_path, "frames.index.json"),
+    ];
+    for (p, name) in required {
+        if !p.is_file() {
+            return Err(format!(
+                "ai-packet --sidecars-only requires {name} under the bundle dir (missing: {})",
+                p.display()
+            ));
+        }
+        fs::copy_file_named(p, packet_dir, name)?;
+    }
+
+    let bundle_path_for_schema2 = bundle_path
+        .map(|p| p.to_path_buf())
+        .unwrap_or_else(|| bundle_dir.join("bundle.schema2.json"));
+    fs::copy_bundle_schema2_if_present(&bundle_path_for_schema2, bundle_dir, packet_dir)?;
+
+    if let Some(frames_index) =
+        crate::frames_index::read_frames_index_json_v1(&frames_index_path, warmup_frames)
+    {
+        let triage_lite = crate::frames_index::triage_lite_json_from_frames_index(
+            bundle_path.unwrap_or(bundle_dir),
+            &frames_index_path,
+            &frames_index,
+            warmup_frames,
+            50,
+            TriageLiteMetric::TotalTimeUs,
+        )?;
+        budget::write_json_compact(&packet_dir.join("triage.lite.json"), &triage_lite)?;
+
+        let hotspots_lite = crate::hotspots_lite::hotspots_lite_json_from_frames_index(
+            bundle_path.unwrap_or(bundle_dir),
+            &frames_index_path,
+            &frames_index,
+            warmup_frames,
+            50,
+            TriageLiteMetric::TotalTimeUs,
+        )?;
+        budget::write_json_compact(&packet_dir.join("hotspots.lite.json"), &hotspots_lite)?;
+    }
+
+    fs::copy_if_present(
+        &bundle_dir.join("script.result.json"),
+        packet_dir,
+        "script.result.json",
+    )?;
+    fs::copy_if_present(
+        &bundle_dir.join("manifest.json"),
+        packet_dir,
+        "manifest.json",
+    )?;
+
+    anchors::write_packet_anchors_if_possible(packet_dir)?;
+
+    let mut failed_step_slices_report: Option<AiPacketFailedStepSlicesReportV1> = None;
+    if test_id.is_none() {
+        if let Some(script) = anchors::try_read_script_result_v1(packet_dir) {
+            let mut report = AiPacketFailedStepSlicesReportV1 {
+                schema_version: 1,
+                status: "skipped".to_string(),
+                reason_code: Some(
+                    "tooling.ai_packet.failed_step_slices.skipped.sidecars_only".to_string(),
+                ),
+                failed_step_index: script.step_index,
+                ..Default::default()
+            };
+            report.candidate_test_ids = anchors::pick_candidate_test_ids_for_failed_step(&script);
+            failed_step_slices_report = Some(report);
+        }
+    }
+
+    if include_triage {
+        let payload = serde_json::json!({
+            "schema_version": 1,
+            "kind": "diag.ai_packet_note",
+            "bundle_dir": bundle_dir.display().to_string(),
+            "bundle_artifact": bundle_path.map(|p| p.display().to_string()),
+            "warmup_frames": warmup_frames,
+            "message": "`--include-triage` requires reading the bundle artifact; it is skipped under `--sidecars-only`. Use triage.lite.json instead.",
+            "suggestions": [
+                format!("fretboard diag triage {} --warmup-frames {}", bundle_path.unwrap_or(bundle_dir).display(), warmup_frames),
+                format!("fretboard diag ai-packet {} --include-triage --warmup-frames {}", bundle_path.unwrap_or(bundle_dir).display(), warmup_frames),
+            ],
+        });
+        budget::write_json_compact(&packet_dir.join("triage.error.json"), &payload)?;
+    }
+
+    if let Some(test_id) = test_id {
+        let stem = crate::util::sanitize_for_filename(test_id, 80, "test_id");
+        let payload = serde_json::json!({
+            "schema_version": 1,
+            "kind": "diag.ai_packet_note",
+            "bundle_dir": bundle_dir.display().to_string(),
+            "bundle_artifact": bundle_path.map(|p| p.display().to_string()),
+            "warmup_frames": warmup_frames,
+            "message": "slice generation requires reading the bundle artifact; it is skipped under `--sidecars-only`.",
+            "test_id": test_id,
+        });
+        budget::write_json_compact(
+            &packet_dir.join(format!("slice.test_id.{stem}.error.json")),
+            &payload,
+        )?;
+    }
+
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "kind": "diag.ai_packet_note",
+        "bundle_dir": bundle_dir.display().to_string(),
+        "bundle_artifact": bundle_path.map(|p| p.display().to_string()),
+        "warmup_frames": warmup_frames,
+        "message": "Sidecars-only mode: skipped reading the bundle artifact; packet uses existing sidecars only.",
+        "suggestions": [
+            format!("fretboard diag doctor --fix-sidecars {} --warmup-frames {}", bundle_dir.display(), warmup_frames),
+            format!("fretboard diag ai-packet {} --warmup-frames {}", bundle_dir.display(), warmup_frames),
+        ],
+    });
+    budget::write_json_compact(&packet_dir.join("doctor.json"), &payload)?;
+
+    let mut report = AiPacketBudgetReport {
+        kind: "ai_packet",
+        schema_version: 1,
+        budget: AiPacketBudgetConfig::default(),
+        failed_step_slices: failed_step_slices_report,
+        ..Default::default()
+    };
+    let enforce_res = budget::enforce_ai_packet_budgets(packet_dir, &mut report);
+    budget::write_packet_budget_report(packet_dir, &report)?;
+    enforce_res?;
+
+    Ok(())
+}
+
 fn resolve_bundle_artifact_path_or_latest(
     bundle_arg: Option<&str>,
     workspace_root: &Path,
@@ -342,4 +558,99 @@ fn resolve_bundle_artifact_path_or_latest(
         .or_else(|| crate::find_latest_export_dir(out_dir))
         .ok_or_else(|| format!("no diagnostics bundle found under {}", out_dir.display()))?;
     Ok(crate::resolve_bundle_artifact_path(&latest))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ai_packet_sidecars_only_copies_required_files_and_writes_notes() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-ai-packet-sidecars-only-{}",
+            crate::util::now_unix_ms()
+        ));
+        let bundle_dir = root.join("bundle");
+        let packet_dir = root.join("packet");
+        std::fs::create_dir_all(&bundle_dir).expect("create bundle dir");
+
+        std::fs::write(
+            bundle_dir.join("bundle.meta.json"),
+            serde_json::to_vec(&serde_json::json!({
+                "kind": "bundle_meta",
+                "schema_version": 1,
+                "warmup_frames": 0,
+                "bundle": "bundle.json",
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        std::fs::write(
+            bundle_dir.join("test_ids.index.json"),
+            b"{\"kind\":\"test_ids_index\",\"schema_version\":1}",
+        )
+        .unwrap();
+        std::fs::write(
+            bundle_dir.join("bundle.index.json"),
+            serde_json::to_vec(&serde_json::json!({
+                "kind": "bundle_index",
+                "schema_version": 1,
+                "warmup_frames": 0,
+                "bundle": "bundle.json",
+                "script": { "steps": [] },
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        std::fs::write(
+            bundle_dir.join("frames.index.json"),
+            serde_json::to_vec(&serde_json::json!({
+                "kind": "frames_index",
+                "schema_version": 1,
+                "bundle": "bundle.json",
+                "generated_unix_ms": 0,
+                "warmup_frames": 0,
+                "has_semantics_table": true,
+                "columns": ["frame_id", "window_snapshot_seq", "timestamp_unix_ms", "total_time_us", "layout_time_us", "paint_time_us", "semantics_fingerprint", "semantics_source_tag"],
+                "windows_total": 1,
+                "snapshots_total": 1,
+                "frames_total": 1,
+                "windows": [{
+                    "window": 1,
+                    "snapshots_total": 1,
+                    "frames_total": 1,
+                    "first_frame_id": 1,
+                    "last_frame_id": 1,
+                    "first_timestamp_unix_ms": 0,
+                    "last_timestamp_unix_ms": 0,
+                    "warmup_fallback": false,
+                    "clipped": null,
+                    "rows": [[1, 1, 0, 1000, 200, 300, 7, 2]]
+                }]
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+
+        generate_ai_packet_dir_sidecars_only(
+            None,
+            &bundle_dir,
+            &packet_dir,
+            true,
+            10,
+            None,
+            0,
+            None,
+        )
+        .expect("sidecars-only packet");
+
+        assert!(packet_dir.join("bundle.meta.json").is_file());
+        assert!(packet_dir.join("test_ids.index.json").is_file());
+        assert!(packet_dir.join("bundle.index.json").is_file());
+        assert!(packet_dir.join("frames.index.json").is_file());
+        assert!(packet_dir.join("triage.lite.json").is_file());
+        assert!(packet_dir.join("hotspots.lite.json").is_file());
+        assert!(packet_dir.join("doctor.json").is_file());
+        assert!(packet_dir.join("triage.error.json").is_file());
+    }
 }
