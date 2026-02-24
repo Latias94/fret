@@ -37,6 +37,7 @@ pub struct CalendarRange {
     selected: Model<DateRangeSelection>,
     number_of_months: usize,
     locale: CalendarLocale,
+    test_id_prefix: Option<Arc<str>>,
     month_bounds: Option<(CalendarMonth, CalendarMonth)>,
     disable_navigation: bool,
     required: bool,
@@ -64,6 +65,7 @@ impl std::fmt::Debug for CalendarRange {
             .field("selected", &"<model>")
             .field("number_of_months", &self.number_of_months)
             .field("locale", &self.locale)
+            .field("test_id_prefix", &self.test_id_prefix.as_deref())
             .field("month_bounds", &self.month_bounds)
             .field("disable_navigation", &self.disable_navigation)
             .field("required", &self.required)
@@ -89,6 +91,7 @@ impl CalendarRange {
             selected,
             number_of_months: 1,
             locale: CalendarLocale::default(),
+            test_id_prefix: None,
             month_bounds: None,
             disable_navigation: false,
             required: false,
@@ -130,6 +133,14 @@ impl CalendarRange {
 
     pub fn locale(mut self, locale: CalendarLocale) -> Self {
         self.locale = locale;
+        self
+    }
+
+    /// Sets a stable `test_id` prefix for calendar parts (days, etc.).
+    ///
+    /// When unset, day cells default to `YYYY-MM-DD`.
+    pub fn test_id_prefix(mut self, prefix: impl Into<Arc<str>>) -> Self {
+        self.test_id_prefix = Some(prefix.into());
         self
     }
 
@@ -250,6 +261,7 @@ impl CalendarRange {
         let selected_model = self.selected.clone();
         let number_of_months = self.number_of_months.max(1);
         let locale = self.locale;
+        let test_id_prefix = self.test_id_prefix.clone();
         let month_bounds = self.month_bounds;
         let disable_navigation = self.disable_navigation;
         let required = self.required;
@@ -422,6 +434,7 @@ impl CalendarRange {
                             exclude_disabled,
                             number_of_months,
                             locale,
+                            test_id_prefix.clone(),
                             month_bounds,
                             disable_navigation,
                             week_start,
@@ -725,6 +738,7 @@ impl CalendarRange {
                                             cx,
                                             &theme_days_for_days,
                                             locale,
+                                            test_id_prefix.clone(),
                                             day.date,
                                             day.in_month,
                                             is_from,
@@ -849,6 +863,7 @@ fn calendar_range_multi_month_view<H: UiHost>(
     exclude_disabled: bool,
     number_of_months: usize,
     locale: CalendarLocale,
+    test_id_prefix: Option<Arc<str>>,
     month_bounds: Option<(CalendarMonth, CalendarMonth)>,
     disable_navigation: bool,
     week_start: Weekday,
@@ -965,6 +980,7 @@ fn calendar_range_multi_month_view<H: UiHost>(
                         theme,
                         m,
                         locale,
+                        test_id_prefix.clone(),
                         month_bounds,
                         week_start,
                         fixed_weeks,
@@ -1007,6 +1023,7 @@ fn calendar_range_multi_month_view<H: UiHost>(
                         theme,
                         m,
                         locale,
+                        test_id_prefix.clone(),
                         month_bounds,
                         week_start,
                         fixed_weeks,
@@ -1054,6 +1071,7 @@ fn calendar_range_month_view<H: UiHost>(
     theme: &Theme,
     month: CalendarMonth,
     locale: CalendarLocale,
+    test_id_prefix: Option<Arc<str>>,
     month_bounds: Option<(CalendarMonth, CalendarMonth)>,
     week_start: Weekday,
     fixed_weeks: bool,
@@ -1344,6 +1362,7 @@ fn calendar_range_month_view<H: UiHost>(
                     cx,
                     &theme_days_for_days,
                     locale,
+                    test_id_prefix.clone(),
                     day.date,
                     day.in_month,
                     is_from,
@@ -1581,6 +1600,7 @@ fn calendar_range_day_cell<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
     locale: CalendarLocale,
+    test_id_prefix: Option<Arc<str>>,
     date: Date,
     in_month: bool,
     is_from: bool,
@@ -1633,6 +1653,16 @@ fn calendar_range_day_cell<H: UiHost>(
     let day = date.day();
     let day_text: Arc<str> = Arc::from(day.to_string());
     let date_label = locale.day_aria_label(date, today, selected);
+    let base_test_id = if let Some(prefix) = test_id_prefix {
+        format!("{prefix}:{date}")
+    } else {
+        date.to_string()
+    };
+    let test_id: Arc<str> = if in_month {
+        Arc::from(base_test_id)
+    } else {
+        Arc::from(format!("{base_test_id}:outside"))
+    };
 
     let text_sm_px = theme
         .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_PX)
@@ -1735,6 +1765,7 @@ fn calendar_range_day_cell<H: UiHost>(
             )),
             a11y: PressableA11y {
                 label: Some(date_label.clone()),
+                test_id: Some(test_id.clone()),
                 selected,
                 ..Default::default()
             },

@@ -2176,10 +2176,15 @@ fn calendar_day_cell<H: UiHost>(
     let day = date.day();
     let day_text: Arc<str> = Arc::from(day.to_string());
     let date_label = locale.day_aria_label(date, today, selected);
-    let test_id: Arc<str> = if let Some(prefix) = test_id_prefix {
-        Arc::from(format!("{prefix}:{date}"))
+    let base_test_id = if let Some(prefix) = test_id_prefix {
+        format!("{prefix}:{date}")
     } else {
-        Arc::from(date.to_string())
+        date.to_string()
+    };
+    let test_id: Arc<str> = if in_month {
+        Arc::from(base_test_id)
+    } else {
+        Arc::from(format!("{base_test_id}:outside"))
     };
 
     let text_sm_px = theme
