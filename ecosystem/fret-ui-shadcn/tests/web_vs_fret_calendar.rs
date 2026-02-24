@@ -3870,7 +3870,7 @@ fn fret_calendar_may_2026_outside_day_text_centered_in_button() {
     for (day, label) in [(27u8, "27"), (28, "28"), (29, "29"), (30, "30")] {
         let date =
             time::Date::from_calendar_date(2026, time::Month::April, day).expect("valid date");
-        let button_test_id = format!("fret-test.calendar:{date}");
+        let button_test_id = format!("fret-test.calendar:{date}:outside");
         assert_fret_calendar_day_text_centered_in_button_by_test_id(
             &snap,
             &button_test_id,
