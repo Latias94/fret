@@ -1,6 +1,8 @@
 use std::path::{Path, PathBuf};
 
-use super::args::{looks_like_path, resolve_bundle_artifact_path_or_latest};
+use super::args::{
+    looks_like_path, resolve_bundle_artifact_path_or_latest, resolve_latest_bundle_dir_path,
+};
 use super::doctor;
 
 use crate::frames_index::TriageLiteMetric;
@@ -427,10 +429,7 @@ fn resolve_bundle_dir_or_latest(
         }
         return Ok(src);
     }
-    let latest = crate::read_latest_pointer(out_dir)
-        .or_else(|| crate::find_latest_export_dir(out_dir))
-        .ok_or_else(|| format!("no diagnostics bundle found under {}", out_dir.display()))?;
-    Ok(latest)
+    resolve_latest_bundle_dir_path(out_dir)
 }
 
 #[allow(clippy::too_many_arguments)]

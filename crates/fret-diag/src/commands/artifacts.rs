@@ -1,5 +1,6 @@
 use std::path::{Path, PathBuf};
 
+use super::args::resolve_latest_bundle_dir_path;
 use super::sidecars;
 
 use crate::lint::{LintOptions, lint_bundle_from_path};
@@ -30,14 +31,12 @@ pub(crate) fn cmd_pack(
             let src = crate::resolve_path(workspace_root, PathBuf::from(src));
             crate::resolve_bundle_root_dir(&src)?
         }
-        None => crate::read_latest_pointer(out_dir)
-            .or_else(|| crate::find_latest_export_dir(out_dir))
-            .ok_or_else(|| {
-                format!(
-                    "no diagnostics bundle found under {} (try: fretboard diag pack ./target/fret-diag/<timestamp>)",
-                    out_dir.display()
-                )
-            })?,
+        None => resolve_latest_bundle_dir_path(out_dir).map_err(|_err| {
+            format!(
+                "no diagnostics bundle found under {} (try: fretboard diag pack ./target/fret-diag/<timestamp>)",
+                out_dir.display()
+            )
+        })?,
     };
 
     let bundle_dir = crate::resolve_bundle_root_dir(&bundle_dir)?;

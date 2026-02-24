@@ -138,6 +138,8 @@ This file tracks tasks for `docs/workstreams/diag-fearless-refactor-v1.md`.
   - Evidence: `crates/fret-diag/src/commands/args.rs`, used by `agent`, `ai-packet`, `bundle-v2`, `hotspots`, `slice`.
 - [x] Deduplicate “resolve latest bundle dir” helper.
   - Evidence: `crates/fret-diag/src/commands/args.rs` (`resolve_latest_bundle_dir_path`), used by `doctor`.
+- [x] Remove remaining direct `read_latest_pointer` usage from `commands/*` (prefer shared helpers).
+  - Evidence: `crates/fret-diag/src/commands/args.rs`, `crates/fret-diag/src/commands/session.rs`.
 - [ ] Decide how far to push schema2-first:
   - [ ] Decide the runtime emission policy for `bundle.schema2.json` (tooling-derived today):
     - Proposed policy draft: `docs/workstreams/diag-fearless-refactor-v1/schema2-first-decision.md`.
