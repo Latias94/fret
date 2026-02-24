@@ -170,6 +170,12 @@ pub fn should_dismiss_on_focus_outside<H: UiHost>(
     let Some(focus) = focus_now else {
         return false;
     };
+    // During tree construction / overlay synthesis, focus can transiently point at a stale node
+    // that is not currently in the tree. Treat this as "unstable focus" and avoid triggering a
+    // focus-outside dismissal; the focus will be repaired or reassigned on subsequent frames.
+    if ui.node_layer(focus).is_none() {
+        return false;
+    }
     if last_focus == Some(focus) {
         return false;
     }
