@@ -60,8 +60,10 @@ Use `length-percentage-semantics-v1-milestones.md` for phase planning.
     - Evidence: `ecosystem/fret-ui-shadcn/src/sheet.rs` (remove viewport clamp; use `Length::Fill`/`Length::Fraction` max constraints)
     - Gate: `ecosystem/fret-ui-shadcn/src/sheet.rs` (`sheet_bottom_auto_max_height_fraction_clamps_tall_content_with_edge_gap`)
     - Gate: `tools/diag-scripts/ui-gallery-sheet-escape-focus-restore.json`
-  - [ ] drawers that currently rely on explicit px extents
-    - Note: `DrawerContent` still uses viewport-derived `max-height` today; migrate after we have a robust “percent max-height clamps content bounds” pattern.
+  - [x] drawers that currently rely on explicit px extents
+    - Evidence: `ecosystem/fret-ui-shadcn/src/drawer.rs` (`DrawerContent` uses `max_h_fraction` vs viewport math)
+    - Gate: `ecosystem/fret-ui-shadcn/src/drawer.rs` (`drawer_content_max_height_fraction_clamps_tall_content`)
+    - Gate: `tools/diag-scripts/ui-gallery-drawer-docs-smoke.json`
 - [ ] Add a gate per migration:
   - [x] a unit test when the invariant is layout-only
   - [x] a diag script when the invariant is “docs-aligned UI outcome”
