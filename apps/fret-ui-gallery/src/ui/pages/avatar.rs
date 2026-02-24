@@ -1,4 +1,5 @@
 use super::super::*;
+use fret_ui_kit::prelude::ActionHooksExt as _;
 
 use crate::ui::doc_layout::{self, DocSection};
 
@@ -308,6 +309,7 @@ pub(super) fn preview_avatar(
     let dropdown = {
         doc_layout::wrap_controls_row(cx, &theme, Space::N4, |cx| {
             let avatar_image_for_trigger = avatar_image.clone();
+            let open_for_trigger = dropdown_open.clone();
             let trigger = move |cx: &mut ElementContext<'_, App>| {
                 let image =
                     shadcn::AvatarImage::model(avatar_image_for_trigger.clone()).into_element(cx);
@@ -316,10 +318,19 @@ pub(super) fn preview_avatar(
                     .delay_ms(120)
                     .into_element(cx);
 
-                shadcn::Avatar::new([image, fallback])
+                let avatar = shadcn::Avatar::new([image, fallback])
                     .size(shadcn::AvatarSize::Default)
-                    .into_element(cx)
-                    .test_id("ui-gallery-avatar-dropdown-trigger")
+                    .into_element(cx);
+
+                let mut props = fret_ui::element::PressableProps::default();
+                props.a11y.role = Some(fret_core::SemanticsRole::Button);
+                props.a11y.label = Some(std::sync::Arc::<str>::from("Avatar menu"));
+                let open_for_pressable = open_for_trigger.clone();
+                cx.pressable(props, move |cx, _st| {
+                    cx.pressable_toggle_bool(&open_for_pressable);
+                    vec![avatar]
+                })
+                .test_id("ui-gallery-avatar-dropdown-trigger")
             };
 
             let entries = |_cx: &mut ElementContext<'_, App>| {
@@ -342,9 +353,7 @@ pub(super) fn preview_avatar(
             };
 
             vec![
-                shadcn::DropdownMenu::new(dropdown_open.clone())
-                    .into_element(cx, trigger, entries)
-                    .test_id("ui-gallery-avatar-dropdown"),
+                shadcn::DropdownMenu::new(dropdown_open.clone()).into_element(cx, trigger, entries),
             ]
         })
         .test_id("ui-gallery-avatar-dropdown-row")
@@ -365,7 +374,7 @@ pub(super) fn preview_avatar(
                 },
             )]
         })
-        .test_id("ui-gallery-avatar-rtl")
+        .test_id("ui-gallery-avatar-rtl-row")
     };
 
     let notes = doc_layout::notes(
