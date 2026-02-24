@@ -239,7 +239,7 @@ pub(crate) fn run_doctor_for_bundle_dir(
     if opts.fix_sidecars {
         let bundle_artifact =
             crate::resolve_bundle_artifact_path_no_materialize(&bundle_dir).ok_or_else(|| {
-            "unable to regenerate sidecars: missing bundle.json or bundle.schema2.json (tip: re-run with --fix-bundle-json, or provide a bundle dir that contains one of those files)".to_string()
+            "unable to regenerate sidecars: missing bundle artifact (bundle.json or bundle.schema2.json) (tip: re-run with --fix-bundle-json, or provide a bundle dir that contains one of those files)".to_string()
         })?;
         let _ = crate::bundle_index::ensure_bundle_meta_json(&bundle_artifact, warmup_frames)
             .map(|p| fixes_applied.push(format!("regenerated bundle.meta.json ({})", p.display())));

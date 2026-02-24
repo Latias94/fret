@@ -61,13 +61,13 @@ Related living docs:
 - `fret-diag` CLI commands treat sidecars as optional accelerators:
   - validate `kind` / `schema_version` / `warmup_frames`,
   - accept `_root/` bundle layouts,
-  - regenerate invalid sidecars from adjacent `bundle.json` when possible.
+  - regenerate invalid sidecars from an adjacent bundle artifact when possible.
   - Evidence: `crates/fret-diag/src/commands/sidecars.rs`
 
 ## Goals
 
 1. **Artifact ergonomics**
-   - Keep `bundle.json` reviewable and bounded.
+   - Keep bundle artifacts bounded; keep raw `bundle.json` reviewable when present.
    - Add small sidecars for fast queries (indexing, fingerprints, bloom filters, step markers).
 2. **Implementation modularity**
    - Split the monolithic `ui_diagnostics.rs` by responsibility (script engine, bundle dump, index writing, WS bridge).
