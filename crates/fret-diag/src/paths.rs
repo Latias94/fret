@@ -82,7 +82,7 @@ pub(crate) fn resolve_bundle_root_dir(path: &Path) -> Result<PathBuf, String> {
         return Ok(path.to_path_buf());
     }
     let Some(parent) = path.parent() else {
-        return Err(format!("invalid bundle path: {}", path.display()));
+        return Err(format!("invalid bundle artifact path: {}", path.display()));
     };
     Ok(parent.to_path_buf())
 }

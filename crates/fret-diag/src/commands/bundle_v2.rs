@@ -45,48 +45,10 @@ fn parse_semantics_mode(mode: &str) -> Result<&'static str, String> {
     }
 }
 
-struct BundleSemanticsPresence {
-    table_keys: HashSet<(u64, u64)>,
-}
-
-impl BundleSemanticsPresence {
-    fn new(bundle: &serde_json::Value) -> Self {
-        let mut table_keys: HashSet<(u64, u64)> = HashSet::new();
-        if let Some(entries) = bundle
-            .get("tables")
-            .and_then(|v| v.get("semantics"))
-            .and_then(|v| v.get("entries"))
-            .and_then(|v| v.as_array())
-        {
-            for e in entries {
-                let Some(window) = e.get("window").and_then(|v| v.as_u64()) else {
-                    continue;
-                };
-                let Some(fp) = e.get("semantics_fingerprint").and_then(|v| v.as_u64()) else {
-                    continue;
-                };
-                table_keys.insert((window, fp));
-            }
-        }
-        Self { table_keys }
-    }
-
-    fn snapshot_has_semantics(&self, snapshot: &serde_json::Value, default_window: u64) -> bool {
-        if let Some(sem) = crate::json_bundle::snapshot_semantics(snapshot) {
-            return !sem.is_null();
-        }
-        let window = crate::json_bundle::snapshot_window_id(snapshot).unwrap_or(default_window);
-        let Some(fp) = crate::json_bundle::snapshot_semantics_fingerprint(snapshot) else {
-            return false;
-        };
-        self.table_keys.contains(&(window, fp))
-    }
-}
-
 fn apply_semantics_mode_inline(
     windows: &mut [serde_json::Value],
     mode: &str,
-    semantics: &BundleSemanticsPresence,
+    semantics: &crate::json_bundle::SemanticsTablePresence,
 ) {
     fn clear_snapshot_semantics(s: &mut serde_json::Value) {
         // Clear any known inline semantics locations so tooling won't accidentally treat legacy
@@ -229,7 +191,7 @@ fn convert_bundle_value_to_schema2_in_place(
         }
     }
 
-    let semantics = BundleSemanticsPresence::new(bundle);
+    let semantics = crate::json_bundle::SemanticsTablePresence::new(bundle);
 
     let windows_mut = bundle
         .get_mut("windows")
@@ -297,7 +259,10 @@ pub(crate) fn write_bundle_schema2_json_from_path(
     })
 }
 
-fn prune_semantics_table(bundle: &mut serde_json::Value, semantics: &BundleSemanticsPresence) {
+fn prune_semantics_table(
+    bundle: &mut serde_json::Value,
+    semantics: &crate::json_bundle::SemanticsTablePresence,
+) {
     let Some(windows) = bundle.get("windows").and_then(|v| v.as_array()) else {
         return;
     };
@@ -481,7 +446,7 @@ mod tests {
             }
         });
 
-        let semantics = BundleSemanticsPresence::new(&bundle);
+        let semantics = crate::json_bundle::SemanticsTablePresence::new(&bundle);
         let windows_mut = bundle
             .get_mut("windows")
             .and_then(|v| v.as_array_mut())

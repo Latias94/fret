@@ -1,6 +1,7 @@
 use serde_json::Value;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
+use std::collections::HashSet;
 
 pub(crate) fn pick_last_snapshot_after_warmup<'a>(
     snaps: &'a [Value],
@@ -165,7 +166,10 @@ impl<'a> SemanticsResolver<'a> {
 
     pub(crate) fn semantics_snapshot(&self, snapshot: &'a Value) -> Option<&'a Value> {
         if let Some(sem) = snapshot_semantics(snapshot) {
-            return Some(sem);
+            // Treat explicit nulls as "missing" so schema2 table semantics can still be resolved.
+            if !sem.is_null() {
+                return Some(sem);
+            }
         }
         let entries = self.entries?;
         let window = snapshot_window_id(snapshot)?;
@@ -175,6 +179,11 @@ impl<'a> SemanticsResolver<'a> {
             .get(idx)
             .and_then(|e| e.get("semantics"))
             .or_else(|| entries.get(idx).and_then(|e| e.get("semantic")))
+    }
+
+    pub(crate) fn has_table_entry(&self, window: u64, semantics_fingerprint: u64) -> bool {
+        self.by_window_fp
+            .contains_key(&(window, semantics_fingerprint))
     }
 
     pub(crate) fn table_entries(&self) -> &'a [Value] {
@@ -204,6 +213,43 @@ impl<'a> SemanticsResolver<'a> {
             .get("nodes")
             .and_then(|v| v.as_array())
             .map(|v| v.as_slice())
+    }
+}
+
+/// Owned semantics presence helper for schema conversion and other in-place mutation workflows.
+///
+/// Unlike [`SemanticsResolver`], this type does not borrow the bundle JSON, so it can be used
+/// while mutating the bundle structure.
+pub(crate) struct SemanticsTablePresence {
+    table_keys: HashSet<(u64, u64)>,
+}
+
+impl SemanticsTablePresence {
+    pub(crate) fn new(bundle: &Value) -> Self {
+        let mut table_keys: HashSet<(u64, u64)> = HashSet::new();
+        if let Some(entries) = bundle_semantics_table_entries(bundle) {
+            for e in entries {
+                let Some(window) = e.get("window").and_then(|v| v.as_u64()) else {
+                    continue;
+                };
+                let Some(fp) = e.get("semantics_fingerprint").and_then(|v| v.as_u64()) else {
+                    continue;
+                };
+                table_keys.insert((window, fp));
+            }
+        }
+        Self { table_keys }
+    }
+
+    pub(crate) fn snapshot_has_semantics(&self, snapshot: &Value, default_window: u64) -> bool {
+        if let Some(sem) = snapshot_semantics(snapshot) {
+            return !sem.is_null();
+        }
+        let window = snapshot_window_id(snapshot).unwrap_or(default_window);
+        let Some(fp) = snapshot_semantics_fingerprint(snapshot) else {
+            return false;
+        };
+        self.table_keys.contains(&(window, fp))
     }
 }
 
@@ -308,6 +354,38 @@ mod tests {
         assert_eq!(nodes.len(), 1);
         assert_eq!(nodes[0]["id"].as_u64(), Some(1));
         assert_eq!(nodes[0]["test_id"].as_str(), Some("inline"));
+    }
+
+    #[test]
+    fn semantics_resolver_falls_back_to_table_when_inline_is_explicit_null() {
+        let bundle = json!({
+            "schema_version": 2,
+            "windows": [{
+                "window": 1,
+                "snapshots": [{
+                    "frame_id": 1,
+                    "window": 1,
+                    "semantics_fingerprint": 42,
+                    "debug": { "semantics": null }
+                }]
+            }],
+            "tables": {
+                "semantics": {
+                    "entries": [{
+                        "window": 1,
+                        "semantics_fingerprint": 42,
+                        "semantics": { "nodes": [{ "id": 9, "test_id": "bar" }] }
+                    }]
+                }
+            }
+        });
+
+        let semantics = SemanticsResolver::new(&bundle);
+        let snap = &bundle["windows"][0]["snapshots"][0];
+        let nodes = semantics.nodes(snap).expect("expected nodes");
+        assert_eq!(nodes.len(), 1);
+        assert_eq!(nodes[0]["id"].as_u64(), Some(9));
+        assert_eq!(nodes[0]["test_id"].as_str(), Some("bar"));
     }
 
     #[test]
