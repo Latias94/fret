@@ -252,7 +252,7 @@ pub(crate) fn resolve_bundle_artifact_path(path: &Path) -> PathBuf {
 
 pub(crate) fn resolve_bundle_artifact_path_no_materialize(bundle_dir: &Path) -> Option<PathBuf> {
     if !bundle_dir.is_dir() {
-        return Some(bundle_dir.to_path_buf());
+        return bundle_dir.is_file().then(|| bundle_dir.to_path_buf());
     }
 
     let direct_v2 = bundle_dir.join("bundle.schema2.json");
