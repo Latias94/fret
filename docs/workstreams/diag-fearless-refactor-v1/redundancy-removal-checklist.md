@@ -6,7 +6,7 @@ scope: diagnostics, tooling, runtime, debt-removal
 
 # Redundancy removal checklist (risk-tiered)
 
-This checklist is the “remove the baggage” companion to the schema2-first (Plan 1) migration.
+This checklist is the "remove the baggage" companion to the schema2-first (Plan 1) migration.
 
 Principles:
 
@@ -17,15 +17,16 @@ Principles:
 Regression gates (recommended before removing any medium/high-risk item):
 
 - `cargo check -p fret-ui-gallery`
-- `cargo test -p fret-diag` (at least the “sidecars-only” and pack/repro AI-only tests)
+- `cargo test -p fret-diag` (at least the "sidecars-only" and pack/repro AI-only tests)
 
 ## Low risk (do now; no behavior change)
 
-- [ ] Deduplicate “latest bundle” resolution helpers across the crate (not just `commands/*`).
+- [x] Deduplicate "latest bundle" resolution helpers across the crate (not just `commands/*`).
   - Target: `diag_perf.rs`, `post_run_checks.rs`, `paths.rs` call sites.
-  - Goal: one shared helper for “latest bundle dir” and one for “latest bundle artifact”.
-- [ ] Deduplicate “bundle artifact hint → choose bundle.schema2.json or bundle.json or sidecars-only” logic everywhere.
+  - Goal: one shared helper for "latest bundle dir" and one for "latest bundle artifact".
+- [ ] Deduplicate "bundle artifact hint -> choose bundle.schema2.json or bundle.json or sidecars-only" logic everywhere.
   - Prefer routing through `crates/fret-diag/src/commands/ai_packet.rs` (`ensure_ai_packet_dir_best_effort`).
+  - Status: `ensure_ai_packet_dir_best_effort` now uses `resolve_bundle_artifact_path_no_materialize` (2026-02-24).
 - [ ] Delete unused helpers and dead code blocks as they appear during refactors.
   - Rule of thumb: if it has no call sites and no tests rely on it, remove it.
 
@@ -48,7 +49,7 @@ Regression gates (recommended before removing any medium/high-risk item):
 ### Sidecar placement conventions
 
 - [ ] Tighten the `_root/` vs top-level sidecar placement policy once pack/repro flows are stable.
-  - Goal: fewer candidate-path scans and fewer “where did this file go” edge cases.
+  - Goal: fewer candidate-path scans and fewer "where did this file go" edge cases.
 
 ## High risk (requires explicit exit criteria + migration plan)
 
@@ -63,14 +64,14 @@ Regression gates (recommended before removing any medium/high-risk item):
 
 ### Remove schema v1 support paths
 
-- [ ] Define a “read support” policy for schema v1 bundles.
+- [ ] Define a "read support" policy for schema v1 bundles.
   - Tooling read support should be retained longer than runtime write support.
   - Only remove readers once we have:
     - a documented migration recipe,
     - a `diag doctor` plan/fix story,
     - and at least one regression fixture proving expected failures are friendly.
 
-## “What to delete next?” decision guide
+## "What to delete next?" decision guide
 
 Pick the highest-impact item that:
 
@@ -82,5 +83,4 @@ Avoid:
 
 - changing runtime defaults without a migration plan,
 - deleting readers before writers (compat-first rule),
-- removing “rare but needed” deep-debug paths before they are documented as “advanced / optional”.
-
+- removing "rare but needed" deep-debug paths before they are documented as "advanced / optional".

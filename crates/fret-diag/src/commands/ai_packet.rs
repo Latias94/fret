@@ -146,7 +146,7 @@ pub(crate) fn cmd_ai_packet(
 
     let (bundle_path, bundle_dir) = if sidecars_only {
         let dir = resolve_bundle_dir_or_latest(bundle_arg.as_deref(), workspace_root, out_dir)?;
-        let bundle_path = resolve_bundle_artifact_path_if_present(&dir);
+        let bundle_path = crate::resolve_bundle_artifact_path_no_materialize(&dir);
         (bundle_path, dir)
     } else {
         let bundle_path =
@@ -369,16 +369,10 @@ pub(crate) fn ensure_ai_packet_dir_best_effort(
         return Ok(());
     }
 
-    let bundle_path_opt: Option<PathBuf> =
-        if let Some(hint) = bundle_artifact_hint.filter(|p| p.is_file()) {
-            Some(hint.to_path_buf())
-        } else if bundle_dir.join("bundle.schema2.json").is_file() {
-            Some(bundle_dir.join("bundle.schema2.json"))
-        } else if bundle_dir.join("bundle.json").is_file() {
-            Some(bundle_dir.join("bundle.json"))
-        } else {
-            None
-        };
+    let bundle_path_opt: Option<PathBuf> = bundle_artifact_hint
+        .filter(|p| p.is_file())
+        .map(|p| p.to_path_buf())
+        .or_else(|| crate::resolve_bundle_artifact_path_no_materialize(bundle_dir));
 
     if let Some(bundle_path) = bundle_path_opt.as_deref() {
         generate_ai_packet_dir(
@@ -403,18 +397,6 @@ pub(crate) fn ensure_ai_packet_dir_best_effort(
             test_id,
         )
     }
-}
-
-fn resolve_bundle_artifact_path_if_present(bundle_dir: &Path) -> Option<PathBuf> {
-    let schema2 = bundle_dir.join("bundle.schema2.json");
-    if schema2.is_file() {
-        return Some(schema2);
-    }
-    let raw = bundle_dir.join("bundle.json");
-    if raw.is_file() {
-        return Some(raw);
-    }
-    None
 }
 
 fn resolve_bundle_dir_or_latest(
