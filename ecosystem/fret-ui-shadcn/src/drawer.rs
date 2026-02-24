@@ -548,14 +548,9 @@ impl Drawer {
             .vertical_auto_max_height_fraction(DRAWER_MAX_HEIGHT_FRACTION);
         match side {
             DrawerSide::Left | DrawerSide::Right => {
-                let viewport_w = cx
-                    .environment_viewport_bounds(fret_ui::Invalidation::Layout)
-                    .size
-                    .width;
-                let desired = Px((viewport_w.0 * DRAWER_SIDE_PANEL_WIDTH_FRACTION)
-                    .min(DRAWER_SIDE_PANEL_MAX_WIDTH_PX.0)
-                    .max(0.0));
-                inner = inner.size(desired);
+                inner = inner
+                    .size_fraction(DRAWER_SIDE_PANEL_WIDTH_FRACTION)
+                    .max_size(DRAWER_SIDE_PANEL_MAX_WIDTH_PX);
             }
             DrawerSide::Top | DrawerSide::Bottom => {}
         }
