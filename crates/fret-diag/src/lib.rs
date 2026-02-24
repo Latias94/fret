@@ -64,8 +64,8 @@ pub(crate) use post_run_checks::apply_post_run_checks;
 
 pub(crate) use evidence_index::write_evidence_index;
 pub(crate) use pack_zip::{
-    ReproZipBundle, pack_bundle_dir_to_zip, pack_repro_zip_multi, repro_zip_prefix_for_script,
-    zip_safe_component,
+    ReproZipBundle, pack_ai_packet_dir_to_zip, pack_bundle_dir_to_zip, pack_repro_zip_multi,
+    repro_zip_prefix_for_script, zip_safe_component,
 };
 pub(crate) use perf_hint_gate::{
     parse_perf_hint_gate_options, perf_hint_gate_failures_for_triage_json,
@@ -380,6 +380,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut pack_after_run: bool = false;
     let mut pack_schema2_only: bool = false;
     let mut ensure_ai_packet: bool = false;
+    let mut pack_ai_only: bool = false;
     let mut triage_out: Option<PathBuf> = None;
     let mut lint_out: Option<PathBuf> = None;
     let mut meta_out: Option<PathBuf> = None;
@@ -630,6 +631,11 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 i += 1;
             }
             "--ai-packet" => {
+                ensure_ai_packet = true;
+                i += 1;
+            }
+            "--ai-only" => {
+                pack_ai_only = true;
                 ensure_ai_packet = true;
                 i += 1;
             }
@@ -2322,6 +2328,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
         trace_out.clone(),
         &pack_out,
         ensure_ai_packet,
+        pack_ai_only,
         pack_include_root_artifacts,
         pack_include_triage,
         pack_include_screenshots,

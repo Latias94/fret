@@ -12,6 +12,7 @@ pub(crate) fn cmd_pack(
     out_dir: &Path,
     pack_out: Option<PathBuf>,
     ensure_ai_packet: bool,
+    pack_ai_only: bool,
     pack_include_root_artifacts: bool,
     pack_include_triage: bool,
     pack_include_screenshots: bool,
@@ -42,7 +43,22 @@ pub(crate) fn cmd_pack(
     let bundle_dir = crate::resolve_bundle_root_dir(&bundle_dir)?;
     let out = pack_out
         .map(|p| crate::resolve_path(workspace_root, p))
-        .unwrap_or_else(|| crate::default_pack_out_path(out_dir, &bundle_dir));
+        .unwrap_or_else(|| {
+            if pack_ai_only {
+                let name = bundle_dir
+                    .file_name()
+                    .and_then(|s| s.to_str())
+                    .filter(|s| !s.trim().is_empty())
+                    .unwrap_or("bundle");
+                if bundle_dir.starts_with(out_dir) {
+                    out_dir.join("share").join(format!("{name}.ai.zip"))
+                } else {
+                    bundle_dir.with_extension("ai.zip")
+                }
+            } else {
+                crate::default_pack_out_path(out_dir, &bundle_dir)
+            }
+        });
 
     let artifacts_root = if bundle_dir.starts_with(out_dir) {
         out_dir.to_path_buf()
@@ -50,7 +66,7 @@ pub(crate) fn cmd_pack(
         bundle_dir.parent().unwrap_or(out_dir).to_path_buf()
     };
 
-    if ensure_ai_packet {
+    if ensure_ai_packet || pack_ai_only {
         let bundle_path = crate::resolve_bundle_artifact_path(&bundle_dir);
         let packet_dir = bundle_dir.join("ai.packet");
         if !packet_dir.is_dir() && bundle_path.is_file() {
@@ -67,6 +83,20 @@ pub(crate) fn cmd_pack(
                 eprintln!("ai-packet: failed to generate ai.packet: {err}");
             }
         }
+    }
+
+    if pack_ai_only {
+        let packet_dir = bundle_dir.join("ai.packet");
+        if !packet_dir.is_dir() {
+            return Err(format!(
+                "--ai-only requires ai.packet under the bundle dir (tip: fretboard diag ai-packet {} --packet-out {})",
+                bundle_dir.display(),
+                packet_dir.display()
+            ));
+        }
+        crate::pack_ai_packet_dir_to_zip(&bundle_dir, &out, &artifacts_root)?;
+        println!("{}", out.display());
+        return Ok(());
     }
 
     crate::pack_bundle_dir_to_zip(

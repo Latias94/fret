@@ -4,6 +4,79 @@ use zip::write::FileOptions;
 
 use crate::stats::{BundleStatsOptions, BundleStatsSort, bundle_stats_from_path};
 
+pub(crate) fn pack_ai_packet_dir_to_zip(
+    bundle_dir: &Path,
+    out_path: &Path,
+    artifacts_root: &Path,
+) -> Result<(), String> {
+    if !bundle_dir.is_dir() {
+        return Err(format!(
+            "bundle_dir is not a directory: {}",
+            bundle_dir.display()
+        ));
+    }
+
+    let packet_dir = bundle_dir.join("ai.packet");
+    if !packet_dir.is_dir() {
+        return Err(format!(
+            "bundle_dir does not contain ai.packet (tip: fretboard diag ai-packet {} --packet-out {})",
+            bundle_dir.display(),
+            packet_dir.display()
+        ));
+    }
+
+    if let Some(parent) = out_path.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+
+    let bundle_name = bundle_dir
+        .file_name()
+        .and_then(|s| s.to_str())
+        .filter(|s| !s.trim().is_empty())
+        .unwrap_or("bundle");
+
+    let file = std::fs::File::create(out_path).map_err(|e| e.to_string())?;
+    let mut zip = zip::ZipWriter::new(file);
+    let options = FileOptions::default()
+        .compression_method(zip::CompressionMethod::Deflated)
+        .unix_permissions(0o644);
+
+    // Repro workflow helper: if a repro summary exists next to the bundle output root, include it.
+    let repro_summary = artifacts_root.join("repro.summary.json");
+    if repro_summary.is_file() {
+        let dst = format!("{bundle_name}/_root/repro.summary.json");
+        zip.start_file(dst, options).map_err(|e| e.to_string())?;
+        let mut f = std::fs::File::open(&repro_summary).map_err(|e| e.to_string())?;
+        std::io::copy(&mut f, &mut zip).map_err(|e| e.to_string())?;
+    }
+
+    // Include script sources when present (small but often essential for agentic triage).
+    for name in ["script.json", "picked.script.json"] {
+        let src = artifacts_root.join(name);
+        if !src.is_file() {
+            continue;
+        }
+        let dst = format!("{bundle_name}/_root/{name}");
+        zip.start_file(dst, options).map_err(|e| e.to_string())?;
+        let mut f = std::fs::File::open(&src).map_err(|e| e.to_string())?;
+        std::io::copy(&mut f, &mut zip).map_err(|e| e.to_string())?;
+    }
+
+    // Pack the packet directory under `_root/ai.packet/`.
+    let packet_prefix = format!("{bundle_name}/_root/ai.packet");
+    zip_add_dir_filtered(
+        &mut zip,
+        &packet_dir,
+        &packet_dir,
+        &packet_prefix,
+        options,
+        &["json", "md", "txt"],
+    )?;
+
+    zip.finish().map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn pack_bundle_dir_to_zip(
     bundle_dir: &Path,
