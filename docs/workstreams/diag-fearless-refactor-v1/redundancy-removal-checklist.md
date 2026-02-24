@@ -27,7 +27,7 @@ Regression gates (recommended before removing any medium/high-risk item):
 - [ ] Deduplicate "bundle artifact hint -> choose bundle.schema2.json or bundle.json or sidecars-only" logic everywhere.
   - Prefer routing through `crates/fret-diag/src/commands/ai_packet.rs` (`ensure_ai_packet_dir_best_effort`).
   - Status: `ensure_ai_packet_dir_best_effort` now uses `resolve_bundle_artifact_path_no_materialize` (2026-02-24).
-  - Status: `pack_zip` and `doctor` now use shared helpers for schema2/bundle artifact presence checks (2026-02-24).
+  - Status: `pack_zip` and `doctor` now use shared helpers for schema2/raw/bundle artifact presence checks (2026-02-24).
 - [ ] Delete unused helpers and dead code blocks as they appear during refactors.
   - Rule of thumb: if it has no call sites and no tests rely on it, remove it.
 
