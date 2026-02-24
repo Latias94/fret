@@ -45,6 +45,9 @@ Last updated: 2026-02-24
 ## Gallery + docs cleanups
 
 - [x] ButtonGroup gallery page: migrate icon usage to deferred `Button` icon slots (no manual fg threading).
+- [x] Avoid building icons outside `Button`'s `currentColor` scope (use `leading_icon` / `trailing_icon` / `icon`):
+  - [x] Spinner preview: `Learn more` uses `trailing_icon` (arrow-right).
+  - [x] Item docs snippet: icon-only action uses `Button::icon(...)`.
 - [ ] Remove manual `*_fg` threading in gallery pages where inheritance is now sufficient.
 - [ ] Add one “copy/paste ready” snippet per component page where code previously relied on local variables.
 

@@ -26,7 +26,6 @@ pub(in crate::ui) fn preview_spinner(cx: &mut ElementContext<'_, App>) -> Vec<An
     };
 
     let theme = Theme::global(&*cx.app).snapshot();
-    let icon = doc_layout::icon;
 
     let sizes = {
         let small = shadcn::Spinner::new()
@@ -137,7 +136,7 @@ pub(in crate::ui) fn preview_spinner(cx: &mut ElementContext<'_, App>) -> Vec<An
 
         let learn_more = shadcn::Button::new("Learn more")
             .variant(shadcn::ButtonVariant::Link)
-            .children([icon(cx, "lucide.arrow-right")])
+            .trailing_icon(fret_icons::IconId::new_static("lucide.arrow-right"))
             .into_element(cx);
 
         shadcn::Empty::new([

@@ -1300,7 +1300,7 @@ shadcn::Item::new([
             .variant(shadcn::ButtonVariant::Outline)
             .size(shadcn::ButtonSize::IconSm)
             .refine_style(ChromeRefinement::default().rounded(Radius::Full))
-            .children([doc_layout::icon(cx, "lucide.plus")])
+            .icon(fret_icons::IconId::new_static("lucide.plus"))
             .a11y_label("Invite")
             .into_element(cx),
     ]).into_element(cx),
