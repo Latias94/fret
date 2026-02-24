@@ -84,8 +84,8 @@ use gates::{
 use lint::{LintOptions, lint_bundle_from_path};
 use perf_seed_policy::{PerfBaselineSeed, PerfSeedMetric, ResolvedPerfBaselineSeedPolicy};
 use run_artifacts::{
-    materialize_bundle_json_from_manifest_chunks_if_missing, refresh_run_id_manifest_file_index,
-    run_id_artifact_dir, write_run_id_bundle_json, write_run_id_script_result,
+    refresh_run_id_manifest_file_index, run_id_artifact_dir, write_run_id_bundle_json,
+    write_run_id_script_result,
 };
 
 use stats::{
@@ -2858,29 +2858,12 @@ pub(crate) fn pack_bundle_dir_to_zip(
         ));
     }
 
-    let bundle_json = bundle_dir.join("bundle.json");
-    if !bundle_json.is_file() {
-        match materialize_bundle_json_from_manifest_chunks_if_missing(bundle_dir) {
-            Ok(Some(p)) if p.is_file() => {
-                // `bundle.json` has been materialized from v2 chunks for compatibility.
-            }
-            Ok(_) => {
-                return Err(format!(
-                    "bundle_dir does not contain bundle.json: {}",
-                    bundle_dir.display()
-                ));
-            }
-            Err(err) => {
-                crate::paths::record_tooling_artifact_integrity_failure_for_dir(
-                    bundle_dir,
-                    &format!("failed to materialize bundle.json from chunks: {err}"),
-                );
-                return Err(format!(
-                    "bundle_dir does not contain bundle.json: {}",
-                    bundle_dir.display()
-                ));
-            }
-        }
+    let bundle_artifact = crate::resolve_bundle_json_path(bundle_dir);
+    if !bundle_artifact.is_file() {
+        return Err(format!(
+            "bundle_dir does not contain bundle.json or bundle.schema2.json: {}",
+            bundle_dir.display()
+        ));
     }
 
     if let Some(parent) = out_path.parent() {
@@ -2988,12 +2971,12 @@ pub(crate) fn pack_bundle_dir_to_zip(
         use std::io::Write;
 
         let report = bundle_stats_from_path(
-            &bundle_json,
+            &bundle_artifact,
             stats_top,
             sort,
             BundleStatsOptions { warmup_frames },
         )?;
-        let payload = triage_json_from_stats(&bundle_json, &report, sort, warmup_frames);
+        let payload = triage_json_from_stats(&bundle_artifact, &report, sort, warmup_frames);
         let bytes = serde_json::to_vec_pretty(&payload).map_err(|e| e.to_string())?;
         let dst = format!("{bundle_name}/_root/triage.json");
         zip.start_file(dst, options).map_err(|e| e.to_string())?;
