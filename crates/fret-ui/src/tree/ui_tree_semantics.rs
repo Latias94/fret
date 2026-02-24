@@ -298,7 +298,9 @@ impl<H: UiHost> UiTree<H> {
                 // Rationale: many assistive technology stacks issue `SetValue(NumericValue)` for
                 // sliders. However, this should only be exposed when we have enough structured
                 // numeric metadata to act on it deterministically.
-                if (role == SemanticsRole::Slider || role == SemanticsRole::SpinButton)
+                if (role == SemanticsRole::Slider
+                    || role == SemanticsRole::SpinButton
+                    || role == SemanticsRole::Splitter)
                     && (actions.increment || actions.decrement)
                 {
                     let numeric = extra.numeric;
@@ -306,7 +308,10 @@ impl<H: UiHost> UiTree<H> {
                     let has_value = numeric.value.is_some();
                     let has_step = numeric.step.is_some_and(|v| v.is_finite() && v > 0.0);
                     actions.set_value = has_range && has_value && has_step;
-                } else if role == SemanticsRole::Slider || role == SemanticsRole::SpinButton {
+                } else if role == SemanticsRole::Slider
+                    || role == SemanticsRole::SpinButton
+                    || role == SemanticsRole::Splitter
+                {
                     actions.set_value = false;
                 }
 
