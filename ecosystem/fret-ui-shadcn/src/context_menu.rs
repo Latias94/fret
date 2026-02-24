@@ -64,7 +64,7 @@ fn menu_destructive_focus_bg(theme: &Theme, destructive_fg: fret_core::Color) ->
     }
 
     // Fallback for non-shadcn themes: approximate the upstream `/10` and `dark:/20` alphas.
-    let alpha = if theme.name.ends_with("/dark") {
+    let alpha = if theme.color_scheme == Some(fret_core::window::ColorScheme::Dark) {
         0.2
     } else {
         0.1
@@ -4051,6 +4051,7 @@ mod tests {
 
     use fret_app::App;
     use fret_core::UiServices;
+    use fret_core::window::ColorScheme;
     use fret_core::{
         AppWindowId, Event, KeyCode, Modifiers, MouseButton, PathCommand, PathConstraints, PathId,
         PathMetrics,
@@ -4060,6 +4061,33 @@ mod tests {
     use fret_runtime::FrameId;
     use fret_ui::element::PressableA11y;
     use fret_ui::tree::UiTree;
+    use fret_ui::{Theme, ThemeConfig};
+
+    #[test]
+    fn destructive_focus_bg_fallback_tracks_theme_color_scheme() {
+        let mut app = App::new();
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                color_scheme: Some(ColorScheme::Dark),
+                ..ThemeConfig::default()
+            });
+        });
+        let theme = Theme::global(&app);
+
+        let destructive_fg = fret_core::Color {
+            r: 1.0,
+            g: 0.0,
+            b: 0.0,
+            a: 1.0,
+        };
+
+        let bg = menu_destructive_focus_bg(theme, destructive_fg);
+        assert!(
+            (bg.a - 0.2).abs() < 1e-6,
+            "expected /20 alpha on dark themes"
+        );
+    }
 
     #[test]
     fn context_menu_new_controllable_uses_controlled_model_when_provided() {

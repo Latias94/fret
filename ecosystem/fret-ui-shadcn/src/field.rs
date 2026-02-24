@@ -234,9 +234,6 @@ pub enum FieldOrientation {
     Vertical,
     Horizontal,
     /// Matches the upstream `orientation="responsive"` variant (container-query driven in web).
-    ///
-    /// In Fret we currently approximate the `@md/field-group` container query with a viewport-width
-    /// breakpoint at `768px` (`md`).
     Responsive,
 }
 
