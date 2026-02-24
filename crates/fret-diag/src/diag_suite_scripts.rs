@@ -167,10 +167,11 @@ pub(crate) fn ui_gallery_select_suite_scripts() -> [&'static str; 10] {
     ]
 }
 
-pub(crate) fn ui_gallery_shadcn_conformance_suite_scripts() -> [&'static str; 18] {
+pub(crate) fn ui_gallery_shadcn_conformance_suite_scripts() -> [&'static str; 19] {
     [
         "tools/diag-scripts/ui-gallery-accordion-demo-shipping-initial-open-height.json",
         "tools/diag-scripts/ui-gallery-accordion-returns-first-open-height.json",
+        "tools/diag-scripts/ui-gallery-accordion-basic-long-text-wraps.json",
         "tools/diag-scripts/ui-gallery-alert-dialog-least-destructive-initial-focus.json",
         "tools/diag-scripts/ui-gallery-breadcrumb-dot-separator-single-line.json",
         "tools/diag-scripts/ui-gallery-card-description-no-early-wrap.json",

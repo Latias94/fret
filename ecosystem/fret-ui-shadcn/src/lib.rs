@@ -136,7 +136,9 @@ pub use avatar::{
 pub use badge::{Badge, BadgeRender, BadgeVariant, badge};
 pub use breadcrumb::{Breadcrumb, BreadcrumbItem, BreadcrumbSeparator};
 pub use button::{Button, ButtonRender, ButtonSize, ButtonVariant};
-pub use button_group::{ButtonGroup, ButtonGroupItem, ButtonGroupOrientation};
+pub use button_group::{
+    ButtonGroup, ButtonGroupItem, ButtonGroupOrientation, ButtonGroupSeparator, ButtonGroupText,
+};
 pub use calendar::{Calendar, CalendarCaptionLayout};
 pub use calendar_hijri::CalendarHijri;
 pub use calendar_multiple::CalendarMultiple;

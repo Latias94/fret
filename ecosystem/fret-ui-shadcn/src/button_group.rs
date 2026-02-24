@@ -19,7 +19,7 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography::{self, TextIntent};
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
 
-use crate::{Button, InputGroup, Separator};
+use crate::{Button, InputGroup, Separator, SeparatorOrientation};
 
 #[derive(Debug, Clone, Copy, Default)]
 struct BorderWidthOverride {
@@ -29,9 +29,9 @@ struct BorderWidthOverride {
     left: Option<Px>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct ButtonGroupText {
-    text: Arc<str>,
+    content: ButtonGroupTextContent,
     layout: LayoutRefinement,
     chrome: ChromeRefinement,
     border_width_override: BorderWidthOverride,
@@ -39,10 +39,16 @@ pub struct ButtonGroupText {
     test_id: Option<Arc<str>>,
 }
 
+#[derive(Debug)]
+enum ButtonGroupTextContent {
+    Text(Arc<str>),
+    Children(Vec<AnyElement>),
+}
+
 impl ButtonGroupText {
     pub fn new(text: impl Into<Arc<str>>) -> Self {
         Self {
-            text: text.into(),
+            content: ButtonGroupTextContent::Text(text.into()),
             layout: LayoutRefinement::default(),
             chrome: ChromeRefinement::default(),
             border_width_override: BorderWidthOverride::default(),
@@ -58,6 +64,11 @@ impl ButtonGroupText {
 
     pub fn refine_style(mut self, chrome: ChromeRefinement) -> Self {
         self.chrome = self.chrome.merge(chrome);
+        self
+    }
+
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.content = ButtonGroupTextContent::Children(children.into_iter().collect());
         self
     }
 
@@ -118,7 +129,7 @@ impl ButtonGroupText {
             .corner_radii_override
             .unwrap_or_else(|| Corners::all(radius));
 
-        let text = self.text;
+        let content = self.content;
         let test_id = self.test_id;
 
         let mut props = decl_style::container_props(&theme, chrome, self.layout);
@@ -165,28 +176,31 @@ impl ButtonGroupText {
                     align: fret_ui::element::CrossAlign::Center,
                     wrap: false,
                 },
-                move |cx| {
-                    let style = typography::with_intent(
-                        TextStyle {
-                            font: FontId::default(),
-                            size: text_px,
-                            weight: FontWeight::MEDIUM,
-                            line_height: Some(line_height),
-                            ..Default::default()
-                        },
-                        TextIntent::Control,
-                    );
+                move |cx| match content {
+                    ButtonGroupTextContent::Text(text) => {
+                        let style = typography::with_intent(
+                            TextStyle {
+                                font: FontId::default(),
+                                size: text_px,
+                                weight: FontWeight::MEDIUM,
+                                line_height: Some(line_height),
+                                ..Default::default()
+                            },
+                            TextIntent::Control,
+                        );
 
-                    vec![cx.text_props(TextProps {
-                        layout: LayoutStyle::default(),
-                        text: text.clone(),
-                        style: Some(style),
-                        color: Some(text_color),
-                        wrap: TextWrap::None,
-                        overflow: TextOverflow::Clip,
-                        align: fret_core::TextAlign::Start,
-                        ink_overflow: Default::default(),
-                    })]
+                        vec![cx.text_props(TextProps {
+                            layout: LayoutStyle::default(),
+                            text,
+                            style: Some(style),
+                            color: Some(text_color),
+                            wrap: TextWrap::None,
+                            overflow: TextOverflow::Clip,
+                            align: fret_core::TextAlign::Start,
+                            ink_overflow: Default::default(),
+                        })]
+                    }
+                    ButtonGroupTextContent::Children(children) => children,
                 },
             );
             vec![content]
@@ -204,12 +218,108 @@ impl ButtonGroupText {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct ButtonGroupSeparator {
+    orientation: SeparatorOrientation,
+    thickness: Option<Px>,
+    layout: LayoutRefinement,
+    test_id: Option<Arc<str>>,
+}
+
+impl ButtonGroupSeparator {
+    pub fn new() -> Self {
+        Self {
+            orientation: SeparatorOrientation::Vertical,
+            thickness: None,
+            layout: LayoutRefinement::default(),
+            test_id: None,
+        }
+    }
+
+    pub fn orientation(mut self, orientation: SeparatorOrientation) -> Self {
+        self.orientation = orientation;
+        self
+    }
+
+    pub fn thickness(mut self, thickness: Px) -> Self {
+        self.thickness = Some(thickness);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+
+    #[track_caller]
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let (bg, thickness, mut layout) = {
+            let theme = Theme::global(&*cx.app);
+
+            let bg = theme
+                .color_by_key("input")
+                .unwrap_or_else(|| theme.color_token("input"));
+            let thickness = self.thickness.unwrap_or_else(|| {
+                theme
+                    .metric_by_key("component.separator.px")
+                    .unwrap_or(Px(1.0))
+            });
+            let layout = decl_style::layout_style(theme, self.layout);
+
+            (bg, thickness, layout)
+        };
+
+        match self.orientation {
+            SeparatorOrientation::Horizontal => {
+                layout.size = SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Px(thickness),
+                    min_height: Some(thickness),
+                    max_height: Some(thickness),
+                    ..layout.size
+                };
+            }
+            SeparatorOrientation::Vertical => {
+                layout.size = SizeStyle {
+                    width: Length::Px(thickness),
+                    // Match shadcn `self-stretch` behavior for vertical separators.
+                    height: Length::Auto,
+                    min_width: Some(thickness),
+                    max_width: Some(thickness),
+                    ..layout.size
+                };
+            }
+        }
+
+        let mut el = cx.container(
+            fret_ui::element::ContainerProps {
+                layout,
+                background: Some(bg),
+                ..Default::default()
+            },
+            |_cx| Vec::new(),
+        );
+
+        if let Some(test_id) = self.test_id {
+            el = el.attach_semantics(SemanticsDecoration::default().test_id(test_id));
+        }
+
+        el
+    }
+}
+
 #[derive(Debug)]
 pub enum ButtonGroupItem {
     Button(Button),
     Text(ButtonGroupText),
     InputGroup(InputGroup),
     Group(Box<ButtonGroup>),
+    GroupSeparator(ButtonGroupSeparator),
     Separator(Separator),
     Element(AnyElement),
 }
@@ -235,6 +345,12 @@ impl From<InputGroup> for ButtonGroupItem {
 impl From<ButtonGroup> for ButtonGroupItem {
     fn from(value: ButtonGroup) -> Self {
         Self::Group(Box::new(value))
+    }
+}
+
+impl From<ButtonGroupSeparator> for ButtonGroupItem {
+    fn from(value: ButtonGroupSeparator) -> Self {
+        Self::GroupSeparator(value)
     }
 }
 
@@ -456,6 +572,7 @@ impl ButtonGroup {
                         group.corner_radii_override(corners).into_element(cx)
                     }
                     ButtonGroupItem::Group(group) => group.into_element(cx),
+                    ButtonGroupItem::GroupSeparator(separator) => separator.into_element(cx),
                     ButtonGroupItem::Separator(separator) => {
                         separator.flex_stretch_cross_axis(true).into_element(cx)
                     }
