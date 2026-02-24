@@ -2,7 +2,7 @@ use std::path::Path;
 
 use crate::util::{now_unix_ms, write_json_value};
 
-pub(super) fn check_bundle_for_layout_fast_path_min(
+pub(crate) fn check_bundle_for_layout_fast_path_min(
     bundle_path: &Path,
     out_dir: &Path,
     min_frames: u64,
@@ -19,7 +19,7 @@ pub(super) fn check_bundle_for_layout_fast_path_min(
     )
 }
 
-pub(super) fn check_bundle_for_layout_fast_path_min_json(
+pub(crate) fn check_bundle_for_layout_fast_path_min_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
     out_dir: &Path,
@@ -94,7 +94,7 @@ pub(super) fn check_bundle_for_layout_fast_path_min_json(
     ))
 }
 
-pub(super) fn check_bundle_for_prepaint_actions_min(
+pub(crate) fn check_bundle_for_prepaint_actions_min(
     bundle_path: &Path,
     out_dir: &Path,
     min_snapshots: u64,
@@ -111,7 +111,7 @@ pub(super) fn check_bundle_for_prepaint_actions_min(
     )
 }
 
-pub(super) fn check_bundle_for_prepaint_actions_min_json(
+pub(crate) fn check_bundle_for_prepaint_actions_min_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
     out_dir: &Path,
@@ -189,7 +189,7 @@ pub(super) fn check_bundle_for_prepaint_actions_min_json(
     Ok(())
 }
 
-pub(super) fn check_bundle_for_chart_sampling_window_shifts_min(
+pub(crate) fn check_bundle_for_chart_sampling_window_shifts_min(
     bundle_path: &Path,
     out_dir: &Path,
     min_actions: u64,
@@ -206,7 +206,7 @@ pub(super) fn check_bundle_for_chart_sampling_window_shifts_min(
     )
 }
 
-pub(super) fn check_bundle_for_chart_sampling_window_shifts_min_json(
+pub(crate) fn check_bundle_for_chart_sampling_window_shifts_min_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
     out_dir: &Path,
@@ -305,7 +305,7 @@ pub(super) fn check_bundle_for_chart_sampling_window_shifts_min_json(
     Ok(())
 }
 
-pub(super) fn check_bundle_for_node_graph_cull_window_shifts_min(
+pub(crate) fn check_bundle_for_node_graph_cull_window_shifts_min(
     bundle_path: &Path,
     out_dir: &Path,
     min_actions: u64,
@@ -322,7 +322,7 @@ pub(super) fn check_bundle_for_node_graph_cull_window_shifts_min(
     )
 }
 
-pub(super) fn check_bundle_for_node_graph_cull_window_shifts_min_json(
+pub(crate) fn check_bundle_for_node_graph_cull_window_shifts_min_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
     out_dir: &Path,
@@ -421,7 +421,7 @@ pub(super) fn check_bundle_for_node_graph_cull_window_shifts_min_json(
     Ok(())
 }
 
-pub(super) fn check_bundle_for_node_graph_cull_window_shifts_max(
+pub(crate) fn check_bundle_for_node_graph_cull_window_shifts_max(
     bundle_path: &Path,
     out_dir: &Path,
     max_actions: u64,
@@ -438,7 +438,7 @@ pub(super) fn check_bundle_for_node_graph_cull_window_shifts_max(
     )
 }
 
-pub(super) fn check_bundle_for_node_graph_cull_window_shifts_max_json(
+pub(crate) fn check_bundle_for_node_graph_cull_window_shifts_max_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
     out_dir: &Path,

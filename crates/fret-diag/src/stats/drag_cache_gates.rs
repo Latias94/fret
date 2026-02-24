@@ -2,7 +2,7 @@ use std::path::Path;
 
 use super::semantics::{semantics_node_id_for_test_id, semantics_parent_map};
 
-pub(super) fn check_bundle_for_drag_cache_root_paint_only(
+pub(crate) fn check_bundle_for_drag_cache_root_paint_only(
     bundle_path: &Path,
     test_id: &str,
     warmup_frames: u64,

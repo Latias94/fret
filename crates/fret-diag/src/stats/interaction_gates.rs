@@ -1,6 +1,6 @@
 use std::path::Path;
 
-pub(super) fn check_bundle_for_viewport_input_min(
+pub(crate) fn check_bundle_for_viewport_input_min(
     bundle_path: &Path,
     min_events: u64,
     warmup_frames: u64,
@@ -10,7 +10,7 @@ pub(super) fn check_bundle_for_viewport_input_min(
     check_bundle_for_viewport_input_min_json(&bundle, bundle_path, min_events, warmup_frames)
 }
 
-pub(super) fn check_bundle_for_viewport_input_min_json(
+pub(crate) fn check_bundle_for_viewport_input_min_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
     min_events: u64,
@@ -62,7 +62,7 @@ pub(super) fn check_bundle_for_viewport_input_min_json(
     ))
 }
 
-pub(super) fn check_bundle_for_dock_drag_min(
+pub(crate) fn check_bundle_for_dock_drag_min(
     bundle_path: &Path,
     min_active_frames: u64,
     warmup_frames: u64,
@@ -72,7 +72,7 @@ pub(super) fn check_bundle_for_dock_drag_min(
     check_bundle_for_dock_drag_min_json(&bundle, bundle_path, min_active_frames, warmup_frames)
 }
 
-pub(super) fn check_bundle_for_dock_drag_min_json(
+pub(crate) fn check_bundle_for_dock_drag_min_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
     min_active_frames: u64,
@@ -125,7 +125,7 @@ pub(super) fn check_bundle_for_dock_drag_min_json(
     ))
 }
 
-pub(super) fn check_bundle_for_viewport_capture_min(
+pub(crate) fn check_bundle_for_viewport_capture_min(
     bundle_path: &Path,
     min_active_frames: u64,
     warmup_frames: u64,
@@ -140,7 +140,7 @@ pub(super) fn check_bundle_for_viewport_capture_min(
     )
 }
 
-pub(super) fn check_bundle_for_viewport_capture_min_json(
+pub(crate) fn check_bundle_for_viewport_capture_min_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
     min_active_frames: u64,

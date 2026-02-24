@@ -2,7 +2,7 @@ use std::path::Path;
 
 use crate::util::now_unix_ms;
 
-pub(super) fn check_bundle_for_retained_vlist_reconcile_no_notify_min(
+pub(crate) fn check_bundle_for_retained_vlist_reconcile_no_notify_min(
     bundle_path: &Path,
     min_reconcile_events: u64,
     warmup_frames: u64,
@@ -17,7 +17,7 @@ pub(super) fn check_bundle_for_retained_vlist_reconcile_no_notify_min(
     )
 }
 
-pub(super) fn check_bundle_for_retained_vlist_reconcile_no_notify_min_json(
+pub(crate) fn check_bundle_for_retained_vlist_reconcile_no_notify_min_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
     min_reconcile_events: u64,
@@ -124,7 +124,7 @@ bundle: {}",
     Ok(())
 }
 
-pub(super) fn check_bundle_for_retained_vlist_keep_alive_reuse_min(
+pub(crate) fn check_bundle_for_retained_vlist_keep_alive_reuse_min(
     bundle_path: &Path,
     min_keep_alive_reuse_frames: u64,
     warmup_frames: u64,
@@ -139,7 +139,7 @@ pub(super) fn check_bundle_for_retained_vlist_keep_alive_reuse_min(
     )
 }
 
-pub(super) fn check_bundle_for_retained_vlist_keep_alive_reuse_min_json(
+pub(crate) fn check_bundle_for_retained_vlist_keep_alive_reuse_min_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
     min_keep_alive_reuse_frames: u64,
@@ -223,7 +223,7 @@ pub(super) fn check_bundle_for_retained_vlist_keep_alive_reuse_min_json(
     Ok(())
 }
 
-pub(super) fn check_bundle_for_retained_vlist_keep_alive_budget(
+pub(crate) fn check_bundle_for_retained_vlist_keep_alive_budget(
     bundle_path: &Path,
     min_max_pool_len_after: u64,
     max_total_evicted_items: u64,
@@ -240,7 +240,7 @@ pub(super) fn check_bundle_for_retained_vlist_keep_alive_budget(
     )
 }
 
-pub(super) fn check_bundle_for_retained_vlist_keep_alive_budget_json(
+pub(crate) fn check_bundle_for_retained_vlist_keep_alive_budget_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
     min_max_pool_len_after: u64,
@@ -353,7 +353,7 @@ pub(super) fn check_bundle_for_retained_vlist_keep_alive_budget_json(
     Ok(())
 }
 
-pub(super) fn check_bundle_for_retained_vlist_attach_detach_max(
+pub(crate) fn check_bundle_for_retained_vlist_attach_detach_max(
     bundle_path: &Path,
     max_delta: u64,
     warmup_frames: u64,
@@ -368,7 +368,7 @@ pub(super) fn check_bundle_for_retained_vlist_attach_detach_max(
     )
 }
 
-pub(super) fn check_bundle_for_retained_vlist_attach_detach_max_json(
+pub(crate) fn check_bundle_for_retained_vlist_attach_detach_max_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
     max_delta: u64,

@@ -32,7 +32,7 @@ fn first_scroll_offset_change_frame_id_for_window(
         .min()
 }
 
-pub(super) fn check_bundle_for_windowed_rows_offset_changes_min(
+pub(crate) fn check_bundle_for_windowed_rows_offset_changes_min(
     bundle_path: &Path,
     out_dir: &Path,
     min_total_offset_changes: u64,
@@ -51,7 +51,7 @@ pub(super) fn check_bundle_for_windowed_rows_offset_changes_min(
     )
 }
 
-pub(super) fn check_bundle_for_windowed_rows_offset_changes_min_json(
+pub(crate) fn check_bundle_for_windowed_rows_offset_changes_min_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
     out_dir: &Path,
@@ -253,7 +253,7 @@ pub(super) fn check_bundle_for_windowed_rows_offset_changes_min_json(
     Ok(())
 }
 
-pub(super) fn check_bundle_for_windowed_rows_visible_start_changes_repainted(
+pub(crate) fn check_bundle_for_windowed_rows_visible_start_changes_repainted(
     bundle_path: &Path,
     out_dir: &Path,
     warmup_frames: u64,
@@ -268,7 +268,7 @@ pub(super) fn check_bundle_for_windowed_rows_visible_start_changes_repainted(
     )
 }
 
-pub(super) fn check_bundle_for_windowed_rows_visible_start_changes_repainted_json(
+pub(crate) fn check_bundle_for_windowed_rows_visible_start_changes_repainted_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
     out_dir: &Path,

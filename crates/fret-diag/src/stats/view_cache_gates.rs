@@ -2,7 +2,7 @@ use std::path::Path;
 
 use crate::util::{now_unix_ms, write_json_value};
 
-pub(super) fn check_bundle_for_view_cache_reuse_min(
+pub(crate) fn check_bundle_for_view_cache_reuse_min(
     bundle_path: &Path,
     min_reuse_events: u64,
     warmup_frames: u64,
@@ -17,7 +17,7 @@ pub(super) fn check_bundle_for_view_cache_reuse_min(
     )
 }
 
-pub(super) fn check_bundle_for_view_cache_reuse_min_json(
+pub(crate) fn check_bundle_for_view_cache_reuse_min_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
     min_reuse_events: u64,
@@ -154,7 +154,7 @@ fn snapshot_view_cache_reuse_signal(snapshot: &serde_json::Value) -> ViewCacheRe
     }
 }
 
-pub(super) fn check_bundle_for_view_cache_reuse_stable_min(
+pub(crate) fn check_bundle_for_view_cache_reuse_stable_min(
     bundle_path: &Path,
     out_dir: &Path,
     min_tail_frames: u64,

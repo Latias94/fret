@@ -3,7 +3,7 @@ use std::path::Path;
 use super::wheel_scroll::first_wheel_frame_id_for_window;
 use crate::util::{now_unix_ms, write_json_value};
 
-pub(super) fn check_bundle_for_vlist_visible_range_refreshes_max(
+pub(crate) fn check_bundle_for_vlist_visible_range_refreshes_max(
     bundle_path: &Path,
     out_dir: &Path,
     max_total_refreshes: u64,
@@ -20,7 +20,7 @@ pub(super) fn check_bundle_for_vlist_visible_range_refreshes_max(
     )
 }
 
-pub(super) fn check_bundle_for_vlist_visible_range_refreshes_min(
+pub(crate) fn check_bundle_for_vlist_visible_range_refreshes_min(
     bundle_path: &Path,
     out_dir: &Path,
     min_total_refreshes: u64,
@@ -37,7 +37,7 @@ pub(super) fn check_bundle_for_vlist_visible_range_refreshes_min(
     )
 }
 
-pub(super) fn check_bundle_for_vlist_policy_key_stable(
+pub(crate) fn check_bundle_for_vlist_policy_key_stable(
     bundle_path: &Path,
     out_dir: &Path,
     warmup_frames: u64,
@@ -47,7 +47,7 @@ pub(super) fn check_bundle_for_vlist_policy_key_stable(
     check_bundle_for_vlist_policy_key_stable_json(&bundle, bundle_path, out_dir, warmup_frames)
 }
 
-pub(super) fn check_bundle_for_vlist_policy_key_stable_json(
+pub(crate) fn check_bundle_for_vlist_policy_key_stable_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
     out_dir: &Path,
@@ -146,7 +146,7 @@ pub(super) fn check_bundle_for_vlist_policy_key_stable_json(
     ))
 }
 
-pub(super) fn check_bundle_for_vlist_visible_range_refreshes_min_json(
+pub(crate) fn check_bundle_for_vlist_visible_range_refreshes_min_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
     out_dir: &Path,
@@ -239,7 +239,7 @@ pub(super) fn check_bundle_for_vlist_visible_range_refreshes_min_json(
     Ok(())
 }
 
-pub(super) fn check_bundle_for_vlist_visible_range_refreshes_max_json(
+pub(crate) fn check_bundle_for_vlist_visible_range_refreshes_max_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
     out_dir: &Path,
@@ -332,7 +332,7 @@ pub(super) fn check_bundle_for_vlist_visible_range_refreshes_max_json(
     Ok(())
 }
 
-pub(super) fn check_bundle_for_vlist_window_shifts_explainable(
+pub(crate) fn check_bundle_for_vlist_window_shifts_explainable(
     bundle_path: &Path,
     out_dir: &Path,
     warmup_frames: u64,
@@ -347,7 +347,7 @@ pub(super) fn check_bundle_for_vlist_window_shifts_explainable(
     )
 }
 
-pub(super) fn check_bundle_for_vlist_window_shifts_explainable_json(
+pub(crate) fn check_bundle_for_vlist_window_shifts_explainable_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
     out_dir: &Path,
@@ -550,7 +550,7 @@ pub(super) fn check_bundle_for_vlist_window_shifts_explainable_json(
     Err(msg)
 }
 
-pub(super) fn check_bundle_for_vlist_window_shifts_non_retained_max(
+pub(crate) fn check_bundle_for_vlist_window_shifts_non_retained_max(
     bundle_path: &Path,
     out_dir: &Path,
     max_total_non_retained_shifts: u64,
@@ -567,7 +567,7 @@ pub(super) fn check_bundle_for_vlist_window_shifts_non_retained_max(
     )
 }
 
-pub(super) fn check_bundle_for_vlist_window_shifts_non_retained_max_json(
+pub(crate) fn check_bundle_for_vlist_window_shifts_non_retained_max_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
     out_dir: &Path,
@@ -666,7 +666,7 @@ pub(super) fn check_bundle_for_vlist_window_shifts_non_retained_max_json(
     Ok(())
 }
 
-pub(super) fn check_bundle_for_vlist_window_shifts_kind_max(
+pub(crate) fn check_bundle_for_vlist_window_shifts_kind_max(
     bundle_path: &Path,
     out_dir: &Path,
     kind: &str,
@@ -685,7 +685,7 @@ pub(super) fn check_bundle_for_vlist_window_shifts_kind_max(
     )
 }
 
-pub(super) fn check_bundle_for_vlist_window_shifts_kind_max_json(
+pub(crate) fn check_bundle_for_vlist_window_shifts_kind_max_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
     out_dir: &Path,
@@ -845,7 +845,7 @@ pub(super) fn check_bundle_for_vlist_window_shifts_kind_max_json(
     Ok(())
 }
 
-pub(super) fn check_bundle_for_vlist_window_shifts_have_prepaint_actions(
+pub(crate) fn check_bundle_for_vlist_window_shifts_have_prepaint_actions(
     bundle_path: &Path,
     out_dir: &Path,
     warmup_frames: u64,
@@ -860,7 +860,7 @@ pub(super) fn check_bundle_for_vlist_window_shifts_have_prepaint_actions(
     )
 }
 
-pub(super) fn check_bundle_for_vlist_window_shifts_have_prepaint_actions_json(
+pub(crate) fn check_bundle_for_vlist_window_shifts_have_prepaint_actions_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
     out_dir: &Path,

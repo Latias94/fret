@@ -1,6 +1,6 @@
 use super::BundleStatsReport;
 
-pub(super) fn check_report_for_hover_layout_invalidations(
+pub(crate) fn check_report_for_hover_layout_invalidations(
     report: &BundleStatsReport,
     max_allowed: u32,
 ) -> Result<(), String> {

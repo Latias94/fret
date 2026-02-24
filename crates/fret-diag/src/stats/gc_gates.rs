@@ -2,7 +2,7 @@ use std::path::Path;
 
 use crate::util::{now_unix_ms, write_json_value};
 
-pub(super) fn check_bundle_for_gc_sweep_liveness(
+pub(crate) fn check_bundle_for_gc_sweep_liveness(
     bundle_path: &Path,
     warmup_frames: u64,
 ) -> Result<(), String> {

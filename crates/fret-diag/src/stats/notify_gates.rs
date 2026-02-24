@@ -2,7 +2,7 @@ use std::path::Path;
 
 use crate::util::{now_unix_ms, write_json_value};
 
-pub(super) fn check_bundle_for_notify_hotspot_file_max(
+pub(crate) fn check_bundle_for_notify_hotspot_file_max(
     bundle_path: &Path,
     file_filter: &str,
     max_count: u64,
@@ -19,7 +19,7 @@ pub(super) fn check_bundle_for_notify_hotspot_file_max(
     )
 }
 
-pub(super) fn check_bundle_for_notify_hotspot_file_max_json(
+pub(crate) fn check_bundle_for_notify_hotspot_file_max_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
     file_filter: &str,

@@ -20,7 +20,7 @@ fn hit_test_node_id(snapshot: &serde_json::Value) -> Option<u64> {
         .and_then(|v| v.as_u64())
 }
 
-pub(super) fn check_bundle_for_wheel_scroll(
+pub(crate) fn check_bundle_for_wheel_scroll(
     bundle_path: &Path,
     test_id: &str,
     warmup_frames: u64,
@@ -30,7 +30,7 @@ pub(super) fn check_bundle_for_wheel_scroll(
     check_bundle_for_wheel_scroll_json(&bundle, bundle_path, test_id, warmup_frames)
 }
 
-pub(super) fn check_bundle_for_wheel_scroll_hit_changes(
+pub(crate) fn check_bundle_for_wheel_scroll_hit_changes(
     bundle_path: &Path,
     test_id: &str,
     warmup_frames: u64,
@@ -40,7 +40,7 @@ pub(super) fn check_bundle_for_wheel_scroll_hit_changes(
     check_bundle_for_wheel_scroll_hit_changes_json(&bundle, bundle_path, test_id, warmup_frames)
 }
 
-pub(super) fn check_bundle_for_wheel_scroll_json(
+pub(crate) fn check_bundle_for_wheel_scroll_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
     test_id: &str,
@@ -161,7 +161,7 @@ pub(super) fn check_bundle_for_wheel_scroll_json(
     Err(msg)
 }
 
-pub(super) fn check_bundle_for_wheel_scroll_hit_changes_json(
+pub(crate) fn check_bundle_for_wheel_scroll_hit_changes_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
     test_id: &str,

@@ -41,7 +41,7 @@ fn bundle_last_snapshot_by_frame_id<'a>(
         .map(|(_, s)| s)
 }
 
-pub(super) fn check_out_dir_for_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps(
+pub(crate) fn check_out_dir_for_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps(
     out_dir: &Path,
 ) -> Result<(), String> {
     const BEFORE_LABEL: &str = "ui-gallery-text-rescan-system-fonts-before";
@@ -122,7 +122,7 @@ pub(super) fn check_out_dir_for_ui_gallery_text_rescan_system_fonts_font_stack_k
     Ok(())
 }
 
-pub(super) fn check_out_dir_for_ui_gallery_text_fallback_policy_key_bumps_on_settings_change(
+pub(crate) fn check_out_dir_for_ui_gallery_text_fallback_policy_key_bumps_on_settings_change(
     out_dir: &Path,
 ) -> Result<(), String> {
     const BEFORE_LABEL: &str = "ui-gallery-text-fallback-policy-before";
@@ -199,7 +199,7 @@ pub(super) fn check_out_dir_for_ui_gallery_text_fallback_policy_key_bumps_on_set
     Ok(())
 }
 
-pub(super) fn check_out_dir_for_ui_gallery_text_mixed_script_bundled_fallback_conformance(
+pub(crate) fn check_out_dir_for_ui_gallery_text_mixed_script_bundled_fallback_conformance(
     out_dir: &Path,
 ) -> Result<(), String> {
     const LABEL: &str = "ui-gallery-text-mixed-script-bundled-fallback-conformance";
@@ -311,7 +311,7 @@ pub(super) fn check_out_dir_for_ui_gallery_text_mixed_script_bundled_fallback_co
     Ok(())
 }
 
-pub(super) fn check_out_dir_for_ui_gallery_text_fallback_policy_key_bumps_on_locale_change(
+pub(crate) fn check_out_dir_for_ui_gallery_text_fallback_policy_key_bumps_on_locale_change(
     out_dir: &Path,
 ) -> Result<(), String> {
     const BEFORE_LABEL: &str = "ui-gallery-text-fallback-policy-locale-before";
