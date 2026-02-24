@@ -20,7 +20,7 @@ Scope note:
 
 The goal is GPUI/Zed-style "inspectable, shareable repro units":
 
-- capture a portable bundle (`bundle.json`) that can be sent to another developer (or an AI tool),
+- capture a portable bundle artifact (`bundle.json` or `bundle.schema2.json`) that can be sent to another developer (or an AI tool),
 - select targets by **semantics** (ADR 0033) rather than paint output,
 - run deterministic scripted repros without adding ad-hoc debug UI.
 
