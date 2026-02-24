@@ -110,6 +110,11 @@ This file tracks tasks for `docs/workstreams/diag-fearless-refactor-v1.md`.
   - [x] Ensure `diag doctor` distinguishes raw `bundle.json` from the resolved bundle artifact in `doctor.json`.
   - [x] Add bundle-artifact aliases to `repro.summary.json` (keep older `*_bundle_json` keys for compatibility).
   - [x] Add bundle-artifact aliases to `diag repeat` output (keep older `bundle_json` key for compatibility).
+  - [x] Update CLI user-facing hints to prefer “bundle artifact” wording where supported:
+    - `crates/fret-diag/src/diag_simple_dispatch.rs` (`diag trace`)
+    - `crates/fret-diag/src/diag_perf_baseline.rs` (`perf-baseline-from-bundles`)
+    - `crates/fret-diag/src/lib.rs` (`--diff` arg errors)
+    - `crates/fret-diag/src/paths.rs` (integrity failure notes mention raw `bundle.json`)
 - [ ] Decide how far to push schema2-first:
   - [ ] runtime dumps: when should `bundle.schema2.json` be emitted by default (vs tooling-derived only)?
   - [ ] compatibility: when is it acceptable to stop treating `bundle.json` as a required artifact?

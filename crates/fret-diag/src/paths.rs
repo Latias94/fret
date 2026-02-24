@@ -202,7 +202,7 @@ pub(crate) fn resolve_bundle_artifact_path(path: &Path) -> PathBuf {
         Err(err) => {
             record_tooling_artifact_integrity_failure_for_dir(
                 path,
-                &format!("failed to materialize bundle.json from chunks: {err}"),
+                &format!("failed to materialize raw bundle.json from chunks: {err}"),
             );
         }
     }
@@ -228,7 +228,7 @@ pub(crate) fn resolve_bundle_artifact_path(path: &Path) -> PathBuf {
             Err(err) => {
                 record_tooling_artifact_integrity_failure_for_dir(
                     &crate::run_artifacts::run_id_artifact_dir(path, run_id),
-                    &format!("failed to materialize bundle.json from chunks: {err}"),
+                    &format!("failed to materialize raw bundle.json from chunks: {err}"),
                 );
             }
         }
