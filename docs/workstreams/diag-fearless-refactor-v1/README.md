@@ -46,6 +46,8 @@ Related living docs:
   - `crates/fret-diag/src/diag_stats.rs` (extracted `diag stats` command handler)
   - `crates/fret-diag/src/diag_matrix.rs` (extracted `diag matrix` command handler)
   - `crates/fret-diag/src/diag_repro.rs` (extracted `diag repro` command handler)
+- Bundle/repro zip packing is also isolated to reduce churn in the CLI entrypoint:
+  - `crates/fret-diag/src/pack_zip.rs`
 - `crates/fret-diag/src/stats.rs` remains large, but UI gallery checks have started moving into dedicated submodules under
   `crates/fret-diag/src/stats/`:
   - `crates/fret-diag/src/stats/ui_gallery_markdown_editor.rs`
