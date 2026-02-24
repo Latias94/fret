@@ -97,6 +97,7 @@ pub(in crate::ui) fn preview_resizable(
     let demo = {
         let nested_vertical = shadcn::ResizablePanelGroup::new(v_fractions)
             .axis(fret_core::Axis::Vertical)
+            .test_id_prefix("ui-gallery-resizable-demo.nested-vertical")
             .entries([
                 shadcn::ResizablePanel::new([panel(cx, "Two", None)]).into(),
                 shadcn::ResizableHandle::new().into(),
@@ -106,6 +107,7 @@ pub(in crate::ui) fn preview_resizable(
 
         let group = shadcn::ResizablePanelGroup::new(h_fractions)
             .axis(fret_core::Axis::Horizontal)
+            .test_id_prefix("ui-gallery-resizable-demo")
             .entries([
                 shadcn::ResizablePanel::new([panel(cx, "One", Some(Px(200.0)))]).into(),
                 shadcn::ResizableHandle::new().into(),
@@ -131,6 +133,7 @@ pub(in crate::ui) fn preview_resizable(
     let handle = {
         let group = shadcn::ResizablePanelGroup::new(handle_fractions)
             .axis(fret_core::Axis::Horizontal)
+            .test_id_prefix("ui-gallery-resizable-handle")
             .entries([
                 shadcn::ResizablePanel::new([panel(cx, "Sidebar", None)]).into(),
                 shadcn::ResizableHandle::new().with_handle(true).into(),
@@ -151,6 +154,7 @@ pub(in crate::ui) fn preview_resizable(
     let vertical = {
         let group = shadcn::ResizablePanelGroup::new(vertical_fractions)
             .axis(fret_core::Axis::Vertical)
+            .test_id_prefix("ui-gallery-resizable-vertical")
             .entries([
                 shadcn::ResizablePanel::new([panel(cx, "Header", None)]).into(),
                 shadcn::ResizableHandle::new().into(),
@@ -172,6 +176,7 @@ pub(in crate::ui) fn preview_resizable(
         let group = doc_layout::rtl(cx, |cx| {
             let nested_vertical = shadcn::ResizablePanelGroup::new(rtl_v_fractions.clone())
                 .axis(fret_core::Axis::Vertical)
+                .test_id_prefix("ui-gallery-resizable-rtl.nested-vertical")
                 .entries([
                     shadcn::ResizablePanel::new([panel(cx, "اثنان", None)]).into(),
                     shadcn::ResizableHandle::new().with_handle(true).into(),
@@ -181,6 +186,7 @@ pub(in crate::ui) fn preview_resizable(
 
             shadcn::ResizablePanelGroup::new(rtl_h_fractions.clone())
                 .axis(fret_core::Axis::Horizontal)
+                .test_id_prefix("ui-gallery-resizable-rtl")
                 .entries([
                     shadcn::ResizablePanel::new([panel(cx, "واحد", Some(Px(200.0)))]).into(),
                     shadcn::ResizableHandle::new().with_handle(true).into(),

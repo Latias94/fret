@@ -2126,6 +2126,7 @@ fn select_impl<H: UiHost>(
                     let desired_h = Px(desired_content_h.0 + chrome_extra_y.0);
                     let desired = fret_core::Size::new(desired_w, desired_h);
 
+                    let item_aligned_inputs_snapshot = item_aligned_inputs;
                     let mut resolved = radix_select::select_resolve_content_placement_from_elements(
                         cx,
                         anchor,
@@ -2133,7 +2134,7 @@ fn select_impl<H: UiHost>(
                         desired,
                         popper_placement,
                         arrow.then_some(arrow_size),
-                        item_aligned_inputs,
+                        item_aligned_inputs_snapshot,
                     );
                     let mut item_aligned_layout_is_cached_fallback = false;
                     let mut item_aligned_layout_locked_this_frame = false;
@@ -2246,7 +2247,11 @@ fn select_impl<H: UiHost>(
                         );
                     }
 
-                    let opacity = motion.opacity;
+                    let warmup_invisible = position == SelectPosition::ItemAligned
+                        && is_open
+                        && item_aligned_inputs_snapshot.is_none()
+                        && last_item_aligned_layout.is_none();
+                    let opacity = if warmup_invisible { 0.0 } else { motion.opacity };
                     let scale = motion.scale;
                     let transform = overlay_motion::shadcn_popper_presence_transform(
                         motion_side,
@@ -3350,7 +3355,9 @@ fn select_impl<H: UiHost>(
                                                 layout: popper_content::popper_panel_layout(
                                                     placed,
                                                     wrapper_insets,
-                                                    Overflow::Clip,
+                                                    // Keep the panel itself unclipped so the Select surface shadow
+                                                    // can extend beyond the panel rect (matching shadcn/ui).
+                                                    Overflow::Visible,
                                                 ),
                                                 enabled: true,
                                                 focusable: true,

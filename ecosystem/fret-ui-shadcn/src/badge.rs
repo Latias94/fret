@@ -363,6 +363,7 @@ fn badge_with_patch<H: UiHost>(
                 .line_box_in_bounds()
                 .font_semibold()
                 .nowrap()
+                .text_color(ColorRef::Color(fg))
                 .into_element(cx);
 
             if children.is_empty() && leading_icon.is_none() && trailing_icon.is_none() {
@@ -374,7 +375,12 @@ fn badge_with_patch<H: UiHost>(
             let mut content = Vec::with_capacity(children.len() + 3);
 
             if let Some(icon) = leading_icon.clone() {
-                content.push(decl_icon::icon_with(cx, icon, Some(icon_px), None));
+                content.push(decl_icon::icon_with(
+                    cx,
+                    icon,
+                    Some(icon_px),
+                    Some(ColorRef::Color(fg)),
+                ));
             }
 
             let children = children
@@ -386,7 +392,12 @@ fn badge_with_patch<H: UiHost>(
             content.push(label);
 
             if let Some(icon) = trailing_icon.clone() {
-                content.push(decl_icon::icon_with(cx, icon, Some(icon_px), None));
+                content.push(decl_icon::icon_with(
+                    cx,
+                    icon,
+                    Some(icon_px),
+                    Some(ColorRef::Color(fg)),
+                ));
             }
 
             vec![stack::hstack(

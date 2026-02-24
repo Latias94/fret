@@ -117,9 +117,10 @@ pub(crate) fn ui_gallery_overlay_steady_suite_scripts() -> [&'static str; 4] {
     ]
 }
 
-pub(crate) fn ui_gallery_date_picker_suite_scripts() -> [&'static str; 3] {
+pub(crate) fn ui_gallery_date_picker_suite_scripts() -> [&'static str; 4] {
     [
         "tools/diag-scripts/ui-gallery-date-picker-range-roving-skips-disabled.json",
+        "tools/diag-scripts/ui-gallery-date-picker-input-open-calendar.json",
         "tools/diag-scripts/ui-gallery-date-picker-dropdowns-mobile-drawer.json",
         "tools/diag-scripts/ui-gallery-date-picker-nested-caption-select-scroll-clamp.json",
     ]

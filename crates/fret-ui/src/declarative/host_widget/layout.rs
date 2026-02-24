@@ -126,6 +126,7 @@ impl ElementHostWidget {
             | ElementInstance::TextInputRegion(_) => true,
             ElementInstance::SelectableText(_) => true,
             ElementInstance::Pressable(p) => p.enabled && p.focusable,
+            ElementInstance::Semantics(p) => p.focusable && !p.disabled && !p.hidden,
             _ => false,
         };
         self.can_scroll_descendant = matches!(

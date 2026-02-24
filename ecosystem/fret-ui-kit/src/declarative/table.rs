@@ -150,6 +150,10 @@ fn with_table_view_column_constraints<TData>(
 pub struct TableViewProps {
     pub size: Size,
     pub row_height: Option<Px>,
+    /// Optional fixed header height (defaults to `row_height` when unset).
+    ///
+    /// This enables shadcn-style tables where the header row height differs from body row height.
+    pub header_height: Option<Px>,
     /// Controls whether the virtualized body rows are treated as fixed-height or measured.
     ///
     /// - `Fixed` (default): fast path; row containers are forced to `row_height` and the virtualizer
@@ -243,6 +247,7 @@ impl Default for TableViewProps {
         Self {
             size: Size::Medium,
             row_height: None,
+            header_height: None,
             row_measure_mode: TableRowMeasureMode::Fixed,
             overscan: 2,
             keep_alive: None,
@@ -945,6 +950,110 @@ mod tests {
     }
 
     #[test]
+    fn table_virtualized_allows_header_height_override() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+
+        let mut state_value = TableState::default();
+        state_value.pagination.page_size = 1;
+        let state = app.models_mut().insert(state_value);
+
+        let data: Arc<[u32]> = Arc::from(vec![0u32]);
+        let columns: Arc<[ColumnDef<u32>]> = Arc::from(vec![{
+            let mut col = ColumnDef::new("name");
+            col.size = 220.0;
+            col
+        }]);
+        let scroll = VirtualListScrollHandle::new();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(320.0), Px(240.0)),
+        );
+        let mut services = FakeServices;
+
+        let props = TableViewProps {
+            draw_frame: false,
+            row_height: Some(Px(36.0)),
+            header_height: Some(Px(40.0)),
+            ..Default::default()
+        };
+
+        let render = |ui: &mut UiTree<App>,
+                      app: &mut App,
+                      services: &mut FakeServices|
+         -> fret_core::NodeId {
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
+                vec![table_virtualized_retained_v0(
+                    cx,
+                    data.clone(),
+                    columns.clone(),
+                    state.clone(),
+                    &scroll,
+                    0,
+                    Arc::new(|_row: &u32, index: usize| RowKey::from_index(index)),
+                    None,
+                    props.clone(),
+                    Arc::new(|col: &ColumnDef<u32>| Arc::from(col.id.as_ref())),
+                    None,
+                    Arc::new(
+                        |cx: &mut ElementContext<'_, App>, _col: &ColumnDef<u32>, _row: &u32| {
+                            crate::ui::text(cx, "Row 0").into_element(cx)
+                        },
+                    ),
+                    Some(Arc::<str>::from("table-test-header-")),
+                    Some(Arc::<str>::from("table-test-row-")),
+                )]
+            })
+        };
+
+        // VirtualList computes the visible window based on viewport metrics populated during layout,
+        // so it takes two frames for the first set of rows to mount.
+        for _ in 0..2 {
+            let root = render(&mut ui, &mut app, &mut services);
+            ui.set_root(root);
+            ui.request_semantics_snapshot();
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+            let mut scene = fret_core::Scene::default();
+            ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        }
+
+        let snap = ui
+            .semantics_snapshot()
+            .expect("expected a semantics snapshot");
+
+        let find_height = |id: &str| -> f32 {
+            snap.nodes
+                .iter()
+                .find(|n| n.test_id.as_deref() == Some(id))
+                .map(|n| n.bounds.size.height.0)
+                .unwrap_or_else(|| panic!("expected to find {id}"))
+        };
+
+        let header_h = find_height("table-test-header-name");
+        let body_h = find_height("table-test-row-0");
+
+        let eps = 2.0;
+        assert!(
+            (header_h - 40.0).abs() <= eps,
+            "expected header height ~40px (got {header_h:.2}px)"
+        );
+        assert!(
+            (body_h - 36.0).abs() <= eps,
+            "expected body height ~36px (got {body_h:.2}px)"
+        );
+    }
+
+    #[test]
     fn table_virtualized_retained_colpin_alignment_gate_across_pin_resize_and_overflow() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -1631,6 +1740,7 @@ where
     let row_h = props
         .row_height
         .unwrap_or_else(|| resolve_row_height(theme, props.size));
+    let header_h = props.header_height.unwrap_or(row_h);
 
     let cell_px = resolve_cell_padding_x(theme);
     let cell_py = resolve_cell_padding_y(theme);
@@ -1818,7 +1928,7 @@ where
                 layout: LayoutStyle {
                     size: fret_ui::element::SizeStyle {
                         width: Length::Fill,
-                        height: Length::Px(row_h),
+                        height: Length::Px(header_h),
                         ..Default::default()
                     },
                     ..Default::default()
@@ -2705,6 +2815,7 @@ where
     let row_h = props
         .row_height
         .unwrap_or_else(|| resolve_row_height(theme, props.size));
+    let header_h = props.header_height.unwrap_or(row_h);
     let body_row_height = match props.row_measure_mode {
         TableRowMeasureMode::Fixed => Length::Px(row_h),
         TableRowMeasureMode::Measured => Length::Auto,
@@ -3815,16 +3926,16 @@ where
                                                 ..Default::default()
                                             },
                                             border_color: Some(border),
-                                            layout: LayoutStyle {
-                                                size: fret_ui::element::SizeStyle {
-                                                    width: Length::Fill,
-                                                    height: Length::Px(row_h),
-                                                    ..Default::default()
-                                                },
-                                                ..Default::default()
-                                            },
-                                            ..Default::default()
-                                        },
+                                                        layout: LayoutStyle {
+                                                            size: fret_ui::element::SizeStyle {
+                                                                width: Length::Fill,
+                                                                height: Length::Px(header_h),
+                                                                ..Default::default()
+                                                            },
+                                                            ..Default::default()
+                                                        },
+                                                        ..Default::default()
+                                                    },
                                         |cx| {
                                             let mut render_header_group =
                                                 |cx: &mut ElementContext<'_, H>,

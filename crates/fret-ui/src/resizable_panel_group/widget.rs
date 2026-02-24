@@ -1,10 +1,13 @@
-use fret_core::{Axis, Color, DrawOrder, Event, MouseButton, Px, Rect, Size};
+use fret_core::{
+    Axis, Color, Corners, DrawOrder, Event, KeyCode, MouseButton, Point, Px, Rect, Size,
+};
 use fret_runtime::{Model, ModelId};
 
 use super::{
     ResizablePanelGroupStyle, apply_handle_delta, compute_resizable_panel_group_layout,
     fractions_from_sizes, layout,
 };
+use crate::element::{RingPlacement, RingStyle};
 use crate::resize_handle::ResizeHandle;
 use crate::widget::{EventCx, LayoutCx, PaintCx, SemanticsCx, Widget};
 use crate::{Invalidation, Theme, UiHost};
@@ -29,6 +32,8 @@ pub struct BoundResizablePanelGroup {
     dragging: Option<DragState>,
     hovered_handle_ix: Option<usize>,
     last_bounds: Rect,
+    last_panel_count: usize,
+    last_has_handle_children: bool,
     last_sizes: Vec<f32>,
     last_handle_rects: Vec<Rect>,
     last_handle_centers: Vec<f32>,
@@ -45,6 +50,8 @@ impl BoundResizablePanelGroup {
             dragging: None,
             hovered_handle_ix: None,
             last_bounds: Rect::default(),
+            last_panel_count: 0,
+            last_has_handle_children: false,
             last_sizes: Vec::new(),
             last_handle_rects: Vec::new(),
             last_handle_centers: Vec::new(),
@@ -166,138 +173,234 @@ impl<H: UiHost> Widget<H> for BoundResizablePanelGroup {
     }
 
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
-        let Event::Pointer(pe) = event else {
-            return;
-        };
-
-        self.last_bounds = cx.bounds;
-        let children_len = cx.children.len();
-        if children_len < 2 || self.style.hit_thickness.0 <= 0.0 {
-            return;
-        }
-
-        let (
-            panel_count,
-            _has_handle_children,
-            _panel_rects,
-            handle_rects,
-            handle_centers,
-            sizes,
-            avail,
-        ) = self.compute_layout(cx.app, cx.bounds, children_len);
-        self.last_handle_rects = handle_rects;
-        self.last_handle_centers = handle_centers;
-        self.last_sizes = sizes;
-
-        if panel_count < 2 {
-            return;
-        }
-
-        let mins = self.effective_min_px(panel_count, avail);
-
-        match pe {
-            fret_core::PointerEvent::Move { position, .. } => {
-                if let Some(drag) = self.dragging {
-                    let Some(&old_center) = self.last_handle_centers.get(drag.handle_ix) else {
-                        return;
-                    };
-                    let desired_center = layout::axis_pos(*position, self.axis) - drag.grab_offset;
-                    let desired_delta = desired_center - old_center;
-
-                    let mut sizes = self.last_sizes.clone();
-                    let actual =
-                        apply_handle_delta(drag.handle_ix, desired_delta, &mut sizes, &mins);
-                    if actual.abs() > 1.0e-6 {
-                        self.update_model_sizes(cx.app, &sizes, avail);
-                        cx.invalidate_self(Invalidation::Layout);
-                        cx.invalidate_self(Invalidation::Paint);
-                        cx.request_redraw();
-                    }
-
-                    cx.set_cursor_icon(
-                        ResizeHandle {
-                            axis: self.axis,
-                            hit_thickness: self.style.hit_thickness,
-                            paint_device_px: self.style.paint_device_px,
-                        }
-                        .cursor_icon(),
-                    );
-                    cx.stop_propagation();
-                    return;
-                }
-
+        match event {
+            Event::KeyDown { key, modifiers, .. } => {
                 if !self.enabled {
                     return;
                 }
 
-                let mut hovered = None;
-                for (i, rect) in self.last_handle_rects.iter().enumerate() {
-                    if rect.contains(*position) {
-                        hovered = Some(i);
+                let step = if modifiers.shift {
+                    32.0
+                } else if modifiers.alt {
+                    1.0
+                } else {
+                    8.0
+                };
+
+                let desired_delta = match (self.axis, *key) {
+                    (Axis::Horizontal, KeyCode::ArrowLeft) => Some(-step),
+                    (Axis::Horizontal, KeyCode::ArrowRight) => Some(step),
+                    (Axis::Vertical, KeyCode::ArrowUp) => Some(-step),
+                    (Axis::Vertical, KeyCode::ArrowDown) => Some(step),
+                    _ => None,
+                };
+                let Some(desired_delta) = desired_delta else {
+                    return;
+                };
+
+                self.last_bounds = cx.bounds;
+                let children_len = cx.children.len();
+                if children_len < 2 || self.style.hit_thickness.0 <= 0.0 {
+                    return;
+                }
+
+                let (
+                    panel_count,
+                    has_handle_children,
+                    _panel_rects,
+                    handle_rects,
+                    handle_centers,
+                    sizes,
+                    avail,
+                ) = self.compute_layout(cx.app, cx.bounds, children_len);
+                self.last_panel_count = panel_count;
+                self.last_has_handle_children = has_handle_children;
+                self.last_handle_rects = handle_rects;
+                self.last_handle_centers = handle_centers;
+                self.last_sizes = sizes;
+
+                if !has_handle_children || panel_count < 2 {
+                    return;
+                }
+
+                let Some(focus) = cx.focus else {
+                    return;
+                };
+
+                let mut focused_handle_ix = None;
+                for handle_ix in 0..panel_count.saturating_sub(1) {
+                    let child_ix = handle_ix.saturating_mul(2).saturating_add(1);
+                    if cx.children.get(child_ix).copied() == Some(focus) {
+                        focused_handle_ix = Some(handle_ix);
                         break;
                     }
                 }
-                if hovered != self.hovered_handle_ix {
-                    self.hovered_handle_ix = hovered;
+                let Some(handle_ix) = focused_handle_ix else {
+                    return;
+                };
+
+                let mins = self.effective_min_px(panel_count, avail);
+                let mut sizes = self.last_sizes.clone();
+                let actual = apply_handle_delta(handle_ix, desired_delta, &mut sizes, &mins);
+                if actual.abs() > 1.0e-6 {
+                    self.update_model_sizes(cx.app, &sizes, avail);
+                    cx.invalidate_self(Invalidation::Layout);
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                } else {
                     cx.invalidate_self(Invalidation::Paint);
                     cx.request_redraw();
                 }
 
-                if self.hovered_handle_ix.is_some() {
-                    cx.set_cursor_icon(
-                        ResizeHandle {
-                            axis: self.axis,
-                            hit_thickness: self.style.hit_thickness,
-                            paint_device_px: self.style.paint_device_px,
-                        }
-                        .cursor_icon(),
-                    );
-                }
+                cx.stop_propagation();
             }
-            fret_core::PointerEvent::Down {
-                position,
-                button: MouseButton::Left,
-                ..
-            } => {
-                if !self.enabled {
+            Event::Pointer(pe) => {
+                self.last_bounds = cx.bounds;
+                let children_len = cx.children.len();
+                if children_len < 2 || self.style.hit_thickness.0 <= 0.0 {
                     return;
                 }
-                let mut picked = None;
-                for (i, rect) in self.last_handle_rects.iter().enumerate() {
-                    if rect.contains(*position) {
-                        picked = Some(i);
-                        break;
-                    }
-                }
-                let Some(handle_ix) = picked else {
-                    return;
-                };
-                let Some(&center) = self.last_handle_centers.get(handle_ix) else {
-                    return;
-                };
 
-                cx.capture_pointer(cx.node);
-                self.dragging = Some(DragState {
-                    handle_ix,
-                    grab_offset: layout::axis_pos(*position, self.axis) - center,
-                });
-                self.hovered_handle_ix = Some(handle_ix);
-                cx.invalidate_self(Invalidation::Paint);
-                cx.request_redraw();
-                cx.stop_propagation();
-            }
-            fret_core::PointerEvent::Up {
-                button: MouseButton::Left,
-                ..
-            } => {
-                if self.dragging.is_none() {
+                let (
+                    panel_count,
+                    has_handle_children,
+                    _panel_rects,
+                    handle_rects,
+                    handle_centers,
+                    sizes,
+                    avail,
+                ) = self.compute_layout(cx.app, cx.bounds, children_len);
+                self.last_panel_count = panel_count;
+                self.last_has_handle_children = has_handle_children;
+                self.last_handle_rects = handle_rects;
+                self.last_handle_centers = handle_centers;
+                self.last_sizes = sizes;
+
+                if panel_count < 2 {
                     return;
                 }
-                cx.release_pointer_capture();
-                self.dragging = None;
-                cx.invalidate_self(Invalidation::Paint);
-                cx.request_redraw();
-                cx.stop_propagation();
+
+                let mins = self.effective_min_px(panel_count, avail);
+
+                match pe {
+                    fret_core::PointerEvent::Move { position, .. } => {
+                        if let Some(drag) = self.dragging {
+                            let Some(&old_center) = self.last_handle_centers.get(drag.handle_ix)
+                            else {
+                                return;
+                            };
+                            let desired_center =
+                                layout::axis_pos(*position, self.axis) - drag.grab_offset;
+                            let desired_delta = desired_center - old_center;
+
+                            let mut sizes = self.last_sizes.clone();
+                            let actual = apply_handle_delta(
+                                drag.handle_ix,
+                                desired_delta,
+                                &mut sizes,
+                                &mins,
+                            );
+                            if actual.abs() > 1.0e-6 {
+                                self.update_model_sizes(cx.app, &sizes, avail);
+                                cx.invalidate_self(Invalidation::Layout);
+                                cx.invalidate_self(Invalidation::Paint);
+                                cx.request_redraw();
+                            }
+
+                            cx.set_cursor_icon(
+                                ResizeHandle {
+                                    axis: self.axis,
+                                    hit_thickness: self.style.hit_thickness,
+                                    paint_device_px: self.style.paint_device_px,
+                                }
+                                .cursor_icon(),
+                            );
+                            cx.stop_propagation();
+                            return;
+                        }
+
+                        if !self.enabled {
+                            return;
+                        }
+
+                        let mut hovered = None;
+                        for (i, rect) in self.last_handle_rects.iter().enumerate() {
+                            if rect.contains(*position) {
+                                hovered = Some(i);
+                                break;
+                            }
+                        }
+                        if hovered != self.hovered_handle_ix {
+                            self.hovered_handle_ix = hovered;
+                            cx.invalidate_self(Invalidation::Paint);
+                            cx.request_redraw();
+                        }
+
+                        if self.hovered_handle_ix.is_some() {
+                            cx.set_cursor_icon(
+                                ResizeHandle {
+                                    axis: self.axis,
+                                    hit_thickness: self.style.hit_thickness,
+                                    paint_device_px: self.style.paint_device_px,
+                                }
+                                .cursor_icon(),
+                            );
+                        }
+                    }
+                    fret_core::PointerEvent::Down {
+                        position,
+                        button: MouseButton::Left,
+                        ..
+                    } => {
+                        if !self.enabled {
+                            return;
+                        }
+                        let mut picked = None;
+                        for (i, rect) in self.last_handle_rects.iter().enumerate() {
+                            if rect.contains(*position) {
+                                picked = Some(i);
+                                break;
+                            }
+                        }
+                        let Some(handle_ix) = picked else {
+                            return;
+                        };
+                        let Some(&center) = self.last_handle_centers.get(handle_ix) else {
+                            return;
+                        };
+
+                        if has_handle_children {
+                            let child_ix = handle_ix.saturating_mul(2).saturating_add(1);
+                            if let Some(&child) = cx.children.get(child_ix) {
+                                cx.request_focus(child);
+                            }
+                        }
+
+                        cx.capture_pointer(cx.node);
+                        self.dragging = Some(DragState {
+                            handle_ix,
+                            grab_offset: layout::axis_pos(*position, self.axis) - center,
+                        });
+                        self.hovered_handle_ix = Some(handle_ix);
+                        cx.invalidate_self(Invalidation::Paint);
+                        cx.request_redraw();
+                        cx.stop_propagation();
+                    }
+                    fret_core::PointerEvent::Up {
+                        button: MouseButton::Left,
+                        ..
+                    } => {
+                        if self.dragging.is_none() {
+                            return;
+                        }
+                        cx.release_pointer_capture();
+                        self.dragging = None;
+                        cx.invalidate_self(Invalidation::Paint);
+                        cx.request_redraw();
+                        cx.stop_propagation();
+                    }
+                    _ => {}
+                }
             }
             _ => {}
         }
@@ -317,6 +420,8 @@ impl<H: UiHost> Widget<H> for BoundResizablePanelGroup {
             sizes,
             _avail,
         ) = self.compute_layout(cx.app, cx.bounds, children_len);
+        self.last_panel_count = panel_count;
+        self.last_has_handle_children = has_handle_children;
         self.last_handle_rects = handle_rects;
         self.last_handle_centers = handle_centers;
         self.last_sizes = sizes;
@@ -378,11 +483,25 @@ impl<H: UiHost> Widget<H> for BoundResizablePanelGroup {
     }
 
     fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
-        for &child in cx.children {
-            if let Some(bounds) = cx.child_bounds(child) {
-                cx.paint(child, bounds);
-            } else {
-                cx.paint(child, cx.bounds);
+        if self.last_has_handle_children {
+            for panel_ix in 0..self.last_panel_count {
+                let child_ix = panel_ix.saturating_mul(2);
+                let Some(&child) = cx.children.get(child_ix) else {
+                    continue;
+                };
+                if let Some(bounds) = cx.child_bounds(child) {
+                    cx.paint(child, bounds);
+                } else {
+                    cx.paint(child, cx.bounds);
+                }
+            }
+        } else {
+            for &child in cx.children {
+                if let Some(bounds) = cx.child_bounds(child) {
+                    cx.paint(child, bounds);
+                } else {
+                    cx.paint(child, cx.bounds);
+                }
             }
         }
 
@@ -400,7 +519,49 @@ impl<H: UiHost> Widget<H> for BoundResizablePanelGroup {
             paint_device_px: self.style.paint_device_px,
         };
 
+        let focus_visible = crate::focus_visible::is_focus_visible(cx.app, cx.window);
         for (i, center) in self.last_handle_centers.iter().copied().enumerate() {
+            if focus_visible
+                && self.last_has_handle_children
+                && cx.focus.is_some_and(|focus| {
+                    let child_ix = i.saturating_mul(2).saturating_add(1);
+                    cx.children.get(child_ix).copied() == Some(focus)
+                })
+            {
+                let ring = RingStyle {
+                    placement: RingPlacement::Outset,
+                    width: Px(1.0),
+                    offset: Px(1.0),
+                    color: theme
+                        .color_by_key("ring")
+                        .unwrap_or(theme.colors.focus_ring),
+                    offset_color: Some(
+                        theme
+                            .color_by_key("ring-offset-background")
+                            .unwrap_or_else(|| theme.color_token("background")),
+                    ),
+                    corner_radii: Corners::all(Px(0.0)),
+                };
+                let paint_rect = handle.paint_rect(cx.bounds, center, cx.scale_factor);
+                let paint_thickness = match self.axis {
+                    Axis::Horizontal => paint_rect.size.width,
+                    Axis::Vertical => paint_rect.size.height,
+                };
+                let min_thickness = self.style.hit_thickness.min(Px(4.0));
+                let thickness = Px(paint_thickness.0.max(min_thickness.0));
+                let ring_rect = match self.axis {
+                    Axis::Horizontal => Rect {
+                        origin: Point::new(Px(center - thickness.0 * 0.5), cx.bounds.origin.y),
+                        size: Size::new(thickness, cx.bounds.size.height),
+                    },
+                    Axis::Vertical => Rect {
+                        origin: Point::new(cx.bounds.origin.x, Px(center - thickness.0 * 0.5)),
+                        size: Size::new(cx.bounds.size.width, thickness),
+                    },
+                };
+                crate::paint::paint_focus_ring(cx.scene, DrawOrder(9_990), ring_rect, ring);
+            }
+
             let alpha = if let Some(drag) = self.dragging {
                 if drag.handle_ix == i {
                     self.style.handle_drag_alpha
@@ -421,6 +582,23 @@ impl<H: UiHost> Widget<H> for BoundResizablePanelGroup {
                 cx.scale_factor,
                 color,
             );
+        }
+
+        if self.last_has_handle_children {
+            // Ensure handle children (e.g. shadcn `withHandle` grip chrome) paint over the handle
+            // line, mirroring upstream `z-10` behavior.
+            let handle_count = self.last_panel_count.saturating_sub(1);
+            for handle_ix in 0..handle_count {
+                let child_ix = handle_ix.saturating_mul(2).saturating_add(1);
+                let Some(&child) = cx.children.get(child_ix) else {
+                    continue;
+                };
+                if let Some(bounds) = cx.child_bounds(child) {
+                    cx.paint(child, bounds);
+                } else {
+                    cx.paint(child, cx.bounds);
+                }
+            }
         }
     }
 }

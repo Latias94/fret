@@ -4,12 +4,14 @@ use std::sync::Arc;
 
 use fret_runtime::Model;
 use fret_ui::element::AnyElement;
-use fret_ui::{ElementContext, UiHost};
+use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
-use fret_ui_kit::{ChromeRefinement, LayoutRefinement, LengthRefinement, Space};
+use fret_ui_kit::declarative::{current_color, stack};
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, LengthRefinement, Space};
+use fret_ui_kit::{WidgetStateProperty, ui};
 use time::{Date, Weekday};
 
-use crate::button::{Button, ButtonVariant};
+use crate::button::{Button, ButtonSize, ButtonStyle, ButtonVariant, button_text_style};
 use crate::calendar_range::CalendarRange;
 use crate::popover::{Popover, PopoverAlign, PopoverContent, PopoverSide};
 
@@ -57,7 +59,7 @@ impl DateRangePicker {
             open,
             month,
             selected,
-            placeholder: Arc::from("Pick a date range"),
+            placeholder: Arc::from("Pick a date"),
             week_start: Weekday::Sunday,
             show_outside_days: true,
             disable_outside_days: false,
@@ -135,8 +137,10 @@ impl DateRangePicker {
                 Rc::new(Cell::new(None));
             let trigger_chrome = self.chrome.clone();
             let trigger_layout = self.layout.clone();
+            let calendar_icon = fret_icons::IconId::new_static("lucide.calendar");
 
             let selected_value = cx.watch_model(&selected).cloned().unwrap_or_default();
+            let selected_empty = selected_value.from.is_none() && selected_value.to.is_none();
             let button_text: Arc<str> =
                 if selected_value.from.is_some() || selected_value.to.is_some() {
                     (self.format_selected)(selected_value)
@@ -151,8 +155,47 @@ impl DateRangePicker {
                 .into_element(
                     cx,
                     move |cx| {
-                        Button::new(button_text)
+                        let theme = Theme::global(&*cx.app).clone();
+                        let theme_for_content = theme.clone();
+                        let calendar_icon_for_content = calendar_icon.clone();
+                        let button_text_for_content = button_text.clone();
+
+                        let content = stack::hstack(
+                            cx,
+                            stack::HStackProps::default()
+                                .justify_start()
+                                .items_center()
+                                .gap_x(Space::N2)
+                                .layout(LayoutRefinement::default().w_full().min_w_0()),
+                            move |cx| {
+                                let fg = current_color::inherited_current_color(cx).unwrap_or_else(
+                                    || ColorRef::Color(theme_for_content.color_token("foreground")),
+                                );
+                                let mut text_style =
+                                    button_text_style(&theme_for_content, ButtonSize::default());
+                                text_style.weight = fret_core::FontWeight::NORMAL;
+                                let line_height = text_style.line_height.unwrap_or_else(|| {
+                                    theme_for_content.metric_token("font.line_height")
+                                });
+
+                                vec![
+                                    crate::icon::icon(cx, calendar_icon_for_content),
+                                    ui::text(cx, button_text_for_content.clone())
+                                        .text_size_px(text_style.size)
+                                        .fixed_line_box_px(line_height)
+                                        .line_box_in_bounds()
+                                        .font_weight(text_style.weight)
+                                        .nowrap()
+                                        .text_color(fg)
+                                        .into_element(cx),
+                                ]
+                            },
+                        );
+
+                        let mut button = Button::new(button_text)
                             .variant(ButtonVariant::Outline)
+                            .leading_icon(calendar_icon)
+                            .children([content])
                             .toggle_model(open_trigger.clone())
                             .disabled(self.disabled)
                             .refine_style(trigger_chrome.clone())
@@ -160,8 +203,17 @@ impl DateRangePicker {
                                 LayoutRefinement::default()
                                     .w_full()
                                     .merge(trigger_layout.clone()),
-                            )
-                            .into_element(cx)
+                            );
+
+                        if selected_empty {
+                            let muted = ColorRef::Color(theme.color_token("muted-foreground"));
+                            button = button.style(
+                                ButtonStyle::default()
+                                    .foreground(WidgetStateProperty::new(Some(muted))),
+                            );
+                        }
+
+                        button.into_element(cx)
                     },
                     move |cx| {
                         let mut calendar = CalendarRange::new(month.clone(), selected.clone())

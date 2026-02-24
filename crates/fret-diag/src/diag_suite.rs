@@ -382,10 +382,8 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
             Some(BuiltinSuite::UiGalleryCodeEditor),
         )
     } else if is_ui_gallery_date_picker_suite {
-        // Date picker scripts rely on stable role-and-name semantics selectors; ensure
-        // diagnostics redaction is disabled so selectors can match.
-        push_env_if_missing(&mut launch_env, "FRET_DIAG_REDACT_TEXT", "0");
-        // Use deterministic date + page seed so roving navigation is repeatable.
+        // Keep date picker scripts deterministic (date + page seed) so keyboard navigation and
+        // disabled-day skipping are repeatable.
         push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_START_PAGE", "date_picker");
         push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_DIAG_CALENDAR_ROVING", "1");
         push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_FIXED_TODAY", "2024-02-01");

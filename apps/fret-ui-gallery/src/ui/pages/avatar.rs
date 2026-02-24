@@ -316,10 +316,20 @@ pub(super) fn preview_avatar(
                     .delay_ms(120)
                     .into_element(cx);
 
-                shadcn::Avatar::new([image, fallback])
+                let avatar = shadcn::Avatar::new([image, fallback])
                     .size(shadcn::AvatarSize::Default)
-                    .into_element(cx)
+                    .into_element(cx);
+
+                // Match shadcn docs: Avatar is composed inside a ghost icon button used as the
+                // dropdown trigger (`asChild`-style).
+                shadcn::Button::new("")
+                    .variant(shadcn::ButtonVariant::Ghost)
+                    .size(shadcn::ButtonSize::Icon)
+                    .a11y_label("Open user menu")
+                    .refine_style(ChromeRefinement::default().rounded(Radius::Full))
+                    .children([avatar])
                     .test_id("ui-gallery-avatar-dropdown-trigger")
+                    .into_element(cx)
             };
 
             let entries = |_cx: &mut ElementContext<'_, App>| {
@@ -327,6 +337,10 @@ pub(super) fn preview_avatar(
                     shadcn::DropdownMenuEntry::Item(
                         shadcn::DropdownMenuItem::new("Profile")
                             .test_id("ui-gallery-avatar-dropdown-item-profile"),
+                    ),
+                    shadcn::DropdownMenuEntry::Item(
+                        shadcn::DropdownMenuItem::new("Billing")
+                            .test_id("ui-gallery-avatar-dropdown-item-billing"),
                     ),
                     shadcn::DropdownMenuEntry::Item(
                         shadcn::DropdownMenuItem::new("Settings")
@@ -342,9 +356,7 @@ pub(super) fn preview_avatar(
             };
 
             vec![
-                shadcn::DropdownMenu::new(dropdown_open.clone())
-                    .into_element(cx, trigger, entries)
-                    .test_id("ui-gallery-avatar-dropdown"),
+                shadcn::DropdownMenu::new(dropdown_open.clone()).into_element(cx, trigger, entries),
             ]
         })
         .test_id("ui-gallery-avatar-dropdown-row")
@@ -454,9 +466,19 @@ shadcn::AvatarGroup::new(avatars.into_iter().chain([count]).collect::<Vec<_>>())
 
 shadcn::DropdownMenu::new(open).into_element(
     cx,
-    |cx| shadcn::Avatar::new([/* image + fallback */]).into_element(cx),
+    |cx| {
+        let avatar = shadcn::Avatar::new([/* image + fallback */]).into_element(cx);
+        shadcn::Button::new("")
+            .variant(shadcn::ButtonVariant::Ghost)
+            .size(shadcn::ButtonSize::Icon)
+            .refine_style(ChromeRefinement::default().rounded(Radius::Full))
+            .children([avatar])
+            .into_element(cx)
+    },
     |_cx| vec![
         shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new("Profile")),
+        shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new("Billing")),
+        shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new("Settings")),
         shadcn::DropdownMenuEntry::Separator,
     ],
 );"#,

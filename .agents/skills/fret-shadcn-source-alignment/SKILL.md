@@ -27,6 +27,10 @@ Ask these to keep the work scoped and landable:
 - Which layer should own the change (mechanism vs policy vs recipe)?
 - What regression protection is required: unit test, parity harness case, and/or diag script?
 - Do we need a new stable `test_id` surface for automation?
+- What platforms and input types must match (native/web; mouse/touch/pen)?
+- Does parity include accessibility outcomes (roles/relations/active-descendant/collection metadata)?
+- Does the component rely on responsive breakpoints (Tailwind-like viewport or container queries)?
+- Is this an overlay family that needs `disableOutsidePointerEvents`, safe-hover corridors, or touch slop rules?
 
 Defaults if unclear:
 
@@ -36,6 +40,7 @@ Defaults if unclear:
 ## Smallest starting point (one command)
 
 - `cargo run -p fretboard -- dev native --bin components_gallery`
+- Alternate (shadcn gallery + a11y harness surface): `cargo run -p fret-demo`
 
 ## Quick start
 
@@ -54,6 +59,17 @@ Defaults if unclear:
 If the mismatch is “interaction policy” (dismiss rules, focus restore, hover intent, menu navigation),
 it almost never belongs in `crates/fret-ui`.
 
+### 1.25) Pick the upstream “reference stack” explicitly
+
+Use the right source for the right kind of parity:
+
+- **APG**: keyboard navigation and composite widget semantics (tabs, menu, listbox/combobox, etc.).
+- **Radix**: overlays (dismiss/focus/portal/presence) and nuanced interaction outcomes.
+- **Floating UI**: placement/flip/shift/arrow geometry outcomes.
+- **cmdk**: command palette interaction details.
+
+See `docs/reference-stack-ui-behavior.md` for the repo’s priority order and boundary mapping.
+
 ### 1.5) Motion parity in a custom renderer (important)
 
 shadcn/Radix sources are DOM-first and often assume CSS/Framer Motion behavior. Fret is a GPU-first
@@ -69,6 +85,57 @@ Rules of thumb:
   - DOM `transform` moves hit-testing with visuals; in Fret, choose `RenderTransform` when you want
     hit-testing to track motion, and `VisualTransform` when you want paint-only motion.
 - Lock motion-sensitive changes with a deterministic diag gate (`--fixed-frame-delta-ms 16`).
+
+### 1.75) Pointer / hit-testing / drag / cursor parity (GPU-first gotchas)
+
+Common DOM-to-Fret translation points to check:
+
+- **Hit-testing follows layout bounds**; transforms and clipping are explicit. Start at:
+  - `crates/fret-ui/src/tree/hit_test.rs`
+  - `crates/fret-ui/src/element.rs` (`VisualTransform` vs `RenderTransform`)
+- **Pointer capture and observer passes** matter for overlays and drags:
+  - Outside-press observer pass + click-through/consume behavior: `crates/fret-ui/src/tree/ui_tree_outside_press.rs` (ADR 0069).
+  - Window-level dispatch (pointer occlusion / hover suppression): `crates/fret-ui/src/tree/dispatch/window.rs`.
+- **Touch is not mouse**: outside-press is delayed to pointer-up with a slop threshold:
+  - `crates/fret-ui/src/tree/ui_tree_focus.rs` (`TOUCH_POINTER_DOWN_OUTSIDE_SLOP_PX`).
+- **Cursor icons are a contract surface** (especially for resize/drag handles):
+  - `crates/fret-core/src/cursor.rs`
+  - `crates/fret-runner-winit/src/mapping/cursor.rs`
+
+If the mismatch is “dragging feels wrong”, prefer expressing policy via action hooks rather than
+adding runtime toggles (see `docs/action-hooks.md` and `crates/fret-ui/src/action.rs`).
+
+### 1.9) A11y parity (semantics snapshot outcomes, not DOM attributes)
+
+Fret models accessibility via a semantics snapshot (portable schema) bridged by platform backends
+e.g. AccessKit. For shadcn/Radix-aligned work, high-signal invariants include:
+
+- roles (`SemanticsRole`) and flags (disabled/selected/expanded/checked),
+- relations (`labelled_by`, `described_by`, `controls`),
+- composite widgets (`active_descendant`),
+- collections (`pos_in_set` / `set_size`) for menus/listbox-like surfaces.
+
+Start points:
+
+- Schema: `crates/fret-core/src/semantics.rs`
+- Trigger stamping helpers (expanded/controls/described-by): `ecosystem/fret-ui-kit/src/primitives/trigger_a11y.rs`
+- Manual acceptance (overlays + shadcn demo): `docs/a11y-acceptance-checklist.md`
+
+### 1.95) Responsive / breakpoint parity (Tailwind-like, but not CSS)
+
+When upstream uses responsive classes or container queries, prefer the in-tree helpers:
+
+- Container queries (Tailwind-compatible breakpoints + hysteresis): `ecosystem/fret-ui-kit/src/declarative/container_queries.rs`
+- shadcn recipes that depend on breakpoints (examples live under `ecosystem/fret-ui-shadcn/src/`).
+
+### 1.97) Visual / token parity (Tailwind → typed theme tokens)
+
+For shadcn “looks right” work, prefer token- and vocab-level alignment over per-component literals:
+
+- Theme ingestion/conversion (shadcn v4 presets): `ecosystem/fret-ui-shadcn/src/shadcn_themes.rs`
+- Style vocabulary (Space/Radius/ColorRef/MetricRef): `ecosystem/fret-ui-kit/src/style/`
+- Focus-visible + rings (web-like outcomes, keyboard modality sensitive): `docs/adr/0061-focus-rings-and-focus-visible.md`
+- Pixel snapping (crisp 1px borders/lines): `crates/fret-ui/src/pixel_snap.rs`
 
 ### 2) Find the upstream reference (source of truth)
 
@@ -104,6 +171,9 @@ Use Base UI as an additional reference for:
 3. Add an interaction repro script when state machines are involved.
    - Create `tools/diag-scripts/<scenario>.json` and gate it via `fretboard diag run`.
    - Always add/keep stable `test_id` targets in the Fret UI so scripts survive refactors.
+4. Add an accessibility gate when semantics are involved.
+   - Prefer invariant-style tests (roles/flags/relations/collection metadata).
+   - Keep AccessKit mapping coverage green: `cargo nextest run -p fret-a11y-accesskit`.
 
 Motion token guidance (ecosystem-level; keep stable for parity work):
 
@@ -144,8 +214,16 @@ Motion token guidance (ecosystem-level; keep stable for parity work):
 ## Evidence anchors
 
 - Layers and contracts: `docs/architecture.md`, `docs/runtime-contract-matrix.md`
+- Reference stack (APG/Radix/Floating/cmdk): `docs/reference-stack-ui-behavior.md`
+- Action hooks (component-owned policy): `docs/action-hooks.md`
+- Overlay ADRs:
+  - `docs/adr/0067-overlay-policy-architecture-dismissal-focus-portal.md`
+  - `docs/adr/0069-outside-press-and-dismissable-non-modal-overlays.md`
+  - `docs/adr/0068-focus-traversal-and-focus-scopes.md`
+- A11y acceptance checklist: `docs/a11y-acceptance-checklist.md`
 - Local shadcn component implementations: `ecosystem/fret-ui-shadcn/src/`
 - Policy primitives (roving/typeahead/overlays): `ecosystem/fret-ui-kit/src/primitives/`
+- Responsive helpers: `ecosystem/fret-ui-kit/src/declarative/container_queries.rs`
 - Web-vs-fret harness + goldens:
   - `ecosystem/fret-ui-shadcn/tests/`
   - `goldens/shadcn-web/v4/new-york-v4/*.json`

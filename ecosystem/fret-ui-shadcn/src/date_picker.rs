@@ -3,7 +3,6 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_core::{FontWeight, Px};
-use fret_icons::IconId;
 use fret_runtime::Model;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
@@ -185,6 +184,7 @@ impl DatePicker {
                 Rc::new(Cell::new(None));
             let trigger_chrome = self.chrome.clone();
             let trigger_layout = self.layout.clone();
+            let calendar_icon = fret_icons::IconId::new_static("lucide.calendar");
 
             let selected_value = cx.watch_model(&selected).copied().flatten();
             let label_is_placeholder = selected_value.is_none();
@@ -200,11 +200,11 @@ impl DatePicker {
                 .into_element(
                     cx,
                     move |cx| {
-                        let mut button = Button::new(button_text)
+                        let mut button = Button::new(button_text.clone())
                             .variant(ButtonVariant::Outline)
                             .toggle_model(open_trigger.clone())
                             .disabled(self.disabled)
-                            .leading_icon(IconId::new_static("lucide.calendar"))
+                            .leading_icon(calendar_icon)
                             .leading_icon_size(Px(16.0))
                             .content_justify_start()
                             .text_weight(FontWeight::NORMAL)
