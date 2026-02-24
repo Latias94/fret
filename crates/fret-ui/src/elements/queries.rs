@@ -81,10 +81,7 @@ pub fn bounds_for_element<H: UiHost>(
     window: AppWindowId,
     element: GlobalElementId,
 ) -> Option<Rect> {
-    with_window_state(app, window, |st| {
-        st.last_bounds(element)
-            .or_else(|| st.current_bounds(element))
-    })
+    with_window_state(app, window, |st| st.current_bounds(element))
 }
 
 /// Returns the most recent recorded **visual** bounds (post-`render_transform` AABB) for a
@@ -98,9 +95,7 @@ pub fn visual_bounds_for_element<H: UiHost>(
     element: GlobalElementId,
 ) -> Option<Rect> {
     with_window_state(app, window, |st| {
-        st.last_visual_bounds(element)
-            .or_else(|| st.current_visual_bounds(element))
-            .or_else(|| st.last_bounds(element))
+        st.current_visual_bounds(element)
             .or_else(|| st.current_bounds(element))
     })
 }
