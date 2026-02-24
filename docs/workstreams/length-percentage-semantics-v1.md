@@ -2,7 +2,7 @@
 
 Status: In progress (workstream)
 
-Last updated: 2026-02-23
+Last updated: 2026-02-24
 
 ## Motivation
 
@@ -135,4 +135,19 @@ The highest-ROI remaining work is to cover **spacing and constraints** consisten
   - `cargo nextest run -p fret-ui -E "test(flex_fraction_basis_and_fill_basis_do_not_collapse_under_min_content_measurement)"`
   - `cargo nextest run -p fret-ui -E "test(spacing_fraction_only_resolve_under_definite_available_space_in_measurement)"`
 - Targeted diag scripts (UI gallery):
-  - Carousel basic screenshot gate: `tools/diag-scripts/ui-gallery-carousel-basic-screenshot.json`
+  - Carousel basic screenshot gate:
+    - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-carousel-basic-screenshot.json --warmup-frames 5 --exit-after-run --launch -- cargo run -p fret-ui-gallery --release`
+  - Sheet escape + focus-restore gate:
+    - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-sheet-escape-focus-restore.json --warmup-frames 5 --exit-after-run --launch -- cargo run -p fret-ui-gallery --release`
+  - Drawer docs smoke gate:
+    - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-drawer-docs-smoke.json --warmup-frames 5 --exit-after-run --launch -- cargo run -p fret-ui-gallery --release`
+
+### Optional: view-cache reuse sanity gate
+
+If you want a “did we actually reuse cached subtrees?” check, run:
+
+- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-view-cache-toggle-perf.json --warmup-frames 5 --check-view-cache-reuse-min 1 --timeout-ms 240000 --exit-after-run --launch -- cargo run -p fret-ui-gallery --release`
+
+Notes:
+
+- View-cache reuse gates depend on cache-root debug records. If you launch UI gallery manually outside of `fretboard`, also set `FRET_UI_DEBUG_STATS=1` so bundles include `debug.cache_roots`.
