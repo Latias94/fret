@@ -3379,13 +3379,8 @@ fn select_impl<H: UiHost>(
                                 }
                             });
 
-                        let animated = overlay_motion::wrap_opacity_and_render_transform_gated(
-                            cx,
-                            opacity,
-                            transform,
-                            is_open && !warmup_invisible,
-                            vec![content],
-                        );
+                        let animated =
+                            overlay_motion::wrap_opacity_and_render_transform(cx, opacity, transform, vec![content]);
 
                         {
                             let mut state = trigger_state_for_overlay
