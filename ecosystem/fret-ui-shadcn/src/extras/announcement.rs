@@ -12,7 +12,7 @@ use crate::test_id::attach_test_id;
 ///
 /// Upstream inspiration (MIT):
 /// - `repo-ref/kibo/packages/announcement`
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Announcement {
     children: Vec<AnyElement>,
     themed: bool,
@@ -144,7 +144,7 @@ impl AnnouncementTag {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct AnnouncementTitle {
     children: Vec<AnyElement>,
     test_id: Option<Arc<str>>,

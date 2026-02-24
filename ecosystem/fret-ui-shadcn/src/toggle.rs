@@ -1,12 +1,15 @@
 use std::sync::Arc;
 
 use fret_core::{Color, Edges, FontId, FontWeight, Px, TextStyle};
+use fret_icons::IconId;
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::{AnyElement, CrossAlign, FlexProps, Length, MainAlign, PressableProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
+use fret_ui_kit::declarative::current_color;
+use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 pub use fret_ui_kit::primitives::toggle::ToggleRoot;
@@ -103,6 +106,52 @@ fn toggle_text_style(theme: &Theme) -> TextStyle {
     style
 }
 
+fn apply_toggle_inherited_style(
+    mut element: AnyElement,
+    fg: Color,
+    default_icon_color: Color,
+) -> AnyElement {
+    match &mut element.kind {
+        fret_ui::element::ElementKind::Text(props) => {
+            props.color.get_or_insert(fg);
+        }
+        fret_ui::element::ElementKind::SvgIcon(fret_ui::element::SvgIconProps {
+            color, ..
+        }) => {
+            // Heuristic:
+            // - Older callsites may build an `SvgIcon` with the default white color.
+            // - `declarative::icon::icon(...)` built outside a `currentColor` provider resolves
+            //   `muted-foreground` eagerly.
+            //
+            // In a Toggle, both shapes should track the toggle foreground by default.
+            let is_default_white = *color
+                == Color {
+                    r: 1.0,
+                    g: 1.0,
+                    b: 1.0,
+                    a: 1.0,
+                };
+            let is_default_muted_fg = *color == default_icon_color;
+            if is_default_white || is_default_muted_fg {
+                *color = fg;
+            }
+        }
+        fret_ui::element::ElementKind::Spinner(fret_ui::element::SpinnerProps {
+            color, ..
+        }) => {
+            color.get_or_insert(fg);
+        }
+        _ => {}
+    }
+
+    element.children = element
+        .children
+        .into_iter()
+        .map(|child| apply_toggle_inherited_style(child, fg, default_icon_color))
+        .collect();
+    element
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct ToggleStyle {
     pub background: OverrideSlot<ColorRef>,
@@ -140,12 +189,13 @@ impl ToggleStyle {
     }
 }
 
-#[derive(Clone)]
 pub struct Toggle {
     model: Option<Model<bool>>,
     default_pressed: bool,
     label: Option<Arc<str>>,
     children: Vec<AnyElement>,
+    leading_icon: Option<IconId>,
+    trailing_icon: Option<IconId>,
     disabled: bool,
     a11y_label: Option<Arc<str>>,
     on_click: Option<CommandId>,
@@ -181,6 +231,8 @@ impl Toggle {
             default_pressed: false,
             label: None,
             children: Vec::new(),
+            leading_icon: None,
+            trailing_icon: None,
             disabled: false,
             a11y_label: None,
             on_click: None,
@@ -199,6 +251,8 @@ impl Toggle {
             default_pressed,
             label: None,
             children: Vec::new(),
+            leading_icon: None,
+            trailing_icon: None,
             disabled: false,
             a11y_label: None,
             on_click: None,
@@ -212,6 +266,28 @@ impl Toggle {
 
     pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
         self.children = children.into_iter().collect();
+        self
+    }
+
+    /// Icon-only toggle content (common in shadcn toolbar patterns).
+    ///
+    /// The icon is stored as an `IconId` and built by the toggle host so it can inherit the
+    /// resolved foreground via `currentColor`.
+    pub fn icon(mut self, icon: IconId) -> Self {
+        self.leading_icon = Some(icon);
+        self.trailing_icon = None;
+        self.label = None;
+        self.children.clear();
+        self
+    }
+
+    pub fn leading_icon(mut self, icon: IconId) -> Self {
+        self.leading_icon = Some(icon);
+        self
+    }
+
+    pub fn trailing_icon(mut self, icon: IconId) -> Self {
+        self.trailing_icon = Some(icon);
         self
     }
 
@@ -277,6 +353,8 @@ impl Toggle {
             .model();
         let label = self.label;
         let children = self.children;
+        let leading_icon = self.leading_icon;
+        let trailing_icon = self.trailing_icon;
         let disabled_explicit = self.disabled;
         let a11y_label = self.a11y_label.clone();
         let on_click = self.on_click;
@@ -398,6 +476,7 @@ impl Toggle {
                 &default_foreground,
                 states,
             );
+            let default_icon_color = fg_muted;
             let bg = resolve_override_slot_opt(
                 style_override.background.as_ref(),
                 &default_background,
@@ -410,6 +489,7 @@ impl Toggle {
             );
 
             let theme = Theme::global(&*cx.app);
+            let fg_color = fg.resolve(theme);
             let mut chrome_props = decl_style::container_props(
                 theme,
                 base_chrome.clone(),
@@ -444,46 +524,60 @@ impl Toggle {
             };
 
             let content_children = move |cx: &mut ElementContext<'_, H>| {
-                vec![cx.flex(
-                    FlexProps {
-                        direction: fret_core::Axis::Horizontal,
-                        layout: {
-                            let mut layout = fret_ui::element::LayoutStyle::default();
-                            layout.size.height = Length::Fill;
-                            layout
+                current_color::with_current_color_provider(cx, fg.clone(), |cx| {
+                    let styled_children: Vec<AnyElement> = children
+                        .into_iter()
+                        .map(|child| {
+                            apply_toggle_inherited_style(child, fg_color, default_icon_color)
+                        })
+                        .collect();
+
+                    vec![cx.flex(
+                        FlexProps {
+                            direction: fret_core::Axis::Horizontal,
+                            layout: {
+                                let mut layout = fret_ui::element::LayoutStyle::default();
+                                layout.size.height = Length::Fill;
+                                layout
+                            },
+                            gap: {
+                                let theme = Theme::global(&*cx.app);
+                                MetricRef::space(Space::N2).resolve(theme)
+                            },
+                            padding: Edges::all(Px(0.0)),
+                            justify: MainAlign::Center,
+                            align: CrossAlign::Center,
+                            wrap: false,
+                            ..Default::default()
                         },
-                        gap: {
-                            let theme = Theme::global(&*cx.app);
-                            MetricRef::space(Space::N2).resolve(theme)
+                        move |cx: &mut ElementContext<'_, H>| {
+                            let mut out = Vec::new();
+                            if let Some(icon) = leading_icon.clone() {
+                                out.push(decl_icon::icon(cx, icon));
+                            }
+                            out.extend(styled_children);
+                            if let Some(label) = label.clone() {
+                                let mut text = ui::label(cx, label)
+                                    .text_size_px(text_style.size)
+                                    .font_weight(text_style.weight)
+                                    .nowrap();
+                                if let Some(line_height) = text_style.line_height {
+                                    text = text.line_height_px(line_height).line_height_policy(
+                                        fret_core::TextLineHeightPolicy::FixedFromStyle,
+                                    );
+                                }
+                                if let Some(letter_spacing_em) = text_style.letter_spacing_em {
+                                    text = text.letter_spacing_em(letter_spacing_em);
+                                }
+                                out.push(text.into_element(cx));
+                            }
+                            if let Some(icon) = trailing_icon.clone() {
+                                out.push(decl_icon::icon(cx, icon));
+                            }
+                            out
                         },
-                        padding: Edges::all(Px(0.0)),
-                        justify: MainAlign::Center,
-                        align: CrossAlign::Center,
-                        wrap: false,
-                        ..Default::default()
-                    },
-                    move |cx: &mut ElementContext<'_, H>| {
-                        let mut out = Vec::new();
-                        out.extend(children);
-                        if let Some(label) = label {
-                            let mut text = ui::label(cx, label)
-                                .text_size_px(text_style.size)
-                                .font_weight(text_style.weight)
-                                .text_color(fg.clone())
-                                .nowrap();
-                            if let Some(line_height) = text_style.line_height {
-                                text = text.line_height_px(line_height).line_height_policy(
-                                    fret_core::TextLineHeightPolicy::FixedFromStyle,
-                                );
-                            }
-                            if let Some(letter_spacing_em) = text_style.letter_spacing_em {
-                                text = text.letter_spacing_em(letter_spacing_em);
-                            }
-                            out.push(text.into_element(cx));
-                        }
-                        out
-                    },
-                )]
+                    )]
+                })
             };
 
             (pressable_props, chrome_props, content_children)

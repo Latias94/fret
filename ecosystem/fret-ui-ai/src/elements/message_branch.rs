@@ -40,7 +40,6 @@ fn ensure_branch_model<H: UiHost>(
     model
 }
 
-#[derive(Clone)]
 /// A branching container aligned with AI Elements `MessageBranch`.
 ///
 /// This is a convenience wrapper that:
@@ -195,7 +194,6 @@ impl MessageBranch {
     }
 }
 
-#[derive(Clone)]
 /// Branch content surface aligned with AI Elements `MessageBranchContent`.
 ///
 /// This keeps all branches mounted but uses `InteractivityGate(present=...)` so inactive branches:

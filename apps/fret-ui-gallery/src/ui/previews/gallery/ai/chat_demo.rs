@@ -630,10 +630,7 @@ pub(in crate::ui) fn preview_ai_chat_demo(
         let copy = ui_ai::MessageAction::new("Copy")
             .tooltip("Copy")
             .test_id("ui-gallery-ai-chat-action-copy")
-            .children([shadcn::icon::icon(
-                cx,
-                fret_icons::IconId::new_static("lucide.copy"),
-            )])
+            .icon(fret_icons::IconId::new_static("lucide.copy"))
             .into_element(cx);
 
         ui_ai::MessageActions::new([copy])

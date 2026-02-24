@@ -26,7 +26,7 @@ pub enum CarouselOrientation {
     Vertical,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Carousel {
     items: Vec<AnyElement>,
     layout: LayoutRefinement,
@@ -677,7 +677,7 @@ impl Carousel {
                                             padding,
                                             ..Default::default()
                                         },
-                                        move |_cx| vec![content.clone()],
+                                        move |_cx| vec![content],
                                     );
 
                                     cx.container(
@@ -694,7 +694,7 @@ impl Carousel {
                                         padding,
                                         ..Default::default()
                                     },
-                                    move |_cx| vec![content.clone()],
+                                    move |_cx| vec![content],
                                 ),
                             };
 

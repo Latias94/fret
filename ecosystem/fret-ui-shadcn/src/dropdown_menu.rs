@@ -1,4 +1,4 @@
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 use std::sync::Arc;
 
@@ -98,7 +98,7 @@ fn dropdown_menu_open_change_events(
     (changed, completed)
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum DropdownMenuEntry {
     Item(DropdownMenuItem),
     CheckboxItem(DropdownMenuCheckboxItem),
@@ -109,7 +109,6 @@ pub enum DropdownMenuEntry {
     Separator,
 }
 
-#[derive(Clone)]
 pub struct DropdownMenuItem {
     pub label: Arc<str>,
     pub value: Arc<str>,
@@ -263,16 +262,18 @@ impl DropdownMenuItem {
 }
 
 /// shadcn/ui `DropdownMenuCheckboxItem` (v4).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct DropdownMenuCheckboxItem {
     pub label: Arc<str>,
     pub value: Arc<str>,
     pub checked: Model<bool>,
     pub leading: Option<AnyElement>,
+    pub leading_icon: Option<IconId>,
     pub disabled: bool,
     pub close_on_select: bool,
     pub command: Option<CommandId>,
     pub a11y_label: Option<Arc<str>>,
+    pub test_id: Option<Arc<str>>,
     pub trailing: Option<AnyElement>,
 }
 
@@ -284,10 +285,12 @@ impl DropdownMenuCheckboxItem {
             value: label,
             checked,
             leading: None,
+            leading_icon: None,
             disabled: false,
             close_on_select: false,
             command: None,
             a11y_label: None,
+            test_id: None,
             trailing: None,
         }
     }
@@ -298,7 +301,15 @@ impl DropdownMenuCheckboxItem {
     }
 
     pub fn leading(mut self, element: AnyElement) -> Self {
+        self.leading_icon = None;
         self.leading = Some(element);
+        self
+    }
+
+    /// Prefer this over `leading(icon(cx, ...))` so the icon can inherit the item's `currentColor`.
+    pub fn leading_icon(mut self, icon: IconId) -> Self {
+        self.leading = None;
+        self.leading_icon = Some(icon);
         self
     }
 
@@ -322,6 +333,11 @@ impl DropdownMenuCheckboxItem {
         self
     }
 
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+
     pub fn trailing(mut self, element: AnyElement) -> Self {
         self.trailing = Some(element);
         self
@@ -329,7 +345,7 @@ impl DropdownMenuCheckboxItem {
 }
 
 /// shadcn/ui `DropdownMenuRadioGroup` (v4).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct DropdownMenuRadioGroup {
     pub value: Model<Option<Arc<str>>>,
     pub items: Vec<DropdownMenuRadioItemSpec>,
@@ -349,15 +365,17 @@ impl DropdownMenuRadioGroup {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct DropdownMenuRadioItemSpec {
     pub label: Arc<str>,
     pub value: Arc<str>,
     pub leading: Option<AnyElement>,
+    pub leading_icon: Option<IconId>,
     pub disabled: bool,
     pub close_on_select: bool,
     pub command: Option<CommandId>,
     pub a11y_label: Option<Arc<str>>,
+    pub test_id: Option<Arc<str>>,
     pub trailing: Option<AnyElement>,
 }
 
@@ -369,16 +387,26 @@ impl DropdownMenuRadioItemSpec {
             label,
             value,
             leading: None,
+            leading_icon: None,
             disabled: false,
             close_on_select: true,
             command: None,
             a11y_label: None,
+            test_id: None,
             trailing: None,
         }
     }
 
     pub fn leading(mut self, element: AnyElement) -> Self {
+        self.leading_icon = None;
         self.leading = Some(element);
+        self
+    }
+
+    /// Prefer this over `leading(icon(cx, ...))` so the icon can inherit the item's `currentColor`.
+    pub fn leading_icon(mut self, icon: IconId) -> Self {
+        self.leading = None;
+        self.leading_icon = Some(icon);
         self
     }
 
@@ -402,6 +430,11 @@ impl DropdownMenuRadioItemSpec {
         self
     }
 
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+
     pub fn trailing(mut self, element: AnyElement) -> Self {
         self.trailing = Some(element);
         self
@@ -413,26 +446,30 @@ impl DropdownMenuRadioItemSpec {
             value: self.value,
             group_value,
             leading: self.leading,
+            leading_icon: self.leading_icon,
             disabled: self.disabled,
             close_on_select: self.close_on_select,
             command: self.command,
             a11y_label: self.a11y_label,
+            test_id: self.test_id,
             trailing: self.trailing,
         }
     }
 }
 
 /// shadcn/ui `DropdownMenuRadioItem` (v4).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct DropdownMenuRadioItem {
     pub label: Arc<str>,
     pub value: Arc<str>,
     pub group_value: Model<Option<Arc<str>>>,
     pub leading: Option<AnyElement>,
+    pub leading_icon: Option<IconId>,
     pub disabled: bool,
     pub close_on_select: bool,
     pub command: Option<CommandId>,
     pub a11y_label: Option<Arc<str>>,
+    pub test_id: Option<Arc<str>>,
     pub trailing: Option<AnyElement>,
 }
 
@@ -449,10 +486,12 @@ impl DropdownMenuRadioItem {
             value,
             group_value,
             leading: None,
+            leading_icon: None,
             disabled: false,
             close_on_select: true,
             command: None,
             a11y_label: None,
+            test_id: None,
             trailing: None,
         }
     }
@@ -478,7 +517,20 @@ impl DropdownMenuRadioItem {
     }
 
     pub fn leading(mut self, element: AnyElement) -> Self {
+        self.leading_icon = None;
         self.leading = Some(element);
+        self
+    }
+
+    /// Prefer this over `leading(icon(cx, ...))` so the icon can inherit the item's `currentColor`.
+    pub fn leading_icon(mut self, icon: IconId) -> Self {
+        self.leading = None;
+        self.leading_icon = Some(icon);
+        self
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
         self
     }
 
@@ -521,7 +573,7 @@ impl DropdownMenuLabel {
 /// In the upstream DOM implementation, this is a structural wrapper (`MenuPrimitive.Group`).
 /// In Fret, we preserve it as a structural semantics wrapper (`role=Group`) without changing
 /// layout, so menu roving/typeahead still matches Radix while keeping group boundaries.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct DropdownMenuGroup {
     pub entries: Vec<DropdownMenuEntry>,
 }
@@ -593,22 +645,26 @@ fn reserve_leading_slot(entries: &[DropdownMenuEntry]) -> bool {
     for entry in entries {
         match entry {
             DropdownMenuEntry::Item(item) => {
-                if item.leading.is_some() {
+                if item.leading.is_some() || item.leading_icon.is_some() {
                     return true;
                 }
             }
             DropdownMenuEntry::CheckboxItem(item) => {
-                if item.leading.is_some() {
+                if item.leading.is_some() || item.leading_icon.is_some() {
                     return true;
                 }
             }
             DropdownMenuEntry::RadioItem(item) => {
-                if item.leading.is_some() {
+                if item.leading.is_some() || item.leading_icon.is_some() {
                     return true;
                 }
             }
             DropdownMenuEntry::RadioGroup(group) => {
-                if group.items.iter().any(|i| i.leading.is_some()) {
+                if group
+                    .items
+                    .iter()
+                    .any(|i| i.leading.is_some() || i.leading_icon.is_some())
+                {
                     return true;
                 }
             }
@@ -656,19 +712,24 @@ fn collect_roving_labels_and_disabled(
     }
 }
 
-fn find_submenu_entries_by_value(
-    entries: &[DropdownMenuEntry],
+fn take_submenu_entries_by_value(
+    entries: &mut [DropdownMenuEntry],
     open_value: &str,
 ) -> Option<Vec<DropdownMenuEntry>> {
     for entry in entries {
         match entry {
             DropdownMenuEntry::Item(item) => {
                 if item.value.as_ref() == open_value {
-                    return item.submenu.clone();
+                    if let Some(submenu) = item.submenu.take() {
+                        // Preserve "has submenu" for render passes that only need the marker.
+                        item.submenu = Some(Vec::new());
+                        return Some(submenu);
+                    }
+                    return None;
                 }
             }
             DropdownMenuEntry::Group(group) => {
-                if let Some(found) = find_submenu_entries_by_value(&group.entries, open_value) {
+                if let Some(found) = take_submenu_entries_by_value(&mut group.entries, open_value) {
                     return Some(found);
                 }
             }
@@ -704,7 +765,7 @@ fn menu_structural_group<H: UiHost>(
                 wrap: false,
             },
         },
-        move |_cx| children.clone(),
+        move |_cx| children,
     )
 }
 
@@ -869,6 +930,7 @@ fn checkable_menu_row_children<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     label: Arc<str>,
     leading: Option<AnyElement>,
+    leading_icon: Option<IconId>,
     reserve_leading_slot: bool,
     trailing: Option<AnyElement>,
     indicator_kind: CheckableIndicatorKind,
@@ -976,12 +1038,16 @@ fn checkable_menu_row_children<H: UiHost>(
                 );
 
                 let mut row: Vec<AnyElement> = Vec::with_capacity(
-                    2 + usize::from(leading.is_some() || reserve_leading_slot)
-                        + usize::from(trailing.is_some()),
+                    2 + usize::from(
+                        leading.is_some() || leading_icon.is_some() || reserve_leading_slot,
+                    ) + usize::from(trailing.is_some()),
                 );
 
-                if let Some(l) = leading.clone() {
+                if let Some(l) = leading {
                     row.push(menu_icon_slot(cx, l));
+                } else if let Some(icon) = leading_icon {
+                    let icon_el = decl_icon::icon_with(cx, icon, Some(Px(16.0)), None);
+                    row.push(menu_icon_slot(cx, icon_el));
                 } else if reserve_leading_slot {
                     row.push(menu_icon_slot_empty(cx));
                 }
@@ -1008,7 +1074,7 @@ fn checkable_menu_row_children<H: UiHost>(
 
                 row.push(text.into_element(cx));
 
-                if let Some(t) = trailing.clone() {
+                if let Some(t) = trailing {
                     row.push(t);
                 }
 
@@ -1026,7 +1092,7 @@ fn checkable_menu_row_children<H: UiHost>(
                         align: CrossAlign::Center,
                         wrap: false,
                     },
-                    move |_cx| row.clone(),
+                    move |_cx| row,
                 );
 
                 vec![content, indicator]
@@ -1090,7 +1156,7 @@ fn menu_icon_slot<H: UiHost>(cx: &mut ElementContext<'_, H>, element: AnyElement
             align: CrossAlign::Center,
             wrap: false,
         },
-        move |_cx| vec![element.clone()],
+        move |_cx| vec![element],
     )
 }
 
@@ -1523,7 +1589,6 @@ impl DropdownMenu {
                      };
 
                     let entries: Vec<DropdownMenuEntry> = entries(cx).into_iter().collect();
-                    let entries: Arc<[DropdownMenuEntry]> = Arc::from(entries.into_boxed_slice());
                     let reserve_leading_slot_enabled =
                         align_leading_icons && reserve_leading_slot(&entries);
 
@@ -1631,12 +1696,19 @@ impl DropdownMenu {
                     let submenu_chrome =
                         crate::ui_builder_ext::surfaces::menu_sub_style_chrome().rounded(Radius::Sm);
 
-                    let entries_for_submenu = entries.clone();
+                    let submenu_entries_for_panel_cell: Rc<RefCell<Option<Vec<DropdownMenuEntry>>>> =
+                        Rc::new(RefCell::new(None));
+                    let submenu_entries_for_panel_cell_for_wrapper =
+                        submenu_entries_for_panel_cell.clone();
+                    let entries_for_panel = entries;
                     let open_for_menu = open_for_overlay.clone();
                     let open_for_submenu = open_for_overlay.clone();
 
                     let submenu_for_content = submenu.clone();
                     let submenu_for_panel = submenu.clone();
+                    let submenu_open_value_model_for_panel = submenu_for_panel.open_value.clone();
+                    let submenu_open_value_model_for_panel_for_content =
+                        submenu_open_value_model_for_panel.clone();
 
                     let first_item_focus_id_for_items = first_item_focus_id.clone();
                     let last_item_focus_id_for_items = last_item_focus_id.clone();
@@ -1702,14 +1774,35 @@ impl DropdownMenu {
                                                 panel_chrome_for_panel.clone(),
                                                 LayoutRefinement::default(),
                                             );
-                                            props.layout = layout;
-                                            props
-                                        },
-                                        move |cx| {
-                                    let scroll_layout = LayoutStyle {
-                                        size: SizeStyle {
-                                            width: Length::Fill,
-                                            height: Length::Fill,
+                                         props.layout = layout;
+                                         props
+                                     },
+                                     move |cx| {
+                                     let submenu_open_value_for_panel = cx
+                                         .app
+                                         .models_mut()
+                                         .read(
+                                             &submenu_open_value_model_for_panel_for_content,
+                                             |v| v.clone(),
+                                         )
+                                         .ok()
+                                         .flatten();
+                                     let mut entries_for_panel = entries_for_panel;
+                                     let submenu_entries_for_panel = submenu_open_value_for_panel
+                                         .as_deref()
+                                         .and_then(|open_value| {
+                                             take_submenu_entries_by_value(
+                                                 &mut entries_for_panel,
+                                                 open_value,
+                                             )
+                                         });
+                                     *submenu_entries_for_panel_cell_for_wrapper.borrow_mut() =
+                                         submenu_entries_for_panel;
+
+                                     let scroll_layout = LayoutStyle {
+                                         size: SizeStyle {
+                                             width: Length::Fill,
+                                             height: Length::Fill,
                                             ..Default::default()
                                         },
                                         overflow: Overflow::Clip,
@@ -1814,7 +1907,7 @@ impl DropdownMenu {
 
                                                     fn render_entries<H: UiHost>(
                                                         cx: &mut ElementContext<'_, H>,
-                                                        entries: &[DropdownMenuEntry],
+                                                        entries: Vec<DropdownMenuEntry>,
                                                         item_ix: &mut usize,
                                                         env: &RenderEnv,
                                                     ) -> Vec<AnyElement> {
@@ -1857,11 +1950,11 @@ impl DropdownMenu {
                                                         let mut out: Vec<AnyElement> =
                                                             Vec::with_capacity(entries.len());
 
-                                                        for entry in entries.iter().cloned() {
+                                                        for entry in entries {
                                                             match entry {
                                                     DropdownMenuEntry::Label(label) => {
                                                         let fg = label_fg;
-                                                        let text = label.text.clone();
+                                                        let text = label.text;
                                                         let pad_left =
                                                             if label.inset { pad_x_inset } else { pad_x };
                                                         out.push(cx.container(
@@ -1891,7 +1984,7 @@ impl DropdownMenu {
                                                     }
                                                     DropdownMenuEntry::Group(group) => {
                                                         let children =
-                                                            render_entries(cx, &group.entries, item_ix, env);
+                                                            render_entries(cx, group.entries, item_ix, env);
                                                         out.push(menu_structural_group(
                                                             cx,
                                                             fret_core::SemanticsRole::Group,
@@ -1910,7 +2003,7 @@ impl DropdownMenu {
                                                             })
                                                             .collect();
                                                         let children =
-                                                            render_entries(cx, &items, item_ix, env);
+                                                            render_entries(cx, items, item_ix, env);
                                                         out.push(menu_structural_group(
                                                             cx,
                                                             fret_core::SemanticsRole::Group,
@@ -1959,8 +2052,10 @@ impl DropdownMenu {
                                                         let disabled = item.disabled;
                                                         let close_on_select = item.close_on_select;
                                                         let command = item.command;
-                                                        let leading = item.leading.clone();
-                                                        let trailing = item.trailing.clone();
+                                                        let leading = item.leading;
+                                                        let leading_icon = item.leading_icon;
+                                                        let trailing = item.trailing;
+                                                        let test_id = item.test_id;
                                                         let open = open_for_menu.clone();
                                                         let text_style = text_style.clone();
                                                         let submenu_for_item =
@@ -2017,14 +2112,17 @@ impl DropdownMenu {
                                                                         enabled: !disabled,
                                                                         focusable: !disabled,
                                                                         focus_ring: Some(ring),
-                                                                        a11y: menu::item::menu_item_checkbox_a11y(
-                                                                            a11y_label,
-                                                                            checked_now,
-                                                                        )
-                                                                        .with_collection_position(
+                                                                        a11y: {
+                                                                            let mut a11y = menu::item::menu_item_checkbox_a11y(
+                                                                                a11y_label,
+                                                                                checked_now,
+                                                                            );
+                                                                            a11y.test_id = test_id.clone();
+                                                                            a11y.with_collection_position(
                                                                             collection_index,
                                                                             item_count,
-                                                                        ),
+                                                                            )
+                                                                        },
                                                                         ..Default::default()
                                                                     };
 
@@ -2039,17 +2137,26 @@ impl DropdownMenu {
                                                                         row_fg = accent_fg;
                                                                     }
 
-                                                                    let trailing = trailing.clone().or_else(|| {
-                                                                        command.as_ref().and_then(|cmd| {
-                                                                            command_shortcut_label(cx, cmd, fret_runtime::Platform::current())
-                                                                                .map(|text| DropdownMenuShortcut::new(text).into_element(cx))
-                                                                        })
-                                                                    });
+                                                                    let mut trailing = trailing;
+                                                                    if trailing.is_none() {
+                                                                        trailing = command.as_ref().and_then(|cmd| {
+                                                                            command_shortcut_label(
+                                                                                cx,
+                                                                                cmd,
+                                                                                fret_runtime::Platform::current(),
+                                                                            )
+                                                                            .map(|text| {
+                                                                                DropdownMenuShortcut::new(text)
+                                                                                    .into_element(cx)
+                                                                            })
+                                                                        });
+                                                                    }
 
                                                                     let children = checkable_menu_row_children(
                                                                         cx,
                                                                         label.clone(),
-                                                                        leading.clone(),
+                                                                        leading,
+                                                                        leading_icon,
                                                                         reserve_leading_slot_enabled,
                                                                         trailing,
                                                                         CheckableIndicatorKind::Check,
@@ -2086,8 +2193,10 @@ impl DropdownMenu {
                                                         let disabled = item.disabled;
                                                         let close_on_select = item.close_on_select;
                                                         let command = item.command;
-                                                        let leading = item.leading.clone();
-                                                        let trailing = item.trailing.clone();
+                                                        let leading = item.leading;
+                                                        let leading_icon = item.leading_icon;
+                                                        let trailing = item.trailing;
+                                                        let test_id = item.test_id;
                                                         let open = open_for_menu.clone();
                                                         let text_style = text_style.clone();
                                                         let submenu_for_item =
@@ -2150,14 +2259,17 @@ impl DropdownMenu {
                                                                         enabled: !disabled,
                                                                         focusable: !disabled,
                                                                         focus_ring: Some(ring),
-                                                                        a11y: menu::item::menu_item_radio_a11y(
-                                                                            a11y_label,
-                                                                            is_selected,
-                                                                        )
-                                                                        .with_collection_position(
+                                                                        a11y: {
+                                                                            let mut a11y = menu::item::menu_item_radio_a11y(
+                                                                                a11y_label,
+                                                                                is_selected,
+                                                                            );
+                                                                            a11y.test_id = test_id.clone();
+                                                                            a11y.with_collection_position(
                                                                             collection_index,
                                                                             item_count,
-                                                                        ),
+                                                                            )
+                                                                        },
                                                                         ..Default::default()
                                                                     };
 
@@ -2172,17 +2284,26 @@ impl DropdownMenu {
                                                                         row_fg = accent_fg;
                                                                     }
 
-                                                                    let trailing = trailing.clone().or_else(|| {
-                                                                        command.as_ref().and_then(|cmd| {
-                                                                            command_shortcut_label(cx, cmd, fret_runtime::Platform::current())
-                                                                                .map(|text| DropdownMenuShortcut::new(text).into_element(cx))
-                                                                        })
-                                                                    });
+                                                                    let mut trailing = trailing;
+                                                                    if trailing.is_none() {
+                                                                        trailing = command.as_ref().and_then(|cmd| {
+                                                                            command_shortcut_label(
+                                                                                cx,
+                                                                                cmd,
+                                                                                fret_runtime::Platform::current(),
+                                                                            )
+                                                                            .map(|text| {
+                                                                                DropdownMenuShortcut::new(text)
+                                                                                    .into_element(cx)
+                                                                            })
+                                                                        });
+                                                                    }
 
                                                                     let children = checkable_menu_row_children(
                                                                         cx,
                                                                         label.clone(),
-                                                                        leading.clone(),
+                                                                        leading,
+                                                                        leading_icon,
                                                                         reserve_leading_slot_enabled,
                                                                         trailing,
                                                                         CheckableIndicatorKind::RadioDot,
@@ -2223,15 +2344,24 @@ impl DropdownMenu {
                                                         let close_on_select = item.close_on_select;
                                                         let command = item.command;
                                                         let on_activate = item.on_activate.clone();
-                                                        let leading = item.leading.clone();
-                                                        let leading_icon = item.leading_icon.clone();
-                                                        let trailing = item.trailing.clone();
-                                                        let content = item.content.clone();
+                                                        let leading = item.leading;
+                                                        let leading_icon = item.leading_icon;
+                                                        let trailing = item.trailing;
+                                                        let content = item.content;
                                                         let padding_override = item.padding;
                                                         let estimated_height = item.estimated_height;
                                                         let variant = item.variant;
                                                         let has_submenu = item.submenu.is_some();
-                                                        let submenu_entries_for_hint = item.submenu.clone();
+                                                        let submenu_estimated_height_unclamped = item
+                                                            .submenu
+                                                            .as_ref()
+                                                            .map(|entries| {
+                                                                estimated_menu_panel_height_for_entries(
+                                                                    entries.as_slice(),
+                                                                    row_height,
+                                                                    Px(100000.0),
+                                                                )
+                                                            });
                                                         let pad_left =
                                                             if item.inset { pad_x_inset } else { pad_x };
                                                         let open = open_for_menu.clone();
@@ -2255,16 +2385,9 @@ impl DropdownMenu {
                                                                                 ))
                                                                             })
                                                                             .unwrap_or(outer.size.height);
-                                                                    let entries_for_estimate =
-                                                                        submenu_entries_for_hint
-                                                                            .clone()
-                                                                            .unwrap_or_default();
-                                                                    let desired_h =
-                                                                        estimated_menu_panel_height_for_entries(
-                                                                            &entries_for_estimate,
-                                                                            row_height,
-                                                                            submenu_max_h,
-                                                                        );
+                                                                    let desired_h = submenu_estimated_height_unclamped
+                                                                        .map(|h| Px(h.0.min(submenu_max_h.0)))
+                                                                        .unwrap_or(submenu_max_h);
                                                                     let desired =
                                                                         Size::new(submenu_min_width, desired_h);
                                                                     menu::sub_trigger::MenuSubTriggerGeometryHint {
@@ -2365,16 +2488,20 @@ impl DropdownMenu {
                                                                     }
                                                                 }
 
-                                                                let trailing = if has_submenu {
-                                                                    trailing.clone()
-                                                                } else {
-                                                                    trailing.clone().or_else(|| {
-                                                                        command.as_ref().and_then(|cmd| {
-                                                                            command_shortcut_label(cx, cmd, fret_runtime::Platform::current())
-                                                                                .map(|text| DropdownMenuShortcut::new(text).into_element(cx))
+                                                                let mut trailing = trailing;
+                                                                if !has_submenu && trailing.is_none() {
+                                                                    trailing = command.as_ref().and_then(|cmd| {
+                                                                        command_shortcut_label(
+                                                                            cx,
+                                                                            cmd,
+                                                                            fret_runtime::Platform::current(),
+                                                                        )
+                                                                        .map(|text| {
+                                                                            DropdownMenuShortcut::new(text)
+                                                                                .into_element(cx)
                                                                         })
-                                                                    })
-                                                                };
+                                                                    });
+                                                                }
 
                                                                  let row_padding = padding_override.unwrap_or(Edges {
                                                                      top: pad_y,
@@ -2401,12 +2528,16 @@ impl DropdownMenu {
                                                                         } else {
                                                                             row_fg
                                                                         };
+                                                                        let mut content = content;
+                                                                        let mut leading = leading;
+                                                                        let mut trailing = trailing;
+                                                                        let leading_icon = leading_icon;
 
                                                                         current_color::with_current_color_provider(
                                                                             cx,
                                                                             ColorRef::Color(effective_fg),
                                                                             |cx| {
-                                                                                if let Some(custom) = content.clone() {
+                                                                                if let Some(custom) = content.take() {
                                                                                     return vec![custom];
                                                                                 }
 
@@ -2420,13 +2551,11 @@ impl DropdownMenu {
                                                                                         ) + usize::from(trailing.is_some())
                                                                                             + usize::from(has_submenu),
                                                                                     );
-                                                                                if let Some(icon) =
-                                                                                    leading_icon.clone()
-                                                                                {
+                                                                                if let Some(icon) = leading_icon {
                                                                                     let icon =
                                                                                         decl_icon::icon(cx, icon);
                                                                                     row.push(menu_icon_slot(cx, icon));
-                                                                                } else if let Some(l) = leading.clone() {
+                                                                                } else if let Some(l) = leading.take() {
                                                                                     row.push(menu_icon_slot(cx, l));
                                                                                 } else if reserve_leading_slot_enabled {
                                                                                     row.push(menu_icon_slot_empty(cx));
@@ -2457,7 +2586,7 @@ impl DropdownMenu {
 
                                                                                 row.push(text.into_element(cx));
 
-                                                                                if let Some(t) = trailing.clone() {
+                                                                                if let Some(t) = trailing.take() {
                                                                                     row.push(t);
                                                                                 }
                                                                                 if has_submenu {
@@ -2489,7 +2618,7 @@ impl DropdownMenu {
                                                                                         align: CrossAlign::Center,
                                                                                         wrap: false,
                                                                                     },
-                                                                                    move |_cx| row.clone(),
+                                                                                    move |_cx| row,
                                                                                 )]
                                                                             },
                                                                         )
@@ -2556,7 +2685,7 @@ impl DropdownMenu {
 
                                                     render_entries(
                                                         cx,
-                                                        entries.as_ref(),
+                                                        entries_for_panel,
                                                         &mut item_ix,
                                                         &env,
                                                     )
@@ -2617,22 +2746,20 @@ impl DropdownMenu {
 
                     let mut children = vec![content];
                     let submenu_open_value = cx
-                        .watch_model(&submenu_for_panel.open_value)
+                        .watch_model(&submenu_open_value_model_for_panel)
                         .layout()
                         .cloned()
                         .unwrap_or(None);
-                    let desired = submenu_open_value
-                        .as_deref()
-                        .and_then(|open_value| {
-                            find_submenu_entries_by_value(entries_for_submenu.as_ref(), open_value)
-                        })
+                    let desired = submenu_entries_for_panel_cell
+                        .borrow()
+                        .as_ref()
                         .map(|submenu_entries| {
                             let submenu_max_h = theme
                                 .metric_by_key("component.dropdown_menu.max_height")
                                 .map(|h| Px(h.0.min(outer.size.height.0)))
                                 .unwrap_or(outer.size.height);
                             let desired_h = estimated_menu_panel_height_for_entries(
-                                &submenu_entries,
+                                submenu_entries.as_slice(),
                                 row_height,
                                 submenu_max_h,
                             );
@@ -2681,12 +2808,9 @@ impl DropdownMenu {
                             return (children, Some(dismissible_on_pointer_move));
                         };
 
-                        let submenu_entries = find_submenu_entries_by_value(
-                            entries_for_submenu.as_ref(),
-                            open_value.as_ref(),
-                        );
-
-                        if let Some(submenu_entries) = submenu_entries {
+                        if let Some(submenu_entries) =
+                            submenu_entries_for_panel_cell.borrow_mut().take()
+                        {
                             let reserve_leading_slot_enabled =
                                 align_leading_icons && reserve_leading_slot(&submenu_entries);
                             let item_count = focusable_item_count(&submenu_entries);
@@ -2796,7 +2920,7 @@ impl DropdownMenu {
 
                                                     fn render_entries<H: UiHost>(
                                                         cx: &mut ElementContext<'_, H>,
-                                                        entries: &[DropdownMenuEntry],
+                                                        entries: Vec<DropdownMenuEntry>,
                                                         item_ix: &mut usize,
                                                         env: &RenderEnv,
                                                     ) -> Vec<AnyElement> {
@@ -2838,10 +2962,10 @@ impl DropdownMenu {
                                                         let mut rows: Vec<AnyElement> =
                                                             Vec::with_capacity(entries.len());
 
-                                                        for entry in entries.iter().cloned() {
+                                                        for entry in entries {
                                                             match entry {
                                                             DropdownMenuEntry::Label(label) => {
-                                                                let text = label.text.clone();
+                                                                let text = label.text;
                                                                 let pad_left = if label.inset {
                                                                     pad_x_inset
                                                                 } else {
@@ -2875,7 +2999,7 @@ impl DropdownMenu {
                                                             DropdownMenuEntry::Group(group) => {
                                                                 let children = render_entries(
                                                                     cx,
-                                                                    &group.entries,
+                                                                    group.entries,
                                                                     item_ix,
                                                                     env,
                                                                 );
@@ -2897,7 +3021,7 @@ impl DropdownMenu {
                                                                     })
                                                                     .collect();
                                                                 let children =
-                                                                    render_entries(cx, &items, item_ix, env);
+                                                                    render_entries(cx, items, item_ix, env);
                                                                 rows.push(menu_structural_group(
                                                                     cx,
                                                                     fret_core::SemanticsRole::Group,
@@ -2954,8 +3078,10 @@ impl DropdownMenu {
                                                                 let disabled = item.disabled;
                                                                 let close_on_select = item.close_on_select;
                                                                 let command = item.command;
-                                                                let leading = item.leading.clone();
-                                                                let trailing = item.trailing.clone();
+                                                                let leading = item.leading;
+                                                                let leading_icon = item.leading_icon;
+                                                                let trailing = item.trailing;
+                                                                let test_id = item.test_id;
                                                                 let open = open_for_submenu.clone();
                                                                 let submenu_for_key =
                                                                     submenu_models_for_panel.clone();
@@ -2996,14 +3122,17 @@ impl DropdownMenu {
                                                                                 enabled: !disabled,
                                                                                 focusable: !disabled,
                                                                                 focus_ring: Some(ring),
-                                                                                a11y: menu::item::menu_item_checkbox_a11y(
-                                                                                    a11y_label,
-                                                                                    checked_now,
-                                                                                )
-                                                                                .with_collection_position(
+                                                                                a11y: {
+                                                                                    let mut a11y = menu::item::menu_item_checkbox_a11y(
+                                                                                        a11y_label,
+                                                                                        checked_now,
+                                                                                    );
+                                                                                    a11y.test_id = test_id.clone();
+                                                                                    a11y.with_collection_position(
                                                                                     collection_index,
                                                                                     item_count,
-                                                                                ),
+                                                                                    )
+                                                                                },
                                                                                 ..Default::default()
                                                                             };
 
@@ -3015,17 +3144,26 @@ impl DropdownMenu {
                                                                                 row_fg = accent_fg;
                                                                             }
 
-                                                                            let trailing = trailing.clone().or_else(|| {
-                                                                                command.as_ref().and_then(|cmd| {
-                                                                                    command_shortcut_label(cx, cmd, fret_runtime::Platform::current())
-                                                                                        .map(|text| DropdownMenuShortcut::new(text).into_element(cx))
-                                                                                })
-                                                                            });
+                                                                            let mut trailing = trailing;
+                                                                            if trailing.is_none() {
+                                                                                trailing = command.as_ref().and_then(|cmd| {
+                                                                                    command_shortcut_label(
+                                                                                        cx,
+                                                                                        cmd,
+                                                                                        fret_runtime::Platform::current(),
+                                                                                    )
+                                                                                    .map(|text| {
+                                                                                        DropdownMenuShortcut::new(text)
+                                                                                            .into_element(cx)
+                                                                                    })
+                                                                                });
+                                                                            }
 
                                                                             let children = checkable_menu_row_children(
                                                                                 cx,
                                                                                 label.clone(),
-                                                                                leading.clone(),
+                                                                                leading,
+                                                                                leading_icon,
                                                                                 reserve_leading_slot_enabled,
                                                                                 trailing,
                                                                                 CheckableIndicatorKind::Check,
@@ -3062,8 +3200,10 @@ impl DropdownMenu {
                                                                 let disabled = item.disabled;
                                                                 let close_on_select = item.close_on_select;
                                                                 let command = item.command;
-                                                                let leading = item.leading.clone();
-                                                                let trailing = item.trailing.clone();
+                                                                let leading = item.leading;
+                                                                let leading_icon = item.leading_icon;
+                                                                let trailing = item.trailing;
+                                                                let test_id = item.test_id;
                                                                 let open = open_for_submenu.clone();
                                                                 let submenu_for_key =
                                                                     submenu_models_for_panel.clone();
@@ -3109,14 +3249,17 @@ impl DropdownMenu {
                                                                                 enabled: !disabled,
                                                                                 focusable: !disabled,
                                                                                 focus_ring: Some(ring),
-                                                                                a11y: menu::item::menu_item_radio_a11y(
-                                                                                    a11y_label,
-                                                                                    is_selected,
-                                                                                )
-                                                                                .with_collection_position(
+                                                                                a11y: {
+                                                                                    let mut a11y = menu::item::menu_item_radio_a11y(
+                                                                                        a11y_label,
+                                                                                        is_selected,
+                                                                                    );
+                                                                                    a11y.test_id = test_id.clone();
+                                                                                    a11y.with_collection_position(
                                                                                     collection_index,
                                                                                     item_count,
-                                                                                ),
+                                                                                    )
+                                                                                },
                                                                                 ..Default::default()
                                                                             };
 
@@ -3128,17 +3271,26 @@ impl DropdownMenu {
                                                                                 row_fg = accent_fg;
                                                                             }
 
-                                                                            let trailing = trailing.clone().or_else(|| {
-                                                                                command.as_ref().and_then(|cmd| {
-                                                                                    command_shortcut_label(cx, cmd, fret_runtime::Platform::current())
-                                                                                        .map(|text| DropdownMenuShortcut::new(text).into_element(cx))
-                                                                                })
-                                                                            });
+                                                                            let mut trailing = trailing;
+                                                                            if trailing.is_none() {
+                                                                                trailing = command.as_ref().and_then(|cmd| {
+                                                                                    command_shortcut_label(
+                                                                                        cx,
+                                                                                        cmd,
+                                                                                        fret_runtime::Platform::current(),
+                                                                                    )
+                                                                                    .map(|text| {
+                                                                                        DropdownMenuShortcut::new(text)
+                                                                                            .into_element(cx)
+                                                                                    })
+                                                                                });
+                                                                            }
 
                                                                             let children = checkable_menu_row_children(
                                                                                 cx,
                                                                                 label.clone(),
-                                                                                leading.clone(),
+                                                                                leading,
+                                                                                leading_icon,
                                                                                 reserve_leading_slot_enabled,
                                                                                 trailing,
                                                                                 CheckableIndicatorKind::RadioDot,
@@ -3174,19 +3326,19 @@ impl DropdownMenu {
                                                         let test_id = item.test_id.clone();
                                                         let close_on_select = item.close_on_select;
                                                         let command = item.command;
-                                                        let disabled = item.disabled
-                                                            || crate::command_gating::command_is_disabled_by_gating(
-                                                                &*cx.app,
-                                                                &gating,
-                                                                command.as_ref(),
-                                                            );
-                                                        let leading = item.leading.clone();
-                                                        let trailing = item.trailing.clone();
-                                                        let variant = item.variant;
-                                                        let pad_left =
-                                                            if item.inset { pad_x_inset } else { pad_x };
-                                                        let open = open_for_submenu.clone();
-                                                        let submenu_for_key =
+                                                         let disabled = item.disabled
+                                                             || crate::command_gating::command_is_disabled_by_gating(
+                                                                 &*cx.app,
+                                                                 &gating,
+                                                                 command.as_ref(),
+                                                             );
+                                                         let leading = item.leading;
+                                                         let trailing = item.trailing;
+                                                         let variant = item.variant;
+                                                         let pad_left =
+                                                             if item.inset { pad_x_inset } else { pad_x };
+                                                         let open = open_for_submenu.clone();
+                                                         let submenu_for_key =
                                                             submenu_models_for_panel.clone();
                                                         let text_style = text_style.clone();
 
@@ -3244,12 +3396,20 @@ impl DropdownMenu {
                                                                                 }
                                                                             }
 
-                                                                            let trailing = trailing.clone().or_else(|| {
-                                                                                command.as_ref().and_then(|cmd| {
-                                                                                    command_shortcut_label(cx, cmd, fret_runtime::Platform::current())
-                                                                                        .map(|text| DropdownMenuShortcut::new(text).into_element(cx))
-                                                                                })
-                                                                            });
+                                                                            let mut trailing = trailing;
+                                                                            if trailing.is_none() {
+                                                                                trailing = command.as_ref().and_then(|cmd| {
+                                                                                    command_shortcut_label(
+                                                                                        cx,
+                                                                                        cmd,
+                                                                                        fret_runtime::Platform::current(),
+                                                                                    )
+                                                                                    .map(|text| {
+                                                                                        DropdownMenuShortcut::new(text)
+                                                                                            .into_element(cx)
+                                                                                    })
+                                                                                });
+                                                                            }
 
                                                                             let children = vec![cx.container(
                                                                                 ContainerProps {
@@ -3269,13 +3429,15 @@ impl DropdownMenu {
                                                                                     ..Default::default()
                                                                                 },
                                                                                 move |cx| {
+                                                                                    let has_leading = leading.is_some();
+                                                                                    let has_trailing = trailing.is_some();
                                                                                     let mut row: Vec<AnyElement> = Vec::with_capacity(
                                                                                         1 + usize::from(
-                                                                                            leading.is_some()
+                                                                                            has_leading
                                                                                                 || reserve_leading_slot_enabled,
-                                                                                        ) + usize::from(trailing.is_some()),
+                                                                                        ) + usize::from(has_trailing),
                                                                                     );
-                                                                                    if let Some(l) = leading.clone() {
+                                                                                    if let Some(l) = leading {
                                                                                         row.push(menu_icon_slot(cx, l));
                                                                                     } else if reserve_leading_slot_enabled {
                                                                                         row.push(menu_icon_slot_empty(cx));
@@ -3302,7 +3464,7 @@ impl DropdownMenu {
 
                                                                                     row.push(text.into_element(cx));
 
-                                                                                    if let Some(t) = trailing.clone() {
+                                                                                    if let Some(t) = trailing {
                                                                                         row.push(t);
                                                                                     }
 
@@ -3320,7 +3482,7 @@ impl DropdownMenu {
                                                                                             align: CrossAlign::Center,
                                                                                             wrap: false,
                                                                                         },
-                                                                                        move |_cx| row.clone(),
+                                                                                        move |_cx| row,
                                                                                     )]
                                                                                 },
                                                                             )];
@@ -3372,7 +3534,7 @@ impl DropdownMenu {
 
                                                     let rows = render_entries(
                                                         cx,
-                                                        submenu_entries.as_ref(),
+                                                        submenu_entries,
                                                         &mut item_ix,
                                                         &env,
                                                     );
@@ -3394,7 +3556,7 @@ impl DropdownMenu {
                                                         submenu_labels_arc.clone(),
                                                         typeahead_timeout_ticks,
                                                         submenu_models_for_panel.clone(),
-                                                        move |_cx| rows.clone(),
+                                                        move |_cx| rows,
                                                     );
                                                     vec![roving]
                                                 },
@@ -4079,7 +4241,7 @@ mod tests {
                                                 )
                                             })
                                         },
-                                        move |_cx| entries.clone(),
+                                        move |_cx| entries,
                                     ),
                             ]
                         },
@@ -4118,9 +4280,11 @@ mod tests {
             let open = app.models_mut().insert(true);
             let trigger_id_out = app.models_mut().insert(None);
 
-            let entries = vec![DropdownMenuEntry::Item(
-                DropdownMenuItem::new("Alpha").value("alpha"),
-            )];
+            let build_entries = || {
+                vec![DropdownMenuEntry::Item(
+                    DropdownMenuItem::new("Alpha").value("alpha"),
+                )]
+            };
 
             // Two frames: first establishes trigger bounds; second mounts the overlay anchored to them.
             let _ = render_frame_capture_trigger_id_with_direction(
@@ -4132,7 +4296,7 @@ mod tests {
                 bounds,
                 open.clone(),
                 trigger_id_out.clone(),
-                entries.clone(),
+                build_entries(),
             );
             let _ = render_frame_capture_trigger_id_with_direction(
                 dir,
@@ -4143,7 +4307,7 @@ mod tests {
                 bounds,
                 open,
                 trigger_id_out.clone(),
-                entries,
+                build_entries(),
             );
 
             let snap = ui.semantics_snapshot().expect("semantics snapshot");
@@ -4648,7 +4812,7 @@ mod tests {
         );
         let mut services = FakeServices::default();
 
-        let entries = vec![DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha"))];
+        let build_entries = || vec![DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha"))];
 
         let root = render_frame_focusable_trigger(
             &mut ui,
@@ -4657,7 +4821,7 @@ mod tests {
             window,
             bounds,
             open.clone(),
-            entries.clone(),
+            build_entries(),
         );
 
         let trigger = ui
@@ -4682,7 +4846,7 @@ mod tests {
             window,
             bounds,
             open,
-            entries,
+            build_entries(),
         );
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
@@ -4709,7 +4873,7 @@ mod tests {
         );
         let mut services = FakeServices::default();
 
-        let entries = vec![DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha"))];
+        let build_entries = || vec![DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha"))];
 
         let root = render_frame_focusable_trigger_with_disabled(
             &mut ui,
@@ -4718,7 +4882,7 @@ mod tests {
             window,
             bounds,
             open.clone(),
-            entries.clone(),
+            build_entries(),
             true,
         );
 
@@ -4744,7 +4908,7 @@ mod tests {
             window,
             bounds,
             open.clone(),
-            entries,
+            build_entries(),
             true,
         );
 
@@ -4778,7 +4942,7 @@ mod tests {
         );
         let mut services = FakeServices::default();
 
-        let entries = vec![DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha"))];
+        let build_entries = || vec![DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha"))];
 
         let _ = render_frame_focusable_trigger_with_disabled(
             &mut ui,
@@ -4787,7 +4951,7 @@ mod tests {
             window,
             bounds,
             open.clone(),
-            entries,
+            build_entries(),
             true,
         );
 
@@ -4823,7 +4987,7 @@ mod tests {
         );
         let mut services = FakeServices::default();
 
-        let items = vec![DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha"))];
+        let build_items = || vec![DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha"))];
 
         let dismiss_calls = Arc::new(AtomicUsize::new(0));
         let dismiss_calls_for_handler = dismiss_calls.clone();
@@ -4840,7 +5004,7 @@ mod tests {
             bounds,
             open.clone(),
             Some(handler.clone()),
-            items.clone(),
+            build_items(),
         );
 
         let _ = app.models_mut().update(&open, |v| *v = true);
@@ -4853,7 +5017,7 @@ mod tests {
             bounds,
             open.clone(),
             Some(handler),
-            items,
+            build_items(),
         );
 
         let outside = Point::new(Px(390.0), Px(230.0));
@@ -4903,7 +5067,7 @@ mod tests {
         );
         let mut services = FakeServices::default();
 
-        let entries = vec![DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha"))];
+        let build_entries = || vec![DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha"))];
 
         // First frame: capture a stable trigger element id.
         let (_, trigger_element) = render_frame_focusable_trigger_capture_id(
@@ -4914,7 +5078,7 @@ mod tests {
             bounds,
             open.clone(),
             trigger_id_out.clone(),
-            entries.clone(),
+            build_entries(),
         );
 
         let _ = app.models_mut().update(&open, |v| *v = true);
@@ -4928,7 +5092,7 @@ mod tests {
             bounds,
             open,
             trigger_id_out,
-            entries,
+            build_entries(),
         );
         assert_eq!(
             trigger_element_2, trigger_element,
@@ -5217,11 +5381,13 @@ mod tests {
         );
         let mut services = FakeServices::default();
 
-        let entries = vec![
-            DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha")),
-            DropdownMenuEntry::Item(DropdownMenuItem::new("Beta")),
-            DropdownMenuEntry::Item(DropdownMenuItem::new("Gamma")),
-        ];
+        let build_entries = || {
+            vec![
+                DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha")),
+                DropdownMenuEntry::Item(DropdownMenuItem::new("Beta")),
+                DropdownMenuEntry::Item(DropdownMenuItem::new("Gamma")),
+            ]
+        };
 
         let root = render_frame_focusable_trigger(
             &mut ui,
@@ -5230,7 +5396,7 @@ mod tests {
             window,
             bounds,
             open.clone(),
-            entries.clone(),
+            build_entries(),
         );
 
         let trigger = ui
@@ -5261,7 +5427,7 @@ mod tests {
             window,
             bounds,
             open,
-            entries,
+            build_entries(),
         );
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
@@ -5538,7 +5704,7 @@ mod tests {
         );
         let mut services = FakeServices::default();
 
-        let entries = vec![DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha"))];
+        let build_entries = || vec![DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha"))];
 
         let root = render_frame_focusable_trigger(
             &mut ui,
@@ -5547,7 +5713,7 @@ mod tests {
             window,
             bounds,
             open.clone(),
-            entries.clone(),
+            build_entries(),
         );
 
         let trigger = ui
@@ -5581,7 +5747,7 @@ mod tests {
             window,
             bounds,
             open,
-            entries,
+            build_entries(),
         );
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
@@ -5619,7 +5785,7 @@ mod tests {
         );
         let mut services = FakeServices::default();
 
-        let entries = vec![DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha"))];
+        let build_entries = || vec![DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha"))];
         let trigger_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
             Rc::new(Cell::new(None));
         let dismiss_calls = Arc::new(AtomicUsize::new(0));
@@ -5638,7 +5804,7 @@ mod tests {
             open.clone(),
             Some(dismiss_hook.clone()),
             trigger_id_out.clone(),
-            entries.clone(),
+            build_entries(),
         );
 
         let trigger_id = trigger_id_out.get().expect("trigger element id");
@@ -5686,7 +5852,7 @@ mod tests {
             open.clone(),
             Some(dismiss_hook.clone()),
             trigger_id_out.clone(),
-            entries.clone(),
+            build_entries(),
         );
         assert_eq!(app.models().get_copied(&open), Some(true));
         assert_ne!(
@@ -5733,7 +5899,7 @@ mod tests {
             open.clone(),
             Some(dismiss_hook),
             trigger_id_out,
-            entries,
+            build_entries(),
         );
 
         assert!(
@@ -5773,13 +5939,15 @@ mod tests {
         );
         let mut services = FakeServices::default();
 
-        let entries = vec![
-            DropdownMenuEntry::Item(DropdownMenuItem::new("More").submenu(vec![
-                DropdownMenuEntry::Item(DropdownMenuItem::new("Sub Alpha")),
-                DropdownMenuEntry::Item(DropdownMenuItem::new("Sub Beta")),
-            ])),
-            DropdownMenuEntry::Item(DropdownMenuItem::new("Other")),
-        ];
+        let build_entries = || {
+            vec![
+                DropdownMenuEntry::Item(DropdownMenuItem::new("More").submenu(vec![
+                    DropdownMenuEntry::Item(DropdownMenuItem::new("Sub Alpha")),
+                    DropdownMenuEntry::Item(DropdownMenuItem::new("Sub Beta")),
+                ])),
+                DropdownMenuEntry::Item(DropdownMenuItem::new("Other")),
+            ]
+        };
 
         // First frame: establish stable trigger bounds.
         let _ = render_frame_capture_submenu_models(
@@ -5790,7 +5958,7 @@ mod tests {
             bounds,
             open.clone(),
             submenu_models_out.clone(),
-            entries.clone(),
+            build_entries(),
         );
 
         let _ = app.models_mut().update(&open, |v| *v = true);
@@ -5804,7 +5972,7 @@ mod tests {
             bounds,
             open.clone(),
             submenu_models_out.clone(),
-            entries.clone(),
+            build_entries(),
         );
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
@@ -5871,7 +6039,7 @@ mod tests {
             bounds,
             open.clone(),
             submenu_models_out.clone(),
-            entries.clone(),
+            build_entries(),
         );
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
@@ -5904,7 +6072,7 @@ mod tests {
             bounds,
             open.clone(),
             submenu_models_out.clone(),
-            entries.clone(),
+            build_entries(),
         );
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
@@ -5992,7 +6160,7 @@ mod tests {
             window,
             bounds,
             open.clone(),
-            entries,
+            build_entries(),
         );
 
         let _ = app
@@ -6073,13 +6241,15 @@ mod tests {
         );
         let mut services = FakeServices::default();
 
-        let submenu_entries: Vec<DropdownMenuEntry> = (0..40)
-            .map(|i| DropdownMenuEntry::Item(DropdownMenuItem::new(format!("Sub {i}"))))
-            .collect();
-        let entries = vec![
-            DropdownMenuEntry::Item(DropdownMenuItem::new("More").submenu(submenu_entries)),
-            DropdownMenuEntry::Item(DropdownMenuItem::new("Other")),
-        ];
+        let build_entries = || {
+            let submenu_entries: Vec<DropdownMenuEntry> = (0..40)
+                .map(|i| DropdownMenuEntry::Item(DropdownMenuItem::new(format!("Sub {i}"))))
+                .collect();
+            vec![
+                DropdownMenuEntry::Item(DropdownMenuItem::new("More").submenu(submenu_entries)),
+                DropdownMenuEntry::Item(DropdownMenuItem::new("Other")),
+            ]
+        };
 
         // First frame: establish stable trigger bounds.
         let _ = render_frame(
@@ -6089,7 +6259,7 @@ mod tests {
             window,
             bounds,
             open.clone(),
-            entries.clone(),
+            build_entries(),
         );
 
         let _ = app.models_mut().update(&open, |v| *v = true);
@@ -6102,7 +6272,7 @@ mod tests {
             window,
             bounds,
             open.clone(),
-            entries.clone(),
+            build_entries(),
         );
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
@@ -6144,7 +6314,7 @@ mod tests {
             window,
             bounds,
             open.clone(),
-            entries.clone(),
+            build_entries(),
         );
 
         ui.dispatch_event(&mut app, &mut services, &Event::Timer { token: open_timer });
@@ -6157,7 +6327,7 @@ mod tests {
             window,
             bounds,
             open.clone(),
-            entries.clone(),
+            build_entries(),
         );
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
@@ -6257,7 +6427,7 @@ mod tests {
             window,
             bounds,
             open,
-            entries,
+            build_entries(),
         );
 
         let snap = ui
@@ -6303,16 +6473,18 @@ mod tests {
         );
         let mut services = FakeServices::default();
 
-        let many_sub_items = (0..16)
-            .map(|i| DropdownMenuEntry::Item(DropdownMenuItem::new(format!("Sub {i}"))))
-            .collect::<Vec<_>>();
+        let build_entries = || {
+            let many_sub_items = (0..16)
+                .map(|i| DropdownMenuEntry::Item(DropdownMenuItem::new(format!("Sub {i}"))))
+                .collect::<Vec<_>>();
 
-        let entries = vec![
-            DropdownMenuEntry::Item(DropdownMenuItem::new("More").submenu(many_sub_items)),
-            DropdownMenuEntry::Item(DropdownMenuItem::new("Other").submenu(vec![
-                DropdownMenuEntry::Item(DropdownMenuItem::new("Other A")),
-            ])),
-        ];
+            vec![
+                DropdownMenuEntry::Item(DropdownMenuItem::new("More").submenu(many_sub_items)),
+                DropdownMenuEntry::Item(DropdownMenuItem::new("Other").submenu(vec![
+                    DropdownMenuEntry::Item(DropdownMenuItem::new("Other A")),
+                ])),
+            ]
+        };
 
         // First frame: establish stable trigger bounds.
         let (_, trigger_id) = render_frame_capture_trigger_id(
@@ -6323,7 +6495,7 @@ mod tests {
             bounds,
             open.clone(),
             trigger_id_out.clone(),
-            entries.clone(),
+            build_entries(),
         );
 
         let _ = app.models_mut().update(&open, |v| *v = true);
@@ -6337,7 +6509,7 @@ mod tests {
             bounds,
             open.clone(),
             trigger_id_out.clone(),
-            entries.clone(),
+            build_entries(),
         );
         assert_eq!(trigger_id2, trigger_id, "expected trigger id to be stable");
 
@@ -6384,7 +6556,7 @@ mod tests {
             bounds,
             open.clone(),
             trigger_id_out.clone(),
-            entries.clone(),
+            build_entries(),
         );
         assert_eq!(trigger_id3, trigger_id, "expected trigger id to be stable");
 
@@ -6580,7 +6752,7 @@ mod tests {
             bounds,
             open.clone(),
             trigger_id_out,
-            entries,
+            build_entries(),
         );
         assert_eq!(trigger_id4, trigger_id, "expected trigger id to be stable");
 
@@ -6643,12 +6815,14 @@ mod tests {
         );
         let mut services = FakeServices::default();
 
-        let entries = vec![DropdownMenuEntry::Item(
-            DropdownMenuItem::new("More").submenu(vec![
-                DropdownMenuEntry::Item(DropdownMenuItem::new("Sub Alpha")),
-                DropdownMenuEntry::Item(DropdownMenuItem::new("Sub Beta")),
-            ]),
-        )];
+        let build_entries = || {
+            vec![DropdownMenuEntry::Item(
+                DropdownMenuItem::new("More").submenu(vec![
+                    DropdownMenuEntry::Item(DropdownMenuItem::new("Sub Alpha")),
+                    DropdownMenuEntry::Item(DropdownMenuItem::new("Sub Beta")),
+                ]),
+            )]
+        };
 
         let _ = render_frame(
             &mut ui,
@@ -6657,7 +6831,7 @@ mod tests {
             window,
             bounds,
             open.clone(),
-            entries.clone(),
+            build_entries(),
         );
 
         let _ = app.models_mut().update(&open, |v| *v = true);
@@ -6668,7 +6842,7 @@ mod tests {
             window,
             bounds,
             open.clone(),
-            entries.clone(),
+            build_entries(),
         );
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
@@ -6696,7 +6870,7 @@ mod tests {
             window,
             bounds,
             open,
-            entries,
+            build_entries(),
         );
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
@@ -6724,12 +6898,16 @@ mod tests {
         );
         let mut services = FakeServices::default();
 
-        let entries = vec![DropdownMenuEntry::Item(
-            DropdownMenuItem::new("More").submenu(vec![
-                DropdownMenuEntry::Item(DropdownMenuItem::new("Sub Alpha").test_id("sub-alpha")),
-                DropdownMenuEntry::Item(DropdownMenuItem::new("Sub Beta")),
-            ]),
-        )];
+        let build_entries = || {
+            vec![DropdownMenuEntry::Item(
+                DropdownMenuItem::new("More").submenu(vec![
+                    DropdownMenuEntry::Item(
+                        DropdownMenuItem::new("Sub Alpha").test_id("sub-alpha"),
+                    ),
+                    DropdownMenuEntry::Item(DropdownMenuItem::new("Sub Beta")),
+                ]),
+            )]
+        };
 
         let _ = render_frame(
             &mut ui,
@@ -6738,7 +6916,7 @@ mod tests {
             window,
             bounds,
             open.clone(),
-            entries.clone(),
+            build_entries(),
         );
 
         let _ = app.models_mut().update(&open, |v| *v = true);
@@ -6749,7 +6927,7 @@ mod tests {
             window,
             bounds,
             open.clone(),
-            entries.clone(),
+            build_entries(),
         );
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
@@ -6777,7 +6955,7 @@ mod tests {
             window,
             bounds,
             open,
-            entries,
+            build_entries(),
         );
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
@@ -6810,12 +6988,14 @@ mod tests {
         );
         let mut services = FakeServices::default();
 
-        let entries = vec![DropdownMenuEntry::Item(
-            DropdownMenuItem::new("More").submenu(vec![
-                DropdownMenuEntry::Item(DropdownMenuItem::new("Sub Alpha")),
-                DropdownMenuEntry::Item(DropdownMenuItem::new("Sub Beta")),
-            ]),
-        )];
+        let build_entries = || {
+            vec![DropdownMenuEntry::Item(
+                DropdownMenuItem::new("More").submenu(vec![
+                    DropdownMenuEntry::Item(DropdownMenuItem::new("Sub Alpha")),
+                    DropdownMenuEntry::Item(DropdownMenuItem::new("Sub Beta")),
+                ]),
+            )]
+        };
 
         let _ = render_frame(
             &mut ui,
@@ -6824,7 +7004,7 @@ mod tests {
             window,
             bounds,
             open.clone(),
-            entries.clone(),
+            build_entries(),
         );
 
         let _ = app.models_mut().update(&open, |v| *v = true);
@@ -6835,7 +7015,7 @@ mod tests {
             window,
             bounds,
             open.clone(),
-            entries.clone(),
+            build_entries(),
         );
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
@@ -6863,7 +7043,7 @@ mod tests {
             window,
             bounds,
             open.clone(),
-            entries.clone(),
+            build_entries(),
         );
 
         let effects = app.flush_effects();
@@ -6890,7 +7070,7 @@ mod tests {
             window,
             bounds,
             open.clone(),
-            entries.clone(),
+            build_entries(),
         );
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
@@ -6922,7 +7102,7 @@ mod tests {
             window,
             bounds,
             open,
-            entries,
+            build_entries(),
         );
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
         let more_after_close = snap

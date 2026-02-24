@@ -47,7 +47,10 @@ We reference:
 We standardize three layers:
 
 1. `ecosystem/fret-syntax`
-   - UI-agnostic tree-sitter highlighting: `highlight(source, language) -> Vec<HighlightSpan>`.
+   - UI-agnostic Tree-sitter highlighting:
+     - `highlight(source, language) -> Result<Vec<HighlightSpan>, HighlightError>`.
+     - On `wasm32` targets, highlighting may be unavailable (e.g. `HighlightError::Unavailable`) and callers must
+       degrade to “no highlighting” deterministically.
    - Bundles `*.scm` query files (highlight + injections) with tracked upstream sources and license texts under:
      - `ecosystem/fret-syntax/third_party/README.md`
      - `ecosystem/fret-syntax/third_party/licenses/`

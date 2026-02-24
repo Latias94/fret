@@ -187,6 +187,7 @@ pub(crate) const PAGE_MAGIC_CARD: &str = "magic_card";
 pub(crate) const PAGE_MAGIC_BORDER_BEAM: &str = "magic_border_beam";
 pub(crate) const PAGE_MAGIC_DOCK: &str = "magic_dock";
 pub(crate) const PAGE_MAGIC_PATTERNS: &str = "magic_patterns";
+pub(crate) const PAGE_MAGIC_PATTERNS_TORTURE: &str = "magic_patterns_torture";
 pub(crate) const PAGE_MAGIC_SPARKLES_TEXT: &str = "magic_sparkles_text";
 pub(crate) const PAGE_MAGIC_BLOOM: &str = "magic_bloom";
 pub(crate) const PAGE_SKELETON: &str = "skeleton";
@@ -410,6 +411,8 @@ pub(crate) const CMD_NAV_MAGIC_LENS: &str = "ui_gallery.nav.select.magic_lens";
 pub(crate) const CMD_NAV_MAGIC_BORDER_BEAM: &str = "ui_gallery.nav.select.magic_border_beam";
 pub(crate) const CMD_NAV_MAGIC_DOCK: &str = "ui_gallery.nav.select.magic_dock";
 pub(crate) const CMD_NAV_MAGIC_PATTERNS: &str = "ui_gallery.nav.select.magic_patterns";
+pub(crate) const CMD_NAV_MAGIC_PATTERNS_TORTURE: &str =
+    "ui_gallery.nav.select.magic_patterns_torture";
 pub(crate) const CMD_NAV_MAGIC_SPARKLES_TEXT: &str = "ui_gallery.nav.select.magic_sparkles_text";
 pub(crate) const CMD_NAV_MAGIC_BLOOM: &str = "ui_gallery.nav.select.magic_bloom";
 pub(crate) const CMD_NAV_SKELETON: &str = "ui_gallery.nav.select.skeleton";
@@ -2098,6 +2101,21 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-magic",
                 CMD_NAV_MAGIC_PATTERNS,
                 &["magic", "patterns", "materials", "tier-b"],
+            ),
+            PageSpec::new(
+                PAGE_MAGIC_PATTERNS_TORTURE,
+                "Patterns (Torture)",
+                "Patterns (Tier B materials, fill-rate torture)",
+                "fret-ui-magic",
+                CMD_NAV_MAGIC_PATTERNS_TORTURE,
+                &[
+                    "magic",
+                    "patterns",
+                    "materials",
+                    "tier-b",
+                    "performance",
+                    "torture",
+                ],
             ),
             PageSpec::new(
                 PAGE_MAGIC_SPARKLES_TEXT,

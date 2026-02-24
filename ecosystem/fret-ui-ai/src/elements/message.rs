@@ -9,7 +9,6 @@ use fret_ui_kit::{ChromeRefinement, ColorRef, Justify, LayoutRefinement, Radius,
 
 use crate::model::MessageRole;
 
-#[derive(Clone)]
 /// A role-aware message wrapper aligned with AI Elements `Message` (`message.tsx`).
 ///
 /// This component is layout-only: it is responsible for alignment (user → right) and spacing
@@ -105,7 +104,6 @@ impl Message {
     }
 }
 
-#[derive(Clone)]
 /// Message bubble surface aligned with AI Elements `MessageContent`.
 ///
 /// Upstream styles user messages as a rounded bubble (`bg-secondary px-4 py-3`) and renders

@@ -228,7 +228,7 @@ fn media_category_icon(category: AttachmentMediaCategory) -> IconId {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Attachments {
     variant: AttachmentVariant,
     children: Vec<AnyElement>,
@@ -921,7 +921,7 @@ impl AttachmentRemove {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct AttachmentEmpty {
     children: Vec<AnyElement>,
     test_id: Option<Arc<str>>,

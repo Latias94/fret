@@ -102,7 +102,7 @@ fn card_chrome(theme: &Theme, _size: CardSize) -> ChromeRefinement {
         .border_color(ColorRef::Color(border))
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Card {
     children: Vec<AnyElement>,
     size: CardSize,
@@ -184,7 +184,7 @@ where
     })
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct CardHeader {
     children: Vec<AnyElement>,
     chrome: ChromeRefinement,
@@ -301,7 +301,7 @@ impl CardHeader {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct CardAction {
     children: Vec<AnyElement>,
     layout: LayoutRefinement,
@@ -492,7 +492,7 @@ mod tests {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct CardContent {
     children: Vec<AnyElement>,
     chrome: ChromeRefinement,
@@ -547,7 +547,7 @@ impl CardContent {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct CardFooter {
     children: Vec<AnyElement>,
     chrome: ChromeRefinement,

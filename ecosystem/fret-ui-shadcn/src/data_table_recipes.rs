@@ -267,7 +267,6 @@ struct DataTableToolbarState {
 /// - global filter input (`TableState.global_filter`)
 /// - column visibility dropdown (`TableState.column_visibility`)
 /// - selected row count (`TableState.row_selection`)
-#[derive(Clone)]
 pub struct DataTableToolbar<TData> {
     state: Model<TableState>,
     columns: Arc<[ColumnDef<TData>]>,
@@ -867,7 +866,7 @@ impl<TData> DataTableToolbar<TData> {
                         DropdownMenuLabel::new("Toggle columns").inset(true),
                     ));
                     entries.push(DropdownMenuEntry::Separator);
-                    entries.extend(visibility_items.clone());
+                    entries.extend(visibility_items);
                     entries
                 },
             )
@@ -915,7 +914,7 @@ impl<TData> DataTableToolbar<TData> {
                         .size(ButtonSize::Sm)
                         .into_element(cx)
                 },
-                move |_cx| pin_items.clone(),
+                move |_cx| pin_items,
             )
         });
 
@@ -1170,7 +1169,7 @@ impl<TData> DataTableToolbar<TData> {
                                         move |_cx| {
                                             let mut out = Vec::new();
                                             out.push(indicator);
-                                            if let Some(icon) = maybe_icon.clone() {
+                                            if let Some(icon) = maybe_icon {
                                                 out.push(icon);
                                             }
                                             out.push(label);
@@ -1186,7 +1185,7 @@ impl<TData> DataTableToolbar<TData> {
                                             .justify_between(),
                                         move |_cx| {
                                             let mut out = vec![left];
-                                            if let Some(count_el) = count_el.clone() {
+                                            if let Some(count_el) = count_el {
                                                 out.push(count_el);
                                             }
                                             out
@@ -1370,26 +1369,26 @@ impl<TData> DataTableToolbar<TData> {
                 text.into_element(cx)
             });
 
-        let trailing = self.trailing.clone();
+        let trailing = self.trailing;
 
         let left_group = hstack(
             cx,
             HStackProps::default().gap_x(Space::N2).items_center(),
             move |_cx| {
                 let mut children = Vec::new();
-                if let Some(global_filter) = global_filter.clone() {
+                if let Some(global_filter) = global_filter {
                     children.push(global_filter);
                 }
-                if let Some(filter) = column_filter.clone() {
+                if let Some(filter) = column_filter {
                     children.push(filter);
                 }
-                if let Some(menu) = faceted_menu.clone() {
+                if let Some(menu) = faceted_menu {
                     children.push(menu);
                 }
-                if let Some(btn) = reset_button.clone() {
+                if let Some(btn) = reset_button {
                     children.push(btn);
                 }
-                if let Some(sel) = selected_text.clone() {
+                if let Some(sel) = selected_text {
                     children.push(sel);
                 }
                 children
@@ -1401,13 +1400,13 @@ impl<TData> DataTableToolbar<TData> {
             HStackProps::default().gap_x(Space::N2).items_center(),
             move |_cx| {
                 let mut children = Vec::new();
-                if let Some(cols_menu) = cols_menu.clone() {
+                if let Some(cols_menu) = cols_menu {
                     children.push(cols_menu);
                 }
-                if let Some(pin_menu) = pin_menu.clone() {
+                if let Some(pin_menu) = pin_menu {
                     children.push(pin_menu);
                 }
-                children.extend(trailing.clone());
+                children.extend(trailing);
                 children
             },
         );

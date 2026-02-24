@@ -292,21 +292,6 @@ fn web_vs_fret_layout_data_table_demo_row_height_and_action_button_size() {
         let header_select_all: Model<bool> = cx.app.models_mut().insert(false);
         let row_select: Model<bool> = cx.app.models_mut().insert(false);
 
-        let select_all = fret_ui_shadcn::Checkbox::new(header_select_all)
-            .a11y_label("Select all")
-            .into_element(cx);
-        let select_row = fret_ui_shadcn::Checkbox::new(row_select)
-            .a11y_label("Select row")
-            .into_element(cx);
-
-        let open_menu = fret_ui_shadcn::Button::new("Open menu")
-            .variant(fret_ui_shadcn::ButtonVariant::Ghost)
-            .size(fret_ui_shadcn::ButtonSize::IconSm)
-            .children(vec![
-                fret_ui_shadcn::Spinner::new().speed(0.0).into_element(cx),
-            ])
-            .into_element(cx);
-
         let header_row = cx.semantics(
             fret_ui::element::SemanticsProps {
                 role: SemanticsRole::Panel,
@@ -318,7 +303,12 @@ fn web_vs_fret_layout_data_table_demo_row_height_and_action_button_size() {
                     fret_ui_shadcn::TableRow::new(
                         5,
                         vec![
-                            fret_ui_shadcn::TableCell::new(select_all.clone()).into_element(cx),
+                            fret_ui_shadcn::TableCell::new(
+                                fret_ui_shadcn::Checkbox::new(header_select_all.clone())
+                                    .a11y_label("Select all")
+                                    .into_element(cx),
+                            )
+                            .into_element(cx),
                             fret_ui_shadcn::TableHead::new("Status").into_element(cx),
                             fret_ui_shadcn::TableHead::new("Email").into_element(cx),
                             fret_ui_shadcn::TableHead::new("Amount").into_element(cx),
@@ -341,7 +331,12 @@ fn web_vs_fret_layout_data_table_demo_row_height_and_action_button_size() {
                     fret_ui_shadcn::TableRow::new(
                         5,
                         vec![
-                            fret_ui_shadcn::TableCell::new(select_row.clone()).into_element(cx),
+                            fret_ui_shadcn::TableCell::new(
+                                fret_ui_shadcn::Checkbox::new(row_select.clone())
+                                    .a11y_label("Select row")
+                                    .into_element(cx),
+                            )
+                            .into_element(cx),
                             fret_ui_shadcn::TableCell::new(decl_text::text_sm(cx, "success"))
                                 .into_element(cx),
                             fret_ui_shadcn::TableCell::new(decl_text::text_sm(
@@ -351,7 +346,16 @@ fn web_vs_fret_layout_data_table_demo_row_height_and_action_button_size() {
                             .into_element(cx),
                             fret_ui_shadcn::TableCell::new(decl_text::text_sm(cx, "$316.00"))
                                 .into_element(cx),
-                            fret_ui_shadcn::TableCell::new(open_menu.clone()).into_element(cx),
+                            fret_ui_shadcn::TableCell::new(
+                                fret_ui_shadcn::Button::new("Open menu")
+                                    .variant(fret_ui_shadcn::ButtonVariant::Ghost)
+                                    .size(fret_ui_shadcn::ButtonSize::IconSm)
+                                    .children(vec![
+                                        fret_ui_shadcn::Spinner::new().speed(0.0).into_element(cx),
+                                    ])
+                                    .into_element(cx),
+                            )
+                            .into_element(cx),
                         ],
                     )
                     .into_element(cx),
@@ -490,7 +494,7 @@ fn web_vs_fret_layout_data_table_demo_empty_state_cell_spans_table_width() {
                         ])
                         .into_element(cx),
                         fret_ui_shadcn::TableBody::new(vec![
-                            fret_ui_shadcn::TableRow::new(5, vec![empty_td.clone()])
+                            fret_ui_shadcn::TableRow::new(5, vec![empty_td])
                                 .border_bottom(false)
                                 .into_element(cx),
                         ])

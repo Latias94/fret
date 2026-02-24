@@ -19,6 +19,114 @@
         height: 100vh;
       }
     </style>
+    <script>
+      // Persist devtools WS config across in-app routing so the WASM runner stays connected even if
+      // the app canonicalizes/rewrites the URL.
+      //
+      // The Rust side reads either:
+      // - URL params: `fret_devtools_ws` + `fret_devtools_token`, or
+      // - globals: `window.__FRET_DEVTOOLS_WS` + `window.__FRET_DEVTOOLS_TOKEN`.
+      (function () {
+        try {
+          var url = new URL(window.location.href);
+          var ws = url.searchParams.get("fret_devtools_ws");
+          var token = url.searchParams.get("fret_devtools_token");
+          var log = url.searchParams.get("fret_devtools_ws_log");
+          var keyWs = "FRET_DEVTOOLS_WS";
+          var keyToken = "FRET_DEVTOOLS_TOKEN";
+          var keyLog = "FRET_DEVTOOLS_WS_CLIENT_LOG";
+          var viewCacheKeys = [
+            "fret_ui_gallery_view_cache",
+            "fret_ui_gallery_view_cache_shell",
+            "fret_ui_gallery_view_cache_content",
+            "fret_ui_gallery_view_cache_inner",
+            "fret_ui_gallery_view_cache_continuous",
+          ];
+
+          function parseBoolParam(v) {
+            if (v == null) return null;
+            var s = String(v).trim().toLowerCase();
+            if (s === "") return true;
+            if (s === "1" || s === "true" || s === "yes" || s === "on") return true;
+            if (s === "0" || s === "false" || s === "no" || s === "off") return false;
+            return null;
+          }
+
+          // 1) Capture from URL (if present) and persist to globals/localStorage.
+          if (ws && token) {
+            window.__FRET_DEVTOOLS_WS = ws;
+            window.__FRET_DEVTOOLS_TOKEN = token;
+            window.__FRET_DEVTOOLS_WS_CLIENT_LOG = log === "1";
+            if (window.localStorage) {
+              window.localStorage.setItem(keyWs, ws);
+              window.localStorage.setItem(keyToken, token);
+              window.localStorage.setItem(keyLog, log === "1" ? "1" : "0");
+            }
+          }
+
+          for (var i = 0; i < viewCacheKeys.length; i++) {
+            var k = viewCacheKeys[i];
+            var v = url.searchParams.get(k);
+            if (v == null) continue;
+            var globalKey = "__" + k.toUpperCase();
+            window[globalKey] = v;
+            if (window.localStorage) {
+              window.localStorage.setItem(globalKey, v);
+            }
+          }
+
+          // If view-cache is explicitly enabled via URL, ensure shell caching defaults to on as
+          // well unless the shell flag is explicitly provided. This prevents stale localStorage
+          // overrides from silently disabling view-cache roots during perf/evidence runs.
+          var vcEnabled = parseBoolParam(url.searchParams.get("fret_ui_gallery_view_cache"));
+          var vcShellProvided =
+            url.searchParams.get("fret_ui_gallery_view_cache_shell") != null;
+          if (vcEnabled === true && !vcShellProvided) {
+            var shellKey = "__FRET_UI_GALLERY_VIEW_CACHE_SHELL";
+            window[shellKey] = "1";
+            if (window.localStorage) {
+              window.localStorage.setItem(shellKey, "1");
+            }
+          }
+
+          // If view-cache is explicitly enabled via URL, default content-root caching on as well
+          // unless explicitly overridden. (Some perf runs may choose to disable content caching
+          // while keeping sidebar caching enabled.)
+          var vcContentProvided =
+            url.searchParams.get("fret_ui_gallery_view_cache_content") != null;
+          if (vcEnabled === true && !vcContentProvided) {
+            var contentKey = "__FRET_UI_GALLERY_VIEW_CACHE_CONTENT";
+            window[contentKey] = "1";
+            if (window.localStorage) {
+              window.localStorage.setItem(contentKey, "1");
+            }
+          }
+
+          // 2) Backfill from localStorage when URL was rewritten/canonicalized by the app.
+          if (window.localStorage) {
+            var wsStored = window.localStorage.getItem(keyWs);
+            var tokenStored = window.localStorage.getItem(keyToken);
+            var logStored = window.localStorage.getItem(keyLog);
+            if (wsStored && tokenStored) {
+              window.__FRET_DEVTOOLS_WS = window.__FRET_DEVTOOLS_WS || wsStored;
+              window.__FRET_DEVTOOLS_TOKEN = window.__FRET_DEVTOOLS_TOKEN || tokenStored;
+              window.__FRET_DEVTOOLS_WS_CLIENT_LOG =
+                window.__FRET_DEVTOOLS_WS_CLIENT_LOG || logStored === "1";
+            }
+
+            for (var j = 0; j < viewCacheKeys.length; j++) {
+              var k2 = viewCacheKeys[j];
+              var globalKey2 = "__" + k2.toUpperCase();
+              if (window[globalKey2] != null) continue;
+              var stored = window.localStorage.getItem(globalKey2);
+              if (stored != null) {
+                window[globalKey2] = stored;
+              }
+            }
+          }
+        } catch (_e) {}
+      })();
+    </script>
     <link data-trunk rel="rust" data-wasm-opt="2" />
     <link data-trunk rel="copy-dir" href="../../assets/textures" />
   </head>
@@ -26,4 +134,3 @@
     <canvas id="fret-canvas"></canvas>
   </body>
 </html>
-

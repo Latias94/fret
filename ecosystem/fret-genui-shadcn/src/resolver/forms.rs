@@ -370,10 +370,7 @@ impl ShadcnResolver {
         if let Some(label) = label {
             out_children.push(
                 fret_ui_kit::ui::h_flex(cx, move |_cx| {
-                    vec![
-                        sw.clone(),
-                        fret_ui_kit::ui::text(_cx, label).into_element(_cx),
-                    ]
+                    vec![sw, fret_ui_kit::ui::text(_cx, label).into_element(_cx)]
                 })
                 .gap(fret_ui_kit::Space::N2)
                 .items_center()

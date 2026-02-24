@@ -1279,14 +1279,74 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
                 .no_shell()
                 .max_w(Px(640.0))
                 .code("rust", r#"shadcn::ItemMedia::new([doc_layout::icon(cx, "lucide.shield-alert")]).variant(shadcn::ItemMediaVariant::Icon).into_element(cx);"#),
-            DocSection::new("Avatar", docs_avatar).no_shell().max_w(Px(720.0)),
-            DocSection::new("Image", docs_image).no_shell().max_w(Px(640.0)),
+            DocSection::new("Avatar", docs_avatar)
+                .no_shell()
+                .max_w(Px(720.0))
+                .code(
+                    "rust",
+                    r#"let avatar = shadcn::Avatar::new([
+    shadcn::AvatarFallback::new("ER").into_element(cx),
+])
+.into_element(cx);
+
+shadcn::Item::new([
+    shadcn::ItemMedia::new([avatar]).into_element(cx),
+    shadcn::ItemContent::new([
+        shadcn::ItemTitle::new("Evil Rabbit").into_element(cx),
+        shadcn::ItemDescription::new("Last seen 5 months ago").into_element(cx),
+    ]).into_element(cx),
+    shadcn::ItemActions::new([
+        shadcn::Button::new("")
+            .variant(shadcn::ButtonVariant::Outline)
+            .size(shadcn::ButtonSize::IconSm)
+            .refine_style(ChromeRefinement::default().rounded(Radius::Full))
+            .children([doc_layout::icon(cx, "lucide.plus")])
+            .a11y_label("Invite")
+            .into_element(cx),
+    ]).into_element(cx),
+])
+.variant(shadcn::ItemVariant::Outline)
+.refine_layout(LayoutRefinement::default().w_full())
+.into_element(cx);"#,
+                ),
+            DocSection::new("Image", docs_image)
+                .no_shell()
+                .max_w(Px(640.0))
+                .code(
+                    "rust",
+                    r#"let theme = Theme::global(&*cx.app).snapshot();
+let props = decl_style::container_props(
+    &theme,
+    ChromeRefinement::default()
+        .bg(ColorRef::Color(theme.color_token("muted")))
+        .rounded(Radius::Sm),
+    LayoutRefinement::default().size_full(),
+);
+let image = cx
+    .container(props, |cx| vec![shadcn::typography::muted(cx, "IMG")])
+    .into_element(cx);
+
+let media = shadcn::ItemMedia::new([image])
+    .variant(shadcn::ItemMediaVariant::Image)
+    .into_element(cx);"#,
+                ),
             DocSection::new("Group", docs_group).no_shell().max_w(Px(640.0)),
             DocSection::new("Header", docs_header).no_shell().max_w(Px(820.0)),
             DocSection::new("Link", docs_link)
                 .description("Links are modeled via `ItemRender::Link` so the root carries link semantics.")
                 .no_shell()
-                .max_w(Px(640.0)),
+                .max_w(Px(640.0))
+                .code(
+                    "rust",
+                    r#"shadcn::Item::new([/* ... */])
+    .render(shadcn::ItemRender::Link {
+        href: Arc::<str>::from("https://example.com/docs"),
+        target: None,
+        rel: None,
+    })
+    .on_click(CMD_APP_OPEN)
+    .into_element(cx);"#,
+                ),
             DocSection::new("Dropdown", docs_dropdown)
                 .description("Item composed inside a DropdownMenu row (new-york-v4).")
                 .no_shell()

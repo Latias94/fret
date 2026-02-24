@@ -47,6 +47,39 @@ Baseline record (fill in; keep this section short):
   - `headless_renderer_perf: frames=600 encode=0.09ms prepare_svg=19.11ms prepare_text=0.46ms draws=27000 ... cache_hits=596 cache_misses=4`
   - `headless_renderer_perf_pipelines: quad=600 viewport=0 mask=600 text_mask=0 text_color=0 path=0 path_msaa=0 composite=0 fullscreen=0 clip_mask=0`
 
+Baseline record (macOS local snapshot; not a gate):
+
+- Date: 2026-02-23
+- Commit: 0a4be0810
+- Platform/backend (native/wasm/mobile): native (macOS + wgpu)
+- Commands run (exact):
+  - `FRET_RENDERER_PERF_PIPELINES=1 cargo run -p fret-svg-atlas-stress --release -- --headless --frames 180`
+- Outputs (summary):
+  - `headless_renderer_perf: frames=180 encode=0.03ms prepare_svg=1.95ms prepare_text=0.02ms draws=8100 ... cache_hits=179 cache_misses=1`
+  - `headless_renderer_perf_pipelines: quad=180 viewport=0 mask=180 text_mask=0 text_color=0 path=0 path_msaa=0 composite=0 fullscreen=0 clip_mask=0`
+
+Guardrails record (macOS local, smoke):
+
+- Date: 2026-02-23
+- Commit: 77fe5ff03
+- Commands run (exact):
+  - `python3 tools/check_layering.py`
+  - `cargo nextest run -p fret-render-wgpu --test affine_clip_conformance --test viewport_surface_metadata_conformance --test paint_gradient_conformance --test mask_gradient_conformance --test composite_group_conformance --test materials_conformance --test materials_sampled_conformance --test clip_path_conformance --test mask_image_conformance --test text_paint_conformance`
+- Outputs (summary):
+  - layering: pass
+  - conformance: pass (35 tests)
+
+Baseline record (web build sanity; prerequisite for WebGPU evidence capture):
+
+- Date: 2026-02-23
+- Commit: fee64c84f (plus a698b6413)
+- Platform/backend (native/wasm/mobile): wasm (wasm32-unknown-unknown)
+- Commands run (exact):
+  - `cargo check -p fret-ui-gallery-web --target wasm32-unknown-unknown`
+- Outputs (summary):
+  - build: pass
+  - note: `fret-syntax` disables Tree-sitter highlighting on wasm targets; `diagnostics-ws` uses a read-only `UiTree` view.
+
 ## M1 — RenderPlan substrate (time-boxed)
 
 Deliverables:
@@ -239,6 +272,44 @@ Exit criteria:
   - `tools/perf/headless_clip_mask_stress_gate.py`
   - `docs/workstreams/perf-baselines/clip-mask-stress-headless.windows-local.v1.json`
 
+Progress record (Stable sampler reuse for uniform bind groups):
+
+- Date: 2026-02-23
+- Status: Landed (Stage 1 step 1)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/bind_group_caches.rs` (`SamplingBindGroups`, `SamplingBindGroups::pick`)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/helpers.rs` (`pick_image_bind_group`, `pick_uniform_bind_group_for_mask_image`)
+  - `crates/fret-render-wgpu/src/renderer/bind_group_builders.rs` (`UniformBindGroupGlobals`, `UniformMaskImageBindGroupGlobals`)
+  - `crates/fret-render-wgpu/src/renderer/buffers.rs` (`rebuild_uniform_bind_group`)
+  - `crates/fret-render-wgpu/src/renderer/resources.rs` (`UniformBindGroupGlobals::create`)
+- Gates run:
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+Progress record (Uniform buffer lifecycle consolidation):
+
+- Date: 2026-02-23
+- Status: Landed (Stage 2 step 1)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/buffers.rs` (`ensure_*_capacity`, `rebuild_uniform_bind_group`)
+  - `crates/fret-render-wgpu/src/renderer/uniform_resources.rs` (`ensure_*_capacity`)
+- Gates run:
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+Progress record (BindGroupCaches facade + invalidation contract):
+
+- Date: 2026-02-23
+- Status: Landed (Stage 3 steps 1–3)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/bind_group_caches.rs` (`BindGroupCaches` contract doc, `invalidate_all`)
+  - `crates/fret-render-wgpu/src/renderer/bind_group_caches.rs` (`ensure_viewport_sampler_texture_bind_group`, `ensure_image_sampler_texture_bind_groups`)
+  - `crates/fret-render-wgpu/src/renderer/bind_group_caches.rs` (`ensure_uniform_mask_image_override_bind_groups`, `invalidate_uniform_mask_image_override_bind_groups`)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/bind_groups.rs` (call sites)
+- Gates run:
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
 Progress record (Bind group + uniform-resource lifecycle tightening):
 
 - Date: 2026-02-22
@@ -381,6 +452,352 @@ Progress record (Backdrop-warp pipeline caches moved into GpuPipelines):
   - `crates/fret-render-wgpu/src/renderer/pipelines/backdrop_warp.rs` (`ensure_backdrop_warp_pipeline`, `*_ref`)
   - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/backdrop_warp.rs` (uses `*_ref`)
 - Gates run:
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+Progress record (Effect pipeline caches moved into GpuPipelines):
+
+- Date: 2026-02-22
+- Status: Landed (Stage 1 step 12)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/gpu_pipelines.rs` (effect pipeline cache fields)
+  - `crates/fret-render-wgpu/src/renderer/pipelines/{color_adjust,color_matrix,alpha_threshold,drop_shadow}.rs` (ensure + `*_ref`)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` (uses `*_ref`)
+- Gates run:
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+Progress record (GpuEffectParams extraction):
+
+- Date: 2026-02-22
+- Status: Landed (Stage 2 step 4)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/gpu_effect_params.rs` (`GpuEffectParams`)
+  - `crates/fret-render-wgpu/src/renderer/mod.rs` (`Renderer::effect_params`)
+  - `crates/fret-render-wgpu/src/renderer/resources.rs` (`GpuEffectParams` init)
+  - `crates/fret-render-wgpu/src/renderer/pipelines/clip_mask.rs` (layout uses `effect_params`)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (scale-param capacity via `effect_params`)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/{scale_nearest,backdrop_warp,effects}.rs` (buffer uses)
+- Gates run:
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+Progress record (GpuRegistries extraction):
+
+- Date: 2026-02-22
+- Status: Landed (Stage 4 step 1)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/gpu_registries.rs` (`GpuRegistries`)
+  - `crates/fret-render-wgpu/src/renderer/mod.rs` (`Renderer::registries`)
+  - `crates/fret-render-wgpu/src/renderer/resources.rs` (register/update/unregister bumps)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/bind_groups.rs` (bind-group keys read revisions)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (scene encoding cache key uses generations)
+- Gates run:
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+Progress record (GpuRegistries mutation API):
+
+- Date: 2026-02-22
+- Status: Landed (Stage 4 step 2)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/gpu_registries.rs` (`register_*` / `update_*` / `unregister_*`)
+  - `crates/fret-render-wgpu/src/renderer/resources.rs` (`register_*` / `update_*` / `unregister_*` call sites)
+- Gates run:
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+Progress record (GpuResources extraction):
+
+- Date: 2026-02-22
+- Status: Landed (Stage 4 step 3)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/gpu_resources.rs` (`GpuResources`)
+  - `crates/fret-render-wgpu/src/renderer/mod.rs` (`Renderer::gpu_resources`)
+  - `crates/fret-render-wgpu/src/renderer/resources.rs` (registry mutation call sites)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/bind_groups.rs` (bind-group cache reads via `gpu_resources`)
+- Gates run:
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+Progress record (GpuResources read/prepare API):
+
+- Date: 2026-02-22
+- Status: Landed (Stage 4 step 4)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/gpu_resources.rs` (read helpers + `ensure_*_for_*` bind-group prep)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/bind_groups.rs` (bind-group prep routed via `GpuResources`)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/encode/{mask,draw/*.rs}` (resource reads routed via `GpuResources`)
+- Gates run:
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+Progress record (SceneEncodingCache extraction):
+
+- Date: 2026-02-23
+- Status: Landed (Stage 5 step 1)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/scene_encoding_cache.rs` (`SceneEncodingCache`)
+  - `crates/fret-render-wgpu/src/renderer/mod.rs` (`Renderer::scene_encoding_cache`)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (hit/miss paths)
+- Gates run:
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+Progress record (SceneEncodingCache integration helper):
+
+- Date: 2026-02-23
+- Status: Landed (Stage 5 step 2)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (`acquire_scene_encoding_for_frame`)
+- Gates run:
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+Progress record (Scene encoding cache module split):
+
+- Date: 2026-02-23
+- Status: Landed (Stage 5 step 3)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/encoding_cache.rs` (`build_scene_encoding_cache_key`, `acquire_scene_encoding_for_frame`)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (call sites)
+- Gates run:
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+Progress record (Debug postprocess selection helper):
+
+- Date: 2026-02-23
+- Status: Landed (Stage 6 step 1)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/debug_postprocess.rs` (`pick_debug_postprocess`)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (call site)
+- Gates run:
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+Progress record (Plan compilation helper):
+
+- Date: 2026-02-23
+- Status: Landed (Stage 6 step 2)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/plan_compile.rs` (`compile_render_plan_for_scene`)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (call site)
+- Gates run:
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+Progress record (Render plan dispatch helper):
+
+- Date: 2026-02-23
+- Status: Landed (Stage 7 step 1)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/dispatch.rs` (`dispatch_render_plan`)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (call site)
+- Gates run:
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+Progress record (Render space upload helper):
+
+- Date: 2026-02-23
+- Status: Landed (Stage 7 step 2)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/render_space_upload.rs` (`upload_render_space_uniforms_for_plan`)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (call site)
+- Gates run:
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+Progress record (Frame geometry uploads helper):
+
+- Date: 2026-02-23
+- Status: Landed (Stage 7 step 3)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/uploads.rs` (`upload_frame_geometry`)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (call site)
+- Gates run:
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+Progress record (Effect pipeline setup helper):
+
+- Date: 2026-02-23
+- Status: Landed (Stage 8 step 1)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/effect_pipelines.rs` (`ensure_effect_pipelines_for_plan`)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (call site)
+- Gates run:
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+Progress record (Per-frame uniform uploads + bind group prep helper):
+
+- Date: 2026-02-23
+- Status: Landed (Stage 9 step 1)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/frame_bindings.rs` (`upload_frame_uniforms_and_prepare_bind_groups`)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (call site)
+- Gates run:
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+Progress record (Render plan diagnostics + perf reporting helper):
+
+- Date: 2026-02-23
+- Status: Landed (Stage 10 step 1)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/plan_reporting.rs` (`record_render_plan_diagnostics_for_frame`)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (call site)
+- Gates run:
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+Progress record (Frame perf finalize helper):
+
+- Date: 2026-02-23
+- Status: Landed (Stage 11 step 1)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/perf_finalize.rs` (`finalize_frame_perf_after_dispatch`)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (call site)
+- Gates run:
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+Progress record (Text + SVG prepare helpers):
+
+- Date: 2026-02-23
+- Status: Landed (Stage 12 steps 1–2)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/frame_prepare.rs` (`prepare_text_for_frame`, `prepare_svg_for_frame`)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (call sites)
+- Gates run:
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+Progress record (Frame pipeline ensure helper):
+
+- Date: 2026-02-23
+- Status: Landed (Stage 13 step 1)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/frame_pipelines.rs` (`ensure_frame_pipelines_and_path_samples`)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (call site)
+- Gates run:
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+Progress record (Frame perf init helper):
+
+- Date: 2026-02-23
+- Status: Landed (Stage 14 step 1)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/frame_perf_init.rs` (`begin_frame_perf_collection`)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (call site)
+- Gates run:
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+Progress record (RenderSpace per-frame upload scratch reuse):
+
+- Date: 2026-02-23
+- Status: Landed (Stage 15 step 1)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/render_space_upload.rs` (`upload_render_space_uniforms_for_plan`)
+  - `crates/fret-render-wgpu/src/renderer/mod.rs` (`Renderer::render_space_bytes_scratch`)
+- Gates run:
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+Progress record (Viewport uniform per-frame upload scratch reuse):
+
+- Date: 2026-02-23
+- Status: Landed (Stage 16 step 1)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/uniform_resources.rs` (`write_viewport_uniforms_into`)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/frame_bindings.rs` (call site)
+  - `crates/fret-render-wgpu/src/renderer/mod.rs` (`Renderer::viewport_uniform_bytes_scratch`)
+- Gates run:
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+Progress record (Plan quad vertices/bases scratch reuse):
+
+- Date: 2026-02-23
+- Status: Landed (Stage 17 step 1)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/quad_vertices.rs` (`build_plan_quad_vertices_into`, `upload_plan_quad_vertices`)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs` (returns bases to scratch after dispatch)
+  - `crates/fret-render-wgpu/src/renderer/mod.rs` (`Renderer::{plan_quad_vertices_scratch,plan_quad_vertex_bases_scratch}`)
+- Gates run:
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+Progress record (Render plan segment report scratch reuse):
+
+- Date: 2026-02-23
+- Status: Landed (Stage 18 step 1)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_scene/plan_reporting.rs` (`record_render_plan_diagnostics_for_frame`)
+  - `crates/fret-render-wgpu/src/renderer/mod.rs` (`Renderer::{render_plan_scene_draw_range_passes_scratch,render_plan_path_msaa_batch_passes_scratch,render_plan_segment_report_scratch}`)
+- Gates run:
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+Progress record (Render plan JSON dump bytes scratch reuse):
+
+- Date: 2026-02-23
+- Status: Landed (Stage 19 step 1)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` (`maybe_dump_render_plan_json`)
+  - `crates/fret-render-wgpu/src/renderer/mod.rs` (`Renderer::render_plan_dump_scratch`)
+- Gates run:
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+Progress record (Render plan JSON dump vector scratch reuse):
+
+- Date: 2026-02-23
+- Status: Landed (Stage 20 step 1)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` (`RenderPlanJsonDumpScratch`, `maybe_dump_render_plan_json`)
+  - `crates/fret-render-wgpu/src/renderer/mod.rs` (`Renderer::render_plan_dump_scratch`)
+- Gates run:
+  - `python3 tools/check_layering.py`
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+Progress record (Render plan JSON dump string allocation cleanup):
+
+- Date: 2026-02-23
+- Status: Landed (Stage 21 step 1)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` (`JsonDumpPass`, `JsonDumpMaskRef`, `JsonDumpDegradation`)
+- Gates run:
+  - `python3 tools/check_layering.py`
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+Progress record (EncodeState per-frame stack scratch reuse):
+
+- Date: 2026-02-23
+- Status: Landed (Stage 22 step 1)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/types.rs` (`SceneEncoding` scratch fields, `ClipPop`, `MaskPop`)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/encode/state.rs` (`EncodeState::new`)
+- Gates run:
+  - `python3 tools/check_layering.py`
+  - `cargo test -p fret-render-wgpu --lib`
+  - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
+
+Progress record (Material distinct encode tracking uses HashSet scratch):
+
+- Date: 2026-02-23
+- Status: Landed (Stage 23 step 1)
+- Evidence anchors:
+  - `crates/fret-render-wgpu/src/renderer/types.rs` (`SceneEncoding::encode_material_seen_scratch`)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/paint.rs` (`Paint::Material` path)
+- Gates run:
+  - `python3 tools/check_layering.py`
   - `cargo test -p fret-render-wgpu --lib`
   - `cargo nextest run -p fret-render-wgpu --test clip_path_conformance --test mask_image_conformance --test composite_group_conformance --test viewport_surface_metadata_conformance`
 

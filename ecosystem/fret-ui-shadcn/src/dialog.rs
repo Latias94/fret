@@ -510,7 +510,7 @@ impl Dialog {
 }
 
 /// shadcn/ui `DialogContent` (v4).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct DialogContent {
     children: Vec<AnyElement>,
     chrome: ChromeRefinement,
@@ -727,7 +727,7 @@ impl DialogClose {
 }
 
 /// shadcn/ui `DialogHeader` (v4).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct DialogHeader {
     children: Vec<AnyElement>,
 }
@@ -751,7 +751,7 @@ impl DialogHeader {
 }
 
 /// shadcn/ui `DialogFooter` (v4).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct DialogFooter {
     children: Vec<AnyElement>,
 }

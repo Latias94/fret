@@ -252,7 +252,6 @@ impl MicSelector {
 }
 
 /// AI Elements-aligned `MicSelectorTrigger`.
-#[derive(Clone)]
 pub struct MicSelectorTrigger {
     children: Vec<AnyElement>,
     disabled: bool,
@@ -325,7 +324,6 @@ impl MicSelectorTrigger {
 }
 
 /// AI Elements-aligned `MicSelectorContent` (PopoverContent + Command container).
-#[derive(Clone)]
 pub struct MicSelectorContent {
     children: Vec<AnyElement>,
     popover_chrome: ChromeRefinement,

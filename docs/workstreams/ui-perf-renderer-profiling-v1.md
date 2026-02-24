@@ -52,6 +52,9 @@ Output includes:
 - CPU: `encode_scene_us`, `prepare_text_us`, `prepare_svg_us`
 - Complexity proxies: `draw_calls`, per-primitive draw calls, pipeline switches, bind group switches, uniform/instance/vertex bytes
 - Scene encoding cache hit/miss counts
+  - Note: the encoding cache is an **exact** “last frame” cache keyed by the scene payload fingerprint (`Scene::fingerprint()`), op count,
+    and a few resource-generation/text-revision fields. Misses are expected on animated scenes; for “same structure, different values”
+    scenarios, optimize higher-level caching (UI paint/view caches) or consider a separate plan-level cache (if evidence warrants).
 - Resource churn proxies (best-effort):
   - Text atlas: `renderer_text_atlas_upload_bytes`, `renderer_text_atlas_evicted_pages`, `renderer_text_atlas_resets`
   - Intermediate pool: `renderer_intermediate_peak_in_use_bytes`, `renderer_intermediate_pool_evictions`

@@ -6,7 +6,6 @@ use fret_ui_kit::LayoutRefinement;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::recipes::resizable as resizable_recipe;
 
-#[derive(Clone)]
 pub struct ResizablePanel {
     min_px: Px,
     layout: LayoutRefinement,
@@ -100,7 +99,7 @@ impl ResizableHandle {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum ResizableEntry {
     Panel(ResizablePanel),
     Handle(ResizableHandle),
@@ -118,7 +117,6 @@ impl From<ResizableHandle> for ResizableEntry {
     }
 }
 
-#[derive(Clone)]
 pub struct ResizablePanelGroup {
     axis: fret_core::Axis,
     model: Model<Vec<f32>>,

@@ -177,7 +177,7 @@ mod tests {
     use fret_runtime::{
         ClipboardToken, CommandRegistry, CommandsHost, DragHost, DragKindId, DragSession,
         DragSessionId, Effect, EffectSink, FrameId, GlobalsHost, ModelHost, ModelId, ModelStore,
-        ModelsHost, PlatformCapabilities, TickId, TimeHost, TimerToken,
+        ModelsHost, PlatformCapabilities, ShareSheetToken, TickId, TimeHost, TimerToken,
     };
     use fret_ui::action::{DismissReason, DismissRequestCx, OnDismissRequest};
     use fret_ui::declarative::render_root;
@@ -416,8 +416,8 @@ mod tests {
             token
         }
 
-        fn next_share_sheet_token(&mut self) -> fret_runtime::ShareSheetToken {
-            let token = fret_runtime::ShareSheetToken(self.next_share_sheet_token);
+        fn next_share_sheet_token(&mut self) -> ShareSheetToken {
+            let token = ShareSheetToken(self.next_share_sheet_token);
             self.next_share_sheet_token = self.next_share_sheet_token.saturating_add(1);
             token
         }

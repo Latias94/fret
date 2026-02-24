@@ -27,6 +27,9 @@ Active workstreams:
 - `docs/workstreams/renderer-vnext-fearless-refactor-v1-refactor-design.md`
 - `docs/workstreams/renderer-vnext-fearless-refactor-v1-todo.md`
 - `docs/workstreams/renderer-vnext-fearless-refactor-v1-milestones.md`
+- `docs/workstreams/renderer-scene-encoding-semantics-audit-v1.md`
+- `docs/workstreams/renderer-scene-encoding-semantics-audit-v1-todo.md`
+- `docs/workstreams/renderer-scene-encoding-semantics-audit-v1-milestones.md`
 - `docs/workstreams/renderer-upstream-semantics-parity-v1-design.md`
 - `docs/workstreams/renderer-upstream-semantics-parity-v1-todo.md`
 - `docs/workstreams/renderer-upstream-semantics-parity-v1-milestones.md`

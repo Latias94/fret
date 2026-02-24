@@ -187,6 +187,8 @@ impl ViewGizmoLabelCache {
             line_height_policy: Default::default(),
             letter_spacing_em: None,
             vertical_placement: TextVerticalPlacement::CenterMetricsBox,
+            leading_distribution: Default::default(),
+            strut_style: Default::default(),
         };
         let constraints = TextConstraints {
             max_width: None,
@@ -4251,6 +4253,8 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     line_height_policy: Default::default(),
                     letter_spacing_em: None,
                     vertical_placement: TextVerticalPlacement::CenterMetricsBox,
+                    leading_distribution: Default::default(),
+                    strut_style: Default::default(),
                 };
                 let constraints = TextConstraints {
                     max_width: Some(Px(bounds.size.width.0 - 24.0)),
@@ -4444,6 +4448,8 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     line_height_policy: Default::default(),
                     letter_spacing_em: None,
                     vertical_placement: TextVerticalPlacement::CenterMetricsBox,
+                    leading_distribution: Default::default(),
+                    strut_style: Default::default(),
                 };
                 let constraints = TextConstraints {
                     max_width: Some(Px(340.0)),

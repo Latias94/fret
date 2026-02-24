@@ -404,7 +404,7 @@ fn image_fit_cover_encodes_cropped_uvs() {
         },
     );
 
-    let encoding = &renderer.scene_encoding_cache;
+    let encoding = renderer.scene_encoding_cache.cache();
     let [super::types::OrderedDraw::Image(draw)] = encoding.ordered_draws.as_slice() else {
         panic!("expected exactly one image draw");
     };
@@ -496,7 +496,7 @@ fn image_fit_contain_encodes_centered_draw_rect() {
         },
     );
 
-    let encoding = &renderer.scene_encoding_cache;
+    let encoding = renderer.scene_encoding_cache.cache();
     let [super::types::OrderedDraw::Image(draw)] = encoding.ordered_draws.as_slice() else {
         panic!("expected exactly one image draw");
     };
@@ -550,14 +550,17 @@ fn scene_encoding_cache_is_busted_by_text_quality_changes() {
 
     let _ = renderer.render_scene(&ctx.device, &ctx.queue, make_params());
     let key0 = renderer
-        .scene_encoding_cache_key
+        .scene_encoding_cache
+        .cache_key()
         .expect("scene encoding key");
     assert_eq!(renderer.perf.scene_encoding_cache_hits, 0);
     assert_eq!(renderer.perf.scene_encoding_cache_misses, 1);
+    assert_eq!(renderer.perf.scene_encoding_cache_last_miss_reasons, 1 << 0);
 
     let _ = renderer.render_scene(&ctx.device, &ctx.queue, make_params());
     let key1 = renderer
-        .scene_encoding_cache_key
+        .scene_encoding_cache
+        .cache_key()
         .expect("scene encoding key");
     assert_eq!(key1, key0);
     assert_eq!(renderer.perf.scene_encoding_cache_hits, 1);
@@ -570,8 +573,15 @@ fn scene_encoding_cache_is_busted_by_text_quality_changes() {
 
     let _ = renderer.render_scene(&ctx.device, &ctx.queue, make_params());
     let key2 = renderer
-        .scene_encoding_cache_key
+        .scene_encoding_cache
+        .cache_key()
         .expect("scene encoding key");
     assert_ne!(key2, key0);
     assert_eq!(renderer.perf.scene_encoding_cache_misses, 2);
+    assert_ne!(renderer.perf.scene_encoding_cache_last_miss_reasons, 0);
+    assert_ne!(renderer.perf.scene_encoding_cache_last_miss_reasons, 1 << 0);
+    assert_ne!(
+        renderer.perf.scene_encoding_cache_last_miss_reasons & (1 << 9),
+        0
+    );
 }

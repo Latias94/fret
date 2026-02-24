@@ -41,7 +41,6 @@ pub struct WorkflowNodeHandles {
 /// - Upstream uses `@xyflow/react` handles. In Fret we expose the **presence** of handles as a
 ///   styling seam only (small indicators), not as an interaction engine.
 /// - Apps own graph layout, hit-testing, drag/drop, and zoom/pan policy.
-#[derive(Clone)]
 pub struct WorkflowNode {
     handles: WorkflowNodeHandles,
     children: Vec<AnyElement>,
@@ -224,7 +223,6 @@ fn workflow_node_handle_indicator<H: UiHost>(
 /// AI Elements-aligned workflow `NodeHeader` chrome (UI-only).
 ///
 /// Upstream reference: `repo-ref/ai-elements/packages/elements/src/node.tsx` (`NodeHeader`).
-#[derive(Clone)]
 pub struct WorkflowNodeHeader {
     children: Vec<AnyElement>,
     test_id: Option<Arc<str>>,
@@ -343,7 +341,6 @@ impl WorkflowNodeHeader {
 /// Marker wrapper for a right-aligned action inside [`WorkflowNodeHeader`].
 ///
 /// This mirrors the upstream `NodeAction` which is backed by `CardAction`.
-#[derive(Clone)]
 pub struct WorkflowNodeAction {
     children: Vec<AnyElement>,
     test_id: Option<Arc<str>>,
@@ -397,7 +394,6 @@ pub type WorkflowNodeDescription = fret_ui_shadcn::CardDescription;
 /// AI Elements-aligned workflow `NodeContent` chrome (UI-only).
 ///
 /// Upstream reference: `repo-ref/ai-elements/packages/elements/src/node.tsx` (`NodeContent`).
-#[derive(Clone)]
 pub struct WorkflowNodeContent {
     children: Vec<AnyElement>,
     test_id: Option<Arc<str>>,
@@ -459,7 +455,6 @@ impl WorkflowNodeContent {
 /// AI Elements-aligned workflow `NodeFooter` chrome (UI-only).
 ///
 /// Upstream reference: `repo-ref/ai-elements/packages/elements/src/node.tsx` (`NodeFooter`).
-#[derive(Clone)]
 pub struct WorkflowNodeFooter {
     children: Vec<AnyElement>,
     test_id: Option<Arc<str>>,

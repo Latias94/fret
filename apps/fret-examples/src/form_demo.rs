@@ -358,7 +358,7 @@ impl WinitAppDriver for FormDemoDriver {
                                 },
                                 move |cx| {
                                     vec![
-                                        header.clone(),
+                                        header,
                                         cx.container(
                                             ContainerProps {
                                                 layout: LayoutStyle {
@@ -372,7 +372,7 @@ impl WinitAppDriver for FormDemoDriver {
                                                 ),
                                                 ..Default::default()
                                             },
-                                            move |_cx| vec![form.clone()],
+                                            move |_cx| vec![form],
                                         ),
                                     ]
                                 },

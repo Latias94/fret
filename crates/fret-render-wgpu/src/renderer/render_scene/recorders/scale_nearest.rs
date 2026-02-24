@@ -26,7 +26,8 @@ pub(in super::super) fn record_scale_nearest_pass(
     let renderer = &mut *exec.renderer;
 
     let scale = pass.scale.max(1);
-    let scale_param_offset = u64::from(*scale_param_cursor) * renderer.scale_param_stride;
+    let scale_param_offset =
+        u64::from(*scale_param_cursor) * renderer.effect_params.scale_param_stride;
     let scale_param_offset_u32 = scale_param_offset as u32;
     *scale_param_cursor = scale_param_cursor.saturating_add(1);
     let params = ScaleParamsUniform {
@@ -38,7 +39,7 @@ pub(in super::super) fn record_scale_nearest_pass(
         _pad2: 0,
     };
     queue.write_buffer(
-        &renderer.scale_param_buffer,
+        &renderer.effect_params.scale_param_buffer,
         scale_param_offset,
         bytemuck::bytes_of(&params),
     );
@@ -50,7 +51,7 @@ pub(in super::super) fn record_scale_nearest_pass(
     let scale_param_size_nz =
         std::num::NonZeroU64::new(scale_param_size).expect("scale params size");
     let scale_param_binding = wgpu::BindingResource::Buffer(wgpu::BufferBinding {
-        buffer: &renderer.scale_param_buffer,
+        buffer: &renderer.effect_params.scale_param_buffer,
         offset: 0,
         size: Some(scale_param_size_nz),
     });

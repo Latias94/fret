@@ -205,16 +205,14 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
                 .into_element_with_open_model(
                     cx,
                     |cx, open, _is_open| {
-                        shadcn::Button::new("Toggle")
+                        shadcn::Button::new("")
+                            .a11y_label("Toggle")
                             .variant(shadcn::ButtonVariant::Ghost)
                             .size(shadcn::ButtonSize::Icon)
                             .refine_layout(
                                 LayoutRefinement::default().w_px(Px(32.0)).h_px(Px(32.0)),
                             )
-                            .children([shadcn::icon::icon(
-                                cx,
-                                fret_icons::IconId::new_static("lucide.chevrons-up-down"),
-                            )])
+                            .icon(fret_icons::IconId::new_static("lucide.chevrons-up-down"))
                             .toggle_model(open)
                             .test_id(format!("{test_id_prefix}-trigger"))
                             .into_element(cx)
@@ -226,16 +224,14 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
                 .into_element_with_open_model(
                     cx,
                     |cx, open, _is_open| {
-                        shadcn::Button::new("Toggle")
+                        shadcn::Button::new("")
+                            .a11y_label("Toggle")
                             .variant(shadcn::ButtonVariant::Ghost)
                             .size(shadcn::ButtonSize::Icon)
                             .refine_layout(
                                 LayoutRefinement::default().w_px(Px(32.0)).h_px(Px(32.0)),
                             )
-                            .children([shadcn::icon::icon(
-                                cx,
-                                fret_icons::IconId::new_static("lucide.chevrons-up-down"),
-                            )])
+                            .icon(fret_icons::IconId::new_static("lucide.chevrons-up-down"))
                             .toggle_model(open)
                             .test_id(format!("{test_id_prefix}-trigger"))
                             .into_element(cx)
@@ -438,10 +434,11 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
                 } else {
                     "lucide.maximize"
                 });
-                let toggle = shadcn::Button::new("Toggle details")
+                let toggle = shadcn::Button::new("")
+                    .a11y_label("Toggle details")
                     .variant(shadcn::ButtonVariant::Outline)
                     .size(shadcn::ButtonSize::IconSm)
-                    .children([shadcn::icon::icon(cx, icon)])
+                    .icon(icon)
                     .toggle_model(open)
                     .test_id("ui-gallery-collapsible-settings-trigger")
                     .into_element(cx);

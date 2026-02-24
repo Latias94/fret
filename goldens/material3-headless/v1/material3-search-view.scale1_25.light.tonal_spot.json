@@ -63,8 +63,14 @@
           "order": 0
         },
         {
+          "kind": "push_clip_rect"
+        },
+        {
           "kind": "text",
           "order": 0
+        },
+        {
+          "kind": "pop_clip"
         },
         {
           "kind": "text",
@@ -546,8 +552,14 @@
           "order": 0
         },
         {
+          "kind": "push_clip_rect"
+        },
+        {
           "kind": "text",
           "order": 0
+        },
+        {
+          "kind": "pop_clip"
         },
         {
           "kind": "text",
@@ -1032,7 +1044,7 @@
           "rect": [
             400,
             800,
-            0,
+            264,
             8
           ],
           "background": [

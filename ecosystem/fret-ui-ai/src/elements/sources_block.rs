@@ -401,7 +401,7 @@ impl SourcesBlock {
                 )
             },
             move |cx| {
-                let content = CollapsibleContent::new(vec![list.clone()])
+                let content = CollapsibleContent::new(vec![list])
                     .refine_style(chrome.clone())
                     .refine_layout(LayoutRefinement::default().mt(Space::N3))
                     .into_element(cx);

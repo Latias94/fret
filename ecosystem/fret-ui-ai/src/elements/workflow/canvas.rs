@@ -23,7 +23,6 @@ use fret_canvas::view::PanZoom2D;
 /// - Upstream is `@xyflow/react`-backed (`ReactFlow` + `Background`).
 /// - In Fret this is a host surface that wires a pan/zoom canvas background and an overlay slot.
 /// - Apps own the actual graph engine (nodes/edges/layout/hit-testing).
-#[derive(Clone)]
 pub struct WorkflowCanvas {
     children: Vec<AnyElement>,
     test_id: Option<Arc<str>>,

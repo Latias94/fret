@@ -41,7 +41,7 @@ impl From<LocalScissorRect> for JsonDumpScissorRect {
 
 #[derive(Debug, serde::Serialize)]
 struct JsonDumpMaskRef {
-    target: String,
+    target: &'static str,
     size: [u32; 2],
     viewport_rect: JsonDumpScissorRect,
 }
@@ -49,7 +49,7 @@ struct JsonDumpMaskRef {
 impl From<MaskRef> for JsonDumpMaskRef {
     fn from(m: MaskRef) -> Self {
         Self {
-            target: plan_target_name(m.target).to_string(),
+            target: plan_target_name(m.target),
             size: [m.size.0, m.size.1],
             viewport_rect: m.viewport_rect.into(),
         }
@@ -183,7 +183,7 @@ fn encode_effect_marker(m: EffectMarker) -> JsonDumpEffectMarker {
 enum JsonDumpPass {
     SceneDrawRange {
         segment: usize,
-        target: String,
+        target: &'static str,
         target_origin: [u32; 2],
         target_size: [u32; 2],
         load: JsonDumpLoadOp,
@@ -191,7 +191,7 @@ enum JsonDumpPass {
     },
     PathMsaaBatch {
         segment: usize,
-        target: String,
+        target: &'static str,
         target_origin: [u32; 2],
         target_size: [u32; 2],
         draw_range: [usize; 2],
@@ -201,7 +201,7 @@ enum JsonDumpPass {
         load: JsonDumpLoadOp,
     },
     PathClipMask {
-        dst: String,
+        dst: &'static str,
         dst_origin: [u32; 2],
         dst_size: [u32; 2],
         scissor: JsonDumpScissorRect,
@@ -212,8 +212,8 @@ enum JsonDumpPass {
         load: JsonDumpLoadOp,
     },
     FullscreenBlit {
-        src: String,
-        dst: String,
+        src: &'static str,
+        dst: &'static str,
         src_size: [u32; 2],
         dst_size: [u32; 2],
         dst_scissor: Option<JsonDumpScissorRect>,
@@ -221,8 +221,8 @@ enum JsonDumpPass {
         load: JsonDumpLoadOp,
     },
     CompositePremul {
-        src: String,
-        dst: String,
+        src: &'static str,
+        dst: &'static str,
         src_size: [u32; 2],
         dst_size: [u32; 2],
         src_origin: [u32; 2],
@@ -235,9 +235,9 @@ enum JsonDumpPass {
         load: JsonDumpLoadOp,
     },
     ScaleNearest {
-        mode: String,
-        src: String,
-        dst: String,
+        mode: &'static str,
+        src: &'static str,
+        dst: &'static str,
         src_size: [u32; 2],
         dst_size: [u32; 2],
         src_origin: [u32; 2],
@@ -250,9 +250,9 @@ enum JsonDumpPass {
         load: JsonDumpLoadOp,
     },
     Blur {
-        axis: String,
-        src: String,
-        dst: String,
+        axis: &'static str,
+        src: &'static str,
+        dst: &'static str,
         src_size: [u32; 2],
         dst_size: [u32; 2],
         dst_scissor: Option<JsonDumpScissorRect>,
@@ -262,8 +262,8 @@ enum JsonDumpPass {
         load: JsonDumpLoadOp,
     },
     BackdropWarp {
-        src: String,
-        dst: String,
+        src: &'static str,
+        dst: &'static str,
         src_size: [u32; 2],
         dst_size: [u32; 2],
         origin_px: [u32; 2],
@@ -275,12 +275,12 @@ enum JsonDumpPass {
         scale_px: f32,
         phase: f32,
         chromatic_aberration_px: f32,
-        warp_kind: String,
+        warp_kind: &'static str,
         load: JsonDumpLoadOp,
     },
     ColorAdjust {
-        src: String,
-        dst: String,
+        src: &'static str,
+        dst: &'static str,
         src_size: [u32; 2],
         dst_size: [u32; 2],
         dst_scissor: Option<JsonDumpScissorRect>,
@@ -293,8 +293,8 @@ enum JsonDumpPass {
         load: JsonDumpLoadOp,
     },
     ColorMatrix {
-        src: String,
-        dst: String,
+        src: &'static str,
+        dst: &'static str,
         src_size: [u32; 2],
         dst_size: [u32; 2],
         dst_scissor: Option<JsonDumpScissorRect>,
@@ -305,8 +305,8 @@ enum JsonDumpPass {
         load: JsonDumpLoadOp,
     },
     AlphaThreshold {
-        src: String,
-        dst: String,
+        src: &'static str,
+        dst: &'static str,
         src_size: [u32; 2],
         dst_size: [u32; 2],
         dst_scissor: Option<JsonDumpScissorRect>,
@@ -318,8 +318,8 @@ enum JsonDumpPass {
         load: JsonDumpLoadOp,
     },
     DropShadow {
-        src: String,
-        dst: String,
+        src: &'static str,
+        dst: &'static str,
         src_size: [u32; 2],
         dst_size: [u32; 2],
         dst_scissor: Option<JsonDumpScissorRect>,
@@ -331,7 +331,7 @@ enum JsonDumpPass {
         load: JsonDumpLoadOp,
     },
     ClipMask {
-        dst: String,
+        dst: &'static str,
         dst_size: [u32; 2],
         dst_scissor: Option<JsonDumpScissorRect>,
         dst_scissor_space: Option<&'static str>,
@@ -339,7 +339,7 @@ enum JsonDumpPass {
         load: JsonDumpLoadOp,
     },
     ReleaseTarget {
-        target: String,
+        target: &'static str,
     },
 }
 
@@ -359,7 +359,7 @@ fn encode_pass(p: &RenderPlanPass) -> JsonDumpPass {
     match p {
         RenderPlanPass::SceneDrawRange(pass) => JsonDumpPass::SceneDrawRange {
             segment: pass.segment.0,
-            target: plan_target_name(pass.target).to_string(),
+            target: plan_target_name(pass.target),
             target_origin: [pass.target_origin.0, pass.target_origin.1],
             target_size: [pass.target_size.0, pass.target_size.1],
             load: encode_load_op(pass.load),
@@ -367,7 +367,7 @@ fn encode_pass(p: &RenderPlanPass) -> JsonDumpPass {
         },
         RenderPlanPass::PathMsaaBatch(pass) => JsonDumpPass::PathMsaaBatch {
             segment: pass.segment.0,
-            target: plan_target_name(pass.target).to_string(),
+            target: plan_target_name(pass.target),
             target_origin: [pass.target_origin.0, pass.target_origin.1],
             target_size: [pass.target_size.0, pass.target_size.1],
             draw_range: [pass.draw_range.start, pass.draw_range.end],
@@ -377,7 +377,7 @@ fn encode_pass(p: &RenderPlanPass) -> JsonDumpPass {
             load: encode_load_op(pass.load),
         },
         RenderPlanPass::PathClipMask(pass) => JsonDumpPass::PathClipMask {
-            dst: plan_target_name(pass.dst).to_string(),
+            dst: plan_target_name(pass.dst),
             dst_origin: [pass.dst_origin.0, pass.dst_origin.1],
             dst_size: [pass.dst_size.0, pass.dst_size.1],
             scissor: pass.scissor.into(),
@@ -388,8 +388,8 @@ fn encode_pass(p: &RenderPlanPass) -> JsonDumpPass {
             load: encode_load_op(pass.load),
         },
         RenderPlanPass::FullscreenBlit(pass) => JsonDumpPass::FullscreenBlit {
-            src: plan_target_name(pass.src).to_string(),
-            dst: plan_target_name(pass.dst).to_string(),
+            src: plan_target_name(pass.src),
+            dst: plan_target_name(pass.dst),
             src_size: [pass.src_size.0, pass.src_size.1],
             dst_size: [pass.dst_size.0, pass.dst_size.1],
             dst_scissor: pass.dst_scissor.map(Into::into),
@@ -397,8 +397,8 @@ fn encode_pass(p: &RenderPlanPass) -> JsonDumpPass {
             load: encode_load_op(pass.load),
         },
         RenderPlanPass::CompositePremul(pass) => JsonDumpPass::CompositePremul {
-            src: plan_target_name(pass.src).to_string(),
-            dst: plan_target_name(pass.dst).to_string(),
+            src: plan_target_name(pass.src),
+            dst: plan_target_name(pass.dst),
             src_size: [pass.src_size.0, pass.src_size.1],
             dst_size: [pass.dst_size.0, pass.dst_size.1],
             src_origin: [pass.src_origin.0, pass.src_origin.1],
@@ -412,11 +412,11 @@ fn encode_pass(p: &RenderPlanPass) -> JsonDumpPass {
         },
         RenderPlanPass::ScaleNearest(pass) => JsonDumpPass::ScaleNearest {
             mode: match pass.mode {
-                ScaleMode::Downsample => "Downsample".to_string(),
-                ScaleMode::Upscale => "Upscale".to_string(),
+                ScaleMode::Downsample => "Downsample",
+                ScaleMode::Upscale => "Upscale",
             },
-            src: plan_target_name(pass.src).to_string(),
-            dst: plan_target_name(pass.dst).to_string(),
+            src: plan_target_name(pass.src),
+            dst: plan_target_name(pass.dst),
             src_size: [pass.src_size.0, pass.src_size.1],
             dst_size: [pass.dst_size.0, pass.dst_size.1],
             src_origin: [pass.src_origin.0, pass.src_origin.1],
@@ -430,11 +430,11 @@ fn encode_pass(p: &RenderPlanPass) -> JsonDumpPass {
         },
         RenderPlanPass::Blur(pass) => JsonDumpPass::Blur {
             axis: match pass.axis {
-                BlurAxis::Horizontal => "Horizontal".to_string(),
-                BlurAxis::Vertical => "Vertical".to_string(),
+                BlurAxis::Horizontal => "Horizontal",
+                BlurAxis::Vertical => "Vertical",
             },
-            src: plan_target_name(pass.src).to_string(),
-            dst: plan_target_name(pass.dst).to_string(),
+            src: plan_target_name(pass.src),
+            dst: plan_target_name(pass.dst),
             src_size: [pass.src_size.0, pass.src_size.1],
             dst_size: [pass.dst_size.0, pass.dst_size.1],
             dst_scissor: pass.dst_scissor.map(Into::into),
@@ -444,8 +444,8 @@ fn encode_pass(p: &RenderPlanPass) -> JsonDumpPass {
             load: encode_load_op(pass.load),
         },
         RenderPlanPass::BackdropWarp(pass) => JsonDumpPass::BackdropWarp {
-            src: plan_target_name(pass.src).to_string(),
-            dst: plan_target_name(pass.dst).to_string(),
+            src: plan_target_name(pass.src),
+            dst: plan_target_name(pass.dst),
             src_size: [pass.src_size.0, pass.src_size.1],
             dst_size: [pass.dst_size.0, pass.dst_size.1],
             origin_px: [pass.origin_px.0, pass.origin_px.1],
@@ -458,14 +458,14 @@ fn encode_pass(p: &RenderPlanPass) -> JsonDumpPass {
             phase: pass.phase,
             chromatic_aberration_px: pass.chromatic_aberration_px,
             warp_kind: match pass.kind {
-                fret_core::scene::BackdropWarpKindV1::Wave => "Wave".to_string(),
-                fret_core::scene::BackdropWarpKindV1::LensReserved => "LensReserved".to_string(),
+                fret_core::scene::BackdropWarpKindV1::Wave => "Wave",
+                fret_core::scene::BackdropWarpKindV1::LensReserved => "LensReserved",
             },
             load: encode_load_op(pass.load),
         },
         RenderPlanPass::ColorAdjust(pass) => JsonDumpPass::ColorAdjust {
-            src: plan_target_name(pass.src).to_string(),
-            dst: plan_target_name(pass.dst).to_string(),
+            src: plan_target_name(pass.src),
+            dst: plan_target_name(pass.dst),
             src_size: [pass.src_size.0, pass.src_size.1],
             dst_size: [pass.dst_size.0, pass.dst_size.1],
             dst_scissor: pass.dst_scissor.map(Into::into),
@@ -478,8 +478,8 @@ fn encode_pass(p: &RenderPlanPass) -> JsonDumpPass {
             load: encode_load_op(pass.load),
         },
         RenderPlanPass::ColorMatrix(pass) => JsonDumpPass::ColorMatrix {
-            src: plan_target_name(pass.src).to_string(),
-            dst: plan_target_name(pass.dst).to_string(),
+            src: plan_target_name(pass.src),
+            dst: plan_target_name(pass.dst),
             src_size: [pass.src_size.0, pass.src_size.1],
             dst_size: [pass.dst_size.0, pass.dst_size.1],
             dst_scissor: pass.dst_scissor.map(Into::into),
@@ -490,8 +490,8 @@ fn encode_pass(p: &RenderPlanPass) -> JsonDumpPass {
             load: encode_load_op(pass.load),
         },
         RenderPlanPass::AlphaThreshold(pass) => JsonDumpPass::AlphaThreshold {
-            src: plan_target_name(pass.src).to_string(),
-            dst: plan_target_name(pass.dst).to_string(),
+            src: plan_target_name(pass.src),
+            dst: plan_target_name(pass.dst),
             src_size: [pass.src_size.0, pass.src_size.1],
             dst_size: [pass.dst_size.0, pass.dst_size.1],
             dst_scissor: pass.dst_scissor.map(Into::into),
@@ -503,8 +503,8 @@ fn encode_pass(p: &RenderPlanPass) -> JsonDumpPass {
             load: encode_load_op(pass.load),
         },
         RenderPlanPass::DropShadow(pass) => JsonDumpPass::DropShadow {
-            src: plan_target_name(pass.src).to_string(),
-            dst: plan_target_name(pass.dst).to_string(),
+            src: plan_target_name(pass.src),
+            dst: plan_target_name(pass.dst),
             src_size: [pass.src_size.0, pass.src_size.1],
             dst_size: [pass.dst_size.0, pass.dst_size.1],
             dst_scissor: pass.dst_scissor.map(Into::into),
@@ -516,7 +516,7 @@ fn encode_pass(p: &RenderPlanPass) -> JsonDumpPass {
             load: encode_load_op(pass.load),
         },
         RenderPlanPass::ClipMask(pass) => JsonDumpPass::ClipMask {
-            dst: plan_target_name(pass.dst).to_string(),
+            dst: plan_target_name(pass.dst),
             dst_size: [pass.dst_size.0, pass.dst_size.1],
             dst_scissor: pass.dst_scissor.map(Into::into),
             dst_scissor_space: pass.dst_scissor.map(|_| "dst_local"),
@@ -524,7 +524,7 @@ fn encode_pass(p: &RenderPlanPass) -> JsonDumpPass {
             load: encode_load_op(pass.load),
         },
         RenderPlanPass::ReleaseTarget(t) => JsonDumpPass::ReleaseTarget {
-            target: plan_target_name(*t).to_string(),
+            target: plan_target_name(*t),
         },
     }
 }
@@ -616,26 +616,36 @@ fn pass_counts(plan: &RenderPlan) -> JsonDumpCounts {
 }
 
 #[derive(Debug, serde::Serialize)]
-struct RenderPlanJsonDump {
+struct RenderPlanJsonDump<'a> {
     schema_version: u32,
     frame_index: u64,
     viewport_size: [u32; 2],
     format: String,
     postprocess: JsonDumpDebugPostprocess,
     ordered_draws_len: usize,
-    segments: Vec<JsonDumpSegment>,
-    effect_markers: Vec<JsonDumpEffectMarker>,
+    segments: &'a [JsonDumpSegment],
+    effect_markers: &'a [JsonDumpEffectMarker],
     pass_counts: JsonDumpCounts,
     estimated_peak_intermediate_bytes: u64,
-    degradations: Vec<JsonDumpDegradation>,
-    passes: Vec<JsonDumpPass>,
+    degradations: &'a [JsonDumpDegradation],
+    passes: &'a [JsonDumpPass],
 }
 
 #[derive(Debug, serde::Serialize)]
 struct JsonDumpDegradation {
     draw_ix: usize,
-    kind: String,
-    reason: String,
+    kind: &'static str,
+    reason: &'static str,
+}
+
+#[derive(Debug, Default)]
+pub(super) struct RenderPlanJsonDumpScratch {
+    segment_pass_counts: Vec<JsonDumpSegmentPassCounts>,
+    segments: Vec<JsonDumpSegment>,
+    effect_markers: Vec<JsonDumpEffectMarker>,
+    degradations: Vec<JsonDumpDegradation>,
+    passes: Vec<JsonDumpPass>,
+    bytes: Vec<u8>,
 }
 
 fn encode_degradation(d: RenderPlanDegradation) -> JsonDumpDegradation {
@@ -654,8 +664,8 @@ fn encode_degradation(d: RenderPlanDegradation) -> JsonDumpDegradation {
     };
     JsonDumpDegradation {
         draw_ix: d.draw_ix,
-        kind: kind.to_string(),
-        reason: reason.to_string(),
+        kind,
+        reason,
     }
 }
 
@@ -707,32 +717,82 @@ pub(super) fn maybe_dump_render_plan_json(
     postprocess: DebugPostprocess,
     ordered_draws_len: usize,
     effect_markers: &[EffectMarker],
+    dump_scratch: &mut RenderPlanJsonDumpScratch,
 ) {
     if !should_dump_frame(frame_index) {
         return;
     }
 
-    let mut segment_pass_counts: Vec<JsonDumpSegmentPassCounts> = vec![
+    dump_scratch.segment_pass_counts.resize(
+        plan.segments.len(),
         JsonDumpSegmentPassCounts {
             scene_draw_range: 0,
             path_msaa_batch: 0,
-        };
-        plan.segments.len()
-    ];
+        },
+    );
+    dump_scratch
+        .segment_pass_counts
+        .fill(JsonDumpSegmentPassCounts {
+            scene_draw_range: 0,
+            path_msaa_batch: 0,
+        });
     for p in &plan.passes {
         match p {
             RenderPlanPass::SceneDrawRange(p) => {
-                if let Some(c) = segment_pass_counts.get_mut(p.segment.0) {
+                if let Some(c) = dump_scratch.segment_pass_counts.get_mut(p.segment.0) {
                     c.scene_draw_range += 1;
                 }
             }
             RenderPlanPass::PathMsaaBatch(p) => {
-                if let Some(c) = segment_pass_counts.get_mut(p.segment.0) {
+                if let Some(c) = dump_scratch.segment_pass_counts.get_mut(p.segment.0) {
                     c.path_msaa_batch += 1;
                 }
             }
             _ => {}
         }
+    }
+
+    dump_scratch.segments.clear();
+    dump_scratch.segments.reserve(plan.segments.len());
+    for (ix, s) in plan.segments.iter().enumerate() {
+        dump_scratch.segments.push(JsonDumpSegment {
+            id: s.id.0,
+            draw_range: [s.draw_range.start, s.draw_range.end],
+            start_uniform_index: s.start_uniform_index,
+            start_uniform_fingerprint: format!("0x{:016x}", s.start_uniform_fingerprint),
+            flags: JsonDumpSegmentFlags {
+                has_quad: s.flags.has_quad,
+                has_viewport: s.flags.has_viewport,
+                has_image: s.flags.has_image,
+                has_mask: s.flags.has_mask,
+                has_text: s.flags.has_text,
+                has_path: s.flags.has_path,
+            },
+            pass_counts: dump_scratch.segment_pass_counts.get(ix).copied().unwrap_or(
+                JsonDumpSegmentPassCounts {
+                    scene_draw_range: 0,
+                    path_msaa_batch: 0,
+                },
+            ),
+        });
+    }
+
+    dump_scratch.effect_markers.clear();
+    dump_scratch.effect_markers.reserve(effect_markers.len());
+    for m in effect_markers.iter().copied() {
+        dump_scratch.effect_markers.push(encode_effect_marker(m));
+    }
+
+    dump_scratch.degradations.clear();
+    dump_scratch.degradations.reserve(plan.degradations.len());
+    for d in plan.degradations.iter().copied() {
+        dump_scratch.degradations.push(encode_degradation(d));
+    }
+
+    dump_scratch.passes.clear();
+    dump_scratch.passes.reserve(plan.passes.len());
+    for p in &plan.passes {
+        dump_scratch.passes.push(encode_pass(p));
     }
 
     let dir = dump_dir_from_env();
@@ -745,52 +805,20 @@ pub(super) fn maybe_dump_render_plan_json(
         format: format!("{format:?}"),
         postprocess: encode_debug_postprocess(postprocess),
         ordered_draws_len,
-        segments: plan
-            .segments
-            .iter()
-            .enumerate()
-            .map(|(ix, s)| JsonDumpSegment {
-                id: s.id.0,
-                draw_range: [s.draw_range.start, s.draw_range.end],
-                start_uniform_index: s.start_uniform_index,
-                start_uniform_fingerprint: format!("0x{:016x}", s.start_uniform_fingerprint),
-                flags: JsonDumpSegmentFlags {
-                    has_quad: s.flags.has_quad,
-                    has_viewport: s.flags.has_viewport,
-                    has_image: s.flags.has_image,
-                    has_mask: s.flags.has_mask,
-                    has_text: s.flags.has_text,
-                    has_path: s.flags.has_path,
-                },
-                pass_counts: segment_pass_counts.get(ix).cloned().unwrap_or(
-                    JsonDumpSegmentPassCounts {
-                        scene_draw_range: 0,
-                        path_msaa_batch: 0,
-                    },
-                ),
-            })
-            .collect(),
-        effect_markers: effect_markers
-            .iter()
-            .copied()
-            .map(encode_effect_marker)
-            .collect(),
+        segments: &dump_scratch.segments,
+        effect_markers: &dump_scratch.effect_markers,
         pass_counts: pass_counts(plan),
         estimated_peak_intermediate_bytes: plan.compile_stats.estimated_peak_intermediate_bytes,
-        degradations: plan
-            .degradations
-            .iter()
-            .copied()
-            .map(encode_degradation)
-            .collect(),
-        passes: plan.passes.iter().map(encode_pass).collect(),
+        degradations: &dump_scratch.degradations,
+        passes: &dump_scratch.passes,
     };
 
     let file = dir.join(format!("renderplan.frame{frame_index}.json"));
-    let Ok(bytes) = serde_json::to_vec_pretty(&dump) else {
+    dump_scratch.bytes.clear();
+    if serde_json::to_writer_pretty(&mut dump_scratch.bytes, &dump).is_err() {
         return;
-    };
-    let _ = std::fs::write(&file, bytes);
+    }
+    let _ = std::fs::write(&file, &dump_scratch.bytes);
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -802,5 +830,6 @@ pub(super) fn maybe_dump_render_plan_json(
     _postprocess: DebugPostprocess,
     _ordered_draws_len: usize,
     _effect_markers: &[EffectMarker],
+    _dump_scratch: &mut RenderPlanJsonDumpScratch,
 ) {
 }

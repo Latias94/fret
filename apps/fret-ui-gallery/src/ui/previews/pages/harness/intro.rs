@@ -7,10 +7,11 @@ pub(in crate::ui) fn preview_intro(
 ) -> Vec<AnyElement> {
     let card = |cx: &mut ElementContext<'_, App>, title: &str, desc: &str| -> AnyElement {
         shadcn::Card::new(vec![
-            shadcn::CardHeader::new(vec![shadcn::CardTitle::new(title).into_element(cx)])
-                .into_element(cx),
-            shadcn::CardContent::new(vec![ui::text_block(cx, desc).into_element(cx)])
-                .into_element(cx),
+            shadcn::CardHeader::new(vec![
+                shadcn::CardTitle::new(title).into_element(cx),
+                shadcn::CardDescription::new(desc).into_element(cx),
+            ])
+            .into_element(cx),
         ])
         .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
         .into_element(cx)
@@ -49,6 +50,7 @@ pub(in crate::ui) fn preview_intro(
     );
 
     let note = {
+        let text_color = ColorRef::Color(theme.color_token("muted-foreground"));
         let props = decl_style::container_props(
             theme,
             ChromeRefinement::default()
@@ -58,7 +60,9 @@ pub(in crate::ui) fn preview_intro(
             LayoutRefinement::default().w_full().min_w_0(),
         );
         cx.container(props, |cx| {
-            vec![ui::text_block(cx, "Phase 1: fixed two-pane layout + hardcoded docs strings (focus on validating component usability). Docking/multi-window views will come later.").into_element(cx)]
+            vec![ui::text_block(cx, "Phase 1: fixed two-pane layout + hardcoded docs strings (focus on validating component usability). Docking/multi-window views will come later.")
+                .text_color(text_color)
+                .into_element(cx)]
         })
     };
     let note = note.attach_semantics(

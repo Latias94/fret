@@ -228,6 +228,7 @@ fn page_preview(
     let motion_preset_open = models.motion_preset_open.clone();
     let view_cache_enabled = models.view_cache_enabled.clone();
     let view_cache_cache_shell = models.view_cache_cache_shell.clone();
+    let view_cache_cache_content = models.view_cache_cache_content.clone();
     let view_cache_inner_enabled = models.view_cache_inner_enabled.clone();
     let view_cache_popover_open = models.view_cache_popover_open.clone();
     let view_cache_continuous = models.view_cache_continuous.clone();
@@ -312,6 +313,7 @@ fn page_preview(
             theme,
             view_cache_enabled,
             view_cache_cache_shell,
+            view_cache_cache_content,
             view_cache_inner_enabled,
             view_cache_popover_open,
             view_cache_continuous,
@@ -476,6 +478,7 @@ fn page_preview(
         PAGE_MAGIC_BORDER_BEAM => preview_magic_border_beam(cx),
         PAGE_MAGIC_DOCK => preview_magic_dock(cx),
         PAGE_MAGIC_PATTERNS => preview_magic_patterns(cx),
+        PAGE_MAGIC_PATTERNS_TORTURE => preview_magic_patterns_torture(cx),
         PAGE_MAGIC_SPARKLES_TEXT => preview_magic_sparkles_text(cx),
         PAGE_MAGIC_BLOOM => preview_magic_bloom(cx),
         PAGE_FIELD => preview_field(cx),

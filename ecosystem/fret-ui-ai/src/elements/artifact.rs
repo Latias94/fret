@@ -64,7 +64,6 @@ fn action_button_style() -> ButtonStyle {
     )
 }
 
-#[derive(Clone)]
 /// Structured container for displaying generated content with header actions (AI Elements `artifact.tsx`).
 pub struct Artifact {
     children: Vec<AnyElement>,
@@ -151,7 +150,6 @@ impl Artifact {
     }
 }
 
-#[derive(Clone)]
 /// Header row (title/description + action group) aligned with AI Elements `ArtifactHeader`.
 pub struct ArtifactHeader {
     children: Vec<AnyElement>,
@@ -366,7 +364,6 @@ impl ArtifactDescription {
     }
 }
 
-#[derive(Clone)]
 /// Action group row aligned with AI Elements `ArtifactActions`.
 pub struct ArtifactActions {
     children: Vec<AnyElement>,
@@ -429,7 +426,6 @@ impl ArtifactActions {
     }
 }
 
-#[derive(Clone)]
 /// A single action button with an optional tooltip (AI Elements `ArtifactAction`).
 pub struct ArtifactAction {
     tooltip: Option<Arc<str>>,
@@ -639,7 +635,6 @@ impl ArtifactClose {
     }
 }
 
-#[derive(Clone)]
 /// Scrollable content region aligned with AI Elements `ArtifactContent`.
 pub struct ArtifactContent {
     children: Vec<AnyElement>,

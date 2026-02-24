@@ -1,6 +1,8 @@
 use bytemuck::{Pod, Zeroable};
+use fret_core::geometry::Transform2D;
 use fret_core::scene::MAX_STOPS;
 use fret_core::scene::UvRect;
+use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -303,6 +305,11 @@ pub struct RenderPerfSnapshot {
 
     pub scene_encoding_cache_hits: u64,
     pub scene_encoding_cache_misses: u64,
+    /// Best-effort miss reason mask for the most recent encoding cache miss.
+    ///
+    /// This is intended for diagnostics bundles and trace logs. It should not be treated as a
+    /// stable API surface.
+    pub scene_encoding_cache_last_miss_reasons: u64,
 
     // Tier B materials (ADR 0235) observability (best-effort).
     pub material_quad_ops: u64,
@@ -430,6 +437,7 @@ pub(super) struct RenderPerfStats {
 
     pub(super) scene_encoding_cache_hits: u64,
     pub(super) scene_encoding_cache_misses: u64,
+    pub(super) scene_encoding_cache_last_miss_reasons: u64,
 
     pub(super) material_quad_ops: u64,
     pub(super) material_sampled_quad_ops: u64,
@@ -600,6 +608,22 @@ pub(super) struct UniformMaskImageSelection {
 }
 
 #[derive(Clone, Copy)]
+pub(super) enum ClipPop {
+    NoShader,
+    Shader { prev_head: u32 },
+    Path,
+}
+
+#[derive(Clone, Copy)]
+pub(super) enum MaskPop {
+    NoShader,
+    Shader {
+        prev_head: u32,
+        prev_mask_image: Option<UniformMaskImageSelection>,
+    },
+}
+
+#[derive(Clone, Copy)]
 pub(super) struct ImageDraw {
     pub(super) scissor: ScissorRect,
     pub(super) uniform_index: u32,
@@ -726,6 +750,14 @@ pub(super) struct SceneEncoding {
     pub(super) ordered_draws: Vec<OrderedDraw>,
     pub(super) effect_markers: Vec<EffectMarker>,
 
+    pub(super) encode_scissor_stack_scratch: Vec<ScissorRect>,
+    pub(super) encode_clip_pop_stack_scratch: Vec<ClipPop>,
+    pub(super) encode_mask_pop_stack_scratch: Vec<MaskPop>,
+    pub(super) encode_mask_scope_stack_scratch: Vec<(u32, u32)>,
+    pub(super) encode_transform_stack_scratch: Vec<Transform2D>,
+    pub(super) encode_opacity_stack_scratch: Vec<f32>,
+    pub(super) encode_material_seen_scratch: HashSet<fret_core::MaterialId>,
+
     pub(super) material_quad_ops: u64,
     pub(super) material_sampled_quad_ops: u64,
     pub(super) material_distinct: u64,
@@ -748,6 +780,13 @@ impl SceneEncoding {
         self.uniform_mask_images.clear();
         self.ordered_draws.clear();
         self.effect_markers.clear();
+        self.encode_scissor_stack_scratch.clear();
+        self.encode_clip_pop_stack_scratch.clear();
+        self.encode_mask_pop_stack_scratch.clear();
+        self.encode_mask_scope_stack_scratch.clear();
+        self.encode_transform_stack_scratch.clear();
+        self.encode_opacity_stack_scratch.clear();
+        self.encode_material_seen_scratch.clear();
         self.material_quad_ops = 0;
         self.material_sampled_quad_ops = 0;
         self.material_distinct = 0;

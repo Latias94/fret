@@ -868,6 +868,9 @@ pub(super) struct BundleStatsReport {
     pub(super) p95_renderer_prepare_svg_us: u64,
     pub(super) p50_renderer_prepare_text_us: u64,
     pub(super) p95_renderer_prepare_text_us: u64,
+    pub(super) renderer_scene_encoding_cache_miss_frames: u64,
+    pub(super) renderer_scene_encoding_cache_miss_total: u64,
+    renderer_scene_encoding_cache_miss_reason_counts: std::collections::HashMap<String, u64>,
     worst_hover_layout: Option<BundleStatsWorstHoverLayout>,
     global_type_hotspots: Vec<BundleStatsGlobalTypeHotspot>,
     model_source_hotspots: Vec<BundleStatsModelSourceHotspot>,
@@ -1047,6 +1050,8 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) renderer_bind_group_switches: u64,
     pub(super) renderer_scissor_sets: u64,
     pub(super) renderer_scene_encoding_cache_misses: u64,
+    pub(super) renderer_scene_encoding_cache_last_miss_reasons: u64,
+    pub(super) renderer_scene_encoding_cache_last_miss_reason: Option<String>,
     pub(super) renderer_material_quad_ops: u64,
     pub(super) renderer_material_sampled_quad_ops: u64,
     pub(super) renderer_material_distinct: u64,
@@ -1304,6 +1309,17 @@ struct BundleStatsModelSourceHotspot {
 
 impl BundleStatsReport {
     pub(super) fn print_human_brief(&self, bundle_path: &Path) {
+        fn fmt_top_reasons(map: &std::collections::HashMap<String, u64>) -> String {
+            let mut items: Vec<(&str, u64)> = map.iter().map(|(k, v)| (k.as_str(), *v)).collect();
+            items.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(b.0)));
+            items
+                .into_iter()
+                .take(3)
+                .map(|(k, v)| format!("{k}:{v}"))
+                .collect::<Vec<_>>()
+                .join(",")
+        }
+
         println!("bundle: {}", bundle_path.display());
         println!(
             "windows={} snapshots={} considered={} warmup_skipped={} model_changes={} global_changes={} propagated_model_changes={} propagated_global_changes={}",
@@ -1380,6 +1396,15 @@ impl BundleStatsReport {
                 self.max_renderer_prepare_text_us,
                 self.p95_renderer_prepare_svg_us,
                 self.max_renderer_prepare_svg_us,
+            );
+        }
+        if self.renderer_scene_encoding_cache_miss_total > 0 {
+            println!(
+                "renderer encoding_cache: miss_frames={}/{} total_misses={} top_reasons=[{}]",
+                self.renderer_scene_encoding_cache_miss_frames,
+                self.snapshots_considered,
+                self.renderer_scene_encoding_cache_miss_total,
+                fmt_top_reasons(&self.renderer_scene_encoding_cache_miss_reason_counts),
             );
         }
         if self.pointer_move_frames_present || self.pointer_move_frames_considered > 0 {
@@ -1483,6 +1508,17 @@ impl BundleStatsReport {
                     row.renderer_prepare_svg_us,
                     row.renderer_prepare_text_us,
                 ));
+                if row.renderer_scene_encoding_cache_misses > 0
+                    || row.renderer_scene_encoding_cache_last_miss_reason.is_some()
+                {
+                    line.push_str(&format!(
+                        " renderer.cache(misses/reason)={}/{}",
+                        row.renderer_scene_encoding_cache_misses,
+                        row.renderer_scene_encoding_cache_last_miss_reason
+                            .as_deref()
+                            .unwrap_or("-"),
+                    ));
+                }
             }
             println!("{line}");
         }
@@ -3192,6 +3228,21 @@ impl BundleStatsReport {
                 obj.insert(
                     "renderer_prepare_text_us".to_string(),
                     Value::from(row.renderer_prepare_text_us),
+                );
+                obj.insert(
+                    "renderer_scene_encoding_cache_misses".to_string(),
+                    Value::from(row.renderer_scene_encoding_cache_misses),
+                );
+                obj.insert(
+                    "renderer_scene_encoding_cache_last_miss_reasons".to_string(),
+                    Value::from(row.renderer_scene_encoding_cache_last_miss_reasons),
+                );
+                obj.insert(
+                    "renderer_scene_encoding_cache_last_miss_reason".to_string(),
+                    row.renderer_scene_encoding_cache_last_miss_reason
+                        .clone()
+                        .map(Value::from)
+                        .unwrap_or(Value::Null),
                 );
                 obj.insert(
                     "prepaint_time_us".to_string(),
@@ -7705,6 +7756,14 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|m| m.get("renderer_scene_encoding_cache_misses"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let renderer_scene_encoding_cache_last_miss_reasons = stats
+                .and_then(|m| m.get("renderer_scene_encoding_cache_last_miss_reasons"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_scene_encoding_cache_last_miss_reason = stats
+                .and_then(|m| m.get("renderer_scene_encoding_cache_last_miss_reason"))
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
             let renderer_material_quad_ops = stats
                 .and_then(|m| m.get("renderer_material_quad_ops"))
                 .and_then(|v| v.as_u64())
@@ -7725,6 +7784,25 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|m| m.get("renderer_material_degraded_due_to_budget"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+
+            out.renderer_scene_encoding_cache_miss_total = out
+                .renderer_scene_encoding_cache_miss_total
+                .saturating_add(renderer_scene_encoding_cache_misses);
+            if renderer_scene_encoding_cache_misses > 0 {
+                out.renderer_scene_encoding_cache_miss_frames = out
+                    .renderer_scene_encoding_cache_miss_frames
+                    .saturating_add(1);
+            }
+            if let Some(reason) = renderer_scene_encoding_cache_last_miss_reason.as_deref() {
+                for part in reason.split('|') {
+                    if part.is_empty() {
+                        continue;
+                    }
+                    *out.renderer_scene_encoding_cache_miss_reason_counts
+                        .entry(part.to_string())
+                        .or_insert(0) += 1;
+                }
+            }
             let layout_engine_solves = stats
                 .and_then(|m| m.get("layout_engine_solves"))
                 .and_then(|v| v.as_u64())
@@ -8429,6 +8507,8 @@ pub(super) fn bundle_stats_from_json_with_options(
                 renderer_bind_group_switches,
                 renderer_scissor_sets,
                 renderer_scene_encoding_cache_misses,
+                renderer_scene_encoding_cache_last_miss_reasons,
+                renderer_scene_encoding_cache_last_miss_reason,
                 renderer_material_quad_ops,
                 renderer_material_sampled_quad_ops,
                 renderer_material_distinct,

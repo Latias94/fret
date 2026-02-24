@@ -9,21 +9,28 @@ pub(super) fn preview_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
     let variants = {
         doc_layout::wrap_controls_row_snapshot(cx, &theme, Space::N2, |cx| {
             vec![
-                shadcn::Button::new("Default").into_element(cx),
+                shadcn::Button::new("Default")
+                    .test_id("ui-gallery-button-variant-default")
+                    .into_element(cx),
                 shadcn::Button::new("Secondary")
                     .variant(shadcn::ButtonVariant::Secondary)
+                    .test_id("ui-gallery-button-variant-secondary")
                     .into_element(cx),
                 shadcn::Button::new("Destructive")
                     .variant(shadcn::ButtonVariant::Destructive)
+                    .test_id("ui-gallery-button-variant-destructive")
                     .into_element(cx),
                 shadcn::Button::new("Outline")
                     .variant(shadcn::ButtonVariant::Outline)
+                    .test_id("ui-gallery-button-variant-outline")
                     .into_element(cx),
                 shadcn::Button::new("Ghost")
                     .variant(shadcn::ButtonVariant::Ghost)
+                    .test_id("ui-gallery-button-variant-ghost")
                     .into_element(cx),
                 shadcn::Button::new("Link")
                     .variant(shadcn::ButtonVariant::Link)
+                    .test_id("ui-gallery-button-variant-link")
                     .into_element(cx),
             ]
         })

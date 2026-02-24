@@ -50,7 +50,6 @@ fn open_url_on_activate(
     })
 }
 
-#[derive(Clone)]
 pub struct Badge {
     label: Arc<str>,
     variant: BadgeVariant,
@@ -59,6 +58,7 @@ pub struct Badge {
     on_activate: Option<OnActivate>,
     test_id: Option<Arc<str>>,
     leading_icon: Option<IconId>,
+    trailing_icon: Option<IconId>,
     children: Vec<AnyElement>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
@@ -89,6 +89,7 @@ impl Badge {
             on_activate: None,
             test_id: None,
             leading_icon: None,
+            trailing_icon: None,
             children: Vec::new(),
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
@@ -98,6 +99,12 @@ impl Badge {
     /// Adds a leading icon rendered under the badge's `currentColor` scope.
     pub fn leading_icon(mut self, icon: IconId) -> Self {
         self.leading_icon = Some(icon);
+        self
+    }
+
+    /// Adds a trailing icon rendered under the badge's `currentColor` scope.
+    pub fn trailing_icon(mut self, icon: IconId) -> Self {
+        self.trailing_icon = Some(icon);
         self
     }
 
@@ -153,6 +160,7 @@ impl Badge {
             self.on_activate,
             self.test_id,
             self.leading_icon,
+            self.trailing_icon,
             self.children,
             self.chrome,
             self.layout,
@@ -283,6 +291,7 @@ pub fn badge<H: UiHost>(
         None,
         None,
         None,
+        None,
         Vec::new(),
         ChromeRefinement::default(),
         LayoutRefinement::default(),
@@ -298,6 +307,7 @@ fn badge_with_patch<H: UiHost>(
     on_activate: Option<OnActivate>,
     test_id: Option<Arc<str>>,
     leading_icon: Option<IconId>,
+    trailing_icon: Option<IconId>,
     children: Vec<AnyElement>,
     chrome_override: ChromeRefinement,
     layout_override: LayoutRefinement,
@@ -355,13 +365,13 @@ fn badge_with_patch<H: UiHost>(
                 .nowrap()
                 .into_element(cx);
 
-            if children.is_empty() && leading_icon.is_none() {
+            if children.is_empty() && leading_icon.is_none() && trailing_icon.is_none() {
                 return vec![label];
             }
 
             // Upstream shadcn badge enforces `[&>svg]:size-3` (12px) for direct svg children.
             let icon_px = Px(12.0);
-            let mut content = Vec::with_capacity(children.len() + 2);
+            let mut content = Vec::with_capacity(children.len() + 3);
 
             if let Some(icon) = leading_icon.clone() {
                 content.push(decl_icon::icon_with(cx, icon, Some(icon_px), None));
@@ -374,6 +384,10 @@ fn badge_with_patch<H: UiHost>(
                 .collect::<Vec<_>>();
             content.extend(children);
             content.push(label);
+
+            if let Some(icon) = trailing_icon.clone() {
+                content.push(decl_icon::icon_with(cx, icon, Some(icon_px), None));
+            }
 
             vec![stack::hstack(
                 cx,
@@ -486,6 +500,7 @@ mod tests {
 
             let el = Badge::new("Verified")
                 .leading_icon(IconId::new_static("lucide.check"))
+                .trailing_icon(IconId::new_static("lucide.arrow-right"))
                 .into_element(cx);
 
             let mut texts = Vec::new();
@@ -499,8 +514,8 @@ mod tests {
                 "expected badge label to resolve to variant fg"
             );
             assert!(
-                icons.iter().any(|c| *c == expected_fg),
-                "expected badge leading icon to resolve to variant fg"
+                icons.len() >= 2 && icons.iter().all(|c| *c == expected_fg),
+                "expected badge icon(s) to resolve to variant fg"
             );
         });
     }

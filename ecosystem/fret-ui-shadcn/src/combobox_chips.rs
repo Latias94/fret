@@ -683,7 +683,7 @@ fn combobox_chips_with_patch<H: UiHost>(
                                                                 ))
                                                                 .truncate()
                                                                 .into_element(cx),
-                                                            remove.clone(),
+                                                            remove,
                                                         ]
                                                     },
                                                 )]

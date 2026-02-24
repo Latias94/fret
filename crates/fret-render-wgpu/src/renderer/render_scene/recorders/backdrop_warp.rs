@@ -54,7 +54,7 @@ pub(in super::super) fn record_backdrop_warp_pass(
         | fret_core::scene::ImageSamplingHint::Linear => 1u32,
     };
     queue.write_buffer(
-        &renderer.backdrop_warp_param_buffer,
+        &renderer.effect_params.backdrop_warp_param_buffer,
         0,
         bytemuck::bytes_of(&BackdropWarpParams {
             origin_px: [pass.origin_px.0 as f32, pass.origin_px.1 as f32],
@@ -77,7 +77,9 @@ pub(in super::super) fn record_backdrop_warp_pass(
             .saturating_add(std::mem::size_of::<BackdropWarpParams>() as u64);
     }
 
-    let warp_view = pass.warp_image.and_then(|image| renderer.images.get(image));
+    let warp_view = pass
+        .warp_image
+        .and_then(|image| renderer.gpu_resources.image_view(image));
 
     let Some(src_view) =
         require_color_src_view(frame_targets, pass.src, pass.src_size, "BackdropWarp")
@@ -131,7 +133,10 @@ pub(in super::super) fn record_backdrop_warp_pass(
                     },
                     wgpu::BindGroupEntry {
                         binding: 1,
-                        resource: renderer.backdrop_warp_param_buffer.as_entire_binding(),
+                        resource: renderer
+                            .effect_params
+                            .backdrop_warp_param_buffer
+                            .as_entire_binding(),
                     },
                     wgpu::BindGroupEntry {
                         binding: 2,
@@ -157,7 +162,10 @@ pub(in super::super) fn record_backdrop_warp_pass(
                     },
                     wgpu::BindGroupEntry {
                         binding: 1,
-                        resource: renderer.backdrop_warp_param_buffer.as_entire_binding(),
+                        resource: renderer
+                            .effect_params
+                            .backdrop_warp_param_buffer
+                            .as_entire_binding(),
                     },
                     wgpu::BindGroupEntry {
                         binding: 2,
@@ -202,7 +210,10 @@ pub(in super::super) fn record_backdrop_warp_pass(
                     },
                     wgpu::BindGroupEntry {
                         binding: 1,
-                        resource: renderer.backdrop_warp_param_buffer.as_entire_binding(),
+                        resource: renderer
+                            .effect_params
+                            .backdrop_warp_param_buffer
+                            .as_entire_binding(),
                     },
                     wgpu::BindGroupEntry {
                         binding: 2,
@@ -219,7 +230,10 @@ pub(in super::super) fn record_backdrop_warp_pass(
                 "fret backdrop-warp bind group",
                 layout,
                 &src_view,
-                renderer.backdrop_warp_param_buffer.as_entire_binding(),
+                renderer
+                    .effect_params
+                    .backdrop_warp_param_buffer
+                    .as_entire_binding(),
             );
             let pipeline = renderer.backdrop_warp_masked_pipeline_ref();
             (bind_group, pipeline)
@@ -260,7 +274,10 @@ pub(in super::super) fn record_backdrop_warp_pass(
                     },
                     wgpu::BindGroupEntry {
                         binding: 1,
-                        resource: renderer.backdrop_warp_param_buffer.as_entire_binding(),
+                        resource: renderer
+                            .effect_params
+                            .backdrop_warp_param_buffer
+                            .as_entire_binding(),
                     },
                     wgpu::BindGroupEntry {
                         binding: 2,
@@ -277,7 +294,10 @@ pub(in super::super) fn record_backdrop_warp_pass(
                 "fret backdrop-warp bind group",
                 layout,
                 &src_view,
-                renderer.backdrop_warp_param_buffer.as_entire_binding(),
+                renderer
+                    .effect_params
+                    .backdrop_warp_param_buffer
+                    .as_entire_binding(),
             );
             let pipeline = renderer.backdrop_warp_pipeline_ref();
             (bind_group, pipeline)

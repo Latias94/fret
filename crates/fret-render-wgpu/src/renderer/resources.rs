@@ -471,18 +471,7 @@ impl Renderer {
             mapped_at_creation: false,
         });
 
-        Self {
-            adapter: adapter.clone(),
-            uniform_bind_group,
-            uniforms,
-            globals,
-            textures,
-            pipelines: GpuPipelines::default(),
-            quad_instances,
-            path_paints,
-            text_paints,
-            viewport_vertices,
-            text_vertices,
+        let effect_params = super::gpu_effect_params::GpuEffectParams {
             clip_mask_param_buffer,
             clip_mask_param_bind_group,
             clip_mask_param_bind_group_layout,
@@ -490,34 +479,37 @@ impl Renderer {
             scale_param_stride,
             scale_param_capacity,
             backdrop_warp_param_buffer,
-            color_adjust_pipeline_format: None,
-            color_adjust_pipeline: None,
-            color_adjust_masked_pipeline: None,
-            color_adjust_mask_pipeline: None,
-            color_adjust_bind_group_layout: None,
-            color_adjust_mask_bind_group_layout: None,
             color_adjust_param_buffer,
-            color_matrix_pipeline_format: None,
-            color_matrix_pipeline: None,
-            color_matrix_masked_pipeline: None,
-            color_matrix_mask_pipeline: None,
-            color_matrix_bind_group_layout: None,
-            color_matrix_mask_bind_group_layout: None,
             color_matrix_param_buffer,
-            alpha_threshold_pipeline_format: None,
-            alpha_threshold_pipeline: None,
-            alpha_threshold_masked_pipeline: None,
-            alpha_threshold_mask_pipeline: None,
-            alpha_threshold_bind_group_layout: None,
-            alpha_threshold_mask_bind_group_layout: None,
             alpha_threshold_param_buffer,
-            drop_shadow_pipeline_format: None,
-            drop_shadow_pipeline: None,
-            drop_shadow_masked_pipeline: None,
-            drop_shadow_mask_pipeline: None,
-            drop_shadow_bind_group_layout: None,
-            drop_shadow_mask_bind_group_layout: None,
             drop_shadow_param_buffer,
+        };
+
+        let render_plan_strict_output_clear =
+            std::env::var("FRET_RENDER_PLAN_STRICT_OUTPUT_CLEAR").is_ok_and(|v| v != "0");
+
+        Self {
+            adapter: adapter.clone(),
+            uniform_bind_group,
+            uniforms,
+            viewport_uniform_bytes_scratch: Vec::new(),
+            render_space_bytes_scratch: Vec::new(),
+            plan_quad_vertices_scratch: Vec::new(),
+            plan_quad_vertex_bases_scratch: Vec::new(),
+            render_plan_scene_draw_range_passes_scratch: Vec::new(),
+            render_plan_path_msaa_batch_passes_scratch: Vec::new(),
+            render_plan_segment_report_scratch: Vec::new(),
+            render_plan_dump_scratch: super::render_plan_dump::RenderPlanJsonDumpScratch::default(),
+            render_plan_strict_output_clear,
+            globals,
+            textures,
+            effect_params,
+            pipelines: GpuPipelines::default(),
+            quad_instances,
+            path_paints,
+            text_paints,
+            viewport_vertices,
+            text_vertices,
             path_vertices,
             path_intermediate: None,
             path_composite_vertices,
@@ -565,16 +557,8 @@ impl Renderer {
             intermediate_perf_enabled: false,
             intermediate_perf: IntermediatePerfStats::default(),
             intermediate_pool: IntermediatePool::default(),
-            render_targets: RenderTargetRegistry::default(),
-            images: ImageRegistry::default(),
-            bind_group_caches: BindGroupCaches::default(),
-            render_target_revisions: HashMap::new(),
-            render_targets_generation: 0,
-            image_revisions: HashMap::new(),
-            images_generation: 0,
-            scene_encoding_cache_key: None,
-            scene_encoding_cache: SceneEncoding::default(),
-            scene_encoding_scratch: SceneEncoding::default(),
+            gpu_resources: super::gpu_resources::GpuResources::default(),
+            scene_encoding_cache: super::scene_encoding_cache::SceneEncodingCache::default(),
 
             materials: SlotMap::with_key(),
             materials_by_desc: HashMap::new(),
@@ -653,38 +637,20 @@ impl Renderer {
                     .saturating_add(1);
             }
         }
-        let id = self.render_targets.register(desc);
-        self.render_target_revisions.insert(id, 1);
-        self.render_targets_generation = self.render_targets_generation.saturating_add(1);
+        let id = self.gpu_resources.register_render_target(desc);
         id
     }
 
     pub fn register_image(&mut self, desc: ImageDescriptor) -> fret_core::ImageId {
-        let id = self.images.register(desc);
-        self.image_revisions.insert(id, 1);
-        self.images_generation = self.images_generation.saturating_add(1);
-        id
+        self.gpu_resources.register_image(desc)
     }
 
     pub fn update_image(&mut self, id: fret_core::ImageId, desc: ImageDescriptor) -> bool {
-        if !self.images.update(id, desc) {
-            return false;
-        }
-        let next = self.image_revisions.get(&id).copied().unwrap_or(0) + 1;
-        self.image_revisions.insert(id, next);
-        self.bind_group_caches.invalidate_image(id);
-        self.images_generation = self.images_generation.saturating_add(1);
-        true
+        self.gpu_resources.update_image(id, desc)
     }
 
     pub fn unregister_image(&mut self, id: fret_core::ImageId) -> bool {
-        if !self.images.unregister(id) {
-            return false;
-        }
-        self.image_revisions.remove(&id);
-        self.bind_group_caches.invalidate_image(id);
-        self.images_generation = self.images_generation.saturating_add(1);
-        true
+        self.gpu_resources.unregister_image(id)
     }
 
     pub fn update_render_target(
@@ -722,14 +688,7 @@ impl Renderer {
                     .saturating_add(1);
             }
         }
-        if !self.render_targets.update(id, desc) {
-            return false;
-        }
-        let next = self.render_target_revisions.get(&id).copied().unwrap_or(0) + 1;
-        self.render_target_revisions.insert(id, next);
-        self.bind_group_caches.invalidate_render_target(id);
-        self.render_targets_generation = self.render_targets_generation.saturating_add(1);
-        true
+        self.gpu_resources.update_render_target(id, desc)
     }
 
     fn render_target_color_encoding_conflicts_with_portable_rgb_assumption(
@@ -777,13 +736,7 @@ impl Renderer {
     }
 
     pub fn unregister_render_target(&mut self, id: fret_core::RenderTargetId) -> bool {
-        if !self.render_targets.unregister(id) {
-            return false;
-        }
-        self.render_target_revisions.remove(&id);
-        self.bind_group_caches.invalidate_render_target(id);
-        self.render_targets_generation = self.render_targets_generation.saturating_add(1);
-        true
+        self.gpu_resources.unregister_render_target(id)
     }
 
     pub(super) fn ensure_mask_image_identity_uploaded(&mut self, queue: &wgpu::Queue) {

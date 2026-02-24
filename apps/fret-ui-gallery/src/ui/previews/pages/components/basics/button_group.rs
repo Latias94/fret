@@ -497,9 +497,12 @@ pub(in crate::ui) fn preview_button_group(cx: &mut ElementContext<'_, App>) -> V
                 .test_id_prefix("ui-gallery-button-group-demo")
                 .code(
                     "rust",
-                    r#"shadcn::ButtonGroup::new([
-    shadcn::Button::new("Button").into(),
-    shadcn::Button::new("Get Started")
+                    r#"use fret_ui_shadcn as shadcn;
+use shadcn::{Button, ButtonGroup};
+
+ButtonGroup::new([
+    Button::new("Button").into(),
+    Button::new("Get Started")
         .trailing_icon(fret_icons::IconId::new_static("lucide.arrow-right"))
         .into(),
 ])

@@ -1,11 +1,11 @@
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
 use fret_core::time::Duration;
 use fret_core::{Edges, Point, Px, Rect, Size, TextStyle};
-use fret_icons::ids;
+use fret_icons::{IconId, ids};
 use fret_runtime::{CommandId, Effect, Model, ModelId, TimerToken, WindowCommandGatingSnapshot};
 use fret_ui::action::{
     OnCloseAutoFocus, OnDismissRequest, OnOpenAutoFocus, PressablePointerUpResult,
@@ -22,6 +22,7 @@ use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::collection_semantics::CollectionSemanticsExt as _;
+use fret_ui_kit::declarative::current_color;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
@@ -41,7 +42,7 @@ use crate::overlay_motion;
 use crate::popper_arrow::{self, DiamondArrowStyle};
 use crate::shortcut_display::command_shortcut_label;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum ContextMenuEntry {
     Item(ContextMenuItem),
     CheckboxItem(ContextMenuCheckboxItem),
@@ -273,12 +274,13 @@ pub enum ContextMenuItemVariant {
     Destructive,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct ContextMenuItem {
     pub label: Arc<str>,
     pub value: Arc<str>,
     pub inset: bool,
     pub leading: Option<AnyElement>,
+    pub leading_icon: Option<IconId>,
     pub disabled: bool,
     pub close_on_select: bool,
     pub command: Option<CommandId>,
@@ -297,6 +299,7 @@ impl ContextMenuItem {
             value: label,
             inset: false,
             leading: None,
+            leading_icon: None,
             disabled: false,
             close_on_select: true,
             command: None,
@@ -319,7 +322,15 @@ impl ContextMenuItem {
     }
 
     pub fn leading(mut self, element: AnyElement) -> Self {
+        self.leading_icon = None;
         self.leading = Some(element);
+        self
+    }
+
+    /// Prefer this over `leading(icon(cx, ...))` so the icon can inherit the item's `currentColor`.
+    pub fn leading_icon(mut self, icon: IconId) -> Self {
+        self.leading = None;
+        self.leading_icon = Some(icon);
         self
     }
 
@@ -389,7 +400,7 @@ impl ContextMenuLabel {
 ///
 /// In the upstream DOM implementation, this is a structural wrapper (Radix `Menu.Group`).
 /// In Fret, we preserve this structure so it can appear in the semantics tree.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct ContextMenuGroup {
     pub entries: Vec<ContextMenuEntry>,
 }
@@ -436,7 +447,7 @@ impl ContextMenuShortcut {
 }
 
 /// shadcn/ui `ContextMenuCheckboxItem` (v4).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct ContextMenuCheckboxItem {
     pub label: Arc<str>,
     pub value: Arc<str>,
@@ -509,7 +520,7 @@ impl ContextMenuCheckboxItem {
 }
 
 /// shadcn/ui `ContextMenuRadioGroup` (v4).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct ContextMenuRadioGroup {
     pub value: Model<Option<Arc<str>>>,
     pub items: Vec<ContextMenuRadioItemSpec>,
@@ -529,7 +540,7 @@ impl ContextMenuRadioGroup {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct ContextMenuRadioItemSpec {
     pub label: Arc<str>,
     pub value: Arc<str>,
@@ -611,7 +622,7 @@ impl ContextMenuRadioItemSpec {
 }
 
 /// shadcn/ui `ContextMenuRadioItem` (v4).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct ContextMenuRadioItem {
     pub label: Arc<str>,
     pub value: Arc<str>,
@@ -704,46 +715,60 @@ fn estimated_menu_panel_height_for_entries(
     row_height: Px,
     max_height: Px,
 ) -> Px {
+    fn leaf_height(entries: &[ContextMenuEntry], row_height: Px) -> f32 {
+        let mut h = 0.0f32;
+        for entry in entries {
+            match entry {
+                ContextMenuEntry::Separator => {
+                    // new-york-v4: `Separator` uses `-mx-1 my-1` (1px line + 4px + 4px).
+                    h += 9.0;
+                }
+                ContextMenuEntry::Label(_)
+                | ContextMenuEntry::Item(_)
+                | ContextMenuEntry::CheckboxItem(_)
+                | ContextMenuEntry::RadioItem(_) => {
+                    h += row_height.0.max(0.0);
+                }
+                ContextMenuEntry::Group(group) => {
+                    h += leaf_height(&group.entries, row_height);
+                }
+                ContextMenuEntry::RadioGroup(group) => {
+                    h += row_height.0.max(0.0) * (group.items.len() as f32);
+                }
+            }
+        }
+        h
+    }
+
     // new-york-v4: menu panels use `p-1` and `border`.
     let panel_padding_y = Px(8.0);
     let panel_border_y = Px(2.0);
 
     let mut height = Px(panel_padding_y.0 + panel_border_y.0);
-    for entry in entries {
-        match entry {
-            ContextMenuEntry::Separator => {
-                // new-york-v4: `Separator` uses `-mx-1 my-1` (1px line + 4px + 4px).
-                height.0 += 9.0;
-            }
-            ContextMenuEntry::Label(_)
-            | ContextMenuEntry::Item(_)
-            | ContextMenuEntry::CheckboxItem(_)
-            | ContextMenuEntry::RadioItem(_) => {
-                height.0 += row_height.0.max(0.0);
-            }
-            ContextMenuEntry::Group(_) | ContextMenuEntry::RadioGroup(_) => {
-                unreachable!("entries are flattened")
-            }
-        }
-    }
+    height.0 += leaf_height(entries, row_height);
 
     let height = height.0.max(0.0);
     Px(height.min(max_height.0.max(0.0)))
 }
 
-fn find_submenu_entries_by_value(
-    entries: &[ContextMenuEntry],
+fn take_submenu_entries_by_value(
+    entries: &mut [ContextMenuEntry],
     open_value: &str,
 ) -> Option<Vec<ContextMenuEntry>> {
     for entry in entries {
         match entry {
             ContextMenuEntry::Item(item) => {
                 if item.value.as_ref() == open_value {
-                    return item.submenu.clone();
+                    if let Some(submenu) = item.submenu.take() {
+                        // Preserve "has submenu" for render passes that only need the marker.
+                        item.submenu = Some(Vec::new());
+                        return Some(submenu);
+                    }
+                    return None;
                 }
             }
             ContextMenuEntry::Group(group) => {
-                if let Some(found) = find_submenu_entries_by_value(&group.entries, open_value) {
+                if let Some(found) = take_submenu_entries_by_value(&mut group.entries, open_value) {
                     return Some(found);
                 }
             }
@@ -816,7 +841,7 @@ impl ContextMenuRenderEnv {
     fn render_entries<H: UiHost>(
         &self,
         cx: &mut ElementContext<'_, H>,
-        entries: &[ContextMenuEntry],
+        entries: Vec<ContextMenuEntry>,
         item_ix: &mut usize,
     ) -> Elements {
         let mut out: Vec<AnyElement> = Vec::with_capacity(entries.len());
@@ -824,7 +849,7 @@ impl ContextMenuRenderEnv {
         for entry in entries {
             match entry {
                 ContextMenuEntry::Group(group) => {
-                    let children = self.render_entries(cx, &group.entries, item_ix);
+                    let children = self.render_entries(cx, group.entries, item_ix);
                     out.push(menu_structural_group(
                         cx,
                         fret_core::SemanticsRole::Group,
@@ -833,7 +858,7 @@ impl ContextMenuRenderEnv {
                 }
                 ContextMenuEntry::RadioGroup(group) => {
                     let mut children: Vec<AnyElement> = Vec::with_capacity(group.items.len());
-                    for spec in group.items.iter().cloned() {
+                    for spec in group.items {
                         children.push(self.render_radio_item(
                             cx,
                             spec.into_item(group.value.clone()),
@@ -846,16 +871,14 @@ impl ContextMenuRenderEnv {
                         children,
                     ));
                 }
-                ContextMenuEntry::Label(label) => out.push(self.render_label(cx, label.clone())),
+                ContextMenuEntry::Label(label) => out.push(self.render_label(cx, label)),
                 ContextMenuEntry::Separator => out.push(self.render_separator(cx)),
-                ContextMenuEntry::Item(item) => {
-                    out.push(self.render_item(cx, item.clone(), item_ix))
-                }
+                ContextMenuEntry::Item(item) => out.push(self.render_item(cx, item, item_ix)),
                 ContextMenuEntry::CheckboxItem(item) => {
-                    out.push(self.render_checkbox_item(cx, item.clone(), item_ix));
+                    out.push(self.render_checkbox_item(cx, item, item_ix));
                 }
                 ContextMenuEntry::RadioItem(item) => {
-                    out.push(self.render_radio_item(cx, item.clone(), item_ix));
+                    out.push(self.render_radio_item(cx, item, item_ix))
                 }
             }
         }
@@ -953,8 +976,9 @@ impl ContextMenuRenderEnv {
                 &self.gating,
                 command.as_ref(),
             );
-        let leading = item.leading.clone();
-        let trailing = item.trailing.clone();
+        let leading = item.leading;
+        let leading_icon = item.leading_icon;
+        let trailing = item.trailing;
         let variant = item.variant;
         let pad_left = if item.inset {
             self.pad_x_inset
@@ -996,7 +1020,7 @@ impl ContextMenuRenderEnv {
                     }
                 }
 
-                let trailing = trailing.clone().or_else(|| {
+                let trailing = trailing.or_else(|| {
                     command.as_ref().and_then(|cmd| {
                         command_shortcut_label(cx, cmd, fret_runtime::Platform::current())
                             .map(|text| ContextMenuShortcut::new(text).into_element(cx))
@@ -1040,7 +1064,8 @@ impl ContextMenuRenderEnv {
                 let children = menu_row_children(
                     cx,
                     label.clone(),
-                    leading.clone(),
+                    leading,
+                    leading_icon,
                     reserve_leading_slot,
                     trailing,
                     false,
@@ -1089,8 +1114,8 @@ impl ContextMenuRenderEnv {
                 &self.gating,
                 command.as_ref(),
             );
-        let leading = item.leading.clone();
-        let trailing = item.trailing.clone();
+        let leading = item.leading;
+        let trailing = item.trailing;
 
         let open_for_item = self.open.clone();
         let cancel_open_for_item = self.cancel_open.clone();
@@ -1126,7 +1151,7 @@ impl ContextMenuRenderEnv {
                     cx.pressable_set_bool(&open_for_item, false);
                 }
 
-                let trailing = trailing.clone().or_else(|| {
+                let trailing = trailing.or_else(|| {
                     command.as_ref().and_then(|cmd| {
                         command_shortcut_label(cx, cmd, fret_runtime::Platform::current())
                             .map(|text| ContextMenuShortcut::new(text).into_element(cx))
@@ -1162,7 +1187,8 @@ impl ContextMenuRenderEnv {
                 let children = menu_row_children(
                     cx,
                     label.clone(),
-                    leading.clone(),
+                    leading,
+                    None,
                     reserve_leading_slot,
                     trailing,
                     false,
@@ -1211,8 +1237,8 @@ impl ContextMenuRenderEnv {
                 &self.gating,
                 command.as_ref(),
             );
-        let leading = item.leading.clone();
-        let trailing = item.trailing.clone();
+        let leading = item.leading;
+        let trailing = item.trailing;
 
         let open_for_item = self.open.clone();
         let cancel_open_for_item = self.cancel_open.clone();
@@ -1254,7 +1280,7 @@ impl ContextMenuRenderEnv {
                     cx.pressable_set_bool(&open_for_item, false);
                 }
 
-                let trailing = trailing.clone().or_else(|| {
+                let trailing = trailing.or_else(|| {
                     command.as_ref().and_then(|cmd| {
                         command_shortcut_label(cx, cmd, fret_runtime::Platform::current())
                             .map(|text| ContextMenuShortcut::new(text).into_element(cx))
@@ -1290,7 +1316,8 @@ impl ContextMenuRenderEnv {
                 let children = menu_row_children(
                     cx,
                     label.clone(),
-                    leading.clone(),
+                    leading,
+                    None,
                     reserve_leading_slot,
                     trailing,
                     false,
@@ -1349,7 +1376,7 @@ impl ContextMenuContentRenderEnv {
     fn render_entries<H: UiHost>(
         &self,
         cx: &mut ElementContext<'_, H>,
-        entries: &[ContextMenuEntry],
+        entries: Vec<ContextMenuEntry>,
         item_ix: &mut usize,
     ) -> Elements {
         let mut out: Vec<AnyElement> = Vec::with_capacity(entries.len());
@@ -1357,7 +1384,7 @@ impl ContextMenuContentRenderEnv {
         for entry in entries {
             match entry {
                 ContextMenuEntry::Group(group) => {
-                    let children = self.render_entries(cx, &group.entries, item_ix);
+                    let children = self.render_entries(cx, group.entries, item_ix);
                     out.push(menu_structural_group(
                         cx,
                         fret_core::SemanticsRole::Group,
@@ -1366,7 +1393,7 @@ impl ContextMenuContentRenderEnv {
                 }
                 ContextMenuEntry::RadioGroup(group) => {
                     let mut children: Vec<AnyElement> = Vec::with_capacity(group.items.len());
-                    for spec in group.items.iter().cloned() {
+                    for spec in group.items {
                         children.push(self.render_radio_item(
                             cx,
                             spec.into_item(group.value.clone()),
@@ -1379,16 +1406,14 @@ impl ContextMenuContentRenderEnv {
                         children,
                     ));
                 }
-                ContextMenuEntry::Label(label) => out.push(self.render_label(cx, label.clone())),
+                ContextMenuEntry::Label(label) => out.push(self.render_label(cx, label)),
                 ContextMenuEntry::Separator => out.push(self.render_separator(cx)),
-                ContextMenuEntry::Item(item) => {
-                    out.push(self.render_item(cx, item.clone(), item_ix))
-                }
+                ContextMenuEntry::Item(item) => out.push(self.render_item(cx, item, item_ix)),
                 ContextMenuEntry::CheckboxItem(item) => {
-                    out.push(self.render_checkbox_item(cx, item.clone(), item_ix));
+                    out.push(self.render_checkbox_item(cx, item, item_ix));
                 }
                 ContextMenuEntry::RadioItem(item) => {
-                    out.push(self.render_radio_item(cx, item.clone(), item_ix));
+                    out.push(self.render_radio_item(cx, item, item_ix))
                 }
             }
         }
@@ -1485,13 +1510,27 @@ impl ContextMenuContentRenderEnv {
                 &self.gating,
                 command.as_ref(),
             );
-        let leading = item.leading.clone();
-        let trailing = item.trailing.clone();
+        let leading = item.leading;
+        let leading_icon = item.leading_icon;
+        let trailing = item.trailing;
         let has_submenu = item.submenu.is_some();
-        let submenu_row_count_for_hint = item.submenu.clone().map(|entries| {
-            let mut flat: Vec<ContextMenuEntry> = Vec::new();
-            flatten_entries(&mut flat, entries);
-            flat.len()
+        let submenu_row_count_for_hint = item.submenu.as_ref().map(|entries| {
+            fn count_rows(entries: &[ContextMenuEntry]) -> usize {
+                let mut count = 0usize;
+                for entry in entries {
+                    match entry {
+                        ContextMenuEntry::Item(_)
+                        | ContextMenuEntry::CheckboxItem(_)
+                        | ContextMenuEntry::RadioItem(_)
+                        | ContextMenuEntry::Label(_)
+                        | ContextMenuEntry::Separator => count += 1,
+                        ContextMenuEntry::RadioGroup(group) => count += group.items.len(),
+                        ContextMenuEntry::Group(group) => count += count_rows(&group.entries),
+                    }
+                }
+                count
+            }
+            count_rows(entries)
         });
         let variant = item.variant;
         let pad_left = if item.inset {
@@ -1611,9 +1650,9 @@ impl ContextMenuContentRenderEnv {
                 }
 
                 let trailing = if has_submenu {
-                    trailing.clone()
+                    trailing
                 } else {
-                    trailing.clone().or_else(|| {
+                    trailing.or_else(|| {
                         command.as_ref().and_then(|cmd| {
                             command_shortcut_label(cx, cmd, fret_runtime::Platform::current())
                                 .map(|text| ContextMenuShortcut::new(text).into_element(cx))
@@ -1624,7 +1663,8 @@ impl ContextMenuContentRenderEnv {
                 let children = menu_row_children(
                     cx,
                     label.clone(),
-                    leading.clone(),
+                    leading,
+                    leading_icon,
                     reserve_leading_slot,
                     trailing,
                     has_submenu,
@@ -1669,8 +1709,8 @@ impl ContextMenuContentRenderEnv {
                 &self.gating,
                 command.as_ref(),
             );
-        let leading = item.leading.clone();
-        let trailing = item.trailing.clone();
+        let leading = item.leading;
+        let trailing = item.trailing;
         let open = self.open.clone();
         let cancel_open = self.cancel_open.clone();
 
@@ -1723,7 +1763,7 @@ impl ContextMenuContentRenderEnv {
                         cx.pressable_set_bool(&open, false);
                     }
 
-                    let trailing = trailing.clone().or_else(|| {
+                    let trailing = trailing.or_else(|| {
                         command.as_ref().and_then(|cmd| {
                             command_shortcut_label(cx, cmd, fret_runtime::Platform::current())
                                 .map(|text| ContextMenuShortcut::new(text).into_element(cx))
@@ -1740,7 +1780,8 @@ impl ContextMenuContentRenderEnv {
                     menu_row_children(
                         cx,
                         label.clone(),
-                        leading.clone(),
+                        leading,
+                        None,
                         reserve_leading_slot,
                         trailing,
                         false,
@@ -1784,8 +1825,8 @@ impl ContextMenuContentRenderEnv {
                 &self.gating,
                 command.as_ref(),
             );
-        let leading = item.leading.clone();
-        let trailing = item.trailing.clone();
+        let leading = item.leading;
+        let trailing = item.trailing;
         let open = self.open.clone();
         let cancel_open = self.cancel_open.clone();
 
@@ -1844,7 +1885,7 @@ impl ContextMenuContentRenderEnv {
                         cx.pressable_set_bool(&open, false);
                     }
 
-                    let trailing = trailing.clone().or_else(|| {
+                    let trailing = trailing.or_else(|| {
                         command.as_ref().and_then(|cmd| {
                             command_shortcut_label(cx, cmd, fret_runtime::Platform::current())
                                 .map(|text| ContextMenuShortcut::new(text).into_element(cx))
@@ -1861,7 +1902,8 @@ impl ContextMenuContentRenderEnv {
                     menu_row_children(
                         cx,
                         label.clone(),
-                        leading.clone(),
+                        leading,
+                        None,
                         reserve_leading_slot,
                         trailing,
                         false,
@@ -1889,6 +1931,7 @@ fn menu_row_children<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     label: Arc<str>,
     leading: Option<AnyElement>,
+    leading_icon: Option<IconId>,
     reserve_leading_slot: bool,
     trailing: Option<AnyElement>,
     submenu: bool,
@@ -1933,122 +1976,123 @@ fn menu_row_children<H: UiHost>(
             ..Default::default()
         },
         move |cx| {
+            let effective_fg = if disabled { text_disabled } else { row_fg };
+            let mut leading = leading;
+            let leading_icon = leading_icon.clone();
+            let mut trailing = trailing;
+            let has_trailing = trailing.is_some();
             let direction = direction_prim::use_direction_in_scope(cx, None);
             let has_indicator = indicator_on.is_some();
-            let has_leading_slot = leading.is_some() || reserve_leading_slot;
+            let has_leading_slot =
+                leading.is_some() || leading_icon.is_some() || reserve_leading_slot;
             let mut row: Vec<AnyElement> = Vec::with_capacity(
                 usize::from(has_indicator)
                     + usize::from(has_leading_slot)
                     + 1
-                    + usize::from(trailing.is_some())
-                    + usize::from(trailing.is_some() || submenu)
+                    + usize::from(has_trailing)
+                    + usize::from(has_trailing || submenu)
                     + usize::from(submenu),
             );
 
-            if let Some(is_on) = indicator_on {
-                let indicator_fg = if disabled { text_disabled } else { row_fg };
-                row.push(cx.flex(
+            current_color::with_current_color_provider(cx, ColorRef::Color(effective_fg), |cx| {
+                if let Some(is_on) = indicator_on {
+                    let indicator_fg = effective_fg;
+                    row.push(cx.flex(
+                        FlexProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Px(Px(16.0));
+                                layout.size.height = Length::Px(Px(16.0));
+                                layout.flex.shrink = 0.0;
+                                layout
+                            },
+                            direction: fret_core::Axis::Horizontal,
+                            gap: Px(0.0),
+                            padding: Edges::all(Px(0.0)),
+                            justify: MainAlign::Center,
+                            align: CrossAlign::Center,
+                            wrap: false,
+                        },
+                        move |cx| {
+                            if !is_on {
+                                return Vec::new();
+                            }
+
+                            vec![decl_icon::icon_with(
+                                cx,
+                                ids::ui::CHECK,
+                                Some(Px(16.0)),
+                                Some(ColorRef::Color(indicator_fg)),
+                            )]
+                        },
+                    ));
+                }
+
+                if let Some(l) = leading.take() {
+                    row.push(menu_icon_slot(cx, l));
+                } else if let Some(icon) = leading_icon.clone() {
+                    let icon_el = decl_icon::icon_with(cx, icon, Some(Px(16.0)), None);
+                    row.push(menu_icon_slot(cx, icon_el));
+                } else if reserve_leading_slot {
+                    row.push(menu_icon_slot_empty(cx));
+                }
+
+                let style = text_style.clone();
+                let mut text = ui::text(cx, label.clone())
+                    .layout(LayoutRefinement::default().min_w_0().flex_1())
+                    .text_size_px(style.size)
+                    .font_weight(style.weight)
+                    .nowrap();
+
+                if let Some(line_height) = style.line_height {
+                    text = text.fixed_line_box_px(line_height).line_box_in_bounds();
+                }
+
+                if let Some(letter_spacing_em) = style.letter_spacing_em {
+                    text = text.letter_spacing_em(letter_spacing_em);
+                }
+
+                let mut label_element = text.into_element(cx);
+                if let Some(test_id) = label_test_id.clone() {
+                    label_element = label_element.test_id(test_id);
+                }
+                row.push(label_element);
+
+                if has_trailing || submenu {
+                    row.push(cx.spacer(SpacerProps::default()));
+                }
+                if let Some(mut trailing_element) = trailing.take() {
+                    if let Some(test_id) = trailing_test_id.clone() {
+                        trailing_element = trailing_element.test_id(test_id);
+                    }
+                    row.push(trailing_element);
+                }
+
+                if submenu {
+                    let mut chevron = submenu_chevron_icon(cx, direction, effective_fg);
+                    if let Some(test_id) = submenu_chevron_test_id.clone() {
+                        chevron = chevron.test_id(test_id);
+                    }
+                    row.push(chevron);
+                }
+
+                vec![cx.flex(
                     FlexProps {
                         layout: {
                             let mut layout = LayoutStyle::default();
-                            layout.size.width = Length::Px(Px(16.0));
-                            layout.size.height = Length::Px(Px(16.0));
-                            layout.flex.shrink = 0.0;
+                            layout.size.width = Length::Fill;
                             layout
                         },
                         direction: fret_core::Axis::Horizontal,
-                        gap: Px(0.0),
+                        gap: Px(8.0),
                         padding: Edges::all(Px(0.0)),
-                        justify: MainAlign::Center,
+                        justify: MainAlign::Start,
                         align: CrossAlign::Center,
                         wrap: false,
                     },
-                    move |cx| {
-                        if !is_on {
-                            return Vec::new();
-                        }
-
-                        vec![decl_icon::icon_with(
-                            cx,
-                            ids::ui::CHECK,
-                            Some(Px(16.0)),
-                            Some(ColorRef::Color(indicator_fg)),
-                        )]
-                    },
-                ));
-            }
-
-            if let Some(l) = leading.clone() {
-                row.push(menu_icon_slot(cx, l));
-            } else if reserve_leading_slot {
-                row.push(menu_icon_slot_empty(cx));
-            }
-
-            let style = text_style.clone();
-            let mut text = ui::text(cx, label.clone())
-                .layout(LayoutRefinement::default().min_w_0().flex_1())
-                .text_size_px(style.size)
-                .font_weight(style.weight)
-                .nowrap()
-                .text_color(ColorRef::Color(if disabled {
-                    text_disabled
-                } else {
-                    row_fg
-                }));
-
-            if let Some(line_height) = style.line_height {
-                text = text.fixed_line_box_px(line_height).line_box_in_bounds();
-            }
-
-            if let Some(letter_spacing_em) = style.letter_spacing_em {
-                text = text.letter_spacing_em(letter_spacing_em);
-            }
-
-            let mut label_element = text.into_element(cx);
-            if let Some(test_id) = label_test_id.clone() {
-                label_element = label_element.test_id(test_id);
-            }
-            row.push(label_element);
-
-            if trailing.is_some() || submenu {
-                row.push(cx.spacer(SpacerProps::default()));
-            }
-            if let Some(t) = trailing.clone() {
-                let mut trailing_element = t;
-                if let Some(test_id) = trailing_test_id.clone() {
-                    trailing_element = trailing_element.test_id(test_id);
-                }
-                row.push(trailing_element);
-            }
-
-            if submenu {
-                let mut chevron = submenu_chevron_icon(
-                    cx,
-                    direction,
-                    if disabled { text_disabled } else { row_fg },
-                );
-                if let Some(test_id) = submenu_chevron_test_id.clone() {
-                    chevron = chevron.test_id(test_id);
-                }
-                row.push(chevron);
-            }
-
-            vec![cx.flex(
-                FlexProps {
-                    layout: {
-                        let mut layout = LayoutStyle::default();
-                        layout.size.width = Length::Fill;
-                        layout
-                    },
-                    direction: fret_core::Axis::Horizontal,
-                    gap: Px(8.0),
-                    padding: Edges::all(Px(0.0)),
-                    justify: MainAlign::Start,
-                    align: CrossAlign::Center,
-                    wrap: false,
-                },
-                move |_cx| row.clone(),
-            )]
+                    move |_cx| row,
+                )]
+            })
         },
     );
 
@@ -2113,7 +2157,7 @@ fn menu_icon_slot<H: UiHost>(cx: &mut ElementContext<'_, H>, element: AnyElement
             align: CrossAlign::Center,
             wrap: false,
         },
-        move |_cx| vec![element.clone()],
+        move |_cx| vec![element],
     )
 }
 
@@ -2153,69 +2197,141 @@ fn context_menu_submenu_panel<H: UiHost>(
     let gating = crate::command_gating::snapshot_for_window(&*cx.app, cx.window);
 
     let entries_tree = entries;
-    let mut flat: Vec<ContextMenuEntry> = Vec::new();
-    flatten_entries(&mut flat, entries_tree.clone());
-    let entries_flat = flat;
 
-    let reserve_leading_slot = align_leading_icons
-        && entries_flat.iter().any(|e| match e {
-            ContextMenuEntry::Item(item) => item.leading.is_some(),
-            ContextMenuEntry::CheckboxItem(item) => item.leading.is_some(),
-            ContextMenuEntry::RadioItem(item) => item.leading.is_some(),
-            ContextMenuEntry::Label(_)
-            | ContextMenuEntry::Group(_)
-            | ContextMenuEntry::RadioGroup(_)
-            | ContextMenuEntry::Separator => false,
-        });
+    fn reserve_leading_slot(entries: &[ContextMenuEntry]) -> bool {
+        for entry in entries {
+            match entry {
+                ContextMenuEntry::Item(item) => {
+                    if item.leading.is_some() || item.leading_icon.is_some() {
+                        return true;
+                    }
+                }
+                ContextMenuEntry::CheckboxItem(item) => {
+                    if item.leading.is_some() {
+                        return true;
+                    }
+                }
+                ContextMenuEntry::RadioItem(item) => {
+                    if item.leading.is_some() {
+                        return true;
+                    }
+                }
+                ContextMenuEntry::RadioGroup(group) => {
+                    if group.items.iter().any(|item| item.leading.is_some()) {
+                        return true;
+                    }
+                }
+                ContextMenuEntry::Group(group) => {
+                    if reserve_leading_slot(&group.entries) {
+                        return true;
+                    }
+                }
+                ContextMenuEntry::Label(_) | ContextMenuEntry::Separator => {}
+            }
+        }
+        false
+    }
 
-    let item_count = entries_flat
-        .iter()
-        .filter(|e| {
-            matches!(
-                e,
+    fn item_count(entries: &[ContextMenuEntry]) -> usize {
+        let mut count = 0usize;
+        for entry in entries {
+            match entry {
                 ContextMenuEntry::Item(_)
-                    | ContextMenuEntry::CheckboxItem(_)
-                    | ContextMenuEntry::RadioItem(_)
-            )
-        })
-        .count();
+                | ContextMenuEntry::CheckboxItem(_)
+                | ContextMenuEntry::RadioItem(_) => count += 1,
+                ContextMenuEntry::RadioGroup(group) => count += group.items.len(),
+                ContextMenuEntry::Group(group) => count += item_count(&group.entries),
+                ContextMenuEntry::Label(_) | ContextMenuEntry::Separator => {}
+            }
+        }
+        count
+    }
 
-    let (labels, disabled_flags): (Vec<Arc<str>>, Vec<bool>) = entries_flat
-        .iter()
-        .filter_map(|e| match e {
-            ContextMenuEntry::Item(item) => Some((
-                item.label.clone(),
-                item.disabled
-                    || crate::command_gating::command_is_disabled_by_gating(
-                        &*cx.app,
-                        &gating,
-                        item.command.as_ref(),
-                    ),
-            )),
-            ContextMenuEntry::CheckboxItem(item) => Some((
-                item.label.clone(),
-                item.disabled
-                    || crate::command_gating::command_is_disabled_by_gating(
-                        &*cx.app,
-                        &gating,
-                        item.command.as_ref(),
-                    ),
-            )),
-            ContextMenuEntry::RadioItem(item) => Some((
-                item.label.clone(),
-                item.disabled
-                    || crate::command_gating::command_is_disabled_by_gating(
-                        &*cx.app,
-                        &gating,
-                        item.command.as_ref(),
-                    ),
-            )),
-            ContextMenuEntry::Label(_)
-            | ContextMenuEntry::Separator
-            | ContextMenuEntry::Group(_)
-            | ContextMenuEntry::RadioGroup(_) => None,
-        })
-        .unzip();
+    fn push_leaf_label_and_disabled<H: UiHost>(
+        cx: &ElementContext<'_, H>,
+        gating: &WindowCommandGatingSnapshot,
+        label: &Arc<str>,
+        disabled: bool,
+        command: Option<&CommandId>,
+        labels: &mut Vec<Arc<str>>,
+        disabled_flags: &mut Vec<bool>,
+    ) {
+        labels.push(label.clone());
+        disabled_flags.push(
+            disabled
+                || crate::command_gating::command_is_disabled_by_gating(&*cx.app, gating, command),
+        );
+    }
+
+    fn collect_labels_and_disabled<H: UiHost>(
+        cx: &ElementContext<'_, H>,
+        gating: &WindowCommandGatingSnapshot,
+        entries: &[ContextMenuEntry],
+        labels: &mut Vec<Arc<str>>,
+        disabled_flags: &mut Vec<bool>,
+    ) {
+        for entry in entries {
+            match entry {
+                ContextMenuEntry::Item(item) => push_leaf_label_and_disabled(
+                    cx,
+                    gating,
+                    &item.label,
+                    item.disabled,
+                    item.command.as_ref(),
+                    labels,
+                    disabled_flags,
+                ),
+                ContextMenuEntry::CheckboxItem(item) => push_leaf_label_and_disabled(
+                    cx,
+                    gating,
+                    &item.label,
+                    item.disabled,
+                    item.command.as_ref(),
+                    labels,
+                    disabled_flags,
+                ),
+                ContextMenuEntry::RadioItem(item) => push_leaf_label_and_disabled(
+                    cx,
+                    gating,
+                    &item.label,
+                    item.disabled,
+                    item.command.as_ref(),
+                    labels,
+                    disabled_flags,
+                ),
+                ContextMenuEntry::RadioGroup(group) => {
+                    for spec in group.items.iter() {
+                        push_leaf_label_and_disabled(
+                            cx,
+                            gating,
+                            &spec.label,
+                            spec.disabled,
+                            spec.command.as_ref(),
+                            labels,
+                            disabled_flags,
+                        );
+                    }
+                }
+                ContextMenuEntry::Group(group) => {
+                    collect_labels_and_disabled(cx, gating, &group.entries, labels, disabled_flags);
+                }
+                ContextMenuEntry::Label(_) | ContextMenuEntry::Separator => {}
+            }
+        }
+    }
+
+    let reserve_leading_slot = align_leading_icons && reserve_leading_slot(entries_tree.as_slice());
+    let item_count = item_count(entries_tree.as_slice());
+
+    let mut labels: Vec<Arc<str>> = Vec::new();
+    let mut disabled_flags: Vec<bool> = Vec::new();
+    collect_labels_and_disabled(
+        cx,
+        &gating,
+        entries_tree.as_slice(),
+        &mut labels,
+        &mut disabled_flags,
+    );
 
     let labels_arc: Arc<[Arc<str>]> = Arc::from(labels.into_boxed_slice());
     let disabled_arc: Arc<[bool]> = Arc::from(disabled_flags.into_boxed_slice());
@@ -2286,10 +2402,8 @@ fn context_menu_submenu_panel<H: UiHost>(
                 destructive_bg,
                 submenu_models: submenu_models.clone(),
             };
-            let entries_tree = entries_tree.clone();
-
             let mut item_ix: usize = 0;
-            let out = render_env.render_entries(cx, &entries_tree, &mut item_ix);
+            let out = render_env.render_entries(cx, entries_tree, &mut item_ix);
 
             vec![
                 menu::sub_content::submenu_roving_group_apg_prefix_typeahead(
@@ -2314,7 +2428,7 @@ fn context_menu_submenu_panel<H: UiHost>(
                     labels_arc.clone(),
                     typeahead_timeout_ticks,
                     submenu_models.clone(),
-                    move |_cx| out.clone(),
+                    move |_cx| out,
                 ),
             ]
         },
@@ -2808,69 +2922,148 @@ impl ContextMenu {
 
                     let entries_tree: Vec<ContextMenuEntry> = entries(cx).into_iter().collect();
                     let gating = crate::command_gating::snapshot_for_window(&*cx.app, cx.window);
-                    let mut flat: Vec<ContextMenuEntry> = Vec::new();
-                    flatten_entries(&mut flat, entries_tree.clone());
-                    let entries_flat = flat;
-                    let reserve_leading_slot = align_leading_icons
-                        && entries_flat.iter().any(|e| match e {
-                            ContextMenuEntry::Item(item) => item.leading.is_some(),
-                            ContextMenuEntry::CheckboxItem(item) => item.leading.is_some(),
-                            ContextMenuEntry::RadioItem(item) => item.leading.is_some(),
-                            ContextMenuEntry::Label(_)
-                            | ContextMenuEntry::Group(_)
-                            | ContextMenuEntry::RadioGroup(_)
-                            | ContextMenuEntry::Separator => false,
-                        });
-
-                    let item_count = entries_flat
-                        .iter()
-                        .filter(|e| {
-                            matches!(
-                                e,
-                                ContextMenuEntry::Item(_)
-                                    | ContextMenuEntry::CheckboxItem(_)
-                                    | ContextMenuEntry::RadioItem(_)
-                            )
-                        })
-                        .count();
-                    let (labels, disabled_flags): (Vec<Arc<str>>, Vec<bool>) = entries_flat
-                        .iter()
-                        .filter_map(|e| match e {
-                            ContextMenuEntry::Item(item) => Some((
-                                item.label.clone(),
-                                item.disabled
-                                    || crate::command_gating::command_is_disabled_by_gating(
-                                        &*cx.app,
-                                        &gating,
-                                        item.command.as_ref(),
-                                    ),
-                            )),
-                            ContextMenuEntry::CheckboxItem(item) => {
-                                Some((
-                                    item.label.clone(),
-                                    item.disabled
-                                        || crate::command_gating::command_is_disabled_by_gating(
-                                            &*cx.app,
-                                            &gating,
-                                            item.command.as_ref(),
-                                        ),
-                                ))
+                    fn reserve_leading_slot(entries: &[ContextMenuEntry]) -> bool {
+                        for entry in entries {
+                            match entry {
+                                ContextMenuEntry::Item(item) => {
+                                    if item.leading.is_some() || item.leading_icon.is_some() {
+                                        return true;
+                                    }
+                                }
+                                ContextMenuEntry::CheckboxItem(item) => {
+                                    if item.leading.is_some() {
+                                        return true;
+                                    }
+                                }
+                                ContextMenuEntry::RadioItem(item) => {
+                                    if item.leading.is_some() {
+                                        return true;
+                                    }
+                                }
+                                ContextMenuEntry::RadioGroup(group) => {
+                                    if group.items.iter().any(|item| item.leading.is_some()) {
+                                        return true;
+                                    }
+                                }
+                                ContextMenuEntry::Group(group) => {
+                                    if reserve_leading_slot(&group.entries) {
+                                        return true;
+                                    }
+                                }
+                                ContextMenuEntry::Label(_) | ContextMenuEntry::Separator => {}
                             }
-                            ContextMenuEntry::RadioItem(item) => Some((
-                                item.label.clone(),
-                                item.disabled
-                                    || crate::command_gating::command_is_disabled_by_gating(
-                                        &*cx.app,
-                                        &gating,
-                                        item.command.as_ref(),
-                                    ),
-                            )),
-                            ContextMenuEntry::Label(_)
-                            | ContextMenuEntry::Separator
-                            | ContextMenuEntry::Group(_)
-                            | ContextMenuEntry::RadioGroup(_) => None,
-                        })
-                        .unzip();
+                        }
+                        false
+                    }
+
+                    fn item_count(entries: &[ContextMenuEntry]) -> usize {
+                        let mut count = 0usize;
+                        for entry in entries {
+                            match entry {
+                                ContextMenuEntry::Item(_)
+                                | ContextMenuEntry::CheckboxItem(_)
+                                | ContextMenuEntry::RadioItem(_) => count += 1,
+                                ContextMenuEntry::RadioGroup(group) => count += group.items.len(),
+                                ContextMenuEntry::Group(group) => count += item_count(&group.entries),
+                                ContextMenuEntry::Label(_) | ContextMenuEntry::Separator => {}
+                            }
+                        }
+                        count
+                    }
+
+                    fn push_leaf_label_and_disabled<H: UiHost>(
+                        cx: &ElementContext<'_, H>,
+                        gating: &WindowCommandGatingSnapshot,
+                        label: &Arc<str>,
+                        disabled: bool,
+                        command: Option<&CommandId>,
+                        labels: &mut Vec<Arc<str>>,
+                        disabled_flags: &mut Vec<bool>,
+                    ) {
+                        labels.push(label.clone());
+                        disabled_flags.push(
+                            disabled
+                                || crate::command_gating::command_is_disabled_by_gating(
+                                    &*cx.app,
+                                    gating,
+                                    command,
+                                ),
+                        );
+                    }
+
+                    fn collect_labels_and_disabled<H: UiHost>(
+                        cx: &ElementContext<'_, H>,
+                        gating: &WindowCommandGatingSnapshot,
+                        entries: &[ContextMenuEntry],
+                        labels: &mut Vec<Arc<str>>,
+                        disabled_flags: &mut Vec<bool>,
+                    ) {
+                        for entry in entries {
+                            match entry {
+                                ContextMenuEntry::Item(item) => push_leaf_label_and_disabled(
+                                    cx,
+                                    gating,
+                                    &item.label,
+                                    item.disabled,
+                                    item.command.as_ref(),
+                                    labels,
+                                    disabled_flags,
+                                ),
+                                ContextMenuEntry::CheckboxItem(item) => push_leaf_label_and_disabled(
+                                    cx,
+                                    gating,
+                                    &item.label,
+                                    item.disabled,
+                                    item.command.as_ref(),
+                                    labels,
+                                    disabled_flags,
+                                ),
+                                ContextMenuEntry::RadioItem(item) => push_leaf_label_and_disabled(
+                                    cx,
+                                    gating,
+                                    &item.label,
+                                    item.disabled,
+                                    item.command.as_ref(),
+                                    labels,
+                                    disabled_flags,
+                                ),
+                                ContextMenuEntry::RadioGroup(group) => {
+                                    for spec in group.items.iter() {
+                                        push_leaf_label_and_disabled(
+                                            cx,
+                                            gating,
+                                            &spec.label,
+                                            spec.disabled,
+                                            spec.command.as_ref(),
+                                            labels,
+                                            disabled_flags,
+                                        );
+                                    }
+                                }
+                                ContextMenuEntry::Group(group) => collect_labels_and_disabled(
+                                    cx,
+                                    gating,
+                                    &group.entries,
+                                    labels,
+                                    disabled_flags,
+                                ),
+                                ContextMenuEntry::Label(_) | ContextMenuEntry::Separator => {}
+                            }
+                        }
+                    }
+
+                    let reserve_leading_slot =
+                        align_leading_icons && reserve_leading_slot(entries_tree.as_slice());
+                    let item_count = item_count(entries_tree.as_slice());
+                    let mut labels: Vec<Arc<str>> = Vec::new();
+                    let mut disabled_flags: Vec<bool> = Vec::new();
+                    collect_labels_and_disabled(
+                        cx,
+                        &gating,
+                        entries_tree.as_slice(),
+                        &mut labels,
+                        &mut disabled_flags,
+                    );
 
                     let labels_arc: Arc<[Arc<str>]> = Arc::from(labels.into_boxed_slice());
                     let disabled_arc: Arc<[bool]> = Arc::from(disabled_flags.into_boxed_slice());
@@ -2916,8 +3109,11 @@ impl ContextMenu {
                     let menu_font_line_height = theme.metric_token("font.line_height");
                     let menu_pad_y = MetricRef::space(Space::N1p5).resolve(&theme);
                     let menu_row_height = Px(menu_font_line_height.0 + menu_pad_y.0 * 2.0);
-                    let desired_h =
-                        estimated_menu_panel_height_for_entries(&entries_flat, menu_row_height, max_h);
+                    let desired_h = estimated_menu_panel_height_for_entries(
+                        entries_tree.as_slice(),
+                        menu_row_height,
+                        max_h,
+                    );
                     let desired = Size::new(desired_w, desired_h);
 
                     let (layout, placement_trace) = popper::popper_layout_sized_with_trace(
@@ -2971,11 +3167,13 @@ impl ContextMenu {
                     let panel_bg = theme.color_token("popover.background");
                     let panel_chrome = crate::ui_builder_ext::surfaces::menu_style_chrome();
 
-                    let entries_for_submenu = entries_tree.clone();
-                    let entries = entries_tree.clone();
+                    let entries = entries_tree;
                     let open_for_submenu = open_for_overlay.clone();
                     let submenu_for_content = submenu.clone();
                     let submenu_for_panel = submenu.clone();
+                    let submenu_open_value_model_for_panel = submenu_for_panel.open_value.clone();
+                    let submenu_open_value_model_for_panel_for_content =
+                        submenu_open_value_model_for_panel.clone();
                     let cancel_open_for_panel = cancel_open.clone();
 
                     // Match Radix: `role=menu` is on the content panel element (not a fullscreen
@@ -2998,6 +3196,11 @@ impl ContextMenu {
                     };
 
                     let placed_local = Rect::new(Point::new(Px(0.0), Px(0.0)), placed.size);
+
+                    let submenu_entries_for_panel_cell: Rc<RefCell<Option<Vec<ContextMenuEntry>>>> =
+                        Rc::new(RefCell::new(None));
+                    let submenu_entries_for_panel_cell_for_wrapper =
+                        submenu_entries_for_panel_cell.clone();
 
                     let (content_id, content) =
                         menu::content_panel::menu_content_semantics_with_id_props(
@@ -3031,6 +3234,26 @@ impl ContextMenu {
 
                                     let overlay_root_name_for_controls_for_content =
                                         overlay_root_name_for_controls.clone();
+                                    let submenu_open_value_for_panel = cx
+                                        .app
+                                        .models_mut()
+                                        .read(
+                                            &submenu_open_value_model_for_panel_for_content,
+                                            |v| v.clone(),
+                                        )
+                                        .ok()
+                                        .flatten();
+                                    let mut entries_for_panel = entries;
+                                    let submenu_entries_for_panel = submenu_open_value_for_panel
+                                        .as_ref()
+                                        .and_then(|open_value| {
+                                            take_submenu_entries_by_value(
+                                                &mut entries_for_panel,
+                                                open_value.as_ref(),
+                                            )
+                                        });
+                                    *submenu_entries_for_panel_cell_for_wrapper.borrow_mut() =
+                                        submenu_entries_for_panel;
                                     let panel = menu::content_panel::menu_panel_container_at(
                                         cx,
                                         Rect::new(Point::new(extra_left, extra_top), placed.size),
@@ -3100,10 +3323,10 @@ impl ContextMenu {
                                                     };
 
                                                     let mut out: Vec<AnyElement> =
-                                                        Vec::with_capacity(entries.len());
+                                                        Vec::with_capacity(entries_for_panel.len());
 
                                             let mut item_ix: usize = 0;
-                                            for entry in entries.clone() {
+                                            for entry in entries_for_panel {
                                                 match entry {
                                                     ContextMenuEntry::Label(label) => {
                                                         let pad_left =
@@ -3137,7 +3360,7 @@ impl ContextMenu {
                                                     ContextMenuEntry::Group(group) => {
                                                         let children = render_env.render_entries(
                                                             cx,
-                                                            &group.entries,
+                                                            group.entries,
                                                             &mut item_ix,
                                                         );
                                                         out.push(menu_structural_group(
@@ -3212,16 +3435,11 @@ impl ContextMenu {
                                                                 &gating,
                                                                 command.as_ref(),
                                                             );
-                                                        let leading = item.leading.clone();
-                                                        let trailing = item.trailing.clone();
+                                                        let leading = item.leading;
+                                                        let leading_icon = item.leading_icon;
+                                                        let trailing = item.trailing;
                                                         let has_submenu = item.submenu.is_some();
-                                                        let submenu_entries_for_hint =
-                                                            item.submenu.clone().map(|entries| {
-                                                                let mut flat: Vec<ContextMenuEntry> =
-                                                                    Vec::new();
-                                                                flatten_entries(&mut flat, entries);
-                                                                flat
-                                                            });
+                                                        let submenu_estimated_height_unclamped: Option<Px> = None;
                                                         let variant = item.variant;
                                                         let pad_left =
                                                             if item.inset { pad_x_inset } else { pad_x };
@@ -3251,16 +3469,9 @@ impl ContextMenu {
                                                                                         ))
                                                                                     })
                                                                                     .unwrap_or(outer.size.height);
-                                                                            let entries_for_estimate =
-                                                                                submenu_entries_for_hint
-                                                                                    .clone()
-                                                                                    .unwrap_or_default();
-                                                                            let desired_h =
-                                                                                estimated_menu_panel_height_for_entries(
-                                                                                    &entries_for_estimate,
-                                                                                    menu_row_height,
-                                                                                    submenu_max_h,
-                                                                                );
+                                                                            let desired_h = submenu_estimated_height_unclamped
+                                                                                .map(|estimated| Px(estimated.0.min(submenu_max_h.0)))
+                                                                                .unwrap_or(submenu_max_h);
                                                                             let desired = Size::new(
                                                                                 submenu_min_width,
                                                                                 desired_h,
@@ -3357,21 +3568,26 @@ impl ContextMenu {
                                                                         }
                                                                     }
 
-                                                                    let trailing = if has_submenu {
-                                                                        trailing.clone()
-                                                                    } else {
-                                                                        trailing.clone().or_else(|| {
-                                                                            command.as_ref().and_then(|cmd| {
-                                                                                command_shortcut_label(cx, cmd, fret_runtime::Platform::current())
-                                                                                    .map(|text| ContextMenuShortcut::new(text).into_element(cx))
+                                                                    let mut trailing = trailing;
+                                                                    if !has_submenu && trailing.is_none() {
+                                                                        trailing = command.as_ref().and_then(|cmd| {
+                                                                            command_shortcut_label(
+                                                                                cx,
+                                                                                cmd,
+                                                                                fret_runtime::Platform::current(),
+                                                                            )
+                                                                            .map(|text| {
+                                                                                ContextMenuShortcut::new(text)
+                                                                                    .into_element(cx)
                                                                             })
-                                                                        })
-                                                                    };
+                                                                        });
+                                                                    }
 
                                                                     let children = menu_row_children(
                                                                         cx,
                                                                         label.clone(),
-                                                                        leading.clone(),
+                                                                        leading,
+                                                                        leading_icon,
                                                                         reserve_leading_slot,
                                                                         trailing,
                                                                         has_submenu,
@@ -3414,8 +3630,8 @@ impl ContextMenu {
                                                                 &gating,
                                                                 command.as_ref(),
                                                             );
-                                                        let leading = item.leading.clone();
-                                                        let trailing = item.trailing.clone();
+                                                        let leading = item.leading;
+                                                        let trailing = item.trailing;
                                                         let open = open_for_overlay.clone();
                                                         let text_style = text_style.clone();
                                                         let first_item_focus_id_for_items =
@@ -3450,12 +3666,20 @@ impl ContextMenu {
                                                                         cx.pressable_set_bool(&open, false);
                                                                     }
 
-                                                                    let trailing = trailing.clone().or_else(|| {
-                                                                        command.as_ref().and_then(|cmd| {
-                                                                            command_shortcut_label(cx, cmd, fret_runtime::Platform::current())
-                                                                                .map(|text| ContextMenuShortcut::new(text).into_element(cx))
-                                                                        })
-                                                                    });
+                                                                    let mut trailing = trailing;
+                                                                    if trailing.is_none() {
+                                                                        trailing = command.as_ref().and_then(|cmd| {
+                                                                            command_shortcut_label(
+                                                                                cx,
+                                                                                cmd,
+                                                                                fret_runtime::Platform::current(),
+                                                                            )
+                                                                            .map(|text| {
+                                                                                ContextMenuShortcut::new(text)
+                                                                                    .into_element(cx)
+                                                                            })
+                                                                        });
+                                                                    }
 
                                                                     let mut row_bg =
                                                                         fret_core::Color::TRANSPARENT;
@@ -3468,7 +3692,8 @@ impl ContextMenu {
                                                                     let children = menu_row_children(
                                                                         cx,
                                                                         label.clone(),
-                                                                        leading.clone(),
+                                                                        leading,
+                                                                        None,
                                                                         reserve_leading_slot,
                                                                         trailing,
                                                                         false,
@@ -3535,8 +3760,8 @@ impl ContextMenu {
                                                                 &gating,
                                                                 command.as_ref(),
                                                             );
-                                                        let leading = item.leading.clone();
-                                                        let trailing = item.trailing.clone();
+                                                        let leading = item.leading;
+                                                        let trailing = item.trailing;
                                                         let open = open_for_overlay.clone();
                                                         let text_style = text_style.clone();
                                                         let first_item_focus_id_for_items =
@@ -3575,12 +3800,20 @@ impl ContextMenu {
                                                                         cx.pressable_set_bool(&open, false);
                                                                     }
 
-                                                                    let trailing = trailing.clone().or_else(|| {
-                                                                        command.as_ref().and_then(|cmd| {
-                                                                            command_shortcut_label(cx, cmd, fret_runtime::Platform::current())
-                                                                                .map(|text| ContextMenuShortcut::new(text).into_element(cx))
-                                                                        })
-                                                                    });
+                                                                    let mut trailing = trailing;
+                                                                    if trailing.is_none() {
+                                                                        trailing = command.as_ref().and_then(|cmd| {
+                                                                            command_shortcut_label(
+                                                                                cx,
+                                                                                cmd,
+                                                                                fret_runtime::Platform::current(),
+                                                                            )
+                                                                            .map(|text| {
+                                                                                ContextMenuShortcut::new(text)
+                                                                                    .into_element(cx)
+                                                                            })
+                                                                        });
+                                                                    }
 
                                                                     let mut row_bg =
                                                                         fret_core::Color::TRANSPARENT;
@@ -3593,7 +3826,8 @@ impl ContextMenu {
                                                                     let children = menu_row_children(
                                                                         cx,
                                                                         label.clone(),
-                                                                        leading.clone(),
+                                                                        leading,
+                                                                        None,
                                                                         reserve_leading_slot,
                                                                         trailing,
                                                                         false,
@@ -3696,33 +3930,15 @@ impl ContextMenu {
                     let submenu_open_value = cx
                         .app
                         .models_mut()
-                        .read(&submenu_for_panel.open_value, |v| v.clone())
+                        .read(&submenu_open_value_model_for_panel, |v| v.clone())
                         .ok()
                         .flatten();
-                    let desired = submenu_open_value
-                        .as_ref()
-                        .and_then(|open_value| {
-                            find_submenu_entries_by_value(&entries_for_submenu, open_value.as_ref())
-                        })
-                        .map(|submenu_entries| {
-                            let mut flat: Vec<ContextMenuEntry> = Vec::new();
-                            flatten_entries(&mut flat, submenu_entries);
-                            let submenu_max_h = submenu_max_height_metric
-                                .map(|h| Px(h.0.min(outer.size.height.0)))
-                                .unwrap_or(outer.size.height);
-                            let desired_h = estimated_menu_panel_height_for_entries(
-                                &flat,
-                                menu_row_height,
-                                submenu_max_h,
-                            );
-                            Size::new(submenu_min_width, desired_h)
-                        })
-                        .unwrap_or_else(|| {
-                            let submenu_max_h = submenu_max_height_metric
-                                .map(|h| Px(h.0.min(outer.size.height.0)))
-                                .unwrap_or(outer.size.height);
-                            Size::new(submenu_min_width, submenu_max_h)
-                        });
+                    let desired = {
+                        let submenu_max_h = submenu_max_height_metric
+                            .map(|h| Px(h.0.min(outer.size.height.0)))
+                            .unwrap_or(outer.size.height);
+                        Size::new(submenu_min_width, submenu_max_h)
+                    };
                     let submenu_is_open = submenu_open_value.is_some();
                     let submenu_present = submenu_is_open;
                     let submenu_opacity = 1.0;
@@ -3758,7 +3974,7 @@ impl ContextMenu {
                         };
 
                         if let Some(submenu_entries) =
-                            find_submenu_entries_by_value(&entries_for_submenu, open_value.as_ref())
+                            submenu_entries_for_panel_cell.borrow_mut().take()
                         {
                             let submenu_panel = context_menu_submenu_panel(
                                 cx,
@@ -4834,7 +5050,7 @@ mod tests {
                             },
                         )
                     },
-                    move |_cx| entries.clone(),
+                    move |_cx| entries,
                 );
 
                 // Keep the context-menu trigger above the underlay so the right-click open gesture
@@ -4923,7 +5139,7 @@ mod tests {
                                 },
                             )
                         },
-                        move |_cx| entries.clone(),
+                        move |_cx| entries,
                     );
 
                 vec![trigger, underlay]
@@ -5025,7 +5241,7 @@ mod tests {
                                     )
                                 }
                             },
-                            move |_cx| entries.clone(),
+                            move |_cx| entries,
                         );
 
                 vec![trigger, underlay]
@@ -6662,13 +6878,15 @@ mod tests {
         );
         let mut services = FakeServices::default();
 
-        let entries = vec![
-            ContextMenuEntry::Item(ContextMenuItem::new("More").submenu(vec![
-                ContextMenuEntry::Item(ContextMenuItem::new("Sub Alpha")),
-                ContextMenuEntry::Item(ContextMenuItem::new("Sub Beta")),
-            ])),
-            ContextMenuEntry::Item(ContextMenuItem::new("Other")),
-        ];
+        let build_entries = || {
+            vec![
+                ContextMenuEntry::Item(ContextMenuItem::new("More").submenu(vec![
+                    ContextMenuEntry::Item(ContextMenuItem::new("Sub Alpha")),
+                    ContextMenuEntry::Item(ContextMenuItem::new("Sub Beta")),
+                ])),
+                ContextMenuEntry::Item(ContextMenuItem::new("Other")),
+            ]
+        };
 
         // Frame 1: build the tree and establish stable trigger bounds.
         let root = render_frame_focusable_trigger_with_underlay_and_entries(
@@ -6679,7 +6897,7 @@ mod tests {
             bounds,
             open.clone(),
             underlay_clicked.clone(),
-            entries.clone(),
+            build_entries(),
         );
         let trigger = ui
             .first_focusable_descendant_including_declarative(&mut app, window, root)
@@ -6728,7 +6946,7 @@ mod tests {
             bounds,
             open.clone(),
             underlay_clicked.clone(),
-            entries.clone(),
+            build_entries(),
         );
         assert_eq!(app.models().get_copied(&open), Some(true));
 
@@ -6790,7 +7008,7 @@ mod tests {
             bounds,
             open.clone(),
             underlay_clicked,
-            entries,
+            build_entries(),
         );
         let _ = app.flush_effects();
 
@@ -6857,13 +7075,15 @@ mod tests {
         );
         let mut services = FakeServices::default();
 
-        let entries = vec![
-            ContextMenuEntry::Item(ContextMenuItem::new("More").submenu(vec![
-                ContextMenuEntry::Item(ContextMenuItem::new("Sub Alpha")),
-                ContextMenuEntry::Item(ContextMenuItem::new("Sub Beta")),
-            ])),
-            ContextMenuEntry::Item(ContextMenuItem::new("Other")),
-        ];
+        let build_entries = || {
+            vec![
+                ContextMenuEntry::Item(ContextMenuItem::new("More").submenu(vec![
+                    ContextMenuEntry::Item(ContextMenuItem::new("Sub Alpha")),
+                    ContextMenuEntry::Item(ContextMenuItem::new("Sub Beta")),
+                ])),
+                ContextMenuEntry::Item(ContextMenuItem::new("Other")),
+            ]
+        };
 
         // Frame 1: build the tree and establish stable trigger bounds.
         let root = render_frame_focusable_trigger_with_entries(
@@ -6873,7 +7093,7 @@ mod tests {
             window,
             bounds,
             open.clone(),
-            entries.clone(),
+            build_entries(),
         );
         let trigger = ui
             .first_focusable_descendant_including_declarative(&mut app, window, root)
@@ -6921,7 +7141,7 @@ mod tests {
             window,
             bounds,
             open.clone(),
-            entries.clone(),
+            build_entries(),
         );
         assert_eq!(app.models().get_copied(&open), Some(true));
         let occlusion = fret_ui_kit::OverlayController::arbitration_snapshot(&ui).pointer_occlusion;
@@ -6973,7 +7193,7 @@ mod tests {
             window,
             bounds,
             open.clone(),
-            entries.clone(),
+            build_entries(),
         );
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
@@ -7191,12 +7411,14 @@ mod tests {
         );
         let mut services = FakeServices::default();
 
-        let entries = vec![ContextMenuEntry::Item(
-            ContextMenuItem::new("More").submenu(vec![
-                ContextMenuEntry::Item(ContextMenuItem::new("Sub Alpha")),
-                ContextMenuEntry::Item(ContextMenuItem::new("Sub Beta")),
-            ]),
-        )];
+        let build_entries = || {
+            vec![ContextMenuEntry::Item(
+                ContextMenuItem::new("More").submenu(vec![
+                    ContextMenuEntry::Item(ContextMenuItem::new("Sub Alpha")),
+                    ContextMenuEntry::Item(ContextMenuItem::new("Sub Beta")),
+                ]),
+            )]
+        };
 
         let _ = render_frame_focusable_trigger_with_entries(
             &mut ui,
@@ -7205,7 +7427,7 @@ mod tests {
             window,
             bounds,
             open.clone(),
-            entries.clone(),
+            build_entries(),
         );
 
         let _ = app.models_mut().update(&open, |v| *v = true);
@@ -7216,7 +7438,7 @@ mod tests {
             window,
             bounds,
             open.clone(),
-            entries.clone(),
+            build_entries(),
         );
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
@@ -7244,7 +7466,7 @@ mod tests {
             window,
             bounds,
             open,
-            entries,
+            build_entries(),
         );
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");

@@ -313,7 +313,7 @@ impl std::fmt::Debug for ToolHeader {
 }
 
 /// Tool disclosure body wrapper (`CollapsibleContent`) with shadcn-like padding/gap defaults.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct ToolContent {
     children: Vec<AnyElement>,
     layout: LayoutRefinement,
@@ -542,7 +542,7 @@ impl ToolOutput {
 }
 
 /// Tool disclosure root (bordered Collapsible).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Tool {
     default_open: bool,
     header: ToolHeader,
@@ -594,8 +594,8 @@ impl Tool {
             .refine_style(base_chrome.merge(self.chrome))
             .into_element_with_open_model(
                 cx,
-                move |cx, open_model, is_open| header.clone().into_trigger(cx, open_model, is_open),
-                move |cx| content.clone().into_element(cx),
+                move |cx, open_model, is_open| header.into_trigger(cx, open_model, is_open),
+                move |cx| content.into_element(cx),
             )
     }
 }

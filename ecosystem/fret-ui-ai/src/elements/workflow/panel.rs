@@ -35,7 +35,6 @@ fret_ui_kit::ui_component_layout_only_patch_only!(WorkflowPanelInner);
 /// Notes:
 /// - Upstream is `@xyflow/react`-backed; in Fret this is a styling/composition wrapper only.
 /// - Apps own positioning and interaction policy.
-#[derive(Clone)]
 pub struct WorkflowPanel {
     children: Vec<AnyElement>,
     test_id: Option<Arc<str>>,

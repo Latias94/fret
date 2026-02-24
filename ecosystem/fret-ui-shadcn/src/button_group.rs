@@ -204,7 +204,7 @@ impl ButtonGroupText {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum ButtonGroupItem {
     Button(Button),
     Text(ButtonGroupText),
@@ -257,7 +257,7 @@ pub enum ButtonGroupOrientation {
     Vertical,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct ButtonGroup {
     items: Vec<ButtonGroupItem>,
     orientation: ButtonGroupOrientation,

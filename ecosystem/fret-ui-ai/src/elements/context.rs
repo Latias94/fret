@@ -60,7 +60,6 @@ impl Default for ContextUsage {
 }
 
 /// AI Elements-aligned context usage hovercard (`context.tsx`).
-#[derive(Clone)]
 pub struct Context {
     used_tokens: u64,
     max_tokens: u64,

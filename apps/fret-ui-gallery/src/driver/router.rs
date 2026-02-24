@@ -32,15 +32,12 @@ struct UiGalleryPagePrefetchSeed {
 }
 
 fn route_location_for_page(from: &RouteLocation, page: &Arc<str>) -> RouteLocation {
-    let location = RouteLocation::from_path("/gallery")
-        .with_query_value("page", Some(page.to_string()))
-        .with_query_value("source", Some("nav".to_string()));
-
-    if let Some(demo) = from.query_value("demo") {
-        location.with_query_value("demo", Some(demo.to_string()))
-    } else {
-        location
-    }
+    // Preserve any non-gallery query params (e.g. devtools WS flags) when canonicalizing navigation.
+    let mut location = from.clone();
+    location.path = "/gallery".to_string();
+    location.set_query_value("page", Some(page.to_string()));
+    location.set_query_value("source", Some("nav".to_string()));
+    location
 }
 
 pub(super) fn page_from_gallery_location(location: &RouteLocation) -> Option<Arc<str>> {

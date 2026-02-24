@@ -18,12 +18,17 @@
   - “LoadOp::Load requires prior init” regression (validator unit test)
   - “ReleaseTarget inserted after last use” regression (unit test)
   - “Downsample scissor mapping never expands bounds” regression (unit test)
-- [ ] Audit pass-by-pass semantics and document any ambiguous areas:
+  - “Scissored in-place effects preserve outside-region content” regression (unit test)
+  - “PathMsaaBatch is preceded by an init clear when it is the first draw in a scope” regression (unit test)
+  - “First write to Output is Clear” regression (unit test)
+- [x] Audit pass-by-pass semantics and document any ambiguous areas:
   - `PathMsaaBatch` initialization rules (validated as `LoadOp::Load`)
   - `ClipMask` pass clear/load assumptions (always `Clear`)
   - mask sampling + viewport rect mapping rules for each postprocess pass
   - [x] Add an explicit “Ambiguities / TODO” section to the v1 semantics doc.
     - Evidence: `docs/workstreams/renderer-render-plan-semantics-audit-v1.md` (Ambiguities / TODO).
+  - [x] Expand the pass-by-pass semantics checklist with the patterns we actually rely on (in-place scissored scale/effects, etc.).
+    - Evidence: `docs/workstreams/renderer-render-plan-semantics-audit-v1.md` (Pass semantics summary).
   - [x] Mechanically verify `ClipMask` clear/load assumptions across all plan pass variants and recorders.
     - Evidence: `crates/fret-render-wgpu/src/renderer/render_plan.rs` (`validate_plan_scissors`: `ClipMask must clear`),
       `crates/fret-render-wgpu/src/renderer/render_plan/tests.rs` (`debug_validate_rejects_clip_mask_load_op_load`).
@@ -32,7 +37,7 @@
   - [x] Write a small per-pass table for `MaskRef.viewport_rect` mapping rules (dst-local space, tier expectations, downsample/upsample behavior).
     - Evidence: `docs/workstreams/renderer-render-plan-semantics-audit-v1.md` (MaskRef mapping matrix).
   - [x] Document scissor mapping rules used across resize chains (floor start, ceil end; never expand coverage).
-    - Evidence: `docs/workstreams/renderer-render-plan-semantics-audit-v1.md` (Scissor mapping rules),
+    - Evidence: `docs/workstreams/renderer-render-plan-semantics-audit-v1.md` (Scissor mapping rules + Scale/scissor mapping notes),
       `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` (`map_scissor_to_size`, `map_scissor_downsample_nearest`),
       `crates/fret-render-wgpu/src/renderer/render_plan/tests.rs` (`downsample_scissor_mapping_does_not_expand_across_steps`).
 - [x] Make plan-pass trace/meta preserve scissor coordinate space tags (absolute vs dst-local).

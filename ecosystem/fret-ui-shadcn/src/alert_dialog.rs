@@ -371,7 +371,7 @@ impl AlertDialog {
 }
 
 /// shadcn/ui `AlertDialogTrigger` (v4).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct AlertDialogTrigger {
     child: AnyElement,
 }
@@ -395,7 +395,7 @@ pub enum AlertDialogContentSize {
     Sm,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct AlertDialogContent {
     children: Vec<AnyElement>,
     size: AlertDialogContentSize,
@@ -493,7 +493,7 @@ impl AlertDialogContent {
 }
 
 /// shadcn/ui `AlertDialogHeader` (v4).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct AlertDialogHeader {
     media: Option<AnyElement>,
     children: Vec<AnyElement>,
@@ -595,7 +595,7 @@ impl AlertDialogHeader {
 }
 
 /// shadcn/ui `AlertDialogMedia` (v4).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct AlertDialogMedia {
     child: AnyElement,
     chrome: ChromeRefinement,
@@ -656,7 +656,7 @@ impl AlertDialogMedia {
 }
 
 /// shadcn/ui `AlertDialogFooter` (v4).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct AlertDialogFooter {
     children: Vec<AnyElement>,
 }

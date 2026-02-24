@@ -143,6 +143,18 @@ Current status:
 - Some legacy/low-level surfaces may still be authored directly as retained widgets, but the long-term direction for
   ecosystem components is “declarative-first / declarative-only”.
 
+#### Move-only elements (important authoring constraint)
+
+`AnyElement` carries stable identity (`GlobalElementId`) used for cross-frame state reuse and mounting. As a result,
+`AnyElement` is intentionally **move-only** (not `Clone`): cloning an element value and inserting it into multiple
+positions in the same element tree would duplicate the same `GlobalElementId`, creating a “multi-parent” graph rather
+than a strict tree. This can surface as late-cycle failures during semantics snapshot production (cycle detection),
+especially under strict runtime settings.
+
+Reusable UI fragments should be expressed as builders/closures that **rebuild** elements each frame, and repeated
+structures should use explicit identity (`cx.keyed(...)`, `cx.named(...)`, stable keys) rather than copying element
+values.
+
 ### Proposed structure
 
 - The UI is described as a tree with stable identity:
