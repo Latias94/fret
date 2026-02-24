@@ -12,7 +12,7 @@ The goal is to avoid “open a huge `bundle.json`” during first-pass triage by
 
 ## Inputs
 
-- A diagnostics bundle directory (or `bundle.json` path).
+- A diagnostics bundle directory (or a `bundle.json` / `bundle.schema2.json` path).
 - A `warmup_frames` value (defaults are fine; for scripted runs use the same value as the run/suite/perf command).
 
 ## Step 0: Preflight (self-heal missing artifacts)
@@ -20,7 +20,7 @@ The goal is to avoid “open a huge `bundle.json`” during first-pass triage by
 Run doctor first. It is safe to run repeatedly.
 
 - (Optional) Generate a plan file:
-  - `fretboard diag agent <bundle_dir|bundle.json> --warmup-frames <n>`
+  - `fretboard diag agent <bundle_dir|bundle.json|bundle.schema2.json> --warmup-frames <n>`
 
 - `fretboard diag doctor --check <bundle_dir> --warmup-frames <n>`
 - If missing/invalid artifacts are reported:

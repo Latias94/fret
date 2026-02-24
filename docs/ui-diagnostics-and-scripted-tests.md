@@ -169,7 +169,7 @@ Notes:
 
 ## Offline bundle viewer (optional)
 
-This repo includes an offline web viewer for `bundle.json` at `tools/fret-bundle-viewer`.
+This repo includes an offline web viewer for bundle artifacts (`bundle.json` / `bundle.schema2.json`) at `tools/fret-bundle-viewer`.
 
 ```powershell
 $env:HTTP_PROXY='http://127.0.0.1:10809'
@@ -181,8 +181,8 @@ pnpm -C tools/fret-bundle-viewer dev
 
 Workflow tip:
 
-- Drag the `bundle.json` file from `target/fret-diag/.../bundle.json` into the viewer (or use the file picker).
-- You can also open a `.zip` that contains a `bundle.json` anywhere inside it (handy for sharing a full repro directory).
+- Drag `bundle.json` (or `bundle.schema2.json`) from `target/fret-diag/.../` into the viewer (or use the file picker).
+- You can also open a `.zip` that contains `bundle.json` or `bundle.schema2.json` anywhere inside it (handy for sharing a full repro directory).
 - To generate a shareable `.zip` for the latest bundle: `cargo run -p fretboard -- diag pack`
 - To include nearby artifacts (`script.json`, `script.result.json`, `pick.result.json`), `triage.json`, and screenshots (when present): `cargo run -p fretboard -- diag pack --include-all`
 - The bundle viewer surfaces these zip artifacts (and lets you copy/download them) when they are present under `_root/`.
@@ -191,7 +191,7 @@ Workflow tip:
 - To print a compact human meta report (semantics inline vs table + table size indicators): `cargo run -p fretboard -- diag meta <bundle_dir|bundle.json|bundle.schema2.json> --meta-report`
 - To include `triage.json` in a share zip: `cargo run -p fretboard -- diag pack --include-triage`
 - To include screenshots in a share zip: `cargo run -p fretboard -- diag pack --include-screenshots` (packs `target/fret-diag/screenshots/<bundle_timestamp>/` into `_root/screenshots/` when available)
-- If you’re sharing via chat, “Paste JSON” is a fast way to load a copied `bundle.json` payload without files.
+- If you’re sharing via chat, “Paste JSON” is a fast way to load a copied `bundle.json` / `bundle.schema2.json` payload without files.
 - Use “Export triage.json” when you want a small, machine-readable artifact for AI triage (selection + bounded debug artifacts).
 
 ## AI-first sharing (recommended)

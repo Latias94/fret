@@ -186,6 +186,9 @@ scope: diagnostics, automation, tooling, refactor
   - Evidence anchors:
     - `crates/fret-diag/src/lib.rs`
     - `crates/fret-diag/src/commands/doctor.rs`
+- [x] Normalize bundle artifact path handling in post-run gates (prefer `resolve_bundle_artifact_path`, avoid hard-coded `join("bundle.json")` reads).
+- [x] Update the offline bundle viewer and docs to accept `bundle.schema2.json` as a primary artifact (prefer schema2 when both exist in a zip).
+- [ ] Continue the sweep: remove remaining hard-coded `bundle.json` reads across `crates/fret-diag` tooling and gates (prefer shared helpers).
 
 ## M3: Tooling + AI loop
 
