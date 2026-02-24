@@ -989,6 +989,27 @@ fn snapshot_meter_numeric_semantics() {
 }
 
 #[test]
+fn snapshot_resizable_splitter_semantics() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(420.0), Px(180.0)),
+    );
+    snapshot_for_root("resizable_splitter_semantics", bounds, |cx| {
+        let model = cx.app.models_mut().insert(vec![0.5f32, 0.5f32]);
+
+        vec![
+            fret_ui_shadcn::ResizablePanelGroup::new(model)
+                .entries([
+                    fret_ui_shadcn::ResizablePanel::new([cx.text("Left")]).into(),
+                    fret_ui_shadcn::ResizableHandle::new().into(),
+                    fret_ui_shadcn::ResizablePanel::new([cx.text("Right")]).into(),
+                ])
+                .into_element(cx),
+        ]
+    });
+}
+
+#[test]
 fn snapshot_scroll_area_scrollbar_semantics() {
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
