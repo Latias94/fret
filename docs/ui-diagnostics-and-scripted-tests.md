@@ -215,6 +215,8 @@ Prefer sharing **bounded artifacts** over the full `bundle.json` (especially in 
   - Before packing a share zip: `cargo run -p fretboard -- diag pack <bundle_dir> --ai-packet`
   - Pack a bounded “AI-only” zip (packs `ai.packet/` + nearby script sources, but does not include the full bundle artifact):
     - `cargo run -p fretboard -- diag pack <bundle_dir> --ai-only`
+    - If the bundle dir has sidecars but no readable bundle artifact, `diag pack --ai-only` can still succeed by generating
+      `ai.packet/` from sidecars (equivalent to `diag ai-packet <bundle_dir> --sidecars-only`).
   - For a multi-script repro run, pack a bounded `repro.ai.zip`:
     - `cargo run -p fretboard -- diag repro <suite|script.json...> --ai-only`
   - Agent plan JSON (includes recommended bounded commands like `diag pack --ai-only`):

@@ -67,11 +67,33 @@ pub(crate) fn cmd_pack(
     };
 
     if ensure_ai_packet || pack_ai_only {
-        let bundle_path = crate::resolve_bundle_artifact_path(&bundle_dir);
         let packet_dir = bundle_dir.join("ai.packet");
-        if !packet_dir.is_dir() && bundle_path.is_file() {
-            if let Err(err) = super::ai_packet::generate_ai_packet_dir(
-                &bundle_path,
+        if !packet_dir.is_dir() {
+            let bundle_path_opt = if bundle_dir.join("bundle.schema2.json").is_file() {
+                Some(bundle_dir.join("bundle.schema2.json"))
+            } else if bundle_dir.join("bundle.json").is_file() {
+                Some(bundle_dir.join("bundle.json"))
+            } else {
+                None
+            };
+
+            if let Some(bundle_path) = bundle_path_opt.as_deref()
+                && bundle_path.is_file()
+            {
+                if let Err(err) = super::ai_packet::generate_ai_packet_dir(
+                    bundle_path,
+                    &bundle_dir,
+                    &packet_dir,
+                    pack_include_triage,
+                    stats_top,
+                    sort_override,
+                    warmup_frames,
+                    None,
+                ) {
+                    eprintln!("ai-packet: failed to generate ai.packet: {err}");
+                }
+            } else if let Err(err) = super::ai_packet::generate_ai_packet_dir_sidecars_only(
+                bundle_path_opt.as_deref(),
                 &bundle_dir,
                 &packet_dir,
                 pack_include_triage,
@@ -80,7 +102,9 @@ pub(crate) fn cmd_pack(
                 warmup_frames,
                 None,
             ) {
-                eprintln!("ai-packet: failed to generate ai.packet: {err}");
+                // Best-effort: pack may still succeed if `ai.packet/` is already present,
+                // or will fail with a clear `--ai-only requires ai.packet` error.
+                eprintln!("ai-packet: failed to generate ai.packet from sidecars: {err}");
             }
         }
     }
@@ -115,6 +139,107 @@ pub(crate) fn cmd_pack(
     )?;
     println!("{}", out.display());
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn pack_ai_only_can_generate_ai_packet_from_sidecars_only() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-pack-ai-only-sidecars-{}-{}",
+            crate::util::now_unix_ms(),
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).expect("create temp root");
+
+        let bundle_dir = root.join("bundle");
+        std::fs::create_dir_all(&bundle_dir).expect("create bundle dir");
+
+        std::fs::write(
+            bundle_dir.join("bundle.meta.json"),
+            serde_json::to_vec(&serde_json::json!({
+                "kind": "bundle_meta",
+                "schema_version": 1,
+                "warmup_frames": 0,
+                "bundle": "bundle.json",
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        std::fs::write(
+            bundle_dir.join("test_ids.index.json"),
+            b"{\"kind\":\"test_ids_index\",\"schema_version\":1}",
+        )
+        .unwrap();
+        std::fs::write(
+            bundle_dir.join("bundle.index.json"),
+            serde_json::to_vec(&serde_json::json!({
+                "kind": "bundle_index",
+                "schema_version": 1,
+                "warmup_frames": 0,
+                "bundle": "bundle.json",
+                "windows": [],
+                "script": { "steps": [] },
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        std::fs::write(
+            bundle_dir.join("frames.index.json"),
+            serde_json::to_vec(&serde_json::json!({
+                "kind": "frames_index",
+                "schema_version": 1,
+                "bundle": "bundle.json",
+                "generated_unix_ms": 0,
+                "warmup_frames": 0,
+                "has_semantics_table": true,
+                "columns": ["frame_id", "window_snapshot_seq", "timestamp_unix_ms", "total_time_us", "layout_time_us", "paint_time_us", "semantics_fingerprint", "semantics_source_tag"],
+                "windows_total": 0,
+                "snapshots_total": 0,
+                "frames_total": 0,
+                "windows": []
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+
+        let out_path = root.join("out.ai.zip");
+        cmd_pack(
+            &[bundle_dir.to_string_lossy().to_string()],
+            &root,
+            &root,
+            Some(out_path.clone()),
+            false,
+            true,
+            false,
+            false,
+            false,
+            false,
+            10,
+            None,
+            0,
+        )
+        .expect("pack ai-only zip");
+
+        assert!(out_path.is_file(), "expected output zip");
+
+        let f = std::fs::File::open(out_path).expect("open out zip");
+        let mut zip = zip::ZipArchive::new(f).expect("open zip archive");
+        let names: Vec<String> = (0..zip.len())
+            .map(|i| zip.by_index(i).expect("zip entry").name().to_string())
+            .collect();
+        assert!(
+            names
+                .iter()
+                .any(|n| n.ends_with("/_root/ai.packet/bundle.meta.json")),
+            "expected ai.packet/bundle.meta.json in zip"
+        );
+
+        let _ = std::fs::remove_dir_all(&root);
+    }
 }
 
 #[allow(clippy::too_many_arguments)]

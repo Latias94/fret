@@ -127,7 +127,7 @@ This file tracks tasks for `docs/workstreams/diag-fearless-refactor-v1.md`.
   - `diag pack <bundle_dir> --ai-packet` (best-effort ensure before zipping)
 - [x] Add a bounded share zip mode that packs only AI artifacts (no full bundle artifact):
   - `diag pack <bundle_dir> --ai-only` (packs `ai.packet/` + nearby script sources)
-- [ ] Add a sidecars-only mode to build ai packets without reading the bundle artifact:
+- [x] Add a sidecars-only mode to build ai packets without reading the bundle artifact:
   - `diag ai-packet <bundle_dir> --sidecars-only`
   - Goal: allow regenerating `ai.packet/` from a shared bundle dir where only sidecars are present (or the raw bundle is too large).
 - [ ] Decide how far to push schema2-first:
