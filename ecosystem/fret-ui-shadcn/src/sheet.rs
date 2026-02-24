@@ -114,7 +114,8 @@ pub enum SheetSide {
 pub struct Sheet {
     open: Model<bool>,
     side: SheetSide,
-    size_override: Option<Px>,
+    size_override: Option<SheetSizeOverride>,
+    max_size_override: Option<Px>,
     overlay_closable: bool,
     overlay_color: Option<Color>,
     on_dismiss_request: Option<OnDismissRequest>,
@@ -126,12 +127,35 @@ pub struct Sheet {
     vertical_auto_max_height_fraction: Option<f32>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum SheetSizeOverride {
+    Px(Px),
+    Fraction(f32),
+}
+
+impl SheetSizeOverride {
+    fn as_length(self) -> Length {
+        match self {
+            Self::Px(px) => Length::Px(px),
+            Self::Fraction(fraction) => Length::Fraction(fraction),
+        }
+    }
+
+    fn as_estimated_motion_distance_px(self, default_px: Px, max_px: Option<Px>) -> Px {
+        match self {
+            Self::Px(px) => px,
+            Self::Fraction(_) => max_px.unwrap_or(default_px),
+        }
+    }
+}
+
 impl std::fmt::Debug for Sheet {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Sheet")
             .field("open", &"<model>")
             .field("side", &self.side)
             .field("size_override", &self.size_override)
+            .field("max_size_override", &self.max_size_override)
             .field("overlay_closable", &self.overlay_closable)
             .field("overlay_color", &self.overlay_color)
             .field("on_dismiss_request", &self.on_dismiss_request.is_some())
@@ -157,6 +181,7 @@ impl Sheet {
             open,
             side: SheetSide::default(),
             size_override: None,
+            max_size_override: None,
             overlay_closable: true,
             overlay_color: None,
             on_dismiss_request: None,
@@ -194,7 +219,36 @@ impl Sheet {
     /// - width for `Left` / `Right`
     /// - height for `Top` / `Bottom`
     pub fn size(mut self, size: Px) -> Self {
-        self.size_override = Some(size);
+        let max_size = self.max_size_override.unwrap_or(Px(f32::INFINITY));
+        let size = Px(size.0.max(0.0).min(max_size.0.max(0.0)));
+        self.size_override = Some(SheetSizeOverride::Px(size));
+        self
+    }
+
+    /// Sets the sheet size as a fraction of the viewport:
+    /// - width for `Left` / `Right`
+    /// - height for `Top` / `Bottom`
+    pub fn size_fraction(mut self, fraction: f32) -> Self {
+        let fraction = if fraction.is_finite() && fraction > 0.0 {
+            fraction.min(1.0)
+        } else {
+            0.0
+        };
+        self.size_override = Some(SheetSizeOverride::Fraction(fraction));
+        self
+    }
+
+    /// Caps the sheet size on its primary axis:
+    /// - width for `Left` / `Right`
+    /// - height for `Top` / `Bottom`
+    pub fn max_size(mut self, max_size: Px) -> Self {
+        let max_size = Px(max_size.0.max(0.0));
+        self.max_size_override = Some(max_size);
+        if let Some(SheetSizeOverride::Px(size_px)) = self.size_override {
+            if size_px.0 > max_size.0 {
+                self.size_override = Some(SheetSizeOverride::Px(max_size));
+            }
+        }
         self
     }
 
@@ -335,6 +389,7 @@ impl Sheet {
                     .on_close_auto_focus(on_close_auto_focus);
 
                 let size_override = self.size_override;
+                let max_size_override = self.max_size_override;
                 let vertical_edge_gap_px = self.vertical_edge_gap_px.unwrap_or(Px(0.0));
                 let vertical_auto_max_height_fraction =
                     self.vertical_auto_max_height_fraction.unwrap_or(1.0);
@@ -342,7 +397,11 @@ impl Sheet {
                     .metric_by_key("component.sheet.size")
                     .or_else(|| theme.metric_by_key("component.sheet.width"))
                     .unwrap_or(Px(350.0));
-                let size = size_override.unwrap_or(default_size);
+                let estimated_motion_distance_px = size_override
+                    .map(|spec| {
+                        spec.as_estimated_motion_distance_px(default_size, max_size_override)
+                    })
+                    .unwrap_or(default_size);
 
                 let opacity = motion.progress;
                 let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
@@ -386,12 +445,18 @@ impl Sheet {
                                 left: None.into(),
                             },
                             SizeStyle {
-                                width: Length::Px(size),
-                                max_width: Some(Length::Fill),
+                                width: size_override
+                                    .map(|spec| spec.as_length())
+                                    .unwrap_or(Length::Px(default_size)),
+                                max_width: match (size_override, max_size_override) {
+                                    (Some(SheetSizeOverride::Px(_)), _) => Some(Length::Fill),
+                                    (_, Some(max_px)) => Some(Length::Px(max_px)),
+                                    _ => Some(Length::Fill),
+                                },
                                 height: Length::Fill,
                                 ..Default::default()
                             },
-                            size,
+                            estimated_motion_distance_px,
                         ),
                         SheetSide::Left => (
                             InsetStyle {
@@ -401,12 +466,18 @@ impl Sheet {
                                 left: Some(Px(0.0)).into(),
                             },
                             SizeStyle {
-                                width: Length::Px(size),
-                                max_width: Some(Length::Fill),
+                                width: size_override
+                                    .map(|spec| spec.as_length())
+                                    .unwrap_or(Length::Px(default_size)),
+                                max_width: match (size_override, max_size_override) {
+                                    (Some(SheetSizeOverride::Px(_)), _) => Some(Length::Fill),
+                                    (_, Some(max_px)) => Some(Length::Px(max_px)),
+                                    _ => Some(Length::Fill),
+                                },
                                 height: Length::Fill,
                                 ..Default::default()
                             },
-                            size,
+                            estimated_motion_distance_px,
                         ),
                         SheetSide::Top => (
                             InsetStyle {
@@ -417,8 +488,8 @@ impl Sheet {
                             },
                             SizeStyle {
                                 width: Length::Fill,
-                                height: if size_override.is_some() {
-                                    Length::Px(size)
+                                height: if let Some(spec) = size_override {
+                                    spec.as_length()
                                 } else {
                                     Length::Auto
                                 },
@@ -431,7 +502,7 @@ impl Sheet {
                                 },
                                 ..Default::default()
                             },
-                            size,
+                            estimated_motion_distance_px,
                         ),
                         SheetSide::Bottom => (
                             InsetStyle {
@@ -442,8 +513,8 @@ impl Sheet {
                             },
                             SizeStyle {
                                 width: Length::Fill,
-                                height: if size_override.is_some() {
-                                    Length::Px(size)
+                                height: if let Some(spec) = size_override {
+                                    spec.as_length()
                                 } else {
                                     Length::Auto
                                 },
@@ -456,7 +527,7 @@ impl Sheet {
                                 },
                                 ..Default::default()
                             },
-                            size,
+                            estimated_motion_distance_px,
                         ),
                     };
 
@@ -1118,6 +1189,68 @@ mod tests {
             content_bounds.size.height.0 <= max_h + 0.5,
             "expected sheet content height <= viewport-height - edge-gap ({max_h}), got {}",
             content_bounds.size.height.0
+        );
+    }
+
+    #[test]
+    fn sheet_right_fractional_width_clamps_to_max_width() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui = UiTree::new();
+        let mut services = FakeServices::default();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(1200.0), Px(400.0)),
+        );
+
+        let open = app.models_mut().insert(true);
+        let content_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        OverlayController::begin_frame(&mut app, window);
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "test",
+            |cx| {
+                let trigger = cx.container(ContainerProps::default(), |_cx| Vec::new());
+
+                let content_id_out = content_id_out.clone();
+                let sheet = Sheet::new(open.clone())
+                    .side(SheetSide::Right)
+                    .size_fraction(0.75)
+                    .max_size(Px(384.0))
+                    .into_element(
+                        cx,
+                        move |_cx| trigger,
+                        move |cx| {
+                            let content = SheetContent::new([cx.text("child")]).into_element(cx);
+                            content_id_out.set(Some(content.id));
+                            content
+                        },
+                    );
+
+                vec![sheet]
+            },
+        );
+
+        ui.set_root(root);
+        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+
+        let content_id = content_id_out.get().expect("sheet content id");
+        let content_node =
+            fret_ui::elements::node_for_element(&mut app, window, content_id).expect("node");
+        let content_bounds = ui.debug_node_bounds(content_node).expect("bounds");
+
+        assert!(
+            content_bounds.size.width.0 <= 384.0 + 0.5,
+            "expected right sheet width <= max-size, got {}",
+            content_bounds.size.width.0
         );
     }
 
