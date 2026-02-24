@@ -51,6 +51,7 @@ These are optional, but high leverage if we want to avoid follow-up “contract 
 - [x] ScrollArea: gate `SemanticsRole::ScrollBar` emission via `scroll_area_scrollbar_semantics` snapshot.
 - [x] Range-like roles: gate `SemanticsRole::{SpinButton,Meter}` via `spin_button_numeric_semantics` and
   `meter_numeric_semantics` snapshots.
+- [x] Resizable splitters: gate `SemanticsRole::Splitter` emission via `resizable_splitter_semantics` snapshot.
 
 ## Additional gates
 
