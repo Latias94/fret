@@ -118,7 +118,7 @@ This file tracks tasks for `docs/workstreams/diag-fearless-refactor-v1.md`.
     - `crates/fret-diag/src/diag_perf_baseline.rs` (`perf-baseline-from-bundles`)
     - `crates/fret-diag/src/lib.rs` (`--diff` arg errors)
     - `crates/fret-diag/src/paths.rs` (integrity failure notes mention raw `bundle.json`)
-  - [ ] Sweep remaining narrow modules and tests that still talk about `bundle.json` when they mean “bundle artifact”:
+  - [x] Sweep remaining narrow modules and tests that still talk about `bundle.json` when they mean “bundle artifact”:
     - [x] `crates/fret-diag/src/artifacts.rs` (docs/comments + test expectations)
     - [x] `crates/fret-diag/src/api.rs` (test fixture filenames `*.bundle.json`)
     - [x] `apps/fret-devtools-mcp/src/main.rs` (resolve/compare via bundle artifacts, prefer `bundle.schema2.json`)
