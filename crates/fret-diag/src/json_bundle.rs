@@ -91,6 +91,24 @@ pub(crate) fn semantics_node_for_test_id<'a>(
     })
 }
 
+pub(crate) fn semantics_node_for_test_id_trimmed<'a>(
+    semantics: &SemanticsResolver<'a>,
+    snapshot: &'a Value,
+    test_id: &str,
+) -> Option<&'a Value> {
+    let target = test_id.trim();
+    if target.is_empty() {
+        return None;
+    }
+
+    let nodes = semantics.nodes(snapshot)?;
+    nodes.iter().find(|n| {
+        n.get("test_id")
+            .and_then(|v| v.as_str())
+            .is_some_and(|id| id.trim() == target)
+    })
+}
+
 pub(crate) fn build_semantics_table_entries_from_windows(windows: &[Value]) -> Vec<Value> {
     let mut table: BTreeMap<(u64, u64), Value> = BTreeMap::new();
 
@@ -356,6 +374,29 @@ mod tests {
         assert_eq!(nodes.len(), 1);
         assert_eq!(nodes[0]["id"].as_u64(), Some(1));
         assert_eq!(nodes[0]["test_id"].as_str(), Some("inline"));
+    }
+
+    #[test]
+    fn semantics_node_for_test_id_trimmed_matches_whitespace_padded_test_id() {
+        let bundle = json!({
+            "schema_version": 2,
+            "windows": [{
+                "window": 1,
+                "snapshots": [{
+                    "frame_id": 1,
+                    "window": 1,
+                    "debug": {
+                        "semantics": { "nodes": [{ "id": 1, "test_id": "  foo  " }] }
+                    }
+                }]
+            }]
+        });
+
+        let semantics = SemanticsResolver::new(&bundle);
+        let snap = &bundle["windows"][0]["snapshots"][0];
+        let node = semantics_node_for_test_id_trimmed(&semantics, snap, "foo")
+            .expect("expected node match");
+        assert_eq!(node.get("id").and_then(|v| v.as_u64()), Some(1));
     }
 
     #[test]

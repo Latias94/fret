@@ -40,12 +40,8 @@ pub(crate) fn build_test_id_slice_payload_from_bundle(
         snapshot: &serde_json::Value,
         target: &str,
     ) -> bool {
-        let nodes = semantics.nodes(snapshot).unwrap_or(&[]);
-        nodes.iter().any(|n| {
-            n.get("test_id")
-                .and_then(|v| v.as_str())
-                .is_some_and(|s| s.trim() == target)
-        })
+        crate::json_bundle::semantics_node_for_test_id_trimmed(semantics, snapshot, target)
+            .is_some()
     }
 
     let mut picked: Option<Picked<'_>> = None;
