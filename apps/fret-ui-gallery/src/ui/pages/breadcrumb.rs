@@ -187,8 +187,11 @@ pub(super) fn preview_breadcrumb(
 
     let link_component = shadcn::Breadcrumb::new()
         .items([
-            shadcn::BreadcrumbItem::new("Home (router link)")
-                .on_click(CMD_APP_OPEN)
+            shadcn::BreadcrumbItem::new("Home")
+                .href("https://example.com")
+                // Keep this example deterministic under automation by default.
+                // Remove to allow `Effect::OpenUrl` fallback.
+                .on_activate(Arc::new(|_host, _acx, _reason| {}))
                 .truncate(true)
                 .refine_layout(trunc_layout.clone()),
             shadcn::BreadcrumbItem::new("Components"),
@@ -407,13 +410,15 @@ shadcn::breadcrumb::primitives::Breadcrumb::new().into_element(cx, |cx| {
                     "rust",
                     r#"let trunc = LayoutRefinement::default().max_w(Px(112.0));
 
-shadcn::Breadcrumb::new().items([
-    shadcn::BreadcrumbItem::new("Home (router link)")
+ shadcn::Breadcrumb::new().items([
+    shadcn::BreadcrumbItem::new("Home")
+        .href("https://example.com")
+        .on_activate(Arc::new(|_host, _acx, _reason| {}))
         .truncate(true)
         .refine_layout(trunc),
     shadcn::BreadcrumbItem::new("Components"),
     shadcn::BreadcrumbItem::new("Breadcrumb"),
-]);"#,
+ ]);"#,
                 ),
             DocSection::new("RTL", rtl)
                 .title_test_id("ui-gallery-breadcrumb-section-title-rtl")
