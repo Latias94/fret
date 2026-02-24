@@ -67,6 +67,7 @@ Definition of done:
 ### M4: Plan 1 closure for AI loops (schema2-first)
 
 - [ ] Ensure “AI packet” is the default shareable artifact path for triage.
+  - [x] Add a convenience `--ai-packet` flag for `diag run` and `diag pack` to generate `ai.packet/` next to a bundle dir.
 - [ ] Ensure sidecars (`bundle.meta.json`, `bundle.index.json`, `test_ids.index.json`, `frames.index.json`) are consistently available
   in pack/repro flows.
   - [x] Runtime writes canonical sidecars on native dumps.

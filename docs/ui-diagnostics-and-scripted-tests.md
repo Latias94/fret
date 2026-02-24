@@ -205,6 +205,9 @@ Prefer sharing **bounded artifacts** over the full `bundle.json` (especially in 
   - `cargo run -p fretboard -- diag ai-packet <bundle_dir|bundle.json|bundle.schema2.json> --packet-out <dir>`
   - If `bundle.schema2.json` is present, the packet may also include it (within the packet budget).
     - To generate it: `cargo run -p fretboard -- diag doctor --fix-schema2 <bundle_dir> --warmup-frames <n>`
+- Convenience: generate `ai.packet/` next to a bundle dir during common workflows:
+  - After a scripted run: `cargo run -p fretboard -- diag run <script.json> --ai-packet`
+  - Before packing a share zip: `cargo run -p fretboard -- diag pack <bundle_dir> --ai-packet`
 - Focus on a specific target when possible (writes a bounded `slice.*.json` alongside the packet):
   - `cargo run -p fretboard -- diag ai-packet <bundle_dir|bundle.json|bundle.schema2.json> --test-id <test_id> --packet-out <dir>`
 - If you only need a semantics-focused subset, slice directly:
