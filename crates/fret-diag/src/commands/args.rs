@@ -18,3 +18,9 @@ pub(crate) fn resolve_bundle_artifact_path_or_latest(
         .ok_or_else(|| format!("no diagnostics bundle found under {}", out_dir.display()))?;
     Ok(crate::resolve_bundle_artifact_path(&latest))
 }
+
+pub(crate) fn resolve_latest_bundle_dir_path(out_dir: &Path) -> Result<PathBuf, String> {
+    crate::read_latest_pointer(out_dir)
+        .or_else(|| crate::find_latest_export_dir(out_dir))
+        .ok_or_else(|| format!("no diagnostics bundle found under {}", out_dir.display()))
+}

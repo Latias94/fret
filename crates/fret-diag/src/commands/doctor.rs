@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 use fret_diag_protocol::{UiScriptResultV1, UiScriptStageV1};
 use serde_json::{Value, json};
 
+use super::args::resolve_latest_bundle_dir_path;
 use super::sidecars;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -41,13 +42,6 @@ struct DoctorItem {
     error: Option<String>,
     suggest: String,
     notes: Vec<String>,
-}
-
-fn resolve_latest_bundle_dir_path(out_dir: &Path) -> Result<PathBuf, String> {
-    let latest = crate::read_latest_pointer(out_dir)
-        .or_else(|| crate::find_latest_export_dir(out_dir))
-        .ok_or_else(|| format!("no diagnostics bundle found under {}", out_dir.display()))?;
-    Ok(latest)
 }
 
 fn normalize_bundle_dir(dir: &Path) -> PathBuf {

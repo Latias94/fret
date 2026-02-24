@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
-use super::args::looks_like_path;
+use super::args::{looks_like_path, resolve_bundle_artifact_path_or_latest};
 use super::sidecars;
 
 use crate::test_id_bloom::TestIdBloomV1;
@@ -30,13 +30,6 @@ impl QueryMode {
             Self::Glob => "glob",
         }
     }
-}
-
-fn resolve_latest_bundle_artifact_path(out_dir: &Path) -> Result<PathBuf, String> {
-    let latest = crate::read_latest_pointer(out_dir)
-        .or_else(|| crate::find_latest_export_dir(out_dir))
-        .ok_or_else(|| format!("no diagnostics bundle found under {}", out_dir.display()))?;
-    Ok(crate::resolve_bundle_artifact_path(&latest))
 }
 
 fn try_read_test_ids_index_json(path: &Path, warmup_frames: u64) -> Option<serde_json::Value> {
@@ -407,7 +400,7 @@ fn cmd_query_snapshots(
         let src = crate::resolve_path(workspace_root, PathBuf::from(bundle_src));
         resolve_bundle_index_from_src(&src, warmup_frames, step_index.is_some())?
     } else {
-        let bundle_path = resolve_latest_bundle_artifact_path(out_dir)?;
+        let bundle_path = resolve_bundle_artifact_path_or_latest(None, workspace_root, out_dir)?;
         let index_path =
             crate::bundle_index::ensure_bundle_index_json(&bundle_path, warmup_frames)?;
         let index = try_read_bundle_index_json(&index_path, warmup_frames)
@@ -857,7 +850,7 @@ fn cmd_query_test_id(
                 );
             }
             (
-                resolve_latest_bundle_artifact_path(out_dir)?,
+                resolve_bundle_artifact_path_or_latest(None, workspace_root, out_dir)?,
                 pattern.to_string(),
             )
         }
