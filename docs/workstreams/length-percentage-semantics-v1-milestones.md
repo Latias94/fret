@@ -66,6 +66,10 @@ Enable percent-based positioning for overlays and editor UI chrome, without ad-h
 - `inset` and `margin` can express percent/fraction (preserving `auto` where meaningful).
 - A unit test proves basic percent inset outcomes.
 
+**Status**
+
+Done (see `docs/workstreams/length-percentage-semantics-v1-todo.md` for evidence anchors).
+
 ## M4 — Ecosystem migration + cleanup
 
 **Goal**

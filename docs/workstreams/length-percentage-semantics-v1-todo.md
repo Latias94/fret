@@ -38,11 +38,16 @@ Use `length-percentage-semantics-v1-milestones.md` for phase planning.
 
 ## M3 — Positioning percent support (inset + margin)
 
-- [ ] Decide whether percent inset/margin uses:
-  - [ ] the containing block width for left/right and height for top/bottom (CSS-like), or
-  - [ ] per-axis base size (simpler mental model for v1).
-- [ ] Extend `InsetRefinement` and `MarginEdgeRefinement` to express percent/fraction.
-- [ ] Add a unit test for percent inset positioning (basic “inset-0”, “inset-10%” outcomes).
+- [x] Decide percent semantics:
+  - [x] `inset`: per-axis containing block size (left/right use width, top/bottom use height).
+  - [x] `margin`: follows Taffy/CSS-like behavior (percent margins resolve against containing block width, including top/bottom).
+- [x] Extend `InsetRefinement` and `MarginEdgeRefinement` to express percent/fraction.
+  - Evidence: `crates/fret-ui/src/element.rs` (`InsetEdge`, `MarginEdge`)
+  - Evidence: `ecosystem/fret-ui-kit/src/style/chrome.rs` (`InsetEdgeRefinement`, `MarginEdgeRefinement`)
+  - Evidence: `ecosystem/fret-ui-kit/src/style/layout.rs` (`inset_*`, `top_*`, `mx_*`, etc)
+- [x] Add focused unit tests for percent inset/margin positioning.
+  - Evidence: `crates/fret-ui/src/declarative/tests/layout/basics.rs` (`absolute_inset_fraction_resolves_against_containing_block`)
+  - Evidence: `crates/fret-ui/src/declarative/tests/layout/basics.rs` (`flex_margin_fraction_uses_containing_block_width_for_top`)
 
 ## M4 — Ecosystem migration (remove workarounds)
 
