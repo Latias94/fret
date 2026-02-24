@@ -77,6 +77,19 @@ pub(crate) fn snapshot_semantics_nodes(snapshot: &Value) -> Option<&[Value]> {
         .map(|v| v.as_slice())
 }
 
+pub(crate) fn semantics_node_for_test_id<'a>(
+    semantics: &SemanticsResolver<'a>,
+    snapshot: &'a Value,
+    test_id: &str,
+) -> Option<&'a Value> {
+    let nodes = semantics.nodes(snapshot)?;
+    nodes.iter().find(|n| {
+        n.get("test_id")
+            .and_then(|v| v.as_str())
+            .is_some_and(|id| id == test_id)
+    })
+}
+
 pub(crate) fn build_semantics_table_entries_from_windows(windows: &[Value]) -> Vec<Value> {
     let mut table: BTreeMap<(u64, u64), Value> = BTreeMap::new();
 

@@ -98,8 +98,10 @@ pub(crate) fn run_doctor_for_bundle_dir(
 
     let plan_report = doctor_report_json(&bundle_dir, warmup_frames);
     if opts.fix_bundle_json {
-        let has_bundle_json = plan_report.get("bundle_json").is_some_and(|v| !v.is_null());
-        if !has_bundle_json {
+        let has_bundle_artifact = plan_report
+            .get("bundle_artifact")
+            .is_some_and(|v| !v.is_null());
+        if !has_bundle_artifact {
             let chunks = plan_report.get("manifest_chunks");
             let can_materialize = chunks.is_some_and(|c| {
                 c.get("chunks_missing").and_then(|v| v.as_u64()) == Some(0)

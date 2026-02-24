@@ -974,11 +974,11 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             "--diff" => {
                 i += 1;
                 let Some(a) = args.get(i).cloned() else {
-                    return Err("missing bundle path a for --diff".to_string());
+                    return Err("missing bundle artifact path a for --diff".to_string());
                 };
                 i += 1;
                 let Some(b) = args.get(i).cloned() else {
-                    return Err("missing bundle path b for --diff".to_string());
+                    return Err("missing bundle artifact path b for --diff".to_string());
                 };
                 stats_diff = Some((PathBuf::from(a), PathBuf::from(b)));
                 i += 1;
@@ -5569,11 +5569,7 @@ fn find_semantics_bounds_for_test_id(
             && s.get("frame_id").and_then(|v| v.as_u64()) == Some(frame_id)
     })?;
 
-    let nodes = semantics.nodes(snap)?;
-
-    let node = nodes
-        .iter()
-        .find(|n| n.get("test_id").and_then(|v| v.as_str()) == Some(test_id))?;
+    let node = crate::json_bundle::semantics_node_for_test_id(semantics, snap, test_id)?;
 
     let bounds = node.get("bounds")?;
     Some(RectF {
@@ -5617,11 +5613,7 @@ fn find_semantics_bounds_for_test_id_latest(
         })
         .or_else(|| snaps.iter().max_by_key(|s| ts(s)))?;
 
-    let nodes = semantics.nodes(snap)?;
-
-    let node = nodes
-        .iter()
-        .find(|n| n.get("test_id").and_then(|v| v.as_str()) == Some(test_id))?;
+    let node = crate::json_bundle::semantics_node_for_test_id(semantics, snap, test_id)?;
 
     let bounds = node.get("bounds")?;
     Some(RectF {
