@@ -9,7 +9,6 @@
 
 #![recursion_limit = "512"]
 
-use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 use std::process::Child;
 use std::time::{Duration, Instant};
@@ -46,6 +45,7 @@ mod json_bundle;
 mod lint;
 mod pack_zip;
 mod paths;
+mod perf_hint_gate;
 mod perf_seed_policy;
 mod post_run_checks;
 mod run_artifacts;
@@ -65,6 +65,9 @@ pub(crate) use evidence_index::write_evidence_index;
 pub(crate) use pack_zip::{
     ReproZipBundle, pack_bundle_dir_to_zip, pack_repro_zip_multi, repro_zip_prefix_for_script,
     zip_safe_component,
+};
+pub(crate) use perf_hint_gate::{
+    parse_perf_hint_gate_options, perf_hint_gate_failures_for_triage_json,
 };
 
 pub(crate) use paths::{
@@ -3279,123 +3282,6 @@ pub(crate) fn triage_json_from_stats(
         "hints": triage_hints(&stats_json, worst_row),
         "worst": worst,
     })
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-enum PerfHintSeverity {
-    Info,
-    Warn,
-    Error,
-}
-
-impl PerfHintSeverity {
-    fn parse(s: &str) -> Result<Self, String> {
-        match s.trim() {
-            "info" => Ok(Self::Info),
-            "warn" => Ok(Self::Warn),
-            "error" => Ok(Self::Error),
-            other => Err(format!(
-                "invalid perf hint severity: {other} (expected: info|warn|error)"
-            )),
-        }
-    }
-
-    fn as_str(self) -> &'static str {
-        match self {
-            Self::Info => "info",
-            Self::Warn => "warn",
-            Self::Error => "error",
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-struct PerfHintGateOptions {
-    enabled: bool,
-    min_severity: PerfHintSeverity,
-    deny_codes: BTreeSet<String>,
-}
-
-fn parse_perf_hint_gate_options(
-    enabled: bool,
-    deny_specs: &[String],
-    min_severity_spec: Option<&str>,
-) -> Result<PerfHintGateOptions, String> {
-    let min_severity = match min_severity_spec {
-        Some(v) => PerfHintSeverity::parse(v)?,
-        None => PerfHintSeverity::Warn,
-    };
-    let mut deny_codes: BTreeSet<String> = BTreeSet::new();
-    for spec in deny_specs {
-        for raw in spec.split(',') {
-            let code = raw.trim();
-            if code.is_empty() {
-                continue;
-            }
-            deny_codes.insert(code.to_string());
-        }
-    }
-    Ok(PerfHintGateOptions {
-        enabled,
-        min_severity,
-        deny_codes,
-    })
-}
-
-fn perf_hint_gate_failures_for_triage_json(
-    script_key: &str,
-    bundle_path: &Path,
-    run_index: Option<u64>,
-    triage: &serde_json::Value,
-    opts: &PerfHintGateOptions,
-) -> Vec<serde_json::Value> {
-    if !opts.enabled {
-        return Vec::new();
-    }
-
-    let hints = triage
-        .get("hints")
-        .and_then(|v| v.as_array())
-        .cloned()
-        .unwrap_or_default();
-    if hints.is_empty() {
-        return Vec::new();
-    }
-
-    let mut failures: Vec<serde_json::Value> = Vec::new();
-    for hint in hints {
-        let code = hint.get("code").and_then(|v| v.as_str()).unwrap_or("");
-        if code.is_empty() {
-            continue;
-        }
-        let sev_str = hint
-            .get("severity")
-            .and_then(|v| v.as_str())
-            .unwrap_or("info");
-        let sev = PerfHintSeverity::parse(sev_str).unwrap_or(PerfHintSeverity::Info);
-
-        let is_denied = if opts.deny_codes.is_empty() {
-            true
-        } else {
-            opts.deny_codes.contains(code)
-        };
-        if !is_denied {
-            continue;
-        }
-        if sev < opts.min_severity {
-            continue;
-        }
-
-        failures.push(serde_json::json!({
-            "script": script_key,
-            "bundle": bundle_path.display().to_string(),
-            "run_index": run_index,
-            "code": code,
-            "severity": sev.as_str(),
-            "hint": hint,
-        }));
-    }
-    failures
 }
 
 fn parse_bool(s: &str) -> Result<bool, ()> {
