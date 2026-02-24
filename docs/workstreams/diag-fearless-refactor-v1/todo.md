@@ -197,6 +197,11 @@ scope: diagnostics, automation, tooling, refactor
 - [x] Add `diag hotspots --lite` as a frames-index-based fallback when `bundle.json` is too large to analyze as JSON.
 - [x] Include lite reports in `diag ai-packet` (so agents can start from `triage.lite.json` / `hotspots.lite.json`).
 - [x] Optionally include `bundle.schema2.json` in `diag ai-packet` (when present and within budget).
+- [x] Split `diag ai-packet` implementation into modules to reduce churn hotspots:
+  - `crates/fret-diag/src/commands/ai_packet/budget.rs`
+  - `crates/fret-diag/src/commands/ai_packet/anchors.rs`
+  - `crates/fret-diag/src/commands/ai_packet/slices.rs`
+  - `crates/fret-diag/src/commands/ai_packet/fs.rs`
 - [x] Ensure `diag perf-baseline-from-bundles` accepts `bundle.schema2.json` inputs (and reports correct errors).
 - [x] Publish an explicit migration plan (Option 1 first, Option 2 later).
   - `docs/workstreams/diag-fearless-refactor-v1/migration-plan.md`
@@ -217,6 +222,8 @@ diagnostics stack stays easy to evolve.
   - [x] Remove the old inline `diag repro` implementation from `crates/fret-diag/src/lib.rs` after extraction (no redundant copies).
   - remove duplicated per-step dispatch code from the old location(s),
   - avoid “forwarder wrappers” that exist only because of historical file layout.
+  - remove the temporary `diag ai-packet` monolith copy after parity is verified:
+    - `crates/fret-diag/src/commands/ai_packet/monolith.rs`
 - [x] Delete the legacy `apply_post_run_checks(...)` mega-signature once all callers are on `diag_run::RunChecks`.
 - [ ] Remove redundant semantics traversal helpers in gates:
   - prefer `crate::json_bundle::SemanticsResolver` + shared helpers (no `debug.semantics.nodes` re-greps).
