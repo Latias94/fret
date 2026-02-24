@@ -120,12 +120,6 @@ fn with_drawer_side_provider<H: UiHost, R>(
     out
 }
 
-fn drawer_vertical_max_height(viewport_height: Px) -> Px {
-    let cap = (viewport_height.0 * DRAWER_MAX_HEIGHT_FRACTION).max(0.0);
-    let by_gap = (viewport_height.0 - DRAWER_EDGE_GAP_PX.0).max(0.0);
-    Px(cap.min(by_gap))
-}
-
 fn drawer_drag_snap_height(drawer_height: Px, side: DrawerSide) -> Px {
     // Snap-point math should be based on the border-box height.
     //
@@ -234,11 +228,7 @@ impl DrawerContent {
                 .overflow_visible(),
             DrawerSide::Top | DrawerSide::Bottom => LayoutRefinement::default()
                 .w_full()
-                .max_h(drawer_vertical_max_height(
-                    cx.environment_viewport_bounds(fret_ui::Invalidation::Layout)
-                        .size
-                        .height,
-                ))
+                .max_h_fraction(DRAWER_MAX_HEIGHT_FRACTION)
                 .overflow_visible(),
         };
         let layout = base_layout.merge(self.layout);
@@ -1098,7 +1088,7 @@ mod tests {
     use fret_ui::UiTree;
     use fret_ui::action::DismissReason;
     use fret_ui::element::{ContainerProps, LayoutStyle, Length, PressableProps, SizeStyle};
-    use fret_ui::elements::{GlobalElementId, visual_bounds_for_element};
+    use fret_ui::elements::{GlobalElementId, bounds_for_element, visual_bounds_for_element};
     use fret_ui_kit::OverlayController;
     use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 
@@ -1133,6 +1123,65 @@ mod tests {
         let inner_debug = format!("{:?}", drawer.inner);
         assert!(inner_debug.contains("on_open_change: true"));
         assert!(inner_debug.contains("on_open_change_complete: true"));
+    }
+
+    #[test]
+    fn drawer_content_max_height_fraction_clamps_tall_content() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(400.0)),
+        );
+
+        let content_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+        let content_id_out = content_id.clone();
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "drawer-content-max-height-fraction",
+            move |cx| {
+                let tall = cx.container(
+                    ContainerProps {
+                        layout: LayoutStyle {
+                            size: SizeStyle {
+                                width: Length::Fill,
+                                height: Length::Px(Px(2000.0)),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    |_cx| Vec::new(),
+                );
+
+                let content = DrawerContent::new(vec![tall]).into_element(cx);
+                content_id_out.set(Some(content.id));
+                vec![content]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let content_bounds = bounds_for_element(
+            &mut app,
+            window,
+            content_id.get().expect("drawer content element id"),
+        )
+        .expect("drawer content bounds");
+        let expected = 400.0 * DRAWER_MAX_HEIGHT_FRACTION;
+        assert!(
+            (content_bounds.size.height.0 - expected).abs() < 2.0,
+            "expected content max-height fraction clamp near {expected}px, got {content_bounds:?}"
+        );
     }
 
     #[derive(Default)]
