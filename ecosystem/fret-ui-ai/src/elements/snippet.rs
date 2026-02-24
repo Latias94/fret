@@ -1,6 +1,7 @@
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
+use fret_core::window::ColorScheme;
 use fret_core::{
     AttributedText, Color, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextSpan,
     TextStyle, TextWrap, TimerToken,
@@ -408,7 +409,7 @@ impl SnippetCopyButton {
                 fg_default
             };
 
-            let bg_hover = if theme.name.contains("/dark") {
+            let bg_hover = if theme.color_scheme == Some(ColorScheme::Dark) {
                 theme
                     .color_by_key("accent/50")
                     .unwrap_or_else(|| alpha(theme.color_token("accent"), 0.5))

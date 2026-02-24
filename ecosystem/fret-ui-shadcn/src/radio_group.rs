@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use fret_core::window::ColorScheme;
 use fret_core::{
     Color, Corners, Edges, FontId, FontWeight, Point, Px, Rect, Size, TextOverflow, TextStyle,
     TextWrap,
@@ -413,7 +414,7 @@ impl RadioGroup {
                         let radius = Px((icon.0 * 0.5).max(0.0));
                         let mut ring_style = decl_style::focus_ring(&theme, radius);
                         if aria_invalid {
-                            let ring_key = if theme.name.contains("/dark") {
+                            let ring_key = if theme.color_scheme == Some(ColorScheme::Dark) {
                                 "destructive/40"
                             } else {
                                 "destructive/20"
@@ -666,7 +667,9 @@ impl RadioGroup {
                                         match item_variant {
                                             RadioGroupItemVariant::Default => vec![item_content],
                                             RadioGroupItemVariant::ChoiceCard => {
-                                                let bg_alpha = if theme.name.contains("/dark") {
+                                                let bg_alpha = if theme.color_scheme
+                                                    == Some(ColorScheme::Dark)
+                                                {
                                                     0.10
                                                 } else {
                                                     0.05

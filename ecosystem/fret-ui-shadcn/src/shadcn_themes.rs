@@ -6,6 +6,7 @@
 
 use std::collections::HashMap;
 
+use fret_core::window::ColorScheme;
 use fret_ui::theme::CubicBezier;
 use fret_ui::{Theme, ThemeConfig, UiHost};
 use fret_ui_kit::theme_tokens;
@@ -536,6 +537,10 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
         name: format!("shadcn/new-york-v4/{}/{}", base.as_str(), scheme.as_str()),
         author: Some("shadcn/ui".to_string()),
         url: Some("https://ui.shadcn.com".to_string()),
+        color_scheme: Some(match scheme {
+            ShadcnColorScheme::Light => ColorScheme::Light,
+            ShadcnColorScheme::Dark => ColorScheme::Dark,
+        }),
         colors,
         metrics,
         ..Default::default()
@@ -672,6 +677,7 @@ fn with_oklch_alpha(raw: &str, alpha: f32) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fret_core::window::ColorScheme;
     use fret_ui::Theme;
 
     #[test]
@@ -745,6 +751,20 @@ mod tests {
             theme.metric_by_key("component.size.sm.button.h"),
             Some(fret_core::Px(32.0))
         );
+    }
+
+    #[test]
+    fn new_york_v4_sets_color_scheme_metadata() {
+        let cfg = shadcn_new_york_v4_config(ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        assert_eq!(cfg.color_scheme, Some(ColorScheme::Light));
+
+        let cfg = shadcn_new_york_v4_config(ShadcnBaseColor::Neutral, ShadcnColorScheme::Dark);
+        assert_eq!(cfg.color_scheme, Some(ColorScheme::Dark));
+
+        let mut app = fret_app::App::new();
+        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Dark);
+        let theme = Theme::global(&app);
+        assert_eq!(theme.color_scheme, Some(ColorScheme::Dark));
     }
 
     #[test]

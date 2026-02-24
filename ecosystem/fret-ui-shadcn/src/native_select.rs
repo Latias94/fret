@@ -1,5 +1,6 @@
 use std::sync::{Arc, Mutex};
 
+use fret_core::window::ColorScheme;
 use fret_core::{Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole};
 use fret_runtime::Model;
 use fret_ui::action::OnCloseAutoFocus;
@@ -336,7 +337,7 @@ pub fn native_select<H: UiHost>(
         let mut focus_ring = decl_style::focus_ring(&theme, resolved.radius);
         if aria_invalid {
             border_color = theme.color_token("destructive");
-            let ring_key = if theme.name.contains("/dark") {
+            let ring_key = if theme.color_scheme == Some(ColorScheme::Dark) {
                 "destructive/40"
             } else {
                 "destructive/20"

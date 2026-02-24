@@ -1,3 +1,4 @@
+use fret_core::window::ColorScheme;
 use fret_core::{Axis, Color, Corners, Edges, FontId, FontWeight, Px};
 use fret_icons::ids;
 use fret_runtime::Model;
@@ -42,7 +43,7 @@ fn otp_active_ring_color(theme: &Theme) -> Color {
 
 fn otp_invalid_ring_color(theme: &Theme) -> Color {
     let border_color = theme.color_token("destructive");
-    let ring_key = if theme.name.contains("/dark") {
+    let ring_key = if theme.color_scheme == Some(ColorScheme::Dark) {
         "destructive/40"
     } else {
         "destructive/20"
@@ -689,11 +690,13 @@ pub fn input_otp<H: UiHost>(cx: &mut ElementContext<'_, H>, otp: InputOtp) -> An
 mod tests {
     use super::*;
     use fret_app::App;
+    use fret_core::window::ColorScheme;
     use fret_core::{
         AppWindowId, Point, Rect, TextBlobId, TextConstraints, TextMetrics, TextService,
     };
     use fret_core::{PathCommand, SvgId, SvgService};
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
+    use fret_ui::ThemeConfig;
     use fret_ui::tree::UiTree;
 
     #[derive(Default)]
@@ -738,6 +741,40 @@ mod tests {
         fn unregister_svg(&mut self, _svg: SvgId) -> bool {
             true
         }
+    }
+
+    #[test]
+    fn otp_invalid_ring_color_tracks_theme_color_scheme() {
+        let mut app = fret_app::App::new();
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                color_scheme: Some(ColorScheme::Dark),
+                colors: std::collections::HashMap::from([
+                    ("destructive".to_string(), "#ff0000".to_string()),
+                    ("destructive/40".to_string(), "#00ff00".to_string()),
+                    ("destructive/20".to_string(), "#0000ff".to_string()),
+                ]),
+                ..ThemeConfig::default()
+            });
+        });
+        let theme = Theme::global(&app).clone();
+        assert_eq!(
+            otp_invalid_ring_color(&theme),
+            theme.color_by_key("destructive/40").unwrap()
+        );
+
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config_patch(&ThemeConfig {
+                color_scheme: Some(ColorScheme::Light),
+                ..ThemeConfig::default()
+            });
+        });
+        let theme = Theme::global(&app).clone();
+        assert_eq!(
+            otp_invalid_ring_color(&theme),
+            theme.color_by_key("destructive/20").unwrap()
+        );
     }
 
     impl fret_core::MaterialService for FakeServices {

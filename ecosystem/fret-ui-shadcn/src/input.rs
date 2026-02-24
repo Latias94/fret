@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use fret_core::window::ColorScheme;
 use fret_core::{Corners, FontId, KeyCode, NodeId, Px, SemanticsRole};
 use fret_runtime::{CommandId, Model};
 use fret_ui::action::{ActionCx, KeyDownCx, UiFocusActionHost};
@@ -363,7 +364,7 @@ fn input_with_style_and_submit<H: UiHost>(
         chrome.border_color = border_color;
         chrome.border_color_focused = border_color;
         if let Some(mut ring) = chrome.focus_ring.take() {
-            let ring_key = if theme.name.contains("/dark") {
+            let ring_key = if theme.color_scheme == Some(ColorScheme::Dark) {
                 "destructive/40"
             } else {
                 "destructive/20"

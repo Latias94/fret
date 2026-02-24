@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use fret_core::window::ColorScheme;
 use fret_core::{Axis, Color, Corners, Edges, Px};
 use fret_icons::ids;
 use fret_runtime::{CommandId, Model};
@@ -280,7 +281,7 @@ impl Checkbox {
             };
             let mut ring = decl_style::focus_ring(&theme, radius);
             ring.color = if aria_invalid {
-                let ring_key = if theme.name.contains("/dark") {
+                let ring_key = if theme.color_scheme == Some(ColorScheme::Dark) {
                     "destructive/40"
                 } else {
                     "destructive/20"

@@ -2,6 +2,7 @@ use std::cell::Cell;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
+use fret_core::window::ColorScheme;
 use fret_core::{Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextStyle};
 use fret_icons::ids;
 use fret_runtime::Model;
@@ -783,7 +784,7 @@ fn combobox_with_patch<H: UiHost>(
             border_base = border_color;
             ring_border = border_color;
 
-            let ring_key = if theme.name.contains("/dark") {
+            let ring_key = if theme.color_scheme == Some(ColorScheme::Dark) {
                 "destructive/40"
             } else {
                 "destructive/20"

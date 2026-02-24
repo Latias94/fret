@@ -2,6 +2,7 @@ use std::cell::Cell;
 use std::sync::Arc;
 use std::time::Duration;
 
+use fret_core::window::ColorScheme;
 use fret_core::{Color, Corners, DrawOrder, Edges, FontId, FontWeight, Px, TextStyle};
 use fret_icons::IconId;
 use fret_runtime::Model;
@@ -296,7 +297,7 @@ fn tabs_shared_indicator<H: UiHost>(
             // shadcn new-york-v4 `TabsTrigger` defaults:
             // - light: `text-foreground`
             // - dark: `text-muted-foreground`
-            let fg_inactive = if theme.name.contains("/dark") {
+            let fg_inactive = if theme.color_scheme == Some(ColorScheme::Dark) {
                 ColorRef::Color(tabs_list_fg_muted(theme))
             } else {
                 ColorRef::Color(theme.color_token("foreground"))
@@ -1590,7 +1591,8 @@ impl Tabs {
                                 // shadcn new-york-v4 `TabsTrigger` defaults:
                                 // - light: `text-foreground`
                                 // - dark: `text-muted-foreground`
-                                let fg_inactive = if theme.name.contains("/dark") {
+                                let fg_inactive = if theme.color_scheme == Some(ColorScheme::Dark)
+                                {
                                     ColorRef::Color(tabs_list_fg_muted(&theme))
                                 } else {
                                     ColorRef::Color(theme.color_token("foreground"))

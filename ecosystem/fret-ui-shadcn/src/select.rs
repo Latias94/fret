@@ -1,5 +1,6 @@
 use crate::popper_arrow::{self, DiamondArrowStyle};
 use crate::test_id::attach_test_id;
+use fret_core::window::ColorScheme;
 use fret_core::{Color, Corners, Edges, FontId, FontWeight, Point, Px, SemanticsRole, TextStyle};
 use fret_icons::ids;
 use fret_runtime::{Effect, Model, TimerToken};
@@ -1293,7 +1294,7 @@ fn select_impl<H: UiHost>(
             border = border_color;
             border_focus = border_color;
 
-            let ring_key = if theme.name.contains("/dark") {
+            let ring_key = if theme.color_scheme == Some(ColorScheme::Dark) {
                 "destructive/40"
             } else {
                 "destructive/20"

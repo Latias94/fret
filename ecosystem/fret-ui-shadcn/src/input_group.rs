@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use crate::button::{ButtonVariant, variant_colors};
+use fret_core::window::ColorScheme;
 use fret_core::{
     Axis, Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextWrap,
 };
@@ -365,7 +366,7 @@ impl InputGroup {
 
                 if self.aria_invalid {
                     let border_color = theme.color_token("destructive");
-                    let ring_key = if theme.name.contains("/dark") {
+                    let ring_key = if theme.color_scheme == Some(ColorScheme::Dark) {
                         "destructive/40"
                     } else {
                         "destructive/20"

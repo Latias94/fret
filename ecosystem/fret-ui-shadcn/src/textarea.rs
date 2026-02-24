@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use fret_core::window::ColorScheme;
 use fret_core::{Color, Corners, CursorIcon, Edges, FontId, MouseButton, Px};
 use fret_runtime::Model;
 use fret_ui::element::{
@@ -230,7 +231,7 @@ pub fn textarea<H: UiHost>(
         let border_color = theme.color_token("destructive");
         chrome.border_color = border_color;
         if let Some(mut ring) = chrome.focus_ring.take() {
-            let ring_key = if theme.name.contains("/dark") {
+            let ring_key = if theme.color_scheme == Some(ColorScheme::Dark) {
                 "destructive/40"
             } else {
                 "destructive/20"
