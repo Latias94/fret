@@ -280,12 +280,14 @@ fn run_bundle_doctor_for_bundle_path(
         },
         BundleDoctorMode::Fix => crate::commands::doctor::DoctorRunOptions {
             fix_bundle_json: true,
+            fix_schema2: true,
             fix_sidecars: true,
             check_required: true,
             ..Default::default()
         },
         BundleDoctorMode::FixDryRun => crate::commands::doctor::DoctorRunOptions {
             fix_bundle_json: true,
+            fix_schema2: true,
             fix_sidecars: true,
             fix_dry_run: true,
             check_required: true,

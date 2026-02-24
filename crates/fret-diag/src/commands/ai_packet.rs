@@ -15,6 +15,7 @@ struct AiPacketBudgetConfig {
     hard_total_bytes: u64,
 
     max_bundle_meta_bytes: u64,
+    max_bundle_schema2_bytes: u64,
     max_bundle_index_bytes: u64,
     max_test_ids_index_bytes: u64,
     max_frames_index_bytes: u64,
@@ -27,6 +28,7 @@ impl Default for AiPacketBudgetConfig {
             soft_total_bytes: 2 * 1024 * 1024,
             hard_total_bytes: 20 * 1024 * 1024,
             max_bundle_meta_bytes: 128 * 1024,
+            max_bundle_schema2_bytes: 8 * 1024 * 1024,
             max_bundle_index_bytes: 4 * 1024 * 1024,
             max_test_ids_index_bytes: 2 * 1024 * 1024,
             max_frames_index_bytes: 2 * 1024 * 1024,
@@ -170,6 +172,8 @@ pub(crate) fn cmd_ai_packet(
     copy_file_named(&test_ids_index_path, &packet_dir, "test_ids.index.json")?;
     copy_file_named(&bundle_index_path, &packet_dir, "bundle.index.json")?;
     copy_file_named(&frames_index_path, &packet_dir, "frames.index.json")?;
+
+    copy_bundle_schema2_if_present(&bundle_path, &bundle_dir, &packet_dir)?;
 
     if let Some(frames_index) =
         crate::frames_index::read_frames_index_json_v1(&frames_index_path, warmup_frames)
@@ -316,6 +320,7 @@ fn write_packet_budget_report(dir: &Path, report: &AiPacketBudgetReport) -> Resu
             "soft_total_bytes": report.budget.soft_total_bytes,
             "hard_total_bytes": report.budget.hard_total_bytes,
             "max_bundle_meta_bytes": report.budget.max_bundle_meta_bytes,
+            "max_bundle_schema2_bytes": report.budget.max_bundle_schema2_bytes,
             "max_bundle_index_bytes": report.budget.max_bundle_index_bytes,
             "max_test_ids_index_bytes": report.budget.max_test_ids_index_bytes,
             "max_frames_index_bytes": report.budget.max_frames_index_bytes,
@@ -734,6 +739,7 @@ fn enforce_ai_packet_budgets(dir: &Path, report: &mut AiPacketBudgetReport) -> R
 
     // Always enforce per-file caps first.
     clip_bundle_meta_if_needed(dir, &cfg, report)?;
+    drop_bundle_schema2_if_needed(dir, &cfg, report)?;
     clip_bundle_index_if_needed(dir, &cfg, report)?;
     clip_test_ids_index_if_needed(dir, &cfg, report)?;
     clip_frames_index_if_needed(dir, &cfg, report)?;
@@ -745,6 +751,7 @@ fn enforce_ai_packet_budgets(dir: &Path, report: &mut AiPacketBudgetReport) -> R
         drop_if_present(dir, "hotspots.lite.json", report)?;
         drop_if_present(dir, "triage.lite.json", report)?;
         drop_if_present(dir, "manifest.json", report)?;
+        drop_if_present(dir, "bundle.schema2.json", report)?;
         total = packet_total_bytes(dir)?;
     }
 
@@ -787,6 +794,28 @@ fn clip_bundle_meta_if_needed(
         ));
     }
     report.clipped_files.push("bundle.meta.json".to_string());
+    Ok(())
+}
+
+fn drop_bundle_schema2_if_needed(
+    dir: &Path,
+    cfg: &AiPacketBudgetConfig,
+    report: &mut AiPacketBudgetReport,
+) -> Result<(), String> {
+    let path = dir.join("bundle.schema2.json");
+    if !path.is_file() {
+        return Ok(());
+    }
+
+    let bytes = file_bytes(&path)?;
+    if bytes <= cfg.max_bundle_schema2_bytes {
+        return Ok(());
+    }
+
+    std::fs::remove_file(&path).map_err(|e| e.to_string())?;
+    report
+        .dropped_files
+        .push("bundle.schema2.json (exceeds max_bundle_schema2_bytes)".to_string());
     Ok(())
 }
 
@@ -1335,5 +1364,34 @@ fn copy_if_present(src: &Path, dir: &Path, name: &str) -> Result<(), String> {
     if src.is_file() {
         copy_file_named(src, dir, name)?;
     }
+    Ok(())
+}
+
+fn copy_bundle_schema2_if_present(
+    bundle_path: &Path,
+    bundle_dir: &Path,
+    packet_dir: &Path,
+) -> Result<(), String> {
+    let schema2_name = std::ffi::OsStr::new("bundle.schema2.json");
+
+    let parent_schema2 = bundle_path
+        .parent()
+        .unwrap_or(bundle_dir)
+        .join("bundle.schema2.json");
+
+    let candidates = [
+        bundle_path.to_path_buf(),
+        parent_schema2,
+        bundle_dir.join("bundle.schema2.json"),
+        bundle_dir.join("_root").join("bundle.schema2.json"),
+    ];
+
+    for c in candidates {
+        if c.is_file() && c.file_name() == Some(schema2_name) {
+            copy_file_named(&c, packet_dir, "bundle.schema2.json")?;
+            break;
+        }
+    }
+
     Ok(())
 }

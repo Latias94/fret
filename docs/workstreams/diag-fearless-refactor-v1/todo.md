@@ -182,6 +182,7 @@ scope: diagnostics, automation, tooling, refactor
   - [x] Accept `bundle.schema2.json` as a primary bundle artifact (so `--fix-sidecars` works even when the directory only contains schema2).
 - [x] Add `--bundle-doctor` integration for `diag run` / `diag suite` / `diag perf` (per-bundle preflight).
   - Modes: `check` / `check-all` / `fix` / `fix-dry-run`.
+  - [x] In `--bundle-doctor fix` / `fix-dry-run`, also attempt schema2 repair (writes `bundle.schema2.json` from `bundle.json` when missing).
   - Evidence anchors:
     - `crates/fret-diag/src/lib.rs`
     - `crates/fret-diag/src/commands/doctor.rs`
@@ -195,6 +196,7 @@ scope: diagnostics, automation, tooling, refactor
 - [x] Add `diag triage --lite` as the default-first entrypoint for huge bundles (frames-index based).
 - [x] Add `diag hotspots --lite` as a frames-index-based fallback when `bundle.json` is too large to analyze as JSON.
 - [x] Include lite reports in `diag ai-packet` (so agents can start from `triage.lite.json` / `hotspots.lite.json`).
+- [x] Optionally include `bundle.schema2.json` in `diag ai-packet` (when present and within budget).
 - [x] Publish an explicit migration plan (Option 1 first, Option 2 later).
   - `docs/workstreams/diag-fearless-refactor-v1/migration-plan.md`
 - [ ] Prefer structured evidence diffs over screenshot diffs where possible.

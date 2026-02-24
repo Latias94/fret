@@ -28,6 +28,10 @@ Run doctor first. It is safe to run repeatedly.
   - If `bundle.json` is large and you want a compact view for tooling/agents:
     - `fretboard diag doctor --fix-schema2 <bundle_dir> --warmup-frames <n>`
 
+Note:
+
+- When using `diag run` / `diag suite` / `diag perf`, `--bundle-doctor fix` will also attempt the schema2 repair (when `bundle.json` exists).
+
 ## Step 1: First-pass perf triage (no bundle.json materialization)
 
 Use `triage --lite` (frames-index based) to identify the worst frames quickly:
@@ -67,6 +71,7 @@ To hand off to an AI agent, generate a compact packet directory:
 Expected contents include:
 
 - `doctor.json`
+- optional `bundle.schema2.json` (when present and within packet budget)
 - `frames.index.json`
 - `triage.lite.json` (frames-index derived)
 - `hotspots.lite.json` (frames-index derived)
