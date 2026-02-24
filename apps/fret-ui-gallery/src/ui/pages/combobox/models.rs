@@ -5,6 +5,9 @@ struct ComboboxModelsState {
     basic_value: Option<Model<Option<Arc<str>>>>,
     basic_open: Option<Model<bool>>,
     basic_query: Option<Model<String>>,
+    auto_highlight_value: Option<Model<Option<Arc<str>>>>,
+    auto_highlight_open: Option<Model<bool>>,
+    auto_highlight_query: Option<Model<String>>,
     clear_value: Option<Model<Option<Arc<str>>>>,
     clear_open: Option<Model<bool>>,
     clear_query: Option<Model<String>>,
@@ -20,6 +23,9 @@ struct ComboboxModelsState {
     groups_value: Option<Model<Option<Arc<str>>>>,
     groups_open: Option<Model<bool>>,
     groups_query: Option<Model<String>>,
+    groups_sep_value: Option<Model<Option<Arc<str>>>>,
+    groups_sep_open: Option<Model<bool>>,
+    groups_sep_query: Option<Model<String>>,
     invalid_value: Option<Model<Option<Arc<str>>>>,
     invalid_open: Option<Model<bool>>,
     invalid_query: Option<Model<String>>,
@@ -42,6 +48,9 @@ pub(super) struct ComboboxModels {
     pub(super) basic_value: Model<Option<Arc<str>>>,
     pub(super) basic_open: Model<bool>,
     pub(super) basic_query: Model<String>,
+    pub(super) auto_highlight_value: Model<Option<Arc<str>>>,
+    pub(super) auto_highlight_open: Model<bool>,
+    pub(super) auto_highlight_query: Model<String>,
     pub(super) clear_value: Model<Option<Arc<str>>>,
     pub(super) clear_open: Model<bool>,
     pub(super) clear_query: Model<String>,
@@ -57,6 +66,9 @@ pub(super) struct ComboboxModels {
     pub(super) groups_value: Model<Option<Arc<str>>>,
     pub(super) groups_open: Model<bool>,
     pub(super) groups_query: Model<String>,
+    pub(super) groups_sep_value: Model<Option<Arc<str>>>,
+    pub(super) groups_sep_open: Model<bool>,
+    pub(super) groups_sep_query: Model<String>,
     pub(super) invalid_value: Model<Option<Arc<str>>>,
     pub(super) invalid_open: Model<bool>,
     pub(super) invalid_query: Model<String>,
@@ -80,6 +92,9 @@ impl ComboboxModels {
             basic_value: state.basic_value?,
             basic_open: state.basic_open?,
             basic_query: state.basic_query?,
+            auto_highlight_value: state.auto_highlight_value?,
+            auto_highlight_open: state.auto_highlight_open?,
+            auto_highlight_query: state.auto_highlight_query?,
             clear_value: state.clear_value?,
             clear_open: state.clear_open?,
             clear_query: state.clear_query?,
@@ -95,6 +110,9 @@ impl ComboboxModels {
             groups_value: state.groups_value?,
             groups_open: state.groups_open?,
             groups_query: state.groups_query?,
+            groups_sep_value: state.groups_sep_value?,
+            groups_sep_open: state.groups_sep_open?,
+            groups_sep_query: state.groups_sep_query?,
             invalid_value: state.invalid_value?,
             invalid_open: state.invalid_open?,
             invalid_query: state.invalid_query?,
@@ -124,6 +142,10 @@ pub(super) fn get_or_init(cx: &mut ElementContext<'_, App>) -> ComboboxModels {
     let basic_open = cx.app.models_mut().insert(false);
     let basic_query = cx.app.models_mut().insert(String::new());
 
+    let auto_highlight_value = cx.app.models_mut().insert(None);
+    let auto_highlight_open = cx.app.models_mut().insert(false);
+    let auto_highlight_query = cx.app.models_mut().insert(String::new());
+
     let clear_value = cx.app.models_mut().insert(Some(Arc::<str>::from("next")));
     let clear_open = cx.app.models_mut().insert(false);
     let clear_query = cx.app.models_mut().insert(String::new());
@@ -143,6 +165,10 @@ pub(super) fn get_or_init(cx: &mut ElementContext<'_, App>) -> ComboboxModels {
     let groups_value = cx.app.models_mut().insert(None);
     let groups_open = cx.app.models_mut().insert(false);
     let groups_query = cx.app.models_mut().insert(String::new());
+
+    let groups_sep_value = cx.app.models_mut().insert(None);
+    let groups_sep_open = cx.app.models_mut().insert(false);
+    let groups_sep_query = cx.app.models_mut().insert(String::new());
 
     let invalid_value = cx.app.models_mut().insert(None);
     let invalid_open = cx.app.models_mut().insert(false);
@@ -169,6 +195,10 @@ pub(super) fn get_or_init(cx: &mut ElementContext<'_, App>) -> ComboboxModels {
         st.basic_open = Some(basic_open.clone());
         st.basic_query = Some(basic_query.clone());
 
+        st.auto_highlight_value = Some(auto_highlight_value.clone());
+        st.auto_highlight_open = Some(auto_highlight_open.clone());
+        st.auto_highlight_query = Some(auto_highlight_query.clone());
+
         st.clear_value = Some(clear_value.clone());
         st.clear_open = Some(clear_open.clone());
         st.clear_query = Some(clear_query.clone());
@@ -188,6 +218,10 @@ pub(super) fn get_or_init(cx: &mut ElementContext<'_, App>) -> ComboboxModels {
         st.groups_value = Some(groups_value.clone());
         st.groups_open = Some(groups_open.clone());
         st.groups_query = Some(groups_query.clone());
+
+        st.groups_sep_value = Some(groups_sep_value.clone());
+        st.groups_sep_open = Some(groups_sep_open.clone());
+        st.groups_sep_query = Some(groups_sep_query.clone());
 
         st.invalid_value = Some(invalid_value.clone());
         st.invalid_open = Some(invalid_open.clone());
@@ -214,6 +248,9 @@ pub(super) fn get_or_init(cx: &mut ElementContext<'_, App>) -> ComboboxModels {
         basic_value,
         basic_open,
         basic_query,
+        auto_highlight_value,
+        auto_highlight_open,
+        auto_highlight_query,
         clear_value,
         clear_open,
         clear_query,
@@ -229,6 +266,9 @@ pub(super) fn get_or_init(cx: &mut ElementContext<'_, App>) -> ComboboxModels {
         groups_value,
         groups_open,
         groups_query,
+        groups_sep_value,
+        groups_sep_open,
+        groups_sep_query,
         invalid_value,
         invalid_open,
         invalid_query,

@@ -2,12 +2,13 @@ use std::cell::Cell;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use fret_core::{Color, FontWeight, KeyCode, Px, TextOverflow, TextStyle, TextWrap};
+use fret_core::{Color, FontWeight, KeyCode, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap};
 use fret_icons::ids;
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, FlexProps, LayoutQueryRegionProps, LayoutStyle, Length, MainAlign, Overflow,
-    PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps, TextProps,
+    AnyElement, CrossAlign, FlexProps, LayoutQueryRegionProps, LayoutStyle, Length, MainAlign,
+    Overflow, PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps, SemanticFlexProps,
+    TextProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
@@ -826,111 +827,139 @@ impl Calendar {
                                                 .map(|b| (b.0.year, b.1.year))
                                                 .unwrap_or((today_year - 10, today_year + 10));
 
-                                            let month_select = Select::new_controllable::<
-                                                H,
-                                                Arc<str>,
-                                            >(
-                                                cx,
-                                                Some(month_value.clone()),
-                                                None::<Arc<str>>,
-                                                None,
-                                                false,
-                                            )
-                                            .position(SelectPosition::Popper)
-                                            .on_value_change(move |host, _acx, raw| {
-                                                let Ok(month_num) = raw.parse::<u8>() else {
-                                                    return;
-                                                };
-                                                let Ok(month) = Month::try_from(month_num) else {
-                                                    return;
-                                                };
-
-                                                let cur_year = host
-                                                    .models_mut()
-                                                    .read(&month_model, |m| m.year)
-                                                    .ok()
-                                                    .unwrap_or(today_year);
-                                                let cand = CalendarMonth::new(cur_year, month);
-                                                let next = month_bounds.map_or(cand, |b| {
-                                                    clamp_start_month(cand, b, 1)
+                                            let month_trigger_test_id =
+                                                test_id_prefix_for_header.as_ref().map(|p| {
+                                                    Arc::<str>::from(format!(
+                                                        "{p}.caption-month-trigger"
+                                                    ))
                                                 });
+                                            let mut month_select =
+                                                Select::new_controllable::<H, Arc<str>>(
+                                                    cx,
+                                                    Some(month_value.clone()),
+                                                    None::<Arc<str>>,
+                                                    None,
+                                                    false,
+                                                );
+                                            if let Some(test_id) = month_trigger_test_id {
+                                                month_select =
+                                                    month_select.trigger_test_id(test_id);
+                                            }
 
-                                                let _ = host
-                                                    .models_mut()
-                                                    .update(&month_model, |m| *m = next);
-                                                let _ = host.models_mut().update(
-                                                    &month_value_for_month,
-                                                    |v| {
-                                                        *v = Some(Arc::from(
-                                                            month_number(next.month).to_string(),
-                                                        ));
-                                                    },
-                                                );
-                                                let _ = host.models_mut().update(
-                                                    &year_value_for_month,
-                                                    |v| {
-                                                        *v = Some(Arc::from(next.year.to_string()));
-                                                    },
-                                                );
-                                            })
-                                            .items([
-                                                SelectItem::new(
-                                                    "1",
-                                                    locale.month_name(Month::January),
-                                                ),
-                                                SelectItem::new(
-                                                    "2",
-                                                    locale.month_name(Month::February),
-                                                ),
-                                                SelectItem::new(
-                                                    "3",
-                                                    locale.month_name(Month::March),
-                                                ),
-                                                SelectItem::new(
-                                                    "4",
-                                                    locale.month_name(Month::April),
-                                                ),
-                                                SelectItem::new("5", locale.month_name(Month::May)),
-                                                SelectItem::new(
-                                                    "6",
-                                                    locale.month_name(Month::June),
-                                                ),
-                                                SelectItem::new(
-                                                    "7",
-                                                    locale.month_name(Month::July),
-                                                ),
-                                                SelectItem::new(
-                                                    "8",
-                                                    locale.month_name(Month::August),
-                                                ),
-                                                SelectItem::new(
-                                                    "9",
-                                                    locale.month_name(Month::September),
-                                                ),
-                                                SelectItem::new(
-                                                    "10",
-                                                    locale.month_name(Month::October),
-                                                ),
-                                                SelectItem::new(
-                                                    "11",
-                                                    locale.month_name(Month::November),
-                                                ),
-                                                SelectItem::new(
-                                                    "12",
-                                                    locale.month_name(Month::December),
-                                                ),
-                                            ])
-                                            .into_element(cx);
+                                            let month_select = month_select
+                                                .position(SelectPosition::Popper)
+                                                .on_value_change(move |host, _acx, raw| {
+                                                    let Ok(month_num) = raw.parse::<u8>() else {
+                                                        return;
+                                                    };
+                                                    let Ok(month) = Month::try_from(month_num)
+                                                    else {
+                                                        return;
+                                                    };
+
+                                                    let cur_year = host
+                                                        .models_mut()
+                                                        .read(&month_model, |m| m.year)
+                                                        .ok()
+                                                        .unwrap_or(today_year);
+                                                    let cand = CalendarMonth::new(cur_year, month);
+                                                    let next = month_bounds.map_or(cand, |b| {
+                                                        clamp_start_month(cand, b, 1)
+                                                    });
+
+                                                    let _ = host
+                                                        .models_mut()
+                                                        .update(&month_model, |m| *m = next);
+                                                    let _ = host.models_mut().update(
+                                                        &month_value_for_month,
+                                                        |v| {
+                                                            *v = Some(Arc::from(
+                                                                month_number(next.month)
+                                                                    .to_string(),
+                                                            ));
+                                                        },
+                                                    );
+                                                    let _ = host.models_mut().update(
+                                                        &year_value_for_month,
+                                                        |v| {
+                                                            *v = Some(Arc::from(
+                                                                next.year.to_string(),
+                                                            ));
+                                                        },
+                                                    );
+                                                })
+                                                .items([
+                                                    SelectItem::new(
+                                                        "1",
+                                                        locale.month_name(Month::January),
+                                                    ),
+                                                    SelectItem::new(
+                                                        "2",
+                                                        locale.month_name(Month::February),
+                                                    ),
+                                                    SelectItem::new(
+                                                        "3",
+                                                        locale.month_name(Month::March),
+                                                    ),
+                                                    SelectItem::new(
+                                                        "4",
+                                                        locale.month_name(Month::April),
+                                                    ),
+                                                    SelectItem::new(
+                                                        "5",
+                                                        locale.month_name(Month::May),
+                                                    ),
+                                                    SelectItem::new(
+                                                        "6",
+                                                        locale.month_name(Month::June),
+                                                    ),
+                                                    SelectItem::new(
+                                                        "7",
+                                                        locale.month_name(Month::July),
+                                                    ),
+                                                    SelectItem::new(
+                                                        "8",
+                                                        locale.month_name(Month::August),
+                                                    ),
+                                                    SelectItem::new(
+                                                        "9",
+                                                        locale.month_name(Month::September),
+                                                    ),
+                                                    SelectItem::new(
+                                                        "10",
+                                                        locale.month_name(Month::October),
+                                                    ),
+                                                    SelectItem::new(
+                                                        "11",
+                                                        locale.month_name(Month::November),
+                                                    ),
+                                                    SelectItem::new(
+                                                        "12",
+                                                        locale.month_name(Month::December),
+                                                    ),
+                                                ])
+                                                .into_element(cx);
 
                                             let year_model = month_model_header.clone();
-                                            let year_select =
+                                            let year_trigger_test_id =
+                                                test_id_prefix_for_header.as_ref().map(|p| {
+                                                    Arc::<str>::from(format!(
+                                                        "{p}.caption-year-trigger"
+                                                    ))
+                                                });
+                                            let mut year_select =
                                                 Select::new_controllable::<H, Arc<str>>(
                                                     cx,
                                                     Some(year_value.clone()),
                                                     None::<Arc<str>>,
                                                     None,
                                                     false,
-                                                )
+                                                );
+                                            if let Some(test_id) = year_trigger_test_id {
+                                                year_select = year_select.trigger_test_id(test_id);
+                                            }
+
+                                            let year_select = year_select
                                                 .position(SelectPosition::Popper)
                                                 .on_value_change(move |host, _acx, raw| {
                                                     let Ok(year) = raw.parse::<i32>() else {
@@ -1023,17 +1052,27 @@ impl Calendar {
                                     move |_cx| vec![title_el],
                                 );
 
-                                let nav_bar = stack::hstack(
-                                    cx,
-                                    stack::HStackProps::default()
-                                        .gap(Space::N2)
-                                        .layout(
-                                            LayoutRefinement::default()
-                                                .w_px(MetricRef::Px(month_width))
-                                                .h_px(MetricRef::Px(day_size)),
-                                        )
-                                        .items_center()
-                                        .justify_between(),
+                                let nav_bar_gap = decl_style::space(&theme, Space::N2);
+                                let nav_bar = cx.semantic_flex(
+                                    SemanticFlexProps {
+                                        role: SemanticsRole::Generic,
+                                        flex: FlexProps {
+                                            layout: LayoutStyle {
+                                                size: fret_ui::element::SizeStyle {
+                                                    width: Length::Px(month_width),
+                                                    height: Length::Px(day_size),
+                                                    ..Default::default()
+                                                },
+                                                ..Default::default()
+                                            },
+                                            direction: fret_core::Axis::Horizontal,
+                                            gap: nav_bar_gap,
+                                            padding: fret_core::Edges::all(Px(0.0)),
+                                            justify: MainAlign::SpaceBetween,
+                                            align: CrossAlign::Center,
+                                            wrap: false,
+                                        },
+                                    },
                                     move |_cx| vec![prev, next],
                                 );
 

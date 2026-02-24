@@ -7,7 +7,7 @@ use super::semantics::{
     semantics_node_y_for_test_id,
 };
 
-pub(super) fn check_bundle_for_stale_paint(
+pub(crate) fn check_bundle_for_stale_paint(
     bundle_path: &Path,
     test_id: &str,
     eps: f32,
@@ -17,7 +17,7 @@ pub(super) fn check_bundle_for_stale_paint(
     check_bundle_for_stale_paint_json(&bundle, bundle_path, test_id, eps)
 }
 
-pub(super) fn check_bundle_for_stale_paint_json(
+pub(crate) fn check_bundle_for_stale_paint_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
     test_id: &str,
@@ -27,7 +27,7 @@ pub(super) fn check_bundle_for_stale_paint_json(
     let windows = bundle
         .get("windows")
         .and_then(|v| v.as_array())
-        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+        .ok_or_else(|| "invalid bundle artifact: missing windows".to_string())?;
     if windows.is_empty() {
         return Ok(());
     }
@@ -113,7 +113,7 @@ pub(super) fn check_bundle_for_stale_paint_json(
     Err(msg)
 }
 
-pub(super) fn check_bundle_for_stale_scene(
+pub(crate) fn check_bundle_for_stale_scene(
     bundle_path: &Path,
     test_id: &str,
     eps: f32,
@@ -131,7 +131,7 @@ pub(crate) struct SemanticsChangedRepaintedScan {
     pub(crate) findings: Vec<serde_json::Value>,
 }
 
-pub(super) fn check_bundle_for_semantics_changed_repainted(
+pub(crate) fn check_bundle_for_semantics_changed_repainted(
     bundle_path: &Path,
     warmup_frames: u64,
     dump_json: bool,
@@ -156,7 +156,7 @@ pub(super) fn check_bundle_for_semantics_changed_repainted(
     check_bundle_for_semantics_changed_repainted_json(&bundle, bundle_path, warmup_frames)
 }
 
-pub(super) fn check_bundle_for_semantics_changed_repainted_json(
+pub(crate) fn check_bundle_for_semantics_changed_repainted_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
     warmup_frames: u64,
@@ -194,7 +194,7 @@ pub(super) fn check_bundle_for_semantics_changed_repainted_json(
     Err(msg)
 }
 
-pub(super) fn scan_semantics_changed_repainted_json(
+pub(crate) fn scan_semantics_changed_repainted_json(
     bundle: &serde_json::Value,
     warmup_frames: u64,
 ) -> SemanticsChangedRepaintedScan {
@@ -321,7 +321,7 @@ pub(super) fn scan_semantics_changed_repainted_json(
     scan
 }
 
-pub(super) fn check_bundle_for_stale_scene_json(
+pub(crate) fn check_bundle_for_stale_scene_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
     test_id: &str,
@@ -331,7 +331,7 @@ pub(super) fn check_bundle_for_stale_scene_json(
     let windows = bundle
         .get("windows")
         .and_then(|v| v.as_array())
-        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+        .ok_or_else(|| "invalid bundle artifact: missing windows".to_string())?;
     if windows.is_empty() {
         return Ok(());
     }

@@ -6,13 +6,27 @@ import { LocalizedError } from './localized-error'
 
 function pickBundleJsonPath(entries: Record<string, Uint8Array>): string | null {
   const names = Object.keys(entries).filter((n) => !n.endsWith('/'))
-  const candidates = names.filter((n) => n.toLowerCase().endsWith('bundle.json'))
+  const candidates = names.filter((n) => {
+    const lower = n.toLowerCase()
+    return lower.endsWith('bundle.schema2.json') || lower.endsWith('bundle.json')
+  })
   if (candidates.length === 0) return null
 
-  const exact = candidates.find((n) => n.toLowerCase() === 'bundle.json')
+  const schema2Candidates = candidates.filter((n) =>
+    n.toLowerCase().endsWith('bundle.schema2.json')
+  )
+  if (schema2Candidates.length > 0) {
+    const exactSchema2 = schema2Candidates.find((n) => n.toLowerCase() === 'bundle.schema2.json')
+    if (exactSchema2) return exactSchema2
+
+    return schema2Candidates.sort((a, b) => a.length - b.length || a.localeCompare(b))[0] ?? null
+  }
+
+  const bundleJsonCandidates = candidates.filter((n) => n.toLowerCase().endsWith('bundle.json'))
+  const exact = bundleJsonCandidates.find((n) => n.toLowerCase() === 'bundle.json')
   if (exact) return exact
 
-  return candidates.sort((a, b) => a.length - b.length || a.localeCompare(b))[0] ?? null
+  return bundleJsonCandidates.sort((a, b) => a.length - b.length || a.localeCompare(b))[0] ?? null
 }
 
 export async function extractBundleJsonFromZipFile(file: File): Promise<{

@@ -285,6 +285,7 @@ fn page_preview(
     let material3_menu_open = models.material3_menu_open.clone();
     let text_input = models.text_input.clone();
     let text_area = models.text_area.clone();
+    let input_file_value = models.input_file_value.clone();
     let dropdown_open = models.dropdown_open.clone();
     let context_menu_open = models.context_menu_open.clone();
     let context_menu_edge_open = models.context_menu_edge_open.clone();
@@ -535,7 +536,7 @@ fn page_preview(
         PAGE_EMPTY => preview_empty(cx),
         PAGE_FORM => preview_forms(cx, text_input, text_area, checkbox, switch),
         PAGE_HOVER_CARD => preview_hover_card(cx),
-        PAGE_INPUT => preview_input(cx, text_input),
+        PAGE_INPUT => preview_input(cx, text_input, input_file_value),
         PAGE_INPUT_GROUP => preview_input_group(cx),
         PAGE_INPUT_OTP => preview_input_otp(cx),
         PAGE_ITEM => preview_item(cx),

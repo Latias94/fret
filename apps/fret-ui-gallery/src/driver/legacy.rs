@@ -71,6 +71,12 @@ struct PendingTaffyDumpRequest {
     filename_tag: Arc<str>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum UiGalleryFileDialogKind {
+    LoadFonts,
+    InputPicture,
+}
+
 #[derive(Default)]
 struct UiGalleryHarnessDiagnosticsStore {
     per_window: HashMap<AppWindowId, UiGalleryHarnessModelIds>,
@@ -135,6 +141,7 @@ struct UiGalleryWindowState {
     root: Option<fret_core::NodeId>,
     debug_hud: DebugHudState,
     pending_taffy_dump: Option<PendingTaffyDumpRequest>,
+    pending_file_dialog: Option<UiGalleryFileDialogKind>,
     page_router: Router<UiGalleryRouteId, UiGalleryHistory>,
     selected_page: Model<Arc<str>>,
     workspace_tabs: Model<Vec<Arc<str>>>,
@@ -231,6 +238,7 @@ struct UiGalleryWindowState {
     material3_menu_open: Model<bool>,
     text_input: Model<String>,
     text_area: Model<String>,
+    input_file_value: Model<String>,
     dropdown_open: Model<bool>,
     context_menu_open: Model<bool>,
     context_menu_edge_open: Model<bool>,
@@ -313,6 +321,7 @@ impl UiGalleryWindowState {
             material3_menu_open: self.material3_menu_open.clone(),
             text_input: self.text_input.clone(),
             text_area: self.text_area.clone(),
+            input_file_value: self.input_file_value.clone(),
             dropdown_open: self.dropdown_open.clone(),
             context_menu_open: self.context_menu_open.clone(),
             context_menu_edge_open: self.context_menu_edge_open.clone(),
@@ -1100,6 +1109,7 @@ impl UiGalleryDriver {
         let material3_menu_open = app.models_mut().insert(false);
         let text_input = app.models_mut().insert(String::new());
         let text_area = app.models_mut().insert(String::new());
+        let input_file_value = app.models_mut().insert(String::new());
         let dropdown_open = app.models_mut().insert(false);
         let context_menu_open = app.models_mut().insert(false);
         let context_menu_edge_open = app.models_mut().insert(false);
@@ -1175,8 +1185,7 @@ impl UiGalleryDriver {
 
         // Perf suites set `FRET_DIAG_RENDERER_PERF=1`. Avoid enabling the inspector/debug HUD by
         // default in that mode because it perturbs steady-state perf measurements.
-        let perf_mode =
-            std::env::var_os("FRET_DIAG_RENDERER_PERF").is_some_and(|v| !v.is_empty());
+        let perf_mode = std::env::var_os("FRET_DIAG_RENDERER_PERF").is_some_and(|v| !v.is_empty());
         let inspector_enabled = app.models_mut().insert(
             std::env::var_os("FRET_UI_GALLERY_INSPECTOR").is_some_and(|v| !v.is_empty())
                 || std::env::var_os("FRET_UI_DEBUG_STATS").is_some_and(|v| !v.is_empty())
@@ -1203,6 +1212,7 @@ impl UiGalleryDriver {
             root: None,
             debug_hud: DebugHudState::default(),
             pending_taffy_dump: None,
+            pending_file_dialog: None,
             page_router,
             selected_page,
             workspace_tabs,
@@ -1297,6 +1307,7 @@ impl UiGalleryDriver {
             material3_menu_open,
             text_input,
             text_area,
+            input_file_value,
             dropdown_open,
             context_menu_open,
             context_menu_edge_open,
@@ -1796,6 +1807,7 @@ impl UiGalleryDriver {
                 }
             }
             CMD_CODE_EDITOR_LOAD_FONTS => {
+                state.pending_file_dialog = Some(UiGalleryFileDialogKind::LoadFonts);
                 app.push_effect(Effect::FileDialogOpen {
                     window,
                     options: FileDialogOptions {
@@ -1814,6 +1826,43 @@ impl UiGalleryDriver {
 
                 let _ = app.models_mut().update(&state.last_action, |v| {
                     *v = Arc::<str>::from("code_editor.load_fonts");
+                });
+            }
+            CMD_INPUT_PICTURE_BROWSE => {
+                let diag_mode = std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty());
+
+                if diag_mode {
+                    let _ = app.models_mut().update(&state.input_file_value, |v| {
+                        *v = String::from("avatar.png");
+                    });
+                    let _ = app.models_mut().update(&state.last_action, |v| {
+                        *v = Arc::<str>::from("input.picture.browse.mocked");
+                    });
+                    app.request_redraw(window);
+                    return true;
+                }
+
+                state.pending_file_dialog = Some(UiGalleryFileDialogKind::InputPicture);
+                app.push_effect(Effect::FileDialogOpen {
+                    window,
+                    options: FileDialogOptions {
+                        title: Some("Choose picture".to_string()),
+                        multiple: false,
+                        filters: vec![FileDialogFilter {
+                            name: "Images".to_string(),
+                            extensions: vec![
+                                "png".to_string(),
+                                "jpg".to_string(),
+                                "jpeg".to_string(),
+                                "gif".to_string(),
+                                "webp".to_string(),
+                            ],
+                        }],
+                    },
+                });
+
+                let _ = app.models_mut().update(&state.last_action, |v| {
+                    *v = Arc::<str>::from("input.picture.browse");
                 });
             }
             CMD_CODE_EDITOR_DUMP_TAFFY => {
@@ -3208,18 +3257,44 @@ impl WinitAppDriver for UiGalleryDriver {
         }
 
         match event {
-            Event::FileDialogSelection(selection) => {
-                app.push_effect(Effect::FileDialogReadAllWithLimits {
-                    window,
-                    token: selection.token,
-                    limits: ExternalDropReadLimits {
-                        max_total_bytes: 128 * 1024 * 1024,
-                        max_file_bytes: 128 * 1024 * 1024,
-                        max_files: 8,
-                    },
-                });
-            }
+            Event::FileDialogSelection(selection) => match state.pending_file_dialog {
+                Some(UiGalleryFileDialogKind::LoadFonts) => {
+                    app.push_effect(Effect::FileDialogReadAllWithLimits {
+                        window,
+                        token: selection.token,
+                        limits: ExternalDropReadLimits {
+                            max_total_bytes: 128 * 1024 * 1024,
+                            max_file_bytes: 128 * 1024 * 1024,
+                            max_files: 8,
+                        },
+                    });
+                }
+                Some(UiGalleryFileDialogKind::InputPicture) => {
+                    let name = selection.files.first().map(|f| f.name.clone());
+                    let _ = app.models_mut().update(&state.input_file_value, |v| {
+                        *v = name.unwrap_or_default();
+                    });
+                    app.push_effect(Effect::FileDialogRelease {
+                        token: selection.token,
+                    });
+                    state.pending_file_dialog = None;
+                    app.request_redraw(window);
+                }
+                None => {
+                    app.push_effect(Effect::FileDialogRelease {
+                        token: selection.token,
+                    });
+                }
+            },
             Event::FileDialogData(data) => {
+                if state.pending_file_dialog != Some(UiGalleryFileDialogKind::LoadFonts) {
+                    state.pending_file_dialog = None;
+                    let mut host = UiActionHostAdapter { app };
+                    host.push_effect(Effect::FileDialogRelease { token: data.token });
+                    host.request_redraw(window);
+                    return;
+                }
+
                 let is_font_blob = |bytes: &[u8]| -> bool {
                     bytes.starts_with(b"OTTO")
                         || bytes.starts_with(b"ttcf")
@@ -3274,15 +3349,21 @@ impl WinitAppDriver for UiGalleryDriver {
                 }
 
                 host.push_effect(Effect::FileDialogRelease { token: data.token });
+                state.pending_file_dialog = None;
                 host.request_redraw(window);
             }
             Event::FileDialogCanceled => {
                 let sonner = shadcn::Sonner::global(app);
                 let mut host = UiActionHostAdapter { app };
+                let title = match state.pending_file_dialog.take() {
+                    Some(UiGalleryFileDialogKind::LoadFonts) => "Load fonts canceled",
+                    Some(UiGalleryFileDialogKind::InputPicture) => "Choose file canceled",
+                    None => "File dialog canceled",
+                };
                 sonner.toast_message(
                     &mut host,
                     window,
-                    "Load fonts canceled",
+                    title,
                     shadcn::ToastMessageOptions::new()
                         .description("The file dialog completed without a selection."),
                 );
@@ -3711,15 +3792,15 @@ impl WinitAppDriver for UiGalleryDriver {
             UiDiagnosticsService::default,
             |svc: &mut UiDiagnosticsService, app| {
                 let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
-	                svc.record_snapshot(
-	                    app,
-	                    window,
-	                    bounds,
-	                    scale_factor,
-	                    &mut state.ui,
-	                    element_runtime,
-	                    scene,
-	                );
+                svc.record_snapshot(
+                    app,
+                    window,
+                    bounds,
+                    scale_factor,
+                    &mut state.ui,
+                    element_runtime,
+                    scene,
+                );
                 let _ = svc.maybe_dump_if_triggered();
                 if svc.is_enabled() {
                     app.push_effect(Effect::RequestAnimationFrame(window));

@@ -1744,6 +1744,7 @@ pub struct CommandPalette {
     filter: Option<CommandPaletteFilterFn>,
     value: Option<Model<Option<Arc<str>>>>,
     default_value: Option<Arc<str>>,
+    auto_highlight: bool,
     wrap: bool,
     vim_bindings: bool,
     disable_pointer_selection: bool,
@@ -2103,6 +2104,7 @@ impl CommandPalette {
             filter: None,
             value: None,
             default_value: None,
+            auto_highlight: true,
             // cmdk default: no loop unless explicitly enabled via `loop`.
             wrap: false,
             // cmdk default: ctrl+n/j/p/k keybinds enabled.
@@ -2203,6 +2205,15 @@ impl CommandPalette {
     /// When omitted, the palette selects the first enabled item.
     pub fn default_value(mut self, default_value: impl Into<Arc<str>>) -> Self {
         self.default_value = Some(cmdk_trimmed_arc(default_value.into()));
+        self
+    }
+
+    /// When enabled, highlights the first enabled option when nothing has been explicitly
+    /// navigated to yet (cmdk default behavior).
+    ///
+    /// Base UI Combobox defaults to `false` and opts in via `autoHighlight`.
+    pub fn auto_highlight(mut self, auto_highlight: bool) -> Self {
+        self.auto_highlight = auto_highlight;
         self
     }
 
@@ -2513,11 +2524,31 @@ impl CommandPalette {
                 }
             });
 
+            let auto_highlight = self.auto_highlight;
             let cur_active_raw = cx.watch_model(&active).cloned().unwrap_or(None);
             let cur_active = cur_active_raw.clone().map(cmdk_trimmed_arc);
-            let next_active = cur_active
-                .as_ref()
-                .and_then(|v| {
+            let next_active = if auto_highlight {
+                cur_active
+                    .as_ref()
+                    .and_then(|v| {
+                        entries_arc
+                            .iter()
+                            .enumerate()
+                            .find(|(idx, e)| {
+                                disabled_flags.get(*idx).copied() == Some(false)
+                                    && e.value.as_ref() == v.as_ref()
+                            })
+                            .map(|(_, e)| e.value.clone())
+                    })
+                    .or_else(|| {
+                        entries_arc
+                            .iter()
+                            .enumerate()
+                            .find(|(idx, _)| disabled_flags.get(*idx).copied() == Some(false))
+                            .map(|(_, e)| e.value.clone())
+                    })
+            } else {
+                cur_active.as_ref().and_then(|v| {
                     entries_arc
                         .iter()
                         .enumerate()
@@ -2527,13 +2558,7 @@ impl CommandPalette {
                         })
                         .map(|(_, e)| e.value.clone())
                 })
-                .or_else(|| {
-                    entries_arc
-                        .iter()
-                        .enumerate()
-                        .find(|(idx, _)| disabled_flags.get(*idx).copied() == Some(false))
-                        .map(|(_, e)| e.value.clone())
-                });
+            };
             if next_active != cur_active_raw {
                 let _ = cx
                     .app

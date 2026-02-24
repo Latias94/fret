@@ -311,7 +311,7 @@ pub(crate) fn wait_for_failure_dump_bundle(
     while Instant::now() < deadline {
         for suffix in &suffixes {
             if let Some(dir) = find_latest_export_dir_with_suffix(out_dir, suffix)
-                && dir.join("bundle.json").is_file()
+                && crate::resolve_bundle_artifact_path(&dir).is_file()
             {
                 return Some(dir);
             }

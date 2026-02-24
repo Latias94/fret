@@ -54,6 +54,7 @@ impl SizeRefinement {
 
 #[derive(Debug, Clone, Default)]
 pub struct FlexItemRefinement {
+    pub order: Option<i32>,
     pub grow: Option<f32>,
     pub shrink: Option<f32>,
     pub basis: Option<LengthRefinement>,
@@ -61,6 +62,9 @@ pub struct FlexItemRefinement {
 
 impl FlexItemRefinement {
     pub fn merge(mut self, other: FlexItemRefinement) -> Self {
+        if other.order.is_some() {
+            self.order = other.order;
+        }
         if other.grow.is_some() {
             self.grow = other.grow;
         }
@@ -709,6 +713,11 @@ impl LayoutRefinement {
 
     pub fn flex_shrink_0(self) -> Self {
         self.flex_shrink(0.0)
+    }
+
+    pub fn order(mut self, order: i32) -> Self {
+        self.ensure_flex_item_mut().order = Some(order);
+        self
     }
 
     /// Tailwind-like `flex-1` shorthand: `grow=1`, `shrink=1`, `basis=0`.

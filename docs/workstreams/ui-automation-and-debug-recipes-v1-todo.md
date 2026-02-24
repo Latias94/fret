@@ -20,8 +20,8 @@ Conventions:
 
 - [x] Add/confirm an ADR for v1 recipes + automation surface (candidate: ADR 0181).
 - [x] Audit and reconcile screenshot capture paths:
-  - `FRET_DIAG_SCREENSHOT=1` (bundle `frame.bmp`) vs
-  - `FRET_DIAG_SCREENSHOTS=1` (PNG + manifest + request/result protocol).
+  - `FRET_DIAG_BUNDLE_SCREENSHOT=1` (bundle `frame.bmp`) vs
+  - `FRET_DIAG_GPU_SCREENSHOTS=1` (PNG + manifest + request/result protocol).
 - [x] Add a “known gaps” section listing current mismatches (doc vs implementation).
 
 ### M1: One-command repro packaging (`fretboard diag repro`)

@@ -339,7 +339,6 @@ impl Default for UiDiagnosticsConfig {
             .or_else(|| config_file.as_ref().and_then(|c| c.semantics_test_ids_only))
             .unwrap_or(false);
         let screenshots_enabled = env_flag_override("FRET_DIAG_GPU_SCREENSHOTS")
-            .or_else(|| env_flag_override("FRET_DIAG_SCREENSHOTS"))
             .or_else(|| config_file.as_ref().and_then(|c| c.screenshots_enabled))
             .unwrap_or(false);
         let screenshot_request_path = std::env::var_os("FRET_DIAG_SCREENSHOT_REQUEST_PATH")
@@ -514,7 +513,6 @@ impl Default for UiDiagnosticsConfig {
             .unwrap_or(200)
             .clamp(0, 2000);
         let screenshot_on_dump = env_flag_override("FRET_DIAG_BUNDLE_SCREENSHOT")
-            .or_else(|| env_flag_override("FRET_DIAG_SCREENSHOT"))
             .or_else(|| config_file.as_ref().and_then(|c| c.screenshot_on_dump))
             .unwrap_or(false);
         let frame_clock_fixed_delta_ms = fret_core::WindowFrameClockService::fixed_delta_from_env()

@@ -20,7 +20,7 @@ pub(crate) fn cmd_index(
     }
     let Some(src) = rest.first().cloned() else {
         return Err(
-            "missing bundle path (try: fretboard diag index ./target/fret-diag/1234/bundle.json)"
+            "missing bundle path (try: fretboard diag index <bundle_dir|bundle.json|bundle.schema2.json>)"
                 .to_string(),
         );
     };
@@ -38,14 +38,14 @@ pub(crate) fn cmd_index(
     {
         if try_read_bundle_index_json(&src, warmup_frames).is_some() {
             (src.clone(), src.clone())
-        } else if let Some(bundle_path) = sidecars::adjacent_bundle_json_path_for_sidecar(&src) {
+        } else if let Some(bundle_path) = sidecars::adjacent_bundle_path_for_sidecar(&src) {
             let canonical =
                 crate::bundle_index::ensure_bundle_index_json(&bundle_path, warmup_frames)?;
             let out = crate::bundle_index::default_bundle_index_path(&bundle_path);
             (canonical, out)
         } else {
             return Err(format!(
-                "invalid bundle.index.json (expected schema_version=1 warmup_frames={warmup_frames}) and no adjacent bundle.json was found to regenerate it\n  index: {}",
+                "invalid bundle.index.json (expected schema_version=1 warmup_frames={warmup_frames}) and no adjacent bundle artifact was found to regenerate it\n  index: {}",
                 src.display()
             ));
         }
@@ -54,14 +54,14 @@ pub(crate) fn cmd_index(
         if direct.is_file() && try_read_bundle_index_json(&direct, warmup_frames).is_some() {
             (direct.clone(), direct)
         } else {
-            let bundle_path = crate::resolve_bundle_json_path(&src);
+            let bundle_path = crate::resolve_bundle_artifact_path(&src);
             let canonical =
                 crate::bundle_index::ensure_bundle_index_json(&bundle_path, warmup_frames)?;
             let out = crate::bundle_index::default_bundle_index_path(&bundle_path);
             (canonical, out)
         }
     } else {
-        let bundle_path = crate::resolve_bundle_json_path(&src);
+        let bundle_path = crate::resolve_bundle_artifact_path(&src);
         let canonical = crate::bundle_index::ensure_bundle_index_json(&bundle_path, warmup_frames)?;
         let out = crate::bundle_index::default_bundle_index_path(&bundle_path);
         (canonical, out)

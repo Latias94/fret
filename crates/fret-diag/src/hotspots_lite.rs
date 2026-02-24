@@ -203,7 +203,7 @@ pub(crate) fn hotspots_lite_json_from_frames_index(
         },
         "frames_index_rows_total": frames_index_rows_total,
         "notes": [
-            "hotspots_lite is derived from frames.index.json to avoid materializing bundle.json in memory.",
+            "hotspots_lite is derived from frames.index.json to avoid materializing bundle artifacts in memory.",
             "This report identifies slow frames (perf hotspots), not JSON subtree size hotspots.",
         ],
         "results": results,

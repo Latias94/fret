@@ -312,14 +312,15 @@ pub(super) fn preview_input_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
     };
 
     let dropdown = {
+        let chevron = shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.chevron-down"));
         let content = shadcn::InputGroup::new(dropdown_value)
             .a11y_label("Dropdown example")
-            .leading([
-                shadcn::InputGroupButton::new("All")
-                    .variant(shadcn::ButtonVariant::Ghost)
-                    .into_element(cx),
-                shadcn::InputGroupText::new("v").into_element(cx),
-            ])
+            .control_test_id("ui-gallery-input-group-dropdown-control")
+            .leading([shadcn::InputGroupButton::new("All")
+                .variant(shadcn::ButtonVariant::Ghost)
+                .children([chevron])
+                .test_id("ui-gallery-input-group-dropdown-leading-button")
+                .into_element(cx)])
             .leading_has_button(true)
             .refine_layout(max_w_xs.clone())
             .test_id("ui-gallery-input-group-dropdown")
@@ -360,7 +361,7 @@ pub(super) fn preview_input_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
         let content = shadcn::InputGroup::new(custom_value)
             .textarea()
             .a11y_label("Custom input example")
-            .block_start([shadcn::InputGroupText::new("Custom control (approx)").into_element(cx)])
+            .block_start([shadcn::InputGroupText::new("Custom control").into_element(cx)])
             .block_start_border_bottom(true)
             .block_end([shadcn::InputGroupButton::new("Resize")
                 .variant(shadcn::ButtonVariant::Ghost)
@@ -389,7 +390,7 @@ pub(super) fn preview_input_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
         [
             "API reference: `ecosystem/fret-ui-shadcn/src/input_group.rs` (InputGroup).",
             "InputGroup API is slot based (`leading/trailing/block_start/block_end`) rather than explicit addon-align enums.",
-            "`Custom Input` is represented as a composition approximation in the current API.",
+            "`Custom Input` is expressed as composition via slots (no dedicated \"custom control\" type).",
             "Keep `ui-gallery-input-group-text-*` test IDs stable for non-overlap regression scripts.",
         ],
     );
@@ -499,7 +500,7 @@ pub(super) fn preview_input_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
     .into_element(cx);"#,
                 ),
             DocSection::new("Dropdown", dropdown)
-                .description("Leading button + caret composition approximation.")
+                .description("Leading button with a chevron icon (wire it to a menu in app code).")
                 .code(
                     "rust",
                     r#"shadcn::InputGroup::new(model)
@@ -507,8 +508,11 @@ pub(super) fn preview_input_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
     .leading([
         shadcn::InputGroupButton::new("All")
             .variant(shadcn::ButtonVariant::Ghost)
+            .children([shadcn::icon::icon(
+                cx,
+                fret_icons::IconId::new_static("lucide.chevron-down"),
+            )])
             .into_element(cx),
-        shadcn::InputGroupText::new("v").into_element(cx),
     ])
     .leading_has_button(true)
     .into_element(cx);"#,
@@ -547,7 +551,7 @@ pub(super) fn preview_input_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
                     r#"shadcn::InputGroup::new(model)
     .textarea()
     .a11y_label("Custom input example")
-    .block_start([shadcn::InputGroupText::new("Custom control (approx)").into_element(cx)])
+    .block_start([shadcn::InputGroupText::new("Custom control").into_element(cx)])
     .block_start_border_bottom(true)
     .block_end([shadcn::InputGroupButton::new("Resize")
         .variant(shadcn::ButtonVariant::Ghost)

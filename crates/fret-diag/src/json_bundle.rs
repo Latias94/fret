@@ -1,4 +1,5 @@
 use serde_json::Value;
+use std::collections::BTreeMap;
 use std::collections::HashMap;
 
 pub(crate) fn pick_last_snapshot_after_warmup<'a>(
@@ -10,23 +11,6 @@ pub(crate) fn pick_last_snapshot_after_warmup<'a>(
         .rev()
         .find(|s| snapshot_frame_id(s) >= warmup_frames)
         .or_else(|| snaps.last())
-}
-
-pub(crate) fn pick_last_snapshot_with_semantics_after_warmup<'a>(
-    snaps: &'a [Value],
-    warmup_frames: u64,
-) -> Option<&'a Value> {
-    snaps
-        .iter()
-        .rev()
-        .find(|s| snapshot_frame_id(s) >= warmup_frames && snapshot_semantics_nodes(s).is_some())
-        .or_else(|| {
-            snaps
-                .iter()
-                .rev()
-                .find(|s| snapshot_semantics_nodes(s).is_some())
-        })
-        .or_else(|| pick_last_snapshot_after_warmup(snaps, warmup_frames))
 }
 
 pub(crate) fn pick_last_snapshot_with_resolved_semantics_after_warmup<'a>(
@@ -91,6 +75,44 @@ pub(crate) fn snapshot_semantics_nodes(snapshot: &Value) -> Option<&[Value]> {
         .get("nodes")
         .and_then(|v| v.as_array())
         .map(|v| v.as_slice())
+}
+
+pub(crate) fn build_semantics_table_entries_from_windows(windows: &[Value]) -> Vec<Value> {
+    let mut table: BTreeMap<(u64, u64), Value> = BTreeMap::new();
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v.as_slice());
+        for s in snaps {
+            let Some(sem) = snapshot_semantics(s) else {
+                continue;
+            };
+            if sem.is_null() {
+                continue;
+            }
+            let Some(fp) = snapshot_semantics_fingerprint(s) else {
+                continue;
+            };
+            let snap_window = snapshot_window_id(s).unwrap_or(window_id);
+            table
+                .entry((snap_window, fp))
+                .or_insert_with(|| sem.clone());
+        }
+    }
+
+    table
+        .into_iter()
+        .map(|((window, fp), semantics)| {
+            serde_json::json!({
+                "window": window,
+                "semantics_fingerprint": fp,
+                "semantics": semantics,
+            })
+        })
+        .collect()
 }
 
 fn bundle_semantics_table_entries(bundle: &Value) -> Option<&[Value]> {
@@ -176,6 +198,38 @@ impl<'a> SemanticsResolver<'a> {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn build_semantics_table_entries_from_windows_dedups_by_window_and_fingerprint() {
+        let windows = json!([{
+            "window": 1,
+            "snapshots": [
+                {
+                    "window": 1,
+                    "semantics_fingerprint": 42,
+                    "debug": { "semantics": { "nodes": [{ "id": 1 }] } }
+                },
+                {
+                    "window": 1,
+                    "semantics_fingerprint": 42,
+                    "debug": { "semantics": { "nodes": [{ "id": 2 }] } }
+                },
+                {
+                    "window": 1,
+                    "semantics_fingerprint": 7,
+                    "debug": { "semantics": { "nodes": [{ "id": 3 }] } }
+                }
+            ]
+        }]);
+
+        let entries = build_semantics_table_entries_from_windows(
+            windows.as_array().expect("windows must be an array"),
+        );
+        assert_eq!(entries.len(), 2);
+        assert_eq!(entries[0]["window"].as_u64(), Some(1));
+        assert_eq!(entries[0]["semantics_fingerprint"].as_u64(), Some(7));
+        assert_eq!(entries[1]["semantics_fingerprint"].as_u64(), Some(42));
+    }
 
     #[test]
     fn semantics_resolver_reads_from_table_when_inline_missing() {

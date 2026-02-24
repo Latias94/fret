@@ -19,7 +19,7 @@ pub(super) fn preview_chart(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                 GridSpec, SeriesEncode, SeriesKind, SeriesSpec,
             };
             use fret_chart::ChartCanvas;
-            use fret_ui::element::{LayoutStyle, Length, SemanticsProps};
+            use fret_ui::element::{LayoutStyle, Length};
             use fret_ui::retained_bridge::RetainedSubtreeProps;
 
             cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), |cx| {
@@ -256,9 +256,12 @@ pub(super) fn preview_chart(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                 layout.size.width = Length::Fill;
                 layout.size.height = Length::Px(Px(220.0));
 
+                let canvas_test_id = test_id.to_string();
                 let props = RetainedSubtreeProps::new::<App>(move |ui| {
-                    let mut canvas =
-                        ChartCanvas::new(spec.clone()).expect("chart spec should be valid");
+                    let mut canvas = ChartCanvas::new(spec.clone())
+                        .expect("chart spec should be valid")
+                        .test_id(canvas_test_id.clone());
+                    canvas.set_accessibility_layer(true);
                     canvas.set_input_map(fret_chart::input_map::ChartInputMap::default());
 
                     let mut table = DataTable::default();
@@ -274,14 +277,7 @@ pub(super) fn preview_chart(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                 .with_layout(layout);
 
                 let subtree = cx.retained_subtree(props);
-                vec![cx.semantics(
-                    SemanticsProps {
-                        role: fret_core::SemanticsRole::Group,
-                        test_id: Some(test_id),
-                        ..Default::default()
-                    },
-                    |_cx| vec![subtree],
-                )]
+                vec![subtree]
             })
         };
 
@@ -560,7 +556,7 @@ pub(super) fn preview_chart(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             "Demo cards are rendered with `delinea` + `fret-chart` (not Recharts); this is a stand-in to keep chart layout real in native builds.",
             "The shadcn `ChartTooltipContent` / `ChartLegendContent` recipes are validated independently (no runtime wire-up yet).",
             "Keep color mapping stable through `chart-*` tokens to avoid dark-theme drift.",
-            "Upstream Recharts `accessibilityLayer` parity remains a follow-up workstream.",
+            "`fret-chart::ChartCanvas` exposes an accessibility layer via keyboard focus + arrow navigation, mirroring Recharts `accessibilityLayer` outcomes at a high level.",
         ],
     );
 

@@ -17,7 +17,7 @@ export const translations = {
     'error.unknownParse': 'Unknown parse error',
     'error.jsonParse': 'JSON parse error',
     'error.bundleRootNotObject': 'Bundle root is not an object',
-    'error.zipNoBundleJson': 'No bundle.json found in zip',
+    'error.zipNoBundleJson': 'No bundle.json or bundle.schema2.json found in zip',
     'error.zipMissingEntry': 'Missing zip entry: {path}',
 
     // Warnings
@@ -34,9 +34,9 @@ export const translations = {
 
     // Header
     'header.open': 'Open',
-    'header.openTooltip': 'Open bundle.json or bundle.zip (Ctrl+O)',
+    'header.openTooltip': 'Open bundle.json / bundle.schema2.json or bundle.zip (Ctrl+O)',
     'header.paste': 'Paste',
-    'header.pasteTooltip': 'Paste raw bundle.json text',
+    'header.pasteTooltip': 'Paste raw bundle.json / bundle.schema2.json text',
     'header.sample': 'Sample',
     'header.sampleSimple': 'Simple (3 snapshots)',
     'header.sampleMultiWindow': 'Multi-window (2 windows)',
@@ -54,15 +54,15 @@ export const translations = {
 
     // Empty State
     'empty.title': 'No Bundle Loaded',
-    'empty.description': 'Open a Fret diagnostics bundle.json file to inspect snapshots, semantics trees, events, and performance data.',
-    'empty.openButton': 'Open bundle.json / bundle.zip',
+    'empty.description': 'Open a Fret diagnostics bundle.json / bundle.schema2.json file to inspect snapshots, semantics trees, events, and performance data.',
+    'empty.openButton': 'Open bundle.json / bundle.schema2.json / bundle.zip',
     'empty.loadSample': 'Load sample',
     'empty.recentFiles': 'Recent Files',
     'empty.recentFilesNote': "Note: Recent files list is stored locally. You'll need to re-select the file to open it.",
     'empty.clear': 'Clear',
 
     // Paste Dialog
-    'paste.title': 'Paste bundle.json',
+    'paste.title': 'Paste bundle.json / bundle.schema2.json',
     'paste.description': 'Paste the JSON text to load a diagnostics bundle. Nothing is uploaded.',
     'paste.placeholder': 'Paste JSON here…',
     'paste.cancel': 'Cancel',
@@ -284,7 +284,7 @@ export const translations = {
     'cmd.placeholder': 'Type a command or search...',
     'cmd.noResults': 'No results found.',
     'cmd.file': 'File',
-    'cmd.openBundle': 'Open bundle.json',
+    'cmd.openBundle': 'Open bundle.json / bundle.schema2.json',
     'cmd.loadSampleSimple': 'Load sample: Simple (3 snapshots)',
     'cmd.loadSampleMulti': 'Load sample: Multi-window',
     'cmd.exportSummary': 'Export Markdown summary',
@@ -340,7 +340,7 @@ export const translations = {
     'error.unknownParse': '未知解析错误',
     'error.jsonParse': 'JSON 解析错误',
     'error.bundleRootNotObject': 'Bundle 根不是对象',
-    'error.zipNoBundleJson': 'Zip 中未找到 bundle.json',
+    'error.zipNoBundleJson': 'Zip 中未找到 bundle.json 或 bundle.schema2.json',
     'error.zipMissingEntry': 'Zip 缺少条目：{path}',
 
     // Warnings
@@ -357,9 +357,9 @@ export const translations = {
 
     // Header
     'header.open': '打开',
-    'header.openTooltip': '打开 bundle.json 或 bundle.zip (Ctrl+O)',
+    'header.openTooltip': '打开 bundle.json / bundle.schema2.json 或 bundle.zip (Ctrl+O)',
     'header.paste': '粘贴',
-    'header.pasteTooltip': '粘贴 bundle.json 的原始 JSON 文本',
+    'header.pasteTooltip': '粘贴 bundle.json / bundle.schema2.json 的原始 JSON 文本',
     'header.sample': '示例',
     'header.sampleSimple': '简单 (3 个快照)',
     'header.sampleMultiWindow': '多窗口 (2 个窗口)',
@@ -377,15 +377,15 @@ export const translations = {
 
     // Empty State
     'empty.title': '未加载 Bundle',
-    'empty.description': '打开 Fret 诊断 bundle.json 文件以检查快照、语义树、事件和性能数据。',
-    'empty.openButton': '打开 bundle.json / bundle.zip',
+    'empty.description': '打开 Fret 诊断 bundle.json / bundle.schema2.json 文件以检查快照、语义树、事件和性能数据。',
+    'empty.openButton': '打开 bundle.json / bundle.schema2.json / bundle.zip',
     'empty.loadSample': '加载示例',
     'empty.recentFiles': '最近打开',
     'empty.recentFilesNote': '注意：最近文件列表存储在本地。您需要重新选择文件才能打开。',
     'empty.clear': '清空',
 
     // Paste Dialog
-    'paste.title': '粘贴 bundle.json',
+    'paste.title': '粘贴 bundle.json / bundle.schema2.json',
     'paste.description': '粘贴 JSON 文本以加载诊断 bundle；不会上传任何数据。',
     'paste.placeholder': '在此粘贴 JSON…',
     'paste.cancel': '取消',
@@ -607,7 +607,7 @@ export const translations = {
     'cmd.placeholder': '输入命令或搜索...',
     'cmd.noResults': '未找到结果。',
     'cmd.file': '文件',
-    'cmd.openBundle': '打开 bundle.json',
+    'cmd.openBundle': '打开 bundle.json / bundle.schema2.json',
     'cmd.loadSampleSimple': '加载示例：简单 (3 个快照)',
     'cmd.loadSampleMulti': '加载示例：多窗口',
     'cmd.exportSummary': '导出 Markdown 摘要',

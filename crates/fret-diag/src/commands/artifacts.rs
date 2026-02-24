@@ -126,7 +126,7 @@ pub(crate) fn cmd_triage(
 
     let Some(src) = positionals.first().cloned() else {
         return Err(
-            "missing bundle path (try: fretboard diag triage ./target/fret-diag/1234/bundle.json)"
+            "missing bundle path (try: fretboard diag triage <bundle_dir|bundle.json|bundle.schema2.json>)"
                 .to_string(),
         );
     };
@@ -138,7 +138,7 @@ pub(crate) fn cmd_triage(
     }
 
     let src = crate::resolve_path(workspace_root, PathBuf::from(src));
-    let bundle_path = crate::resolve_bundle_json_path(&src);
+    let bundle_path = crate::resolve_bundle_artifact_path(&src);
 
     let payload = if lite {
         let index_path = crate::frames_index::default_frames_index_path(&bundle_path);
@@ -214,7 +214,7 @@ pub(crate) fn cmd_lint(
     }
     let Some(src) = rest.first().cloned() else {
         return Err(
-            "missing bundle path (try: fretboard diag lint ./target/fret-diag/1234/bundle.json)"
+            "missing bundle path (try: fretboard diag lint <bundle_dir|bundle.json|bundle.schema2.json>)"
                 .to_string(),
         );
     };
@@ -223,7 +223,7 @@ pub(crate) fn cmd_lint(
     }
 
     let src = crate::resolve_path(workspace_root, PathBuf::from(src));
-    let bundle_path = crate::resolve_bundle_json_path(&src);
+    let bundle_path = crate::resolve_bundle_artifact_path(&src);
 
     let report = lint_bundle_from_path(
         &bundle_path,
@@ -271,7 +271,7 @@ pub(crate) fn cmd_test_ids(
     }
     let Some(src) = rest.first().cloned() else {
         return Err(
-            "missing bundle path (try: fretboard diag test-ids ./target/fret-diag/1234/bundle.json)"
+            "missing bundle path (try: fretboard diag test-ids <bundle_dir|bundle.json|bundle.schema2.json>)"
                 .to_string(),
         );
     };
@@ -280,7 +280,7 @@ pub(crate) fn cmd_test_ids(
     }
 
     let src = crate::resolve_path(workspace_root, PathBuf::from(src));
-    let bundle_path = crate::resolve_bundle_json_path(&src);
+    let bundle_path = crate::resolve_bundle_artifact_path(&src);
 
     let out = test_ids_out
         .map(|p| crate::resolve_path(workspace_root, p))
@@ -331,7 +331,7 @@ pub(crate) fn cmd_test_ids_index(
     }
     let Some(src) = rest.first().cloned() else {
         return Err(
-            "missing bundle path (try: fretboard diag test-ids-index ./target/fret-diag/1234/bundle.json)"
+            "missing bundle path (try: fretboard diag test-ids-index <bundle_dir|bundle.json|bundle.schema2.json>)"
                 .to_string(),
         );
     };
@@ -340,7 +340,7 @@ pub(crate) fn cmd_test_ids_index(
     }
 
     let src = crate::resolve_path(workspace_root, PathBuf::from(src));
-    let bundle_path = crate::resolve_bundle_json_path(&src);
+    let bundle_path = crate::resolve_bundle_artifact_path(&src);
     let out = crate::bundle_index::ensure_test_ids_index_json(&bundle_path, warmup_frames)?;
 
     if stats_json {
@@ -367,7 +367,7 @@ pub(crate) fn cmd_frames_index(
     }
     let Some(src) = rest.first().cloned() else {
         return Err(
-            "missing bundle path (try: fretboard diag frames-index ./target/fret-diag/1234/bundle.json)"
+            "missing bundle path (try: fretboard diag frames-index <bundle_dir|bundle.json|bundle.schema2.json>)"
                 .to_string(),
         );
     };
@@ -376,7 +376,7 @@ pub(crate) fn cmd_frames_index(
     }
 
     let src = crate::resolve_path(workspace_root, PathBuf::from(src));
-    let bundle_path = crate::resolve_bundle_json_path(&src);
+    let bundle_path = crate::resolve_bundle_artifact_path(&src);
     let out = crate::frames_index::ensure_frames_index_json(&bundle_path, warmup_frames)?;
 
     if stats_json {
@@ -408,7 +408,7 @@ pub(crate) fn cmd_meta(
     }
     let Some(src) = rest.first().cloned() else {
         return Err(
-            "missing bundle path (try: fretboard diag meta ./target/fret-diag/1234/bundle.json)"
+            "missing bundle path (try: fretboard diag meta <bundle_dir|bundle.json|bundle.schema2.json>)"
                 .to_string(),
         );
     };
@@ -426,14 +426,14 @@ pub(crate) fn cmd_meta(
     {
         if sidecars::try_read_sidecar_json_v1(&src, "bundle_meta", warmup_frames).is_some() {
             (src.clone(), src.clone())
-        } else if let Some(bundle_path) = sidecars::adjacent_bundle_json_path_for_sidecar(&src) {
+        } else if let Some(bundle_path) = sidecars::adjacent_bundle_path_for_sidecar(&src) {
             let canonical =
                 crate::bundle_index::ensure_bundle_meta_json(&bundle_path, warmup_frames)?;
             let out = crate::default_meta_out_path(&bundle_path);
             (canonical, out)
         } else {
             return Err(format!(
-                "invalid bundle.meta.json (expected schema_version=1 warmup_frames={warmup_frames}) and no adjacent bundle.json was found to regenerate it\n  meta: {}",
+                "invalid bundle.meta.json (expected schema_version=1 warmup_frames={warmup_frames}) and no adjacent bundle artifact was found to regenerate it\n  meta: {}",
                 src.display()
             ));
         }
@@ -450,7 +450,7 @@ pub(crate) fn cmd_meta(
             {
                 (root.clone(), root)
             } else {
-                let bundle_path = crate::resolve_bundle_json_path(&src);
+                let bundle_path = crate::resolve_bundle_artifact_path(&src);
                 let canonical =
                     crate::bundle_index::ensure_bundle_meta_json(&bundle_path, warmup_frames)?;
                 let out = crate::default_meta_out_path(&bundle_path);
@@ -458,7 +458,7 @@ pub(crate) fn cmd_meta(
             }
         }
     } else {
-        let bundle_path = crate::resolve_bundle_json_path(&src);
+        let bundle_path = crate::resolve_bundle_artifact_path(&src);
         let canonical = crate::bundle_index::ensure_bundle_meta_json(&bundle_path, warmup_frames)?;
         let out = crate::default_meta_out_path(&bundle_path);
         (canonical, out)

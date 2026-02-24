@@ -64,7 +64,7 @@ try {
             ExtraArgs = @(
                 "--check-stale-paint", "imui-float-demo.a.activate",
                 "--check-stale-paint-eps", "0.5",
-                "--env", "FRET_DIAG_SCREENSHOTS=1",
+                "--env", "FRET_DIAG_GPU_SCREENSHOTS=1",
                 "--env", "FRET_DIAG_REDACT_TEXT=0"
             )
             DemoExe = $demoExe

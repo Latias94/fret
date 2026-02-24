@@ -382,6 +382,9 @@ Recent fixes:
   - Inline addon layout now matches shadcn-web geometry: addons participate in normal flex flow
     instead of absolute slots; input padding switches to `pl-2` / `pr-2` when an inline addon is
     present.
+  - Focus navigation now matches the shadcn docs contract: addons can be authored after the control
+    in element-tree order (DOM order), while their visual placement is expressed via flex item
+    visual order (`order-first` / `order-last`) in layout.
   - `aria-invalid=true` border color now matches shadcn-web (`input-group-demo.invalid`) and is
     gated via `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`
     (`web_vs_fret_input_group_demo_aria_invalid_border_color_matches`).
@@ -398,6 +401,8 @@ Recent fixes:
   - `InputGroupButton` is now available (xs/sm/icon sizes) to support input-group compositions.
   - `InputGroupButton` no longer forces a fill-width content row for text buttons, matching the
     upstream shrink-to-fit behavior.
+  - UI gallery dropdown demo now uses the real chevron-down icon (`lucide.chevron-down`) instead of
+    a text placeholder.
 - Conformance gates:
   - Layout: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs`
     (`web_vs_fret_layout_input_group_dropdown_height`, `web_vs_fret_layout_input_group_icon_geometry_matches`,
@@ -411,6 +416,7 @@ Recent fixes:
     `web_vs_fret_layout_input_group_text_url_geometry_matches`,
     `web_vs_fret_layout_input_group_text_email_geometry_matches`,
     `web_vs_fret_layout_input_group_text_textarea_count_geometry_matches`).
+  - Focus navigation: `tools/diag-scripts/ui-gallery-input-group-addon-after-control-tab-focus.json`
 - Gaps to check next:
   - Placeholder + selection colors for group control content (ensure they match upstream shadcn tokens).
 
@@ -456,10 +462,24 @@ Recent fixes:
     `web_vs_fret_breadcrumb_dropdown_overlay_placement_matches`, `web_vs_fret_breadcrumb_dropdown_small_viewport_overlay_placement_matches`,
     `web_vs_fret_breadcrumb_responsive_overlay_placement_matches`, `web_vs_fret_breadcrumb_responsive_mobile_drawer_overlay_insets_match`).
 
+### `Avatar`
+
+- Upstream: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/avatar.tsx`
+- Fret: `ecosystem/fret-ui-shadcn/src/avatar.rs`
+- UI gallery: `apps/fret-ui-gallery/src/ui/pages/avatar.rs`
+- Gaps to check:
+  - Trigger composition: using `Avatar` as an overlay trigger should preserve focus restore and pointer hit-testing semantics.
+  - Badge placement: bottom-right dot/icon sizing across `sm`/`default`/`lg`.
+  - Group overlap: `-space-x-2` should match upstream overlap geometry.
+- Conformance gates:
+  - Docs examples: `tools/diag-scripts/ui-gallery-avatar-badge-and-group-count.json`
+  - Dropdown trigger focus restore: `tools/diag-scripts/ui-gallery-avatar-dropdown-escape-focus-restore.json`
+
 ### `Button`
 
 - Upstream: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/button.tsx`
 - Fret: `ecosystem/fret-ui-shadcn/src/button.rs`
+- UI gallery: `apps/fret-ui-gallery/src/ui/pages/button.rs`
 - Gaps to check:
   - Size: `h-9` baseline, icon-only sizing (`size-9`) behavior.
   - Variant mapping: outline uses border + shadow-xs; destructive uses dedicated ring color.
@@ -475,6 +495,7 @@ Conformance gates:
 
 - Chrome: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`web_vs_fret_button_demo_control_chrome_matches`).
 - Focus ring: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`web_vs_fret_button_demo_focus_ring_matches`).
+- Link render semantics (role + activation): `tools/diag-scripts/ui-gallery-button-link-render.json`.
 
 ### `ButtonGroup`
 

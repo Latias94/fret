@@ -13,8 +13,9 @@ use fret_ui_kit::declarative::current_color;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
 use fret_ui_kit::{
-    ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, OverrideSlot, ShadowPreset,
-    Size as ComponentSize, Space, WidgetStateProperty, WidgetStates, resolve_override_slot, ui,
+    ChromeRefinement, ColorFallback, ColorRef, Justify, LayoutRefinement, OverrideSlot,
+    ShadowPreset, Size as ComponentSize, Space, WidgetStateProperty, WidgetStates,
+    resolve_override_slot, ui,
 };
 
 #[derive(Debug, Clone, Default)]
@@ -321,6 +322,9 @@ pub struct Button {
     children: Vec<AnyElement>,
     leading_icon: Option<IconId>,
     trailing_icon: Option<IconId>,
+    leading_icon_size: Option<Px>,
+    content_justify: Justify,
+    text_weight_override: Option<FontWeight>,
     command: Option<CommandId>,
     on_activate: Option<OnActivate>,
     on_hover_change: Option<OnHoverChange>,
@@ -382,6 +386,9 @@ impl Button {
             children: Vec::new(),
             leading_icon: None,
             trailing_icon: None,
+            leading_icon_size: None,
+            content_justify: Justify::Center,
+            text_weight_override: None,
             command: None,
             on_activate: None,
             on_hover_change: None,
@@ -431,6 +438,25 @@ impl Button {
     pub fn icon(mut self, icon: IconId) -> Self {
         self.leading_icon = Some(icon);
         self.trailing_icon = None;
+        self
+    }
+
+    pub fn leading_icon_size(mut self, size: Px) -> Self {
+        self.leading_icon_size = Some(size);
+        self
+    }
+
+    pub fn content_justify(mut self, justify: Justify) -> Self {
+        self.content_justify = justify;
+        self
+    }
+
+    pub fn content_justify_start(self) -> Self {
+        self.content_justify(Justify::Start)
+    }
+
+    pub fn text_weight(mut self, weight: FontWeight) -> Self {
+        self.text_weight_override = Some(weight);
         self
     }
 
@@ -636,7 +662,7 @@ impl Button {
             let corner_radii_override = self.corner_radii_override;
             let text_style = button_text_style(&theme, self.size);
             let text_px = text_style.size;
-            let text_weight = text_style.weight;
+            let text_weight = self.text_weight_override.unwrap_or(text_style.weight);
             let text_line_height = text_style
                 .line_height
                 .unwrap_or_else(|| theme.metric_token("font.line_height"));
@@ -649,6 +675,8 @@ impl Button {
             let visible_label = self.label;
             let leading_icon = self.leading_icon;
             let trailing_icon = self.trailing_icon;
+            let leading_icon_size = self.leading_icon_size;
+            let content_justify = self.content_justify;
 
             let pressable = control_chrome_pressable_with_id_props(cx, move |cx, st, _id| {
                 cx.pressable_dispatch_command_if_enabled_opt(command);
@@ -785,8 +813,9 @@ impl Button {
                                     + usize::from(trailing_icon.is_some()),
                             );
 
+                            let icon_px = leading_icon_size.unwrap_or(Px(16.0));
                             if let Some(icon) = leading_icon.clone() {
-                                content.push(crate::icon::icon(cx, icon));
+                                content.push(crate::icon::icon_with(cx, icon, Some(icon_px), None));
                             }
 
                             if !visible_label.is_empty() {
@@ -803,7 +832,7 @@ impl Button {
                             }
 
                             if let Some(icon) = trailing_icon.clone() {
-                                content.push(crate::icon::icon(cx, icon));
+                                content.push(crate::icon::icon_with(cx, icon, Some(icon_px), None));
                             }
 
                             content
@@ -814,7 +843,7 @@ impl Button {
                         vec![fret_ui_kit::declarative::stack::hstack(
                             cx,
                             fret_ui_kit::declarative::stack::HStackProps::default()
-                                .justify_center()
+                                .justify(content_justify)
                                 .items_center()
                                 .gap_x(gap),
                             |_cx| content,

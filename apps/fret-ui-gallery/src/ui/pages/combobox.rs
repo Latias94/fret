@@ -19,10 +19,12 @@ pub(super) fn preview_combobox(
 
     let conformance_demo = sections::demo(cx, value, open, query);
     let basic = sections::basic_frameworks(cx, &models);
+    let auto_highlight = sections::auto_highlight(cx, &models);
     let clear = sections::clear_button(cx, &models);
     let custom_items_top = sections::custom_items_top(cx, &models);
     let long_list = sections::long_list(cx, &models);
     let groups = sections::groups(cx, &models);
+    let groups_with_separator = sections::groups_with_separator(cx, &models);
     let popup = sections::popup_trigger(cx, &models);
     let multiple = sections::multiple_selection(cx, &models);
     let invalid = sections::invalid(cx, &models);
@@ -67,6 +69,21 @@ pub(super) fn preview_combobox(
     ])
     .into_element(cx);"#,
                 ),
+            DocSection::new("Auto Highlight", auto_highlight)
+                .description("Base UI opt-in: highlight the first enabled match on open/filter (`autoHighlight`).")
+                .code(
+                    "rust",
+                    r#"shadcn::Combobox::new(value, open)
+    .placeholder("Select a framework")
+    .query_model(query)
+    .auto_highlight(true)
+    .items([
+        shadcn::ComboboxItem::new("next", "Next.js"),
+        shadcn::ComboboxItem::new("svelte", "SvelteKit"),
+    ])
+    .into_element(cx);"#,
+                )
+                .no_shell(),
             DocSection::new("Clear Button", clear)
                 .description("Enable `show_clear` to show a clear affordance when a value is selected.")
                 .code(
@@ -91,6 +108,27 @@ pub(super) fn preview_combobox(
                     r#"shadcn::Combobox::new(value, open)
     .placeholder("Select a timezone")
     .query_model(query)
+    .groups([
+        shadcn::ComboboxGroup::new(
+            "Americas",
+            [shadcn::ComboboxItem::new("americas-ny", "(GMT-5) New York")],
+        ),
+        shadcn::ComboboxGroup::new(
+            "Europe",
+            [shadcn::ComboboxItem::new("europe-lon", "(GMT+0) London")],
+        ),
+    ])
+    .into_element(cx);"#,
+                )
+                .no_shell(),
+            DocSection::new("Groups + Separator", groups_with_separator)
+                .description("Use `.group_separators(true)` to insert separators between groups (shadcn `ComboboxSeparator`).")
+                .code(
+                    "rust",
+                    r#"shadcn::Combobox::new(value, open)
+    .placeholder("Select a timezone")
+    .query_model(query)
+    .group_separators(true)
     .groups([
         shadcn::ComboboxGroup::new(
             "Americas",
@@ -129,17 +167,15 @@ shadcn::ComboboxChips::new(values, open)
     .into_element(cx);"#,
                 ),
             DocSection::new("Extras: Custom Items", custom_items_top)
-                .description(
-                    "Fret currently uses string value/label pairs; object-item mapping is approximated by richer labels.",
-                )
+                .description("Structured item details (e.g. suffix metadata) without pre-formatting richer labels.")
                 .code(
                     "rust",
                     r#"let combo = shadcn::Combobox::new(value, open)
     .placeholder("Select framework")
     .query_model(query)
     .items([
-        shadcn::ComboboxItem::new("next", "Next.js (React)"),
-        shadcn::ComboboxItem::new("nuxt", "Nuxt.js (Vue)"),
+        shadcn::ComboboxItem::new("next", "Next.js").detail("React"),
+        shadcn::ComboboxItem::new("nuxt", "Nuxt.js").detail("Vue"),
     ])
     .into_element(cx);"#,
                 ),

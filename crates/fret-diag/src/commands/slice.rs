@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use crate::json_bundle::{
-    SemanticsResolver, pick_last_snapshot_with_semantics_after_warmup, snapshot_frame_id,
+    SemanticsResolver, pick_last_snapshot_with_resolved_semantics_after_warmup, snapshot_frame_id,
     snapshot_window_snapshot_seq,
 };
 use crate::test_id_bloom::TestIdBloomV1;
@@ -28,7 +28,7 @@ pub(crate) fn build_test_id_slice_payload_from_bundle(
     let windows = bundle
         .get("windows")
         .and_then(|v| v.as_array())
-        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+        .ok_or_else(|| "invalid bundle artifact: missing windows".to_string())?;
 
     struct Picked<'a> {
         window: u64,
@@ -67,7 +67,7 @@ pub(crate) fn build_test_id_slice_payload_from_bundle(
                 .iter()
                 .find(|s| snapshot_window_snapshot_seq(s) == Some(req_seq))
         } else {
-            pick_last_snapshot_with_semantics_after_warmup(snaps, warmup_frames)
+            pick_last_snapshot_with_resolved_semantics_after_warmup(snaps, warmup_frames, semantics)
         };
         let Some(snapshot) = snapshot else {
             continue;
@@ -94,7 +94,7 @@ pub(crate) fn build_test_id_slice_payload_from_bundle(
     }
 
     let Some(picked) = picked else {
-        return Err("bundle.json contains no windows".to_string());
+        return Err("bundle contains no windows".to_string());
     };
 
     let snapshot = picked.snapshot;
@@ -174,7 +174,7 @@ pub(crate) fn build_test_id_slice_payload_from_bundle_path(
                     if let Some(s) = window_snapshot_seq {
                         hint.push_str(&format!(" --snapshot-seq {s}"));
                     }
-                    format!("no matching snapshot found in bundle.index.json (try regenerating it via `fretboard diag index <bundle.json>`), args:{hint}")
+                    format!("no matching snapshot found in bundle.index.json (try regenerating it via `fretboard diag index <bundle_dir|bundle.json|bundle.schema2.json>`), args:{hint}")
                 })?;
             if !m.has_semantics {
                 let source = m.semantics_source.unwrap_or_else(|| "none".to_string());
@@ -298,19 +298,19 @@ fn sanitize_test_id_for_filename(test_id: &str) -> String {
     crate::util::sanitize_for_filename(test_id, 80, "test_id")
 }
 
-fn resolve_bundle_json_path_or_latest(
+fn resolve_bundle_artifact_path_or_latest(
     bundle_arg: Option<&str>,
     workspace_root: &Path,
     out_dir: &Path,
 ) -> Result<PathBuf, String> {
     if let Some(s) = bundle_arg {
         let src = crate::resolve_path(workspace_root, PathBuf::from(s));
-        return Ok(crate::resolve_bundle_json_path(&src));
+        return Ok(crate::resolve_bundle_artifact_path(&src));
     }
     let latest = crate::read_latest_pointer(out_dir)
         .or_else(|| crate::find_latest_export_dir(out_dir))
         .ok_or_else(|| format!("no diagnostics bundle found under {}", out_dir.display()))?;
-    Ok(crate::resolve_bundle_json_path(&latest))
+    Ok(crate::resolve_bundle_artifact_path(&latest))
 }
 
 struct BundleIndexSnapshotMatch {
@@ -903,7 +903,7 @@ pub(crate) fn cmd_slice(
     if let (Some(step_index), Some(bundle_arg)) = (step_index, bundle_arg.as_deref()) {
         let src = crate::resolve_path(workspace_root, PathBuf::from(bundle_arg));
         if src.is_dir() {
-            let bundle_path = crate::resolve_bundle_json_path(&src);
+            let bundle_path = crate::resolve_bundle_artifact_path(&src);
             let idx = if bundle_path.is_file() {
                 read_bundle_index_for_step_index(&bundle_path, warmup_frames)
                     .ok()
@@ -994,7 +994,7 @@ pub(crate) fn cmd_slice(
     }
 
     let bundle_path =
-        resolve_bundle_json_path_or_latest(bundle_arg.as_deref(), workspace_root, out_dir)?;
+        resolve_bundle_artifact_path_or_latest(bundle_arg.as_deref(), workspace_root, out_dir)?;
 
     if let Some(step_index) = step_index {
         let bundle_index = read_bundle_index_for_step_index(&bundle_path, warmup_frames)?;
@@ -1007,7 +1007,7 @@ pub(crate) fn cmd_slice(
             resolve_step_selector_from_bundle_index(&idx, step_index)
         else {
             return Err(format!(
-                "bundle.index.json is missing script step markers for step_index={step_index} (tip: run `fretboard diag index <out_dir>/<run_id>/bundle.json` so it can see script.result.json)"
+                "bundle.index.json is missing script step markers for step_index={step_index} (tip: run `fretboard diag index <out_dir>/<run_id>` so it can see script.result.json)"
             ));
         };
         if let Some(req) = window_id
@@ -1247,6 +1247,53 @@ mod tests {
         );
 
         let _ = std::fs::remove_file(&tmp);
+    }
+
+    #[test]
+    fn build_test_id_slice_payload_picks_last_snapshot_with_resolved_semantics() {
+        let bundle = serde_json::json!({
+            "schema_version": 2,
+            "windows": [{
+                "window": 1,
+                "snapshots": [
+                    { "frame_id": 1, "window_snapshot_seq": 1, "timestamp_unix_ms": 100, "window": 1, "semantics_fingerprint": 1, "debug": {} },
+                    { "frame_id": 2, "window_snapshot_seq": 2, "timestamp_unix_ms": 200, "window": 1, "semantics_fingerprint": 2, "debug": { "semantics": null } }
+                ]
+            }],
+            "tables": {
+                "semantics": {
+                    "schema_version": 1,
+                    "entries": [{
+                        "window": 1,
+                        "semantics_fingerprint": 1,
+                        "semantics": { "nodes": [{ "id": 10, "test_id": "target", "role": "button" }] }
+                    }, {
+                        "window": 1,
+                        "semantics_fingerprint": 2,
+                        "semantics": { "nodes": [{ "id": 11, "test_id": "target", "role": "button" }] }
+                    }]
+                }
+            }
+        });
+
+        let semantics = SemanticsResolver::new(&bundle);
+
+        let payload = build_test_id_slice_payload_from_bundle(
+            Path::new("bundle.json"),
+            &bundle,
+            &semantics,
+            0,
+            "target",
+            None,
+            None,
+            None,
+            10,
+            10,
+        )
+        .expect("expected payload");
+
+        assert_eq!(payload["kind"].as_str(), Some("slice.test_id"));
+        assert_eq!(payload["frame_id"].as_u64(), Some(1));
     }
 
     #[test]

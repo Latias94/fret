@@ -950,6 +950,26 @@ pub enum UiPredicateV1 {
         target: UiSelectorV1,
         role: String,
     },
+    /// True when the target exists and its semantics `label` contains `text` as a substring.
+    LabelContains {
+        target: UiSelectorV1,
+        text: String,
+    },
+    /// True when the target exists and its semantics `value` contains `text` as a substring.
+    ValueContains {
+        target: UiSelectorV1,
+        text: String,
+    },
+    /// True when the target exists and its semantics `pos_in_set` equals `pos_in_set`.
+    PosInSetIs {
+        target: UiSelectorV1,
+        pos_in_set: u32,
+    },
+    /// True when the target exists and its semantics `set_size` equals `set_size`.
+    SetSizeIs {
+        target: UiSelectorV1,
+        set_size: u32,
+    },
     CheckedIs {
         target: UiSelectorV1,
         checked: bool,
@@ -1054,6 +1074,15 @@ pub enum UiPredicateV1 {
         container: UiSelectorV1,
         /// The expected active item (highlighted option / row).
         item: UiSelectorV1,
+    },
+    /// True when there is no active item (neither roving focus nor `active_descendant`).
+    ///
+    /// This is primarily intended for combobox/listbox recipes that should not implicitly
+    /// highlight the first option on open unless `auto_highlight` is enabled.
+    ActiveItemIsNone {
+        /// Container node used for composite focus + `active_descendant` models (typically the
+        /// focused input or listbox root).
+        container: UiSelectorV1,
     },
     BarrierRoots {
         #[serde(default)]

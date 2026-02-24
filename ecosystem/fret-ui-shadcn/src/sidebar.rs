@@ -10,10 +10,10 @@ use fret_runtime::keymap::Binding;
 use fret_runtime::{
     CommandId, Effect, KeyChord, Keymap, KeymapService, Model, ModelStore, PlatformFilter,
 };
-use fret_ui::action::OnActivate;
+use fret_ui::action::{OnActivate, OnCommand, OnCommandAvailability, OnKeyDown};
 use fret_ui::element::{
-    AnyElement, CrossAlign, Elements, FlexProps, HoverRegionProps, MainAlign, OpacityProps,
-    Overflow, PressableProps, RingStyle, SemanticsDecoration, SpacerProps,
+    AnyElement, ContainerProps, CrossAlign, Elements, FlexProps, HoverRegionProps, MainAlign,
+    OpacityProps, Overflow, PressableProps, RingStyle, SemanticsDecoration, SpacerProps,
 };
 use fret_ui::{CommandAvailability, ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
@@ -518,6 +518,57 @@ fn sidebar_toggle_model(
     });
 }
 
+fn sidebar_toggle_key_down_handler(
+    open: Model<bool>,
+    open_mobile: Model<bool>,
+    is_mobile: bool,
+) -> OnKeyDown {
+    Arc::new(move |host, acx, down| {
+        if down.ime_composing {
+            return false;
+        }
+
+        let wants_toggle = down.key == SIDEBAR_TOGGLE_SHORTCUT_KEY
+            && (down.modifiers.ctrl || down.modifiers.meta)
+            && !down.modifiers.alt;
+
+        if !wants_toggle {
+            return false;
+        }
+
+        sidebar_toggle_model(host.models_mut(), &open, &open_mobile, is_mobile);
+        host.request_redraw(acx.window);
+        true
+    })
+}
+
+fn sidebar_toggle_command_handlers(
+    open: Model<bool>,
+    open_mobile: Model<bool>,
+    is_mobile: bool,
+) -> (OnCommand, OnCommandAvailability) {
+    let on_command: OnCommand = Arc::new(move |host, acx, command| {
+        if command.as_str() != SIDEBAR_TOGGLE_COMMAND_ID {
+            return false;
+        }
+        sidebar_toggle_model(host.models_mut(), &open, &open_mobile, is_mobile);
+        host.request_redraw(acx.window);
+        true
+    });
+
+    let on_command_availability: OnCommandAvailability = Arc::new(move |_host, acx, command| {
+        if command.as_str() != SIDEBAR_TOGGLE_COMMAND_ID {
+            return CommandAvailability::NotHandled;
+        }
+        if !acx.focus_in_subtree {
+            return CommandAvailability::NotHandled;
+        }
+        CommandAvailability::Available
+    });
+
+    (on_command, on_command_availability)
+}
+
 /// shadcn/ui `SidebarProvider` (V1).
 ///
 /// Provides shared sidebar open/collapsed state and wraps descendants in `TooltipProvider`
@@ -682,45 +733,35 @@ impl SidebarProvider {
             is_mobile,
         };
 
-        let toggle_command = sidebar_toggle_command_id();
         let open_for_command = open.clone();
         let open_mobile_for_command = open_mobile.clone();
         let is_mobile_for_command = is_mobile;
 
         with_sidebar_provider_state(cx, context, |cx| {
-            let root = cx.root_id();
-            cx.command_on_command_for(
-                root,
-                Arc::new(move |host, _acx, command| {
-                    if command.as_str() != SIDEBAR_TOGGLE_COMMAND_ID {
-                        return false;
-                    }
-                    sidebar_toggle_model(
-                        host.models_mut(),
-                        &open_for_command,
-                        &open_mobile_for_command,
-                        is_mobile_for_command,
-                    );
-                    true
-                }),
-            );
-            cx.command_on_command_availability_for(
-                root,
-                Arc::new(move |_host, acx, command| {
-                    if command != toggle_command {
-                        return CommandAvailability::NotHandled;
-                    }
-                    if !acx.focus_in_subtree {
-                        return CommandAvailability::NotHandled;
-                    }
-                    CommandAvailability::Available
-                }),
-            );
-
             let children = TooltipProvider::new()
                 .delay_duration_frames(0)
                 .with_elements(cx, f)
                 .into_vec();
+
+            let open_for_shortcut = open.clone();
+            let open_mobile_for_shortcut = open_mobile.clone();
+            let on_key_down = sidebar_toggle_key_down_handler(
+                open_for_shortcut,
+                open_mobile_for_shortcut,
+                is_mobile_for_command,
+            );
+
+            let (on_command, on_command_availability) = sidebar_toggle_command_handlers(
+                open_for_command,
+                open_mobile_for_command,
+                is_mobile_for_command,
+            );
+
+            for child in &children {
+                cx.key_add_on_key_down_capture_for(child.id, on_key_down.clone());
+                cx.command_on_command_for(child.id, on_command.clone());
+                cx.command_on_command_availability_for(child.id, on_command_availability.clone());
+            }
 
             Elements::new(children)
         })
@@ -817,6 +858,21 @@ impl Sidebar {
         publish_sidebar_surface_context(cx, surface_context);
 
         if is_mobile && let Some(sidebar_ctx) = sidebar_ctx {
+            let open_model = sidebar_ctx.open.clone();
+            let open_mobile_model = sidebar_ctx.open_mobile.clone();
+            let is_mobile_for_toggle = sidebar_ctx.is_mobile;
+
+            let on_key_down = sidebar_toggle_key_down_handler(
+                open_model.clone(),
+                open_mobile_model.clone(),
+                is_mobile_for_toggle,
+            );
+            let (on_command, on_command_availability) = sidebar_toggle_command_handlers(
+                open_model,
+                open_mobile_model,
+                is_mobile_for_toggle,
+            );
+
             let sheet_side = sidebar_sheet_side(side);
             let (surface_props, sheet_size, sheet_bg, sheet_border) = {
                 let theme = Theme::global(&*cx.app);
@@ -836,24 +892,51 @@ impl Sidebar {
                 let sheet_border = sidebar_border(theme);
                 (surface_props, sheet_size, sheet_bg, sheet_border)
             };
-            return Sheet::new(sidebar_ctx.open_mobile)
+
+            let on_key_down_for_trigger = on_key_down.clone();
+            let on_command_for_trigger = on_command.clone();
+            let on_command_availability_for_trigger = on_command_availability.clone();
+            return Sheet::new(sidebar_ctx.open_mobile.clone())
                 .side(sheet_side)
                 .size(sheet_size)
                 .into_element(
                     cx,
                     |cx| {
-                        cx.spacer(SpacerProps {
+                        let trigger = cx.spacer(SpacerProps {
                             min: Px(0.0),
                             ..Default::default()
-                        })
+                        });
+
+                        cx.key_add_on_key_down_capture_for(
+                            trigger.id,
+                            on_key_down_for_trigger.clone(),
+                        );
+                        cx.command_on_command_for(trigger.id, on_command_for_trigger.clone());
+                        cx.command_on_command_availability_for(
+                            trigger.id,
+                            on_command_availability_for_trigger.clone(),
+                        );
+
+                        trigger
                     },
                     move |cx| {
                         let children = with_sidebar_surface_state(cx, surface_context, |cx| {
                             render_children(cx).into_iter().collect::<Vec<_>>()
                         });
-                        let surface = shadcn_layout::container_flow(cx, surface_props, children);
+                        let content_root =
+                            cx.container(ContainerProps::default(), move |_cx| children);
 
-                        SheetContent::new([surface])
+                        cx.key_add_on_key_down_capture_for(content_root.id, on_key_down.clone());
+                        cx.command_on_command_for(content_root.id, on_command.clone());
+                        cx.command_on_command_availability_for(
+                            content_root.id,
+                            on_command_availability.clone(),
+                        );
+
+                        let surface =
+                            shadcn_layout::container_flow(cx, surface_props, vec![content_root]);
+
+                        let content = SheetContent::new([surface])
                             .refine_style(
                                 ChromeRefinement::default()
                                     .bg(ColorRef::Color(sheet_bg))
@@ -866,7 +949,9 @@ impl Sidebar {
                                     .h_full()
                                     .overflow_hidden(),
                             )
-                            .into_element(cx)
+                            .into_element(cx);
+
+                        content
                     },
                 );
         }
@@ -3249,6 +3334,27 @@ impl SidebarMenuSubButton {
             vec![chrome]
         });
 
+        if let Some(sidebar_ctx) = use_sidebar(cx) {
+            let open_model = sidebar_ctx.open.clone();
+            let open_mobile_model = sidebar_ctx.open_mobile.clone();
+            let is_mobile_for_toggle = sidebar_ctx.is_mobile;
+
+            let on_key_down = sidebar_toggle_key_down_handler(
+                open_model.clone(),
+                open_mobile_model.clone(),
+                is_mobile_for_toggle,
+            );
+            let (on_command, on_command_availability) = sidebar_toggle_command_handlers(
+                open_model,
+                open_mobile_model,
+                is_mobile_for_toggle,
+            );
+
+            cx.key_add_on_key_down_capture_for(element.id, on_key_down);
+            cx.command_add_on_command_for(element.id, on_command);
+            cx.command_add_on_command_availability_for(element.id, on_command_availability);
+        }
+
         if let Some(href) = href_for_semantics {
             element.attach_semantics(SemanticsDecoration::default().value(href))
         } else {
@@ -3603,6 +3709,21 @@ impl SidebarMenuButton {
             }
             vec![chrome]
         });
+
+        if let Some(sidebar_ctx) = use_sidebar(cx) {
+            let open_model = sidebar_ctx.open.clone();
+            let open_mobile_model = sidebar_ctx.open_mobile.clone();
+            let is_mobile_for_toggle = sidebar_ctx.is_mobile;
+
+            let (on_command, on_command_availability) = sidebar_toggle_command_handlers(
+                open_model,
+                open_mobile_model,
+                is_mobile_for_toggle,
+            );
+
+            cx.command_add_on_command_for(element.id, on_command);
+            cx.command_add_on_command_availability_for(element.id, on_command_availability);
+        }
 
         if let Some(href) = href_for_semantics {
             element.attach_semantics(SemanticsDecoration::default().value(href))

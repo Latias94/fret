@@ -24,7 +24,7 @@ fn chrome_trace_json_from_bundle_value(bundle: &Value) -> Result<Value, String> 
     let windows = bundle
         .get("windows")
         .and_then(|v| v.as_array())
-        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+        .ok_or_else(|| "invalid bundle artifact: missing windows".to_string())?;
 
     let mut events: Vec<Value> = Vec::new();
     let pid: u32 = 1;

@@ -129,7 +129,7 @@ diagnostics, not perfect CSS parity.
     - `tools/diag-scripts/ui-gallery-magic-bloom-fixed-frame-delta.json`
     - `tools/diag-scripts/ui-gallery-magic-sparkles-text-fixed-frame-delta.json`
   - Recommended invocation (example):
-    - `FRET_DIAG_SCREENSHOTS=1 cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-magic-patterns-fixed-frame-delta.json --fixed-frame-delta-ms 16 --check-pixels-changed ui-gallery-magic-pattern-stripe --include-screenshots --launch -- cargo run -p fret-ui-gallery`
+    - `FRET_DIAG_GPU_SCREENSHOTS=1 cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-magic-patterns-fixed-frame-delta.json --fixed-frame-delta-ms 16 --check-pixels-changed ui-gallery-magic-pattern-stripe --include-screenshots --launch -- cargo run -p fret-ui-gallery`
 
 ## P1 — External texture imports (v1)
 

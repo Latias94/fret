@@ -123,7 +123,7 @@ pub use accordion::{
     AccordionTrigger, accordion_multiple, accordion_multiple_uncontrolled, accordion_single,
     accordion_single_uncontrolled,
 };
-pub use alert::{Alert, AlertDescription, AlertTitle, AlertVariant};
+pub use alert::{Alert, AlertAction, AlertDescription, AlertTitle, AlertVariant};
 pub use alert_dialog::{
     AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogContentSize,
     AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogMedia,
@@ -288,7 +288,7 @@ pub use sonner::{
     ToastPromiseUnwrapError, ToastRequest, ToastVariant, Toaster,
 };
 pub use spinner::Spinner;
-pub use switch::{Switch, switch};
+pub use switch::{Switch, SwitchSize, switch};
 pub use table::{
     Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TableRow,
 };

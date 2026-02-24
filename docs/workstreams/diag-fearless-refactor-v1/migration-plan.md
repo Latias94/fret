@@ -10,6 +10,10 @@ scope: diagnostics, artifacts, schema, migration
 This plan is intentionally incremental: land sidecars and lite tooling first, then remove legacy/debt once the new path is the
 default for in-tree workflows.
 
+See also:
+
+- `docs/workstreams/diag-fearless-refactor-v1/schema-compat-matrix.md`
+
 ## Strategy options
 
 ### Option 1 (preferred): Sidecar-first + schema v2 adoption
@@ -69,4 +73,3 @@ Exit criteria:
 Exit criteria:
 
 - the tooling surface stays small and consistent; compatibility code is bounded and justified.
-

@@ -431,6 +431,11 @@ impl Default for SizeStyle {
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct FlexItemStyle {
+    /// Visual order within a flex container.
+    ///
+    /// This matches the web flexbox `order` property: it affects layout order only and does not
+    /// change tree order (e.g. focus navigation that follows element order).
+    pub order: i32,
     pub grow: f32,
     pub shrink: f32,
     pub basis: Length,
@@ -440,6 +445,7 @@ pub struct FlexItemStyle {
 impl Default for FlexItemStyle {
     fn default() -> Self {
         Self {
+            order: 0,
             grow: 0.0,
             // Tailwind/DOM default is `flex-shrink: 1`. Recipes should opt out via
             // `LayoutRefinement::flex_shrink_0()` when needed.

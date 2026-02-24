@@ -32,6 +32,25 @@ At minimum, chart parity should cover:
 - Styling: color tokens, typography, grid/axis stroke widths, radii, and opacity.
 - Data contracts: series ordering, stacked/grouped behavior, and default variants.
 
+## Accessibility (`accessibilityLayer`)
+
+The upstream docs recommend enabling `accessibilityLayer` to add keyboard access and screen reader
+support for Recharts-driven charts.
+
+In Fret, the closest portable outcome is exposed via an opt-in accessibility layer on the native
+chart canvas surface:
+
+- Pass: `fret-chart::ChartCanvas` can be made focusable (Tab/click) via `set_accessibility_layer(true)`.
+- Pass: While focused, `ArrowLeft/ArrowRight/ArrowUp/ArrowDown` navigate between data points (by
+  `data_index` and series), driving the engine hover state.
+- Pass: Semantics `value` is populated from the tooltip formatter so screen readers can announce
+  the current point context (category + series values) without requiring DOM nodes.
+
+Evidence anchors:
+
+- Keyboard + semantics: `ecosystem/fret-chart/src/retained/canvas.rs`
+- Gallery gate: `tools/diag-scripts/ui-gallery-chart-accessibility-layer-keyboard.json`
+
 ## Next actions (proposed)
 
 1. Identify the upstream reference implementation(s) in `repo-ref/ui` used for chart demos in `v4/new-york-v4`.

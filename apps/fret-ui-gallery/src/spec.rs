@@ -570,6 +570,7 @@ pub(crate) const CMD_SHELL_SHARE_SHEET_SMOKE: &str = "ui_gallery.shell.share_she
 
 pub(crate) const CMD_CODE_EDITOR_LOAD_FONTS: &str = "ui_gallery.code_editor.load_fonts";
 pub(crate) const CMD_CODE_EDITOR_DUMP_TAFFY: &str = "ui_gallery.code_editor.dump_taffy";
+pub(crate) const CMD_INPUT_PICTURE_BROWSE: &str = "ui_gallery.input.picture.browse";
 
 #[derive(Clone, Copy)]
 pub(crate) struct PageSpec {
