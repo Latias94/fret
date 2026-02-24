@@ -64,20 +64,31 @@ Implementation note:
 
 ### 2) Theme metadata heuristics
 
-There are multiple uses of `theme.name.contains("/dark")` to decide “dark-mode variant” behavior
-for things like invalid rings (`destructive/20` vs `destructive/40`) and inactive tab foreground.
+We had multiple uses of `theme.name.contains("/dark")` to decide “dark-mode variant” behavior (e.g.
+invalid rings using `destructive/20` vs `destructive/40`, inactive tab foreground).
 
 This is brittle:
 
 - It couples runtime behavior to theme naming conventions.
 - It breaks for user themes and for apps that rename themes.
-- It can diverge from the actual per-window color scheme preference (ADR 0232).
 
-We likely need to:
+Current strategy (implemented):
 
-- Add a stable theme metadata field (e.g. `ThemeConfig.color_scheme` or similar), and/or
-- Prefer explicit token keys for “dark-mode variant” values, and/or
-- Consult per-window environment `ColorScheme` only as an input (policy remains app/theme-owned).
+- Add app/theme-owned theme metadata:
+  - `ThemeConfig.color_scheme: Option<ColorScheme>`
+  - `Theme.color_scheme: Option<ColorScheme>`
+  - Evidence: `crates/fret-ui/src/theme/mod.rs`
+- Ensure shadcn presets set the metadata explicitly:
+  - Evidence: `ecosystem/fret-ui-shadcn/src/shadcn_themes.rs`
+- Remove name heuristics from recipe code and consult `theme.color_scheme` instead:
+  - Evidence: `ecosystem/fret-ui-shadcn/src/checkbox.rs`, `ecosystem/fret-ui-shadcn/src/input.rs`,
+    `ecosystem/fret-ui-shadcn/src/input_group.rs`, `ecosystem/fret-ui-shadcn/src/input_otp.rs`,
+    `ecosystem/fret-ui-shadcn/src/native_select.rs`, `ecosystem/fret-ui-shadcn/src/combobox.rs`,
+    `ecosystem/fret-ui-shadcn/src/radio_group.rs`, `ecosystem/fret-ui-shadcn/src/select.rs`,
+    `ecosystem/fret-ui-shadcn/src/textarea.rs`, `ecosystem/fret-ui-shadcn/src/tabs.rs`
+- Regression evidence:
+  - `ecosystem/fret-ui-shadcn/src/shadcn_themes.rs` (metadata is set + applied)
+  - `ecosystem/fret-ui-shadcn/src/input_otp.rs` (invalid ring variant follows `color_scheme`)
 
 ### 3) Token reads: avoid heavy `Theme` clones in hot codepaths
 

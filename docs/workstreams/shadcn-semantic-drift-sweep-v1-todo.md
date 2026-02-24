@@ -35,7 +35,7 @@ Workstream entry:
   - [ ] Option B (editor-first): switch to container query so the toolbar adapts to panel width.
   - [x] Option C (dual-mode): expose an explicit “query source” knob in the recipe layer
     (viewport vs container region id), defaulting to parity-first.
-- [ ] Add a regression gate for the chosen behavior:
+- [x] Add a regression gate for the chosen behavior:
   - [x] unit test (layout invariant), and/or
     - Evidence: `ecosystem/fret-ui-shadcn/tests/data_table_toolbar_faceted_responsive.rs`
   - [ ] `tools/diag-scripts/*.json` scenario that resizes a panel / window and asserts stable
@@ -43,14 +43,14 @@ Workstream entry:
 
 ## Theme metadata drift: remove `theme.name.contains("/dark")`
 
-- [ ] Inventory all callsites using theme-name heuristics:
-  - `ecosystem/fret-ui-shadcn/src/*` (search: `name.contains("/dark")`).
-- [ ] Choose a stable strategy:
-  - [ ] Add a theme metadata field to `ThemeConfig` + `Theme` (app/theme-owned).
+- [x] Inventory all callsites using theme-name heuristics:
+  - [x] `ecosystem/fret-ui-shadcn/src/*` (search: `name.contains("/dark")`).
+- [x] Choose a stable strategy:
+  - [x] Add a theme metadata field to `ThemeConfig` + `Theme` (app/theme-owned).
   - [ ] Prefer explicit token keys for “dark variant” values and remove heuristics.
   - [ ] Where necessary, treat per-window environment `ColorScheme` (ADR 0232) as a hint, not the
     source of truth (theme content remains app-owned per ADR 0032).
-- [ ] Migrate the callsites and add at least one regression test covering:
+- [x] Migrate the callsites and add at least one regression test covering:
   - invalid ring alpha selection,
   - inactive tabs foreground selection, or
   - any other behavior currently keyed off the name heuristic.
