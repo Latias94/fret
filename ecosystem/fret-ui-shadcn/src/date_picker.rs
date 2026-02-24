@@ -3,7 +3,6 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_core::{FontWeight, Px};
-use fret_icons::IconId;
 use fret_runtime::Model;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
