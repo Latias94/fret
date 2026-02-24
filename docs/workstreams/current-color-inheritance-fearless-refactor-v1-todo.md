@@ -69,6 +69,9 @@ Last updated: 2026-02-24
 - [x] Add a “menu item with leading icon + disabled/active” diag script:
   - `tools/diag-scripts/ui-gallery-dropdown-menu-checkable-icons-hover-screenshots-zinc-light.json`
   - `tools/diag-scripts/ui-gallery-dropdown-menu-checkable-icons-hover-screenshots-zinc-dark.json`
+- [x] Add Button loading foreground screenshot scripts (zinc/light + zinc/dark):
+  - `tools/diag-scripts/ui-gallery-button-loading-screenshots-zinc-light.json`
+  - `tools/diag-scripts/ui-gallery-button-loading-screenshots-zinc-dark.json`
 
 ## Cross-cutting checks
 
