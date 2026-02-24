@@ -86,6 +86,8 @@ Definition of done:
 - [ ] Ensure post-run checks, suite runners, and error messages consistently talk about “bundle artifacts” (not `bundle.json`).
 - [x] Extract bundle/repro zip packing into a dedicated module (reduce churn in `crates/fret-diag/src/lib.rs`).
   - Evidence: `crates/fret-diag/src/pack_zip.rs` (`pack_bundle_dir_to_zip`, `pack_repro_zip_multi`).
+- [x] Extract evidence indexing into a dedicated module (reduce churn in `crates/fret-diag/src/lib.rs`).
+  - Evidence: `crates/fret-diag/src/evidence_index.rs` (`write_evidence_index`).
 - [x] Add one regression test that a schema2-only bundle dir is accepted where we claim it is.
   - Evidence: `crates/fret-diag/src/pack_zip.rs` (`pack_bundle_dir_to_zip_accepts_schema2_only`).
 - [x] Add a schema2-only packing option for shareable zips.
