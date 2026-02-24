@@ -54,6 +54,14 @@ Decision to make:
 - Should “show filter label chips vs just a count” follow the **viewport** (web parity), or the
   **toolbar/container width** (editor docking/panels)?
 
+Implementation note:
+
+- We provide a dual-mode knob on the Fret side so callers can choose:
+  - default parity: viewport-driven (`lg`),
+  - editor-first: container-query-driven (toolbar region width; ADR 0231).
+  - Evidence: `fret_ui_shadcn::DataTableToolbarResponsiveQuery` in
+    `ecosystem/fret-ui-shadcn/src/data_table_recipes.rs`.
+
 ### 2) Theme metadata heuristics
 
 There are multiple uses of `theme.name.contains("/dark")` to decide “dark-mode variant” behavior
@@ -96,4 +104,3 @@ This is a sweepable, low-risk refactor as long as callsites do not rely on non-s
 
 - Milestones: `docs/workstreams/shadcn-semantic-drift-sweep-v1-milestones.md`
 - TODO list: `docs/workstreams/shadcn-semantic-drift-sweep-v1-todo.md`
-

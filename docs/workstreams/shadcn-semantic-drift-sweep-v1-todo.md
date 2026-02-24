@@ -33,12 +33,13 @@ Workstream entry:
 - [ ] Decide Fret behavior for editor-grade layouts:
   - [ ] Option A (parity-first): keep viewport `LG` (matches web Tailwind semantics).
   - [ ] Option B (editor-first): switch to container query so the toolbar adapts to panel width.
-  - [ ] Option C (dual-mode): expose an explicit “query source” knob in the recipe layer
+  - [x] Option C (dual-mode): expose an explicit “query source” knob in the recipe layer
     (viewport vs container region id), defaulting to parity-first.
 - [ ] Add a regression gate for the chosen behavior:
-  - [ ] unit test (layout invariant), and/or
+  - [x] unit test (layout invariant), and/or
+    - Evidence: `ecosystem/fret-ui-shadcn/tests/data_table_toolbar_faceted_responsive.rs`
   - [ ] `tools/diag-scripts/*.json` scenario that resizes a panel / window and asserts stable
-    element placements via `test_id`.
+     element placements via `test_id`.
 
 ## Theme metadata drift: remove `theme.name.contains("/dark")`
 
@@ -69,4 +70,3 @@ Workstream entry:
   issues are found.
 - [ ] For any “hard-to-change” contract additions (theme metadata, new token namespaces), add/update
   ADRs and evidence anchors.
-

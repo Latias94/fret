@@ -6,7 +6,7 @@ use std::sync::Arc;
 use fret_core::{Px, SemanticsRole};
 use fret_runtime::Model;
 use fret_ui::action::OnActivate;
-use fret_ui::element::AnyElement;
+use fret_ui::element::{AnyElement, LayoutQueryRegionProps, LayoutStyle, Length};
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_headless::table::{ColumnDef, ColumnId, ColumnPinPosition, TableState, pin_column};
@@ -283,7 +283,26 @@ pub struct DataTableToolbar<TData> {
     pinning_button_label: Arc<str>,
     show_selected_text: bool,
     faceted_filter: Option<FacetedFilterConfig>,
+    faceted_selected_badges_query: DataTableToolbarResponsiveQuery,
     trailing: Vec<AnyElement>,
+}
+
+/// Responsive query source used by `DataTableToolbar` recipes.
+///
+/// Upstream shadcn/Tailwind `lg:*` variants are viewport-driven. In editor-grade layouts, some
+/// toolbar behaviors may instead want to follow the width of the hosting panel/container.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DataTableToolbarResponsiveQuery {
+    /// Match upstream Tailwind viewport breakpoint behavior.
+    Viewport,
+    /// Drive responsive variants from the toolbar's container-query region (ADR 0231).
+    Container,
+}
+
+impl Default for DataTableToolbarResponsiveQuery {
+    fn default() -> Self {
+        Self::Viewport
+    }
 }
 
 impl<TData> std::fmt::Debug for DataTableToolbar<TData> {
@@ -325,6 +344,7 @@ impl<TData> DataTableToolbar<TData> {
             pinning_button_label: Arc::from("Pin"),
             show_selected_text: true,
             faceted_filter: None,
+            faceted_selected_badges_query: DataTableToolbarResponsiveQuery::Viewport,
             trailing: Vec::new(),
         }
     }
@@ -440,485 +460,510 @@ impl<TData> DataTableToolbar<TData> {
         self
     }
 
+    /// Controls how the faceted-filter trigger decides when to show label badges (shadcn uses
+    /// `lg:hidden` / `hidden lg:flex`).
+    ///
+    /// Default: [`DataTableToolbarResponsiveQuery::Viewport`] (web parity).
+    pub fn faceted_selected_badges_query(mut self, query: DataTableToolbarResponsiveQuery) -> Self {
+        self.faceted_selected_badges_query = query;
+        self
+    }
+
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement
     where
         TData: 'static,
     {
-        let state_value = cx
-            .watch_model(&self.state)
-            .layout()
-            .cloned()
-            .unwrap_or_default();
-        let state_revision = self.state.revision(&*cx.app).unwrap_or(0);
-
-        let filter_model =
-            cx.with_state(DataTableToolbarState::default, |st| st.filter_model.clone());
-        let filter_model = match (self.show_global_filter, filter_model) {
-            (false, _) => None,
-            (true, Some(m)) => Some(m),
-            (true, None) => {
-                let initial = state_value
-                    .global_filter
-                    .as_ref()
-                    .and_then(|v| v.as_str())
-                    .unwrap_or_default()
-                    .to_string();
-                let m = cx.app.models_mut().insert(initial);
-                let m_for_state = m.clone();
-                cx.with_state(DataTableToolbarState::default, move |st| {
-                    st.filter_model = Some(m_for_state);
-                });
-                Some(m)
-            }
+        let mut region_layout = LayoutStyle::default();
+        region_layout.size.width = Length::Fill;
+        let region_props = LayoutQueryRegionProps {
+            layout: region_layout,
+            name: None,
         };
 
-        let column_filter_model = cx.with_state(DataTableToolbarState::default, |st| {
-            st.column_filter_model.clone()
-        });
-        let column_filter_model = match (self.column_filter.as_ref(), column_filter_model) {
-            (Some(_), Some(m)) => Some(m),
-            (None, _) => None,
-            (Some(column_id), None) => {
-                let initial = state_value
-                    .column_filters
-                    .iter()
-                    .find(|f| f.column.as_ref() == column_id.as_ref())
-                    .and_then(|f| f.value.as_str())
-                    .unwrap_or_default()
-                    .to_string();
-                let m = cx.app.models_mut().insert(initial);
-                let m_for_state = m.clone();
-                cx.with_state(DataTableToolbarState::default, move |st| {
-                    st.column_filter_model = Some(m_for_state);
-                });
-                Some(m)
-            }
-        };
+        fret_ui_kit::declarative::container_query_region_with_id(
+            cx,
+            "shadcn.data_table.toolbar",
+            region_props,
+            move |cx, toolbar_region_id| {
+                let state_value = cx
+                    .watch_model(&self.state)
+                    .layout()
+                    .cloned()
+                    .unwrap_or_default();
+                let state_revision = self.state.revision(&*cx.app).unwrap_or(0);
 
-        let columns_open =
-            cx.with_state(DataTableToolbarState::default, |st| st.columns_open.clone());
-        let columns_open = match columns_open {
-            Some(m) => m,
-            None => {
-                let m = cx.app.models_mut().insert(false);
-                let m_for_state = m.clone();
-                cx.with_state(DataTableToolbarState::default, move |st| {
-                    st.columns_open = Some(m_for_state);
-                });
-                m
-            }
-        };
-
-        let pinning_open =
-            cx.with_state(DataTableToolbarState::default, |st| st.pinning_open.clone());
-        let pinning_open = match pinning_open {
-            Some(m) => m,
-            None => {
-                let m = cx.app.models_mut().insert(false);
-                let m_for_state = m.clone();
-                cx.with_state(DataTableToolbarState::default, move |st| {
-                    st.pinning_open = Some(m_for_state);
-                });
-                m
-            }
-        };
-
-        let faceted_open =
-            cx.with_state(DataTableToolbarState::default, |st| st.faceted_open.clone());
-        let faceted_open = match (self.faceted_filter.as_ref(), faceted_open) {
-            (None, _) => None,
-            (Some(_), Some(m)) => Some(m),
-            (Some(_), None) => {
-                let m = cx.app.models_mut().insert(false);
-                let m_for_state = m.clone();
-                cx.with_state(DataTableToolbarState::default, move |st| {
-                    st.faceted_open = Some(m_for_state);
-                });
-                Some(m)
-            }
-        };
-
-        let faceted_query = cx.with_state(DataTableToolbarState::default, |st| {
-            st.faceted_query.clone()
-        });
-        let faceted_query = match (self.faceted_filter.as_ref(), faceted_query) {
-            (None, _) => None,
-            (Some(_), Some(m)) => Some(m),
-            (Some(_), None) => {
-                let m = cx.app.models_mut().insert(String::new());
-                let m_for_state = m.clone();
-                cx.with_state(DataTableToolbarState::default, move |st| {
-                    st.faceted_query = Some(m_for_state);
-                });
-                Some(m)
-            }
-        };
-
-        if let (Some(open), Some(query)) = (faceted_open.as_ref(), faceted_query.as_ref()) {
-            let open_now = cx.watch_model(open).layout().copied().unwrap_or(false);
-            let last_open =
-                cx.with_state(DataTableToolbarState::default, |st| st.faceted_last_open);
-            if last_open == Some(true) && !open_now {
-                let _ = cx.app.models_mut().update(query, |s| s.clear());
-            }
-            cx.with_state(DataTableToolbarState::default, move |st| {
-                st.faceted_last_open = Some(open_now);
-            });
-        }
-
-        let mut bindings = cx.with_state(DataTableToolbarState::default, |st| {
-            st.column_visibility.clone()
-        });
-        if bindings.is_empty() {
-            bindings = self
-                .columns
-                .iter()
-                .filter(|c| c.enable_hiding)
-                .map(|c| ColumnVisibilityBinding {
-                    id: c.id.clone(),
-                    model: cx
-                        .app
-                        .models_mut()
-                        .insert(is_column_visible(&state_value, &c.id)),
-                })
-                .collect();
-            let next = bindings.clone();
-            cx.with_state(DataTableToolbarState::default, |st| {
-                st.column_visibility = next
-            });
-        }
-
-        let mut pinning_bindings = cx.with_state(DataTableToolbarState::default, |st| {
-            st.column_pinning.clone()
-        });
-        if pinning_bindings.is_empty() {
-            pinning_bindings = self
-                .columns
-                .iter()
-                .filter(|c| c.enable_pinning)
-                .map(|c| ColumnPinningBinding {
-                    id: c.id.clone(),
-                    model: cx
-                        .app
-                        .models_mut()
-                        .insert(Some(pin_position_model_value(&state_value, &c.id))),
-                })
-                .collect();
-            let next = pinning_bindings.clone();
-            cx.with_state(DataTableToolbarState::default, |st| {
-                st.column_pinning = next
-            });
-        }
-
-        let mut faceted_items = cx.with_state(DataTableToolbarState::default, |st| {
-            st.faceted_items.clone()
-        });
-        let faceted_column = cx.with_state(DataTableToolbarState::default, |st| {
-            st.faceted_column.clone()
-        });
-        if let Some(cfg) = self.faceted_filter.as_ref() {
-            let column_changed = faceted_column
-                .as_ref()
-                .is_none_or(|id| id.as_ref() != cfg.column_id.as_ref());
-            let should_rebuild = column_changed || faceted_items.len() != cfg.options.len();
-            if should_rebuild {
-                let selected: std::collections::HashSet<Arc<str>> = state_value
-                    .column_filters
-                    .iter()
-                    .find(|f| f.column.as_ref() == cfg.column_id.as_ref())
-                    .map(|f| f.value.clone())
-                    .and_then(|v| match v {
-                        Value::String(s) => Some(vec![Arc::<str>::from(s)]),
-                        Value::Array(items) => Some(
-                            items
-                                .into_iter()
-                                .filter_map(|it| it.as_str().map(|s| Arc::<str>::from(s)))
-                                .collect::<Vec<_>>(),
-                        ),
-                        _ => None,
-                    })
-                    .unwrap_or_default()
-                    .into_iter()
-                    .collect();
-
-                faceted_items = cfg
-                    .options
-                    .iter()
-                    .map(|opt| FacetedFilterItemBinding {
-                        value: opt.value.clone(),
-                        label: opt.label.clone(),
-                        icon: opt.icon.clone(),
-                        model: cx.app.models_mut().insert(selected.contains(&opt.value)),
-                    })
-                    .collect();
-                let next_items = faceted_items.clone();
-                let next_column = cfg.column_id.clone();
-                cx.with_state(DataTableToolbarState::default, move |st| {
-                    st.faceted_items = next_items;
-                    st.faceted_column = Some(next_column);
-                });
-
-                if column_changed {
-                    if let Some(model) = faceted_query.as_ref() {
-                        let _ = cx.app.models_mut().update(model, |s| s.clear());
+                let filter_model =
+                    cx.with_state(DataTableToolbarState::default, |st| st.filter_model.clone());
+                let filter_model = match (self.show_global_filter, filter_model) {
+                    (false, _) => None,
+                    (true, Some(m)) => Some(m),
+                    (true, None) => {
+                        let initial = state_value
+                            .global_filter
+                            .as_ref()
+                            .and_then(|v| v.as_str())
+                            .unwrap_or_default()
+                            .to_string();
+                        let m = cx.app.models_mut().insert(initial);
+                        let m_for_state = m.clone();
+                        cx.with_state(DataTableToolbarState::default, move |st| {
+                            st.filter_model = Some(m_for_state);
+                        });
+                        Some(m)
                     }
+                };
+
+                let column_filter_model = cx.with_state(DataTableToolbarState::default, |st| {
+                    st.column_filter_model.clone()
+                });
+                let column_filter_model = match (self.column_filter.as_ref(), column_filter_model) {
+                    (Some(_), Some(m)) => Some(m),
+                    (None, _) => None,
+                    (Some(column_id), None) => {
+                        let initial = state_value
+                            .column_filters
+                            .iter()
+                            .find(|f| f.column.as_ref() == column_id.as_ref())
+                            .and_then(|f| f.value.as_str())
+                            .unwrap_or_default()
+                            .to_string();
+                        let m = cx.app.models_mut().insert(initial);
+                        let m_for_state = m.clone();
+                        cx.with_state(DataTableToolbarState::default, move |st| {
+                            st.column_filter_model = Some(m_for_state);
+                        });
+                        Some(m)
+                    }
+                };
+
+                let columns_open =
+                    cx.with_state(DataTableToolbarState::default, |st| st.columns_open.clone());
+                let columns_open = match columns_open {
+                    Some(m) => m,
+                    None => {
+                        let m = cx.app.models_mut().insert(false);
+                        let m_for_state = m.clone();
+                        cx.with_state(DataTableToolbarState::default, move |st| {
+                            st.columns_open = Some(m_for_state);
+                        });
+                        m
+                    }
+                };
+
+                let pinning_open =
+                    cx.with_state(DataTableToolbarState::default, |st| st.pinning_open.clone());
+                let pinning_open = match pinning_open {
+                    Some(m) => m,
+                    None => {
+                        let m = cx.app.models_mut().insert(false);
+                        let m_for_state = m.clone();
+                        cx.with_state(DataTableToolbarState::default, move |st| {
+                            st.pinning_open = Some(m_for_state);
+                        });
+                        m
+                    }
+                };
+
+                let faceted_open =
+                    cx.with_state(DataTableToolbarState::default, |st| st.faceted_open.clone());
+                let faceted_open = match (self.faceted_filter.as_ref(), faceted_open) {
+                    (None, _) => None,
+                    (Some(_), Some(m)) => Some(m),
+                    (Some(_), None) => {
+                        let m = cx.app.models_mut().insert(false);
+                        let m_for_state = m.clone();
+                        cx.with_state(DataTableToolbarState::default, move |st| {
+                            st.faceted_open = Some(m_for_state);
+                        });
+                        Some(m)
+                    }
+                };
+
+                let faceted_query = cx.with_state(DataTableToolbarState::default, |st| {
+                    st.faceted_query.clone()
+                });
+                let faceted_query = match (self.faceted_filter.as_ref(), faceted_query) {
+                    (None, _) => None,
+                    (Some(_), Some(m)) => Some(m),
+                    (Some(_), None) => {
+                        let m = cx.app.models_mut().insert(String::new());
+                        let m_for_state = m.clone();
+                        cx.with_state(DataTableToolbarState::default, move |st| {
+                            st.faceted_query = Some(m_for_state);
+                        });
+                        Some(m)
+                    }
+                };
+
+                if let (Some(open), Some(query)) = (faceted_open.as_ref(), faceted_query.as_ref()) {
+                    let open_now = cx.watch_model(open).layout().copied().unwrap_or(false);
+                    let last_open =
+                        cx.with_state(DataTableToolbarState::default, |st| st.faceted_last_open);
+                    if last_open == Some(true) && !open_now {
+                        let _ = cx.app.models_mut().update(query, |s| s.clear());
+                    }
+                    cx.with_state(DataTableToolbarState::default, move |st| {
+                        st.faceted_last_open = Some(open_now);
+                    });
                 }
-            }
-        }
 
-        let last_synced_state_revision = cx.with_state(DataTableToolbarState::default, |st| {
-            st.last_synced_state_revision
-        });
-        if last_synced_state_revision != Some(state_revision) {
-            for binding in pinning_bindings.iter() {
-                let desired = Some(pin_position_model_value(&state_value, &binding.id));
-                let _ = cx
-                    .app
-                    .models_mut()
-                    .update(&binding.model, |v| *v = desired.clone());
-            }
-
-            if let Some(cfg) = self.faceted_filter.as_ref() {
-                let selected: std::collections::HashSet<Arc<str>> = state_value
-                    .column_filters
-                    .iter()
-                    .find(|f| f.column.as_ref() == cfg.column_id.as_ref())
-                    .map(|f| f.value.clone())
-                    .and_then(|v| match v {
-                        Value::String(s) => Some(vec![Arc::<str>::from(s)]),
-                        Value::Array(items) => Some(
-                            items
-                                .into_iter()
-                                .filter_map(|it| it.as_str().map(|s| Arc::<str>::from(s)))
-                                .collect::<Vec<_>>(),
-                        ),
-                        _ => None,
-                    })
-                    .unwrap_or_default()
-                    .into_iter()
-                    .collect();
-
-                for item in faceted_items.iter() {
-                    let desired = selected.contains(&item.value);
-                    let _ = cx.app.models_mut().update(&item.model, |v| *v = desired);
-                }
-            }
-
-            cx.with_state(DataTableToolbarState::default, |st| {
-                st.last_synced_state_revision = Some(state_revision);
-            });
-        }
-
-        if let Some(filter_model) = filter_model.as_ref() {
-            let filter_value = cx
-                .watch_model(filter_model)
-                .layout()
-                .cloned()
-                .unwrap_or_default();
-            sync_global_filter(&mut *cx.app, &self.state, &filter_value);
-        }
-
-        if let (Some(column_id), Some(model)) =
-            (self.column_filter.as_ref(), column_filter_model.as_ref())
-        {
-            let value = cx.watch_model(model).layout().cloned().unwrap_or_default();
-            let _ = cx.app.models_mut().update(&self.state, |st| {
-                let next = normalized_global_filter(&value);
-                let existing = st
-                    .column_filters
-                    .iter()
-                    .position(|f| f.column.as_ref() == column_id.as_ref());
-
-                match (existing, next) {
-                    (None, None) => {}
-                    (Some(idx), None) => {
-                        st.column_filters.remove(idx);
-                        st.pagination.page_index = 0;
-                    }
-                    (Some(idx), Some(next)) => {
-                        if st.column_filters[idx].value != next {
-                            st.column_filters[idx].value = next;
-                            st.pagination.page_index = 0;
-                        }
-                    }
-                    (None, Some(next)) => {
-                        st.column_filters
-                            .push(fret_ui_headless::table::ColumnFilter {
-                                column: column_id.clone(),
-                                value: next,
-                            });
-                        st.pagination.page_index = 0;
-                    }
-                }
-            });
-        }
-
-        if let Some(cfg) = self.faceted_filter.as_ref() {
-            let selected: Vec<Arc<str>> = faceted_items
-                .iter()
-                .filter_map(|it| {
-                    cx.watch_model(&it.model)
-                        .layout()
-                        .copied()
-                        .unwrap_or(false)
-                        .then(|| it.value.clone())
-                })
-                .collect();
-
-            let next = if selected.is_empty() {
-                None
-            } else {
-                Some(Value::Array(
-                    selected
+                let mut bindings = cx.with_state(DataTableToolbarState::default, |st| {
+                    st.column_visibility.clone()
+                });
+                if bindings.is_empty() {
+                    bindings = self
+                        .columns
                         .iter()
-                        .map(|v| Value::String(v.as_ref().to_string()))
-                        .collect(),
-                ))
-            };
+                        .filter(|c| c.enable_hiding)
+                        .map(|c| ColumnVisibilityBinding {
+                            id: c.id.clone(),
+                            model: cx
+                                .app
+                                .models_mut()
+                                .insert(is_column_visible(&state_value, &c.id)),
+                        })
+                        .collect();
+                    let next = bindings.clone();
+                    cx.with_state(DataTableToolbarState::default, |st| {
+                        st.column_visibility = next
+                    });
+                }
 
-            let _ = cx.app.models_mut().update(&self.state, |st| {
-                let existing = st
-                    .column_filters
-                    .iter()
-                    .position(|f| f.column.as_ref() == cfg.column_id.as_ref());
+                let mut pinning_bindings = cx.with_state(DataTableToolbarState::default, |st| {
+                    st.column_pinning.clone()
+                });
+                if pinning_bindings.is_empty() {
+                    pinning_bindings = self
+                        .columns
+                        .iter()
+                        .filter(|c| c.enable_pinning)
+                        .map(|c| ColumnPinningBinding {
+                            id: c.id.clone(),
+                            model: cx
+                                .app
+                                .models_mut()
+                                .insert(Some(pin_position_model_value(&state_value, &c.id))),
+                        })
+                        .collect();
+                    let next = pinning_bindings.clone();
+                    cx.with_state(DataTableToolbarState::default, |st| {
+                        st.column_pinning = next
+                    });
+                }
 
-                match (existing, next.clone()) {
-                    (None, None) => {}
-                    (Some(idx), None) => {
-                        st.column_filters.remove(idx);
-                        st.pagination.page_index = 0;
-                    }
-                    (Some(idx), Some(next)) => {
-                        if st.column_filters[idx].value != next {
-                            st.column_filters[idx].value = next;
-                            st.pagination.page_index = 0;
+                let mut faceted_items = cx.with_state(DataTableToolbarState::default, |st| {
+                    st.faceted_items.clone()
+                });
+                let faceted_column = cx.with_state(DataTableToolbarState::default, |st| {
+                    st.faceted_column.clone()
+                });
+                if let Some(cfg) = self.faceted_filter.as_ref() {
+                    let column_changed = faceted_column
+                        .as_ref()
+                        .is_none_or(|id| id.as_ref() != cfg.column_id.as_ref());
+                    let should_rebuild = column_changed || faceted_items.len() != cfg.options.len();
+                    if should_rebuild {
+                        let selected: std::collections::HashSet<Arc<str>> = state_value
+                            .column_filters
+                            .iter()
+                            .find(|f| f.column.as_ref() == cfg.column_id.as_ref())
+                            .map(|f| f.value.clone())
+                            .and_then(|v| match v {
+                                Value::String(s) => Some(vec![Arc::<str>::from(s)]),
+                                Value::Array(items) => Some(
+                                    items
+                                        .into_iter()
+                                        .filter_map(|it| it.as_str().map(|s| Arc::<str>::from(s)))
+                                        .collect::<Vec<_>>(),
+                                ),
+                                _ => None,
+                            })
+                            .unwrap_or_default()
+                            .into_iter()
+                            .collect();
+
+                        faceted_items = cfg
+                            .options
+                            .iter()
+                            .map(|opt| FacetedFilterItemBinding {
+                                value: opt.value.clone(),
+                                label: opt.label.clone(),
+                                icon: opt.icon.clone(),
+                                model: cx.app.models_mut().insert(selected.contains(&opt.value)),
+                            })
+                            .collect();
+                        let next_items = faceted_items.clone();
+                        let next_column = cfg.column_id.clone();
+                        cx.with_state(DataTableToolbarState::default, move |st| {
+                            st.faceted_items = next_items;
+                            st.faceted_column = Some(next_column);
+                        });
+
+                        if column_changed {
+                            if let Some(model) = faceted_query.as_ref() {
+                                let _ = cx.app.models_mut().update(model, |s| s.clear());
+                            }
                         }
                     }
-                    (None, Some(next)) => {
-                        st.column_filters
-                            .push(fret_ui_headless::table::ColumnFilter {
-                                column: cfg.column_id.clone(),
-                                value: next,
-                            });
-                        st.pagination.page_index = 0;
-                    }
                 }
-            });
-        }
 
-        let desired_visibility: HashMap<ColumnId, bool> = bindings
-            .iter()
-            .map(|b| {
-                (
-                    b.id.clone(),
-                    cx.watch_model(&b.model).layout().copied().unwrap_or(true),
-                )
-            })
-            .collect();
-        sync_column_visibility(&mut *cx.app, &self.state, &desired_visibility);
+                let last_synced_state_revision = cx
+                    .with_state(DataTableToolbarState::default, |st| {
+                        st.last_synced_state_revision
+                    });
+                if last_synced_state_revision != Some(state_revision) {
+                    for binding in pinning_bindings.iter() {
+                        let desired = Some(pin_position_model_value(&state_value, &binding.id));
+                        let _ = cx
+                            .app
+                            .models_mut()
+                            .update(&binding.model, |v| *v = desired.clone());
+                    }
 
-        let desired_pinning: HashMap<ColumnId, Option<ColumnPinPosition>> = pinning_bindings
-            .iter()
-            .map(|b| {
-                let raw = cx.watch_model(&b.model).layout().cloned().flatten();
-                (b.id.clone(), pin_position_from_model_value(raw.as_ref()))
-            })
-            .collect();
-        sync_column_pinning(&mut *cx.app, &self.state, &desired_pinning);
+                    if let Some(cfg) = self.faceted_filter.as_ref() {
+                        let selected: std::collections::HashSet<Arc<str>> = state_value
+                            .column_filters
+                            .iter()
+                            .find(|f| f.column.as_ref() == cfg.column_id.as_ref())
+                            .map(|f| f.value.clone())
+                            .and_then(|v| match v {
+                                Value::String(s) => Some(vec![Arc::<str>::from(s)]),
+                                Value::Array(items) => Some(
+                                    items
+                                        .into_iter()
+                                        .filter_map(|it| it.as_str().map(|s| Arc::<str>::from(s)))
+                                        .collect::<Vec<_>>(),
+                                ),
+                                _ => None,
+                            })
+                            .unwrap_or_default()
+                            .into_iter()
+                            .collect();
 
-        let selected_count = state_value.row_selection.len();
-        let theme = Theme::global(&*cx.app).clone();
+                        for item in faceted_items.iter() {
+                            let desired = selected.contains(&item.value);
+                            let _ = cx.app.models_mut().update(&item.model, |v| *v = desired);
+                        }
+                    }
 
-        let column_label = Arc::clone(&self.column_label);
-        let columns = Arc::clone(&self.columns);
-        let visibility_items: Vec<DropdownMenuEntry> = bindings
-            .iter()
-            .filter_map(|b| {
-                let col = columns.iter().find(|c| c.id.as_ref() == b.id.as_ref())?;
-                let label = (column_label)(col);
-                Some(DropdownMenuEntry::CheckboxItem(
-                    DropdownMenuCheckboxItem::new(b.model.clone(), label),
-                ))
-            })
-            .collect();
+                    cx.with_state(DataTableToolbarState::default, |st| {
+                        st.last_synced_state_revision = Some(state_revision);
+                    });
+                }
 
-        let columns_button_label = self.columns_button_label.clone();
-        let cols_menu = self.show_columns_menu.then(|| {
-            DropdownMenu::new(columns_open.clone()).into_element(
-                cx,
-                move |cx| {
-                    Button::new(columns_button_label.clone())
-                        .variant(ButtonVariant::Outline)
-                        .size(ButtonSize::Sm)
-                        .children([
-                            crate::icon::icon(
-                                cx,
-                                fret_icons::IconId::new_static("lucide.settings-2"),
-                            ),
-                            ui::text(cx, columns_button_label.clone()).into_element(cx),
+                if let Some(filter_model) = filter_model.as_ref() {
+                    let filter_value = cx
+                        .watch_model(filter_model)
+                        .layout()
+                        .cloned()
+                        .unwrap_or_default();
+                    sync_global_filter(&mut *cx.app, &self.state, &filter_value);
+                }
+
+                if let (Some(column_id), Some(model)) =
+                    (self.column_filter.as_ref(), column_filter_model.as_ref())
+                {
+                    let value = cx.watch_model(model).layout().cloned().unwrap_or_default();
+                    let _ = cx.app.models_mut().update(&self.state, |st| {
+                        let next = normalized_global_filter(&value);
+                        let existing = st
+                            .column_filters
+                            .iter()
+                            .position(|f| f.column.as_ref() == column_id.as_ref());
+
+                        match (existing, next) {
+                            (None, None) => {}
+                            (Some(idx), None) => {
+                                st.column_filters.remove(idx);
+                                st.pagination.page_index = 0;
+                            }
+                            (Some(idx), Some(next)) => {
+                                if st.column_filters[idx].value != next {
+                                    st.column_filters[idx].value = next;
+                                    st.pagination.page_index = 0;
+                                }
+                            }
+                            (None, Some(next)) => {
+                                st.column_filters
+                                    .push(fret_ui_headless::table::ColumnFilter {
+                                        column: column_id.clone(),
+                                        value: next,
+                                    });
+                                st.pagination.page_index = 0;
+                            }
+                        }
+                    });
+                }
+
+                if let Some(cfg) = self.faceted_filter.as_ref() {
+                    let selected: Vec<Arc<str>> = faceted_items
+                        .iter()
+                        .filter_map(|it| {
+                            cx.watch_model(&it.model)
+                                .layout()
+                                .copied()
+                                .unwrap_or(false)
+                                .then(|| it.value.clone())
+                        })
+                        .collect();
+
+                    let next = if selected.is_empty() {
+                        None
+                    } else {
+                        Some(Value::Array(
+                            selected
+                                .iter()
+                                .map(|v| Value::String(v.as_ref().to_string()))
+                                .collect(),
+                        ))
+                    };
+
+                    let _ = cx.app.models_mut().update(&self.state, |st| {
+                        let existing = st
+                            .column_filters
+                            .iter()
+                            .position(|f| f.column.as_ref() == cfg.column_id.as_ref());
+
+                        match (existing, next.clone()) {
+                            (None, None) => {}
+                            (Some(idx), None) => {
+                                st.column_filters.remove(idx);
+                                st.pagination.page_index = 0;
+                            }
+                            (Some(idx), Some(next)) => {
+                                if st.column_filters[idx].value != next {
+                                    st.column_filters[idx].value = next;
+                                    st.pagination.page_index = 0;
+                                }
+                            }
+                            (None, Some(next)) => {
+                                st.column_filters
+                                    .push(fret_ui_headless::table::ColumnFilter {
+                                        column: cfg.column_id.clone(),
+                                        value: next,
+                                    });
+                                st.pagination.page_index = 0;
+                            }
+                        }
+                    });
+                }
+
+                let desired_visibility: HashMap<ColumnId, bool> = bindings
+                    .iter()
+                    .map(|b| {
+                        (
+                            b.id.clone(),
+                            cx.watch_model(&b.model).layout().copied().unwrap_or(true),
+                        )
+                    })
+                    .collect();
+                sync_column_visibility(&mut *cx.app, &self.state, &desired_visibility);
+
+                let desired_pinning: HashMap<ColumnId, Option<ColumnPinPosition>> =
+                    pinning_bindings
+                        .iter()
+                        .map(|b| {
+                            let raw = cx.watch_model(&b.model).layout().cloned().flatten();
+                            (b.id.clone(), pin_position_from_model_value(raw.as_ref()))
+                        })
+                        .collect();
+                sync_column_pinning(&mut *cx.app, &self.state, &desired_pinning);
+
+                let selected_count = state_value.row_selection.len();
+                let theme = Theme::global(&*cx.app).clone();
+
+                let column_label = Arc::clone(&self.column_label);
+                let columns = Arc::clone(&self.columns);
+                let visibility_items: Vec<DropdownMenuEntry> = bindings
+                    .iter()
+                    .filter_map(|b| {
+                        let col = columns.iter().find(|c| c.id.as_ref() == b.id.as_ref())?;
+                        let label = (column_label)(col);
+                        Some(DropdownMenuEntry::CheckboxItem(
+                            DropdownMenuCheckboxItem::new(b.model.clone(), label),
+                        ))
+                    })
+                    .collect();
+
+                let columns_button_label = self.columns_button_label.clone();
+                let cols_menu = self.show_columns_menu.then(|| {
+                    DropdownMenu::new(columns_open.clone()).into_element(
+                        cx,
+                        move |cx| {
+                            Button::new(columns_button_label.clone())
+                                .variant(ButtonVariant::Outline)
+                                .size(ButtonSize::Sm)
+                                .children([
+                                    crate::icon::icon(
+                                        cx,
+                                        fret_icons::IconId::new_static("lucide.settings-2"),
+                                    ),
+                                    ui::text(cx, columns_button_label.clone()).into_element(cx),
+                                ])
+                                .into_element(cx)
+                        },
+                        move |_cx| {
+                            let mut entries = Vec::new();
+                            entries.push(DropdownMenuEntry::Label(
+                                DropdownMenuLabel::new("Toggle columns").inset(true),
+                            ));
+                            entries.push(DropdownMenuEntry::Separator);
+                            entries.extend(visibility_items);
+                            entries
+                        },
+                    )
+                });
+
+                let mut pin_items: Vec<DropdownMenuEntry> = pinning_bindings
+                    .iter()
+                    .filter_map(|b| {
+                        let col = columns.iter().find(|c| c.id.as_ref() == b.id.as_ref())?;
+                        let label = (column_label)(col);
+
+                        let radio_group =
+                            DropdownMenuRadioGroup::new(b.model.clone())
+                                .item(
+                                    DropdownMenuRadioItemSpec::new("none", "Unpinned").a11y_label(
+                                        Arc::<str>::from(format!("Pin {label} unpinned")),
+                                    ),
+                                )
+                                .item(
+                                    DropdownMenuRadioItemSpec::new("left", "Left")
+                                        .a11y_label(Arc::<str>::from(format!("Pin {label} left"))),
+                                )
+                                .item(
+                                    DropdownMenuRadioItemSpec::new("right", "Right")
+                                        .a11y_label(Arc::<str>::from(format!("Pin {label} right"))),
+                                );
+
+                        Some(vec![
+                            DropdownMenuEntry::Label(DropdownMenuLabel::new(label).inset(true)),
+                            DropdownMenuEntry::RadioGroup(radio_group),
+                            DropdownMenuEntry::Separator,
                         ])
-                        .into_element(cx)
-                },
-                move |_cx| {
-                    let mut entries = Vec::new();
-                    entries.push(DropdownMenuEntry::Label(
-                        DropdownMenuLabel::new("Toggle columns").inset(true),
-                    ));
-                    entries.push(DropdownMenuEntry::Separator);
-                    entries.extend(visibility_items);
-                    entries
-                },
-            )
-        });
+                    })
+                    .flatten()
+                    .collect();
+                if matches!(pin_items.last(), Some(DropdownMenuEntry::Separator)) {
+                    pin_items.pop();
+                }
 
-        let mut pin_items: Vec<DropdownMenuEntry> = pinning_bindings
-            .iter()
-            .filter_map(|b| {
-                let col = columns.iter().find(|c| c.id.as_ref() == b.id.as_ref())?;
-                let label = (column_label)(col);
-
-                let radio_group = DropdownMenuRadioGroup::new(b.model.clone())
-                    .item(
-                        DropdownMenuRadioItemSpec::new("none", "Unpinned")
-                            .a11y_label(Arc::<str>::from(format!("Pin {label} unpinned"))),
+                let pinning_button_label = self.pinning_button_label.clone();
+                let pin_menu = self.show_pinning_menu.then(|| {
+                    DropdownMenu::new(pinning_open.clone()).into_element(
+                        cx,
+                        move |cx| {
+                            Button::new(pinning_button_label.clone())
+                                .variant(ButtonVariant::Outline)
+                                .size(ButtonSize::Sm)
+                                .into_element(cx)
+                        },
+                        move |_cx| pin_items,
                     )
-                    .item(
-                        DropdownMenuRadioItemSpec::new("left", "Left")
-                            .a11y_label(Arc::<str>::from(format!("Pin {label} left"))),
-                    )
-                    .item(
-                        DropdownMenuRadioItemSpec::new("right", "Right")
-                            .a11y_label(Arc::<str>::from(format!("Pin {label} right"))),
-                    );
+                });
 
-                Some(vec![
-                    DropdownMenuEntry::Label(DropdownMenuLabel::new(label).inset(true)),
-                    DropdownMenuEntry::RadioGroup(radio_group),
-                    DropdownMenuEntry::Separator,
-                ])
-            })
-            .flatten()
-            .collect();
-        if matches!(pin_items.last(), Some(DropdownMenuEntry::Separator)) {
-            pin_items.pop();
-        }
-
-        let pinning_button_label = self.pinning_button_label.clone();
-        let pin_menu = self.show_pinning_menu.then(|| {
-            DropdownMenu::new(pinning_open.clone()).into_element(
-                cx,
-                move |cx| {
-                    Button::new(pinning_button_label.clone())
-                        .variant(ButtonVariant::Outline)
-                        .size(ButtonSize::Sm)
-                        .into_element(cx)
-                },
-                move |_cx| pin_items,
-            )
-        });
-
-        let faceted_menu = self
+                let faceted_menu = self
             .faceted_filter
             .as_ref()
             .and_then(|cfg| {
@@ -963,6 +1008,8 @@ impl<TData> DataTableToolbar<TData> {
                 let trigger_test_id = trigger_test_id.clone();
                 let trigger_selected_labels = selected_labels.clone();
                 let trigger_selected_count = selected_count;
+                let trigger_badges_query = self.faceted_selected_badges_query;
+                let trigger_badges_query_region_id = toolbar_region_id;
 
                 let faceted_items_for_content = faceted_items.clone();
                 let query = query.clone();
@@ -1022,6 +1069,31 @@ impl<TData> DataTableToolbar<TData> {
                                                 fret_ui_kit::declarative::viewport_tailwind::LG,
                                                 fret_ui_kit::declarative::ViewportQueryHysteresis::default(),
                                             );
+                                            let show_labels = match trigger_badges_query {
+                                                DataTableToolbarResponsiveQuery::Viewport => {
+                                                    show_labels
+                                                }
+                                                DataTableToolbarResponsiveQuery::Container => {
+                                                    // Container queries are frame-lagged. When the region width is
+                                                    // temporarily unknown (e.g. in single-pass layout test harnesses),
+                                                    // fall back to viewport-width behavior so we avoid branching on a
+                                                    // missing measurement.
+                                                    let default_when_unknown = cx
+                                                        .environment_viewport_width(
+                                                            fret_ui::Invalidation::Layout,
+                                                        )
+                                                        .0
+                                                        >= fret_ui_kit::declarative::container_queries::tailwind::LG.0;
+                                                    fret_ui_kit::declarative::container_width_at_least(
+                                                        cx,
+                                                        trigger_badges_query_region_id,
+                                                        fret_ui::Invalidation::Layout,
+                                                        default_when_unknown,
+                                                        fret_ui_kit::declarative::container_queries::tailwind::LG,
+                                                        fret_ui_kit::declarative::ContainerQueryHysteresis::default(),
+                                                    )
+                                                }
+                                            };
 
                                             let badge_style = ChromeRefinement::default()
                                                 .rounded(Radius::Sm)
@@ -1029,30 +1101,44 @@ impl<TData> DataTableToolbar<TData> {
                                                 .py(Space::N0p5);
 
                                             if !show_labels {
+                                                let count_test_id = Arc::<str>::from(format!(
+                                                    "data-table-toolbar-faceted-{col_seg}-badge-count"
+                                                ));
                                                 children.push(
                                                     crate::badge::Badge::new(Arc::<str>::from(
                                                         trigger_selected_count.to_string(),
                                                     ))
                                                     .variant(crate::badge::BadgeVariant::Secondary)
+                                                    .test_id(count_test_id)
                                                     .refine_style(badge_style.clone())
                                                     .into_element(cx),
                                                 );
                                             } else if trigger_selected_count > 2 {
+                                                let summary_test_id = Arc::<str>::from(format!(
+                                                    "data-table-toolbar-faceted-{col_seg}-badge-summary"
+                                                ));
                                                 children.push(
                                                     crate::badge::Badge::new(Arc::<str>::from(
                                                         format!("{trigger_selected_count} selected"),
                                                     ))
                                                     .variant(crate::badge::BadgeVariant::Secondary)
+                                                    .test_id(summary_test_id)
                                                     .refine_style(badge_style.clone())
                                                     .into_element(cx),
                                                 );
                                             } else {
-                                                for label in trigger_selected_labels.iter().cloned() {
+                                                for (idx, label) in
+                                                    trigger_selected_labels.iter().cloned().enumerate()
+                                                {
+                                                    let label_test_id = Arc::<str>::from(format!(
+                                                        "data-table-toolbar-faceted-{col_seg}-badge-label-{idx}"
+                                                    ));
                                                     children.push(
                                                         crate::badge::Badge::new(label)
                                                             .variant(
                                                                 crate::badge::BadgeVariant::Secondary,
                                                             )
+                                                            .test_id(label_test_id)
                                                             .refine_style(badge_style.clone())
                                                             .into_element(cx),
                                                     );
@@ -1280,145 +1366,148 @@ impl<TData> DataTableToolbar<TData> {
                     )
             });
 
-        let filter_layout = self.filter_layout.clone();
-        let global_filter = filter_model.as_ref().map(|m| {
-            Input::new(m.clone())
-                .a11y_label("Global filter")
-                .a11y_role(SemanticsRole::TextField)
-                .placeholder(self.filter_placeholder.clone())
-                .refine_layout(filter_layout.clone())
-                .into_element(cx)
-        });
-
-        let column_filter = column_filter_model.as_ref().map(|m| {
-            Input::new(m.clone())
-                .a11y_label(self.column_filter_a11y_label.clone())
-                .a11y_role(SemanticsRole::TextField)
-                .placeholder(self.column_filter_placeholder.clone())
-                .refine_layout(filter_layout.clone())
-                .into_element(cx)
-        });
-
-        let reset_filters = cx
-            .app
-            .models()
-            .read(&self.state, |st| {
-                st.global_filter.is_some() || !st.column_filters.is_empty()
-            })
-            .ok()
-            .unwrap_or(false);
-        let reset_button = reset_filters.then(|| {
-            let state = self.state.clone();
-            let filter_model = filter_model.clone();
-            let column_filter_model = column_filter_model.clone();
-            let columns_open = columns_open.clone();
-            let pinning_open = pinning_open.clone();
-            let faceted_open = faceted_open.clone();
-            let faceted_query = faceted_query.clone();
-            let faceted_models: Vec<Model<bool>> =
-                faceted_items.iter().map(|it| it.model.clone()).collect();
-
-            let on_activate: OnActivate = Arc::new(move |host, acx, _reason| {
-                let _ = host.models_mut().update(&state, |st| {
-                    st.global_filter = None;
-                    st.column_filters.clear();
-                    st.pagination.page_index = 0;
+                let filter_layout = self.filter_layout.clone();
+                let global_filter = filter_model.as_ref().map(|m| {
+                    Input::new(m.clone())
+                        .a11y_label("Global filter")
+                        .a11y_role(SemanticsRole::TextField)
+                        .placeholder(self.filter_placeholder.clone())
+                        .refine_layout(filter_layout.clone())
+                        .into_element(cx)
                 });
 
-                if let Some(filter_model) = filter_model.as_ref() {
-                    let _ = host.models_mut().update(filter_model, |s| s.clear());
-                }
-                if let Some(model) = column_filter_model.as_ref() {
-                    let _ = host.models_mut().update(model, |s| s.clear());
-                }
-                for model in faceted_models.iter() {
-                    let _ = host.models_mut().update(model, |v| *v = false);
-                }
-                if let Some(model) = faceted_query.as_ref() {
-                    let _ = host.models_mut().update(model, |s| s.clear());
-                }
+                let column_filter = column_filter_model.as_ref().map(|m| {
+                    Input::new(m.clone())
+                        .a11y_label(self.column_filter_a11y_label.clone())
+                        .a11y_role(SemanticsRole::TextField)
+                        .placeholder(self.column_filter_placeholder.clone())
+                        .refine_layout(filter_layout.clone())
+                        .into_element(cx)
+                });
 
-                let _ = host.models_mut().update(&columns_open, |v| *v = false);
-                let _ = host.models_mut().update(&pinning_open, |v| *v = false);
-                if let Some(open) = faceted_open.as_ref() {
-                    let _ = host.models_mut().update(open, |v| *v = false);
-                }
+                let reset_filters = cx
+                    .app
+                    .models()
+                    .read(&self.state, |st| {
+                        st.global_filter.is_some() || !st.column_filters.is_empty()
+                    })
+                    .ok()
+                    .unwrap_or(false);
+                let reset_button = reset_filters.then(|| {
+                    let state = self.state.clone();
+                    let filter_model = filter_model.clone();
+                    let column_filter_model = column_filter_model.clone();
+                    let columns_open = columns_open.clone();
+                    let pinning_open = pinning_open.clone();
+                    let faceted_open = faceted_open.clone();
+                    let faceted_query = faceted_query.clone();
+                    let faceted_models: Vec<Model<bool>> =
+                        faceted_items.iter().map(|it| it.model.clone()).collect();
 
-                host.notify(acx);
-            });
+                    let on_activate: OnActivate = Arc::new(move |host, acx, _reason| {
+                        let _ = host.models_mut().update(&state, |st| {
+                            st.global_filter = None;
+                            st.column_filters.clear();
+                            st.pagination.page_index = 0;
+                        });
 
-            Button::new("Reset")
-                .variant(ButtonVariant::Ghost)
-                .size(ButtonSize::Sm)
-                .test_id("data-table-toolbar-reset-filters")
-                .children([
-                    ui::text(cx, Arc::<str>::from("Reset")).into_element(cx),
-                    crate::icon::icon(cx, fret_icons::IconId::new_static("lucide.x")),
-                ])
-                .on_activate(on_activate)
-                .into_element(cx)
-        });
+                        if let Some(filter_model) = filter_model.as_ref() {
+                            let _ = host.models_mut().update(filter_model, |s| s.clear());
+                        }
+                        if let Some(model) = column_filter_model.as_ref() {
+                            let _ = host.models_mut().update(model, |s| s.clear());
+                        }
+                        for model in faceted_models.iter() {
+                            let _ = host.models_mut().update(model, |v| *v = false);
+                        }
+                        if let Some(model) = faceted_query.as_ref() {
+                            let _ = host.models_mut().update(model, |s| s.clear());
+                        }
 
-        let selected_text: Option<AnyElement> = (self.show_selected_text && selected_count > 0)
-            .then(|| {
-                let mut text =
-                    ui::raw_text(cx, Arc::from(format!("Selected: {selected_count}"))).nowrap();
-                if let Some(color) = theme.color_by_key("muted-foreground") {
-                    text = text.text_color(ColorRef::Color(color));
-                }
-                text.into_element(cx)
-            });
+                        let _ = host.models_mut().update(&columns_open, |v| *v = false);
+                        let _ = host.models_mut().update(&pinning_open, |v| *v = false);
+                        if let Some(open) = faceted_open.as_ref() {
+                            let _ = host.models_mut().update(open, |v| *v = false);
+                        }
 
-        let trailing = self.trailing;
+                        host.notify(acx);
+                    });
 
-        let left_group = hstack(
-            cx,
-            HStackProps::default().gap_x(Space::N2).items_center(),
-            move |_cx| {
-                let mut children = Vec::new();
-                if let Some(global_filter) = global_filter {
-                    children.push(global_filter);
-                }
-                if let Some(filter) = column_filter {
-                    children.push(filter);
-                }
-                if let Some(menu) = faceted_menu {
-                    children.push(menu);
-                }
-                if let Some(btn) = reset_button {
-                    children.push(btn);
-                }
-                if let Some(sel) = selected_text {
-                    children.push(sel);
-                }
-                children
+                    Button::new("Reset")
+                        .variant(ButtonVariant::Ghost)
+                        .size(ButtonSize::Sm)
+                        .test_id("data-table-toolbar-reset-filters")
+                        .children([
+                            ui::text(cx, Arc::<str>::from("Reset")).into_element(cx),
+                            crate::icon::icon(cx, fret_icons::IconId::new_static("lucide.x")),
+                        ])
+                        .on_activate(on_activate)
+                        .into_element(cx)
+                });
+
+                let selected_text: Option<AnyElement> =
+                    (self.show_selected_text && selected_count > 0).then(|| {
+                        let mut text =
+                            ui::raw_text(cx, Arc::from(format!("Selected: {selected_count}")))
+                                .nowrap();
+                        if let Some(color) = theme.color_by_key("muted-foreground") {
+                            text = text.text_color(ColorRef::Color(color));
+                        }
+                        text.into_element(cx)
+                    });
+
+                let trailing = self.trailing;
+
+                let left_group = hstack(
+                    cx,
+                    HStackProps::default().gap_x(Space::N2).items_center(),
+                    move |_cx| {
+                        let mut children = Vec::new();
+                        if let Some(global_filter) = global_filter {
+                            children.push(global_filter);
+                        }
+                        if let Some(filter) = column_filter {
+                            children.push(filter);
+                        }
+                        if let Some(menu) = faceted_menu {
+                            children.push(menu);
+                        }
+                        if let Some(btn) = reset_button {
+                            children.push(btn);
+                        }
+                        if let Some(sel) = selected_text {
+                            children.push(sel);
+                        }
+                        children
+                    },
+                );
+
+                let right_group = hstack(
+                    cx,
+                    HStackProps::default().gap_x(Space::N2).items_center(),
+                    move |_cx| {
+                        let mut children = Vec::new();
+                        if let Some(cols_menu) = cols_menu {
+                            children.push(cols_menu);
+                        }
+                        if let Some(pin_menu) = pin_menu {
+                            children.push(pin_menu);
+                        }
+                        children.extend(trailing);
+                        children
+                    },
+                );
+
+                vec![hstack(
+                    cx,
+                    HStackProps::default()
+                        .layout(LayoutRefinement::default().w_full())
+                        .items_center()
+                        .justify_between()
+                        .gap_x(Space::N2),
+                    move |_cx| vec![left_group, right_group],
+                )]
             },
-        );
-
-        let right_group = hstack(
-            cx,
-            HStackProps::default().gap_x(Space::N2).items_center(),
-            move |_cx| {
-                let mut children = Vec::new();
-                if let Some(cols_menu) = cols_menu {
-                    children.push(cols_menu);
-                }
-                if let Some(pin_menu) = pin_menu {
-                    children.push(pin_menu);
-                }
-                children.extend(trailing);
-                children
-            },
-        );
-
-        hstack(
-            cx,
-            HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .items_center()
-                .justify_between()
-                .gap_x(Space::N2),
-            move |_cx| vec![left_group, right_group],
         )
     }
 }
