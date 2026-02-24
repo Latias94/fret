@@ -57,6 +57,8 @@ Proposed knobs (names TBD; keep conservative and internal until proven):
 - Keep accepting `<bundle_dir|bundle.json|bundle.schema2.json>` everywhere.
 - Prefer `bundle.schema2.json` as the **bundle artifact** input when both exist (where it is sufficient).
 - `diag doctor --fix-schema2` stays as a self-heal fallback, even if the runtime can emit schema2.
+- When tooling launches an app (`--launch`) for schema2/AI-focused flows, it should default to enabling
+  runtime schema2 emission (`FRET_DIAG_BUNDLE_WRITE_SCHEMA2=1`) unless the caller already set an explicit value.
 
 ## Exit criteria to treat raw `bundle.json` as “optional” for common flows
 

@@ -133,6 +133,9 @@ This file tracks tasks for `docs/workstreams/diag-fearless-refactor-v1.md`.
     - [x] Implement an opt-in runtime companion artifact (`bundle.schema2.json`) emission path.
       - Evidence: `ecosystem/fret-bootstrap/src/ui_diagnostics/config.rs` (`FRET_DIAG_BUNDLE_WRITE_SCHEMA2`),
         `ecosystem/fret-bootstrap/src/ui_diagnostics/bundle_dump.rs`.
+    - [x] Make launched tooling workflows auto-enable runtime schema2 emission for schema2/AI-focused flows.
+      - Evidence: `crates/fret-diag/src/lib.rs` (injects `FRET_DIAG_BUNDLE_WRITE_SCHEMA2=1` for `--launch` when
+        `--ai-packet` / `--ai-only` / `--pack-schema2-only` are set).
     - [ ] Decide whether scripted runs should default to emitting schema2, and whether raw `bundle.json` can be skipped.
   - [ ] Decide when it is acceptable to stop treating raw `bundle.json` as a required artifact for common flows
     (keep it supported for deep debugging).

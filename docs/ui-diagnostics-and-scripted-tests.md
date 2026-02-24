@@ -579,6 +579,8 @@ Semantics export:
   - `last`: include semantics only on the last snapshot (default for script-driven dumps; useful for AI triage and very large UIs).
   - `off`: never include semantics in bundles (perf captures where semantics isn't needed).
 - `FRET_DIAG_BUNDLE_WRITE_SCHEMA2=1`: also write a compact `bundle.schema2.json` alongside `bundle.json` during dumps (default disabled).
+  - When launching via `fretboard diag ... --launch`, schema2/AI-focused flows may auto-enable this (e.g. `--ai-packet`, `--ai-only`,
+    `--pack-schema2-only`), unless you already set an explicit value.
 - `FRET_UI_GALLERY_INSPECTOR_KEEP_ALIVE=...`: keep-alive budget for the UI Gallery Inspector torture (retained host; ADR 0177).
 
 Privacy / size:
