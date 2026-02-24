@@ -219,6 +219,8 @@ Prefer sharing **bounded artifacts** over the full `bundle.json` (especially in 
       `ai.packet/` from sidecars (equivalent to `diag ai-packet <bundle_dir> --sidecars-only`).
   - For a multi-script repro run, pack a bounded `repro.ai.zip`:
     - `cargo run -p fretboard -- diag repro <suite|script.json...> --ai-only`
+    - If any repro item bundle artifacts are missing/unreadable but sidecars exist, this may still succeed by generating
+      `ai.packet/` from sidecars for each item (equivalent to `diag ai-packet <bundle_dir> --sidecars-only`).
   - Agent plan JSON (includes recommended bounded commands like `diag pack --ai-only`):
     - `cargo run -p fretboard -- diag agent <bundle_dir|bundle.json|bundle.schema2.json>`
 - Focus on a specific target when possible (writes a bounded `slice.*.json` alongside the packet):
