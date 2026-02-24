@@ -280,8 +280,8 @@ impl ButtonGroupSeparator {
                 layout.size = SizeStyle {
                     width: Length::Fill,
                     height: Length::Px(thickness),
-                    min_height: Some(thickness),
-                    max_height: Some(thickness),
+                    min_height: Some(Length::Px(thickness)),
+                    max_height: Some(Length::Px(thickness)),
                     ..layout.size
                 };
             }
@@ -290,8 +290,8 @@ impl ButtonGroupSeparator {
                     width: Length::Px(thickness),
                     // Match shadcn `self-stretch` behavior for vertical separators.
                     height: Length::Auto,
-                    min_width: Some(thickness),
-                    max_width: Some(thickness),
+                    min_width: Some(Length::Px(thickness)),
+                    max_width: Some(Length::Px(thickness)),
                     ..layout.size
                 };
             }

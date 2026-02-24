@@ -1081,8 +1081,8 @@ impl Calendar {
                                                 ..Default::default()
                                             },
                                             direction: fret_core::Axis::Horizontal,
-                                            gap: nav_bar_gap,
-                                            padding: fret_core::Edges::all(Px(0.0)),
+                                            gap: nav_bar_gap.into(),
+                                            padding: fret_core::Edges::all(Px(0.0)).into(),
                                             justify: MainAlign::SpaceBetween,
                                             align: CrossAlign::Center,
                                             wrap: false,

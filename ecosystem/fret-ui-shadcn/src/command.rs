@@ -2891,7 +2891,7 @@ impl CommandPalette {
                                                                     layout.size.width =
                                                                         Length::Fill;
                                                                     layout.size.min_width =
-                                                                        Some(Px(0.0));
+                                                                        Some(Length::Px(Px(0.0)));
                                                                     layout.flex.grow = 1.0;
                                                                     layout.flex.shrink = 1.0;
                                                                     layout.flex.basis =
@@ -2899,8 +2899,7 @@ impl CommandPalette {
                                                                     layout
                                                                 },
                                                                 gap: row_gap.into(),
-                                                                padding: Edges::all(Px(0.0))
-                                                                    .into(),
+                                                                padding: Edges::all(Px(0.0)).into(),
                                                                 justify: MainAlign::Start,
                                                                 align: CrossAlign::Center,
                                                             },

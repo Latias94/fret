@@ -406,10 +406,10 @@ pub fn native_select<H: UiHost>(
                     size: SizeStyle {
                         width: Length::Fill,
                         height: Length::Fill,
+                        ..Default::default()
+                    },
                     ..Default::default()
                 },
-                ..Default::default()
-            },
                 padding: Edges::all(Px(0.0)).into(),
                 background: None,
                 shadow: Some(decl_style::shadow_xs(&theme_for_trigger, resolved.radius)),
@@ -441,7 +441,8 @@ pub fn native_select<H: UiHost>(
                                 right: Px(36.0),
                                 top: py,
                                 bottom: py,
-                            },
+                            }
+                            .into(),
                             background: Some(resolved.background),
                             shadow: None,
                             border: Edges::all(resolved.border_width),

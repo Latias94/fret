@@ -507,8 +507,8 @@ impl InputGroup {
                             FlexProps {
                                 layout,
                                 direction: Axis::Horizontal,
-                                gap,
-                                padding,
+                                gap: gap.into(),
+                                padding: padding.into(),
                                 justify: fret_ui::element::MainAlign::Center,
                                 align: fret_ui::element::CrossAlign::Center,
                                 wrap: false,
@@ -640,8 +640,8 @@ impl InputGroup {
                         FlexProps {
                             layout: control_row_layout,
                             direction: Axis::Horizontal,
-                            gap: Px(0.0),
-                            padding: Edges::all(Px(0.0)),
+                            gap: Px(0.0).into(),
+                            padding: Edges::all(Px(0.0)).into(),
                             justify: fret_ui::element::MainAlign::Start,
                             align: fret_ui::element::CrossAlign::Center,
                             wrap: false,

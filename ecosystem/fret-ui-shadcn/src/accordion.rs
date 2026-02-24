@@ -60,7 +60,7 @@ fn apply_trigger_label_defaults(el: AnyElement, text_style: &TextStyle, fg: Colo
                 props.color = Some(fg);
             }
             props.layout.size.width = Length::Fill;
-            props.layout.size.min_width = Some(Px(0.0));
+            props.layout.size.min_width = Some(Length::Px(Px(0.0)));
             props.wrap = TextWrap::Word;
             props.overflow = TextOverflow::Clip;
             AnyElement::new(el.id, ElementKind::Text(props), el.children)
@@ -73,7 +73,7 @@ fn apply_trigger_label_defaults(el: AnyElement, text_style: &TextStyle, fg: Colo
                 props.color = Some(fg);
             }
             props.layout.size.width = Length::Fill;
-            props.layout.size.min_width = Some(Px(0.0));
+            props.layout.size.min_width = Some(Length::Px(Px(0.0)));
             props.wrap = TextWrap::Word;
             props.overflow = TextOverflow::Clip;
             AnyElement::new(el.id, ElementKind::StyledText(props), el.children)
@@ -86,7 +86,7 @@ fn apply_trigger_label_defaults(el: AnyElement, text_style: &TextStyle, fg: Colo
                 props.color = Some(fg);
             }
             props.layout.size.width = Length::Fill;
-            props.layout.size.min_width = Some(Px(0.0));
+            props.layout.size.min_width = Some(Length::Px(Px(0.0)));
             props.wrap = TextWrap::Word;
             props.overflow = TextOverflow::Clip;
             AnyElement::new(el.id, ElementKind::SelectableText(props), el.children)
@@ -314,7 +314,7 @@ pub mod composable {
                                 );
                                 let mut row_layout = LayoutStyle::default();
                                 row_layout.size.width = Length::Fill;
-                                row_layout.size.min_width = Some(Px(0.0));
+                                row_layout.size.min_width = Some(Length::Px(Px(0.0)));
                                 vec![cx.row(
                                     RowProps {
                                         layout: row_layout,
@@ -1147,7 +1147,7 @@ impl AccordionTrigger {
                             );
                             let mut row_layout = LayoutStyle::default();
                             row_layout.size.width = Length::Fill;
-                            row_layout.size.min_width = Some(Px(0.0));
+                            row_layout.size.min_width = Some(Length::Px(Px(0.0)));
                             vec![cx.row(
                                 RowProps {
                                     layout: row_layout,
