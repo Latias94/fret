@@ -2,7 +2,7 @@
 
 Status: Shippable (core contract + AccessKit mapping + shadcn adoption + gates landed; contract locked in ADR 0288; follow-ups tracked below)
 
-Last updated: 2026-02-23
+Last updated: 2026-02-24
 
 ## Motivation
 
@@ -86,11 +86,12 @@ Notes:
 Action notes:
 
 - `SemanticsActions.scroll_by` is the portable “scroll by delta” action surface.
-- `SemanticsActions.increment` / `SemanticsActions.decrement` are a portable stepper surface for sliders. In `fret-ui`,
-  `value_editable` on `SemanticsRole::Slider` maps to these actions (instead of `SetValue`).
-- Sliders may also expose a `SetValue` surface; the default `fret-ui-app` driver implements it by translating target
-  values into `Home/End/PageUp/PageDown/ArrowUp/ArrowDown` key sequences. This surface is gated by the runtime: it is
-  only exposed when slider numeric metadata includes `value/min/max/step`.
+- `SemanticsActions.increment` / `SemanticsActions.decrement` are a portable stepper surface for “range-like” controls
+  (slider/spinbutton/splitter). In `fret-ui`, `value_editable` on these roles maps to `increment/decrement` (instead of
+  always exposing `SetValue`).
+- Range-like controls may also expose a `SetValue` surface; the default `fret-ui-app` driver implements it by
+  translating target values into `Home/End/PageUp/PageDown/ArrowUp/ArrowDown` key sequences. This surface is gated by
+  the runtime: it is only exposed when the numeric metadata includes `value/min/max/step`.
 
 ## Closure checklist (range/numeric controls)
 
@@ -121,10 +122,10 @@ spinbutton-like) to avoid drifting back into string-only semantics.
 
 ### 3) Actions (adjustable controls)
 
-- [ ] Sliders expose stepper actions (portable):
+- [ ] Range-like controls expose stepper actions (portable):
   - `SemanticsActions.increment` / `decrement` are enabled when the control is editable.
-  - `invoke/click` is suppressed for `Slider` roles (avoid confusing AT).
-- [ ] `SetValue` for sliders is only exposed when numeric metadata is sufficient:
+  - `invoke/click` is suppressed for stepper-like roles (avoid confusing AT).
+- [ ] `SetValue` for range-like controls is only exposed when numeric metadata is sufficient:
   - `value + min + max + step` present (runtime-gated).
   - The platform action decoder and UI driver can deterministically apply the target value.
 
