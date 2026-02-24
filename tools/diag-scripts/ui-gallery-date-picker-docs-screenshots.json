@@ -12,14 +12,14 @@
       "timeout_frames": 1800,
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-date-picker-demo" }
+        "target": { "kind": "test_id", "id": "ui-gallery-date-picker-simple" }
       }
     },
 
     {
       "type": "scroll_into_view",
       "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
-      "target": { "kind": "test_id", "id": "ui-gallery-date-picker-demo" },
+      "target": { "kind": "test_id", "id": "ui-gallery-date-picker-simple" },
       "delta_x": 0.0,
       "delta_y": -120.0,
       "require_fully_within_container": true,
@@ -27,8 +27,8 @@
       "padding_px": 4.0,
       "timeout_frames": 600
     },
-    { "type": "capture_bundle", "label": "ui-gallery-date-picker-docs-00-demo" },
-    { "type": "capture_screenshot", "label": "ui-gallery-date-picker-docs-00-demo" },
+    { "type": "capture_bundle", "label": "ui-gallery-date-picker-docs-00-basic" },
+    { "type": "capture_screenshot", "label": "ui-gallery-date-picker-docs-00-basic" },
 
     {
       "type": "click",
@@ -39,8 +39,8 @@
       "timeout_frames": 1800,
       "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "2024-02-01" } }
     },
-    { "type": "capture_bundle", "label": "ui-gallery-date-picker-docs-00-demo-open" },
-    { "type": "capture_screenshot", "label": "ui-gallery-date-picker-docs-00-demo-open" },
+    { "type": "capture_bundle", "label": "ui-gallery-date-picker-docs-01-basic-open" },
+    { "type": "capture_screenshot", "label": "ui-gallery-date-picker-docs-01-basic-open" },
     { "type": "press_key", "key": "escape" },
     { "type": "wait_frames", "n": 8 },
 
@@ -56,15 +56,15 @@
         "target": { "kind": "test_id", "id": "2024-02-13" }
       }
     },
-    { "type": "capture_bundle", "label": "ui-gallery-date-picker-docs-01-range-open" },
-    { "type": "capture_screenshot", "label": "ui-gallery-date-picker-docs-01-range-open" },
+    { "type": "capture_bundle", "label": "ui-gallery-date-picker-docs-10-range-open" },
+    { "type": "capture_screenshot", "label": "ui-gallery-date-picker-docs-10-range-open" },
     { "type": "press_key", "key": "escape" },
     { "type": "wait_frames", "n": 8 },
 
     {
       "type": "scroll_into_view",
       "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
-      "target": { "kind": "test_id", "id": "ui-gallery-date-picker-with-presets" },
+      "target": { "kind": "test_id", "id": "ui-gallery-date-picker-dob" },
       "delta_x": 0.0,
       "delta_y": -120.0,
       "require_fully_within_container": true,
@@ -72,23 +72,20 @@
       "padding_px": 4.0,
       "timeout_frames": 600
     },
-    { "type": "capture_bundle", "label": "ui-gallery-date-picker-docs-10-with-presets" },
-    { "type": "capture_screenshot", "label": "ui-gallery-date-picker-docs-10-with-presets" },
+    { "type": "capture_bundle", "label": "ui-gallery-date-picker-docs-20-dob" },
+    { "type": "capture_screenshot", "label": "ui-gallery-date-picker-docs-20-dob" },
 
     {
       "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-date-picker-with-presets" }
+      "target": { "kind": "test_id", "id": "ui-gallery-date-picker-dob-trigger" }
     },
     {
       "type": "wait_until",
       "timeout_frames": 1800,
       "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "2024-02-01" } }
     },
-    { "type": "capture_bundle", "label": "ui-gallery-date-picker-docs-11-with-presets-open" },
-    {
-      "type": "capture_screenshot",
-      "label": "ui-gallery-date-picker-docs-11-with-presets-open"
-    },
+    { "type": "capture_bundle", "label": "ui-gallery-date-picker-docs-21-dob-open" },
+    { "type": "capture_screenshot", "label": "ui-gallery-date-picker-docs-21-dob-open" },
     { "type": "press_key", "key": "escape" },
     { "type": "wait_frames", "n": 8 },
 
@@ -138,6 +135,69 @@
     { "type": "capture_screenshot", "label": "ui-gallery-date-picker-docs-30-time" },
 
     {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-date-picker-time-date" }
+    },
+    {
+      "type": "wait_until",
+      "timeout_frames": 1800,
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "2024-02-01" } }
+    },
+    { "type": "capture_bundle", "label": "ui-gallery-date-picker-docs-31-time-open" },
+    { "type": "capture_screenshot", "label": "ui-gallery-date-picker-docs-31-time-open" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 8 },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-date-picker-natural-language" },
+      "delta_x": 0.0,
+      "delta_y": -120.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 4.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-date-picker-docs-40-natural-language"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-date-picker-docs-40-natural-language"
+    },
+
+    {
+      "type": "click",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-date-picker-natural-language-trigger"
+      }
+    },
+    {
+      "type": "wait_until",
+      "timeout_frames": 1800,
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-date-picker-natural-language-calendar"
+        }
+      }
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-date-picker-docs-41-natural-language-open"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-date-picker-docs-41-natural-language-open"
+    },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 8 },
+
+    {
       "type": "scroll_into_view",
       "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
       "target": { "kind": "test_id", "id": "ui-gallery-date-picker-rtl" },
@@ -148,7 +208,7 @@
       "padding_px": 4.0,
       "timeout_frames": 600
     },
-    { "type": "capture_bundle", "label": "ui-gallery-date-picker-docs-40-rtl" },
-    { "type": "capture_screenshot", "label": "ui-gallery-date-picker-docs-40-rtl" }
+    { "type": "capture_bundle", "label": "ui-gallery-date-picker-docs-50-rtl" },
+    { "type": "capture_screenshot", "label": "ui-gallery-date-picker-docs-50-rtl" }
   ]
 }
