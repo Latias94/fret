@@ -95,6 +95,7 @@ This file tracks tasks for `docs/workstreams/diag-fearless-refactor-v1.md`.
     - [x] `diag query snapshots` / `diag slice` read `bundle.index.json` when present (selection + semantics presence)
   - [x] Packing includes canonical sidecars under `_root/` (even when the bundle dir is relocated):
     - [x] `diag pack --include-all` (and repro multi-pack with `--include-all`).
+    - [x] Includes `frames.index.json` to support `triage --lite` without materializing large bundles.
 - [x] Add a short “AI-first” recipe to `docs/ui-diagnostics-and-scripted-tests.md` that links to:
   - `diag meta`, `diag index`, `diag query`, `diag slice`, `diag ai-packet`.
 - [ ] Finish the “bundle artifact” naming sweep so common failure messages and CLI hints do not assume `bundle.json`.

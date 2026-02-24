@@ -2974,12 +2974,15 @@ pub(crate) fn pack_bundle_dir_to_zip(
             crate::bundle_index::ensure_test_ids_index_json(&bundle_artifact, warmup_frames)?;
         let test_ids_path =
             crate::bundle_index::ensure_test_ids_json(&bundle_artifact, warmup_frames, 500)?;
+        let frames_index_path =
+            crate::frames_index::ensure_frames_index_json(&bundle_artifact, warmup_frames)?;
 
         for (src, rel) in [
             (meta_path, "bundle.meta.json"),
             (bundle_index_path, "bundle.index.json"),
             (test_ids_index_path, "test_ids.index.json"),
             (test_ids_path, "test_ids.json"),
+            (frames_index_path, "frames.index.json"),
         ] {
             if src.is_file() {
                 let dst = format!("{bundle_name}/_root/{rel}");
@@ -3923,12 +3926,15 @@ fn pack_repro_zip_multi(
                 crate::bundle_index::ensure_test_ids_index_json(&bundle_artifact, warmup_frames)?;
             let test_ids_path =
                 crate::bundle_index::ensure_test_ids_json(&bundle_artifact, warmup_frames, 500)?;
+            let frames_index_path =
+                crate::frames_index::ensure_frames_index_json(&bundle_artifact, warmup_frames)?;
 
             for (src, rel) in [
                 (meta_path, "bundle.meta.json"),
                 (bundle_index_path, "bundle.index.json"),
                 (test_ids_index_path, "test_ids.index.json"),
                 (test_ids_path, "test_ids.json"),
+                (frames_index_path, "frames.index.json"),
             ] {
                 if src.is_file() {
                     let dst = format!("{}/_root/{rel}", item.prefix);
@@ -7307,6 +7313,8 @@ mod tests {
             .expect("test_ids.index.json should be present under _root");
         zip.by_name("01-a/_root/test_ids.json")
             .expect("test_ids.json should be present under _root");
+        zip.by_name("01-a/_root/frames.index.json")
+            .expect("frames.index.json should be present under _root");
     }
 
     #[test]
