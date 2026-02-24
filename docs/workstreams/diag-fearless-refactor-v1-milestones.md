@@ -83,7 +83,10 @@ Definition of done:
 ### M4.1: Remove `bundle.json`-only assumptions in tooling
 
 - [ ] Ensure post-run checks, suite runners, and error messages consistently talk about “bundle artifacts” (not `bundle.json`).
-- [ ] Add one regression test that a schema2-only bundle dir is accepted where we claim it is.
+- [x] Add one regression test that a schema2-only bundle dir is accepted where we claim it is.
+  - Evidence: `crates/fret-diag/src/lib.rs` (`pack_bundle_dir_to_zip_accepts_schema2_only`).
+- [x] Add a schema2-only packing option for shareable zips.
+  - Evidence: `crates/fret-diag/src/lib.rs` (`--pack-schema2-only` / `--schema2-only`).
 
 ### M5: Plan 2 prototype (deferred)
 

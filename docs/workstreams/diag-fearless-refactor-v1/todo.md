@@ -7,6 +7,11 @@ scope: diagnostics, automation, tooling, refactor
 
 # Diagnostics Fearless Refactor v1 (TODO)
 
+Status note:
+
+- This file contains historical notes and may drift.
+- For the up-to-date tracker, see `docs/workstreams/diag-fearless-refactor-v1-todo.md`.
+
 ## M1: Make the monolith smaller (safe mechanical moves)
 
 - [x] Extract internal script runner state types into `ecosystem/fret-bootstrap/src/ui_diagnostics/script_types.rs`.

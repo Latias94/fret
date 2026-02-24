@@ -18,6 +18,12 @@ keeping the day-to-day debugging loop fast:
 This workstream is intentionally scoped to refactors and additive sidecars. It must not change the core runtime contracts in
 `crates/fret-ui` (mechanism only).
 
+Canonical tracking docs (kept up to date as implementation evolves):
+
+- Workstream overview: `docs/workstreams/diag-fearless-refactor-v1.md`
+- TODO tracker: `docs/workstreams/diag-fearless-refactor-v1-todo.md`
+- Milestones: `docs/workstreams/diag-fearless-refactor-v1-milestones.md`
+
 Related living docs:
 
 - `docs/ui-diagnostics-and-scripted-tests.md`

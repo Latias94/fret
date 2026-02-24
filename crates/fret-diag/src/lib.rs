@@ -368,6 +368,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut pack_include_triage: bool = false;
     let mut pack_include_screenshots: bool = false;
     let mut pack_after_run: bool = false;
+    let mut pack_schema2_only: bool = false;
     let mut triage_out: Option<PathBuf> = None;
     let mut lint_out: Option<PathBuf> = None;
     let mut meta_out: Option<PathBuf> = None;
@@ -633,6 +634,10 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             }
             "--include-screenshots" => {
                 pack_include_screenshots = true;
+                i += 1;
+            }
+            "--pack-schema2-only" | "--schema2-only" => {
+                pack_schema2_only = true;
                 i += 1;
             }
             "--pack" => {
@@ -2304,6 +2309,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
         pack_include_root_artifacts,
         pack_include_triage,
         pack_include_screenshots,
+        pack_schema2_only,
         &triage_out,
         &lint_out,
         &meta_out,
@@ -2455,6 +2461,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 pack_include_root_artifacts,
                 pack_include_triage,
                 pack_include_screenshots,
+                pack_schema2_only,
                 stats_top,
                 sort_override,
                 warmup_frames,
@@ -2519,6 +2526,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 pack_include_root_artifacts,
                 pack_include_triage,
                 pack_include_screenshots,
+                pack_schema2_only,
                 stats_top,
                 sort_override,
                 warmup_frames,
@@ -2844,6 +2852,7 @@ pub(crate) fn pack_bundle_dir_to_zip(
     include_root_artifacts: bool,
     include_triage: bool,
     include_screenshots: bool,
+    schema2_only: bool,
     include_renderdoc: bool,
     include_tracy: bool,
     artifacts_root: &Path,
@@ -2866,6 +2875,18 @@ pub(crate) fn pack_bundle_dir_to_zip(
         ));
     }
 
+    if schema2_only {
+        let direct_v2 = bundle_dir.join("bundle.schema2.json");
+        let root_v2 = bundle_dir.join("_root").join("bundle.schema2.json");
+        if !direct_v2.is_file() && !root_v2.is_file() {
+            return Err(format!(
+                "--pack-schema2-only requires bundle.schema2.json (tip: fretboard diag doctor --fix-schema2 {} --warmup-frames {})",
+                bundle_dir.display(),
+                warmup_frames
+            ));
+        }
+    }
+
     if let Some(parent) = out_path.parent() {
         std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
@@ -2882,13 +2903,14 @@ pub(crate) fn pack_bundle_dir_to_zip(
         .compression_method(zip::CompressionMethod::Deflated)
         .unix_permissions(0o644);
 
-    zip_add_dir(
+    zip_add_dir_pack_bundle(
         &mut zip,
         bundle_dir,
         bundle_dir,
         bundle_name,
         out_path,
         options,
+        schema2_only,
     )?;
 
     // Repro workflow helper: if a repro summary exists next to the bundle output root, include it.
@@ -3791,6 +3813,7 @@ fn pack_repro_zip_multi(
     include_root_artifacts: bool,
     include_triage: bool,
     include_screenshots: bool,
+    schema2_only: bool,
     include_renderdoc: bool,
     include_tracy: bool,
     artifacts_root: &Path,
@@ -3869,13 +3892,24 @@ fn pack_repro_zip_multi(
 
     for item in bundles {
         let bundle_dir = resolve_bundle_root_dir(&item.bundle_json)?;
-        zip_add_dir(
+        if schema2_only {
+            let direct_v2 = bundle_dir.join("bundle.schema2.json");
+            let root_v2 = bundle_dir.join("_root").join("bundle.schema2.json");
+            if !direct_v2.is_file() && !root_v2.is_file() {
+                return Err(format!(
+                    "--pack-schema2-only requires bundle.schema2.json (bundle_dir={})",
+                    bundle_dir.display()
+                ));
+            }
+        }
+        zip_add_dir_pack_bundle(
             &mut zip,
             &bundle_dir,
             &bundle_dir,
             &item.prefix,
             out_path,
             options,
+            schema2_only,
         )?;
 
         if include_screenshots {
@@ -4034,14 +4068,45 @@ fn zip_add_dir_filtered(
     Ok(())
 }
 
-fn zip_add_dir(
+fn zip_add_dir_pack_bundle(
     zip: &mut zip::ZipWriter<std::fs::File>,
     dir: &Path,
     base_dir: &Path,
     prefix: &str,
     out_path: &Path,
     options: FileOptions,
+    schema2_only: bool,
 ) -> Result<(), String> {
+    fn rel_starts_with_components(rel: &Path, head: &str, next: &str) -> bool {
+        let mut it = rel.components();
+        let a = it.next().and_then(|c| c.as_os_str().to_str());
+        let b = it.next().and_then(|c| c.as_os_str().to_str());
+        a.is_some_and(|v| v.eq_ignore_ascii_case(head))
+            && b.is_some_and(|v| v.eq_ignore_ascii_case(next))
+    }
+
+    fn should_skip_path(rel: &Path) -> bool {
+        if rel.file_name()
+            .and_then(|s| s.to_str())
+            .is_some_and(|s| s.eq_ignore_ascii_case("bundle.json"))
+        {
+            let parent = rel.parent();
+            let is_root = parent.is_none()
+                || parent.is_some_and(|p| p.as_os_str().is_empty())
+                || parent.is_some_and(|p| p == Path::new("_root"));
+            if is_root {
+                return true;
+            }
+        }
+
+        // Avoid packing the raw bundle.json chunk directory when shipping schema2-only zips.
+        if rel_starts_with_components(rel, "chunks", "bundle_json") {
+            return true;
+        }
+
+        false
+    }
+
     let mut entries: Vec<std::fs::DirEntry> = std::fs::read_dir(dir)
         .map_err(|e| e.to_string())?
         .flatten()
@@ -4059,18 +4124,21 @@ fn zip_add_dir(
             continue;
         }
 
+        let rel = path
+            .strip_prefix(base_dir)
+            .map_err(|_| "failed to compute zip relative path".to_string())?;
+        if schema2_only && should_skip_path(rel) {
+            continue;
+        }
+
         if meta.is_dir() {
-            zip_add_dir(zip, &path, base_dir, prefix, out_path, options)?;
+            zip_add_dir_pack_bundle(zip, &path, base_dir, prefix, out_path, options, schema2_only)?;
             continue;
         }
 
         if !meta.is_file() {
             continue;
         }
-
-        let rel = path
-            .strip_prefix(base_dir)
-            .map_err(|_| "failed to compute zip relative path".to_string())?;
 
         let name = format!("{}/{}", prefix, zip_name(rel));
         zip.start_file(name, options).map_err(|e| e.to_string())?;
@@ -7081,6 +7149,12 @@ mod tests {
         std::fs::create_dir_all(&bundle_dir).expect("create bundle_dir");
         std::fs::write(bundle_dir.join("bundle.schema2.json"), br#"{}"#)
             .expect("write bundle.schema2.json");
+        std::fs::write(bundle_dir.join("bundle.json"), br#"{"schema_version":1}"#)
+            .expect("write bundle.json");
+
+        let chunks_dir = bundle_dir.join("chunks").join("bundle_json");
+        std::fs::create_dir_all(&chunks_dir).expect("create chunks/bundle_json");
+        std::fs::write(chunks_dir.join("0000.json"), br#"{}"#).expect("write chunk");
 
         let artifacts_root = root.join("artifacts");
         std::fs::create_dir_all(&artifacts_root).expect("create artifacts_root");
@@ -7092,6 +7166,7 @@ mod tests {
             false,
             false,
             false,
+            true,
             false,
             false,
             &artifacts_root,
@@ -7101,6 +7176,19 @@ mod tests {
         )
         .expect("pack should succeed");
         assert!(out_zip.is_file(), "expected zip output to exist");
+
+        let f = std::fs::File::open(&out_zip).expect("open zip output");
+        let mut zip = zip::ZipArchive::new(f).expect("open zip archive");
+        zip.by_name("bundle_dir/bundle.schema2.json")
+            .expect("bundle.schema2.json should be present");
+        assert!(
+            zip.by_name("bundle_dir/bundle.json").is_err(),
+            "bundle.json should be skipped when packing schema2-only"
+        );
+        assert!(
+            zip.by_name("bundle_dir/chunks/bundle_json/0000.json").is_err(),
+            "raw bundle.json chunks should be skipped when packing schema2-only"
+        );
     }
 
     #[test]

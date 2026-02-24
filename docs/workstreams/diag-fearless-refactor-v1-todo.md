@@ -79,6 +79,8 @@ This file tracks tasks for `docs/workstreams/diag-fearless-refactor-v1.md`.
 
 - [x] Document recommended defaults for AI loops (env presets) and keep them consistent across tooling and runtime:
   - `docs/ui-diagnostics-and-scripted-tests.md` (AI presets)
+- [x] Keep shareable zips bounded when `bundle.schema2.json` is available:
+  - `diag run|suite|repro --pack --include-all --pack-schema2-only` (or `--schema2-only`).
 - [ ] Ensure `bundle.index.json` / `test_ids.index.json` generation is part of the “pack/repro” happy path (where appropriate).
   - [x] Runtime writes canonical sidecars on dump (native filesystem):
     - [x] `bundle.index.json`
