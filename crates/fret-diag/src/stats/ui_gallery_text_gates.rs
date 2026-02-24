@@ -16,8 +16,8 @@ fn find_latest_labeled_bundle_dir(out_dir: &Path, label: &str) -> Option<PathBuf
             continue;
         }
         let ts = name.split('-').next()?.parse::<u64>().ok()?;
-        let bundle_json = path.join("bundle.json");
-        if !bundle_json.is_file() {
+        let bundle = crate::resolve_bundle_artifact_path(&path);
+        if !bundle.is_file() {
             continue;
         }
         match &best {
@@ -72,8 +72,8 @@ pub(crate) fn check_out_dir_for_ui_gallery_text_rescan_system_fonts_font_stack_k
         )
     })?;
 
-    let before_path = before_dir.join("bundle.json");
-    let after_path = after_dir.join("bundle.json");
+    let before_path = crate::resolve_bundle_artifact_path(&before_dir);
+    let after_path = crate::resolve_bundle_artifact_path(&after_dir);
 
     let before_bytes = std::fs::read(&before_path).map_err(|e| e.to_string())?;
     let after_bytes = std::fs::read(&after_path).map_err(|e| e.to_string())?;
@@ -151,8 +151,8 @@ pub(crate) fn check_out_dir_for_ui_gallery_text_fallback_policy_key_bumps_on_set
         )
     })?;
 
-    let before_path = before_dir.join("bundle.json");
-    let after_path = after_dir.join("bundle.json");
+    let before_path = crate::resolve_bundle_artifact_path(&before_dir);
+    let after_path = crate::resolve_bundle_artifact_path(&after_dir);
 
     let before_bytes = std::fs::read(&before_path).map_err(|e| e.to_string())?;
     let after_bytes = std::fs::read(&after_path).map_err(|e| e.to_string())?;
@@ -244,7 +244,7 @@ pub(crate) fn check_out_dir_for_ui_gallery_text_mixed_script_bundled_fallback_co
         )
     })?;
 
-    let bundle_path = dir.join("bundle.json");
+    let bundle_path = crate::resolve_bundle_artifact_path(&dir);
     let bytes = std::fs::read(&bundle_path).map_err(|e| e.to_string())?;
     let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
 
@@ -347,8 +347,8 @@ pub(crate) fn check_out_dir_for_ui_gallery_text_fallback_policy_key_bumps_on_loc
         )
     })?;
 
-    let before_path = before_dir.join("bundle.json");
-    let after_path = after_dir.join("bundle.json");
+    let before_path = crate::resolve_bundle_artifact_path(&before_dir);
+    let after_path = crate::resolve_bundle_artifact_path(&after_dir);
 
     let before_bytes = std::fs::read(&before_path).map_err(|e| e.to_string())?;
     let after_bytes = std::fs::read(&after_path).map_err(|e| e.to_string())?;
