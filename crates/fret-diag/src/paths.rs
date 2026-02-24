@@ -274,6 +274,32 @@ pub(crate) fn resolve_bundle_artifact_path_no_materialize(bundle_dir: &Path) -> 
     None
 }
 
+pub(crate) fn resolve_bundle_schema2_artifact_path_no_materialize(
+    bundle_dir: &Path,
+) -> Option<PathBuf> {
+    if !bundle_dir.is_dir() {
+        if bundle_dir.is_file()
+            && bundle_dir
+                .file_name()
+                .is_some_and(|s| s.eq_ignore_ascii_case("bundle.schema2.json"))
+        {
+            return Some(bundle_dir.to_path_buf());
+        }
+        return None;
+    }
+
+    let direct_v2 = bundle_dir.join("bundle.schema2.json");
+    if direct_v2.is_file() {
+        return Some(direct_v2);
+    }
+    let root_v2 = bundle_dir.join("_root").join("bundle.schema2.json");
+    if root_v2.is_file() {
+        return Some(root_v2);
+    }
+
+    None
+}
+
 pub(crate) fn wait_for_bundle_artifact_from_script_result(
     out_dir: &Path,
     result: &crate::stats::ScriptResultSummary,

@@ -421,24 +421,18 @@ pub(crate) fn cmd_doctor(
 
     // If the user points at an out-dir root (no bundle artifacts directly), prefer the latest
     // bundle directory so `doctor` produces a useful report without requiring another argument.
-    let has_bundleish_artifact = bundle_dir.join("bundle.schema2.json").is_file()
-        || bundle_dir
-            .join("_root")
-            .join("bundle.schema2.json")
-            .is_file()
-        || bundle_dir.join("bundle.json").is_file()
-        || bundle_dir.join("_root").join("bundle.json").is_file()
-        || bundle_dir.join("bundle.index.json").is_file()
-        || bundle_dir.join("_root").join("bundle.index.json").is_file()
-        || bundle_dir.join("bundle.meta.json").is_file()
-        || bundle_dir.join("_root").join("bundle.meta.json").is_file()
-        || bundle_dir.join("test_ids.index.json").is_file()
-        || bundle_dir
-            .join("_root")
-            .join("test_ids.index.json")
-            .is_file()
-        || bundle_dir.join("frames.index.json").is_file()
-        || bundle_dir.join("_root").join("frames.index.json").is_file()
+    let has_bundleish_artifact = crate::resolve_bundle_artifact_path_no_materialize(&bundle_dir)
+        .is_some()
+        || [
+            "bundle.index.json",
+            "bundle.meta.json",
+            "test_ids.index.json",
+            "frames.index.json",
+        ]
+        .into_iter()
+        .any(|name| {
+            bundle_dir.join(name).is_file() || bundle_dir.join("_root").join(name).is_file()
+        })
         || bundle_dir.join("manifest.json").is_file()
         || bundle_dir.join("_root").join("manifest.json").is_file();
     if !has_bundleish_artifact {
