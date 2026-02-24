@@ -191,9 +191,9 @@ pub(crate) fn apply_post_run_checks(
         let mut best: Option<std::path::PathBuf> = None;
 
         loop {
-            let from_latest = compare::read_latest_pointer(out_dir).map(normalize_bundle_path);
-            let from_scan =
-                compare::find_latest_export_dir(out_dir).map(|dir| normalize_bundle_path(dir));
+            let (from_latest, from_scan) = crate::latest::latest_bundle_dir_candidates(out_dir);
+            let from_latest = from_latest.map(normalize_bundle_path);
+            let from_scan = from_scan.map(|dir| normalize_bundle_path(dir));
 
             let candidate = match (from_latest, from_scan) {
                 (Some(a), Some(b)) => match (path_ts(&a), path_ts(&b)) {

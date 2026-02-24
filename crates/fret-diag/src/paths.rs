@@ -234,9 +234,7 @@ pub(crate) fn resolve_bundle_artifact_path(path: &Path) -> PathBuf {
         }
     }
 
-    if let Some(dir) = crate::compare::read_latest_pointer(path)
-        .or_else(|| crate::compare::find_latest_export_dir(path))
-    {
+    if let Some(dir) = crate::latest::latest_bundle_dir_path_opt(path) {
         let nested_v2 = dir.join("bundle.schema2.json");
         if nested_v2.is_file() {
             return nested_v2;
@@ -302,8 +300,7 @@ pub(crate) fn wait_for_bundle_artifact_from_script_result(
             .and_then(|s| (!s.trim().is_empty()).then_some(s.trim()))
             .map(PathBuf::from)
             .map(|p| if p.is_absolute() { p } else { out_dir.join(p) })
-            .or_else(|| crate::compare::read_latest_pointer(out_dir))
-            .or_else(|| crate::compare::find_latest_export_dir(out_dir));
+            .or_else(|| crate::latest::latest_bundle_dir_path_opt(out_dir));
         if let Some(dir) = dir {
             let bundle_path = resolve_bundle_artifact_path(&dir);
             if bundle_path.is_file() {

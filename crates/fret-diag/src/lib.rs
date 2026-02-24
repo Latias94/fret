@@ -42,6 +42,7 @@ mod frames_index;
 mod gates;
 mod hotspots_lite;
 mod json_bundle;
+mod latest;
 mod lint;
 mod pack_zip;
 mod paths;

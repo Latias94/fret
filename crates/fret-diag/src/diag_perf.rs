@@ -738,8 +738,7 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
                     Some(bundle_dir) => Some(resolve_bundle_artifact_path(
                         &resolved_out_dir.join(bundle_dir),
                     )),
-                    None => read_latest_pointer(&resolved_out_dir)
-                        .or_else(|| find_latest_export_dir(&resolved_out_dir))
+                    None => crate::latest::latest_bundle_dir_path_opt(&resolved_out_dir)
                         .map(|path| resolve_bundle_artifact_path(path.as_path())),
                 }
             };
@@ -1690,8 +1689,7 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
                     Some(bundle_dir) => Some(resolve_bundle_artifact_path(
                         &resolved_out_dir.join(bundle_dir),
                     )),
-                    None => read_latest_pointer(&resolved_out_dir)
-                        .or_else(|| find_latest_export_dir(&resolved_out_dir))
+                    None => crate::latest::latest_bundle_dir_path_opt(&resolved_out_dir)
                         .map(|path| resolve_bundle_artifact_path(path.as_path())),
                 }
             };
