@@ -5567,7 +5567,7 @@ fn wait_for_devtools_bundle_dumped(
             }
 
             // Non-embedded bundle (native filesystem case): allow materialization to fall back to
-            // reading the runtime's bundle.json.
+            // reading the runtime's bundle artifact.
             return Ok(dumped);
         }
 
@@ -5608,14 +5608,14 @@ fn materialize_devtools_bundle_dumped(
             if runtime_bundle_path != bundle_path || !bundle_path.is_file() {
                 let bytes = std::fs::read(&runtime_bundle_path).map_err(|e| {
                     format!(
-                        "bundle.dumped did not include an embedded bundle payload, and runtime bundle.json was not readable ({}): {}",
+                        "bundle.dumped did not include an embedded bundle payload, and the runtime bundle artifact was not readable ({}): {}",
                         runtime_bundle_path.display(),
                         e
                     )
                 })?;
                 let bundle = serde_json::from_slice::<serde_json::Value>(&bytes).map_err(|e| {
                     format!(
-                        "runtime bundle.json was not valid JSON ({}): {}",
+                        "runtime bundle artifact was not valid JSON ({}): {}",
                         runtime_bundle_path.display(),
                         e
                     )
