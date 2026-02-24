@@ -24,9 +24,18 @@ pub fn compare_bundles_to_json(
     b_bundle_json_path: &Path,
     opts: CompareOptionsV1,
 ) -> Result<serde_json::Value, String> {
+    compare_bundle_artifacts_to_json(a_bundle_json_path, b_bundle_json_path, opts)
+}
+
+/// Compares two bundle artifacts (`bundle.json` or `bundle.schema2.json`) and returns a JSON report.
+pub fn compare_bundle_artifacts_to_json(
+    a_bundle_artifact_path: &Path,
+    b_bundle_artifact_path: &Path,
+    opts: CompareOptionsV1,
+) -> Result<serde_json::Value, String> {
     let report = crate::compare::compare_bundles(
-        a_bundle_json_path,
-        b_bundle_json_path,
+        a_bundle_artifact_path,
+        b_bundle_artifact_path,
         crate::compare::CompareOptions {
             warmup_frames: opts.warmup_frames,
             eps_px: opts.eps_px,

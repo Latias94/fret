@@ -477,8 +477,8 @@ impl FretDevtoolsMcp {
 
         let a_src = resolve_repo_path(&repo_root, &params.0.a);
         let b_src = resolve_repo_path(&repo_root, &params.0.b);
-        let a_bundle = resolve_bundle_json_path(&a_src);
-        let b_bundle = resolve_bundle_json_path(&b_src);
+        let a_bundle = resolve_bundle_artifact_path(&a_src);
+        let b_bundle = resolve_bundle_artifact_path(&b_src);
 
         let opts = fret_diag::api::CompareOptionsV1 {
             warmup_frames: params.0.warmup_frames.unwrap_or(0),
@@ -486,7 +486,7 @@ impl FretDevtoolsMcp {
             ignore_bounds: params.0.ignore_bounds.unwrap_or(false),
             ignore_scene_fingerprint: params.0.ignore_scene_fingerprint.unwrap_or(false),
         };
-        let report = fret_diag::api::compare_bundles_to_json(&a_bundle, &b_bundle, opts)?;
+        let report = fret_diag::api::compare_bundle_artifacts_to_json(&a_bundle, &b_bundle, opts)?;
         let ok = report.get("ok").and_then(|v| v.as_bool()).unwrap_or(false);
 
         Ok(Json(CompareBundlesResultV1 {
@@ -1704,9 +1704,13 @@ fn resolve_repo_path(repo_root: &Path, raw: &str) -> PathBuf {
     }
 }
 
-fn resolve_bundle_json_path(src: &Path) -> PathBuf {
+fn resolve_bundle_artifact_path(src: &Path) -> PathBuf {
     if src.is_file() {
         return src.to_path_buf();
+    }
+    let schema2 = src.join("bundle.schema2.json");
+    if schema2.is_file() {
+        return schema2;
     }
     src.join("bundle.json")
 }
