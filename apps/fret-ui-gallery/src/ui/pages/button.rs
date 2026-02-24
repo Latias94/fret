@@ -5,6 +5,7 @@ use crate::ui::doc_layout::{self, DocSection};
 pub(super) fn preview_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let theme = Theme::global(&*cx.app).snapshot();
     let outline_fg = ColorRef::Color(theme.color_token("foreground"));
+    let destructive_fg = ColorRef::Color(theme.color_token("destructive-foreground"));
 
     let variants = {
         doc_layout::wrap_controls_row_snapshot(cx, &theme, Space::N2, |cx| {
@@ -165,10 +166,13 @@ pub(super) fn preview_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
                     .variant(shadcn::ButtonVariant::Destructive)
                     .disabled(true)
                     .children([
-                        shadcn::Spinner::new().into_element(cx),
+                        shadcn::Spinner::new()
+                            .color(destructive_fg.clone())
+                            .into_element(cx),
                         ui::text(cx, "Deleting")
                             .font_medium()
                             .nowrap()
+                            .text_color(destructive_fg.clone())
                             .into_element(cx),
                     ])
                     .into_element(cx),
