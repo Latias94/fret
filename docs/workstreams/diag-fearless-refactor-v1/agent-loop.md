@@ -32,6 +32,15 @@ Note:
 
 - When using `diag run` / `diag suite` / `diag perf`, `--bundle-doctor fix` will also attempt the schema2 repair (when `bundle.json` exists).
 
+## Optional: Pack a small shareable zip (schema2-only)
+
+If you want to share a repro bundle, prefer schema2-only zips (avoid shipping a huge `bundle.json`):
+
+- Ensure schema2 exists (or let `--bundle-doctor fix` handle it when possible):
+  - `fretboard diag doctor --fix-schema2 <bundle_dir> --warmup-frames <n>`
+- Pack:
+  - `fretboard diag pack <bundle_dir> --include-all --pack-schema2-only`
+
 ## Step 1: First-pass perf triage (no bundle.json materialization)
 
 Use `triage --lite` (frames-index based) to identify the worst frames quickly:
@@ -43,7 +52,7 @@ Use `triage --lite` (frames-index based) to identify the worst frames quickly:
 
 ## Step 2: Perf “hotspots” fallback (slow frames report)
 
-When `bundle.json` is too large to run JSON-size hotspots, use:
+When the bundle artifact is too large to run JSON-size hotspots, use:
 
 - `fretboard diag hotspots --lite <bundle_dir> --warmup-frames <n> --metric total`
 

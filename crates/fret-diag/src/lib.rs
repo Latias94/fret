@@ -4086,7 +4086,8 @@ fn zip_add_dir_pack_bundle(
     }
 
     fn should_skip_path(rel: &Path) -> bool {
-        if rel.file_name()
+        if rel
+            .file_name()
             .and_then(|s| s.to_str())
             .is_some_and(|s| s.eq_ignore_ascii_case("bundle.json"))
         {
@@ -4132,7 +4133,15 @@ fn zip_add_dir_pack_bundle(
         }
 
         if meta.is_dir() {
-            zip_add_dir_pack_bundle(zip, &path, base_dir, prefix, out_path, options, schema2_only)?;
+            zip_add_dir_pack_bundle(
+                zip,
+                &path,
+                base_dir,
+                prefix,
+                out_path,
+                options,
+                schema2_only,
+            )?;
             continue;
         }
 
@@ -7186,7 +7195,8 @@ mod tests {
             "bundle.json should be skipped when packing schema2-only"
         );
         assert!(
-            zip.by_name("bundle_dir/chunks/bundle_json/0000.json").is_err(),
+            zip.by_name("bundle_dir/chunks/bundle_json/0000.json")
+                .is_err(),
             "raw bundle.json chunks should be skipped when packing schema2-only"
         );
     }

@@ -110,6 +110,11 @@ pub(crate) fn cmd_agent(
                 "why": "Optional: write bundle.schema2.json for large bundles to keep tooling and AI loops fast.",
             },
             {
+                "id": "pack_schema2_only_optional",
+                "command": format!("fretboard diag pack {} --include-all --pack-schema2-only --warmup-frames {}", bundle_dir.display(), warmup_frames),
+                "why": "Optional: pack a small shareable zip (schema2-only; avoids shipping a huge bundle.json).",
+            },
+            {
                 "id": "triage_lite_total",
                 "command": format!("fretboard diag triage --lite {} --warmup-frames {} --metric total", bundle_dir.display(), warmup_frames),
                 "why": "First-pass perf triage (slowest frames) without materializing bundle artifacts.",
