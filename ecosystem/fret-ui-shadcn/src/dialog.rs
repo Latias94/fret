@@ -9,7 +9,7 @@ use fret_ui::element::{
     OpacityProps, PressableA11y, PressableProps, RingPlacement, RingStyle, SemanticFlexProps,
     SemanticsDecoration, SizeStyle,
 };
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::glass::{GlassPanelProps, glass_panel};
@@ -764,21 +764,48 @@ impl DialogFooter {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        use fret_ui_kit::declarative::stack;
+
+        // Upstream shadcn uses Tailwind `sm:` (viewport breakpoint), so match it via viewport
+        // queries (ADR 0232).
+        let sm_breakpoint = fret_ui_kit::declarative::viewport_width_at_least(
+            cx,
+            Invalidation::Layout,
+            fret_ui_kit::declarative::viewport_tailwind::SM,
+            fret_ui_kit::declarative::ViewportQueryHysteresis::default(),
+        );
+
         let props = decl_style::container_props(
             Theme::global(&*cx.app),
             ChromeRefinement::default().pt(Space::N4),
-            LayoutRefinement::default(),
+            LayoutRefinement::default().w_full(),
         );
-        let children = self.children;
-        shadcn_layout::container_hstack(
-            cx,
-            props,
-            fret_ui_kit::declarative::stack::HStackProps::default()
-                .gap(Space::N2)
-                .justify_end()
-                .items_center(),
-            children,
-        )
+
+        let mut children = self.children;
+        if sm_breakpoint {
+            shadcn_layout::container_hstack(
+                cx,
+                props,
+                stack::HStackProps::default()
+                    .gap(Space::N2)
+                    .layout(LayoutRefinement::default().w_full())
+                    .justify_end()
+                    .items_center(),
+                children,
+            )
+        } else {
+            // Tailwind: `flex-col-reverse gap-2`
+            children.reverse();
+            shadcn_layout::container_vstack(
+                cx,
+                props,
+                stack::VStackProps::default()
+                    .gap(Space::N2)
+                    .layout(LayoutRefinement::default().w_full())
+                    .items_stretch(),
+                children,
+            )
+        }
     }
 }
 
@@ -966,6 +993,164 @@ mod tests {
 
         assert_eq!(changed, Some(true));
         assert_eq!(completed, Some(true));
+    }
+
+    fn render_dialog_frame_with_footer(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        open: Model<bool>,
+        cancel_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        action_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+    ) {
+        OverlayController::begin_frame(app, window);
+
+        let root =
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
+                let trigger = cx.pressable(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(10.0));
+                            layout.size.height = Length::Px(Px(10.0));
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    |_cx, _st| Vec::new(),
+                );
+
+                let dialog = Dialog::new(open.clone()).into_element(
+                    cx,
+                    |_cx| trigger,
+                    move |cx| {
+                        let cancel_id_out = cancel_id_out.clone();
+                        let cancel = cx.pressable_with_id(
+                            PressableProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Px(Px(120.0));
+                                    layout.size.height = Length::Px(Px(44.0));
+                                    layout
+                                },
+                                enabled: true,
+                                focusable: true,
+                                ..Default::default()
+                            },
+                            |cx, _st, id| {
+                                cancel_id_out.set(Some(id));
+                                vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                            },
+                        );
+
+                        let action_id_out = action_id_out.clone();
+                        let action = cx.pressable_with_id(
+                            PressableProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Px(Px(120.0));
+                                    layout.size.height = Length::Px(Px(44.0));
+                                    layout
+                                },
+                                enabled: true,
+                                focusable: true,
+                                ..Default::default()
+                            },
+                            |cx, _st, id| {
+                                action_id_out.set(Some(id));
+                                vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                            },
+                        );
+
+                        let footer = DialogFooter::new(vec![cancel, action]).into_element(cx);
+                        DialogContent::new(vec![footer]).into_element(cx)
+                    },
+                );
+
+                vec![dialog]
+            });
+
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+    }
+
+    #[test]
+    fn dialog_footer_stacks_on_base_viewport_and_rows_on_sm() {
+        fn assert_footer_layout(bounds: Rect, expect_row: bool) {
+            let window = AppWindowId::default();
+            let mut app = App::new();
+            let mut ui: UiTree<App> = UiTree::new();
+            ui.set_window(window);
+
+            let open = app.models_mut().insert(true);
+            let cancel_id = Rc::new(Cell::new(None));
+            let action_id = Rc::new(Cell::new(None));
+
+            let mut services = FakeServices;
+
+            // Viewport queries read the committed per-window environment snapshot, so render two
+            // frames to allow the width to commit before asserting layout.
+            for frame in 1..=2 {
+                app.set_frame_id(FrameId(frame));
+                render_dialog_frame_with_footer(
+                    &mut ui,
+                    &mut app,
+                    &mut services,
+                    window,
+                    bounds,
+                    open.clone(),
+                    cancel_id.clone(),
+                    action_id.clone(),
+                );
+                ui.layout_all(&mut app, &mut services, bounds, 1.0);
+            }
+
+            let cancel_bounds = fret_ui::elements::bounds_for_element(
+                &mut app,
+                window,
+                cancel_id.get().expect("cancel element id"),
+            )
+            .expect("cancel bounds");
+            let action_bounds = fret_ui::elements::bounds_for_element(
+                &mut app,
+                window,
+                action_id.get().expect("action element id"),
+            )
+            .expect("action bounds");
+
+            if expect_row {
+                assert!(
+                    (cancel_bounds.origin.y.0 - action_bounds.origin.y.0).abs() < 2.0,
+                    "expected footer buttons to share a row; cancel={cancel_bounds:?} action={action_bounds:?}"
+                );
+                assert!(cancel_bounds.origin.x.0 < action_bounds.origin.x.0);
+            } else {
+                // col-reverse => action above cancel
+                assert!(action_bounds.origin.y.0 < cancel_bounds.origin.y.0);
+            }
+        }
+
+        // Base viewport: vertical stack (col-reverse => action above cancel).
+        assert_footer_layout(
+            Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(480.0), Px(600.0)),
+            ),
+            false,
+        );
+
+        // `sm:` viewport: horizontal row (cancel left of action).
+        assert_footer_layout(
+            Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(800.0), Px(600.0)),
+            ),
+            true,
+        );
     }
 
     #[derive(Default)]
