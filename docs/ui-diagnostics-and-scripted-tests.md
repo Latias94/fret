@@ -52,7 +52,8 @@ Implementation pointers (where the code lives today):
 4. Locate the most recent bundle directory:
 
    - `cargo run -p fretboard -- diag latest`
-   - The bundle file is `bundle.json` under that directory.
+   - The full bundle file is `bundle.json` under that directory.
+   - Tooling may also write a compact schema2 view: `bundle.schema2.json` (preferred by tooling when present).
 
 By default bundles go under `target/fret-diag/<timestamp>/` and `target/fret-diag/latest.txt` is updated.
 
@@ -139,14 +140,14 @@ $env:FRET_DIAG_REDACT_TEXT=0
 When `bundle.json` is too large to share or inspect directly, prefer a bounded artifact set:
 
 1. Get quick context:
-   - `cargo run -p fretboard -- diag meta <bundle_dir|bundle.json> --meta-report`
+   - `cargo run -p fretboard -- diag meta <bundle_dir|bundle.json|bundle.schema2.json> --meta-report`
 2. Find a stable selector (usually `test_id`):
-   - `cargo run -p fretboard -- diag query test-id <bundle_dir|bundle.json> <pattern> --top 50`
+   - `cargo run -p fretboard -- diag query test-id <bundle_dir|bundle.json|bundle.schema2.json> <pattern> --top 50`
    - Optional: find the best snapshot quickly:
-     - `cargo run -p fretboard -- diag index <bundle_dir|bundle.json> --json`
-     - `cargo run -p fretboard -- diag slice <bundle_dir|bundle.json> --test-id <test_id>`
+     - `cargo run -p fretboard -- diag index <bundle_dir|bundle.json|bundle.schema2.json> --json`
+     - `cargo run -p fretboard -- diag slice <bundle_dir|bundle.json|bundle.schema2.json> --test-id <test_id>`
 3. Export a compact packet for AI / code review:
-   - `cargo run -p fretboard -- diag ai-packet <bundle_dir|bundle.json> --test-id <test_id> --packet-out <dir>`
+   - `cargo run -p fretboard -- diag ai-packet <bundle_dir|bundle.json|bundle.schema2.json> --test-id <test_id> --packet-out <dir>`
 
 ## Optional: dump a frame screenshot alongside the bundle
 
@@ -185,9 +186,9 @@ Workflow tip:
 - To generate a shareable `.zip` for the latest bundle: `cargo run -p fretboard -- diag pack`
 - To include nearby artifacts (`script.json`, `script.result.json`, `pick.result.json`), `triage.json`, and screenshots (when present): `cargo run -p fretboard -- diag pack --include-all`
 - The bundle viewer surfaces these zip artifacts (and lets you copy/download them) when they are present under `_root/`.
-- To generate a machine-readable `triage.json` next to a bundle: `cargo run -p fretboard -- diag triage <bundle_dir|bundle.json>`
-- To generate (or refresh) a cached bundle metadata sidecar (`bundle.meta.json`): `cargo run -p fretboard -- diag meta <bundle_dir|bundle.json> --json`
-- To print a compact human meta report (semantics inline vs table + table size indicators): `cargo run -p fretboard -- diag meta <bundle_dir|bundle.json> --meta-report`
+- To generate a machine-readable `triage.json` next to a bundle: `cargo run -p fretboard -- diag triage <bundle_dir|bundle.json|bundle.schema2.json>`
+- To generate (or refresh) a cached bundle metadata sidecar (`bundle.meta.json`): `cargo run -p fretboard -- diag meta <bundle_dir|bundle.json|bundle.schema2.json> --json`
+- To print a compact human meta report (semantics inline vs table + table size indicators): `cargo run -p fretboard -- diag meta <bundle_dir|bundle.json|bundle.schema2.json> --meta-report`
 - To include `triage.json` in a share zip: `cargo run -p fretboard -- diag pack --include-triage`
 - To include screenshots in a share zip: `cargo run -p fretboard -- diag pack --include-screenshots` (packs `target/fret-diag/screenshots/<bundle_timestamp>/` into `_root/screenshots/` when available)
 - If you’re sharing via chat, “Paste JSON” is a fast way to load a copied `bundle.json` payload without files.
@@ -198,13 +199,13 @@ Workflow tip:
 Prefer sharing **bounded artifacts** over the full `bundle.json` (especially in AI loops):
 
 - Generate an “AI packet” directory (includes `bundle.meta.json`, `bundle.index.json`, `test_ids.index.json`, and a budget report):
-  - `cargo run -p fretboard -- diag ai-packet <bundle_dir|bundle.json> --packet-out <dir>`
+  - `cargo run -p fretboard -- diag ai-packet <bundle_dir|bundle.json|bundle.schema2.json> --packet-out <dir>`
   - If `bundle.schema2.json` is present, the packet may also include it (within the packet budget).
     - To generate it: `cargo run -p fretboard -- diag doctor --fix-schema2 <bundle_dir> --warmup-frames <n>`
 - Focus on a specific target when possible (writes a bounded `slice.*.json` alongside the packet):
-  - `cargo run -p fretboard -- diag ai-packet <bundle_dir|bundle.json> --test-id <test_id> --packet-out <dir>`
+  - `cargo run -p fretboard -- diag ai-packet <bundle_dir|bundle.json|bundle.schema2.json> --test-id <test_id> --packet-out <dir>`
 - If you only need a semantics-focused subset, slice directly:
-  - `cargo run -p fretboard -- diag slice <bundle_dir|bundle.json> --test-id <test_id> --out <path>`
+  - `cargo run -p fretboard -- diag slice <bundle_dir|bundle.json|bundle.schema2.json> --test-id <test_id> --out <path>`
 
 ## DevTools GUI (preview)
 
