@@ -451,7 +451,7 @@ fn cmd_query_snapshots(
         });
         let Some(step) = step else {
             return Err(format!(
-                "bundle.index.json is missing script step markers for step_index={step_index} (tip: run `fretboard diag index <out_dir>/<run_id>/bundle.json` so it can see script.result.json)"
+                "bundle.index.json is missing script step markers for step_index={step_index} (tip: run `fretboard diag index <out_dir>/<run_id>` so it can see script.result.json)"
             ));
         };
         let window = step.get("window").and_then(|v| v.as_u64()).ok_or_else(|| {

@@ -208,8 +208,13 @@ pub(crate) fn resolve_bundle_json_path(path: &Path) -> PathBuf {
     }
 
     if let Some(run_id) = crate::util::read_script_result_run_id(&path.join("script.result.json")) {
-        let run_id_bundle =
-            crate::run_artifacts::run_id_artifact_dir(path, run_id).join("bundle.json");
+        let run_id_dir = crate::run_artifacts::run_id_artifact_dir(path, run_id);
+        let run_id_schema2 = run_id_dir.join("bundle.schema2.json");
+        if run_id_schema2.is_file() {
+            return run_id_schema2;
+        }
+
+        let run_id_bundle = run_id_dir.join("bundle.json");
         if run_id_bundle.is_file() {
             return run_id_bundle;
         }
@@ -255,10 +260,14 @@ pub(crate) fn wait_for_bundle_json_from_script_result(
 
     let deadline = Instant::now() + Duration::from_millis(timeout_ms.clamp(250, 5_000));
     while Instant::now() < deadline {
-        let run_id_bundle_path =
-            crate::run_artifacts::run_id_artifact_dir(out_dir, result.run_id).join("bundle.json");
-        if run_id_bundle_path.is_file() {
-            return Some(run_id_bundle_path);
+        let run_id_dir = crate::run_artifacts::run_id_artifact_dir(out_dir, result.run_id);
+        let run_id_schema2 = run_id_dir.join("bundle.schema2.json");
+        if run_id_schema2.is_file() {
+            return Some(run_id_schema2);
+        }
+        let run_id_bundle_json = run_id_dir.join("bundle.json");
+        if run_id_bundle_json.is_file() {
+            return Some(run_id_bundle_json);
         }
 
         let dir = result

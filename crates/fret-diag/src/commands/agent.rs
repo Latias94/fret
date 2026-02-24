@@ -127,7 +127,7 @@ pub(crate) fn cmd_agent(
             {
                 "id": "hotspots_lite_total",
                 "command": format!("fretboard diag hotspots --lite {} --warmup-frames {} --metric total", bundle_dir.display(), warmup_frames),
-                "why": "Perf hotspots (slow frames) fallback when bundle.json is too large for JSON-size hotspots.",
+                "why": "Perf hotspots (slow frames) fallback when a bundle artifact is too large for JSON-size hotspots.",
             },
             {
                 "id": "slice_targeted",

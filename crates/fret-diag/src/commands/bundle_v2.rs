@@ -214,7 +214,7 @@ fn convert_bundle_value_to_schema2_in_place(
             let windows = bundle
                 .get("windows")
                 .and_then(|v| v.as_array())
-                .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+                .ok_or_else(|| "invalid bundle artifact: missing windows".to_string())?;
 
             let entries = crate::json_bundle::build_semantics_table_entries_from_windows(windows);
             let tables = serde_json::json!({
@@ -234,7 +234,7 @@ fn convert_bundle_value_to_schema2_in_place(
     let windows_mut = bundle
         .get_mut("windows")
         .and_then(|v| v.as_array_mut())
-        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+        .ok_or_else(|| "invalid bundle artifact: missing windows".to_string())?;
 
     apply_semantics_mode_inline(windows_mut.as_mut_slice(), mode, &semantics);
     if mode == "off" {

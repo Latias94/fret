@@ -7034,6 +7034,68 @@ mod tests {
     }
 
     #[test]
+    fn resolve_bundle_json_path_prefers_run_id_schema2_from_script_result() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-resolve-bundle-run-id-schema2-{}",
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).expect("create temp root");
+
+        let run_id_dir = root.join("777");
+        std::fs::create_dir_all(&run_id_dir).expect("create run_id dir");
+        std::fs::write(run_id_dir.join("bundle.schema2.json"), br#"{"schema_version":2}"#)
+            .expect("write bundle.schema2.json");
+
+        std::fs::write(root.join("script.result.json"), br#"{"run_id":777}"#)
+            .expect("write script.result.json");
+
+        let resolved = resolve_bundle_json_path(&root);
+        assert_eq!(resolved, run_id_dir.join("bundle.schema2.json"));
+    }
+
+    #[test]
+    fn pack_bundle_dir_to_zip_accepts_schema2_only() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-pack-schema2-only-{}",
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).expect("create temp root");
+
+        let bundle_dir = root.join("bundle_dir");
+        std::fs::create_dir_all(&bundle_dir).expect("create bundle_dir");
+        std::fs::write(bundle_dir.join("bundle.schema2.json"), br#"{}"#)
+            .expect("write bundle.schema2.json");
+
+        let artifacts_root = root.join("artifacts");
+        std::fs::create_dir_all(&artifacts_root).expect("create artifacts_root");
+
+        let out_zip = root.join("out.zip");
+        pack_bundle_dir_to_zip(
+            &bundle_dir,
+            &out_zip,
+            false,
+            false,
+            false,
+            false,
+            false,
+            &artifacts_root,
+            10,
+            BundleStatsSort::Invalidation,
+            0,
+        )
+        .expect("pack should succeed");
+        assert!(out_zip.is_file(), "expected zip output to exist");
+    }
+
+    #[test]
     fn resolve_bundle_json_path_records_integrity_failure_reason_code_on_chunk_hash_mismatch() {
         let root = std::env::temp_dir().join(format!(
             "fret-diag-resolve-bundle-chunks-integrity-{}",
