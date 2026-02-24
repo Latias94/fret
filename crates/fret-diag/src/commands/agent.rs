@@ -105,6 +105,11 @@ pub(crate) fn cmd_agent(
                 "why": "Self-heal: regenerate missing/invalid sidecars (including frames.index.json).",
             },
             {
+                "id": "doctor_fix_schema2_optional",
+                "command": format!("fretboard diag doctor --fix-schema2 {} --warmup-frames {}", bundle_dir.display(), warmup_frames),
+                "why": "Optional: write bundle.schema2.json for large bundles to keep tooling and AI loops fast.",
+            },
+            {
                 "id": "triage_lite_total",
                 "command": format!("fretboard diag triage --lite {} --warmup-frames {} --metric total", bundle_dir.display(), warmup_frames),
                 "why": "First-pass perf triage (slowest frames) without materializing bundle.json.",
