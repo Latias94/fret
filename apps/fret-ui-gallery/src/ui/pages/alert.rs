@@ -76,13 +76,11 @@ pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                 "Enable it in profile settings to reduce eye strain during long sessions.",
             )
             .into_element(cx),
-            shadcn::AlertAction::new([
-                shadcn::Button::new("Enable")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .size(shadcn::ButtonSize::Sm)
-                    .into_element(cx)
-                    .test_id("ui-gallery-alert-action-enable"),
-            ])
+            shadcn::AlertAction::new([shadcn::Button::new("Enable")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .into_element(cx)
+                .test_id("ui-gallery-alert-action-enable")])
             .into_element(cx),
         ])
         .refine_layout(LayoutRefinement::default().w_full().max_w(Px(520.0)))
