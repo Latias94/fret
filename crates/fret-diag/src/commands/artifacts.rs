@@ -128,7 +128,7 @@ pub(crate) fn cmd_triage(
 
     let Some(src) = positionals.first().cloned() else {
         return Err(
-            "missing bundle path (try: fretboard diag triage <bundle_dir|bundle.json|bundle.schema2.json>)"
+            "missing bundle artifact path (try: fretboard diag triage <bundle_dir|bundle.json|bundle.schema2.json>)"
                 .to_string(),
         );
     };
@@ -216,7 +216,7 @@ pub(crate) fn cmd_lint(
     }
     let Some(src) = rest.first().cloned() else {
         return Err(
-            "missing bundle path (try: fretboard diag lint <bundle_dir|bundle.json|bundle.schema2.json>)"
+            "missing bundle artifact path (try: fretboard diag lint <bundle_dir|bundle.json|bundle.schema2.json>)"
                 .to_string(),
         );
     };
@@ -273,7 +273,7 @@ pub(crate) fn cmd_test_ids(
     }
     let Some(src) = rest.first().cloned() else {
         return Err(
-            "missing bundle path (try: fretboard diag test-ids <bundle_dir|bundle.json|bundle.schema2.json>)"
+            "missing bundle artifact path (try: fretboard diag test-ids <bundle_dir|bundle.json|bundle.schema2.json>)"
                 .to_string(),
         );
     };
@@ -333,7 +333,7 @@ pub(crate) fn cmd_test_ids_index(
     }
     let Some(src) = rest.first().cloned() else {
         return Err(
-            "missing bundle path (try: fretboard diag test-ids-index <bundle_dir|bundle.json|bundle.schema2.json>)"
+            "missing bundle artifact path (try: fretboard diag test-ids-index <bundle_dir|bundle.json|bundle.schema2.json>)"
                 .to_string(),
         );
     };
@@ -369,7 +369,7 @@ pub(crate) fn cmd_frames_index(
     }
     let Some(src) = rest.first().cloned() else {
         return Err(
-            "missing bundle path (try: fretboard diag frames-index <bundle_dir|bundle.json|bundle.schema2.json>)"
+            "missing bundle artifact path (try: fretboard diag frames-index <bundle_dir|bundle.json|bundle.schema2.json>)"
                 .to_string(),
         );
     };
@@ -410,7 +410,7 @@ pub(crate) fn cmd_meta(
     }
     let Some(src) = rest.first().cloned() else {
         return Err(
-            "missing bundle path (try: fretboard diag meta <bundle_dir|bundle.json|bundle.schema2.json>)"
+            "missing bundle artifact path (try: fretboard diag meta <bundle_dir|bundle.json|bundle.schema2.json>)"
                 .to_string(),
         );
     };
