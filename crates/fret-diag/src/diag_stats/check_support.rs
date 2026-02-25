@@ -17,6 +17,13 @@ pub(crate) struct StatsLiteCheckSupport {
     pub(crate) note: &'static str,
 }
 
+pub(crate) fn stats_lite_support_for(check_name: &str) -> Option<StatsLiteCheckSupport> {
+    STATS_LITE_SUPPORTED_CHECKS
+        .iter()
+        .copied()
+        .find(|c| c.check_name == check_name)
+}
+
 pub(crate) const STATS_LITE_SUPPORTED_CHECKS: &[StatsLiteCheckSupport] = &[
     StatsLiteCheckSupport {
         check_name: "check-hover-layout-max",
@@ -74,3 +81,17 @@ pub(crate) const STATS_LITE_SUPPORTED_CHECKS: &[StatsLiteCheckSupport] = &[
         note: "streams bundle JSON; resolves semantics via schema2 tables when needed",
     },
 ];
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn stats_lite_support_for_returns_some_for_known_checks() {
+        assert!(stats_lite_support_for("check-hover-layout-max").is_some());
+        assert!(stats_lite_support_for("check-view-cache-reuse-min").is_some());
+        assert!(stats_lite_support_for("check-wheel-scroll").is_some());
+        assert!(stats_lite_support_for("check-drag-cache-root-paint-only").is_some());
+        assert!(stats_lite_support_for("check-not-a-real-check").is_none());
+    }
+}

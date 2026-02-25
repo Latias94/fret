@@ -230,9 +230,12 @@ Goal: common tooling should keep working even when `bundle.json` is too large to
     - `crates/fret-diag/src/diag_stats.rs`
     - `crates/fret-diag/src/stats.rs`
 
-- [ ] Audit `diag stats --check-*` flags for stats-lite compatibility.
-  - In stats-lite mode, checks that require full-bundle traversal should fail fast with an actionable message.
-  - When a check can be implemented from sidecars (frames/bundle indexes), port it so it works for huge bundles.
+- [x] Audit `diag stats --check-*` flags for stats-lite compatibility.
+  - In stats-lite mode, checks that are not on the allowlist fail fast with an actionable message.
+  - When a check can be implemented from sidecars (frames/bundle indexes) or streaming, port it so it works for huge bundles.
+  - Evidence anchors:
+    - `crates/fret-diag/src/diag_stats.rs`
+    - `crates/fret-diag/src/diag_stats/check_support.rs`
 
 - [x] Evolve `frames.index.json` (schema v1, additive) so stats-lite can run more checks.
   - [x] Add top-level `features: string[]` (additive; do not bump `schema_version` yet).

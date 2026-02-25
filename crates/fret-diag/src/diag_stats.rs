@@ -3,7 +3,7 @@ use crate::stats;
 
 mod check_support;
 
-use check_support::{STATS_LITE_SUPPORTED_CHECKS, StatsLiteCheckKind};
+use check_support::{STATS_LITE_SUPPORTED_CHECKS, StatsLiteCheckKind, stats_lite_support_for};
 
 #[derive(Debug, Clone)]
 pub(crate) struct StatsCmdContext {
@@ -158,6 +158,10 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
             return Ok(());
         }
 
+        if stats_lite_support_for(check_name).is_some() {
+            return Ok(());
+        }
+
         fn stats_lite_supported_checks_table() -> String {
             let mut rows: Vec<(StatsLiteCheckKind, &'static str, &'static str)> =
                 STATS_LITE_SUPPORTED_CHECKS
@@ -222,6 +226,12 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
         stats::check_bundle_for_idle_no_paint_min(&bundle_path, out_dir, min, warmup_frames)?;
     }
     if let Some(test_id) = check_pixels_changed_test_id.as_deref() {
+        ensure_check_supported_in_stats_mode(
+            derived_from_frames_index,
+            "check-pixels-changed",
+            &bundle_path,
+            warmup_frames,
+        )?;
         let bundle_dir = resolve_bundle_root_dir(&bundle_path)?;
         let out_dir = bundle_dir.parent().unwrap_or_else(|| Path::new("."));
         stats::check_out_dir_for_pixels_changed(out_dir, test_id, warmup_frames)?;
@@ -240,9 +250,21 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
         )?;
     }
     if let Some(test_id) = check_wheel_scroll_test_id.as_deref() {
+        ensure_check_supported_in_stats_mode(
+            derived_from_frames_index,
+            "check-wheel-scroll",
+            &bundle_path,
+            warmup_frames,
+        )?;
         stats::check_bundle_for_wheel_scroll(bundle_path.as_path(), test_id, warmup_frames)?;
     }
     if let Some(test_id) = check_wheel_scroll_hit_changes_test_id.as_deref() {
+        ensure_check_supported_in_stats_mode(
+            derived_from_frames_index,
+            "check-wheel-scroll-hit-changes",
+            &bundle_path,
+            warmup_frames,
+        )?;
         stats::check_bundle_for_wheel_scroll_hit_changes(
             bundle_path.as_path(),
             test_id,
@@ -259,6 +281,12 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
         stats::check_bundle_for_drag_cache_root_paint_only(&bundle_path, test_id, warmup_frames)?;
     }
     if let Some(max_allowed) = check_hover_layout_max {
+        ensure_check_supported_in_stats_mode(
+            derived_from_frames_index,
+            "check-hover-layout-max",
+            &bundle_path,
+            warmup_frames,
+        )?;
         check_report_for_hover_layout_invalidations(&report, max_allowed)?;
     }
     if check_gc_sweep_liveness {
@@ -269,6 +297,14 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
             warmup_frames,
         )?;
         stats::check_bundle_for_gc_sweep_liveness(bundle_path.as_path(), warmup_frames)?;
+    }
+    if !check_notify_hotspot_file_max.is_empty() {
+        ensure_check_supported_in_stats_mode(
+            derived_from_frames_index,
+            "check-notify-hotspot-file-max",
+            &bundle_path,
+            warmup_frames,
+        )?;
     }
     for (file, max) in &check_notify_hotspot_file_max {
         stats::check_bundle_for_notify_hotspot_file_max(
@@ -299,6 +335,12 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
     if let Some(min) = check_view_cache_reuse_min
         && min > 0
     {
+        ensure_check_supported_in_stats_mode(
+            derived_from_frames_index,
+            "check-view-cache-reuse-min",
+            &bundle_path,
+            warmup_frames,
+        )?;
         if derived_from_frames_index {
             stats::check_frames_index_for_view_cache_reuse_min(
                 bundle_path.as_path(),
@@ -312,6 +354,12 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
     if let Some(min) = check_overlay_synthesis_min
         && min > 0
     {
+        ensure_check_supported_in_stats_mode(
+            derived_from_frames_index,
+            "check-overlay-synthesis-min",
+            &bundle_path,
+            warmup_frames,
+        )?;
         if derived_from_frames_index {
             stats::check_frames_index_for_overlay_synthesis_min(
                 bundle_path.as_path(),
@@ -325,6 +373,12 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
     if let Some(min) = check_viewport_input_min
         && min > 0
     {
+        ensure_check_supported_in_stats_mode(
+            derived_from_frames_index,
+            "check-viewport-input-min",
+            &bundle_path,
+            warmup_frames,
+        )?;
         if derived_from_frames_index {
             stats::check_frames_index_for_viewport_input_min(bundle_path.as_path(), min, warmup_frames)?;
         } else {
@@ -334,6 +388,12 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
     if let Some(min) = check_dock_drag_min
         && min > 0
     {
+        ensure_check_supported_in_stats_mode(
+            derived_from_frames_index,
+            "check-dock-drag-min",
+            &bundle_path,
+            warmup_frames,
+        )?;
         if derived_from_frames_index {
             stats::check_frames_index_for_dock_drag_min(bundle_path.as_path(), min, warmup_frames)?;
         } else {
@@ -343,6 +403,12 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
     if let Some(min) = check_viewport_capture_min
         && min > 0
     {
+        ensure_check_supported_in_stats_mode(
+            derived_from_frames_index,
+            "check-viewport-capture-min",
+            &bundle_path,
+            warmup_frames,
+        )?;
         if derived_from_frames_index {
             stats::check_frames_index_for_viewport_capture_min(
                 bundle_path.as_path(),
