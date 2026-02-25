@@ -11,6 +11,7 @@ new_key_type! {
     pub struct PathId;
     pub struct RenderTargetId;
     pub struct MaterialId;
+    pub struct EffectId;
 }
 
 /// Window-scoped view identifier used for "dirty view" tracking (GPUI-aligned).

@@ -1,7 +1,7 @@
 use crate::{
     Px, SvgFit, ViewportFit,
     geometry::{Corners, Edges, Point, Rect, Transform2D},
-    ids::{ImageId, PathId, RenderTargetId, SvgId, TextBlobId},
+    ids::{EffectId, ImageId, PathId, RenderTargetId, SvgId, TextBlobId},
 };
 use serde::{Deserialize, Serialize};
 use slotmap::Key;
@@ -125,6 +125,37 @@ pub enum EffectQuality {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DitherMode {
     Bayer4x4,
+}
+
+/// Fixed-size custom effect parameters (v1).
+///
+/// This is intentionally a small, bounded payload for capability-gated custom effects.
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct EffectParamsV1 {
+    pub vec4s: [[f32; 4]; 4],
+}
+
+impl EffectParamsV1 {
+    pub const ZERO: Self = Self {
+        vec4s: [[0.0; 4]; 4],
+    };
+
+    pub fn sanitize(self) -> Self {
+        let mut out = self;
+        for v in &mut out.vec4s {
+            for x in v {
+                if !x.is_finite() {
+                    *x = 0.0;
+                }
+            }
+        }
+        out
+    }
+
+    pub fn is_finite(self) -> bool {
+        self.vec4s.iter().flatten().all(|&x| x.is_finite())
+    }
 }
 
 /// Bounded procedural noise parameters (v1).
@@ -423,6 +454,10 @@ pub enum EffectStep {
     Dither {
         mode: DitherMode,
     },
+    CustomV1 {
+        id: EffectId,
+        params: EffectParamsV1,
+    },
 }
 
 impl EffectStep {
@@ -440,6 +475,10 @@ impl EffectStep {
             EffectStep::BackdropWarpV2(w) => EffectStep::BackdropWarpV2(w.sanitize()),
             EffectStep::DropShadowV1(s) => EffectStep::DropShadowV1(s.sanitize()),
             EffectStep::NoiseV1(n) => EffectStep::NoiseV1(n.sanitize()),
+            EffectStep::CustomV1 { id, params } => EffectStep::CustomV1 {
+                id,
+                params: params.sanitize(),
+            },
             EffectStep::AlphaThreshold { cutoff, soft } => EffectStep::AlphaThreshold {
                 cutoff: if cutoff.is_finite() { cutoff } else { 0.0 },
                 soft: if soft.is_finite() { soft.max(0.0) } else { 0.0 },
