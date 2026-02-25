@@ -7,6 +7,7 @@
 //!
 //! This is a tooling-focused crate (not a runtime dependency for apps).
 
+#![cfg(not(target_arch = "wasm32"))]
 #![recursion_limit = "512"]
 
 use std::collections::BTreeSet;

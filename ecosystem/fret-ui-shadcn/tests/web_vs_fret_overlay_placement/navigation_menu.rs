@@ -16,6 +16,9 @@ fn fret_navigation_menu_tracks_trigger_when_underlay_scrolls() {
         CoreSize::new(Px(480.0), Px(400.0)),
     );
 
+    let left = Px(24.0);
+    let top = Px(64.0);
+
     let open_value = "components";
     let model: Model<Option<Arc<str>>> = app.models_mut().insert(None);
     let root_id_out: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
@@ -301,6 +304,9 @@ fn fret_navigation_menu_tracks_trigger_when_underlay_scrolls_via_wheel_over_over
         Point::new(Px(0.0), Px(0.0)),
         CoreSize::new(Px(480.0), Px(400.0)),
     );
+
+    let left = Px(24.0);
+    let top = Px(64.0);
 
     let open_value = "components";
     let model: Model<Option<Arc<str>>> = app.models_mut().insert(None);

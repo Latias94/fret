@@ -73,13 +73,6 @@ pub mod virtual_list;
 pub(crate) mod widget;
 pub(crate) mod windowed_surface_host;
 
-#[cfg(feature = "compat-policy-shortcuts")]
-compile_error!(
-    "Feature `compat-policy-shortcuts` has been removed. \
-Use component-owned action hooks (ADR 0074) via `ElementCx::{pressable_*, dismissible_*, roving_*}` \
-or `fret-ui-kit::declarative::action_hooks::ActionHooksExt`."
-);
-
 pub use elements::{ElementContext, ElementRuntime, GlobalElementId};
 #[cfg(any(test, feature = "compat-retained-widgets"))]
 pub use fixed_split::FixedSplit;

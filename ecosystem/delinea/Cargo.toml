@@ -11,7 +11,7 @@ documentation.workspace = true
 
 [dependencies]
 fret-core = { path = "../../crates/fret-core" }
-serde = { workspace = true, optional = true }
+serde = { workspace = true, optional = true, features = ["rc"] }
 thiserror = { workspace = true }
 time = { workspace = true }
 

@@ -190,6 +190,8 @@ fn shadcn_text<H: UiHost>(
         color: None,
         wrap: TextWrap::Word,
         overflow: TextOverflow::Clip,
+        align: Default::default(),
+        ink_overflow: Default::default(),
     })
 }
 
@@ -206,6 +208,8 @@ fn shadcn_text_with_layout<H: UiHost>(
         color: None,
         wrap: TextWrap::Word,
         overflow: TextOverflow::Clip,
+        align: Default::default(),
+        ink_overflow: Default::default(),
     })
 }
 
@@ -221,6 +225,8 @@ fn shadcn_text_line<H: UiHost>(
         color: None,
         wrap: TextWrap::None,
         overflow: TextOverflow::Clip,
+        align: Default::default(),
+        ink_overflow: Default::default(),
     })
 }
 
@@ -384,7 +390,7 @@ fn shadcn_nav_menu_demo_home_panel<H: UiHost>(
             },
             cols: 1,
             rows: None,
-            gap,
+            gap: gap.into(),
             padding: Edges::all(Px(0.0)).into(),
             justify: MainAlign::Start,
             align: CrossAlign::Stretch,
@@ -537,7 +543,7 @@ fn shadcn_nav_menu_demo_home_desktop_panel<H: UiHost>(
                 layout.size.width = Length::Px(right_w);
                 layout
             },
-            gap,
+            gap: gap.into(),
             padding: Edges::all(Px(0.0)).into(),
             justify: MainAlign::Start,
             align: CrossAlign::Stretch,
@@ -552,7 +558,7 @@ fn shadcn_nav_menu_demo_home_desktop_panel<H: UiHost>(
                 layout.size.width = Length::Px(Px(500.0)); // lg:w-[500px]
                 layout
             },
-            gap,
+            gap: gap.into(),
             padding: Edges::all(Px(0.0)).into(),
             justify: MainAlign::Start,
             align: CrossAlign::Stretch,
@@ -873,7 +879,7 @@ fn shadcn_nav_menu_demo_components_panel_impl<H: UiHost>(
             },
             cols,
             rows: None,
-            gap,
+            gap: gap.into(),
             padding: Edges::all(Px(0.0)).into(),
             justify: MainAlign::Start,
             align: CrossAlign::Stretch,
@@ -3225,7 +3231,7 @@ fn build_dropdown_menu_dialog_open_snapshot(
             .align(DropdownMenuAlign::End)
             .into_element(
                 cx,
-                |cx| button.clone().into_element(cx),
+                move |cx| button.into_element(cx),
                 |_cx| {
                     vec![
                         DropdownMenuEntry::Label(DropdownMenuLabel::new("File Actions")),
@@ -3379,7 +3385,7 @@ fn build_item_dropdown_open_snapshot(
         let dropdown = DropdownMenu::new(open.clone())
             .min_width(Px(288.0))
             .align(DropdownMenuAlign::End)
-            .into_element(cx, |cx| button.clone().into_element(cx), |_cx| entries);
+            .into_element(cx, move |cx| button.into_element(cx), |_cx| entries);
 
         cx.container(
             ContainerProps {
@@ -3569,7 +3575,7 @@ fn render_button_group_demo_dropdown_menu<H: UiHost>(
         .min_width(Px(208.0))
         .into_element(
             cx,
-            |cx| right_button.clone().into_element(cx),
+            move |cx| right_button.into_element(cx),
             |cx| {
                 vec![
                     DropdownMenuEntry::Group(DropdownMenuGroup::new(vec![
@@ -3634,7 +3640,7 @@ fn render_button_group_demo_dropdown_menu<H: UiHost>(
                     align: CrossAlign::Stretch,
                     wrap: false,
                 },
-                move |cx| vec![left_button.clone().into_element(cx), dropdown.clone()],
+                move |cx| vec![left_button.into_element(cx), dropdown],
             )]
         },
     );
@@ -4202,7 +4208,7 @@ fn assert_combobox_dropdown_menu_overlay_placement_matches(web_name: &str) {
                 .min_width(Px(200.0))
                 .into_element(
                     cx,
-                    |cx| button.clone().into_element(cx),
+                    move |cx| button.into_element(cx),
                     |cx| {
                         vec![
                             DropdownMenuEntry::Label(DropdownMenuLabel::new("Actions")),
@@ -4300,7 +4306,7 @@ fn assert_combobox_dropdown_menu_constrained_menu_item_height_matches(web_name: 
             .min_width(Px(200.0))
             .into_element(
                 cx,
-                |cx| button.clone().into_element(cx),
+                move |cx| button.into_element(cx),
                 |cx| {
                     vec![
                         DropdownMenuEntry::Label(DropdownMenuLabel::new("Actions")),
@@ -4423,7 +4429,7 @@ fn assert_combobox_dropdown_menu_constrained_menu_content_insets_match(web_name:
             .min_width(Px(200.0))
             .into_element(
                 cx,
-                |cx| button.clone().into_element(cx),
+                move |cx| button.into_element(cx),
                 |cx| {
                     vec![
                         DropdownMenuEntry::Label(DropdownMenuLabel::new("Actions")),
@@ -4557,6 +4563,8 @@ fn build_breadcrumb_dropdown_open_snapshot(theme: &WebGoldenTheme) -> fret_core:
                                                 color: Some(muted),
                                                 wrap: TextWrap::Word,
                                                 overflow: TextOverflow::Clip,
+                                                align: Default::default(),
+                                                ink_overflow: Default::default(),
                                             });
 
                                             let icon = fret_ui_kit::declarative::icon::icon_with(
@@ -14014,35 +14022,35 @@ fn command_dialog_open_snapshot(theme: &WebGoldenTheme) -> fret_core::SemanticsS
     let query: Model<String> = app.models_mut().insert(String::new());
     let open: Model<bool> = app.models_mut().insert(false);
 
-    let entries = vec![
-        fret_ui_shadcn::CommandGroup::new(vec![
-            fret_ui_shadcn::CommandItem::new("Calendar").on_select("command.calendar"),
-            fret_ui_shadcn::CommandItem::new("Search Emoji").on_select("command.search_emoji"),
-            fret_ui_shadcn::CommandItem::new("Calculator").on_select("command.calculator"),
-        ])
-        .heading("Suggestions")
-        .into(),
-        fret_ui_shadcn::CommandSeparator::new().into(),
-        fret_ui_shadcn::CommandGroup::new(vec![
-            fret_ui_shadcn::CommandItem::new("Profile")
-                .shortcut("⌘P")
-                .on_select("command.profile"),
-            fret_ui_shadcn::CommandItem::new("Billing")
-                .shortcut("⌘B")
-                .on_select("command.billing"),
-            fret_ui_shadcn::CommandItem::new("Settings")
-                .shortcut("⌘S")
-                .on_select("command.settings"),
-        ])
-        .heading("Settings")
-        .into(),
-    ];
-
     let render = |cx: &mut ElementContext<'_, App>| {
         use fret_ui_shadcn::{Button, CommandDialog};
 
+        let entries = vec![
+            fret_ui_shadcn::CommandGroup::new(vec![
+                fret_ui_shadcn::CommandItem::new("Calendar").on_select("command.calendar"),
+                fret_ui_shadcn::CommandItem::new("Search Emoji").on_select("command.search_emoji"),
+                fret_ui_shadcn::CommandItem::new("Calculator").on_select("command.calculator"),
+            ])
+            .heading("Suggestions")
+            .into(),
+            fret_ui_shadcn::CommandSeparator::new().into(),
+            fret_ui_shadcn::CommandGroup::new(vec![
+                fret_ui_shadcn::CommandItem::new("Profile")
+                    .shortcut("⌘P")
+                    .on_select("command.profile"),
+                fret_ui_shadcn::CommandItem::new("Billing")
+                    .shortcut("⌘B")
+                    .on_select("command.billing"),
+                fret_ui_shadcn::CommandItem::new("Settings")
+                    .shortcut("⌘S")
+                    .on_select("command.settings"),
+            ])
+            .heading("Settings")
+            .into(),
+        ];
+
         CommandDialog::new(open.clone(), query.clone(), Vec::new())
-            .entries(entries.clone())
+            .entries(entries)
             .into_element(cx, |cx| Button::new("Open").into_element(cx))
     };
 

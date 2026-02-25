@@ -16,6 +16,9 @@ fn fret_context_menu_does_not_move_when_underlay_scrolls() {
         CoreSize::new(Px(480.0), Px(400.0)),
     );
 
+    let left = Px(24.0);
+    let top = Px(64.0);
+
     let open = app.models_mut().insert(false);
     let scroll_handle = ScrollHandle::default();
 

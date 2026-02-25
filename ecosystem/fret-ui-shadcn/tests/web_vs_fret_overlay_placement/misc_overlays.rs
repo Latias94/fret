@@ -16,6 +16,9 @@ fn fret_tooltip_tracks_trigger_when_underlay_scrolls() {
         CoreSize::new(Px(480.0), Px(400.0)),
     );
 
+    let left = Px(24.0);
+    let top = Px(64.0);
+
     let scroll_handle = ScrollHandle::default();
     let trigger_test_id = "scroll-underlay-tooltip-trigger";
 
@@ -259,6 +262,9 @@ fn fret_popover_tracks_trigger_when_underlay_scrolls() {
         Point::new(Px(0.0), Px(0.0)),
         CoreSize::new(Px(480.0), Px(400.0)),
     );
+
+    let left = Px(24.0);
+    let top = Px(64.0);
 
     let open = app.models_mut().insert(false);
     let scroll_handle = ScrollHandle::default();
@@ -511,6 +517,9 @@ fn fret_hover_card_tracks_trigger_when_underlay_scrolls() {
         Point::new(Px(0.0), Px(0.0)),
         CoreSize::new(Px(480.0), Px(400.0)),
     );
+
+    let left = Px(24.0);
+    let top = Px(64.0);
 
     let scroll_handle = ScrollHandle::default();
     let trigger_test_id = "scroll-underlay-hover-card-trigger";

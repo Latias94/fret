@@ -58,7 +58,7 @@ impl Div<f32> for Px {
     }
 }
 
-#[derive(Debug, Default, Clone, Copy, PartialEq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct Point {
     pub x: Px,
     pub y: Px,
@@ -70,7 +70,7 @@ impl Point {
     }
 }
 
-#[derive(Debug, Default, Clone, Copy, PartialEq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct Size {
     pub width: Px,
     pub height: Px,
@@ -82,7 +82,7 @@ impl Size {
     }
 }
 
-#[derive(Debug, Default, Clone, Copy, PartialEq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct Rect {
     pub origin: Point,
     pub size: Size,

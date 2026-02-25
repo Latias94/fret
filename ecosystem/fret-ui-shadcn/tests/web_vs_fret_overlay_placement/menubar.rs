@@ -19,6 +19,9 @@ fn fret_menubar_menu_tracks_trigger_when_underlay_scrolls() {
         CoreSize::new(Px(480.0), Px(400.0)),
     );
 
+    let left = Px(24.0);
+    let top = Px(64.0);
+
     let scroll_handle = ScrollHandle::default();
     let file_test_id = "scroll-underlay-menubar-file";
 

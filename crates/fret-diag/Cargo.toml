@@ -11,6 +11,7 @@ documentation.workspace = true
 publish = false
 
 [dependencies]
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 serde.workspace = true
 serde_json.workspace = true
 zip.workspace = true

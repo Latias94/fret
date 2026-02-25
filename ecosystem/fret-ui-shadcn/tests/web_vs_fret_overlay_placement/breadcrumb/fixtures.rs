@@ -123,6 +123,8 @@ fn build_breadcrumb_dropdown_button(
                                             color: Some(muted),
                                             wrap: TextWrap::Word,
                                             overflow: TextOverflow::Clip,
+                                            align: Default::default(),
+                                            ink_overflow: Default::default(),
                                         });
 
                                         let icon = fret_ui_kit::declarative::icon::icon_with(
@@ -285,7 +287,8 @@ fn build_breadcrumb_responsive_drawer(
                                                             padding: Edges::symmetric(
                                                                 Px(0.0),
                                                                 Px(4.0),
-                                                            ),
+                                                            )
+                                                            .into(),
                                                             ..Default::default()
                                                         },
                                                         move |cx| {

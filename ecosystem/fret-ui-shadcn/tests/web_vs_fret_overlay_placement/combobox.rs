@@ -16,6 +16,9 @@ fn fret_combobox_popover_tracks_trigger_when_underlay_scrolls() {
         CoreSize::new(Px(480.0), Px(400.0)),
     );
 
+    let left = Px(24.0);
+    let top = Px(64.0);
+
     let value: Model<Option<Arc<str>>> = app.models_mut().insert(None);
     let open: Model<bool> = app.models_mut().insert(false);
     let scroll_handle = ScrollHandle::default();
@@ -261,6 +264,9 @@ fn fret_combobox_responsive_drawer_blocks_underlay_scroll_on_mobile() {
         Point::new(Px(0.0), Px(0.0)),
         CoreSize::new(Px(480.0), Px(400.0)),
     );
+
+    let left = Px(24.0);
+    let top = Px(64.0);
 
     let value: Model<Option<Arc<str>>> = app.models_mut().insert(None);
     let open: Model<bool> = app.models_mut().insert(false);
