@@ -7,6 +7,7 @@ pub(super) fn preview_navigation_menu(cx: &mut ElementContext<'_, App>) -> Vec<A
     struct NavigationMenuModels {
         demo_value: Option<Model<Option<Arc<str>>>>,
         rtl_value: Option<Model<Option<Arc<str>>>>,
+        md_breakpoint_query_uses_container: Option<Model<bool>>,
     }
 
     let muted_foreground = cx.with_theme(|theme| theme.color_token("muted-foreground"));
@@ -32,6 +33,48 @@ pub(super) fn preview_navigation_menu(cx: &mut ElementContext<'_, App>) -> Vec<A
             model
         }
     };
+    let md_breakpoint_query_uses_container = match state.md_breakpoint_query_uses_container {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(false);
+            cx.with_state(NavigationMenuModels::default, |st| {
+                st.md_breakpoint_query_uses_container = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let md_breakpoint_query = if cx
+        .watch_model(&md_breakpoint_query_uses_container)
+        .cloned()
+        .unwrap_or(false)
+    {
+        shadcn::navigation_menu::NavigationMenuMdBreakpointQuery::Container
+    } else {
+        shadcn::navigation_menu::NavigationMenuMdBreakpointQuery::Viewport
+    };
+
+    let md_breakpoint_query_toggle = shadcn::FieldGroup::new([shadcn::Field::new([
+        shadcn::FieldContent::new([
+            shadcn::FieldLabel::new("MD breakpoint query source")
+                .for_control("ui-gallery-navigation-menu-md-breakpoint-query-switch")
+                .into_element(cx),
+            shadcn::FieldDescription::new(
+                "Toggle to drive `md:*` behavior by local container width (editor-first) instead of window viewport width (web parity).",
+            )
+            .into_element(cx),
+        ])
+        .into_element(cx),
+        shadcn::Switch::new(md_breakpoint_query_uses_container.clone())
+            .control_id("ui-gallery-navigation-menu-md-breakpoint-query-switch")
+            .a11y_label("MD breakpoint query uses container width")
+            .into_element(cx),
+    ])
+    .orientation(shadcn::FieldOrientation::Horizontal)
+    .into_element(cx)])
+    .refine_layout(LayoutRefinement::default().w_full().max_w(Px(720.0)))
+    .into_element(cx)
+    .test_id("ui-gallery-navigation-menu-md-breakpoint-query");
 
     let list_item = |cx: &mut ElementContext<'_, App>,
                      model: Model<Option<Arc<str>>>,
@@ -110,6 +153,16 @@ pub(super) fn preview_navigation_menu(cx: &mut ElementContext<'_, App>) -> Vec<A
     };
 
     let demo = {
+        let region_props = fret_ui::element::LayoutQueryRegionProps {
+            layout: cx.with_theme(|theme| {
+                fret_ui_kit::declarative::style::layout_style(
+                    theme,
+                    LayoutRefinement::default().w_px(Px(640.0)).min_w_0(),
+                )
+            }),
+            name: None,
+        };
+
         let getting_started = shadcn::NavigationMenuItem::new(
             "getting_started",
             "Getting started",
@@ -277,19 +330,39 @@ pub(super) fn preview_navigation_menu(cx: &mut ElementContext<'_, App>) -> Vec<A
         let docs = shadcn::NavigationMenuItem::new("docs", "Docs", std::iter::empty())
             .trigger_test_id("ui-gallery-navigation-menu-demo-trigger-docs");
 
-        let menu = shadcn::NavigationMenu::new(demo_value.clone())
-            .list(shadcn::NavigationMenuList::new([
-                getting_started,
-                components,
-                with_icon,
-                docs,
-            ]))
-            .viewport_test_id("ui-gallery-navigation-menu-demo-viewport")
-            .into_element(cx);
-        menu
+        fret_ui_kit::declarative::container_query_region_with_id(
+            cx,
+            "ui-gallery.navigation_menu.demo",
+            region_props,
+            move |cx, region_id| {
+                vec![
+                    shadcn::NavigationMenu::new(demo_value.clone())
+                        .md_breakpoint_query(md_breakpoint_query)
+                        .container_query_region(region_id)
+                        .list(shadcn::NavigationMenuList::new([
+                            getting_started,
+                            components,
+                            with_icon,
+                            docs,
+                        ]))
+                        .viewport_test_id("ui-gallery-navigation-menu-demo-viewport")
+                        .into_element(cx),
+                ]
+            },
+        )
     };
 
     let rtl = doc_layout::rtl(cx, |cx| {
+        let region_props = fret_ui::element::LayoutQueryRegionProps {
+            layout: cx.with_theme(|theme| {
+                fret_ui_kit::declarative::style::layout_style(
+                    theme,
+                    LayoutRefinement::default().w_px(Px(640.0)).min_w_0(),
+                )
+            }),
+            name: None,
+        };
+
         let getting_started = shadcn::NavigationMenuItem::new(
             "getting_started",
             "البدء",
@@ -457,24 +530,46 @@ pub(super) fn preview_navigation_menu(cx: &mut ElementContext<'_, App>) -> Vec<A
         let docs = shadcn::NavigationMenuItem::new("docs", "الوثائق", std::iter::empty())
             .trigger_test_id("ui-gallery-navigation-menu-rtl-trigger-docs");
 
-        shadcn::NavigationMenu::new(rtl_value.clone())
-            .list(shadcn::NavigationMenuList::new([
-                getting_started,
-                components,
-                with_icon,
-                docs,
-            ]))
-            .viewport_test_id("ui-gallery-navigation-menu-rtl-viewport")
-            .into_element(cx)
+        fret_ui_kit::declarative::container_query_region_with_id(
+            cx,
+            "ui-gallery.navigation_menu.rtl",
+            region_props,
+            move |cx, region_id| {
+                vec![
+                    shadcn::NavigationMenu::new(rtl_value.clone())
+                        .md_breakpoint_query(md_breakpoint_query)
+                        .container_query_region(region_id)
+                        .list(shadcn::NavigationMenuList::new([
+                            getting_started,
+                            components,
+                            with_icon,
+                            docs,
+                        ]))
+                        .viewport_test_id("ui-gallery-navigation-menu-rtl-viewport")
+                        .into_element(cx),
+                ]
+            },
+        )
     });
+
+    let demo_with_toggle = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .gap(Space::N4)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full().min_w_0()),
+        move |_cx| vec![md_breakpoint_query_toggle, demo],
+    );
 
     let body = doc_layout::render_doc_page(
         cx,
         Some("Preview follows shadcn Navigation Menu docs order: Demo, RTL."),
         vec![
-            DocSection::new("Demo", demo).max_w(Px(820.0)).code(
-                "rust",
-                r#"let selected = cx.app.models_mut().insert(None::<Arc<str>>);
+            DocSection::new("Demo", demo_with_toggle)
+                .max_w(Px(820.0))
+                .code(
+                    "rust",
+                    r#"let selected = cx.app.models_mut().insert(None::<Arc<str>>);
 
 let item = shadcn::NavigationMenuItem::new(
     "getting_started",
@@ -491,7 +586,7 @@ let item = shadcn::NavigationMenuItem::new(
 shadcn::NavigationMenu::new(selected)
     .list(shadcn::NavigationMenuList::new([item]))
     .into_element(cx);"#,
-            ),
+                ),
             DocSection::new("RTL", rtl).max_w(Px(820.0)).code(
                 "rust",
                 r#"fret_ui_kit::primitives::direction::with_direction_provider(
