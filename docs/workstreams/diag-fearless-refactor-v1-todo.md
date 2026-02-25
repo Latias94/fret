@@ -260,6 +260,9 @@ Goal: common tooling should keep working even when `bundle.json` is too large to
     - [x] `--check-drag-cache-root-paint-only` (streaming; does not materialize full bundle JSON).
     - [x] `--check-view-cache-reuse-stable-min` (frames-index aggregates; reuse streak tail/max).
     - [x] `--check-idle-no-paint-min` (frames-index aggregates; idle streak tail/max).
+    - [x] `--check-retained-vlist-reconcile-no-notify-min` (streaming; does not materialize full bundle JSON; legacy alias: `--check-retained-vlist-reconcile-no-notify`).
+    - [x] `--check-retained-vlist-keep-alive-reuse-min` (streaming; does not materialize full bundle JSON).
+    - [x] `--check-retained-vlist-attach-detach-max` (streaming; does not materialize full bundle JSON).
 
 ## Plan 2 (defer until Plan 1 is solid)
 

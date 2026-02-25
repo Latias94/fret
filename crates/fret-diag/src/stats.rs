@@ -15,6 +15,7 @@ mod notify_gates_streaming;
 mod overlay_gates;
 mod pixels_changed;
 mod retained_vlist_gates;
+mod retained_vlist_gates_streaming;
 mod script_runtime;
 mod semantics;
 mod stale;
@@ -44,10 +45,10 @@ pub(super) use debug_stats_gates::{
 };
 pub(super) use drag_cache_gates::check_bundle_for_drag_cache_root_paint_only;
 pub(super) use frames_index_gates::{
-    check_frames_index_for_dock_drag_min, check_frames_index_for_overlay_synthesis_min,
-    check_frames_index_for_view_cache_reuse_min, check_frames_index_for_viewport_capture_min,
-    check_frames_index_for_view_cache_reuse_stable_min, check_frames_index_for_viewport_input_min,
-    check_frames_index_for_idle_no_paint_min,
+    check_frames_index_for_dock_drag_min, check_frames_index_for_idle_no_paint_min,
+    check_frames_index_for_overlay_synthesis_min, check_frames_index_for_view_cache_reuse_min,
+    check_frames_index_for_view_cache_reuse_stable_min,
+    check_frames_index_for_viewport_capture_min, check_frames_index_for_viewport_input_min,
 };
 pub(super) use gc_gates::check_bundle_for_gc_sweep_liveness;
 pub(super) use hover_layout_checks::check_report_for_hover_layout_invalidations;

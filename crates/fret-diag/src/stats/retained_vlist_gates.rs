@@ -2,21 +2,27 @@ use std::path::Path;
 
 use crate::util::now_unix_ms;
 
+use super::retained_vlist_gates_streaming::{
+    check_bundle_for_retained_vlist_attach_detach_max_streaming,
+    check_bundle_for_retained_vlist_keep_alive_reuse_min_streaming,
+    check_bundle_for_retained_vlist_reconcile_no_notify_min_streaming,
+};
+
 pub(crate) fn check_bundle_for_retained_vlist_reconcile_no_notify_min(
     bundle_path: &Path,
     min_reconcile_events: u64,
     warmup_frames: u64,
 ) -> Result<(), String> {
-    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
-    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
-    check_bundle_for_retained_vlist_reconcile_no_notify_min_json(
-        &bundle,
+    check_bundle_for_retained_vlist_reconcile_no_notify_min_streaming(
         bundle_path,
         min_reconcile_events,
         warmup_frames,
     )
 }
 
+// Keep the JSON variants for unit tests and for potential in-memory workflows. The CLI uses the
+// streaming wrappers to avoid materializing huge bundle artifacts.
+#[allow(dead_code)]
 pub(crate) fn check_bundle_for_retained_vlist_reconcile_no_notify_min_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
@@ -129,16 +135,14 @@ pub(crate) fn check_bundle_for_retained_vlist_keep_alive_reuse_min(
     min_keep_alive_reuse_frames: u64,
     warmup_frames: u64,
 ) -> Result<(), String> {
-    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
-    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
-    check_bundle_for_retained_vlist_keep_alive_reuse_min_json(
-        &bundle,
+    check_bundle_for_retained_vlist_keep_alive_reuse_min_streaming(
         bundle_path,
         min_keep_alive_reuse_frames,
         warmup_frames,
     )
 }
 
+#[allow(dead_code)]
 pub(crate) fn check_bundle_for_retained_vlist_keep_alive_reuse_min_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
@@ -359,16 +363,14 @@ pub(crate) fn check_bundle_for_retained_vlist_attach_detach_max(
     max_delta: u64,
     warmup_frames: u64,
 ) -> Result<(), String> {
-    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
-    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
-    check_bundle_for_retained_vlist_attach_detach_max_json(
-        &bundle,
+    check_bundle_for_retained_vlist_attach_detach_max_streaming(
         bundle_path,
         max_delta,
         warmup_frames,
     )
 }
 
+#[allow(dead_code)]
 pub(crate) fn check_bundle_for_retained_vlist_attach_detach_max_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,

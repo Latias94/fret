@@ -81,6 +81,21 @@ pub(crate) const STATS_LITE_SUPPORTED_CHECKS: &[StatsLiteCheckSupport] = &[
         note: "streams bundle JSON; parses debug.notify_requests only",
     },
     StatsLiteCheckSupport {
+        check_name: "check-retained-vlist-reconcile-no-notify-min",
+        kind: StatsLiteCheckKind::StreamingBundle,
+        note: "streams bundle JSON; scans retained virtual-list reconciles + dirty_views",
+    },
+    StatsLiteCheckSupport {
+        check_name: "check-retained-vlist-keep-alive-reuse-min",
+        kind: StatsLiteCheckKind::StreamingBundle,
+        note: "streams bundle JSON; scans reconcile records for keep-alive reuse",
+    },
+    StatsLiteCheckSupport {
+        check_name: "check-retained-vlist-attach-detach-max",
+        kind: StatsLiteCheckKind::StreamingBundle,
+        note: "streams bundle JSON; sums attach/detach deltas (record or stats fallback)",
+    },
+    StatsLiteCheckSupport {
         check_name: "check-view-cache-reuse-stable-min",
         kind: StatsLiteCheckKind::FramesIndex,
         note: "uses frames.index.json window aggregates (reuse streak tail/max)",
@@ -100,6 +115,9 @@ mod tests {
     fn stats_lite_support_for_returns_some_for_known_checks() {
         assert!(stats_lite_support_for("check-hover-layout-max").is_some());
         assert!(stats_lite_support_for("check-idle-no-paint-min").is_some());
+        assert!(stats_lite_support_for("check-retained-vlist-reconcile-no-notify-min").is_some());
+        assert!(stats_lite_support_for("check-retained-vlist-keep-alive-reuse-min").is_some());
+        assert!(stats_lite_support_for("check-retained-vlist-attach-detach-max").is_some());
         assert!(stats_lite_support_for("check-view-cache-reuse-min").is_some());
         assert!(stats_lite_support_for("check-wheel-scroll").is_some());
         assert!(stats_lite_support_for("check-drag-cache-root-paint-only").is_some());

@@ -1793,16 +1793,19 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     })?);
                 i += 1;
             }
-            "--check-retained-vlist-reconcile-no-notify" => {
+            "--check-retained-vlist-reconcile-no-notify"
+            | "--check-retained-vlist-reconcile-no-notify-min" => {
                 i += 1;
                 let Some(v) = args.get(i).cloned() else {
                     return Err(
-                        "missing value for --check-retained-vlist-reconcile-no-notify".to_string(),
+                        "missing value for --check-retained-vlist-reconcile-no-notify[-min]"
+                            .to_string(),
                     );
                 };
                 check_retained_vlist_reconcile_no_notify_min =
                     Some(v.parse::<u64>().map_err(|_| {
-                        "invalid value for --check-retained-vlist-reconcile-no-notify".to_string()
+                        "invalid value for --check-retained-vlist-reconcile-no-notify[-min]"
+                            .to_string()
                     })?);
                 i += 1;
             }
