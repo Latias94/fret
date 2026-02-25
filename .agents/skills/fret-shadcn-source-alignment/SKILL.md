@@ -23,6 +23,7 @@ description: "This skill should be used when the user asks to \"align shadcn com
 Ask these to keep the work scoped and landable:
 
 - Which component + mismatch class (dismiss/focus/keyboard nav/placement/style)?
+- Which mechanism axis is likely involved (overlay dismissal/focus restore/hit-testing/transform/clipping/breakpoints)?
 - What is the upstream source of truth (Radix docs vs shadcn composition/source)?
 - Which layer should own the change (mechanism vs policy vs recipe)?
 - What regression protection is required: unit test, parity harness case, and/or diag script?
@@ -49,6 +50,14 @@ Defaults if unclear:
 3. Land a gate: a small invariant test and/or a `tools/diag-scripts/*.json` scripted repro with stable `test_id`.
 
 ## Workflow
+
+### 0) Run the mechanism checklist first (don’t chase pixels yet)
+
+When shadcn “looks almost right”, the remaining drift is usually **mechanism** (overlay routing,
+dismissal/focus, hit-testing, breakpoints), not styling. Before adding/adjusting web goldens, run:
+
+- `.agents/skills/fret-shadcn-source-alignment/references/mechanism-parity-checklist.md`
+- `.agents/skills/fret-shadcn-source-alignment/references/style-parity-checklist.md`
 
 ### 1) Map the mismatch to the right layer
 
@@ -222,6 +231,7 @@ Start points:
 When upstream uses responsive classes or container queries, prefer the in-tree helpers:
 
 - Container queries (Tailwind-compatible breakpoints + hysteresis): `ecosystem/fret-ui-kit/src/declarative/container_queries.rs`
+- Viewport/device queries (Tailwind-compatible breakpoints + hysteresis): `ecosystem/fret-ui-kit/src/declarative/viewport_queries.rs`
 - shadcn recipes that depend on breakpoints (examples live under `ecosystem/fret-ui-shadcn/src/`).
 
 ### 1.97) Visual / token parity (Tailwind → typed theme tokens)
@@ -261,9 +271,10 @@ Use Base UI as an additional reference for:
 1. Prefer fast, targeted Rust unit tests for invariants.
    - Add tests next to the component in `ecosystem/fret-ui-shadcn/src/<component>.rs` (`#[cfg(test)]`).
    - Assert relationships (centering, overlap, clamping, tab order, active descendant, etc.).
-2. Add web-vs-fret parity checks when the mismatch is layout/style outcome.
-   - Existing harness lives under `ecosystem/fret-ui-shadcn/tests/`.
-   - Web goldens live under `goldens/shadcn-web/v4/new-york-v4/*.json`.
+2. Style/layout mismatches: prefer **Fret-side** deterministic checks (tokens, geometry invariants, and
+   state-driven assertions) over adding new web goldens.
+   - If a surface is already covered by an existing web-vs-fret harness, keep it green, but don’t
+     default to expanding golden coverage during mechanism work.
 3. Add an interaction repro script when state machines are involved.
    - Create `tools/diag-scripts/<scenario>.json` and gate it via `fretboard diag run`.
    - Always add/keep stable `test_id` targets in the Fret UI so scripts survive refactors.
@@ -287,16 +298,11 @@ Motion token guidance (ecosystem-level; keep stable for parity work):
 - Material 3 scheme tokens (damping+stiffness):
   - `md.sys.motion.spring.{default|fast|slow}.{spatial|effects}.{damping|stiffness}`
 
-### 4) When a golden is missing
-
-1. Add a targeted invariant test first (so you stop bleeding regressions immediately).
-2. If needed, generate the missing golden later:
-   - Follow `docs/shadcn-web-goldens.md` (extraction from the upstream shadcn v4 app; a local upstream checkout is optional).
-
-### 5) High-value regression targets (start here)
+### 4) High-value regression targets (start here)
 
 - Overlay families: `dropdown-menu`, `select`, `context-menu`, `tooltip`/`hover-card`, `dialog`/`sheet`, `navigation-menu`.
 - Listbox-ish behavior: roving focus, typeahead, active-descendant semantics, scroll clamping in constrained viewports.
+- Responsive decisions: viewport vs container driver, hysteresis around thresholds, and “constrained viewport” max-height/scroll outcomes.
 
 ## Definition of done (what to leave behind)
 
@@ -304,25 +310,31 @@ Motion token guidance (ecosystem-level; keep stable for parity work):
 - A clear layer mapping in the change (no “policy knobs” added to `crates/fret-ui` unless it is truly a mechanism).
 - At least one regression artifact:
   - **state machine** mismatch ⇒ `tools/diag-scripts/*.json` repro with stable `test_id`,
-  - **layout/style** mismatch ⇒ parity harness case and/or deterministic invariant test.
+  - **layout/style** mismatch ⇒ deterministic invariant test (tokens/geometry/paint outcomes).
 - Evidence anchors in the PR/commit message: upstream link(s) + in-tree file(s) + test/script path(s).
 
 ## Evidence anchors
 
 - Layers and contracts: `docs/architecture.md`, `docs/runtime-contract-matrix.md`
 - Reference stack (APG/Radix/Floating/cmdk): `docs/reference-stack-ui-behavior.md`
+- Shadcn parity tracker (canonical; treat older audits as historical): `docs/shadcn-declarative-progress.md`
+- Mechanism checklist (this skill): `.agents/skills/fret-shadcn-source-alignment/references/mechanism-parity-checklist.md`
+- Style checklist (this skill): `.agents/skills/fret-shadcn-source-alignment/references/style-parity-checklist.md`
 - Action hooks (component-owned policy): `docs/action-hooks.md`
 - Overlay ADRs:
   - `docs/adr/0067-overlay-policy-architecture-dismissal-focus-portal.md`
   - `docs/adr/0069-outside-press-and-dismissable-non-modal-overlays.md`
   - `docs/adr/0068-focus-traversal-and-focus-scopes.md`
+- Queries:
+  - Container queries (frame-lagged layout queries): `docs/adr/0231-container-queries-and-frame-lagged-layout-queries-v1.md`
+  - Environment/viewport snapshots: `docs/adr/0232-environment-queries-and-viewport-snapshots-v1.md`
 - A11y acceptance checklist: `docs/a11y-acceptance-checklist.md`
 - Local shadcn component implementations: `ecosystem/fret-ui-shadcn/src/`
 - Policy primitives (roving/typeahead/overlays): `ecosystem/fret-ui-kit/src/primitives/`
-- Responsive helpers: `ecosystem/fret-ui-kit/src/declarative/container_queries.rs`
-- Web-vs-fret harness + goldens:
-  - `ecosystem/fret-ui-shadcn/tests/`
-  - `goldens/shadcn-web/v4/new-york-v4/*.json`
+- Responsive helpers:
+  - `ecosystem/fret-ui-kit/src/declarative/container_queries.rs`
+  - `ecosystem/fret-ui-kit/src/declarative/viewport_queries.rs`
+- Existing web-vs-fret harness (optional, for already-covered surfaces): `ecosystem/fret-ui-shadcn/tests/`
 
 ## Examples
 
@@ -343,8 +355,8 @@ Motion token guidance (ecosystem-level; keep stable for parity work):
 
 - Symptom: upstream behavior is subtle (focus/keyboard/ARIA).
   - Fix: gate semantics and interaction flows before chasing pixels.
-- Symptom: goldens are incomplete.
-  - Fix: rely on scripted diagnostics and targeted Rust tests as primary gates.
+- Symptom: a “visual” mismatch keeps reappearing.
+  - Fix: make it a token- or invariant-level gate (don’t rely on ad-hoc tweaks).
 
 ## Related skills
 
