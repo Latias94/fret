@@ -565,7 +565,7 @@ impl Button {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
+            let theme = Theme::global(&*cx.app).snapshot();
 
             let variant_style = variant_style(self.variant);
             let has_outline_shadow = self.variant == ButtonVariant::Outline;
@@ -588,7 +588,7 @@ impl Button {
                 ButtonSize::Icon | ButtonSize::IconSm | ButtonSize::IconLg
             );
             if is_icon_button {
-                let icon = size.icon_button_size(&theme);
+                let icon = size.icon_button_size(Theme::global(&*cx.app));
                 let has_explicit_w = base_layout
                     .size
                     .as_ref()
@@ -610,7 +610,7 @@ impl Button {
                     base_layout = base_layout.h_px(icon).min_h(icon);
                 }
             } else {
-                let min_h = size.button_h(&theme);
+                let min_h = size.button_h(Theme::global(&*cx.app));
 
                 // shadcn/ui v4 buttons use Tailwind `h-*` to pin the border-box height across
                 // variants (including `outline`). Using `min-height` alone allows chrome padding +
@@ -660,7 +660,7 @@ impl Button {
             let border_override = self.border_override;
             let border_width_override = self.border_width_override;
             let corner_radii_override = self.corner_radii_override;
-            let text_style = button_text_style(&theme, self.size);
+            let text_style = button_text_style(Theme::global(&*cx.app), self.size);
             let text_px = text_style.size;
             let text_weight = self.text_weight_override.unwrap_or(text_style.weight);
             let text_line_height = text_style
