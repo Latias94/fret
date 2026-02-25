@@ -753,9 +753,9 @@ mod tests {
                 ..ThemeConfig::default()
             });
         });
-        let theme = Theme::global(&app).clone();
+        let theme = Theme::global(&app).snapshot();
         assert_eq!(
-            otp_invalid_ring_color(&theme.snapshot()),
+            otp_invalid_ring_color(&theme),
             theme.color_by_key("destructive/40").unwrap()
         );
 
@@ -765,9 +765,9 @@ mod tests {
                 ..ThemeConfig::default()
             });
         });
-        let theme = Theme::global(&app).clone();
+        let theme = Theme::global(&app).snapshot();
         assert_eq!(
-            otp_invalid_ring_color(&theme.snapshot()),
+            otp_invalid_ring_color(&theme),
             theme.color_by_key("destructive/20").unwrap()
         );
     }

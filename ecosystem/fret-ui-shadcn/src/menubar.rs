@@ -4787,8 +4787,7 @@ mod tests {
 
         render_frame(&mut ui, &mut app, &mut services, window, bounds);
 
-        let theme = Theme::global(&app).clone();
-        let expected_bg = theme.color_token("accent");
+        let expected_bg = Theme::global(&app).snapshot().color_token("accent");
 
         let mut scene = fret_core::Scene::default();
         ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);

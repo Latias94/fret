@@ -4012,9 +4012,10 @@ mod tests {
             CoreSize::new(Px(1200.0), Px(720.0)),
         );
 
-        let theme = Theme::global(&app).clone();
-        let expanded_w = sidebar_width(&theme).0;
-        let icon_w = sidebar_width_icon(&theme).0;
+        let (expanded_w, icon_w) = {
+            let theme = Theme::global(&app);
+            (sidebar_width(theme).0, sidebar_width_icon(theme).0)
+        };
 
         let mut expanded_rect = Rect::default();
         for frame in 1..=24 {
@@ -4077,8 +4078,10 @@ mod tests {
             CoreSize::new(Px(1200.0), Px(720.0)),
         );
 
-        let theme = Theme::global(&app).clone();
-        let icon_w = sidebar_width_icon(&theme).0;
+        let icon_w = {
+            let theme = Theme::global(&app);
+            sidebar_width_icon(theme).0
+        };
 
         for frame in 1..=24 {
             let _ = render_sidebar_frame(
@@ -4157,8 +4160,10 @@ mod tests {
             24,
         );
 
-        let theme = Theme::global(&app).clone();
-        let expected_delta = decl_style::space(&theme, Space::N2).0 * 2.0 + 2.0;
+        let expected_delta = {
+            let theme = Theme::global(&app);
+            decl_style::space(theme, Space::N2).0 * 2.0 + 2.0
+        };
 
         let floating_delta = floating_rect.size.width.0 - sidebar_rect.size.width.0;
         assert!(
@@ -4208,8 +4213,10 @@ mod tests {
             2,
         );
 
-        let theme = Theme::global(&app).clone();
-        let expected_shift = decl_style::space(&theme, Space::N2).0;
+        let expected_shift = {
+            let theme = Theme::global(&app);
+            decl_style::space(theme, Space::N2).0
+        };
         let actual_shift = collapsed.origin.x.0 - expanded.origin.x.0;
 
         assert!(
@@ -4256,8 +4263,10 @@ mod tests {
         ui.set_root(root);
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
-        let theme = Theme::global(&app).clone();
-        let icon_w = sidebar_width_icon(&theme).0;
+        let icon_w = {
+            let theme = Theme::global(&app);
+            sidebar_width_icon(theme).0
+        };
 
         let sidebar_node = *ui.children(root).first().expect("sidebar node");
         let sidebar_bounds = ui.debug_node_bounds(sidebar_node).expect("sidebar bounds");

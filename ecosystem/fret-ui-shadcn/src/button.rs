@@ -1046,10 +1046,14 @@ mod tests {
         let mut app = App::new();
         let window = AppWindowId::default();
 
-        let theme = Theme::global(&app).clone();
-        let expected_sm = fret_ui_kit::Size::Small.icon_button_size(&theme);
-        let expected_md = fret_ui_kit::Size::Medium.icon_button_size(&theme);
-        let expected_lg = fret_ui_kit::Size::Large.icon_button_size(&theme);
+        let (expected_sm, expected_md, expected_lg) = {
+            let theme = Theme::global(&app);
+            (
+                fret_ui_kit::Size::Small.icon_button_size(theme),
+                fret_ui_kit::Size::Medium.icon_button_size(theme),
+                fret_ui_kit::Size::Large.icon_button_size(theme),
+            )
+        };
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -1099,7 +1103,7 @@ mod tests {
     fn button_padding_x_compacts_when_icon_present() {
         let mut app = App::new();
         let window = AppWindowId::default();
-        let theme = Theme::global(&app).clone();
+        let theme = Theme::global(&app).snapshot();
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -1192,8 +1196,7 @@ mod tests {
         );
         let mut services = FakeServices;
 
-        let theme = Theme::global(&app).clone();
-        let ring = theme.color_token("ring");
+        let ring = Theme::global(&app).snapshot().color_token("ring");
 
         let id_out: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
 
@@ -1606,9 +1609,10 @@ mod tests {
         let mut scene = Scene::default();
         ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
 
-        let theme = Theme::global(&app).clone();
-        let (expected_bg, _expected_bg_hover, _expected_bg_active, _border, _fg) =
-            variant_colors(&theme, ButtonVariant::Default);
+        let (expected_bg, _expected_bg_hover, _expected_bg_active, _border, _fg) = {
+            let theme = Theme::global(&app);
+            variant_colors(theme, ButtonVariant::Default)
+        };
 
         let mut best_quad: Option<(Rect, Color, f32)> = None;
         for op in scene.ops() {
