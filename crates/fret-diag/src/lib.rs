@@ -44,6 +44,7 @@ mod frames_index;
 mod gates;
 mod hotspots_lite;
 mod json_bundle;
+mod json_stream;
 mod latest;
 mod lint;
 mod math;

@@ -248,6 +248,10 @@ Goal: common tooling should keep working even when `bundle.json` is too large to
 
 - [ ] Port selected `diag stats --check-*` gates to sidecars (so they work in stats-lite mode).
   - [x] Define a small “compat matrix” in code (agent-friendly): `check -> stats-lite data source`.
+  - [x] Reduce streaming gate churn by extracting shared deserializer helpers:
+    - `crates/fret-diag/src/json_stream.rs`
+  - [x] Split retained virtual-list streaming gates into dedicated submodules:
+    - `crates/fret-diag/src/stats/retained_vlist_gates_streaming/`
   - [x] First wave (frames-index aggregates):
     - [x] `--check-viewport-input-min` (post-warmup viewport_input event count).
     - [x] `--check-dock-drag-min` (post-warmup dock-drag-active frames).
