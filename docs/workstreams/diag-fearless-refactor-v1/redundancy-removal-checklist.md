@@ -24,10 +24,11 @@ Regression gates (recommended before removing any medium/high-risk item):
 - [x] Deduplicate "latest bundle" resolution helpers across the crate (not just `commands/*`).
   - Target: `diag_perf.rs`, `post_run_checks.rs`, `paths.rs` call sites.
   - Goal: one shared helper for "latest bundle dir" and one for "latest bundle artifact".
-- [ ] Deduplicate "bundle artifact hint -> choose bundle.schema2.json or bundle.json or sidecars-only" logic everywhere.
+- [x] Deduplicate "bundle artifact hint -> choose bundle.schema2.json or bundle.json or sidecars-only" logic everywhere.
   - Prefer routing through `crates/fret-diag/src/commands/ai_packet.rs` (`ensure_ai_packet_dir_best_effort`).
   - Status: `ensure_ai_packet_dir_best_effort` now uses `resolve_bundle_artifact_path_no_materialize` (2026-02-24).
   - Status: `pack_zip` and `doctor` now use shared helpers for schema2/raw/bundle artifact presence checks (2026-02-24).
+  - Status: no remaining manual schema2/raw presence branching found outside `paths.rs` (2026-02-25).
 - [x] Reduce crate-root "prelude" style imports for stats gates.
   - Status: `diag_stats` / `post_run_checks` now call `stats::check_bundle_for_*`; crate root no longer imports `check_bundle_for_*` from `stats` (2026-02-25).
   - Status: moved `check_bundle_for_idle_no_paint_min` into `stats::stale` (2026-02-25).
