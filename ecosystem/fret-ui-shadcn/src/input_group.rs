@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use crate::button::{ButtonVariant, variant_colors};
+use fret_core::window::ColorScheme;
 use fret_core::{
     Axis, Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextWrap,
 };
@@ -365,7 +366,7 @@ impl InputGroup {
 
                 if self.aria_invalid {
                     let border_color = theme.color_token("destructive");
-                    let ring_key = if theme.name.contains("/dark") {
+                    let ring_key = if theme.color_scheme == Some(ColorScheme::Dark) {
                         "destructive/40"
                     } else {
                         "destructive/20"
@@ -506,8 +507,8 @@ impl InputGroup {
                             FlexProps {
                                 layout,
                                 direction: Axis::Horizontal,
-                                gap,
-                                padding,
+                                gap: gap.into(),
+                                padding: padding.into(),
                                 justify: fret_ui::element::MainAlign::Center,
                                 align: fret_ui::element::CrossAlign::Center,
                                 wrap: false,
@@ -639,8 +640,8 @@ impl InputGroup {
                         FlexProps {
                             layout: control_row_layout,
                             direction: Axis::Horizontal,
-                            gap: Px(0.0),
-                            padding: Edges::all(Px(0.0)),
+                            gap: Px(0.0).into(),
+                            padding: Edges::all(Px(0.0)).into(),
                             justify: fret_ui::element::MainAlign::Start,
                             align: fret_ui::element::CrossAlign::Center,
                             wrap: false,
@@ -700,23 +701,26 @@ impl InputGroup {
                                 ..Default::default()
                             },
                             move |cx| {
-                                vec![cx.flex(
-                                    FlexProps {
-                                        layout: LayoutStyle::default(),
-                                        direction: Axis::Horizontal,
-                                        gap,
-                                        padding: Edges {
-                                            top: pt,
-                                            right: px_3,
-                                            bottom: pb,
-                                            left: px_3,
+                                vec![
+                                    cx.flex(
+                                        FlexProps {
+                                            layout: LayoutStyle::default(),
+                                            direction: Axis::Horizontal,
+                                            gap: gap.into(),
+                                            padding: Edges {
+                                                top: pt,
+                                                right: px_3,
+                                                bottom: pb,
+                                                left: px_3,
+                                            }
+                                            .into(),
+                                            justify: fret_ui::element::MainAlign::Start,
+                                            align: fret_ui::element::CrossAlign::Center,
+                                            wrap: false,
                                         },
-                                        justify: fret_ui::element::MainAlign::Start,
-                                        align: fret_ui::element::CrossAlign::Center,
-                                        wrap: false,
-                                    },
-                                    move |_cx| block_start,
-                                )]
+                                        move |_cx| block_start,
+                                    ),
+                                ]
                             },
                         )
                     });
@@ -759,23 +763,26 @@ impl InputGroup {
                                 ..Default::default()
                             },
                             move |cx| {
-                                vec![cx.flex(
-                                    FlexProps {
-                                        layout: LayoutStyle::default(),
-                                        direction: Axis::Horizontal,
-                                        gap,
-                                        padding: Edges {
-                                            top: pt,
-                                            right: px_3,
-                                            bottom: pb,
-                                            left: px_3,
+                                vec![
+                                    cx.flex(
+                                        FlexProps {
+                                            layout: LayoutStyle::default(),
+                                            direction: Axis::Horizontal,
+                                            gap: gap.into(),
+                                            padding: Edges {
+                                                top: pt,
+                                                right: px_3,
+                                                bottom: pb,
+                                                left: px_3,
+                                            }
+                                            .into(),
+                                            justify: fret_ui::element::MainAlign::Start,
+                                            align: fret_ui::element::CrossAlign::Center,
+                                            wrap: false,
                                         },
-                                        justify: fret_ui::element::MainAlign::Start,
-                                        align: fret_ui::element::CrossAlign::Center,
-                                        wrap: false,
-                                    },
-                                    move |_cx| block_end,
-                                )]
+                                        move |_cx| block_end,
+                                    ),
+                                ]
                             },
                         )
                     });
@@ -790,8 +797,8 @@ impl InputGroup {
                                 )
                             },
                             direction: Axis::Vertical,
-                            gap: Px(0.0),
-                            padding: Edges::all(Px(0.0)),
+                            gap: Px(0.0).into(),
+                            padding: Edges::all(Px(0.0)).into(),
                             justify: fret_ui::element::MainAlign::Start,
                             align: fret_ui::element::CrossAlign::Stretch,
                             wrap: false,
@@ -889,8 +896,8 @@ impl InputGroup {
                         FlexProps {
                             layout: flex_layout,
                             direction: Axis::Horizontal,
-                            gap: Px(0.0),
-                            padding: Edges::all(Px(0.0)),
+                            gap: Px(0.0).into(),
+                            padding: Edges::all(Px(0.0)).into(),
                             justify: fret_ui::element::MainAlign::Start,
                             align: fret_ui::element::CrossAlign::Center,
                             wrap: false,
@@ -1242,82 +1249,79 @@ impl InputGroupButton {
                         right: padding_x,
                         bottom: Px(0.0),
                         left: padding_x,
-                    },
+                    }
+                    .into(),
                     ..Default::default()
                 };
 
                 let content = move |cx: &mut ElementContext<'_, H>| {
-                    current_color::with_current_color_provider(
-                        cx,
-                        fret_ui_kit::ColorRef::Color(fg),
-                        |cx| {
-                            let icon_px = Px(16.0);
+                    current_color::scope_children(cx, fret_ui_kit::ColorRef::Color(fg), |cx| {
+                        let icon_px = Px(16.0);
 
-                            let mut row = Vec::new();
-                            if let Some(icon) = icon {
+                        let mut row = Vec::new();
+                        if let Some(icon) = icon {
+                            row.push(decl_icon::icon_with(cx, icon, Some(icon_px), None));
+                        } else {
+                            if let Some(icon) = leading_icon {
                                 row.push(decl_icon::icon_with(cx, icon, Some(icon_px), None));
-                            } else {
-                                if let Some(icon) = leading_icon {
-                                    row.push(decl_icon::icon_with(cx, icon, Some(icon_px), None));
-                                }
-
-                                if !label.is_empty() {
-                                    let mut style = typography::fixed_line_box_style(
-                                        FontId::ui(),
-                                        text_px,
-                                        line_height,
-                                    );
-                                    style.weight = FontWeight::MEDIUM;
-                                    row.push(cx.text_props(TextProps {
-                                        layout: LayoutStyle {
-                                            size: fret_ui::element::SizeStyle {
-                                                width: Length::Auto,
-                                                height: Length::Px(line_height),
-                                                ..Default::default()
-                                            },
-                                            ..Default::default()
-                                        },
-                                        text: label,
-                                        style: Some(style),
-                                        color: Some(fg),
-                                        wrap: TextWrap::None,
-                                        overflow: TextOverflow::Clip,
-                                        align: fret_core::TextAlign::Start,
-                                        ink_overflow: Default::default(),
-                                    }));
-                                }
-                                row.extend(children);
-
-                                if let Some(icon) = trailing_icon {
-                                    row.push(decl_icon::icon_with(cx, icon, Some(icon_px), None));
-                                }
                             }
 
-                            vec![cx.flex(
-                                FlexProps {
+                            if !label.is_empty() {
+                                let mut style = typography::fixed_line_box_style(
+                                    FontId::ui(),
+                                    text_px,
+                                    line_height,
+                                );
+                                style.weight = FontWeight::MEDIUM;
+                                row.push(cx.text_props(TextProps {
                                     layout: LayoutStyle {
                                         size: fret_ui::element::SizeStyle {
-                                            width: if fill_content_width {
-                                                Length::Fill
-                                            } else {
-                                                Length::Auto
-                                            },
-                                            height: Length::Fill,
+                                            width: Length::Auto,
+                                            height: Length::Px(line_height),
                                             ..Default::default()
                                         },
                                         ..Default::default()
                                     },
-                                    direction: Axis::Horizontal,
-                                    gap,
-                                    padding: Edges::all(Px(0.0)),
-                                    justify: fret_ui::element::MainAlign::Center,
-                                    align: fret_ui::element::CrossAlign::Center,
-                                    wrap: false,
+                                    text: label,
+                                    style: Some(style),
+                                    color: Some(fg),
+                                    wrap: TextWrap::None,
+                                    overflow: TextOverflow::Clip,
+                                    align: fret_core::TextAlign::Start,
+                                    ink_overflow: Default::default(),
+                                }));
+                            }
+                            row.extend(children);
+
+                            if let Some(icon) = trailing_icon {
+                                row.push(decl_icon::icon_with(cx, icon, Some(icon_px), None));
+                            }
+                        }
+
+                        vec![cx.flex(
+                            FlexProps {
+                                layout: LayoutStyle {
+                                    size: fret_ui::element::SizeStyle {
+                                        width: if fill_content_width {
+                                            Length::Fill
+                                        } else {
+                                            Length::Auto
+                                        },
+                                        height: Length::Fill,
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
                                 },
-                                move |_cx| row,
-                            )]
-                        },
-                    )
+                                direction: Axis::Horizontal,
+                                gap: gap.into(),
+                                padding: Edges::all(Px(0.0)).into(),
+                                justify: fret_ui::element::MainAlign::Center,
+                                align: fret_ui::element::CrossAlign::Center,
+                                wrap: false,
+                            },
+                            move |_cx| row,
+                        )]
+                    })
                 };
 
                 (pressable_props, chrome_props, content)

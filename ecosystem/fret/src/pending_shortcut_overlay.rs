@@ -41,11 +41,15 @@ pub fn pending_shortcut_hint_overlay<H: UiHost>(
         lines.push(Arc::<str>::from(format!("{key} → {title}{suffix}")));
     }
 
+    let top = top_inset;
+    let left = fret_core::Px(0.0);
+    let right = fret_core::Px(0.0);
+
     let mut layout = LayoutStyle::default();
     layout.position = fret_ui::element::PositionStyle::Absolute;
-    layout.inset.top = Some(top_inset);
-    layout.inset.left = Some(fret_core::Px(0.0));
-    layout.inset.right = Some(fret_core::Px(0.0));
+    layout.inset.top = Some(top).into();
+    layout.inset.left = Some(left).into();
+    layout.inset.right = Some(right).into();
     layout.size.width = Length::Px(fret_core::Px(520.0));
     layout.margin = MarginEdges {
         left: MarginEdge::Auto,
@@ -56,7 +60,7 @@ pub fn pending_shortcut_hint_overlay<H: UiHost>(
     Some(cx.container(
         ContainerProps {
             layout,
-            padding: fret_core::Edges::all(fret_core::Px(10.0)),
+            padding: fret_core::Edges::all(fret_core::Px(10.0)).into(),
             background: bg,
             border: fret_core::Edges::all(fret_core::Px(1.0)),
             border_color: border,
@@ -66,7 +70,7 @@ pub fn pending_shortcut_hint_overlay<H: UiHost>(
         |cx| {
             let col = cx.column(
                 ColumnProps {
-                    gap: fret_core::Px(6.0),
+                    gap: fret_core::Px(6.0).into(),
                     ..Default::default()
                 },
                 |cx| {

@@ -273,7 +273,8 @@ pub fn file_tree_view_retained_v0<H: UiHost + 'static>(
                     right: row_px,
                     bottom: row_py,
                     left: pad_left,
-                };
+                }
+                .into();
 
                 vec![cx.container(row_props, |cx| {
                     vec![stack::hstack(

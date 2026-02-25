@@ -344,8 +344,8 @@ impl WinitAppDriver for VirtualListStressDriver {
                                     FlexProps {
                                         layout: root_layout,
                                         direction: fret_core::Axis::Vertical,
-                                        gap: Px(8.0),
-                                        padding: fret_core::Edges::all(padding),
+                                        gap: fret_ui::element::SpacingLength::Px(Px(8.0)),
+                                        padding: fret_core::Edges::all(padding).into(),
                                         justify: MainAlign::Start,
                                         align: CrossAlign::Stretch,
                                         wrap: false,
@@ -412,7 +412,8 @@ impl WinitAppDriver for VirtualListStressDriver {
                                                                     "metric.padding.md",
                                                                 ),
                                                                 Px(0.0),
-                                                            ),
+                                                            )
+                                                            .into(),
                                                             ..Default::default()
                                                         },
                                                         |cx| {

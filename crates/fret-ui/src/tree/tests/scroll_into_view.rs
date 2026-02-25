@@ -46,8 +46,8 @@ fn focus_traversal_scrolls_focused_descendant_into_view() {
                             crate::element::FlexProps {
                                 layout: crate::element::LayoutStyle::default(),
                                 direction: fret_core::Axis::Vertical,
-                                gap: Px(0.0),
-                                padding: Edges::all(Px(0.0)),
+                                gap: Px(0.0).into(),
+                                padding: Edges::all(Px(0.0)).into(),
                                 justify: crate::element::MainAlign::Start,
                                 align: crate::element::CrossAlign::Stretch,
                                 wrap: false,
@@ -437,8 +437,8 @@ fn scroll_into_view_does_not_drift_scroll_when_descendant_is_already_visible() {
                         crate::element::FlexProps {
                             layout: crate::element::LayoutStyle::default(),
                             direction: fret_core::Axis::Vertical,
-                            gap: Px(0.0),
-                            padding: Edges::all(Px(0.0)),
+                            gap: Px(0.0).into(),
+                            padding: Edges::all(Px(0.0)).into(),
                             justify: crate::element::MainAlign::Start,
                             align: crate::element::CrossAlign::Stretch,
                             wrap: false,

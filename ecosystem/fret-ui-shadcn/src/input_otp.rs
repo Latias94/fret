@@ -1,3 +1,4 @@
+use fret_core::window::ColorScheme;
 use fret_core::{Axis, Color, Corners, Edges, FontId, FontWeight, Px};
 use fret_icons::ids;
 use fret_runtime::Model;
@@ -42,7 +43,7 @@ fn otp_active_ring_color(theme: &Theme) -> Color {
 
 fn otp_invalid_ring_color(theme: &Theme) -> Color {
     let border_color = theme.color_token("destructive");
-    let ring_key = if theme.name.contains("/dark") {
+    let ring_key = if theme.color_scheme == Some(ColorScheme::Dark) {
         "destructive/40"
     } else {
         "destructive/20"
@@ -340,10 +341,10 @@ impl InputOtp {
                 input.layout = LayoutStyle {
                     position: PositionStyle::Absolute,
                     inset: InsetStyle {
-                        left: Some(Px(0.0)),
-                        top: Some(Px(0.0)),
-                        right: Some(Px(0.0)),
-                        bottom: Some(Px(0.0)),
+                        left: Some(Px(0.0)).into(),
+                        top: Some(Px(0.0)).into(),
+                        right: Some(Px(0.0)).into(),
+                        bottom: Some(Px(0.0)).into(),
                     },
                     size: SizeStyle {
                         width: Length::Fill,
@@ -439,7 +440,7 @@ impl InputOtp {
                                     },
                                     ..Default::default()
                                 },
-                                padding: Edges::all(Px(0.0)),
+                                padding: Edges::all(Px(0.0)).into(),
                                 background: Some(bg),
                                 shadow: Some(decl_style::shadow_xs(&theme, radius)),
                                 border: slot_border,
@@ -461,8 +462,8 @@ impl InputOtp {
                                             ..Default::default()
                                         },
                                         direction: Axis::Horizontal,
-                                        gap: Px(0.0),
-                                        padding: Edges::all(Px(0.0)),
+                                        gap: Px(0.0).into(),
+                                        padding: Edges::all(Px(0.0)).into(),
                                         justify: MainAlign::Center,
                                         align: CrossAlign::Center,
                                         wrap: false,
@@ -496,10 +497,10 @@ impl InputOtp {
                                             layout: LayoutStyle {
                                                 position: PositionStyle::Absolute,
                                                 inset: InsetStyle {
-                                                    left: Some(Px(0.0)),
-                                                    top: Some(Px(0.0)),
-                                                    right: Some(Px(0.0)),
-                                                    bottom: Some(Px(0.0)),
+                                                    left: Some(Px(0.0)).into(),
+                                                    top: Some(Px(0.0)).into(),
+                                                    right: Some(Px(0.0)).into(),
+                                                    bottom: Some(Px(0.0)).into(),
                                                 },
                                                 ..Default::default()
                                             },
@@ -517,8 +518,8 @@ impl InputOtp {
                                                         ..Default::default()
                                                     },
                                                     direction: Axis::Horizontal,
-                                                    gap: Px(0.0),
-                                                    padding: Edges::all(Px(0.0)),
+                                                    gap: Px(0.0).into(),
+                                                    padding: Edges::all(Px(0.0)).into(),
                                                     justify: MainAlign::Center,
                                                     align: CrossAlign::Center,
                                                     wrap: false,
@@ -565,8 +566,8 @@ impl InputOtp {
                         FlexProps {
                             layout: LayoutStyle::default(),
                             direction: Axis::Horizontal,
-                            gap: slot_gap,
-                            padding: Edges::all(Px(0.0)),
+                            gap: slot_gap.into(),
+                            padding: Edges::all(Px(0.0)).into(),
                             justify: MainAlign::Start,
                             align: CrossAlign::Center,
                             wrap: false,
@@ -586,8 +587,8 @@ impl InputOtp {
                                     ..Default::default()
                                 },
                                 direction: Axis::Horizontal,
-                                gap: Px(0.0),
-                                padding: Edges::all(Px(0.0)),
+                                gap: Px(0.0).into(),
+                                padding: Edges::all(Px(0.0)).into(),
                                 justify: MainAlign::Center,
                                 align: CrossAlign::Center,
                                 wrap: false,
@@ -608,8 +609,8 @@ impl InputOtp {
                     FlexProps {
                         layout: LayoutStyle::default(),
                         direction: Axis::Horizontal,
-                        gap: container_gap,
-                        padding: Edges::all(Px(0.0)),
+                        gap: container_gap.into(),
+                        padding: Edges::all(Px(0.0)).into(),
                         justify: MainAlign::Start,
                         align: CrossAlign::Center,
                         wrap: false,
@@ -643,10 +644,10 @@ impl InputOtp {
                                         layout: LayoutStyle {
                                             position: PositionStyle::Absolute,
                                             inset: InsetStyle {
-                                                left: Some(left),
-                                                top: Some(top),
-                                                right: None,
-                                                bottom: None,
+                                                left: Some(left).into(),
+                                                top: Some(top).into(),
+                                                right: None.into(),
+                                                bottom: None.into(),
                                             },
                                             size: SizeStyle {
                                                 width: Length::Px(slot_bounds.size.width),
@@ -689,11 +690,13 @@ pub fn input_otp<H: UiHost>(cx: &mut ElementContext<'_, H>, otp: InputOtp) -> An
 mod tests {
     use super::*;
     use fret_app::App;
+    use fret_core::window::ColorScheme;
     use fret_core::{
         AppWindowId, Point, Rect, TextBlobId, TextConstraints, TextMetrics, TextService,
     };
     use fret_core::{PathCommand, SvgId, SvgService};
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
+    use fret_ui::ThemeConfig;
     use fret_ui::tree::UiTree;
 
     #[derive(Default)]
@@ -738,6 +741,40 @@ mod tests {
         fn unregister_svg(&mut self, _svg: SvgId) -> bool {
             true
         }
+    }
+
+    #[test]
+    fn otp_invalid_ring_color_tracks_theme_color_scheme() {
+        let mut app = fret_app::App::new();
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                color_scheme: Some(ColorScheme::Dark),
+                colors: std::collections::HashMap::from([
+                    ("destructive".to_string(), "#ff0000".to_string()),
+                    ("destructive/40".to_string(), "#00ff00".to_string()),
+                    ("destructive/20".to_string(), "#0000ff".to_string()),
+                ]),
+                ..ThemeConfig::default()
+            });
+        });
+        let theme = Theme::global(&app).clone();
+        assert_eq!(
+            otp_invalid_ring_color(&theme),
+            theme.color_by_key("destructive/40").unwrap()
+        );
+
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config_patch(&ThemeConfig {
+                color_scheme: Some(ColorScheme::Light),
+                ..ThemeConfig::default()
+            });
+        });
+        let theme = Theme::global(&app).clone();
+        assert_eq!(
+            otp_invalid_ring_color(&theme),
+            theme.color_by_key("destructive/20").unwrap()
+        );
     }
 
     impl fret_core::MaterialService for FakeServices {

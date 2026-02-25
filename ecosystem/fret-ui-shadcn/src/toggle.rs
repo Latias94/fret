@@ -500,7 +500,8 @@ impl Toggle {
                 right: pad_x,
                 bottom: pad_y,
                 left: pad_x,
-            };
+            }
+            .into();
             if matches!(variant, ToggleVariant::Outline) {
                 chrome_props.shadow = Some(decl_style::shadow_xs(theme, radius));
             }
@@ -524,7 +525,7 @@ impl Toggle {
             };
 
             let content_children = move |cx: &mut ElementContext<'_, H>| {
-                current_color::with_current_color_provider(cx, fg.clone(), |cx| {
+                current_color::scope_children(cx, fg.clone(), |cx| {
                     let styled_children: Vec<AnyElement> = children
                         .into_iter()
                         .map(|child| {
@@ -542,9 +543,9 @@ impl Toggle {
                             },
                             gap: {
                                 let theme = Theme::global(&*cx.app);
-                                MetricRef::space(Space::N2).resolve(theme)
+                                MetricRef::space(Space::N2).resolve(theme).into()
                             },
-                            padding: Edges::all(Px(0.0)),
+                            padding: Edges::all(Px(0.0)).into(),
                             justify: MainAlign::Center,
                             align: CrossAlign::Center,
                             wrap: false,

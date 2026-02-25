@@ -145,6 +145,79 @@ fn layout_query_bounds_are_frame_lagged_and_invalidate_view_cache_next_frame() {
 }
 
 #[test]
+fn bounds_for_element_reflects_current_frame_layout_after_layout_all() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let width = Arc::new(Mutex::new(Px(80.0)));
+    let element_id: Arc<Mutex<Option<crate::elements::GlobalElementId>>> =
+        Arc::new(Mutex::new(None));
+    let mut seen: Vec<Px> = Vec::new();
+
+    let mut root: Option<NodeId> = None;
+
+    for frame in 0..3 {
+        if frame == 1 {
+            *width.lock().unwrap() = Px(140.0);
+        }
+
+        let width = width.clone();
+        let element_id_for_render = element_id.clone();
+
+        let root_node = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "bounds-for-element-current-frame",
+            move |cx| {
+                let w = *width.lock().unwrap();
+                let mut props = crate::element::PressableProps::default();
+                props.layout.size.width = Length::Px(w);
+                props.layout.size.height = Length::Px(Px(20.0));
+
+                vec![cx.pressable_with_id(props, move |_cx, _st, id| {
+                    *element_id_for_render.lock().unwrap() = Some(id);
+                    Vec::new()
+                })]
+            },
+        );
+
+        root.get_or_insert(root_node);
+        if frame == 0 {
+            ui.set_root(root_node);
+        }
+
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let id = element_id
+            .lock()
+            .unwrap()
+            .expect("expected element id to be recorded");
+        let rect =
+            crate::elements::current_bounds_for_element(&mut app, window, id).expect("bounds");
+        seen.push(rect.size.width);
+
+        app.advance_frame();
+    }
+
+    assert_eq!(
+        seen,
+        vec![Px(80.0), Px(140.0), Px(140.0)],
+        "expected current_bounds_for_element(...) to reflect the latest layout pass, not the previous frame"
+    );
+}
+
+#[test]
 fn layout_query_region_ignores_origin_and_small_size_jitter_for_invalidation() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

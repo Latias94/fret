@@ -4,8 +4,8 @@ use crate::test_host::TestHost;
 use crate::tree::UiTree;
 use crate::widget::{LayoutCx, Widget};
 use fret_core::{
-    AppWindowId, Axis, Event, MouseButton, PathCommand, PathConstraints, PathMetrics, PathService,
-    PathStyle, Point, Px, Rect, Size, TextConstraints, TextMetrics, TextService,
+    AppWindowId, Axis, Event, KeyCode, MouseButton, PathCommand, PathConstraints, PathMetrics,
+    PathService, PathStyle, Point, Px, Rect, Size, TextConstraints, TextMetrics, TextService,
 };
 use fret_runtime::{Effect, PlatformCapabilities};
 
@@ -74,6 +74,77 @@ impl<H: UiHost> Widget<H> for Dummy {
     fn layout(&mut self, _cx: &mut LayoutCx<'_, H>) -> Size {
         Size::new(Px(0.0), Px(0.0))
     }
+}
+
+struct FocusableDummy;
+impl<H: UiHost> Widget<H> for FocusableDummy {
+    fn layout(&mut self, _cx: &mut LayoutCx<'_, H>) -> Size {
+        Size::new(Px(0.0), Px(0.0))
+    }
+
+    fn is_focusable(&self) -> bool {
+        true
+    }
+}
+
+#[test]
+fn resizable_panel_group_style_defaults_keep_handles_visible() {
+    let style = ResizablePanelGroupStyle::default();
+    assert!(style.handle_alpha >= 0.9);
+    assert!(style.handle_hover_alpha >= 0.9);
+    assert!(style.handle_drag_alpha >= 0.9);
+    assert!(style.paint_device_px >= 1.0);
+}
+
+#[test]
+fn resizable_panel_group_keyboard_arrow_keys_nudge_when_handle_child_is_focused() {
+    let window = AppWindowId::default();
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let fractions = app.models_mut().insert(vec![0.5, 0.5]);
+    let mut group = BoundResizablePanelGroup::new(Axis::Horizontal, fractions.clone());
+    group.set_style(ResizablePanelGroupStyle {
+        gap: Px(0.0),
+        hit_thickness: Px(10.0),
+        ..Default::default()
+    });
+
+    let root_id = ui.create_node(group);
+    let left = ui.create_node(Dummy);
+    let handle = ui.create_node(FocusableDummy);
+    let right = ui.create_node(Dummy);
+    ui.add_child(root_id, left);
+    ui.add_child(root_id, handle);
+    ui.add_child(root_id, right);
+    ui.set_root(root_id);
+
+    ui.set_focus(Some(handle));
+
+    let mut services = FakeUiServices;
+    let size = Size::new(Px(400.0), Px(40.0));
+    let _ = ui.layout(&mut app, &mut services, root_id, size, 1.0);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::KeyDown {
+            key: KeyCode::ArrowRight,
+            modifiers: fret_core::Modifiers::default(),
+            repeat: false,
+        },
+    );
+
+    let v = app.models().get_cloned(&fractions).unwrap_or_default();
+    assert_eq!(v.len(), 2);
+    assert!(
+        v[0] > 0.5,
+        "expected left panel to grow when nudging handle right, got {v:?}"
+    );
 }
 
 #[test]

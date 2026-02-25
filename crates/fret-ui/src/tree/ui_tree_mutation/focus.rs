@@ -167,6 +167,9 @@ impl<H: UiHost> UiTree<H> {
                     crate::declarative::ElementInstance::TextArea(_) => true,
                     crate::declarative::ElementInstance::TextInputRegion(_) => true,
                     crate::declarative::ElementInstance::Pressable(p) => p.enabled && p.focusable,
+                    crate::declarative::ElementInstance::Semantics(p) => {
+                        p.focusable && !p.disabled && !p.hidden
+                    }
                     _ => false,
                 };
                 let traverse_children = match &record.instance {
@@ -227,6 +230,9 @@ impl<H: UiHost> UiTree<H> {
                     crate::declarative::ElementInstance::TextArea(_) => true,
                     crate::declarative::ElementInstance::TextInputRegion(_) => true,
                     crate::declarative::ElementInstance::Pressable(p) => p.enabled && p.focusable,
+                    crate::declarative::ElementInstance::Semantics(p) => {
+                        p.focusable && !p.disabled && !p.hidden
+                    }
                     _ => false,
                 };
                 let traverse_children = match &record.instance {

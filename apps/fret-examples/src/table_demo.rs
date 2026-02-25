@@ -396,7 +396,7 @@ impl WinitAppDriver for TableDemoDriver {
                         ContainerProps {
                             layout: root_layout,
                             background: Some(theme.color_token("background")),
-                            padding: Edges::all(theme.metric_token("metric.padding.md")),
+                            padding: Edges::all(theme.metric_token("metric.padding.md")).into(),
                             ..Default::default()
                         },
                         move |cx| {
@@ -404,8 +404,8 @@ impl WinitAppDriver for TableDemoDriver {
                                 FlexProps {
                                     layout: root_layout,
                                     direction: fret_core::Axis::Vertical,
-                                    gap: Px(8.0),
-                                    padding: Edges::all(Px(0.0)),
+                                    gap: fret_ui::element::SpacingLength::Px(Px(8.0)),
+                                    padding: Edges::all(Px(0.0)).into(),
                                     justify: MainAlign::Start,
                                     align: CrossAlign::Stretch,
                                     wrap: false,
@@ -426,16 +426,16 @@ impl WinitAppDriver for TableDemoDriver {
                                                     let mut layout = LayoutStyle::default();
                                                     layout.size.width = Length::Fill;
                                                     layout.size.height = Length::Auto;
-                                                    layout
-                                                },
-                                                direction: fret_core::Axis::Horizontal,
-                                                gap: Px(8.0),
-                                                padding: Edges::all(Px(0.0)),
-                                                justify: MainAlign::Start,
-                                                align: CrossAlign::Center,
-                                                wrap: false,
+                                                layout
                                             },
-                                            move |cx| {
+                                            direction: fret_core::Axis::Horizontal,
+                                            gap: fret_ui::element::SpacingLength::Px(Px(8.0)),
+                                            padding: Edges::all(Px(0.0)).into(),
+                                            justify: MainAlign::Start,
+                                            align: CrossAlign::Center,
+                                            wrap: false,
+                                        },
+                                        move |cx| {
                                                 let open = view_options_open.clone();
                                                 let open_for_trigger = open.clone();
                                                 let enable_grouping =

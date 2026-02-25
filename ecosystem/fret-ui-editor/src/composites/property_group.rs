@@ -8,7 +8,7 @@ use fret_runtime::Model;
 use fret_ui::action::{ActionCx, ActivateReason, OnActivate, UiActionHost};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
-    PressableA11y, PressableProps, SizeStyle, SpacerProps, TextProps,
+    PressableA11y, PressableProps, SizeStyle, SpacerProps, SpacingLength, TextProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::typography;
@@ -172,7 +172,7 @@ impl PropertyGroup {
                         size: SizeStyle {
                             width: Length::Fill,
                             height: Length::Auto,
-                            min_height: Some(Px(header_height.0.max(0.0))),
+                            min_height: Some(Length::Px(Px(header_height.0.max(0.0)))),
                             ..Default::default()
                         },
                         ..Default::default()
@@ -228,35 +228,9 @@ impl PropertyGroup {
                             ..Default::default()
                         },
                         move |cx| {
-                            vec![cx.flex(
-                                FlexProps {
-                                    layout: LayoutStyle {
-                                        size: SizeStyle {
-                                            width: Length::Fill,
-                                            height: Length::Auto,
-                                            ..Default::default()
-                                        },
-                                        ..Default::default()
-                                    },
-                                    direction: Axis::Horizontal,
-                                    gap: Px(6.0),
-                                    padding: Edges::symmetric(density.padding_x, density.padding_y),
-                                    justify: MainAlign::Start,
-                                    align: CrossAlign::Center,
-                                    wrap: false,
-                                },
-                                move |cx| {
-                                    let mut out = Vec::new();
-                                    let header_text_style =
-                                        typography::as_control_text(TextStyle {
-                                            size: Px(12.0),
-                                            line_height: Some(header_height),
-                                            ..Default::default()
-                                        });
-                                    if let Some(icon) = disclosure_icon.clone() {
-                                        out.push(editor_icon(cx, density, icon, Some(Px(12.0))));
-                                    }
-                                    out.push(cx.text_props(TextProps {
+                            vec![
+                                cx.flex(
+                                    FlexProps {
                                         layout: LayoutStyle {
                                             size: SizeStyle {
                                                 width: Length::Fill,
@@ -265,21 +239,58 @@ impl PropertyGroup {
                                             },
                                             ..Default::default()
                                         },
-                                        text: label.clone(),
-                                        style: Some(header_text_style),
-                                        color: Some(header_fg),
-                                        wrap: TextWrap::None,
-                                        overflow: TextOverflow::Ellipsis,
-                                        align: TextAlign::Start,
-                                        ink_overflow: Default::default(),
-                                    }));
-                                    out.push(cx.spacer(SpacerProps::default()));
-                                    if let Some(actions) = actions {
-                                        out.push(actions);
-                                    }
-                                    out
-                                },
-                            )]
+                                        direction: Axis::Horizontal,
+                                        gap: SpacingLength::Px(Px(6.0)),
+                                        padding: Edges::symmetric(
+                                            density.padding_x,
+                                            density.padding_y,
+                                        )
+                                        .into(),
+                                        justify: MainAlign::Start,
+                                        align: CrossAlign::Center,
+                                        wrap: false,
+                                    },
+                                    move |cx| {
+                                        let mut out = Vec::new();
+                                        let header_text_style =
+                                            typography::as_control_text(TextStyle {
+                                                size: Px(12.0),
+                                                line_height: Some(header_height),
+                                                ..Default::default()
+                                            });
+                                        if let Some(icon) = disclosure_icon.clone() {
+                                            out.push(editor_icon(
+                                                cx,
+                                                density,
+                                                icon,
+                                                Some(Px(12.0)),
+                                            ));
+                                        }
+                                        out.push(cx.text_props(TextProps {
+                                            layout: LayoutStyle {
+                                                size: SizeStyle {
+                                                    width: Length::Fill,
+                                                    height: Length::Auto,
+                                                    ..Default::default()
+                                                },
+                                                ..Default::default()
+                                            },
+                                            text: label.clone(),
+                                            style: Some(header_text_style),
+                                            color: Some(header_fg),
+                                            wrap: TextWrap::None,
+                                            overflow: TextOverflow::Ellipsis,
+                                            align: TextAlign::Start,
+                                            ink_overflow: Default::default(),
+                                        }));
+                                        out.push(cx.spacer(SpacerProps::default()));
+                                        if let Some(actions) = actions {
+                                            out.push(actions);
+                                        }
+                                        out
+                                    },
+                                ),
+                            ]
                         },
                     )]
                 },
@@ -304,8 +315,8 @@ impl PropertyGroup {
                             ..Default::default()
                         },
                         direction: Axis::Vertical,
-                        gap,
-                        padding: Edges::symmetric(density.padding_x, density.padding_y),
+                        gap: SpacingLength::Px(gap),
+                        padding: Edges::symmetric(density.padding_x, density.padding_y).into(),
                         justify: MainAlign::Start,
                         align: CrossAlign::Stretch,
                         wrap: false,
@@ -322,8 +333,8 @@ impl PropertyGroup {
                 FlexProps {
                     layout: self.options.layout,
                     direction: Axis::Vertical,
-                    gap: Px(0.0),
-                    padding: Edges::all(Px(0.0)),
+                    gap: SpacingLength::Px(Px(0.0)),
+                    padding: Edges::all(Px(0.0)).into(),
                     justify: MainAlign::Start,
                     align: CrossAlign::Stretch,
                     wrap: false,
@@ -338,7 +349,7 @@ impl PropertyGroup {
             cx.container(
                 ContainerProps {
                     layout: self.options.layout,
-                    padding: Edges::all(Px(0.0)),
+                    padding: Edges::all(Px(0.0)).into(),
                     background: Some(panel_bg),
                     border: Edges::all(Px(1.0)),
                     border_color: Some(panel_border),

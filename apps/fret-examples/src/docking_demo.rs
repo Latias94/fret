@@ -141,7 +141,7 @@ impl DockPanelRegistry<App> for DemoDockPanelRegistry {
                             layout.size.height = Length::Fill;
                             layout
                         },
-                        padding: fret_core::Edges::all(padding),
+                        padding: fret_core::Edges::all(padding).into(),
                         background: Some(background),
                         ..Default::default()
                     },

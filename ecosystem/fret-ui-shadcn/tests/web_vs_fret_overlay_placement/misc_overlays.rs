@@ -16,6 +16,9 @@ fn fret_tooltip_tracks_trigger_when_underlay_scrolls() {
         CoreSize::new(Px(480.0), Px(400.0)),
     );
 
+    let left = Px(24.0);
+    let top = Px(64.0);
+
     let scroll_handle = ScrollHandle::default();
     let trigger_test_id = "scroll-underlay-tooltip-trigger";
 
@@ -58,8 +61,8 @@ fn fret_tooltip_tracks_trigger_when_underlay_scrolls() {
                                             let mut layout = LayoutStyle::default();
                                             layout.position =
                                                 fret_ui::element::PositionStyle::Absolute;
-                                            layout.inset.left = Some(Px(16.0));
-                                            layout.inset.top = Some(Px(160.0));
+                                            layout.inset.left = Some(left).into();
+                                            layout.inset.top = Some(top).into();
                                             layout.size.width = Length::Px(Px(120.0));
                                             layout.size.height = Length::Px(Px(32.0));
                                             layout
@@ -260,6 +263,9 @@ fn fret_popover_tracks_trigger_when_underlay_scrolls() {
         CoreSize::new(Px(480.0), Px(400.0)),
     );
 
+    let left = Px(24.0);
+    let top = Px(64.0);
+
     let open = app.models_mut().insert(false);
     let scroll_handle = ScrollHandle::default();
 
@@ -304,8 +310,8 @@ fn fret_popover_tracks_trigger_when_underlay_scrolls() {
                                             let mut layout = LayoutStyle::default();
                                             layout.position =
                                                 fret_ui::element::PositionStyle::Absolute;
-                                            layout.inset.left = Some(Px(16.0));
-                                            layout.inset.top = Some(Px(160.0));
+                                            layout.inset.left = Some(left).into();
+                                            layout.inset.top = Some(top).into();
                                             layout.size.width = Length::Px(Px(120.0));
                                             layout.size.height = Length::Px(Px(32.0));
                                             layout
@@ -512,6 +518,9 @@ fn fret_hover_card_tracks_trigger_when_underlay_scrolls() {
         CoreSize::new(Px(480.0), Px(400.0)),
     );
 
+    let left = Px(24.0);
+    let top = Px(64.0);
+
     let scroll_handle = ScrollHandle::default();
     let trigger_test_id = "scroll-underlay-hover-card-trigger";
     let content_test_id = "scroll-underlay-hover-card-content";
@@ -550,8 +559,8 @@ fn fret_hover_card_tracks_trigger_when_underlay_scrolls() {
                                 layout: {
                                     let mut layout = LayoutStyle::default();
                                     layout.position = fret_ui::element::PositionStyle::Absolute;
-                                    layout.inset.left = Some(Px(16.0));
-                                    layout.inset.top = Some(Px(160.0));
+                                    layout.inset.left = Some(left).into();
+                                    layout.inset.top = Some(top).into();
                                     layout.size.width = Length::Px(Px(120.0));
                                     layout.size.height = Length::Px(Px(32.0));
                                     layout

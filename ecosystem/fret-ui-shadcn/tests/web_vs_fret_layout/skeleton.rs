@@ -111,7 +111,7 @@ fn web_vs_fret_layout_skeleton_demo_rects_match_web() {
         let col = cx.column(
             ColumnProps {
                 layout: LayoutStyle::default(),
-                gap: Px(8.0),
+                gap: Px(8.0).into(),
                 ..Default::default()
             },
             move |_cx| vec![line0, line1],
@@ -121,8 +121,8 @@ fn web_vs_fret_layout_skeleton_demo_rects_match_web() {
             FlexProps {
                 layout: LayoutStyle::default(),
                 direction: fret_core::Axis::Horizontal,
-                gap: Px(16.0),
-                padding: Edges::all(Px(0.0)),
+                gap: Px(16.0).into(),
+                padding: Edges::all(Px(0.0)).into(),
                 justify: MainAlign::Start,
                 align: CrossAlign::Center,
                 wrap: false,
@@ -201,7 +201,7 @@ fn web_vs_fret_layout_skeleton_card_rects_match_web() {
         let inner = cx.column(
             ColumnProps {
                 layout: LayoutStyle::default(),
-                gap: Px(8.0),
+                gap: Px(8.0).into(),
                 ..Default::default()
             },
             move |_cx| vec![line0, line1],
@@ -210,7 +210,7 @@ fn web_vs_fret_layout_skeleton_card_rects_match_web() {
         vec![cx.column(
             ColumnProps {
                 layout: LayoutStyle::default(),
-                gap: Px(12.0),
+                gap: Px(12.0).into(),
                 ..Default::default()
             },
             move |_cx| vec![top, inner],

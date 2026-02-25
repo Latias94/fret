@@ -1,7 +1,7 @@
 pub mod keys;
 pub(crate) mod registry;
 
-use fret_core::{Color, Corners, Px, TextStyle};
+use fret_core::{Color, Corners, Px, TextStyle, window::ColorScheme};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{HashMap, HashSet},
@@ -544,6 +544,11 @@ pub struct ThemeConfig {
     pub name: String,
     pub author: Option<String>,
     pub url: Option<String>,
+    /// Optional theme metadata hint describing the intended color scheme.
+    ///
+    /// This is app/theme-owned content (ADR 0032). It is used by recipe-layer code that needs a
+    /// stable “light vs dark” hint without relying on theme naming conventions.
+    pub color_scheme: Option<ColorScheme>,
     pub colors: HashMap<String, String>,
     pub metrics: HashMap<String, f32>,
     pub corners: HashMap<String, Corners>,
@@ -559,6 +564,7 @@ impl Default for ThemeConfig {
             name: "Default".to_string(),
             author: None,
             url: None,
+            color_scheme: None,
             colors: HashMap::new(),
             metrics: HashMap::new(),
             corners: HashMap::new(),
@@ -637,6 +643,7 @@ pub struct ThemeColors {
 pub struct ThemeSnapshot {
     pub colors: ThemeColors,
     pub metrics: ThemeMetrics,
+    pub color_scheme: Option<ColorScheme>,
     pub revision: u64,
     color_tokens: Arc<HashMap<String, Color>>,
     metric_tokens: Arc<HashMap<String, Px>>,
@@ -647,6 +654,7 @@ impl ThemeSnapshot {
         Self {
             colors,
             metrics,
+            color_scheme: None,
             revision,
             color_tokens: Arc::new(default_color_tokens(colors)),
             metric_tokens: Arc::new(default_metric_tokens(metrics)),
@@ -703,6 +711,7 @@ pub struct Theme {
     pub name: String,
     pub author: Option<String>,
     pub url: Option<String>,
+    pub color_scheme: Option<ColorScheme>,
     pub colors: ThemeColors,
     pub metrics: ThemeMetrics,
     extra_colors: Arc<HashMap<String, Color>>,
@@ -949,6 +958,7 @@ impl Theme {
         ThemeSnapshot {
             colors: self.colors,
             metrics: self.metrics,
+            color_scheme: self.color_scheme,
             revision: self.revision,
             color_tokens: self.extra_colors.clone(),
             metric_tokens: self.extra_metrics.clone(),
@@ -984,6 +994,13 @@ impl Theme {
         let cfg_text_styles = canonicalize_config_map(ThemeTokenKind::TextStyle, &cfg.text_styles);
 
         let mut changed = false;
+
+        if let Some(scheme) = cfg.color_scheme {
+            if self.color_scheme != Some(scheme) {
+                self.color_scheme = Some(scheme);
+                changed = true;
+            }
+        }
 
         let mut next_numbers = HashMap::new();
         let mut next_durations_ms = HashMap::new();
@@ -1730,6 +1747,13 @@ impl Theme {
 
         let mut changed = false;
 
+        if let Some(scheme) = cfg.color_scheme {
+            if self.color_scheme != Some(scheme) {
+                self.color_scheme = Some(scheme);
+                changed = true;
+            }
+        }
+
         let colors = canonicalize_config_map(ThemeTokenKind::Color, &cfg.colors);
         for (key, v) in &colors {
             self.configured_colors.insert(key.to_string());
@@ -1913,6 +1937,7 @@ fn default_theme() -> &'static Theme {
             name: "Fret Default (Dark)".to_string(),
             author: Some("Fret".to_string()),
             url: None,
+            color_scheme: Some(ColorScheme::Dark),
             revision: 1,
             metrics,
             colors,

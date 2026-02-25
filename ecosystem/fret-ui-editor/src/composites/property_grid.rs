@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 use fret_core::{Axis, Edges, Px};
 use fret_ui::element::{
-    AnyElement, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, SizeStyle,
+    AnyElement, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, SizeStyle, SpacingLength,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 
@@ -96,8 +96,8 @@ impl PropertyGrid {
             FlexProps {
                 layout: self.options.layout,
                 direction: Axis::Vertical,
-                gap: row_gap,
-                padding: Edges::all(Px(0.0)),
+                gap: SpacingLength::Px(row_gap),
+                padding: Edges::all(Px(0.0)).into(),
                 justify: MainAlign::Start,
                 align: CrossAlign::Stretch,
                 wrap: false,

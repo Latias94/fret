@@ -179,16 +179,16 @@ fn badge_element<H: UiHost>(
     let mut inset = InsetStyle::default();
     match placement {
         BadgePlacement::TopRight => {
-            inset.top = Some(Px(0.0));
-            inset.right = Some(Px(0.0));
+            inset.top = Some(Px(0.0)).into();
+            inset.right = Some(Px(0.0)).into();
         }
         BadgePlacement::NavigationIcon => {
             let anchor = anchor_size.unwrap_or(Px(24.0));
             let start = Px(anchor.0 * 0.5 + inset_start_px.0);
-            inset.top = Some(inset_top_px);
+            inset.top = Some(inset_top_px).into();
             match layout_direction {
-                LayoutDirection::Ltr => inset.left = Some(start),
-                LayoutDirection::Rtl => inset.right = Some(start),
+                LayoutDirection::Ltr => inset.left = Some(start).into(),
+                LayoutDirection::Rtl => inset.right = Some(start).into(),
             }
         }
     }
@@ -216,7 +216,7 @@ fn badge_element<H: UiHost>(
     container.layout.inset = inset;
     container.layout.size.height = Length::Px(height);
     container.layout.size.width = width;
-    container.layout.size.min_width = min_width;
+    container.layout.size.min_width = min_width.map(Length::Px);
     container.background = Some(background);
     container.corner_radii = corner_radii;
     if is_large {
@@ -225,7 +225,8 @@ fn badge_element<H: UiHost>(
             right: Px(4.0),
             top: Px(0.0),
             bottom: Px(0.0),
-        };
+        }
+        .into();
     }
 
     let content = match value {

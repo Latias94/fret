@@ -11,6 +11,7 @@ impl<H: UiHost> UiTree<H> {
         bounds: Rect,
         scene: &mut Scene,
         scale_factor: f32,
+        paint_style: crate::tree::paint_style::PaintStyleState,
         accumulated_transform: Transform2D,
     ) {
         if self.debug_enabled {
@@ -86,7 +87,7 @@ impl<H: UiHost> UiTree<H> {
             let theme_revision = Theme::global(&*app).revision();
             let children_render_transform = self.node_children_render_transform(node);
             let child_transform = children_render_transform.unwrap_or(Transform2D::IDENTITY);
-            PaintCacheKey::new(bounds, sf, theme_revision, child_transform)
+            PaintCacheKey::new(bounds, sf, theme_revision, paint_style, child_transform)
         });
         let relax_view_cache_gating = super::paint_cache_relax_view_cache_gating();
         let allow_hit_test_only = super::paint_cache_allow_hit_test_only();
@@ -445,6 +446,7 @@ impl<H: UiHost> UiTree<H> {
                     children: children_buf.as_slice(),
                     bounds,
                     scale_factor: sf,
+                    paint_style,
                     accumulated_transform: current_transform,
                     children_render_transform,
                     services: &mut *services,

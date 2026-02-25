@@ -2,6 +2,7 @@ use std::cell::Cell;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
+use fret_core::window::ColorScheme;
 use fret_core::{Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextStyle};
 use fret_icons::ids;
 use fret_runtime::Model;
@@ -18,7 +19,9 @@ use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::combobox as kit_combobox;
 use fret_ui_kit::primitives::controllable_state;
+use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::popover as radix_popover;
+use fret_ui_kit::primitives::popper;
 use fret_ui_kit::{
     ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, MetricRef, OverrideSlot, Radius,
     ShadowPreset, Size, Space, WidgetState, WidgetStateProperty, WidgetStates,
@@ -228,7 +231,7 @@ impl Combobox {
             items: Vec::new(),
             groups: Vec::new(),
             group_separators: false,
-            auto_highlight: false,
+            auto_highlight: true,
             test_id_prefix: None,
             trigger_test_id: None,
             width: None,
@@ -732,7 +735,7 @@ fn combobox_with_patch<H: UiHost>(
                 .merge(layout_patch),
         );
         trigger_layout.size.height = Length::Auto;
-        trigger_layout.size.min_height = Some(min_h);
+        trigger_layout.size.min_height = Some(Length::Px(min_h));
 
         let bg_base = chrome_patch
             .background
@@ -783,7 +786,7 @@ fn combobox_with_patch<H: UiHost>(
             border_base = border_color;
             ring_border = border_color;
 
-            let ring_key = if theme.name.contains("/dark") {
+            let ring_key = if theme.color_scheme == Some(ColorScheme::Dark) {
                 "destructive/40"
             } else {
                 "destructive/20"
@@ -919,7 +922,7 @@ fn combobox_with_patch<H: UiHost>(
                                     right: pad_right,
                                     bottom: pad_bottom,
                                     left: pad_left,
-                                },
+                                }.into(),
                                 background: Some(bg),
                                 shadow: None,
                                 border: Edges::all(border_w),
@@ -937,8 +940,8 @@ fn combobox_with_patch<H: UiHost>(
                                             layout
                                         },
                                         direction: fret_core::Axis::Horizontal,
-                                        gap: trigger_gap,
-                                        padding: Edges::all(Px(0.0)),
+                                        gap: trigger_gap.into(),
+                                        padding: Edges::all(Px(0.0)).into(),
                                         justify: MainAlign::SpaceBetween,
                                         align: CrossAlign::Center,
                                         wrap: false,
@@ -951,8 +954,8 @@ fn combobox_with_patch<H: UiHost>(
                                             FlexProps {
                                                 layout: LayoutStyle::default(),
                                                 direction: fret_core::Axis::Horizontal,
-                                                gap: Px(0.0),
-                                                padding: Edges::all(Px(0.0)),
+                                                gap: Px(0.0).into(),
+                                                padding: Edges::all(Px(0.0)).into(),
                                                 justify: MainAlign::Start,
                                                 align: CrossAlign::Center,
                                                 wrap: false,
@@ -1065,8 +1068,8 @@ fn combobox_with_patch<H: UiHost>(
                                                                             FlexProps {
                                                                                 layout: LayoutStyle::default(),
                                                                                 direction: fret_core::Axis::Horizontal,
-                                                                                gap: Px(0.0),
-                                                                                padding: Edges::all(Px(0.0)),
+                                                                                gap: Px(0.0).into(),
+                                                                                padding: Edges::all(Px(0.0)).into(),
                                                                                 justify: MainAlign::Center,
                                                                                 align: CrossAlign::Center,
                                                                                 wrap: false,
@@ -1512,7 +1515,7 @@ fn combobox_with_patch<H: UiHost>(
                             right: pad_right,
                             bottom: pad_bottom,
                             left: pad_left,
-                        },
+                        }.into(),
                         background: Some(bg),
                         shadow: None,
                         border: Edges::all(border_w),
@@ -1526,8 +1529,8 @@ fn combobox_with_patch<H: UiHost>(
                             FlexProps {
                                 layout: LayoutStyle::default(),
                                 direction: fret_core::Axis::Horizontal,
-                                gap: trigger_gap,
-                                padding: Edges::all(Px(0.0)),
+                                gap: trigger_gap.into(),
+                                padding: Edges::all(Px(0.0)).into(),
                                 justify: MainAlign::SpaceBetween,
                                 align: CrossAlign::Center,
                                 wrap: false,
@@ -1539,8 +1542,8 @@ fn combobox_with_patch<H: UiHost>(
                                     FlexProps {
                                         layout: LayoutStyle::default(),
                                         direction: fret_core::Axis::Horizontal,
-                                        gap: Px(0.0),
-                                        padding: Edges::all(Px(0.0)),
+                                        gap: Px(0.0).into(),
+                                        padding: Edges::all(Px(0.0)).into(),
                                         justify: MainAlign::Start,
                                         align: CrossAlign::Center,
                                         wrap: false,
@@ -1626,8 +1629,8 @@ fn combobox_with_patch<H: UiHost>(
                                                                 FlexProps {
                                                                     layout: LayoutStyle::default(),
                                                                     direction: fret_core::Axis::Horizontal,
-                                                                    gap: Px(0.0),
-                                                                    padding: Edges::all(Px(0.0)),
+                                                                    gap: Px(0.0).into(),
+                                                                    padding: Edges::all(Px(0.0)).into(),
                                                                     justify: MainAlign::Center,
                                                                     align: CrossAlign::Center,
                                                                     wrap: false,
@@ -1712,23 +1715,30 @@ fn combobox_with_patch<H: UiHost>(
                     // trigger. This models the Radix popper "available height" variables used by
                     // shadcn/cmdk (`--radix-*-content-available-height`) and prevents the listbox
                     // from overflowing tight windows.
-                    //
-                    // We bias towards "the side with more room" so the popover placement solver
-                    // can flip when needed without the listbox exceeding the window bounds.
-                    let outer = cx.environment_viewport_bounds(fret_ui::Invalidation::Layout);
-                    let side_offset = Px(4.0);
-                    let outer_top = outer.origin.y.0;
-                    let outer_bottom = outer_top + outer.size.height.0.max(0.0);
-                    let anchor_top = anchor.origin.y.0;
-                    let anchor_bottom = anchor_top + anchor.size.height.0.max(0.0);
-                    let available_above = Px((anchor_top - outer_top - side_offset.0).max(0.0));
-                    let available_below =
-                        Px((outer_bottom - anchor_bottom - side_offset.0).max(0.0));
-                    let available_main = if available_above.0 > available_below.0 {
-                        available_above
-                    } else {
-                        available_below
-                    };
+                    let window_margin = theme
+                        .metric_by_key("component.popover.window_margin")
+                        .unwrap_or(Px(0.0));
+                    let outer = fret_ui_kit::overlay::outer_bounds_with_window_margin_for_environment(
+                        cx,
+                        fret_ui::Invalidation::Layout,
+                        window_margin,
+                    );
+                    let direction = direction_prim::use_direction_in_scope(cx, None);
+                    let placement = popper::PopperContentPlacement::new(
+                        direction,
+                        popper::Side::Bottom,
+                        popper::Align::Center,
+                        Px(4.0),
+                    )
+                    .with_shift_cross_axis(true)
+                    .with_sticky(popper::StickyMode::Partial);
+                    let available_main = radix_popover::popover_popper_vars(
+                        outer,
+                        anchor,
+                        desired_w,
+                        placement,
+                    )
+                    .available_height;
                     // CommandPalette includes a fixed-height search row above the list.
                     let header_estimate = Px(48.0);
                     let max_list_h = Px(

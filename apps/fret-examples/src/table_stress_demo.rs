@@ -572,7 +572,7 @@ impl WinitAppDriver for TableStressDriver {
                         ContainerProps {
                             layout: root_layout,
                             background: Some(theme.color_token("background")),
-                            padding: Edges::all(theme.metric_token("metric.padding.md")),
+                            padding: Edges::all(theme.metric_token("metric.padding.md")).into(),
                             ..Default::default()
                         },
                         move |cx| {
@@ -580,8 +580,8 @@ impl WinitAppDriver for TableStressDriver {
                                 FlexProps {
                                     layout: root_layout,
                                     direction: fret_core::Axis::Vertical,
-                                    gap: Px(8.0),
-                                    padding: Edges::all(Px(0.0)),
+                                    gap: fret_ui::element::SpacingLength::Px(Px(8.0)),
+                                    padding: Edges::all(Px(0.0)).into(),
                                     justify: MainAlign::Start,
                                     align: CrossAlign::Stretch,
                                     wrap: false,

@@ -287,10 +287,10 @@ impl DataGrid {
                     let (body, body_id) = {
                         let mut body_layout = LayoutStyle::default();
                         body_layout.position = PositionStyle::Absolute;
-                        body_layout.inset.top = Some(row_height);
-                        body_layout.inset.left = Some(Px(0.0));
-                        body_layout.inset.right = Some(Px(0.0));
-                        body_layout.inset.bottom = Some(Px(0.0));
+                        body_layout.inset.top = Some(row_height).into();
+                        body_layout.inset.left = Some(Px(0.0)).into();
+                        body_layout.inset.right = Some(Px(0.0)).into();
+                        body_layout.inset.bottom = Some(Px(0.0)).into();
                         body_layout.size.width = Length::Fill;
                         body_layout.size.height = Length::Fill;
                         body_layout.overflow = Overflow::Clip;
@@ -339,8 +339,8 @@ impl DataGrid {
                                             let pressable_layout = LayoutStyle {
                                                 position: PositionStyle::Absolute,
                                                 inset: InsetStyle {
-                                                    top: Some(row.start),
-                                                    left: Some(Px(0.0)),
+                                                    top: Some(row.start).into(),
+                                                    left: Some(Px(0.0)).into(),
                                                     ..Default::default()
                                                 },
                                                 size: SizeStyle {
@@ -411,8 +411,8 @@ impl DataGrid {
                                                             let cell_layout = LayoutStyle {
                                                                 position: PositionStyle::Absolute,
                                                                 inset: InsetStyle {
-                                                                    top: Some(Px(0.0)),
-                                                                    left: Some(col.start),
+                                                                    top: Some(Px(0.0)).into(),
+                                                                    left: Some(col.start).into(),
                                                                     ..Default::default()
                                                                 },
                                                                 size: SizeStyle {
@@ -487,8 +487,8 @@ impl DataGrid {
                                 let cell_layout = LayoutStyle {
                                     position: PositionStyle::Absolute,
                                     inset: InsetStyle {
-                                        top: Some(Px(0.0)),
-                                        left: Some(left),
+                                        top: Some(Px(0.0)).into(),
+                                        left: Some(left).into(),
                                         ..Default::default()
                                     },
                                     size: SizeStyle {
@@ -547,14 +547,15 @@ impl DataGrid {
                         let scrollbar_layout = LayoutStyle {
                             position: PositionStyle::Absolute,
                             inset: InsetStyle {
-                                top: Some(row_height),
-                                right: Some(Px(0.0)),
+                                top: Some(row_height).into(),
+                                right: Some(Px(0.0)).into(),
                                 bottom: Some(if show_scrollbar_x {
                                     scrollbar_w
                                 } else {
                                     Px(0.0)
-                                }),
-                                left: None,
+                                })
+                                .into(),
+                                left: None.into(),
                             },
                             size: SizeStyle {
                                 width: Length::Px(scrollbar_w),
@@ -580,14 +581,15 @@ impl DataGrid {
                         let scrollbar_layout = LayoutStyle {
                             position: PositionStyle::Absolute,
                             inset: InsetStyle {
-                                top: None,
+                                top: None.into(),
                                 right: Some(if show_scrollbar_y {
                                     scrollbar_w
                                 } else {
                                     Px(0.0)
-                                }),
-                                bottom: Some(Px(0.0)),
-                                left: Some(Px(0.0)),
+                                })
+                                .into(),
+                                bottom: Some(Px(0.0)).into(),
+                                left: Some(Px(0.0)).into(),
                             },
                             size: SizeStyle {
                                 height: Length::Px(scrollbar_w),
@@ -613,8 +615,8 @@ impl DataGrid {
                         let corner_layout = LayoutStyle {
                             position: PositionStyle::Absolute,
                             inset: InsetStyle {
-                                right: Some(Px(0.0)),
-                                bottom: Some(Px(0.0)),
+                                right: Some(Px(0.0)).into(),
+                                bottom: Some(Px(0.0)).into(),
                                 ..Default::default()
                             },
                             size: SizeStyle {
@@ -641,8 +643,8 @@ impl DataGrid {
 
             let col = ColumnProps {
                 layout: decl_style::layout_style(&theme, LayoutRefinement::default().w_full()),
-                gap: Px(0.0),
-                padding: Edges::all(Px(0.0)),
+                gap: Px(0.0).into(),
+                padding: Edges::all(Px(0.0)).into(),
                 align: fret_ui::element::CrossAlign::Stretch,
                 justify: MainAlign::Start,
             };

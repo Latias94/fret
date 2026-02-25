@@ -486,10 +486,10 @@ pub fn material_ink_layer<H: UiHost>(
 ) -> AnyElement {
     let mut props = CanvasProps::default();
     props.layout.position = fret_ui::element::PositionStyle::Absolute;
-    props.layout.inset.top = Some(Px(0.0));
-    props.layout.inset.right = Some(Px(0.0));
-    props.layout.inset.bottom = Some(Px(0.0));
-    props.layout.inset.left = Some(Px(0.0));
+    props.layout.inset.top = Some(Px(0.0)).into();
+    props.layout.inset.right = Some(Px(0.0)).into();
+    props.layout.inset.bottom = Some(Px(0.0)).into();
+    props.layout.inset.left = Some(Px(0.0)).into();
 
     cx.canvas(props, move |p| {
         let bounds = p.bounds();
@@ -547,10 +547,10 @@ pub fn material_ink_layer_with_bounds<H: UiHost>(
 ) -> AnyElement {
     let mut props = CanvasProps::default();
     props.layout.position = fret_ui::element::PositionStyle::Absolute;
-    props.layout.inset.top = Some(Px(0.0));
-    props.layout.inset.right = Some(Px(0.0));
-    props.layout.inset.bottom = Some(Px(0.0));
-    props.layout.inset.left = Some(Px(0.0));
+    props.layout.inset.top = Some(Px(0.0)).into();
+    props.layout.inset.right = Some(Px(0.0)).into();
+    props.layout.inset.bottom = Some(Px(0.0)).into();
+    props.layout.inset.left = Some(Px(0.0)).into();
 
     cx.canvas(props, move |p| {
         let bounds = p.bounds();

@@ -249,6 +249,14 @@ pub(super) fn preview_alert_dialog(
         ],
     );
 
+    let usage = doc_layout::notes(
+        cx,
+        [
+            "Use `AlertDialog` when you need explicit confirmation for destructive/irreversible actions.",
+            "Prefer `AlertDialogCancel` + `AlertDialogAction` over custom buttons to preserve consistent semantics and focus handling.",
+        ],
+    );
+
     let body = doc_layout::render_doc_page(
         cx,
         Some(
@@ -257,7 +265,7 @@ pub(super) fn preview_alert_dialog(
         vec![
             DocSection::new("Demo", demo_content)
                 .description("Default-sized modal alert dialog.")
-                .test_id_prefix("ui-gallery-alert-dialog-demo")
+                .test_id_prefix("ui-gallery-alert-dialog-demo-docsec")
                 .code(
                     "rust",
                     r#"shadcn::AlertDialog::new(open).into_element(
@@ -310,7 +318,7 @@ let dialog = build_dialog(
                 ),
             DocSection::new("Small", small_content)
                 .description("Compact dialog size for short copy.")
-                .test_id_prefix("ui-gallery-alert-dialog-small")
+                .test_id_prefix("ui-gallery-alert-dialog-small-docsec")
                 .code(
                     "rust",
                     r#"shadcn::AlertDialogContent::new([...])
@@ -320,7 +328,7 @@ let dialog = build_dialog(
                 .max_w(Px(760.0)),
             DocSection::new("Media", media_content)
                 .description("Dialogs can optionally show a leading media/icon in the header.")
-                .test_id_prefix("ui-gallery-alert-dialog-media")
+                .test_id_prefix("ui-gallery-alert-dialog-media-docsec")
                 .code(
                     "rust",
                     r#"let icon = shadcn::icon::icon_with(
@@ -358,7 +366,7 @@ build_dialog(
                 ),
             DocSection::new("Destructive", destructive_content)
                 .description("Destructive styling for irreversible actions.")
-                .test_id_prefix("ui-gallery-alert-dialog-destructive")
+                .test_id_prefix("ui-gallery-alert-dialog-destructive-docsec")
                 .code(
                     "rust",
                     r#"shadcn::AlertDialogAction::new("Delete", open.clone())
@@ -390,7 +398,12 @@ build_dialog(
     ),
 );"#,
                 ),
+            DocSection::new("Usage", usage)
+                .title_test_id("ui-gallery-section-usage-title")
+                .description("Quick reference for composing an alert dialog.")
+                .max_w(Px(760.0)),
             DocSection::new("Notes", notes)
+                .title_test_id("ui-gallery-section-notes-title")
                 .description("Guidelines and best practices for alert dialogs.")
                 .max_w(Px(760.0)),
         ],

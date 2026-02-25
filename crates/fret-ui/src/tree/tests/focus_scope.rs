@@ -42,8 +42,8 @@ fn focus_scope_traps_focus_traversal_within_subtree() {
                 crate::element::FlexProps {
                     layout: crate::element::LayoutStyle::default(),
                     direction: fret_core::Axis::Horizontal,
-                    gap: Px(0.0),
-                    padding: Edges::all(Px(0.0)),
+                    gap: Px(0.0).into(),
+                    padding: Edges::all(Px(0.0)).into(),
                     justify: crate::element::MainAlign::Start,
                     align: crate::element::CrossAlign::Start,
                     wrap: false,
@@ -205,8 +205,8 @@ fn focus_scope_prevents_pointer_focus_from_leaving_subtree_when_trapped() {
                 crate::element::FlexProps {
                     layout: crate::element::LayoutStyle::default(),
                     direction: fret_core::Axis::Horizontal,
-                    gap: Px(0.0),
-                    padding: Edges::all(Px(0.0)),
+                    gap: Px(0.0).into(),
+                    padding: Edges::all(Px(0.0)).into(),
                     justify: crate::element::MainAlign::Start,
                     align: crate::element::CrossAlign::Start,
                     wrap: false,

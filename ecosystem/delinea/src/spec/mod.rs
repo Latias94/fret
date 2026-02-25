@@ -658,6 +658,7 @@ where
     match input {
         RatioInput::Num(v) => Ok(Some(v)),
         RatioInput::Str(s) => parse_percent_ratio(&s)
+            .map(Some)
             .ok_or_else(|| serde::de::Error::custom("invalid percent string")),
     }
 }

@@ -136,8 +136,8 @@ fn web_vs_fret_layout_textarea_geometry_matches_web_fixtures() {
                                 ..Default::default()
                             },
                             direction: fret_core::Axis::Vertical,
-                            gap: Px(gap),
-                            padding: Edges::all(Px(0.0)),
+                            gap: Px(gap).into(),
+                            padding: Edges::all(Px(0.0)).into(),
                             justify: MainAlign::Start,
                             align: CrossAlign::Stretch,
                             wrap: false,
@@ -226,8 +226,8 @@ fn web_vs_fret_layout_textarea_geometry_matches_web_fixtures() {
                                 ..Default::default()
                             },
                             direction: fret_core::Axis::Vertical,
-                            gap: Px(gap),
-                            padding: Edges::all(Px(0.0)),
+                            gap: Px(gap).into(),
+                            padding: Edges::all(Px(0.0)).into(),
                             justify: MainAlign::Start,
                             align: CrossAlign::Stretch,
                             wrap: false,
@@ -302,8 +302,8 @@ fn web_vs_fret_layout_textarea_geometry_matches_web_fixtures() {
                                 ..Default::default()
                             },
                             direction: fret_core::Axis::Vertical,
-                            gap: Px(12.0),
-                            padding: Edges::all(Px(0.0)),
+                            gap: Px(12.0).into(),
+                            padding: Edges::all(Px(0.0)).into(),
                             justify: MainAlign::Start,
                             align: CrossAlign::Stretch,
                             wrap: false,

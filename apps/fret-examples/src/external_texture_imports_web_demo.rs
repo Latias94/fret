@@ -268,8 +268,8 @@ impl ExternalTextureImportsWebDriver {
         let mut row = FlexProps {
             layout: fill,
             direction: fret_core::Axis::Horizontal,
-            gap: Px(12.0),
-            padding: fret_core::Edges::all(Px(16.0)),
+            gap: fret_ui::element::SpacingLength::Px(Px(12.0)),
+            padding: fret_core::Edges::all(Px(16.0)).into(),
             justify: MainAlign::Start,
             align: CrossAlign::Start,
             wrap: true,

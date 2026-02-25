@@ -1,10 +1,15 @@
+use std::sync::Arc;
+
 use fret_core::{Corners, Edges, Px};
+use fret_icons::IconId;
 use fret_runtime::Model;
-use fret_ui::element::{AnyElement, ContainerProps, ResizablePanelGroupProps, SemanticsDecoration};
+use fret_ui::element::{
+    AnyElement, ContainerProps, LayoutStyle, Length, ResizablePanelGroupProps, SemanticsProps,
+};
 use fret_ui::{ElementContext, ResizablePanelGroupStyle, Theme, UiHost};
-use fret_ui_kit::LayoutRefinement;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::recipes::resizable as resizable_recipe;
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius};
 
 pub struct ResizablePanel {
     min_px: Px,
@@ -48,7 +53,7 @@ impl ResizablePanel {
 
         let props = ContainerProps {
             layout,
-            padding: Edges::all(Px(0.0)),
+            padding: Edges::all(Px(0.0)).into(),
             background: None,
             shadow: None,
             border: Edges::all(Px(0.0)),
@@ -123,6 +128,7 @@ pub struct ResizablePanelGroup {
     disabled: bool,
     layout: LayoutRefinement,
     style: Option<ResizablePanelGroupStyle>,
+    test_id_prefix: Option<Arc<str>>,
     entries: Vec<ResizableEntry>,
 }
 
@@ -146,6 +152,7 @@ impl ResizablePanelGroup {
             disabled: false,
             layout: LayoutRefinement::default(),
             style: None,
+            test_id_prefix: None,
             entries: Vec::new(),
         }
     }
@@ -170,6 +177,15 @@ impl ResizablePanelGroup {
         self
     }
 
+    /// Prefix used to stamp deterministic automation ids onto the group's splitter semantics.
+    ///
+    /// When set, handles are assigned `"{prefix}.splitter.{ix}"` test ids; otherwise the default
+    /// `resizable.splitter.{ix}` ids are used.
+    pub fn test_id_prefix(mut self, prefix: impl Into<Arc<str>>) -> Self {
+        self.test_id_prefix = Some(prefix.into());
+        self
+    }
+
     pub fn entries(mut self, entries: impl IntoIterator<Item = ResizableEntry>) -> Self {
         self.entries = entries.into_iter().collect();
         self
@@ -184,6 +200,7 @@ impl ResizablePanelGroup {
             self.disabled,
             self.layout,
             self.style,
+            self.test_id_prefix,
             self.entries,
         )
     }
@@ -196,6 +213,7 @@ fn resizable_panel_group_with_entries<H: UiHost>(
     disabled: bool,
     layout: LayoutRefinement,
     style: Option<ResizablePanelGroupStyle>,
+    test_id_prefix: Option<Arc<str>>,
     entries: Vec<ResizableEntry>,
 ) -> AnyElement {
     let theme = Theme::global(&*cx.app).clone();
@@ -205,13 +223,15 @@ fn resizable_panel_group_with_entries<H: UiHost>(
 
     let mut panels: Vec<ResizablePanel> = Vec::new();
     let mut saw_handles = false;
-    let mut with_handle = false;
+    let mut handle_grips: Vec<bool> = Vec::new();
+    let mut any_grip = false;
     for e in entries {
         match e {
             ResizableEntry::Panel(p) => panels.push(p),
             ResizableEntry::Handle(h) => {
                 saw_handles = true;
-                with_handle |= h.with_handle;
+                handle_grips.push(h.with_handle);
+                any_grip |= h.with_handle;
                 if h.disabled {
                     // Per-handle disabling is not supported yet; treat as a no-op marker.
                 }
@@ -220,10 +240,11 @@ fn resizable_panel_group_with_entries<H: UiHost>(
     }
     let panels_len = panels.len();
 
-    if with_handle {
-        // shadcn/ui's `withHandle` adds a visible grip. Fret currently paints a uniform handle,
-        // so we approximate by making it thicker.
-        style.paint_device_px = style.paint_device_px.max(4.0);
+    if any_grip {
+        // shadcn/ui's `withHandle` adds a visible grip on top of the handle line.
+        // We approximate the DOM behavior by ensuring the runtime hit region is wide enough to
+        // host the grip without constraining it to a 1px gap.
+        style.hit_thickness = style.hit_thickness.max(Px(16.0));
     }
 
     let min_px: Vec<Px> = panels.iter().map(|p| p.min_px).collect();
@@ -244,6 +265,7 @@ fn resizable_panel_group_with_entries<H: UiHost>(
 
         if saw_handles && panels_len >= 2 && panel_ix + 1 < panels_len {
             let handle_ix = panel_ix;
+            let with_handle = handle_grips.get(handle_ix).copied().unwrap_or(false);
 
             let value = if total_weight.is_finite() && total_weight > 0.0 {
                 let mut prefix = 0.0f32;
@@ -257,23 +279,92 @@ fn resizable_panel_group_with_entries<H: UiHost>(
                 None
             };
 
-            let mut decoration = SemanticsDecoration::default()
-                .role(fret_core::SemanticsRole::Splitter)
-                .orientation(handle_orientation)
-                .test_id(format!("resizable.splitter.{handle_ix}"))
-                .label("Resize");
+            let mut semantics_layout = LayoutStyle::default();
+            semantics_layout.size.width = Length::Fill;
+            semantics_layout.size.height = Length::Fill;
 
-            if let Some(value) = value {
-                decoration = decoration
-                    .numeric_value(value)
-                    .numeric_range(0.0, 1.0)
-                    .numeric_step(0.01)
-                    .numeric_jump(0.1);
+            let test_id: Arc<str> = match &test_id_prefix {
+                Some(prefix) => Arc::from(format!("{prefix}.splitter.{handle_ix}")),
+                None => Arc::from(format!("resizable.splitter.{handle_ix}")),
+            };
+            let mut props = SemanticsProps {
+                layout: semantics_layout,
+                role: fret_core::SemanticsRole::Splitter,
+                label: Some(Arc::from("Resize")),
+                test_id: Some(test_id),
+                orientation: Some(handle_orientation),
+                numeric_value: value,
+                min_numeric_value: Some(0.0),
+                max_numeric_value: Some(1.0),
+                numeric_value_step: Some(0.01),
+                numeric_value_jump: Some(0.1),
+                focusable: true,
+                value_editable: Some(true),
+                disabled,
+                ..Default::default()
+            };
+
+            // Prefer omitting a numeric value surface when the fractions model is missing or
+            // degenerate; this keeps `SetValue` gated off until we can compute a stable value.
+            if value.is_none() {
+                props.numeric_value_step = None;
+                props.numeric_value_jump = None;
             }
 
-            let handle = cx
-                .hit_test_gate(false, |_cx| Vec::<AnyElement>::new())
-                .attach_semantics(decoration);
+            let theme = theme.clone();
+            let handle = cx.semantics(props, move |cx| {
+                vec![cx.hit_test_gate(false, move |cx| {
+                    if !with_handle {
+                        return Vec::<AnyElement>::new();
+                    }
+
+                    let (w, h, icon) = match axis {
+                        fret_core::Axis::Horizontal => (
+                            Px(12.0),
+                            Px(16.0),
+                            IconId::new_static("lucide.grip-vertical"),
+                        ),
+                        fret_core::Axis::Vertical => (
+                            Px(16.0),
+                            Px(12.0),
+                            IconId::new_static("lucide.grip-horizontal"),
+                        ),
+                    };
+
+                    let bg = theme.color_token("border");
+                    let fg = theme.color_token("foreground");
+
+                    let grip = cx.container(
+                        decl_style::container_props(
+                            &theme,
+                            ChromeRefinement::default()
+                                .bg(ColorRef::Color(bg))
+                                .border_1()
+                                .rounded(Radius::Sm),
+                            LayoutRefinement::default().w_px(w).h_px(h),
+                        ),
+                        move |cx| {
+                            [crate::icon::icon_with(
+                                cx,
+                                icon.clone(),
+                                Some(Px(10.0)),
+                                Some(ColorRef::Color(fg)),
+                            )]
+                        },
+                    );
+
+                    let centered = crate::stack::hstack(
+                        cx,
+                        crate::stack::HStackProps::default()
+                            .layout(LayoutRefinement::default().w_full().h_full())
+                            .items_center()
+                            .justify_center(),
+                        |_cx| vec![grip],
+                    );
+
+                    vec![centered]
+                })]
+            });
             children.push(handle);
         }
     }

@@ -1,5 +1,6 @@
 use std::sync::{Arc, Mutex};
 
+use fret_core::window::ColorScheme;
 use fret_core::{Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole};
 use fret_runtime::Model;
 use fret_ui::action::OnCloseAutoFocus;
@@ -336,7 +337,7 @@ pub fn native_select<H: UiHost>(
         let mut focus_ring = decl_style::focus_ring(&theme, resolved.radius);
         if aria_invalid {
             border_color = theme.color_token("destructive");
-            let ring_key = if theme.name.contains("/dark") {
+            let ring_key = if theme.color_scheme == Some(ColorScheme::Dark) {
                 "destructive/40"
             } else {
                 "destructive/20"
@@ -368,6 +369,8 @@ pub fn native_select<H: UiHost>(
         let trigger_test_id_for_trigger = trigger_test_id.clone();
         let theme_for_trigger = theme.clone();
         let focus_restore_target_for_trigger = focus_restore_target.clone();
+        let test_id_prefix_for_trigger = test_id_prefix.clone();
+        let test_id_prefix_for_content = test_id_prefix.clone();
 
         let trigger = control_chrome_pressable_with_id_props(cx, move |cx, _st, trigger_id| {
             *focus_restore_target_for_trigger
@@ -393,6 +396,11 @@ pub fn native_select<H: UiHost>(
                 ..Default::default()
             };
 
+            // IMPORTANT: absolute positioning in `Container` is resolved relative to the container's
+            // inner content box (padding+border are excluded). shadcn's NativeSelect positions the
+            // chevron relative to a zero-padding wrapper, so we mirror that structure here:
+            //
+            // Pressable -> (clip) chrome wrapper (no padding) -> surface (padding+border) + chevron (absolute)
             let chrome_props = ContainerProps {
                 layout: LayoutStyle {
                     size: SizeStyle {
@@ -402,16 +410,11 @@ pub fn native_select<H: UiHost>(
                     },
                     ..Default::default()
                 },
-                padding: Edges {
-                    left: resolved.padding.left,
-                    right: Px(36.0),
-                    top: py,
-                    bottom: py,
-                },
-                background: Some(resolved.background),
+                padding: Edges::all(Px(0.0)).into(),
+                background: None,
                 shadow: Some(decl_style::shadow_xs(&theme_for_trigger, resolved.radius)),
-                border: Edges::all(resolved.border_width),
-                border_color: Some(border_color),
+                border: Edges::all(Px(0.0)),
+                border_color: None,
                 corner_radii: Corners::all(resolved.radius),
                 ..Default::default()
             };
@@ -423,23 +426,51 @@ pub fn native_select<H: UiHost>(
                 pressable_props,
                 chrome_props,
                 move |cx: &mut ElementContext<'_, H>| {
-                    let fg = if label_is_placeholder {
-                        ColorRef::Color(muted_fg)
-                    } else {
-                        ColorRef::Color(resolved.text_color)
+                    let surface = {
+                        let surface_props = ContainerProps {
+                            layout: LayoutStyle {
+                                size: SizeStyle {
+                                    width: Length::Fill,
+                                    height: Length::Fill,
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            padding: Edges {
+                                left: resolved.padding.left,
+                                right: Px(36.0),
+                                top: py,
+                                bottom: py,
+                            }
+                            .into(),
+                            background: Some(resolved.background),
+                            shadow: None,
+                            border: Edges::all(resolved.border_width),
+                            border_color: Some(border_color),
+                            corner_radii: Corners::all(resolved.radius),
+                            ..Default::default()
+                        };
+                        cx.container(surface_props, move |cx| {
+                            let fg = if label_is_placeholder {
+                                ColorRef::Color(muted_fg)
+                            } else {
+                                ColorRef::Color(resolved.text_color)
+                            };
+                            let mut content = ui::text(cx, label)
+                                .text_size_px(text_style.size)
+                                .fixed_line_box_px(
+                                    text_style.line_height.unwrap_or(text_style.size),
+                                )
+                                .line_box_in_bounds()
+                                .font_normal()
+                                .nowrap()
+                                .text_color(fg)
+                                .truncate();
+
+                            content = content.overflow(fret_core::TextOverflow::Clip);
+                            vec![content.into_element(cx)]
+                        })
                     };
-
-                    let mut content = ui::text(cx, label)
-                        .text_size_px(text_style.size)
-                        .fixed_line_box_px(text_style.line_height.unwrap_or(text_style.size))
-                        .line_box_in_bounds()
-                        .font_normal()
-                        .nowrap()
-                        .text_color(fg)
-                        .truncate();
-
-                    content = content.overflow(fret_core::TextOverflow::Clip);
-                    let content = content.into_element(cx);
 
                     let icon = decl_icon::icon_with(
                         cx,
@@ -447,15 +478,15 @@ pub fn native_select<H: UiHost>(
                         Some(icon_size),
                         Some(ColorRef::Color(icon_color)),
                     );
-                    let icon = cx.container(
+                    let mut icon = cx.container(
                         ContainerProps {
                             layout: LayoutStyle {
                                 position: PositionStyle::Absolute,
                                 inset: InsetStyle {
-                                    left: None,
-                                    top: Some(icon_top),
-                                    right: Some(icon_right),
-                                    bottom: None,
+                                    left: None.into(),
+                                    top: Some(icon_top).into(),
+                                    right: Some(icon_right).into(),
+                                    bottom: None.into(),
                                 },
                                 size: SizeStyle {
                                     width: Length::Px(icon_size),
@@ -464,7 +495,7 @@ pub fn native_select<H: UiHost>(
                                 },
                                 ..Default::default()
                             },
-                            padding: Edges::all(Px(0.0)),
+                            padding: Edges::all(Px(0.0)).into(),
                             background: None,
                             shadow: None,
                             border: Edges::all(Px(0.0)),
@@ -475,11 +506,15 @@ pub fn native_select<H: UiHost>(
                         move |_cx| vec![icon],
                     );
 
+                    if let Some(prefix) = test_id_prefix_for_trigger.as_deref() {
+                        icon = icon.test_id(format!("{prefix}-icon"));
+                    }
+
                     let disabled = disabled;
                     let out: Vec<AnyElement> = if disabled {
-                        vec![cx.opacity(0.5, move |_cx| vec![content, icon])]
+                        vec![cx.opacity(0.5, move |_cx| vec![surface, icon])]
                     } else {
-                        vec![content, icon]
+                        vec![surface, icon]
                     };
                     out
                 },
@@ -592,7 +627,7 @@ pub fn native_select<H: UiHost>(
                             .on_select_action(on_select)
                             .children(vec![text, icon]);
 
-                        if let Some(prefix) = test_id_prefix.as_deref() {
+                        if let Some(prefix) = test_id_prefix_for_content.as_deref() {
                             item = item.test_id(format!(
                                 "{prefix}-item-{}",
                                 test_id_slug(option.value.as_ref())
@@ -650,7 +685,7 @@ pub fn native_select<H: UiHost>(
                     .refine_scroll_layout(LayoutRefinement::default().max_h(max_list_h))
                     .into_element(cx);
 
-                if let Some(prefix) = test_id_prefix.as_deref() {
+                if let Some(prefix) = test_id_prefix_for_content.as_deref() {
                     list = list.test_id(format!("{prefix}-listbox"));
                 }
 

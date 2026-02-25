@@ -4,12 +4,12 @@ use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-#[cfg(feature = "client-wasm")]
+#[cfg(all(feature = "client-wasm", target_arch = "wasm32"))]
 use wasm_bindgen::JsCast as _;
-#[cfg(feature = "client-wasm")]
+#[cfg(all(feature = "client-wasm", target_arch = "wasm32"))]
 use wasm_bindgen::prelude::*;
 
-#[cfg(feature = "client-wasm")]
+#[cfg(all(feature = "client-wasm", target_arch = "wasm32"))]
 fn wasm_client_log_enabled() -> bool {
     let Some(window) = web_sys::window() else {
         return false;
@@ -23,7 +23,7 @@ fn wasm_client_log_enabled() -> bool {
     .unwrap_or(false)
 }
 
-#[cfg(feature = "client-wasm")]
+#[cfg(all(feature = "client-wasm", target_arch = "wasm32"))]
 fn wasm_log(line: &str) {
     if !wasm_client_log_enabled() {
         return;
@@ -31,7 +31,7 @@ fn wasm_log(line: &str) {
     web_sys::console::log_1(&JsValue::from_str(line));
 }
 
-#[cfg(feature = "client-wasm")]
+#[cfg(all(feature = "client-wasm", target_arch = "wasm32"))]
 fn wasm_warn(line: &str) {
     if !wasm_client_log_enabled() {
         return;
@@ -81,7 +81,7 @@ impl DevtoolsWsClientConfig {
 
 pub struct DevtoolsWsClient {
     state: Arc<State>,
-    #[cfg(feature = "client-wasm")]
+    #[cfg(all(feature = "client-wasm", target_arch = "wasm32"))]
     wasm: Option<WasmInner>,
 }
 
@@ -98,7 +98,7 @@ struct State {
     default_session_id: Mutex<Option<String>>,
 }
 
-#[cfg(feature = "client-wasm")]
+#[cfg(all(feature = "client-wasm", target_arch = "wasm32"))]
 struct WasmInner {
     ws: web_sys::WebSocket,
     _on_open: Closure<dyn FnMut(web_sys::Event)>,
@@ -114,7 +114,7 @@ impl DevtoolsWsClient {
         Self::connect_native_inner(cfg)
     }
 
-    #[cfg(feature = "client-wasm")]
+    #[cfg(all(feature = "client-wasm", target_arch = "wasm32"))]
     pub fn connect_wasm(cfg: DevtoolsWsClientConfig) -> Result<Self, String> {
         let state = Arc::new(State {
             outbox: Mutex::new(VecDeque::new()),
@@ -289,7 +289,7 @@ impl DevtoolsWsClient {
             outbox.push_back(msg);
         }
 
-        #[cfg(feature = "client-wasm")]
+        #[cfg(all(feature = "client-wasm", target_arch = "wasm32"))]
         if let Some(wasm) = self.wasm.as_ref() {
             flush_wasm_outbox(&wasm.ws, &self.state);
         }
@@ -408,7 +408,7 @@ impl DevtoolsWsClient {
 
         Ok(Self {
             state,
-            #[cfg(feature = "client-wasm")]
+            #[cfg(all(feature = "client-wasm", target_arch = "wasm32"))]
             wasm: None,
         })
     }
@@ -442,7 +442,7 @@ fn append_token_query_param(url: &str, token: &str, key: &str) -> String {
     url.to_string()
 }
 
-#[cfg(feature = "client-wasm")]
+#[cfg(all(feature = "client-wasm", target_arch = "wasm32"))]
 fn append_token_query_param_simple(url: &str, token: &str, key: &str) -> String {
     if url.contains(&format!("{key}=")) {
         return url.to_string();
@@ -454,7 +454,7 @@ fn append_token_query_param_simple(url: &str, token: &str, key: &str) -> String 
     }
 }
 
-#[cfg(feature = "client-wasm")]
+#[cfg(all(feature = "client-wasm", target_arch = "wasm32"))]
 fn flush_wasm_outbox(ws: &web_sys::WebSocket, state: &Arc<State>) {
     if ws.ready_state() != web_sys::WebSocket::OPEN {
         return;
@@ -482,7 +482,7 @@ fn flush_wasm_outbox(ws: &web_sys::WebSocket, state: &Arc<State>) {
     }
 }
 
-#[cfg(feature = "client-wasm")]
+#[cfg(all(feature = "client-wasm", target_arch = "wasm32"))]
 pub fn devtools_ws_config_from_window_query() -> (Option<String>, Option<String>) {
     let Some(window) = web_sys::window() else {
         return (None, None);

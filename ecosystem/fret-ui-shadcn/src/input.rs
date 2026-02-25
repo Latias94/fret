@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use fret_core::window::ColorScheme;
 use fret_core::{Corners, FontId, KeyCode, NodeId, Px, SemanticsRole};
 use fret_runtime::{CommandId, Model};
 use fret_ui::action::{ActionCx, KeyDownCx, UiFocusActionHost};
@@ -320,7 +321,7 @@ fn input_with_style_and_submit<H: UiHost>(
             border: Some("input"),
             border_focus: Some("ring"),
             fg: Some("foreground"),
-            selection: Some("primary"),
+            selection: Some("ring/50"),
             ..InputTokenKeys::none()
         },
     );
@@ -363,7 +364,7 @@ fn input_with_style_and_submit<H: UiHost>(
         chrome.border_color = border_color;
         chrome.border_color_focused = border_color;
         if let Some(mut ring) = chrome.focus_ring.take() {
-            let ring_key = if theme.name.contains("/dark") {
+            let ring_key = if theme.color_scheme == Some(ColorScheme::Dark) {
                 "destructive/40"
             } else {
                 "destructive/20"
@@ -411,7 +412,7 @@ fn input_with_style_and_submit<H: UiHost>(
     props.layout.size = SizeStyle {
         width: Length::Fill,
         height: Length::Px(resolved.min_height),
-        min_width: Some(fret_core::Px(0.0)),
+        min_width: Some(Length::Px(fret_core::Px(0.0))),
         ..Default::default()
     };
     props.layout.overflow = Overflow::Clip;
@@ -451,5 +452,41 @@ fn input_with_style_and_submit<H: UiHost>(
         cx.opacity(0.5, move |_cx| vec![input])
     } else {
         input
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn input_selection_color_uses_ring_50_in_shadcn_light_theme() {
+        let mut app = fret_app::App::new();
+        crate::shadcn_themes::apply_shadcn_new_york_v4(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Slate,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let theme = Theme::global(&app);
+        let expected = theme
+            .color_by_key("ring/50")
+            .expect("shadcn new-york-v4 seeds ring/50");
+
+        let resolved = resolve_input_chrome(
+            theme,
+            Size::default(),
+            &ChromeRefinement::default(),
+            InputTokenKeys {
+                bg: Some("component.input.bg"),
+                border: Some("input"),
+                border_focus: Some("ring"),
+                fg: Some("foreground"),
+                selection: Some("ring/50"),
+                ..InputTokenKeys::none()
+            },
+        );
+
+        assert_eq!(resolved.selection_color, expected);
     }
 }

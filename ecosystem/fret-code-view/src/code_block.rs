@@ -608,7 +608,7 @@ fn render_code_block_header<H: UiHost>(
 
     let mut props = ContainerProps::default();
     props.layout.size.width = Length::Fill;
-    props.padding = Edges::symmetric(pad_x, pad_y);
+    props.padding = Edges::symmetric(pad_x, pad_y).into();
     match background {
         CodeBlockHeaderBackground::None => {}
         CodeBlockHeaderBackground::Secondary => {
@@ -700,7 +700,7 @@ fn render_code_block_body<H: UiHost + 'static>(
     let mut props = ContainerProps::default();
     props.layout.size.width = Length::Fill;
     props.layout.overflow = Overflow::Clip;
-    props.padding = Edges::all(pad);
+    props.padding = Edges::all(pad).into();
 
     cx.container(props, |cx| {
         let wrap = if prepared.show_line_numbers {
@@ -714,14 +714,14 @@ fn render_code_block_body<H: UiHost + 'static>(
         };
 
         let scrollbar_w = theme.metric_token("metric.scrollbar.width");
-        let reserved_right_for_x_scrollbar = if scrollbar_y_enabled {
-            scrollbar_w
-        } else {
-            Px(0.0)
-        };
 
         let content =
             if windowed_lines && max_height.is_some() && matches!(wrap, CodeBlockWrap::ScrollX) {
+                let reserved_right_for_x_scrollbar = if scrollbar_y_enabled {
+                    scrollbar_w
+                } else {
+                    Px(0.0)
+                };
                 render_code_block_windowed_lines(
                     cx,
                     theme,
@@ -745,6 +745,23 @@ fn render_code_block_body<H: UiHost + 'static>(
                     disable_contextual_alternates,
                 );
                 let line_count = prepared.lines.len();
+
+                let needs_scroll_y = match max_height {
+                    None => false,
+                    Some(max_height) => match text_wrap_for_code_block_wrap(wrap) {
+                        TextWrap::None => {
+                            let line_height = theme.metric_token("metric.font.mono_line_height");
+                            let est_h = Px(line_height.0 * (line_count.max(1) as f32));
+                            est_h.0 > max_height.0
+                        }
+                        TextWrap::Word | TextWrap::WordBreak | TextWrap::Grapheme => true,
+                    },
+                };
+                let reserved_right_for_x_scrollbar = if needs_scroll_y && scrollbar_y_enabled {
+                    scrollbar_w
+                } else {
+                    Px(0.0)
+                };
 
                 let content = if !prepared.show_line_numbers {
                     render_code_block_text(
@@ -772,7 +789,7 @@ fn render_code_block_body<H: UiHost + 'static>(
                     render_code_block_with_line_numbers(cx, theme, line_numbers, code)
                 };
 
-                if let Some(max_height) = max_height {
+                if let (Some(max_height), true) = (max_height, needs_scroll_y) {
                     let thumb = theme.color_token("scrollbar.thumb.background");
                     let thumb_hover = theme.color_token("scrollbar.thumb.hover.background");
                     let handle = cx.with_state(ScrollHandle::default, |h| h.clone());
@@ -784,8 +801,8 @@ fn render_code_block_body<H: UiHost + 'static>(
                         // viewport height. Using `max_height` alone yields an indefinite height
                         // (auto) which can collapse or produce inconsistent layout.
                         layout.size.height = Length::Px(max_height);
-                        layout.size.min_height = Some(max_height);
-                        layout.size.max_height = Some(max_height);
+                        layout.size.min_height = Some(Length::Px(max_height));
+                        layout.size.max_height = Some(Length::Px(max_height));
                         layout.overflow = Overflow::Clip;
                         layout
                     };
@@ -818,14 +835,15 @@ fn render_code_block_body<H: UiHost + 'static>(
                                 let scrollbar_layout = LayoutStyle {
                                     position: PositionStyle::Absolute,
                                     inset: InsetStyle {
-                                        top: Some(Px(0.0)),
-                                        right: Some(Px(0.0)),
+                                        top: Some(Px(0.0)).into(),
+                                        right: Some(Px(0.0)).into(),
                                         bottom: Some(if scrollbar_x_enabled {
                                             scrollbar_w
                                         } else {
                                             Px(0.0)
-                                        }),
-                                        left: None,
+                                        })
+                                        .into(),
+                                        left: None.into(),
                                     },
                                     size: SizeStyle {
                                         width: Length::Px(scrollbar_w),
@@ -1104,7 +1122,7 @@ fn render_code_block_line_row<H: UiHost>(
                 layout.size.height = Length::Auto;
                 layout
             },
-            padding: Edges::all(Px(0.0)),
+            padding: Edges::all(Px(0.0)).into(),
             background: None,
             shadow: None,
             border: Edges {
@@ -1241,8 +1259,8 @@ fn render_code_block_windowed_lines<H: UiHost + 'static>(
                 // Same rationale as the non-windowed path: nested scrollables need a definite
                 // viewport height, otherwise `Length::Fill` has no base to resolve against.
                 layout.size.height = Length::Px(max_height);
-                layout.size.min_height = Some(max_height);
-                layout.size.max_height = Some(max_height);
+                layout.size.min_height = Some(Length::Px(max_height));
+                layout.size.max_height = Some(Length::Px(max_height));
                 layout.overflow = Overflow::Clip;
                 layout
             },
@@ -1269,10 +1287,10 @@ fn render_code_block_windowed_lines<H: UiHost + 'static>(
                     let scrollbar_layout = LayoutStyle {
                         position: PositionStyle::Absolute,
                         inset: InsetStyle {
-                            top: None,
-                            right: Some(scrollbar_x_right_inset),
-                            bottom: Some(Px(0.0)),
-                            left: Some(Px(0.0)),
+                            top: None.into(),
+                            right: Some(scrollbar_x_right_inset).into(),
+                            bottom: Some(Px(0.0)).into(),
+                            left: Some(Px(0.0)).into(),
                         },
                         size: SizeStyle {
                             height: Length::Px(scrollbar_w),
@@ -1313,14 +1331,15 @@ fn render_code_block_windowed_lines<H: UiHost + 'static>(
                 let scrollbar_layout = LayoutStyle {
                     position: PositionStyle::Absolute,
                     inset: InsetStyle {
-                        top: Some(Px(0.0)),
-                        right: Some(Px(0.0)),
+                        top: Some(Px(0.0)).into(),
+                        right: Some(Px(0.0)).into(),
                         bottom: Some(if scrollbar_x_enabled {
                             scrollbar_w
                         } else {
                             Px(0.0)
-                        }),
-                        left: None,
+                        })
+                        .into(),
+                        left: None.into(),
                     },
                     size: SizeStyle {
                         width: Length::Px(scrollbar_w),
@@ -1393,7 +1412,7 @@ fn render_code_block_with_line_numbers<H: UiHost>(
                 layout.size.height = Length::Auto;
                 layout
             },
-            padding: Edges::all(Px(0.0)),
+            padding: Edges::all(Px(0.0)).into(),
             background: None,
             shadow: None,
             border: Edges {
@@ -1507,10 +1526,10 @@ fn render_code_block_text<H: UiHost>(
             let scrollbar_layout = LayoutStyle {
                 position: PositionStyle::Absolute,
                 inset: InsetStyle {
-                    top: None,
-                    right: Some(scrollbar_x_right_inset),
-                    bottom: Some(Px(0.0)),
-                    left: Some(Px(0.0)),
+                    top: None.into(),
+                    right: Some(scrollbar_x_right_inset).into(),
+                    bottom: Some(Px(0.0)).into(),
+                    left: Some(Px(0.0)).into(),
                 },
                 size: SizeStyle {
                     height: Length::Px(scrollbar_w),

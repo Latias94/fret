@@ -171,7 +171,7 @@ fn render_thematic_break<H: UiHost>(
     cx.container(
         ContainerProps {
             layout,
-            padding: Edges::all(Px(0.0)),
+            padding: Edges::all(Px(0.0)).into(),
             background: Some(markdown_theme.hr),
             shadow: None,
             border: Edges::all(Px(0.0)),
@@ -501,7 +501,7 @@ fn render_math_block_builtin<H: UiHost>(
 
     let mut container = ContainerProps::default();
     container.layout.size.width = Length::Fill;
-    container.padding = Edges::all(markdown_theme.math_block_padding);
+    container.padding = Edges::all(markdown_theme.math_block_padding).into();
     container.background = Some(markdown_theme.math_block_bg);
     container.border = Edges::all(Px(0.0));
     container.corner_radii = fret_core::Corners::all(theme.metric_token("metric.radius.md"));
@@ -891,8 +891,8 @@ fn render_inline_line_with_layout<H: UiHost>(
     let mut props = FlexProps::default();
     props.layout.size.width = Length::Fill;
     props.direction = Axis::Horizontal;
-    props.gap = Px(0.0);
-    props.padding = Edges::all(Px(0.0));
+    props.gap = Px(0.0).into();
+    props.padding = Edges::all(Px(0.0)).into();
     props.justify = justify;
     props.align = CrossAlign::Start;
     props.wrap = true;
@@ -966,7 +966,8 @@ fn render_inline_token<H: UiHost>(
             right: markdown_theme.inline_code_padding_x,
             bottom: markdown_theme.inline_code_padding_y,
             left: markdown_theme.inline_code_padding_x,
-        };
+        }
+        .into();
         props.background = Some(markdown_theme.inline_code_bg);
         props.border = Edges::all(Px(0.0));
         props.corner_radii = fret_core::Corners::all(theme.metric_token("metric.radius.sm"));
@@ -1102,7 +1103,7 @@ fn render_inline_text_token<H: UiHost>(
 
     let mut props = ContainerProps::default();
     props.layout.position = PositionStyle::Relative;
-    props.padding = Edges::all(Px(0.0));
+    props.padding = Edges::all(Px(0.0)).into();
     props.border = Edges::all(Px(0.0));
 
     cx.container(props, |cx| {
@@ -1127,15 +1128,15 @@ fn render_inline_text_token<H: UiHost>(
 
         let mut line_layout = LayoutStyle::default();
         line_layout.position = PositionStyle::Absolute;
-        line_layout.inset.left = Some(Px(0.0));
-        line_layout.inset.right = Some(Px(0.0));
-        line_layout.inset.top = Some(line_y);
+        line_layout.inset.left = Some(Px(0.0)).into();
+        line_layout.inset.right = Some(Px(0.0)).into();
+        line_layout.inset.top = Some(line_y).into();
         line_layout.size.height = Length::Px(Px(1.0));
 
         let line_el = cx.container(
             ContainerProps {
                 layout: line_layout,
-                padding: Edges::all(Px(0.0)),
+                padding: Edges::all(Px(0.0)).into(),
                 background: Some(color),
                 border: Edges::all(Px(0.0)),
                 ..Default::default()
@@ -1275,7 +1276,8 @@ fn render_inline_math_builtin<H: UiHost>(
         right: markdown_theme.inline_math_padding_x,
         bottom: markdown_theme.inline_math_padding_y,
         left: markdown_theme.inline_math_padding_x,
-    };
+    }
+    .into();
     props.background = Some(markdown_theme.inline_math_bg);
     props.border = Edges::all(Px(0.0));
     props.corner_radii = fret_core::Corners::all(theme.metric_token("metric.radius.sm"));

@@ -77,8 +77,8 @@ impl Suggestions {
         let mut scroll_layout = LayoutStyle::default();
         scroll_layout.size.width = Length::Fill;
         scroll_layout.size.height = Length::Auto;
-        scroll_layout.size.min_width = Some(fret_core::Px(0.0));
-        scroll_layout.size.min_height = Some(fret_core::Px(0.0));
+        scroll_layout.size.min_width = Some(Length::Px(fret_core::Px(0.0)));
+        scroll_layout.size.min_height = Some(Length::Px(fret_core::Px(0.0)));
         scroll_layout.overflow = Overflow::Clip;
 
         let mut scroll = cx.scroll(

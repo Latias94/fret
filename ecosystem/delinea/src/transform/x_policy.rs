@@ -4,6 +4,7 @@ use crate::spec::AxisRange;
 use crate::spec::FilterMode;
 
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SeriesXPolicy {
     pub filter: AxisFilter1D,
     pub mapping_window: Option<DataWindowX>,

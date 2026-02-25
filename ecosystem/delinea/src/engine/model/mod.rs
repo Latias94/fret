@@ -473,6 +473,7 @@ impl ChartModel {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct VisualMapDomain {
     pub min: f64,
     pub max: f64,
@@ -488,6 +489,7 @@ impl VisualMapDomain {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct VisualMapRange {
     pub min: f64,
     pub max: f64,

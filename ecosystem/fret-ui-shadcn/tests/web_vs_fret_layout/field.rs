@@ -1716,7 +1716,7 @@ fn web_vs_fret_layout_field_fieldset_geometry() {
         let grid = cx.grid(
             GridProps {
                 cols: 2,
-                gap: Px(16.0),
+                gap: Px(16.0).into(),
                 layout: fret_ui_kit::declarative::style::layout_style(
                     &Theme::global(&*cx.app),
                     fret_ui_kit::LayoutRefinement::default().w_full(),
@@ -1925,7 +1925,7 @@ fn web_vs_fret_layout_field_choice_card_geometry() {
             &theme,
             fret_ui_kit::LayoutRefinement::default().w_full(),
         );
-        list_props.flex.gap = MetricRef::space(Space::N3).resolve(&theme);
+        list_props.flex.gap = MetricRef::space(Space::N3).resolve(&theme).into();
 
         let pressable_layout = fret_ui_kit::declarative::style::layout_style(
             &theme,

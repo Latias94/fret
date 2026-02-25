@@ -158,8 +158,8 @@ fn web_vs_fret_layout_spinner_input_group_geometry_matches() {
                                 FlexProps {
                                     layout: LayoutStyle::default(),
                                     direction: fret_core::Axis::Horizontal,
-                                    gap: Px(0.0),
-                                    padding: Edges::symmetric(Px(8.0), Px(0.0)),
+                                    gap: Px(0.0).into(),
+                                    padding: Edges::symmetric(Px(8.0), Px(0.0)).into(),
                                     justify: MainAlign::Start,
                                     align: CrossAlign::Center,
                                     wrap: false,
@@ -186,7 +186,7 @@ fn web_vs_fret_layout_spinner_input_group_geometry_matches() {
 
                     vec![cx.column(
                         ColumnProps {
-                            gap: Px(expected_gap_y),
+                            gap: Px(expected_gap_y).into(),
                             ..Default::default()
                         },
                         move |_cx| vec![group0, group1],
@@ -594,17 +594,21 @@ fn web_vs_fret_layout_spinner_button_disabled_sm_heights_match_web() {
                 .into_element(cx),
         ];
 
-        vec![cx.column(
-            ColumnProps {
-                layout: fret_ui_kit::declarative::style::layout_style(
-                    &Theme::global(&*cx.app),
-                    LayoutRefinement::default().w_full(),
-                ),
-                gap: MetricRef::space(Space::N4).resolve(&Theme::global(&*cx.app)),
-                ..Default::default()
-            },
-            move |_cx| buttons,
-        )]
+        vec![
+            cx.column(
+                ColumnProps {
+                    layout: fret_ui_kit::declarative::style::layout_style(
+                        &Theme::global(&*cx.app),
+                        LayoutRefinement::default().w_full(),
+                    ),
+                    gap: MetricRef::space(Space::N4)
+                        .resolve(&Theme::global(&*cx.app))
+                        .into(),
+                    ..Default::default()
+                },
+                move |_cx| buttons,
+            ),
+        ]
     });
 
     for (i, web_button) in web_buttons.iter().enumerate() {
@@ -788,7 +792,7 @@ fn web_vs_fret_layout_spinner_demo_item_height_matches_web() {
         vec![cx.column(
             ColumnProps {
                 layout: wrapper_layout,
-                gap: wrapper_gap,
+                gap: wrapper_gap.into(),
                 ..Default::default()
             },
             move |_cx| vec![item],

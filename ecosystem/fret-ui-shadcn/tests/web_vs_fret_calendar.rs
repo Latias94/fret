@@ -373,7 +373,8 @@ fn render_fret_calendar_range_scene(
                     top: Px(config.origin_y),
                     right: Px(0.0),
                     bottom: Px(0.0),
-                },
+                }
+                .into(),
                 ..Default::default()
             },
             move |_cx| vec![calendar],
@@ -870,7 +871,8 @@ fn render_calendar_chrome_from_config(
                 top: Px(config.origin_y),
                 right: Px(0.0),
                 bottom: Px(0.0),
-            },
+            }
+            .into(),
             ..Default::default()
         },
         move |_cx| vec![calendar],
@@ -976,7 +978,8 @@ fn render_calendar_hover_chrome_from_config(
                 top: Px(config.origin_y),
                 right: Px(0.0),
                 bottom: Px(0.0),
-            },
+            }
+            .into(),
             ..Default::default()
         },
         move |_cx| vec![calendar],
@@ -1188,7 +1191,8 @@ fn assert_calendar_single_month_variant_geometry_matches_web(web_name: &str) {
                     top: Px(web_origin_y),
                     right: Px(0.0),
                     bottom: Px(0.0),
-                },
+                }
+                .into(),
                 ..Default::default()
             },
             move |_cx| vec![calendar],
@@ -1494,24 +1498,27 @@ fn assert_calendar_multi_month_variant_geometry_matches_web(web_name: &str) {
                 if let Some(today) = web_today {
                     calendar = calendar.today(today);
                 }
-                vec![cx.container(
-                    fret_ui::element::ContainerProps {
-                        layout: {
-                            let mut layout = fret_ui::element::LayoutStyle::default();
-                            layout.size.width = fret_ui::element::Length::Fill;
-                            layout.size.height = fret_ui::element::Length::Fill;
-                            layout
+                vec![
+                    cx.container(
+                        fret_ui::element::ContainerProps {
+                            layout: {
+                                let mut layout = fret_ui::element::LayoutStyle::default();
+                                layout.size.width = fret_ui::element::Length::Fill;
+                                layout.size.height = fret_ui::element::Length::Fill;
+                                layout
+                            },
+                            padding: fret_core::Edges {
+                                left: Px(web_origin_x),
+                                top: Px(web_origin_y),
+                                right: Px(0.0),
+                                bottom: Px(0.0),
+                            }
+                            .into(),
+                            ..Default::default()
                         },
-                        padding: fret_core::Edges {
-                            left: Px(web_origin_x),
-                            top: Px(web_origin_y),
-                            right: Px(0.0),
-                            bottom: Px(0.0),
-                        },
-                        ..Default::default()
-                    },
-                    move |cx| vec![calendar.into_element(cx)],
-                )]
+                        move |cx| vec![calendar.into_element(cx)],
+                    ),
+                ]
             }
             _ if web_is_range_mode => {
                 let (min, max) = web_selected_dates.iter().fold(
@@ -1544,24 +1551,27 @@ fn assert_calendar_multi_month_variant_geometry_matches_web(web_name: &str) {
                 if let Some(today) = web_today {
                     calendar = calendar.today(today);
                 }
-                vec![cx.container(
-                    fret_ui::element::ContainerProps {
-                        layout: {
-                            let mut layout = fret_ui::element::LayoutStyle::default();
-                            layout.size.width = fret_ui::element::Length::Fill;
-                            layout.size.height = fret_ui::element::Length::Fill;
-                            layout
+                vec![
+                    cx.container(
+                        fret_ui::element::ContainerProps {
+                            layout: {
+                                let mut layout = fret_ui::element::LayoutStyle::default();
+                                layout.size.width = fret_ui::element::Length::Fill;
+                                layout.size.height = fret_ui::element::Length::Fill;
+                                layout
+                            },
+                            padding: fret_core::Edges {
+                                left: Px(web_origin_x),
+                                top: Px(web_origin_y),
+                                right: Px(0.0),
+                                bottom: Px(0.0),
+                            }
+                            .into(),
+                            ..Default::default()
                         },
-                        padding: fret_core::Edges {
-                            left: Px(web_origin_x),
-                            top: Px(web_origin_y),
-                            right: Px(0.0),
-                            bottom: Px(0.0),
-                        },
-                        ..Default::default()
-                    },
-                    move |cx| vec![calendar.into_element(cx)],
-                )]
+                        move |cx| vec![calendar.into_element(cx)],
+                    ),
+                ]
             }
             _ => {
                 let selected: Model<Vec<time::Date>> =
@@ -1592,24 +1602,27 @@ fn assert_calendar_multi_month_variant_geometry_matches_web(web_name: &str) {
                     calendar = calendar.today(today);
                 }
 
-                vec![cx.container(
-                    fret_ui::element::ContainerProps {
-                        layout: {
-                            let mut layout = fret_ui::element::LayoutStyle::default();
-                            layout.size.width = fret_ui::element::Length::Fill;
-                            layout.size.height = fret_ui::element::Length::Fill;
-                            layout
+                vec![
+                    cx.container(
+                        fret_ui::element::ContainerProps {
+                            layout: {
+                                let mut layout = fret_ui::element::LayoutStyle::default();
+                                layout.size.width = fret_ui::element::Length::Fill;
+                                layout.size.height = fret_ui::element::Length::Fill;
+                                layout
+                            },
+                            padding: fret_core::Edges {
+                                left: Px(web_origin_x),
+                                top: Px(web_origin_y),
+                                right: Px(0.0),
+                                bottom: Px(0.0),
+                            }
+                            .into(),
+                            ..Default::default()
                         },
-                        padding: fret_core::Edges {
-                            left: Px(web_origin_x),
-                            top: Px(web_origin_y),
-                            right: Px(0.0),
-                            bottom: Px(0.0),
-                        },
-                        ..Default::default()
-                    },
-                    move |cx| vec![calendar.into_element(cx)],
-                )]
+                        move |cx| vec![calendar.into_element(cx)],
+                    ),
+                ]
             }
         }
     });
@@ -1887,24 +1900,27 @@ fn web_vs_fret_calendar_hijri_day_grid_geometry_and_a11y_labels_match_web_target
             cal = cal.cell_size(cell_size);
         }
 
-        vec![cx.container(
-            fret_ui::element::ContainerProps {
-                layout: {
-                    let mut layout = fret_ui::element::LayoutStyle::default();
-                    layout.size.width = fret_ui::element::Length::Fill;
-                    layout.size.height = fret_ui::element::Length::Fill;
-                    layout
+        vec![
+            cx.container(
+                fret_ui::element::ContainerProps {
+                    layout: {
+                        let mut layout = fret_ui::element::LayoutStyle::default();
+                        layout.size.width = fret_ui::element::Length::Fill;
+                        layout.size.height = fret_ui::element::Length::Fill;
+                        layout
+                    },
+                    padding: fret_core::Edges {
+                        left: Px(web_origin_x),
+                        top: Px(web_origin_y),
+                        right: Px(0.0),
+                        bottom: Px(0.0),
+                    }
+                    .into(),
+                    ..Default::default()
                 },
-                padding: fret_core::Edges {
-                    left: Px(web_origin_x),
-                    top: Px(web_origin_y),
-                    right: Px(0.0),
-                    bottom: Px(0.0),
-                },
-                ..Default::default()
-            },
-            move |cx| vec![cal.into_element(cx)],
-        )]
+                move |cx| vec![cal.into_element(cx)],
+            ),
+        ]
     });
 
     let prev = find_semantics(
@@ -2256,7 +2272,8 @@ fn assert_calendar_11_disabled_navigation_semantics_matches_web(web_name: &str) 
                         top: Px(origin_y),
                         right: Px(0.0),
                         bottom: Px(0.0),
-                    },
+                    }
+                    .into(),
                     ..Default::default()
                 },
                 move |_cx| vec![calendar],
@@ -2521,7 +2538,8 @@ fn assert_calendar_08_disabled_day_semantics_matches_web(web_name: &str) {
                         top: Px(origin_y),
                         right: Px(0.0),
                         bottom: Px(0.0),
-                    },
+                    }
+                    .into(),
                     ..Default::default()
                 },
                 move |_cx| vec![calendar],
@@ -3870,7 +3888,7 @@ fn fret_calendar_may_2026_outside_day_text_centered_in_button() {
     for (day, label) in [(27u8, "27"), (28, "28"), (29, "29"), (30, "30")] {
         let date =
             time::Date::from_calendar_date(2026, time::Month::April, day).expect("valid date");
-        let button_test_id = format!("fret-test.calendar:{date}");
+        let button_test_id = format!("fret-test.calendar:{date}:outside");
         assert_fret_calendar_day_text_centered_in_button_by_test_id(
             &snap,
             &button_test_id,

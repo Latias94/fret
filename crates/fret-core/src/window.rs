@@ -1,10 +1,12 @@
 use std::collections::HashMap;
 use std::sync::OnceLock;
 
+use serde::{Deserialize, Serialize};
+
 use crate::time::{Duration, Instant};
 use crate::{AppWindowId, Color, Edges, Event, FrameId, Point, Rect, Size};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ColorScheme {
     Light,
     Dark,

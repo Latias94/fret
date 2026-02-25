@@ -105,8 +105,8 @@ fn build_breadcrumb_dropdown_button(
                                     fret_ui::element::FlexProps {
                                         layout: Default::default(),
                                         direction: fret_core::Axis::Horizontal,
-                                        gap: Px(4.0),
-                                        padding: Edges::all(Px(0.0)),
+                                        gap: Px(4.0).into(),
+                                        padding: Edges::all(Px(0.0)).into(),
                                         justify: MainAlign::Start,
                                         align: CrossAlign::Center,
                                         wrap: false,
@@ -123,6 +123,8 @@ fn build_breadcrumb_dropdown_button(
                                             color: Some(muted),
                                             wrap: TextWrap::Word,
                                             overflow: TextOverflow::Clip,
+                                            align: Default::default(),
+                                            ink_overflow: Default::default(),
                                         });
 
                                         let icon = fret_ui_kit::declarative::icon::icon_with(
@@ -262,7 +264,7 @@ fn build_breadcrumb_responsive_drawer(
                                 cx.container(
                                     ContainerProps {
                                         layout: LayoutStyle::default(),
-                                        padding: Edges::all(Px(16.0)),
+                                        padding: Edges::all(Px(16.0)).into(),
                                         ..Default::default()
                                     },
                                     move |cx| {
@@ -285,7 +287,8 @@ fn build_breadcrumb_responsive_drawer(
                                                             padding: Edges::symmetric(
                                                                 Px(0.0),
                                                                 Px(4.0),
-                                                            ),
+                                                            )
+                                                            .into(),
                                                             ..Default::default()
                                                         },
                                                         move |cx| {

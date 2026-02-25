@@ -33,9 +33,11 @@ impl Default for ResizablePanelGroupStyle {
                 b: 1.0,
                 a: 1.0,
             },
-            handle_alpha: 0.18,
-            handle_hover_alpha: 0.28,
-            handle_drag_alpha: 0.35,
+            // Align with shadcn/ui: the handle line should use the border color at full opacity.
+            // Contrast remains subtle because the `border` token is intentionally low-contrast.
+            handle_alpha: 1.0,
+            handle_hover_alpha: 1.0,
+            handle_drag_alpha: 1.0,
         }
     }
 }

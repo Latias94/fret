@@ -309,7 +309,6 @@ pub(super) fn preview_avatar(
     let dropdown = {
         doc_layout::wrap_controls_row(cx, &theme, Space::N4, |cx| {
             let avatar_image_for_trigger = avatar_image.clone();
-            let open_for_trigger = dropdown_open.clone();
             let trigger = move |cx: &mut ElementContext<'_, App>| {
                 let image =
                     shadcn::AvatarImage::model(avatar_image_for_trigger.clone()).into_element(cx);
@@ -318,19 +317,20 @@ pub(super) fn preview_avatar(
                     .delay_ms(120)
                     .into_element(cx);
 
-                let avatar = shadcn::Avatar::new([image, fallback])
-                    .size(shadcn::AvatarSize::Default)
-                    .into_element(cx);
+            let avatar = shadcn::Avatar::new([image, fallback])
+                .size(shadcn::AvatarSize::Default)
+                .into_element(cx);
 
-                let mut props = fret_ui::element::PressableProps::default();
-                props.a11y.role = Some(fret_core::SemanticsRole::Button);
-                props.a11y.label = Some(std::sync::Arc::<str>::from("Avatar menu"));
-                let open_for_pressable = open_for_trigger.clone();
-                cx.pressable(props, move |cx, _st| {
-                    cx.pressable_toggle_bool(&open_for_pressable);
-                    vec![avatar]
-                })
-                .test_id("ui-gallery-avatar-dropdown-trigger")
+                // Match shadcn docs: Avatar is composed inside a ghost icon button used as the
+                // dropdown trigger (`asChild`-style).
+                shadcn::Button::new("")
+                    .variant(shadcn::ButtonVariant::Ghost)
+                    .size(shadcn::ButtonSize::Icon)
+                    .a11y_label("Open user menu")
+                    .refine_style(ChromeRefinement::default().rounded(Radius::Full))
+                    .children([avatar])
+                    .test_id("ui-gallery-avatar-dropdown-trigger")
+                    .into_element(cx)
             };
 
             let entries = |_cx: &mut ElementContext<'_, App>| {
@@ -338,6 +338,10 @@ pub(super) fn preview_avatar(
                     shadcn::DropdownMenuEntry::Item(
                         shadcn::DropdownMenuItem::new("Profile")
                             .test_id("ui-gallery-avatar-dropdown-item-profile"),
+                    ),
+                    shadcn::DropdownMenuEntry::Item(
+                        shadcn::DropdownMenuItem::new("Billing")
+                            .test_id("ui-gallery-avatar-dropdown-item-billing"),
                     ),
                     shadcn::DropdownMenuEntry::Item(
                         shadcn::DropdownMenuItem::new("Settings")
@@ -463,9 +467,19 @@ shadcn::AvatarGroup::new(avatars.into_iter().chain([count]).collect::<Vec<_>>())
 
 shadcn::DropdownMenu::new(open).into_element(
     cx,
-    |cx| shadcn::Avatar::new([/* image + fallback */]).into_element(cx),
+    |cx| {
+        let avatar = shadcn::Avatar::new([/* image + fallback */]).into_element(cx);
+        shadcn::Button::new("")
+            .variant(shadcn::ButtonVariant::Ghost)
+            .size(shadcn::ButtonSize::Icon)
+            .refine_style(ChromeRefinement::default().rounded(Radius::Full))
+            .children([avatar])
+            .into_element(cx)
+    },
     |_cx| vec![
         shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new("Profile")),
+        shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new("Billing")),
+        shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new("Settings")),
         shadcn::DropdownMenuEntry::Separator,
     ],
 );"#,

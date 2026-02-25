@@ -77,8 +77,8 @@ fn web_vs_fret_layout_item_avatar_geometry() {
             FlexProps {
                 layout: LayoutStyle::default(),
                 direction: fret_core::Axis::Horizontal,
-                gap: Px(0.0),
-                padding: fret_core::Edges::all(Px(0.0)),
+                gap: Px(0.0).into(),
+                padding: fret_core::Edges::all(Px(0.0)).into(),
                 justify: MainAlign::Start,
                 align: CrossAlign::Center,
                 wrap: false,
@@ -90,8 +90,8 @@ fn web_vs_fret_layout_item_avatar_geometry() {
             FlexProps {
                 layout: LayoutStyle::default(),
                 direction: fret_core::Axis::Vertical,
-                gap: Px(16.0),
-                padding: fret_core::Edges::all(Px(0.0)),
+                gap: Px(16.0).into(),
+                padding: fret_core::Edges::all(Px(0.0)).into(),
                 justify: MainAlign::Start,
                 align: CrossAlign::Start,
                 wrap: false,
@@ -309,7 +309,7 @@ fn web_vs_fret_layout_item_demo_item_rects_match_web() {
         vec![cx.column(
             ColumnProps {
                 layout: wrapper_layout,
-                gap: Px(0.0),
+                gap: Px(0.0).into(),
                 ..Default::default()
             },
             move |_cx| vec![item0, item1],
@@ -512,7 +512,7 @@ fn web_vs_fret_layout_item_size_item_rects_match_web() {
         vec![cx.column(
             ColumnProps {
                 layout: wrapper_layout,
-                gap: Px(0.0),
+                gap: Px(0.0).into(),
                 ..Default::default()
             },
             move |_cx| vec![item0, item1],
@@ -613,7 +613,7 @@ fn web_vs_fret_layout_item_variant_item_heights_match_web() {
         vec![cx.column(
             ColumnProps {
                 layout: wrapper_layout,
-                gap: Px(0.0),
+                gap: Px(0.0).into(),
                 ..Default::default()
             },
             move |_cx| vec![item0, item1, item2],
@@ -689,7 +689,7 @@ fn web_vs_fret_layout_item_icon_item_rect_matches_web() {
         vec![cx.column(
             ColumnProps {
                 layout: wrapper_layout,
-                gap: Px(0.0),
+                gap: Px(0.0).into(),
                 ..Default::default()
             },
             move |_cx| vec![item],
@@ -786,7 +786,7 @@ fn web_vs_fret_layout_item_link_item_rects_match_web() {
         vec![cx.column(
             ColumnProps {
                 layout: wrapper_layout,
-                gap: Px(0.0),
+                gap: Px(0.0).into(),
                 ..Default::default()
             },
             move |_cx| vec![item0, item1],
@@ -909,7 +909,7 @@ fn web_vs_fret_layout_item_group_item_and_separator_heights_match_web() {
         vec![cx.column(
             ColumnProps {
                 layout: wrapper_layout,
-                gap: Px(0.0),
+                gap: Px(0.0).into(),
                 ..Default::default()
             },
             move |_cx| vec![group],
@@ -1007,7 +1007,7 @@ fn web_vs_fret_layout_item_header_grid_item_rects_match_web() {
         vec![cx.column(
             ColumnProps {
                 layout: wrapper_layout,
-                gap: Px(0.0),
+                gap: Px(0.0).into(),
                 ..Default::default()
             },
             move |_cx| vec![group],
@@ -1117,7 +1117,7 @@ fn web_vs_fret_layout_item_image_list_item_heights_match_web() {
         vec![cx.column(
             ColumnProps {
                 layout: wrapper_layout,
-                gap: Px(0.0),
+                gap: Px(0.0).into(),
                 ..Default::default()
             },
             move |_cx| vec![group],

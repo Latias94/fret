@@ -99,7 +99,7 @@ impl RadioGroup {
             items: Arc::from([]),
             disabled: false,
             orientation: RadioGroupOrientation::default(),
-            gap: Px(0.0),
+            gap: Px(0.0).into(),
             typeahead_timeout_ticks: 60,
             loop_navigation: true,
             a11y_label: None,
@@ -205,7 +205,7 @@ impl RadioGroup {
                 RadioGroupOrientation::Vertical => fret_core::Axis::Vertical,
                 RadioGroupOrientation::Horizontal => fret_core::Axis::Horizontal,
             };
-            props.flex.gap = self.gap;
+            props.flex.gap = self.gap.into();
             props.flex.align = fret_ui::element::CrossAlign::Center;
             props.roving = fret_ui::element::RovingFocusProps {
                 enabled: !disabled_group,
@@ -747,8 +747,8 @@ impl Radio {
                         let mut l = fret_ui::element::LayoutStyle::default();
                         l.overflow = Overflow::Visible;
                         if min_touch_target.0 > 0.0 {
-                            l.size.min_width = Some(min_touch_target);
-                            l.size.min_height = Some(min_touch_target);
+                            l.size.min_width = Some(Length::Px(min_touch_target));
+                            l.size.min_height = Some(Length::Px(min_touch_target));
                         }
                         l
                     },
@@ -949,10 +949,10 @@ fn radio_icon<H: UiHost>(
 
     let mut props = CanvasProps::default();
     props.layout.position = fret_ui::element::PositionStyle::Absolute;
-    props.layout.inset.top = Some(Px(0.0));
-    props.layout.inset.right = Some(Px(0.0));
-    props.layout.inset.bottom = Some(Px(0.0));
-    props.layout.inset.left = Some(Px(0.0));
+    props.layout.inset.top = Some(Px(0.0)).into();
+    props.layout.inset.right = Some(Px(0.0)).into();
+    props.layout.inset.bottom = Some(Px(0.0)).into();
+    props.layout.inset.left = Some(Px(0.0)).into();
 
     cx.canvas(props, move |p| {
         let scale_factor = p.scale_factor();

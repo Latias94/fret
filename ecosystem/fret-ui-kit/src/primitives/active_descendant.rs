@@ -135,8 +135,8 @@ mod tests {
                     fret_ui::element::FlexProps {
                         layout: LayoutStyle::default(),
                         direction: fret_core::Axis::Vertical,
-                        gap: Px(0.0),
-                        padding: fret_core::Edges::all(Px(0.0)),
+                        gap: Px(0.0).into(),
+                        padding: fret_core::Edges::all(Px(0.0)).into(),
                         justify: fret_ui::element::MainAlign::Start,
                         align: fret_ui::element::CrossAlign::Stretch,
                         wrap: false,
@@ -417,8 +417,8 @@ mod tests {
                             FlexProps {
                                 layout: LayoutStyle::default(),
                                 direction: fret_core::Axis::Vertical,
-                                gap: Px(0.0),
-                                padding: fret_core::Edges::all(Px(0.0)),
+                                gap: Px(0.0).into(),
+                                padding: fret_core::Edges::all(Px(0.0)).into(),
                                 justify: MainAlign::Start,
                                 align: fret_ui::element::CrossAlign::Stretch,
                                 wrap: false,

@@ -64,7 +64,7 @@ fn menu_destructive_focus_bg(theme: &Theme, destructive_fg: fret_core::Color) ->
     }
 
     // Fallback for non-shadcn themes: approximate the upstream `/10` and `dark:/20` alphas.
-    let alpha = if theme.name.ends_with("/dark") {
+    let alpha = if theme.color_scheme == Some(fret_core::window::ColorScheme::Dark) {
         0.2
     } else {
         0.1
@@ -694,22 +694,6 @@ impl ContextMenuRadioItem {
     }
 }
 
-fn flatten_entries(into: &mut Vec<ContextMenuEntry>, entries: Vec<ContextMenuEntry>) {
-    for entry in entries {
-        match entry {
-            ContextMenuEntry::Group(group) => flatten_entries(into, group.entries),
-            ContextMenuEntry::RadioGroup(group) => {
-                for item in group.items {
-                    into.push(ContextMenuEntry::RadioItem(
-                        item.into_item(group.value.clone()),
-                    ));
-                }
-            }
-            other => into.push(other),
-        }
-    }
-}
-
 fn estimated_menu_panel_height_for_entries(
     entries: &[ContextMenuEntry],
     row_height: Px,
@@ -800,8 +784,8 @@ where
                     layout
                 },
                 direction: fret_core::Axis::Vertical,
-                gap: Px(0.0),
-                padding: Edges::all(Px(0.0)),
+                gap: Px(0.0).into(),
+                padding: Edges::all(Px(0.0)).into(),
                 justify: MainAlign::Start,
                 align: CrossAlign::Stretch,
                 wrap: false,
@@ -911,7 +895,8 @@ impl ContextMenuRenderEnv {
                     right: pad_x,
                     bottom: pad_y,
                     left: pad_left,
-                },
+                }
+                .into(),
                 ..Default::default()
             },
             move |cx| {
@@ -944,7 +929,7 @@ impl ContextMenuRenderEnv {
                     layout.margin.bottom = fret_ui::element::MarginEdge::Px(Px(4.0));
                     layout
                 },
-                padding: Edges::all(Px(0.0)),
+                padding: Edges::all(Px(0.0)).into(),
                 background: Some(border),
                 ..Default::default()
             },
@@ -1031,7 +1016,7 @@ impl ContextMenuRenderEnv {
                     layout: {
                         let mut layout = LayoutStyle::default();
                         layout.size.width = Length::Fill;
-                        layout.size.min_height = Some(Px(28.0));
+                        layout.size.min_height = Some(Length::Px(Px(28.0)));
                         layout
                     },
                     enabled: !disabled,
@@ -1162,7 +1147,7 @@ impl ContextMenuRenderEnv {
                     layout: {
                         let mut layout = LayoutStyle::default();
                         layout.size.width = Length::Fill;
-                        layout.size.min_height = Some(Px(28.0));
+                        layout.size.min_height = Some(Length::Px(Px(28.0)));
                         layout
                     },
                     enabled: !disabled,
@@ -1291,7 +1276,7 @@ impl ContextMenuRenderEnv {
                     layout: {
                         let mut layout = LayoutStyle::default();
                         layout.size.width = Length::Fill;
-                        layout.size.min_height = Some(Px(28.0));
+                        layout.size.min_height = Some(Length::Px(Px(28.0)));
                         layout
                     },
                     enabled: !disabled,
@@ -1446,7 +1431,8 @@ impl ContextMenuContentRenderEnv {
                     right: pad_x,
                     bottom: pad_y,
                     left: pad_left,
-                },
+                }
+                .into(),
                 ..Default::default()
             },
             move |cx| {
@@ -1478,7 +1464,7 @@ impl ContextMenuContentRenderEnv {
                     layout.margin.bottom = fret_ui::element::MarginEdge::Px(Px(4.0));
                     layout
                 },
-                padding: Edges::all(Px(0.0)),
+                padding: Edges::all(Px(0.0)).into(),
                 background: Some(border),
                 ..Default::default()
             },
@@ -1623,7 +1609,7 @@ impl ContextMenuContentRenderEnv {
                     layout: {
                         let mut layout = LayoutStyle::default();
                         layout.size.width = Length::Fill;
-                        layout.size.min_height = Some(Px(28.0));
+                        layout.size.min_height = Some(Length::Px(Px(28.0)));
                         layout
                     },
                     enabled: !disabled,
@@ -1735,7 +1721,7 @@ impl ContextMenuContentRenderEnv {
                     layout: {
                         let mut layout = LayoutStyle::default();
                         layout.size.width = Length::Fill;
-                        layout.size.min_height = Some(Px(28.0));
+                        layout.size.min_height = Some(Length::Px(Px(28.0)));
                         layout
                     },
                     enabled: !disabled,
@@ -1852,7 +1838,7 @@ impl ContextMenuContentRenderEnv {
                     layout: {
                         let mut layout = LayoutStyle::default();
                         layout.size.width = Length::Fill;
-                        layout.size.min_height = Some(Px(28.0));
+                        layout.size.min_height = Some(Length::Px(Px(28.0)));
                         layout
                     },
                     enabled: !disabled,
@@ -1970,7 +1956,8 @@ fn menu_row_children<H: UiHost>(
                 right: pad_x,
                 bottom: pad_y,
                 left: pad_left,
-            },
+            }
+            .into(),
             background: Some(row_bg),
             corner_radii: fret_core::Corners::all(radius_sm),
             ..Default::default()
@@ -1994,7 +1981,7 @@ fn menu_row_children<H: UiHost>(
                     + usize::from(submenu),
             );
 
-            current_color::with_current_color_provider(cx, ColorRef::Color(effective_fg), |cx| {
+            current_color::scope_children(cx, ColorRef::Color(effective_fg), |cx| {
                 if let Some(is_on) = indicator_on {
                     let indicator_fg = effective_fg;
                     row.push(cx.flex(
@@ -2007,8 +1994,8 @@ fn menu_row_children<H: UiHost>(
                                 layout
                             },
                             direction: fret_core::Axis::Horizontal,
-                            gap: Px(0.0),
-                            padding: Edges::all(Px(0.0)),
+                            gap: Px(0.0).into(),
+                            padding: Edges::all(Px(0.0)).into(),
                             justify: MainAlign::Center,
                             align: CrossAlign::Center,
                             wrap: false,
@@ -2084,8 +2071,8 @@ fn menu_row_children<H: UiHost>(
                             layout
                         },
                         direction: fret_core::Axis::Horizontal,
-                        gap: Px(8.0),
-                        padding: Edges::all(Px(0.0)),
+                        gap: Px(8.0).into(),
+                        padding: Edges::all(Px(0.0)).into(),
                         justify: MainAlign::Start,
                         align: CrossAlign::Center,
                         wrap: false,
@@ -2123,8 +2110,8 @@ fn submenu_chevron_icon<H: UiHost>(
                 layout
             },
             direction: fret_core::Axis::Horizontal,
-            gap: Px(0.0),
-            padding: Edges::all(Px(0.0)),
+            gap: Px(0.0).into(),
+            padding: Edges::all(Px(0.0)).into(),
             justify: MainAlign::Center,
             align: CrossAlign::Center,
             wrap: false,
@@ -2151,8 +2138,8 @@ fn menu_icon_slot<H: UiHost>(cx: &mut ElementContext<'_, H>, element: AnyElement
                 layout
             },
             direction: fret_core::Axis::Horizontal,
-            gap: Px(0.0),
-            padding: Edges::all(Px(0.0)),
+            gap: Px(0.0).into(),
+            padding: Edges::all(Px(0.0)).into(),
             justify: MainAlign::Center,
             align: CrossAlign::Center,
             wrap: false,
@@ -2172,8 +2159,8 @@ fn menu_icon_slot_empty<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement
                 layout
             },
             direction: fret_core::Axis::Horizontal,
-            gap: Px(0.0),
-            padding: Edges::all(Px(0.0)),
+            gap: Px(0.0).into(),
+            padding: Edges::all(Px(0.0)).into(),
             justify: MainAlign::Center,
             align: CrossAlign::Center,
             wrap: false,
@@ -2412,8 +2399,8 @@ fn context_menu_submenu_panel<H: UiHost>(
                         flex: FlexProps {
                             layout: LayoutStyle::default(),
                             direction: fret_core::Axis::Vertical,
-                            gap: Px(0.0),
-                            padding: Edges::all(Px(0.0)),
+                            gap: Px(0.0).into(),
+                            padding: Edges::all(Px(0.0)).into(),
                             justify: MainAlign::Start,
                             align: CrossAlign::Stretch,
                             wrap: false,
@@ -3182,8 +3169,8 @@ impl ContextMenu {
                     let content_layout = LayoutStyle {
                         position: PositionStyle::Absolute,
                         inset: InsetStyle {
-                            left: Some(placed.origin.x),
-                            top: Some(placed.origin.y),
+                            left: Some(placed.origin.x).into(),
+                            top: Some(placed.origin.y).into(),
                             ..Default::default()
                         },
                         size: SizeStyle {
@@ -3275,8 +3262,8 @@ impl ContextMenu {
                                                     flex: FlexProps {
                                                         layout: LayoutStyle::default(),
                                                         direction: fret_core::Axis::Vertical,
-                                                        gap: Px(0.0),
-                                                        padding: Edges::all(Px(0.0)),
+                                                        gap: Px(0.0).into(),
+                                                        padding: Edges::all(Px(0.0)).into(),
                                                         justify: MainAlign::Start,
                                                         align: CrossAlign::Stretch,
                                                         wrap: false,
@@ -3340,7 +3327,7 @@ impl ContextMenu {
                                                                     right: pad_x,
                                                                     bottom: pad_y,
                                                                     left: pad_left,
-                                                                },
+                                                                }.into(),
                                                                 ..Default::default()
                                                             },
                                                             move |cx| {
@@ -3406,7 +3393,7 @@ impl ContextMenu {
                                                                         fret_ui::element::MarginEdge::Px(Px(4.0));
                                                                     layout
                                                                 },
-                                                                padding: Edges::all(Px(0.0)),
+                                                                padding: Edges::all(Px(0.0)).into(),
                                                                 background: Some(border),
                                                                 ..Default::default()
                                                             },
@@ -3534,7 +3521,7 @@ impl ContextMenu {
                                                                             layout.size.width =
                                                                                 Length::Fill;
                                                                             layout.size.min_height =
-                                                                                Some(Px(28.0));
+                                                                                Some(Length::Px(Px(28.0)));
                                                                             layout
                                                                         },
                                                                         enabled: !disabled,
@@ -3719,7 +3706,7 @@ impl ContextMenu {
                                                                             layout.size.width =
                                                                                 Length::Fill;
                                                                             layout.size.min_height =
-                                                                                Some(Px(28.0));
+                                                                                Some(Length::Px(Px(28.0)));
                                                                             layout
                                                                         },
                                                                         enabled: !disabled,
@@ -3853,7 +3840,7 @@ impl ContextMenu {
                                                                             layout.size.width =
                                                                                 Length::Fill;
                                                                             layout.size.min_height =
-                                                                                Some(Px(28.0));
+                                                                                Some(Length::Px(Px(28.0)));
                                                                             layout
                                                                         },
                                                                         enabled: !disabled,
@@ -4067,6 +4054,7 @@ mod tests {
 
     use fret_app::App;
     use fret_core::UiServices;
+    use fret_core::window::ColorScheme;
     use fret_core::{
         AppWindowId, Event, KeyCode, Modifiers, MouseButton, PathCommand, PathConstraints, PathId,
         PathMetrics,
@@ -4076,6 +4064,33 @@ mod tests {
     use fret_runtime::FrameId;
     use fret_ui::element::PressableA11y;
     use fret_ui::tree::UiTree;
+    use fret_ui::{Theme, ThemeConfig};
+
+    #[test]
+    fn destructive_focus_bg_fallback_tracks_theme_color_scheme() {
+        let mut app = App::new();
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                color_scheme: Some(ColorScheme::Dark),
+                ..ThemeConfig::default()
+            });
+        });
+        let theme = Theme::global(&app);
+
+        let destructive_fg = fret_core::Color {
+            r: 1.0,
+            g: 0.0,
+            b: 0.0,
+            a: 1.0,
+        };
+
+        let bg = menu_destructive_focus_bg(theme, destructive_fg);
+        assert!(
+            (bg.a - 0.2).abs() < 1e-6,
+            "expected /20 alpha on dark themes"
+        );
+    }
 
     #[test]
     fn context_menu_new_controllable_uses_controlled_model_when_provided() {
@@ -4392,6 +4407,12 @@ mod tests {
                                 },
                                 enabled: true,
                                 focusable: true,
+                                a11y: PressableA11y {
+                                    role: Some(SemanticsRole::Button),
+                                    label: Some(Arc::from("Trigger")),
+                                    test_id: Some(Arc::from("trigger")),
+                                    ..Default::default()
+                                },
                                 ..Default::default()
                             },
                             |cx, _st| {
@@ -4598,7 +4619,7 @@ mod tests {
                                     layout: {
                                         let mut layout = LayoutStyle::default();
                                         layout.size.width = Length::Fill;
-                                        layout.size.min_height = Some(Px(28.0));
+                                        layout.size.min_height = Some(Length::Px(Px(28.0)));
                                         layout
                                     },
                                     enabled: true,
@@ -4830,10 +4851,10 @@ mod tests {
                         layout: {
                             let mut layout = LayoutStyle::default();
                             layout.position = fret_ui::element::PositionStyle::Absolute;
-                            layout.inset.left = Some(Px(0.0));
-                            layout.inset.right = Some(Px(0.0));
-                            layout.inset.top = Some(Px(60.0));
-                            layout.inset.bottom = Some(Px(0.0));
+                            layout.inset.left = Some(Px(0.0)).into();
+                            layout.inset.right = Some(Px(0.0)).into();
+                            layout.inset.top = Some(Px(0.0)).into();
+                            layout.inset.bottom = Some(Px(0.0)).into();
                             layout.size.width = Length::Fill;
                             layout.size.height = Length::Fill;
                             layout
@@ -4867,6 +4888,12 @@ mod tests {
                                 },
                                 enabled: true,
                                 focusable: true,
+                                a11y: PressableA11y {
+                                    role: Some(SemanticsRole::Button),
+                                    label: Some(Arc::from("Trigger")),
+                                    test_id: Some(Arc::from("trigger")),
+                                    ..Default::default()
+                                },
                                 ..Default::default()
                             },
                             |cx, _st| {
@@ -4879,7 +4906,7 @@ mod tests {
 
                 // Keep the context-menu trigger above the underlay so the right-click open gesture
                 // cannot be intercepted by the "underlay" pressable.
-                vec![trigger, underlay]
+                vec![underlay, trigger]
             },
         );
         ui.set_root(root);
@@ -4917,10 +4944,10 @@ mod tests {
                         layout: {
                             let mut layout = LayoutStyle::default();
                             layout.position = fret_ui::element::PositionStyle::Absolute;
-                            layout.inset.left = Some(Px(0.0));
-                            layout.inset.right = Some(Px(0.0));
-                            layout.inset.top = Some(Px(60.0));
-                            layout.inset.bottom = Some(Px(0.0));
+                            layout.inset.left = Some(Px(0.0)).into();
+                            layout.inset.right = Some(Px(0.0)).into();
+                            layout.inset.top = Some(Px(0.0)).into();
+                            layout.inset.bottom = Some(Px(0.0)).into();
                             layout.size.width = Length::Fill;
                             layout.size.height = Length::Fill;
                             layout
@@ -4957,6 +4984,12 @@ mod tests {
                                     },
                                     enabled: true,
                                     focusable: true,
+                                    a11y: PressableA11y {
+                                        role: Some(SemanticsRole::Button),
+                                        label: Some(Arc::from("Trigger")),
+                                        test_id: Some(Arc::from("trigger")),
+                                        ..Default::default()
+                                    },
                                     ..Default::default()
                                 },
                                 |cx, _st| {
@@ -4969,7 +5002,7 @@ mod tests {
 
                 // Keep the context-menu trigger above the underlay so the right-click open gesture
                 // cannot be intercepted by the "underlay" pressable.
-                vec![trigger, underlay]
+                vec![underlay, trigger]
             },
         );
         ui.set_root(root);
@@ -5006,10 +5039,10 @@ mod tests {
                         layout: {
                             let mut layout = LayoutStyle::default();
                             layout.position = fret_ui::element::PositionStyle::Absolute;
-                            layout.inset.left = Some(Px(0.0));
-                            layout.inset.right = Some(Px(0.0));
-                            layout.inset.top = Some(Px(60.0));
-                            layout.inset.bottom = Some(Px(0.0));
+                            layout.inset.left = Some(Px(0.0)).into();
+                            layout.inset.right = Some(Px(0.0)).into();
+                            layout.inset.top = Some(Px(0.0)).into();
+                            layout.inset.bottom = Some(Px(0.0)).into();
                             layout.size.width = Length::Fill;
                             layout.size.height = Length::Fill;
                             layout
@@ -5043,6 +5076,12 @@ mod tests {
                                 },
                                 enabled: true,
                                 focusable: true,
+                                a11y: PressableA11y {
+                                    role: Some(SemanticsRole::Button),
+                                    label: Some(Arc::from("Trigger")),
+                                    test_id: Some(Arc::from("trigger")),
+                                    ..Default::default()
+                                },
                                 ..Default::default()
                             },
                             |cx, _st| {
@@ -5055,7 +5094,7 @@ mod tests {
 
                 // Keep the context-menu trigger above the underlay so the right-click open gesture
                 // cannot be intercepted by the "underlay" pressable.
-                vec![trigger, underlay]
+                vec![underlay, trigger]
             },
         );
         ui.set_root(root);
@@ -5093,10 +5132,10 @@ mod tests {
                         layout: {
                             let mut layout = LayoutStyle::default();
                             layout.position = fret_ui::element::PositionStyle::Absolute;
-                            layout.inset.left = Some(Px(0.0));
-                            layout.inset.right = Some(Px(0.0));
-                            layout.inset.top = Some(Px(60.0));
-                            layout.inset.bottom = Some(Px(0.0));
+                            layout.inset.left = Some(Px(0.0)).into();
+                            layout.inset.right = Some(Px(0.0)).into();
+                            layout.inset.top = Some(Px(0.0)).into();
+                            layout.inset.bottom = Some(Px(0.0)).into();
                             layout.size.width = Length::Fill;
                             layout.size.height = Length::Fill;
                             layout
@@ -5132,6 +5171,12 @@ mod tests {
                                     },
                                     enabled: true,
                                     focusable: true,
+                                    a11y: PressableA11y {
+                                        role: Some(SemanticsRole::Button),
+                                        label: Some(Arc::from("Trigger")),
+                                        test_id: Some(Arc::from("trigger")),
+                                        ..Default::default()
+                                    },
                                     ..Default::default()
                                 },
                                 |cx, _st| {
@@ -5142,7 +5187,7 @@ mod tests {
                         move |_cx| entries,
                     );
 
-                vec![trigger, underlay]
+                vec![underlay, trigger]
             },
         );
         ui.set_root(root);
@@ -5183,10 +5228,10 @@ mod tests {
                         layout: {
                             let mut layout = LayoutStyle::default();
                             layout.position = fret_ui::element::PositionStyle::Absolute;
-                            layout.inset.left = Some(Px(0.0));
-                            layout.inset.right = Some(Px(0.0));
-                            layout.inset.top = Some(Px(60.0));
-                            layout.inset.bottom = Some(Px(0.0));
+                            layout.inset.left = Some(Px(0.0)).into();
+                            layout.inset.right = Some(Px(0.0)).into();
+                            layout.inset.top = Some(Px(0.0)).into();
+                            layout.inset.bottom = Some(Px(0.0)).into();
                             layout.size.width = Length::Fill;
                             layout.size.height = Length::Fill;
                             layout
@@ -5548,7 +5593,7 @@ mod tests {
         });
 
         let entries = vec![ContextMenuEntry::Item(ContextMenuItem::new("Alpha"))];
-        let root = render_frame_focusable_trigger_with_underlay_and_entries_and_dismiss_handler(
+        let _root = render_frame_focusable_trigger_with_underlay_and_entries_and_dismiss_handler(
             &mut ui,
             &mut app,
             &mut services,
@@ -5560,18 +5605,20 @@ mod tests {
             Some(handler.clone()),
         );
 
-        let trigger = ui
-            .first_focusable_descendant_including_declarative(&mut app, window, root)
-            .expect("focusable trigger");
-        ui.set_focus(Some(trigger));
-
-        let snap0 = ui.semantics_snapshot().expect("semantics snapshot").clone();
+        let snap0 = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger = snap0
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("trigger"))
+            .map(|n| n.id)
+            .expect("trigger node");
         let underlay_node = snap0
             .nodes
             .iter()
             .find(|n| n.test_id.as_deref() == Some("underlay"))
             .map(|n| n.id)
             .expect("underlay node");
+        ui.set_focus(Some(trigger));
 
         let trigger_bounds = ui.debug_node_bounds(trigger).expect("trigger bounds");
         let position = Point::new(
@@ -6302,7 +6349,7 @@ mod tests {
         let mut services = FakeServices::default();
 
         // Frame 1: build the tree and establish stable trigger bounds.
-        let root = render_frame_focusable_trigger_with_underlay(
+        let _root = render_frame_focusable_trigger_with_underlay(
             &mut ui,
             &mut app,
             &mut services,
@@ -6312,9 +6359,13 @@ mod tests {
             underlay_clicked.clone(),
         );
 
-        let trigger = ui
-            .first_focusable_descendant_including_declarative(&mut app, window, root)
-            .expect("focusable trigger");
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("trigger"))
+            .map(|n| n.id)
+            .expect("trigger node");
         ui.set_focus(Some(trigger));
 
         let trigger_bounds = ui.debug_node_bounds(trigger).expect("trigger bounds");
@@ -6390,6 +6441,11 @@ mod tests {
                 click_count: 1,
             }),
         );
+        assert_ne!(
+            ui.captured(),
+            Some(underlay_node),
+            "expected modal context menu to block underlay pointer capture on pointer-down"
+        );
         ui.dispatch_event(
             &mut app,
             &mut services,
@@ -6426,7 +6482,7 @@ mod tests {
         let mut services = FakeServices::default();
 
         // Frame 1: build the tree and establish stable trigger bounds.
-        let root = render_frame_focusable_trigger_with_underlay_modal_and_dismiss_handler(
+        let _root = render_frame_focusable_trigger_with_underlay_modal_and_dismiss_handler(
             &mut ui,
             &mut app,
             &mut services,
@@ -6437,16 +6493,28 @@ mod tests {
             underlay_clicked.clone(),
             None,
         );
-
-        let trigger = ui
-            .first_focusable_descendant_including_declarative(&mut app, window, root)
-            .expect("focusable trigger");
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("trigger"))
+            .map(|n| n.id)
+            .expect("trigger node");
         ui.set_focus(Some(trigger));
 
         let trigger_bounds = ui.debug_node_bounds(trigger).expect("trigger bounds");
         let trigger_pos = Point::new(
             Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 / 2.0),
             Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 / 2.0),
+        );
+        let hit = ui
+            .debug_hit_test(trigger_pos)
+            .hit
+            .expect("expected a hit at trigger_pos");
+        let hit_path = ui.debug_node_path(hit);
+        assert!(
+            hit_path.contains(&trigger),
+            "expected trigger_pos to hit inside the trigger subtree; hit={hit:?} hit_path={hit_path:?} trigger={trigger:?}"
         );
 
         // Right-click to open the context menu (modal=false => click-through).
@@ -6506,6 +6574,14 @@ mod tests {
 
         // Click the underlay: should close via outside-press observer and remain click-through.
         let underlay_pos = Point::new(Px(10.0), Px(230.0));
+        let hit = ui.debug_hit_test(underlay_pos).hit;
+        if hit != Some(underlay_node) {
+            let underlay_bounds = ui.debug_node_bounds(underlay_node);
+            let hit_bounds = hit.and_then(|n| ui.debug_node_bounds(n));
+            panic!(
+                "expected click-through underlay_pos to hit the underlay; hit={hit:?} hit_bounds={hit_bounds:?} underlay_bounds={underlay_bounds:?}"
+            );
+        }
         ui.dispatch_event(
             &mut app,
             &mut services,
@@ -6530,6 +6606,11 @@ mod tests {
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
+        );
+        assert_eq!(
+            ui.captured(),
+            None,
+            "expected underlay pressable to release capture on pointer-up"
         );
 
         assert_eq!(app.models().get_copied(&open), Some(false));
@@ -6565,7 +6646,7 @@ mod tests {
         });
 
         // Frame 1: build the tree and establish stable trigger bounds.
-        let root = render_frame_focusable_trigger_with_underlay_modal_and_dismiss_handler(
+        let _root = render_frame_focusable_trigger_with_underlay_modal_and_dismiss_handler(
             &mut ui,
             &mut app,
             &mut services,
@@ -6576,10 +6657,13 @@ mod tests {
             underlay_clicked.clone(),
             Some(handler.clone()),
         );
-
-        let trigger = ui
-            .first_focusable_descendant_including_declarative(&mut app, window, root)
-            .expect("focusable trigger");
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("trigger"))
+            .map(|n| n.id)
+            .expect("trigger node");
         ui.set_focus(Some(trigger));
 
         let trigger_bounds = ui.debug_node_bounds(trigger).expect("trigger bounds");
@@ -6680,7 +6764,7 @@ mod tests {
         let mut services = FakeServices::default();
 
         // Frame 1: build the tree and establish stable trigger bounds.
-        let root = render_frame_focusable_trigger_with_underlay(
+        let _root = render_frame_focusable_trigger_with_underlay(
             &mut ui,
             &mut app,
             &mut services,
@@ -6690,9 +6774,13 @@ mod tests {
             underlay_clicked.clone(),
         );
 
-        let trigger = ui
-            .first_focusable_descendant_including_declarative(&mut app, window, root)
-            .expect("focusable trigger");
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("trigger"))
+            .map(|n| n.id)
+            .expect("trigger node");
         ui.set_focus(Some(trigger));
 
         let trigger_bounds = ui.debug_node_bounds(trigger).expect("trigger bounds");
@@ -6889,7 +6977,7 @@ mod tests {
         };
 
         // Frame 1: build the tree and establish stable trigger bounds.
-        let root = render_frame_focusable_trigger_with_underlay_and_entries(
+        let _root = render_frame_focusable_trigger_with_underlay_and_entries(
             &mut ui,
             &mut app,
             &mut services,
@@ -6899,9 +6987,13 @@ mod tests {
             underlay_clicked.clone(),
             build_entries(),
         );
-        let trigger = ui
-            .first_focusable_descendant_including_declarative(&mut app, window, root)
-            .expect("focusable trigger");
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("trigger"))
+            .map(|n| n.id)
+            .expect("trigger node");
         ui.set_focus(Some(trigger));
 
         let trigger_bounds = ui.debug_node_bounds(trigger).expect("trigger bounds");

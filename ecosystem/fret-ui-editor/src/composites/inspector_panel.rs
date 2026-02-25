@@ -11,6 +11,7 @@ use fret_core::{Axis, Edges, Px};
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, SizeStyle, SpacerProps,
+    SpacingLength,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 
@@ -152,8 +153,8 @@ impl InspectorPanel {
                                     ..Default::default()
                                 },
                                 direction: Axis::Horizontal,
-                                gap: Px(6.0),
-                                padding: Edges::all(Px(0.0)),
+                                gap: SpacingLength::Px(Px(6.0)),
+                                padding: Edges::all(Px(0.0)).into(),
                                 justify: MainAlign::Start,
                                 align: CrossAlign::Center,
                                 wrap: false,
@@ -190,8 +191,8 @@ impl InspectorPanel {
                                 ..Default::default()
                             },
                             direction: Axis::Horizontal,
-                            gap: Px(6.0),
-                            padding: Edges::all(Px(0.0)),
+                            gap: SpacingLength::Px(Px(6.0)),
+                            padding: Edges::all(Px(0.0)).into(),
                             justify: MainAlign::End,
                             align: CrossAlign::Center,
                             wrap: false,
@@ -231,8 +232,8 @@ impl InspectorPanel {
                             ..Default::default()
                         },
                         direction: Axis::Vertical,
-                        gap: header_gap,
-                        padding: Edges::all(Px(0.0)),
+                        gap: SpacingLength::Px(header_gap),
+                        padding: Edges::all(Px(0.0)).into(),
                         justify: MainAlign::Start,
                         align: CrossAlign::Stretch,
                         wrap: false,
@@ -257,8 +258,8 @@ impl InspectorPanel {
                         ..Default::default()
                     },
                     direction: Axis::Vertical,
-                    gap,
-                    padding: Edges::all(Px(0.0)),
+                    gap: SpacingLength::Px(gap),
+                    padding: Edges::all(Px(0.0)).into(),
                     justify: MainAlign::Start,
                     align: CrossAlign::Stretch,
                     wrap: false,
@@ -274,8 +275,8 @@ impl InspectorPanel {
                 FlexProps {
                     layout: self.options.layout,
                     direction: Axis::Vertical,
-                    gap,
-                    padding,
+                    gap: SpacingLength::Px(gap),
+                    padding: padding.into(),
                     justify: MainAlign::Start,
                     align: CrossAlign::Stretch,
                     wrap: false,

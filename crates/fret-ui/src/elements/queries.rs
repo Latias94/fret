@@ -72,22 +72,34 @@ pub fn element_is_live_in_current_frame<H: UiHost>(
     })
 }
 
-/// Returns the most recent recorded bounds for a declarative element, if available.
+/// Returns the most recent **committed** bounds for a declarative element, if available.
 ///
 /// This is a cross-frame geometry query intended for component-layer policies (e.g. anchored
-/// overlays) that need a stable anchor rect. The value is updated during layout.
+/// overlays) that need a stable anchor rect. The value is committed at frame boundaries to avoid
+/// feedback loops during layout (see `ElementRuntime` geometry buffering notes).
 pub fn bounds_for_element<H: UiHost>(
     app: &mut H,
     window: AppWindowId,
     element: GlobalElementId,
 ) -> Option<Rect> {
-    with_window_state(app, window, |st| {
-        st.last_bounds(element)
-            .or_else(|| st.current_bounds(element))
-    })
+    with_window_state(app, window, |st| st.last_bounds(element))
 }
 
-/// Returns the most recent recorded **visual** bounds (post-`render_transform` AABB) for a
+/// Returns the most recent recorded bounds for `element`, including the current frame's
+/// in-progress layout deltas.
+///
+/// Prefer [`bounds_for_element`] for policy code that must avoid layout feedback loops (e.g.
+/// anchored overlays). This helper is intended for mechanism code that runs *during* layout and
+/// needs immediate access to the bounds just recorded for the current frame.
+pub fn current_bounds_for_element<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    element: GlobalElementId,
+) -> Option<Rect> {
+    with_window_state(app, window, |st| st.current_bounds(element))
+}
+
+/// Returns the most recent committed **visual** bounds (post-`render_transform` AABB) for a
 /// declarative element, if available.
 ///
 /// This is a cross-frame geometry query intended for component-layer anchored overlay policies
@@ -99,8 +111,19 @@ pub fn visual_bounds_for_element<H: UiHost>(
 ) -> Option<Rect> {
     with_window_state(app, window, |st| {
         st.last_visual_bounds(element)
-            .or_else(|| st.current_visual_bounds(element))
             .or_else(|| st.last_bounds(element))
+    })
+}
+
+/// Returns the most recent recorded **visual** bounds for `element`, including the current
+/// frame's in-progress layout deltas.
+pub fn current_visual_bounds_for_element<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    element: GlobalElementId,
+) -> Option<Rect> {
+    with_window_state(app, window, |st| {
+        st.current_visual_bounds(element)
             .or_else(|| st.current_bounds(element))
     })
 }

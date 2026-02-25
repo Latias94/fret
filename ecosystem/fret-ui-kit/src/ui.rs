@@ -20,8 +20,8 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use crate::declarative::style as decl_style;
 use crate::declarative::text as decl_text;
 use crate::{
-    ChromeRefinement, Items, Justify, LayoutRefinement, MetricRef, Space, UiBuilder, UiIntoElement,
-    UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout,
+    ChromeRefinement, Items, Justify, LayoutRefinement, LengthRefinement, MetricRef, Space,
+    UiBuilder, UiIntoElement, UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout,
 };
 
 fn collect_ui_children<H: UiHost, I>(
@@ -49,6 +49,7 @@ pub struct FlexBox<H, F> {
     pub(crate) layout: LayoutRefinement,
     pub(crate) direction: Axis,
     pub(crate) gap: MetricRef,
+    pub(crate) gap_length: Option<LengthRefinement>,
     pub(crate) justify: Justify,
     pub(crate) items: Items,
     pub(crate) wrap: bool,
@@ -63,6 +64,7 @@ pub struct FlexBoxBuild<H, B> {
     pub(crate) layout: LayoutRefinement,
     pub(crate) direction: Axis,
     pub(crate) gap: MetricRef,
+    pub(crate) gap_length: Option<LengthRefinement>,
     pub(crate) justify: Justify,
     pub(crate) items: Items,
     pub(crate) wrap: bool,
@@ -81,6 +83,7 @@ impl<H, F> FlexBox<H, F> {
             layout: LayoutRefinement::default(),
             direction,
             gap: MetricRef::space(Space::N0),
+            gap_length: None,
             justify: Justify::Start,
             items,
             wrap: false,
@@ -101,6 +104,7 @@ impl<H, B> FlexBoxBuild<H, B> {
             layout: LayoutRefinement::default(),
             direction,
             gap: MetricRef::space(Space::N0),
+            gap_length: None,
             justify: Justify::Start,
             items,
             wrap: false,
@@ -144,11 +148,18 @@ where
 
         let container = decl_style::container_props(theme, self.chrome, self.layout);
 
-        let gap = self.gap.resolve(theme);
+        let gap = self.gap_length.as_ref().and_then(|l| match l {
+            LengthRefinement::Auto => None,
+            LengthRefinement::Px(m) => Some(fret_ui::element::SpacingLength::Px(m.resolve(theme))),
+            LengthRefinement::Fraction(f) => Some(fret_ui::element::SpacingLength::Fraction(*f)),
+            LengthRefinement::Fill => Some(fret_ui::element::SpacingLength::Fill),
+        });
+        let gap =
+            gap.unwrap_or_else(|| fret_ui::element::SpacingLength::Px(self.gap.resolve(theme)));
         let mut flex_props = FlexProps {
             direction: self.direction,
             gap,
-            padding: Edges::all(Px(0.0)),
+            padding: Edges::all(Px(0.0)).into(),
             justify: self.justify.to_main_align(),
             align: self.items.to_cross_align(),
             wrap: self.wrap,
@@ -176,11 +187,18 @@ where
 
         let container = decl_style::container_props(theme, self.chrome, self.layout);
 
-        let gap = self.gap.resolve(theme);
+        let gap = self.gap_length.as_ref().and_then(|l| match l {
+            LengthRefinement::Auto => None,
+            LengthRefinement::Px(m) => Some(fret_ui::element::SpacingLength::Px(m.resolve(theme))),
+            LengthRefinement::Fraction(f) => Some(fret_ui::element::SpacingLength::Fraction(*f)),
+            LengthRefinement::Fill => Some(fret_ui::element::SpacingLength::Fill),
+        });
+        let gap =
+            gap.unwrap_or_else(|| fret_ui::element::SpacingLength::Px(self.gap.resolve(theme)));
         let mut flex_props = FlexProps {
             direction: self.direction,
             gap,
-            padding: Edges::all(Px(0.0)),
+            padding: Edges::all(Px(0.0)).into(),
             justify: self.justify.to_main_align(),
             align: self.items.to_cross_align(),
             wrap: self.wrap,
@@ -523,14 +541,15 @@ where
                 let scrollbar_layout = LayoutStyle {
                     position: PositionStyle::Absolute,
                     inset: InsetStyle {
-                        top: Some(Px(0.0)),
-                        right: Some(Px(0.0)),
+                        top: Some(Px(0.0)).into(),
+                        right: Some(Px(0.0)).into(),
                         bottom: Some(if show_scrollbar_x {
                             scrollbar_w
                         } else {
                             Px(0.0)
-                        }),
-                        left: None,
+                        })
+                        .into(),
+                        left: None.into(),
                     },
                     size: SizeStyle {
                         width: Length::Px(scrollbar_w),
@@ -556,14 +575,15 @@ where
                 let scrollbar_layout = LayoutStyle {
                     position: PositionStyle::Absolute,
                     inset: InsetStyle {
-                        top: None,
+                        top: None.into(),
                         right: Some(if show_scrollbar_y {
                             scrollbar_w
                         } else {
                             Px(0.0)
-                        }),
-                        bottom: Some(Px(0.0)),
-                        left: Some(Px(0.0)),
+                        })
+                        .into(),
+                        bottom: Some(Px(0.0)).into(),
+                        left: Some(Px(0.0)).into(),
                     },
                     size: SizeStyle {
                         height: Length::Px(scrollbar_w),
@@ -589,10 +609,10 @@ where
                 let corner_layout = LayoutStyle {
                     position: PositionStyle::Absolute,
                     inset: InsetStyle {
-                        top: None,
-                        right: Some(Px(0.0)),
-                        bottom: Some(Px(0.0)),
-                        left: None,
+                        top: None.into(),
+                        right: Some(Px(0.0)).into(),
+                        bottom: Some(Px(0.0)).into(),
+                        left: None.into(),
                     },
                     size: SizeStyle {
                         width: Length::Px(scrollbar_w),
@@ -672,14 +692,15 @@ where
                 let scrollbar_layout = LayoutStyle {
                     position: PositionStyle::Absolute,
                     inset: InsetStyle {
-                        top: Some(Px(0.0)),
-                        right: Some(Px(0.0)),
+                        top: Some(Px(0.0)).into(),
+                        right: Some(Px(0.0)).into(),
                         bottom: Some(if show_scrollbar_x {
                             scrollbar_w
                         } else {
                             Px(0.0)
-                        }),
-                        left: None,
+                        })
+                        .into(),
+                        left: None.into(),
                     },
                     size: SizeStyle {
                         width: Length::Px(scrollbar_w),
@@ -705,14 +726,15 @@ where
                 let scrollbar_layout = LayoutStyle {
                     position: PositionStyle::Absolute,
                     inset: InsetStyle {
-                        top: None,
+                        top: None.into(),
                         right: Some(if show_scrollbar_y {
                             scrollbar_w
                         } else {
                             Px(0.0)
-                        }),
-                        bottom: Some(Px(0.0)),
-                        left: Some(Px(0.0)),
+                        })
+                        .into(),
+                        bottom: Some(Px(0.0)).into(),
+                        left: Some(Px(0.0)).into(),
                     },
                     size: SizeStyle {
                         height: Length::Px(scrollbar_w),
@@ -738,10 +760,10 @@ where
                 let corner_layout = LayoutStyle {
                     position: PositionStyle::Absolute,
                     inset: InsetStyle {
-                        top: None,
-                        right: Some(Px(0.0)),
-                        bottom: Some(Px(0.0)),
-                        left: None,
+                        top: None.into(),
+                        right: Some(Px(0.0)).into(),
+                        bottom: Some(Px(0.0)).into(),
+                        left: None.into(),
                     },
                     size: SizeStyle {
                         width: Length::Px(scrollbar_w),
@@ -995,21 +1017,7 @@ impl UiIntoElement for TextBox {
 
             let layout = decl_style::layout_style(theme, layout_refinement);
 
-            let inherited_color = crate::declarative::current_color::inherited_current_color(cx)
-                .as_ref()
-                .map(|c| c.resolve(theme));
-
-            let resolved_color = color_override
-                .as_ref()
-                .map(|c| c.resolve(theme))
-                .or(inherited_color)
-                .or_else(|| {
-                    (preset == TextPreset::Label).then(|| {
-                        theme
-                            .color_by_key("foreground")
-                            .unwrap_or_else(|| theme.color_token("foreground"))
-                    })
-                });
+            let resolved_color = color_override.as_ref().map(|c| c.resolve(theme));
 
             (style, layout, label_line_height, resolved_color)
         };
@@ -1181,13 +1189,7 @@ impl UiIntoElement for RawTextBox {
         let (layout, color) = {
             let theme = Theme::global(&*cx.app);
             let layout = decl_style::layout_style(theme, layout_refinement);
-            let inherited_color = crate::declarative::current_color::inherited_current_color(cx)
-                .as_ref()
-                .map(|c| c.resolve(theme));
-            let color = color_override
-                .as_ref()
-                .map(|c| c.resolve(theme))
-                .or(inherited_color);
+            let color = color_override.as_ref().map(|c| c.resolve(theme));
             (layout, color)
         };
 
@@ -1306,16 +1308,31 @@ mod tests {
         };
 
         fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
-            crate::declarative::current_color::with_current_color_provider(
+            let mut els = crate::declarative::current_color::scope_children(
                 cx,
                 crate::ColorRef::Color(expected),
-                |cx| {
-                    let el = text(cx, "hello").into_element(cx);
-                    let ElementKind::Text(props) = el.kind else {
-                        panic!("expected Text element");
-                    };
-                    assert_eq!(props.color, Some(expected));
-                },
+                |cx| [text(cx, "hello").into_element(cx)],
+            );
+
+            let scope = els
+                .pop()
+                .expect("expected a ForegroundScope wrapper element");
+            assert!(
+                matches!(scope.kind, ElementKind::ForegroundScope(_)),
+                "expected current_color::scope_children(...) to install a ForegroundScope wrapper"
+            );
+
+            let child = scope
+                .children
+                .into_iter()
+                .next()
+                .expect("expected a child element");
+            let ElementKind::Text(props) = child.kind else {
+                panic!("expected Text element");
+            };
+            assert_eq!(
+                props.color, None,
+                "expected text to keep color late-bound for ForegroundScope inheritance"
             );
         });
     }

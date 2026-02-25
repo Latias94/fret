@@ -526,8 +526,8 @@ where
 
                     let mut p = ContainerProps::default();
                     p.layout.position = fret_ui::element::PositionStyle::Absolute;
-                    p.layout.inset.left = Some(left);
-                    p.layout.inset.top = Some(top);
+                    p.layout.inset.left = Some(left).into();
+                    p.layout.inset.top = Some(top).into();
                     p.layout.size.width = Length::Px(rect_screen.size.width);
                     p.layout.size.height = Length::Px(rect_screen.size.height);
                     p.background = Some(marquee_style.fill);

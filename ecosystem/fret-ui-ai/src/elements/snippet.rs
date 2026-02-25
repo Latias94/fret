@@ -1,6 +1,7 @@
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
+use fret_core::window::ColorScheme;
 use fret_core::{
     AttributedText, Color, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextSpan,
     TextStyle, TextWrap, TimerToken,
@@ -141,7 +142,8 @@ impl SnippetText {
                     right: pad_x,
                     bottom: pad_y,
                     left: Px(pad_x.0.max(0.0) * 0.75),
-                },
+                }
+                .into(),
                 ..Default::default()
             },
             move |cx| {
@@ -232,7 +234,7 @@ impl SnippetInput {
                     layout.size.height = Length::Auto;
                     layout
                 },
-                padding: Edges::symmetric(pad_x, pad_y),
+                padding: Edges::symmetric(pad_x, pad_y).into(),
                 ..Default::default()
             },
             move |cx| vec![cx.selectable_text_props(props)],
@@ -408,7 +410,7 @@ impl SnippetCopyButton {
                 fg_default
             };
 
-            let bg_hover = if theme.name.contains("/dark") {
+            let bg_hover = if theme.color_scheme == Some(ColorScheme::Dark) {
                 theme
                     .color_by_key("accent/50")
                     .unwrap_or_else(|| alpha(theme.color_token("accent"), 0.5))
@@ -441,7 +443,7 @@ impl SnippetCopyButton {
             chrome_props.background = Some(bg);
             chrome_props.corner_radii = fret_core::Corners::all(radius);
             chrome_props.border = Edges::all(Px(0.0));
-            chrome_props.padding = Edges::all(Px(0.0));
+            chrome_props.padding = Edges::all(Px(0.0)).into();
 
             (props, chrome_props, move |cx| {
                 let row = stack::hstack(

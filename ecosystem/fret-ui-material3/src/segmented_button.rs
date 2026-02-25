@@ -208,7 +208,7 @@ impl SegmentedButtonSet {
 
         let mut props = RovingFlexProps::default();
         props.flex.direction = Axis::Horizontal;
-        props.flex.gap = Px(0.0);
+        props.flex.gap = Px(0.0).into();
         props.flex.align = CrossAlign::Center;
         props.flex.layout.size.width = Length::Fill;
         props.roving.enabled = !disabled;
@@ -674,7 +674,7 @@ fn material_segment_content<H: UiHost>(
 
     let mut props = FlexProps::default();
     props.direction = Axis::Horizontal;
-    props.gap = icon_gap;
+    props.gap = icon_gap.into();
     props.justify = MainAlign::Center;
     props.align = CrossAlign::Center;
     props.wrap = false;
@@ -687,7 +687,7 @@ fn material_segment_content<H: UiHost>(
 
     if !icon_visible {
         text.layout.position = fret_ui::element::PositionStyle::Relative;
-        text.layout.inset.left = Some(Px(-0.5 * (icon_size.0 + icon_gap.0)));
+        text.layout.inset.left = Some(Px(-0.5 * (icon_size.0 + icon_gap.0))).into();
     }
 
     let icon_slot = {

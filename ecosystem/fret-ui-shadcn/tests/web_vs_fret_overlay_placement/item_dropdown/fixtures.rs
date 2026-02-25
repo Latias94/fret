@@ -140,7 +140,8 @@ fn build_item_dropdown_overlay(
             padding: Edges {
                 left: Px(trigger_rect.x),
                 ..Default::default()
-            },
+            }
+            .into(),
             ..Default::default()
         },
         |_cx| vec![dropdown],

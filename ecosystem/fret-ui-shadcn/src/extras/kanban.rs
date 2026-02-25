@@ -426,7 +426,7 @@ impl Kanban {
                 let sm_breakpoint = fret_ui_kit::declarative::viewport_width_at_least(
                     cx,
                     Invalidation::Layout,
-                    fret_ui_kit::declarative::tailwind::SM,
+                    fret_ui_kit::declarative::viewport_tailwind::SM,
                     fret_ui_kit::declarative::ViewportQueryHysteresis::default(),
                 );
                 let board_gap_x = if sm_breakpoint { Space::N4 } else { Space::N3 };
@@ -1205,8 +1205,8 @@ impl Kanban {
 
                         let mut overlay_layout = LayoutStyle::default();
                         overlay_layout.position = fret_ui::element::PositionStyle::Absolute;
-                        overlay_layout.inset.left = Some(local_origin.x);
-                        overlay_layout.inset.top = Some(local_origin.y);
+                        overlay_layout.inset.left = Some(local_origin.x).into();
+                        overlay_layout.inset.top = Some(local_origin.y).into();
                         overlay_layout.size.width = Length::Px(active_rect.size.width);
                         overlay_layout.size.height = Length::Px(active_rect.size.height);
 

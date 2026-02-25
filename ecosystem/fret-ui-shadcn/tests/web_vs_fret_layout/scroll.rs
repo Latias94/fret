@@ -241,7 +241,7 @@ fn web_vs_fret_layout_scroll_area_demo_max_offset_y_matches_web() {
                         },
                         // Match the upstream border inset: the scroll viewport is inset from the
                         // root's border box (fractional due to DPR / layout rounding).
-                        padding: Edges::all(Px(inset)),
+                        padding: Edges::all(Px(inset)).into(),
                         ..Default::default()
                     },
                     move |_cx| vec![scroll_area],
@@ -332,7 +332,7 @@ fn web_vs_fret_layout_scroll_area_horizontal_demo_max_offset_matches_web() {
                             layout.size.height = Length::Px(Px(web_root.rect.h));
                             layout
                         },
-                        padding: Edges::all(Px(inset)),
+                        padding: Edges::all(Px(inset)).into(),
                         ..Default::default()
                     },
                     move |_cx| vec![scroll_area],
@@ -460,7 +460,7 @@ fn web_vs_fret_layout_scroll_area_demo_scrollbar_bounds_match_web_hover() {
                             layout.size.height = Length::Px(Px(web_root.rect.h));
                             layout
                         },
-                        padding: Edges::all(Px(inset)),
+                        padding: Edges::all(Px(inset)).into(),
                         ..Default::default()
                     },
                     move |_cx| vec![scroll_area],
@@ -672,7 +672,7 @@ fn web_vs_fret_layout_scroll_area_demo_thumb_background_matches_web_hover_light(
                             layout.size.height = Length::Px(Px(web_root.rect.h));
                             layout
                         },
-                        padding: Edges::all(Px(inset)),
+                        padding: Edges::all(Px(inset)).into(),
                         ..Default::default()
                     },
                     move |_cx| vec![scroll_area],
@@ -875,7 +875,7 @@ fn web_vs_fret_layout_scroll_area_demo_thumb_background_matches_web_hover_dark()
                             layout.size.height = Length::Px(Px(web_root.rect.h));
                             layout
                         },
-                        padding: Edges::all(Px(inset)),
+                        padding: Edges::all(Px(inset)).into(),
                         ..Default::default()
                     },
                     move |_cx| vec![scroll_area],
@@ -1053,7 +1053,7 @@ fn web_vs_fret_layout_scroll_area_demo_scrollbar_hides_after_hover_out_delay() {
                             layout.size.height = Length::Px(Px(root_h));
                             layout
                         },
-                        padding: Edges::all(Px(inset)),
+                        padding: Edges::all(Px(inset)).into(),
                         ..Default::default()
                     },
                     move |cx| {
@@ -1373,7 +1373,7 @@ fn web_vs_fret_layout_scroll_area_demo_thumb_bounds_match_web_scrolled() {
                             layout.size.height = Length::Px(Px(web_root.rect.h));
                             layout
                         },
-                        padding: Edges::all(Px(inset)),
+                        padding: Edges::all(Px(inset)).into(),
                         ..Default::default()
                     },
                     move |_cx| vec![scroll_area],
@@ -1577,7 +1577,7 @@ fn web_vs_fret_layout_scroll_area_horizontal_demo_scrollbar_bounds_match_web_hov
                             layout.size.height = Length::Px(Px(web_root.rect.h));
                             layout
                         },
-                        padding: Edges::all(Px(inset)),
+                        padding: Edges::all(Px(inset)).into(),
                         ..Default::default()
                     },
                     move |_cx| vec![scroll_area],
@@ -1794,7 +1794,7 @@ fn web_vs_fret_layout_scroll_area_horizontal_demo_thumb_background_matches_web_h
                             layout.size.height = Length::Px(Px(web_root.rect.h));
                             layout
                         },
-                        padding: Edges::all(Px(inset)),
+                        padding: Edges::all(Px(inset)).into(),
                         ..Default::default()
                     },
                     move |_cx| vec![scroll_area],
@@ -2002,7 +2002,7 @@ fn web_vs_fret_layout_scroll_area_horizontal_demo_thumb_background_matches_web_h
                             layout.size.height = Length::Px(Px(web_root.rect.h));
                             layout
                         },
-                        padding: Edges::all(Px(inset)),
+                        padding: Edges::all(Px(inset)).into(),
                         ..Default::default()
                     },
                     move |_cx| vec![scroll_area],
@@ -2180,7 +2180,7 @@ fn web_vs_fret_layout_scroll_area_horizontal_demo_scrollbar_hides_after_hover_ou
                             layout.size.height = Length::Px(Px(root_h));
                             layout
                         },
-                        padding: Edges::all(Px(inset)),
+                        padding: Edges::all(Px(inset)).into(),
                         ..Default::default()
                     },
                     move |cx| {
@@ -2499,7 +2499,7 @@ fn web_vs_fret_layout_scroll_area_horizontal_demo_thumb_bounds_match_web_scrolle
                             layout.size.height = Length::Px(Px(web_root.rect.h));
                             layout
                         },
-                        padding: Edges::all(Px(inset)),
+                        padding: Edges::all(Px(inset)).into(),
                         ..Default::default()
                     },
                     move |_cx| vec![scroll_area],

@@ -125,13 +125,13 @@ impl DockedBottomSheet {
             column.justify = MainAlign::Start;
             column.align = CrossAlign::Stretch;
             column.wrap = false;
-            column.gap = Px(0.0);
+            column.gap = Px(0.0).into();
             column.layout.size.width = Length::Fill;
 
             // Compose baseline: `SheetMaxWidth = 640.dp`.
             let mut layout = LayoutStyle::default();
             layout.size.width = Length::Fill;
-            layout.size.max_width = Some(Px(640.0));
+            layout.size.max_width = Some(Length::Px(Px(640.0)));
             layout.overflow = Overflow::Clip;
 
             let mut container = ContainerProps::default();
@@ -500,7 +500,8 @@ fn drag_handle_element<H: UiHost>(
         right: Px(0.0),
         top: padding_y,
         bottom: padding_y,
-    };
+    }
+    .into();
 
     let mut row = FlexProps::default();
     row.direction = Axis::Horizontal;
@@ -542,10 +543,10 @@ fn absolute_fill_layout() -> LayoutStyle {
     layout.size.width = Length::Fill;
     layout.size.height = Length::Fill;
     layout.inset = fret_ui::element::InsetStyle {
-        top: Some(Px(0.0)),
-        right: Some(Px(0.0)),
-        bottom: Some(Px(0.0)),
-        left: Some(Px(0.0)),
+        top: Some(Px(0.0)).into(),
+        right: Some(Px(0.0)).into(),
+        bottom: Some(Px(0.0)).into(),
+        left: Some(Px(0.0)).into(),
     };
     layout
 }

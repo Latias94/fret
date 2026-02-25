@@ -91,7 +91,8 @@ fn web_vs_fret_layout_dashboard_01_shell_geometry_matches_web() {
                     top: Px(pad_top),
                     right: Px(pad_right),
                     bottom: Px(pad_bottom),
-                },
+                }
+                .into(),
                 ..Default::default()
             },
             move |_cx| vec![header],
@@ -101,8 +102,8 @@ fn web_vs_fret_layout_dashboard_01_shell_geometry_matches_web() {
             FlexProps {
                 layout: LayoutStyle::default(),
                 direction: fret_core::Axis::Horizontal,
-                gap: Px(0.0),
-                padding: Edges::all(Px(0.0)),
+                gap: Px(0.0).into(),
+                padding: Edges::all(Px(0.0)).into(),
                 justify: MainAlign::Start,
                 align: CrossAlign::Start,
                 wrap: false,

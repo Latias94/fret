@@ -108,8 +108,8 @@ fn web_vs_fret_layout_label_demo_geometry() {
                     ..Default::default()
                 },
                 direction: fret_core::Axis::Horizontal,
-                gap: Px(8.0),
-                padding: fret_core::Edges::all(Px(0.0)),
+                gap: Px(8.0).into(),
+                padding: fret_core::Edges::all(Px(0.0)).into(),
                 justify: MainAlign::Start,
                 align: CrossAlign::Center,
                 wrap: false,
@@ -221,8 +221,8 @@ fn web_vs_fret_layout_checkbox_with_text_geometry() {
             FlexProps {
                 layout: LayoutStyle::default(),
                 direction: fret_core::Axis::Vertical,
-                gap: Px(6.0),
-                padding: fret_core::Edges::all(Px(0.0)),
+                gap: Px(6.0).into(),
+                padding: fret_core::Edges::all(Px(0.0)).into(),
                 justify: MainAlign::Start,
                 align: CrossAlign::Start,
                 wrap: false,
@@ -234,8 +234,8 @@ fn web_vs_fret_layout_checkbox_with_text_geometry() {
             FlexProps {
                 layout: LayoutStyle::default(),
                 direction: fret_core::Axis::Horizontal,
-                gap: Px(8.0),
-                padding: fret_core::Edges::all(Px(0.0)),
+                gap: Px(8.0).into(),
+                padding: fret_core::Edges::all(Px(0.0)).into(),
                 justify: MainAlign::Start,
                 align: CrossAlign::Start,
                 wrap: false,

@@ -69,8 +69,8 @@ impl SonnerDemoDriver {
                             FlexProps {
                                 layout: LayoutStyle::default(),
                                 direction: fret_core::Axis::Vertical,
-                                gap: Px(12.0),
-                                padding: Edges::all(Px(24.0)),
+                                gap: fret_ui::element::SpacingLength::Px(Px(12.0)),
+                                padding: Edges::all(Px(24.0)).into(),
                                 justify: MainAlign::Start,
                                 align: CrossAlign::Stretch,
                                 wrap: false,
@@ -85,8 +85,8 @@ impl SonnerDemoDriver {
                                         FlexProps {
                                             layout: LayoutStyle::default(),
                                             direction: fret_core::Axis::Horizontal,
-                                            gap: Px(8.0),
-                                            padding: Edges::all(Px(0.0)),
+                                            gap: fret_ui::element::SpacingLength::Px(Px(8.0)),
+                                            padding: Edges::all(Px(0.0)).into(),
                                             justify: MainAlign::Start,
                                             align: CrossAlign::Center,
                                             wrap: true,
@@ -138,8 +138,8 @@ impl SonnerDemoDriver {
                                         FlexProps {
                                             layout: LayoutStyle::default(),
                                             direction: fret_core::Axis::Horizontal,
-                                            gap: Px(8.0),
-                                            padding: Edges::all(Px(0.0)),
+                                            gap: fret_ui::element::SpacingLength::Px(Px(8.0)),
+                                            padding: Edges::all(Px(0.0)).into(),
                                             justify: MainAlign::Start,
                                             align: CrossAlign::Center,
                                             wrap: true,
@@ -170,8 +170,8 @@ impl SonnerDemoDriver {
                                         FlexProps {
                                             layout: LayoutStyle::default(),
                                             direction: fret_core::Axis::Horizontal,
-                                            gap: Px(8.0),
-                                            padding: Edges::all(Px(0.0)),
+                                            gap: fret_ui::element::SpacingLength::Px(Px(8.0)),
+                                            padding: Edges::all(Px(0.0)).into(),
                                             justify: MainAlign::Start,
                                             align: CrossAlign::Center,
                                             wrap: true,

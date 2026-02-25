@@ -419,10 +419,10 @@ mod tests {
             };
 
             assert_eq!(layout.overflow, Overflow::Visible);
-            assert_eq!(padding.top, py);
-            assert_eq!(padding.right, Px(0.0));
-            assert_eq!(padding.bottom, py);
-            assert_eq!(padding.left, Px(0.0));
+            assert_eq!(padding.top, py.into());
+            assert_eq!(padding.right, Px(0.0).into());
+            assert_eq!(padding.bottom, py.into());
+            assert_eq!(padding.left, Px(0.0).into());
         });
     }
 
@@ -442,10 +442,17 @@ mod tests {
                 panic!("expected CardContent to be a container element");
             };
 
-            assert_eq!(padding.top, Px(0.0));
-            assert_eq!(padding.bottom, Px(0.0));
+            assert_eq!(padding.top, Px(0.0).into());
+            assert_eq!(padding.bottom, Px(0.0).into());
             assert_eq!(padding.left, padding.right);
-            assert!(padding.left.0 > 0.0);
+            assert!(
+                matches!(
+                    padding.left,
+                    fret_ui::element::SpacingLength::Px(px) if px.0 > 0.0
+                ),
+                "expected CardContent horizontal padding to be px-only and positive, got {:?}",
+                padding.left
+            );
         });
     }
 
@@ -470,9 +477,12 @@ mod tests {
                 let mut stack = vec![el];
                 while let Some(node) = stack.pop() {
                     if let ElementKind::Container(ContainerProps { padding, .. }) = &node.kind {
-                        if padding.bottom == pb
+                        if padding.bottom == pb.into()
                             && padding.left == padding.right
-                            && padding.left.0 > 0.0
+                            && matches!(
+                                padding.left,
+                                fret_ui::element::SpacingLength::Px(px) if px.0 > 0.0
+                            )
                         {
                             return true;
                         }
@@ -565,7 +575,7 @@ impl CardFooter {
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             border_top: false,
-            gap: Space::N0,
+            gap: Space::N0.into(),
             wrap: false,
         }
     }

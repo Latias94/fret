@@ -2748,7 +2748,9 @@ impl<H: UiHost> Widget<H> for DemoHelpOverlay {
                 order: DrawOrder(21_601),
                 text: id,
                 origin: Point::new(Px(rect.origin.x.0 + Self::PAD_PX), Px(cy)),
-                color: self.style.controls_text,
+                paint: self.style.controls_text.into(),
+                outline: None,
+                shadow: None,
             });
             cy += metrics.size.height.0;
         }
@@ -2863,7 +2865,9 @@ impl<H: UiHost> Widget<H> for DemoToolbarStrip {
             order: DrawOrder(21_501),
             text: label_id,
             origin: Point::new(Px(lx), Px(ly)),
-            color: self.style.controls_text,
+            paint: self.style.controls_text.into(),
+            outline: None,
+            shadow: None,
         });
 
         let buttons = [
@@ -2904,7 +2908,9 @@ impl<H: UiHost> Widget<H> for DemoToolbarStrip {
                 order: DrawOrder(21_502),
                 text: id,
                 origin: Point::new(Px(tx), Px(ty)),
-                color: self.style.controls_text,
+                paint: self.style.controls_text.into(),
+                outline: None,
+                shadow: None,
             });
         }
     }

@@ -39,8 +39,14 @@ tracing = ["fret-bootstrap/tracing"]
 # Ecosystem integrations.
 shadcn = ["dep:fret-ui-shadcn"]
 ui-assets = ["fret-bootstrap/ui-assets"]
-icons-lucide = ["fret-bootstrap/icons-lucide"]
-icons-radix = ["fret-bootstrap/icons-radix"]
+icons-lucide = ["fret-bootstrap/icons-lucide", "fret-bootstrap/icons-ui-semantic-lucide"]
+icons-radix = ["fret-bootstrap/icons-radix", "fret-bootstrap/icons-ui-semantic-radix"]
+# Vendor namespaces only (no `ui.*` semantic aliases).
+icons-lucide-vendor = ["fret-bootstrap/icons-lucide"]
+icons-radix-vendor = ["fret-bootstrap/icons-radix"]
+# Select a single provider for semantic `ui.*` icon aliases.
+icons-ui-semantic-lucide = ["icons-lucide-vendor", "fret-bootstrap/icons-ui-semantic-lucide"]
+icons-ui-semantic-radix = ["icons-radix-vendor", "fret-bootstrap/icons-ui-semantic-radix"]
 preload-icon-svgs = ["fret-bootstrap/preload-icon-svgs"]
 command-palette = ["fret-bootstrap/ui-app-command-palette"]
 workspace-shell = ["dep:fret-workspace", "fret-workspace/shadcn-context-menu", "shadcn"]

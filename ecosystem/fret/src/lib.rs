@@ -23,9 +23,6 @@
 //! }
 //! ```
 
-#[cfg(all(feature = "icons-lucide", feature = "icons-radix"))]
-compile_error!("`fret` features `icons-lucide` and `icons-radix` are mutually exclusive.");
-
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 use fret_app::App;
 

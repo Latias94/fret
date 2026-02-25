@@ -74,8 +74,8 @@ fn portal_pointer_region_blocks_underlay_only_inside_body_region() {
             props.layout = LayoutStyle {
                 position: PositionStyle::Absolute,
                 inset: InsetStyle {
-                    left: Some(Px(20.0)),
-                    top: Some(Px(36.0)),
+                    left: Some(Px(20.0)).into(),
+                    top: Some(Px(36.0)).into(),
                     ..Default::default()
                 },
                 size: SizeStyle {

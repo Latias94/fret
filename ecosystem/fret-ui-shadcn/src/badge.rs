@@ -356,13 +356,14 @@ fn badge_with_patch<H: UiHost>(
         .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
     let content_children = move |cx: &mut ElementContext<'_, H>| {
-        current_color::with_current_color_provider(cx, ColorRef::Color(fg), |cx| {
+        current_color::scope_children(cx, ColorRef::Color(fg), |cx| {
             let label = ui::text(cx, label_for_content.clone())
                 .text_size_px(text_px)
                 .fixed_line_box_px(line_height)
                 .line_box_in_bounds()
                 .font_semibold()
                 .nowrap()
+                .text_color(ColorRef::Color(fg))
                 .into_element(cx);
 
             if children.is_empty() && leading_icon.is_none() && trailing_icon.is_none() {
@@ -374,7 +375,12 @@ fn badge_with_patch<H: UiHost>(
             let mut content = Vec::with_capacity(children.len() + 3);
 
             if let Some(icon) = leading_icon.clone() {
-                content.push(decl_icon::icon_with(cx, icon, Some(icon_px), None));
+                content.push(decl_icon::icon_with(
+                    cx,
+                    icon,
+                    Some(icon_px),
+                    Some(ColorRef::Color(fg)),
+                ));
             }
 
             let children = children
@@ -386,7 +392,12 @@ fn badge_with_patch<H: UiHost>(
             content.push(label);
 
             if let Some(icon) = trailing_icon.clone() {
-                content.push(decl_icon::icon_with(cx, icon, Some(icon_px), None));
+                content.push(decl_icon::icon_with(
+                    cx,
+                    icon,
+                    Some(icon_px),
+                    Some(ColorRef::Color(fg)),
+                ));
             }
 
             vec![stack::hstack(

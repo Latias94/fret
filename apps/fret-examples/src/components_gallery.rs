@@ -413,7 +413,7 @@ impl ComponentsGalleryDriver {
 
                     let mut props = ContainerProps::default();
                     props.layout = root_layout;
-                    props.padding = Edges::all(padding);
+                    props.padding = Edges::all(padding).into();
                     props.background = Some(theme.color_token("background"));
 
                     return vec![cx.container(props, |_cx| vec![header, table])];
@@ -468,8 +468,8 @@ impl ComponentsGalleryDriver {
                                         FlexProps {
                                             layout: LayoutStyle::default(),
                                             direction: fret_core::Axis::Horizontal,
-                                            gap: Px(8.0),
-                                            padding: Edges::all(Px(0.0)),
+                                            gap: fret_ui::element::SpacingLength::Px(Px(8.0)),
+                                            padding: Edges::all(Px(0.0)).into(),
                                             justify: MainAlign::Start,
                                             align: CrossAlign::Center,
                                             wrap: true,
@@ -540,8 +540,8 @@ impl ComponentsGalleryDriver {
                                         FlexProps {
                                             layout: LayoutStyle::default(),
                                             direction: fret_core::Axis::Horizontal,
-                                            gap: Px(10.0),
-                                            padding: Edges::all(Px(0.0)),
+                                            gap: fret_ui::element::SpacingLength::Px(Px(10.0)),
+                                            padding: Edges::all(Px(0.0)).into(),
                                             justify: MainAlign::Start,
                                             align: CrossAlign::Center,
                                             wrap: true,
@@ -565,8 +565,8 @@ impl ComponentsGalleryDriver {
                                                         FlexProps {
                                                             layout: LayoutStyle::default(),
                                                             direction: fret_core::Axis::Horizontal,
-                                                            gap: Px(6.0),
-                                                            padding: Edges::all(Px(0.0)),
+                                                            gap: fret_ui::element::SpacingLength::Px(Px(6.0)),
+                                                            padding: Edges::all(Px(0.0)).into(),
                                                             justify: MainAlign::Start,
                                                             align: CrossAlign::Center,
                                                             wrap: false,
@@ -610,7 +610,8 @@ impl ComponentsGalleryDriver {
                                             },
                                             padding: Edges::all(
                                                 theme.metric_token("metric.padding.md"),
-                                            ),
+                                            )
+                                            .into(),
                                             background: Some(theme.color_token("card")),
                                             border: Edges::all(Px(1.0)),
                                             border_color: Some(theme.color_token("border")),
@@ -652,8 +653,8 @@ impl ComponentsGalleryDriver {
                                                 FlexProps {
                                                     layout: LayoutStyle::default(),
                                                     direction: fret_core::Axis::Vertical,
-                                                    gap: Px(8.0),
-                                                    padding: Edges::all(Px(0.0)),
+                                                    gap: fret_ui::element::SpacingLength::Px(Px(8.0)),
+                                                    padding: Edges::all(Px(0.0)).into(),
                                                     justify: MainAlign::Start,
                                                     align: CrossAlign::Stretch,
                                                     wrap: false,
@@ -669,8 +670,8 @@ impl ComponentsGalleryDriver {
                                                         FlexProps {
                                                             layout: LayoutStyle::default(),
                                                             direction: fret_core::Axis::Horizontal,
-                                                            gap: Px(8.0),
-                                                            padding: Edges::all(Px(0.0)),
+                                                            gap: fret_ui::element::SpacingLength::Px(Px(8.0)),
+                                                            padding: Edges::all(Px(0.0)).into(),
                                                             justify: MainAlign::Start,
                                                             align: CrossAlign::Center,
                                                             wrap: true,
@@ -859,8 +860,8 @@ impl ComponentsGalleryDriver {
                                         FlexProps {
                                             layout: LayoutStyle::default(),
                                             direction: fret_core::Axis::Horizontal,
-                                            gap: Px(8.0),
-                                            padding: Edges::all(Px(0.0)),
+                                            gap: fret_ui::element::SpacingLength::Px(Px(8.0)),
+                                            padding: Edges::all(Px(0.0)).into(),
                                             justify: MainAlign::Start,
                                             align: CrossAlign::Center,
                                             wrap: true,
@@ -891,8 +892,8 @@ impl ComponentsGalleryDriver {
                                         FlexProps {
                                             layout: LayoutStyle::default(),
                                             direction: fret_core::Axis::Horizontal,
-                                            gap: Px(12.0),
-                                            padding: Edges::all(Px(0.0)),
+                                            gap: fret_ui::element::SpacingLength::Px(Px(12.0)),
+                                            padding: Edges::all(Px(0.0)).into(),
                                             justify: MainAlign::Start,
                                             align: CrossAlign::Center,
                                             wrap: true,
@@ -921,8 +922,8 @@ impl ComponentsGalleryDriver {
                                         FlexProps {
                                             layout: LayoutStyle::default(),
                                             direction: fret_core::Axis::Vertical,
-                                            gap: Px(8.0),
-                                            padding: Edges::all(Px(0.0)),
+                                            gap: fret_ui::element::SpacingLength::Px(Px(8.0)),
+                                            padding: Edges::all(Px(0.0)).into(),
                                             justify: MainAlign::Start,
                                             align: CrossAlign::Stretch,
                                         wrap: false,
@@ -955,8 +956,8 @@ impl ComponentsGalleryDriver {
                                         FlexProps {
                                             layout: LayoutStyle::default(),
                                             direction: fret_core::Axis::Vertical,
-                                            gap: Px(8.0),
-                                            padding: Edges::all(Px(0.0)),
+                                            gap: fret_ui::element::SpacingLength::Px(Px(8.0)),
+                                            padding: Edges::all(Px(0.0)).into(),
                                             justify: MainAlign::Start,
                                             align: CrossAlign::Stretch,
                                         wrap: false,
@@ -990,8 +991,8 @@ impl ComponentsGalleryDriver {
                                     FlexProps {
                                         layout: LayoutStyle::default(),
                                         direction: fret_core::Axis::Vertical,
-                                        gap: Px(8.0),
-                                        padding: Edges::all(Px(0.0)),
+                                        gap: fret_ui::element::SpacingLength::Px(Px(8.0)),
+                                        padding: Edges::all(Px(0.0)).into(),
                                         justify: MainAlign::Start,
                                         align: CrossAlign::Stretch,
                                         wrap: false,
@@ -1004,8 +1005,8 @@ impl ComponentsGalleryDriver {
                                     FlexProps {
                                         layout: LayoutStyle::default(),
                                         direction: fret_core::Axis::Vertical,
-                                        gap: Px(8.0),
-                                        padding: Edges::all(Px(0.0)),
+                                        gap: fret_ui::element::SpacingLength::Px(Px(8.0)),
+                                        padding: Edges::all(Px(0.0)).into(),
                                         justify: MainAlign::Start,
                                         align: CrossAlign::Stretch,
                                         wrap: false,
@@ -1018,8 +1019,8 @@ impl ComponentsGalleryDriver {
                                             FlexProps {
                                                 layout: LayoutStyle::default(),
                                                 direction: fret_core::Axis::Horizontal,
-                                                gap: Px(8.0),
-                                                padding: Edges::all(Px(0.0)),
+                                                gap: fret_ui::element::SpacingLength::Px(Px(8.0)),
+                                                padding: Edges::all(Px(0.0)).into(),
                                                 justify: MainAlign::Start,
                                                 align: CrossAlign::Center,
                                                 wrap: true,
@@ -1052,9 +1053,9 @@ impl ComponentsGalleryDriver {
                                                                 layout.size.width = Length::Px(Px(240.0));
                                                                 layout.size.height = Length::Px(Px(72.0));
                                                                 layout.overflow = Overflow::Clip;
-                                                                layout
-                                                            },
-                                                            padding: Edges::all(Px(8.0)),
+                                                            layout
+                                                        },
+                                                            padding: Edges::all(Px(8.0)).into(),
                                                             background: Some(
                                                                 theme.color_token("card"),
                                                             ),
@@ -1071,11 +1072,11 @@ impl ComponentsGalleryDriver {
                                                                         let mut layout = LayoutStyle::default();
                                                                         layout.size.width = Length::Fill;
                                                                         layout.size.height = Length::Fill;
-                                                                        layout
-                                                                    },
+                                                                    layout
+                                                                },
                                                                     direction: fret_core::Axis::Vertical,
-                                                                    gap: Px(0.0),
-                                                                    padding: Edges::all(Px(0.0)),
+                                                                    gap: fret_ui::element::SpacingLength::Px(Px(0.0)),
+                                                                    padding: Edges::all(Px(0.0)).into(),
                                                                     justify: MainAlign::End,
                                                                     align: CrossAlign::Start,
                                                                     wrap: false,
@@ -1089,8 +1090,8 @@ impl ComponentsGalleryDriver {
                                                                             FlexProps {
                                                                                 layout: LayoutStyle::default(),
                                                                                 direction: fret_core::Axis::Vertical,
-                                                                                gap: Px(4.0),
-                                                                                padding: Edges::all(Px(0.0)),
+                                                                                gap: fret_ui::element::SpacingLength::Px(Px(4.0)),
+                                                                                padding: Edges::all(Px(0.0)).into(),
                                                                                 justify: MainAlign::Start,
                                                                                 align: CrossAlign::Start,
                                                                                 wrap: false,

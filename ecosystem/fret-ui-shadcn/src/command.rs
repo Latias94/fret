@@ -360,8 +360,8 @@ fn command_text_input<H: UiHost>(
     props.layout.size = SizeStyle {
         width: Length::Fill,
         height: Length::Px(height),
-        min_width: Some(Px(0.0)),
-        min_height: Some(Px(0.0)),
+        min_width: Some(Length::Px(Px(0.0))),
+        min_height: Some(Length::Px(Px(0.0))),
         ..Default::default()
     };
     props.layout.overflow = Overflow::Clip;
@@ -464,14 +464,14 @@ fn cmdk_highlighted_label<H: UiHost>(
             layout: {
                 let mut layout = LayoutStyle::default();
                 layout.size.width = Length::Fill;
-                layout.size.min_width = Some(Px(0.0));
+                layout.size.min_width = Some(Length::Px(Px(0.0)));
                 layout.flex.grow = 1.0;
                 layout.flex.shrink = 1.0;
                 layout.flex.basis = Length::Px(Px(0.0));
                 layout
             },
-            gap: Px(0.0),
-            padding: Edges::all(Px(0.0)),
+            gap: Px(0.0).into(),
+            padding: Edges::all(Px(0.0)).into(),
             justify: MainAlign::Start,
             align: CrossAlign::Center,
         },
@@ -756,7 +756,8 @@ impl CommandInput {
                 right: pad_right,
                 bottom: pad_bottom,
                 left: pad_left,
-            };
+            }
+            .into();
 
             cx.container(wrapper, move |cx| {
                 let a11y_label = self
@@ -793,8 +794,8 @@ impl CommandInput {
                             layout.size.height = Length::Fill;
                             layout
                         },
-                        gap,
-                        padding: Edges::all(Px(0.0)),
+                        gap: gap.into(),
+                        padding: Edges::all(Px(0.0)).into(),
                         justify: MainAlign::Start,
                         align: CrossAlign::Center,
                     },
@@ -1079,7 +1080,8 @@ impl CommandEmpty {
                     right: Px(0.0),
                     bottom: Px(24.0),
                     left: Px(0.0),
-                },
+                }
+                .into(),
                 ..Default::default()
             },
             move |cx| {
@@ -1090,8 +1092,8 @@ impl CommandEmpty {
                             layout.size.width = Length::Fill;
                             layout
                         },
-                        gap: Px(0.0),
-                        padding: Edges::all(Px(0.0)),
+                        gap: Px(0.0).into(),
+                        padding: Edges::all(Px(0.0)).into(),
                         justify: MainAlign::Center,
                         align: CrossAlign::Center,
                     },
@@ -1186,7 +1188,8 @@ impl CommandLoading {
                     right: Px(0.0),
                     bottom: Px(24.0),
                     left: Px(0.0),
-                },
+                }
+                .into(),
                 ..Default::default()
             },
             move |cx| {
@@ -1197,8 +1200,8 @@ impl CommandLoading {
                             layout.size.width = Length::Fill;
                             layout
                         },
-                        gap: Px(0.0),
-                        padding: Edges::all(Px(0.0)),
+                        gap: Px(0.0).into(),
+                        padding: Edges::all(Px(0.0)).into(),
                         justify: MainAlign::Center,
                         align: CrossAlign::Center,
                     },
@@ -1456,14 +1459,14 @@ impl CommandList {
                         layout: {
                             let mut layout = LayoutStyle::default();
                             layout.size.width = Length::Fill;
-                            layout.size.min_height = Some(Px(0.0));
+                            layout.size.min_height = Some(Length::Px(Px(0.0)));
                             layout
                         },
                         direction: fret_core::Axis::Vertical,
-                        gap: Px(0.0),
+                        gap: Px(0.0).into(),
                         // new-york-v4: `CommandList` uses `scroll-py-1` and is typically
                         // wrapped in `CommandGroup` which uses `p-1`.
-                        padding: Edges::all(Px(4.0)),
+                        padding: Edges::all(Px(4.0)).into(),
                         justify: MainAlign::Start,
                         align: CrossAlign::Stretch,
                         wrap: false,
@@ -1481,44 +1484,47 @@ impl CommandList {
                                 let heading = heading.clone();
                                 let heading_style = heading_style.clone();
                                 let fg_heading = fg_heading;
-                                out.push(cx.container(
-                                    ContainerProps {
-                                        layout: {
-                                            let mut layout = LayoutStyle::default();
-                                            layout.size.width = Length::Fill;
-                                            layout
+                                out.push(
+                                    cx.container(
+                                        ContainerProps {
+                                            layout: {
+                                                let mut layout = LayoutStyle::default();
+                                                layout.size.width = Length::Fill;
+                                                layout
+                                            },
+                                            padding: Edges {
+                                                top: Px(6.0),
+                                                right: pad_x,
+                                                bottom: Px(6.0),
+                                                left: pad_x,
+                                            }
+                                            .into(),
+                                            ..Default::default()
                                         },
-                                        padding: Edges {
-                                            top: Px(6.0),
-                                            right: pad_x,
-                                            bottom: Px(6.0),
-                                            left: pad_x,
-                                        },
-                                        ..Default::default()
-                                    },
-                                    move |cx| {
-                                        let mut text = ui::text(cx, heading)
-                                            .text_size_px(heading_style.size)
-                                            .font_weight(heading_style.weight)
-                                            .nowrap()
-                                            .text_color(ColorRef::Color(fg_heading));
+                                        move |cx| {
+                                            let mut text = ui::text(cx, heading)
+                                                .text_size_px(heading_style.size)
+                                                .font_weight(heading_style.weight)
+                                                .nowrap()
+                                                .text_color(ColorRef::Color(fg_heading));
 
-                                        if let Some(line_height) = heading_style.line_height {
-                                            text = text
-                                                .line_height_px(line_height)
-                                                .line_height_policy(
+                                            if let Some(line_height) = heading_style.line_height {
+                                                text = text
+                                                    .line_height_px(line_height)
+                                                    .line_height_policy(
                                                     fret_core::TextLineHeightPolicy::FixedFromStyle,
                                                 );
-                                        }
-                                        if let Some(letter_spacing_em) =
-                                            heading_style.letter_spacing_em
-                                        {
-                                            text = text.letter_spacing_em(letter_spacing_em);
-                                        }
+                                            }
+                                            if let Some(letter_spacing_em) =
+                                                heading_style.letter_spacing_em
+                                            {
+                                                text = text.letter_spacing_em(letter_spacing_em);
+                                            }
 
-                                        vec![text.into_element(cx)]
-                                    },
-                                ));
+                                            vec![text.into_element(cx)]
+                                        },
+                                    ),
+                                );
                             }
                             CommandPaletteRenderRow::GroupPad => out.push(cx.container(
                                 ContainerProps {
@@ -1639,7 +1645,8 @@ impl CommandList {
                                                     right: pad_x,
                                                     bottom: pad_y,
                                                     left: pad_x,
-                                                },
+                                                }
+                                                .into(),
                                                 background: bg,
                                                 shadow: None,
                                                 border: Edges::all(Px(0.0)),
@@ -1651,15 +1658,15 @@ impl CommandList {
                                             let child = cx.container(props, move |cx| {
                                                 let effective_fg =
                                                     if enabled { fg } else { fg_disabled };
-                                                current_color::with_current_color_provider(
+                                                current_color::scope_children(
                                                     cx,
                                                     ColorRef::Color(effective_fg),
                                                     |cx| {
                                                         vec![cx.row(
                                                             RowProps {
                                                                 layout: LayoutStyle::default(),
-                                                                gap: row_gap,
-                                                                padding: Edges::all(Px(0.0)),
+                                                                gap: row_gap.into(),
+                                                                padding: Edges::all(Px(0.0)).into(),
                                                                 justify: MainAlign::Start,
                                                                 align: CrossAlign::Center,
                                                             },
@@ -2634,7 +2641,8 @@ impl CommandPalette {
                                     right: pad_x,
                                     bottom: Px(6.0),
                                     left: pad_x,
-                                },
+                                }
+                                .into(),
                                 ..Default::default()
                             },
                             move |cx| {
@@ -2842,7 +2850,8 @@ impl CommandPalette {
                                             right: pad_x,
                                             bottom: pad_y,
                                             left: pad_x,
-                                        },
+                                        }
+                                        .into(),
                                         background: bg,
                                         shadow: None,
                                         border: Edges::all(Px(0.0)),
@@ -2853,7 +2862,7 @@ impl CommandPalette {
 
                                     let child = cx.container(props, move |cx| {
                                         let effective_fg = if enabled { fg } else { fg_disabled };
-                                        current_color::with_current_color_provider(
+                                        current_color::scope_children(
                                             cx,
                                             ColorRef::Color(effective_fg),
                                             |cx| {
@@ -2864,8 +2873,8 @@ impl CommandPalette {
                                                             layout.size.width = Length::Fill;
                                                             layout
                                                         },
-                                                        gap: row_gap,
-                                                        padding: Edges::all(Px(0.0)),
+                                                        gap: row_gap.into(),
+                                                        padding: Edges::all(Px(0.0)).into(),
                                                         justify: MainAlign::Start,
                                                         align: CrossAlign::Center,
                                                     },
@@ -2882,15 +2891,15 @@ impl CommandPalette {
                                                                     layout.size.width =
                                                                         Length::Fill;
                                                                     layout.size.min_width =
-                                                                        Some(Px(0.0));
+                                                                        Some(Length::Px(Px(0.0)));
                                                                     layout.flex.grow = 1.0;
                                                                     layout.flex.shrink = 1.0;
                                                                     layout.flex.basis =
                                                                         Length::Px(Px(0.0));
                                                                     layout
                                                                 },
-                                                                gap: row_gap,
-                                                                padding: Edges::all(Px(0.0)),
+                                                                gap: row_gap.into(),
+                                                                padding: Edges::all(Px(0.0)).into(),
                                                                 justify: MainAlign::Start,
                                                                 align: CrossAlign::Center,
                                                             },
@@ -3021,7 +3030,8 @@ impl CommandPalette {
                 right: pad_x,
                 bottom: Px(0.0),
                 left: pad_x,
-            };
+            }
+            .into();
 
             let a11y_label = self.a11y_label.clone();
             let effective_input_test_id = input_test_id.clone().or_else(|| test_id_input.clone());
@@ -3061,8 +3071,8 @@ impl CommandPalette {
                         layout.size.height = Length::Fill;
                         layout
                     },
-                    gap,
-                    padding: Edges::all(Px(0.0)),
+                    gap: gap.into(),
+                    padding: Edges::all(Px(0.0)).into(),
                     justify: MainAlign::Start,
                     align: CrossAlign::Center,
                 },
@@ -3314,29 +3324,32 @@ impl CommandPalette {
                 CommandEmpty::new(empty).into_element(cx)
             } else {
                 let scroll_handle = cx.with_state(ScrollHandle::default, |h| h.clone());
-                let scroll_area = ScrollArea::new(vec![cx.flex(
-                    FlexProps {
-                        layout: {
-                            let mut layout = LayoutStyle::default();
-                            layout.size.width = Length::Fill;
-                            layout.size.min_height = Some(Px(0.0));
-                            layout
+                let scroll_area = ScrollArea::new(vec![
+                    cx.flex(
+                        FlexProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Fill;
+                                layout.size.min_height = Some(Length::Px(Px(0.0)));
+                                layout
+                            },
+                            direction: fret_core::Axis::Vertical,
+                            gap: Px(0.0).into(),
+                            padding: Edges {
+                                top: group_pad_y,
+                                right: group_pad_x,
+                                bottom: group_pad_y,
+                                left: group_pad_x,
+                            }
+                            .into(),
+                            justify: MainAlign::Start,
+                            align: CrossAlign::Stretch,
+                            wrap: false,
+                            ..Default::default()
                         },
-                        direction: fret_core::Axis::Vertical,
-                        gap: Px(0.0),
-                        padding: Edges {
-                            top: group_pad_y,
-                            right: group_pad_x,
-                            bottom: group_pad_y,
-                            left: group_pad_x,
-                        },
-                        justify: MainAlign::Start,
-                        align: CrossAlign::Stretch,
-                        wrap: false,
-                        ..Default::default()
-                    },
-                    move |_cx| rows,
-                )])
+                        move |_cx| rows,
+                    ),
+                ])
                 .scroll_handle(scroll_handle.clone())
                 .refine_layout(scroll_layout.clone())
                 .into_element(cx);

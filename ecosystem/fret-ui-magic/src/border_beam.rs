@@ -125,7 +125,7 @@ where
             overflow: Overflow::Clip,
             ..props.layout
         },
-        padding: props.padding,
+        padding: props.padding.into(),
         corner_radii: props.corner_radii,
         background: Some(props.background),
         border: props.border,
@@ -161,10 +161,10 @@ where
         let overlay_layout = LayoutStyle {
             position: PositionStyle::Absolute,
             inset: InsetStyle {
-                top: Some(Px(0.0)),
-                right: Some(Px(0.0)),
-                bottom: Some(Px(0.0)),
-                left: Some(Px(0.0)),
+                top: Some(Px(0.0)).into(),
+                right: Some(Px(0.0)).into(),
+                bottom: Some(Px(0.0)).into(),
+                left: Some(Px(0.0)).into(),
             },
             size: SizeStyle {
                 width: Length::Fill,

@@ -191,10 +191,11 @@ fn render_column_actions_menu<H: UiHost>(
             .into_element(
                 cx,
                 |cx| {
-                    Button::new(trigger_label.clone())
+                    Button::new("")
+                        .a11y_label(trigger_label.clone())
                         .variant(ButtonVariant::Ghost)
                         .size(ButtonSize::IconSm)
-                        .children([cx.text("⋯")])
+                        .icon(fret_icons::IconId::new_static("lucide.more-horizontal"))
                         .into_element(cx)
                 },
                 move |cx| {
@@ -268,6 +269,7 @@ pub struct DataTable {
     overscan: usize,
     keep_alive: Option<usize>,
     row_height: Option<Px>,
+    header_height: Option<Px>,
     measure_rows: bool,
     column_actions_menu: bool,
     chrome: ChromeRefinement,
@@ -281,6 +283,7 @@ impl Default for DataTable {
             overscan: 4,
             keep_alive: None,
             row_height: None,
+            header_height: None,
             measure_rows: false,
             column_actions_menu: false,
             chrome: ChromeRefinement::default(),
@@ -307,6 +310,11 @@ impl DataTable {
 
     pub fn row_height(mut self, row_height: Px) -> Self {
         self.row_height = Some(row_height);
+        self
+    }
+
+    pub fn header_height(mut self, header_height: Px) -> Self {
+        self.header_height = Some(header_height);
         self
     }
 
@@ -367,6 +375,7 @@ impl DataTable {
             overscan,
             keep_alive,
             row_height,
+            header_height,
             measure_rows,
             column_actions_menu,
             chrome,
@@ -421,6 +430,7 @@ impl DataTable {
             view_props.overscan = overscan;
             view_props.keep_alive = keep_alive;
             view_props.row_height = row_height;
+            view_props.header_height = header_height;
             view_props.row_measure_mode = if measure_rows {
                 TableRowMeasureMode::Measured
             } else {
@@ -554,6 +564,7 @@ impl DataTable {
             overscan,
             keep_alive,
             row_height,
+            header_height,
             measure_rows,
             column_actions_menu,
             chrome,
@@ -596,6 +607,7 @@ impl DataTable {
             view_props.overscan = overscan;
             view_props.keep_alive = keep_alive;
             view_props.row_height = row_height;
+            view_props.header_height = header_height;
             view_props.row_measure_mode = if measure_rows {
                 TableRowMeasureMode::Measured
             } else {
@@ -647,8 +659,8 @@ impl DataTable {
                                     LayoutRefinement::default().w_full().h_full(),
                                 ),
                                 direction: Axis::Horizontal,
-                                gap: Px(2.0),
-                                padding: Edges::all(Px(0.0)),
+                                gap: Px(2.0).into(),
+                                padding: Edges::all(Px(0.0)).into(),
                                 justify: MainAlign::Start,
                                 align: CrossAlign::Center,
                                 wrap: false,
@@ -691,7 +703,7 @@ impl DataTable {
                                     let icon_id = match sort_state {
                                         Some(true) => "lucide.arrow-down",
                                         Some(false) => "lucide.arrow-up",
-                                        None => "lucide.arrow-up-down",
+                                        None => "lucide.chevrons-up-down",
                                     };
                                     pieces.push(decl_icon::icon_with(
                                         cx,
@@ -734,8 +746,8 @@ impl DataTable {
                                 LayoutRefinement::default().w_full().h_full(),
                             ),
                             direction: Axis::Horizontal,
-                            gap: Px(2.0),
-                            padding: Edges::all(Px(0.0)),
+                            gap: Px(2.0).into(),
+                            padding: Edges::all(Px(0.0)).into(),
                             justify: MainAlign::Start,
                             align: CrossAlign::Center,
                             wrap: false,
@@ -778,7 +790,7 @@ impl DataTable {
                                 let icon_id = match sort_state {
                                     Some(true) => "lucide.arrow-down",
                                     Some(false) => "lucide.arrow-up",
-                                    None => "lucide.arrow-up-down",
+                                    None => "lucide.chevrons-up-down",
                                 };
                                 pieces.push(decl_icon::icon_with(
                                     cx,

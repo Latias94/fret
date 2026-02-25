@@ -523,7 +523,8 @@ impl InlineCitation {
                             right: fret_core::Px(0.0),
                             bottom: fret_core::Px(0.0),
                             left: fret_core::Px(12.0),
-                        },
+                        }
+                        .into(),
                         background: None,
                         background_paint: None,
                         shadow: None,

@@ -35,7 +35,7 @@
       "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
       "target": {
         "kind": "test_id",
-        "id": "ui-gallery-alert-dialog-destructive-tabs-trigger-code"
+        "id": "ui-gallery-alert-dialog-destructive-docsec-tabs-trigger-code"
       },
       "delta_y": -240.0,
       "require_fully_within_container": true,
@@ -53,7 +53,7 @@
       "type": "click_stable",
       "target": {
         "kind": "test_id",
-        "id": "ui-gallery-alert-dialog-destructive-tabs-trigger-code"
+        "id": "ui-gallery-alert-dialog-destructive-docsec-tabs-trigger-code"
       }
     },
     { "type": "wait_frames", "n": 10 },
@@ -61,4 +61,3 @@
     { "type": "capture_screenshot", "label": "ui-gallery-alert-dialog-destructive-code-tab" }
   ]
 }
-

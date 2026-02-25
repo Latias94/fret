@@ -357,8 +357,8 @@ impl TableRow {
             vec![cx.container(props, move |cx| {
                 let grid = GridProps {
                     cols,
-                    gap: fret_core::Px(0.0),
-                    padding: fret_core::geometry::Edges::all(fret_core::Px(0.0)),
+                    gap: fret_core::Px(0.0).into(),
+                    padding: fret_core::geometry::Edges::all(fret_core::Px(0.0)).into(),
                     justify: MainAlign::Start,
                     align: CrossAlign::Stretch,
                     layout: grid_layout,
@@ -376,7 +376,7 @@ fn assign_grid_column_starts<I>(cells: I) -> Elements
 where
     I: IntoIterator<Item = AnyElement>,
 {
-    let mut cells: Vec<AnyElement> = cells.into_iter().collect();
+    let cells: Vec<AnyElement> = cells.into_iter().collect();
 
     fn grid_span(cell: &AnyElement) -> u16 {
         match &cell.kind {
@@ -476,8 +476,8 @@ impl TableHead {
                 FlexProps {
                     layout: content_layout,
                     direction: Axis::Horizontal,
-                    gap: fret_core::Px(0.0),
-                    padding: Edges::all(fret_core::Px(0.0)),
+                    gap: fret_core::Px(0.0).into(),
+                    padding: Edges::all(fret_core::Px(0.0)).into(),
                     justify: MainAlign::Start,
                     align: CrossAlign::Center,
                     wrap: false,
@@ -563,8 +563,8 @@ impl TableCell {
                 FlexProps {
                     layout: row_layout,
                     direction: Axis::Horizontal,
-                    gap: fret_core::Px(0.0),
-                    padding: Edges::all(fret_core::Px(0.0)),
+                    gap: fret_core::Px(0.0).into(),
+                    padding: Edges::all(fret_core::Px(0.0)).into(),
                     justify: MainAlign::Start,
                     align: CrossAlign::Center,
                     wrap: false,

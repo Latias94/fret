@@ -23,10 +23,10 @@ mod tests {
         let chrome = ChromeRefinement::default().p(Space::N6).pt(Space::N0);
         let props = container_props(&theme, chrome, LayoutRefinement::default());
 
-        assert_eq!(props.padding.top, Px(0.0));
-        assert_eq!(props.padding.bottom, Px(32.0));
-        assert_eq!(props.padding.left, Px(32.0));
-        assert_eq!(props.padding.right, Px(32.0));
+        assert_eq!(props.padding.top, Px(0.0).into());
+        assert_eq!(props.padding.bottom, Px(32.0).into());
+        assert_eq!(props.padding.left, Px(32.0).into());
+        assert_eq!(props.padding.right, Px(32.0).into());
     }
 
     #[test]
@@ -47,9 +47,9 @@ mod tests {
         let chrome = ChromeRefinement::default().p(Space::N6).pr(Space::N0);
         let props = container_props(&theme, chrome, LayoutRefinement::default());
 
-        assert_eq!(props.padding.top, Px(32.0));
-        assert_eq!(props.padding.bottom, Px(32.0));
-        assert_eq!(props.padding.left, Px(32.0));
-        assert_eq!(props.padding.right, Px(0.0));
+        assert_eq!(props.padding.top, Px(32.0).into());
+        assert_eq!(props.padding.bottom, Px(32.0).into());
+        assert_eq!(props.padding.left, Px(32.0).into());
+        assert_eq!(props.padding.right, Px(0.0).into());
     }
 }

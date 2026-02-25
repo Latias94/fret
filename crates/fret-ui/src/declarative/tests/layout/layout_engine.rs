@@ -309,8 +309,8 @@ fn layout_engine_v2_scales_px_styles_with_scale_factor() {
             |cx| {
                 let flex = crate::element::FlexProps {
                     direction: fret_core::Axis::Vertical,
-                    gap: Px(8.0),
-                    padding: fret_core::Edges::all(Px(10.0)),
+                    gap: Px(8.0).into(),
+                    padding: fret_core::Edges::all(Px(10.0)).into(),
                     layout: crate::element::LayoutStyle {
                         size: crate::element::SizeStyle {
                             width: Length::Fill,
@@ -556,7 +556,7 @@ fn nested_flow_is_solved_once_per_island() {
                 ..Default::default()
             },
             direction: fret_core::Axis::Horizontal,
-            gap: Px(4.0),
+            gap: Px(4.0).into(),
             ..Default::default()
         };
 

@@ -43,8 +43,8 @@ pub(crate) fn render_copy_button_overlay<H: UiHost>(
 
     let mut props = ContainerProps::default();
     props.layout.position = PositionStyle::Absolute;
-    props.layout.inset.top = Some(inset);
-    props.layout.inset.right = Some(inset);
+    props.layout.inset.top = Some(inset).into();
+    props.layout.inset.right = Some(inset).into();
     props.layout.size.width = Length::Auto;
 
     cx.container(props, |cx| {
@@ -140,7 +140,8 @@ pub(crate) fn render_copy_button<H: UiHost>(
                 right: pad_x,
                 bottom: pad_y,
                 left: pad_x,
-            },
+            }
+            .into(),
             corner_radii: fret_core::Corners::all(radius_sm),
             background: Some(bg),
             border: Edges::all(Px(0.0)),

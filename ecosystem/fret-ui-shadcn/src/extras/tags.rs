@@ -69,7 +69,7 @@ impl Tags {
         Self {
             items,
             variant: BadgeVariant::Secondary,
-            gap: Space::N2,
+            gap: Space::N2.into(),
             wrap: true,
             test_id: None,
             layout: LayoutRefinement::default(),
@@ -124,8 +124,8 @@ impl Tags {
             FlexProps {
                 layout,
                 direction: fret_core::Axis::Horizontal,
-                gap,
-                padding: fret_core::Edges::all(fret_core::Px(0.0)),
+                gap: gap.into(),
+                padding: fret_core::Edges::all(fret_core::Px(0.0)).into(),
                 justify: MainAlign::Start,
                 align: CrossAlign::Center,
                 wrap,

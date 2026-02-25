@@ -495,6 +495,14 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
         ],
     );
 
+    let usage = doc_layout::notes(
+        cx,
+        [
+            "See the Preview sections above for the canonical shadcn-aligned recipes (Demo, Snap Points, Scrollable Content, Sides, Responsive Dialog, RTL).",
+            "Each section includes a minimal code snippet that you can copy into an app and adapt.",
+        ],
+    );
+
     let body = doc_layout::render_doc_page(
         cx,
         Some(
@@ -574,9 +582,13 @@ ui::h_flex(cx, move |_cx| [desktop, mobile])
     cx,
     fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
     |cx| shadcn::Drawer::new(open).into_element(cx, trigger, content),
-);"#,
+                    );"#,
                 ),
+            DocSection::new("Usage", usage)
+                .title_test_id("ui-gallery-section-usage-title")
+                .description("Quick reference for using the drawer recipes."),
             DocSection::new("Notes", notes)
+                .title_test_id("ui-gallery-section-notes-title")
                 .description("Implementation notes and regression guidelines."),
         ],
     );

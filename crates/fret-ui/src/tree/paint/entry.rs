@@ -329,6 +329,7 @@ impl<H: UiHost> UiTree<H> {
             bounds,
             scene,
             scale_factor,
+            crate::tree::paint_style::PaintStyleState::default(),
             Transform2D::IDENTITY,
         );
     }

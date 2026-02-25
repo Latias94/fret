@@ -2,6 +2,7 @@ use std::cell::Cell;
 use std::sync::Arc;
 use std::time::Duration;
 
+use fret_core::window::ColorScheme;
 use fret_core::{Color, Corners, DrawOrder, Edges, FontId, FontWeight, Px, TextStyle};
 use fret_icons::IconId;
 use fret_runtime::Model;
@@ -296,7 +297,7 @@ fn tabs_shared_indicator<H: UiHost>(
             // shadcn new-york-v4 `TabsTrigger` defaults:
             // - light: `text-foreground`
             // - dark: `text-muted-foreground`
-            let fg_inactive = if theme.name.contains("/dark") {
+            let fg_inactive = if theme.color_scheme == Some(ColorScheme::Dark) {
                 ColorRef::Color(tabs_list_fg_muted(theme))
             } else {
                 ColorRef::Color(theme.color_token("foreground"))
@@ -433,10 +434,10 @@ fn tabs_shared_indicator<H: UiHost>(
 
         let mut props = fret_ui::element::CanvasProps::default();
         props.layout.position = fret_ui::element::PositionStyle::Absolute;
-        props.layout.inset.top = Some(Px(0.0));
-        props.layout.inset.right = Some(Px(0.0));
-        props.layout.inset.bottom = Some(Px(0.0));
-        props.layout.inset.left = Some(Px(0.0));
+        props.layout.inset.top = Some(Px(0.0)).into();
+        props.layout.inset.right = Some(Px(0.0)).into();
+        props.layout.inset.bottom = Some(Px(0.0)).into();
+        props.layout.inset.left = Some(Px(0.0)).into();
 
         let mut indicator = cx.canvas(props, move |p| {
             if height.value <= 0.0 || width.value <= 0.0 || bg.a <= 0.0 {
@@ -1423,7 +1424,7 @@ impl Tabs {
                 .text_color(ColorRef::Color(tabs_list_fg_muted(&theme))),
             LayoutRefinement::default().h_px(list_height),
         );
-        list_props.padding = Edges::all(list_padding);
+        list_props.padding = Edges::all(list_padding).into();
         if list_full_width {
             list_props.layout.size.width = Length::Fill;
             list_props.layout.flex.align_self = Some(CrossAlign::Stretch);
@@ -1538,8 +1539,8 @@ impl Tabs {
                                         TabsOrientation::Horizontal => fret_core::Axis::Horizontal,
                                         TabsOrientation::Vertical => fret_core::Axis::Vertical,
                                     },
-                                    gap: Px(0.0),
-                                    padding: Edges::all(Px(0.0)),
+                                    gap: Px(0.0).into(),
+                                    padding: Edges::all(Px(0.0)).into(),
                                     // NOTE: Taffy currently shrink-wraps auto-sized flex containers
                                     // around the sum of flex bases, not the min-content widths.
                                     // With Tailwind-like `flex-1` (`basis=0`), that yields a
@@ -1590,7 +1591,8 @@ impl Tabs {
                                 // shadcn new-york-v4 `TabsTrigger` defaults:
                                 // - light: `text-foreground`
                                 // - dark: `text-muted-foreground`
-                                let fg_inactive = if theme.name.contains("/dark") {
+                                let fg_inactive = if theme.color_scheme == Some(ColorScheme::Dark)
+                                {
                                     ColorRef::Color(tabs_list_fg_muted(&theme))
                                 } else {
                                     ColorRef::Color(theme.color_token("foreground"))
@@ -1839,7 +1841,7 @@ impl Tabs {
                                                 right: pad_x,
                                                 bottom: pad_y,
                                                 left: pad_x,
-                                            },
+                                            }.into(),
                                             background: bg,
                                             shadow,
                                             border: Edges::all(border_w),
@@ -1850,7 +1852,7 @@ impl Tabs {
 
                                         let mut trigger_children = trigger_children;
                                         let content = move |cx: &mut ElementContext<'_, H>| {
-                                            current_color::with_current_color_provider(
+                                            current_color::scope_children(
                                                 cx,
                                                 fg_ref.clone(),
                                                 |cx| {
@@ -1887,7 +1889,9 @@ impl Tabs {
                                                         }
                                                         out.push(text.into_element(cx));
 
-                                                        if let Some(icon) = trigger_trailing_icon.clone() {
+                                                        if let Some(icon) =
+                                                            trigger_trailing_icon.clone()
+                                                        {
                                                             out.push(decl_icon::icon(cx, icon));
                                                         }
                                                         out
@@ -1905,23 +1909,24 @@ impl Tabs {
                                                         })
                                                         .collect();
 
-                                                        vec![cx.flex(
-                                                            FlexProps {
-                                                                layout: {
-                                                                    let mut layout = LayoutStyle::default();
-                                                                    layout.size.width = Length::Fill;
-                                                                    layout.size.height = Length::Fill;
-                                                                    layout
-                                                                },
-                                                                direction: fret_core::Axis::Horizontal,
-                                                                gap: Px(6.0),
-                                                                padding: Edges::all(Px(0.0)),
-                                                                justify: MainAlign::Center,
-                                                                align: CrossAlign::Center,
-                                                                wrap: false,
+                                                    vec![cx.flex(
+                                                        FlexProps {
+                                                            layout: {
+                                                                let mut layout =
+                                                                    LayoutStyle::default();
+                                                                layout.size.width = Length::Fill;
+                                                                layout.size.height = Length::Fill;
+                                                                layout
                                                             },
-                                                            move |_cx| styled,
-                                                        )]
+                                                            direction: fret_core::Axis::Horizontal,
+                                                            gap: Px(6.0).into(),
+                                                            padding: Edges::all(Px(0.0)).into(),
+                                                            justify: MainAlign::Center,
+                                                            align: CrossAlign::Center,
+                                                            wrap: false,
+                                                        },
+                                                        move |_cx| styled,
+                                                    )]
                                                 },
                                             )
                                         };
@@ -2113,8 +2118,8 @@ impl Tabs {
                         TabsOrientation::Horizontal => fret_core::Axis::Vertical,
                         TabsOrientation::Vertical => fret_core::Axis::Horizontal,
                     },
-                    gap,
-                    padding: Edges::all(Px(0.0)),
+                    gap: gap.into(),
+                    padding: Edges::all(Px(0.0)).into(),
                     justify: MainAlign::Start,
                     align: CrossAlign::Stretch,
                     wrap: false,
@@ -2425,7 +2430,7 @@ mod tests {
                 let mut page = ContainerProps::default();
                 page.layout.size.width = Length::Fill;
                 page.layout.size.height = Length::Fill;
-                page.padding = Edges::all(Px(16.0));
+                page.padding = Edges::all(Px(16.0)).into();
 
                 vec![cx.container(page, |cx| {
                     let items = vec![
@@ -2437,7 +2442,7 @@ mod tests {
                     let mut col = ColumnProps::default();
                     col.layout.size.width = Length::Fill;
                     col.layout.size.height = Length::Auto;
-                    col.gap = Px(16.0);
+                    col.gap = Px(16.0).into();
 
                     vec![cx.column(col, |cx| {
                         vec![

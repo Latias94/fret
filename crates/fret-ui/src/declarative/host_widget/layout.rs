@@ -10,6 +10,18 @@ mod grid;
 mod positioned_container;
 mod scrolling;
 
+pub(super) fn spacing_px_for_basis(length: crate::element::SpacingLength, basis: Px) -> f32 {
+    let basis = basis.0.max(0.0);
+    match length {
+        crate::element::SpacingLength::Px(px) => px.0.max(0.0),
+        crate::element::SpacingLength::Fill => basis,
+        crate::element::SpacingLength::Fraction(f) => {
+            let f = if f.is_finite() { f.max(0.0) } else { 0.0 };
+            (basis * f).max(0.0)
+        }
+    }
+}
+
 impl ElementHostWidget {
     pub(super) fn layout_impl<H: UiHost>(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
         let _element_id = self.element;
@@ -58,6 +70,7 @@ impl ElementHostWidget {
             ElementInstance::HitTestGate(_) => false,
             ElementInstance::FocusTraversalGate(_) => false,
             ElementInstance::DismissibleLayer(_) => false,
+            ElementInstance::ForegroundScope(_) => false,
             ElementInstance::Opacity(_) => false,
             ElementInstance::EffectLayer(_) => false,
             ElementInstance::MaskLayer(_) => false,
@@ -86,6 +99,7 @@ impl ElementHostWidget {
             ElementInstance::HitTestGate(p) => p.hit_test,
             ElementInstance::FocusTraversalGate(_) => true,
             ElementInstance::DismissibleLayer(_) => true,
+            ElementInstance::ForegroundScope(_) => true,
             ElementInstance::EffectLayer(_) => true,
             ElementInstance::MaskLayer(_) => true,
             ElementInstance::CompositeGroup(_) => true,
@@ -124,6 +138,7 @@ impl ElementHostWidget {
             | ElementInstance::TextInputRegion(_) => true,
             ElementInstance::SelectableText(_) => true,
             ElementInstance::Pressable(p) => p.enabled && p.focusable,
+            ElementInstance::Semantics(p) => p.focusable && !p.disabled && !p.hidden,
             _ => false,
         };
         self.can_scroll_descendant = matches!(
@@ -154,6 +169,7 @@ impl ElementHostWidget {
             ElementInstance::InternalDragRegion(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::ExternalDragRegion(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::DismissibleLayer(p) => matches!(p.layout.overflow, Overflow::Clip),
+            ElementInstance::ForegroundScope(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::Stack(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::Flex(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::RovingFlex(p) => matches!(p.flex.layout.overflow, Overflow::Clip),
@@ -201,10 +217,15 @@ impl ElementHostWidget {
             ElementInstance::Container(props) => {
                 // Tailwind/shadcn assume `box-sizing: border-box` by default. Model borders as part
                 // of the container's layout insets so child placement matches web geometry.
-                let pad_left = props.padding.left.0.max(0.0) + props.border.left.0.max(0.0);
-                let pad_right = props.padding.right.0.max(0.0) + props.border.right.0.max(0.0);
-                let pad_top = props.padding.top.0.max(0.0) + props.border.top.0.max(0.0);
-                let pad_bottom = props.padding.bottom.0.max(0.0) + props.border.bottom.0.max(0.0);
+                let padding_basis = cx.available.width;
+                let pad_left = spacing_px_for_basis(props.padding.left, padding_basis)
+                    + props.border.left.0.max(0.0);
+                let pad_right = spacing_px_for_basis(props.padding.right, padding_basis)
+                    + props.border.right.0.max(0.0);
+                let pad_top = spacing_px_for_basis(props.padding.top, padding_basis)
+                    + props.border.top.0.max(0.0);
+                let pad_bottom = spacing_px_for_basis(props.padding.bottom, padding_basis)
+                    + props.border.bottom.0.max(0.0);
                 let pad_w = pad_left + pad_right;
                 let pad_h = pad_top + pad_bottom;
                 if let Some(size) = try_layout_children_from_engine_or_manual_absolute(
@@ -287,10 +308,21 @@ impl ElementHostWidget {
                                 .iter()
                                 .find_map(|(id, size)| (*id == child).then_some(*size))
                                 .unwrap_or(Size::new(Px(0.0), Px(0.0)));
-                            let dx =
-                                inset.left.unwrap_or(Px(0.0)).0 - inset.right.unwrap_or(Px(0.0)).0;
-                            let dy =
-                                inset.top.unwrap_or(Px(0.0)).0 - inset.bottom.unwrap_or(Px(0.0)).0;
+                            let resolve = |edge: crate::element::InsetEdge, basis: Px| -> f32 {
+                                match edge {
+                                    crate::element::InsetEdge::Px(px) => px.0,
+                                    crate::element::InsetEdge::Fill => basis.0.max(0.0),
+                                    crate::element::InsetEdge::Fraction(f) => {
+                                        let f = if f.is_finite() { f.max(0.0) } else { 0.0 };
+                                        (basis.0.max(0.0) * f).max(0.0)
+                                    }
+                                    crate::element::InsetEdge::Auto => 0.0,
+                                }
+                            };
+                            let dx = resolve(inset.left, inner_bounds.size.width)
+                                - resolve(inset.right, inner_bounds.size.width);
+                            let dy = resolve(inset.top, inner_bounds.size.height)
+                                - resolve(inset.bottom, inner_bounds.size.height);
                             let origin = fret_core::Point::new(
                                 Px(inner_bounds.origin.x.0 + dx),
                                 Px(inner_bounds.origin.y.0 + dy),
@@ -347,6 +379,17 @@ impl ElementHostWidget {
                 self.layout_positioned_container_impl(cx, window, props.layout)
             }
             ElementInstance::LayoutQueryRegion(props) => {
+                if let Some(size) = try_layout_children_from_engine_or_manual_absolute(
+                    cx,
+                    window,
+                    Rect::new(cx.bounds.origin, cx.available),
+                ) {
+                    return size;
+                }
+
+                self.layout_positioned_container_impl(cx, window, props.layout)
+            }
+            ElementInstance::ForegroundScope(props) => {
                 if let Some(size) = try_layout_children_from_engine_or_manual_absolute(
                     cx,
                     window,
@@ -862,7 +905,18 @@ impl ElementHostWidget {
                     }
                 };
                 if let Some(max_w) = props.layout.size.max_width {
-                    measure_width = Px(measure_width.0.min(max_w.0.max(0.0)));
+                    let max_w = match max_w {
+                        Length::Auto => None,
+                        Length::Px(px) => Some(Px(px.0.max(0.0))),
+                        Length::Fill => Some(Px(cx.available.width.0.max(0.0))),
+                        Length::Fraction(f) => {
+                            let f = if f.is_finite() { f.max(0.0) } else { 0.0 };
+                            Some(Px((cx.available.width.0 * f).max(0.0)))
+                        }
+                    };
+                    if let Some(max_w) = max_w {
+                        measure_width = Px(measure_width.0.min(max_w.0.max(0.0)));
+                    }
                 }
                 measure_width = Px(measure_width.0.max(0.0).min(cx.available.width.0.max(0.0)));
                 measure_width = crate::pixel_snap::snap_px_ceil(measure_width, cx.scale_factor);
@@ -1002,7 +1056,18 @@ impl ElementHostWidget {
                     }
                 };
                 if let Some(max_w) = props.layout.size.max_width {
-                    measure_width = Px(measure_width.0.min(max_w.0.max(0.0)));
+                    let max_w = match max_w {
+                        Length::Auto => None,
+                        Length::Px(px) => Some(Px(px.0.max(0.0))),
+                        Length::Fill => Some(Px(cx.available.width.0.max(0.0))),
+                        Length::Fraction(f) => {
+                            let f = if f.is_finite() { f.max(0.0) } else { 0.0 };
+                            Some(Px((cx.available.width.0 * f).max(0.0)))
+                        }
+                    };
+                    if let Some(max_w) = max_w {
+                        measure_width = Px(measure_width.0.min(max_w.0.max(0.0)));
+                    }
                 }
                 measure_width = Px(measure_width.0.max(0.0).min(cx.available.width.0.max(0.0)));
                 measure_width = crate::pixel_snap::snap_px_ceil(measure_width, cx.scale_factor);
@@ -1154,7 +1219,18 @@ impl ElementHostWidget {
                     }
                 };
                 if let Some(max_w) = props.layout.size.max_width {
-                    measure_width = Px(measure_width.0.min(max_w.0.max(0.0)));
+                    let max_w = match max_w {
+                        Length::Auto => None,
+                        Length::Px(px) => Some(Px(px.0.max(0.0))),
+                        Length::Fill => Some(Px(cx.available.width.0.max(0.0))),
+                        Length::Fraction(f) => {
+                            let f = if f.is_finite() { f.max(0.0) } else { 0.0 };
+                            Some(Px((cx.available.width.0 * f).max(0.0)))
+                        }
+                    };
+                    if let Some(max_w) = max_w {
+                        measure_width = Px(measure_width.0.min(max_w.0.max(0.0)));
+                    }
                 }
                 measure_width = Px(measure_width.0.max(0.0).min(cx.available.width.0.max(0.0)));
                 measure_width = crate::pixel_snap::snap_px_ceil(measure_width, cx.scale_factor);

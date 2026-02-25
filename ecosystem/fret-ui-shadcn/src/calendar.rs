@@ -537,31 +537,40 @@ impl Calendar {
             name: None,
         };
 
-        // Tailwind `md:` breakpoints are viewport-driven on the web, but in editor-grade layouts
-        // the calendar should adapt to the width of its local container (panel resize), not the
-        // global window.
+        // Tailwind `md:` breakpoints are viewport-driven on the web. For editor-grade layouts the
+        // calendar generally adapts to its local container width (panel resize), but when mounted
+        // inside PopoverContent we prefer viewport breakpoints to avoid circular sizing (the
+        // popover panel width depends on the calendar's month layout).
         fret_ui_kit::declarative::container_query_region_with_id(
             cx,
             "shadcn.calendar",
             region_props,
             move |cx, region_id| {
                 let is_row = if number_of_months > 1 {
-                    // Container queries are read from last-committed bounds. In single-pass layout
-                    // environments (e.g. snapshot tests), the region width can be temporarily
-                    // unknown. Fall back to the viewport width so the initial layout matches the
-                    // web Tailwind breakpoint behavior when the calendar is effectively
-                    // unconstrained by a smaller container.
-                    let default_when_unknown =
+                    if matches!(
+                        surface_slot_in_scope(cx),
+                        Some(ShadcnSurfaceSlot::PopoverContent)
+                    ) {
                         cx.environment_viewport_width(Invalidation::Layout).0
-                            >= fret_ui_kit::declarative::container_queries::tailwind::MD.0;
-                    fret_ui_kit::declarative::container_width_at_least(
-                        cx,
-                        region_id,
-                        Invalidation::Layout,
-                        default_when_unknown,
-                        fret_ui_kit::declarative::container_queries::tailwind::MD,
-                        fret_ui_kit::declarative::ContainerQueryHysteresis::default(),
-                    )
+                            >= fret_ui_kit::declarative::container_queries::tailwind::MD.0
+                    } else {
+                        // Container queries are read from last-committed bounds. In single-pass layout
+                        // environments (e.g. snapshot tests), the region width can be temporarily
+                        // unknown. Fall back to the viewport width so the initial layout matches the
+                        // web Tailwind breakpoint behavior when the calendar is effectively
+                        // unconstrained by a smaller container.
+                        let default_when_unknown =
+                            cx.environment_viewport_width(Invalidation::Layout).0
+                                >= fret_ui_kit::declarative::container_queries::tailwind::MD.0;
+                        fret_ui_kit::declarative::container_width_at_least(
+                            cx,
+                            region_id,
+                            Invalidation::Layout,
+                            default_when_unknown,
+                            fret_ui_kit::declarative::container_queries::tailwind::MD,
+                            fret_ui_kit::declarative::ContainerQueryHysteresis::default(),
+                        )
+                    }
                 } else {
                     false
                 };
@@ -595,9 +604,14 @@ impl Calendar {
                     } else {
                         month_width
                     };
+                    let spacing_px = |v: fret_ui::element::SpacingLength| match v {
+                        fret_ui::element::SpacingLength::Px(px) => px.0.max(0.0),
+                        fret_ui::element::SpacingLength::Fill
+                        | fret_ui::element::SpacingLength::Fraction(_) => 0.0,
+                    };
                     let w = Px(content_w.0
-                        + container_props.padding.left.0
-                        + container_props.padding.right.0);
+                        + spacing_px(container_props.padding.left)
+                        + spacing_px(container_props.padding.right));
                     container_props.layout.size.width = Length::Px(w);
                 }
 
@@ -1038,13 +1052,14 @@ impl Calendar {
                                             ..Default::default()
                                         },
                                         direction: fret_core::Axis::Horizontal,
-                                        gap: Px(0.0),
+                                        gap: Px(0.0).into(),
                                         padding: fret_core::Edges {
                                             left: day_size,
                                             right: day_size,
                                             top: Px(0.0),
                                             bottom: Px(0.0),
-                                        },
+                                        }
+                                        .into(),
                                         justify: MainAlign::Center,
                                         align: fret_ui::element::CrossAlign::Center,
                                         wrap: false,
@@ -1066,8 +1081,8 @@ impl Calendar {
                                                 ..Default::default()
                                             },
                                             direction: fret_core::Axis::Horizontal,
-                                            gap: nav_bar_gap,
-                                            padding: fret_core::Edges::all(Px(0.0)),
+                                            gap: nav_bar_gap.into(),
+                                            padding: fret_core::Edges::all(Px(0.0)).into(),
                                             justify: MainAlign::SpaceBetween,
                                             align: CrossAlign::Center,
                                             wrap: false,
@@ -1093,8 +1108,8 @@ impl Calendar {
                                         ..Default::default()
                                     },
                                     direction: fret_core::Axis::Horizontal,
-                                    gap: day_col_gap,
-                                    padding: fret_core::Edges::all(Px(0.0)),
+                                    gap: day_col_gap.into(),
+                                    padding: fret_core::Edges::all(Px(0.0)).into(),
                                     justify: MainAlign::Start,
                                     align: fret_ui::element::CrossAlign::Center,
                                     wrap: false,
@@ -1139,11 +1154,12 @@ impl Calendar {
                                         ..Default::default()
                                     },
                                     direction: fret_core::Axis::Horizontal,
-                                    gap: day_col_gap,
+                                    gap: day_col_gap.into(),
                                     padding: fret_core::Edges {
                                         top: week_row_gap,
                                         ..fret_core::Edges::all(Px(0.0))
-                                    },
+                                    }
+                                    .into(),
                                     justify: MainAlign::Start,
                                     align: fret_ui::element::CrossAlign::Start,
                                     wrap: true,
@@ -1282,11 +1298,12 @@ impl Calendar {
                                             ..Default::default()
                                         },
                                         direction: fret_core::Axis::Vertical,
-                                        gap: Px(0.0),
+                                        gap: Px(0.0).into(),
                                         padding: fret_core::Edges {
                                             top: week_row_gap,
                                             ..fret_core::Edges::all(Px(0.0))
-                                        },
+                                        }
+                                        .into(),
                                         justify: MainAlign::Start,
                                         align: fret_ui::element::CrossAlign::Start,
                                         wrap: false,
@@ -1323,8 +1340,8 @@ impl Calendar {
                                             ..Default::default()
                                         },
                                         direction: fret_core::Axis::Horizontal,
-                                        gap: Px(0.0),
-                                        padding: fret_core::Edges::all(Px(0.0)),
+                                        gap: Px(0.0).into(),
+                                        padding: fret_core::Edges::all(Px(0.0)).into(),
                                         justify: MainAlign::Start,
                                         align: fret_ui::element::CrossAlign::Start,
                                         wrap: false,
@@ -1450,15 +1467,15 @@ fn calendar_multi_month_view<H: UiHost>(
         let mut layout = LayoutStyle::default();
         layout.size.width = Length::Px(months_span);
         layout.position = fret_ui::element::PositionStyle::Absolute;
-        layout.inset.top = Some(Px(0.0));
-        layout.inset.left = Some(Px(0.0));
+        layout.inset.top = Some(Px(0.0)).into();
+        layout.inset.left = Some(Px(0.0)).into();
 
         cx.flex(
             FlexProps {
                 layout,
                 direction: fret_core::Axis::Horizontal,
-                gap: decl_style::space(theme, Space::N1),
-                padding: fret_core::Edges::all(Px(0.0)),
+                gap: decl_style::space(theme, Space::N1).into(),
+                padding: fret_core::Edges::all(Px(0.0)).into(),
                 justify: MainAlign::SpaceBetween,
                 align: fret_ui::element::CrossAlign::Center,
                 wrap: false,
@@ -1652,13 +1669,14 @@ fn calendar_month_view<H: UiHost>(
                 ..Default::default()
             },
             direction: fret_core::Axis::Horizontal,
-            gap: Px(0.0),
+            gap: Px(0.0).into(),
             padding: fret_core::Edges {
                 left: day_size,
                 right: day_size,
                 top: Px(0.0),
                 bottom: Px(0.0),
-            },
+            }
+            .into(),
             justify: MainAlign::Center,
             align: fret_ui::element::CrossAlign::Center,
             wrap: false,
@@ -1682,8 +1700,8 @@ fn calendar_month_view<H: UiHost>(
                 ..Default::default()
             },
             direction: fret_core::Axis::Horizontal,
-            gap: Px(0.0),
-            padding: fret_core::Edges::all(Px(0.0)),
+            gap: Px(0.0).into(),
+            padding: fret_core::Edges::all(Px(0.0)).into(),
             justify: MainAlign::Start,
             align: fret_ui::element::CrossAlign::Center,
             wrap: false,
@@ -1728,11 +1746,12 @@ fn calendar_month_view<H: UiHost>(
                 ..Default::default()
             },
             direction: fret_core::Axis::Horizontal,
-            gap: Px(0.0),
+            gap: Px(0.0).into(),
             padding: fret_core::Edges {
                 top: week_row_gap,
                 ..fret_core::Edges::all(Px(0.0))
-            },
+            }
+            .into(),
             justify: MainAlign::Start,
             align: fret_ui::element::CrossAlign::Start,
             wrap: true,
@@ -1865,11 +1884,12 @@ fn calendar_month_view<H: UiHost>(
                     ..Default::default()
                 },
                 direction: fret_core::Axis::Vertical,
-                gap: Px(0.0),
+                gap: Px(0.0).into(),
                 padding: fret_core::Edges {
                     top: week_row_gap,
                     ..fret_core::Edges::all(Px(0.0))
-                },
+                }
+                .into(),
                 justify: MainAlign::Start,
                 align: fret_ui::element::CrossAlign::Start,
                 wrap: false,
@@ -1905,8 +1925,8 @@ fn calendar_month_view<H: UiHost>(
                     ..Default::default()
                 },
                 direction: fret_core::Axis::Horizontal,
-                gap: Px(0.0),
-                padding: fret_core::Edges::all(Px(0.0)),
+                gap: Px(0.0).into(),
+                padding: fret_core::Edges::all(Px(0.0)).into(),
                 justify: MainAlign::Start,
                 align: fret_ui::element::CrossAlign::Start,
                 wrap: false,
@@ -2094,8 +2114,8 @@ fn calendar_centered_text_cell<H: UiHost>(
         FlexProps {
             layout,
             direction: fret_core::Axis::Horizontal,
-            gap: Px(0.0),
-            padding: fret_core::Edges::all(Px(0.0)),
+            gap: Px(0.0).into(),
+            padding: fret_core::Edges::all(Px(0.0)).into(),
             justify: MainAlign::Center,
             align: fret_ui::element::CrossAlign::Center,
             wrap: false,
@@ -2125,8 +2145,8 @@ fn calendar_cell_slot<H: UiHost>(
         FlexProps {
             layout,
             direction: fret_core::Axis::Vertical,
-            gap: Px(0.0),
-            padding: fret_core::Edges::all(Px(0.0)),
+            gap: Px(0.0).into(),
+            padding: fret_core::Edges::all(Px(0.0)).into(),
             justify: MainAlign::Start,
             align: fret_ui::element::CrossAlign::Start,
             wrap: false,
@@ -2215,10 +2235,15 @@ fn calendar_day_cell<H: UiHost>(
     let day = date.day();
     let day_text: Arc<str> = Arc::from(day.to_string());
     let date_label = locale.day_aria_label(date, today, selected);
-    let test_id: Arc<str> = if let Some(prefix) = test_id_prefix {
-        Arc::from(format!("{prefix}:{date}"))
+    let base_test_id = if let Some(prefix) = test_id_prefix {
+        format!("{prefix}:{date}")
     } else {
-        Arc::from(date.to_string())
+        date.to_string()
+    };
+    let test_id: Arc<str> = if in_month {
+        Arc::from(base_test_id)
+    } else {
+        Arc::from(format!("{base_test_id}:outside"))
     };
 
     let text_sm_px = theme
@@ -2315,8 +2340,8 @@ fn calendar_day_cell<H: UiHost>(
                         ..Default::default()
                     },
                     direction: fret_core::Axis::Vertical,
-                    gap: Px(0.0),
-                    padding: fret_core::Edges::all(Px(0.0)),
+                    gap: Px(0.0).into(),
+                    padding: fret_core::Edges::all(Px(0.0)).into(),
                     justify: MainAlign::Center,
                     align: fret_ui::element::CrossAlign::Center,
                     wrap: false,

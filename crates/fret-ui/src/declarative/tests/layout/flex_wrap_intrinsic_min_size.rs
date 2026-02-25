@@ -123,7 +123,7 @@ fn flex_1_item(
     container.layout.flex.basis = Length::Px(Px(0.0));
     container.layout.size.height = Length::Px(Px(20.0));
     if min_w_0 {
-        container.layout.size.min_width = Some(Px(0.0));
+        container.layout.size.min_width = Some(Length::Px(Px(0.0)));
     }
 
     let text = Arc::<str>::from(label);

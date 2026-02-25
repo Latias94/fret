@@ -30,6 +30,8 @@ hotpatch = [
 node-graph-demos = ["fret-examples/node-graph-demos"]
 
 [dependencies]
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 anyhow.workspace = true
 fret-examples = { path = "../fret-examples" }
 fret-ui-gallery = { path = "../fret-ui-gallery", optional = true }
@@ -40,7 +42,7 @@ fret-ui = { path = "../../crates/fret-ui", optional = true }
 fret-ui-literals = { path = "../../ecosystem/fret-ui-literals", optional = true }
 fret-ui-kit = { path = "../../ecosystem/fret-ui-kit", optional = true }
 fret-ui-shadcn = { path = "../../ecosystem/fret-ui-shadcn", optional = true }
-fret-bootstrap = { path = "../../ecosystem/fret-bootstrap", optional = true, features = ["ui-app-driver", "ui-app-command-palette", "icons-lucide"] }
+fret-bootstrap = { path = "../../ecosystem/fret-bootstrap", optional = true, features = ["ui-app-driver", "ui-app-command-palette", "icons-lucide", "icons-ui-semantic-lucide"] }
 
 [[bin]]
 name = "ui_gallery"

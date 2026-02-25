@@ -273,7 +273,7 @@ impl ConversationTranscript {
                     overflow: fret_ui::element::Overflow::Clip,
                     ..Default::default()
                 },
-                padding: Edges::all(padding_px),
+                padding: Edges::all(padding_px).into(),
                 ..Default::default()
             },
             move |_cx| vec![list],
@@ -327,7 +327,7 @@ impl ConversationTranscript {
                     if let Some(bottom) =
                         theme.metric_by_key("fret.ai.conversation.scroll_button.offset_bottom")
                     {
-                        overlay_layout.inset.bottom = Some(bottom);
+                        overlay_layout.inset.bottom = Some(bottom).into();
                     }
 
                     out.push(cx.container(
@@ -500,7 +500,7 @@ impl Conversation {
         let content = cx.container(
             ContainerProps {
                 layout: LayoutStyle::default(),
-                padding: Edges::all(padding_px),
+                padding: Edges::all(padding_px).into(),
                 ..Default::default()
             },
             move |cx| {
@@ -556,7 +556,7 @@ impl Conversation {
                     if let Some(bottom) =
                         theme.metric_by_key("fret.ai.conversation.scroll_button.offset_bottom")
                     {
-                        overlay_layout.inset.bottom = Some(bottom);
+                        overlay_layout.inset.bottom = Some(bottom).into();
                     }
 
                     out.push(cx.container(

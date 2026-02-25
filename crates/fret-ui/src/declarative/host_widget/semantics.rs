@@ -362,6 +362,7 @@ impl ElementHostWidget {
             | ElementInstance::ExternalDragRegion(_)
             | ElementInstance::HoverRegion(_)
             | ElementInstance::Spinner(_)
+            | ElementInstance::ForegroundScope(_)
             | ElementInstance::Opacity(_)
             | ElementInstance::EffectLayer(_)
             | ElementInstance::MaskLayer(_)

@@ -29,7 +29,7 @@ use fret_ui::action::{PressablePointerDownResult, PressablePointerUpResult};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexItemStyle, FlexProps, InsetStyle, LayoutStyle,
     Length, MainAlign, Overflow, PositionStyle, PressableA11y, PressableProps, SizeStyle,
-    TextProps,
+    SpacingLength, TextProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::typography;
@@ -102,14 +102,14 @@ fn hidden_layout(mut layout: LayoutStyle) -> LayoutStyle {
     layout.size = SizeStyle {
         width: Length::Px(Px(0.0)),
         height: Length::Px(Px(0.0)),
-        min_width: Some(Px(0.0)),
-        min_height: Some(Px(0.0)),
+        min_width: Some(Length::Px(Px(0.0))),
+        min_height: Some(Length::Px(Px(0.0))),
         ..Default::default()
     };
     layout.position = PositionStyle::Absolute;
     layout.inset = InsetStyle {
-        top: Some(Px(0.0)),
-        left: Some(Px(0.0)),
+        top: Some(Px(0.0)).into(),
+        left: Some(Px(0.0)).into(),
         ..Default::default()
     };
     layout.overflow = Overflow::Clip;
@@ -350,7 +350,7 @@ where
 
         let mut layout = slider_layout;
         if layout.size.min_height.is_none() {
-            layout.size.min_height = Some(density.row_height);
+            layout.size.min_height = Some(Length::Px(density.row_height));
         }
 
         let format = self.format.clone();
@@ -542,7 +542,7 @@ where
                         size: SizeStyle {
                             width: Length::Fill,
                             height: Length::Fill,
-                            min_height: Some(density.row_height),
+                            min_height: Some(Length::Px(density.row_height)),
                             ..Default::default()
                         },
                         overflow: Overflow::Clip,
@@ -576,8 +576,8 @@ where
                                     ..Default::default()
                                 },
                                 direction: Axis::Horizontal,
-                                gap: Px(0.0),
-                                padding: Edges::all(Px(0.0)),
+                                gap: SpacingLength::Px(Px(0.0)),
+                                padding: Edges::all(Px(0.0)).into(),
                                 justify: MainAlign::Start,
                                 align: CrossAlign::Center,
                                 wrap: false,
@@ -743,8 +743,8 @@ where
                                     ..Default::default()
                                 },
                                 direction: Axis::Horizontal,
-                                gap: Px(0.0),
-                                padding: Edges::all(Px(0.0)),
+                                gap: SpacingLength::Px(Px(0.0)),
+                                padding: Edges::all(Px(0.0)).into(),
                                 justify: MainAlign::Start,
                                 align: CrossAlign::Center,
                                 wrap: false,

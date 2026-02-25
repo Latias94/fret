@@ -193,7 +193,7 @@ impl List {
 
             let mut roving = RovingFlexProps::default();
             roving.flex.direction = Axis::Vertical;
-            roving.flex.gap = Px(0.0);
+            roving.flex.gap = Px(0.0).into();
             roving.flex.align = CrossAlign::Stretch;
             roving.flex.justify = MainAlign::Start;
             roving.roving = fret_ui::element::RovingFocusProps {
@@ -508,8 +508,8 @@ fn list_item<H: UiHost>(
                 row.direction = Axis::Horizontal;
                 row.justify = MainAlign::Start;
                 row.align = CrossAlign::Center;
-                row.gap = gap;
-                row.padding = padding;
+                row.gap = gap.into();
+                row.padding = padding.into();
 
                 let mut container = cx.container(
                     ContainerProps {

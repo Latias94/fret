@@ -99,7 +99,7 @@ impl DemoDockPanelRegistry {
         vec![cx.container(
             ContainerProps {
                 layout: fill,
-                padding: fret_core::Edges::all(padding),
+                padding: fret_core::Edges::all(padding).into(),
                 background: Some(background),
                 ..Default::default()
             },
@@ -133,7 +133,7 @@ impl DemoDockPanelRegistry {
                                         layout.size.height = Length::Px(Px(28.0));
                                         layout
                                     },
-                                    padding: fret_core::Edges::all(Px(6.0)),
+                                    padding: fret_core::Edges::all(Px(6.0)).into(),
                                     background: Some(muted),
                                     corner_radii: fret_core::Corners::all(Px(6.0)),
                                     ..Default::default()
@@ -152,7 +152,7 @@ impl DemoDockPanelRegistry {
                                     layout.size.height = Length::Px(Px(34.0));
                                     layout
                                 },
-                                padding: fret_core::Edges::all(Px(8.0)),
+                                padding: fret_core::Edges::all(Px(8.0)).into(),
                                 background: Some(theme.color_token("secondary")),
                                 corner_radii: fret_core::Corners::all(Px(6.0)),
                                 ..Default::default()
@@ -200,20 +200,27 @@ impl DockPanelRegistry<App> for DemoDockPanelRegistry {
             &root_name,
             |cx| match panel.kind.0.as_str() {
                 "examples.cq.left" => Self::render_left_panel(cx, &theme),
-                "examples.cq.right" => vec![cx.container(
-                    ContainerProps {
-                        layout: {
-                            let mut layout = LayoutStyle::default();
-                            layout.size.width = Length::Fill;
-                            layout.size.height = Length::Fill;
-                            layout
-                        },
-                        padding: fret_core::Edges::all(theme.metric_token("metric.padding.md")),
-                        background: Some(theme.color_token("background")),
-                        ..Default::default()
-                    },
-                    |_cx| vec![],
-                )],
+                "examples.cq.right" => {
+                    vec![
+                        cx.container(
+                            ContainerProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Fill;
+                                    layout.size.height = Length::Fill;
+                                    layout
+                                },
+                                padding: fret_core::Edges::all(
+                                    theme.metric_token("metric.padding.md"),
+                                )
+                                .into(),
+                                background: Some(theme.color_token("background")),
+                                ..Default::default()
+                            },
+                            |_cx| vec![],
+                        ),
+                    ]
+                }
                 _ => vec![cx.text("Unregistered panel kind")],
             },
         ))

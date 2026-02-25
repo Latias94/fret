@@ -333,8 +333,8 @@ impl ChartTooltipContent {
                                 layout
                             },
                             direction: fret_core::Axis::Horizontal,
-                            gap: row_gap,
-                            padding: Edges::all(Px(0.0)),
+                            gap: row_gap.into(),
+                            padding: Edges::all(Px(0.0)).into(),
                             justify: MainAlign::Start,
                             align,
                             wrap: false,
@@ -374,8 +374,8 @@ impl ChartTooltipContent {
                                 layout
                             },
                             direction: fret_core::Axis::Horizontal,
-                            gap: Px(2.0),
-                            padding: Edges::all(Px(0.0)),
+                            gap: Px(2.0).into(),
+                            padding: Edges::all(Px(0.0)).into(),
                             justify: MainAlign::Start,
                             align: CrossAlign::Center,
                             wrap: false,
@@ -441,8 +441,8 @@ impl ChartTooltipContent {
                                 layout
                             },
                             direction: fret_core::Axis::Horizontal,
-                            gap: row_gap,
-                            padding: Edges::all(Px(0.0)),
+                            gap: row_gap.into(),
+                            padding: Edges::all(Px(0.0)).into(),
                             justify: MainAlign::Start,
                             align: CrossAlign::Center,
                             wrap: false,
@@ -500,7 +500,8 @@ impl ChartTooltipContent {
                                     right: Px(0.0),
                                     bottom: Px(0.0),
                                     left: Px(0.0),
-                                },
+                                }
+                                .into(),
                                 border: Edges {
                                     top: Px(1.0),
                                     right: Px(0.0),
@@ -515,8 +516,8 @@ impl ChartTooltipContent {
                                     FlexProps {
                                         layout: LayoutStyle::default(),
                                         direction: fret_core::Axis::Horizontal,
-                                        gap: Px(2.0),
-                                        padding: Edges::all(Px(0.0)),
+                                        gap: Px(2.0).into(),
+                                        padding: Edges::all(Px(0.0)).into(),
                                         justify: MainAlign::Start,
                                         align: CrossAlign::Center,
                                         wrap: false,
@@ -670,7 +671,7 @@ impl ChartLegendContent {
             vertical_align: ChartLegendVerticalAlign::Bottom,
             hide_icon: false,
             wrap: false,
-            gap: Space::N4,
+            gap: Space::N4.into(),
             item_width_px: None,
             item_justify_center: false,
             chrome: ChromeRefinement::default(),
@@ -789,8 +790,8 @@ impl ChartLegendContent {
                             layout
                         },
                         direction: fret_core::Axis::Horizontal,
-                        gap: item_gap,
-                        padding: Edges::all(Px(0.0)),
+                        gap: item_gap.into(),
+                        padding: Edges::all(Px(0.0)).into(),
                         justify: if self.item_justify_center {
                             MainAlign::Center
                         } else {
@@ -809,8 +810,8 @@ impl ChartLegendContent {
                 FlexProps {
                     layout: LayoutStyle::default(),
                     direction: fret_core::Axis::Horizontal,
-                    gap: legend_gap,
-                    padding: Edges::all(Px(0.0)),
+                    gap: legend_gap.into(),
+                    padding: Edges::all(Px(0.0)).into(),
                     justify: MainAlign::Center,
                     align: CrossAlign::Center,
                     wrap: self.wrap,

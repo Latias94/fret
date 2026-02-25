@@ -867,9 +867,9 @@ pub(super) fn preview_motion_presets(
 
                         let mut row_layout = LayoutStyle::default();
                         row_layout.position = fret_ui::element::PositionStyle::Absolute;
-                        row_layout.inset.left = Some(Px(0.0));
-                        row_layout.inset.right = Some(Px(0.0));
-                        row_layout.inset.top = Some(Px(0.0));
+                        row_layout.inset.left = Some(Px(0.0)).into();
+                        row_layout.inset.right = Some(Px(0.0)).into();
+                        row_layout.inset.top = Some(Px(0.0)).into();
                         row_layout.size.height = fret_ui::element::Length::Px(row_h);
 
                         let transform = fret_core::Transform2D::translation(fret_core::Point::new(

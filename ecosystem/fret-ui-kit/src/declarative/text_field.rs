@@ -144,7 +144,7 @@ pub fn text_field_with_leading_icon_and_clear<H: UiHost>(
         input.cancel_command = cancel_command;
         input.layout.size = SizeStyle {
             width: Length::Fill,
-            min_height: Some(resolved.min_height),
+            min_height: Some(Length::Px(resolved.min_height)),
             ..Default::default()
         };
 
@@ -161,8 +161,8 @@ pub fn text_field_with_leading_icon_and_clear<H: UiHost>(
                     FlexProps {
                         layout: left_layout,
                         direction: Axis::Horizontal,
-                        gap: Px(0.0),
-                        padding: Edges::symmetric(base_px, Px(0.0)),
+                        gap: Px(0.0).into(),
+                        padding: Edges::symmetric(base_px, Px(0.0)).into(),
                         justify: Justify::Center.to_main_align(),
                         align: Items::Center.to_cross_align(),
                         wrap: false,
@@ -182,8 +182,8 @@ pub fn text_field_with_leading_icon_and_clear<H: UiHost>(
                                 FlexProps {
                                     layout: clear_icon_layout,
                                     direction: Axis::Horizontal,
-                                    gap: Px(0.0),
-                                    padding: Edges::symmetric(base_px, Px(0.0)),
+                                    gap: Px(0.0).into(),
+                                    padding: Edges::symmetric(base_px, Px(0.0)).into(),
                                     justify: Justify::Center.to_main_align(),
                                     align: Items::Center.to_cross_align(),
                                     wrap: false,

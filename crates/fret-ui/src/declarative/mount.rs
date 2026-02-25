@@ -1409,6 +1409,7 @@ fn mount_element<H: UiHost + 'static>(
         ElementKind::InteractivityGate(p) => ElementInstance::InteractivityGate(p),
         ElementKind::HitTestGate(p) => ElementInstance::HitTestGate(p),
         ElementKind::FocusTraversalGate(p) => ElementInstance::FocusTraversalGate(p),
+        ElementKind::ForegroundScope(p) => ElementInstance::ForegroundScope(p),
         ElementKind::Opacity(p) => ElementInstance::Opacity(p),
         ElementKind::EffectLayer(p) => ElementInstance::EffectLayer(p),
         ElementKind::MaskLayer(p) => ElementInstance::MaskLayer(p),

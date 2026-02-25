@@ -10,6 +10,8 @@ pub(in crate::ui) fn preview_select(
     #[derive(Default)]
     struct SelectPageModels {
         align_item_with_trigger: Option<Model<bool>>,
+        shadcn_demo_value: Option<Model<Option<Arc<str>>>>,
+        shadcn_demo_open: Option<Model<bool>>,
     }
 
     let align_item_with_trigger = cx.with_state(SelectPageModels::default, |st| {
@@ -27,6 +29,44 @@ pub(in crate::ui) fn preview_select(
     };
 
     let demo = {
+        // A minimal shadcn-aligned demo (matches the upstream `select-demo.tsx` example).
+        let shadcn_demo = {
+            let (demo_value, demo_open) = cx.with_state(SelectPageModels::default, |st| {
+                (st.shadcn_demo_value.clone(), st.shadcn_demo_open.clone())
+            });
+            let (demo_value, demo_open) = match (demo_value, demo_open) {
+                (Some(value), Some(open)) => (value, open),
+                _ => {
+                    let demo_value = cx.app.models_mut().insert(None::<Arc<str>>);
+                    let demo_open = cx.app.models_mut().insert(false);
+                    cx.with_state(SelectPageModels::default, |st| {
+                        st.shadcn_demo_value = Some(demo_value.clone());
+                        st.shadcn_demo_open = Some(demo_open.clone());
+                    });
+                    (demo_value, demo_open)
+                }
+            };
+
+            let entries: Vec<shadcn::SelectEntry> = vec![
+                shadcn::SelectGroup::new([
+                    shadcn::SelectLabel::new("Fruits").into(),
+                    shadcn::SelectItem::new("apple", "Apple").into(),
+                    shadcn::SelectItem::new("banana", "Banana").into(),
+                    shadcn::SelectItem::new("blueberry", "Blueberry").into(),
+                    shadcn::SelectItem::new("grapes", "Grapes").into(),
+                    shadcn::SelectItem::new("pineapple", "Pineapple").into(),
+                ])
+                .into(),
+            ];
+
+            shadcn::Select::new(demo_value, demo_open)
+                .trigger_test_id("ui-gallery-select-shadcn-demo-trigger")
+                .placeholder("Select a fruit")
+                .entries(entries)
+                .refine_layout(LayoutRefinement::default().w_px(Px(180.0)))
+                .into_element(cx)
+        };
+
         // Keep the primary demo select stable for existing diag scripts.
         let entries: Vec<shadcn::SelectEntry> = std::iter::once(
             shadcn::SelectGroup::new([
@@ -85,7 +125,7 @@ pub(in crate::ui) fn preview_select(
                 .gap(Space::N2)
                 .items_start()
                 .layout(LayoutRefinement::default().w_full().min_w_0()),
-            |_cx| vec![select, selected_label],
+            |_cx| vec![shadcn_demo, select, selected_label],
         )
         .test_id("ui-gallery-select-demo")
     };
@@ -360,11 +400,11 @@ pub(in crate::ui) fn preview_select(
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Select docs order: Demo, Align Item With Trigger, Groups, Scrollable, Disabled, Invalid, RTL.",
+            "Upstream shadcn Select docs cover Demo and Scrollable. This page also includes extra probes (positioning modes, groups/separators, disabled/invalid styling, and RTL) plus a long-list surface used by diag scripts.",
         ),
         vec![
             DocSection::new("Demo", demo)
-                .description("Basic select with groups, separators, and a disabled item.")
+                .description("Top: minimal shadcn-aligned demo. Below: a long-list surface (stable test_ids) used by diag scripts.")
                 .test_id_prefix("ui-gallery-select-demo")
                 .code(
                     "rust",
@@ -373,6 +413,9 @@ pub(in crate::ui) fn preview_select(
         shadcn::SelectLabel::new("Fruits").into(),
         shadcn::SelectItem::new("apple", "Apple").into(),
         shadcn::SelectItem::new("banana", "Banana").into(),
+        shadcn::SelectItem::new("blueberry", "Blueberry").into(),
+        shadcn::SelectItem::new("grapes", "Grapes").into(),
+        shadcn::SelectItem::new("pineapple", "Pineapple").into(),
     ])
     .into(),
 ];
@@ -380,6 +423,7 @@ pub(in crate::ui) fn preview_select(
 let select = shadcn::Select::new(value, open)
     .placeholder("Select a fruit")
     .entries(entries)
+    .refine_layout(LayoutRefinement::default().w_px(Px(180.0)))
     .into_element(cx);"#,
                 ),
             DocSection::new("Align Item With Trigger", align_item)

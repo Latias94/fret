@@ -120,18 +120,20 @@ fn with_drawer_side_provider<H: UiHost, R>(
     out
 }
 
-fn drawer_vertical_max_height(viewport_height: Px) -> Px {
-    let cap = (viewport_height.0 * DRAWER_MAX_HEIGHT_FRACTION).max(0.0);
-    let by_gap = (viewport_height.0 - DRAWER_EDGE_GAP_PX.0).max(0.0);
-    Px(cap.min(by_gap))
-}
-
-fn drawer_drag_snap_height(drawer_height: Px, side: DrawerSide) -> Px {
+fn drawer_drag_snap_height(drawer_height: Px, window_height: Px, side: DrawerSide) -> Px {
     // Snap-point math should be based on the border-box height.
     //
     // The layout engine treats max-size constraints as border-box under Tailwind-style
     // `box-sizing: border-box`, so the measured drawer bounds already include the edge border.
-    let _ = side;
+    //
+    // When the content subtree's intrinsic height exceeds the sheet's max-height clamp, layout
+    // bounds can report a taller value than what is actually visible. For Vaul-style snap points
+    // we want the *effective* drawer height, so clamp to the same max-height fraction used by the
+    // recipe (`max-h-[80vh]`).
+    if matches!(side, DrawerSide::Top | DrawerSide::Bottom) {
+        let max_h = Px((window_height.0 * DRAWER_MAX_HEIGHT_FRACTION).max(0.0));
+        return Px(drawer_height.0.min(max_h.0));
+    }
     drawer_height
 }
 
@@ -227,6 +229,16 @@ impl DrawerContent {
             .border_color(ColorRef::Color(border))
             .merge(self.chrome);
 
+        let viewport_bounds = cx.environment_viewport_bounds(fret_ui::Invalidation::Layout);
+        let window_height =
+            fret_ui_kit::OverlayController::last_known_window_bounds(cx.app, cx.window)
+                .unwrap_or(viewport_bounds)
+                .size
+                .height;
+        let cap = (window_height.0 * DRAWER_MAX_HEIGHT_FRACTION).max(0.0);
+        let by_gap = (window_height.0 - DRAWER_EDGE_GAP_PX.0).max(0.0);
+        let max_height = Px(cap.min(by_gap));
+
         let base_layout = match side {
             DrawerSide::Left | DrawerSide::Right => LayoutRefinement::default()
                 .w_full()
@@ -234,17 +246,13 @@ impl DrawerContent {
                 .overflow_visible(),
             DrawerSide::Top | DrawerSide::Bottom => LayoutRefinement::default()
                 .w_full()
-                .max_h(drawer_vertical_max_height(
-                    cx.environment_viewport_bounds(fret_ui::Invalidation::Layout)
-                        .size
-                        .height,
-                ))
+                .max_h(max_height)
                 .overflow_visible(),
         };
         let layout = base_layout.merge(self.layout);
 
         let mut props = decl_style::container_props(&theme, chrome, layout);
-        props.padding = Edges::all(Px(0.0));
+        props.padding = Edges::all(Px(0.0)).into();
         props.shadow = None;
         props.border = borders;
         props.corner_radii = corners;
@@ -268,7 +276,7 @@ impl DrawerContent {
                         },
                         ..Default::default()
                     },
-                    padding: Edges::all(Px(0.0)),
+                    padding: Edges::all(Px(0.0)).into(),
                     background: Some(muted),
                     shadow: None,
                     border: Edges::all(Px(0.0)),
@@ -558,14 +566,9 @@ impl Drawer {
             .vertical_auto_max_height_fraction(DRAWER_MAX_HEIGHT_FRACTION);
         match side {
             DrawerSide::Left | DrawerSide::Right => {
-                let viewport_w = cx
-                    .environment_viewport_bounds(fret_ui::Invalidation::Layout)
-                    .size
-                    .width;
-                let desired = Px((viewport_w.0 * DRAWER_SIDE_PANEL_WIDTH_FRACTION)
-                    .min(DRAWER_SIDE_PANEL_MAX_WIDTH_PX.0)
-                    .max(0.0));
-                inner = inner.size(desired);
+                inner = inner
+                    .size_fraction(DRAWER_SIDE_PANEL_WIDTH_FRACTION)
+                    .max_size(DRAWER_SIDE_PANEL_MAX_WIDTH_PX);
             }
             DrawerSide::Top | DrawerSide::Bottom => {}
         }
@@ -578,14 +581,20 @@ impl Drawer {
 
             let is_open = cx.watch_model(&open).layout().copied().unwrap_or(false);
             let (runtime, offset_model, was_open) = drawer_drag_models(cx);
-            let window_height = cx
-                .environment_viewport_bounds(fret_ui::Invalidation::Layout)
-                .size
-                .height;
+            let viewport_bounds = cx.environment_viewport_bounds(fret_ui::Invalidation::Layout);
+            let window_height =
+                fret_ui_kit::OverlayController::last_known_window_bounds(cx.app, cx.window)
+                    .unwrap_or(viewport_bounds)
+                    .size
+                    .height;
+            let _ = cx.app.models_mut().update(&runtime, |st| {
+                st.window_height = window_height;
+                st.viewport_height = viewport_bounds.size.height;
+            });
             let has_snap_points = snap_points.as_ref().map(|v| !v.is_empty()).unwrap_or(false);
 
             if let Some(bounds) = cx.last_bounds_for_element(content.id) {
-                let drawer_h = drawer_drag_snap_height(bounds.size.height, side);
+                let drawer_h = drawer_drag_snap_height(bounds.size.height, window_height, side);
                 let _ = cx.app.models_mut().update(&runtime, |st| {
                     if st.drawer_height != drawer_h {
                         st.drawer_height = drawer_h;
@@ -621,7 +630,8 @@ impl Drawer {
 
                 if needs_init {
                     if let Some(bounds) = cx.last_bounds_for_element(content.id) {
-                        let drawer_h = drawer_drag_snap_height(bounds.size.height, side);
+                        let drawer_h =
+                            drawer_drag_snap_height(bounds.size.height, window_height, side);
                         let _ = cx
                             .app
                             .models_mut()
@@ -783,7 +793,7 @@ impl Drawer {
                 let drawer_h = if stored_drawer_h.0 > 0.0 {
                     stored_drawer_h
                 } else {
-                    drawer_drag_snap_height(bounds.size.height, side)
+                    drawer_drag_snap_height(bounds.size.height, window_height, side)
                 };
                 let offset = host
                     .models_mut()
@@ -933,6 +943,8 @@ struct DrawerDragRuntime {
     start: Point,
     start_offset: Px,
     drawer_height: Px,
+    window_height: Px,
+    viewport_height: Px,
     last_tick: TickId,
     last_offset: Px,
     velocity: f32,
@@ -950,6 +962,8 @@ impl Default for DrawerDragRuntime {
             start: Point::new(Px(0.0), Px(0.0)),
             start_offset: Px(0.0),
             drawer_height: Px(0.0),
+            window_height: Px(0.0),
+            viewport_height: Px(0.0),
             last_tick: TickId(0),
             last_offset: Px(0.0),
             velocity: 0.0,
@@ -1098,7 +1112,9 @@ mod tests {
     use fret_ui::UiTree;
     use fret_ui::action::DismissReason;
     use fret_ui::element::{ContainerProps, LayoutStyle, Length, PressableProps, SizeStyle};
-    use fret_ui::elements::{GlobalElementId, visual_bounds_for_element};
+    use fret_ui::elements::{
+        GlobalElementId, current_bounds_for_element, visual_bounds_for_element,
+    };
     use fret_ui_kit::OverlayController;
     use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 
@@ -1133,6 +1149,68 @@ mod tests {
         let inner_debug = format!("{:?}", drawer.inner);
         assert!(inner_debug.contains("on_open_change: true"));
         assert!(inner_debug.contains("on_open_change_complete: true"));
+    }
+
+    #[test]
+    fn drawer_content_max_height_fraction_clamps_tall_content() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(400.0)),
+        );
+
+        let content_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+        let content_id_out = content_id.clone();
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "drawer-content-max-height-fraction",
+            move |cx| {
+                let tall = cx.container(
+                    ContainerProps {
+                        layout: LayoutStyle {
+                            size: SizeStyle {
+                                width: Length::Fill,
+                                height: Length::Px(Px(2000.0)),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    |_cx| Vec::new(),
+                );
+
+                let content = DrawerContent::new(vec![tall]).into_element(cx);
+                content_id_out.set(Some(content.id));
+                vec![content]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let content_bounds = current_bounds_for_element(
+            &mut app,
+            window,
+            content_id.get().expect("drawer content element id"),
+        )
+        .expect("drawer content bounds");
+        let viewport_h = bounds.size.height.0;
+        let cap = viewport_h * DRAWER_MAX_HEIGHT_FRACTION;
+        let by_gap = (viewport_h - DRAWER_EDGE_GAP_PX.0).max(0.0);
+        let expected = cap.min(by_gap);
+        assert!(
+            (content_bounds.size.height.0 - expected).abs() < 2.0,
+            "expected content max-height fraction clamp near {expected}px, got {content_bounds:?}"
+        );
     }
 
     #[derive(Default)]
@@ -1238,8 +1316,8 @@ mod tests {
                             let mut layout = LayoutStyle::default();
                             layout.size.width = Length::Px(Px(120.0));
                             layout.size.height = Length::Px(Px(40.0));
-                            layout.inset.left = Some(Px(20.0));
-                            layout.inset.top = Some(Px(20.0));
+                            layout.inset.left = Some(Px(100.0)).into();
+                            layout.inset.top = Some(Px(100.0)).into();
                             layout.position = fret_ui::element::PositionStyle::Absolute;
                             layout
                         },
@@ -1528,8 +1606,8 @@ mod tests {
                                 layout.size.width = Length::Px(Px(120.0));
                                 layout.size.height = Length::Px(Px(40.0));
                                 layout.position = fret_ui::element::PositionStyle::Absolute;
-                                layout.inset.top = Some(Px(0.0));
-                                layout.inset.left = Some(Px(0.0));
+                                layout.inset.top = Some(Px(100.0)).into();
+                                layout.inset.left = Some(Px(100.0)).into();
                                 layout
                             },
                             enabled: true,
@@ -1550,8 +1628,8 @@ mod tests {
                             layout.size.width = Length::Px(Px(120.0));
                             layout.size.height = Length::Px(Px(40.0));
                             layout.position = fret_ui::element::PositionStyle::Absolute;
-                            layout.inset.top = Some(Px(200.0));
-                            layout.inset.left = Some(Px(200.0));
+                            layout.inset.top = Some(Px(100.0)).into();
+                            layout.inset.left = Some(Px(100.0)).into();
                             layout
                         },
                         enabled: true,
@@ -1902,6 +1980,8 @@ mod tests {
         ui.set_window(window);
 
         let open = app.models_mut().insert(true);
+        let runtime_model_cell: Rc<RefCell<Option<Model<DrawerDragRuntime>>>> =
+            Rc::new(RefCell::new(None));
         let offset_model_cell: Rc<RefCell<Option<Model<Px>>>> = Rc::new(RefCell::new(None));
         let drawer_content_id_cell: Rc<RefCell<Option<GlobalElementId>>> =
             Rc::new(RefCell::new(None));
@@ -1914,6 +1994,7 @@ mod tests {
 
         let render_frame = |ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices| {
             let open_for_drawer = open.clone();
+            let runtime_model_cell_for_drawer = runtime_model_cell.clone();
             let offset_model_cell_for_drawer = offset_model_cell.clone();
             let drawer_content_id_for_drawer = drawer_content_id_cell.clone();
 
@@ -1945,7 +2026,8 @@ mod tests {
                             cx,
                             |_cx| trigger,
                             move |cx| {
-                                let (_runtime, offset_model, _was_open) = drawer_drag_models(cx);
+                                let (runtime, offset_model, _was_open) = drawer_drag_models(cx);
+                                *runtime_model_cell_for_drawer.borrow_mut() = Some(runtime);
                                 *offset_model_cell_for_drawer.borrow_mut() = Some(offset_model);
 
                                 let content = DrawerContent::new(vec![cx.container(
@@ -1998,6 +2080,10 @@ mod tests {
             .clone()
             .expect("offset model captured");
         let offset = app.models().get_copied(&offset_model).unwrap_or(Px(0.0));
+        let runtime_model = runtime_model_cell
+            .borrow()
+            .clone()
+            .expect("runtime model captured");
         let dialog =
             visual_bounds_for_element(&mut app, window, drawer_content_id).expect("drawer visual");
         let start = Point::new(
@@ -2071,9 +2157,14 @@ mod tests {
         }
 
         let offset = app.models().get_copied(&offset_model).unwrap_or(Px(0.0));
+        let runtime = app
+            .models()
+            .get_copied(&runtime_model)
+            .expect("runtime snapshot");
         assert!(
             settled,
-            "expected offset to settle near {expected:?}, got {offset:?}"
+            "expected offset to settle near {expected:?}, got {offset:?} (window_height={:?}, viewport_height={:?}, drawer_height={:?})",
+            runtime.window_height, runtime.viewport_height, runtime.drawer_height,
         );
     }
 

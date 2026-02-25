@@ -16,6 +16,9 @@ fn fret_navigation_menu_tracks_trigger_when_underlay_scrolls() {
         CoreSize::new(Px(480.0), Px(400.0)),
     );
 
+    let left = Px(24.0);
+    let top = Px(64.0);
+
     let open_value = "components";
     let model: Model<Option<Arc<str>>> = app.models_mut().insert(None);
     let root_id_out: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
@@ -55,8 +58,8 @@ fn fret_navigation_menu_tracks_trigger_when_underlay_scrolls() {
                                 layout: {
                                     let mut layout = LayoutStyle::default();
                                     layout.position = fret_ui::element::PositionStyle::Absolute;
-                                    layout.inset.left = Some(Px(16.0));
-                                    layout.inset.top = Some(Px(160.0));
+                                    layout.inset.left = Some(left).into();
+                                    layout.inset.top = Some(top).into();
                                     layout.size.width = Length::Px(Px(360.0));
                                     layout.size.height = Length::Px(Px(32.0));
                                     layout
@@ -302,6 +305,9 @@ fn fret_navigation_menu_tracks_trigger_when_underlay_scrolls_via_wheel_over_over
         CoreSize::new(Px(480.0), Px(400.0)),
     );
 
+    let left = Px(24.0);
+    let top = Px(64.0);
+
     let open_value = "components";
     let model: Model<Option<Arc<str>>> = app.models_mut().insert(None);
     let root_id_out: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
@@ -341,8 +347,8 @@ fn fret_navigation_menu_tracks_trigger_when_underlay_scrolls_via_wheel_over_over
                                 layout: {
                                     let mut layout = LayoutStyle::default();
                                     layout.position = fret_ui::element::PositionStyle::Absolute;
-                                    layout.inset.left = Some(Px(16.0));
-                                    layout.inset.top = Some(Px(160.0));
+                                    layout.inset.left = Some(left).into();
+                                    layout.inset.top = Some(top).into();
                                     layout.size.width = Length::Px(Px(360.0));
                                     layout.size.height = Length::Px(Px(32.0));
                                     layout

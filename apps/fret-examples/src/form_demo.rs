@@ -350,8 +350,8 @@ impl WinitAppDriver for FormDemoDriver {
                                 FlexProps {
                                     layout: root_layout,
                                     direction: fret_core::Axis::Vertical,
-                                    gap: Px(12.0),
-                                    padding: Edges::all(padding),
+                                    gap: fret_ui::element::SpacingLength::Px(Px(12.0)),
+                                    padding: Edges::all(padding).into(),
                                     justify: MainAlign::Start,
                                     align: CrossAlign::Stretch,
                                     wrap: false,

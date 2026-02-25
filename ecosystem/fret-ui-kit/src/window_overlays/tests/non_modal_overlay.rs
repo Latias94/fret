@@ -710,8 +710,8 @@ fn non_modal_overlay_does_not_restore_focus_when_focus_moves_to_underlay_on_unmo
                         LayoutStyle {
                             position: PositionStyle::Absolute,
                             inset: InsetStyle {
-                                left: Some(Px(0.0)),
-                                top: Some(Px(40.0)),
+                                left: Some(Px(0.0)).into(),
+                                top: Some(Px(40.0)).into(),
                                 ..Default::default()
                             },
                             size: SizeStyle {
@@ -882,8 +882,8 @@ fn non_modal_overlay_can_consume_outside_press_to_block_underlay_activation() {
                         LayoutStyle {
                             position: PositionStyle::Absolute,
                             inset: InsetStyle {
-                                left: Some(Px(0.0)),
-                                top: Some(Px(40.0)),
+                                left: Some(Px(0.0)).into(),
+                                top: Some(Px(40.0)).into(),
                                 ..Default::default()
                             },
                             size: SizeStyle {

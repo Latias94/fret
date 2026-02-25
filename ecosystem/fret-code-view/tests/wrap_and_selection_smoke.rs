@@ -488,3 +488,136 @@ fn code_block_wrap_grapheme_and_selection_smoke() {
         "expected selection rect queries after setting a selection for some focused node"
     );
 }
+
+#[test]
+fn code_block_max_height_shrinks_when_content_is_short() {
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+    let window = AppWindowId::default();
+    let mut services = RecordingUiServices::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(240.0)),
+    );
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let max_height = Px(157.0);
+    let code = "let x = 1;\nlet y = 2;\nlet z = x + y;\n";
+
+    let root = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "root",
+        |cx| {
+            let mut options = fret_code_view::CodeBlockUiOptions::default();
+            options.wrap = fret_code_view::CodeBlockWrap::ScrollX;
+            options.max_height = Some(max_height);
+            vec![fret_code_view::code_block_with(
+                cx,
+                code,
+                Some("rust"),
+                false,
+                options,
+            )]
+        },
+    );
+
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    fn any_node_with_height(ui: &UiTree<TestHost>, root: fret_core::NodeId, target: Px) -> bool {
+        let mut stack = vec![root];
+        while let Some(node) = stack.pop() {
+            if let Some(bounds) = ui.debug_node_bounds(node) {
+                if (bounds.size.height.0 - target.0).abs() < 0.5 {
+                    return true;
+                }
+            }
+            for child in ui.children(node) {
+                stack.push(child);
+            }
+        }
+        false
+    }
+
+    assert!(
+        !any_node_with_height(&ui, root, max_height),
+        "expected short content to avoid forcing a fixed Y viewport height"
+    );
+}
+
+#[test]
+fn code_block_max_height_clamps_when_content_is_tall() {
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+    let window = AppWindowId::default();
+    let mut services = RecordingUiServices::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(240.0)),
+    );
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let max_height = Px(157.0);
+    let mut code = String::new();
+    for i in 0..80 {
+        code.push_str(&format!("let line_{i} = {i};\n"));
+    }
+
+    let root = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "root",
+        |cx| {
+            let mut options = fret_code_view::CodeBlockUiOptions::default();
+            options.wrap = fret_code_view::CodeBlockWrap::ScrollX;
+            options.max_height = Some(max_height);
+            vec![fret_code_view::code_block_with(
+                cx,
+                code.as_str(),
+                Some("rust"),
+                false,
+                options,
+            )]
+        },
+    );
+
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    fn any_node_with_height(ui: &UiTree<TestHost>, root: fret_core::NodeId, target: Px) -> bool {
+        let mut stack = vec![root];
+        while let Some(node) = stack.pop() {
+            if let Some(bounds) = ui.debug_node_bounds(node) {
+                if (bounds.size.height.0 - target.0).abs() < 0.5 {
+                    return true;
+                }
+            }
+            for child in ui.children(node) {
+                stack.push(child);
+            }
+        }
+        false
+    }
+
+    assert!(
+        any_node_with_height(&ui, root, max_height),
+        "expected tall content to clamp to max_height and enable Y scrolling"
+    );
+}

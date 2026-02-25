@@ -4,8 +4,8 @@ use fret_core::{Color, Corners, Edges, Point, Px, SemanticsRole, TextOverflow, T
 use fret_runtime::Model;
 use fret_ui::action::{OnCloseAutoFocus, OnOpenAutoFocus};
 use fret_ui::element::{
-    AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, Overflow, PositionStyle,
-    RenderTransformProps, SemanticsDecoration, SizeStyle,
+    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
+    RenderTransformProps, SemanticFlexProps, SemanticsDecoration, SizeStyle,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
@@ -241,7 +241,7 @@ impl AlertDialog {
                                 },
                                 ..Default::default()
                             },
-                            padding: Edges::all(Px(0.0)),
+                            padding: Edges::all(Px(0.0)).into(),
                             background: Some(overlay_color),
                             shadow: None,
                             border: Edges::all(Px(0.0)),
@@ -257,50 +257,29 @@ impl AlertDialog {
                     content_element_for_trigger.set(Some(content.id));
                     crate::a11y_modal::end_modal_a11y_scope(cx.app, open_id);
 
-                    // Center like `Dialog`, but avoid full-window wrappers that can steal hit tests.
+                    // Center like `Dialog` via an input-transparent flex wrapper so we don't need
+                    // last-frame bounds (which can cause a 1-frame jump on first open).
                     let outer = cx.environment_viewport_bounds(fret_ui::Invalidation::Layout);
-                    let available_w = Px((outer.size.width.0 - window_padding_px.0 * 2.0).max(0.0));
-                    let available_h =
-                        Px((outer.size.height.0 - window_padding_px.0 * 2.0).max(0.0));
-
-                    let last_size = cx.last_bounds_for_element(content.id).map(|r| r.size);
-                    let desired_w = last_size.map(|s| s.width).unwrap_or(Px(512.0));
-                    let desired_h = last_size.map(|s| s.height).unwrap_or(Px(240.0));
-
-                    let content_w = Px(desired_w.0.min(available_w.0).max(0.0));
-                    let content_h_hint = Px(desired_h.0.max(0.0));
-
-                    let left = Px(outer.origin.x.0
-                        + window_padding_px.0
-                        + ((available_w.0 - content_w.0) * 0.5).max(0.0));
-                    let top = Px(outer.origin.y.0
-                        + window_padding_px.0
-                        + (available_h.0 - content_h_hint.0) * 0.5);
-
                     let origin = Point::new(
-                        Px(left.0 + content_w.0 * 0.5),
-                        Px(top.0 + content_h_hint.0 * 0.5),
+                        Px(outer.origin.x.0 + outer.size.width.0 * 0.5),
+                        Px(outer.origin.y.0 + outer.size.height.0 * 0.5),
                     );
                     let zoom = overlay_motion::shadcn_zoom_transform(origin, opacity);
 
-                    let wrapper = cx.container(
-                        ContainerProps {
-                            layout: LayoutStyle {
-                                position: PositionStyle::Absolute,
-                                inset: InsetStyle {
-                                    top: Some(top),
-                                    left: Some(left),
-                                    right: None,
-                                    bottom: None,
-                                },
-                                size: SizeStyle {
-                                    width: Length::Px(content_w),
-                                    ..Default::default()
-                                },
-                                overflow: Overflow::Visible,
+                    let mut centered_layout = LayoutStyle::default();
+                    centered_layout.size.width = Length::Fill;
+                    centered_layout.size.height = Length::Fill;
+                    let centered = cx.semantic_flex(
+                        SemanticFlexProps {
+                            role: SemanticsRole::Generic,
+                            flex: FlexProps {
+                                layout: centered_layout,
+                                direction: fret_core::Axis::Vertical,
+                                padding: Edges::all(window_padding_px).into(),
+                                justify: MainAlign::Center,
+                                align: CrossAlign::Center,
                                 ..Default::default()
                             },
-                            ..Default::default()
                         },
                         move |_cx| vec![content],
                     );
@@ -325,7 +304,7 @@ impl AlertDialog {
                             layout: content_layout,
                             transform: zoom,
                         },
-                        vec![wrapper],
+                        vec![centered],
                     );
                     radix_alert_dialog::alert_dialog_modal_layer_elements(
                         cx,
@@ -460,7 +439,10 @@ impl AlertDialogContent {
             .size
             .as_ref()
             .and_then(|s| s.max_width.as_ref())
-            .map(|m| m.resolve(&theme))
+            .and_then(|m| match m {
+                fret_ui_kit::LengthRefinement::Px(metric) => Some(metric.resolve(&theme)),
+                _ => None,
+            })
         {
             crate::a11y_modal::register_modal_content_max_width(cx.app, max_w);
         }
@@ -1613,8 +1595,8 @@ mod tests {
                             let mut layout = LayoutStyle::default();
                             layout.size.width = Length::Px(Px(120.0));
                             layout.size.height = Length::Px(Px(40.0));
-                            layout.inset.left = Some(Px(20.0));
-                            layout.inset.top = Some(Px(20.0));
+                            layout.inset.left = Some(Px(100.0)).into();
+                            layout.inset.top = Some(Px(100.0)).into();
                             layout.position = fret_ui::element::PositionStyle::Absolute;
                             layout
                         },

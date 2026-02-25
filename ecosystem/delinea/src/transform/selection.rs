@@ -3,6 +3,7 @@ use std::sync::Arc;
 use crate::transform::RowRange;
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum RowSelection {
     #[default]
     All,

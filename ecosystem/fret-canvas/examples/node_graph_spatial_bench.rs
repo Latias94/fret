@@ -507,7 +507,8 @@ fn main() {
     let mut rng_q = Rng::new(cfg.seed ^ 0x9e3779b97f4a7c15);
     let steps = DEFAULT_BEZIER_HIT_TEST_STEPS;
     let hit_w2 = cfg.edge_hit_width * cfg.edge_hit_width;
-    let _hit_w_screen = cfg.edge_hit_width * zoom;
+    #[cfg(feature = "kurbo")]
+    let hit_w_screen = cfg.edge_hit_width * zoom;
     let compare_band_screen_px = cfg.compare_band_screen_px;
 
     #[cfg(feature = "kurbo")]

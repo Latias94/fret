@@ -15,8 +15,8 @@ use fret_core::{Axis, Color, Edges, KeyCode, Px, TextAlign, TextStyle};
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, UiFocusActionHost};
 use fret_ui::element::{
-    AnyElement, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, SizeStyle, TextInputProps,
-    TextProps,
+    AnyElement, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, SizeStyle, SpacingLength,
+    TextInputProps, TextProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::typography;
@@ -256,7 +256,7 @@ where
                     size: SizeStyle {
                         width: Length::Fill,
                         height: Length::Fill,
-                        min_height: Some(density.row_height),
+                        min_height: Some(Length::Px(density.row_height)),
                         ..Default::default()
                     },
                     ..Default::default()
@@ -451,15 +451,15 @@ where
 
         let mut layout = options.layout;
         if layout.size.min_height.is_none() {
-            layout.size.min_height = Some(density.row_height);
+            layout.size.min_height = Some(Length::Px(density.row_height));
         }
 
         cx.flex(
             FlexProps {
                 layout,
                 direction: Axis::Vertical,
-                gap: Px(4.0),
-                padding: Edges::all(Px(0.0)),
+                gap: SpacingLength::Px(Px(4.0)),
+                padding: Edges::all(Px(0.0)).into(),
                 justify: MainAlign::Start,
                 align: CrossAlign::Start,
                 wrap: false,

@@ -223,8 +223,8 @@ fn assert_chart_tooltip_rect_matches_web(
                 layout: {
                     let mut layout = LayoutStyle::default();
                     layout.position = fret_ui::element::PositionStyle::Absolute;
-                    layout.inset.left = Some(Px(web_tooltip.rect.x));
-                    layout.inset.top = Some(Px(web_tooltip.rect.y));
+                    layout.inset.left = Some(Px(web_tooltip.rect.x)).into();
+                    layout.inset.top = Some(Px(web_tooltip.rect.y)).into();
                     layout.size.width = Length::Px(Px(web_tooltip.rect.w));
                     layout
                 },
@@ -315,8 +315,8 @@ fn assert_chart_legend_rect_matches_web(web_name: &str) {
                 layout: {
                     let mut layout = LayoutStyle::default();
                     layout.position = fret_ui::element::PositionStyle::Absolute;
-                    layout.inset.left = Some(Px(web_legend.rect.x));
-                    layout.inset.top = Some(Px(web_legend.rect.y));
+                    layout.inset.left = Some(Px(web_legend.rect.x)).into();
+                    layout.inset.top = Some(Px(web_legend.rect.y)).into();
                     layout.size.width = Length::Px(Px(web_legend.rect.w));
                     layout
                 },
@@ -384,8 +384,8 @@ fn assert_chart_pie_legend_rect_matches_web(web_name: &str) {
                 layout: {
                     let mut layout = LayoutStyle::default();
                     layout.position = fret_ui::element::PositionStyle::Absolute;
-                    layout.inset.left = Some(Px(web_legend.rect.x));
-                    layout.inset.top = Some(Px(web_legend.rect.y));
+                    layout.inset.left = Some(Px(web_legend.rect.x)).into();
+                    layout.inset.top = Some(Px(web_legend.rect.y)).into();
                     layout.size.width = Length::Px(Px(web_legend.rect.w));
                     layout
                 },

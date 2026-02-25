@@ -32,10 +32,10 @@ pub(in crate::ui) fn preview_material3_touch_targets(
             move |cx| {
                 let mut canvas = CanvasProps::default();
                 canvas.layout.position = fret_ui::element::PositionStyle::Absolute;
-                canvas.layout.inset.top = Some(Px(0.0));
-                canvas.layout.inset.right = Some(Px(0.0));
-                canvas.layout.inset.bottom = Some(Px(0.0));
-                canvas.layout.inset.left = Some(Px(0.0));
+                canvas.layout.inset.top = Some(Px(0.0)).into();
+                canvas.layout.inset.right = Some(Px(0.0)).into();
+                canvas.layout.inset.bottom = Some(Px(0.0)).into();
+                canvas.layout.inset.left = Some(Px(0.0)).into();
 
                 let overlay = cx.canvas(canvas, move |p| {
                     let bounds = p.bounds();
@@ -181,7 +181,7 @@ pub(in crate::ui) fn preview_material3_touch_targets(
         props.layout.size.width = fret_ui::element::Length::Fill;
         props.direction = fret_core::Axis::Horizontal;
         props.wrap = true;
-        props.gap = Px(16.0);
+        props.gap = Px(16.0).into();
         props.align = fret_ui::element::CrossAlign::Start;
         props.justify = fret_ui::element::MainAlign::Start;
 

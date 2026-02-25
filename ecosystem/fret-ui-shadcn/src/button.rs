@@ -795,7 +795,7 @@ impl Button {
                 };
 
                 let content_children = move |cx: &mut ElementContext<'_, H>| {
-                    current_color::with_current_color_provider(cx, fg.clone(), |cx| {
+                    current_color::scope_children(cx, fg.clone(), |cx| {
                         let gap = if is_icon {
                             Space::N0
                         } else {
@@ -1084,8 +1084,8 @@ mod tests {
                 panic!("expected icon button to render as a Pressable");
             };
 
-            assert_eq!(props.layout.size.min_width, Some(expected));
-            assert_eq!(props.layout.size.min_height, Some(expected));
+            assert_eq!(props.layout.size.min_width, Some(Length::Px(expected)));
+            assert_eq!(props.layout.size.min_height, Some(Length::Px(expected)));
         }
     }
 
@@ -1140,8 +1140,8 @@ mod tests {
                 panic!("expected chrome container");
             };
 
-            assert_eq!(props.padding.left, expected_px);
-            assert_eq!(props.padding.right, expected_px);
+            assert_eq!(props.padding.left, expected_px.into());
+            assert_eq!(props.padding.right, expected_px.into());
         }
     }
 

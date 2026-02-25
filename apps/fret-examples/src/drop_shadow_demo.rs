@@ -57,7 +57,7 @@ fn card<H: UiHost>(
         let card = cx.container(
             ContainerProps {
                 layout: inner_layout,
-                padding: Edges::all(Px(14.0)),
+                padding: Edges::all(Px(14.0)).into(),
                 background: Some(srgb(248, 250, 252, 0.90)),
                 border: Edges::all(Px(1.0)),
                 border_color: Some(srgb(226, 232, 240, 0.90)),
@@ -108,7 +108,7 @@ fn card<H: UiHost>(
                         },
                         ..Default::default()
                     },
-                    padding: Edges::all(Px(22.0)),
+                    padding: Edges::all(Px(22.0)).into(),
                     ..Default::default()
                 },
                 content,
@@ -254,7 +254,7 @@ impl MvuProgram for DropShadowDemoProgram {
                     },
                     ..Default::default()
                 },
-                padding: Edges::all(Px(16.0)),
+                padding: Edges::all(Px(16.0)).into(),
                 background: Some(srgb(17, 19, 24, 0.92)),
                 ..Default::default()
             },

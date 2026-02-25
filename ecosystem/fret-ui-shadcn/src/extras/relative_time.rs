@@ -410,8 +410,8 @@ impl RelativeTimeZoneLabel {
                 fret_ui::element::FlexProps {
                     layout,
                     direction: fret_core::Axis::Horizontal,
-                    gap: Px(0.0),
-                    padding: fret_core::Edges::all(Px(0.0)),
+                    gap: Px(0.0).into(),
+                    padding: fret_core::Edges::all(Px(0.0)).into(),
                     justify: fret_ui::element::MainAlign::Center,
                     align: fret_ui::element::CrossAlign::Center,
                     wrap: false,

@@ -1,4 +1,4 @@
-#[cfg(feature = "hotpatch")]
+#[cfg(all(not(target_arch = "wasm32"), feature = "hotpatch"))]
 mod hotpatch {
     use fret_app::{App, CommandId};
     use fret_bootstrap::BootstrapBuilder;
@@ -244,12 +244,15 @@ mod hotpatch {
     }
 }
 
-#[cfg(feature = "hotpatch")]
+#[cfg(target_arch = "wasm32")]
+fn main() {}
+
+#[cfg(all(not(target_arch = "wasm32"), feature = "hotpatch"))]
 fn main() -> anyhow::Result<()> {
     hotpatch::main()
 }
 
-#[cfg(not(feature = "hotpatch"))]
+#[cfg(all(not(target_arch = "wasm32"), not(feature = "hotpatch")))]
 fn main() -> anyhow::Result<()> {
     eprintln!(
         "hotpatch_smoke_demo requires `--features hotpatch`.\nTry: cargo run -p fret-demo --bin hotpatch_smoke_demo --features hotpatch"

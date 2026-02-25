@@ -12,8 +12,9 @@ mod vocab;
 mod tests;
 
 pub use chrome::{
-    ChromeRefinement, CornerRadiiRefinement, InsetRefinement, MarginEdgeRefinement,
-    MarginRefinement, PaddingRefinement, ShadowPreset,
+    ChromeRefinement, CornerRadiiRefinement, InsetEdgeRefinement, InsetRefinement,
+    MarginEdgeRefinement, MarginRefinement, PaddingLengthRefinement, PaddingRefinement,
+    ShadowPreset,
 };
 pub use layout::{LayoutRefinement, LengthRefinement, SizeRefinement};
 pub use refs::{ColorRef, MetricRef, SignedMetricRef};

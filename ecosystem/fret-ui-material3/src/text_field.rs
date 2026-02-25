@@ -518,8 +518,8 @@ impl TextField {
                             layout
                         },
                         direction: fret_core::Axis::Vertical,
-                        gap: Px(4.0),
-                        padding: Edges::all(Px(0.0)),
+                        gap: Px(4.0).into(),
+                        padding: Edges::all(Px(0.0)).into(),
                         justify: MainAlign::Start,
                         align: fret_ui::element::CrossAlign::Start,
                         wrap: false,
@@ -948,10 +948,10 @@ impl TextField {
                             let overlay = {
                                 let mut overlay_layout = fret_ui::element::LayoutStyle::default();
                                 overlay_layout.position = fret_ui::element::PositionStyle::Absolute;
-                                overlay_layout.inset.top = Some(Px(0.0));
-                                overlay_layout.inset.right = Some(Px(0.0));
-                                overlay_layout.inset.bottom = Some(Px(0.0));
-                                overlay_layout.inset.left = Some(Px(0.0));
+                                overlay_layout.inset.top = Some(Px(0.0)).into();
+                                overlay_layout.inset.right = Some(Px(0.0)).into();
+                                overlay_layout.inset.bottom = Some(Px(0.0)).into();
+                                overlay_layout.inset.left = Some(Px(0.0)).into();
 
                                 let mut overlay = ContainerProps::default();
                                 overlay.layout = overlay_layout;
@@ -1097,9 +1097,9 @@ impl TextField {
 
                                     let mut layout = fret_ui::element::LayoutStyle::default();
                                     layout.position = fret_ui::element::PositionStyle::Absolute;
-                                    layout.inset.top = Some(Px(0.0));
-                                    layout.inset.right = Some(Px(0.0));
-                                    layout.inset.bottom = Some(Px(0.0));
+                                    layout.inset.top = Some(Px(0.0)).into();
+                                    layout.inset.right = Some(Px(0.0)).into();
+                                    layout.inset.bottom = Some(Px(0.0)).into();
                                     layout.size.width = Length::Px(Px(48.0));
                                     layout.size.height = Length::Fill;
 
@@ -1271,9 +1271,9 @@ fn text_field_label<H: UiHost>(
 
     let mut layout = fret_ui::element::LayoutStyle::default();
     layout.position = fret_ui::element::PositionStyle::Absolute;
-    layout.inset.top = Some(y);
-    layout.inset.left = Some(x);
-    layout.inset.right = Some(Px(16.0));
+    layout.inset.top = Some(y).into();
+    layout.inset.left = Some(x).into();
+    layout.inset.right = Some(Px(16.0)).into();
     layout.overflow = Overflow::Visible;
 
     let floated = floating_label::is_floated(progress);
@@ -1282,7 +1282,7 @@ fn text_field_label<H: UiHost>(
     if variant == TextFieldVariant::Outlined {
         let patch_padding_x = Px(4.0);
         let patch_padding_y = Px((outline_width.0 + 1.0).max(0.0));
-        patch.padding = if floated {
+        patch.padding = (if floated {
             Edges {
                 top: patch_padding_y,
                 right: patch_padding_x,
@@ -1291,7 +1291,8 @@ fn text_field_label<H: UiHost>(
             }
         } else {
             Edges::all(Px(0.0))
-        };
+        })
+        .into();
         patch.background = floated.then_some(input_bg);
     }
 

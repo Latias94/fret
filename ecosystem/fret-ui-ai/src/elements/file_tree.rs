@@ -604,7 +604,7 @@ impl FileTreeName {
                 size: fret_ui::element::SizeStyle {
                     width: fret_ui::element::Length::Fill,
                     height: fret_ui::element::Length::Auto,
-                    min_width: Some(Px(0.0)),
+                    min_width: Some(fret_ui::element::Length::Px(Px(0.0))),
                     ..Default::default()
                 },
                 flex: fret_ui::element::FlexItemStyle {
@@ -708,7 +708,7 @@ fn render_actions<H: UiHost + 'static>(
                                 MetricRef::radius(Radius::Sm).resolve(theme),
                             );
                             chrome.border = Edges::all(Px(0.0));
-                            chrome.padding = Edges::all(Px(2.0));
+                            chrome.padding = Edges::all(Px(2.0)).into();
 
                             let icon = decl_icon::icon_with(
                                 cx,
@@ -907,7 +907,8 @@ fn render_folder_row<H: UiHost + 'static>(
             right: MetricRef::space(Space::N2).resolve(theme),
             bottom: MetricRef::space(Space::N1).resolve(theme),
             left: Px(0.0),
-        };
+        }
+        .into();
         chrome.background = bg;
         chrome.corner_radii = fret_core::Corners::all(MetricRef::radius(Radius::Sm).resolve(theme));
         chrome.border = Edges::all(Px(0.0));
@@ -1032,7 +1033,8 @@ fn render_file_row<H: UiHost + 'static>(
             right: MetricRef::space(Space::N2).resolve(theme),
             bottom: MetricRef::space(Space::N1).resolve(theme),
             left: Px(0.0),
-        };
+        }
+        .into();
         chrome.background = bg;
         chrome.corner_radii = fret_core::Corners::all(MetricRef::radius(Radius::Sm).resolve(theme));
         chrome.border = Edges::all(Px(0.0));

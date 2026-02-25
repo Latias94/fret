@@ -164,7 +164,7 @@ where
             let body = cx.container(
                 ContainerProps {
                     layout: container_layout,
-                    padding: props.padding,
+                    padding: props.padding.into(),
                     background: None,
                     background_paint: Some(background_paint),
                     shadow: None,

@@ -1,12 +1,13 @@
 use fret_core::{Color, Corners, Edges, Px};
 use fret_ui::element::{
     ContainerProps, LayoutStyle, Length, MarginEdge, RingPlacement, RingStyle, ShadowLayerStyle,
-    ShadowStyle,
+    ShadowStyle, SpacingEdges, SpacingLength,
 };
 
 use crate::style::{
     ChromeRefinement, CornerRadiiRefinement, InsetRefinement, LayoutRefinement, LengthRefinement,
-    MarginRefinement, PaddingRefinement, ShadowPreset, SizeRefinement, ThemeTokenRead,
+    MarginRefinement, PaddingLengthRefinement, PaddingRefinement, ShadowPreset, SizeRefinement,
+    ThemeTokenRead,
 };
 use crate::{ColorRef, MetricRef, Radius, Space};
 
@@ -31,27 +32,91 @@ fn resolve_length<T: ThemeTokenRead + ?Sized>(theme: &T, l: &LengthRefinement) -
     }
 }
 
+fn resolve_constraint_length<T: ThemeTokenRead + ?Sized>(
+    theme: &T,
+    l: &LengthRefinement,
+) -> Option<Length> {
+    match l {
+        LengthRefinement::Auto => None,
+        _ => Some(resolve_length(theme, l)),
+    }
+}
+
 fn resolve_padding<T: ThemeTokenRead + ?Sized>(
     theme: &T,
     padding: Option<&PaddingRefinement>,
-) -> Edges {
+) -> SpacingEdges {
     let Some(p) = padding else {
-        return Edges::all(Px(0.0));
+        return SpacingEdges::all(SpacingLength::Px(Px(0.0)));
     };
-    Edges {
-        top: p.top.as_ref().map(|m| m.resolve(theme)).unwrap_or(Px(0.0)),
-        right: p
-            .right
-            .as_ref()
-            .map(|m| m.resolve(theme))
-            .unwrap_or(Px(0.0)),
-        bottom: p
-            .bottom
-            .as_ref()
-            .map(|m| m.resolve(theme))
-            .unwrap_or(Px(0.0)),
-        left: p.left.as_ref().map(|m| m.resolve(theme)).unwrap_or(Px(0.0)),
+    SpacingEdges {
+        top: SpacingLength::Px(p.top.as_ref().map(|m| m.resolve(theme)).unwrap_or(Px(0.0))),
+        right: SpacingLength::Px(
+            p.right
+                .as_ref()
+                .map(|m| m.resolve(theme))
+                .unwrap_or(Px(0.0)),
+        ),
+        bottom: SpacingLength::Px(
+            p.bottom
+                .as_ref()
+                .map(|m| m.resolve(theme))
+                .unwrap_or(Px(0.0)),
+        ),
+        left: SpacingLength::Px(p.left.as_ref().map(|m| m.resolve(theme)).unwrap_or(Px(0.0))),
     }
+}
+
+fn resolve_spacing_length<T: ThemeTokenRead + ?Sized>(
+    theme: &T,
+    length: &LengthRefinement,
+) -> Option<SpacingLength> {
+    match length {
+        LengthRefinement::Auto => None,
+        LengthRefinement::Fill => Some(SpacingLength::Fill),
+        LengthRefinement::Fraction(f) => Some(SpacingLength::Fraction(*f)),
+        LengthRefinement::Px(m) => Some(SpacingLength::Px(m.resolve(theme))),
+    }
+}
+
+fn resolve_padding_length<T: ThemeTokenRead + ?Sized>(
+    theme: &T,
+    base: SpacingEdges,
+    padding: Option<&PaddingLengthRefinement>,
+) -> SpacingEdges {
+    let Some(p) = padding else {
+        return base;
+    };
+    let mut out = base;
+    if let Some(v) = p
+        .top
+        .as_ref()
+        .and_then(|l| resolve_spacing_length(theme, l))
+    {
+        out.top = v;
+    }
+    if let Some(v) = p
+        .right
+        .as_ref()
+        .and_then(|l| resolve_spacing_length(theme, l))
+    {
+        out.right = v;
+    }
+    if let Some(v) = p
+        .bottom
+        .as_ref()
+        .and_then(|l| resolve_spacing_length(theme, l))
+    {
+        out.bottom = v;
+    }
+    if let Some(v) = p
+        .left
+        .as_ref()
+        .and_then(|l| resolve_spacing_length(theme, l))
+    {
+        out.left = v;
+    }
+    out
 }
 
 fn resolve_corner_radii(
@@ -141,10 +206,10 @@ pub fn apply_layout_refinement<T: ThemeTokenRead + ?Sized>(
         left,
     }) = refinement.inset
     {
-        layout.inset.top = top.map(|m| m.resolve(theme));
-        layout.inset.right = right.map(|m| m.resolve(theme));
-        layout.inset.bottom = bottom.map(|m| m.resolve(theme));
-        layout.inset.left = left.map(|m| m.resolve(theme));
+        layout.inset.top = top.map(|m| m.resolve(theme)).unwrap_or_default();
+        layout.inset.right = right.map(|m| m.resolve(theme)).unwrap_or_default();
+        layout.inset.bottom = bottom.map(|m| m.resolve(theme)).unwrap_or_default();
+        layout.inset.left = left.map(|m| m.resolve(theme)).unwrap_or_default();
     }
     if let Some(SizeRefinement {
         width,
@@ -162,16 +227,16 @@ pub fn apply_layout_refinement<T: ThemeTokenRead + ?Sized>(
             layout.size.height = resolve_length(theme, h);
         }
         if let Some(m) = min_width.as_ref() {
-            layout.size.min_width = Some(m.resolve(theme));
+            layout.size.min_width = resolve_constraint_length(theme, m);
         }
         if let Some(m) = min_height.as_ref() {
-            layout.size.min_height = Some(m.resolve(theme));
+            layout.size.min_height = resolve_constraint_length(theme, m);
         }
         if let Some(m) = max_width.as_ref() {
-            layout.size.max_width = Some(m.resolve(theme));
+            layout.size.max_width = resolve_constraint_length(theme, m);
         }
         if let Some(m) = max_height.as_ref() {
-            layout.size.max_height = Some(m.resolve(theme));
+            layout.size.max_height = resolve_constraint_length(theme, m);
         }
     }
 
@@ -201,6 +266,7 @@ pub fn container_props(
     layout_refinement: LayoutRefinement,
 ) -> ContainerProps {
     let padding = resolve_padding(theme, chrome.padding.as_ref());
+    let padding = resolve_padding_length(theme, padding, chrome.padding_length.as_ref());
 
     let background = chrome.background.as_ref().map(|c| c.resolve(theme));
 

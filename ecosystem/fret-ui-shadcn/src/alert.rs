@@ -54,10 +54,10 @@ impl AlertAction {
         let mut layout = LayoutStyle::default();
         layout.position = PositionStyle::Absolute;
         layout.inset = InsetStyle {
-            top: Some(inset),
-            right: Some(inset),
-            bottom: None,
-            left: None,
+            top: Some(inset).into(),
+            right: Some(inset).into(),
+            bottom: None.into(),
+            left: None.into(),
         };
         layout.size.width = Length::Auto;
         layout.size.height = Length::Auto;
@@ -157,7 +157,7 @@ fn alert_with_patch<H: UiHost>(
     chrome_override: ChromeRefinement,
     layout_override: LayoutRefinement,
 ) -> AnyElement {
-    let theme = Theme::global(&*cx.app).clone();
+    let theme = Theme::global(&*cx.app).snapshot();
 
     let bg = theme.color_token("card");
     let border = theme.color_token("border");
@@ -270,7 +270,7 @@ impl AlertTitle {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
         let fg = theme.color_token("foreground");
         let px = theme
             .metric_by_key("component.alert.title_px")
@@ -304,7 +304,7 @@ impl AlertDescription {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
         let fg = theme.color_token("muted-foreground");
         let px = theme
             .metric_by_key("component.alert.description_px")

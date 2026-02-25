@@ -491,7 +491,7 @@ fn tab_focus_traversal_reaches_controls_then_minimap_and_escape_returns_to_canva
     ui.set_focus(Some(underlay));
     assert_eq!(ui.focus(), Some(underlay));
 
-    // Tab should emit focus.next via the keymap, then the command should move focus.
+    // Tab should advance focus according to the installed keymap.
     host.effects.clear();
     ui.dispatch_event(
         &mut host,
@@ -502,14 +502,6 @@ fn tab_focus_traversal_reaches_controls_then_minimap_and_escape_returns_to_canva
             repeat: false,
         },
     );
-    assert!(
-        host.effects.iter().any(|e| matches!(
-            e,
-            Effect::Command { command, .. } if *command == CommandId::from("focus.next")
-        )),
-        "expected Tab to emit focus.next"
-    );
-    let _ = ui.dispatch_command(&mut host, &mut services, &CommandId::from("focus.next"));
     assert_eq!(ui.focus(), Some(controls_node));
 
     host.effects.clear();
@@ -522,7 +514,6 @@ fn tab_focus_traversal_reaches_controls_then_minimap_and_escape_returns_to_canva
             repeat: false,
         },
     );
-    let _ = ui.dispatch_command(&mut host, &mut services, &CommandId::from("focus.next"));
     assert_eq!(
         ui.focus(),
         Some(minimap_node),

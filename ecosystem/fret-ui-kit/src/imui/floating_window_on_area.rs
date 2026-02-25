@@ -9,7 +9,7 @@ use fret_ui::action::UiActionHostExt as _;
 use fret_ui::element::{
     AnyElement, ColumnProps, ContainerProps, InsetStyle, LayoutStyle, Length, Overflow,
     PointerRegionProps, PositionStyle, PressableA11y, PressableProps, RowProps, ScrollAxis,
-    ScrollProps,
+    ScrollProps, SpacingLength,
 };
 
 pub(super) fn render_floating_window_in_area<H: UiHost, Build>(
@@ -296,7 +296,8 @@ where
                         right: Px(6.0),
                         top: Px(4.0),
                         bottom: Px(4.0),
-                    };
+                    }
+                    .into();
                     props.background = Some(muted);
                     props.border = Edges {
                         left: Px(0.0),
@@ -321,7 +322,7 @@ where
                         Length::Auto
                     };
                     row.layout.size.height = Length::Fill;
-                    row.gap = Px(6.0);
+                    row.gap = SpacingLength::Px(Px(6.0));
                     row.align = fret_ui::element::CrossAlign::Center;
 
                     let title = title_for_window.clone();
@@ -366,7 +367,7 @@ where
                                     layout.flex.grow = 1.0;
                                     layout.flex.shrink = 1.0;
                                     layout.flex.basis = Length::Px(Px(0.0));
-                                    layout.size.min_width = Some(Px(0.0));
+                                    layout.size.min_width = Some(Length::Px(Px(0.0)));
                                 }
                                 layout
                             },
@@ -403,7 +404,7 @@ where
                                     Length::Auto
                                 };
                                 if resizable_layout {
-                                    props.layout.size.min_width = Some(Px(0.0));
+                                    props.layout.size.min_width = Some(Length::Px(Px(0.0)));
                                     props.layout.flex.grow = 1.0;
                                     props.layout.flex.shrink = 1.0;
                                     props.layout.flex.basis = Length::Px(Px(0.0));
@@ -484,7 +485,7 @@ where
                                     } else {
                                         Length::Auto
                                     };
-                                    props.padding = Edges::all(Px(8.0));
+                                    props.padding = Edges::all(Px(8.0)).into();
                                     props
                                 },
                                 move |cx| {
@@ -588,10 +589,10 @@ where
                 let mut layout = LayoutStyle::default();
                 layout.position = PositionStyle::Absolute;
                 layout.inset = InsetStyle {
-                    left: Some(Px(0.0)),
-                    right: Some(Px(0.0)),
-                    top: Some(Px(0.0)),
-                    bottom: Some(Px(0.0)),
+                    left: Some(Px(0.0)).into(),
+                    right: Some(Px(0.0)).into(),
+                    top: Some(Px(0.0)).into(),
+                    bottom: Some(Px(0.0)).into(),
                 };
                 layout.size.width = Length::Fill;
                 layout.size.height = Length::Fill;
@@ -629,9 +630,9 @@ where
                         let mut layout = LayoutStyle::default();
                         layout.position = PositionStyle::Absolute;
                         layout.inset = InsetStyle {
-                            left: Some(Px(0.0)),
-                            top: Some(Px(0.0)),
-                            bottom: Some(Px(0.0)),
+                            left: Some(Px(0.0)).into(),
+                            top: Some(Px(0.0)).into(),
+                            bottom: Some(Px(0.0)).into(),
                             ..Default::default()
                         };
                         layout.size.width = Length::Px(Px(6.0));
@@ -642,9 +643,9 @@ where
                         let mut layout = LayoutStyle::default();
                         layout.position = PositionStyle::Absolute;
                         layout.inset = InsetStyle {
-                            right: Some(Px(0.0)),
-                            top: Some(Px(0.0)),
-                            bottom: Some(Px(0.0)),
+                            right: Some(Px(0.0)).into(),
+                            top: Some(Px(0.0)).into(),
+                            bottom: Some(Px(0.0)).into(),
                             ..Default::default()
                         };
                         layout.size.width = Length::Px(Px(6.0));
@@ -655,9 +656,9 @@ where
                         let mut layout = LayoutStyle::default();
                         layout.position = PositionStyle::Absolute;
                         layout.inset = InsetStyle {
-                            left: Some(Px(0.0)),
-                            right: Some(Px(0.0)),
-                            top: Some(Px(0.0)),
+                            left: Some(Px(0.0)).into(),
+                            right: Some(Px(0.0)).into(),
+                            top: Some(Px(0.0)).into(),
                             ..Default::default()
                         };
                         layout.size.width = Length::Fill;
@@ -668,9 +669,9 @@ where
                         let mut layout = LayoutStyle::default();
                         layout.position = PositionStyle::Absolute;
                         layout.inset = InsetStyle {
-                            left: Some(Px(0.0)),
-                            right: Some(Px(0.0)),
-                            bottom: Some(Px(0.0)),
+                            left: Some(Px(0.0)).into(),
+                            right: Some(Px(0.0)).into(),
+                            bottom: Some(Px(0.0)).into(),
                             ..Default::default()
                         };
                         layout.size.width = Length::Fill;
@@ -681,8 +682,8 @@ where
                         let mut layout = LayoutStyle::default();
                         layout.position = PositionStyle::Absolute;
                         layout.inset = InsetStyle {
-                            left: Some(Px(0.0)),
-                            top: Some(Px(0.0)),
+                            left: Some(Px(0.0)).into(),
+                            top: Some(Px(0.0)).into(),
                             ..Default::default()
                         };
                         layout.size.width = Length::Px(Px(10.0));
@@ -693,8 +694,8 @@ where
                         let mut layout = LayoutStyle::default();
                         layout.position = PositionStyle::Absolute;
                         layout.inset = InsetStyle {
-                            right: Some(Px(0.0)),
-                            top: Some(Px(0.0)),
+                            right: Some(Px(0.0)).into(),
+                            top: Some(Px(0.0)).into(),
                             ..Default::default()
                         };
                         layout.size.width = Length::Px(Px(10.0));
@@ -705,8 +706,8 @@ where
                         let mut layout = LayoutStyle::default();
                         layout.position = PositionStyle::Absolute;
                         layout.inset = InsetStyle {
-                            left: Some(Px(0.0)),
-                            bottom: Some(Px(0.0)),
+                            left: Some(Px(0.0)).into(),
+                            bottom: Some(Px(0.0)).into(),
                             ..Default::default()
                         };
                         layout.size.width = Length::Px(Px(10.0));
@@ -717,8 +718,8 @@ where
                         let mut layout = LayoutStyle::default();
                         layout.position = PositionStyle::Absolute;
                         layout.inset = InsetStyle {
-                            right: Some(Px(0.0)),
-                            bottom: Some(Px(0.0)),
+                            right: Some(Px(0.0)).into(),
+                            bottom: Some(Px(0.0)).into(),
                             ..Default::default()
                         };
                         layout.size.width = Length::Px(Px(10.0));

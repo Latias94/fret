@@ -1019,8 +1019,8 @@ fn snapshot_scroll_area_scrollbar_semantics() {
         let mut content_layout = LayoutStyle::default();
         content_layout.size.width = Length::Fill;
         content_layout.size.height = Length::Px(Px(1200.0));
-        content_layout.size.min_width = Some(Px(0.0));
-        content_layout.size.min_height = Some(Px(0.0));
+        content_layout.size.min_width = Some(Length::Px(Px(0.0)));
+        content_layout.size.min_height = Some(Length::Px(Px(0.0)));
 
         let content = cx.container(
             ContainerProps {

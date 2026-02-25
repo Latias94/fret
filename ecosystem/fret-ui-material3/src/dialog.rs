@@ -293,7 +293,7 @@ impl DialogAction {
                                 l.size.height = Length::Fill;
                                 l
                             },
-                            padding: config.padding,
+                            padding: config.padding.into(),
                             ..Default::default()
                         },
                         move |_cx| vec![text, ink],
@@ -570,7 +570,7 @@ impl Dialog {
 
                     let action_cfg = DialogActionConfig {
                         height: dialog_tokens::action_height(theme),
-                        padding: dialog_tokens::action_padding(theme),
+                        padding: dialog_tokens::action_padding(theme).into(),
                         corner_radii: dialog_tokens::action_corner_radii(theme),
                     };
                     let panel_padding = dialog_tokens::panel_padding(theme);
@@ -623,10 +623,10 @@ impl Dialog {
                                 l.size.width = Length::Fill;
                                 l.size.height = Length::Fill;
                                 l.inset = InsetStyle {
-                                    top: Some(Px(0.0)),
-                                    right: Some(Px(0.0)),
-                                    bottom: Some(Px(0.0)),
-                                    left: Some(Px(0.0)),
+                                    top: Some(Px(0.0)).into(),
+                                    right: Some(Px(0.0)).into(),
+                                    bottom: Some(Px(0.0)).into(),
+                                    left: Some(Px(0.0)).into(),
                                 };
 
                                 cx.pressable(
@@ -697,13 +697,15 @@ impl Dialog {
                                 center.direction = Axis::Vertical;
                                 center.justify = MainAlign::Center;
                                 center.align = CrossAlign::Center;
-                                center.padding = panel_padding;
+                                center.padding = panel_padding.into();
 
                                 let content = cx.flex(center, move |cx| {
                                                 let mut panel_layout = LayoutStyle::default();
                                                 panel_layout.size.width = Length::Fill;
-                                                panel_layout.size.max_width = Some(Px(560.0));
-                                                panel_layout.size.min_width = Some(Px(280.0));
+                                                panel_layout.size.max_width =
+                                                    Some(Length::Px(Px(560.0)));
+                                                panel_layout.size.min_width =
+                                                    Some(Length::Px(Px(280.0)));
                                                 panel_layout.overflow = Overflow::Clip;
 
                                                 let mut body = Vec::new();
@@ -741,7 +743,7 @@ impl Dialog {
                                                     row.direction = Axis::Horizontal;
                                                     row.justify = MainAlign::End;
                                                     row.align = CrossAlign::Center;
-                                                    row.gap = Px(8.0);
+                                                    row.gap = Px(8.0).into();
                                                     row.layout.size.width = Length::Fill;
 
                                                     let actions = self
@@ -763,7 +765,7 @@ impl Dialog {
                                                             background: Some(container_bg),
                                                             shadow,
                                                             corner_radii: container_shape,
-                                                            padding: panel_padding,
+                                                            padding: panel_padding.into(),
                                                             ..Default::default()
                                                         },
                                                         move |_cx| body,

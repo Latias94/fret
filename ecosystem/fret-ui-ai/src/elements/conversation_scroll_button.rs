@@ -90,7 +90,7 @@ impl ConversationScrollButton {
                 .bottom(Space::N4)
                 .merge(self.layout),
         );
-        overlay_layout.inset.bottom = Some(bottom_offset);
+        overlay_layout.inset.bottom = Some(bottom_offset).into();
 
         if is_at_bottom {
             return cx.container(
@@ -131,7 +131,7 @@ impl ConversationScrollButton {
         cx.container(
             ContainerProps {
                 layout: overlay_layout,
-                padding: Edges::all(Px(0.0)),
+                padding: Edges::all(Px(0.0)).into(),
                 background: None,
                 corner_radii: Corners::all(Px(0.0)),
                 ..Default::default()

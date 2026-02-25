@@ -666,7 +666,9 @@ impl NodeGraphTuningOverlay {
             order: DrawOrder(order),
             origin: Point::new(origin.x, Px(origin.y.0 + metrics.baseline.0)),
             text: id,
-            color,
+            paint: color.into(),
+            outline: None,
+            shadow: None,
         });
     }
 }

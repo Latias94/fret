@@ -211,6 +211,13 @@ fn script_v2_roundtrip_ui_gallery_data_table_guide_demo_select_and_row_actions()
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_data_table_toolbar_faceted_responsive() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-data-table-toolbar-faceted-responsive.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_wait_bounds_stable() {
     assert_script_v2_roundtrip(
         r#"{

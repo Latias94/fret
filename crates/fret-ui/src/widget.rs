@@ -939,6 +939,7 @@ pub struct PaintCx<'a, H: UiHost> {
     pub children: &'a [NodeId],
     pub bounds: Rect,
     pub scale_factor: f32,
+    pub(crate) paint_style: crate::tree::paint_style::PaintStyleState,
     pub accumulated_transform: Transform2D,
     pub children_render_transform: Option<Transform2D>,
     pub services: &'a mut dyn UiServices,
@@ -948,6 +949,47 @@ pub struct PaintCx<'a, H: UiHost> {
 }
 
 impl<'a, H: UiHost> PaintCx<'a, H> {
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        app: &'a mut H,
+        tree: &'a mut crate::tree::UiTree<H>,
+        node: NodeId,
+        window: Option<AppWindowId>,
+        focus: Option<NodeId>,
+        children: &'a [NodeId],
+        bounds: Rect,
+        scale_factor: f32,
+        accumulated_transform: Transform2D,
+        children_render_transform: Option<Transform2D>,
+        services: &'a mut dyn UiServices,
+        observe_model: &'a mut dyn FnMut(ModelId, Invalidation),
+        observe_global: &'a mut dyn FnMut(TypeId, Invalidation),
+        scene: &'a mut Scene,
+    ) -> Self {
+        Self {
+            app,
+            tree,
+            node,
+            window,
+            focus,
+            children,
+            bounds,
+            scale_factor,
+            paint_style: Default::default(),
+            accumulated_transform,
+            children_render_transform,
+            services,
+            observe_model,
+            observe_global,
+            scene,
+        }
+    }
+
+    /// Returns the nearest inherited foreground color for the current paint traversal (v2).
+    pub fn inherited_foreground(&self) -> Option<fret_core::Color> {
+        self.paint_style.foreground
+    }
+
     pub fn prepaint_output<T: std::any::Any>(&mut self) -> Option<&T> {
         self.tree.prepaint_output(self.node)
     }
@@ -1136,6 +1178,7 @@ impl<'a, H: UiHost> PaintCx<'a, H> {
             bounds,
             self.scene,
             self.scale_factor,
+            self.paint_style,
             accumulated,
         );
 

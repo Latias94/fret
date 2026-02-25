@@ -30,10 +30,10 @@ fn absolute_fill_layout() -> LayoutStyle {
     let mut layout = fill_layout();
     layout.position = PositionStyle::Absolute;
     layout.inset = InsetStyle {
-        top: Some(Px(0.0)),
-        right: Some(Px(0.0)),
-        bottom: Some(Px(0.0)),
-        left: Some(Px(0.0)),
+        top: Some(Px(0.0)).into(),
+        right: Some(Px(0.0)).into(),
+        bottom: Some(Px(0.0)).into(),
+        left: Some(Px(0.0)).into(),
     };
     layout
 }
@@ -48,37 +48,37 @@ fn absolute_edge_layout(zone: WorkspaceTabDropZone, edge: Px) -> LayoutStyle {
         WorkspaceTabDropZone::Left => {
             layout.size.width = Length::Px(edge);
             layout.inset = InsetStyle {
-                top: Some(Px(0.0)),
-                bottom: Some(Px(0.0)),
-                left: Some(Px(0.0)),
-                right: None,
+                top: Some(Px(0.0)).into(),
+                bottom: Some(Px(0.0)).into(),
+                left: Some(Px(0.0)).into(),
+                right: None.into(),
             };
         }
         WorkspaceTabDropZone::Right => {
             layout.size.width = Length::Px(edge);
             layout.inset = InsetStyle {
-                top: Some(Px(0.0)),
-                bottom: Some(Px(0.0)),
-                left: None,
-                right: Some(Px(0.0)),
+                top: Some(Px(0.0)).into(),
+                bottom: Some(Px(0.0)).into(),
+                left: None.into(),
+                right: Some(Px(0.0)).into(),
             };
         }
         WorkspaceTabDropZone::Up => {
             layout.size.height = Length::Px(edge);
             layout.inset = InsetStyle {
-                top: Some(Px(0.0)),
-                bottom: None,
-                left: Some(Px(0.0)),
-                right: Some(Px(0.0)),
+                top: Some(Px(0.0)).into(),
+                bottom: None.into(),
+                left: Some(Px(0.0)).into(),
+                right: Some(Px(0.0)).into(),
             };
         }
         WorkspaceTabDropZone::Down => {
             layout.size.height = Length::Px(edge);
             layout.inset = InsetStyle {
-                top: None,
-                bottom: Some(Px(0.0)),
-                left: Some(Px(0.0)),
-                right: Some(Px(0.0)),
+                top: None.into(),
+                bottom: Some(Px(0.0)).into(),
+                left: Some(Px(0.0)).into(),
+                right: Some(Px(0.0)).into(),
             };
         }
         WorkspaceTabDropZone::Center => layout = absolute_fill_layout(),

@@ -747,8 +747,8 @@ fn time_picker_contents<H: UiHost>(
     props.justify = MainAlign::Start;
     props.align = CrossAlign::Stretch;
     props.wrap = false;
-    props.gap = Px(16.0);
-    props.padding = Edges::all(Px(24.0));
+    props.gap = Px(16.0).into();
+    props.padding = Edges::all(Px(24.0)).into();
     props.layout.size.width = Length::Fill;
     props.layout.size.height = Length::Fill;
 
@@ -871,7 +871,7 @@ fn time_picker_contents<H: UiHost>(
                         justify: MainAlign::Start,
                         align: CrossAlign::Center,
                         wrap: false,
-                        gap: Px(12.0),
+                        gap: Px(12.0).into(),
                         ..Default::default()
                     },
                     move |_cx| {
@@ -924,7 +924,7 @@ fn time_picker_display<H: UiHost>(
     props.justify = MainAlign::Start;
     props.align = CrossAlign::Center;
     props.wrap = false;
-    props.gap = Px(8.0);
+    props.gap = Px(8.0).into();
 
     cx.flex(props, move |cx| {
         let hour_el = time_selector_field(
@@ -1031,7 +1031,7 @@ fn time_picker_time_input<H: UiHost>(
     row.justify = MainAlign::Start;
     row.align = CrossAlign::Center;
     row.wrap = false;
-    row.gap = Px(8.0);
+    row.gap = Px(8.0).into();
 
     cx.flex(row, move |_cx| {
         let mut out = vec![hour_column, sep_el, minute_column];
@@ -1085,7 +1085,7 @@ fn time_input_field_column<H: UiHost>(
     col.justify = MainAlign::Start;
     col.align = CrossAlign::Center;
     col.wrap = false;
-    col.gap = Px(4.0);
+    col.gap = Px(4.0).into();
     cx.flex(col, move |_cx| vec![field, supporting])
 }
 
@@ -1304,10 +1304,10 @@ fn time_input_field<H: UiHost>(
         let overlay = (hovered && !focused).then(|| {
             let mut layout = LayoutStyle::default();
             layout.position = fret_ui::element::PositionStyle::Absolute;
-            layout.inset.top = Some(Px(0.0));
-            layout.inset.right = Some(Px(0.0));
-            layout.inset.bottom = Some(Px(0.0));
-            layout.inset.left = Some(Px(0.0));
+            layout.inset.top = Some(Px(0.0)).into();
+            layout.inset.right = Some(Px(0.0)).into();
+            layout.inset.bottom = Some(Px(0.0)).into();
+            layout.inset.left = Some(Px(0.0)).into();
 
             let c = {
                 let theme = Theme::global(&*cx.app);
@@ -1815,10 +1815,10 @@ fn time_picker_clock_dial<H: UiHost>(
                             layout: {
                                 let mut l = LayoutStyle::default();
                                 l.position = fret_ui::element::PositionStyle::Absolute;
-                                l.inset.top = Some(Px(0.0));
-                                l.inset.right = Some(Px(0.0));
-                                l.inset.bottom = Some(Px(0.0));
-                                l.inset.left = Some(Px(0.0));
+                                l.inset.top = Some(Px(0.0)).into();
+                                l.inset.right = Some(Px(0.0)).into();
+                                l.inset.bottom = Some(Px(0.0)).into();
+                                l.inset.left = Some(Px(0.0)).into();
                                 l.size.width = Length::Fill;
                                 l.size.height = Length::Fill;
                                 l
@@ -1919,8 +1919,8 @@ fn dial_label<H: UiHost>(
             layout: {
                 let mut l = LayoutStyle::default();
                 l.position = fret_ui::element::PositionStyle::Absolute;
-                l.inset.left = Some(Px(x));
-                l.inset.top = Some(Px(y));
+                l.inset.left = Some(Px(x)).into();
+                l.inset.top = Some(Px(y)).into();
                 l.size.width = Length::Px(Px(handle_size));
                 l.size.height = Length::Px(Px(handle_size));
                 l.overflow = Overflow::Visible;
@@ -2466,7 +2466,7 @@ fn time_picker_actions<H: UiHost>(
     props.justify = MainAlign::End;
     props.align = CrossAlign::Center;
     props.wrap = false;
-    props.gap = Px(8.0);
+    props.gap = Px(8.0).into();
 
     cx.flex(props, move |cx| {
         let cancel = Button::new("Cancel")
@@ -2723,10 +2723,10 @@ fn absolute_fill_layout() -> LayoutStyle {
     layout.size.width = Length::Fill;
     layout.size.height = Length::Fill;
     layout.inset = fret_ui::element::InsetStyle {
-        top: Some(Px(0.0)),
-        right: Some(Px(0.0)),
-        bottom: Some(Px(0.0)),
-        left: Some(Px(0.0)),
+        top: Some(Px(0.0)).into(),
+        right: Some(Px(0.0)).into(),
+        bottom: Some(Px(0.0)).into(),
+        left: Some(Px(0.0)).into(),
     };
     layout
 }

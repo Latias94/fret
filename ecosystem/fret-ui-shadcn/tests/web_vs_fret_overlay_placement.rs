@@ -158,7 +158,7 @@ fn pad_root<H: UiHost>(cx: &mut ElementContext<'_, H>, pad: Px, child: AnyElemen
                 layout.size.height = Length::Fill;
                 layout
             },
-            padding: Edges::all(pad),
+            padding: Edges::all(pad).into(),
             ..Default::default()
         },
         move |_cx| vec![child],
@@ -190,6 +190,8 @@ fn shadcn_text<H: UiHost>(
         color: None,
         wrap: TextWrap::Word,
         overflow: TextOverflow::Clip,
+        align: Default::default(),
+        ink_overflow: Default::default(),
     })
 }
 
@@ -206,6 +208,8 @@ fn shadcn_text_with_layout<H: UiHost>(
         color: None,
         wrap: TextWrap::Word,
         overflow: TextOverflow::Clip,
+        align: Default::default(),
+        ink_overflow: Default::default(),
     })
 }
 
@@ -221,6 +225,8 @@ fn shadcn_text_line<H: UiHost>(
         color: None,
         wrap: TextWrap::None,
         overflow: TextOverflow::Clip,
+        align: Default::default(),
+        ink_overflow: Default::default(),
     })
 }
 
@@ -243,7 +249,7 @@ fn shadcn_nav_menu_demo_home_panel<H: UiHost>(
                 layout.size.width = Length::Fill; // `w-full`
                 layout
             },
-            padding: Edges::all(Px(16.0)), // p-4
+            padding: Edges::all(Px(16.0)).into(), // p-4
             ..Default::default()
         },
         move |cx| {
@@ -255,8 +261,8 @@ fn shadcn_nav_menu_demo_home_panel<H: UiHost>(
                         layout
                     },
                     // NavigationMenuLink: `gap-1` + title: `mb-2` => 12px total.
-                    gap: Px(4.0),
-                    padding: Edges::all(Px(0.0)),
+                    gap: Px(4.0).into(),
+                    padding: Edges::all(Px(0.0)).into(),
                     justify: MainAlign::End, // `justify-end`
                     align: CrossAlign::Stretch,
                 },
@@ -299,7 +305,7 @@ fn shadcn_nav_menu_demo_home_panel<H: UiHost>(
                     layout.size.width = Length::Fill;
                     layout
                 },
-                padding: Edges::all(Px(8.0)), // NavigationMenuLink: p-2
+                padding: Edges::all(Px(8.0)).into(), // NavigationMenuLink: p-2
                 ..Default::default()
             },
             move |cx| {
@@ -311,8 +317,8 @@ fn shadcn_nav_menu_demo_home_panel<H: UiHost>(
                             layout.size.width = Length::Fill;
                             layout
                         },
-                        gap: Px(4.0), // NavigationMenuLink: gap-1
-                        padding: Edges::all(Px(0.0)),
+                        gap: Px(4.0).into(), // NavigationMenuLink: gap-1
+                        padding: Edges::all(Px(0.0)).into(),
                         justify: MainAlign::Start,
                         align: CrossAlign::Stretch,
                     },
@@ -330,7 +336,7 @@ fn shadcn_nav_menu_demo_home_panel<H: UiHost>(
                                     layout.overflow = fret_ui::element::Overflow::Clip;
                                     layout
                                 },
-                                padding: Edges::all(Px(0.0)),
+                                padding: Edges::all(Px(0.0)).into(),
                                 ..Default::default()
                             },
                             move |cx| {
@@ -384,8 +390,8 @@ fn shadcn_nav_menu_demo_home_panel<H: UiHost>(
             },
             cols: 1,
             rows: None,
-            gap,
-            padding: Edges::all(Px(0.0)),
+            gap: gap.into(),
+            padding: Edges::all(Px(0.0)).into(),
             justify: MainAlign::Start,
             align: CrossAlign::Stretch,
         },
@@ -417,7 +423,7 @@ fn shadcn_nav_menu_demo_home_desktop_panel<H: UiHost>(
                 layout.size.width = Length::Px(left_w);
                 layout
             },
-            padding: Edges::all(Px(24.0)), // md:p-6
+            padding: Edges::all(Px(24.0)).into(), // md:p-6
             ..Default::default()
         },
         move |cx| {
@@ -429,8 +435,8 @@ fn shadcn_nav_menu_demo_home_desktop_panel<H: UiHost>(
                         layout
                     },
                     // NavigationMenuLink: `gap-1` + title: `mb-2` => 12px total.
-                    gap: Px(4.0),
-                    padding: Edges::all(Px(0.0)),
+                    gap: Px(4.0).into(),
+                    padding: Edges::all(Px(0.0)).into(),
                     justify: MainAlign::End, // `justify-end`
                     align: CrossAlign::Stretch,
                 },
@@ -473,7 +479,7 @@ fn shadcn_nav_menu_demo_home_desktop_panel<H: UiHost>(
                     layout.size.width = Length::Fill;
                     layout
                 },
-                padding: Edges::all(Px(8.0)), // NavigationMenuLink: p-2
+                padding: Edges::all(Px(8.0)).into(), // NavigationMenuLink: p-2
                 ..Default::default()
             },
             move |cx| {
@@ -485,8 +491,8 @@ fn shadcn_nav_menu_demo_home_desktop_panel<H: UiHost>(
                             layout.size.width = Length::Fill;
                             layout
                         },
-                        gap: Px(4.0), // NavigationMenuLink: gap-1
-                        padding: Edges::all(Px(0.0)),
+                        gap: Px(4.0).into(), // NavigationMenuLink: gap-1
+                        padding: Edges::all(Px(0.0)).into(),
                         justify: MainAlign::Start,
                         align: CrossAlign::Stretch,
                     },
@@ -537,8 +543,8 @@ fn shadcn_nav_menu_demo_home_desktop_panel<H: UiHost>(
                 layout.size.width = Length::Px(right_w);
                 layout
             },
-            gap,
-            padding: Edges::all(Px(0.0)),
+            gap: gap.into(),
+            padding: Edges::all(Px(0.0)).into(),
             justify: MainAlign::Start,
             align: CrossAlign::Stretch,
         },
@@ -552,8 +558,8 @@ fn shadcn_nav_menu_demo_home_desktop_panel<H: UiHost>(
                 layout.size.width = Length::Px(Px(500.0)); // lg:w-[500px]
                 layout
             },
-            gap,
-            padding: Edges::all(Px(0.0)),
+            gap: gap.into(),
+            padding: Edges::all(Px(0.0)).into(),
             justify: MainAlign::Start,
             align: CrossAlign::Stretch,
         },
@@ -580,7 +586,7 @@ fn shadcn_nav_menu_demo_simple_panel<H: UiHost>(
         let body = cx.container(
             ContainerProps {
                 layout: LayoutStyle::default(),
-                padding: Edges::all(Px(8.0)), // p-2
+                padding: Edges::all(Px(8.0)).into(), // p-2
                 ..Default::default()
             },
             move |cx| vec![shadcn_text_line(cx, label_arc.clone(), style.clone())],
@@ -598,8 +604,8 @@ fn shadcn_nav_menu_demo_simple_panel<H: UiHost>(
                 layout.size.width = Length::Px(Px(200.0)); // `w-[200px]`
                 layout
             },
-            gap: Px(0.0),
-            padding: Edges::all(Px(0.0)),
+            gap: Px(0.0).into(),
+            padding: Edges::all(Px(0.0)).into(),
             justify: MainAlign::Start,
             align: CrossAlign::Stretch,
         },
@@ -649,15 +655,15 @@ fn shadcn_nav_menu_demo_with_icon_panel<H: UiHost>(
         let body = cx.container(
             ContainerProps {
                 layout: LayoutStyle::default(),
-                padding: Edges::all(Px(8.0)), // p-2
+                padding: Edges::all(Px(8.0)).into(), // p-2
                 ..Default::default()
             },
             move |cx| {
                 vec![cx.row(
                     RowProps {
                         layout: LayoutStyle::default(),
-                        gap: Px(8.0), // gap-2
-                        padding: Edges::all(Px(0.0)),
+                        gap: Px(8.0).into(), // gap-2
+                        padding: Edges::all(Px(0.0)).into(),
                         justify: MainAlign::Start,
                         align: CrossAlign::Center,
                     },
@@ -683,8 +689,8 @@ fn shadcn_nav_menu_demo_with_icon_panel<H: UiHost>(
                 layout.size.width = Length::Px(Px(200.0)); // `w-[200px]`
                 layout
             },
-            gap: Px(0.0),
-            padding: Edges::all(Px(0.0)),
+            gap: Px(0.0).into(),
+            padding: Edges::all(Px(0.0)).into(),
             justify: MainAlign::Start,
             align: CrossAlign::Stretch,
         },
@@ -723,15 +729,15 @@ fn shadcn_nav_menu_demo_list_panel<H: UiHost>(
         let body = cx.container(
             ContainerProps {
                 layout: LayoutStyle::default(),
-                padding: Edges::all(Px(8.0)), // p-2
+                padding: Edges::all(Px(8.0)).into(), // p-2
                 ..Default::default()
             },
             move |cx| {
                 vec![cx.column(
                     ColumnProps {
                         layout: LayoutStyle::default(),
-                        gap: Px(4.0), // gap-1
-                        padding: Edges::all(Px(0.0)),
+                        gap: Px(4.0).into(), // gap-1
+                        padding: Edges::all(Px(0.0)).into(),
                         justify: MainAlign::Start,
                         align: CrossAlign::Stretch,
                     },
@@ -757,8 +763,8 @@ fn shadcn_nav_menu_demo_list_panel<H: UiHost>(
                 layout.size.width = Length::Px(Px(300.0)); // `w-[300px]`
                 layout
             },
-            gap: Px(0.0),
-            padding: Edges::all(Px(0.0)),
+            gap: Px(0.0).into(),
+            padding: Edges::all(Px(0.0)).into(),
             justify: MainAlign::Start,
             align: CrossAlign::Stretch,
         },
@@ -820,7 +826,7 @@ fn shadcn_nav_menu_demo_components_panel_impl<H: UiHost>(
         let body = cx.container(
             ContainerProps {
                 layout: LayoutStyle::default(),
-                padding: Edges::all(Px(8.0)), // p-2
+                padding: Edges::all(Px(8.0)).into(), // p-2
                 ..Default::default()
             },
             move |cx| {
@@ -828,8 +834,8 @@ fn shadcn_nav_menu_demo_components_panel_impl<H: UiHost>(
                 vec![cx.column(
                     ColumnProps {
                         layout: LayoutStyle::default(),
-                        gap: Px(4.0), // gap-1
-                        padding: Edges::all(Px(0.0)),
+                        gap: Px(4.0).into(), // gap-1
+                        padding: Edges::all(Px(0.0)).into(),
                         justify: MainAlign::Start,
                         align: CrossAlign::Stretch,
                     },
@@ -873,8 +879,8 @@ fn shadcn_nav_menu_demo_components_panel_impl<H: UiHost>(
             },
             cols,
             rows: None,
-            gap,
-            padding: Edges::all(Px(0.0)),
+            gap: gap.into(),
+            padding: Edges::all(Px(0.0)).into(),
             justify: MainAlign::Start,
             align: CrossAlign::Stretch,
         },
@@ -3225,7 +3231,7 @@ fn build_dropdown_menu_dialog_open_snapshot(
             .align(DropdownMenuAlign::End)
             .into_element(
                 cx,
-                |cx| button.clone().into_element(cx),
+                move |cx| button.into_element(cx),
                 |_cx| {
                     vec![
                         DropdownMenuEntry::Label(DropdownMenuLabel::new("File Actions")),
@@ -3379,7 +3385,7 @@ fn build_item_dropdown_open_snapshot(
         let dropdown = DropdownMenu::new(open.clone())
             .min_width(Px(288.0))
             .align(DropdownMenuAlign::End)
-            .into_element(cx, |cx| button.clone().into_element(cx), |_cx| entries);
+            .into_element(cx, move |cx| button.into_element(cx), |_cx| entries);
 
         cx.container(
             ContainerProps {
@@ -3391,7 +3397,8 @@ fn build_item_dropdown_open_snapshot(
                 padding: Edges {
                     left: Px(web_trigger.rect.x),
                     ..Default::default()
-                },
+                }
+                .into(),
                 corner_radii: Corners::all(Px(0.0)),
                 ..Default::default()
             },
@@ -3568,7 +3575,7 @@ fn render_button_group_demo_dropdown_menu<H: UiHost>(
         .min_width(Px(208.0))
         .into_element(
             cx,
-            |cx| right_button.clone().into_element(cx),
+            move |cx| right_button.into_element(cx),
             |cx| {
                 vec![
                     DropdownMenuEntry::Group(DropdownMenuGroup::new(vec![
@@ -3627,13 +3634,13 @@ fn render_button_group_demo_dropdown_menu<H: UiHost>(
                 fret_ui::element::FlexProps {
                     layout: LayoutStyle::default(),
                     direction: fret_core::Axis::Horizontal,
-                    gap: Px(0.0),
-                    padding: Edges::all(Px(0.0)),
+                    gap: Px(0.0).into(),
+                    padding: Edges::all(Px(0.0)).into(),
                     justify: MainAlign::Start,
                     align: CrossAlign::Stretch,
                     wrap: false,
                 },
-                move |cx| vec![left_button.clone().into_element(cx), dropdown.clone()],
+                move |cx| vec![left_button.into_element(cx), dropdown],
             )]
         },
     );
@@ -4201,7 +4208,7 @@ fn assert_combobox_dropdown_menu_overlay_placement_matches(web_name: &str) {
                 .min_width(Px(200.0))
                 .into_element(
                     cx,
-                    |cx| button.clone().into_element(cx),
+                    move |cx| button.into_element(cx),
                     |cx| {
                         vec![
                             DropdownMenuEntry::Label(DropdownMenuLabel::new("Actions")),
@@ -4299,7 +4306,7 @@ fn assert_combobox_dropdown_menu_constrained_menu_item_height_matches(web_name: 
             .min_width(Px(200.0))
             .into_element(
                 cx,
-                |cx| button.clone().into_element(cx),
+                move |cx| button.into_element(cx),
                 |cx| {
                     vec![
                         DropdownMenuEntry::Label(DropdownMenuLabel::new("Actions")),
@@ -4422,7 +4429,7 @@ fn assert_combobox_dropdown_menu_constrained_menu_content_insets_match(web_name:
             .min_width(Px(200.0))
             .into_element(
                 cx,
-                |cx| button.clone().into_element(cx),
+                move |cx| button.into_element(cx),
                 |cx| {
                     vec![
                         DropdownMenuEntry::Label(DropdownMenuLabel::new("Actions")),
@@ -4538,8 +4545,8 @@ fn build_breadcrumb_dropdown_open_snapshot(theme: &WebGoldenTheme) -> fret_core:
                                         fret_ui::element::FlexProps {
                                             layout: Default::default(),
                                             direction: fret_core::Axis::Horizontal,
-                                            gap: Px(4.0),
-                                            padding: Edges::all(Px(0.0)),
+                                            gap: Px(4.0).into(),
+                                            padding: Edges::all(Px(0.0)).into(),
                                             justify: MainAlign::Start,
                                             align: CrossAlign::Center,
                                             wrap: false,
@@ -4556,6 +4563,8 @@ fn build_breadcrumb_dropdown_open_snapshot(theme: &WebGoldenTheme) -> fret_core:
                                                 color: Some(muted),
                                                 wrap: TextWrap::Word,
                                                 overflow: TextOverflow::Clip,
+                                                align: Default::default(),
+                                                ink_overflow: Default::default(),
                                             });
 
                                             let icon = fret_ui_kit::declarative::icon::icon_with(
@@ -14013,35 +14022,35 @@ fn command_dialog_open_snapshot(theme: &WebGoldenTheme) -> fret_core::SemanticsS
     let query: Model<String> = app.models_mut().insert(String::new());
     let open: Model<bool> = app.models_mut().insert(false);
 
-    let entries = vec![
-        fret_ui_shadcn::CommandGroup::new(vec![
-            fret_ui_shadcn::CommandItem::new("Calendar").on_select("command.calendar"),
-            fret_ui_shadcn::CommandItem::new("Search Emoji").on_select("command.search_emoji"),
-            fret_ui_shadcn::CommandItem::new("Calculator").on_select("command.calculator"),
-        ])
-        .heading("Suggestions")
-        .into(),
-        fret_ui_shadcn::CommandSeparator::new().into(),
-        fret_ui_shadcn::CommandGroup::new(vec![
-            fret_ui_shadcn::CommandItem::new("Profile")
-                .shortcut("⌘P")
-                .on_select("command.profile"),
-            fret_ui_shadcn::CommandItem::new("Billing")
-                .shortcut("⌘B")
-                .on_select("command.billing"),
-            fret_ui_shadcn::CommandItem::new("Settings")
-                .shortcut("⌘S")
-                .on_select("command.settings"),
-        ])
-        .heading("Settings")
-        .into(),
-    ];
-
     let render = |cx: &mut ElementContext<'_, App>| {
         use fret_ui_shadcn::{Button, CommandDialog};
 
+        let entries = vec![
+            fret_ui_shadcn::CommandGroup::new(vec![
+                fret_ui_shadcn::CommandItem::new("Calendar").on_select("command.calendar"),
+                fret_ui_shadcn::CommandItem::new("Search Emoji").on_select("command.search_emoji"),
+                fret_ui_shadcn::CommandItem::new("Calculator").on_select("command.calculator"),
+            ])
+            .heading("Suggestions")
+            .into(),
+            fret_ui_shadcn::CommandSeparator::new().into(),
+            fret_ui_shadcn::CommandGroup::new(vec![
+                fret_ui_shadcn::CommandItem::new("Profile")
+                    .shortcut("⌘P")
+                    .on_select("command.profile"),
+                fret_ui_shadcn::CommandItem::new("Billing")
+                    .shortcut("⌘B")
+                    .on_select("command.billing"),
+                fret_ui_shadcn::CommandItem::new("Settings")
+                    .shortcut("⌘S")
+                    .on_select("command.settings"),
+            ])
+            .heading("Settings")
+            .into(),
+        ];
+
         CommandDialog::new(open.clone(), query.clone(), Vec::new())
-            .entries(entries.clone())
+            .entries(entries)
             .into_element(cx, |cx| Button::new("Open").into_element(cx))
     };
 

@@ -133,8 +133,8 @@ fn kbd_with_patch<H: UiHost>(
                     ..Default::default()
                 },
                 direction: fret_core::Axis::Horizontal,
-                gap,
-                padding: fret_core::Edges::all(Px(0.0)),
+                gap: gap.into(),
+                padding: fret_core::Edges::all(Px(0.0)).into(),
                 justify: MainAlign::Center,
                 align: CrossAlign::Center,
                 wrap: false,
@@ -188,8 +188,8 @@ impl KbdGroup {
             FlexProps {
                 layout,
                 direction: fret_core::Axis::Horizontal,
-                gap,
-                padding: fret_core::Edges::all(Px(0.0)),
+                gap: gap.into(),
+                padding: fret_core::Edges::all(Px(0.0)).into(),
                 justify: MainAlign::Start,
                 align: CrossAlign::Center,
                 wrap: false,

@@ -116,7 +116,7 @@ pub(in crate::ui) fn preview_ai_prompt_input_provider_demo(
                     };
 
                     let mut props = ContainerProps::default();
-                    props.padding = Edges::symmetric(Px(12.0), Px(6.0));
+                    props.padding = Edges::symmetric(Px(12.0), Px(6.0)).into();
                     props.background = Some(bg);
                     props.corner_radii = Corners::all(theme.metric_token("metric.radius.sm"));
 

@@ -8,7 +8,7 @@ use fret_ui::UiHost;
 
 /// Adds a code block element to an `imui` output list.
 #[track_caller]
-pub fn code_block<H: UiHost>(
+pub fn code_block<H: UiHost + 'static>(
     ui: &mut impl UiWriter<H>,
     code: &str,
     language: Option<&str>,

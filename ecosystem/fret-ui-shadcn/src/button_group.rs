@@ -165,13 +165,14 @@ impl ButtonGroupText {
                         ..Default::default()
                     },
                     direction: Axis::Horizontal,
-                    gap: Px(8.0),
+                    gap: Px(8.0).into(),
                     padding: Edges {
                         top: Px(0.0),
                         right: px_4,
                         bottom: Px(0.0),
                         left: px_4,
-                    },
+                    }
+                    .into(),
                     justify: fret_ui::element::MainAlign::Start,
                     align: fret_ui::element::CrossAlign::Center,
                     wrap: false,
@@ -279,8 +280,8 @@ impl ButtonGroupSeparator {
                 layout.size = SizeStyle {
                     width: Length::Fill,
                     height: Length::Px(thickness),
-                    min_height: Some(thickness),
-                    max_height: Some(thickness),
+                    min_height: Some(Length::Px(thickness)),
+                    max_height: Some(Length::Px(thickness)),
                     ..layout.size
                 };
             }
@@ -289,8 +290,8 @@ impl ButtonGroupSeparator {
                     width: Length::Px(thickness),
                     // Match shadcn `self-stretch` behavior for vertical separators.
                     height: Length::Auto,
-                    min_width: Some(thickness),
-                    max_width: Some(thickness),
+                    min_width: Some(Length::Px(thickness)),
+                    max_width: Some(Length::Px(thickness)),
                     ..layout.size
                 };
             }
@@ -431,8 +432,8 @@ impl ButtonGroup {
         let props = FlexProps {
             layout,
             direction,
-            gap,
-            padding: Edges::all(Px(0.0)),
+            gap: gap.into(),
+            padding: Edges::all(Px(0.0)).into(),
             justify: fret_ui::element::MainAlign::Start,
             align: fret_ui::element::CrossAlign::Stretch,
             wrap: false,

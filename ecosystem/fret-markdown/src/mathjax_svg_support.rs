@@ -64,7 +64,7 @@ pub(super) fn render_math_block_mathjax_svg<H: UiHost>(
 
     let mut container = ContainerProps::default();
     container.layout.size.width = Length::Fill;
-    container.padding = Edges::all(markdown_theme.math_block_padding);
+    container.padding = Edges::all(markdown_theme.math_block_padding).into();
     container.background = Some(markdown_theme.math_block_bg);
     container.border = Edges::all(Px(0.0));
     container.corner_radii = fret_core::Corners::all(theme.metric_token("metric.radius.md"));
@@ -159,7 +159,8 @@ fn render_inline_math_svg<H: UiHost>(
         right: markdown_theme.inline_math_padding_x,
         bottom: markdown_theme.inline_math_padding_y,
         left: markdown_theme.inline_math_padding_x,
-    };
+    }
+    .into();
     props.background = Some(markdown_theme.inline_math_bg);
     props.border = Edges::all(Px(0.0));
     props.corner_radii = fret_core::Corners::all(theme.metric_token("metric.radius.sm"));
@@ -186,7 +187,8 @@ fn render_inline_math_source<H: UiHost>(
         right: markdown_theme.inline_math_padding_x,
         bottom: markdown_theme.inline_math_padding_y,
         left: markdown_theme.inline_math_padding_x,
-    };
+    }
+    .into();
     props.background = Some(markdown_theme.inline_math_bg);
     props.border = Edges::all(Px(0.0));
     props.corner_radii = fret_core::Corners::all(theme.metric_token("metric.radius.sm"));

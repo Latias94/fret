@@ -325,7 +325,7 @@ impl SourcesBlock {
                         cx.container(
                             ContainerProps {
                                 layout: highlight_layout,
-                                padding: Edges::all(highlight_padding),
+                                padding: Edges::all(highlight_padding).into(),
                                 background: Some(highlight_bg),
                                 corner_radii: Corners::all(highlight_radius),
                                 ..Default::default()
@@ -423,7 +423,7 @@ impl SourcesBlock {
         let root = cx.container(
             ContainerProps {
                 layout: root_layout,
-                padding: Edges::all(fret_core::Px(0.0)),
+                padding: Edges::all(fret_core::Px(0.0)).into(),
                 background: None,
                 corner_radii: Corners::all(fret_core::Px(0.0)),
                 ..Default::default()
