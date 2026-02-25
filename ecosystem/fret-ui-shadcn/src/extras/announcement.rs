@@ -55,7 +55,7 @@ impl Announcement {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
 
         let border = theme.color_token("border");
         let bg = theme.color_token("background");
@@ -123,7 +123,7 @@ impl AnnouncementTag {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
         let mut bg = theme.color_token("foreground");
         bg.a = (bg.a * 0.05).clamp(0.0, 1.0);
         let chrome = ChromeRefinement::default()
@@ -165,7 +165,7 @@ impl AnnouncementTitle {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
         let props = decl_style::container_props(
             &theme,
             ChromeRefinement::default().py(Space::N1),
