@@ -148,20 +148,88 @@ pub(super) fn apply_chain_in_place(
                         requested_downsample,
                         quality,
                     ) else {
+                        // Downsampled two-scratch blur does not fit. Fall back to a single-scratch
+                        // blur if possible, otherwise degrade to no-op.
+                        let Some(&scratch) = scratch_targets.first() else {
+                            effect_degradations.gaussian_blur.degraded_target_exhausted =
+                                effect_degradations
+                                    .gaussian_blur
+                                    .degraded_target_exhausted
+                                    .saturating_add(1);
+                            effect_blur_quality.gaussian_blur.record_applied(
+                                1,
+                                0,
+                                desired_downsample,
+                            );
+                            effect_blur_quality
+                                .gaussian_blur
+                                .quality_degraded_blur_removed = effect_blur_quality
+                                .gaussian_blur
+                                .quality_degraded_blur_removed
+                                .saturating_add(1);
+                            continue;
+                        };
                         if budget_bytes == 0 {
                             effect_degradations.gaussian_blur.degraded_budget_zero =
                                 effect_degradations
                                     .gaussian_blur
                                     .degraded_budget_zero
                                     .saturating_add(1);
-                        } else {
+                            effect_blur_quality.gaussian_blur.record_applied(
+                                1,
+                                0,
+                                desired_downsample,
+                            );
+                            effect_blur_quality
+                                .gaussian_blur
+                                .quality_degraded_blur_removed = effect_blur_quality
+                                .gaussian_blur
+                                .quality_degraded_blur_removed
+                                .saturating_add(1);
+                            continue;
+                        }
+                        let full = estimate_texture_bytes(ctx.viewport_size, ctx.format, 1);
+                        let required = full.saturating_mul(2);
+                        if required > budget_bytes {
                             effect_degradations
                                 .gaussian_blur
                                 .degraded_budget_insufficient = effect_degradations
                                 .gaussian_blur
                                 .degraded_budget_insufficient
                                 .saturating_add(1);
+                            effect_blur_quality.gaussian_blur.record_applied(
+                                1,
+                                0,
+                                desired_downsample,
+                            );
+                            effect_blur_quality
+                                .gaussian_blur
+                                .quality_degraded_blur_removed = effect_blur_quality
+                                .gaussian_blur
+                                .quality_degraded_blur_removed
+                                .saturating_add(1);
+                            continue;
                         }
+
+                        let iterations = blur_iterations_for_radius(radius_px, 1, quality);
+                        effect_degradations.gaussian_blur.applied =
+                            effect_degradations.gaussian_blur.applied.saturating_add(1);
+                        effect_blur_quality.gaussian_blur.record_applied(
+                            1,
+                            iterations,
+                            desired_downsample,
+                        );
+                        append_scissored_blur_in_place_single_scratch(
+                            passes,
+                            srcdst,
+                            scratch,
+                            ctx.viewport_size,
+                            iterations,
+                            scissor,
+                            ctx.clear,
+                            mask_uniform_index,
+                            mask,
+                        );
                         continue;
                     };
                     let iterations =
@@ -195,12 +263,30 @@ pub(super) fn apply_chain_in_place(
                             .gaussian_blur
                             .degraded_target_exhausted
                             .saturating_add(1);
+                    effect_blur_quality
+                        .gaussian_blur
+                        .record_applied(1, 0, desired_downsample);
+                    effect_blur_quality
+                        .gaussian_blur
+                        .quality_degraded_blur_removed = effect_blur_quality
+                        .gaussian_blur
+                        .quality_degraded_blur_removed
+                        .saturating_add(1);
                     continue;
                 };
                 if budget_bytes == 0 {
                     effect_degradations.gaussian_blur.degraded_budget_zero = effect_degradations
                         .gaussian_blur
                         .degraded_budget_zero
+                        .saturating_add(1);
+                    effect_blur_quality
+                        .gaussian_blur
+                        .record_applied(1, 0, desired_downsample);
+                    effect_blur_quality
+                        .gaussian_blur
+                        .quality_degraded_blur_removed = effect_blur_quality
+                        .gaussian_blur
+                        .quality_degraded_blur_removed
                         .saturating_add(1);
                     continue;
                 }
@@ -212,6 +298,15 @@ pub(super) fn apply_chain_in_place(
                         .degraded_budget_insufficient = effect_degradations
                         .gaussian_blur
                         .degraded_budget_insufficient
+                        .saturating_add(1);
+                    effect_blur_quality
+                        .gaussian_blur
+                        .record_applied(1, 0, desired_downsample);
+                    effect_blur_quality
+                        .gaussian_blur
+                        .quality_degraded_blur_removed = effect_blur_quality
+                        .gaussian_blur
+                        .quality_degraded_blur_removed
                         .saturating_add(1);
                     continue;
                 }
@@ -1595,6 +1690,61 @@ mod tests {
         assert_eq!(blur_quality.drop_shadow.applied, 1);
         assert_eq!(blur_quality.drop_shadow.applied_iterations_zero, 1);
         assert_eq!(blur_quality.drop_shadow.quality_degraded_blur_removed, 1);
+    }
+
+    #[test]
+    fn gaussian_blur_target_pressure_falls_back_to_single_scratch_blur() {
+        let viewport_size = (256, 256);
+        let format = wgpu::TextureFormat::Rgba8Unorm;
+        let full = estimate_texture_bytes(viewport_size, format, 1);
+        let budget_bytes = full.saturating_mul(2);
+        let ctx = EffectCompileCtx {
+            viewport_size,
+            format,
+            intermediate_budget_bytes: budget_bytes,
+            clear: wgpu::Color::TRANSPARENT,
+            scale_factor: 1.0,
+        };
+        let scissor = ScissorRect::full(viewport_size.0, viewport_size.1);
+
+        let mut passes = Vec::new();
+        let mut degradations = super::super::EffectDegradationSnapshot::default();
+        let mut blur_quality = super::super::BlurQualitySnapshot::default();
+        apply_chain_in_place(
+            &mut passes,
+            &[PlanTarget::Intermediate1, PlanTarget::Intermediate2],
+            PlanTarget::Intermediate0,
+            fret_core::EffectMode::FilterContent,
+            fret_core::EffectChain::from_steps(&[fret_core::EffectStep::GaussianBlur {
+                radius_px: fret_core::Px(16.0),
+                downsample: 2,
+            }]),
+            fret_core::EffectQuality::Medium,
+            scissor,
+            None,
+            &[],
+            &mut degradations,
+            &mut blur_quality,
+            ctx,
+        );
+
+        assert_eq!(degradations.gaussian_blur.requested, 1);
+        assert_eq!(degradations.gaussian_blur.applied, 1);
+        assert_eq!(degradations.gaussian_blur.degraded_target_exhausted, 0);
+        assert_eq!(blur_quality.gaussian_blur.applied, 1);
+        assert_eq!(blur_quality.gaussian_blur.applied_downsample_1, 1);
+        assert_eq!(blur_quality.gaussian_blur.quality_degraded_blur_removed, 0);
+        assert_eq!(blur_quality.gaussian_blur.quality_degraded_downsample, 1);
+        assert!(
+            passes.iter().any(|p| matches!(p, RenderPlanPass::Blur(_))),
+            "single-scratch blur fallback should still emit blur passes"
+        );
+        assert!(
+            !passes
+                .iter()
+                .any(|p| matches!(p, RenderPlanPass::ScaleNearest(_))),
+            "single-scratch blur fallback must not emit downsample scale passes"
+        );
     }
 }
 
