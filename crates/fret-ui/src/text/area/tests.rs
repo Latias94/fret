@@ -3,8 +3,8 @@ use crate::UiTree;
 use crate::test_host::TestHost;
 use crate::widget::Widget;
 use fret_core::{
-    AppWindowId, CaretAffinity, Color, Event, Paint, Point, Px, Rect, Scene, SceneOp, Size,
-    TextConstraints, TextLineMetrics, TextMetrics, TextService,
+    AppWindowId, CaretAffinity, Color, Corners, Edges, Event, Paint, Point, Px, Rect, Scene,
+    SceneOp, Size, TextConstraints, TextLineMetrics, TextMetrics, TextService,
 };
 use fret_runtime::{Effect, PlatformCapabilities};
 use slotmap::KeyData;
@@ -381,6 +381,90 @@ fn caret_is_visible_when_text_area_is_focused_and_empty() {
         caret_rect.size.height.0 > 0.0,
         "expected caret height to be > 0 (got {:?})",
         caret_rect.size.height
+    );
+}
+
+#[test]
+fn focused_border_color_switches_when_focus_visible_is_enabled() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(80.0)));
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let border_color = Color {
+        r: 0.1,
+        g: 0.2,
+        b: 0.3,
+        a: 1.0,
+    };
+    let border_color_focused = Color {
+        r: 0.8,
+        g: 0.1,
+        b: 0.2,
+        a: 1.0,
+    };
+
+    let style = TextAreaStyle {
+        padding_x: Px(0.0),
+        padding_y: Px(0.0),
+        border: Edges::all(Px(1.0)),
+        border_color,
+        border_color_focused,
+        focus_ring: None,
+        corner_radii: Corners::all(Px(0.0)),
+        ..Default::default()
+    };
+
+    let area = ui.create_node(TextArea::new("").with_style(style));
+    ui.set_root(area);
+    ui.set_focus(Some(area));
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut text = FakeTextService::default();
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let border_paint = |scene: &Scene| {
+        scene.ops().iter().find_map(|op| match op {
+            SceneOp::Quad {
+                border,
+                border_paint,
+                ..
+            } if border.left.0 > 0.0 => Some(*border_paint),
+            _ => None,
+        })
+    };
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut text, bounds, &mut scene, 1.0);
+    assert_eq!(
+        border_paint(&scene),
+        Some(Paint::Solid(border_color)),
+        "expected base border color before focus-visible is enabled"
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &Event::KeyDown {
+            key: fret_core::KeyCode::Tab,
+            modifiers: fret_core::Modifiers::default(),
+            repeat: false,
+        },
+    );
+    assert!(
+        crate::focus_visible::is_focus_visible(&mut app, Some(window)),
+        "expected focus-visible to be enabled after Tab keydown"
+    );
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut text, bounds, &mut scene, 1.0);
+    assert_eq!(
+        border_paint(&scene),
+        Some(Paint::Solid(border_color_focused)),
+        "expected focused border color when focus-visible is active"
     );
 }
 

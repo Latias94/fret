@@ -59,6 +59,11 @@ pub struct TextAreaStyle {
     pub background: Color,
     pub border: Edges,
     pub border_color: Color,
+    /// Border color applied when the textarea itself is focused and focus-visible is active.
+    ///
+    /// This aligns with shadcn/ui-style `focus-visible:border-ring` outcomes without requiring
+    /// wrapper containers to own the textarea border.
+    pub border_color_focused: Color,
     pub focus_ring: Option<crate::element::RingStyle>,
     pub corner_radii: Corners,
     pub text_color: Color,
@@ -71,6 +76,12 @@ pub struct TextAreaStyle {
 
 impl Default for TextAreaStyle {
     fn default() -> Self {
+        let border_color = Color {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+            a: 0.35,
+        };
         Self {
             padding_x: Px(10.0),
             padding_y: Px(10.0),
@@ -81,12 +92,8 @@ impl Default for TextAreaStyle {
                 a: 1.0,
             },
             border: Edges::all(Px(1.0)),
-            border_color: Color {
-                r: 0.0,
-                g: 0.0,
-                b: 0.0,
-                a: 0.35,
-            },
+            border_color,
+            border_color_focused: border_color,
             focus_ring: None,
             corner_radii: Corners::all(Px(8.0)),
             text_color: Color {
@@ -326,6 +333,7 @@ impl TextArea {
             self.style.padding_y = theme.metric_token("metric.padding.md");
             self.style.background = theme.color(ThemeColorKey::Card);
             self.style.border_color = theme.color(ThemeColorKey::Border);
+            self.style.border_color_focused = self.style.border_color;
             // Focus ring styling is intentionally component-owned (recipes) rather than
             // runtime-owned to keep `fret-ui` mechanism-only (ADR 0066). Component libraries can
             // set `TextAreaStyle.focus_ring` explicitly when desired.

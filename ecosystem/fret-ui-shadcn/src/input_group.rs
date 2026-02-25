@@ -577,6 +577,7 @@ impl InputGroup {
                             chrome.background = Color::TRANSPARENT;
                             chrome.border = Edges::all(Px(0.0));
                             chrome.border_color = resolved.border_color;
+                            chrome.border_color_focused = resolved.border_color_focused;
                             chrome.corner_radii = Corners::all(Px(0.0));
                             chrome.text_color = resolved.text_color;
                             chrome.selection_color = resolved.selection_color;
