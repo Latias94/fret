@@ -114,7 +114,9 @@ This file tracks tasks for `docs/workstreams/diag-fearless-refactor-v1.md`.
   - [x] Add bundle-artifact aliases to `repro.summary.json` (keep older `*_bundle_json` keys for compatibility).
   - [x] Add bundle-artifact aliases to `diag repeat` output (keep older `bundle_json` key for compatibility).
   - [x] Add bundle-artifact aliases to stats check JSON evidence payloads (keep older `bundle_json` key for compatibility).
-    - Evidence: `crates/fret-diag/src/stats/stale.rs`, `crates/fret-diag/src/stats/vlist.rs`, `crates/fret-diag/src/stats/windowed_rows.rs`.
+    - Evidence: `crates/fret-diag/src/stats/stale.rs`, `crates/fret-diag/src/stats/vlist.rs`,
+      `crates/fret-diag/src/stats/windowed_rows.rs`, `crates/fret-diag/src/stats/ui_gallery_code_editor.rs`,
+      `crates/fret-diag/src/stats/ui_gallery_markdown_editor.rs`.
   - [x] Update CLI user-facing hints to prefer “bundle artifact” wording where supported:
     - `crates/fret-diag/src/diag_simple_dispatch.rs` (`diag trace`)
     - `crates/fret-diag/src/diag_perf_baseline.rs` (`perf-baseline-from-bundles`)
