@@ -106,7 +106,7 @@ This is a sweepable, low-risk refactor as long as callsites do not rely on non-s
 Status:
 
 - Started converting shadcn recipe callsites to `Theme::snapshot()` where only token reads are needed.
-  - Evidence: `ecosystem/fret-ui-shadcn/src/{accordion,alert_dialog,avatar,badge,button,button_group,chart,combobox,command,context_menu,data_grid,data_table,dialog,dropdown_menu,empty,hover_card,kbd,menubar,navigation_menu,native_select,pagination,popover,radio_group,resizable,select,sheet,textarea,tooltip}.rs`, `ecosystem/fret-ui-shadcn/src/extras/{announcement,banner}.rs`
+  - Evidence: `ecosystem/fret-ui-shadcn/src/{accordion,alert_dialog,avatar,badge,button,button_group,chart,checkbox,collapsible,combobox,command,context_menu,data_grid,data_grid_canvas,data_table,data_table_recipes,dialog,dropdown_menu,empty,hover_card,kbd,menubar,navigation_menu,native_select,pagination,popover,radio_group,resizable,select,sheet,textarea,tooltip}.rs`, `ecosystem/fret-ui-shadcn/src/extras/{announcement,banner}.rs`
   - Tracking: `docs/workstreams/shadcn-semantic-drift-sweep-v1-todo.md` (Token read sweep section)
 
 ## References (contracts / docs)

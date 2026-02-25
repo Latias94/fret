@@ -871,7 +871,7 @@ impl<TData> DataTableToolbar<TData> {
                 sync_column_pinning(&mut *cx.app, &self.state, &desired_pinning);
 
                 let selected_count = state_value.row_selection.len();
-                let theme = Theme::global(&*cx.app).clone();
+                let theme = Theme::global(&*cx.app).snapshot();
 
                 let column_label = Arc::clone(&self.column_label);
                 let columns = Arc::clone(&self.columns);
@@ -1152,7 +1152,7 @@ impl<TData> DataTableToolbar<TData> {
                             .into_element(cx)
                         },
                         move |cx| {
-                            let theme = Theme::global(&*cx.app).clone();
+                            let theme = Theme::global(&*cx.app).snapshot();
                             let transparent = fret_core::Color::TRANSPARENT;
 
                             let items: Vec<CommandEntry> = faceted_items_for_content

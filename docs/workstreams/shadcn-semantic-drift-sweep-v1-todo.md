@@ -79,8 +79,8 @@ Note: `repo-ref/` is local state (not committed). See `docs/repo-ref.md`.
 
 - [ ] Sweep `Theme::global(&*cx.app).clone()` callsites in `ecosystem/fret-ui-shadcn/src/`:
   - [x] Convert an initial batch to `Theme::global(&*cx.app).snapshot()` when only token reads are needed:
-    - Evidence: `ecosystem/fret-ui-shadcn/src/{accordion,alert_dialog,avatar,badge,button,button_group,chart,combobox,command,context_menu,data_grid,data_table,dialog,dropdown_menu,empty,hover_card,kbd,menubar,navigation_menu,native_select,pagination,popover,radio_group,resizable,select,sheet,textarea,tooltip}.rs`, `ecosystem/fret-ui-shadcn/src/extras/{announcement,banner}.rs`
-    - Progress note: reduced remaining `Theme::global(...).clone()` callsites from 135 → 42.
+    - Evidence: `ecosystem/fret-ui-shadcn/src/{accordion,alert_dialog,avatar,badge,button,button_group,chart,checkbox,collapsible,combobox,command,context_menu,data_grid,data_grid_canvas,data_table,data_table_recipes,dialog,dropdown_menu,empty,hover_card,kbd,menubar,navigation_menu,native_select,pagination,popover,radio_group,resizable,select,sheet,textarea,tooltip}.rs`, `ecosystem/fret-ui-shadcn/src/extras/{announcement,banner}.rs`
+    - Progress note: reduced remaining `Theme::global(...).clone()` callsites from 135 → 34.
   - [ ] Continue converting remaining callsites (prioritize hot paths: `input`, `select`, `sheet`, `popover`, `dropdown_menu`).
   - [ ] Keep `Theme` where name/metadata APIs are required (but avoid long-lived borrows across
     `cx.*` calls).
