@@ -97,6 +97,21 @@ fn tooltip_content_chrome(theme: &Theme) -> ChromeRefinement {
         .py(Space::N1p5)
 }
 
+fn tooltip_diamond_arrow_options(
+    enabled: bool,
+    arrow_size: Px,
+    arrow_padding: Px,
+) -> (Option<popper::ArrowOptions>, Px) {
+    let (options, protrusion) = popper::diamond_arrow_options(enabled, arrow_size, arrow_padding);
+    if options.is_none() {
+        return (options, protrusion);
+    }
+
+    // new-york-v4 arrow uses `translate-*- [calc(-50%_-_2px)]`, which effectively adds ~2px of
+    // main-axis offset between the trigger and the panel.
+    (options, Px(protrusion.0 + 2.0))
+}
+
 #[derive(Clone)]
 struct TooltipTriggerEventModels {
     has_pointer_move_opened: Model<bool>,
@@ -888,7 +903,7 @@ impl Tooltip {
                 };
 
                 let (arrow_options, arrow_protrusion) =
-                    popper::diamond_arrow_options(arrow, arrow_size, arrow_padding);
+                    tooltip_diamond_arrow_options(arrow, arrow_size, arrow_padding);
                 let direction = direction_prim::use_direction_in_scope(cx, None);
 
                 let layout = popper::popper_content_layout_sized(
@@ -1166,7 +1181,7 @@ impl Tooltip {
                     };
 
                     let (arrow_options, arrow_protrusion) =
-                        popper::diamond_arrow_options(arrow, arrow_size, arrow_padding);
+                        tooltip_diamond_arrow_options(arrow, arrow_size, arrow_padding);
 
                     let placement =
                         popper::PopperContentPlacement::new(direction, side, align, side_offset)
