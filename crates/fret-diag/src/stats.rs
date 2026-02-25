@@ -10,6 +10,7 @@ mod gc_gates;
 mod hover_layout_checks;
 mod interaction_gates;
 mod notify_gates;
+mod notify_gates_streaming;
 mod overlay_gates;
 mod pixels_changed;
 mod retained_vlist_gates;

@@ -253,6 +253,7 @@ Goal: common tooling should keep working even when `bundle.json` is too large to
   - [ ] Second wave (still sidecar-only, but may need additional signals):
     - [x] `--check-overlay-synthesis-min` (synthesized overlay counts).
     - [x] `--check-wheel-scroll*` (streaming; does not materialize full bundle JSON).
+    - [x] `--check-notify-hotspot-file-max` (streaming; does not materialize full bundle JSON).
 
 ## Plan 2 (defer until Plan 1 is solid)
 

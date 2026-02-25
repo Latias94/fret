@@ -271,12 +271,6 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
         stats::check_bundle_for_gc_sweep_liveness(bundle_path.as_path(), warmup_frames)?;
     }
     for (file, max) in &check_notify_hotspot_file_max {
-        ensure_check_supported_in_stats_mode(
-            derived_from_frames_index,
-            "check-notify-hotspot-file-max",
-            &bundle_path,
-            warmup_frames,
-        )?;
         stats::check_bundle_for_notify_hotspot_file_max(
             bundle_path.as_path(),
             file.as_str(),

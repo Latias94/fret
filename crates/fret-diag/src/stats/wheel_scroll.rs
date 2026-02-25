@@ -49,6 +49,7 @@ pub(crate) fn check_bundle_for_wheel_scroll_hit_changes(
 }
 
 #[cfg(test)]
+#[allow(dead_code)]
 pub(crate) fn check_bundle_for_wheel_scroll_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
@@ -171,6 +172,7 @@ pub(crate) fn check_bundle_for_wheel_scroll_json(
 }
 
 #[cfg(test)]
+#[allow(dead_code)]
 pub(crate) fn check_bundle_for_wheel_scroll_hit_changes_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
