@@ -364,14 +364,18 @@ fn input_with_style_and_submit<H: UiHost>(
         chrome.border_color = border_color;
         chrome.border_color_focused = border_color;
         if let Some(mut ring) = chrome.focus_ring.take() {
-            let ring_key = if theme.color_scheme == Some(ColorScheme::Dark) {
-                "destructive/40"
-            } else {
-                "destructive/20"
-            };
             ring.color = theme
-                .color_by_key(ring_key)
-                .or_else(|| theme.color_by_key("destructive/20"))
+                .color_by_key("component.control.invalid_ring")
+                .or_else(|| {
+                    let ring_key = if theme.color_scheme == Some(ColorScheme::Dark) {
+                        "destructive/40"
+                    } else {
+                        "destructive/20"
+                    };
+                    theme
+                        .color_by_key(ring_key)
+                        .or_else(|| theme.color_by_key("destructive/20"))
+                })
                 .unwrap_or(border_color);
             chrome.focus_ring = Some(ring);
         }

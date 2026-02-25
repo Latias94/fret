@@ -366,14 +366,18 @@ impl InputGroup {
 
                 if self.aria_invalid {
                     let border_color = theme.color_token("destructive");
-                    let ring_key = if theme.color_scheme == Some(ColorScheme::Dark) {
-                        "destructive/40"
-                    } else {
-                        "destructive/20"
-                    };
                     ring.color = theme
-                        .color_by_key(ring_key)
-                        .or_else(|| theme.color_by_key("destructive/20"))
+                        .color_by_key("component.control.invalid_ring")
+                        .or_else(|| {
+                            let ring_key = if theme.color_scheme == Some(ColorScheme::Dark) {
+                                "destructive/40"
+                            } else {
+                                "destructive/20"
+                            };
+                            theme
+                                .color_by_key(ring_key)
+                                .or_else(|| theme.color_by_key("destructive/20"))
+                        })
                         .unwrap_or(border_color);
                     (border_color, None, Some(ring))
                 } else {

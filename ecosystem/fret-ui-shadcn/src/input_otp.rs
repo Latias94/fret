@@ -43,14 +43,18 @@ fn otp_active_ring_color(theme: &ThemeSnapshot) -> Color {
 
 fn otp_invalid_ring_color(theme: &ThemeSnapshot) -> Color {
     let border_color = theme.color_token("destructive");
-    let ring_key = if theme.color_scheme == Some(ColorScheme::Dark) {
-        "destructive/40"
-    } else {
-        "destructive/20"
-    };
     theme
-        .color_by_key(ring_key)
-        .or_else(|| theme.color_by_key("destructive/20"))
+        .color_by_key("component.control.invalid_ring")
+        .or_else(|| {
+            let ring_key = if theme.color_scheme == Some(ColorScheme::Dark) {
+                "destructive/40"
+            } else {
+                "destructive/20"
+            };
+            theme
+                .color_by_key(ring_key)
+                .or_else(|| theme.color_by_key("destructive/20"))
+        })
         .unwrap_or(border_color)
 }
 

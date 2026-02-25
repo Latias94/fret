@@ -297,11 +297,16 @@ fn tabs_shared_indicator<H: UiHost>(
             // shadcn new-york-v4 `TabsTrigger` defaults:
             // - light: `text-foreground`
             // - dark: `text-muted-foreground`
-            let fg_inactive = if theme.color_scheme == Some(ColorScheme::Dark) {
-                ColorRef::Color(tabs_list_fg_muted(&theme))
-            } else {
-                ColorRef::Color(theme.color_token("foreground"))
-            };
+            let fg_inactive = theme
+                .color_by_key("component.tabs.trigger.fg_inactive")
+                .map(ColorRef::Color)
+                .unwrap_or_else(|| {
+                    if theme.color_scheme == Some(ColorScheme::Dark) {
+                        ColorRef::Color(tabs_list_fg_muted(&theme))
+                    } else {
+                        ColorRef::Color(theme.color_token("foreground"))
+                    }
+                });
             let fg_active = ColorRef::Color(theme.color_token("foreground"));
             let fg_disabled = ColorRef::Color(alpha_mul(theme.color_token("foreground"), 0.5));
 
@@ -1591,12 +1596,16 @@ impl Tabs {
                                 // shadcn new-york-v4 `TabsTrigger` defaults:
                                 // - light: `text-foreground`
                                 // - dark: `text-muted-foreground`
-                                let fg_inactive = if theme.color_scheme == Some(ColorScheme::Dark)
-                                {
-                                    ColorRef::Color(tabs_list_fg_muted(&theme))
-                                } else {
-                                    ColorRef::Color(theme.color_token("foreground"))
-                                };
+                                let fg_inactive = theme
+                                    .color_by_key("component.tabs.trigger.fg_inactive")
+                                    .map(ColorRef::Color)
+                                    .unwrap_or_else(|| {
+                                        if theme.color_scheme == Some(ColorScheme::Dark) {
+                                            ColorRef::Color(tabs_list_fg_muted(&theme))
+                                        } else {
+                                            ColorRef::Color(theme.color_token("foreground"))
+                                        }
+                                    });
                                 let fg_active = ColorRef::Color(theme.color_token("foreground"));
                                 let fg_disabled =
                                     ColorRef::Color(alpha_mul(theme.color_token("foreground"), 0.5));

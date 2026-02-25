@@ -415,14 +415,19 @@ impl RadioGroup {
                         let radius = Px((icon.0 * 0.5).max(0.0));
                         let mut ring_style = decl_style::focus_ring(&theme, radius);
                         if aria_invalid {
-                            let ring_key = if theme.color_scheme == Some(ColorScheme::Dark) {
-                                "destructive/40"
-                            } else {
-                                "destructive/20"
-                            };
                             ring_style.color = theme
-                                .color_by_key(ring_key)
-                                .or_else(|| theme.color_by_key("destructive/20"))
+                                .color_by_key("component.control.invalid_ring")
+                                .or_else(|| {
+                                    let ring_key = if theme.color_scheme == Some(ColorScheme::Dark)
+                                    {
+                                        "destructive/40"
+                                    } else {
+                                        "destructive/20"
+                                    };
+                                    theme
+                                        .color_by_key(ring_key)
+                                        .or_else(|| theme.color_by_key("destructive/20"))
+                                })
                                 .unwrap_or_else(|| theme.color_token("destructive"));
                         }
                         let a11y_label = item.label;
@@ -668,14 +673,21 @@ impl RadioGroup {
                                         match item_variant {
                                             RadioGroupItemVariant::Default => vec![item_content],
                                             RadioGroupItemVariant::ChoiceCard => {
-                                                let bg_alpha = if theme.color_scheme
-                                                    == Some(ColorScheme::Dark)
-                                                {
-                                                    0.10
-                                                } else {
-                                                    0.05
-                                                };
                                                 let primary = radio_indicator(&theme);
+                                                let checked_bg = theme
+                                                    .color_by_key(
+                                                        "component.radio_group.choice_card.checked_bg",
+                                                    )
+                                                    .unwrap_or_else(|| {
+                                                        let bg_alpha = if theme.color_scheme
+                                                            == Some(ColorScheme::Dark)
+                                                        {
+                                                            0.10
+                                                        } else {
+                                                            0.05
+                                                        };
+                                                        alpha_mul(primary, bg_alpha)
+                                                    });
                                                 let border = radio_border(&theme);
 
                                                 let mut chrome = ChromeRefinement::default()
@@ -685,9 +697,7 @@ impl RadioGroup {
                                                     .border_color(ColorRef::Color(border));
                                                 if checked {
                                                     chrome = chrome
-                                                        .bg(ColorRef::Color(alpha_mul(
-                                                            primary, bg_alpha,
-                                                        )))
+                                                        .bg(ColorRef::Color(checked_bg))
                                                         .border_color(ColorRef::Color(primary));
                                                 }
 
