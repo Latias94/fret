@@ -62,6 +62,7 @@ P1/P2 — Diagnostics:
   - budget zero, insufficient budget, target exhaustion (per effect family).
   - optional: include “applied downsample scale” summaries for blur/drop shadow.
   Done (initial): `RenderPerfSnapshot.effect_degradations` with per-family `requested/applied` + counters.
+  Done (initial): `RenderPerfSnapshot.effect_blur_quality` with downsample/iteration summaries for blur/shadow.
   Anchors: `crates/fret-render-wgpu/src/renderer/types.rs`,
   `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs`,
   `crates/fret-render-wgpu/src/renderer/render_scene/plan_reporting.rs`.

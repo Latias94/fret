@@ -229,6 +229,73 @@ impl EffectDegradationSnapshot {
 }
 
 #[derive(Debug, Default, Clone, Copy)]
+pub struct BlurQualityCounters {
+    pub applied: u64,
+    pub applied_downsample_1: u64,
+    pub applied_downsample_2: u64,
+    pub applied_downsample_4: u64,
+    pub applied_iterations_sum: u64,
+    pub applied_iterations_max: u64,
+    /// Counts cases where the applied downsample scale differs from the desired scale.
+    pub quality_degraded_downsample: u64,
+}
+
+impl BlurQualityCounters {
+    pub(crate) fn record_applied(&mut self, downsample_scale: u32, iterations: u32, desired: u32) {
+        self.applied = self.applied.saturating_add(1);
+        match downsample_scale {
+            1 => self.applied_downsample_1 = self.applied_downsample_1.saturating_add(1),
+            2 => self.applied_downsample_2 = self.applied_downsample_2.saturating_add(1),
+            4 => self.applied_downsample_4 = self.applied_downsample_4.saturating_add(1),
+            _ => {}
+        }
+        self.applied_iterations_sum = self
+            .applied_iterations_sum
+            .saturating_add(u64::from(iterations));
+        self.applied_iterations_max = self.applied_iterations_max.max(u64::from(iterations));
+        if downsample_scale != desired {
+            self.quality_degraded_downsample = self.quality_degraded_downsample.saturating_add(1);
+        }
+    }
+
+    pub(crate) fn saturating_add_assign(&mut self, other: Self) {
+        self.applied = self.applied.saturating_add(other.applied);
+        self.applied_downsample_1 = self
+            .applied_downsample_1
+            .saturating_add(other.applied_downsample_1);
+        self.applied_downsample_2 = self
+            .applied_downsample_2
+            .saturating_add(other.applied_downsample_2);
+        self.applied_downsample_4 = self
+            .applied_downsample_4
+            .saturating_add(other.applied_downsample_4);
+        self.applied_iterations_sum = self
+            .applied_iterations_sum
+            .saturating_add(other.applied_iterations_sum);
+        self.applied_iterations_max = self
+            .applied_iterations_max
+            .max(other.applied_iterations_max);
+        self.quality_degraded_downsample = self
+            .quality_degraded_downsample
+            .saturating_add(other.quality_degraded_downsample);
+    }
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+pub struct BlurQualitySnapshot {
+    pub gaussian_blur: BlurQualityCounters,
+    pub drop_shadow: BlurQualityCounters,
+}
+
+impl BlurQualitySnapshot {
+    pub(crate) fn saturating_add_assign(&mut self, other: Self) {
+        self.gaussian_blur
+            .saturating_add_assign(other.gaussian_blur);
+        self.drop_shadow.saturating_add_assign(other.drop_shadow);
+    }
+}
+
+#[derive(Debug, Default, Clone, Copy)]
 pub struct RenderPerfSnapshot {
     pub frames: u64,
 
@@ -317,6 +384,7 @@ pub struct RenderPerfSnapshot {
     pub render_plan_degradations_clip_path_disabled: u64,
     pub render_plan_degradations_composite_group_blend_to_over: u64,
     pub effect_degradations: EffectDegradationSnapshot,
+    pub effect_blur_quality: BlurQualitySnapshot,
 
     pub clip_path_mask_cache_bytes_live: u64,
     pub clip_path_mask_cache_entries_live: u64,
@@ -450,6 +518,7 @@ pub(super) struct RenderPerfStats {
     pub(super) render_plan_degradations_clip_path_disabled: u64,
     pub(super) render_plan_degradations_composite_group_blend_to_over: u64,
     pub(super) effect_degradations: EffectDegradationSnapshot,
+    pub(super) effect_blur_quality: BlurQualitySnapshot,
 
     pub(super) clip_path_mask_cache_bytes_live: u64,
     pub(super) clip_path_mask_cache_entries_live: u64,

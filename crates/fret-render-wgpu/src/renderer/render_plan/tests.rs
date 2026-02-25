@@ -22,6 +22,7 @@ fn apply_single_step_effect_with_scissor(
 ) -> Vec<RenderPlanPass> {
     let mut passes: Vec<RenderPlanPass> = Vec::new();
     let mut degradations = super::super::EffectDegradationSnapshot::default();
+    let mut blur_quality = super::super::BlurQualitySnapshot::default();
     effects::apply_chain_in_place(
         &mut passes,
         &[],
@@ -33,6 +34,7 @@ fn apply_single_step_effect_with_scissor(
         None,
         &[],
         &mut degradations,
+        &mut blur_quality,
         effects::EffectCompileCtx {
             viewport_size: (100, 100),
             format: wgpu::TextureFormat::Bgra8UnormSrgb,

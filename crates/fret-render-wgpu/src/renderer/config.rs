@@ -138,6 +138,7 @@ impl Renderer {
                 .perf
                 .render_plan_degradations_composite_group_blend_to_over,
             effect_degradations: self.perf.effect_degradations,
+            effect_blur_quality: self.perf.effect_blur_quality,
             clip_path_mask_cache_bytes_live: self.perf.clip_path_mask_cache_bytes_live,
             clip_path_mask_cache_entries_live: self.perf.clip_path_mask_cache_entries_live,
             clip_path_mask_cache_hits: self.perf.clip_path_mask_cache_hits,

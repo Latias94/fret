@@ -5,9 +5,9 @@
 
 use super::render_plan_effects as effects;
 use super::{
-    EffectDegradationSnapshot, EffectMarkerKind, OrderedDraw, RenderPlanDegradation,
-    RenderPlanDegradationKind, RenderPlanDegradationReason, RenderPlanPass, SceneDrawRangePass,
-    SceneEncoding, ScissorRect,
+    BlurQualitySnapshot, EffectDegradationSnapshot, EffectMarkerKind, OrderedDraw,
+    RenderPlanDegradation, RenderPlanDegradationKind, RenderPlanDegradationReason, RenderPlanPass,
+    SceneDrawRangePass, SceneEncoding, ScissorRect,
 };
 use crate::renderer::estimate_texture_bytes;
 use slotmap::Key;
@@ -216,6 +216,7 @@ fn compile_for_scene_inner(
     let mut passes: Vec<RenderPlanPass> = Vec::new();
     let mut degradations: Vec<RenderPlanDegradation> = Vec::new();
     let mut effect_degradations = EffectDegradationSnapshot::default();
+    let mut effect_blur_quality = BlurQualitySnapshot::default();
     let mut draw_scopes: Vec<DrawScope> = vec![DrawScope {
         target: scene_target,
         origin: (0, 0),
@@ -430,6 +431,7 @@ fn compile_for_scene_inner(
                 mask_uniform_index,
                 unavailable_mask_targets,
                 &mut effect_degradations,
+                &mut effect_blur_quality,
                 effects::EffectCompileCtx {
                     viewport_size: ctx_viewport_size,
                     format,
@@ -1084,5 +1086,6 @@ fn compile_for_scene_inner(
         format,
         degradations,
         effect_degradations,
+        effect_blur_quality,
     )
 }

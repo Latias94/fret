@@ -50,6 +50,7 @@ pub(super) fn apply_chain_in_place(
     mask_uniform_index: Option<u32>,
     unavailable_mask_targets: &[PlanTarget],
     effect_degradations: &mut super::EffectDegradationSnapshot,
+    effect_blur_quality: &mut super::BlurQualitySnapshot,
     ctx: EffectCompileCtx,
 ) {
     if srcdst == PlanTarget::Output || scissor.w == 0 || scissor.h == 0 {
@@ -137,6 +138,8 @@ pub(super) fn apply_chain_in_place(
                     .saturating_add(1);
 
                 let requested_downsample = if downsample >= 4 { 4 } else { 2 };
+                let desired_downsample =
+                    effect_blur_desired_downsample(requested_downsample, quality);
                 if scratch_targets.len() >= 2 {
                     let Some(downsample_scale) = choose_effect_blur_downsample_scale(
                         ctx.viewport_size,
@@ -165,6 +168,11 @@ pub(super) fn apply_chain_in_place(
                         blur_iterations_for_radius(radius_px, downsample_scale, quality);
                     effect_degradations.gaussian_blur.applied =
                         effect_degradations.gaussian_blur.applied.saturating_add(1);
+                    effect_blur_quality.gaussian_blur.record_applied(
+                        downsample_scale,
+                        iterations,
+                        desired_downsample,
+                    );
                     append_scissored_blur_in_place_two_scratch(
                         passes,
                         srcdst,
@@ -210,6 +218,9 @@ pub(super) fn apply_chain_in_place(
                 let iterations = blur_iterations_for_radius(radius_px, 1, quality);
                 effect_degradations.gaussian_blur.applied =
                     effect_degradations.gaussian_blur.applied.saturating_add(1);
+                effect_blur_quality
+                    .gaussian_blur
+                    .record_applied(1, iterations, desired_downsample);
                 append_scissored_blur_in_place_single_scratch(
                     passes,
                     srcdst,
@@ -430,6 +441,11 @@ pub(super) fn apply_chain_in_place(
                 } else {
                     1
                 };
+                let desired_downsample = if requested_downsample <= 1 {
+                    1
+                } else {
+                    effect_blur_desired_downsample(requested_downsample, quality)
+                };
                 let downsample_scale = if requested_downsample <= 1 {
                     1
                 } else {
@@ -442,9 +458,15 @@ pub(super) fn apply_chain_in_place(
                     )
                     .unwrap_or(1)
                 };
+                let iterations =
+                    blur_iterations_for_radius(blur_radius_px, downsample_scale, quality);
+                effect_blur_quality.drop_shadow.record_applied(
+                    downsample_scale,
+                    iterations,
+                    desired_downsample,
+                );
 
                 if downsample_scale <= 1 {
-                    let iterations = blur_iterations_for_radius(blur_radius_px, 1, quality);
                     passes.push(RenderPlanPass::Blur(BlurPass {
                         src: scratch_original,
                         dst: srcdst,
@@ -495,8 +517,6 @@ pub(super) fn apply_chain_in_place(
                 } else {
                     let downsample_scale = if downsample_scale >= 4 { 4 } else { 2 };
                     let blur_size = downsampled_size(ctx.viewport_size, downsample_scale);
-                    let iterations =
-                        blur_iterations_for_radius(blur_radius_px, downsample_scale, quality);
 
                     let down_scissor =
                         map_scissor_downsample_nearest(Some(scissor), downsample_scale, blur_size);
@@ -1217,6 +1237,7 @@ mod tests {
 
         let mut passes_small = Vec::new();
         let mut degr_small = super::super::EffectDegradationSnapshot::default();
+        let mut blur_small = super::super::BlurQualitySnapshot::default();
         apply_chain_in_place(
             &mut passes_small,
             &[],
@@ -1231,11 +1252,13 @@ mod tests {
             None,
             &[],
             &mut degr_small,
+            &mut blur_small,
             ctx,
         );
 
         let mut passes_large = Vec::new();
         let mut degr_large = super::super::EffectDegradationSnapshot::default();
+        let mut blur_large = super::super::BlurQualitySnapshot::default();
         apply_chain_in_place(
             &mut passes_large,
             &[],
@@ -1250,6 +1273,7 @@ mod tests {
             None,
             &[],
             &mut degr_large,
+            &mut blur_large,
             ctx,
         );
 
@@ -1272,6 +1296,7 @@ mod tests {
 
         let mut passes = Vec::new();
         let mut degradations = super::super::EffectDegradationSnapshot::default();
+        let mut blur_quality = super::super::BlurQualitySnapshot::default();
         apply_chain_in_place(
             &mut passes,
             &[],
@@ -1285,6 +1310,7 @@ mod tests {
             None,
             &[],
             &mut degradations,
+            &mut blur_quality,
             ctx,
         );
 
@@ -1309,6 +1335,7 @@ mod tests {
 
         let mut passes = Vec::new();
         let mut degradations = super::super::EffectDegradationSnapshot::default();
+        let mut blur_quality = super::super::BlurQualitySnapshot::default();
         apply_chain_in_place(
             &mut passes,
             &[],
@@ -1326,6 +1353,7 @@ mod tests {
             None,
             &[],
             &mut degradations,
+            &mut blur_quality,
             ctx,
         );
 
@@ -1348,6 +1376,7 @@ mod tests {
 
         let mut passes = Vec::new();
         let mut degradations = super::super::EffectDegradationSnapshot::default();
+        let mut blur_quality = super::super::BlurQualitySnapshot::default();
         apply_chain_in_place(
             &mut passes,
             &[],
@@ -1362,6 +1391,7 @@ mod tests {
             None,
             &[],
             &mut degradations,
+            &mut blur_quality,
             ctx,
         );
 
@@ -1383,6 +1413,7 @@ mod tests {
 
         let mut passes = Vec::new();
         let mut degradations = super::super::EffectDegradationSnapshot::default();
+        let mut blur_quality = super::super::BlurQualitySnapshot::default();
         apply_chain_in_place(
             &mut passes,
             &[
@@ -1402,6 +1433,7 @@ mod tests {
             None,
             &[],
             &mut degradations,
+            &mut blur_quality,
             ctx,
         );
 
@@ -1409,6 +1441,53 @@ mod tests {
         assert_eq!(degradations.color_adjust.applied, 0);
         assert_eq!(degradations.color_adjust.degraded_target_exhausted, 1);
         assert!(passes.is_empty());
+    }
+
+    #[test]
+    fn gaussian_blur_quality_records_applied_downsample_scale() {
+        let viewport_size = (256, 256);
+        let format = wgpu::TextureFormat::Rgba8Unorm;
+        let full = estimate_texture_bytes(viewport_size, format, 1);
+        let half = estimate_texture_bytes(downsampled_size(viewport_size, 2), format, 1);
+        let quarter = estimate_texture_bytes(downsampled_size(viewport_size, 4), format, 1);
+        let required_half = full.saturating_add(half.saturating_mul(2));
+        let required_quarter = full.saturating_add(quarter.saturating_mul(2));
+        let budget_bytes = required_quarter.min(required_half.saturating_sub(1));
+
+        let ctx = EffectCompileCtx {
+            viewport_size,
+            format,
+            intermediate_budget_bytes: budget_bytes,
+            clear: wgpu::Color::TRANSPARENT,
+            scale_factor: 1.0,
+        };
+        let scissor = ScissorRect::full(viewport_size.0, viewport_size.1);
+
+        let mut passes = Vec::new();
+        let mut degradations = super::super::EffectDegradationSnapshot::default();
+        let mut blur_quality = super::super::BlurQualitySnapshot::default();
+        apply_chain_in_place(
+            &mut passes,
+            &[],
+            PlanTarget::Intermediate0,
+            fret_core::EffectMode::FilterContent,
+            fret_core::EffectChain::from_steps(&[fret_core::EffectStep::GaussianBlur {
+                radius_px: fret_core::Px(16.0),
+                downsample: 2,
+            }]),
+            fret_core::EffectQuality::Medium,
+            scissor,
+            None,
+            &[],
+            &mut degradations,
+            &mut blur_quality,
+            ctx,
+        );
+
+        assert_eq!(blur_quality.gaussian_blur.applied, 1);
+        assert_eq!(blur_quality.gaussian_blur.applied_downsample_4, 1);
+        assert_eq!(blur_quality.gaussian_blur.quality_degraded_downsample, 1);
+        assert!(passes.iter().any(|p| matches!(p, RenderPlanPass::Blur(_))));
     }
 }
 
