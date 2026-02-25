@@ -321,6 +321,7 @@ pub(crate) fn check_bundle_for_retained_vlist_keep_alive_budget_json(
     let evidence = serde_json::json!({
         "schema_version": 1,
         "kind": "retained_vlist_keep_alive_budget",
+        "bundle_artifact": bundle_path.display().to_string(),
         "bundle_json": bundle_path.display().to_string(),
         "evidence_dir": evidence_dir.display().to_string(),
         "evidence_path": evidence_path.display().to_string(),

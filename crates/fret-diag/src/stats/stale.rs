@@ -146,6 +146,7 @@ pub(crate) fn check_bundle_for_semantics_changed_repainted(
         let payload = serde_json::json!({
             "schema_version": 1,
             "kind": "semantics_changed_repainted",
+            "bundle_artifact": bundle_path.display().to_string(),
             "bundle_json": bundle_path.display().to_string(),
             "warmup_frames": warmup_frames,
             "findings": scan.findings,
@@ -456,6 +457,7 @@ pub(crate) fn check_bundle_for_idle_no_paint_min(
         "schema_version": 1,
         "generated_unix_ms": now_unix_ms(),
         "kind": "idle_no_paint",
+        "bundle_artifact": bundle_path.display().to_string(),
         "bundle_json": bundle_path.display().to_string(),
         "out_dir": out_dir.display().to_string(),
         "warmup_frames": warmup_frames,

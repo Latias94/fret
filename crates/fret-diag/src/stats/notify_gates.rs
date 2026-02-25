@@ -116,6 +116,7 @@ pub(crate) fn check_bundle_for_notify_hotspot_file_max_json(
         "schema_version": 1,
         "generated_unix_ms": now_unix_ms(),
         "kind": "notify_hotspots",
+        "bundle_artifact": bundle_path.display().to_string(),
         "bundle_json": bundle_path.display().to_string(),
         "evidence_dir": evidence_dir.display().to_string(),
         "evidence_path": evidence_path.display().to_string(),

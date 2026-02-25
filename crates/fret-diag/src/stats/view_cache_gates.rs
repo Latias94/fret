@@ -281,6 +281,7 @@ pub(crate) fn check_bundle_for_view_cache_reuse_stable_min(
         "schema_version": 1,
         "generated_unix_ms": now_unix_ms(),
         "kind": "view_cache_reuse_stable",
+        "bundle_artifact": bundle_path.display().to_string(),
         "bundle_json": bundle_path.display().to_string(),
         "out_dir": out_dir.display().to_string(),
         "warmup_frames": warmup_frames,
