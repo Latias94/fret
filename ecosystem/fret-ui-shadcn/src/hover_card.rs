@@ -1278,7 +1278,8 @@ mod tests {
 
         let content_id = content_id_out.get().expect("content id");
         let content_bounds =
-            fret_ui::elements::bounds_for_element(&mut app, window, content_id).expect("bounds");
+            fret_ui::elements::current_bounds_for_element(&mut app, window, content_id)
+                .expect("bounds");
         assert_eq!(content_bounds.size.width, Px(256.0));
     }
 
@@ -1336,7 +1337,8 @@ mod tests {
 
         let content_id = content_id_out.get().expect("content id");
         let content_bounds =
-            fret_ui::elements::bounds_for_element(&mut app, window, content_id).expect("bounds");
+            fret_ui::elements::current_bounds_for_element(&mut app, window, content_id)
+                .expect("bounds");
         assert_eq!(content_bounds.size.width, Px(200.0));
     }
 

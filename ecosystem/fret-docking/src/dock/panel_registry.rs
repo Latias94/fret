@@ -106,7 +106,7 @@ fn render_missing_panel<H: UiHost + 'static>(
         vec![cx.container(
             fret_ui::element::ContainerProps {
                 layout: fill_layout(),
-                padding: Edges::all(padding),
+                padding: Edges::all(padding).into(),
                 background: Some(background),
                 ..Default::default()
             },

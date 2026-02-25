@@ -584,6 +584,10 @@ impl OverlayController {
         window_overlays::begin_frame(app, window);
     }
 
+    pub fn last_known_window_bounds<H: UiHost>(app: &mut H, window: AppWindowId) -> Option<Rect> {
+        window_overlays::last_known_window_bounds_for_window(app, window)
+    }
+
     pub fn popover_root_name(id: GlobalElementId) -> String {
         window_overlays::popover_root_name(id)
     }

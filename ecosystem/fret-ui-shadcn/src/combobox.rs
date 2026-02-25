@@ -231,7 +231,7 @@ impl Combobox {
             items: Vec::new(),
             groups: Vec::new(),
             group_separators: false,
-            auto_highlight: false,
+            auto_highlight: true,
             test_id_prefix: None,
             trigger_test_id: None,
             width: None,

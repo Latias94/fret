@@ -177,6 +177,11 @@ impl TopAppBarScrollBehavior {
                         let mut state = state_rc.borrow_mut();
                         state.last_offset_y = Some(initial_offset_y);
                         state.idle_frames = 0;
+                        // When the scroll surface becomes non-scrollable (content fits), ensure we
+                        // return to a stable, fully-expanded baseline. Otherwise, resuming
+                        // scrolling can "double apply" the next delta against a stale
+                        // `height_offset`.
+                        state.height_offset = 0.0;
                         let tick = state.tick;
                         let height_offset = state.height_offset;
                         state.settle.reset(tick, height_offset);

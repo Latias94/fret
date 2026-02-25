@@ -137,8 +137,8 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut ExternalVideoImportsState) ->
     let mut row = FlexProps {
         layout: fill,
         direction: fret_core::Axis::Horizontal,
-        gap: fret_core::Px(12.0),
-        padding: fret_core::Edges::all(fret_core::Px(16.0)),
+        gap: fret_ui::element::SpacingLength::Px(fret_core::Px(12.0)),
+        padding: fret_core::Edges::all(fret_core::Px(16.0)).into(),
         justify: MainAlign::Start,
         align: CrossAlign::Start,
         wrap: false,

@@ -13,7 +13,7 @@ use fret_runtime::CommandId;
 use fret_runtime::Model;
 use fret_ui::declarative::RenderRootContext;
 use fret_ui::element::{AnyElement, Elements};
-use fret_ui::elements::{ElementContext, GlobalElementId, bounds_for_element};
+use fret_ui::elements::{ElementContext, GlobalElementId, peek_node_for_element};
 use fret_ui::{UiHost, retained_bridge::*};
 use uuid::Uuid;
 
@@ -535,19 +535,23 @@ where
             if node.size.is_some() {
                 continue;
             }
-            if let Some(bounds) = bounds_for_element(cx.app, window, *element) {
-                let (inputs, outputs) = node_ports(&graph_snapshot, *node_id);
-                let min = node_size_default_px(inputs.len(), outputs.len(), &self.style);
-                let measured_px = (bounds.size.width.0, bounds.size.height.0);
-                let prev_px = self.measured.node_size_px(*node_id).unwrap_or(min);
-                publish.push((
-                    *node_id,
-                    (
-                        measured_px.0.max(min.0).max(prev_px.0),
-                        measured_px.1.max(min.1).max(prev_px.1),
-                    ),
-                ));
-            }
+            let Some(ui_node) = peek_node_for_element(cx.app, window, *element) else {
+                continue;
+            };
+            let Some(bounds) = cx.tree.debug_node_bounds(ui_node) else {
+                continue;
+            };
+            let (inputs, outputs) = node_ports(&graph_snapshot, *node_id);
+            let min = node_size_default_px(inputs.len(), outputs.len(), &self.style);
+            let measured_px = (bounds.size.width.0, bounds.size.height.0);
+            let prev_px = self.measured.node_size_px(*node_id).unwrap_or(min);
+            publish.push((
+                *node_id,
+                (
+                    measured_px.0.max(min.0).max(prev_px.0),
+                    measured_px.1.max(min.1).max(prev_px.1),
+                ),
+            ));
         }
 
         let prev_published = self.last_published_nodes.clone();

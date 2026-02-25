@@ -819,7 +819,7 @@ fn with_padding<'a, H: fret_ui::UiHost>(
 ) -> AnyElement {
     cx.container(
         ContainerProps {
-            padding: Edges::all(padding),
+            padding: Edges::all(padding).into(),
             ..Default::default()
         },
         move |_cx| vec![child],
@@ -5941,7 +5941,7 @@ fn tooltip_is_click_through_and_does_not_block_underlay_activation_across_scheme
 
                         let mut props = fret_ui::element::FlexProps::default();
                         props.direction = fret_core::Axis::Vertical;
-                        props.gap = Px(24.0);
+                        props.gap = fret_ui::element::SpacingLength::Px(Px(24.0));
                         vec![cx.flex(props, move |_cx| vec![tooltip, underlay])]
                     })
             })
@@ -6157,8 +6157,7 @@ fn material3_headless_controls_suite_goldens_v1() {
                 fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
                     let mut props = FlexProps::default();
                     props.direction = fret_core::Axis::Vertical;
-                    props.gap = Px(16.0);
-
+                    props.gap = fret_ui::element::SpacingLength::Px(Px(16.0));
                     let content = cx.flex(props, |cx| {
                         let theme = Theme::global(&*cx.app).clone();
                         let body_style = theme
@@ -6172,7 +6171,7 @@ fn material3_headless_controls_suite_goldens_v1() {
                                 let mut container = ContainerProps::default();
                                 container.layout.size.width = Length::Px(Px(360.0));
                                 container.layout.size.height = Length::Px(Px(72.0));
-                                container.padding = Edges::all(Px(12.0));
+                                container.padding = Edges::all(Px(12.0)).into();
 
                                 let mut text = TextProps::new(Arc::<str>::from(label));
                                 text.style = Some(body_style.clone());
@@ -6365,8 +6364,7 @@ fn material3_headless_controls_suite_goldens_v1() {
                         |cx| {
                             let mut props = FlexProps::default();
                             props.direction = fret_core::Axis::Vertical;
-                            props.gap = Px(16.0);
-
+                            props.gap = fret_ui::element::SpacingLength::Px(Px(16.0));
                             let content = cx.flex(props, |cx| {
                                 vec![
                                     Select::new(select_empty.clone())
@@ -6606,8 +6604,7 @@ fn material3_headless_fab_suite_goldens_v1() {
                         |cx| {
                             let mut props = FlexProps::default();
                             props.direction = fret_core::Axis::Vertical;
-                            props.gap = Px(16.0);
-
+                            props.gap = fret_ui::element::SpacingLength::Px(Px(16.0));
                             let content = cx.flex(props, |cx| {
                                 let row =
                                     |cx: &mut fret_ui::elements::ElementContext<'_, TestHost>,
@@ -6615,7 +6612,7 @@ fn material3_headless_fab_suite_goldens_v1() {
                                      id_prefix: &'static str| {
                                         let mut props = FlexProps::default();
                                         props.direction = fret_core::Axis::Horizontal;
-                                        props.gap = Px(16.0);
+                                        props.gap = fret_ui::element::SpacingLength::Px(Px(16.0));
                                         cx.flex(props, move |cx| {
                                             vec![
                                                 Fab::new(fret_icons::ids::ui::SEARCH)
@@ -6831,8 +6828,7 @@ fn material3_headless_segmented_button_suite_goldens_v1() {
                         |cx| {
                             let mut props = FlexProps::default();
                             props.direction = fret_core::Axis::Vertical;
-                            props.gap = Px(16.0);
-
+                            props.gap = fret_ui::element::SpacingLength::Px(Px(16.0));
                             let content = cx.flex(props, |cx| {
                                 vec![
                                     SegmentedButtonSet::single(single_value.clone())
@@ -7049,7 +7045,7 @@ fn segmented_button_semantics_roles_match_compose_baseline() {
 
             let mut props = FlexProps::default();
             props.direction = fret_core::Axis::Vertical;
-            props.gap = Px(16.0);
+            props.gap = fret_ui::element::SpacingLength::Px(Px(16.0));
             let content = cx.flex(props, |_cx| vec![single, multi]);
             vec![with_padding(cx, Px(24.0), content)]
         })
@@ -7178,7 +7174,7 @@ fn material3_headless_badge_suite_goldens_v1() {
 
                         let mut props = FlexProps::default();
                         props.direction = fret_core::Axis::Horizontal;
-                        props.gap = Px(24.0);
+                        props.gap = fret_ui::element::SpacingLength::Px(Px(24.0));
                         props.align = fret_ui::element::CrossAlign::Center;
                         props.wrap = false;
 
@@ -8023,12 +8019,11 @@ fn material3_headless_divider_suite_goldens_v1() {
                 fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
                     let mut props = FlexProps::default();
                     props.direction = fret_core::Axis::Vertical;
-                    props.gap = Px(16.0);
-
+                    props.gap = fret_ui::element::SpacingLength::Px(Px(16.0));
                     let content = cx.flex(props, |cx| {
                         let mut row = FlexProps::default();
                         row.direction = fret_core::Axis::Horizontal;
-                        row.gap = Px(12.0);
+                        row.gap = fret_ui::element::SpacingLength::Px(Px(12.0));
                         row.layout.size.width = fret_ui::element::Length::Px(Px(240.0));
                         row.layout.size.height = fret_ui::element::Length::Px(Px(32.0));
 
@@ -8148,8 +8143,7 @@ fn material3_headless_list_suite_goldens_v1() {
                         |cx| {
                             let mut props = FlexProps::default();
                             props.direction = fret_core::Axis::Vertical;
-                            props.gap = Px(12.0);
-
+                            props.gap = fret_ui::element::SpacingLength::Px(Px(12.0));
                             let list = List::new(selected.clone())
                                 .test_id("list")
                                 .items(vec![
@@ -8330,8 +8324,7 @@ fn material3_headless_progress_indicator_suite_goldens_v1() {
                         |cx| {
                             let mut props = FlexProps::default();
                             props.direction = fret_core::Axis::Vertical;
-                            props.gap = Px(16.0);
-
+                            props.gap = fret_ui::element::SpacingLength::Px(Px(16.0));
                             let content = cx.flex(props, |cx| {
                                 vec![
                                     LinearProgressIndicator::new(progress_0.clone())
@@ -8346,7 +8339,7 @@ fn material3_headless_progress_indicator_suite_goldens_v1() {
                                     {
                                         let mut row = FlexProps::default();
                                         row.direction = fret_core::Axis::Horizontal;
-                                        row.gap = Px(16.0);
+                                        row.gap = fret_ui::element::SpacingLength::Px(Px(16.0));
                                         cx.flex(row, |cx| {
                                             vec![
                                                 CircularProgressIndicator::new(progress_0.clone())
@@ -8383,8 +8376,7 @@ fn material3_headless_progress_indicator_suite_goldens_v1() {
                         |cx| {
                             let mut props = FlexProps::default();
                             props.direction = fret_core::Axis::Vertical;
-                            props.gap = Px(16.0);
-
+                            props.gap = fret_ui::element::SpacingLength::Px(Px(16.0));
                             let content = cx.flex(props, |cx| {
                                 vec![
                                     LinearProgressIndicator::indeterminate()
@@ -8413,8 +8405,7 @@ fn material3_headless_progress_indicator_suite_goldens_v1() {
                         |cx| {
                             let mut props = FlexProps::default();
                             props.direction = fret_core::Axis::Vertical;
-                            props.gap = Px(16.0);
-
+                            props.gap = fret_ui::element::SpacingLength::Px(Px(16.0));
                             let content = cx.flex(props, |cx| {
                                 vec![
                                     LinearProgressIndicator::indeterminate()
@@ -8588,8 +8579,7 @@ fn material3_headless_slider_suite_goldens_v1() {
                         |cx| {
                             let mut props = FlexProps::default();
                             props.direction = fret_core::Axis::Vertical;
-                            props.gap = Px(24.0);
-
+                            props.gap = fret_ui::element::SpacingLength::Px(Px(24.0));
                             let content = cx.flex(props, |cx| {
                                 let slider_step = if case_name == "with_tick_marks" {
                                     0.1
@@ -9107,7 +9097,7 @@ fn material3_headless_overlays_suite_goldens_v1() {
                             let mut props = FlexProps::default();
                             props.layout.size.width = Length::Fill;
                             props.direction = fret_core::Axis::Horizontal;
-                            props.gap = Px(48.0);
+                            props.gap = fret_ui::element::SpacingLength::Px(Px(48.0));
                             props.justify = MainAlign::SpaceBetween;
                             props.align = CrossAlign::Center;
 
@@ -9288,7 +9278,7 @@ fn material3_headless_overlays_suite_goldens_v1() {
                                     let mut props = FlexProps::default();
                                     props.layout.size.width = Length::Fill;
                                     props.direction = fret_core::Axis::Horizontal;
-                                    props.gap = Px(48.0);
+                                    props.gap = fret_ui::element::SpacingLength::Px(Px(48.0));
                                     props.justify = MainAlign::SpaceBetween;
                                     props.align = CrossAlign::Center;
 
@@ -9449,7 +9439,7 @@ fn material3_headless_overlays_suite_goldens_v1() {
                         |cx| {
                             let mut props = FlexProps::default();
                             props.direction = fret_core::Axis::Vertical;
-                            props.gap = Px(16.0);
+                            props.gap = fret_ui::element::SpacingLength::Px(Px(16.0));
                             props.align = CrossAlign::Start;
 
                             let select = Select::new(selected)
@@ -10147,7 +10137,7 @@ fn material3_exposed_dropdown_reverts_query_to_committed_selection_on_blur_v1() 
 
                 let mut column = FlexProps::default();
                 column.direction = fret_core::Axis::Vertical;
-                column.gap = Px(24.0);
+                column.gap = fret_ui::element::SpacingLength::Px(Px(24.0));
                 column.layout.size.width = Length::Fill;
 
                 let content = cx.flex(column, |_cx| vec![exposed, other]);
@@ -10457,8 +10447,7 @@ fn material3_headless_autocomplete_suite_goldens_v1() {
                         |cx| {
                             let mut column = FlexProps::default();
                             column.direction = fret_core::Axis::Vertical;
-                            column.gap = Px(16.0);
-
+                            column.gap = fret_ui::element::SpacingLength::Px(Px(16.0));
                             let outlined = Autocomplete::new(outlined_model.clone())
                                 .variant(AutocompleteVariant::Outlined)
                                 .label("Outlined")
@@ -10555,8 +10544,7 @@ fn material3_headless_autocomplete_suite_goldens_v1() {
                         |cx| {
                             let mut column = FlexProps::default();
                             column.direction = fret_core::Axis::Vertical;
-                            column.gap = Px(16.0);
-
+                            column.gap = fret_ui::element::SpacingLength::Px(Px(16.0));
                             let outlined = Autocomplete::new(outlined_model.clone())
                                 .variant(AutocompleteVariant::Outlined)
                                 .label("Outlined")
@@ -10794,7 +10782,7 @@ fn material3_headless_menu_dialog_style_suite_goldens_v1() {
 
                             let mut props = FlexProps::default();
                             props.direction = fret_core::Axis::Horizontal;
-                            props.gap = Px(32.0);
+                            props.gap = fret_ui::element::SpacingLength::Px(Px(32.0));
                             props.align = CrossAlign::Start;
                             props.justify = MainAlign::Center;
 
@@ -11742,8 +11730,7 @@ fn material3_headless_text_field_suite_goldens_v1() {
                         |cx| {
                             let mut props = FlexProps::default();
                             props.direction = fret_core::Axis::Vertical;
-                            props.gap = Px(12.0);
-
+                            props.gap = fret_ui::element::SpacingLength::Px(Px(12.0));
                             let content = cx.flex(props, |cx| {
                                 vec![
                                     TextField::new(outlined_empty.clone())
@@ -12133,8 +12120,7 @@ fn material3_headless_search_view_suite_goldens_v1() {
                             let content = cx.named("search_view_content", |cx| {
                                 let mut props = FlexProps::default();
                                 props.direction = fret_core::Axis::Vertical;
-                                props.gap = Px(8.0);
-
+                                props.gap = fret_ui::element::SpacingLength::Px(Px(8.0));
                                 cx.flex(props, |cx| {
                                     vec![
                                         cx.text("Alpha"),
@@ -12154,7 +12140,7 @@ fn material3_headless_search_view_suite_goldens_v1() {
                             let content = cx.named("search_view_root", |cx| {
                                 let mut root = FlexProps::default();
                                 root.direction = fret_core::Axis::Vertical;
-                                root.gap = Px(16.0);
+                                root.gap = fret_ui::element::SpacingLength::Px(Px(16.0));
                                 cx.flex(root, |cx| {
                                     vec![
                                         search_view,
@@ -12276,7 +12262,7 @@ fn material3_headless_carousel_item_suite_goldens_v1() {
                                     let mut container = ContainerProps::default();
                                     container.layout.size.width = Length::Fill;
                                     container.layout.size.height = Length::Fill;
-                                    container.padding = Edges::all(Px(16.0));
+                                    container.padding = Edges::all(Px(16.0)).into();
 
                                     let mut text = TextProps::new(Arc::<str>::from(label));
                                     text.style = Some(body_style.clone());
@@ -12287,7 +12273,7 @@ fn material3_headless_carousel_item_suite_goldens_v1() {
 
                             let mut props = FlexProps::default();
                             props.direction = fret_core::Axis::Vertical;
-                            props.gap = Px(16.0);
+                            props.gap = fret_ui::element::SpacingLength::Px(Px(16.0));
                             props.wrap = false;
 
                             let content = cx.flex(props, |cx| {
@@ -12525,7 +12511,7 @@ fn dropdown_menu_dismisses_and_restores_focus_across_schemes() {
 
                     let mut props = fret_ui::element::FlexProps::default();
                     props.direction = fret_core::Axis::Vertical;
-                    props.gap = Px(24.0);
+                    props.gap = fret_ui::element::SpacingLength::Px(Px(24.0));
                     vec![cx.flex(props, move |_cx| vec![menu, underlay])]
                 })
             };
@@ -12940,7 +12926,7 @@ fn select_keyboard_open_sets_initial_focus_and_outside_dismiss_restores_focus_ac
 
                     let mut props = fret_ui::element::FlexProps::default();
                     props.direction = fret_core::Axis::Vertical;
-                    props.gap = Px(24.0);
+                    props.gap = fret_ui::element::SpacingLength::Px(Px(24.0));
                     // Place the underlay above the trigger so the "outside press" point is
                     // guaranteed to be outside the select popover (which opens below the trigger).
                     vec![cx.flex(props, move |_cx| vec![underlay, select])]

@@ -203,7 +203,8 @@ fn bounds_for_element_reflects_current_frame_layout_after_layout_all() {
             .lock()
             .unwrap()
             .expect("expected element id to be recorded");
-        let rect = crate::elements::bounds_for_element(&mut app, window, id).expect("bounds");
+        let rect =
+            crate::elements::current_bounds_for_element(&mut app, window, id).expect("bounds");
         seen.push(rect.size.width);
 
         app.advance_frame();
@@ -212,7 +213,7 @@ fn bounds_for_element_reflects_current_frame_layout_after_layout_all() {
     assert_eq!(
         seen,
         vec![Px(80.0), Px(140.0), Px(140.0)],
-        "expected bounds_for_element(...) to reflect the latest layout pass, not the previous frame"
+        "expected current_bounds_for_element(...) to reflect the latest layout pass, not the previous frame"
     );
 }
 

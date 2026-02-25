@@ -13,7 +13,8 @@ use fret_runtime::Model;
 use fret_ui::action::{ActionCx, ActivateReason, OnActivate, OnCloseAutoFocus};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
-    PointerRegionProps, PressableA11y, PressableProps, SizeStyle, TextInputProps, TextProps,
+    PointerRegionProps, PressableA11y, PressableProps, SizeStyle, SpacingLength, TextInputProps,
+    TextProps,
 };
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
@@ -332,8 +333,8 @@ impl ColorEdit {
             FlexProps {
                 layout: root_layout,
                 direction: Axis::Vertical,
-                gap: Px(4.0),
-                padding: Edges::all(Px(0.0)),
+                gap: SpacingLength::Px(Px(4.0)),
+                padding: Edges::all(Px(0.0)).into(),
                 justify: MainAlign::Start,
                 align: CrossAlign::Stretch,
                 wrap: false,
@@ -350,8 +351,8 @@ impl ColorEdit {
                             ..Default::default()
                         },
                         direction: Axis::Horizontal,
-                        gap: Px(8.0),
-                        padding: Edges::all(Px(0.0)),
+                        gap: SpacingLength::Px(Px(8.0)),
+                        padding: Edges::all(Px(0.0)).into(),
                         justify: MainAlign::Start,
                         align: CrossAlign::Center,
                         wrap: false,
@@ -431,7 +432,7 @@ fn request_popup_overlay<H: UiHost>(
                         },
                         ..Default::default()
                     },
-                    padding: Edges::all(popup_padding),
+                    padding: Edges::all(popup_padding).into(),
                     background: Some(Theme::global(&*cx.app).color_token("popover")),
                     border: Edges::all(Px(1.0)),
                     border_color: Some(Theme::global(&*cx.app).color_token("border")),

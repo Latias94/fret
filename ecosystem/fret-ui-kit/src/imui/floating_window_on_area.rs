@@ -9,7 +9,7 @@ use fret_ui::action::UiActionHostExt as _;
 use fret_ui::element::{
     AnyElement, ColumnProps, ContainerProps, InsetStyle, LayoutStyle, Length, Overflow,
     PointerRegionProps, PositionStyle, PressableA11y, PressableProps, RowProps, ScrollAxis,
-    ScrollProps,
+    ScrollProps, SpacingLength,
 };
 
 pub(super) fn render_floating_window_in_area<H: UiHost, Build>(
@@ -296,7 +296,8 @@ where
                         right: Px(6.0),
                         top: Px(4.0),
                         bottom: Px(4.0),
-                    };
+                    }
+                    .into();
                     props.background = Some(muted);
                     props.border = Edges {
                         left: Px(0.0),
@@ -321,7 +322,7 @@ where
                         Length::Auto
                     };
                     row.layout.size.height = Length::Fill;
-                    row.gap = Px(6.0);
+                    row.gap = SpacingLength::Px(Px(6.0));
                     row.align = fret_ui::element::CrossAlign::Center;
 
                     let title = title_for_window.clone();
@@ -484,7 +485,7 @@ where
                                     } else {
                                         Length::Auto
                                     };
-                                    props.padding = Edges::all(Px(8.0));
+                                    props.padding = Edges::all(Px(8.0)).into();
                                     props
                                 },
                                 move |cx| {

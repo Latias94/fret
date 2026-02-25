@@ -5926,7 +5926,7 @@ mod tests {
             fret_ui::elements::node_for_element(&mut app, window, trigger_id).expect("trigger");
         ui.set_focus(Some(trigger_node));
 
-        // Pointer-open and flip the caller-owned open model like a trigger would.
+        // Pointer-open like a trigger would.
         let trigger_bounds = ui.debug_node_bounds(trigger_node).expect("trigger bounds");
         let trigger_pos = rect_center(trigger_bounds);
         ui.dispatch_event(
@@ -5941,7 +5941,6 @@ mod tests {
                 click_count: 1,
             }),
         );
-        let _ = app.models_mut().update(&open, |v| *v = true);
         ui.dispatch_event(
             &mut app,
             &mut services,

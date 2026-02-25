@@ -252,7 +252,7 @@ impl WorkspaceShellDemoDriver {
                                             FlexProps {
                                                 layout: fill_layout(),
                                                 direction: Axis::Vertical,
-                                                gap: Px(0.0),
+                                                gap: fret_ui::element::SpacingLength::Px(Px(0.0)),
                                                 justify: MainAlign::Start,
                                                 align: CrossAlign::Stretch,
                                                 wrap: false,

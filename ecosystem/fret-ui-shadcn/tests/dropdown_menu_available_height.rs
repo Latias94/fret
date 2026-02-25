@@ -107,8 +107,8 @@ fn render_frame(
                     layout: {
                         let mut layout = LayoutStyle::default();
                         layout.position = fret_ui::element::PositionStyle::Absolute;
-                        layout.inset.left = Some(Px(16.0));
-                        layout.inset.top = Some(trigger_top_y);
+                        layout.inset.left = Some(Px(16.0)).into();
+                        layout.inset.top = Some(trigger_top_y).into();
                         layout.size.width = Length::Px(Px(120.0));
                         layout.size.height = Length::Px(Px(40.0));
                         layout

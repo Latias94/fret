@@ -13,7 +13,7 @@ use fret_core::{Axis, Corners, Edges, FontWeight, Px, TextAlign, TextStyle};
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, SizeStyle,
-    TextProps,
+    SpacingLength, TextProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::typography;
@@ -211,8 +211,8 @@ impl TransformEdit {
                 FlexProps {
                     layout: self.options.layout,
                     direction: Axis::Vertical,
-                    gap: self.options.section_gap,
-                    padding: Edges::all(Px(0.0)),
+                    gap: SpacingLength::Px(self.options.section_gap),
+                    padding: Edges::all(Px(0.0)).into(),
                     justify: MainAlign::Start,
                     align: CrossAlign::Stretch,
                     wrap: false,
@@ -267,8 +267,8 @@ impl TransformEdit {
                 FlexProps {
                     layout: self.options.layout,
                     direction: Axis::Horizontal,
-                    gap: self.options.section_gap,
-                    padding: Edges::all(Px(0.0)),
+                    gap: SpacingLength::Px(self.options.section_gap),
+                    padding: Edges::all(Px(0.0)).into(),
                     justify: MainAlign::Start,
                     align: CrossAlign::Start,
                     wrap: false,
@@ -362,8 +362,8 @@ fn section_row<H: UiHost>(
                 ..Default::default()
             },
             direction: Axis::Horizontal,
-            gap: Px(6.0),
-            padding: Edges::all(Px(0.0)),
+            gap: SpacingLength::Px(Px(6.0)),
+            padding: Edges::all(Px(0.0)).into(),
             justify: MainAlign::Start,
             align: CrossAlign::Center,
             wrap: false,
@@ -436,8 +436,8 @@ fn section_row<H: UiHost>(
                                 ..Default::default()
                             },
                             direction: Axis::Horizontal,
-                            gap: Px(4.0),
-                            padding: Edges::all(Px(0.0)),
+                            gap: SpacingLength::Px(Px(4.0)),
+                            padding: Edges::all(Px(0.0)).into(),
                             justify: MainAlign::Start,
                             align: CrossAlign::Center,
                             wrap: false,
@@ -500,8 +500,8 @@ fn section_col<H: UiHost>(
                 ..Default::default()
             },
             direction: Axis::Vertical,
-            gap: Px(4.0),
-            padding: Edges::all(Px(0.0)),
+            gap: SpacingLength::Px(Px(4.0)),
+            padding: Edges::all(Px(0.0)).into(),
             justify: MainAlign::Start,
             align: CrossAlign::Stretch,
             wrap: false,
@@ -563,8 +563,8 @@ fn section_col_with_link<H: UiHost>(
                     ..Default::default()
                 },
                 direction: Axis::Vertical,
-                gap: Px(4.0),
-                padding: Edges::all(Px(0.0)),
+                gap: SpacingLength::Px(Px(4.0)),
+                padding: Edges::all(Px(0.0)).into(),
                 justify: MainAlign::Start,
                 align: CrossAlign::Stretch,
                 wrap: false,
@@ -595,8 +595,8 @@ fn section_col_with_link<H: UiHost>(
                             ..Default::default()
                         },
                         direction: Axis::Horizontal,
-                        gap: Px(4.0),
-                        padding: Edges::all(Px(0.0)),
+                        gap: SpacingLength::Px(Px(4.0)),
+                        padding: Edges::all(Px(0.0)).into(),
                         justify: MainAlign::Start,
                         align: CrossAlign::Center,
                         wrap: false,

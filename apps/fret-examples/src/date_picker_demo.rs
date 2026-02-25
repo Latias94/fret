@@ -282,8 +282,8 @@ impl WinitAppDriver for DatePickerDemoDriver {
                         FlexProps {
                             layout: LayoutStyle::default(),
                             direction: fret_core::Axis::Horizontal,
-                            gap: Px(12.0),
-                            padding: Edges::all(Px(0.0)),
+                            gap: fret_ui::element::SpacingLength::Px(Px(12.0)),
+                            padding: Edges::all(Px(0.0)).into(),
                             justify: MainAlign::Start,
                             align: CrossAlign::Center,
                             wrap: true,
@@ -376,8 +376,8 @@ impl WinitAppDriver for DatePickerDemoDriver {
                                 FlexProps {
                                     layout: root_layout,
                                     direction: fret_core::Axis::Vertical,
-                                    gap: Px(12.0),
-                                    padding: Edges::all(padding),
+                                    gap: fret_ui::element::SpacingLength::Px(Px(12.0)),
+                                    padding: Edges::all(padding).into(),
                                     justify: MainAlign::Start,
                                     align: CrossAlign::Stretch,
                                     wrap: false,
@@ -398,7 +398,7 @@ impl WinitAppDriver for DatePickerDemoDriver {
                                                 corner_radii: Corners::all(
                                                     theme.metric_token("metric.radius.md"),
                                                 ),
-                                                padding: Edges::all(Px(12.0)),
+                                                padding: Edges::all(Px(12.0)).into(),
                                                 ..Default::default()
                                             },
                                             move |_cx| vec![picker],
@@ -414,7 +414,7 @@ impl WinitAppDriver for DatePickerDemoDriver {
                                                 corner_radii: Corners::all(
                                                     theme.metric_token("metric.radius.md"),
                                                 ),
-                                                padding: Edges::all(Px(12.0)),
+                                                padding: Edges::all(Px(12.0)).into(),
                                                 ..Default::default()
                                             },
                                             move |_cx| vec![calendar],

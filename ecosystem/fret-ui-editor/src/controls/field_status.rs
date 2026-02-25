@@ -109,7 +109,7 @@ impl FieldStatusBadge {
         cx.container(
             ContainerProps {
                 layout: self.options.layout,
-                padding: Edges::symmetric(Px(6.0), Px(0.0)),
+                padding: Edges::symmetric(Px(6.0), Px(0.0)).into(),
                 background: Some(bg),
                 corner_radii: fret_core::Corners::all(Px(6.0)),
                 ..Default::default()

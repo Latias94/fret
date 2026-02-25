@@ -84,22 +84,22 @@ fn paint_once(
     let mut observe_model = |_id, _inv: Invalidation| {};
     let mut observe_global = |_id, _inv: Invalidation| {};
 
-    let mut cx = fret_ui::retained_bridge::PaintCx {
-        app: host,
+    let mut cx = fret_ui::retained_bridge::PaintCx::new(
+        host,
         tree,
-        node: UiNodeId::default(),
-        window: None,
-        focus: None,
-        children: &[],
+        UiNodeId::default(),
+        None,
+        None,
+        &[],
         bounds,
-        scale_factor: 1.0,
-        accumulated_transform: Transform2D::IDENTITY,
-        children_render_transform: None,
+        1.0,
+        Transform2D::IDENTITY,
+        None,
         services,
-        observe_model: &mut observe_model,
-        observe_global: &mut observe_global,
-        scene: &mut scene,
-    };
+        &mut observe_model,
+        &mut observe_global,
+        &mut scene,
+    );
 
     canvas.paint(&mut cx);
     scene

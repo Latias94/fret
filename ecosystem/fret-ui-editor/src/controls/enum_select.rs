@@ -14,7 +14,7 @@ use fret_runtime::Model;
 use fret_ui::action::{ActionCx, ActivateReason, OnActivate, OnCloseAutoFocus, OnKeyDown};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
-    PressableA11y, PressableProps, ScrollAxis, ScrollProps, SizeStyle, TextProps,
+    PressableA11y, PressableProps, ScrollAxis, ScrollProps, SizeStyle, SpacingLength, TextProps,
 };
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
@@ -293,7 +293,7 @@ impl EnumSelect {
                                     },
                                     ..Default::default()
                                 },
-                                padding: Edges::all(Px(0.0)),
+                                padding: Edges::all(Px(0.0)).into(),
                                 ..Default::default()
                             },
                             move |cx| {
@@ -308,8 +308,8 @@ impl EnumSelect {
                                             ..Default::default()
                                         },
                                         direction: Axis::Horizontal,
-                                        gap: Px(0.0),
-                                        padding: Edges::all(Px(0.0)),
+                                        gap: SpacingLength::Px(Px(0.0)),
+                                        padding: Edges::all(Px(0.0)).into(),
                                         justify: MainAlign::Center,
                                         align: CrossAlign::Center,
                                         wrap: false,
@@ -489,7 +489,7 @@ fn request_overlay<H: UiHost>(
                         overflow: Overflow::Clip,
                         ..Default::default()
                     },
-                    padding: Edges::all(Px(8.0)),
+                    padding: Edges::all(Px(8.0)).into(),
                     background: Some(bg),
                     border: Edges::all(Px(1.0)),
                     border_color: Some(border),
@@ -521,8 +521,8 @@ fn request_overlay<H: UiHost>(
                                 ..Default::default()
                             },
                             direction: Axis::Vertical,
-                            gap: Px(6.0),
-                            padding: Edges::all(Px(0.0)),
+                            gap: SpacingLength::Px(Px(6.0)),
+                            padding: Edges::all(Px(0.0)).into(),
                             justify: MainAlign::Start,
                             align: CrossAlign::Stretch,
                             wrap: false,
@@ -562,8 +562,8 @@ fn request_overlay<H: UiHost>(
                                                 ..Default::default()
                                             },
                                             direction: Axis::Vertical,
-                                            gap: Px(2.0),
-                                            padding: Edges::all(Px(0.0)),
+                                            gap: SpacingLength::Px(Px(2.0)),
+                                            padding: Edges::all(Px(0.0)).into(),
                                             justify: MainAlign::Start,
                                             align: CrossAlign::Stretch,
                                             wrap: false,
@@ -708,7 +708,7 @@ fn enum_select_row<H: UiHost>(
                         },
                         ..Default::default()
                     },
-                    padding: Edges::symmetric(density.padding_x, Px(0.0)),
+                    padding: Edges::symmetric(density.padding_x, Px(0.0)).into(),
                     background: bg,
                     corner_radii: Corners::all(Px(6.0)),
                     ..Default::default()

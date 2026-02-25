@@ -29,7 +29,7 @@ use fret_ui::action::{PressablePointerDownResult, PressablePointerUpResult};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexItemStyle, FlexProps, InsetStyle, LayoutStyle,
     Length, MainAlign, Overflow, PositionStyle, PressableA11y, PressableProps, SizeStyle,
-    TextProps,
+    SpacingLength, TextProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::typography;
@@ -576,8 +576,8 @@ where
                                     ..Default::default()
                                 },
                                 direction: Axis::Horizontal,
-                                gap: Px(0.0),
-                                padding: Edges::all(Px(0.0)),
+                                gap: SpacingLength::Px(Px(0.0)),
+                                padding: Edges::all(Px(0.0)).into(),
                                 justify: MainAlign::Start,
                                 align: CrossAlign::Center,
                                 wrap: false,
@@ -743,8 +743,8 @@ where
                                     ..Default::default()
                                 },
                                 direction: Axis::Horizontal,
-                                gap: Px(0.0),
-                                padding: Edges::all(Px(0.0)),
+                                gap: SpacingLength::Px(Px(0.0)),
+                                padding: Edges::all(Px(0.0)).into(),
                                 justify: MainAlign::Start,
                                 align: CrossAlign::Center,
                                 wrap: false,

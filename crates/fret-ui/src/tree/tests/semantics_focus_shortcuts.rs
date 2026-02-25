@@ -254,6 +254,19 @@ fn focus_traversal_prefers_topmost_overlay_root() {
 
 #[test]
 fn tab_focus_next_runs_when_text_input_not_composing() {
+    #[derive(Default)]
+    struct Focusable;
+
+    impl<H: UiHost> Widget<H> for Focusable {
+        fn is_focusable(&self) -> bool {
+            true
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            cx.available
+        }
+    }
+
     let mut app = crate::test_host::TestHost::new();
     app.set_global(PlatformCapabilities::default());
     app.set_global(KeymapService {
@@ -278,7 +291,9 @@ fn tab_focus_next_runs_when_text_input_not_composing() {
 
     let root = ui.create_node(TestStack);
     let text_input = ui.create_node(crate::text_input::TextInput::new());
+    let other_focusable = ui.create_node(Focusable);
     ui.add_child(root, text_input);
+    ui.add_child(root, other_focusable);
     ui.set_root(root);
 
     let mut services = FakeUiServices;
@@ -286,7 +301,6 @@ fn tab_focus_next_runs_when_text_input_not_composing() {
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
     ui.set_focus(Some(text_input));
 
-    let _ = app.take_effects();
     ui.dispatch_event(
         &mut app,
         &mut services,
@@ -296,13 +310,10 @@ fn tab_focus_next_runs_when_text_input_not_composing() {
             repeat: false,
         },
     );
-    let effects = app.take_effects();
-    assert!(
-        effects.iter().any(|e| matches!(
-            e,
-            Effect::Command { command, .. } if *command == CommandId::from("focus.next")
-        )),
-        "expected focus traversal command effect"
+    assert_eq!(
+        ui.focus(),
+        Some(other_focusable),
+        "expected Tab to advance focus to the next focusable"
     );
 }
 
@@ -436,6 +447,19 @@ fn tab_focus_next_is_suppressed_when_preedit_empty_but_cursor_present() {
 
 #[test]
 fn tab_focus_next_runs_after_ime_commit_clears_composition() {
+    #[derive(Default)]
+    struct Focusable;
+
+    impl<H: UiHost> Widget<H> for Focusable {
+        fn is_focusable(&self) -> bool {
+            true
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            cx.available
+        }
+    }
+
     let mut app = crate::test_host::TestHost::new();
     app.set_global(PlatformCapabilities::default());
     app.set_global(KeymapService {
@@ -460,7 +484,9 @@ fn tab_focus_next_runs_after_ime_commit_clears_composition() {
 
     let root = ui.create_node(TestStack);
     let text_input = ui.create_node(crate::text_input::TextInput::new());
+    let other_focusable = ui.create_node(Focusable);
     ui.add_child(root, text_input);
+    ui.add_child(root, other_focusable);
     ui.set_root(root);
 
     let mut services = FakeUiServices;
@@ -468,7 +494,6 @@ fn tab_focus_next_runs_after_ime_commit_clears_composition() {
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
     ui.set_focus(Some(text_input));
 
-    let _ = app.take_effects();
     ui.dispatch_event(
         &mut app,
         &mut services,
@@ -482,7 +507,6 @@ fn tab_focus_next_runs_after_ime_commit_clears_composition() {
         &mut services,
         &Event::Ime(fret_core::ImeEvent::Commit("東京".into())),
     );
-    let _ = app.take_effects();
 
     ui.dispatch_event(
         &mut app,
@@ -493,13 +517,10 @@ fn tab_focus_next_runs_after_ime_commit_clears_composition() {
             repeat: false,
         },
     );
-    let effects = app.take_effects();
-    assert!(
-        effects.iter().any(|e| matches!(
-            e,
-            Effect::Command { command, .. } if *command == CommandId::from("focus.next")
-        )),
-        "expected focus traversal command effect after IME commit"
+    assert_eq!(
+        ui.focus(),
+        Some(other_focusable),
+        "expected Tab to advance focus after IME commit"
     );
 }
 

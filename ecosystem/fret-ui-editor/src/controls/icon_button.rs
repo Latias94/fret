@@ -10,7 +10,7 @@ use fret_icons::IconId;
 use fret_ui::action::{ActionCx, ActivateReason, OnActivate, UiActionHost};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
-    PressableA11y, PressableProps, SizeStyle,
+    PressableA11y, PressableProps, SizeStyle, SpacingLength,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::ColorRef;
@@ -161,8 +161,8 @@ impl IconButton {
                                     ..Default::default()
                                 },
                                 direction: Axis::Horizontal,
-                                gap: Px(0.0),
-                                padding: Edges::all(Px(0.0)),
+                                gap: SpacingLength::Px(Px(0.0)),
+                                padding: Edges::all(Px(0.0)).into(),
                                 justify: MainAlign::Center,
                                 align: CrossAlign::Center,
                                 wrap: false,

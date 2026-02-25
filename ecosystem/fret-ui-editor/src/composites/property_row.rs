@@ -6,7 +6,7 @@ use fret_core::{Axis, Corners, Edges, Px, TextAlign, TextStyle};
 use fret_ui::action::{ActionCx, ActivateReason, OnActivate, UiActionHost};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexItemStyle, FlexProps, LayoutStyle, Length,
-    MainAlign, Overflow, PressableA11y, PressableProps, SizeStyle, TextProps,
+    MainAlign, Overflow, PressableA11y, PressableProps, SizeStyle, SpacingLength, TextProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::typography;
@@ -297,8 +297,8 @@ impl PropertyRow {
                 FlexProps {
                     layout,
                     direction: Axis::Horizontal,
-                    gap,
-                    padding: Edges::all(Px(0.0)),
+                    gap: SpacingLength::Px(gap),
+                    padding: Edges::all(Px(0.0)).into(),
                     justify: MainAlign::Start,
                     align: CrossAlign::Center,
                     wrap: false,
@@ -370,8 +370,8 @@ impl PropertyRow {
                     FlexProps {
                         layout,
                         direction: Axis::Vertical,
-                        gap: stack_gap,
-                        padding: Edges::all(Px(0.0)),
+                        gap: SpacingLength::Px(stack_gap),
+                        padding: Edges::all(Px(0.0)).into(),
                         justify: MainAlign::Start,
                         align: CrossAlign::Stretch,
                         wrap: false,
@@ -389,8 +389,8 @@ impl PropertyRow {
                                     ..Default::default()
                                 },
                                 direction: Axis::Horizontal,
-                                gap: header_gap,
-                                padding: Edges::all(Px(0.0)),
+                                gap: SpacingLength::Px(header_gap),
+                                padding: Edges::all(Px(0.0)).into(),
                                 justify: MainAlign::Start,
                                 align: CrossAlign::Center,
                                 wrap: false,

@@ -14,6 +14,7 @@ use fret_runtime::Model;
 use fret_ui::action::{ActionCx, ActivateReason, OnActivate, UiActionHost};
 use fret_ui::element::{
     AnyElement, CrossAlign, FlexItemStyle, FlexProps, LayoutStyle, Length, MainAlign, SizeStyle,
+    SpacingLength,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 
@@ -121,8 +122,8 @@ where
                 ..Default::default()
             },
             direction: Axis::Horizontal,
-            gap: axis_gap,
-            padding: Edges::all(Px(0.0)),
+            gap: SpacingLength::Px(axis_gap),
+            padding: Edges::all(Px(0.0)).into(),
             justify: MainAlign::Start,
             align: CrossAlign::Center,
             wrap: false,
@@ -328,8 +329,8 @@ where
             FlexProps {
                 layout: self.options.layout,
                 direction,
-                gap: self.options.gap,
-                padding: Edges::all(Px(0.0)),
+                gap: SpacingLength::Px(self.options.gap),
+                padding: Edges::all(Px(0.0)).into(),
                 justify: MainAlign::Start,
                 align: if direction == Axis::Horizontal {
                     CrossAlign::Center
@@ -536,8 +537,8 @@ where
             FlexProps {
                 layout: self.options.layout,
                 direction,
-                gap: self.options.gap,
-                padding: Edges::all(Px(0.0)),
+                gap: SpacingLength::Px(self.options.gap),
+                padding: Edges::all(Px(0.0)).into(),
                 justify: MainAlign::Start,
                 align: if direction == Axis::Horizontal {
                     CrossAlign::Center
@@ -778,8 +779,8 @@ where
             FlexProps {
                 layout: self.options.layout,
                 direction,
-                gap: self.options.gap,
-                padding: Edges::all(Px(0.0)),
+                gap: SpacingLength::Px(self.options.gap),
+                padding: Edges::all(Px(0.0)).into(),
                 justify: MainAlign::Start,
                 align: if direction == Axis::Horizontal {
                     CrossAlign::Center

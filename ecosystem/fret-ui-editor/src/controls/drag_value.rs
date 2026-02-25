@@ -226,7 +226,7 @@ where
                             },
                             ..Default::default()
                         },
-                        padding: scrub_chrome.padding,
+                        padding: scrub_chrome.padding.into(),
                         background: Some(visuals.bg),
                         border: Edges::all(scrub_chrome.border_width),
                         border_color: Some(visuals.border),

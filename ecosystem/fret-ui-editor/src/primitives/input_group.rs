@@ -11,7 +11,7 @@ use fret_ui::action::{ActionCx, OnActivate, OnPointerCancel, OnPointerDown, OnPo
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexItemStyle, FlexProps, HoverRegionProps,
     LayoutStyle, Length, MainAlign, PointerRegionProps, PressableA11y, PressableProps, SizeStyle,
-    TextProps,
+    SpacingLength, TextProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::ColorRef;
@@ -88,7 +88,7 @@ pub(crate) fn editor_input_group_frame_with_overrides<H: UiHost>(
     cx.container(
         ContainerProps {
             layout,
-            padding: Edges::all(Px(0.0)),
+            padding: Edges::all(Px(0.0)).into(),
             background: Some(visuals.bg),
             border: Edges::all(chrome.border_width),
             border_color: Some(visuals.border),
@@ -135,7 +135,7 @@ pub(crate) fn editor_input_group_segment<H: UiHost>(
     cx.container(
         ContainerProps {
             layout,
-            padding,
+            padding: padding.into(),
             ..Default::default()
         },
         move |_cx| vec![child],
@@ -158,8 +158,8 @@ pub(crate) fn editor_input_group_row<H: UiHost>(
                 ..Default::default()
             },
             direction: fret_core::Axis::Horizontal,
-            gap,
-            padding: Edges::all(Px(0.0)),
+            gap: SpacingLength::Px(gap),
+            padding: Edges::all(Px(0.0)).into(),
             justify: MainAlign::Start,
             align: CrossAlign::Center,
             wrap: false,
@@ -292,7 +292,7 @@ pub(crate) fn editor_icon_segment<H: UiHost>(
                 },
                 ..Default::default()
             },
-            padding: Edges::all(Px(0.0)),
+            padding: Edges::all(Px(0.0)).into(),
             ..Default::default()
         },
         move |cx| {
@@ -307,8 +307,8 @@ pub(crate) fn editor_icon_segment<H: UiHost>(
                         ..Default::default()
                     },
                     direction: fret_core::Axis::Horizontal,
-                    gap: Px(0.0),
-                    padding: Edges::all(Px(0.0)),
+                    gap: SpacingLength::Px(Px(0.0)),
+                    padding: Edges::all(Px(0.0)).into(),
                     justify: MainAlign::Center,
                     align: CrossAlign::Center,
                     wrap: false,

@@ -425,8 +425,8 @@ impl WinitAppDriver for CanvasDataGridStressDriver {
                         FlexProps {
                             layout: root_layout,
                             direction: fret_core::Axis::Vertical,
-                            gap: Px(8.0),
-                            padding: fret_core::Edges::all(padding),
+                            gap: fret_ui::element::SpacingLength::Px(Px(8.0)),
+                            padding: fret_core::Edges::all(padding).into(),
                             justify: MainAlign::Start,
                             align: CrossAlign::Stretch,
                             wrap: false,

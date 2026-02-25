@@ -469,10 +469,10 @@ mod tests {
 
         let pid = pressable_id.get().expect("pressable id");
         let cid = chrome_id.get().expect("chrome id");
-        let pressable_bounds =
-            fret_ui::elements::bounds_for_element(&mut app, window, pid).expect("pressable bounds");
-        let chrome_bounds =
-            fret_ui::elements::bounds_for_element(&mut app, window, cid).expect("chrome bounds");
+        let pressable_bounds = fret_ui::elements::current_bounds_for_element(&mut app, window, pid)
+            .expect("pressable bounds");
+        let chrome_bounds = fret_ui::elements::current_bounds_for_element(&mut app, window, cid)
+            .expect("chrome bounds");
 
         assert!(
             rect_eq_eps(pressable_bounds, chrome_bounds, 0.5),
@@ -558,10 +558,10 @@ mod tests {
 
         let pid = pressable_id.get().expect("pressable id");
         let cid = chrome_id.get().expect("chrome id");
-        let pressable_bounds =
-            fret_ui::elements::bounds_for_element(&mut app, window, pid).expect("pressable bounds");
-        let chrome_bounds =
-            fret_ui::elements::bounds_for_element(&mut app, window, cid).expect("chrome bounds");
+        let pressable_bounds = fret_ui::elements::current_bounds_for_element(&mut app, window, pid)
+            .expect("pressable bounds");
+        let chrome_bounds = fret_ui::elements::current_bounds_for_element(&mut app, window, cid)
+            .expect("chrome bounds");
 
         assert!(
             rect_eq_eps(

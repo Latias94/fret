@@ -1061,9 +1061,19 @@ mod tests {
 
         let theme = Theme::global(&app).clone();
         let primary = radio_indicator(&theme);
-        let expected_bg = alpha_mul(primary, 0.05);
+        let bg_alpha = if theme.color_scheme == Some(ColorScheme::Dark) {
+            0.10
+        } else {
+            0.05
+        };
+        let expected_bg = alpha_mul(primary, bg_alpha);
 
+        let mut total_quads = 0usize;
+        let mut bg_matches = 0usize;
+        let mut border_paint_matches = 0usize;
+        let mut bg_and_border_paint_matches = 0usize;
         let mut found = false;
+        let mut sample_quad = None::<(fret_core::Paint, Edges, fret_core::Paint)>;
         for op in scene.ops() {
             let fret_core::SceneOp::Quad {
                 background,
@@ -1074,6 +1084,22 @@ mod tests {
             else {
                 continue;
             };
+
+            total_quads = total_quads.saturating_add(1);
+            if sample_quad.is_none() {
+                sample_quad = Some((*background, *border, *border_paint));
+            }
+            if *background == fret_core::Paint::Solid(expected_bg) {
+                bg_matches = bg_matches.saturating_add(1);
+            }
+            if *border_paint == fret_core::Paint::Solid(primary) {
+                border_paint_matches = border_paint_matches.saturating_add(1);
+            }
+            if *background == fret_core::Paint::Solid(expected_bg)
+                && *border_paint == fret_core::Paint::Solid(primary)
+            {
+                bg_and_border_paint_matches = bg_and_border_paint_matches.saturating_add(1);
+            }
 
             if *background == fret_core::Paint::Solid(expected_bg)
                 && *border_paint == fret_core::Paint::Solid(primary)
@@ -1087,7 +1113,10 @@ mod tests {
             }
         }
 
-        assert!(found, "missing checked choice-card background/border quad");
+        assert!(
+            found,
+            "missing checked choice-card background/border quad (total_quads={total_quads}, bg_matches={bg_matches}, border_paint_matches={border_paint_matches}, bg_and_border_paint_matches={bg_and_border_paint_matches}, sample_quad={sample_quad:?})"
+        );
     }
 
     #[test]

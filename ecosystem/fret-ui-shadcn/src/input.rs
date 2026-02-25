@@ -321,7 +321,7 @@ fn input_with_style_and_submit<H: UiHost>(
             border: Some("input"),
             border_focus: Some("ring"),
             fg: Some("foreground"),
-            selection: Some("primary"),
+            selection: Some("ring/50"),
             ..InputTokenKeys::none()
         },
     );
@@ -452,5 +452,41 @@ fn input_with_style_and_submit<H: UiHost>(
         cx.opacity(0.5, move |_cx| vec![input])
     } else {
         input
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn input_selection_color_uses_ring_50_in_shadcn_light_theme() {
+        let mut app = fret_app::App::new();
+        crate::shadcn_themes::apply_shadcn_new_york_v4(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Slate,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let theme = Theme::global(&app);
+        let expected = theme
+            .color_by_key("ring/50")
+            .expect("shadcn new-york-v4 seeds ring/50");
+
+        let resolved = resolve_input_chrome(
+            theme,
+            Size::default(),
+            &ChromeRefinement::default(),
+            InputTokenKeys {
+                bg: Some("component.input.bg"),
+                border: Some("input"),
+                border_focus: Some("ring"),
+                fg: Some("foreground"),
+                selection: Some("ring/50"),
+                ..InputTokenKeys::none()
+            },
+        );
+
+        assert_eq!(resolved.selection_color, expected);
     }
 }

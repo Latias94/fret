@@ -20,7 +20,7 @@ use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui::element::{
     ContainerProps, CrossAlign, EffectLayerProps, InsetStyle, LayoutStyle, Length, MainAlign,
-    Overflow, PositionStyle, RowProps, SizeStyle, SpacerProps, TextProps,
+    Overflow, PositionStyle, RowProps, SizeStyle, SpacerProps, SpacingLength, TextProps,
 };
 use fret_ui_assets::image_asset_cache::{ImageAssetCacheHostExt, ImageAssetKey};
 use fret_ui_kit::Space;
@@ -166,8 +166,8 @@ fn lens_panel<H: UiHost>(
 
             let mut label_layout = LayoutStyle::default();
             label_layout.position = PositionStyle::Absolute;
-            label_layout.inset.left = Some(left).into();
-            label_layout.inset.top = Some(top).into();
+            label_layout.inset.left = Some(Px(12.0)).into();
+            label_layout.inset.top = Some(Px(12.0)).into();
 
             let title = cx.text_props(TextProps {
                 layout: Default::default(),
@@ -188,7 +188,8 @@ fn lens_panel<H: UiHost>(
                         right: Px(10.0),
                         top: Px(6.0),
                         bottom: Px(6.0),
-                    },
+                    }
+                    .into(),
                     background: Some(srgb(10, 12, 18, 0.32)),
                     border: Edges::all(Px(1.0)),
                     border_color: Some(srgb(255, 255, 255, 0.18)),
@@ -353,6 +354,10 @@ fn view(
     let theme = Theme::global(&*cx.app).snapshot();
     let theme_stage = theme.clone();
     let viewport = cx.environment_viewport_bounds(Invalidation::Layout);
+    let left = Px(24.0);
+    let top = Px(24.0);
+    let right = Px(24.0);
+    let bottom = Px(24.0);
 
     let show_fake_model = st.show_fake.clone();
     let show_warp_model = st.show_warp.clone();
@@ -525,7 +530,7 @@ fn view(
                             let stripes = cx.row(
                                 RowProps {
                                     layout: stripes_layout,
-                                    gap: Px(0.0),
+                                    gap: SpacingLength::Px(Px(0.0)),
                                     justify: MainAlign::Start,
                                     align: CrossAlign::Stretch,
                                     ..Default::default()
@@ -602,7 +607,7 @@ fn view(
                             let cards = cx.row(
                                 RowProps {
                                     layout: cards_layout,
-                                    gap: Px(12.0),
+                                    gap: SpacingLength::Px(Px(12.0)),
                                     justify: MainAlign::Start,
                                     align: CrossAlign::Stretch,
                                     ..Default::default()
@@ -630,7 +635,7 @@ fn view(
                                         cx.container(
                                             ContainerProps {
                                                 layout,
-                                                padding: Edges::all(Px(14.0)),
+                                                padding: Edges::all(Px(14.0)).into(),
                                                 background: Some(bg),
                                                 border: Edges::all(Px(1.0)),
                                                 border_color: Some(border),
@@ -677,7 +682,7 @@ fn view(
                             let hud = cx.container(
                                 ContainerProps {
                                     layout: hud_layout,
-                                    padding: Edges::all(Px(12.0)),
+                                    padding: Edges::all(Px(12.0)).into(),
                                     background: Some(hud_bg),
                                     border: Edges::all(Px(1.0)),
                                     border_color: Some(theme_stage.color_token("border")),
@@ -819,7 +824,7 @@ fn view(
                             let lenses = cx.row(
                                 RowProps {
                                     layout: lenses_layout,
-                                    gap: Px(14.0),
+                                    gap: SpacingLength::Px(Px(14.0)),
                                     justify: MainAlign::Start,
                                     align: CrossAlign::Start,
                                     ..Default::default()
@@ -882,7 +887,7 @@ fn view(
                         cx.container(
                             ContainerProps {
                                 layout,
-                                padding: Edges::all(Px(16.0)),
+                                padding: Edges::all(Px(16.0)).into(),
                                 background: Some(theme.color_token("card")),
                                 border: Edges::all(Px(1.0)),
                                 border_color: Some(theme.color_token("border")),

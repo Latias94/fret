@@ -36,7 +36,7 @@ use fret_ui::action::{
 };
 use fret_ui::element::{
     AnyElement, ColumnProps, ContainerProps, InsetStyle, LayoutStyle, Length, Overflow,
-    PointerRegionProps, PositionStyle, PressableA11y, PressableProps, RowProps,
+    PointerRegionProps, PositionStyle, PressableA11y, PressableProps, RowProps, SpacingLength,
 };
 use fret_ui::{ElementContext, GlobalElementId, UiHost};
 
@@ -3143,11 +3143,11 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                         panel_props.border = Edges::all(Px(1.0));
                         panel_props.border_color = Some(border);
                         panel_props.corner_radii = Corners::all(Px(6.0));
-                        panel_props.padding = Edges::all(Px(6.0));
+                        panel_props.padding = Edges::all(Px(6.0)).into();
 
                         vec![cx.container(panel_props, move |cx| {
                             let mut col = ColumnProps::default();
-                            col.gap = Px(2.0);
+                            col.gap = SpacingLength::Px(Px(2.0));
                             col.layout.size.width = Length::Auto;
                             col.layout.size.height = Length::Auto;
                             vec![cx.column(col, move |cx| {
@@ -3329,7 +3329,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                                 panel_props.border = Edges::all(Px(1.0));
                                 panel_props.border_color = Some(border);
                                 panel_props.corner_radii = Corners::all(Px(8.0));
-                                panel_props.padding = Edges::all(Px(10.0));
+                                panel_props.padding = Edges::all(Px(10.0)).into();
                                 panel_props.layout.size.width = Length::Fill;
                                 panel_props.layout.size.height = Length::Fill;
 
@@ -3453,7 +3453,8 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 right: Px(8.0),
                 top: Px(4.0),
                 bottom: Px(4.0),
-            };
+            }
+            .into();
 
             let close_popup = options.close_popup.clone();
             let test_id = options.test_id.clone();
@@ -3469,7 +3470,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     let mut row = RowProps::default();
                     row.layout.size.width = Length::Fill;
                     row.layout.size.height = Length::Auto;
-                    row.gap = Px(8.0);
+                    row.gap = SpacingLength::Px(Px(8.0));
 
                     let indicator = match (role, checked) {
                         (SemanticsRole::MenuItemCheckbox, Some(true)) => {
@@ -5615,7 +5616,8 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                                 right: Px(6.0),
                                 top: Px(4.0),
                                 bottom: Px(4.0),
-                            };
+                            }
+                            .into();
                             props.background = Some(muted);
                             props.border = Edges {
                                 left: Px(0.0),
@@ -5636,7 +5638,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                             let mut row = RowProps::default();
                             row.layout.size.width = Length::Fill;
                             row.layout.size.height = Length::Fill;
-                            row.gap = Px(6.0);
+                            row.gap = SpacingLength::Px(Px(6.0));
 
                             let title = title.clone();
                             let title_bar_test_id = title_bar_test_id.clone();
@@ -5791,7 +5793,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     let content = cx.container(
                         {
                             let mut props = ContainerProps::default();
-                            props.padding = Edges::all(Px(8.0));
+                            props.padding = Edges::all(Px(8.0)).into();
                             props
                         },
                         |cx| {

@@ -1301,13 +1301,13 @@ fn time_input_field<H: UiHost>(
             container.border_color = Some(c);
         }
 
-            let overlay = (hovered && !focused).then(|| {
-                let mut layout = LayoutStyle::default();
-                layout.position = fret_ui::element::PositionStyle::Absolute;
-                layout.inset.top = Some(Px(0.0)).into();
-                layout.inset.right = Some(Px(0.0)).into();
-                layout.inset.bottom = Some(Px(0.0)).into();
-                layout.inset.left = Some(Px(0.0)).into();
+        let overlay = (hovered && !focused).then(|| {
+            let mut layout = LayoutStyle::default();
+            layout.position = fret_ui::element::PositionStyle::Absolute;
+            layout.inset.top = Some(Px(0.0)).into();
+            layout.inset.right = Some(Px(0.0)).into();
+            layout.inset.bottom = Some(Px(0.0)).into();
+            layout.inset.left = Some(Px(0.0)).into();
 
             let c = {
                 let theme = Theme::global(&*cx.app);

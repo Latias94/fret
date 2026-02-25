@@ -15,7 +15,7 @@ mod toast;
 #[cfg(test)]
 mod tests;
 
-use fret_core::{AppWindowId, NodeId};
+use fret_core::{AppWindowId, NodeId, Rect};
 use fret_runtime::{FrameId, Model};
 use fret_ui::elements::GlobalElementId;
 use fret_ui::tree::UiLayerId;
@@ -52,6 +52,15 @@ pub use toast::{
 
 #[allow(unused_imports)]
 pub use toast::{ToastDescription, ToastDuration, ToastSwipeDirections};
+
+pub(crate) fn last_known_window_bounds_for_window<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+) -> Option<Rect> {
+    app.with_global_mut_untracked(state::WindowOverlays::default, |overlays, _app| {
+        overlays.windows.get(&window).and_then(|w| w.last_bounds)
+    })
+}
 
 /// Radix `ToastViewport` focus-jump command (default hotkey: `F8`).
 pub const TOAST_VIEWPORT_FOCUS_COMMAND: &str = "toast.viewport.focus";

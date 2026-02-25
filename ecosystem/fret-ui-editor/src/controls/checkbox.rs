@@ -10,7 +10,7 @@ use fret_runtime::Model;
 use fret_ui::action::{ActionCx, OnActivate};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
-    PressableProps, RingPlacement, RingStyle, SizeStyle,
+    PressableProps, RingPlacement, RingStyle, SizeStyle, SpacingLength,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::ColorRef;
@@ -262,8 +262,8 @@ impl Checkbox {
                                     ..Default::default()
                                 },
                                 direction: Axis::Horizontal,
-                                gap: Px(0.0),
-                                padding: Edges::all(Px(0.0)),
+                                gap: SpacingLength::Px(Px(0.0)),
+                                padding: Edges::all(Px(0.0)).into(),
                                 justify: MainAlign::Center,
                                 align: CrossAlign::Center,
                                 wrap: false,
@@ -291,8 +291,8 @@ impl Checkbox {
                             ..Default::default()
                         },
                         direction: Axis::Horizontal,
-                        gap: Px(0.0),
-                        padding: Edges::all(Px(0.0)),
+                        gap: SpacingLength::Px(Px(0.0)),
+                        padding: Edges::all(Px(0.0)).into(),
                         justify: MainAlign::Center,
                         align: CrossAlign::Center,
                         wrap: false,

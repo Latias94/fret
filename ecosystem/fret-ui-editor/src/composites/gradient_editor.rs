@@ -19,7 +19,7 @@ use fret_ui::action::{
 use fret_ui::canvas::OnCanvasPaint;
 use fret_ui::element::{
     AnyElement, CanvasProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, PressableA11y,
-    PressableProps, SizeStyle,
+    PressableProps, SizeStyle, SpacingLength,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 
@@ -273,8 +273,8 @@ impl GradientEditor {
             FlexProps {
                 layout: options.layout,
                 direction: Axis::Vertical,
-                gap: Px(8.0),
-                padding: Edges::all(Px(0.0)),
+                gap: SpacingLength::Px(Px(8.0)),
+                padding: Edges::all(Px(0.0)).into(),
                 justify: MainAlign::Start,
                 align: CrossAlign::Stretch,
                 wrap: false,
@@ -317,8 +317,8 @@ fn stop_row<H: UiHost>(
                         ..Default::default()
                     },
                     direction: Axis::Horizontal,
-                    gap: Px(6.0),
-                    padding: Edges::all(Px(0.0)),
+                    gap: SpacingLength::Px(Px(6.0)),
+                    padding: Edges::all(Px(0.0)).into(),
                     justify: MainAlign::Start,
                     align: CrossAlign::Center,
                     wrap: false,

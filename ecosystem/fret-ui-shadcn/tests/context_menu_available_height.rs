@@ -203,8 +203,8 @@ fn context_menu_content_height_clamps_to_available_height() {
 
     let mut trigger_layout = LayoutStyle::default();
     trigger_layout.position = fret_ui::element::PositionStyle::Absolute;
-    trigger_layout.inset.left = Some(Px(16.0));
-    trigger_layout.inset.top = Some(Px(42.0));
+    trigger_layout.inset.left = Some(Px(16.0)).into();
+    trigger_layout.inset.top = Some(Px(42.0)).into();
     trigger_layout.size.width = Length::Px(Px(200.0));
     trigger_layout.size.height = Length::Px(Px(40.0));
 
