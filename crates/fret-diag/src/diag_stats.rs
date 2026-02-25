@@ -325,12 +325,21 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
         )?;
         let bundle_dir = resolve_bundle_root_dir(&bundle_path)?;
         let out_dir = bundle_dir.parent().unwrap_or_else(|| Path::new("."));
-        stats::check_bundle_for_view_cache_reuse_stable_min(
-            bundle_path.as_path(),
-            out_dir,
-            min,
-            warmup_frames,
-        )?;
+        if derived_from_frames_index {
+            stats::check_frames_index_for_view_cache_reuse_stable_min(
+                bundle_path.as_path(),
+                out_dir,
+                min,
+                warmup_frames,
+            )?;
+        } else {
+            stats::check_bundle_for_view_cache_reuse_stable_min(
+                bundle_path.as_path(),
+                out_dir,
+                min,
+                warmup_frames,
+            )?;
+        }
     }
     if let Some(min) = check_view_cache_reuse_min
         && min > 0

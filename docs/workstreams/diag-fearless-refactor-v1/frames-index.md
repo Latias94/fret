@@ -93,6 +93,9 @@ When `features[]` contains `window_aggregates.v1`, each `windows[i]` object may 
 - `aggregates.view_cache_active_snapshots_post_warmup`
 - `aggregates.view_cache_reuse_events_post_warmup`
 - `aggregates.paint_cache_replayed_ops_post_warmup`
+- `aggregates.view_cache_reuse_streak_max_post_warmup` (requires `window_aggregates.view_cache_reuse_streak.v1`)
+- `aggregates.view_cache_reuse_streak_tail_post_warmup` (requires `window_aggregates.view_cache_reuse_streak.v1`)
+- `aggregates.view_cache_reuse_last_non_signal_post_warmup` (requires `window_aggregates.view_cache_reuse_streak.v1`; nullable)
 - `aggregates.overlay_synthesis_events_total_post_warmup`
 - `aggregates.overlay_synthesis_events_synthesized_post_warmup`
 - `aggregates.overlay_synthesis_events_suppressed_post_warmup`
@@ -100,4 +103,4 @@ When `features[]` contains `window_aggregates.v1`, each `windows[i]` object may 
 These counters are computed over the full streamed snapshot sequence (post-warmup), even if `rows[]`
 is tail-clipped.
 
-Additional counters may be present as new `features[]` are added (e.g. overlay synthesis totals).
+Additional counters may be present as new `features[]` are added (e.g. reuse streaks, overlay synthesis totals).

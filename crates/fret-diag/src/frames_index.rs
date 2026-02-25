@@ -10,9 +10,12 @@ const FRAMES_INDEX_SCHEMA_VERSION: u64 = 1;
 const FRAMES_INDEX_FEATURE_WINDOW_AGG_V1: &str = "window_aggregates.v1";
 const FRAMES_INDEX_FEATURE_WINDOW_AGG_OVERLAY_SYNTHESIS_V1: &str =
     "window_aggregates.overlay_synthesis.v1";
+const FRAMES_INDEX_FEATURE_WINDOW_AGG_VIEW_CACHE_REUSE_STREAK_V1: &str =
+    "window_aggregates.view_cache_reuse_streak.v1";
 const FRAMES_INDEX_REQUIRED_FEATURES: &[&str] = &[
     FRAMES_INDEX_FEATURE_WINDOW_AGG_V1,
     FRAMES_INDEX_FEATURE_WINDOW_AGG_OVERLAY_SYNTHESIS_V1,
+    FRAMES_INDEX_FEATURE_WINDOW_AGG_VIEW_CACHE_REUSE_STREAK_V1,
 ];
 
 // Guardrail: building a frames index that is larger than this is unlikely to be useful for agentic
@@ -117,6 +120,9 @@ struct WindowAggregates {
     view_cache_active_snapshots_post_warmup: u64,
     view_cache_reuse_events_post_warmup: u64,
     paint_cache_replayed_ops_post_warmup: u64,
+    view_cache_reuse_streak_max_post_warmup: u64,
+    view_cache_reuse_streak_tail_post_warmup: u64,
+    view_cache_reuse_last_non_signal_post_warmup: Option<Value>,
 
     overlay_synthesis_events_total_post_warmup: u64,
     overlay_synthesis_events_synthesized_post_warmup: u64,
@@ -526,10 +532,38 @@ fn build_frames_index_payload_streaming(
                         .aggregates
                         .view_cache_reuse_events_post_warmup
                         .saturating_add(reuse_events);
+                    let paint_cache_replayed_ops = row.paint_cache_replayed_ops.unwrap_or(0);
                     self.aggregates.paint_cache_replayed_ops_post_warmup = self
                         .aggregates
                         .paint_cache_replayed_ops_post_warmup
-                        .saturating_add(row.paint_cache_replayed_ops.unwrap_or(0));
+                        .saturating_add(paint_cache_replayed_ops);
+
+                    let has_reuse_signal =
+                        row.view_cache_active && (reuse_events > 0 || paint_cache_replayed_ops > 0);
+                    if has_reuse_signal {
+                        self.aggregates.view_cache_reuse_streak_tail_post_warmup = self
+                            .aggregates
+                            .view_cache_reuse_streak_tail_post_warmup
+                            .saturating_add(1);
+                        self.aggregates.view_cache_reuse_streak_max_post_warmup = self
+                            .aggregates
+                            .view_cache_reuse_streak_max_post_warmup
+                            .max(self.aggregates.view_cache_reuse_streak_tail_post_warmup);
+                    } else {
+                        self.aggregates.view_cache_reuse_streak_tail_post_warmup = 0;
+                        let reason = if row.view_cache_active {
+                            "active_no_signal"
+                        } else {
+                            "view_cache_inactive"
+                        };
+                        self.aggregates.view_cache_reuse_last_non_signal_post_warmup = Some(json!({
+                            "frame_id": frame_id,
+                            "reason": reason,
+                            "view_cache_active": row.view_cache_active,
+                            "reuse_events": reuse_events,
+                            "paint_cache_replayed_ops": paint_cache_replayed_ops,
+                        }));
+                    }
                     self.aggregates.overlay_synthesis_events_total_post_warmup = self
                         .aggregates
                         .overlay_synthesis_events_total_post_warmup
@@ -1540,6 +1574,9 @@ fn build_frames_index_payload_streaming(
             "view_cache_active_snapshots_post_warmup": w.aggregates.view_cache_active_snapshots_post_warmup,
             "view_cache_reuse_events_post_warmup": w.aggregates.view_cache_reuse_events_post_warmup,
             "paint_cache_replayed_ops_post_warmup": w.aggregates.paint_cache_replayed_ops_post_warmup,
+            "view_cache_reuse_streak_max_post_warmup": w.aggregates.view_cache_reuse_streak_max_post_warmup,
+            "view_cache_reuse_streak_tail_post_warmup": w.aggregates.view_cache_reuse_streak_tail_post_warmup,
+            "view_cache_reuse_last_non_signal_post_warmup": w.aggregates.view_cache_reuse_last_non_signal_post_warmup,
             "overlay_synthesis_events_total_post_warmup": w.aggregates.overlay_synthesis_events_total_post_warmup,
             "overlay_synthesis_events_synthesized_post_warmup": w.aggregates.overlay_synthesis_events_synthesized_post_warmup,
             "overlay_synthesis_events_suppressed_post_warmup": w.aggregates.overlay_synthesis_events_suppressed_post_warmup,
@@ -1566,6 +1603,7 @@ fn build_frames_index_payload_streaming(
         "features": [
             FRAMES_INDEX_FEATURE_WINDOW_AGG_V1,
             FRAMES_INDEX_FEATURE_WINDOW_AGG_OVERLAY_SYNTHESIS_V1,
+            FRAMES_INDEX_FEATURE_WINDOW_AGG_VIEW_CACHE_REUSE_STREAK_V1,
         ],
         "bundle": bundle_path.display().to_string(),
         "generated_unix_ms": crate::util::now_unix_ms(),
@@ -1886,6 +1924,9 @@ mod tests {
             v.iter().any(|f| f.as_str() == Some("window_aggregates.v1"))
                 && v.iter()
                     .any(|f| f.as_str() == Some("window_aggregates.overlay_synthesis.v1"))
+                && v.iter().any(|f| {
+                    f.as_str() == Some("window_aggregates.view_cache_reuse_streak.v1")
+                })
         }));
         assert_eq!(payload["warmup_frames"].as_u64(), Some(5));
         assert_eq!(payload["has_semantics_table"].as_bool(), Some(true));
@@ -1935,6 +1976,18 @@ mod tests {
                 .and_then(|v| v.as_u64()),
             Some(5)
         );
+        assert_eq!(
+            aggs.get("view_cache_reuse_streak_max_post_warmup")
+                .and_then(|v| v.as_u64()),
+            Some(2)
+        );
+        assert_eq!(
+            aggs.get("view_cache_reuse_streak_tail_post_warmup")
+                .and_then(|v| v.as_u64()),
+            Some(2)
+        );
+        assert!(aggs.get("view_cache_reuse_last_non_signal_post_warmup").is_some());
+        assert!(aggs["view_cache_reuse_last_non_signal_post_warmup"].is_null());
         assert_eq!(
             aggs.get("overlay_synthesis_events_total_post_warmup")
                 .and_then(|v| v.as_u64()),
