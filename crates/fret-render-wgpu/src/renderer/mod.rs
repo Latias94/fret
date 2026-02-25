@@ -165,6 +165,7 @@ pub struct Renderer {
 
     materials: SlotMap<fret_core::MaterialId, MaterialEntry>,
     materials_by_desc: HashMap<fret_core::MaterialDescriptor, fret_core::MaterialId>,
+    materials_generation: u64,
     material_paint_budget_per_frame: u64,
     material_distinct_budget_per_frame: usize,
 }

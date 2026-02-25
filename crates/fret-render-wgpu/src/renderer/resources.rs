@@ -562,6 +562,7 @@ impl Renderer {
 
             materials: SlotMap::with_key(),
             materials_by_desc: HashMap::new(),
+            materials_generation: 0,
             material_paint_budget_per_frame: 50_000,
             material_distinct_budget_per_frame: 256,
         }

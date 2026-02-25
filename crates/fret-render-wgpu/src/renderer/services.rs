@@ -318,6 +318,7 @@ impl fret_core::MaterialService for Renderer {
                     .materials
                     .insert(super::MaterialEntry { desc, refs: 1 });
                 e.insert(id);
+                self.materials_generation = self.materials_generation.wrapping_add(1);
                 Ok(id)
             }
         }
@@ -340,6 +341,7 @@ impl fret_core::MaterialService for Renderer {
         };
 
         self.materials_by_desc.remove(&entry.desc);
+        self.materials_generation = self.materials_generation.wrapping_add(1);
         true
     }
 }
