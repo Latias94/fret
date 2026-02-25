@@ -95,6 +95,13 @@ pub(super) struct GpuPipelines {
     pub(super) alpha_threshold_bind_group_layout: Option<wgpu::BindGroupLayout>,
     pub(super) alpha_threshold_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
 
+    pub(super) dither_pipeline_format: Option<wgpu::TextureFormat>,
+    pub(super) dither_pipeline: Option<wgpu::RenderPipeline>,
+    pub(super) dither_masked_pipeline: Option<wgpu::RenderPipeline>,
+    pub(super) dither_mask_pipeline: Option<wgpu::RenderPipeline>,
+    pub(super) dither_bind_group_layout: Option<wgpu::BindGroupLayout>,
+    pub(super) dither_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
+
     pub(super) drop_shadow_pipeline_format: Option<wgpu::TextureFormat>,
     pub(super) drop_shadow_pipeline: Option<wgpu::RenderPipeline>,
     pub(super) drop_shadow_masked_pipeline: Option<wgpu::RenderPipeline>,
@@ -178,6 +185,14 @@ impl Default for GpuPipelines {
             alpha_threshold_mask_pipeline: None,
             alpha_threshold_bind_group_layout: None,
             alpha_threshold_mask_bind_group_layout: None,
+
+            dither_pipeline_format: None,
+            dither_pipeline: None,
+            dither_masked_pipeline: None,
+            dither_mask_pipeline: None,
+            dither_bind_group_layout: None,
+            dither_mask_bind_group_layout: None,
+
             drop_shadow_pipeline_format: None,
             drop_shadow_pipeline: None,
             drop_shadow_masked_pipeline: None,

@@ -55,6 +55,7 @@ fn first_output_write(passes: &[RenderPlanPass]) -> Option<&RenderPlanPass> {
         RenderPlanPass::ColorAdjust(p) => p.dst == PlanTarget::Output,
         RenderPlanPass::ColorMatrix(p) => p.dst == PlanTarget::Output,
         RenderPlanPass::AlphaThreshold(p) => p.dst == PlanTarget::Output,
+        RenderPlanPass::Dither(p) => p.dst == PlanTarget::Output,
         RenderPlanPass::DropShadow(p) => p.dst == PlanTarget::Output,
         RenderPlanPass::ClipMask(_) => false,
         RenderPlanPass::ReleaseTarget(_) => false,
@@ -92,6 +93,9 @@ fn assert_first_output_write_is_clear(passes: &[RenderPlanPass]) {
             assert!(matches!(p.load, wgpu::LoadOp::Clear(_)));
         }
         RenderPlanPass::AlphaThreshold(p) => {
+            assert!(matches!(p.load, wgpu::LoadOp::Clear(_)));
+        }
+        RenderPlanPass::Dither(p) => {
             assert!(matches!(p.load, wgpu::LoadOp::Clear(_)));
         }
         RenderPlanPass::DropShadow(p) => {

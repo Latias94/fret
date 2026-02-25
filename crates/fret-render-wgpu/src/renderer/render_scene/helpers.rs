@@ -233,6 +233,7 @@ pub(super) fn render_plan_pass_trace_kind(pass: &RenderPlanPass) -> &'static str
         RenderPlanPass::ColorAdjust(_) => "color_adjust",
         RenderPlanPass::ColorMatrix(_) => "color_matrix",
         RenderPlanPass::AlphaThreshold(_) => "alpha_threshold",
+        RenderPlanPass::Dither(_) => "dither",
         RenderPlanPass::DropShadow(_) => "drop_shadow",
         RenderPlanPass::FullscreenBlit(_) => "fullscreen_blit",
         RenderPlanPass::ClipMask(_) => "clip_mask",
@@ -394,6 +395,17 @@ pub(super) fn render_plan_pass_trace_meta(pass: &RenderPlanPass) -> RenderPlanPa
             render_origin,
             render_size,
         },
+        RenderPlanPass::Dither(pass) => RenderPlanPassTraceMeta {
+            src: Some(pass.src),
+            dst: Some(pass.dst),
+            load: Some(load_label(pass.load)),
+            scissor: pass.dst_scissor.map(|s| s.0),
+            scissor_space: pass
+                .dst_scissor
+                .map(|_| RenderPlanPassTraceScissorSpace::DstLocal),
+            render_origin,
+            render_size,
+        },
         RenderPlanPass::DropShadow(pass) => RenderPlanPassTraceMeta {
             src: Some(pass.src),
             dst: Some(pass.dst),
@@ -496,6 +508,7 @@ pub(super) fn render_plan_pass_render_space(
         RenderPlanPass::ColorAdjust(pass) => Some(((0, 0), pass.dst_size)),
         RenderPlanPass::ColorMatrix(pass) => Some(((0, 0), pass.dst_size)),
         RenderPlanPass::AlphaThreshold(pass) => Some(((0, 0), pass.dst_size)),
+        RenderPlanPass::Dither(pass) => Some(((0, 0), pass.dst_size)),
         RenderPlanPass::DropShadow(pass) => Some(((0, 0), pass.dst_size)),
         RenderPlanPass::FullscreenBlit(pass) => Some(((0, 0), pass.dst_size)),
         RenderPlanPass::ClipMask(pass) => Some(((0, 0), pass.dst_size)),

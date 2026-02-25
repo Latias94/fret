@@ -44,6 +44,10 @@ impl Renderer {
             .passes
             .iter()
             .any(|p| matches!(p, RenderPlanPass::AlphaThreshold(_)));
+        let needs_dither = plan
+            .passes
+            .iter()
+            .any(|p| matches!(p, RenderPlanPass::Dither(_)));
         let needs_drop_shadow = plan
             .passes
             .iter()
@@ -75,6 +79,9 @@ impl Renderer {
         }
         if needs_alpha_threshold {
             self.ensure_alpha_threshold_pipeline(device, format);
+        }
+        if needs_dither {
+            self.ensure_dither_pipeline(device, format);
         }
         if needs_drop_shadow {
             self.ensure_drop_shadow_pipeline(device, format);

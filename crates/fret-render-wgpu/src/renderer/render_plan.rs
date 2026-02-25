@@ -117,6 +117,7 @@ pub(super) enum RenderPlanPass {
     ColorAdjust(ColorAdjustPass),
     ColorMatrix(ColorMatrixPass),
     AlphaThreshold(AlphaThresholdPass),
+    Dither(DitherPass),
     DropShadow(DropShadowPass),
     ClipMask(ClipMaskPass),
     ReleaseTarget(PlanTarget),
@@ -225,6 +226,19 @@ pub(super) struct AlphaThresholdPass {
     pub(super) mask: Option<MaskRef>,
     pub(super) cutoff: f32,
     pub(super) soft: f32,
+    pub(super) load: wgpu::LoadOp<wgpu::Color>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(super) struct DitherPass {
+    pub(super) src: PlanTarget,
+    pub(super) dst: PlanTarget,
+    pub(super) src_size: (u32, u32),
+    pub(super) dst_size: (u32, u32),
+    pub(super) dst_scissor: Option<LocalScissorRect>,
+    pub(super) mask_uniform_index: Option<u32>,
+    pub(super) mask: Option<MaskRef>,
+    pub(super) mode: fret_core::DitherMode,
     pub(super) load: wgpu::LoadOp<wgpu::Color>,
 }
 
@@ -600,6 +614,19 @@ fn validate_plan_target_lifetimes(passes: &[RenderPlanPass]) -> Result<(), Strin
                 }
                 mark_write(&mut live, &mut initialized, pass_index, dst, Some(load))?;
             }
+            RenderPlanPass::Dither(DitherPass {
+                src,
+                dst,
+                mask,
+                load,
+                ..
+            }) => {
+                mark_read(&live, &initialized, pass_index, src)?;
+                if let Some(mask) = mask {
+                    mark_read(&live, &initialized, pass_index, mask.target)?;
+                }
+                mark_write(&mut live, &mut initialized, pass_index, dst, Some(load))?;
+            }
             RenderPlanPass::DropShadow(DropShadowPass { src, dst, load, .. }) => {
                 mark_read(&live, &initialized, pass_index, src)?;
                 mark_write(&mut live, &mut initialized, pass_index, dst, Some(load))?;
@@ -887,6 +914,23 @@ fn validate_plan_scissors(passes: &[RenderPlanPass]) -> Result<(), String> {
                     validate_mask_ref(pass_index, "AlphaThreshold", pass.dst_size, mask)?;
                 }
             }
+            RenderPlanPass::Dither(pass) => {
+                if let Some(scissor) = pass.dst_scissor.map(|s| s.0)
+                    && !within_local(scissor, pass.dst_size)
+                {
+                    return Err(format!(
+                        "pass[{pass_index}] Dither dst_scissor exceeds destination size"
+                    ));
+                }
+                if let Some(mask) = pass.mask {
+                    if pass.mask_uniform_index.is_none() {
+                        return Err(format!(
+                            "pass[{pass_index}] Dither mask requires mask_uniform_index"
+                        ));
+                    }
+                    validate_mask_ref(pass_index, "Dither", pass.dst_size, mask)?;
+                }
+            }
             RenderPlanPass::DropShadow(pass) => {
                 if let Some(scissor) = pass.dst_scissor.map(|s| s.0)
                     && !within_local(scissor, pass.dst_size)
@@ -984,6 +1028,9 @@ fn validate_plan_first_output_write_is_clear(passes: &[RenderPlanPass]) -> Resul
             RenderPlanPass::AlphaThreshold(AlphaThresholdPass { dst, load, .. })
                 if dst == PlanTarget::Output =>
             {
+                Some(load)
+            }
+            RenderPlanPass::Dither(DitherPass { dst, load, .. }) if dst == PlanTarget::Output => {
                 Some(load)
             }
             RenderPlanPass::DropShadow(DropShadowPass { dst, load, .. })
@@ -1103,6 +1150,9 @@ fn estimate_plan_peak_intermediate_bytes(
             RenderPlanPass::AlphaThreshold(AlphaThresholdPass { dst, dst_size, .. }) => {
                 mark_live(&mut live, &mut sizes, dst, dst_size);
             }
+            RenderPlanPass::Dither(DitherPass { dst, dst_size, .. }) => {
+                mark_live(&mut live, &mut sizes, dst, dst_size);
+            }
             RenderPlanPass::DropShadow(DropShadowPass { dst, dst_size, .. }) => {
                 mark_live(&mut live, &mut sizes, dst, dst_size);
             }
@@ -1205,6 +1255,13 @@ fn insert_early_releases(passes: &mut Vec<RenderPlanPass>) -> u64 {
                 }
             }
             RenderPlanPass::AlphaThreshold(p) => {
+                mark(p.src);
+                mark(p.dst);
+                if let Some(mask) = p.mask {
+                    mark(mask.target);
+                }
+            }
+            RenderPlanPass::Dither(p) => {
                 mark(p.src);
                 mark(p.dst);
                 if let Some(mask) = p.mask {

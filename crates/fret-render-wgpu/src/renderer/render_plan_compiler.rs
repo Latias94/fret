@@ -140,7 +140,9 @@ pub(super) fn compile_for_scene(
                 intermediate_budget_bytes,
                 scale,
             ),
-            fret_core::EffectStep::Dither { .. } => false,
+            fret_core::EffectStep::Dither { .. } => {
+                effects::dither_enabled(viewport_size, format, intermediate_budget_bytes)
+            }
         })
     });
 

@@ -11,22 +11,21 @@ This TODO is ordered by implementation priority (P0 first), and is designed to b
 
 ## P0 — Correctness and contract closure
 
-- [ ] Fix `SceneEncodingCacheKey` to include all encode-time inputs that change output:
-  - [ ] Add a `materials_generation` (or equivalent) to the key so material register/unregister cannot reuse stale encodes.
-  - [ ] Add an `encode_config_key` to the key to cover encode budgets + relevant renderer config knobs.
-  - [ ] Extend miss reasons with new key fields, and surface them in perf snapshots.
+- [x] Fix `SceneEncodingCacheKey` to include all encode-time inputs that change output:
+  - [x] Add a `materials_generation` (or equivalent) to the key so material register/unregister cannot reuse stale encodes.
+  - [x] Include encode-time budgets and relevant renderer knobs in the key.
+  - [x] Extend miss reasons with new key fields, and surface them in perf snapshots.
   - Evidence: `crates/fret-render-wgpu/src/renderer/render_scene/encoding_cache.rs`,
     `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/paint.rs`.
 
-- [ ] Make blur radius semantics real:
-  - [ ] Consume `EffectStep::GaussianBlur.radius_px` in plan compilation.
-  - [ ] Consume `DropShadowV1.blur_radius_px` (in addition to downsample) and map to the shared blur primitive.
-  - [ ] Define deterministic degradation behavior when the requested radius is too expensive under budgets.
+- [x] Make blur radius semantics real:
+  - [x] Consume `EffectStep::GaussianBlur.radius_px` in plan compilation.
+  - [x] Consume `DropShadowV1.blur_radius_px` (in addition to downsample) and map to the shared blur primitive.
+  - [x] Define deterministic degradation behavior when the requested radius is too expensive under budgets.
   - Evidence: `crates/fret-core/src/scene/mod.rs`, `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs`.
 
-- [ ] Decide and implement `EffectStep::Dither` behavior in effect chains:
-  - Option A: implement (preferred).
-  - Option B: deterministic no-op with explicit plan degradation reason and diagnostics counters.
+- [x] Decide and implement `EffectStep::Dither` behavior in effect chains:
+  - Implemented: ordered Bayer 4x4 dithering in effect chains (portable, deterministic).
   - Evidence: `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs`.
 
 ## P1 — Consistency (color, intermediates, diagnostics)
@@ -58,4 +57,3 @@ This TODO is ordered by implementation priority (P0 first), and is designed to b
   - `cargo nextest run -p fret-render-wgpu` (where feasible) for cache-key correctness and blur radius mapping.
 - Determinism checks:
   - A small diag bundle + script that exercises blur/shadow at multiple radii and asserts stable outcomes under budgets.
-
