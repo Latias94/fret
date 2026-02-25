@@ -44,6 +44,7 @@ P1 — Quality and maintainability:
   - pipeline selection (unmasked vs masked vs mask texture),
   - bind-group creation (texture + params + optional mask),
   - perf accounting (uniform bytes and pass counters).
+  Done (initial): `record_fullscreen_param_effect_pass` + `record_fullscreen_texture_effect_pass`.
   Anchors: `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs`,
   `crates/fret-render-wgpu/src/renderer/pipelines/*`.
 
@@ -82,4 +83,3 @@ P2 — Higher-end visuals without core bloat:
   Prefer bounded custom effects first.
 - End-to-end HDR / wide-gamut correctness: requires a broader contract and platform integration.
   Keep hooks (`RenderTargetColorEncoding`) but defer full pipeline work.
-
