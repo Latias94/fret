@@ -853,7 +853,7 @@ mod tests {
         let mut scene = fret_core::Scene::default();
         ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
 
-        let theme = Theme::global(&app).clone();
+        let theme = Theme::global(&app).snapshot();
         let icon = icon_size(&theme);
         let indicator = indicator_size(&theme);
         let dot = radio_indicator(&theme);
@@ -965,7 +965,7 @@ mod tests {
         let mut scene = fret_core::Scene::default();
         ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
 
-        let theme = Theme::global(&app).clone();
+        let theme = Theme::global(&app).snapshot();
         let icon = icon_size(&theme);
         let destructive = theme.color_token("destructive");
 
@@ -1059,7 +1059,7 @@ mod tests {
         let mut scene = fret_core::Scene::default();
         ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
 
-        let theme = Theme::global(&app).clone();
+        let theme = Theme::global(&app).snapshot();
         let primary = radio_indicator(&theme);
         let bg_alpha = if theme.color_scheme == Some(ColorScheme::Dark) {
             0.10

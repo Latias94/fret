@@ -831,9 +831,10 @@ mod tests {
     #[test]
     fn input_otp_aria_invalid_uses_destructive_border_color() {
         let app = App::new();
-        let theme = Theme::global(&app).clone();
+        let theme_full = Theme::global(&app);
+        let theme = theme_full.snapshot();
         let resolved = resolve_input_chrome(
-            &theme,
+            theme_full,
             ComponentSize::default(),
             &ChromeRefinement::default(),
             InputTokenKeys::none(),

@@ -4079,7 +4079,7 @@ mod tests {
                 ..ThemeConfig::default()
             });
         });
-        let theme = Theme::global(&app);
+        let theme = Theme::global(&app).snapshot();
 
         let destructive_fg = fret_core::Color {
             r: 1.0,
@@ -4088,7 +4088,7 @@ mod tests {
             a: 1.0,
         };
 
-        let bg = menu_destructive_focus_bg(theme, destructive_fg);
+        let bg = menu_destructive_focus_bg(&theme, destructive_fg);
         assert!(
             (bg.a - 0.2).abs() < 1e-6,
             "expected /20 alpha on dark themes"
