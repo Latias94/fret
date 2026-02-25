@@ -3,8 +3,9 @@ use super::frame_targets::downsampled_size;
 use super::intermediate_pool::estimate_texture_bytes;
 use super::{
     AlphaThresholdPass, BackdropWarpPass, BlurAxis, BlurPass, ClipMaskPass, ColorAdjustPass,
-    ColorMatrixPass, DitherPass, DropShadowPass, FullscreenBlitPass, LocalScissorRect, MaskRef,
-    NoisePass, PlanTarget, RenderPlanPass, ScaleMode, ScaleNearestPass, ScissorRect,
+    ColorMatrixPass, CustomEffectPass, DitherPass, DropShadowPass, FullscreenBlitPass,
+    LocalScissorRect, MaskRef, NoisePass, PlanTarget, RenderPlanPass, ScaleMode, ScaleNearestPass,
+    ScissorRect,
 };
 
 #[derive(Clone, Copy, Debug)]
@@ -994,6 +995,51 @@ pub(super) fn apply_chain_in_place(
                     mask,
                 );
             }
+            fret_core::EffectStep::CustomV1 { id, params } => {
+                effect_degradations.custom_effect.requested = effect_degradations
+                    .custom_effect
+                    .requested
+                    .saturating_add(1);
+                if !color_adjust_enabled(ctx.viewport_size, ctx.format, budget_bytes) {
+                    if budget_bytes == 0 {
+                        effect_degradations.custom_effect.degraded_budget_zero =
+                            effect_degradations
+                                .custom_effect
+                                .degraded_budget_zero
+                                .saturating_add(1);
+                    } else {
+                        effect_degradations
+                            .custom_effect
+                            .degraded_budget_insufficient = effect_degradations
+                            .custom_effect
+                            .degraded_budget_insufficient
+                            .saturating_add(1);
+                    }
+                    continue;
+                }
+                let Some(&scratch) = scratch_targets.first() else {
+                    effect_degradations.custom_effect.degraded_target_exhausted =
+                        effect_degradations
+                            .custom_effect
+                            .degraded_target_exhausted
+                            .saturating_add(1);
+                    continue;
+                };
+                effect_degradations.custom_effect.applied =
+                    effect_degradations.custom_effect.applied.saturating_add(1);
+                append_custom_effect_in_place_single_scratch(
+                    passes,
+                    srcdst,
+                    scratch,
+                    ctx.viewport_size,
+                    Some(scissor),
+                    id,
+                    params,
+                    ctx.clear,
+                    mask_uniform_index,
+                    mask,
+                );
+            }
         }
     }
 }
@@ -1863,6 +1909,74 @@ fn append_noise_in_place_single_scratch(
         strength,
         scale_px,
         phase,
+        load: wgpu::LoadOp::Clear(clear),
+    }));
+    passes.push(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
+        src: scratch,
+        dst: srcdst,
+        src_size: size,
+        dst_size: size,
+        dst_scissor: None,
+        encode_output_srgb: false,
+        load: wgpu::LoadOp::Clear(clear),
+    }));
+}
+
+fn append_custom_effect_in_place_single_scratch(
+    passes: &mut Vec<RenderPlanPass>,
+    srcdst: PlanTarget,
+    scratch: PlanTarget,
+    size: (u32, u32),
+    scissor: Option<ScissorRect>,
+    effect: fret_core::EffectId,
+    params: fret_core::EffectParamsV1,
+    clear: wgpu::Color,
+    mask_uniform_index: Option<u32>,
+    mask: Option<MaskRef>,
+) {
+    debug_assert_ne!(srcdst, PlanTarget::Output);
+    debug_assert_ne!(scratch, PlanTarget::Output);
+    debug_assert_ne!(srcdst, scratch);
+
+    if let Some(scissor) = scissor {
+        if scissor.w == 0 || scissor.h == 0 {
+            return;
+        }
+
+        passes.push(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
+            src: srcdst,
+            dst: scratch,
+            src_size: size,
+            dst_size: size,
+            dst_scissor: None,
+            encode_output_srgb: false,
+            load: wgpu::LoadOp::Clear(clear),
+        }));
+        passes.push(RenderPlanPass::CustomEffect(CustomEffectPass {
+            src: scratch,
+            dst: srcdst,
+            src_size: size,
+            dst_size: size,
+            dst_scissor: Some(LocalScissorRect(scissor)),
+            mask_uniform_index,
+            mask,
+            effect,
+            params,
+            load: wgpu::LoadOp::Load,
+        }));
+        return;
+    }
+
+    passes.push(RenderPlanPass::CustomEffect(CustomEffectPass {
+        src: srcdst,
+        dst: scratch,
+        src_size: size,
+        dst_size: size,
+        dst_scissor: None,
+        mask_uniform_index: None,
+        mask: None,
+        effect,
+        params,
         load: wgpu::LoadOp::Clear(clear),
     }));
     passes.push(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {

@@ -3,9 +3,10 @@ use super::super::*;
 use super::recorders::{
     record_alpha_threshold_pass, record_backdrop_warp_pass, record_blur_pass,
     record_clip_mask_pass, record_color_adjust_pass, record_color_matrix_pass,
-    record_composite_premul_pass, record_dither_pass, record_drop_shadow_pass,
-    record_fullscreen_blit_pass, record_noise_pass, record_path_clip_mask_pass,
-    record_path_msaa_batch_pass, record_scale_nearest_pass, record_scene_draw_range_pass,
+    record_composite_premul_pass, record_custom_effect_pass, record_dither_pass,
+    record_drop_shadow_pass, record_fullscreen_blit_pass, record_noise_pass,
+    record_path_clip_mask_pass, record_path_msaa_batch_pass, record_scale_nearest_pass,
+    record_scene_draw_range_pass,
 };
 
 pub(super) struct RenderSceneExecutor<'a> {
@@ -130,6 +131,9 @@ impl<'a> RenderSceneExecutor<'a> {
             }
             RenderPlanPass::DropShadow(pass) => {
                 record_drop_shadow_pass(self, ctx, pass);
+            }
+            RenderPlanPass::CustomEffect(pass) => {
+                record_custom_effect_pass(self, ctx, pass);
             }
             RenderPlanPass::CompositePremul(pass) => {
                 record_composite_premul_pass(self, ctx, pass);

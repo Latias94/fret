@@ -171,6 +171,10 @@ pub struct Renderer {
     materials_generation: u64,
     material_paint_budget_per_frame: u64,
     material_distinct_budget_per_frame: usize,
+
+    custom_effects: SlotMap<fret_core::EffectId, CustomEffectEntry>,
+    custom_effect_hash_index: HashMap<u64, Vec<fret_core::EffectId>>,
+    custom_effects_generation: u64,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -185,6 +189,15 @@ struct RenderPlanSegmentReport {
 #[derive(Clone, Copy, Debug)]
 struct MaterialEntry {
     desc: fret_core::MaterialDescriptor,
+    refs: u32,
+}
+
+#[derive(Clone, Debug)]
+struct CustomEffectEntry {
+    raw_source: Arc<str>,
+    wgsl_unmasked: Arc<str>,
+    wgsl_masked: Arc<str>,
+    wgsl_mask: Arc<str>,
     refs: u32,
 }
 

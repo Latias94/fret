@@ -209,6 +209,7 @@ pub struct EffectDegradationSnapshot {
     pub pixelate: EffectDegradationCounters,
     pub dither: EffectDegradationCounters,
     pub noise: EffectDegradationCounters,
+    pub custom_effect: EffectDegradationCounters,
 }
 
 impl EffectDegradationSnapshot {
@@ -225,6 +226,8 @@ impl EffectDegradationSnapshot {
         self.pixelate.saturating_add_assign(other.pixelate);
         self.dither.saturating_add_assign(other.dither);
         self.noise.saturating_add_assign(other.noise);
+        self.custom_effect
+            .saturating_add_assign(other.custom_effect);
     }
 }
 
@@ -947,4 +950,5 @@ pub(super) struct SceneEncodingCacheKey {
     pub(super) materials_generation: u64,
     pub(super) material_paint_budget_per_frame: u64,
     pub(super) material_distinct_budget_per_frame: usize,
+    pub(super) custom_effects_generation: u64,
 }

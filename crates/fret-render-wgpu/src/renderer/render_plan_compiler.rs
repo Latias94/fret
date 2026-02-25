@@ -148,6 +148,9 @@ pub(super) fn compile_for_scene(
             fret_core::EffectStep::NoiseV1(_n) => {
                 effects::noise_enabled(viewport_size, format, intermediate_budget_bytes)
             }
+            fret_core::EffectStep::CustomV1 { .. } => {
+                effects::color_adjust_enabled(viewport_size, format, intermediate_budget_bytes)
+            }
         })
     });
 

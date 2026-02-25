@@ -135,6 +135,7 @@ pub(super) enum RenderPlanPass {
     Dither(DitherPass),
     Noise(NoisePass),
     DropShadow(DropShadowPass),
+    CustomEffect(CustomEffectPass),
     ClipMask(ClipMaskPass),
     ReleaseTarget(PlanTarget),
 }
@@ -284,6 +285,20 @@ pub(super) struct DropShadowPass {
     pub(super) mask: Option<MaskRef>,
     pub(super) offset_px: (f32, f32),
     pub(super) color: fret_core::scene::Color,
+    pub(super) load: wgpu::LoadOp<wgpu::Color>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(super) struct CustomEffectPass {
+    pub(super) src: PlanTarget,
+    pub(super) dst: PlanTarget,
+    pub(super) src_size: (u32, u32),
+    pub(super) dst_size: (u32, u32),
+    pub(super) dst_scissor: Option<LocalScissorRect>,
+    pub(super) mask_uniform_index: Option<u32>,
+    pub(super) mask: Option<MaskRef>,
+    pub(super) effect: fret_core::EffectId,
+    pub(super) params: fret_core::EffectParamsV1,
     pub(super) load: wgpu::LoadOp<wgpu::Color>,
 }
 
@@ -686,6 +701,19 @@ fn validate_plan_target_lifetimes(passes: &[RenderPlanPass]) -> Result<(), Strin
                 mark_read(&live, &initialized, pass_index, src)?;
                 mark_write(&mut live, &mut initialized, pass_index, dst, Some(load))?;
             }
+            RenderPlanPass::CustomEffect(CustomEffectPass {
+                src,
+                dst,
+                mask,
+                load,
+                ..
+            }) => {
+                mark_read(&live, &initialized, pass_index, src)?;
+                if let Some(mask) = mask {
+                    mark_read(&live, &initialized, pass_index, mask.target)?;
+                }
+                mark_write(&mut live, &mut initialized, pass_index, dst, Some(load))?;
+            }
             RenderPlanPass::ReleaseTarget(t) => {
                 mark_release(&mut live, &mut initialized, pass_index, t)?;
             }
@@ -1020,6 +1048,23 @@ fn validate_plan_scissors(passes: &[RenderPlanPass]) -> Result<(), String> {
                     validate_mask_ref(pass_index, "DropShadow", pass.dst_size, mask)?;
                 }
             }
+            RenderPlanPass::CustomEffect(pass) => {
+                if let Some(scissor) = pass.dst_scissor.map(|s| s.0)
+                    && !within_local(scissor, pass.dst_size)
+                {
+                    return Err(format!(
+                        "pass[{pass_index}] CustomEffect dst_scissor exceeds destination size"
+                    ));
+                }
+                if let Some(mask) = pass.mask {
+                    if pass.mask_uniform_index.is_none() {
+                        return Err(format!(
+                            "pass[{pass_index}] CustomEffect mask requires mask_uniform_index"
+                        ));
+                    }
+                    validate_mask_ref(pass_index, "CustomEffect", pass.dst_size, mask)?;
+                }
+            }
             RenderPlanPass::FullscreenBlit(pass) => {
                 if let Some(scissor) = pass.dst_scissor.map(|s| s.0)
                     && !within_local(scissor, pass.dst_size)
@@ -1109,6 +1154,11 @@ fn validate_plan_first_output_write_is_clear(passes: &[RenderPlanPass]) -> Resul
                 Some(load)
             }
             RenderPlanPass::DropShadow(DropShadowPass { dst, load, .. })
+                if dst == PlanTarget::Output =>
+            {
+                Some(load)
+            }
+            RenderPlanPass::CustomEffect(CustomEffectPass { dst, load, .. })
                 if dst == PlanTarget::Output =>
             {
                 Some(load)
@@ -1236,6 +1286,9 @@ fn estimate_plan_peak_intermediate_bytes(
             RenderPlanPass::DropShadow(DropShadowPass { dst, dst_size, .. }) => {
                 mark_live(&mut live, &mut sizes, dst, dst_size);
             }
+            RenderPlanPass::CustomEffect(CustomEffectPass { dst, dst_size, .. }) => {
+                mark_live(&mut live, &mut sizes, dst, dst_size);
+            }
             RenderPlanPass::ReleaseTarget(t) => {
                 live[idx(t)] = false;
             }
@@ -1302,6 +1355,13 @@ fn insert_early_releases(passes: &mut Vec<RenderPlanPass>) -> u64 {
                 }
             }
             RenderPlanPass::ScaleNearest(p) => {
+                mark(p.src);
+                mark(p.dst);
+                if let Some(mask) = p.mask {
+                    mark(mask.target);
+                }
+            }
+            RenderPlanPass::CustomEffect(p) => {
                 mark(p.src);
                 mark(p.dst);
                 if let Some(mask) = p.mask {

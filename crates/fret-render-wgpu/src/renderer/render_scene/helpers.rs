@@ -236,6 +236,7 @@ pub(super) fn render_plan_pass_trace_kind(pass: &RenderPlanPass) -> &'static str
         RenderPlanPass::Dither(_) => "dither",
         RenderPlanPass::Noise(_) => "noise",
         RenderPlanPass::DropShadow(_) => "drop_shadow",
+        RenderPlanPass::CustomEffect(_) => "custom_effect",
         RenderPlanPass::FullscreenBlit(_) => "fullscreen_blit",
         RenderPlanPass::ClipMask(_) => "clip_mask",
         RenderPlanPass::ReleaseTarget(_) => "release_target",
@@ -429,6 +430,17 @@ pub(super) fn render_plan_pass_trace_meta(pass: &RenderPlanPass) -> RenderPlanPa
             render_origin,
             render_size,
         },
+        RenderPlanPass::CustomEffect(pass) => RenderPlanPassTraceMeta {
+            src: Some(pass.src),
+            dst: Some(pass.dst),
+            load: Some(load_label(pass.load)),
+            scissor: pass.dst_scissor.map(|s| s.0),
+            scissor_space: pass
+                .dst_scissor
+                .map(|_| RenderPlanPassTraceScissorSpace::DstLocal),
+            render_origin,
+            render_size,
+        },
         RenderPlanPass::ClipMask(pass) => RenderPlanPassTraceMeta {
             src: None,
             dst: Some(pass.dst),
@@ -523,6 +535,7 @@ pub(super) fn render_plan_pass_render_space(
         RenderPlanPass::Dither(pass) => Some(((0, 0), pass.dst_size)),
         RenderPlanPass::Noise(pass) => Some(((0, 0), pass.dst_size)),
         RenderPlanPass::DropShadow(pass) => Some(((0, 0), pass.dst_size)),
+        RenderPlanPass::CustomEffect(pass) => Some(((0, 0), pass.dst_size)),
         RenderPlanPass::FullscreenBlit(pass) => Some(((0, 0), pass.dst_size)),
         RenderPlanPass::ClipMask(pass) => Some(((0, 0), pass.dst_size)),
         RenderPlanPass::ReleaseTarget(_) => None,

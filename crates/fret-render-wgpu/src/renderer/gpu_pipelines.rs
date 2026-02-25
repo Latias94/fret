@@ -2,6 +2,12 @@ use super::Renderer;
 use super::gpu_globals::GpuGlobals;
 use super::types::QuadPipelineKey;
 
+pub(super) struct CustomEffectPipelines {
+    pub(super) unmasked: wgpu::RenderPipeline,
+    pub(super) masked: wgpu::RenderPipeline,
+    pub(super) mask: wgpu::RenderPipeline,
+}
+
 pub(super) struct GpuPipelines {
     pub(super) quad_pipeline_format: Option<wgpu::TextureFormat>,
     pub(super) quad_pipelines: std::collections::HashMap<QuadPipelineKey, wgpu::RenderPipeline>,
@@ -116,6 +122,12 @@ pub(super) struct GpuPipelines {
     pub(super) drop_shadow_mask_pipeline: Option<wgpu::RenderPipeline>,
     pub(super) drop_shadow_bind_group_layout: Option<wgpu::BindGroupLayout>,
     pub(super) drop_shadow_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
+
+    pub(super) custom_effect_pipeline_format: Option<wgpu::TextureFormat>,
+    pub(super) custom_effect_pipelines:
+        std::collections::HashMap<fret_core::EffectId, CustomEffectPipelines>,
+    pub(super) custom_effect_bind_group_layout: Option<wgpu::BindGroupLayout>,
+    pub(super) custom_effect_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
 }
 
 impl Default for GpuPipelines {
@@ -215,6 +227,11 @@ impl Default for GpuPipelines {
             drop_shadow_mask_pipeline: None,
             drop_shadow_bind_group_layout: None,
             drop_shadow_mask_bind_group_layout: None,
+
+            custom_effect_pipeline_format: None,
+            custom_effect_pipelines: std::collections::HashMap::new(),
+            custom_effect_bind_group_layout: None,
+            custom_effect_mask_bind_group_layout: None,
         }
     }
 }

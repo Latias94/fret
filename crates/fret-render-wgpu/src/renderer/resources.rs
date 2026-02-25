@@ -478,6 +478,13 @@ impl Renderer {
             mapped_at_creation: false,
         });
 
+        let custom_effect_param_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("fret custom-effect params buffer"),
+            size: 256,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
         let effect_params = super::gpu_effect_params::GpuEffectParams {
             clip_mask_param_buffer,
             clip_mask_param_bind_group,
@@ -491,6 +498,7 @@ impl Renderer {
             alpha_threshold_param_buffer,
             noise_param_buffer,
             drop_shadow_param_buffer,
+            custom_effect_param_buffer,
         };
 
         let render_plan_strict_output_clear =
@@ -573,6 +581,9 @@ impl Renderer {
             materials_generation: 0,
             material_paint_budget_per_frame: 50_000,
             material_distinct_budget_per_frame: 256,
+            custom_effects: SlotMap::with_key(),
+            custom_effect_hash_index: HashMap::new(),
+            custom_effects_generation: 0,
         }
     }
 

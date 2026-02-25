@@ -361,6 +361,18 @@ enum JsonDumpPass {
         color: [f32; 4],
         load: JsonDumpLoadOp,
     },
+    CustomEffect {
+        src: &'static str,
+        dst: &'static str,
+        src_size: [u32; 2],
+        dst_size: [u32; 2],
+        dst_scissor: Option<JsonDumpScissorRect>,
+        dst_scissor_space: Option<&'static str>,
+        mask_uniform_index: Option<u32>,
+        mask: Option<JsonDumpMaskRef>,
+        effect: String,
+        load: JsonDumpLoadOp,
+    },
     ClipMask {
         dst: &'static str,
         dst_size: [u32; 2],
@@ -576,6 +588,18 @@ fn encode_pass(p: &RenderPlanPass) -> JsonDumpPass {
             color: [pass.color.r, pass.color.g, pass.color.b, pass.color.a],
             load: encode_load_op(pass.load),
         },
+        RenderPlanPass::CustomEffect(pass) => JsonDumpPass::CustomEffect {
+            src: plan_target_name(pass.src),
+            dst: plan_target_name(pass.dst),
+            src_size: [pass.src_size.0, pass.src_size.1],
+            dst_size: [pass.dst_size.0, pass.dst_size.1],
+            dst_scissor: pass.dst_scissor.map(Into::into),
+            dst_scissor_space: pass.dst_scissor.map(|_| "dst_local"),
+            mask_uniform_index: pass.mask_uniform_index,
+            mask: pass.mask.map(Into::into),
+            effect: format!("{:?}", pass.effect),
+            load: encode_load_op(pass.load),
+        },
         RenderPlanPass::ClipMask(pass) => JsonDumpPass::ClipMask {
             dst: plan_target_name(pass.dst),
             dst_size: [pass.dst_size.0, pass.dst_size.1],
@@ -633,6 +657,7 @@ struct JsonDumpCounts {
     dither: usize,
     noise: usize,
     drop_shadow: usize,
+    custom_effect: usize,
     clip_mask: usize,
     release_target: usize,
 }
@@ -654,6 +679,7 @@ fn pass_counts(plan: &RenderPlan) -> JsonDumpCounts {
         dither: 0,
         noise: 0,
         drop_shadow: 0,
+        custom_effect: 0,
         clip_mask: 0,
         release_target: 0,
     };
@@ -674,6 +700,7 @@ fn pass_counts(plan: &RenderPlan) -> JsonDumpCounts {
             RenderPlanPass::Dither(_) => c.dither += 1,
             RenderPlanPass::Noise(_) => c.noise += 1,
             RenderPlanPass::DropShadow(_) => c.drop_shadow += 1,
+            RenderPlanPass::CustomEffect(_) => c.custom_effect += 1,
             RenderPlanPass::ClipMask(_) => c.clip_mask += 1,
             RenderPlanPass::ReleaseTarget(_) => c.release_target += 1,
         }

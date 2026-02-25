@@ -6,6 +6,7 @@ mod clip_mask;
 mod color_adjust;
 mod color_matrix;
 mod composite;
+mod custom_effect;
 mod dither;
 mod drop_shadow;
 mod mask;
