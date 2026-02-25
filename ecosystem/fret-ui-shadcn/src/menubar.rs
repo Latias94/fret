@@ -15,7 +15,7 @@ use fret_ui::element::{
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side};
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::collection_semantics::CollectionSemanticsExt as _;
@@ -43,7 +43,7 @@ fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c
 }
 
-fn is_dark_background(theme: &Theme) -> bool {
+fn is_dark_background(theme: &ThemeSnapshot) -> bool {
     let bg = theme.color_token("background");
     let luma = 0.2126 * bg.r + 0.7152 * bg.g + 0.0722 * bg.b;
     luma < 0.5
@@ -352,7 +352,7 @@ impl MenubarShortcut {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
         let fg = theme.color_token("muted-foreground");
         let font_size = theme.metric_token("font.size");
         let font_line_height = theme.metric_token("font.line_height");
@@ -962,7 +962,7 @@ impl Menubar {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
+            let theme = Theme::global(&*cx.app).snapshot();
 
             let radius = self
                 .chrome
@@ -1299,7 +1299,7 @@ impl MenubarMenuEntries {
                 model
             };
 
-            let theme = Theme::global(&*cx.app).clone();
+            let theme = Theme::global(&*cx.app).snapshot();
             let enabled = !(menu.disabled || menubar_disabled_in_scope(cx));
 
             let radius = MetricRef::radius(Radius::Sm).resolve(&theme);
