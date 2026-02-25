@@ -103,6 +103,13 @@ pub(super) struct GpuPipelines {
     pub(super) dither_bind_group_layout: Option<wgpu::BindGroupLayout>,
     pub(super) dither_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
 
+    pub(super) noise_pipeline_format: Option<wgpu::TextureFormat>,
+    pub(super) noise_pipeline: Option<wgpu::RenderPipeline>,
+    pub(super) noise_masked_pipeline: Option<wgpu::RenderPipeline>,
+    pub(super) noise_mask_pipeline: Option<wgpu::RenderPipeline>,
+    pub(super) noise_bind_group_layout: Option<wgpu::BindGroupLayout>,
+    pub(super) noise_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
+
     pub(super) drop_shadow_pipeline_format: Option<wgpu::TextureFormat>,
     pub(super) drop_shadow_pipeline: Option<wgpu::RenderPipeline>,
     pub(super) drop_shadow_masked_pipeline: Option<wgpu::RenderPipeline>,
@@ -194,6 +201,13 @@ impl Default for GpuPipelines {
             dither_mask_pipeline: None,
             dither_bind_group_layout: None,
             dither_mask_bind_group_layout: None,
+
+            noise_pipeline_format: None,
+            noise_pipeline: None,
+            noise_masked_pipeline: None,
+            noise_mask_pipeline: None,
+            noise_bind_group_layout: None,
+            noise_mask_bind_group_layout: None,
 
             drop_shadow_pipeline_format: None,
             drop_shadow_pipeline: None,

@@ -9,6 +9,7 @@ mod composite;
 mod dither;
 mod drop_shadow;
 mod mask;
+mod noise;
 mod path;
 mod path_clip_mask;
 mod path_intermediate;

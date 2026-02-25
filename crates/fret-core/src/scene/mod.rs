@@ -127,6 +127,55 @@ pub enum DitherMode {
     Bayer4x4,
 }
 
+/// Bounded procedural noise parameters (v1).
+///
+/// This is a mechanism-level surface intended to enable authored “grain” layers that are useful
+/// for acrylic/glass recipes (e.g. subtle noise after backdrop blur) while remaining deterministic
+/// (no hidden time dependency).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct NoiseV1 {
+    /// Additive noise magnitude in linear space. Recommended range is ~[0, 0.1].
+    pub strength: f32,
+    /// Spatial scale for the noise field in logical pixels (pre-scale-factor).
+    pub scale_px: crate::Px,
+    /// Deterministic phase/seed value (no hidden time dependency).
+    pub phase: f32,
+}
+
+impl NoiseV1 {
+    pub const MAX_STRENGTH: f32 = 1.0;
+    pub const MIN_SCALE_PX: crate::Px = crate::Px(1.0);
+    pub const MAX_SCALE_PX: crate::Px = crate::Px(1024.0);
+
+    pub fn sanitize(self) -> Self {
+        let strength = if self.strength.is_finite() {
+            self.strength.clamp(0.0, Self::MAX_STRENGTH)
+        } else {
+            0.0
+        };
+        let scale_px = if self.scale_px.0.is_finite() {
+            crate::Px(
+                self.scale_px
+                    .0
+                    .clamp(Self::MIN_SCALE_PX.0, Self::MAX_SCALE_PX.0),
+            )
+        } else {
+            Self::MIN_SCALE_PX
+        };
+        let phase = if self.phase.is_finite() {
+            self.phase
+        } else {
+            0.0
+        };
+
+        Self {
+            strength,
+            scale_px,
+            phase,
+        }
+    }
+}
+
 /// Bounded backdrop warp parameters (v1).
 ///
 /// This is a mechanism-level surface intended to enable refraction-like liquid glass effects by
@@ -355,6 +404,7 @@ pub enum EffectStep {
     DropShadowV1(DropShadowV1),
     BackdropWarpV1(BackdropWarpV1),
     BackdropWarpV2(BackdropWarpV2),
+    NoiseV1(NoiseV1),
     ColorAdjust {
         saturation: f32,
         brightness: f32,
@@ -389,6 +439,7 @@ impl EffectStep {
             EffectStep::BackdropWarpV1(w) => EffectStep::BackdropWarpV1(w.sanitize()),
             EffectStep::BackdropWarpV2(w) => EffectStep::BackdropWarpV2(w.sanitize()),
             EffectStep::DropShadowV1(s) => EffectStep::DropShadowV1(s.sanitize()),
+            EffectStep::NoiseV1(n) => EffectStep::NoiseV1(n.sanitize()),
             EffectStep::AlphaThreshold { cutoff, soft } => EffectStep::AlphaThreshold {
                 cutoff: if cutoff.is_finite() { cutoff } else { 0.0 },
                 soft: if soft.is_finite() { soft.max(0.0) } else { 0.0 },

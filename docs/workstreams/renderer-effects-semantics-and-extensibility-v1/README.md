@@ -35,6 +35,7 @@ In-scope (v1):
   - `EffectStep::GaussianBlur { radius_px, downsample }`
   - `EffectStep::DropShadowV1 { blur_radius_px, downsample, ... }`
   - `EffectStep::Dither` in effect chains.
+  - `EffectStep::NoiseV1` (bounded procedural grain for acrylic/glass recipes).
   - A single shared blur primitive used by multiple effects, with deterministic budgeting/degradation.
   - A documented rule for intermediate color handling (linear intermediates; deterministic encode path).
   - A capability-gated, bounded “custom effect” extension design (start as wgpu-only; decide later if it becomes core).
@@ -66,6 +67,8 @@ wgpu backend:
   `crates/fret-render-wgpu/src/renderer/render_plan.rs`
 - Output sRGB encode blit shader/pipeline: `crates/fret-render-wgpu/src/renderer/shaders.rs`,
   `crates/fret-render-wgpu/src/renderer/pipelines/blit.rs`
+- Noise effect shader/pipeline: `crates/fret-render-wgpu/src/renderer/shaders.rs`,
+  `crates/fret-render-wgpu/src/renderer/pipelines/noise.rs`
 
 ## Principles (renderer contract hygiene)
 

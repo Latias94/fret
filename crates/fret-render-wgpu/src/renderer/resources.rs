@@ -464,6 +464,13 @@ impl Renderer {
             mapped_at_creation: false,
         });
 
+        let noise_param_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("fret noise params buffer"),
+            size: 256,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
         let drop_shadow_param_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("fret drop-shadow params buffer"),
             size: 256,
@@ -482,6 +489,7 @@ impl Renderer {
             color_adjust_param_buffer,
             color_matrix_param_buffer,
             alpha_threshold_param_buffer,
+            noise_param_buffer,
             drop_shadow_param_buffer,
         };
 

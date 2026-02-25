@@ -52,6 +52,10 @@ impl Renderer {
             .passes
             .iter()
             .any(|p| matches!(p, RenderPlanPass::Dither(_)));
+        let needs_noise = plan
+            .passes
+            .iter()
+            .any(|p| matches!(p, RenderPlanPass::Noise(_)));
         let needs_drop_shadow = plan
             .passes
             .iter()
@@ -89,6 +93,9 @@ impl Renderer {
         }
         if needs_dither {
             self.ensure_dither_pipeline(device, format);
+        }
+        if needs_noise {
+            self.ensure_noise_pipeline(device, format);
         }
         if needs_drop_shadow {
             self.ensure_drop_shadow_pipeline(device, format);

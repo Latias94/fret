@@ -41,6 +41,15 @@ This TODO is ordered by implementation priority (P0 first), and is designed to b
     `crates/fret-render-wgpu/src/renderer/shaders.rs`,
     `crates/fret-render-wgpu/tests/output_srgb_transfer_conformance.rs`.
 
+- [x] Add `EffectStep::NoiseV1` (bounded procedural grain) for acrylic/glass recipes:
+  - [x] Deterministic, bounded noise evaluation in effect chains (no hidden time sources).
+  - [x] Conformance: scissored FilterContent noise preserves outside-region content and is deterministic.
+  - Evidence: `crates/fret-core/src/scene/mod.rs`,
+    `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs`,
+    `crates/fret-render-wgpu/src/renderer/pipelines/noise.rs`,
+    `crates/fret-render-wgpu/src/renderer/shaders.rs`,
+    `crates/fret-render-wgpu/tests/effect_filter_content_noise_conformance.rs`.
+
 - [ ] Unify blur implementation into a shared “blur primitive” module:
   - [ ] Single place that maps `(radius_px, quality, budgets, viewport_size)` → passes + downsample strategy.
   - [ ] Shared degradation counters + reasons used by `GaussianBlur`, `DropShadow`, and future effects.

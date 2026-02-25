@@ -390,6 +390,12 @@ pub(super) fn mix_scene_op(state: u64, op: SceneOp) -> u64 {
                             }
                         }
                     }
+                    EffectStep::NoiseV1(n) => {
+                        let mut state = mix_u64(state, 10);
+                        state = mix_f32(state, n.strength);
+                        state = mix_px(state, n.scale_px);
+                        mix_f32(state, n.phase)
+                    }
                     EffectStep::ColorAdjust {
                         saturation,
                         brightness,

@@ -353,6 +353,12 @@ impl SceneRecording {
                                     }
                                 }
                             }
+                            EffectStep::NoiseV1(n) => {
+                                n.strength.is_finite()
+                                    && px_is_finite(n.scale_px)
+                                    && n.scale_px.0 > 0.0
+                                    && n.phase.is_finite()
+                            }
                             EffectStep::ColorAdjust {
                                 saturation,
                                 brightness,

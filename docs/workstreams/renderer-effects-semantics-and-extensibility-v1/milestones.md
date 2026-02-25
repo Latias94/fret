@@ -18,6 +18,7 @@ Exit criteria:
   - `GaussianBlur`
   - `DropShadowV1`
   - `Backdrop` mode effect
+  - `NoiseV1`
 
 ## M1 — Scene encoding cache correctness
 

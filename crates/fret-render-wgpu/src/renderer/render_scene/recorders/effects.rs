@@ -694,6 +694,187 @@ pub(in super::super) fn record_dither_pass(
     }
 }
 
+pub(in super::super) fn record_noise_pass(
+    exec: &mut RenderSceneExecutor<'_>,
+    ctx: &RecordPassCtx<'_>,
+    pass: &NoisePass,
+) {
+    let device = exec.device;
+    let queue = exec.queue;
+    let format = exec.format;
+    let target_view = exec.target_view;
+    let viewport_size = exec.viewport_size;
+    let usage = exec.usage;
+    let encoder = &mut *exec.encoder;
+    let frame_targets = &mut *exec.frame_targets;
+    let encoding = exec.encoding;
+    let perf_enabled = exec.perf_enabled;
+    let frame_perf = &mut *exec.frame_perf;
+
+    let renderer = &mut *exec.renderer;
+
+    queue.write_buffer(
+        &renderer.effect_params.noise_param_buffer,
+        0,
+        bytemuck::cast_slice(&[pass.strength, pass.scale_px, pass.phase, 0.0]),
+    );
+    if perf_enabled {
+        frame_perf.uniform_bytes = frame_perf
+            .uniform_bytes
+            .saturating_add(std::mem::size_of::<[f32; 4]>() as u64);
+    }
+
+    let Some(src_view) = require_color_src_view(frame_targets, pass.src, pass.src_size, "Noise")
+    else {
+        return;
+    };
+
+    let dst_view_owned = ensure_color_dst_view_owned(
+        frame_targets,
+        &mut renderer.intermediate_pool,
+        device,
+        pass.dst,
+        pass.dst_size,
+        format,
+        usage,
+        "Noise",
+    );
+    let dst_view = dst_view_owned.as_ref().unwrap_or(target_view);
+
+    if let Some(mask) = pass.mask {
+        debug_assert!(matches!(
+            mask.target,
+            PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2
+        ));
+        debug_assert_eq!(
+            pass.dst_size, viewport_size,
+            "mask-based noise expects full-size destination"
+        );
+
+        let mask_uniform_index = pass
+            .mask_uniform_index
+            .expect("mask noise needs uniform index");
+        let uniform_offset =
+            (u64::from(mask_uniform_index) * renderer.uniforms.uniform_stride) as u32;
+
+        let Some(mask_view) = require_mask_view(frame_targets, mask.target, mask.size, "Noise")
+        else {
+            return;
+        };
+        let layout = renderer.noise_mask_bind_group_layout_ref();
+        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("fret noise mask bind group"),
+            layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::TextureView(&src_view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: renderer
+                        .effect_params
+                        .noise_param_buffer
+                        .as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: wgpu::BindingResource::TextureView(&mask_view),
+                },
+            ],
+        });
+
+        let pipeline = renderer.noise_mask_pipeline_ref();
+
+        run_fullscreen_triangle_pass_uniform_texture(
+            encoder,
+            "fret noise mask pass",
+            pipeline,
+            dst_view,
+            pass.load,
+            renderer.pick_uniform_bind_group_for_mask_image(
+                encoding
+                    .uniform_mask_images
+                    .get(mask_uniform_index as usize)
+                    .copied()
+                    .flatten(),
+            ),
+            &[uniform_offset, ctx.render_space_offset_u32],
+            &bind_group,
+            &[],
+            pass.dst_scissor,
+            pass.dst_size,
+            if perf_enabled { Some(frame_perf) } else { None },
+        );
+    } else if let Some(mask_uniform_index) = pass.mask_uniform_index {
+        debug_assert_eq!(
+            pass.dst_size, viewport_size,
+            "clip-based noise expects full-size destination"
+        );
+
+        let layout = renderer.noise_bind_group_layout_ref();
+        let bind_group = create_texture_uniform_bind_group(
+            device,
+            "fret noise bind group",
+            layout,
+            &src_view,
+            renderer
+                .effect_params
+                .noise_param_buffer
+                .as_entire_binding(),
+        );
+        let pipeline = renderer.noise_masked_pipeline_ref();
+        let uniform_offset =
+            (u64::from(mask_uniform_index) * renderer.uniforms.uniform_stride) as u32;
+
+        run_fullscreen_triangle_pass_uniform_texture(
+            encoder,
+            "fret noise masked pass",
+            pipeline,
+            dst_view,
+            pass.load,
+            renderer.pick_uniform_bind_group_for_mask_image(
+                encoding
+                    .uniform_mask_images
+                    .get(mask_uniform_index as usize)
+                    .copied()
+                    .flatten(),
+            ),
+            &[uniform_offset, ctx.render_space_offset_u32],
+            &bind_group,
+            &[],
+            pass.dst_scissor,
+            pass.dst_size,
+            if perf_enabled { Some(frame_perf) } else { None },
+        );
+    } else {
+        let layout = renderer.noise_bind_group_layout_ref();
+        let bind_group = create_texture_uniform_bind_group(
+            device,
+            "fret noise bind group",
+            layout,
+            &src_view,
+            renderer
+                .effect_params
+                .noise_param_buffer
+                .as_entire_binding(),
+        );
+        let pipeline = renderer.noise_pipeline_ref();
+        run_fullscreen_triangle_pass(
+            encoder,
+            "fret noise pass",
+            pipeline,
+            dst_view,
+            pass.dst_size,
+            pass.load,
+            &bind_group,
+            &[],
+            pass.dst_scissor,
+            perf_enabled.then_some(frame_perf),
+        );
+    }
+}
+
 pub(in super::super) fn record_drop_shadow_pass(
     exec: &mut RenderSceneExecutor<'_>,
     ctx: &RecordPassCtx<'_>,

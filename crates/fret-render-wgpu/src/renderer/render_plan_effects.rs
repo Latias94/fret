@@ -3,7 +3,7 @@ use super::intermediate_pool::estimate_texture_bytes;
 use super::{
     AlphaThresholdPass, BackdropWarpPass, BlurAxis, BlurPass, ClipMaskPass, ColorAdjustPass,
     ColorMatrixPass, DitherPass, DropShadowPass, FullscreenBlitPass, LocalScissorRect, MaskRef,
-    PlanTarget, RenderPlanPass, ScaleMode, ScaleNearestPass, ScissorRect,
+    NoisePass, PlanTarget, RenderPlanPass, ScaleMode, ScaleNearestPass, ScissorRect,
 };
 
 #[derive(Clone, Copy, Debug)]
@@ -591,6 +591,31 @@ pub(super) fn apply_chain_in_place(
                     mask,
                 );
             }
+            fret_core::EffectStep::NoiseV1(n) => {
+                if !noise_enabled(ctx.viewport_size, ctx.format, budget_bytes) {
+                    continue;
+                }
+                let n = n.sanitize();
+                if n.strength <= 0.0 {
+                    continue;
+                }
+                let Some(&scratch) = scratch_targets.first() else {
+                    continue;
+                };
+                append_noise_in_place_single_scratch(
+                    passes,
+                    srcdst,
+                    scratch,
+                    ctx.viewport_size,
+                    Some(scissor),
+                    n.strength,
+                    (n.scale_px.0 * ctx.scale_factor).max(1.0),
+                    n.phase,
+                    ctx.clear,
+                    mask_uniform_index,
+                    mask,
+                );
+            }
         }
     }
 }
@@ -654,6 +679,15 @@ pub(super) fn dither_enabled(
     budget_bytes: u64,
 ) -> bool {
     // Dither uses the same single-scratch in-place pattern as color-adjust/matrix.
+    color_adjust_enabled(viewport_size, format, budget_bytes)
+}
+
+pub(super) fn noise_enabled(
+    viewport_size: (u32, u32),
+    format: wgpu::TextureFormat,
+    budget_bytes: u64,
+) -> bool {
+    // Noise uses the same single-scratch in-place pattern as color-adjust/matrix.
     color_adjust_enabled(viewport_size, format, budget_bytes)
 }
 
@@ -1015,6 +1049,43 @@ mod tests {
             "dither step should compile to a Dither pass"
         );
     }
+
+    #[test]
+    fn noise_compiles_to_pass() {
+        let ctx = EffectCompileCtx {
+            viewport_size: (64, 64),
+            format: wgpu::TextureFormat::Rgba8Unorm,
+            intermediate_budget_bytes: 1u64 << 60,
+            clear: wgpu::Color::TRANSPARENT,
+            scale_factor: 1.0,
+        };
+        let scissor = ScissorRect::full(64, 64);
+
+        let mut passes = Vec::new();
+        apply_chain_in_place(
+            &mut passes,
+            &[],
+            PlanTarget::Intermediate0,
+            fret_core::EffectMode::FilterContent,
+            fret_core::EffectChain::from_steps(&[fret_core::EffectStep::NoiseV1(
+                fret_core::scene::NoiseV1 {
+                    strength: 0.1,
+                    scale_px: fret_core::Px(4.0),
+                    phase: 0.0,
+                },
+            )]),
+            fret_core::EffectQuality::Medium,
+            scissor,
+            None,
+            &[],
+            ctx,
+        );
+
+        assert!(
+            passes.iter().any(|p| matches!(p, RenderPlanPass::Noise(_))),
+            "noise step should compile to a Noise pass"
+        );
+    }
 }
 
 fn append_color_adjust_in_place_single_scratch(
@@ -1140,6 +1211,77 @@ fn append_dither_in_place_single_scratch(
         mask_uniform_index: None,
         mask: None,
         mode,
+        load: wgpu::LoadOp::Clear(clear),
+    }));
+    passes.push(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
+        src: scratch,
+        dst: srcdst,
+        src_size: size,
+        dst_size: size,
+        dst_scissor: None,
+        encode_output_srgb: false,
+        load: wgpu::LoadOp::Clear(clear),
+    }));
+}
+
+fn append_noise_in_place_single_scratch(
+    passes: &mut Vec<RenderPlanPass>,
+    srcdst: PlanTarget,
+    scratch: PlanTarget,
+    size: (u32, u32),
+    scissor: Option<ScissorRect>,
+    strength: f32,
+    scale_px: f32,
+    phase: f32,
+    clear: wgpu::Color,
+    mask_uniform_index: Option<u32>,
+    mask: Option<MaskRef>,
+) {
+    debug_assert_ne!(srcdst, PlanTarget::Output);
+    debug_assert_ne!(scratch, PlanTarget::Output);
+    debug_assert_ne!(srcdst, scratch);
+
+    if let Some(scissor) = scissor {
+        if scissor.w == 0 || scissor.h == 0 {
+            return;
+        }
+
+        passes.push(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
+            src: srcdst,
+            dst: scratch,
+            src_size: size,
+            dst_size: size,
+            dst_scissor: None,
+            encode_output_srgb: false,
+            load: wgpu::LoadOp::Clear(clear),
+        }));
+        passes.push(RenderPlanPass::Noise(NoisePass {
+            src: scratch,
+            dst: srcdst,
+            src_size: size,
+            dst_size: size,
+            dst_scissor: Some(LocalScissorRect(scissor)),
+            mask_uniform_index,
+            mask,
+            strength,
+            scale_px,
+            phase,
+            load: wgpu::LoadOp::Load,
+        }));
+        return;
+    }
+
+    passes.push(RenderPlanPass::Noise(NoisePass {
+        src: srcdst,
+        dst: scratch,
+        src_size: size,
+        dst_size: size,
+        dst_scissor: None,
+        mask_uniform_index: None,
+        mask: None,
+        strength,
+        scale_px,
+        phase,
         load: wgpu::LoadOp::Clear(clear),
     }));
     passes.push(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
