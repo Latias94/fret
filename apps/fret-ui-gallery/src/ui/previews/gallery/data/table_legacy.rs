@@ -316,6 +316,7 @@ pub(in crate::ui) fn preview_data_table_legacy(
         .into_element(cx),
         shadcn::Switch::new(use_container_query.clone())
             .control_id("ui-gallery-data-table-toolbar-responsive-query-switch")
+            .test_id("ui-gallery-data-table-toolbar-responsive-query-switch")
             .a11y_label("Toolbar responsive query uses container width")
             .into_element(cx),
     ])

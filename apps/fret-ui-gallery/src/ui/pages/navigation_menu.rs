@@ -67,6 +67,7 @@ pub(super) fn preview_navigation_menu(cx: &mut ElementContext<'_, App>) -> Vec<A
         .into_element(cx),
         shadcn::Switch::new(md_breakpoint_query_uses_container.clone())
             .control_id("ui-gallery-navigation-menu-md-breakpoint-query-switch")
+            .test_id("ui-gallery-navigation-menu-md-breakpoint-query-switch")
             .a11y_label("MD breakpoint query uses container width")
             .into_element(cx),
     ])
