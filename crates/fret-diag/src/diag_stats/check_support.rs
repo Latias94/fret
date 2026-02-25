@@ -143,4 +143,38 @@ mod tests {
         assert!(stats_lite_support_for("check-drag-cache-root-paint-only").is_some());
         assert!(stats_lite_support_for("check-not-a-real-check").is_none());
     }
+
+    #[test]
+    fn all_diag_stats_checks_are_stats_lite_supported() {
+        // Policy: any `diag stats --check-*` flag should keep working even when the stats report is
+        // derived from `frames.index.json` (bundle too large to materialize).
+        let checks = [
+            "check-stale-paint",
+            "check-stale-scene",
+            "check-idle-no-paint-min",
+            "check-pixels-changed",
+            "check-semantics-changed-repainted",
+            "check-wheel-scroll",
+            "check-wheel-scroll-hit-changes",
+            "check-drag-cache-root-paint-only",
+            "check-hover-layout-max",
+            "check-gc-sweep-liveness",
+            "check-notify-hotspot-file-max",
+            "check-view-cache-reuse-stable-min",
+            "check-view-cache-reuse-min",
+            "check-overlay-synthesis-min",
+            "check-viewport-input-min",
+            "check-dock-drag-min",
+            "check-viewport-capture-min",
+            "check-retained-vlist-reconcile-no-notify-min",
+            "check-retained-vlist-attach-detach-max",
+            "check-retained-vlist-keep-alive-reuse-min",
+        ];
+        for name in checks {
+            assert!(
+                stats_lite_support_for(name).is_some(),
+                "expected `{name}` to be stats-lite supported"
+            );
+        }
+    }
 }
