@@ -234,6 +234,26 @@ Goal: common tooling should keep working even when `bundle.json` is too large to
   - In stats-lite mode, checks that require full-bundle traversal should fail fast with an actionable message.
   - When a check can be implemented from sidecars (frames/bundle indexes), port it so it works for huge bundles.
 
+- [x] Evolve `frames.index.json` (schema v1, additive) so stats-lite can run more checks.
+  - [x] Add top-level `features: string[]` (additive; do not bump `schema_version` yet).
+  - [x] Add optional per-window aggregates to `windows[i].aggregates` for gate-friendly counters that are:
+    - small,
+    - stable across schema evolution,
+    - computable via streaming (no need to materialize the bundle).
+  - [x] Update `ensure_frames_index_json` to treat missing required `features[]` as "outdated" and regenerate.
+  - [x] Document the new fields in `docs/workstreams/diag-fearless-refactor-v1/frames-index.md`.
+
+- [ ] Port selected `diag stats --check-*` gates to sidecars (so they work in stats-lite mode).
+  - [ ] Define a small “compat matrix” in code: `check -> required frames-index features`.
+  - [x] First wave (frames-index aggregates):
+    - [x] `--check-viewport-input-min` (post-warmup viewport_input event count).
+    - [x] `--check-dock-drag-min` (post-warmup dock-drag-active frames).
+    - [x] `--check-viewport-capture-min` (post-warmup capture-active frames).
+    - [x] `--check-view-cache-reuse-min` (post-warmup reuse event count).
+  - [ ] Second wave (still sidecar-only, but may need additional signals):
+    - [ ] `--check-overlay-synthesis` (synthesized overlay counts).
+    - [ ] `--check-wheel-scroll` (wheel-delivered counts vs expected).
+
 ## Plan 2 (defer until Plan 1 is solid)
 
 - [ ] Prototype manifest-first chunked bundle layout (snapshots/logs/semantics split).

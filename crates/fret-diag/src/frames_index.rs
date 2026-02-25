@@ -7,6 +7,9 @@ use serde_json::{Value, json};
 const FRAMES_INDEX_KIND: &str = "frames_index";
 const FRAMES_INDEX_SCHEMA_VERSION: u64 = 1;
 
+const FRAMES_INDEX_FEATURE_WINDOW_AGG_V1: &str = "window_aggregates.v1";
+const FRAMES_INDEX_REQUIRED_FEATURES: &[&str] = &[FRAMES_INDEX_FEATURE_WINDOW_AGG_V1];
+
 // Guardrail: building a frames index that is larger than this is unlikely to be useful for agentic
 // triage. Keep the tail to avoid unbounded memory usage.
 const FRAMES_INDEX_MAX_ROWS_PER_WINDOW: usize = 50_000;
@@ -31,6 +34,15 @@ struct FrameRow {
 
     semantics_fingerprint: Option<u64>,
     semantics_source_tag: u64,
+
+    // Parsed for per-window aggregates (not encoded into the frame row columns).
+    viewport_input_events: u64,
+    dock_drag_active: bool,
+    viewport_capture_active: bool,
+    view_cache_active: bool,
+    view_cache_roots_reused: Option<u64>,
+    cache_roots_reused: Option<u64>,
+    paint_cache_replayed_ops: Option<u64>,
 }
 
 impl FrameRow {
@@ -81,13 +93,41 @@ struct WindowOut {
     rows_total: u64,
     warmup_fallback: bool,
     clipped_rows_dropped: u64,
+    aggregates: WindowAggregates,
     rows: Vec<FrameRow>,
+}
+
+#[derive(Debug, Clone, Default)]
+struct WindowAggregates {
+    // These are post-warmup (frame_id >= warmup_frames) and are computed over the full stream,
+    // even when per-window rows are tail-clipped.
+    examined_snapshots_post_warmup: u64,
+    viewport_input_events_post_warmup: u64,
+    dock_drag_active_frames_post_warmup: u64,
+    viewport_capture_active_frames_post_warmup: u64,
+    view_cache_active_snapshots_post_warmup: u64,
+    view_cache_reuse_events_post_warmup: u64,
+    paint_cache_replayed_ops_post_warmup: u64,
 }
 
 pub(crate) fn ensure_frames_index_json(
     bundle_path: &Path,
     warmup_frames: u64,
 ) -> Result<PathBuf, String> {
+    fn has_required_features(v: &Value, required: &[&str]) -> bool {
+        if required.is_empty() {
+            return true;
+        }
+        let Some(features) = v.get("features").and_then(|v| v.as_array()) else {
+            return false;
+        };
+        required.iter().all(|req| {
+            features
+                .iter()
+                .any(|f| f.as_str().is_some_and(|s| s == *req))
+        })
+    }
+
     let out = default_frames_index_path(bundle_path);
     let expected_bundle = bundle_path.display().to_string();
     if out.is_file() {
@@ -99,7 +139,8 @@ pub(crate) fn ensure_frames_index_json(
                 existing.get("warmup_frames").and_then(|v| v.as_u64()) == Some(warmup_frames);
             let bundle_ok =
                 existing.get("bundle").and_then(|v| v.as_str()) == Some(&expected_bundle);
-            if kind_ok && schema_ok && warmup_ok && bundle_ok {
+            let features_ok = has_required_features(&existing, FRAMES_INDEX_REQUIRED_FEATURES);
+            if kind_ok && schema_ok && warmup_ok && bundle_ok && features_ok {
                 return Ok(out);
             }
         }
@@ -333,6 +374,7 @@ fn build_frames_index_payload_streaming(
             let mut rows: VecDeque<FrameRow> = VecDeque::new();
             let mut clipped_rows_dropped: u64 = 0;
             let mut last_seen: Option<FrameRow> = None;
+            let mut aggregates: WindowAggregates = WindowAggregates::default();
 
             while let Some(key) = map.next_key::<String>()? {
                 match key.as_str() {
@@ -348,6 +390,7 @@ fn build_frames_index_payload_streaming(
                             rows: &mut rows,
                             clipped_rows_dropped: &mut clipped_rows_dropped,
                             last_seen: &mut last_seen,
+                            aggregates: &mut aggregates,
                         })?;
                     }
                     _ => {
@@ -372,6 +415,7 @@ fn build_frames_index_payload_streaming(
                 rows_total,
                 warmup_fallback,
                 clipped_rows_dropped,
+                aggregates,
                 rows: out_rows,
             });
             Ok(())
@@ -385,6 +429,7 @@ fn build_frames_index_payload_streaming(
         rows: &'a mut VecDeque<FrameRow>,
         clipped_rows_dropped: &'a mut u64,
         last_seen: &'a mut Option<FrameRow>,
+        aggregates: &'a mut WindowAggregates,
     }
 
     impl<'de> DeserializeSeed<'de> for SnapshotsSeed<'_> {
@@ -401,6 +446,7 @@ fn build_frames_index_payload_streaming(
                 rows: self.rows,
                 clipped_rows_dropped: self.clipped_rows_dropped,
                 last_seen: self.last_seen,
+                aggregates: self.aggregates,
             })
         }
     }
@@ -412,6 +458,7 @@ fn build_frames_index_payload_streaming(
         rows: &'a mut VecDeque<FrameRow>,
         clipped_rows_dropped: &'a mut u64,
         last_seen: &'a mut Option<FrameRow>,
+        aggregates: &'a mut WindowAggregates,
     }
 
     impl<'de> Visitor<'de> for SnapshotsVisitor<'_> {
@@ -434,6 +481,43 @@ fn build_frames_index_payload_streaming(
                 let frame_id = row.frame_id.unwrap_or(0);
                 let keep = self.warmup_frames == 0 || frame_id >= self.warmup_frames;
                 if keep {
+                    self.aggregates.examined_snapshots_post_warmup =
+                        self.aggregates.examined_snapshots_post_warmup.saturating_add(1);
+                    self.aggregates.viewport_input_events_post_warmup = self
+                        .aggregates
+                        .viewport_input_events_post_warmup
+                        .saturating_add(row.viewport_input_events);
+                    if row.dock_drag_active {
+                        self.aggregates.dock_drag_active_frames_post_warmup = self
+                            .aggregates
+                            .dock_drag_active_frames_post_warmup
+                            .saturating_add(1);
+                    }
+                    if row.viewport_capture_active {
+                        self.aggregates.viewport_capture_active_frames_post_warmup = self
+                            .aggregates
+                            .viewport_capture_active_frames_post_warmup
+                            .saturating_add(1);
+                    }
+                    if row.view_cache_active {
+                        self.aggregates.view_cache_active_snapshots_post_warmup = self
+                            .aggregates
+                            .view_cache_active_snapshots_post_warmup
+                            .saturating_add(1);
+                    }
+                    let reuse_events = row
+                        .view_cache_roots_reused
+                        .or(row.cache_roots_reused)
+                        .unwrap_or(0);
+                    self.aggregates.view_cache_reuse_events_post_warmup = self
+                        .aggregates
+                        .view_cache_reuse_events_post_warmup
+                        .saturating_add(reuse_events);
+                    self.aggregates.paint_cache_replayed_ops_post_warmup = self
+                        .aggregates
+                        .paint_cache_replayed_ops_post_warmup
+                        .saturating_add(row.paint_cache_replayed_ops.unwrap_or(0));
+
                     self.rows.push_back(row);
                     if self.rows.len() > FRAMES_INDEX_MAX_ROWS_PER_WINDOW {
                         let _ = self.rows.pop_front();
@@ -549,6 +633,17 @@ fn build_frames_index_payload_streaming(
                     "stats" => {
                         map.next_value_seed(StatsSeed { out: self.out })?;
                     }
+                    "viewport_input" | "viewportInput" => {
+                        self.out.viewport_input_events = map.next_value_seed(SeqLenSeed)?;
+                    }
+                    "docking_interaction" | "dockingInteraction" => {
+                        let flags = map.next_value_seed(DockingInteractionSeed)?;
+                        self.out.dock_drag_active |= flags.dock_drag_active;
+                        self.out.viewport_capture_active |= flags.viewport_capture_active;
+                    }
+                    "cache_roots" | "cacheRoots" => {
+                        self.out.cache_roots_reused = Some(map.next_value_seed(CacheRootsSeed)?);
+                    }
                     "semantics" => {
                         let has_nodes = map.next_value_seed(SemanticsSeed)?;
                         if has_nodes {
@@ -610,12 +705,501 @@ fn build_frames_index_payload_streaming(
                     "invalidation_walk_nodes" => {
                         self.out.invalidation_walk_nodes = map.next_value::<Option<u64>>()?
                     }
+                    "view_cache_active" => {
+                        self.out.view_cache_active =
+                            map.next_value::<Option<bool>>()?.unwrap_or(false);
+                    }
+                    "view_cache_roots_reused" => {
+                        self.out.view_cache_roots_reused = map.next_value::<Option<u64>>()?;
+                    }
+                    "paint_cache_replayed_ops" => {
+                        self.out.paint_cache_replayed_ops = map.next_value::<Option<u64>>()?;
+                    }
                     _ => {
                         map.next_value::<IgnoredAny>()?;
                     }
                 }
             }
             Ok(())
+        }
+    }
+
+    struct SeqLenSeed;
+
+    impl<'de> DeserializeSeed<'de> for SeqLenSeed {
+        type Value = u64;
+
+        fn deserialize<D>(self, deserializer: D) -> Result<u64, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
+            deserializer.deserialize_any(SeqLenVisitor { len: 0 })
+        }
+    }
+
+    struct SeqLenVisitor {
+        len: u64,
+    }
+
+    impl<'de> Visitor<'de> for SeqLenVisitor {
+        type Value = u64;
+
+        fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "an array")
+        }
+
+        fn visit_seq<A>(mut self, mut seq: A) -> Result<u64, A::Error>
+        where
+            A: SeqAccess<'de>,
+        {
+            while seq.next_element::<IgnoredAny>()?.is_some() {
+                self.len = self.len.saturating_add(1);
+            }
+            Ok(self.len)
+        }
+
+        fn visit_map<M>(self, mut map: M) -> Result<u64, M::Error>
+        where
+            M: MapAccess<'de>,
+        {
+            while map.next_key::<IgnoredAny>()?.is_some() {
+                map.next_value::<IgnoredAny>()?;
+            }
+            Ok(0)
+        }
+
+        fn visit_unit<E>(self) -> Result<u64, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(0)
+        }
+
+        fn visit_none<E>(self) -> Result<u64, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(0)
+        }
+
+        fn visit_bool<E>(self, _v: bool) -> Result<u64, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(0)
+        }
+
+        fn visit_i64<E>(self, _v: i64) -> Result<u64, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(0)
+        }
+
+        fn visit_u64<E>(self, _v: u64) -> Result<u64, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(0)
+        }
+
+        fn visit_f64<E>(self, _v: f64) -> Result<u64, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(0)
+        }
+
+        fn visit_str<E>(self, _v: &str) -> Result<u64, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(0)
+        }
+    }
+
+    #[derive(Debug, Clone, Copy, Default)]
+    struct DockingInteractionFlags {
+        dock_drag_active: bool,
+        viewport_capture_active: bool,
+    }
+
+    struct DockingInteractionSeed;
+
+    impl<'de> DeserializeSeed<'de> for DockingInteractionSeed {
+        type Value = DockingInteractionFlags;
+
+        fn deserialize<D>(self, deserializer: D) -> Result<DockingInteractionFlags, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
+            deserializer.deserialize_any(DockingInteractionVisitor {
+                flags: DockingInteractionFlags::default(),
+            })
+        }
+    }
+
+    struct DockingInteractionVisitor {
+        flags: DockingInteractionFlags,
+    }
+
+    impl<'de> Visitor<'de> for DockingInteractionVisitor {
+        type Value = DockingInteractionFlags;
+
+        fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "a docking_interaction object")
+        }
+
+        fn visit_map<M>(mut self, mut map: M) -> Result<DockingInteractionFlags, M::Error>
+        where
+            M: MapAccess<'de>,
+        {
+            while let Some(key) = map.next_key::<String>()? {
+                match key.as_str() {
+                    "dock_drag" | "dockDrag" => {
+                        self.flags.dock_drag_active = map.next_value_seed(IsObjectSeed)?;
+                    }
+                    "viewport_capture" | "viewportCapture" => {
+                        self.flags.viewport_capture_active = map.next_value_seed(IsObjectSeed)?;
+                    }
+                    _ => {
+                        map.next_value::<IgnoredAny>()?;
+                    }
+                }
+            }
+            Ok(self.flags)
+        }
+
+        fn visit_unit<E>(self) -> Result<DockingInteractionFlags, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(self.flags)
+        }
+
+        fn visit_seq<A>(self, mut seq: A) -> Result<DockingInteractionFlags, A::Error>
+        where
+            A: SeqAccess<'de>,
+        {
+            while seq.next_element::<IgnoredAny>()?.is_some() {}
+            Ok(self.flags)
+        }
+
+        fn visit_bool<E>(self, _v: bool) -> Result<DockingInteractionFlags, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(self.flags)
+        }
+
+        fn visit_i64<E>(self, _v: i64) -> Result<DockingInteractionFlags, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(self.flags)
+        }
+
+        fn visit_u64<E>(self, _v: u64) -> Result<DockingInteractionFlags, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(self.flags)
+        }
+
+        fn visit_f64<E>(self, _v: f64) -> Result<DockingInteractionFlags, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(self.flags)
+        }
+
+        fn visit_str<E>(self, _v: &str) -> Result<DockingInteractionFlags, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(self.flags)
+        }
+    }
+
+    struct IsObjectSeed;
+
+    impl<'de> DeserializeSeed<'de> for IsObjectSeed {
+        type Value = bool;
+
+        fn deserialize<D>(self, deserializer: D) -> Result<bool, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
+            deserializer.deserialize_any(IsObjectVisitor)
+        }
+    }
+
+    struct IsObjectVisitor;
+
+    impl<'de> Visitor<'de> for IsObjectVisitor {
+        type Value = bool;
+
+        fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "any value")
+        }
+
+        fn visit_map<M>(self, mut map: M) -> Result<bool, M::Error>
+        where
+            M: MapAccess<'de>,
+        {
+            while map.next_key::<IgnoredAny>()?.is_some() {
+                map.next_value::<IgnoredAny>()?;
+            }
+            Ok(true)
+        }
+
+        fn visit_seq<A>(self, mut seq: A) -> Result<bool, A::Error>
+        where
+            A: SeqAccess<'de>,
+        {
+            while seq.next_element::<IgnoredAny>()?.is_some() {}
+            Ok(false)
+        }
+
+        fn visit_unit<E>(self) -> Result<bool, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(false)
+        }
+
+        fn visit_none<E>(self) -> Result<bool, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(false)
+        }
+
+        fn visit_bool<E>(self, _v: bool) -> Result<bool, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(false)
+        }
+
+        fn visit_i64<E>(self, _v: i64) -> Result<bool, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(false)
+        }
+
+        fn visit_u64<E>(self, _v: u64) -> Result<bool, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(false)
+        }
+
+        fn visit_f64<E>(self, _v: f64) -> Result<bool, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(false)
+        }
+
+        fn visit_str<E>(self, _v: &str) -> Result<bool, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(false)
+        }
+    }
+
+    struct CacheRootsSeed;
+
+    impl<'de> DeserializeSeed<'de> for CacheRootsSeed {
+        type Value = u64;
+
+        fn deserialize<D>(self, deserializer: D) -> Result<u64, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
+            deserializer.deserialize_any(CacheRootsVisitor { reused: 0 })
+        }
+    }
+
+    struct CacheRootsVisitor {
+        reused: u64,
+    }
+
+    impl<'de> Visitor<'de> for CacheRootsVisitor {
+        type Value = u64;
+
+        fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "a cache_roots array")
+        }
+
+        fn visit_seq<A>(mut self, mut seq: A) -> Result<u64, A::Error>
+        where
+            A: SeqAccess<'de>,
+        {
+            while let Some(reused) = seq.next_element_seed(CacheRootSeed)? {
+                if reused {
+                    self.reused = self.reused.saturating_add(1);
+                }
+            }
+            Ok(self.reused)
+        }
+
+        fn visit_map<M>(self, mut map: M) -> Result<u64, M::Error>
+        where
+            M: MapAccess<'de>,
+        {
+            while map.next_key::<IgnoredAny>()?.is_some() {
+                map.next_value::<IgnoredAny>()?;
+            }
+            Ok(0)
+        }
+
+        fn visit_unit<E>(self) -> Result<u64, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(0)
+        }
+
+        fn visit_none<E>(self) -> Result<u64, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(0)
+        }
+
+        fn visit_bool<E>(self, _v: bool) -> Result<u64, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(0)
+        }
+
+        fn visit_i64<E>(self, _v: i64) -> Result<u64, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(0)
+        }
+
+        fn visit_u64<E>(self, _v: u64) -> Result<u64, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(0)
+        }
+
+        fn visit_f64<E>(self, _v: f64) -> Result<u64, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(0)
+        }
+
+        fn visit_str<E>(self, _v: &str) -> Result<u64, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(0)
+        }
+    }
+
+    struct CacheRootSeed;
+
+    impl<'de> DeserializeSeed<'de> for CacheRootSeed {
+        type Value = bool;
+
+        fn deserialize<D>(self, deserializer: D) -> Result<bool, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
+            deserializer.deserialize_any(CacheRootVisitor { reused: false })
+        }
+    }
+
+    struct CacheRootVisitor {
+        reused: bool,
+    }
+
+    impl<'de> Visitor<'de> for CacheRootVisitor {
+        type Value = bool;
+
+        fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "a cache root object")
+        }
+
+        fn visit_map<M>(mut self, mut map: M) -> Result<bool, M::Error>
+        where
+            M: MapAccess<'de>,
+        {
+            while let Some(key) = map.next_key::<String>()? {
+                if key == "reused" {
+                    self.reused = map.next_value::<Option<bool>>()?.unwrap_or(false);
+                } else {
+                    map.next_value::<IgnoredAny>()?;
+                }
+            }
+            Ok(self.reused)
+        }
+
+        fn visit_unit<E>(self) -> Result<bool, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(false)
+        }
+
+        fn visit_seq<A>(self, mut seq: A) -> Result<bool, A::Error>
+        where
+            A: SeqAccess<'de>,
+        {
+            while seq.next_element::<IgnoredAny>()?.is_some() {}
+            Ok(false)
+        }
+
+        fn visit_none<E>(self) -> Result<bool, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(false)
+        }
+
+        fn visit_bool<E>(self, _v: bool) -> Result<bool, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(false)
+        }
+
+        fn visit_i64<E>(self, _v: i64) -> Result<bool, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(false)
+        }
+
+        fn visit_u64<E>(self, _v: u64) -> Result<bool, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(false)
+        }
+
+        fn visit_f64<E>(self, _v: f64) -> Result<bool, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(false)
+        }
+
+        fn visit_str<E>(self, _v: &str) -> Result<bool, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(false)
         }
     }
 
@@ -733,6 +1317,17 @@ fn build_frames_index_payload_streaming(
             None
         };
 
+        let aggregates = json!({
+            "schema_version": 1,
+            "examined_snapshots_post_warmup": w.aggregates.examined_snapshots_post_warmup,
+            "viewport_input_events_post_warmup": w.aggregates.viewport_input_events_post_warmup,
+            "dock_drag_active_frames_post_warmup": w.aggregates.dock_drag_active_frames_post_warmup,
+            "viewport_capture_active_frames_post_warmup": w.aggregates.viewport_capture_active_frames_post_warmup,
+            "view_cache_active_snapshots_post_warmup": w.aggregates.view_cache_active_snapshots_post_warmup,
+            "view_cache_reuse_events_post_warmup": w.aggregates.view_cache_reuse_events_post_warmup,
+            "paint_cache_replayed_ops_post_warmup": w.aggregates.paint_cache_replayed_ops_post_warmup,
+        });
+
         windows_out.push(json!({
             "window": w.window,
             "snapshots_total": w.snapshots_total,
@@ -743,6 +1338,7 @@ fn build_frames_index_payload_streaming(
             "last_timestamp_unix_ms": last_ts,
             "warmup_fallback": w.warmup_fallback,
             "clipped": clipped,
+            "aggregates": aggregates,
             "rows": rows,
         }));
     }
@@ -750,6 +1346,7 @@ fn build_frames_index_payload_streaming(
     Ok(json!({
         "schema_version": FRAMES_INDEX_SCHEMA_VERSION,
         "kind": FRAMES_INDEX_KIND,
+        "features": [FRAMES_INDEX_FEATURE_WINDOW_AGG_V1],
         "bundle": bundle_path.display().to_string(),
         "generated_unix_ms": crate::util::now_unix_ms(),
         "warmup_frames": warmup_frames,
@@ -1054,8 +1651,8 @@ mod tests {
     "window": 1,
     "snapshots": [
       { "frame_id": 0, "window_snapshot_seq": 1, "timestamp_unix_ms": 1, "debug": { "stats": { "total_time_us": 10 } } },
-      { "frame_id": 5, "window_snapshot_seq": 2, "timestamp_unix_ms": 2, "semantics_fingerprint": 42, "debug": { "stats": { "total_time_us": 20, "layout_time_us": 3 }, "semantics": { "nodes": [] } } },
-      { "frame_id": 6, "window_snapshot_seq": 3, "timestamp_unix_ms": 3, "semantics_fingerprint": 43, "debug": { "stats": { "total_time_us": 30 } } }
+      { "frame_id": 5, "window_snapshot_seq": 2, "timestamp_unix_ms": 2, "semantics_fingerprint": 42, "debug": { "viewport_input": [1,2], "docking_interaction": { "dock_drag": {} }, "stats": { "total_time_us": 20, "layout_time_us": 3, "view_cache_active": true, "view_cache_roots_reused": 1, "paint_cache_replayed_ops": 4 }, "semantics": { "nodes": [] } } },
+      { "frame_id": 6, "window_snapshot_seq": 3, "timestamp_unix_ms": 3, "semantics_fingerprint": 43, "debug": { "viewport_input": [1], "docking_interaction": { "viewport_capture": {} }, "stats": { "total_time_us": 30, "view_cache_active": true, "view_cache_roots_reused": 2, "paint_cache_replayed_ops": 1 } } }
     ]
   }]
 }"#,
@@ -1065,6 +1662,9 @@ mod tests {
         let payload = build_frames_index_payload_streaming(&bundle_path, 5).expect("payload");
         assert_eq!(payload["kind"].as_str(), Some("frames_index"));
         assert_eq!(payload["schema_version"].as_u64(), Some(1));
+        assert!(payload["features"]
+            .as_array()
+            .is_some_and(|v| v.iter().any(|f| f.as_str() == Some("window_aggregates.v1"))));
         assert_eq!(payload["warmup_frames"].as_u64(), Some(5));
         assert_eq!(payload["has_semantics_table"].as_bool(), Some(true));
         assert_eq!(payload["windows_total"].as_u64(), Some(1));
@@ -1076,6 +1676,43 @@ mod tests {
         assert_eq!(w.get("window").and_then(|v| v.as_u64()), Some(1));
         assert_eq!(w.get("frames_total").and_then(|v| v.as_u64()), Some(2));
         assert_eq!(w.get("first_frame_id").and_then(|v| v.as_u64()), Some(5));
+
+        let aggs = w.get("aggregates").and_then(|v| v.as_object()).expect("aggregates");
+        assert_eq!(
+            aggs.get("examined_snapshots_post_warmup")
+                .and_then(|v| v.as_u64()),
+            Some(2)
+        );
+        assert_eq!(
+            aggs.get("viewport_input_events_post_warmup")
+                .and_then(|v| v.as_u64()),
+            Some(3)
+        );
+        assert_eq!(
+            aggs.get("dock_drag_active_frames_post_warmup")
+                .and_then(|v| v.as_u64()),
+            Some(1)
+        );
+        assert_eq!(
+            aggs.get("viewport_capture_active_frames_post_warmup")
+                .and_then(|v| v.as_u64()),
+            Some(1)
+        );
+        assert_eq!(
+            aggs.get("view_cache_active_snapshots_post_warmup")
+                .and_then(|v| v.as_u64()),
+            Some(2)
+        );
+        assert_eq!(
+            aggs.get("view_cache_reuse_events_post_warmup")
+                .and_then(|v| v.as_u64()),
+            Some(3)
+        );
+        assert_eq!(
+            aggs.get("paint_cache_replayed_ops_post_warmup")
+                .and_then(|v| v.as_u64()),
+            Some(5)
+        );
 
         let rows = w.get("rows").and_then(|v| v.as_array()).expect("rows");
         assert_eq!(rows.len(), 2);

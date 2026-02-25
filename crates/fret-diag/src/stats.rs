@@ -5,6 +5,7 @@ mod bundle_stats_snapshot;
 mod bundle_stats_sort;
 mod debug_stats_gates;
 mod drag_cache_gates;
+mod frames_index_gates;
 mod gc_gates;
 mod hover_layout_checks;
 mod interaction_gates;
@@ -39,6 +40,10 @@ pub(super) use debug_stats_gates::{
     check_bundle_for_node_graph_cull_window_shifts_min, check_bundle_for_prepaint_actions_min,
 };
 pub(super) use drag_cache_gates::check_bundle_for_drag_cache_root_paint_only;
+pub(super) use frames_index_gates::{
+    check_frames_index_for_dock_drag_min, check_frames_index_for_view_cache_reuse_min,
+    check_frames_index_for_viewport_capture_min, check_frames_index_for_viewport_input_min,
+};
 pub(super) use gc_gates::check_bundle_for_gc_sweep_liveness;
 pub(super) use hover_layout_checks::check_report_for_hover_layout_invalidations;
 pub(super) use interaction_gates::{

@@ -288,13 +288,15 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
     if let Some(min) = check_view_cache_reuse_min
         && min > 0
     {
-        ensure_check_supported_in_stats_mode(
-            derived_from_frames_index,
-            "check-view-cache-reuse-min",
-            &bundle_path,
-            warmup_frames,
-        )?;
-        stats::check_bundle_for_view_cache_reuse_min(bundle_path.as_path(), min, warmup_frames)?;
+        if derived_from_frames_index {
+            stats::check_frames_index_for_view_cache_reuse_min(
+                bundle_path.as_path(),
+                min,
+                warmup_frames,
+            )?;
+        } else {
+            stats::check_bundle_for_view_cache_reuse_min(bundle_path.as_path(), min, warmup_frames)?;
+        }
     }
     if let Some(min) = check_overlay_synthesis_min
         && min > 0
@@ -310,35 +312,33 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
     if let Some(min) = check_viewport_input_min
         && min > 0
     {
-        ensure_check_supported_in_stats_mode(
-            derived_from_frames_index,
-            "check-viewport-input-min",
-            &bundle_path,
-            warmup_frames,
-        )?;
-        stats::check_bundle_for_viewport_input_min(bundle_path.as_path(), min, warmup_frames)?;
+        if derived_from_frames_index {
+            stats::check_frames_index_for_viewport_input_min(bundle_path.as_path(), min, warmup_frames)?;
+        } else {
+            stats::check_bundle_for_viewport_input_min(bundle_path.as_path(), min, warmup_frames)?;
+        }
     }
     if let Some(min) = check_dock_drag_min
         && min > 0
     {
-        ensure_check_supported_in_stats_mode(
-            derived_from_frames_index,
-            "check-dock-drag-min",
-            &bundle_path,
-            warmup_frames,
-        )?;
-        stats::check_bundle_for_dock_drag_min(bundle_path.as_path(), min, warmup_frames)?;
+        if derived_from_frames_index {
+            stats::check_frames_index_for_dock_drag_min(bundle_path.as_path(), min, warmup_frames)?;
+        } else {
+            stats::check_bundle_for_dock_drag_min(bundle_path.as_path(), min, warmup_frames)?;
+        }
     }
     if let Some(min) = check_viewport_capture_min
         && min > 0
     {
-        ensure_check_supported_in_stats_mode(
-            derived_from_frames_index,
-            "check-viewport-capture-min",
-            &bundle_path,
-            warmup_frames,
-        )?;
-        stats::check_bundle_for_viewport_capture_min(bundle_path.as_path(), min, warmup_frames)?;
+        if derived_from_frames_index {
+            stats::check_frames_index_for_viewport_capture_min(
+                bundle_path.as_path(),
+                min,
+                warmup_frames,
+            )?;
+        } else {
+            stats::check_bundle_for_viewport_capture_min(bundle_path.as_path(), min, warmup_frames)?;
+        }
     }
     if let Some(min) = check_retained_vlist_reconcile_no_notify_min
         && min > 0
