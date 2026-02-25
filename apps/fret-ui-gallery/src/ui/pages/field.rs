@@ -548,6 +548,45 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     .test_id("ui-gallery-field-rtl");
 
     let responsive = {
+        #[derive(Default, Clone)]
+        struct ResponsiveWidthModels {
+            wide: Option<Model<bool>>,
+        }
+
+        let state = cx.with_state(ResponsiveWidthModels::default, |st| st.clone());
+        let wide = match state.wide {
+            Some(model) => model,
+            None => {
+                let model = cx.app.models_mut().insert(false);
+                cx.with_state(ResponsiveWidthModels::default, |st| {
+                    st.wide = Some(model.clone())
+                });
+                model
+            }
+        };
+        let wide_value = cx.watch_model(&wide).layout().copied().unwrap_or(false);
+        let max_w = if wide_value { Px(900.0) } else { Px(520.0) };
+
+        let width_toggle = shadcn::FieldGroup::new([shadcn::Field::new([
+            shadcn::FieldContent::new([
+                shadcn::FieldLabel::new("Responsive width").into_element(cx),
+                shadcn::FieldDescription::new(
+                    "Toggle the container width to exercise responsive orientation via container queries.",
+                )
+                .into_element(cx),
+            ])
+            .into_element(cx),
+            shadcn::Switch::new(wide.clone())
+                .control_id("ui-gallery-field-responsive-width-switch")
+                .test_id("ui-gallery-field-responsive-width-switch")
+                .a11y_label("Use wide responsive container")
+                .into_element(cx),
+        ])
+        .orientation(shadcn::FieldOrientation::Horizontal)
+        .into_element(cx)])
+        .into_element(cx)
+        .test_id("ui-gallery-field-responsive-width-toggle");
+
         let content = shadcn::FieldSet::new([
             shadcn::FieldLegend::new("Profile").into_element(cx),
             shadcn::FieldDescription::new("Fill in your profile information.").into_element(cx),
@@ -559,11 +598,13 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                         shadcn::FieldDescription::new("Provide your full name for identification.")
                             .into_element(cx),
                     ])
-                    .into_element(cx),
+                    .into_element(cx)
+                    .test_id("ui-gallery-field-responsive-name-content"),
                     shadcn::Input::new(username.clone())
                         .placeholder("Evil Rabbit")
                         .a11y_label("Name")
-                        .into_element(cx),
+                        .into_element(cx)
+                        .test_id("ui-gallery-field-responsive-name-input"),
                 ])
                 .orientation(shadcn::FieldOrientation::Responsive)
                 .into_element(cx),
@@ -594,10 +635,18 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             ])
             .into_element(cx),
         ])
-        .refine_layout(LayoutRefinement::default().w_full().max_w(Px(760.0)))
+        .refine_layout(LayoutRefinement::default().w_full().max_w(max_w))
         .into_element(cx)
         .test_id("ui-gallery-field-responsive");
-        content
+
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap(Space::N3)
+                .items_start()
+                .layout(LayoutRefinement::default().w_full().min_w_0()),
+            move |_cx| vec![width_toggle, content],
+        )
     };
 
     let notes = doc_layout::notes(
