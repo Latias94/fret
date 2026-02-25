@@ -95,3 +95,29 @@ pub(crate) fn write_perf_hints_json(
     let _ = write_json_value(&out_path, &payload);
     out_path
 }
+
+pub(crate) fn print_perf_stats_stdout_json(
+    sort: BundleStatsSort,
+    repeat: usize,
+    rows: &[serde_json::Value],
+    overall_worst: Option<&(u64, PathBuf, PathBuf)>,
+) {
+    let worst = overall_worst.as_ref().map(|(us, src, bundle)| {
+        serde_json::json!({
+            "script": src.display().to_string(),
+            "top_total_time_us": us,
+            "bundle": bundle.display().to_string(),
+        })
+    });
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "sort": sort.as_str(),
+        "repeat": repeat,
+        "rows": rows,
+        "worst_overall": worst,
+    });
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "{}".to_string())
+    );
+}

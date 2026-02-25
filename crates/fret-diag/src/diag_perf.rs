@@ -2036,24 +2036,7 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
     }
 
     if stats_json {
-        let worst = overall_worst.as_ref().map(|(us, src, bundle)| {
-            serde_json::json!({
-                "script": src.display().to_string(),
-                "top_total_time_us": us,
-                "bundle": bundle.display().to_string(),
-            })
-        });
-        let payload = serde_json::json!({
-            "schema_version": 1,
-            "sort": sort.as_str(),
-            "repeat": repeat,
-            "rows": perf_json_rows,
-            "worst_overall": worst,
-        });
-        println!(
-            "{}",
-            serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "{}".to_string())
-        );
+        outputs::print_perf_stats_stdout_json(sort, repeat, &perf_json_rows, overall_worst.as_ref());
     } else if let Some((us, src, bundle)) = overall_worst {
         println!(
             "PERF worst overall: {} us={} bundle={}",
