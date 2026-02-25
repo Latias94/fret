@@ -1,6 +1,10 @@
 use super::*;
 use crate::stats;
 
+mod check_support;
+
+use check_support::{STATS_LITE_SUPPORTED_CHECKS, StatsLiteCheckKind};
+
 #[derive(Debug, Clone)]
 pub(crate) struct StatsCmdContext {
     pub rest: Vec<String>,
@@ -153,14 +157,39 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
         if !derived_from_frames_index {
             return Ok(());
         }
+
+        fn stats_lite_supported_checks_table() -> String {
+            let mut rows: Vec<(StatsLiteCheckKind, &'static str, &'static str)> =
+                STATS_LITE_SUPPORTED_CHECKS
+                    .iter()
+                    .map(|c| (c.kind, c.check_name, c.note))
+                    .collect();
+            rows.sort_by(|a, b| a.1.cmp(b.1));
+
+            let mut out = String::new();
+            out.push_str("  stats-lite supported checks:\n");
+            for (kind, name, note) in rows {
+                let kind = match kind {
+                    StatsLiteCheckKind::FramesIndex => "frames-index",
+                    StatsLiteCheckKind::StreamingBundle => "streaming",
+                    StatsLiteCheckKind::ReportOnly => "report-only",
+                    StatsLiteCheckKind::OutDirOnly => "out-dir",
+                };
+                out.push_str(&format!("    - {name} ({kind}): {note}\n"));
+            }
+            out
+        }
+
         Err(format!(
-            "`diag stats --{check_name}` requires full bundle stats, but this run used a stats-lite report derived from frames.index.json (bundle too large to materialize).\n\
+            "`diag stats --{check_name}` is not stats-lite compatible yet, but this run used a stats-lite report derived from frames.index.json (bundle too large to materialize).\n\
   bundle: {}\n\
+{}\n\
   hint: regenerate schema2 + sidecars, then re-run the check:\n\
     - fretboard diag doctor --fix-schema2 <bundle_dir> --warmup-frames {warmup_frames}\n\
     - fretboard diag index <bundle_dir> --warmup-frames {warmup_frames}\n\
     - fretboard diag stats <bundle_dir> --warmup-frames {warmup_frames} --{check_name} ...",
             bundle_path.display(),
+            stats_lite_supported_checks_table(),
         ))
     }
     if let Some(test_id) = check_stale_paint_test_id.as_deref() {

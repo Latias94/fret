@@ -244,7 +244,7 @@ Goal: common tooling should keep working even when `bundle.json` is too large to
   - [x] Document the new fields in `docs/workstreams/diag-fearless-refactor-v1/frames-index.md`.
 
 - [ ] Port selected `diag stats --check-*` gates to sidecars (so they work in stats-lite mode).
-  - [ ] Define a small “compat matrix” in code: `check -> required frames-index features`.
+  - [x] Define a small “compat matrix” in code (agent-friendly): `check -> stats-lite data source`.
   - [x] First wave (frames-index aggregates):
     - [x] `--check-viewport-input-min` (post-warmup viewport_input event count).
     - [x] `--check-dock-drag-min` (post-warmup dock-drag-active frames).
