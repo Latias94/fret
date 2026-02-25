@@ -125,9 +125,9 @@ pub(crate) fn check_bundle_for_stale_scene(
 
 #[derive(Debug, Clone, Default)]
 pub(crate) struct SemanticsChangedRepaintedScan {
-    missing_scene_fingerprint: bool,
-    missing_semantics_fingerprint: bool,
-    suspicious_lines: Vec<String>,
+    pub(super) missing_scene_fingerprint: bool,
+    pub(super) missing_semantics_fingerprint: bool,
+    pub(super) suspicious_lines: Vec<String>,
     pub(crate) findings: Vec<serde_json::Value>,
 }
 

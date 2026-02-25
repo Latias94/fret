@@ -247,11 +247,19 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
             &bundle_path,
             warmup_frames,
         )?;
-        stats::check_bundle_for_semantics_changed_repainted(
-            &bundle_path,
-            warmup_frames,
-            dump_semantics_changed_repainted_json,
-        )?;
+        if derived_from_frames_index {
+            stats::check_bundle_for_semantics_changed_repainted_streaming(
+                &bundle_path,
+                warmup_frames,
+                dump_semantics_changed_repainted_json,
+            )?;
+        } else {
+            stats::check_bundle_for_semantics_changed_repainted(
+                &bundle_path,
+                warmup_frames,
+                dump_semantics_changed_repainted_json,
+            )?;
+        }
     }
     if let Some(test_id) = check_wheel_scroll_test_id.as_deref() {
         ensure_check_supported_in_stats_mode(

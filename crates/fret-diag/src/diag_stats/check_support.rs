@@ -41,6 +41,11 @@ pub(crate) const STATS_LITE_SUPPORTED_CHECKS: &[StatsLiteCheckSupport] = &[
         note: "uses out-dir artifacts",
     },
     StatsLiteCheckSupport {
+        check_name: "check-semantics-changed-repainted",
+        kind: StatsLiteCheckKind::StreamingBundle,
+        note: "streams bundle JSON; loads schema2 semantics table nodes for diffs",
+    },
+    StatsLiteCheckSupport {
         check_name: "check-view-cache-reuse-min",
         kind: StatsLiteCheckKind::FramesIndex,
         note: "uses frames.index.json window aggregates",

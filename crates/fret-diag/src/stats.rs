@@ -19,6 +19,7 @@ mod retained_vlist_gates_streaming;
 mod script_runtime;
 mod semantics;
 mod stale;
+mod stale_streaming;
 mod ui_gallery_code_editor;
 mod ui_gallery_markdown_editor;
 mod ui_gallery_text_gates;
@@ -69,6 +70,7 @@ pub(super) use stale::{
     check_bundle_for_idle_no_paint_min, check_bundle_for_semantics_changed_repainted,
     check_bundle_for_stale_paint, check_bundle_for_stale_scene,
 };
+pub(super) use stale_streaming::check_bundle_for_semantics_changed_repainted_streaming;
 pub(super) use ui_gallery_text_gates::{
     check_out_dir_for_ui_gallery_text_fallback_policy_key_bumps_on_locale_change,
     check_out_dir_for_ui_gallery_text_fallback_policy_key_bumps_on_settings_change,
