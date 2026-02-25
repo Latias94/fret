@@ -20,8 +20,8 @@ Workstream entry:
     - e.g. layouts inside docking/panels (ADR 0231).
   - [x] Mixed/unclear — write down the decision and leave an evidence anchor to upstream.
 
-- [ ] Collect upstream evidence anchors in `repo-ref/ui` for each responsive decision that differs
-  from web parity.
+- [x] Collect upstream evidence anchors in `repo-ref/ui` for each responsive decision that differs
+  from web parity (and `repo-ref/kibo` for shadcn extras).
 
 ## Responsive decision table (seed)
 
@@ -44,7 +44,7 @@ Note: `repo-ref/` is local state (not committed). See `docs/repo-ref.md`.
 | DataTable faceted filter “show label badges” (`lg:*`) | `ecosystem/fret-ui-shadcn/src/data_table_recipes.rs` | `repo-ref/ui/apps/v4/app/(app)/examples/tasks/components/data-table-faceted-filter.tsx` (`lg:hidden` / `hidden lg:flex`) | Dual-mode (viewport default; container optional) | Keep explicit knob (`DataTableToolbarResponsiveQuery`), default viewport parity, allow container region for docking/panels | `ecosystem/fret-ui-shadcn/tests/data_table_toolbar_faceted_responsive.rs` + `tools/diag-scripts/ui-gallery-data-table-toolbar-faceted-responsive.json` |
 | Sidebar mobile vs desktop (`md:block`) | `ecosystem/fret-ui-shadcn/src/sidebar.rs` | `repo-ref/ui/apps/v4/registry/new-york-v4/ui/sidebar.tsx` (`useIsMobile`, `hidden md:block`) | Viewport (device shell) | Keep viewport breakpoint (ADR 0232) | `tools/diag-scripts/ui-gallery-sidebar-mobile-controlled-open-sync.json` |
 | Shadcn Extras: Kanban (`sm:` spacing/width) | `ecosystem/fret-ui-shadcn/src/extras/kanban.rs` | `repo-ref/kibo/packages/kanban` | Viewport (device shell) | Keep viewport breakpoint (extras demo parity) | `tools/diag-scripts/ui-gallery-shadcn-extras-kanban-dnd.json` |
-| Shadcn Extras: Marquee base cycle width | `ecosystem/fret-ui-shadcn/src/extras/marquee.rs` | N/A (Fret extras) | Container (panel width; viewport fallback when unknown) | Default to container query region width; keep explicit `cycle_width_px` override (ADR 0231) | `ecosystem/fret-ui-shadcn/src/extras/marquee.rs` (test: `marquee_default_cycle_width_prefers_region_over_viewport`) |
+| Shadcn Extras: Marquee base cycle width | `ecosystem/fret-ui-shadcn/src/extras/marquee.rs` | `repo-ref/kibo/packages/marquee` | Container (panel width; viewport fallback when unknown) | Default to container query region width; keep explicit `cycle_width_px` override (ADR 0231) | `ecosystem/fret-ui-shadcn/src/extras/marquee.rs` (test: `marquee_default_cycle_width_prefers_region_over_viewport`) |
 | NavigationMenu `md:*` behavior | `ecosystem/fret-ui-shadcn/src/navigation_menu.rs` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/navigation-menu.tsx` (`md:absolute`, `md:w-[var(--radix-…)]`) | Mixed (upstream viewport; editor layouts may prefer container) | Add a query-source knob: default viewport parity, optional container (editor-first) | `ecosystem/fret-ui-shadcn/src/navigation_menu.rs` (test: `navigation_menu_md_breakpoint_query_can_follow_viewport_or_container_width`) |
 
 ## Responsive drift: DataTable “LG show labels”
