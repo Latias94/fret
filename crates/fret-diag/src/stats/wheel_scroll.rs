@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use super::semantics::{is_descendant, semantics_node_id_for_test_id, semantics_parent_map};
+use super::wheel_scroll_streaming;
 
 pub(super) fn first_wheel_frame_id_for_window(window: &serde_json::Value) -> Option<u64> {
     window
@@ -12,6 +12,10 @@ pub(super) fn first_wheel_frame_id_for_window(window: &serde_json::Value) -> Opt
         .min()
 }
 
+#[cfg(test)]
+use super::semantics::{is_descendant, semantics_node_id_for_test_id, semantics_parent_map};
+
+#[cfg(test)]
 fn hit_test_node_id(snapshot: &serde_json::Value) -> Option<u64> {
     snapshot
         .get("debug")
@@ -25,9 +29,11 @@ pub(crate) fn check_bundle_for_wheel_scroll(
     test_id: &str,
     warmup_frames: u64,
 ) -> Result<(), String> {
-    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
-    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
-    check_bundle_for_wheel_scroll_json(&bundle, bundle_path, test_id, warmup_frames)
+    wheel_scroll_streaming::check_bundle_for_wheel_scroll_streaming(
+        bundle_path,
+        test_id,
+        warmup_frames,
+    )
 }
 
 pub(crate) fn check_bundle_for_wheel_scroll_hit_changes(
@@ -35,11 +41,14 @@ pub(crate) fn check_bundle_for_wheel_scroll_hit_changes(
     test_id: &str,
     warmup_frames: u64,
 ) -> Result<(), String> {
-    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
-    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
-    check_bundle_for_wheel_scroll_hit_changes_json(&bundle, bundle_path, test_id, warmup_frames)
+    wheel_scroll_streaming::check_bundle_for_wheel_scroll_hit_changes_streaming(
+        bundle_path,
+        test_id,
+        warmup_frames,
+    )
 }
 
+#[cfg(test)]
 pub(crate) fn check_bundle_for_wheel_scroll_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
@@ -161,6 +170,7 @@ pub(crate) fn check_bundle_for_wheel_scroll_json(
     Err(msg)
 }
 
+#[cfg(test)]
 pub(crate) fn check_bundle_for_wheel_scroll_hit_changes_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,

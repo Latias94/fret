@@ -22,6 +22,7 @@ mod ui_gallery_text_gates;
 mod view_cache_gates;
 mod vlist;
 mod wheel_scroll;
+mod wheel_scroll_streaming;
 mod windowed_rows;
 pub(super) use bundle_stats_sort::BundleStatsSort;
 pub(super) use script_runtime::{

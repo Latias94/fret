@@ -211,21 +211,9 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
         )?;
     }
     if let Some(test_id) = check_wheel_scroll_test_id.as_deref() {
-        ensure_check_supported_in_stats_mode(
-            derived_from_frames_index,
-            "check-wheel-scroll",
-            &bundle_path,
-            warmup_frames,
-        )?;
         stats::check_bundle_for_wheel_scroll(bundle_path.as_path(), test_id, warmup_frames)?;
     }
     if let Some(test_id) = check_wheel_scroll_hit_changes_test_id.as_deref() {
-        ensure_check_supported_in_stats_mode(
-            derived_from_frames_index,
-            "check-wheel-scroll-hit-changes",
-            &bundle_path,
-            warmup_frames,
-        )?;
         stats::check_bundle_for_wheel_scroll_hit_changes(
             bundle_path.as_path(),
             test_id,
