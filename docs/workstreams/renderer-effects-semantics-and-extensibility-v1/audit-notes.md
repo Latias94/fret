@@ -45,6 +45,7 @@ P1 — Quality and maintainability:
   - bind-group creation (texture + params + optional mask),
   - perf accounting (uniform bytes and pass counters).
   Done (initial): `record_fullscreen_param_effect_pass` + `record_fullscreen_texture_effect_pass`.
+  Migrated passes (so far): `ColorAdjust`, `AlphaThreshold`, `ColorMatrix`, `Dither`, `Noise`, `DropShadow`.
   Anchors: `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs`,
   `crates/fret-render-wgpu/src/renderer/pipelines/*`.
 

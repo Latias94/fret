@@ -41,6 +41,11 @@ This TODO is ordered by implementation priority (P0 first), and is designed to b
     `crates/fret-render-wgpu/src/renderer/shaders.rs`,
     `crates/fret-render-wgpu/tests/output_srgb_transfer_conformance.rs`.
 
+- [x] Reduce boilerplate for fullscreen effects (recorder dedupe):
+  - Extract reusable helpers for “unmasked / masked / mask texture” variants.
+  - Migrate existing effect recorders to the helpers (including `DropShadow`).
+  - Evidence: `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs`.
+
 - [x] Add `EffectStep::NoiseV1` (bounded procedural grain) for acrylic/glass recipes:
   - [x] Deterministic, bounded noise evaluation in effect chains (no hidden time sources).
   - [x] Conformance: scissored FilterContent noise preserves outside-region content and is deterministic.
