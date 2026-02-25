@@ -28,6 +28,11 @@ Regression gates (recommended before removing any medium/high-risk item):
   - Prefer routing through `crates/fret-diag/src/commands/ai_packet.rs` (`ensure_ai_packet_dir_best_effort`).
   - Status: `ensure_ai_packet_dir_best_effort` now uses `resolve_bundle_artifact_path_no_materialize` (2026-02-24).
   - Status: `pack_zip` and `doctor` now use shared helpers for schema2/raw/bundle artifact presence checks (2026-02-24).
+- [x] Reduce crate-root "prelude" style imports for stats gates.
+  - Status: `diag_stats` / `post_run_checks` now call `stats::check_bundle_for_*`; crate root no longer imports `check_bundle_for_*` from `stats` (2026-02-25).
+  - Status: moved `check_bundle_for_idle_no_paint_min` into `stats::stale` (2026-02-25).
+- [x] Extract script gate policy helpers from crate root.
+  - Status: `crates/fret-diag/src/diag_policy.rs` owns UI-gallery script classification helpers (2026-02-25).
 - [ ] Delete unused helpers and dead code blocks as they appear during refactors.
   - Rule of thumb: if it has no call sites and no tests rely on it, remove it.
 
