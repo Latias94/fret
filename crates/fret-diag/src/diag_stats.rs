@@ -77,8 +77,10 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
         }
         let a = resolve_path(&workspace_root, a);
         let b = resolve_path(&workspace_root, b);
-        let a_bundle_path = resolve_bundle_artifact_path(&a);
-        let b_bundle_path = resolve_bundle_artifact_path(&b);
+        let a_bundle_path =
+            prefer_schema2_sibling_for_bundle_json_path(&resolve_bundle_artifact_path(&a));
+        let b_bundle_path =
+            prefer_schema2_sibling_for_bundle_json_path(&resolve_bundle_artifact_path(&b));
         let sort = sort_override.unwrap_or(BundleStatsSort::Invalidation);
         let report = bundle_stats_diff_from_paths(
             &a_bundle_path,
@@ -111,6 +113,7 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
 
     let src = resolve_path(&workspace_root, PathBuf::from(src));
     let bundle_path = resolve_bundle_artifact_path(&src);
+    let bundle_path = prefer_schema2_sibling_for_bundle_json_path(&bundle_path);
     let mut report = bundle_stats_from_path(
         &bundle_path,
         stats_top,

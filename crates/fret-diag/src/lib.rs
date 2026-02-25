@@ -77,9 +77,9 @@ pub(crate) use perf_hint_gate::{
 
 pub(crate) use paths::{
     default_lint_out_path, default_meta_out_path, default_pack_out_path, default_test_ids_out_path,
-    default_triage_out_path, expand_script_inputs, resolve_bundle_artifact_path,
-    resolve_bundle_artifact_path_no_materialize, resolve_bundle_root_dir,
-    resolve_bundle_schema2_artifact_path_no_materialize, resolve_path,
+    default_triage_out_path, expand_script_inputs, prefer_schema2_sibling_for_bundle_json_path,
+    resolve_bundle_artifact_path, resolve_bundle_artifact_path_no_materialize,
+    resolve_bundle_root_dir, resolve_bundle_schema2_artifact_path_no_materialize, resolve_path,
     resolve_raw_bundle_artifact_path_no_materialize, wait_for_bundle_artifact_from_script_result,
     wait_for_bundle_artifact_in_dir,
 };

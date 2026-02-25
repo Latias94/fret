@@ -529,6 +529,25 @@ pub(super) fn bundle_stats_from_path(
     sort: BundleStatsSort,
     opts: BundleStatsOptions,
 ) -> Result<BundleStatsReport, String> {
+    const MAX_MATERIALIZED_BUNDLE_BYTES: u64 = 64 * 1024 * 1024;
+    let file_len = std::fs::metadata(bundle_path)
+        .map(|m| m.len())
+        .unwrap_or(MAX_MATERIALIZED_BUNDLE_BYTES + 1);
+    if file_len > MAX_MATERIALIZED_BUNDLE_BYTES {
+        return Err(format!(
+            "bundle artifact is too large for `diag stats` (would require materializing the full JSON into memory).\n\
+  bundle: {} ({} MiB)\n\
+  hint: prefer schema2 + sidecars + lite triage:\n\
+    - fretboard diag doctor --fix-schema2 <bundle_dir> --warmup-frames {}\n\
+    - fretboard diag index <bundle_dir> --warmup-frames {}\n\
+    - fretboard diag triage --lite <bundle_dir> --warmup-frames {}",
+            bundle_path.display(),
+            file_len / (1024 * 1024),
+            opts.warmup_frames,
+            opts.warmup_frames,
+            opts.warmup_frames
+        ));
+    }
     let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
     let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
     bundle_stats_from_json_with_options(&bundle, top, sort, opts)
