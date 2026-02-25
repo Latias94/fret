@@ -168,3 +168,4 @@ Notes:
 - Inputs and outputs are treated as **premultiplied RGBA** in the renderer’s working space.
 - `uv` is derived from the source texture dimensions.
 - The renderer applies clip/mask coverage *after* the custom function, so authors do not need to implement masking.
+- Backends may impose a maximum WGSL source size (wgpu MVP caps v1 sources at 64KiB) and reject oversized programs.

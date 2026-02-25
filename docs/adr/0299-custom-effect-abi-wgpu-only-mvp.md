@@ -53,6 +53,7 @@ The MVP is intentionally small and landable:
 - single-pass fullscreen effect,
 - params-only (fixed 64B payload),
 - no user-provided textures in v1,
+- WGSL sources are size-capped and validated at registration time,
 - expressed only inside `EffectChain` between `PushEffect`/`PopEffect`,
 - deterministic degradation to no-op under budget/target exhaustion (tracked in counters).
 
@@ -77,4 +78,3 @@ Because `EffectId` is opaque, changing registration state must invalidate scene 
 - ADR 0117: Effect Layers and Backdrop Filters
 - ADR 0118: Renderer Intermediate Budgets and Effect Degradation
 - Workstream: `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-abi-wgpu-mvp.md`
-
