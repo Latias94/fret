@@ -269,7 +269,7 @@ impl Dialog {
         content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
     ) -> AnyElement {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
+            let theme = Theme::global(&*cx.app).snapshot();
             let is_open = cx
                 .watch_model(&self.open)
                 .layout()
@@ -546,7 +546,7 @@ impl DialogContent {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
 
         let chrome = crate::ui_builder_ext::surfaces::dialog_style_chrome().merge(self.chrome);
 
@@ -638,7 +638,7 @@ impl DialogClose {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
+            let theme = Theme::global(&*cx.app).snapshot();
 
             let fg = theme
                 .color_by_key("muted.foreground")
@@ -825,7 +825,7 @@ impl DialogTitle {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
         let fg = theme
             .color_by_key("foreground")
             .unwrap_or_else(|| theme.color_token("foreground"));
@@ -871,7 +871,7 @@ impl DialogDescription {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
         let fg = theme
             .color_by_key("muted.foreground")
             .or_else(|| theme.color_by_key("muted-foreground"))
