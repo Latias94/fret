@@ -79,8 +79,8 @@ Note: `repo-ref/` is local state (not committed). See `docs/repo-ref.md`.
 
 - [ ] Sweep `Theme::global(&*cx.app).clone()` callsites in `ecosystem/fret-ui-shadcn/src/`:
   - [x] Convert an initial batch to `Theme::global(&*cx.app).snapshot()` when only token reads are needed:
-    - Evidence: `ecosystem/fret-ui-shadcn/src/{avatar,badge,button_group,combobox,command,dropdown_menu,native_select,popover,sheet}.rs`
-    - Progress note: reduced remaining `Theme::global(...).clone()` callsites from 135 → 113.
+    - Evidence: `ecosystem/fret-ui-shadcn/src/{avatar,badge,button_group,combobox,command,dropdown_menu,native_select,popover,select,sheet}.rs`
+    - Progress note: reduced remaining `Theme::global(...).clone()` callsites from 135 → 109.
   - [ ] Continue converting remaining callsites (prioritize hot paths: `input`, `select`, `sheet`, `popover`, `dropdown_menu`).
   - [ ] Keep `Theme` where name/metadata APIs are required (but avoid long-lived borrows across
     `cx.*` calls).

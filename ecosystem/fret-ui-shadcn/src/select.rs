@@ -12,7 +12,7 @@ use fret_ui::element::{
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side};
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
 use fret_ui_kit::declarative::chrome as decl_chrome;
 use fret_ui_kit::declarative::collection_semantics::CollectionSemanticsExt as _;
@@ -107,7 +107,7 @@ fn select_list_desired_height(
 
 fn select_scroll_with_buttons<H: UiHost, C, I>(
     cx: &mut ElementContext<'_, H>,
-    theme: Theme,
+    theme: ThemeSnapshot,
     item_step: Px,
     predicted_has_scroll: bool,
     allow_hover_scroll_arrows: bool,
@@ -1195,7 +1195,7 @@ fn select_impl<H: UiHost>(
             count
         }
 
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
         let enabled = !disabled;
         let model_open = cx.app.models().get_copied(&open).unwrap_or(false);
         let is_open = model_open && enabled;
@@ -1239,7 +1239,7 @@ fn select_impl<H: UiHost>(
         });
 
         let resolved = resolve_input_chrome(
-            &theme,
+            Theme::global(&*cx.app),
             fret_ui_kit::Size::default(),
             &chrome,
             InputTokenKeys::none(),
@@ -2658,7 +2658,7 @@ fn select_impl<H: UiHost>(
                                                                                       out: &mut Vec<AnyElement>| {
                                                                     match row {
                                                                         SelectRow::Label(label) => {
-                                                                            let theme = Theme::global(&*cx.app).clone();
+                                                                            let theme = Theme::global(&*cx.app).snapshot();
                                                                             let fg = theme
                                                                                 .color_by_key("muted.foreground")
                                                                                 .or_else(|| theme.color_by_key("muted-foreground"))
@@ -2715,7 +2715,7 @@ fn select_impl<H: UiHost>(
                                                                             ));
                                                                         }
                                                                         SelectRow::Separator => {
-                                                                            let theme = Theme::global(&*cx.app).clone();
+                                                                            let theme = Theme::global(&*cx.app).snapshot();
                                                                             let border = theme
                                                                                 .color_by_key("border")
                                                                                 .unwrap_or_else(|| theme.color_token("border"));
@@ -2950,7 +2950,7 @@ fn select_impl<H: UiHost>(
                                                                                         ));
                                                                                     }
 
-                                                                                    let theme = Theme::global(&*cx.app).clone();
+                                                                                    let theme = Theme::global(&*cx.app).snapshot();
                                                                                     // new-york-v4: items highlight on focus/hover via `bg-accent`.
                                                                                     let bg_accent = theme
                                                                                         .color_by_key("accent")
