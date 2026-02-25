@@ -88,7 +88,9 @@ fn read_wheel_frames_min_by_window(bundle_path: &Path) -> Result<HashMap<u64, u6
             while let Some(key) = map.next_key::<String>()? {
                 match key.as_str() {
                     "windows" => {
-                        map.next_value_seed(WindowsSeed { out: self.out.clone() })?;
+                        map.next_value_seed(WindowsSeed {
+                            out: self.out.clone(),
+                        })?;
                     }
                     _ => {
                         map.next_value::<IgnoredAny>()?;
@@ -315,14 +317,10 @@ fn read_wheel_frames_min_by_window(bundle_path: &Path) -> Result<HashMap<u64, u6
         }
     }
 
-    let file = std::fs::File::open(bundle_path).map_err(|e| e.to_string())?;
-    let reader = std::io::BufReader::new(file);
-    let mut de = serde_json::Deserializer::from_reader(reader);
-
     let out = std::rc::Rc::new(std::cell::RefCell::new(HashMap::new()));
-    RootSeed { out: out.clone() }
-        .deserialize(&mut de)
-        .map_err(|e| e.to_string())?;
+    crate::json_stream::with_bundle_json_deserializer(bundle_path, |de| {
+        RootSeed { out: out.clone() }.deserialize(de)
+    })?;
     Ok(out.borrow().clone())
 }
 
@@ -849,18 +847,15 @@ fn read_window_before_after_metas(
         }
     }
 
-    let file = std::fs::File::open(bundle_path).map_err(|e| e.to_string())?;
-    let reader = std::io::BufReader::new(file);
-    let mut de = serde_json::Deserializer::from_reader(reader);
-
     let out = std::rc::Rc::new(std::cell::RefCell::new(Vec::new()));
-    RootSeed {
-        wheel_frames: wheel_frames.clone(),
-        warmup_frames,
-        out: out.clone(),
-    }
-    .deserialize(&mut de)
-    .map_err(|e| e.to_string())?;
+    crate::json_stream::with_bundle_json_deserializer(bundle_path, |de| {
+        RootSeed {
+            wheel_frames: wheel_frames.clone(),
+            warmup_frames,
+            out: out.clone(),
+        }
+        .deserialize(de)
+    })?;
     Ok(out.borrow().clone())
 }
 
@@ -1388,20 +1383,16 @@ fn stream_read_inline_semantics_lite_for_pairs(
         test_id: test_id.to_string(),
     }));
 
-    let file = std::fs::File::open(bundle_path).map_err(|e| e.to_string())?;
-    let reader = std::io::BufReader::new(file);
-    let mut de = serde_json::Deserializer::from_reader(reader);
-
-    let res = RootSeed {
-        state: state.clone(),
-    }
-    .deserialize(&mut de);
-    if let Err(err) = res {
-        let msg = err.to_string();
-        if !msg.starts_with(FOUND_MARKER) {
-            return Err(msg);
-        }
-    }
+    crate::json_stream::with_bundle_json_deserializer_allow_stop(
+        bundle_path,
+        FOUND_MARKER,
+        |de| {
+            RootSeed {
+                state: state.clone(),
+            }
+            .deserialize(de)
+        },
+    )?;
 
     Ok(state.borrow().found.clone())
 }

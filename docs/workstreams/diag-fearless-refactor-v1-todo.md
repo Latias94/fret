@@ -250,6 +250,10 @@ Goal: common tooling should keep working even when `bundle.json` is too large to
   - [x] Define a small “compat matrix” in code (agent-friendly): `check -> stats-lite data source`.
   - [x] Reduce streaming gate churn by extracting shared deserializer helpers:
     - `crates/fret-diag/src/json_stream.rs`
+  - [x] Migrate existing streaming gates to the shared helper (reduce duplication):
+    - `crates/fret-diag/src/stats/notify_gates_streaming.rs`
+    - `crates/fret-diag/src/stats/drag_cache_gates_streaming.rs`
+    - `crates/fret-diag/src/stats/wheel_scroll_streaming.rs`
   - [x] Split retained virtual-list streaming gates into dedicated submodules:
     - `crates/fret-diag/src/stats/retained_vlist_gates_streaming/`
   - [x] First wave (frames-index aggregates):

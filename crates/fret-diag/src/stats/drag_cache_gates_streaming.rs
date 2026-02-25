@@ -133,8 +133,8 @@ impl State {
             return Ok(());
         };
 
-        let cache_roots =
-            cache_roots.ok_or_else(|| "invalid bundle artifact: missing debug.cache_roots".to_string())?;
+        let cache_roots = cache_roots
+            .ok_or_else(|| "invalid bundle artifact: missing debug.cache_roots".to_string())?;
 
         let mut current = target_node_id;
         let mut cache_root_node: Option<u64> = None;
@@ -435,8 +435,9 @@ pub(crate) fn check_bundle_for_drag_cache_root_paint_only_streaming(
                         self.frame_id = map.next_value::<Option<u64>>()?.unwrap_or(0);
                     }
                     "window" | "window_id" | "windowId" => {
-                        self.semantics_window_id =
-                            map.next_value::<Option<u64>>()?.unwrap_or(self.window_id_default);
+                        self.semantics_window_id = map
+                            .next_value::<Option<u64>>()?
+                            .unwrap_or(self.window_id_default);
                     }
                     "semantics_fingerprint" | "semanticsFingerprint" => {
                         self.semantics_fingerprint = map.next_value::<Option<u64>>()?;
@@ -952,10 +953,6 @@ pub(crate) fn check_bundle_for_drag_cache_root_paint_only_streaming(
         }
     }
 
-    let file = std::fs::File::open(bundle_path).map_err(|e| e.to_string())?;
-    let reader = std::io::BufReader::new(file);
-    let mut de = serde_json::Deserializer::from_reader(reader);
-
     let state: Rc<std::cell::RefCell<State>> = Rc::new(std::cell::RefCell::new(State {
         cfg: Cfg {
             bundle_path: bundle_path.to_path_buf(),
@@ -965,18 +962,12 @@ pub(crate) fn check_bundle_for_drag_cache_root_paint_only_streaming(
         out: Out::default(),
         table_sem_cache: HashMap::new(),
     }));
-
-    let res = RootSeed {
-        state: state.clone(),
-    }
-    .deserialize(&mut de);
-
-    if let Err(err) = res {
-        let msg = err.to_string();
-        if !msg.starts_with(STOP_MARKER) {
-            return Err(msg);
+    crate::json_stream::with_bundle_json_deserializer_allow_stop(bundle_path, STOP_MARKER, |de| {
+        RootSeed {
+            state: state.clone(),
         }
-    }
+        .deserialize(de)
+    })?;
 
     let state = state.borrow();
     if let Some(err) = state.out.fatal_error.as_deref() {

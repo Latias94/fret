@@ -619,14 +619,18 @@ pub(crate) fn stream_read_semantics_table_nodes(
 
     let out: std::rc::Rc<std::cell::RefCell<Option<Vec<Value>>>> =
         std::rc::Rc::new(std::cell::RefCell::new(None));
-    crate::json_stream::with_bundle_json_deserializer_allow_stop(bundle_path, FOUND_TABLE_MARKER, |de| {
-        RootSeed {
-            window_id,
-            semantics_fingerprint,
-            out: out.clone(),
-        }
-        .deserialize(de)
-    })?;
+    crate::json_stream::with_bundle_json_deserializer_allow_stop(
+        bundle_path,
+        FOUND_TABLE_MARKER,
+        |de| {
+            RootSeed {
+                window_id,
+                semantics_fingerprint,
+                out: out.clone(),
+            }
+            .deserialize(de)
+        },
+    )?;
 
     Ok(out.borrow_mut().take())
 }

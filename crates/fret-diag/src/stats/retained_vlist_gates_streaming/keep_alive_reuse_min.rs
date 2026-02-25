@@ -20,6 +20,7 @@ pub(crate) fn check_bundle_for_retained_vlist_keep_alive_reuse_min_streaming(
     #[derive(Debug, Clone)]
     struct Cfg {
         warmup_frames: u64,
+        min_keep_alive_reuse_frames: u64,
     }
 
     #[derive(Debug, Clone, Default)]
@@ -258,8 +259,10 @@ pub(crate) fn check_bundle_for_retained_vlist_keep_alive_reuse_min_streaming(
                     }
                 }
 
-                let done =
-                    { self.out.borrow().keep_alive_reuse_frames >= min_keep_alive_reuse_frames };
+                let done = {
+                    self.out.borrow().keep_alive_reuse_frames
+                        >= self.cfg.min_keep_alive_reuse_frames
+                };
                 if done {
                     return Err(serde::de::Error::custom(STOP_MARKER));
                 }
@@ -458,7 +461,10 @@ pub(crate) fn check_bundle_for_retained_vlist_keep_alive_reuse_min_streaming(
     let out: Rc<std::cell::RefCell<Out>> = Rc::new(std::cell::RefCell::new(Out::default()));
     crate::json_stream::with_bundle_json_deserializer_allow_stop(bundle_path, STOP_MARKER, |de| {
         RootSeed {
-            cfg: Cfg { warmup_frames },
+            cfg: Cfg {
+                warmup_frames,
+                min_keep_alive_reuse_frames,
+            },
             out: out.clone(),
         }
         .deserialize(de)

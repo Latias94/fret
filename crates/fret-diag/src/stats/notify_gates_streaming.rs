@@ -304,7 +304,9 @@ pub(crate) fn check_bundle_for_notify_hotspot_file_max_streaming(
                         frame_id = map.next_value::<Option<u64>>()?.unwrap_or(0);
                     }
                     "debug" => {
-                        map.next_value_seed(DebugSeed { pending: &mut pending })?;
+                        map.next_value_seed(DebugSeed {
+                            pending: &mut pending,
+                        })?;
                     }
                     _ => {
                         map.next_value::<IgnoredAny>()?;
@@ -356,7 +358,9 @@ pub(crate) fn check_bundle_for_notify_hotspot_file_max_streaming(
         where
             D: serde::Deserializer<'de>,
         {
-            deserializer.deserialize_map(DebugVisitor { pending: self.pending })
+            deserializer.deserialize_map(DebugVisitor {
+                pending: self.pending,
+            })
         }
     }
 
@@ -378,7 +382,9 @@ pub(crate) fn check_bundle_for_notify_hotspot_file_max_streaming(
             while let Some(key) = map.next_key::<String>()? {
                 match key.as_str() {
                     "notify_requests" | "notifyRequests" => {
-                        map.next_value_seed(NotifyRequestsSeed { pending: self.pending })?;
+                        map.next_value_seed(NotifyRequestsSeed {
+                            pending: self.pending,
+                        })?;
                     }
                     _ => {
                         map.next_value::<IgnoredAny>()?;
@@ -400,7 +406,9 @@ pub(crate) fn check_bundle_for_notify_hotspot_file_max_streaming(
         where
             D: serde::Deserializer<'de>,
         {
-            deserializer.deserialize_seq(NotifyRequestsVisitor { pending: self.pending })
+            deserializer.deserialize_seq(NotifyRequestsVisitor {
+                pending: self.pending,
+            })
         }
     }
 
@@ -482,20 +490,17 @@ pub(crate) fn check_bundle_for_notify_hotspot_file_max_streaming(
         }
     }
 
-    let file = std::fs::File::open(bundle_path).map_err(|e| e.to_string())?;
-    let reader = std::io::BufReader::new(file);
-    let mut de = serde_json::Deserializer::from_reader(reader);
-
     let out = std::rc::Rc::new(std::cell::RefCell::new(NotifyOut::default()));
-    RootSeed {
-        cfg: Cfg {
-            file_filter: file_filter.to_string(),
-            warmup_frames,
-        },
-        out: out.clone(),
-    }
-    .deserialize(&mut de)
-    .map_err(|e| e.to_string())?;
+    crate::json_stream::with_bundle_json_deserializer(bundle_path, |de| {
+        RootSeed {
+            cfg: Cfg {
+                file_filter: file_filter.to_string(),
+                warmup_frames,
+            },
+            out: out.clone(),
+        }
+        .deserialize(de)
+    })?;
 
     let out = out.borrow().clone();
     if out.windows_total == 0 {
