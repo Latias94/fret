@@ -17,7 +17,7 @@ use fret_ui::element::{
     ScrollbarStyle, SizeStyle, StackProps, WheelRegionProps,
 };
 use fret_ui::scroll::ScrollHandle;
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, ThemeSnapshot, UiHost};
 use fret_ui_headless::grid_viewport::{
     GridAxisMetrics, compute_grid_viewport_2d, default_range_extractor,
 };
@@ -59,33 +59,33 @@ fn with_alpha(mut c: Color, a: f32) -> Color {
     c
 }
 
-fn border_color(theme: &Theme) -> Color {
+fn border_color(theme: &ThemeSnapshot) -> Color {
     theme.color_token("border")
 }
 
-fn muted_bg(theme: &Theme) -> Color {
+fn muted_bg(theme: &ThemeSnapshot) -> Color {
     theme.color_token("muted")
 }
 
-fn row_height_px(theme: &Theme) -> Px {
+fn row_height_px(theme: &ThemeSnapshot) -> Px {
     theme
         .metric_by_key("component.table.row_min_h")
         .unwrap_or(Px(40.0))
 }
 
-fn scrollbar_width(theme: &Theme) -> Px {
+fn scrollbar_width(theme: &ThemeSnapshot) -> Px {
     theme
         .metric_by_key("metric.scrollbar.width")
         .unwrap_or(Px(10.0))
 }
 
-fn scrollbar_thumb(theme: &Theme) -> Color {
+fn scrollbar_thumb(theme: &ThemeSnapshot) -> Color {
     theme
         .color_by_key("scrollbar.thumb.background")
         .unwrap_or_else(|| with_alpha(theme.color_token("muted-foreground"), 0.35))
 }
 
-fn scrollbar_thumb_hover(theme: &Theme) -> Color {
+fn scrollbar_thumb_hover(theme: &ThemeSnapshot) -> Color {
     theme
         .color_by_key("scrollbar.thumb.hover.background")
         .unwrap_or_else(|| with_alpha(theme.color_token("muted-foreground"), 0.55))
@@ -158,7 +158,7 @@ impl DataGrid {
         row_state_at: impl FnMut(usize) -> DataGridRowState,
         cell_at: impl FnMut(&mut ElementContext<'_, H>, usize, usize) -> AnyElement,
     ) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
 
         let cols = self.headers.len().max(1);
         let row_height = self.row_height.unwrap_or_else(|| row_height_px(&theme));
@@ -184,7 +184,7 @@ impl DataGrid {
         let overscan_cols = self.overscan_cols;
 
         cx.container(root_props, move |cx| {
-            let theme = Theme::global(&*cx.app).clone();
+            let theme = Theme::global(&*cx.app).snapshot();
             let border = border_color(&theme);
             let row_bg = muted_bg(&theme);
 
@@ -198,7 +198,7 @@ impl DataGrid {
                     layout: stack_layout,
                 },
                 move |cx| {
-                    let theme = Theme::global(&*cx.app).clone();
+                    let theme = Theme::global(&*cx.app).snapshot();
                     let theme_for_body = theme.clone();
                     let headers = headers.clone();
                     let col_widths = col_widths.clone();
