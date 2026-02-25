@@ -10,7 +10,7 @@ use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
     PressableProps, RovingFlexProps, RovingFocusProps, SizeStyle, TextProps,
 };
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::direction as direction_prim;
@@ -27,31 +27,31 @@ fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c
 }
 
-fn row_gap(theme: &Theme) -> Px {
+fn row_gap(theme: &ThemeSnapshot) -> Px {
     theme
         .metric_by_key("component.radio_group.gap")
         .unwrap_or_else(|| MetricRef::space(Space::N3).resolve(theme))
 }
 
-fn label_gap(theme: &Theme) -> Px {
+fn label_gap(theme: &ThemeSnapshot) -> Px {
     theme
         .metric_by_key("component.radio_group.label_gap")
         .unwrap_or_else(|| MetricRef::space(Space::N2).resolve(theme))
 }
 
-fn icon_size(theme: &Theme) -> Px {
+fn icon_size(theme: &ThemeSnapshot) -> Px {
     theme
         .metric_by_key("component.radio_group.icon_size_px")
         .unwrap_or(Px(16.0))
 }
 
-fn indicator_size(theme: &Theme) -> Px {
+fn indicator_size(theme: &ThemeSnapshot) -> Px {
     theme
         .metric_by_key("component.radio_group.indicator_size_px")
         .unwrap_or(Px(8.0))
 }
 
-fn radio_text_style(theme: &Theme) -> TextStyle {
+fn radio_text_style(theme: &ThemeSnapshot) -> TextStyle {
     let px = theme
         .metric_by_key("component.radio_group.text_px")
         .or_else(|| theme.metric_by_key("font.size"))
@@ -65,22 +65,22 @@ fn radio_text_style(theme: &Theme) -> TextStyle {
     style
 }
 
-fn radio_border(theme: &Theme) -> Color {
+fn radio_border(theme: &ThemeSnapshot) -> Color {
     theme
         .color_by_key("input")
         .or_else(|| theme.color_by_key("border"))
         .expect("missing theme token: input/border")
 }
 
-fn radio_ring(theme: &Theme) -> Color {
+fn radio_ring(theme: &ThemeSnapshot) -> Color {
     theme.color_token("ring")
 }
 
-fn radio_fg(theme: &Theme) -> Color {
+fn radio_fg(theme: &ThemeSnapshot) -> Color {
     theme.color_token("foreground")
 }
 
-fn radio_indicator(theme: &Theme) -> Color {
+fn radio_indicator(theme: &ThemeSnapshot) -> Color {
     theme.color_token("primary")
 }
 
@@ -296,7 +296,7 @@ impl RadioGroup {
         } = self;
 
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
+            let theme = Theme::global(&*cx.app).snapshot();
             let gap_y = row_gap(&theme);
             let gap_x = label_gap(&theme);
             let icon = icon_size(&theme);
@@ -471,7 +471,7 @@ impl RadioGroup {
                                         ..Default::default()
                                     },
                                     move |cx, st, checked| {
-                                        let theme = Theme::global(&*cx.app).clone();
+                                        let theme = Theme::global(&*cx.app).snapshot();
                                         let theme_for_icon = theme.clone();
 
                                         let mut states =

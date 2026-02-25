@@ -16,7 +16,7 @@ use fret_ui::element::{
     SemanticsDecoration, SizeStyle, StackProps, VisualTransformProps,
 };
 use fret_ui::overlay_placement::{Align, Side};
-use fret_ui::{ElementContext, GlobalElementId, Invalidation, Theme, UiHost};
+use fret_ui::{ElementContext, GlobalElementId, Invalidation, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
@@ -64,7 +64,7 @@ fn command_is_disabled_by_gating<H: UiHost>(
         .is_some_and(|(id, meta)| !gating.is_enabled_for_command(id, meta))
 }
 
-fn nav_menu_trigger_text_style(theme: &Theme) -> TextStyle {
+fn nav_menu_trigger_text_style(theme: &ThemeSnapshot) -> TextStyle {
     let px = theme
         .metric_by_key("component.navigation_menu.trigger.text_px")
         .or_else(|| theme.metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_PX))
@@ -82,7 +82,7 @@ fn nav_menu_trigger_text_style(theme: &Theme) -> TextStyle {
     style
 }
 
-fn nav_menu_trigger_padding_x(theme: &Theme) -> Px {
+fn nav_menu_trigger_padding_x(theme: &ThemeSnapshot) -> Px {
     theme
         .metric_by_key("component.navigation_menu.trigger.pad_x")
         .unwrap_or(Px(16.0))
@@ -160,64 +160,64 @@ fn navigation_menu_open_change_complete_event(
     None
 }
 
-fn nav_menu_trigger_padding_y(theme: &Theme) -> Px {
+fn nav_menu_trigger_padding_y(theme: &ThemeSnapshot) -> Px {
     theme
         .metric_by_key("component.navigation_menu.trigger.pad_y")
         .unwrap_or(Px(8.0))
 }
 
-fn nav_menu_trigger_space_px(theme: &Theme) -> Px {
+fn nav_menu_trigger_space_px(theme: &ThemeSnapshot) -> Px {
     theme
         .metric_by_key("component.navigation_menu.trigger.space_px")
         .unwrap_or(Px(3.92))
 }
 
-fn nav_menu_trigger_radius(theme: &Theme) -> Px {
+fn nav_menu_trigger_radius(theme: &ThemeSnapshot) -> Px {
     theme
         .metric_by_key("component.navigation_menu.trigger.radius")
         .unwrap_or_else(|| MetricRef::radius(Radius::Md).resolve(theme))
 }
 
-fn nav_menu_trigger_bg_hover(theme: &Theme) -> Color {
+fn nav_menu_trigger_bg_hover(theme: &ThemeSnapshot) -> Color {
     theme.color_token("accent")
 }
 
-fn nav_menu_trigger_fg(theme: &Theme) -> Color {
+fn nav_menu_trigger_fg(theme: &ThemeSnapshot) -> Color {
     theme.color_token("foreground")
 }
 
-fn nav_menu_trigger_fg_muted(theme: &Theme) -> Color {
+fn nav_menu_trigger_fg_muted(theme: &ThemeSnapshot) -> Color {
     theme.color_token("muted-foreground")
 }
 
-fn nav_menu_viewport_bg(theme: &Theme) -> Color {
+fn nav_menu_viewport_bg(theme: &ThemeSnapshot) -> Color {
     theme.color_token("popover")
 }
 
-fn nav_menu_viewport_border(theme: &Theme) -> Color {
+fn nav_menu_viewport_border(theme: &ThemeSnapshot) -> Color {
     theme.color_token("border")
 }
 
-fn nav_menu_viewport_side_offset(theme: &Theme) -> Px {
+fn nav_menu_viewport_side_offset(theme: &ThemeSnapshot) -> Px {
     theme
         .metric_by_key("component.navigation_menu.viewport.side_offset")
         .unwrap_or(Px(6.0))
 }
 
-fn nav_menu_viewport_window_margin(theme: &Theme) -> Px {
+fn nav_menu_viewport_window_margin(theme: &ThemeSnapshot) -> Px {
     theme
         .metric_by_key("component.navigation_menu.viewport.window_margin")
         .unwrap_or(Px(8.0))
 }
 
-fn nav_menu_content_switch_slide_px(theme: &Theme) -> Px {
+fn nav_menu_content_switch_slide_px(theme: &ThemeSnapshot) -> Px {
     // Matches shadcn/ui's `slide-*-52` distance (13rem ≈ 208px).
     theme
         .metric_by_key("component.navigation_menu.content.switch_slide_px")
         .unwrap_or(Px(208.0))
 }
 
-fn nav_menu_indicator_diamond_size(theme: &Theme) -> Px {
+fn nav_menu_indicator_diamond_size(theme: &ThemeSnapshot) -> Px {
     theme
         .metric_by_key("component.navigation_menu.indicator.diamond_size")
         .unwrap_or(Px(8.0))
@@ -876,7 +876,7 @@ impl NavigationMenu {
             })
             .model();
 
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
 
         let trigger_pad_x = nav_menu_trigger_padding_x(&theme);
         let trigger_pad_y = nav_menu_trigger_padding_y(&theme);
@@ -3128,7 +3128,7 @@ mod tests {
                     "navigation-menu-dir",
                     move |cx| {
                         direction_prim::with_direction_provider(cx, dir, |cx| {
-                            let theme = Theme::global(&*cx.app).clone();
+                            let theme = Theme::global(&*cx.app).snapshot();
                             let region_props = LayoutQueryRegionProps {
                                 layout: decl_style::layout_style(
                                     &theme,
