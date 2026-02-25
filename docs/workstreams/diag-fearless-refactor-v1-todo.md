@@ -183,6 +183,8 @@ This file tracks tasks for `docs/workstreams/diag-fearless-refactor-v1.md`.
   - [x] Keep existing call sites unchanged (`crate::triage_json_from_stats`), and keep tests compiling.
 - [x] Extract `diag perf` suite aux-script runner into a helper module (reduce churn + keep `diag_perf.rs` shorter):
   - `crates/fret-diag/src/diag_perf/aux_scripts.rs`
+- [x] Extract “run perf script + resolve bundle artifact” logic into a helper module (dedupe the two call sites):
+  - `crates/fret-diag/src/diag_perf/run_script.rs`
 
 ## Plan 2 (defer until Plan 1 is solid)
 
