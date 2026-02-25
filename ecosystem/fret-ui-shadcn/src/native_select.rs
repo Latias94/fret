@@ -284,7 +284,7 @@ pub fn native_select<H: UiHost>(
     layout: LayoutRefinement,
 ) -> AnyElement {
     cx.scope(|cx| {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
 
         let focus_restore_target = {
             let existing = cx.with_state(NativeSelectState::default, |st| {
@@ -305,7 +305,7 @@ pub fn native_select<H: UiHost>(
         let selected: Option<Arc<str>> = cx.watch_model(&model).cloned().unwrap_or_default();
 
         let resolved = resolve_input_chrome(
-            &theme,
+            Theme::global(&*cx.app),
             ComponentSize::default(),
             &chrome,
             InputTokenKeys::none(),
@@ -316,8 +316,11 @@ pub fn native_select<H: UiHost>(
             NativeSelectSize::Default => (Px(36.0), Px(8.0)),
         };
 
-        let mut text_style =
-            typography::control_text_style_scaled(&theme, FontId::ui(), resolved.text_px);
+        let mut text_style = typography::control_text_style_scaled(
+            Theme::global(&*cx.app),
+            FontId::ui(),
+            resolved.text_px,
+        );
         text_style.weight = FontWeight::NORMAL;
 
         let muted_fg = theme.color_token("muted-foreground");

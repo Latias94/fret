@@ -103,6 +103,12 @@ Preferred pattern:
 This is a sweepable, low-risk refactor as long as callsites do not rely on non-snapshot fields
 (e.g. `theme.name`).
 
+Status:
+
+- Started converting shadcn recipe callsites to `Theme::snapshot()` where only token reads are needed.
+  - Evidence: `ecosystem/fret-ui-shadcn/src/{avatar,badge,button_group,combobox,command,native_select}.rs`
+  - Tracking: `docs/workstreams/shadcn-semantic-drift-sweep-v1-todo.md` (Token read sweep section)
+
 ## References (contracts / docs)
 
 - Runtime contract split: `docs/adr/0066-fret-ui-runtime-contract-surface.md`
