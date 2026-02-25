@@ -24,6 +24,10 @@ Workstream entry:
 - For DataTable:
   - Decision recorded (parity-first vs editor-first vs dual-mode).
   - Evidence anchors point to upstream `repo-ref/ui` sources.
+- Status (2026-02-25):
+  - Seed decision table covers all current viewport/container query callsites in
+    `ecosystem/fret-ui-shadcn/src/` (see TODO doc). Remaining work is upstream evidence collection
+    and any behavior changes / gates.
 
 ## M2 — Theme metadata strategy (remove name heuristics)
 
@@ -39,6 +43,8 @@ Workstream entry:
   - convert safe callsites to `ThemeSnapshot`,
   - avoid borrow pitfalls called out in `docs/component-author-guide.md`.
 - No new public runtime contracts introduced.
+- Status (2026-02-25):
+  - `Theme::global(&*cx.app).clone()` reduced to 0 callsites in `ecosystem/fret-ui-shadcn/src/`.
 
 ## M4 — Regression gates for behavior changes
 
@@ -52,4 +58,3 @@ Workstream entry:
 - Drift inventory updated to reflect remaining known gaps.
 - Any follow-up workstreams spawned if scope grows (e.g. “DataTable editor-first container
   responsiveness” as a separate workstream).
-

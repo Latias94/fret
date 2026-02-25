@@ -62,6 +62,16 @@ Implementation note:
   - Evidence: `fret_ui_shadcn::DataTableToolbarResponsiveQuery` in
     `ecosystem/fret-ui-shadcn/src/data_table_recipes.rs`.
 
+Additional responsive notes:
+
+- Calendar month layout is intentionally **mixed**:
+  - Prefer container width for editor panels (ADR 0231),
+  - but prefer viewport breakpoints when mounted inside `PopoverContent` to avoid circular sizing.
+  - Applies to `calendar.rs`, `calendar_multiple.rs`, and `calendar_range.rs`.
+- Shadcn Extras: `Marquee` currently uses `environment_viewport_width` as the implicit base cycle
+  width. This likely needs a container/region-width default for docking/panels, with a viewport
+  fallback when the region measurement is temporarily unknown.
+
 ### 2) Theme metadata heuristics (remove theme-name coupling)
 
 We had multiple uses of `theme.name.*` heuristics to decide “dark-mode variant” behavior (e.g.

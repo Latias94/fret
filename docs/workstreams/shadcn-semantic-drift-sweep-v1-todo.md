@@ -12,13 +12,13 @@ Workstream entry:
 
 ## Audit / inventory
 
-- [ ] Produce a “responsive decision table” for all viewport/container queries in
+- [x] Produce a “responsive decision table” for all viewport/container queries in
   `ecosystem/fret-ui-shadcn/src/`:
-  - [ ] Viewport-driven (device shell) — keep viewport:
+  - [x] Viewport-driven (device shell) — keep viewport:
     - e.g. “Drawer on mobile” patterns (ADR 0232).
-  - [ ] Container-driven (panel width) — use container query regions:
+  - [x] Container-driven (panel width) — use container query regions:
     - e.g. layouts inside docking/panels (ADR 0231).
-  - [ ] Mixed/unclear — write down the decision and leave an evidence anchor to upstream.
+  - [x] Mixed/unclear — write down the decision and leave an evidence anchor to upstream.
 
 - [ ] Collect upstream evidence anchors in `repo-ref/ui` for each responsive decision that differs
   from web parity.
@@ -35,12 +35,16 @@ Note: `repo-ref/` is local state (not committed). See `docs/repo-ref.md`.
 | Drawer layout (side width, max height) | `ecosystem/fret-ui-shadcn/src/drawer.rs` | `repo-ref/ui/apps/v4/registry/new-york-v4/ui/drawer.tsx` (`w-3/4`, `sm:max-w-sm`, `max-h-[80vh]`) | Viewport (device shell) | Keep viewport bounds + viewport breakpoints (ADR 0232) | `ecosystem/fret-ui-shadcn/tests/drawer_layout_invariants.rs` (tests: `drawer_side_panel_width_tracks_viewport_fraction_and_caps`, `drawer_bottom_height_caps_at_80vh_and_edge_gap`) |
 | Dialog content sizing + footer row (`sm:`) | `ecosystem/fret-ui-shadcn/src/dialog.rs` | `repo-ref/ui/apps/v4/registry/new-york-v4/ui/dialog.tsx` (`sm:max-w-lg`, `sm:flex-row`, `sm:justify-end`) | Viewport (device shell) | Keep viewport semantics (ADR 0232) | `ecosystem/fret-ui-shadcn/src/dialog.rs` (test: `dialog_footer_stacks_on_base_viewport_and_rows_on_sm`) |
 | Calendar multi-month layout (`md:flex-row`) | `ecosystem/fret-ui-shadcn/src/calendar.rs` | `repo-ref/ui/apps/v4/registry/new-york-v4/ui/calendar.tsx` (`md:flex-row` on `.months`) | Mixed (container; viewport in popovers) | Keep mixed: container query regions (ADR 0231) for panel width; prefer viewport `md` when in `PopoverContent` to avoid circular sizing | `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/calendar.rs` (multi-month layout coverage) |
+| CalendarMultiple multi-month layout (`md:flex-row`) | `ecosystem/fret-ui-shadcn/src/calendar_multiple.rs` | `repo-ref/ui/apps/v4/registry/new-york-v4/ui/calendar.tsx` (`md:flex-row` on `.months`) | Mixed (container; viewport in popovers) | Same as `Calendar` (shared month-layout policy) | `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/calendar.rs` (multi-month layout coverage) |
+| CalendarRange multi-month layout (`md:flex-row`) | `ecosystem/fret-ui-shadcn/src/calendar_range.rs` | `repo-ref/ui/apps/v4/registry/new-york-v4/ui/calendar.tsx` (`md:flex-row` on `.months`) | Mixed (container; viewport in popovers) | Same as `Calendar` (shared month-layout policy) | `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/calendar.rs` (multi-month layout coverage) |
 | Popover (placement + motion; no breakpoints) | `ecosystem/fret-ui-shadcn/src/popover.rs` | `repo-ref/ui/apps/v4/registry/new-york-v4/ui/popover.tsx` | Viewport (device shell) | Treat as viewport-level overlay geometry (not container responsive) | `ecosystem/fret-ui-shadcn/src/popover.rs` (extensive interaction tests) |
 | DropdownMenu content max-height (available height) | `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs` | `repo-ref/ui/apps/v4/registry/new-york-v4/ui/dropdown-menu.tsx` (`max-h-(--radix-dropdown-menu-content-available-height)`) | Viewport (device shell) | Keep viewport-derived available-height constraints (Radix popper vars) | `ecosystem/fret-ui-shadcn/tests/dropdown_menu_available_height.rs` (test: `dropdown_menu_content_height_clamps_to_available_height`) |
 | ContextMenu content max-height (available height) | `ecosystem/fret-ui-shadcn/src/context_menu.rs` | `repo-ref/ui/apps/v4/registry/new-york-v4/ui/context-menu.tsx` (`max-h-(--radix-context-menu-content-available-height)`) | Viewport (device shell) | Keep viewport-derived available-height constraints (Radix popper vars) | `ecosystem/fret-ui-shadcn/tests/context_menu_available_height.rs` (test: `context_menu_content_height_clamps_to_available_height`) |
 | Combobox “responsive” (Drawer on mobile) | `ecosystem/fret-ui-shadcn/src/combobox.rs` | `repo-ref/ui/apps/v4/registry/new-york-v4/examples/combobox-responsive.tsx` (`useMediaQuery("(min-width: 768px)")`) | Viewport (device shell) | Keep viewport breakpoint (ADR 0232) | `ecosystem/fret-ui-shadcn/tests/combobox_responsive_breakpoint.rs` (test: `combobox_responsive_switches_between_drawer_and_popover_at_md_breakpoint`) |
+| DataTable faceted filter “show label badges” (`lg:*`) | `ecosystem/fret-ui-shadcn/src/data_table_recipes.rs` | `repo-ref/ui/apps/v4/app/(app)/examples/tasks/components/data-table-faceted-filter.tsx` (`lg:hidden` / `hidden lg:flex`) | Dual-mode (viewport default; container optional) | Keep explicit knob (`DataTableToolbarResponsiveQuery`), default viewport parity, allow container region for docking/panels | `ecosystem/fret-ui-shadcn/tests/data_table_toolbar_faceted_responsive.rs` + `tools/diag-scripts/ui-gallery-data-table-toolbar-faceted-responsive.json` |
 | Sidebar mobile vs desktop (`md:block`) | `ecosystem/fret-ui-shadcn/src/sidebar.rs` | `repo-ref/ui/apps/v4/registry/new-york-v4/ui/sidebar.tsx` (`useIsMobile`, `hidden md:block`) | Viewport (device shell) | Keep viewport breakpoint (ADR 0232) | `tools/diag-scripts/ui-gallery-sidebar-mobile-controlled-open-sync.json` |
 | Shadcn Extras: Kanban (`sm:` spacing/width) | `ecosystem/fret-ui-shadcn/src/extras/kanban.rs` | `repo-ref/kibo/packages/kanban` | Viewport (device shell) | Keep viewport breakpoint (extras demo parity) | `tools/diag-scripts/ui-gallery-shadcn-extras-kanban-dnd.json` |
+| Shadcn Extras: Marquee base cycle width | `ecosystem/fret-ui-shadcn/src/extras/marquee.rs` | N/A (Fret extras) | Viewport (today; `environment_viewport_width` fallback) | Pending: likely switch default to container/region width for editor panels; keep explicit override | TBD (add a small unit/diag gate once decided) |
 | NavigationMenu `md:*` behavior | `ecosystem/fret-ui-shadcn/src/navigation_menu.rs` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/navigation-menu.tsx` (`md:absolute`, `md:w-[var(--radix-…)]`) | Mixed (upstream viewport; editor layouts may prefer container) | Add a query-source knob: default viewport parity, optional container (editor-first) | `ecosystem/fret-ui-shadcn/src/navigation_menu.rs` (test: `navigation_menu_md_breakpoint_query_can_follow_viewport_or_container_width`) |
 
 ## Responsive drift: DataTable “LG show labels”
@@ -60,6 +64,17 @@ Note: `repo-ref/` is local state (not committed). See `docs/repo-ref.md`.
     - Evidence: `ecosystem/fret-ui-shadcn/tests/data_table_toolbar_faceted_responsive.rs`
   - [x] `tools/diag-scripts/ui-gallery-data-table-toolbar-faceted-responsive.json` (window resize;
     asserts `data-table-toolbar-faceted-status-badge-*` invariants via `test_id`).
+
+## Responsive drift: Marquee base width (viewport vs container)
+
+- [ ] Confirm intent:
+  - [ ] If used inside docking/panels, the cycle width should follow the local container width,
+    not the window viewport width.
+- [ ] Decide default semantics:
+  - [ ] Option A: keep viewport width fallback (simple; stable when container size is unknown).
+  - [ ] Option B: switch to container query region width with viewport fallback when unknown (ADR
+    0231).
+- [ ] Add a regression gate for the chosen behavior (unit or diag).
 
 ## Theme metadata drift: remove theme-name heuristics
 
