@@ -10,7 +10,7 @@ use fret_ui::element::{
     Overflow, PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps, SemanticFlexProps,
     TextProps,
 };
-use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
+use fret_ui::{ElementContext, Invalidation, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
@@ -413,7 +413,7 @@ impl Calendar {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
 
         let month_model = self.month.clone();
         let selected_model = self.selected.clone();
@@ -1370,7 +1370,7 @@ impl Calendar {
 #[allow(clippy::too_many_arguments)]
 fn calendar_multi_month_view<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
+    theme: &ThemeSnapshot,
     is_row: bool,
     start_month: CalendarMonth,
     month_model: Model<CalendarMonth>,
@@ -1575,7 +1575,7 @@ fn calendar_multi_month_view<H: UiHost>(
 #[allow(clippy::too_many_arguments)]
 fn calendar_month_view<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
+    theme: &ThemeSnapshot,
     month: CalendarMonth,
     locale: CalendarLocale,
     month_bounds: Option<(CalendarMonth, CalendarMonth)>,
@@ -2157,7 +2157,7 @@ fn calendar_cell_slot<H: UiHost>(
 
 fn calendar_hidden_day_cell<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
+    theme: &ThemeSnapshot,
     size: Px,
     week_row_gap: Px,
 ) -> AnyElement {
@@ -2194,7 +2194,7 @@ fn calendar_hidden_day_cell<H: UiHost>(
 
 fn calendar_day_cell<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
+    theme: &ThemeSnapshot,
     locale: CalendarLocale,
     date: Date,
     in_month: bool,
