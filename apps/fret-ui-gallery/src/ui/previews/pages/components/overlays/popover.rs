@@ -160,7 +160,7 @@ pub(in crate::ui) fn preview_popover(
                     shadcn::PopoverContent::new([header, fields])
                         .refine_layout(LayoutRefinement::default().w_px(Px(320.0)))
                         .into_element(cx)
-                        .test_id("ui-gallery-popover-demo-content")
+                        .test_id("ui-gallery-popover-demo-panel")
                 },
             );
         centered(cx, popover).test_id("ui-gallery-popover-demo")
@@ -186,7 +186,7 @@ pub(in crate::ui) fn preview_popover(
                     ])
                     .into_element(cx)])
                     .into_element(cx)
-                    .test_id("ui-gallery-popover-basic-content")
+                    .test_id("ui-gallery-popover-basic-panel")
                 },
             );
         centered(cx, popover).test_id("ui-gallery-popover-basic")
@@ -312,7 +312,7 @@ pub(in crate::ui) fn preview_popover(
                     ])
                     .refine_layout(LayoutRefinement::default().w_px(Px(256.0)))
                     .into_element(cx)
-                    .test_id("ui-gallery-popover-with-form-content")
+                    .test_id("ui-gallery-popover-with-form-panel")
                 },
             );
         centered(cx, popover).test_id("ui-gallery-popover-with-form")
