@@ -207,6 +207,20 @@ This file tracks tasks for `docs/workstreams/diag-fearless-refactor-v1.md`.
 - [x] Extract `diag perf` perf-baseline row assembly into a helper module (reduce churn + keep `diag_perf.rs` shorter):
   - `crates/fret-diag/src/diag_perf/baseline_rows.rs`
 
+## Large-bundle ergonomics (avoid materializing `bundle.json`)
+
+Goal: common tooling should keep working even when `bundle.json` is too large to load into memory as `serde_json::Value`.
+
+- [ ] Make `diag lint` stream bundle artifacts instead of reading+materializing the full JSON.
+  - Prefer schema2 semantics tables (`tables.semantics.entries[*]`) when a snapshot has `semantics_fingerprint`.
+  - Fall back to extracting inline semantics nodes (`debug.semantics.nodes`) when table entries are missing.
+  - Keep output JSON stable (additive-only); do not remove legacy keys.
+  - Evidence anchors (implementation targets):
+    - `crates/fret-diag/src/lint.rs`
+    - `crates/fret-diag/src/json_bundle.rs` (`stream_read_semantics_table_nodes`)
+    - `crates/fret-diag/src/commands/slice_streaming.rs` (streaming extraction patterns)
+- [ ] Add one regression test that `diag lint` can handle a schema2-only bundle with table semantics without materializing the bundle.
+
 ## Plan 2 (defer until Plan 1 is solid)
 
 - [ ] Prototype manifest-first chunked bundle layout (snapshots/logs/semantics split).
