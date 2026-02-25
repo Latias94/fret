@@ -106,7 +106,7 @@ This is a sweepable, low-risk refactor as long as callsites do not rely on non-s
 Status:
 
 - Started converting shadcn recipe callsites to `Theme::snapshot()` where only token reads are needed.
-  - Evidence: `ecosystem/fret-ui-shadcn/src/{accordion,alert_dialog,avatar,badge,button,button_group,calendar_hijri,calendar_multiple,calendar_range,chart,checkbox,collapsible,combobox,command,context_menu,data_grid,data_grid_canvas,data_table,data_table_recipes,date_picker_with_presets,dialog,dropdown_menu,empty,hover_card,kbd,media_image,menubar,navigation_menu,native_select,pagination,popover,progress,radio_group,resizable,scroll_area,select,sheet,shortcut_hint,skeleton,slider,spinner,textarea,tooltip}.rs`, `ecosystem/fret-ui-shadcn/src/extras/{announcement,banner,rating,relative_time}.rs`
+  - Evidence: `ecosystem/fret-ui-shadcn/src/{accordion,alert_dialog,avatar,badge,button,button_group,calendar_hijri,calendar_multiple,calendar_range,chart,checkbox,collapsible,combobox,command,context_menu,data_grid,data_grid_canvas,data_table,data_table_recipes,date_picker_with_presets,dialog,dropdown_menu,empty,form_field,hover_card,kbd,media_image,menubar,navigation_menu,native_select,pagination,popover,progress,radio_group,resizable,scroll_area,select,sheet,shortcut_hint,skeleton,slider,spinner,textarea,tooltip}.rs`, `ecosystem/fret-ui-shadcn/src/extras/{announcement,avatar_stack,banner,marquee,rating,relative_time,tags,ticker}.rs`
   - Tracking: `docs/workstreams/shadcn-semantic-drift-sweep-v1-todo.md` (Token read sweep section)
 
 ## References (contracts / docs)

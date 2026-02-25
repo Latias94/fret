@@ -123,7 +123,7 @@ impl Marquee {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
+            let theme = Theme::global(&*cx.app).snapshot();
 
             let speed = self.speed_px_per_frame;
             let pause_on_hover = self.pause_on_hover;
@@ -163,7 +163,8 @@ impl Marquee {
                 last_frame: u64,
             }
 
-            let theme_for_inner = theme.clone();
+            let track_gap_px = MetricRef::space(track_gap).resolve(&theme);
+            let inner_layout = decl_style::layout_style(&theme, LayoutRefinement::default());
             let build_inner = move |cx: &mut ElementContext<'_, H>, paused: bool| {
                 let reduced_motion = fret_ui_kit::declarative::prefers_reduced_motion(
                     cx,
@@ -201,8 +202,7 @@ impl Marquee {
                     let base = cycle_width_px.unwrap_or_else(|| {
                         cx.environment_viewport_width(fret_ui::Invalidation::Layout)
                     });
-                    let gap_px = MetricRef::space(track_gap).resolve(&theme_for_inner);
-                    let cycle = base.0.max(0.0) + gap_px.0.max(0.0);
+                    let cycle = base.0.max(0.0) + track_gap_px.0.max(0.0);
                     if cycle > 0.0 {
                         phase.rem_euclid(cycle)
                     } else {
@@ -218,11 +218,9 @@ impl Marquee {
                 };
 
                 let transform = Transform2D::translation(Point::new(Px(translate_x), Px(0.0)));
-                let inner_layout =
-                    decl_style::layout_style(&theme_for_inner, LayoutRefinement::default());
                 cx.visual_transform_props(
                     VisualTransformProps {
-                        layout: inner_layout,
+                        layout: inner_layout.clone(),
                         transform,
                     },
                     move |_cx| vec![track_row],
