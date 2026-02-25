@@ -191,6 +191,8 @@ This file tracks tasks for `docs/workstreams/diag-fearless-refactor-v1.md`.
   - `crates/fret-diag/src/diag_perf/hints.rs`
 - [x] Extract `diag perf` perf stats JSON row assembly into a helper module (reduce churn + keep `diag_perf.rs` shorter):
   - `crates/fret-diag/src/diag_perf/stats_rows.rs`
+- [x] Reduce `stats_rows::push_perf_json_row` argument list by passing `&BundleStatsReport` (derive fields inside the module).
+  - Evidence: `crates/fret-diag/src/diag_perf/stats_rows.rs`, `crates/fret-diag/src/diag_perf.rs`.
 - [x] Extract `diag perf` output payload writers into a helper module (reduce churn + keep `diag_perf.rs` shorter):
   - `crates/fret-diag/src/diag_perf/outputs.rs`
 - [x] Extract `diag perf` stats stdout JSON payload assembly into `outputs.rs` (reduce churn + keep `diag_perf.rs` shorter).
