@@ -134,6 +134,7 @@ Candidate keys (landed):
 Evidence:
 
 - Theme preset seeding + tests: `ecosystem/fret-ui-shadcn/src/shadcn_themes.rs`
+- Fallback centralization (custom-theme compatibility): `ecosystem/fret-ui-shadcn/src/theme_variants.rs`
 - Callsite migrations:
   - Invalid ring: `ecosystem/fret-ui-shadcn/src/{checkbox,combobox,input,input_group,input_otp,native_select,radio_group,select,textarea}.rs`
   - Tabs inactive fg: `ecosystem/fret-ui-shadcn/src/tabs.rs`
