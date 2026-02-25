@@ -2374,5 +2374,3 @@ fn scan_stale_scene(
     }
     Err(msg)
 }
-
-// __END__
