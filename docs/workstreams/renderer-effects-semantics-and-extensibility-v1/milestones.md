@@ -19,6 +19,7 @@ Exit criteria:
   - `DropShadowV1`
   - `Backdrop` mode effect
   - `NoiseV1`
+  - Evidence: `crates/fret-render-wgpu/tests/effect_backdrop_acrylic_recipe_conformance.rs`.
 
 ## M1 — Scene encoding cache correctness
 
