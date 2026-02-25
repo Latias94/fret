@@ -1,8 +1,8 @@
 # Length percentage semantics v1 (percent / fraction closure)
 
-Status: In progress (workstream)
+Status: Shippable (percent/fraction semantics closed; shadcn migrations landed; gates passing)
 
-Last updated: 2026-02-24
+Last updated: 2026-02-25
 
 ## Motivation
 
@@ -94,7 +94,7 @@ For v1, percent-bearing spacing is treated as a *definite-only* contract:
 - `gap` percent/fraction resolves against the **inner** available space (after padding shrink), since the gap lives inside the padding box.
 - During intrinsic probes (min/max-content measurement), percent-bearing spacing resolves to `0px` (effectively ignored) to avoid cyclic dependencies.
 
-## Current implementation status (what is already landed)
+## Current implementation status (landed)
 
 | Area | Layer | Status | Evidence anchor |
 |---|---|---:|---|
@@ -107,25 +107,25 @@ For v1, percent-bearing spacing is treated as a *definite-only* contract:
 | Spacing: percent-capable `padding` + `gap` (definite-only) | `crates/fret-ui` | Landed | `crates/fret-ui/src/element.rs` + `crates/fret-ui/src/declarative/host_widget/measure.rs` |
 | Spacing authoring shorthands (`padding_percent`, `gap_percent`, ...) | `fret-ui-kit` | Landed | `ecosystem/fret-ui-kit/src/ui_builder.rs` |
 | Spacing regression test (definite vs intrinsic measurement) | `crates/fret-ui` | Landed | `crates/fret-ui/src/declarative/tests/layout/basics.rs` |
+| Positioning: percent-capable `inset` + `margin` semantics | `crates/fret-ui` + `fret-ui-kit` | Landed | `crates/fret-ui/src/element.rs` + `ecosystem/fret-ui-kit/src/style/chrome.rs` |
+| Positioning regression tests (inset + margin) | `crates/fret-ui` | Landed | `crates/fret-ui/src/declarative/tests/layout/basics.rs` |
+| shadcn migration: carousel “basis-full” no longer needs px clamps | `fret-ui-shadcn` | Landed | `ecosystem/fret-ui-shadcn/src/carousel.rs` |
+| shadcn migration: sheet + drawer max-height clamps use fraction/fill | `fret-ui-shadcn` | Landed | `ecosystem/fret-ui-shadcn/src/sheet.rs` + `ecosystem/fret-ui-shadcn/src/drawer.rs` |
+| Evidence (UI): carousel screenshot gate | `tools/diag-scripts` | Landed | `tools/diag-scripts/ui-gallery-carousel-basic-screenshot.json` |
+| Evidence (UI): sheet escape + focus-restore gate | `tools/diag-scripts` | Landed | `tools/diag-scripts/ui-gallery-sheet-escape-focus-restore.json` |
+| Evidence (UI): drawer docs smoke gate | `tools/diag-scripts` | Landed | `tools/diag-scripts/ui-gallery-drawer-docs-smoke.json` |
 
-## Remaining closures (what is still missing)
+## Closure notes
 
-Percent/fraction semantics are currently “closed” for `size`, `flex-basis`, and basic size constraints, but not for the full authoring language.
-The highest-ROI remaining work is to cover **spacing and constraints** consistently:
+This workstream is considered **closed** for v1: percent/fraction semantics are supported end-to-end across:
 
-1. Positioning + spacing adjacency
-   - `margin` and `inset` should accept percent/fraction (and preserve `auto` where it is meaningful).
-2. Positioning + overlays
-   - `inset` percent should enable “inset by % of containing block” outcomes without per-component math.
-3. Migration
-   - remove ad-hoc workarounds like “clamp percent basis to px when viewport extent is measurable” from recipes.
+- core sizing + flex-basis
+- min/max constraints
+- spacing (padding + gap)
+- positioning (inset + margin)
+- shadcn recipe migrations for the originally reported “percent collapse” symptoms
 
-## Migration plan (incremental)
-
-1. Extend the authoring language in `fret-ui-kit` (new `*_percent` / `*_fraction` shorthands) without changing existing callsites.
-2. Teach the declarative bridge / layout engine to resolve the new percent-bearing fields using the v1 rule.
-3. Migrate shadcn recipes one component at a time (start with the ones that match upstream docs: carousel, overlays, sheets/drawers).
-4. Add one focused gate per migration (unit test when possible; diag script when it’s a UI outcome).
+Follow-ups that are *out of scope* for this workstream should be tracked in their owning workstreams (e.g. Embla carousel interaction parity, overlay placement policy, or container-query fallback ergonomics).
 
 ## Quality gates (v1)
 
