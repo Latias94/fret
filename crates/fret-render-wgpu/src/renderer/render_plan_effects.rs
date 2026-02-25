@@ -12,7 +12,10 @@ pub(super) struct EffectCompileCtx {
     pub(super) format: wgpu::TextureFormat,
     pub(super) intermediate_budget_bytes: u64,
     pub(super) clear: wgpu::Color,
+    pub(super) scale_factor: f32,
 }
+
+const BLUR_KERNEL_RADIUS_PX: f32 = 4.0;
 
 pub(super) fn available_scratch_targets(
     in_use_targets: &[PlanTarget],
@@ -57,7 +60,13 @@ pub(super) fn apply_chain_in_place(
     let scratch_targets = available_scratch_targets(in_use_targets, srcdst);
     let forced_quarter_blur = scratch_targets.len() >= 2
         && chain.iter().any(|step| match step {
-            fret_core::EffectStep::GaussianBlur { downsample, .. } => {
+            fret_core::EffectStep::GaussianBlur {
+                radius_px,
+                downsample,
+            } => {
+                if !radius_px.0.is_finite() || radius_px.0 <= 0.0 {
+                    return false;
+                }
                 let requested_downsample = if downsample >= 4 { 4 } else { 2 };
                 let desired_downsample =
                     effect_blur_desired_downsample(requested_downsample, quality);
@@ -108,7 +117,19 @@ pub(super) fn apply_chain_in_place(
 
     for step in chain.iter() {
         match step {
-            fret_core::EffectStep::GaussianBlur { downsample, .. } => {
+            fret_core::EffectStep::GaussianBlur {
+                radius_px,
+                downsample,
+            } => {
+                let radius_px = if radius_px.0.is_finite() {
+                    (radius_px.0 * ctx.scale_factor).max(0.0)
+                } else {
+                    0.0
+                };
+                if radius_px <= 0.0 {
+                    continue;
+                }
+
                 let requested_downsample = if downsample >= 4 { 4 } else { 2 };
                 if scratch_targets.len() >= 2 {
                     let Some(downsample_scale) = choose_effect_blur_downsample_scale(
@@ -120,6 +141,8 @@ pub(super) fn apply_chain_in_place(
                     ) else {
                         continue;
                     };
+                    let iterations =
+                        blur_iterations_for_radius(radius_px, downsample_scale, quality);
                     append_scissored_blur_in_place_two_scratch(
                         passes,
                         srcdst,
@@ -127,6 +150,7 @@ pub(super) fn apply_chain_in_place(
                         scratch_targets[1],
                         ctx.viewport_size,
                         downsample_scale,
+                        iterations,
                         scissor,
                         ctx.clear,
                         mask_uniform_index,
@@ -146,11 +170,13 @@ pub(super) fn apply_chain_in_place(
                 if required > budget_bytes {
                     continue;
                 }
+                let iterations = blur_iterations_for_radius(radius_px, 1, quality);
                 append_scissored_blur_in_place_single_scratch(
                     passes,
                     srcdst,
                     scratch,
                     ctx.viewport_size,
+                    iterations,
                     scissor,
                     ctx.clear,
                     mask_uniform_index,
@@ -173,7 +199,7 @@ pub(super) fn apply_chain_in_place(
                     scratch,
                     ctx.viewport_size,
                     scissor,
-                    w.sanitize(),
+                    scale_backdrop_warp_v1(w.sanitize(), ctx.scale_factor),
                     ctx.clear,
                     mask_uniform_index,
                     mask,
@@ -226,10 +252,10 @@ pub(super) fn apply_chain_in_place(
                     dst_scissor: Some(LocalScissorRect(scissor)),
                     mask_uniform_index,
                     mask,
-                    strength_px: base.strength_px.0,
-                    scale_px: base.scale_px.0,
+                    strength_px: base.strength_px.0 * ctx.scale_factor,
+                    scale_px: base.scale_px.0 * ctx.scale_factor,
                     phase: base.phase,
-                    chromatic_aberration_px: base.chromatic_aberration_px.0,
+                    chromatic_aberration_px: base.chromatic_aberration_px.0 * ctx.scale_factor,
                     kind: base.kind,
                     warp_image,
                     warp_uv,
@@ -245,6 +271,14 @@ pub(super) fn apply_chain_in_place(
 
                 let s = s.sanitize();
                 if s.color.a <= 0.0 {
+                    continue;
+                }
+                let blur_radius_px = if s.blur_radius_px.0.is_finite() {
+                    (s.blur_radius_px.0 * ctx.scale_factor).max(0.0)
+                } else {
+                    0.0
+                };
+                if blur_radius_px <= 0.0 {
                     continue;
                 }
 
@@ -302,6 +336,7 @@ pub(super) fn apply_chain_in_place(
                 };
 
                 if downsample_scale <= 1 {
+                    let iterations = blur_iterations_for_radius(blur_radius_px, 1, quality);
                     passes.push(RenderPlanPass::Blur(BlurPass {
                         src: scratch_original,
                         dst: srcdst,
@@ -324,9 +359,36 @@ pub(super) fn apply_chain_in_place(
                         axis: BlurAxis::Vertical,
                         load: wgpu::LoadOp::Clear(ctx.clear),
                     }));
+
+                    for _ in 1..iterations {
+                        passes.push(RenderPlanPass::Blur(BlurPass {
+                            src: scratch_blurred,
+                            dst: srcdst,
+                            src_size: ctx.viewport_size,
+                            dst_size: ctx.viewport_size,
+                            dst_scissor: Some(LocalScissorRect(scissor)),
+                            mask_uniform_index: None,
+                            mask: None,
+                            axis: BlurAxis::Horizontal,
+                            load: wgpu::LoadOp::Clear(ctx.clear),
+                        }));
+                        passes.push(RenderPlanPass::Blur(BlurPass {
+                            src: srcdst,
+                            dst: scratch_blurred,
+                            src_size: ctx.viewport_size,
+                            dst_size: ctx.viewport_size,
+                            dst_scissor: Some(LocalScissorRect(scissor)),
+                            mask_uniform_index: None,
+                            mask: None,
+                            axis: BlurAxis::Vertical,
+                            load: wgpu::LoadOp::Clear(ctx.clear),
+                        }));
+                    }
                 } else {
                     let downsample_scale = if downsample_scale >= 4 { 4 } else { 2 };
                     let blur_size = downsampled_size(ctx.viewport_size, downsample_scale);
+                    let iterations =
+                        blur_iterations_for_radius(blur_radius_px, downsample_scale, quality);
 
                     let down_scissor =
                         map_scissor_downsample_nearest(Some(scissor), downsample_scale, blur_size);
@@ -347,28 +409,30 @@ pub(super) fn apply_chain_in_place(
                     }));
 
                     let blur_scissor = down_scissor.map(LocalScissorRect);
-                    passes.push(RenderPlanPass::Blur(BlurPass {
-                        src: srcdst,
-                        dst: scratch_blurred,
-                        src_size: blur_size,
-                        dst_size: blur_size,
-                        dst_scissor: blur_scissor,
-                        mask_uniform_index: None,
-                        mask: None,
-                        axis: BlurAxis::Horizontal,
-                        load: wgpu::LoadOp::Clear(ctx.clear),
-                    }));
-                    passes.push(RenderPlanPass::Blur(BlurPass {
-                        src: scratch_blurred,
-                        dst: srcdst,
-                        src_size: blur_size,
-                        dst_size: blur_size,
-                        dst_scissor: blur_scissor,
-                        mask_uniform_index: None,
-                        mask: None,
-                        axis: BlurAxis::Vertical,
-                        load: wgpu::LoadOp::Clear(ctx.clear),
-                    }));
+                    for _ in 0..iterations {
+                        passes.push(RenderPlanPass::Blur(BlurPass {
+                            src: srcdst,
+                            dst: scratch_blurred,
+                            src_size: blur_size,
+                            dst_size: blur_size,
+                            dst_scissor: blur_scissor,
+                            mask_uniform_index: None,
+                            mask: None,
+                            axis: BlurAxis::Horizontal,
+                            load: wgpu::LoadOp::Clear(ctx.clear),
+                        }));
+                        passes.push(RenderPlanPass::Blur(BlurPass {
+                            src: scratch_blurred,
+                            dst: srcdst,
+                            src_size: blur_size,
+                            dst_size: blur_size,
+                            dst_scissor: blur_scissor,
+                            mask_uniform_index: None,
+                            mask: None,
+                            axis: BlurAxis::Vertical,
+                            load: wgpu::LoadOp::Clear(ctx.clear),
+                        }));
+                    }
 
                     let final_scissor =
                         map_scissor_to_size(Some(scissor), ctx.viewport_size, ctx.viewport_size);
@@ -407,7 +471,10 @@ pub(super) fn apply_chain_in_place(
                     dst_scissor: Some(LocalScissorRect(scissor)),
                     mask_uniform_index,
                     mask,
-                    offset_px: (s.offset_px.x.0, s.offset_px.y.0),
+                    offset_px: (
+                        s.offset_px.x.0 * ctx.scale_factor,
+                        s.offset_px.y.0 * ctx.scale_factor,
+                    ),
                     color: s.color,
                     load: wgpu::LoadOp::Load,
                 }));
@@ -662,6 +729,7 @@ fn append_scissored_blur_in_place_two_scratch(
     scratch_b: PlanTarget,
     full_size: (u32, u32),
     downsample_scale: u32,
+    iterations: u32,
     scissor: ScissorRect,
     clear: wgpu::Color,
     mask_uniform_index: Option<u32>,
@@ -674,7 +742,7 @@ fn append_scissored_blur_in_place_two_scratch(
     debug_assert_ne!(srcdst, scratch_b);
     debug_assert_ne!(scratch_a, scratch_b);
 
-    if scissor.w == 0 || scissor.h == 0 {
+    if scissor.w == 0 || scissor.h == 0 || iterations == 0 {
         return;
     }
 
@@ -699,28 +767,30 @@ fn append_scissored_blur_in_place_two_scratch(
     }));
 
     let blur_scissor = down_scissor.map(LocalScissorRect);
-    passes.push(RenderPlanPass::Blur(BlurPass {
-        src: scratch_a,
-        dst: scratch_b,
-        src_size: blur_size,
-        dst_size: blur_size,
-        dst_scissor: blur_scissor,
-        mask_uniform_index: None,
-        mask: None,
-        axis: BlurAxis::Horizontal,
-        load: wgpu::LoadOp::Clear(clear),
-    }));
-    passes.push(RenderPlanPass::Blur(BlurPass {
-        src: scratch_b,
-        dst: scratch_a,
-        src_size: blur_size,
-        dst_size: blur_size,
-        dst_scissor: blur_scissor,
-        mask_uniform_index: None,
-        mask: None,
-        axis: BlurAxis::Vertical,
-        load: wgpu::LoadOp::Clear(clear),
-    }));
+    for _ in 0..iterations {
+        passes.push(RenderPlanPass::Blur(BlurPass {
+            src: scratch_a,
+            dst: scratch_b,
+            src_size: blur_size,
+            dst_size: blur_size,
+            dst_scissor: blur_scissor,
+            mask_uniform_index: None,
+            mask: None,
+            axis: BlurAxis::Horizontal,
+            load: wgpu::LoadOp::Clear(clear),
+        }));
+        passes.push(RenderPlanPass::Blur(BlurPass {
+            src: scratch_b,
+            dst: scratch_a,
+            src_size: blur_size,
+            dst_size: blur_size,
+            dst_scissor: blur_scissor,
+            mask_uniform_index: None,
+            mask: None,
+            axis: BlurAxis::Vertical,
+            load: wgpu::LoadOp::Clear(clear),
+        }));
+    }
 
     let final_scissor = map_scissor_to_size(Some(scissor), full_size, full_size);
     passes.push(RenderPlanPass::ScaleNearest(ScaleNearestPass {
@@ -744,6 +814,7 @@ fn append_scissored_blur_in_place_single_scratch(
     srcdst: PlanTarget,
     scratch: PlanTarget,
     size: (u32, u32),
+    iterations: u32,
     scissor: ScissorRect,
     clear: wgpu::Color,
     mask_uniform_index: Option<u32>,
@@ -753,32 +824,133 @@ fn append_scissored_blur_in_place_single_scratch(
     debug_assert_ne!(scratch, PlanTarget::Output);
     debug_assert_ne!(srcdst, scratch);
 
-    if scissor.w == 0 || scissor.h == 0 {
+    if scissor.w == 0 || scissor.h == 0 || iterations == 0 {
         return;
     }
 
-    passes.push(RenderPlanPass::Blur(BlurPass {
-        src: srcdst,
-        dst: scratch,
-        src_size: size,
-        dst_size: size,
-        dst_scissor: Some(LocalScissorRect(scissor)),
-        mask_uniform_index: None,
-        mask: None,
-        axis: BlurAxis::Horizontal,
-        load: wgpu::LoadOp::Clear(clear),
-    }));
-    passes.push(RenderPlanPass::Blur(BlurPass {
-        src: scratch,
-        dst: srcdst,
-        src_size: size,
-        dst_size: size,
-        dst_scissor: Some(LocalScissorRect(scissor)),
-        mask_uniform_index,
-        mask,
-        axis: BlurAxis::Vertical,
-        load: wgpu::LoadOp::Load,
-    }));
+    for ix in 0..iterations {
+        let apply_mask = ix + 1 == iterations;
+        passes.push(RenderPlanPass::Blur(BlurPass {
+            src: srcdst,
+            dst: scratch,
+            src_size: size,
+            dst_size: size,
+            dst_scissor: Some(LocalScissorRect(scissor)),
+            mask_uniform_index: None,
+            mask: None,
+            axis: BlurAxis::Horizontal,
+            load: wgpu::LoadOp::Clear(clear),
+        }));
+        passes.push(RenderPlanPass::Blur(BlurPass {
+            src: scratch,
+            dst: srcdst,
+            src_size: size,
+            dst_size: size,
+            dst_scissor: Some(LocalScissorRect(scissor)),
+            mask_uniform_index: apply_mask.then_some(mask_uniform_index).flatten(),
+            mask: apply_mask.then_some(mask).flatten(),
+            axis: BlurAxis::Vertical,
+            load: wgpu::LoadOp::Load,
+        }));
+    }
+}
+
+fn blur_iterations_for_radius(
+    radius_px: f32,
+    downsample_scale: u32,
+    quality: fret_core::EffectQuality,
+) -> u32 {
+    let radius_px = if radius_px.is_finite() {
+        radius_px.max(0.0)
+    } else {
+        0.0
+    };
+    if radius_px <= 0.0 {
+        return 0;
+    }
+
+    let downsample_scale = downsample_scale.max(1) as f32;
+    let per_iter = BLUR_KERNEL_RADIUS_PX * downsample_scale;
+    let mut iterations = (radius_px / per_iter).ceil() as u32;
+    iterations = iterations.max(1);
+
+    let max_iterations = match quality {
+        fret_core::EffectQuality::Low => 2,
+        fret_core::EffectQuality::Auto | fret_core::EffectQuality::Medium => 4,
+        fret_core::EffectQuality::High => 8,
+    };
+    iterations.min(max_iterations)
+}
+
+fn scale_backdrop_warp_v1(
+    warp: fret_core::scene::BackdropWarpV1,
+    scale_factor: f32,
+) -> fret_core::scene::BackdropWarpV1 {
+    // The core contract uses logical px (pre-scale-factor). The wgpu backend operates in
+    // physical pixels, so we scale here while keeping sanitization in logical space.
+    fret_core::scene::BackdropWarpV1 {
+        strength_px: fret_core::Px(warp.strength_px.0 * scale_factor),
+        scale_px: fret_core::Px(warp.scale_px.0 * scale_factor),
+        phase: warp.phase,
+        chromatic_aberration_px: fret_core::Px(warp.chromatic_aberration_px.0 * scale_factor),
+        kind: warp.kind,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn gaussian_blur_radius_affects_pass_count() {
+        let ctx = EffectCompileCtx {
+            viewport_size: (64, 64),
+            format: wgpu::TextureFormat::Rgba8Unorm,
+            intermediate_budget_bytes: 1u64 << 60,
+            clear: wgpu::Color::TRANSPARENT,
+            scale_factor: 1.0,
+        };
+        let scissor = ScissorRect::full(64, 64);
+
+        let mut passes_small = Vec::new();
+        apply_chain_in_place(
+            &mut passes_small,
+            &[],
+            PlanTarget::Intermediate0,
+            fret_core::EffectMode::FilterContent,
+            fret_core::EffectChain::from_steps(&[fret_core::EffectStep::GaussianBlur {
+                radius_px: fret_core::Px(8.0),
+                downsample: 2,
+            }]),
+            fret_core::EffectQuality::Medium,
+            scissor,
+            None,
+            &[],
+            ctx,
+        );
+
+        let mut passes_large = Vec::new();
+        apply_chain_in_place(
+            &mut passes_large,
+            &[],
+            PlanTarget::Intermediate0,
+            fret_core::EffectMode::FilterContent,
+            fret_core::EffectChain::from_steps(&[fret_core::EffectStep::GaussianBlur {
+                radius_px: fret_core::Px(16.0),
+                downsample: 2,
+            }]),
+            fret_core::EffectQuality::Medium,
+            scissor,
+            None,
+            &[],
+            ctx,
+        );
+
+        assert!(
+            passes_large.len() > passes_small.len(),
+            "larger blur radius should compile to more passes"
+        );
+    }
 }
 
 fn append_color_adjust_in_place_single_scratch(

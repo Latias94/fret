@@ -75,6 +75,7 @@ struct ClipPathScope {
 
 pub(super) fn compile_for_scene(
     encoding: &SceneEncoding,
+    scale_factor: f32,
     viewport_size: (u32, u32),
     format: wgpu::TextureFormat,
     clear: wgpu::Color,
@@ -100,7 +101,13 @@ pub(super) fn compile_for_scene(
         }
 
         chain.iter().any(|step| match step {
-            fret_core::EffectStep::GaussianBlur { downsample, .. } => {
+            fret_core::EffectStep::GaussianBlur {
+                radius_px,
+                downsample,
+            } => {
+                if !radius_px.0.is_finite() || radius_px.0 <= 0.0 {
+                    return false;
+                }
                 effects::choose_effect_blur_downsample_scale(
                     viewport_size,
                     format,
@@ -157,6 +164,7 @@ pub(super) fn compile_for_scene(
 
     compile_for_scene_inner(
         encoding,
+        scale_factor,
         viewport_size,
         format,
         clear,
@@ -169,6 +177,7 @@ pub(super) fn compile_for_scene(
 
 fn compile_for_scene_inner(
     encoding: &SceneEncoding,
+    scale_factor: f32,
     viewport_size: (u32, u32),
     format: wgpu::TextureFormat,
     clear: wgpu::Color,
@@ -404,6 +413,7 @@ fn compile_for_scene_inner(
                     format,
                     intermediate_budget_bytes: effective_budget_bytes,
                     clear,
+                    scale_factor,
                 },
             );
         };

@@ -131,6 +131,7 @@ impl Renderer {
             perf_enabled,
             trace_enabled,
             &encoding,
+            scale_factor,
             viewport_size,
             format,
             clear.0,

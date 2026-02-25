@@ -36,6 +36,7 @@ fn apply_single_step_effect_with_scissor(
             format: wgpu::TextureFormat::Bgra8UnormSrgb,
             intermediate_budget_bytes: u64::MAX,
             clear: wgpu::Color::TRANSPARENT,
+            scale_factor: 1.0,
         },
     );
     passes
@@ -176,6 +177,7 @@ fn compile_for_scene_path_msaa_batch_initializes_output_via_empty_clear_pass() {
     let viewport_size = (64, 64);
     let plan = RenderPlan::compile_for_scene(
         &encoding,
+        1.0,
         viewport_size,
         wgpu::TextureFormat::Bgra8UnormSrgb,
         wgpu::Color::TRANSPARENT,
@@ -538,6 +540,7 @@ fn compile_for_scene_none_targets_output() {
     let encoding = SceneEncoding::default();
     let plan = RenderPlan::compile_for_scene(
         &encoding,
+        1.0,
         (100, 100),
         wgpu::TextureFormat::Bgra8UnormSrgb,
         wgpu::Color::TRANSPARENT,
@@ -560,6 +563,7 @@ fn compile_for_scene_offscreen_blit_adds_fullscreen_blit() {
     let encoding = SceneEncoding::default();
     let plan = RenderPlan::compile_for_scene(
         &encoding,
+        1.0,
         (100, 100),
         wgpu::TextureFormat::Bgra8UnormSrgb,
         wgpu::Color::TRANSPARENT,
@@ -599,6 +603,7 @@ fn compile_for_scene_pixelate_adds_scale_chain_then_blit() {
     let viewport_size = (128, 64);
     let plan = RenderPlan::compile_for_scene(
         &encoding,
+        1.0,
         viewport_size,
         wgpu::TextureFormat::Bgra8UnormSrgb,
         wgpu::Color::TRANSPARENT,
@@ -731,6 +736,7 @@ fn compile_for_scene_backdrop_color_adjust_emits_mask_target_when_budget_allows(
 
     let plan = RenderPlan::compile_for_scene(
         &encoding,
+        1.0,
         viewport_size,
         wgpu::TextureFormat::Bgra8UnormSrgb,
         wgpu::Color::TRANSPARENT,
@@ -786,6 +792,7 @@ fn compile_for_scene_backdrop_blur_caps_clip_mask_tier_when_forced_to_quarter() 
 
     let plan = RenderPlan::compile_for_scene(
         &encoding,
+        1.0,
         viewport_size,
         format,
         clear,
@@ -837,6 +844,7 @@ fn compile_for_scene_filter_content_composite_does_not_allocate_clip_mask() {
 
     let plan = RenderPlan::compile_for_scene(
         &encoding,
+        1.0,
         viewport_size,
         wgpu::TextureFormat::Bgra8UnormSrgb,
         wgpu::Color::TRANSPARENT,
@@ -894,6 +902,7 @@ fn compile_for_scene_composite_group_preserves_output_clear_guardrail() {
 
     let plan = RenderPlan::compile_for_scene(
         &encoding,
+        1.0,
         viewport_size,
         wgpu::TextureFormat::Bgra8UnormSrgb,
         wgpu::Color::TRANSPARENT,
@@ -958,6 +967,7 @@ fn compile_for_scene_clip_path_preserves_output_clear_guardrail() {
 
     let plan = RenderPlan::compile_for_scene(
         &encoding,
+        1.0,
         viewport_size,
         wgpu::TextureFormat::Bgra8UnormSrgb,
         wgpu::Color::TRANSPARENT,
@@ -988,6 +998,7 @@ fn compile_for_scene_blur_emits_separable_passes() {
     let viewport_size = (128, 64);
     let plan = RenderPlan::compile_for_scene(
         &encoding,
+        1.0,
         viewport_size,
         wgpu::TextureFormat::Bgra8UnormSrgb,
         wgpu::Color::TRANSPARENT,
@@ -1192,6 +1203,7 @@ fn blur_scissor_is_mapped_per_pass_dst_size() {
     let viewport_size = (100, 100);
     let plan = RenderPlan::compile_for_scene(
         &encoding,
+        1.0,
         viewport_size,
         wgpu::TextureFormat::Bgra8UnormSrgb,
         wgpu::Color::TRANSPARENT,

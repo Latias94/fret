@@ -339,6 +339,7 @@ impl RenderPlan {
 
     pub(super) fn compile_for_scene(
         encoding: &SceneEncoding,
+        scale_factor: f32,
         viewport_size: (u32, u32),
         format: wgpu::TextureFormat,
         clear: wgpu::Color,
@@ -348,6 +349,7 @@ impl RenderPlan {
     ) -> Self {
         super::render_plan_compiler::compile_for_scene(
             encoding,
+            scale_factor,
             viewport_size,
             format,
             clear,
