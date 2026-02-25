@@ -521,7 +521,7 @@ fn preview_code_tabs(
     max_w: Px,
     code: DocCodeBlock,
 ) -> AnyElement {
-    let code_shell = code_block_shell(cx, max_w, code);
+    let code_shell = code_block_shell(cx, test_id_prefix, max_w, code);
     let code_el = centered(cx, code_shell);
 
     let base = shadcn::Tabs::uncontrolled(Some("preview"))
@@ -547,18 +547,31 @@ fn preview_code_tabs(
 
 fn code_block_shell(
     cx: &mut ElementContext<'_, App>,
+    test_id_prefix: Option<&str>,
     max_w: Px,
     block: DocCodeBlock,
 ) -> AnyElement {
     let code: Arc<str> = Arc::from(block.code);
-    let copy = ui_ai::CodeBlockCopyButton::new(code.clone()).into_element(cx);
-    let code_block = ui_ai::CodeBlock::new(code)
+    let copy = match test_id_prefix {
+        Some(prefix) => ui_ai::CodeBlockCopyButton::new(code.clone())
+            .test_id(format!("{prefix}-code-block-copy"))
+            .copied_marker_test_id(format!("{prefix}-code-block-copy-copied"))
+            .into_element(cx),
+        None => ui_ai::CodeBlockCopyButton::new(code.clone()).into_element(cx),
+    };
+
+    let mut code_block = ui_ai::CodeBlock::new(code)
         .language(block.language)
         .show_header(true)
         .show_language(true)
-        .max_height(Px(520.0))
+        .show_line_numbers(true)
+        .max_height(Px(400.0))
         .header_right([copy])
         .into_element(cx);
+
+    if let Some(prefix) = test_id_prefix {
+        code_block = code_block.test_id(format!("{prefix}-code-block"));
+    }
 
     let props = cx.with_theme(|theme| {
         decl_style::container_props(

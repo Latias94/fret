@@ -714,14 +714,14 @@ fn render_code_block_body<H: UiHost + 'static>(
         };
 
         let scrollbar_w = theme.metric_token("metric.scrollbar.width");
-        let reserved_right_for_x_scrollbar = if scrollbar_y_enabled {
-            scrollbar_w
-        } else {
-            Px(0.0)
-        };
 
         let content =
             if windowed_lines && max_height.is_some() && matches!(wrap, CodeBlockWrap::ScrollX) {
+                let reserved_right_for_x_scrollbar = if scrollbar_y_enabled {
+                    scrollbar_w
+                } else {
+                    Px(0.0)
+                };
                 render_code_block_windowed_lines(
                     cx,
                     theme,
@@ -745,6 +745,23 @@ fn render_code_block_body<H: UiHost + 'static>(
                     disable_contextual_alternates,
                 );
                 let line_count = prepared.lines.len();
+
+                let needs_scroll_y = match max_height {
+                    None => false,
+                    Some(max_height) => match text_wrap_for_code_block_wrap(wrap) {
+                        TextWrap::None => {
+                            let line_height = theme.metric_token("metric.font.mono_line_height");
+                            let est_h = Px(line_height.0 * (line_count.max(1) as f32));
+                            est_h.0 > max_height.0
+                        }
+                        TextWrap::Word | TextWrap::WordBreak | TextWrap::Grapheme => true,
+                    },
+                };
+                let reserved_right_for_x_scrollbar = if needs_scroll_y && scrollbar_y_enabled {
+                    scrollbar_w
+                } else {
+                    Px(0.0)
+                };
 
                 let content = if !prepared.show_line_numbers {
                     render_code_block_text(
@@ -772,7 +789,7 @@ fn render_code_block_body<H: UiHost + 'static>(
                     render_code_block_with_line_numbers(cx, theme, line_numbers, code)
                 };
 
-                if let Some(max_height) = max_height {
+                if let (Some(max_height), true) = (max_height, needs_scroll_y) {
                     let thumb = theme.color_token("scrollbar.thumb.background");
                     let thumb_hover = theme.color_token("scrollbar.thumb.hover.background");
                     let handle = cx.with_state(ScrollHandle::default, |h| h.clone());
