@@ -3,7 +3,6 @@
 // These checks intentionally avoid materializing the full bundle artifact in memory so they can
 // run on huge `bundle.json` / `bundle.schema2.json` inputs.
 
-mod legacy;
 mod before_after_metas;
 mod checks;
 mod inline_semantics_lite;

@@ -260,13 +260,12 @@ Goal: common tooling should keep working even when `bundle.json` is too large to
     - `crates/fret-diag/src/stats/wheel_scroll_streaming/types.rs` (shared structs)
     - `crates/fret-diag/src/stats/wheel_scroll_streaming/wheel_frames_min.rs` (streamed wheel frame index)
     - `crates/fret-diag/src/stats/wheel_scroll_streaming/tests.rs` (regression tests)
-    - `crates/fret-diag/src/stats/wheel_scroll_streaming/before_after_metas.rs` (TODO: move impl out of legacy)
-    - `crates/fret-diag/src/stats/wheel_scroll_streaming/inline_semantics_lite.rs` (TODO: move impl out of legacy)
-    - `crates/fret-diag/src/stats/wheel_scroll_streaming/legacy.rs` (stream readers; TODO: delete once migrated)
-  - [ ] Remove the remaining wheel-scroll legacy shim:
+    - `crates/fret-diag/src/stats/wheel_scroll_streaming/before_after_metas.rs` (stream reader)
+    - `crates/fret-diag/src/stats/wheel_scroll_streaming/inline_semantics_lite.rs` (stream reader)
+  - [x] Remove the remaining wheel-scroll legacy shim:
     - move `read_window_before_after_metas` into `before_after_metas.rs`
     - move `stream_read_inline_semantics_lite_for_pairs` into `inline_semantics_lite.rs`
-    - delete `crates/fret-diag/src/stats/wheel_scroll_streaming/legacy.rs`
+    - delete the `legacy.rs` shim module
   - [x] Split retained virtual-list streaming gates into dedicated submodules:
     - `crates/fret-diag/src/stats/retained_vlist_gates_streaming/`
   - [x] First wave (frames-index aggregates):
