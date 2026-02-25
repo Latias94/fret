@@ -112,7 +112,7 @@ impl Rating {
         cx: &mut ElementContext<'_, H>,
     ) -> fret_ui::element::AnyElement {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
+            let theme = Theme::global(&*cx.app).snapshot();
 
             let model = use_controllable_model(cx, self.model, || self.default_value).model();
             let selected = cx.watch_model(&model).layout().copied().unwrap_or(0);
@@ -230,7 +230,7 @@ impl Rating {
                             let is_checked = index_1_based == selected_clamped;
 
                             let star = cx.pressable_with_id_props(move |cx, st, _id| {
-                                let theme = Theme::global(&*cx.app).clone();
+                                let theme = Theme::global(&*cx.app).snapshot();
                                 if !read_only {
                                     cx.pressable_on_hover_change(hover_hook.clone());
                                     cx.pressable_set_model(&model, value);
