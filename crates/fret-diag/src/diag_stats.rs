@@ -152,7 +152,7 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
     if let Some(test_id) = check_pixels_changed_test_id.as_deref() {
         let bundle_dir = resolve_bundle_root_dir(&bundle_path)?;
         let out_dir = bundle_dir.parent().unwrap_or_else(|| Path::new("."));
-        check_out_dir_for_pixels_changed(out_dir, test_id, warmup_frames)?;
+        stats::check_out_dir_for_pixels_changed(out_dir, test_id, warmup_frames)?;
     }
     if check_semantics_changed_repainted {
         stats::check_bundle_for_semantics_changed_repainted(

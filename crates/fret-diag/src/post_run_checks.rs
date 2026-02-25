@@ -247,7 +247,7 @@ pub(crate) fn apply_post_run_checks(
         stats::check_bundle_for_idle_no_paint_min(bundle_path, out_dir, min, warmup_frames)?;
     }
     if let Some(test_id) = check_pixels_changed_test_id {
-        check_out_dir_for_pixels_changed(out_dir, test_id, warmup_frames)?;
+        stats::check_out_dir_for_pixels_changed(out_dir, test_id, warmup_frames)?;
     }
     if check_ui_gallery_code_editor_torture_marker_present {
         stats::check_bundle_for_ui_gallery_code_editor_torture_marker_present(

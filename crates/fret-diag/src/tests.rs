@@ -3264,6 +3264,14 @@ fn write_png_solid(path: &std::path::Path, w: u32, h: u32, rgba: [u8; 4]) {
     img.save(path).expect("png save should succeed");
 }
 
+#[derive(Debug, Clone, Copy)]
+struct RectF {
+    x: f64,
+    y: f64,
+    w: f64,
+    h: f64,
+}
+
 fn write_bundle_with_bounds(
     out_dir: &std::path::Path,
     bundle_dir_name: &str,
@@ -4311,7 +4319,7 @@ fn pixels_changed_check_passes_when_region_hash_changes() {
     )
     .expect("screenshots.result.json write should succeed");
 
-    check_out_dir_for_pixels_changed(&out_dir, test_id, 0).unwrap();
+    stats::check_out_dir_for_pixels_changed(&out_dir, test_id, 0).unwrap();
     assert!(out_dir.join("check.pixels_changed.json").is_file());
 }
 
@@ -4358,7 +4366,7 @@ fn pixels_changed_check_supports_schema_v2_table_only_semantics() {
     )
     .expect("screenshots.result.json write should succeed");
 
-    check_out_dir_for_pixels_changed(&out_dir, test_id, 0).unwrap();
+    stats::check_out_dir_for_pixels_changed(&out_dir, test_id, 0).unwrap();
     assert!(out_dir.join("check.pixels_changed.json").is_file());
 }
 
@@ -4405,7 +4413,7 @@ fn pixels_changed_check_fails_when_region_hash_is_unchanged() {
     )
     .expect("screenshots.result.json write should succeed");
 
-    let err = check_out_dir_for_pixels_changed(&out_dir, test_id, 0).unwrap_err();
+    let err = stats::check_out_dir_for_pixels_changed(&out_dir, test_id, 0).unwrap_err();
     assert!(err.contains("pixels unchanged suspected"));
     assert!(out_dir.join("check.pixels_changed.json").is_file());
 }

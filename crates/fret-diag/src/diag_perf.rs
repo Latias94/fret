@@ -3131,7 +3131,7 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
     stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
 
     if let Some(test_id) = check_pixels_changed_test_id.as_deref() {
-        check_out_dir_for_pixels_changed(&resolved_out_dir, test_id, warmup_frames)?;
+        stats::check_out_dir_for_pixels_changed(&resolved_out_dir, test_id, warmup_frames)?;
     }
 
     if let Some(path) = perf_baseline_out.as_ref() {
