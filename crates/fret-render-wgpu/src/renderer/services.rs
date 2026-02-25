@@ -5,6 +5,33 @@ use super::shaders::{
 use super::*;
 use std::collections::hash_map::Entry;
 
+const MAX_CUSTOM_EFFECT_WGSL_BYTES: usize = 64 * 1024;
+
+fn build_and_validate_custom_effect_wgsl_v1(
+    user_source: &str,
+) -> Result<(String, String, String), fret_core::CustomEffectRegistrationError> {
+    use naga::valid::{Capabilities, ValidationFlags, Validator};
+
+    if user_source.len() > MAX_CUSTOM_EFFECT_WGSL_BYTES {
+        return Err(fret_core::CustomEffectRegistrationError::InvalidSource);
+    }
+
+    let wgsl_unmasked = custom_effect_unmasked_shader_source(user_source);
+    let wgsl_masked = custom_effect_masked_shader_source(user_source);
+    let wgsl_mask = custom_effect_mask_shader_source(user_source);
+
+    let mut validator = Validator::new(ValidationFlags::all(), Capabilities::empty());
+    for src in [&wgsl_unmasked, &wgsl_masked, &wgsl_mask] {
+        let module = naga::front::wgsl::parse_str(src)
+            .map_err(|_err| fret_core::CustomEffectRegistrationError::InvalidSource)?;
+        validator
+            .validate(&module)
+            .map_err(|_err| fret_core::CustomEffectRegistrationError::InvalidSource)?;
+    }
+
+    Ok((wgsl_unmasked, wgsl_masked, wgsl_mask))
+}
+
 impl fret_core::TextService for Renderer {
     fn prepare(
         &mut self,
@@ -355,10 +382,12 @@ impl fret_core::CustomEffectService for Renderer {
         &mut self,
         desc: fret_core::CustomEffectDescriptorV1,
     ) -> Result<fret_core::EffectId, fret_core::CustomEffectRegistrationError> {
-        use naga::valid::{Capabilities, ValidationFlags, Validator};
-
         if desc.language != fret_core::CustomEffectProgramLanguage::WgslUtf8 {
             return Err(fret_core::CustomEffectRegistrationError::Unsupported);
+        }
+
+        if desc.source.len() > MAX_CUSTOM_EFFECT_WGSL_BYTES {
+            return Err(fret_core::CustomEffectRegistrationError::InvalidSource);
         }
 
         let h = hash_bytes(desc.source.as_bytes());
@@ -376,17 +405,8 @@ impl fret_core::CustomEffectService for Renderer {
             }
         }
 
-        let wgsl_unmasked = custom_effect_unmasked_shader_source(&desc.source);
-        let wgsl_masked = custom_effect_masked_shader_source(&desc.source);
-        let wgsl_mask = custom_effect_mask_shader_source(&desc.source);
-
-        for src in [&wgsl_unmasked, &wgsl_masked, &wgsl_mask] {
-            let module = naga::front::wgsl::parse_str(src)
-                .map_err(|_err| fret_core::CustomEffectRegistrationError::InvalidSource)?;
-            Validator::new(ValidationFlags::all(), Capabilities::empty())
-                .validate(&module)
-                .map_err(|_err| fret_core::CustomEffectRegistrationError::InvalidSource)?;
-        }
+        let (wgsl_unmasked, wgsl_masked, wgsl_mask) =
+            build_and_validate_custom_effect_wgsl_v1(&desc.source)?;
 
         let raw_source: Arc<str> = Arc::from(desc.source);
         let id = self.custom_effects.insert(super::CustomEffectEntry {
@@ -458,5 +478,32 @@ mod tests {
             required_usages,
             required_flags
         ));
+    }
+
+    #[test]
+    fn custom_effect_wgsl_size_limit_is_enforced() {
+        let src = "x".repeat(MAX_CUSTOM_EFFECT_WGSL_BYTES + 1);
+        assert!(matches!(
+            build_and_validate_custom_effect_wgsl_v1(&src),
+            Err(fret_core::CustomEffectRegistrationError::InvalidSource)
+        ));
+    }
+
+    #[test]
+    fn custom_effect_wgsl_empty_is_rejected() {
+        assert!(matches!(
+            build_and_validate_custom_effect_wgsl_v1(""),
+            Err(fret_core::CustomEffectRegistrationError::InvalidSource)
+        ));
+    }
+
+    #[test]
+    fn custom_effect_wgsl_minimal_program_validates() {
+        let src = r#"
+fn fret_custom_effect(src: vec4<f32>, _uv: vec2<f32>, _pos_px: vec2<f32>, _params: EffectParamsV1) -> vec4<f32> {
+  return src;
+}
+"#;
+        build_and_validate_custom_effect_wgsl_v1(src).expect("expected valid custom effect WGSL");
     }
 }
