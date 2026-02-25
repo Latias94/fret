@@ -57,3 +57,4 @@ Exit criteria:
 - A design for a bounded, capability-gated custom effect extension point exists and is reviewed.
 - A minimal MVP can render one custom effect (e.g. “glass tint + subtle blur + warp”) without touching core contracts.
 - Budgeting/degradation is deterministic and diagnosable.
+ - Evidence: `docs/adr/0299-custom-effect-abi-wgpu-only-mvp.md`.

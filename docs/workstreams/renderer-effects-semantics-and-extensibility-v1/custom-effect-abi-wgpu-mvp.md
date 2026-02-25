@@ -81,6 +81,13 @@ Materials are draw-time; effects are plan-time (ordering + offscreen/backdrop se
 The MVP supports **one-pass fullscreen effects** that read from the current effect source
 (`src_texture`) and write to the current destination (`dst_texture`), under scissor/mask.
 
+MVP scoping constraints:
+
+- Only expressed via `EffectStep::CustomV1` inside an `EffectChain` (`SceneOp::PushEffect`).
+- Single pass (no user-declared multi-pass bundles).
+- Params-only (fixed 64-byte payload) + a single source texture.
+- No user-provided textures in v1 (use built-in `BackdropWarpV2` + built-in effects for distortion).
+
 Binding shapes are versioned and strictly limited:
 
 - **Shape v1 (ParamsOnly)**:
@@ -109,7 +116,7 @@ Custom effects must participate in the `RenderPlan` budgeting model.
 MVP rule:
 
 - Custom effect pass uses the same budget gate as other single-scratch in-place passes:
-  requires `full * 2` bytes available (source + scratch) unless it can be proven in-place safe.
+  requires `full * 2` bytes available (source + scratch).
 - On insufficient budget or target exhaustion:
   - degrade deterministically to no-op (tracked in counters),
   - optionally allow a renderer-provided fallback chain (pre-registered).
@@ -138,6 +145,7 @@ Plan dumps should include:
 
 - `fret-render-wgpu`:
   - add an effect registry (slotmap) keyed by `EffectId`
+  - increment an `effects_generation` counter on register/unregister and include it in the scene encoding cache key
   - compile `CustomV1` into a `RenderPlanPass::CustomEffect`
   - executor records the fullscreen pass using the same masking/scissor helpers
 
@@ -149,3 +157,14 @@ Plan dumps should include:
   - MVP: no (start with one pass). If needed later, it must declare pass count and scratch usage
     so budgeting stays deterministic.
 
+## WGSL contract (v1)
+
+Custom effects register a WGSL snippet that must define:
+
+- `fn fret_custom_effect(src: vec4<f32>, uv: vec2<f32>, pos_px: vec2<f32>, params: EffectParamsV1) -> vec4<f32>`
+
+Notes:
+
+- Inputs and outputs are treated as **premultiplied RGBA** in the renderer’s working space.
+- `uv` is derived from the source texture dimensions.
+- The renderer applies clip/mask coverage *after* the custom function, so authors do not need to implement masking.

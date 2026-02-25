@@ -85,6 +85,12 @@ This TODO is ordered by implementation priority (P0 first), and is designed to b
   - Non-goal: arbitrary user-provided WGSL in core without a bounded ABI and capability gates.
   - Design doc: `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-abi-wgpu-mvp.md`.
 
+- [ ] Implement CustomV1 (wgpu-only MVP):
+  - [ ] `fret-core`: `EffectId`, `EffectParamsV1`, `EffectStep::CustomV1` + fingerprint/validate.
+  - [ ] `fret-render-wgpu`: registry + `effects_generation` + cache key inclusion.
+  - [ ] `fret-render-wgpu`: `RenderPlanPass::CustomEffect` + recorder/executor support.
+  - [ ] Conformance: scissored + ordering + determinism for a registered custom effect.
+
 ## Suggested regression gates
 
 - Unit tests:
