@@ -1,0 +1,194 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-data-table-toolbar-faceted-query-source-toggle",
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+
+    { "type": "set_window_outer_position", "x_px": 120.0, "y_px": 120.0 },
+    { "type": "set_window_inner_size", "width_px": 1200.0, "height_px": 900.0 },
+    { "type": "wait_frames", "n": 10 },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "datatable" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-data-table" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-data-table" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-data-table-root" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 20 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-data-table-toolbar-responsive-query-switch"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "checked_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-data-table-toolbar-responsive-query-switch"
+        },
+        "checked": false
+      }
+    },
+
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "data-table-toolbar-faceted-status-trigger" }
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "data-table-toolbar-faceted-status-input" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "data-table-toolbar-faceted-status-item-running" }
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "data-table-toolbar-faceted-status-item-idle" }
+    },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "press_key", "key": "escape" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "data-table-toolbar-faceted-status-input" }
+      },
+      "timeout_frames": 600
+    },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "data-table-toolbar-faceted-status-badge-label-0"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "data-table-toolbar-faceted-status-badge-label-1"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": {
+          "kind": "test_id",
+          "id": "data-table-toolbar-faceted-status-badge-count"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-data-table-toolbar-faceted-query-source-toggle-viewport"
+    },
+
+    {
+      "type": "click",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-data-table-toolbar-responsive-query-switch"
+      }
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "checked_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-data-table-toolbar-responsive-query-switch"
+        },
+        "checked": true
+      }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "data-table-toolbar-faceted-status-badge-count"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": {
+          "kind": "test_id",
+          "id": "data-table-toolbar-faceted-status-badge-label-0"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-data-table-toolbar-faceted-query-source-toggle-container"
+    },
+
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-data-table-toolbar-faceted-query-source-toggle"
+    }
+  ]
+}
+

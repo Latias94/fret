@@ -66,6 +66,8 @@ Note: `repo-ref/` is local state (not committed). See `docs/repo-ref.md`.
     asserts `data-table-toolbar-faceted-status-badge-*` invariants via `test_id`).
   - [x] Expose a gallery toggle for the query source (makes drift review interactive):
     - `apps/fret-ui-gallery/src/ui/previews/gallery/data/table_legacy.rs`
+  - [x] Add a diag script that toggles the query source and asserts the expected badge shape:
+    - `tools/diag-scripts/ui-gallery-data-table-toolbar-faceted-query-source-toggle.json`
 
 ## Responsive drift: Marquee base width (viewport vs container)
 
