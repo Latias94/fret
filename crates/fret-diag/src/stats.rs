@@ -5,6 +5,7 @@ mod bundle_stats_snapshot;
 mod bundle_stats_sort;
 mod debug_stats_gates;
 mod drag_cache_gates;
+mod drag_cache_gates_streaming;
 mod frames_index_gates;
 mod gc_gates;
 mod hover_layout_checks;
