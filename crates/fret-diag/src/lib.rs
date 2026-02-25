@@ -354,6 +354,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut stats_verbose: bool = false;
     let mut sort_override: Option<BundleStatsSort> = None;
     let mut stats_json: bool = false;
+    let mut stats_lite_checks_json: bool = false;
     let mut stats_diff: Option<(PathBuf, PathBuf)> = None;
     let mut trace_chrome: bool = false;
     let mut trace_out: Option<PathBuf> = None;
@@ -1879,6 +1880,10 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 stats_json = true;
                 i += 1;
             }
+            "--stats-lite-checks-json" | "--stats-lite-matrix-json" => {
+                stats_lite_checks_json = true;
+                i += 1;
+            }
             "--meta-report" => {
                 meta_report = true;
                 i += 1;
@@ -2737,6 +2742,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 sort_override: sort_override.clone(),
                 stats_top,
                 stats_json,
+                stats_lite_checks_json,
                 stats_verbose,
                 warmup_frames,
                 check_stale_paint_test_id: check_stale_paint_test_id.clone(),

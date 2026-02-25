@@ -59,6 +59,8 @@ flags is supported.
 
 - Supported checks are enforced by a code allowlist:
   - `crates/fret-diag/src/diag_stats/check_support.rs`
+- For a machine-readable view (agent/tooling friendly):
+  - `fretboard diag stats --stats-lite-checks-json`
 - Unsupported checks will fail fast and print a “stats-lite supported checks” table with suggested remediation commands.
 
 ## Step 2: Perf “hotspots” fallback (slow frames report)

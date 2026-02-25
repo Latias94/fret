@@ -3,7 +3,10 @@ use crate::stats;
 
 mod check_support;
 
-use check_support::{STATS_LITE_SUPPORTED_CHECKS, StatsLiteCheckKind, stats_lite_support_for};
+use check_support::{
+    STATS_LITE_SUPPORTED_CHECKS, StatsLiteCheckKind, stats_lite_support_for,
+    stats_lite_support_matrix_json_value,
+};
 
 #[derive(Debug, Clone)]
 pub(crate) struct StatsCmdContext {
@@ -13,6 +16,7 @@ pub(crate) struct StatsCmdContext {
     pub sort_override: Option<BundleStatsSort>,
     pub stats_top: usize,
     pub stats_json: bool,
+    pub stats_lite_checks_json: bool,
     pub stats_verbose: bool,
     pub warmup_frames: u64,
     pub check_stale_paint_test_id: Option<String>,
@@ -48,6 +52,7 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
         sort_override,
         stats_top,
         stats_json,
+        stats_lite_checks_json,
         stats_verbose,
         warmup_frames,
         check_stale_paint_test_id,
@@ -74,6 +79,21 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
         check_retained_vlist_attach_detach_max,
         check_retained_vlist_keep_alive_reuse_min,
     } = ctx;
+
+    if stats_lite_checks_json {
+        if stats_diff.is_some() {
+            return Err("--stats-lite-checks-json cannot be combined with --diff".to_string());
+        }
+        if !rest.is_empty() {
+            return Err(format!("unexpected arguments: {}", rest.join(" ")));
+        }
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&stats_lite_support_matrix_json_value())
+                .unwrap_or_else(|_| "{}".to_string())
+        );
+        return Ok(());
+    }
 
     if let Some((a, b)) = stats_diff {
         if !rest.is_empty() {
@@ -173,12 +193,7 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
             let mut out = String::new();
             out.push_str("  stats-lite supported checks:\n");
             for (kind, name, note) in rows {
-                let kind = match kind {
-                    StatsLiteCheckKind::FramesIndex => "frames-index",
-                    StatsLiteCheckKind::StreamingBundle => "streaming",
-                    StatsLiteCheckKind::ReportOnly => "report-only",
-                    StatsLiteCheckKind::OutDirOnly => "out-dir",
-                };
+                let kind = kind.as_str();
                 out.push_str(&format!("    - {name} ({kind}): {note}\n"));
             }
             out
@@ -204,7 +219,11 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
             warmup_frames,
         )?;
         if derived_from_frames_index {
-            stats::check_bundle_for_stale_paint_streaming(&bundle_path, test_id, check_stale_paint_eps)?;
+            stats::check_bundle_for_stale_paint_streaming(
+                &bundle_path,
+                test_id,
+                check_stale_paint_eps,
+            )?;
         } else {
             stats::check_bundle_for_stale_paint(&bundle_path, test_id, check_stale_paint_eps)?;
         }
@@ -217,7 +236,11 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
             warmup_frames,
         )?;
         if derived_from_frames_index {
-            stats::check_bundle_for_stale_scene_streaming(&bundle_path, test_id, check_stale_scene_eps)?;
+            stats::check_bundle_for_stale_scene_streaming(
+                &bundle_path,
+                test_id,
+                check_stale_scene_eps,
+            )?;
         } else {
             stats::check_bundle_for_stale_scene(&bundle_path, test_id, check_stale_scene_eps)?;
         }
@@ -232,7 +255,12 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
         let bundle_dir = resolve_bundle_root_dir(&bundle_path)?;
         let out_dir = bundle_dir.parent().unwrap_or_else(|| Path::new("."));
         if derived_from_frames_index {
-            stats::check_frames_index_for_idle_no_paint_min(&bundle_path, out_dir, min, warmup_frames)?;
+            stats::check_frames_index_for_idle_no_paint_min(
+                &bundle_path,
+                out_dir,
+                min,
+                warmup_frames,
+            )?;
         } else {
             stats::check_bundle_for_idle_no_paint_min(&bundle_path, out_dir, min, warmup_frames)?;
         }
@@ -317,7 +345,10 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
             warmup_frames,
         )?;
         if derived_from_frames_index {
-            stats::check_bundle_for_gc_sweep_liveness_streaming(bundle_path.as_path(), warmup_frames)?;
+            stats::check_bundle_for_gc_sweep_liveness_streaming(
+                bundle_path.as_path(),
+                warmup_frames,
+            )?;
         } else {
             stats::check_bundle_for_gc_sweep_liveness(bundle_path.as_path(), warmup_frames)?;
         }
@@ -381,7 +412,11 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
                 warmup_frames,
             )?;
         } else {
-            stats::check_bundle_for_view_cache_reuse_min(bundle_path.as_path(), min, warmup_frames)?;
+            stats::check_bundle_for_view_cache_reuse_min(
+                bundle_path.as_path(),
+                min,
+                warmup_frames,
+            )?;
         }
     }
     if let Some(min) = check_overlay_synthesis_min
@@ -400,7 +435,11 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
                 warmup_frames,
             )?;
         } else {
-            stats::check_bundle_for_overlay_synthesis_min(bundle_path.as_path(), min, warmup_frames)?;
+            stats::check_bundle_for_overlay_synthesis_min(
+                bundle_path.as_path(),
+                min,
+                warmup_frames,
+            )?;
         }
     }
     if let Some(min) = check_viewport_input_min
@@ -413,7 +452,11 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
             warmup_frames,
         )?;
         if derived_from_frames_index {
-            stats::check_frames_index_for_viewport_input_min(bundle_path.as_path(), min, warmup_frames)?;
+            stats::check_frames_index_for_viewport_input_min(
+                bundle_path.as_path(),
+                min,
+                warmup_frames,
+            )?;
         } else {
             stats::check_bundle_for_viewport_input_min(bundle_path.as_path(), min, warmup_frames)?;
         }
@@ -449,7 +492,11 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
                 warmup_frames,
             )?;
         } else {
-            stats::check_bundle_for_viewport_capture_min(bundle_path.as_path(), min, warmup_frames)?;
+            stats::check_bundle_for_viewport_capture_min(
+                bundle_path.as_path(),
+                min,
+                warmup_frames,
+            )?;
         }
     }
     if let Some(min) = check_retained_vlist_reconcile_no_notify_min

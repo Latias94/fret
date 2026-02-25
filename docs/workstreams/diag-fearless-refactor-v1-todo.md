@@ -248,6 +248,8 @@ Goal: common tooling should keep working even when `bundle.json` is too large to
 
 - [ ] Port selected `diag stats --check-*` gates to sidecars (so they work in stats-lite mode).
   - [x] Define a small “compat matrix” in code (agent-friendly): `check -> stats-lite data source`.
+  - [x] Expose the compat matrix as machine-readable JSON for agents:
+    - `fretboard diag stats --stats-lite-checks-json`
   - [x] Reduce streaming gate churn by extracting shared deserializer helpers:
     - `crates/fret-diag/src/json_stream.rs`
   - [x] Migrate existing streaming gates to the shared helper (reduce duplication):

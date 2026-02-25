@@ -10,6 +10,17 @@ pub(crate) enum StatsLiteCheckKind {
     OutDirOnly,
 }
 
+impl StatsLiteCheckKind {
+    pub(crate) const fn as_str(self) -> &'static str {
+        match self {
+            StatsLiteCheckKind::FramesIndex => "frames-index",
+            StatsLiteCheckKind::StreamingBundle => "streaming",
+            StatsLiteCheckKind::ReportOnly => "report-only",
+            StatsLiteCheckKind::OutDirOnly => "out-dir",
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct StatsLiteCheckSupport {
     pub(crate) check_name: &'static str,
@@ -127,6 +138,28 @@ pub(crate) const STATS_LITE_SUPPORTED_CHECKS: &[StatsLiteCheckSupport] = &[
     },
 ];
 
+pub(crate) fn stats_lite_support_matrix_json_value() -> serde_json::Value {
+    let mut rows: Vec<StatsLiteCheckSupport> =
+        STATS_LITE_SUPPORTED_CHECKS.iter().copied().collect();
+    rows.sort_by(|a, b| a.check_name.cmp(b.check_name));
+
+    let checks: Vec<serde_json::Value> = rows
+        .into_iter()
+        .map(|c| {
+            serde_json::json!({
+                "check_name": c.check_name,
+                "kind": c.kind.as_str(),
+                "note": c.note,
+            })
+        })
+        .collect();
+
+    serde_json::json!({
+        "schema_version": 1u64,
+        "checks": checks,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -176,5 +209,49 @@ mod tests {
                 "expected `{name}` to be stats-lite supported"
             );
         }
+    }
+
+    #[test]
+    fn stats_lite_support_matrix_json_value_is_sorted_and_complete() {
+        let v = stats_lite_support_matrix_json_value();
+        assert_eq!(
+            v.get("schema_version").and_then(|v| v.as_u64()),
+            Some(1),
+            "expected schema_version == 1"
+        );
+        let checks = v
+            .get("checks")
+            .and_then(|v| v.as_array())
+            .expect("expected checks array");
+        assert_eq!(checks.len(), STATS_LITE_SUPPORTED_CHECKS.len());
+
+        let mut names: Vec<&str> = Vec::with_capacity(checks.len());
+        for c in checks {
+            let name = c
+                .get("check_name")
+                .and_then(|v| v.as_str())
+                .expect("expected check_name string");
+            let kind = c
+                .get("kind")
+                .and_then(|v| v.as_str())
+                .expect("expected kind string");
+            let note = c
+                .get("note")
+                .and_then(|v| v.as_str())
+                .expect("expected note string");
+            assert!(!note.is_empty(), "expected non-empty note for {name}");
+            assert!(
+                matches!(
+                    kind,
+                    "frames-index" | "streaming" | "report-only" | "out-dir"
+                ),
+                "unexpected kind for {name}: {kind}"
+            );
+            names.push(name);
+        }
+
+        let mut sorted = names.clone();
+        sorted.sort();
+        assert_eq!(names, sorted, "expected checks to be sorted by check_name");
     }
 }
