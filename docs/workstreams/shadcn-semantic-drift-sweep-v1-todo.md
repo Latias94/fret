@@ -29,7 +29,7 @@ Note: `repo-ref/` is local state (not committed). See `docs/repo-ref.md`.
 
 | Surface | Fret | Upstream evidence | Query semantics | Decision | Gate |
 | --- | --- | --- | --- | --- | --- |
-| Field: `orientation="responsive"` | `ecosystem/fret-ui-shadcn/src/field.rs` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/field.tsx` (`@container/field-group`, `@md/field-group:*`), `repo-ref/ui/apps/v4/content/docs/components/field.mdx` | Container (panel width) | Keep container queries (ADR 0231) | `ecosystem/fret-ui-shadcn/tests/field_responsive_orientation.rs` (test: `field_orientation_responsive_follows_container_md_breakpoint`) |
+| Field: `orientation="responsive"` | `ecosystem/fret-ui-shadcn/src/field.rs` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/field.tsx` (`@container/field-group`, `@md/field-group:*`), `repo-ref/ui/apps/v4/content/docs/components/field.mdx` | Container (panel width) | Keep container queries (ADR 0231); use viewport fallback when container width is temporarily unknown | `ecosystem/fret-ui-shadcn/tests/field_responsive_orientation.rs` (test: `field_orientation_responsive_follows_container_md_breakpoint`) |
 | AlertDialog footer stacking (`sm:`) | `ecosystem/fret-ui-shadcn/src/alert_dialog.rs` | `repo-ref/ui/apps/v4/registry/base-mira/ui/alert-dialog.tsx` (`sm:flex-row sm:justify-end`) | Viewport (device shell) | Keep viewport queries (ADR 0232) | `ecosystem/fret-ui-shadcn/src/alert_dialog.rs` (test: `alert_dialog_footer_stacks_on_base_viewport_and_rows_on_sm`) |
 | Empty padding (`md:p-12`) | `ecosystem/fret-ui-shadcn/src/empty.rs` | `repo-ref/ui/apps/v4/registry/new-york-v4/ui/empty.tsx` (`p-6 ... md:p-12`) | Container (panel width) | Keep container queries (ADR 0231) | `ecosystem/fret-ui-shadcn/tests/empty_responsive_padding.rs` (test: `empty_padding_switches_at_md_using_container_queries`) |
 | Drawer layout (side width, max height) | `ecosystem/fret-ui-shadcn/src/drawer.rs` | `repo-ref/ui/apps/v4/registry/new-york-v4/ui/drawer.tsx` (`w-3/4`, `sm:max-w-sm`, `max-h-[80vh]`) | Viewport (device shell) | Keep viewport bounds + viewport breakpoints (ADR 0232) | `ecosystem/fret-ui-shadcn/tests/drawer_layout_invariants.rs` (tests: `drawer_side_panel_width_tracks_viewport_fraction_and_caps`, `drawer_bottom_height_caps_at_80vh_and_edge_gap`) |
@@ -45,16 +45,16 @@ Note: `repo-ref/` is local state (not committed). See `docs/repo-ref.md`.
 | Sidebar mobile vs desktop (`md:block`) | `ecosystem/fret-ui-shadcn/src/sidebar.rs` | `repo-ref/ui/apps/v4/registry/new-york-v4/ui/sidebar.tsx` (`useIsMobile`, `hidden md:block`) | Viewport (device shell) | Keep viewport breakpoint (ADR 0232) | `tools/diag-scripts/ui-gallery-sidebar-mobile-controlled-open-sync.json` |
 | Shadcn Extras: Kanban (`sm:` spacing/width) | `ecosystem/fret-ui-shadcn/src/extras/kanban.rs` | `repo-ref/kibo/packages/kanban` | Viewport (device shell) | Keep viewport breakpoint (extras demo parity) | `tools/diag-scripts/ui-gallery-shadcn-extras-kanban-dnd.json` |
 | Shadcn Extras: Marquee base cycle width | `ecosystem/fret-ui-shadcn/src/extras/marquee.rs` | `repo-ref/kibo/packages/marquee` | Container (panel width; viewport fallback when unknown) | Default to container query region width; keep explicit `cycle_width_px` override (ADR 0231) | `ecosystem/fret-ui-shadcn/src/extras/marquee.rs` (test: `marquee_default_cycle_width_prefers_region_over_viewport`) |
-| NavigationMenu `md:*` behavior | `ecosystem/fret-ui-shadcn/src/navigation_menu.rs` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/navigation-menu.tsx` (`md:absolute`, `md:w-[var(--radix-…)]`) | Mixed (upstream viewport; editor layouts may prefer container) | Add a query-source knob: default viewport parity, optional container (editor-first) | `ecosystem/fret-ui-shadcn/src/navigation_menu.rs` (test: `navigation_menu_md_breakpoint_query_can_follow_viewport_or_container_width`) |
+| NavigationMenu `md:*` behavior | `ecosystem/fret-ui-shadcn/src/navigation_menu.rs` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/navigation-menu.tsx` (`md:absolute`, `md:w-[var(--radix-…)]`) | Mixed (upstream viewport; editor layouts may prefer container) | Add a query-source knob: default viewport parity, optional container (editor-first); use viewport fallback when container width is temporarily unknown | `ecosystem/fret-ui-shadcn/src/navigation_menu.rs` (test: `navigation_menu_md_breakpoint_query_can_follow_viewport_or_container_width`) |
 
 ## Responsive drift: DataTable “LG show labels”
 
-- [ ] Confirm upstream behavior and intent:
+- [x] Confirm upstream behavior and intent:
   - [x] `repo-ref/ui/apps/v4/app/(app)/examples/tasks/components/data-table-faceted-filter.tsx`
     uses `lg:hidden` / `hidden lg:flex`.
   - [x] `repo-ref/ui/apps/v4/app/(app)/examples/tasks/components/data-table-toolbar.tsx` uses
     `lg:w-[250px]`.
-- [ ] Decide Fret behavior for editor-grade layouts:
+- [x] Decide Fret behavior for editor-grade layouts:
   - [ ] Option A (parity-first): keep viewport `LG` (matches web Tailwind semantics).
   - [ ] Option B (editor-first): switch to container query so the toolbar adapts to panel width.
   - [x] Option C (dual-mode): expose an explicit “query source” knob in the recipe layer
