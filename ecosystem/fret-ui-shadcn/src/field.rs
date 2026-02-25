@@ -1277,15 +1277,19 @@ impl Field {
                 region_props,
                 move |cx, region_id| {
                     vec![cx.container(wrapper, move |cx| {
-                        let md_breakpoint = fret_ui_kit::declarative::container_breakpoints(
+                        // Container queries are frame-lagged. When the region width is
+                        // temporarily unknown (e.g. in single-pass layout test harnesses), fall
+                        // back to viewport behavior so we avoid branching on a missing
+                        // measurement.
+                        let default_when_unknown =
+                            cx.environment_viewport_width(Invalidation::Layout).0
+                                >= fret_ui_kit::declarative::container_queries::tailwind::MD.0;
+                        let md_breakpoint = fret_ui_kit::declarative::container_width_at_least(
                             cx,
                             region_id,
                             Invalidation::Layout,
-                            false,
-                            &[(
-                                fret_ui_kit::declarative::container_queries::tailwind::MD,
-                                true,
-                            )],
+                            default_when_unknown,
+                            fret_ui_kit::declarative::container_queries::tailwind::MD,
                             fret_ui_kit::declarative::ContainerQueryHysteresis::default(),
                         );
 
