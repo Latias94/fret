@@ -254,6 +254,9 @@ Goal: common tooling should keep working even when `bundle.json` is too large to
     - `crates/fret-diag/src/stats/notify_gates_streaming.rs`
     - `crates/fret-diag/src/stats/drag_cache_gates_streaming.rs`
     - `crates/fret-diag/src/stats/wheel_scroll_streaming.rs`
+  - [x] Start splitting wheel-scroll streaming gates into a directory module:
+    - `crates/fret-diag/src/stats/wheel_scroll_streaming/mod.rs`
+    - `crates/fret-diag/src/stats/wheel_scroll_streaming/legacy.rs`
   - [x] Split retained virtual-list streaming gates into dedicated submodules:
     - `crates/fret-diag/src/stats/retained_vlist_gates_streaming/`
   - [x] First wave (frames-index aggregates):
