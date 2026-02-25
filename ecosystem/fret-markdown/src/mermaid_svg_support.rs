@@ -159,7 +159,7 @@ fn render_mermaid_header_row<H: UiHost + 'static>(
         left: Px(0.0),
     };
     props.border_color = Some(border);
-    props.padding = Edges::all(theme.metric_token("metric.padding.sm"));
+    props.padding = Edges::all(theme.metric_token("metric.padding.sm")).into();
 
     cx.container(props, |cx| {
         let mut row = FlexProps::default();
@@ -168,11 +168,11 @@ fn render_mermaid_header_row<H: UiHost + 'static>(
         row.align = CrossAlign::Center;
 
         let mut left_props = FlexProps::default();
-        left_props.gap = theme.metric_token("metric.gap.sm");
+        left_props.gap = theme.metric_token("metric.gap.sm").into();
         left_props.align = CrossAlign::Center;
 
         let mut right_props = FlexProps::default();
-        right_props.gap = theme.metric_token("metric.gap.sm");
+        right_props.gap = theme.metric_token("metric.gap.sm").into();
         right_props.align = CrossAlign::Center;
 
         vec![cx.flex(row, |cx| {

@@ -9,14 +9,14 @@ use fret_ui::UiHost;
 
 /// Adds a markdown element to an `imui` output list.
 #[track_caller]
-pub fn markdown<H: UiHost>(ui: &mut impl UiWriter<H>, source: &str) {
+pub fn markdown<H: UiHost + 'static>(ui: &mut impl UiWriter<H>, source: &str) {
     let element = ui.with_cx_mut(|cx| crate::markdown(cx, source));
     ui.add(element);
 }
 
 /// Adds a markdown element to an `imui` output list with a custom component set.
 #[track_caller]
-pub fn markdown_with<H: UiHost>(
+pub fn markdown_with<H: UiHost + 'static>(
     ui: &mut impl UiWriter<H>,
     source: &str,
     components: &crate::MarkdownComponents<H>,
