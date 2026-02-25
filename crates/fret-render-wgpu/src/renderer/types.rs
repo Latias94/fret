@@ -234,10 +234,13 @@ pub struct BlurQualityCounters {
     pub applied_downsample_1: u64,
     pub applied_downsample_2: u64,
     pub applied_downsample_4: u64,
+    pub applied_iterations_zero: u64,
     pub applied_iterations_sum: u64,
     pub applied_iterations_max: u64,
     /// Counts cases where the applied downsample scale differs from the desired scale.
     pub quality_degraded_downsample: u64,
+    /// Counts cases where the requested blur was removed (hard shadow fallback).
+    pub quality_degraded_blur_removed: u64,
 }
 
 impl BlurQualityCounters {
@@ -253,7 +256,10 @@ impl BlurQualityCounters {
             .applied_iterations_sum
             .saturating_add(u64::from(iterations));
         self.applied_iterations_max = self.applied_iterations_max.max(u64::from(iterations));
-        if downsample_scale != desired {
+        if iterations == 0 {
+            self.applied_iterations_zero = self.applied_iterations_zero.saturating_add(1);
+        }
+        if iterations != 0 && downsample_scale != desired {
             self.quality_degraded_downsample = self.quality_degraded_downsample.saturating_add(1);
         }
     }
@@ -269,6 +275,9 @@ impl BlurQualityCounters {
         self.applied_downsample_4 = self
             .applied_downsample_4
             .saturating_add(other.applied_downsample_4);
+        self.applied_iterations_zero = self
+            .applied_iterations_zero
+            .saturating_add(other.applied_iterations_zero);
         self.applied_iterations_sum = self
             .applied_iterations_sum
             .saturating_add(other.applied_iterations_sum);
@@ -278,6 +287,9 @@ impl BlurQualityCounters {
         self.quality_degraded_downsample = self
             .quality_degraded_downsample
             .saturating_add(other.quality_degraded_downsample);
+        self.quality_degraded_blur_removed = self
+            .quality_degraded_blur_removed
+            .saturating_add(other.quality_degraded_blur_removed);
     }
 }
 

@@ -384,17 +384,6 @@ pub(super) fn apply_chain_in_place(
                 }
                 effect_degradations.drop_shadow.requested =
                     effect_degradations.drop_shadow.requested.saturating_add(1);
-
-                // We need two scratch targets:
-                // - one to preserve the original content (for later restore),
-                // - one to store the blurred coverage that the shadow is sampled from.
-                if scratch_targets.len() < 2 {
-                    effect_degradations.drop_shadow.degraded_target_exhausted = effect_degradations
-                        .drop_shadow
-                        .degraded_target_exhausted
-                        .saturating_add(1);
-                    continue;
-                }
                 if budget_bytes == 0 {
                     effect_degradations.drop_shadow.degraded_budget_zero = effect_degradations
                         .drop_shadow
@@ -403,18 +392,84 @@ pub(super) fn apply_chain_in_place(
                     continue;
                 }
 
-                // Conservative budget check: DropShadow needs 1 srcdst + 2 full-size scratch targets.
-                // This keeps degradation deterministic under tight budgets (and matches ADR 0117’s
-                // “bounded multi-pass features” rule).
                 let full = estimate_texture_bytes(ctx.viewport_size, ctx.format, 1);
-                if full.saturating_mul(3) > budget_bytes {
-                    effect_degradations.drop_shadow.degraded_budget_insufficient =
-                        effect_degradations
-                            .drop_shadow
-                            .degraded_budget_insufficient
-                            .saturating_add(1);
+                let requested_downsample = if s.downsample >= 4 {
+                    4
+                } else if s.downsample >= 2 {
+                    2
+                } else {
+                    1
+                };
+                let desired_downsample = if requested_downsample <= 1 {
+                    1
+                } else {
+                    effect_blur_desired_downsample(requested_downsample, quality)
+                };
+
+                // Preferred path: blurred drop shadow, which needs two scratch targets:
+                // - one to preserve the original content (for later restore),
+                // - one to store the blurred coverage that the shadow is sampled from.
+                //
+                // If budgets are too tight to hold the full blurred pipeline deterministically,
+                // we fall back to a hard shadow (no blur) that uses only a single scratch target.
+                let can_blur = scratch_targets.len() >= 2 && full.saturating_mul(3) <= budget_bytes;
+                if !can_blur {
+                    let Some(&scratch_original) = scratch_targets.first() else {
+                        effect_degradations.drop_shadow.degraded_target_exhausted =
+                            effect_degradations
+                                .drop_shadow
+                                .degraded_target_exhausted
+                                .saturating_add(1);
+                        continue;
+                    };
+                    if full.saturating_mul(2) > budget_bytes {
+                        effect_degradations.drop_shadow.degraded_budget_insufficient =
+                            effect_degradations
+                                .drop_shadow
+                                .degraded_budget_insufficient
+                                .saturating_add(1);
+                        continue;
+                    }
+
+                    effect_degradations.drop_shadow.applied =
+                        effect_degradations.drop_shadow.applied.saturating_add(1);
+                    effect_blur_quality
+                        .drop_shadow
+                        .record_applied(1, 0, desired_downsample);
+                    effect_blur_quality
+                        .drop_shadow
+                        .quality_degraded_blur_removed = effect_blur_quality
+                        .drop_shadow
+                        .quality_degraded_blur_removed
+                        .saturating_add(1);
+
+                    passes.push(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
+                        src: srcdst,
+                        dst: scratch_original,
+                        src_size: ctx.viewport_size,
+                        dst_size: ctx.viewport_size,
+                        dst_scissor: None,
+                        encode_output_srgb: false,
+                        load: wgpu::LoadOp::Clear(ctx.clear),
+                    }));
+                    passes.push(RenderPlanPass::DropShadow(DropShadowPass {
+                        src: scratch_original,
+                        dst: srcdst,
+                        src_size: ctx.viewport_size,
+                        dst_size: ctx.viewport_size,
+                        dst_scissor: Some(LocalScissorRect(scissor)),
+                        mask_uniform_index,
+                        mask,
+                        offset_px: (
+                            s.offset_px.x.0 * ctx.scale_factor,
+                            s.offset_px.y.0 * ctx.scale_factor,
+                        ),
+                        color: s.color,
+                        load: wgpu::LoadOp::Load,
+                    }));
                     continue;
                 }
+
                 effect_degradations.drop_shadow.applied =
                     effect_degradations.drop_shadow.applied.saturating_add(1);
 
@@ -434,18 +489,6 @@ pub(super) fn apply_chain_in_place(
                 }));
 
                 // Build blurred coverage into `scratch_blurred`, treating outside-bounds as transparent.
-                let requested_downsample = if s.downsample >= 4 {
-                    4
-                } else if s.downsample >= 2 {
-                    2
-                } else {
-                    1
-                };
-                let desired_downsample = if requested_downsample <= 1 {
-                    1
-                } else {
-                    effect_blur_desired_downsample(requested_downsample, quality)
-                };
                 let downsample_scale = if requested_downsample <= 1 {
                     1
                 } else {
@@ -1488,6 +1531,70 @@ mod tests {
         assert_eq!(blur_quality.gaussian_blur.applied_downsample_4, 1);
         assert_eq!(blur_quality.gaussian_blur.quality_degraded_downsample, 1);
         assert!(passes.iter().any(|p| matches!(p, RenderPlanPass::Blur(_))));
+    }
+
+    #[test]
+    fn drop_shadow_budget_pressure_degrades_to_hard_shadow() {
+        let viewport_size = (128, 128);
+        let format = wgpu::TextureFormat::Rgba8Unorm;
+        let full = estimate_texture_bytes(viewport_size, format, 1);
+        let budget_bytes = full.saturating_mul(2);
+
+        let ctx = EffectCompileCtx {
+            viewport_size,
+            format,
+            intermediate_budget_bytes: budget_bytes,
+            clear: wgpu::Color::TRANSPARENT,
+            scale_factor: 1.0,
+        };
+        let scissor = ScissorRect::full(viewport_size.0, viewport_size.1);
+
+        let shadow = fret_core::scene::DropShadowV1 {
+            offset_px: fret_core::Point::new(fret_core::Px(2.0), fret_core::Px(3.0)),
+            blur_radius_px: fret_core::Px(8.0),
+            downsample: 2,
+            color: fret_core::Color {
+                r: 0.0,
+                g: 0.0,
+                b: 0.0,
+                a: 1.0,
+            },
+        };
+
+        let mut passes = Vec::new();
+        let mut degradations = super::super::EffectDegradationSnapshot::default();
+        let mut blur_quality = super::super::BlurQualitySnapshot::default();
+        apply_chain_in_place(
+            &mut passes,
+            &[],
+            PlanTarget::Intermediate0,
+            fret_core::EffectMode::FilterContent,
+            fret_core::EffectChain::from_steps(&[fret_core::EffectStep::DropShadowV1(shadow)]),
+            fret_core::EffectQuality::Medium,
+            scissor,
+            None,
+            &[],
+            &mut degradations,
+            &mut blur_quality,
+            ctx,
+        );
+
+        assert_eq!(degradations.drop_shadow.requested, 1);
+        assert_eq!(degradations.drop_shadow.applied, 1);
+        assert_eq!(degradations.drop_shadow.degraded_budget_insufficient, 0);
+        assert!(
+            passes
+                .iter()
+                .any(|p| matches!(p, RenderPlanPass::DropShadow(_))),
+            "hard drop shadow fallback should still emit a DropShadow pass"
+        );
+        assert!(
+            !passes.iter().any(|p| matches!(p, RenderPlanPass::Blur(_))),
+            "hard drop shadow fallback must not emit blur passes"
+        );
+        assert_eq!(blur_quality.drop_shadow.applied, 1);
+        assert_eq!(blur_quality.drop_shadow.applied_iterations_zero, 1);
+        assert_eq!(blur_quality.drop_shadow.quality_degraded_blur_removed, 1);
     }
 }
 

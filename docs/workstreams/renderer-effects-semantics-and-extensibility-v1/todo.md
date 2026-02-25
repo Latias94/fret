@@ -67,6 +67,7 @@ This TODO is ordered by implementation priority (P0 first), and is designed to b
 - [x] Improve diagnostics for degradations:
   - [x] Add per-effect degradation counters (requested/applied + budget zero/insufficient/target exhausted).
   - [x] Add blur/shadow “applied quality” summaries (downsample + iteration stats) into perf snapshots.
+  - [x] Degrade drop shadow under tight budgets to a deterministic hard shadow (no blur) instead of skipping.
   - Evidence: `crates/fret-render-wgpu/src/renderer/types.rs`,
     `crates/fret-render-wgpu/src/renderer/render_plan.rs`,
     `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs`,
