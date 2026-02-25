@@ -1,8 +1,9 @@
 use fret_core::{Point, Px, Transform2D};
 use fret_icons::{IconId, ids};
 use fret_ui::element::{AnyElement, LayoutStyle, Length, SvgIconProps, VisualTransformProps};
-use fret_ui::{ElementContext, SvgSource, Theme, UiHost};
+use fret_ui::{ElementContext, Invalidation, SvgSource, Theme, UiHost};
 use fret_ui_kit::declarative::icon as icon_runtime;
+use fret_ui_kit::declarative::prefers_reduced_motion;
 use fret_ui_kit::declarative::scheduling;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ColorRef, LayoutRefinement};
@@ -90,8 +91,10 @@ impl Spinner {
             center = Point::new(Px(w.0 * 0.5), Px(h.0 * 0.5));
         }
 
-        let angle = cx.app.frame_id().0 as f32 * self.speed;
-        scheduling::set_continuous_frames(cx, self.speed != 0.0);
+        let reduced_motion = prefers_reduced_motion(cx, Invalidation::Paint, false);
+        let speed = if reduced_motion { 0.0 } else { self.speed };
+        let angle = cx.app.frame_id().0 as f32 * speed;
+        scheduling::set_continuous_frames(cx, speed != 0.0);
         let transform = Transform2D::rotation_about_radians(angle, center);
 
         cx.visual_transform_props(VisualTransformProps { layout, transform }, |cx| {

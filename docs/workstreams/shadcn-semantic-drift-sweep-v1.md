@@ -119,6 +119,21 @@ Status:
   - Evidence: `ecosystem/fret-ui-shadcn/src/{accordion,alert_dialog,avatar,badge,button,button_group,calendar,calendar_hijri,calendar_multiple,calendar_range,carousel,chart,checkbox,collapsible,combobox,combobox_chips,command,context_menu,data_grid,data_grid_canvas,data_table,data_table_recipes,date_picker_with_presets,date_range_picker,dialog,drawer,dropdown_menu,empty,field,form_field,hover_card,input_otp,kbd,media_image,menubar,navigation_menu,native_select,pagination,popover,progress,radio_group,resizable,scroll_area,select,sheet,shortcut_hint,skeleton,slider,spinner,tabs,textarea,toggle_group,tooltip}.rs`, `ecosystem/fret-ui-shadcn/src/extras/{announcement,avatar_stack,banner,kanban,marquee,rating,relative_time,tags,ticker}.rs`
   - Tracking: `docs/workstreams/shadcn-semantic-drift-sweep-v1-todo.md` (Token read sweep section)
 
+### 4) Reduced motion semantics: continuous animations must not request frames
+
+Some shadcn-aligned surfaces implement continuous animations (pulse, spin, marquees) by requesting
+animation frames while mounted. This must respect environment reduced-motion queries (ADR 0232):
+
+- When reduced motion is preferred, continuous animations must:
+  - render at rest (no phase/angle drift across frames),
+  - avoid requesting RAF effects while mounted.
+
+Status:
+
+- `Marquee` respects reduced motion (no RAF; stable translation).
+- `Skeleton` disables pulse under reduced motion.
+- `Spinner` disables rotation under reduced motion.
+
 ## References (contracts / docs)
 
 - Runtime contract split: `docs/adr/0066-fret-ui-runtime-contract-surface.md`

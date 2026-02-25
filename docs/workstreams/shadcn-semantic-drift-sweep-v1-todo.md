@@ -102,6 +102,15 @@ Note: `repo-ref/` is local state (not committed). See `docs/repo-ref.md`.
 - [ ] Add a small unit/perf-adjacent test or diagnostic note if this sweep reduces allocation
   churn on common views.
 
+## Reduced motion drift: continuous animations should not request frames
+
+- [x] Skeleton pulse respects reduced motion (no RAF requests):
+  - `ecosystem/fret-ui-shadcn/src/skeleton.rs`
+  - `ecosystem/fret-ui-shadcn/tests/reduced_motion_continuous_frames.rs`
+- [x] Spinner rotation respects reduced motion (no RAF requests):
+  - `ecosystem/fret-ui-shadcn/src/spinner.rs`
+  - `ecosystem/fret-ui-shadcn/tests/reduced_motion_continuous_frames.rs`
+
 ## Docs / closure
 
 - [ ] Update the drift inventory in `docs/workstreams/shadcn-semantic-drift-sweep-v1.md` as new
