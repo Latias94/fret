@@ -86,6 +86,102 @@ Rules of thumb:
     hit-testing to track motion, and `VisualTransform` when you want paint-only motion.
 - Lock motion-sensitive changes with a deterministic diag gate (`--fixed-frame-delta-ms 16`).
 
+### 1.6) Renderer parity (CSS/Tailwind → GPU-first self-rendering)
+
+shadcn/Radix sources assume DOM + CSS. In Fret, “matching upstream” often means translating CSS
+idioms into explicit scene operations and layout/paint contracts.
+
+Use this mini playbook to decide where to implement a visual parity fix and when it’s worth adding
+a new render primitive.
+
+**Rule of thumb**
+
+- If it’s purely a recipe/style choice, keep it in `ecosystem/fret-ui-shadcn` (tokens + chrome).
+- If it’s a reusable style vocabulary or shaping behavior, put it in `ecosystem/fret-ui-kit`.
+- If it requires a new draw primitive or cross-backend correctness, it likely belongs in the
+  `fret-core` scene contract + renderer(s), then expose it via `crates/fret-ui` authoring surfaces.
+
+**Common CSS → Fret translations**
+
+- `border-radius` / rounded corners
+  - Prefer first-class rounded-rect ops over “masking by many quads” when quality matters.
+  - Start points: `crates/fret-core/src/scene/`, `crates/fret-render-wgpu/` encode path.
+- `border` / `ring` / outline
+  - Distinguish “layout-affecting border” vs “paint-only ring” and lock the focus-visible contract.
+  - Evidence: `docs/adr/0061-focus-rings-and-focus-visible.md`, `crates/fret-ui/src/pixel_snap.rs`.
+- `box-shadow` / elevation
+  - Decide whether you need a real blur (expensive) vs a cheap drop shadow approximation.
+  - Prefer stable tokenized radii/offsets; gate with a screenshot or a small pixel/geometry
+    invariant when feasible.
+- `transform` animations
+  - Choose between `RenderTransform` (moves hit-test) and `VisualTransform` (paint-only), then gate
+    pointer outcomes (hover/outside-press) as well as visuals.
+- `overflow: hidden` + rounded clipping
+  - Explicit clip stacks are easy to get subtly wrong; gate scroll/overlay interactions where
+    clipping affects dismissal or pointer occlusion.
+
+**When to add a new render primitive**
+
+Add/extend a scene op only if at least one is true:
+
+- You can’t reach the upstream outcome with existing ops without major quality/perf regression.
+- Multiple shadcn/Radix components need the same capability (e.g. dashed borders, crisp rrect
+  stroke, blur variants).
+- The behavior must be identical across backends (wgpu/WebGPU), so “just do it in a component”
+  would fork correctness.
+
+If you do add a primitive, require a gate at the same layer:
+
+- Contract-level unit test (scene op encoding / invariants), and
+- At least one consumer-level usage anchor (a shadcn recipe + a diag script or parity case).
+
+### 1.65) Semantic conflict hazards (avoid “fighting” sources of truth)
+
+As Fret gains more query surfaces (viewport snapshots, container regions, theme metadata, slot
+scoping), the most expensive regressions come from *semantic conflicts*: the same decision is
+implicitly driven by multiple “truths” that do not update at the same cadence.
+
+Use these rules to keep parity work stable and refactors landable.
+
+**Single source of truth per decision**
+
+- For each responsive decision point, choose exactly one driver:
+  - **viewport** (device shell / Tailwind `sm|md|lg` semantics), or
+  - **container region** (panel width / docking resize).
+- If both are needed, expose an explicit recipe-level knob (defaulting to web parity) and gate both
+  modes. Do not silently “mix and match” in one layout subtree.
+
+**Overlays and circular sizing**
+
+- In overlay slots (popover/menu/dialog/sheet), prefer viewport queries for breakpoint-like
+  decisions unless you can prove the container region is stable.
+- Watch for “content decides overlay size, overlay size decides content breakpoint” loops. If you
+  see resize jitter or non-deterministic first frame layout, treat it as a semantic conflict and
+  add a targeted gate.
+
+**Theme vs environment**
+
+- Prefer app-owned theme metadata (e.g. `Theme.color_scheme`) for “dark vs light” styling decisions.
+- Treat per-window environment hints (OS color scheme) as inputs to theme selection, not as a
+  long-lived styling oracle inside recipes.
+
+**Transforms and hit-testing**
+
+- If a visual change affects interaction (hover/outside-press/drag handles), use
+  `RenderTransform`. If it is paint-only, use `VisualTransform` and gate pointer outcomes
+  explicitly.
+
+**Stability mechanisms**
+
+- Use hysteresis for breakpoint thresholds (viewport/container) to prevent flicker during resize.
+- Prefer snapshot-style reads for “hot path” token/query reads and keep invalidation scopes tight.
+
+**Regression protection**
+
+- Always add at least one gate for a semantic decision:
+  - invariant test for layout/semantics, and/or
+  - `tools/diag-scripts/*.json` that exercises resize/dismiss/focus outcomes via stable `test_id`s.
+
 ### 1.75) Pointer / hit-testing / drag / cursor parity (GPU-first gotchas)
 
 Common DOM-to-Fret translation points to check:
