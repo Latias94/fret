@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use crate::util::write_json_value;
+use crate::util::{now_unix_ms, write_json_value};
 
 use super::semantics::{
     semantics_diff_detail, semantics_diff_summary, semantics_node_fields_for_test_id,
@@ -319,6 +319,174 @@ pub(crate) fn scan_semantics_changed_repainted_json(
     }
 
     scan
+}
+
+#[derive(Debug, Clone)]
+struct IdleNoPaintWindowReport {
+    window: u64,
+    examined_snapshots: u64,
+    idle_frames_total: u64,
+    paint_frames_total: u64,
+    idle_streak_max: u64,
+    idle_streak_tail: u64,
+    last_paint: Option<serde_json::Value>,
+}
+
+fn snapshot_is_idle_no_paint(snapshot: &serde_json::Value) -> bool {
+    let stats = snapshot.get("debug").and_then(|v| v.get("stats"));
+    let prepaint_time_us = stats
+        .and_then(|v| v.get("prepaint_time_us"))
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0);
+    let paint_time_us = stats
+        .and_then(|v| v.get("paint_time_us"))
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0);
+    let paint_nodes_performed = stats
+        .and_then(|v| v.get("paint_nodes_performed"))
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0);
+    prepaint_time_us == 0 && paint_time_us == 0 && paint_nodes_performed == 0
+}
+
+pub(crate) fn check_bundle_for_idle_no_paint_min(
+    bundle_path: &Path,
+    out_dir: &Path,
+    min_idle_frames: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle artifact: missing windows".to_string())?;
+
+    let mut reports: Vec<IdleNoPaintWindowReport> = Vec::new();
+    let mut failures: Vec<serde_json::Value> = Vec::new();
+
+    for w in windows {
+        let window = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+
+        let mut examined_snapshots: u64 = 0;
+        let mut idle_frames_total: u64 = 0;
+        let mut paint_frames_total: u64 = 0;
+        let mut idle_streak: u64 = 0;
+        let mut idle_streak_max: u64 = 0;
+        let mut last_paint: Option<serde_json::Value> = None;
+
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let is_idle = snapshot_is_idle_no_paint(s);
+            if is_idle {
+                idle_frames_total = idle_frames_total.saturating_add(1);
+                idle_streak = idle_streak.saturating_add(1);
+                idle_streak_max = idle_streak_max.max(idle_streak);
+            } else {
+                paint_frames_total = paint_frames_total.saturating_add(1);
+                idle_streak = 0;
+
+                let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
+                let stats = s.get("debug").and_then(|v| v.get("stats"));
+                let prepaint_time_us = stats
+                    .and_then(|v| v.get("prepaint_time_us"))
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0);
+                let paint_time_us = stats
+                    .and_then(|v| v.get("paint_time_us"))
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0);
+                let paint_nodes_performed = stats
+                    .and_then(|v| v.get("paint_nodes_performed"))
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0);
+                last_paint = Some(serde_json::json!({
+                    "tick_id": tick_id,
+                    "frame_id": frame_id,
+                    "prepaint_time_us": prepaint_time_us,
+                    "paint_time_us": paint_time_us,
+                    "paint_nodes_performed": paint_nodes_performed,
+                }));
+            }
+        }
+
+        reports.push(IdleNoPaintWindowReport {
+            window,
+            examined_snapshots,
+            idle_frames_total,
+            paint_frames_total,
+            idle_streak_max,
+            idle_streak_tail: idle_streak,
+            last_paint: last_paint.clone(),
+        });
+
+        let mut fail_reason: Option<&'static str> = None;
+        if min_idle_frames > 0 && examined_snapshots < min_idle_frames {
+            fail_reason = Some("insufficient_snapshots");
+        } else if min_idle_frames > 0 && idle_streak < min_idle_frames {
+            fail_reason = Some("idle_tail_streak_too_small");
+        }
+
+        if let Some(reason) = fail_reason {
+            failures.push(serde_json::json!({
+                "window": window,
+                "reason": reason,
+                "examined_snapshots": examined_snapshots,
+                "idle_streak_tail": idle_streak,
+                "idle_streak_max": idle_streak_max,
+                "idle_frames_total": idle_frames_total,
+                "paint_frames_total": paint_frames_total,
+                "last_paint": last_paint,
+            }));
+        }
+    }
+
+    let out_path = out_dir.join("check.idle_no_paint.json");
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "idle_no_paint",
+        "bundle_json": bundle_path.display().to_string(),
+        "out_dir": out_dir.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "min_idle_frames": min_idle_frames,
+        "windows": reports.iter().map(|r| serde_json::json!({
+            "window": r.window,
+            "examined_snapshots": r.examined_snapshots,
+            "idle_frames_total": r.idle_frames_total,
+            "paint_frames_total": r.paint_frames_total,
+            "idle_streak_max": r.idle_streak_max,
+            "idle_streak_tail": r.idle_streak_tail,
+            "last_paint": r.last_paint,
+        })).collect::<Vec<_>>(),
+        "failures": failures,
+    });
+    let _ = write_json_value(&out_path, &payload);
+
+    if payload
+        .get("failures")
+        .and_then(|v| v.as_array())
+        .map(|v| v.is_empty())
+        .unwrap_or(true)
+    {
+        return Ok(());
+    }
+
+    Err(format!(
+        "idle no-paint gate failed (min_idle_frames={min_idle_frames}, warmup_frames={warmup_frames})\n  bundle: {}\n  evidence: {}",
+        bundle_path.display(),
+        out_path.display()
+    ))
 }
 
 pub(crate) fn check_bundle_for_stale_scene_json(

@@ -244,7 +244,7 @@ pub(crate) fn apply_post_run_checks(
         stats::check_bundle_for_stale_scene(bundle_path, test_id, check_stale_scene_eps)?;
     }
     if let Some(min) = check_idle_no_paint_min {
-        check_bundle_for_idle_no_paint_min(bundle_path, out_dir, min, warmup_frames)?;
+        stats::check_bundle_for_idle_no_paint_min(bundle_path, out_dir, min, warmup_frames)?;
     }
     if let Some(test_id) = check_pixels_changed_test_id {
         check_out_dir_for_pixels_changed(out_dir, test_id, warmup_frames)?;

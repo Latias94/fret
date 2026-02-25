@@ -53,8 +53,8 @@ pub(super) use retained_vlist_gates::{
     check_bundle_for_retained_vlist_reconcile_no_notify_min,
 };
 pub(super) use stale::{
-    check_bundle_for_semantics_changed_repainted, check_bundle_for_stale_paint,
-    check_bundle_for_stale_scene,
+    check_bundle_for_idle_no_paint_min, check_bundle_for_semantics_changed_repainted,
+    check_bundle_for_stale_paint, check_bundle_for_stale_scene,
 };
 pub(super) use ui_gallery_text_gates::{
     check_out_dir_for_ui_gallery_text_fallback_policy_key_bumps_on_locale_change,

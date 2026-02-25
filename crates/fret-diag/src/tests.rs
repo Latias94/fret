@@ -3,7 +3,8 @@ use crate::compare::compare_bundles_json;
 use crate::stats::{
     bundle_stats_from_json_with_options, check_bundle_for_chart_sampling_window_shifts_min,
     check_bundle_for_dock_drag_min_json, check_bundle_for_gc_sweep_liveness,
-    check_bundle_for_layout_fast_path_min, check_bundle_for_node_graph_cull_window_shifts_max,
+    check_bundle_for_idle_no_paint_min, check_bundle_for_layout_fast_path_min,
+    check_bundle_for_node_graph_cull_window_shifts_max,
     check_bundle_for_node_graph_cull_window_shifts_min, check_bundle_for_notify_hotspot_file_max,
     check_bundle_for_overlay_synthesis_min_json, check_bundle_for_prepaint_actions_min,
     check_bundle_for_retained_vlist_attach_detach_max_json,
