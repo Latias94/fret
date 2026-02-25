@@ -19,7 +19,7 @@ use fret_ui::element::{
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side};
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::collection_semantics::CollectionSemanticsExt as _;
 use fret_ui_kit::declarative::current_color;
@@ -58,7 +58,10 @@ fn alpha_mul(mut c: fret_core::Color, mul: f32) -> fret_core::Color {
     c
 }
 
-fn menu_destructive_focus_bg(theme: &Theme, destructive_fg: fret_core::Color) -> fret_core::Color {
+fn menu_destructive_focus_bg(
+    theme: &ThemeSnapshot,
+    destructive_fg: fret_core::Color,
+) -> fret_core::Color {
     if let Some(c) = theme.color_by_key("component.menu.destructive_focus_bg") {
         return c;
     }
@@ -428,7 +431,7 @@ impl ContextMenuShortcut {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
         let fg = theme.color_token("muted-foreground");
         let font_size = theme.metric_token("font.size");
         let font_line_height = theme.metric_token("font.line_height");
@@ -2180,7 +2183,7 @@ fn context_menu_submenu_panel<H: UiHost>(
     submenu_models: menu::sub::MenuSubmenuModels,
     cancel_open: ContextMenuCancelOpenShared,
 ) -> AnyElement {
-    let theme = Theme::global(&*cx.app).clone();
+    let theme = Theme::global(&*cx.app).snapshot();
     let gating = crate::command_gating::snapshot_for_window(&*cx.app, cx.window);
 
     let entries_tree = entries;
@@ -2659,7 +2662,7 @@ impl ContextMenu {
         I: IntoIterator<Item = ContextMenuEntry>,
     {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
+            let theme = Theme::global(&*cx.app).snapshot();
             let submenu_max_height_metric = theme.metric_by_key("component.context_menu.max_height");
             let is_open = cx
                 .watch_model(&self.open)
@@ -4456,7 +4459,7 @@ mod tests {
                     cx.with_state(context_menu_cancel_open_shared, |shared| shared.clone());
                 debug_out.set(Some(shared.clone()));
 
-                let theme = Theme::global(&*cx.app).clone();
+                let theme = Theme::global(&*cx.app).snapshot();
                 let is_open = cx.watch_model(&open).layout().copied().unwrap_or(false);
                 let motion =
                     radix_presence::scale_fade_presence_with_durations_and_cubic_bezier_duration(
