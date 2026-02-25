@@ -840,14 +840,20 @@ impl Button {
                             children.take().unwrap_or_default()
                         };
 
-                        vec![fret_ui_kit::declarative::stack::hstack(
-                            cx,
-                            fret_ui_kit::declarative::stack::HStackProps::default()
-                                .justify(content_justify)
-                                .items_center()
-                                .gap_x(gap),
-                            |_cx| content,
-                        )]
+                        let mut props = fret_ui_kit::declarative::stack::HStackProps::default()
+                            .justify(content_justify)
+                            .items_center()
+                            .gap_x(gap);
+                        if is_icon {
+                            // shadcn/ui icon buttons are `inline-flex items-center justify-center`
+                            // in a fixed square. Ensure the content stack stretches so the icon
+                            // is centered within that box.
+                            props = props.layout(LayoutRefinement::default().w_full().h_full());
+                        }
+
+                        vec![fret_ui_kit::declarative::stack::hstack(cx, props, |_cx| {
+                            content
+                        })]
                     })
                 };
 

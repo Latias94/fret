@@ -29,6 +29,7 @@ use crate::{OverlayController, OverlayPresence, OverlayRequest};
 use crate::primitives::dialog as dialog_prim;
 use crate::primitives::popper;
 pub use crate::primitives::popper::{Align, LayoutDirection, Side};
+use crate::primitives::portal_inherited;
 use crate::primitives::trigger_a11y;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -423,7 +424,8 @@ pub fn popover_dialog_wrapper_id<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     overlay_root_name: &str,
 ) -> GlobalElementId {
-    cx.with_root_name(overlay_root_name, |cx| {
+    let inherited = portal_inherited::PortalInherited::capture(cx);
+    portal_inherited::with_root_name_inheriting(cx, overlay_root_name, inherited, |cx| {
         let element = popover_dialog_wrapper(cx, None, |_cx| Vec::new());
         element.id
     })
@@ -813,9 +815,11 @@ mod tests {
         fret_ui::elements::with_element_cx(&mut app, window, b, "test", |cx| {
             let root_name = "popover-dialog-wrapper-id-test";
             let computed = popover_dialog_wrapper_id::<App>(cx, root_name);
-            let rendered = cx.with_root_name(root_name, |cx| {
-                popover_dialog_wrapper(cx, None, |_cx| Vec::new())
-            });
+            let inherited = portal_inherited::PortalInherited::capture(cx);
+            let rendered =
+                portal_inherited::with_root_name_inheriting(cx, root_name, inherited, |cx| {
+                    popover_dialog_wrapper(cx, None, |_cx| Vec::new())
+                });
             assert_eq!(computed, rendered.id);
         });
     }

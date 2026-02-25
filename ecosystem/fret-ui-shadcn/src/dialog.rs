@@ -18,6 +18,7 @@ use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::dialog as radix_dialog;
+use fret_ui_kit::primitives::portal_inherited;
 use fret_ui_kit::recipes::glass::GlassEffectRefinement;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
@@ -357,128 +358,134 @@ impl Dialog {
 
                 let opacity = motion.progress;
                 let overlay_backdrop = self.overlay_backdrop.clone();
-                let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
-                    let barrier_fill: AnyElement = match overlay_backdrop {
-                        DialogOverlayBackdrop::Solid => cx.container(
-                            ContainerProps {
-                                layout: LayoutStyle {
-                                    size: SizeStyle {
-                                        width: Length::Fill,
-                                        height: Length::Fill,
+                let portal_inherited = portal_inherited::PortalInherited::capture(cx);
+                let overlay_children = portal_inherited::with_root_name_inheriting(
+                    cx,
+                    &overlay_root_name,
+                    portal_inherited,
+                    |cx| {
+                        let barrier_fill: AnyElement = match overlay_backdrop {
+                            DialogOverlayBackdrop::Solid => cx.container(
+                                ContainerProps {
+                                    layout: LayoutStyle {
+                                        size: SizeStyle {
+                                            width: Length::Fill,
+                                            height: Length::Fill,
+                                            ..Default::default()
+                                        },
                                         ..Default::default()
                                     },
+                                    padding: Edges::all(Px(0.0)).into(),
+                                    background: Some(overlay_color),
+                                    shadow: None,
+                                    border: Edges::all(Px(0.0)),
+                                    border_color: None,
+                                    corner_radii: Corners::all(Px(0.0)),
                                     ..Default::default()
                                 },
-                                padding: Edges::all(Px(0.0)).into(),
-                                background: Some(overlay_color),
-                                shadow: None,
-                                border: Edges::all(Px(0.0)),
-                                border_color: None,
-                                corner_radii: Corners::all(Px(0.0)),
-                                ..Default::default()
-                            },
-                            |_cx| Vec::new(),
-                        ),
-                        DialogOverlayBackdrop::Glass(refinement) => {
-                            let mut layout = LayoutStyle::default();
-                            layout.size.width = Length::Fill;
-                            layout.size.height = Length::Fill;
+                                |_cx| Vec::new(),
+                            ),
+                            DialogOverlayBackdrop::Glass(refinement) => {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Fill;
+                                layout.size.height = Length::Fill;
 
-                            let chrome = ChromeRefinement::default()
-                                .p(Space::N0)
-                                .radius(Px(0.0))
-                                .border_width(Px(0.0))
-                                .bg(ColorRef::Color(overlay_color));
-                            let effect = GlassEffectRefinement {
-                                blur_radius_px: Some(refinement.blur_radius_px),
-                                blur_downsample: Some(refinement.blur_downsample),
-                                saturation: Some(refinement.saturation),
-                                brightness: Some(refinement.brightness),
-                                contrast: Some(refinement.contrast),
-                            };
+                                let chrome = ChromeRefinement::default()
+                                    .p(Space::N0)
+                                    .radius(Px(0.0))
+                                    .border_width(Px(0.0))
+                                    .bg(ColorRef::Color(overlay_color));
+                                let effect = GlassEffectRefinement {
+                                    blur_radius_px: Some(refinement.blur_radius_px),
+                                    blur_downsample: Some(refinement.blur_downsample),
+                                    saturation: Some(refinement.saturation),
+                                    brightness: Some(refinement.brightness),
+                                    contrast: Some(refinement.contrast),
+                                };
 
-                            glass_panel(
-                                cx,
-                                GlassPanelProps {
-                                    layout,
-                                    chrome,
-                                    effect,
+                                glass_panel(
+                                    cx,
+                                    GlassPanelProps {
+                                        layout,
+                                        chrome,
+                                        effect,
+                                        ..Default::default()
+                                    },
+                                    |_cx| Vec::<AnyElement>::new(),
+                                )
+                            }
+                        };
+
+                        crate::a11y_modal::begin_modal_a11y_scope(cx.app, open_id);
+                        let content = content(cx);
+                        let content_id = content.id;
+                        content_element_for_trigger.set(Some(content_id));
+                        crate::a11y_modal::end_modal_a11y_scope(cx.app, open_id);
+
+                        // Center the dialog via an input-transparent flex wrapper so we don't need
+                        // last-frame bounds (which can cause a 1-frame jump on first open).
+                        let outer = cx.environment_viewport_bounds(fret_ui::Invalidation::Layout);
+                        let origin = Point::new(
+                            Px(outer.origin.x.0 + outer.size.width.0 * 0.5),
+                            Px(outer.origin.y.0 + outer.size.height.0 * 0.5),
+                        );
+                        let zoom = overlay_motion::shadcn_zoom_transform(origin, opacity);
+
+                        let mut centered_layout = LayoutStyle::default();
+                        centered_layout.size.width = Length::Fill;
+                        centered_layout.size.height = Length::Fill;
+                        let centered = cx.semantic_flex(
+                            SemanticFlexProps {
+                                role: SemanticsRole::Generic,
+                                flex: FlexProps {
+                                    layout: centered_layout,
+                                    direction: fret_core::Axis::Vertical,
+                                    padding: Edges::all(window_padding_px).into(),
+                                    justify: MainAlign::Center,
+                                    align: CrossAlign::Center,
                                     ..Default::default()
                                 },
-                                |_cx| Vec::<AnyElement>::new(),
-                            )
-                        }
-                    };
-
-                    crate::a11y_modal::begin_modal_a11y_scope(cx.app, open_id);
-                    let content = content(cx);
-                    let content_id = content.id;
-                    content_element_for_trigger.set(Some(content_id));
-                    crate::a11y_modal::end_modal_a11y_scope(cx.app, open_id);
-
-                    // Center the dialog via an input-transparent flex wrapper so we don't need
-                    // last-frame bounds (which can cause a 1-frame jump on first open).
-                    let outer = cx.environment_viewport_bounds(fret_ui::Invalidation::Layout);
-                    let origin = Point::new(
-                        Px(outer.origin.x.0 + outer.size.width.0 * 0.5),
-                        Px(outer.origin.y.0 + outer.size.height.0 * 0.5),
-                    );
-                    let zoom = overlay_motion::shadcn_zoom_transform(origin, opacity);
-
-                    let mut centered_layout = LayoutStyle::default();
-                    centered_layout.size.width = Length::Fill;
-                    centered_layout.size.height = Length::Fill;
-                    let centered = cx.semantic_flex(
-                        SemanticFlexProps {
-                            role: SemanticsRole::Generic,
-                            flex: FlexProps {
-                                layout: centered_layout,
-                                direction: fret_core::Axis::Vertical,
-                                padding: Edges::all(window_padding_px).into(),
-                                justify: MainAlign::Center,
-                                align: CrossAlign::Center,
-                                ..Default::default()
                             },
-                        },
-                        move |_cx| vec![content],
-                    );
-                    let dialog = overlay_motion::wrap_opacity_and_render_transform(
-                        cx,
-                        opacity,
-                        zoom,
-                        vec![centered],
-                    );
-
-                    let opacity_layout = LayoutStyle {
-                        size: SizeStyle {
-                            width: Length::Fill,
-                            height: Length::Fill,
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    };
-                    let barrier = cx.opacity_props(
-                        OpacityProps {
-                            layout: opacity_layout,
+                            move |_cx| vec![content],
+                        );
+                        let dialog = overlay_motion::wrap_opacity_and_render_transform(
+                            cx,
                             opacity,
-                        },
-                        move |_cx| vec![barrier_fill],
-                    );
-                    let open_for_children = self.open.clone();
-                    let dialog_options = radix_dialog::DialogOptions::default()
-                        .dismiss_on_overlay_press(overlay_closable)
-                        .initial_focus(None)
-                        .on_open_auto_focus(on_open_auto_focus.clone())
-                        .on_close_auto_focus(on_close_auto_focus.clone());
-                    radix_dialog::modal_dialog_layer_elements_with_dismiss_handler(
-                        cx,
-                        open_for_children.clone(),
-                        dialog_options,
-                        on_dismiss_request_for_barrier.clone(),
-                        [barrier],
-                        dialog,
-                    )
-                });
+                            zoom,
+                            vec![centered],
+                        );
+
+                        let opacity_layout = LayoutStyle {
+                            size: SizeStyle {
+                                width: Length::Fill,
+                                height: Length::Fill,
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        };
+                        let barrier = cx.opacity_props(
+                            OpacityProps {
+                                layout: opacity_layout,
+                                opacity,
+                            },
+                            move |_cx| vec![barrier_fill],
+                        );
+                        let open_for_children = self.open.clone();
+                        let dialog_options = radix_dialog::DialogOptions::default()
+                            .dismiss_on_overlay_press(overlay_closable)
+                            .initial_focus(None)
+                            .on_open_auto_focus(on_open_auto_focus.clone())
+                            .on_close_auto_focus(on_close_auto_focus.clone());
+                        radix_dialog::modal_dialog_layer_elements_with_dismiss_handler(
+                            cx,
+                            open_for_children.clone(),
+                            dialog_options,
+                            on_dismiss_request_for_barrier.clone(),
+                            [barrier],
+                            dialog,
+                        )
+                    },
+                );
 
                 if let Some(content_element) = content_element_for_trigger.get() {
                     cx.with_state(DialogA11yState::default, |st| {

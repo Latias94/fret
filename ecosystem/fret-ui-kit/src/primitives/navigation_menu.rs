@@ -25,6 +25,7 @@ use crate::declarative::model_watch::ModelWatchExt;
 use crate::headless::transition::TransitionTimeline;
 use crate::overlay;
 use crate::primitives::popper;
+use crate::primitives::portal_inherited;
 use crate::{OverlayController, OverlayPresence, OverlayRequest};
 
 /// Radix `delayDuration` default (milliseconds).
@@ -248,7 +249,8 @@ pub fn navigation_menu_viewport_content_semantics_id<H: UiHost>(
     overlay_root_name: &str,
     value: &str,
 ) -> GlobalElementId {
-    cx.with_root_name(overlay_root_name, |cx| {
+    let inherited = portal_inherited::PortalInherited::capture(cx);
+    portal_inherited::with_root_name_inheriting(cx, overlay_root_name, inherited, |cx| {
         navigation_menu_viewport_content_semantics_id_in_scope::<H>(cx, value)
     })
 }
@@ -548,105 +550,113 @@ pub fn navigation_menu_request_viewport_overlay<H: UiHost>(
     let overlay_root_name = OverlayController::popover_root_name(root_id);
     let mut computed_layout: Option<NavigationMenuViewportOverlayLayout> = None;
 
-    let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
-        let Some(value) = selected_value else {
-            return Vec::new();
-        };
-        let trigger_anchor_id = navigation_menu_trigger_id(cx, root_id, value);
-        let trigger_anchor = trigger_anchor_id.and_then(|id| {
-            cx.last_visual_bounds_for_element(id)
-                .or_else(|| cx.last_bounds_for_element(id))
-        });
-        let Some(trigger_anchor) = trigger_anchor else {
-            return Vec::new();
-        };
-
-        let placement_anchor = args
-            .placement_anchor_override
-            .and_then(|id| {
+    let inherited = portal_inherited::PortalInherited::capture(cx);
+    let overlay_children = portal_inherited::with_root_name_inheriting(
+        cx,
+        &overlay_root_name,
+        inherited,
+        |cx| {
+            let Some(value) = selected_value else {
+                return Vec::new();
+            };
+            let trigger_anchor_id = navigation_menu_trigger_id(cx, root_id, value);
+            let trigger_anchor = trigger_anchor_id.and_then(|id| {
                 cx.last_visual_bounds_for_element(id)
                     .or_else(|| cx.last_bounds_for_element(id))
-            })
-            .map(|override_anchor| match args.placement.side {
-                Side::Top | Side::Bottom => Rect::new(
-                    Point::new(override_anchor.origin.x, trigger_anchor.origin.y),
-                    Size::new(override_anchor.size.width, trigger_anchor.size.height),
-                ),
-                Side::Left | Side::Right => Rect::new(
-                    Point::new(trigger_anchor.origin.x, override_anchor.origin.y),
-                    Size::new(trigger_anchor.size.width, override_anchor.size.height),
-                ),
-            })
-            .unwrap_or(trigger_anchor);
+            });
+            let Some(trigger_anchor) = trigger_anchor else {
+                return Vec::new();
+            };
 
-        let content_size = if args.width_tracks_anchor {
-            Size::new(placement_anchor.size.width, args.content_size.height)
-        } else {
-            args.content_size
-        };
+            let placement_anchor = args
+                .placement_anchor_override
+                .and_then(|id| {
+                    cx.last_visual_bounds_for_element(id)
+                        .or_else(|| cx.last_bounds_for_element(id))
+                })
+                .map(|override_anchor| match args.placement.side {
+                    Side::Top | Side::Bottom => Rect::new(
+                        Point::new(override_anchor.origin.x, trigger_anchor.origin.y),
+                        Size::new(override_anchor.size.width, trigger_anchor.size.height),
+                    ),
+                    Side::Left | Side::Right => Rect::new(
+                        Point::new(trigger_anchor.origin.x, override_anchor.origin.y),
+                        Size::new(trigger_anchor.size.width, override_anchor.size.height),
+                    ),
+                })
+                .unwrap_or(trigger_anchor);
 
-        if std::env::var("FRET_DEBUG_NAV_MENU_OVERLAY").ok().as_deref() == Some("1") {
-            eprintln!(
-                "nav-menu overlay root={:?} selected={:?} trigger_anchor={:?} override={:?} placement_anchor={:?} content_size={:?} width_tracks_anchor={}",
-                root_id,
-                selected_value,
-                trigger_anchor,
-                args.placement_anchor_override.and_then(|id| cx.last_bounds_for_element(id)),
+            let content_size = if args.width_tracks_anchor {
+                Size::new(placement_anchor.size.width, args.content_size.height)
+            } else {
+                args.content_size
+            };
+
+            if std::env::var("FRET_DEBUG_NAV_MENU_OVERLAY").ok().as_deref() == Some("1") {
+                eprintln!(
+                    "nav-menu overlay root={:?} selected={:?} trigger_anchor={:?} override={:?} placement_anchor={:?} content_size={:?} width_tracks_anchor={}",
+                    root_id,
+                    selected_value,
+                    trigger_anchor,
+                    args.placement_anchor_override
+                        .and_then(|id| cx.last_bounds_for_element(id)),
+                    placement_anchor,
+                    content_size,
+                    args.width_tracks_anchor
+                );
+            }
+
+            let outer = overlay::outer_bounds_with_window_margin_for_environment(
+                cx,
+                fret_ui::Invalidation::Layout,
+                args.window_margin,
+            );
+            let popper_layout = popper::popper_content_layout_unclamped(
+                outer,
                 placement_anchor,
                 content_size,
-                args.width_tracks_anchor
+                args.placement,
             );
-        }
+            let placed = popper_layout.rect;
 
-        let outer = overlay::outer_bounds_with_window_margin_for_environment(
-            cx,
-            fret_ui::Invalidation::Layout,
-            args.window_margin,
-        );
-        let popper_layout = popper::popper_content_layout_unclamped(
-            outer,
-            placement_anchor,
-            content_size,
-            args.placement,
-        );
-        let placed = popper_layout.rect;
+            if std::env::var("FRET_DEBUG_NAV_MENU_OVERLAY").ok().as_deref() == Some("1") {
+                eprintln!(
+                    "nav-menu overlay outer={:?} window_margin={:?} placed={:?}",
+                    outer, args.window_margin, placed
+                );
+            }
 
-        if std::env::var("FRET_DEBUG_NAV_MENU_OVERLAY").ok().as_deref() == Some("1") {
-            eprintln!(
-                "nav-menu overlay outer={:?} window_margin={:?} placed={:?}",
-                outer, args.window_margin, placed
+            let transform_origin =
+                popper::popper_content_transform_origin(&popper_layout, placement_anchor, None);
+            let indicator_rect = navigation_menu_indicator_rect(
+                trigger_anchor,
+                placed,
+                popper_layout.side,
+                args.indicator_size,
             );
-        }
 
-        let transform_origin =
-            popper::popper_content_transform_origin(&popper_layout, placement_anchor, None);
-        let indicator_rect = navigation_menu_indicator_rect(
-            trigger_anchor,
-            placed,
-            popper_layout.side,
-            args.indicator_size,
-        );
+            let layout = NavigationMenuViewportOverlayLayout {
+                anchor: trigger_anchor,
+                placed,
+                side: popper_layout.side,
+                transform_origin,
+                indicator_rect,
+            };
+            computed_layout = Some(layout);
 
-        let layout = NavigationMenuViewportOverlayLayout {
-            anchor: trigger_anchor,
-            placed,
-            side: popper_layout.side,
-            transform_origin,
-            indicator_rect,
-        };
-        computed_layout = Some(layout);
+            let out = render(cx, layout);
 
-        let out = render(cx, layout);
+            let overlay_content =
+                crate::declarative::overlay_motion::wrap_opacity_and_render_transform(
+                    cx,
+                    out.opacity,
+                    out.transform,
+                    out.children,
+                );
 
-        let overlay_content = crate::declarative::overlay_motion::wrap_opacity_and_render_transform(
-            cx,
-            out.opacity,
-            out.transform,
-            out.children,
-        );
-
-        vec![overlay_content]
-    });
+            vec![overlay_content]
+        },
+    );
 
     let open_model_for_request = open_model.clone();
     let mut request = OverlayRequest::dismissible_popover(

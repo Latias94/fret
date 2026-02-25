@@ -15,6 +15,7 @@ use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
 
 use crate::OverlayController;
+use crate::primitives::portal_inherited;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PortalKind {
@@ -45,6 +46,7 @@ pub fn with_portal_root_name<H: UiHost, R>(
     id: GlobalElementId,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
 ) -> R {
+    let inherited = portal_inherited::PortalInherited::capture(cx);
     let root_name = portal_root_name(kind, id);
-    cx.with_root_name(&root_name, f)
+    portal_inherited::with_root_name_inheriting(cx, &root_name, inherited, f)
 }
