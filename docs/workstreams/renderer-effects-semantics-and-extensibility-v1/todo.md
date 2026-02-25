@@ -83,6 +83,7 @@ This TODO is ordered by implementation priority (P0 first), and is designed to b
   - [ ] Explicit cost model + budgeting hooks so the plan can reject/degrade deterministically.
   - [ ] Clear layering: core contract stays small; ecosystem can provide “recipes” that map to the extension.
   - Non-goal: arbitrary user-provided WGSL in core without a bounded ABI and capability gates.
+  - Design doc: `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-abi-wgpu-mvp.md`.
 
 ## Suggested regression gates
 
