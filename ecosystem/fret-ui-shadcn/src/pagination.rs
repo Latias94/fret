@@ -4,7 +4,7 @@ use fret_runtime::CommandId;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, MainAlign, PressableProps,
 };
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::icon as decl_icon;
@@ -27,35 +27,27 @@ fn alpha(color: Color, a: f32) -> Color {
     }
 }
 
-fn radius(theme: &Theme) -> Px {
+fn radius(theme: &ThemeSnapshot) -> Px {
     MetricRef::radius(Radius::Md).resolve(theme)
 }
 
-fn icon_size(theme: &Theme) -> Px {
-    ComponentSize::Medium.icon_button_size(theme)
-}
-
-fn button_h(theme: &Theme) -> Px {
-    ComponentSize::Medium.button_h(theme)
-}
-
-fn border_color(theme: &Theme) -> Color {
+fn border_color(theme: &ThemeSnapshot) -> Color {
     theme.color_token("border")
 }
 
-fn accent(theme: &Theme) -> Color {
+fn accent(theme: &ThemeSnapshot) -> Color {
     theme.color_token("accent")
 }
 
-fn accent_fg(theme: &Theme) -> Color {
+fn accent_fg(theme: &ThemeSnapshot) -> Color {
     theme.color_token("accent-foreground")
 }
 
-fn base_fg(theme: &Theme) -> Color {
+fn base_fg(theme: &ThemeSnapshot) -> Color {
     theme.color_token("foreground")
 }
 
-fn disabled_fg(theme: &Theme) -> Color {
+fn disabled_fg(theme: &ThemeSnapshot) -> Color {
     alpha(base_fg(theme), 0.5)
 }
 
@@ -81,7 +73,7 @@ impl Pagination {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
         let layout = decl_style::layout_style(&theme, self.layout);
         let children = self.children;
 
@@ -113,7 +105,7 @@ impl PaginationContent {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
         let gap = MetricRef::space(Space::N1).resolve(&theme);
         let children = self.children;
 
@@ -191,7 +183,9 @@ impl PaginationLink {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
+        let icon_size = ComponentSize::Medium.icon_button_size(Theme::global(&*cx.app));
+        let button_h = ComponentSize::Medium.button_h(Theme::global(&*cx.app));
 
         let r = radius(&theme);
         let gap = MetricRef::space(Space::N1).resolve(&theme);
@@ -229,27 +223,24 @@ impl PaginationLink {
         let children = self.children;
 
         let (layout, padding, inner_gap, inner_wrap) = match self.size {
-            PaginationLinkSize::Icon => {
-                let s = icon_size(&theme);
-                (
-                    decl_style::layout_style(
-                        &theme,
-                        LayoutRefinement::default()
-                            .w_px(s)
-                            .h_px(s)
-                            .flex_none()
-                            .flex_shrink_0(),
-                    ),
-                    Edges::all(Px(0.0)),
-                    Px(0.0),
-                    false,
-                )
-            }
+            PaginationLinkSize::Icon => (
+                decl_style::layout_style(
+                    &theme,
+                    LayoutRefinement::default()
+                        .w_px(icon_size)
+                        .h_px(icon_size)
+                        .flex_none()
+                        .flex_shrink_0(),
+                ),
+                Edges::all(Px(0.0)),
+                Px(0.0),
+                false,
+            ),
             PaginationLinkSize::Default => (
                 decl_style::layout_style(
                     &theme,
                     LayoutRefinement::default()
-                        .min_h(button_h(&theme))
+                        .min_h(button_h)
                         .flex_none()
                         .flex_shrink_0(),
                 ),
@@ -468,8 +459,8 @@ impl PaginationEllipsis {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
-        let s = icon_size(&theme);
+        let theme = Theme::global(&*cx.app).snapshot();
+        let s = ComponentSize::Medium.icon_button_size(Theme::global(&*cx.app));
         let layout = decl_style::layout_style(
             &theme,
             LayoutRefinement::default()
