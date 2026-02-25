@@ -33,6 +33,8 @@ Regression gates (recommended before removing any medium/high-risk item):
   - Status: moved `check_bundle_for_idle_no_paint_min` into `stats::stale` (2026-02-25).
 - [x] Extract script gate policy helpers from crate root.
   - Status: `crates/fret-diag/src/diag_policy.rs` owns UI-gallery script classification helpers (2026-02-25).
+- [x] Extract pixels-changed gate from crate root.
+  - Status: `crates/fret-diag/src/stats/pixels_changed.rs` owns the screenshots-driven pixels-changed gate (2026-02-25).
 - [ ] Delete unused helpers and dead code blocks as they appear during refactors.
   - Rule of thumb: if it has no call sites and no tests rely on it, remove it.
 
