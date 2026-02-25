@@ -6,6 +6,8 @@ mod aux_scripts;
 mod run_script;
 #[path = "diag_perf/reporting.rs"]
 mod reporting;
+#[path = "diag_perf/hints.rs"]
+mod hints;
 #[path = "diag_perf/baseline_rows.rs"]
 mod baseline_rows;
 #[path = "diag_perf/thresholds.rs"]
@@ -544,19 +546,20 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
                         .unwrap_or(serde_json::Value::Null);
 
                     perf_hint_failures.extend(failures.clone());
-                    perf_hint_rows.push(serde_json::json!({
-                        "script": script_key.clone(),
-                        "sort": sort.as_str(),
-                        "repeat": repeat,
-                        "run_index": 0,
-                        "bundle": bundle_path.display().to_string(),
-                        "warmup_frames": report_warmup_frames,
-                        "hints": hints,
-                        "unit_costs": unit_costs,
-                        "worst": worst,
-                        "trace_chrome_json_path": trace_chrome_json_path,
-                        "failures": failures,
-                    }));
+                    hints::push_perf_hint_row(
+                        &mut perf_hint_rows,
+                        script_key.as_str(),
+                        sort,
+                        repeat,
+                        0usize,
+                        &bundle_path,
+                        report_warmup_frames,
+                        hints,
+                        unit_costs,
+                        worst,
+                        trace_chrome_json_path,
+                        failures,
+                    );
                 }
                 let top = report.top.first();
                 let top_total = top.map(|r| r.total_time_us).unwrap_or(0);
@@ -1277,19 +1280,20 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
                     .unwrap_or(serde_json::Value::Null);
 
                 perf_hint_failures.extend(failures.clone());
-                perf_hint_rows.push(serde_json::json!({
-                    "script": script_key.clone(),
-                    "sort": sort.as_str(),
-                    "repeat": repeat,
-                    "run_index": run_index,
-                    "bundle": bundle_path.display().to_string(),
-                    "warmup_frames": report_warmup_frames,
-                    "hints": hints,
-                    "unit_costs": unit_costs,
-                    "worst": worst,
-                    "trace_chrome_json_path": trace_chrome_json_path,
-                    "failures": failures,
-                }));
+                hints::push_perf_hint_row(
+                    &mut perf_hint_rows,
+                    script_key.as_str(),
+                    sort,
+                    repeat,
+                    run_index,
+                    &bundle_path,
+                    report_warmup_frames,
+                    hints,
+                    unit_costs,
+                    worst,
+                    trace_chrome_json_path,
+                    failures,
+                );
             }
 
             let top = report.top.first();
