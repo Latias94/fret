@@ -26,6 +26,7 @@ pub(super) fn available_scratch_targets(
         PlanTarget::Intermediate0,
         PlanTarget::Intermediate1,
         PlanTarget::Intermediate2,
+        PlanTarget::Intermediate3,
     ] {
         if t == srcdst {
             continue;
@@ -223,6 +224,7 @@ pub(super) fn apply_chain_in_place(
                     src_size: ctx.viewport_size,
                     dst_size: ctx.viewport_size,
                     dst_scissor: None,
+                    encode_output_srgb: false,
                     load: wgpu::LoadOp::Clear(ctx.clear),
                 }));
 
@@ -311,6 +313,7 @@ pub(super) fn apply_chain_in_place(
                     src_size: ctx.viewport_size,
                     dst_size: ctx.viewport_size,
                     dst_scissor: None,
+                    encode_output_srgb: false,
                     load: wgpu::LoadOp::Clear(ctx.clear),
                 }));
 
@@ -459,6 +462,7 @@ pub(super) fn apply_chain_in_place(
                     src_size: ctx.viewport_size,
                     dst_size: ctx.viewport_size,
                     dst_scissor: None,
+                    encode_output_srgb: false,
                     load: wgpu::LoadOp::Clear(ctx.clear),
                 }));
 
@@ -1041,6 +1045,7 @@ fn append_color_adjust_in_place_single_scratch(
             src_size: size,
             dst_size: size,
             dst_scissor: None,
+            encode_output_srgb: false,
             load: wgpu::LoadOp::Clear(clear),
         }));
         passes.push(RenderPlanPass::ColorAdjust(ColorAdjustPass {
@@ -1078,6 +1083,7 @@ fn append_color_adjust_in_place_single_scratch(
         src_size: size,
         dst_size: size,
         dst_scissor: None,
+        encode_output_srgb: false,
         load: wgpu::LoadOp::Clear(clear),
     }));
 }
@@ -1108,6 +1114,7 @@ fn append_dither_in_place_single_scratch(
             src_size: size,
             dst_size: size,
             dst_scissor: None,
+            encode_output_srgb: false,
             load: wgpu::LoadOp::Clear(clear),
         }));
         passes.push(RenderPlanPass::Dither(DitherPass {
@@ -1141,6 +1148,7 @@ fn append_dither_in_place_single_scratch(
         src_size: size,
         dst_size: size,
         dst_scissor: None,
+        encode_output_srgb: false,
         load: wgpu::LoadOp::Clear(clear),
     }));
 }
@@ -1171,6 +1179,7 @@ fn append_backdrop_warp_in_place_single_scratch(
         src_size: size,
         dst_size: size,
         dst_scissor: None,
+        encode_output_srgb: false,
         load: wgpu::LoadOp::Clear(clear),
     }));
     passes.push(RenderPlanPass::BackdropWarp(BackdropWarpPass {
@@ -1223,6 +1232,7 @@ fn append_color_matrix_in_place_single_scratch(
             src_size: size,
             dst_size: size,
             dst_scissor: None,
+            encode_output_srgb: false,
             load: wgpu::LoadOp::Clear(clear),
         }));
         passes.push(RenderPlanPass::ColorMatrix(ColorMatrixPass {
@@ -1256,6 +1266,7 @@ fn append_color_matrix_in_place_single_scratch(
         src_size: size,
         dst_size: size,
         dst_scissor: None,
+        encode_output_srgb: false,
         load: wgpu::LoadOp::Clear(clear),
     }));
 }
@@ -1288,6 +1299,7 @@ fn append_alpha_threshold_in_place_single_scratch(
             src_size: size,
             dst_size: size,
             dst_scissor: None,
+            encode_output_srgb: false,
             load: wgpu::LoadOp::Clear(clear),
         }));
         passes.push(RenderPlanPass::AlphaThreshold(AlphaThresholdPass {
@@ -1323,6 +1335,7 @@ fn append_alpha_threshold_in_place_single_scratch(
         src_size: size,
         dst_size: size,
         dst_scissor: None,
+        encode_output_srgb: false,
         load: wgpu::LoadOp::Clear(clear),
     }));
 }

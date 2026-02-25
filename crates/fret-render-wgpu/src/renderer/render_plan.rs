@@ -60,9 +60,20 @@ pub(super) enum PlanTarget {
     Intermediate0,
     Intermediate1,
     Intermediate2,
+    Intermediate3,
     Mask0,
     Mask1,
     Mask2,
+}
+
+pub(super) fn output_requires_explicit_srgb_encode(format: wgpu::TextureFormat) -> bool {
+    if format.is_srgb() {
+        return false;
+    }
+    matches!(
+        format,
+        wgpu::TextureFormat::Bgra8Unorm | wgpu::TextureFormat::Rgba8Unorm
+    )
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -83,7 +94,9 @@ pub(super) struct LocalScissorRect(pub(super) ScissorRect);
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum DebugPostprocess {
     None,
-    OffscreenBlit,
+    OffscreenBlit {
+        src: PlanTarget,
+    },
     Pixelate {
         scale: u32,
     },
@@ -263,6 +276,11 @@ pub(super) struct FullscreenBlitPass {
     pub(super) src_size: (u32, u32),
     pub(super) dst_size: (u32, u32),
     pub(super) dst_scissor: Option<LocalScissorRect>,
+    /// Apply an explicit linear->sRGB transfer to the output (premul-aware).
+    ///
+    /// This must only be used for the final write to a non-sRGB display surface format (see ADR
+    /// 0040 / ADR 0117).
+    pub(super) encode_output_srgb: bool,
     pub(super) load: wgpu::LoadOp<wgpu::Color>,
 }
 
@@ -343,7 +361,7 @@ impl RenderPlan {
             },
             degradations,
         };
-        append_postprocess(&mut plan, viewport_size, postprocess, clear);
+        append_postprocess(&mut plan, viewport_size, postprocess, clear, format);
         insert_early_releases(&mut plan.passes);
         plan.compile_stats.estimated_peak_intermediate_bytes =
             estimate_plan_peak_intermediate_bytes(&plan.passes, format);
@@ -404,9 +422,10 @@ fn validate_plan_target_lifetimes(passes: &[RenderPlanPass]) -> Result<(), Strin
             PlanTarget::Intermediate0 => Some(0),
             PlanTarget::Intermediate1 => Some(1),
             PlanTarget::Intermediate2 => Some(2),
-            PlanTarget::Mask0 => Some(3),
-            PlanTarget::Mask1 => Some(4),
-            PlanTarget::Mask2 => Some(5),
+            PlanTarget::Intermediate3 => Some(3),
+            PlanTarget::Mask0 => Some(4),
+            PlanTarget::Mask1 => Some(5),
+            PlanTarget::Mask2 => Some(6),
             PlanTarget::Output => None,
         }
     }
@@ -417,18 +436,19 @@ fn validate_plan_target_lifetimes(passes: &[RenderPlanPass]) -> Result<(), Strin
             PlanTarget::Intermediate0 => "Intermediate0",
             PlanTarget::Intermediate1 => "Intermediate1",
             PlanTarget::Intermediate2 => "Intermediate2",
+            PlanTarget::Intermediate3 => "Intermediate3",
             PlanTarget::Mask0 => "Mask0",
             PlanTarget::Mask1 => "Mask1",
             PlanTarget::Mask2 => "Mask2",
         }
     }
 
-    let mut live: [bool; 6] = [false; 6];
-    let mut initialized: [bool; 6] = [false; 6];
+    let mut live: [bool; 7] = [false; 7];
+    let mut initialized: [bool; 7] = [false; 7];
 
     fn mark_read(
-        live: &[bool; 6],
-        initialized: &[bool; 6],
+        live: &[bool; 7],
+        initialized: &[bool; 7],
         pass_index: usize,
         t: PlanTarget,
     ) -> Result<(), String> {
@@ -451,8 +471,8 @@ fn validate_plan_target_lifetimes(passes: &[RenderPlanPass]) -> Result<(), Strin
     }
 
     fn mark_write(
-        live: &mut [bool; 6],
-        initialized: &mut [bool; 6],
+        live: &mut [bool; 7],
+        initialized: &mut [bool; 7],
         pass_index: usize,
         t: PlanTarget,
         load: Option<wgpu::LoadOp<wgpu::Color>>,
@@ -483,8 +503,8 @@ fn validate_plan_target_lifetimes(passes: &[RenderPlanPass]) -> Result<(), Strin
     }
 
     fn mark_release(
-        live: &mut [bool; 6],
-        initialized: &mut [bool; 6],
+        live: &mut [bool; 7],
+        initialized: &mut [bool; 7],
         pass_index: usize,
         t: PlanTarget,
     ) -> Result<(), String> {
@@ -1069,9 +1089,10 @@ fn estimate_plan_peak_intermediate_bytes(
             PlanTarget::Intermediate0 => 1,
             PlanTarget::Intermediate1 => 2,
             PlanTarget::Intermediate2 => 3,
-            PlanTarget::Mask0 => 4,
-            PlanTarget::Mask1 => 5,
-            PlanTarget::Mask2 => 6,
+            PlanTarget::Intermediate3 => 4,
+            PlanTarget::Mask0 => 5,
+            PlanTarget::Mask1 => 6,
+            PlanTarget::Mask2 => 7,
         }
     }
 
@@ -1080,20 +1101,21 @@ fn estimate_plan_peak_intermediate_bytes(
             PlanTarget::Output
             | PlanTarget::Intermediate0
             | PlanTarget::Intermediate1
-            | PlanTarget::Intermediate2 => scene_format,
+            | PlanTarget::Intermediate2
+            | PlanTarget::Intermediate3 => scene_format,
             PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2 => {
                 wgpu::TextureFormat::R8Unorm
             }
         }
     }
 
-    let mut live: [bool; 7] = [false; 7];
-    let mut sizes: [(u32, u32); 7] = [(0, 0); 7];
+    let mut live: [bool; 8] = [false; 8];
+    let mut sizes: [(u32, u32); 8] = [(0, 0); 8];
     let mut peak: u64 = 0;
 
     fn mark_live(
-        live: &mut [bool; 7],
-        sizes: &mut [(u32, u32); 7],
+        live: &mut [bool; 8],
+        sizes: &mut [(u32, u32); 8],
         t: PlanTarget,
         size: (u32, u32),
     ) {
@@ -1166,6 +1188,7 @@ fn estimate_plan_peak_intermediate_bytes(
             PlanTarget::Intermediate0,
             PlanTarget::Intermediate1,
             PlanTarget::Intermediate2,
+            PlanTarget::Intermediate3,
             PlanTarget::Mask0,
             PlanTarget::Mask1,
             PlanTarget::Mask2,
@@ -1186,7 +1209,7 @@ fn estimate_plan_peak_intermediate_bytes(
 }
 
 fn insert_early_releases(passes: &mut Vec<RenderPlanPass>) -> u64 {
-    let mut last_use: [Option<usize>; 6] = [None, None, None, None, None, None];
+    let mut last_use: [Option<usize>; 7] = [None, None, None, None, None, None, None];
 
     for (idx, pass) in passes.iter().enumerate() {
         let mut mark = |t: PlanTarget| {
@@ -1194,9 +1217,10 @@ fn insert_early_releases(passes: &mut Vec<RenderPlanPass>) -> u64 {
                 PlanTarget::Intermediate0 => Some(0),
                 PlanTarget::Intermediate1 => Some(1),
                 PlanTarget::Intermediate2 => Some(2),
-                PlanTarget::Mask0 => Some(3),
-                PlanTarget::Mask1 => Some(4),
-                PlanTarget::Mask2 => Some(5),
+                PlanTarget::Intermediate3 => Some(3),
+                PlanTarget::Mask0 => Some(4),
+                PlanTarget::Mask1 => Some(5),
+                PlanTarget::Mask2 => Some(6),
                 PlanTarget::Output => None,
             };
             if let Some(slot) = slot {
@@ -1280,9 +1304,10 @@ fn insert_early_releases(passes: &mut Vec<RenderPlanPass>) -> u64 {
     let last0 = last_use[0];
     let last1 = last_use[1];
     let last2 = last_use[2];
-    let last_mask0 = last_use[3];
-    let last_mask1 = last_use[4];
-    let last_mask2 = last_use[5];
+    let last3 = last_use[3];
+    let last_mask0 = last_use[4];
+    let last_mask1 = last_use[5];
+    let last_mask2 = last_use[6];
 
     let old = std::mem::take(passes);
     let mut out: Vec<RenderPlanPass> = Vec::with_capacity(old.len() + 4);
@@ -1304,6 +1329,9 @@ fn insert_early_releases(passes: &mut Vec<RenderPlanPass>) -> u64 {
         }
         if last2 == Some(idx) {
             push_release(PlanTarget::Intermediate2);
+        }
+        if last3 == Some(idx) {
+            push_release(PlanTarget::Intermediate3);
         }
         if last_mask0 == Some(idx) {
             push_release(PlanTarget::Mask0);
@@ -1369,6 +1397,7 @@ fn push_fullscreen_blit(
     src_size: (u32, u32),
     dst_size: (u32, u32),
     dst_scissor: Option<ScissorRect>,
+    encode_output_srgb: bool,
     load: wgpu::LoadOp<wgpu::Color>,
 ) {
     plan.passes
@@ -1378,6 +1407,7 @@ fn push_fullscreen_blit(
             src_size,
             dst_size,
             dst_scissor: dst_scissor.map(LocalScissorRect),
+            encode_output_srgb,
             load,
         }));
 }
@@ -1517,7 +1547,7 @@ fn append_upsample_chain(
             PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2 => {
                 unreachable!("upsample chain must read from Intermediate1/2")
             }
-            PlanTarget::Intermediate0 | PlanTarget::Output => {
+            PlanTarget::Intermediate0 | PlanTarget::Intermediate3 | PlanTarget::Output => {
                 unreachable!("upsample chain must read from Intermediate1/2")
             }
         };
@@ -1544,17 +1574,20 @@ fn append_postprocess(
     viewport_size: (u32, u32),
     postprocess: DebugPostprocess,
     clear: wgpu::Color,
+    format: wgpu::TextureFormat,
 ) {
+    let encode_output_srgb = output_requires_explicit_srgb_encode(format);
     match postprocess {
         DebugPostprocess::None => {}
-        DebugPostprocess::OffscreenBlit => {
+        DebugPostprocess::OffscreenBlit { src } => {
             push_fullscreen_blit(
                 plan,
-                PlanTarget::Intermediate0,
+                src,
                 PlanTarget::Output,
                 viewport_size,
                 viewport_size,
                 None,
+                encode_output_srgb,
                 wgpu::LoadOp::Clear(clear),
             );
         }
@@ -1633,6 +1666,7 @@ fn append_postprocess(
                 viewport_size,
                 viewport_size,
                 None,
+                encode_output_srgb,
                 wgpu::LoadOp::Clear(clear),
             );
         }
@@ -1696,6 +1730,17 @@ fn append_postprocess(
 
             let final_scissor = map_scissor_to_size(scissor, viewport_size, viewport_size);
             if scissor.is_some() {
+                push_scale_nearest(
+                    plan,
+                    blur_src,
+                    PlanTarget::Intermediate0,
+                    blur_size,
+                    viewport_size,
+                    final_scissor,
+                    ScaleMode::Upscale,
+                    downsample_scale,
+                    wgpu::LoadOp::Load,
+                );
                 push_fullscreen_blit(
                     plan,
                     PlanTarget::Intermediate0,
@@ -1703,18 +1748,8 @@ fn append_postprocess(
                     viewport_size,
                     viewport_size,
                     None,
+                    encode_output_srgb,
                     wgpu::LoadOp::Clear(clear),
-                );
-                push_scale_nearest(
-                    plan,
-                    blur_src,
-                    PlanTarget::Output,
-                    blur_size,
-                    viewport_size,
-                    final_scissor,
-                    ScaleMode::Upscale,
-                    downsample_scale,
-                    wgpu::LoadOp::Load,
                 );
             } else {
                 push_scale_nearest(
@@ -1735,6 +1770,7 @@ fn append_postprocess(
                     viewport_size,
                     viewport_size,
                     final_scissor,
+                    encode_output_srgb,
                     wgpu::LoadOp::Clear(clear),
                 );
             }

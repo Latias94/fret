@@ -78,7 +78,9 @@ fn encode_load_op(load: wgpu::LoadOp<wgpu::Color>) -> JsonDumpLoadOp {
 #[serde(tag = "kind")]
 enum JsonDumpDebugPostprocess {
     None,
-    OffscreenBlit,
+    OffscreenBlit {
+        src: &'static str,
+    },
     Pixelate {
         scale: u32,
     },
@@ -92,7 +94,9 @@ enum JsonDumpDebugPostprocess {
 fn encode_debug_postprocess(p: DebugPostprocess) -> JsonDumpDebugPostprocess {
     match p {
         DebugPostprocess::None => JsonDumpDebugPostprocess::None,
-        DebugPostprocess::OffscreenBlit => JsonDumpDebugPostprocess::OffscreenBlit,
+        DebugPostprocess::OffscreenBlit { src } => JsonDumpDebugPostprocess::OffscreenBlit {
+            src: plan_target_name(src),
+        },
         DebugPostprocess::Pixelate { scale } => JsonDumpDebugPostprocess::Pixelate { scale },
         DebugPostprocess::Blur {
             radius,
@@ -218,6 +222,7 @@ enum JsonDumpPass {
         dst_size: [u32; 2],
         dst_scissor: Option<JsonDumpScissorRect>,
         dst_scissor_space: Option<&'static str>,
+        encode_output_srgb: bool,
         load: JsonDumpLoadOp,
     },
     CompositePremul {
@@ -361,6 +366,7 @@ fn plan_target_name(t: PlanTarget) -> &'static str {
         PlanTarget::Intermediate0 => "Intermediate0",
         PlanTarget::Intermediate1 => "Intermediate1",
         PlanTarget::Intermediate2 => "Intermediate2",
+        PlanTarget::Intermediate3 => "Intermediate3",
         PlanTarget::Mask0 => "Mask0",
         PlanTarget::Mask1 => "Mask1",
         PlanTarget::Mask2 => "Mask2",
@@ -406,6 +412,7 @@ fn encode_pass(p: &RenderPlanPass) -> JsonDumpPass {
             dst_size: [pass.dst_size.0, pass.dst_size.1],
             dst_scissor: pass.dst_scissor.map(Into::into),
             dst_scissor_space: pass.dst_scissor.map(|_| "dst_local"),
+            encode_output_srgb: pass.encode_output_srgb,
             load: encode_load_op(pass.load),
         },
         RenderPlanPass::CompositePremul(pass) => JsonDumpPass::CompositePremul {

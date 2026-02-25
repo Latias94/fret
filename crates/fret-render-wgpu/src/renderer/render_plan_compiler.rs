@@ -84,6 +84,7 @@ pub(super) fn compile_for_scene(
     intermediate_budget_bytes: u64,
 ) -> super::RenderPlan {
     let mut postprocess = postprocess;
+    let output_transfer_needed = super::output_requires_explicit_srgb_encode(format);
 
     let backdrop_effect_enabled = encoding.effect_markers.iter().any(|m| {
         let EffectMarkerKind::Push {
@@ -149,20 +150,30 @@ pub(super) fn compile_for_scene(
     let needs_intermediate = backdrop_effect_enabled
         || matches!(
             postprocess,
-            super::DebugPostprocess::OffscreenBlit
+            super::DebugPostprocess::OffscreenBlit { .. }
                 | super::DebugPostprocess::Pixelate { .. }
                 | super::DebugPostprocess::Blur { .. }
         );
 
     if needs_intermediate && matches!(postprocess, super::DebugPostprocess::None) {
-        postprocess = super::DebugPostprocess::OffscreenBlit;
+        postprocess = super::DebugPostprocess::OffscreenBlit {
+            src: super::PlanTarget::Intermediate0,
+        };
     }
 
-    let scene_target = if needs_intermediate {
+    let mut scene_target = if needs_intermediate {
         super::PlanTarget::Intermediate0
     } else {
         super::PlanTarget::Output
     };
+
+    if scene_target == super::PlanTarget::Output
+        && output_transfer_needed
+        && matches!(postprocess, super::DebugPostprocess::None)
+    {
+        scene_target = super::PlanTarget::Intermediate3;
+        postprocess = super::DebugPostprocess::OffscreenBlit { src: scene_target };
+    }
 
     compile_for_scene_inner(
         encoding,
@@ -222,6 +233,7 @@ fn compile_for_scene_inner(
                         super::PlanTarget::Intermediate0
                             | super::PlanTarget::Intermediate1
                             | super::PlanTarget::Intermediate2
+                            | super::PlanTarget::Intermediate3
                     )
                 })
                 .map(|s| estimate_texture_bytes(s.size, format, 1))
@@ -381,6 +393,7 @@ fn compile_for_scene_inner(
                         super::PlanTarget::Intermediate0
                             | super::PlanTarget::Intermediate1
                             | super::PlanTarget::Intermediate2
+                            | super::PlanTarget::Intermediate3
                     )
                 })
                 .map(|s| estimate_texture_bytes(s.size, format, 1))
@@ -390,6 +403,7 @@ fn compile_for_scene_inner(
                 super::PlanTarget::Intermediate0
                     | super::PlanTarget::Intermediate1
                     | super::PlanTarget::Intermediate2
+                    | super::PlanTarget::Intermediate3
             )
             .then(|| estimate_texture_bytes(ctx_viewport_size, format, 1))
             .unwrap_or(0);
@@ -459,6 +473,7 @@ fn compile_for_scene_inner(
                                     super::PlanTarget::Intermediate0,
                                     super::PlanTarget::Intermediate1,
                                     super::PlanTarget::Intermediate2,
+                                    super::PlanTarget::Intermediate3,
                                 ]
                                 .into_iter()
                                 .any(|t| {
@@ -531,6 +546,7 @@ fn compile_for_scene_inner(
                                         super::PlanTarget::Intermediate0,
                                         super::PlanTarget::Intermediate1,
                                         super::PlanTarget::Intermediate2,
+                                        super::PlanTarget::Intermediate3,
                                     ] {
                                         if draw_scopes.iter().any(|s| s.target == t) {
                                             continue;
@@ -607,6 +623,7 @@ fn compile_for_scene_inner(
                                 super::PlanTarget::Intermediate0,
                                 super::PlanTarget::Intermediate1,
                                 super::PlanTarget::Intermediate2,
+                                super::PlanTarget::Intermediate3,
                             ]
                             .into_iter()
                             .any(|t| {
@@ -707,6 +724,7 @@ fn compile_for_scene_inner(
                                 super::PlanTarget::Intermediate0,
                                 super::PlanTarget::Intermediate1,
                                 super::PlanTarget::Intermediate2,
+                                super::PlanTarget::Intermediate3,
                             ] {
                                 if draw_scopes.iter().any(|s| s.target == t) {
                                     continue;
@@ -895,6 +913,7 @@ fn compile_for_scene_inner(
                                 super::PlanTarget::Intermediate0,
                                 super::PlanTarget::Intermediate1,
                                 super::PlanTarget::Intermediate2,
+                                super::PlanTarget::Intermediate3,
                             ] {
                                 if draw_scopes.iter().any(|s| s.target == t) {
                                     continue;

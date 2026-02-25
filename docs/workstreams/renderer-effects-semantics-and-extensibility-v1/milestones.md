@@ -43,7 +43,10 @@ Exit criteria:
 
 - A written rule exists (linear intermediates recommended).
 - Effect passes behave consistently with the rule.
-- At least one targeted test/diag gate catches sRGB/linear mismatches for a representative effect chain.
+- Output transfer behavior is explicit and deterministic for non-sRGB 8-bit output formats:
+  - render into an extra color intermediate (`PlanTarget::Intermediate3`),
+  - apply a single final explicit sRGB transfer blit when writing to `Rgba8Unorm` / `Bgra8Unorm`.
+- At least one targeted test/diag gate catches regressions (explicit output transfer + representative effects).
 
 ## M4 — Bounded custom effect design (wgpu-only MVP)
 
@@ -52,4 +55,3 @@ Exit criteria:
 - A design for a bounded, capability-gated custom effect extension point exists and is reviewed.
 - A minimal MVP can render one custom effect (e.g. “glass tint + subtle blur + warp”) without touching core contracts.
 - Budgeting/degradation is deterministic and diagnosable.
-

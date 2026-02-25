@@ -345,6 +345,7 @@ fn insert_early_releases_inserts_release_after_last_use() {
             src_size: (64, 64),
             dst_size: (64, 64),
             dst_scissor: None,
+            encode_output_srgb: false,
             load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
         }),
     ];
@@ -365,6 +366,49 @@ fn insert_early_releases_inserts_release_after_last_use() {
         .position(|p| matches!(p, RenderPlanPass::ReleaseTarget(PlanTarget::Intermediate0)))
         .unwrap();
     assert!(release_at > last_use);
+}
+
+#[test]
+fn non_srgb_output_forces_intermediate_and_explicit_srgb_encode_blit() {
+    let encoding = SceneEncoding::default();
+    let plan = RenderPlan::compile_for_scene(
+        &encoding,
+        1.0,
+        (64, 64),
+        wgpu::TextureFormat::Rgba8Unorm,
+        wgpu::Color::TRANSPARENT,
+        1,
+        DebugPostprocess::None,
+        u64::MAX,
+    );
+
+    let first_scene_target = plan
+        .passes
+        .iter()
+        .find_map(|p| match p {
+            RenderPlanPass::SceneDrawRange(p) => Some(p.target),
+            _ => None,
+        })
+        .expect("expected a SceneDrawRange pass");
+    assert_eq!(
+        first_scene_target,
+        PlanTarget::Intermediate3,
+        "non-sRGB output must render into an intermediate to keep effect math linear"
+    );
+
+    let final_blit = plan
+        .passes
+        .iter()
+        .rev()
+        .find_map(|p| match p {
+            RenderPlanPass::FullscreenBlit(p) if p.dst == PlanTarget::Output => Some(*p),
+            _ => None,
+        })
+        .expect("expected a final FullscreenBlit to Output");
+    assert!(
+        final_blit.encode_output_srgb,
+        "non-sRGB output must apply an explicit sRGB transfer on the final blit"
+    );
 }
 
 #[test]
@@ -572,7 +616,9 @@ fn compile_for_scene_offscreen_blit_adds_fullscreen_blit() {
         wgpu::TextureFormat::Bgra8UnormSrgb,
         wgpu::Color::TRANSPARENT,
         1,
-        DebugPostprocess::OffscreenBlit,
+        DebugPostprocess::OffscreenBlit {
+            src: PlanTarget::Intermediate0,
+        },
         u64::MAX,
     );
 
@@ -745,7 +791,9 @@ fn compile_for_scene_backdrop_color_adjust_emits_mask_target_when_budget_allows(
         wgpu::TextureFormat::Bgra8UnormSrgb,
         wgpu::Color::TRANSPARENT,
         1,
-        DebugPostprocess::OffscreenBlit,
+        DebugPostprocess::OffscreenBlit {
+            src: PlanTarget::Intermediate0,
+        },
         u64::MAX,
     );
 
@@ -801,7 +849,9 @@ fn compile_for_scene_backdrop_blur_caps_clip_mask_tier_when_forced_to_quarter() 
         format,
         clear,
         1,
-        DebugPostprocess::OffscreenBlit,
+        DebugPostprocess::OffscreenBlit {
+            src: PlanTarget::Intermediate0,
+        },
         required_quarter,
     );
 
@@ -1279,13 +1329,13 @@ fn blur_scissor_is_mapped_per_pass_dst_size() {
         .iter()
         .find_map(|p| match p {
             RenderPlanPass::ScaleNearest(p)
-                if p.mode == ScaleMode::Upscale && p.dst == PlanTarget::Output =>
+                if p.mode == ScaleMode::Upscale && p.dst == PlanTarget::Intermediate0 =>
             {
                 Some(*p)
             }
             _ => None,
         })
-        .expect("expected upscale-to-output pass");
+        .expect("expected upscale-to-intermediate pass");
     assert_eq!(
         upscale.dst_scissor.map(|s| s.0),
         Some(ScissorRect {

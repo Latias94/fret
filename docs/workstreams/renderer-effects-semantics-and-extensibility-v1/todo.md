@@ -30,10 +30,16 @@ This TODO is ordered by implementation priority (P0 first), and is designed to b
 
 ## P1 — Consistency (color, intermediates, diagnostics)
 
-- [ ] Document and enforce intermediate color rules:
-  - [ ] Define whether intermediates are always linear (recommended) and how output encoding is handled.
-  - [ ] Ensure effect passes are consistent with the rule (blur/color adjust/backdrop warp/composite).
-  - [ ] Add a small conformance test or a diag script to catch regressions (sRGB vs linear surprises).
+- [x] Document and enforce intermediate color rules:
+  - [x] Intermediates are treated as linear storage; effects/compositing remain linear (ADR 0040 / ADR 0117).
+  - [x] Non-sRGB 8-bit outputs (`Rgba8Unorm` / `Bgra8Unorm`) use a single final output blit that applies an explicit
+        sRGB transfer, avoiding “encoded intermediates”.
+  - [x] Add a targeted conformance test for the explicit output transfer path.
+  - Evidence: `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs`,
+    `crates/fret-render-wgpu/src/renderer/render_plan.rs`,
+    `crates/fret-render-wgpu/src/renderer/pipelines/blit.rs`,
+    `crates/fret-render-wgpu/src/renderer/shaders.rs`,
+    `crates/fret-render-wgpu/tests/output_srgb_transfer_conformance.rs`.
 
 - [ ] Unify blur implementation into a shared “blur primitive” module:
   - [ ] Single place that maps `(radius_px, quality, budgets, viewport_size)` → passes + downsample strategy.
@@ -57,3 +63,10 @@ This TODO is ordered by implementation priority (P0 first), and is designed to b
   - `cargo nextest run -p fret-render-wgpu` (where feasible) for cache-key correctness and blur radius mapping.
 - Determinism checks:
   - A small diag bundle + script that exercises blur/shadow at multiple radii and asserts stable outcomes under budgets.
+
+## Follow-ups (quality/perf)
+
+- [ ] Optional higher-precision intermediate for output transfer:
+  - [ ] When output transfer is required, allow rendering into a float intermediate (e.g. `RGBA16Float`) under budgets,
+        then encode once to `Rgba8Unorm` / `Bgra8Unorm`.
+  - Rationale: avoid the extra unorm quantization step in linear space for display-referred non-sRGB outputs.

@@ -523,9 +523,10 @@ pub(super) fn require_color_src_view(
     pass_name: &'static str,
 ) -> Option<wgpu::TextureView> {
     match src {
-        PlanTarget::Intermediate0 | PlanTarget::Intermediate1 | PlanTarget::Intermediate2 => {
-            Some(frame_targets.require_target(src, src_size))
-        }
+        PlanTarget::Intermediate0
+        | PlanTarget::Intermediate1
+        | PlanTarget::Intermediate2
+        | PlanTarget::Intermediate3 => Some(frame_targets.require_target(src, src_size)),
         PlanTarget::Output | PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2 => {
             debug_assert!(false, "{pass_name} src cannot be Output/mask targets");
             None
@@ -545,7 +546,10 @@ pub(super) fn ensure_color_dst_view_owned(
 ) -> Option<wgpu::TextureView> {
     match dst {
         PlanTarget::Output => None,
-        PlanTarget::Intermediate0 | PlanTarget::Intermediate1 | PlanTarget::Intermediate2 => {
+        PlanTarget::Intermediate0
+        | PlanTarget::Intermediate1
+        | PlanTarget::Intermediate2
+        | PlanTarget::Intermediate3 => {
             Some(frame_targets.ensure_target(pool, device, dst, dst_size, format, usage))
         }
         PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2 => {
@@ -568,7 +572,8 @@ pub(super) fn require_mask_view(
         PlanTarget::Output
         | PlanTarget::Intermediate0
         | PlanTarget::Intermediate1
-        | PlanTarget::Intermediate2 => {
+        | PlanTarget::Intermediate2
+        | PlanTarget::Intermediate3 => {
             debug_assert!(false, "{pass_name} mask target must be Mask[0-2]");
             None
         }
@@ -598,7 +603,8 @@ pub(super) fn ensure_mask_dst_view(
         PlanTarget::Output
         | PlanTarget::Intermediate0
         | PlanTarget::Intermediate1
-        | PlanTarget::Intermediate2 => {
+        | PlanTarget::Intermediate2
+        | PlanTarget::Intermediate3 => {
             debug_assert!(false, "{pass_name} dst must be Mask[0-2]");
             None
         }

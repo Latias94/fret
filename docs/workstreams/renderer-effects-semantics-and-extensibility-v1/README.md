@@ -62,6 +62,10 @@ wgpu backend:
 - Render execution: `crates/fret-render-wgpu/src/renderer/render_scene/execute.rs`
 - Scene encoding cache key + miss reasons: `crates/fret-render-wgpu/src/renderer/render_scene/encoding_cache.rs`
 - Material paint degradation (encode-time): `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/paint.rs`
+- Output transfer + intermediate targeting: `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs`,
+  `crates/fret-render-wgpu/src/renderer/render_plan.rs`
+- Output sRGB encode blit shader/pipeline: `crates/fret-render-wgpu/src/renderer/shaders.rs`,
+  `crates/fret-render-wgpu/src/renderer/pipelines/blit.rs`
 
 ## Principles (renderer contract hygiene)
 
@@ -115,3 +119,27 @@ This ordering intentionally avoids mixing “new features” with “correctness
 - Scene-encoding semantics audit: `docs/workstreams/renderer-scene-encoding-semantics-audit-v1.md`
 - Drop shadow effect: `docs/workstreams/renderer-drop-shadow-effect-v1.md`
 - Backdrop warp effects: `docs/workstreams/renderer-effect-backdrop-warp-v2.md`
+
+## Intermediate color + output transfer rule (implemented in this workstream)
+
+Anchors: ADR 0040 (linear compositor + surface formats) and ADR 0117 (effects evaluated in linear).
+
+Rule summary:
+
+- **All effect evaluation and compositing is performed in linear premultiplied space.**
+- **Intermediate targets are treated as linear storage.**
+  - If the intermediate `wgpu::TextureFormat` is sRGB, sampling yields linear automatically and writes expect linear.
+  - If the format is non-sRGB unorm, sampling yields linear and writes store linear (quantized in linear space).
+- **Explicit linear→sRGB transfer for non-sRGB display formats is applied once, at the end.**
+  - For `Rgba8Unorm` / `Bgra8Unorm` outputs, the plan renders into an extra color intermediate
+    (`PlanTarget::Intermediate3`) and finishes with a single fullscreen blit that applies an explicit sRGB transfer.
+  - This keeps effect math linear and avoids “encoded intermediates”, while keeping deterministic pass structure.
+- **Why the extra intermediate?**
+  - Using `Intermediate0` as the output accumulator can starve filter-content effects of scratch targets (e.g.
+    `DropShadowV1` needs multiple intermediates). `Intermediate3` keeps `Intermediate0..2` available for effect work.
+
+Known limitation (intentional in v1):
+
+- The explicit output transfer path currently encodes from a linear 8-bit intermediate, meaning the pipeline may incur
+  an extra quantization step in linear space. A follow-up can introduce an optional float intermediate (e.g.
+  `RGBA16Float`) when output transfer is required and budgets permit.

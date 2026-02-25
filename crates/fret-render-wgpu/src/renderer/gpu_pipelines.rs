@@ -42,6 +42,7 @@ pub(super) struct GpuPipelines {
 
     pub(super) blit_pipeline_format: Option<wgpu::TextureFormat>,
     pub(super) blit_pipeline: Option<wgpu::RenderPipeline>,
+    pub(super) blit_srgb_encode_pipeline: Option<wgpu::RenderPipeline>,
     pub(super) blit_bind_group_layout: Option<wgpu::BindGroupLayout>,
 
     pub(super) blur_pipeline_format: Option<wgpu::TextureFormat>,
@@ -140,6 +141,7 @@ impl Default for GpuPipelines {
             clip_mask_pipeline: None,
             blit_pipeline_format: None,
             blit_pipeline: None,
+            blit_srgb_encode_pipeline: None,
             blit_bind_group_layout: None,
             blur_pipeline_format: None,
             blur_h_pipeline: None,

@@ -24,6 +24,10 @@ impl Renderer {
             .passes
             .iter()
             .any(|p| matches!(p, RenderPlanPass::FullscreenBlit(_)));
+        let needs_blit_srgb_encode = plan.passes.iter().any(|p| match p {
+            RenderPlanPass::FullscreenBlit(pass) => pass.encode_output_srgb,
+            _ => false,
+        });
         let needs_composite = plan
             .passes
             .iter()
@@ -55,6 +59,9 @@ impl Renderer {
 
         if needs_blit || needs_blur {
             self.ensure_blit_pipeline(device, format);
+        }
+        if needs_blit_srgb_encode {
+            self.ensure_blit_srgb_encode_pipeline(device, format);
         }
         if needs_scale {
             self.ensure_scale_nearest_pipelines(device, format);
