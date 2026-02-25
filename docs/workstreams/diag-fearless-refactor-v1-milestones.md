@@ -106,7 +106,7 @@ Definition of done:
   - Evidence: `crates/fret-diag/src/pack_zip.rs` (`pack_bundle_dir_to_zip_accepts_schema2_only`).
 - [x] Add a schema2-only packing option for shareable zips.
   - Evidence: `crates/fret-diag/src/lib.rs` (`--pack-schema2-only` / `--schema2-only`).
-- [ ] Ensure `diag lint` does not require materializing the full bundle artifact in memory (streaming reader path for large bundles).
+- [x] Ensure `diag lint` does not require materializing the full bundle artifact in memory (streaming reader path for large bundles).
   - Evidence: `crates/fret-diag/src/lint.rs`
 
 ### M5: Plan 2 prototype (deferred)
