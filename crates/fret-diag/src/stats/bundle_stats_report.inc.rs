@@ -2,6 +2,7 @@
 pub(super) struct BundleStatsReport {
     sort: BundleStatsSort,
     warmup_frames: u64,
+    derived_from_frames_index: bool,
     pub(super) windows: u32,
     pub(super) snapshots: u32,
     pub(super) snapshots_considered: u32,
@@ -585,6 +586,11 @@ struct BundleStatsModelSourceHotspot {
 impl BundleStatsReport {
     pub(super) fn print_human_brief(&self, bundle_path: &Path) {
         println!("bundle: {}", bundle_path.display());
+        if self.derived_from_frames_index {
+            println!(
+                "note: derived from frames.index.json (tail-limited); some counters/percentiles may be missing or zero"
+            );
+        }
         println!(
             "windows={} snapshots={} considered={} warmup_skipped={} model_changes={} global_changes={} propagated_model_changes={} propagated_global_changes={}",
             self.windows,
@@ -607,32 +613,50 @@ impl BundleStatsReport {
             self.sum_prepaint_time_us,
             self.sum_paint_time_us
         );
-        println!(
-            "time p50/p95 (us): total={}/{} cpu_time={}/{} layout={}/{} prepaint={}/{} paint={}/{} dispatch={}/{} hit_test={}/{}",
-            self.p50_total_time_us,
-            self.p95_total_time_us,
-            self.p50_ui_thread_cpu_time_us,
-            self.p95_ui_thread_cpu_time_us,
-            self.p50_layout_time_us,
-            self.p95_layout_time_us,
-            self.p50_prepaint_time_us,
-            self.p95_prepaint_time_us,
-            self.p50_paint_time_us,
-            self.p95_paint_time_us,
-            self.p50_dispatch_time_us,
-            self.p95_dispatch_time_us,
-            self.p50_hit_test_time_us,
-            self.p95_hit_test_time_us
-        );
-        println!(
-            "hot p50/p95 (us): layout.engine_solve={}/{} paint.widget={}/{} paint.text_prepare={}/{}",
-            self.p50_layout_engine_solve_time_us,
-            self.p95_layout_engine_solve_time_us,
-            self.p50_paint_widget_time_us,
-            self.p95_paint_widget_time_us,
-            self.p50_paint_text_prepare_time_us,
-            self.p95_paint_text_prepare_time_us
-        );
+        if self.derived_from_frames_index {
+            println!(
+                "time p50/p95 (us): total={}/{} layout={}/{} prepaint={}/{} paint={}/{}",
+                self.p50_total_time_us,
+                self.p95_total_time_us,
+                self.p50_layout_time_us,
+                self.p95_layout_time_us,
+                self.p50_prepaint_time_us,
+                self.p95_prepaint_time_us,
+                self.p50_paint_time_us,
+                self.p95_paint_time_us
+            );
+            println!(
+                "invalidation sum: walk.calls={} walk.nodes={}",
+                self.sum_invalidation_walk_calls, self.sum_invalidation_walk_nodes
+            );
+        } else {
+            println!(
+                "time p50/p95 (us): total={}/{} cpu_time={}/{} layout={}/{} prepaint={}/{} paint={}/{} dispatch={}/{} hit_test={}/{}",
+                self.p50_total_time_us,
+                self.p95_total_time_us,
+                self.p50_ui_thread_cpu_time_us,
+                self.p95_ui_thread_cpu_time_us,
+                self.p50_layout_time_us,
+                self.p95_layout_time_us,
+                self.p50_prepaint_time_us,
+                self.p95_prepaint_time_us,
+                self.p50_paint_time_us,
+                self.p95_paint_time_us,
+                self.p50_dispatch_time_us,
+                self.p95_dispatch_time_us,
+                self.p50_hit_test_time_us,
+                self.p95_hit_test_time_us
+            );
+            println!(
+                "hot p50/p95 (us): layout.engine_solve={}/{} paint.widget={}/{} paint.text_prepare={}/{}",
+                self.p50_layout_engine_solve_time_us,
+                self.p95_layout_engine_solve_time_us,
+                self.p50_paint_widget_time_us,
+                self.p95_paint_widget_time_us,
+                self.p50_paint_text_prepare_time_us,
+                self.p95_paint_text_prepare_time_us
+            );
+        }
         if self.p95_renderer_encode_scene_us > 0
             || self.p95_renderer_upload_us > 0
             || self.p95_renderer_record_passes_us > 0
@@ -770,6 +794,11 @@ impl BundleStatsReport {
 
     pub(super) fn print_human(&self, bundle_path: &Path) {
         println!("bundle: {}", bundle_path.display());
+        if self.derived_from_frames_index {
+            println!(
+                "note: derived from frames.index.json (tail-limited); some counters/percentiles may be missing or zero"
+            );
+        }
         println!(
             "windows={} snapshots={} considered={} warmup_skipped={} model_changes={} global_changes={} propagated_model_changes={} propagated_global_changes={}",
             self.windows,
@@ -792,23 +821,41 @@ impl BundleStatsReport {
             self.sum_prepaint_time_us,
             self.sum_paint_time_us
         );
-        println!(
-            "time p50/p95 (us): total={}/{} cpu_time={}/{} layout={}/{} prepaint={}/{} paint={}/{} dispatch={}/{} hit_test={}/{}",
-            self.p50_total_time_us,
-            self.p95_total_time_us,
-            self.p50_ui_thread_cpu_time_us,
-            self.p95_ui_thread_cpu_time_us,
-            self.p50_layout_time_us,
-            self.p95_layout_time_us,
-            self.p50_prepaint_time_us,
-            self.p95_prepaint_time_us,
-            self.p50_paint_time_us,
-            self.p95_paint_time_us,
-            self.p50_dispatch_time_us,
-            self.p95_dispatch_time_us,
-            self.p50_hit_test_time_us,
-            self.p95_hit_test_time_us
-        );
+        if self.derived_from_frames_index {
+            println!(
+                "time p50/p95 (us): total={}/{} layout={}/{} prepaint={}/{} paint={}/{}",
+                self.p50_total_time_us,
+                self.p95_total_time_us,
+                self.p50_layout_time_us,
+                self.p95_layout_time_us,
+                self.p50_prepaint_time_us,
+                self.p95_prepaint_time_us,
+                self.p50_paint_time_us,
+                self.p95_paint_time_us
+            );
+            println!(
+                "invalidation sum: walk.calls={} walk.nodes={}",
+                self.sum_invalidation_walk_calls, self.sum_invalidation_walk_nodes
+            );
+        } else {
+            println!(
+                "time p50/p95 (us): total={}/{} cpu_time={}/{} layout={}/{} prepaint={}/{} paint={}/{} dispatch={}/{} hit_test={}/{}",
+                self.p50_total_time_us,
+                self.p95_total_time_us,
+                self.p50_ui_thread_cpu_time_us,
+                self.p95_ui_thread_cpu_time_us,
+                self.p50_layout_time_us,
+                self.p95_layout_time_us,
+                self.p50_prepaint_time_us,
+                self.p95_prepaint_time_us,
+                self.p50_paint_time_us,
+                self.p95_paint_time_us,
+                self.p50_dispatch_time_us,
+                self.p95_dispatch_time_us,
+                self.p50_hit_test_time_us,
+                self.p95_hit_test_time_us
+            );
+        }
         if self.p50_ui_thread_cpu_cycle_time_delta_cycles > 0
             || self.p95_ui_thread_cpu_cycle_time_delta_cycles > 0
             || self.max_ui_thread_cpu_cycle_time_delta_cycles > 0
@@ -820,15 +867,17 @@ impl BundleStatsReport {
                 self.max_ui_thread_cpu_cycle_time_delta_cycles
             );
         }
-        println!(
-            "hot p50/p95 (us): layout.engine_solve={}/{} paint.widget={}/{} paint.text_prepare={}/{}",
-            self.p50_layout_engine_solve_time_us,
-            self.p95_layout_engine_solve_time_us,
-            self.p50_paint_widget_time_us,
-            self.p95_paint_widget_time_us,
-            self.p50_paint_text_prepare_time_us,
-            self.p95_paint_text_prepare_time_us
-        );
+        if !self.derived_from_frames_index {
+            println!(
+                "hot p50/p95 (us): layout.engine_solve={}/{} paint.widget={}/{} paint.text_prepare={}/{}",
+                self.p50_layout_engine_solve_time_us,
+                self.p95_layout_engine_solve_time_us,
+                self.p50_paint_widget_time_us,
+                self.p95_paint_widget_time_us,
+                self.p50_paint_text_prepare_time_us,
+                self.p95_paint_text_prepare_time_us
+            );
+        }
         if self.p50_renderer_encode_scene_us > 0
             || self.p95_renderer_encode_scene_us > 0
             || self.p50_renderer_upload_us > 0
@@ -1679,6 +1728,10 @@ impl BundleStatsReport {
 
         let mut root = Map::new();
         root.insert("schema_version".to_string(), Value::from(1));
+        root.insert(
+            "derived_from_frames_index".to_string(),
+            Value::from(self.derived_from_frames_index),
+        );
         root.insert("sort".to_string(), Value::from(self.sort.as_str()));
         root.insert("warmup_frames".to_string(), Value::from(self.warmup_frames));
         root.insert("windows".to_string(), Value::from(self.windows));

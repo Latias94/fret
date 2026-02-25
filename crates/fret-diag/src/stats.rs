@@ -534,19 +534,23 @@ pub(super) fn bundle_stats_from_path(
         .map(|m| m.len())
         .unwrap_or(MAX_MATERIALIZED_BUNDLE_BYTES + 1);
     if file_len > MAX_MATERIALIZED_BUNDLE_BYTES {
-        return Err(format!(
-            "bundle artifact is too large for `diag stats` (would require materializing the full JSON into memory).\n\
+        return bundle_stats_from_frames_index(bundle_path, top, sort, opts.warmup_frames).map_err(
+            |err| {
+                format!(
+                    "{err}\n\
   bundle: {} ({} MiB)\n\
   hint: prefer schema2 + sidecars + lite triage:\n\
     - fretboard diag doctor --fix-schema2 <bundle_dir> --warmup-frames {}\n\
     - fretboard diag index <bundle_dir> --warmup-frames {}\n\
     - fretboard diag triage --lite <bundle_dir> --warmup-frames {}",
-            bundle_path.display(),
-            file_len / (1024 * 1024),
-            opts.warmup_frames,
-            opts.warmup_frames,
-            opts.warmup_frames
-        ));
+                    bundle_path.display(),
+                    file_len / (1024 * 1024),
+                    opts.warmup_frames,
+                    opts.warmup_frames,
+                    opts.warmup_frames
+                )
+            },
+        );
     }
     let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
     let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
@@ -554,6 +558,195 @@ pub(super) fn bundle_stats_from_path(
 }
 
 include!("stats/bundle_stats_compute.inc.rs");
+
+fn bundle_stats_from_frames_index(
+    bundle_path: &Path,
+    top: usize,
+    sort: BundleStatsSort,
+    warmup_frames: u64,
+) -> Result<BundleStatsReport, String> {
+    if !matches!(sort, BundleStatsSort::Invalidation | BundleStatsSort::Time) {
+        return Err(format!(
+            "bundle artifact is too large for full `diag stats`, and stats-lite currently supports `--sort invalidation|time` only (got: {})",
+            sort.as_str()
+        ));
+    }
+
+    fn col_index(columns: &[serde_json::Value], name: &str) -> Option<usize> {
+        columns
+            .iter()
+            .position(|c| c.as_str().is_some_and(|s| s == name))
+    }
+
+    fn row_u64(row: &[serde_json::Value], idx: Option<usize>) -> Option<u64> {
+        let idx = idx?;
+        row.get(idx)?.as_u64()
+    }
+
+    fn p50_p95(mut values: Vec<u64>) -> (u64, u64) {
+        if values.is_empty() {
+            return (0, 0);
+        }
+        values.sort_unstable();
+        let n = values.len();
+        let p50 = values[(n - 1) * 50 / 100];
+        let p95 = values[(n - 1) * 95 / 100];
+        (p50, p95)
+    }
+
+    let frames_index_path =
+        crate::frames_index::ensure_frames_index_json(bundle_path, warmup_frames)?;
+    let Some(frames_index) =
+        crate::frames_index::read_frames_index_json_v1(&frames_index_path, warmup_frames)
+    else {
+        return Err(format!(
+            "frames.index.json is missing or invalid (warmup_frames={warmup_frames})"
+        ));
+    };
+
+    let columns = frames_index
+        .get("columns")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid frames.index.json: missing columns".to_string())?;
+    let windows = frames_index
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid frames.index.json: missing windows".to_string())?;
+
+    let idx_frame_id = col_index(columns, "frame_id");
+    let idx_snapshot_seq = col_index(columns, "window_snapshot_seq");
+    let idx_ts = col_index(columns, "timestamp_unix_ms");
+    let idx_total = col_index(columns, "total_time_us");
+    let idx_layout = col_index(columns, "layout_time_us");
+    let idx_prepaint = col_index(columns, "prepaint_time_us");
+    let idx_paint = col_index(columns, "paint_time_us");
+    let idx_inv_calls = col_index(columns, "invalidation_walk_calls");
+    let idx_inv_nodes = col_index(columns, "invalidation_walk_nodes");
+
+    let mut out = BundleStatsReport {
+        sort,
+        warmup_frames,
+        derived_from_frames_index: true,
+        windows: windows.len().min(u32::MAX as usize) as u32,
+        ..Default::default()
+    };
+
+    let mut rows: Vec<BundleStatsSnapshotRow> = Vec::new();
+
+    let mut total_values: Vec<u64> = Vec::new();
+    let mut layout_values: Vec<u64> = Vec::new();
+    let mut prepaint_values: Vec<u64> = Vec::new();
+    let mut paint_values: Vec<u64> = Vec::new();
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snapshots_total = w
+            .get("snapshots_total")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+        out.snapshots = out
+            .snapshots
+            .saturating_add(snapshots_total.min(u32::MAX as u64) as u32);
+
+        let rows_arr = w
+            .get("rows")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v.as_slice());
+        out.snapshots_considered = out
+            .snapshots_considered
+            .saturating_add(rows_arr.len().min(u32::MAX as usize) as u32);
+
+        let skipped = snapshots_total.saturating_sub(rows_arr.len() as u64);
+        out.snapshots_skipped_warmup = out
+            .snapshots_skipped_warmup
+            .saturating_add(skipped.min(u32::MAX as u64) as u32);
+
+        for row in rows_arr {
+            let Some(row) = row.as_array() else {
+                continue;
+            };
+
+            let frame_id = row_u64(row, idx_frame_id).unwrap_or(0);
+            let snapshot_seq = row_u64(row, idx_snapshot_seq).unwrap_or(0);
+            let ts = row_u64(row, idx_ts);
+
+            let total = row_u64(row, idx_total).unwrap_or(0);
+            let layout = row_u64(row, idx_layout).unwrap_or(0);
+            let prepaint = row_u64(row, idx_prepaint).unwrap_or(0);
+            let paint = row_u64(row, idx_paint).unwrap_or(0);
+            let inv_calls_u64 = row_u64(row, idx_inv_calls).unwrap_or(0);
+            let inv_nodes_u64 = row_u64(row, idx_inv_nodes).unwrap_or(0);
+            let inv_calls_u32 = inv_calls_u64.min(u32::MAX as u64) as u32;
+            let inv_nodes_u32 = inv_nodes_u64.min(u32::MAX as u64) as u32;
+
+            out.sum_total_time_us = out.sum_total_time_us.saturating_add(total);
+            out.sum_layout_time_us = out.sum_layout_time_us.saturating_add(layout);
+            out.sum_prepaint_time_us = out.sum_prepaint_time_us.saturating_add(prepaint);
+            out.sum_paint_time_us = out.sum_paint_time_us.saturating_add(paint);
+            out.sum_invalidation_walk_calls = out
+                .sum_invalidation_walk_calls
+                .saturating_add(inv_calls_u64);
+            out.sum_invalidation_walk_nodes = out
+                .sum_invalidation_walk_nodes
+                .saturating_add(inv_nodes_u64);
+
+            out.max_total_time_us = out.max_total_time_us.max(total);
+            out.max_layout_time_us = out.max_layout_time_us.max(layout);
+            out.max_prepaint_time_us = out.max_prepaint_time_us.max(prepaint);
+            out.max_paint_time_us = out.max_paint_time_us.max(paint);
+            out.max_invalidation_walk_calls = out.max_invalidation_walk_calls.max(inv_calls_u32);
+            out.max_invalidation_walk_nodes = out.max_invalidation_walk_nodes.max(inv_nodes_u32);
+
+            total_values.push(total);
+            layout_values.push(layout);
+            prepaint_values.push(prepaint);
+            paint_values.push(paint);
+
+            rows.push(BundleStatsSnapshotRow {
+                window: window_id,
+                tick_id: snapshot_seq,
+                frame_id,
+                timestamp_unix_ms: ts,
+                total_time_us: total,
+                layout_time_us: layout,
+                prepaint_time_us: prepaint,
+                paint_time_us: paint,
+                invalidation_walk_calls: inv_calls_u32,
+                invalidation_walk_nodes: inv_nodes_u32,
+                ..Default::default()
+            });
+        }
+    }
+
+    (out.p50_total_time_us, out.p95_total_time_us) = p50_p95(total_values);
+    (out.p50_layout_time_us, out.p95_layout_time_us) = p50_p95(layout_values);
+    (out.p50_prepaint_time_us, out.p95_prepaint_time_us) = p50_p95(prepaint_values);
+    (out.p50_paint_time_us, out.p95_paint_time_us) = p50_p95(paint_values);
+
+    match sort {
+        BundleStatsSort::Invalidation => {
+            rows.sort_by(|a, b| {
+                b.invalidation_walk_nodes
+                    .cmp(&a.invalidation_walk_nodes)
+                    .then_with(|| b.invalidation_walk_calls.cmp(&a.invalidation_walk_calls))
+                    .then_with(|| b.total_time_us.cmp(&a.total_time_us))
+            });
+        }
+        BundleStatsSort::Time => {
+            rows.sort_by(|a, b| {
+                b.total_time_us
+                    .cmp(&a.total_time_us)
+                    .then_with(|| b.layout_time_us.cmp(&a.layout_time_us))
+                    .then_with(|| b.paint_time_us.cmp(&a.paint_time_us))
+                    .then_with(|| b.invalidation_walk_nodes.cmp(&a.invalidation_walk_nodes))
+            });
+        }
+        _ => {}
+    }
+
+    out.top = rows.into_iter().take(top).collect();
+    Ok(out)
+}
 
 fn parse_redacted_len_bytes(value: &str) -> Option<u64> {
     let value = value.trim();

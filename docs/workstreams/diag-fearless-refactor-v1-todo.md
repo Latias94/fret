@@ -224,8 +224,8 @@ Goal: common tooling should keep working even when `bundle.json` is too large to
 
 - [x] Make `diag stats` degrade gracefully for large bundle artifacts.
   - Prefer `bundle.schema2.json` when the user passes a raw `bundle.json` file and schema2 is present next to it.
-  - When the bundle artifact is still too large to materialize, fail fast with an actionable message that points to
-    `diag triage --lite` / schema2 + sidecar regeneration.
+  - When the bundle artifact is too large to materialize, fall back to a stats-lite report derived from `frames.index.json`
+    (and keep a clear hint to regen sidecars / use `diag triage --lite`).
   - Evidence anchors:
     - `crates/fret-diag/src/diag_stats.rs`
     - `crates/fret-diag/src/stats.rs`
