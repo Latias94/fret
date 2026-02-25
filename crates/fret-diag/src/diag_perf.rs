@@ -826,7 +826,7 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
                 let (
                     run_paint_cache_hit_test_only_replay_allowed_max,
                     run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
-                ) = bundle_paint_cache_hit_test_only_replay_maxes(
+                ) = diag_policy::bundle_paint_cache_hit_test_only_replay_maxes(
                     &bundle_path,
                     report_warmup_frames,
                 )?;
@@ -1972,7 +1972,10 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
             let (
                 run_paint_cache_hit_test_only_replay_allowed_max,
                 run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
-            ) = bundle_paint_cache_hit_test_only_replay_maxes(&bundle_path, report_warmup_frames)?;
+            ) = diag_policy::bundle_paint_cache_hit_test_only_replay_maxes(
+                &bundle_path,
+                report_warmup_frames,
+            )?;
             runs_pointer_move_dispatch.push(pointer_move_max_dispatch_time_us);
             runs_pointer_move_hit_test.push(pointer_move_max_hit_test_time_us);
             runs_pointer_move_global_changes.push(pointer_move_snapshots_with_global_changes);

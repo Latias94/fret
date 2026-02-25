@@ -1048,7 +1048,7 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
         || (check_pixels_changed_test_id.is_none()
             && scripts
                 .iter()
-                .any(|src| ui_gallery_script_pixels_changed_test_id(src).is_some()))
+                .any(|src| diag_policy::ui_gallery_script_pixels_changed_test_id(src).is_some()))
         || scripts.iter().any(|src| script_requests_screenshots(src));
     // Suite defaults: most suites only need a small warmup to skip startup churn, but
     // "no shift" gates should avoid the initial VirtualList window stabilization phase.
@@ -1713,18 +1713,26 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
             }
         }
 
-        let retained_vlist_gate_for_script = check_retained_vlist_reconcile_no_notify_min
-            .filter(|_| ui_gallery_script_requires_retained_vlist_reconcile_gate(&src));
+        let retained_vlist_gate_for_script =
+            check_retained_vlist_reconcile_no_notify_min.filter(|_| {
+                diag_policy::ui_gallery_script_requires_retained_vlist_reconcile_gate(&src)
+            });
         let retained_vlist_attach_detach_max_for_script = check_retained_vlist_attach_detach_max
-            .filter(|_| ui_gallery_script_requires_retained_vlist_reconcile_gate(&src));
+            .filter(|_| {
+                diag_policy::ui_gallery_script_requires_retained_vlist_reconcile_gate(&src)
+            });
         let retained_vlist_keep_alive_reuse_min_for_script =
-            check_retained_vlist_keep_alive_reuse_min
-                .filter(|_| ui_gallery_script_requires_retained_vlist_keep_alive_reuse_gate(&src));
+            check_retained_vlist_keep_alive_reuse_min.filter(|_| {
+                diag_policy::ui_gallery_script_requires_retained_vlist_keep_alive_reuse_gate(&src)
+            });
         let retained_vlist_keep_alive_budget_for_script = check_retained_vlist_keep_alive_budget
-            .filter(|_| ui_gallery_script_requires_retained_vlist_keep_alive_reuse_gate(&src));
+            .filter(|_| {
+                diag_policy::ui_gallery_script_requires_retained_vlist_keep_alive_reuse_gate(&src)
+            });
         let vlist_window_shifts_non_retained_max_for_script =
-            check_vlist_window_shifts_non_retained_max
-                .filter(|_| ui_gallery_script_requires_retained_vlist_reconcile_gate(&src));
+            check_vlist_window_shifts_non_retained_max.filter(|_| {
+                diag_policy::ui_gallery_script_requires_retained_vlist_reconcile_gate(&src)
+            });
         let wants_post_run_checks_for_script = check_stale_paint_test_id.is_some()
             || check_stale_scene_test_id.is_some()
             || check_idle_no_paint_min.is_some()
@@ -1788,53 +1796,53 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
             || retained_vlist_keep_alive_reuse_min_for_script.is_some()
             || retained_vlist_keep_alive_budget_for_script.is_some()
             || vlist_window_shifts_non_retained_max_for_script.is_some()
-            || ui_gallery_script_requires_text_rescan_system_fonts_font_stack_key_bumps_gate(
+            || diag_policy::ui_gallery_script_requires_text_rescan_system_fonts_font_stack_key_bumps_gate(
                 &src,
             )
-            || ui_gallery_script_requires_windowed_rows_offset_changes_gate(&src)
-            || ui_gallery_script_requires_windowed_rows_visible_start_repaint_gate(&src)
-            || ui_gallery_script_requires_markdown_editor_source_read_only_blocks_edits_gate(
+            || diag_policy::ui_gallery_script_requires_windowed_rows_offset_changes_gate(&src)
+            || diag_policy::ui_gallery_script_requires_windowed_rows_visible_start_repaint_gate(&src)
+            || diag_policy::ui_gallery_script_requires_markdown_editor_source_read_only_blocks_edits_gate(
                 &src,
             )
-            || ui_gallery_script_requires_markdown_editor_source_disabled_blocks_edits_gate(
+            || diag_policy::ui_gallery_script_requires_markdown_editor_source_disabled_blocks_edits_gate(
                 &src,
             )
-            || ui_gallery_script_requires_markdown_editor_source_soft_wrap_toggle_stable_gate(
+            || diag_policy::ui_gallery_script_requires_markdown_editor_source_soft_wrap_toggle_stable_gate(
                 &src,
             )
-            || ui_gallery_script_requires_markdown_editor_source_word_boundary_gate(&src)
-            || ui_gallery_script_requires_web_ime_bridge_enabled_gate(&src)
-            || ui_gallery_script_requires_markdown_editor_source_line_boundary_triple_click_gate(
+            || diag_policy::ui_gallery_script_requires_markdown_editor_source_word_boundary_gate(&src)
+            || diag_policy::ui_gallery_script_requires_web_ime_bridge_enabled_gate(&src)
+            || diag_policy::ui_gallery_script_requires_markdown_editor_source_line_boundary_triple_click_gate(
                 &src,
             )
-            || ui_gallery_script_requires_markdown_editor_source_a11y_composition_gate(&src)
-            || ui_gallery_script_requires_markdown_editor_source_a11y_composition_soft_wrap_gate(
+            || diag_policy::ui_gallery_script_requires_markdown_editor_source_a11y_composition_gate(&src)
+            || diag_policy::ui_gallery_script_requires_markdown_editor_source_a11y_composition_soft_wrap_gate(
                 &src,
             )
-            || ui_gallery_script_requires_markdown_editor_source_soft_wrap_editing_selection_wrap_stable_gate(&src)
-            || ui_gallery_script_requires_markdown_editor_source_folds_toggle_stable_gate(&src)
-            || ui_gallery_script_requires_markdown_editor_source_folds_placeholder_present_gate(
+            || diag_policy::ui_gallery_script_requires_markdown_editor_source_soft_wrap_editing_selection_wrap_stable_gate(&src)
+            || diag_policy::ui_gallery_script_requires_markdown_editor_source_folds_toggle_stable_gate(&src)
+            || diag_policy::ui_gallery_script_requires_markdown_editor_source_folds_placeholder_present_gate(
                 &src,
             )
-            || ui_gallery_script_requires_markdown_editor_source_folds_placeholder_present_under_soft_wrap_gate(&src)
-            || ui_gallery_script_requires_markdown_editor_source_folds_placeholder_absent_under_inline_preedit_gate(&src)
-            || ui_gallery_script_requires_markdown_editor_source_inlays_toggle_stable_gate(&src)
-            || ui_gallery_script_requires_markdown_editor_source_inlays_caret_navigation_stable_gate(&src)
-            || ui_gallery_script_requires_markdown_editor_source_inlays_present_gate(&src)
-            || ui_gallery_script_requires_markdown_editor_source_inlays_present_under_soft_wrap_gate(&src)
-            || ui_gallery_script_requires_markdown_editor_source_inlays_absent_under_inline_preedit_gate(&src)
-            || ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped_gate(&src)
-            || ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_gate(&src)
-            || ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed_gate(&src)
-            || ui_gallery_script_requires_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed_gate(&src)
-            || ui_gallery_script_requires_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed_gate(&src)
-            || ui_gallery_script_requires_code_editor_torture_composed_preedit_stable_after_wheel_scroll_gate(&src)
-            || ui_gallery_script_requires_code_editor_torture_composed_preedit_cancels_on_drag_selection_gate(&src)
-            || ui_gallery_script_requires_code_editor_torture_inlays_present_under_inline_preedit_unwrapped_gate(&src)
-            || ui_gallery_script_requires_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_gate(&src)
-            || ui_gallery_script_requires_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed_gate(&src)
-            || ui_gallery_script_wheel_scroll_hit_changes_test_id(&src).is_some()
-            || ui_gallery_script_requires_retained_vlist_reconcile_gate(&src);
+            || diag_policy::ui_gallery_script_requires_markdown_editor_source_folds_placeholder_present_under_soft_wrap_gate(&src)
+            || diag_policy::ui_gallery_script_requires_markdown_editor_source_folds_placeholder_absent_under_inline_preedit_gate(&src)
+            || diag_policy::ui_gallery_script_requires_markdown_editor_source_inlays_toggle_stable_gate(&src)
+            || diag_policy::ui_gallery_script_requires_markdown_editor_source_inlays_caret_navigation_stable_gate(&src)
+            || diag_policy::ui_gallery_script_requires_markdown_editor_source_inlays_present_gate(&src)
+            || diag_policy::ui_gallery_script_requires_markdown_editor_source_inlays_present_under_soft_wrap_gate(&src)
+            || diag_policy::ui_gallery_script_requires_markdown_editor_source_inlays_absent_under_inline_preedit_gate(&src)
+            || diag_policy::ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped_gate(&src)
+            || diag_policy::ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_gate(&src)
+            || diag_policy::ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed_gate(&src)
+            || diag_policy::ui_gallery_script_requires_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed_gate(&src)
+            || diag_policy::ui_gallery_script_requires_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed_gate(&src)
+            || diag_policy::ui_gallery_script_requires_code_editor_torture_composed_preedit_stable_after_wheel_scroll_gate(&src)
+            || diag_policy::ui_gallery_script_requires_code_editor_torture_composed_preedit_cancels_on_drag_selection_gate(&src)
+            || diag_policy::ui_gallery_script_requires_code_editor_torture_inlays_present_under_inline_preedit_unwrapped_gate(&src)
+            || diag_policy::ui_gallery_script_requires_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_gate(&src)
+            || diag_policy::ui_gallery_script_requires_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed_gate(&src)
+            || diag_policy::ui_gallery_script_wheel_scroll_hit_changes_test_id(&src).is_some()
+            || diag_policy::ui_gallery_script_requires_retained_vlist_reconcile_gate(&src);
 
         let is_gc_liveness_script = src.file_name().and_then(|n| n.to_str()).is_some_and(|n| {
             n == "ui-gallery-overlay-torture.json" || n == "ui-gallery-sidebar-scroll-refresh.json"
@@ -1873,7 +1881,7 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
 
             let (suite_viewport_input_min, suite_dock_drag_min, suite_viewport_capture_min) =
                 if builtin_suite == Some(BuiltinSuite::DockingArbitration) {
-                    docking_arbitration_script_default_gates(&src)
+                    diag_policy::docking_arbitration_script_default_gates(&src)
                 } else {
                     (None, None, None)
                 };
@@ -1904,7 +1912,7 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
                 .then_some("ui-gallery-ai-transcript-row-0")
                 .filter(|_| check_stale_paint_test_id.is_none());
             let suite_wheel_scroll_hit_changes_test_id =
-                ui_gallery_script_wheel_scroll_hit_changes_test_id(&src)
+                diag_policy::ui_gallery_script_wheel_scroll_hit_changes_test_id(&src)
                     .or_else(|| {
                         is_components_gallery_file_tree_suite
                             .then_some("components-gallery-file-tree-root")
@@ -1990,7 +1998,7 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
                 })
                 .filter(|_| check_vlist_window_shifts_escape_max.is_none());
             let script_requires_retained_vlist_reconcile_gate =
-                ui_gallery_script_requires_retained_vlist_reconcile_gate(&src)
+                diag_policy::ui_gallery_script_requires_retained_vlist_reconcile_gate(&src)
                     || vlist_window_boundary_retained_suite;
             let suite_vlist_window_shifts_non_retained_max =
                 script_requires_retained_vlist_reconcile_gate
@@ -2012,174 +2020,184 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
                 && script_requires_retained_vlist_reconcile_gate
                 && !check_vlist_policy_key_stable;
             let suite_windowed_rows_offset_changes_min =
-                ui_gallery_script_requires_windowed_rows_offset_changes_gate(&src)
+                diag_policy::ui_gallery_script_requires_windowed_rows_offset_changes_gate(&src)
                     .then_some(1u64)
                     .filter(|_| check_windowed_rows_offset_changes_min.is_none());
             let suite_windowed_rows_visible_start_changes_repainted =
-                ui_gallery_script_requires_windowed_rows_visible_start_repaint_gate(&src)
-                    && !check_windowed_rows_visible_start_changes_repainted;
-            let suite_pixels_changed_test_id = ui_gallery_script_pixels_changed_test_id(&src)
-                .filter(|_| check_pixels_changed_test_id.is_none());
+                diag_policy::ui_gallery_script_requires_windowed_rows_visible_start_repaint_gate(
+                    &src,
+                ) && !check_windowed_rows_visible_start_changes_repainted;
+            let suite_pixels_changed_test_id =
+                diag_policy::ui_gallery_script_pixels_changed_test_id(&src)
+                    .filter(|_| check_pixels_changed_test_id.is_none());
             let suite_ui_gallery_code_editor_torture_marker_present =
-                ui_gallery_script_requires_code_editor_torture_marker_present_gate(&src)
-                    && !check_ui_gallery_code_editor_torture_marker_present;
+                diag_policy::ui_gallery_script_requires_code_editor_torture_marker_present_gate(
+                    &src,
+                ) && !check_ui_gallery_code_editor_torture_marker_present;
             let suite_ui_gallery_code_editor_torture_undo_redo =
-                ui_gallery_script_requires_code_editor_torture_undo_redo_gate(&src)
+                diag_policy::ui_gallery_script_requires_code_editor_torture_undo_redo_gate(&src)
                     && !check_ui_gallery_code_editor_torture_undo_redo;
             let suite_ui_gallery_code_editor_torture_geom_fallbacks_low =
-                ui_gallery_script_requires_code_editor_torture_geom_fallbacks_low_gate(&src)
-                    && !check_ui_gallery_code_editor_torture_geom_fallbacks_low;
+                diag_policy::ui_gallery_script_requires_code_editor_torture_geom_fallbacks_low_gate(
+                    &src,
+                ) && !check_ui_gallery_code_editor_torture_geom_fallbacks_low;
             let suite_ui_gallery_code_editor_torture_read_only_blocks_edits =
-                ui_gallery_script_requires_code_editor_torture_read_only_blocks_edits_gate(&src)
+                diag_policy::ui_gallery_script_requires_code_editor_torture_read_only_blocks_edits_gate(&src)
                     && !check_ui_gallery_code_editor_torture_read_only_blocks_edits;
             let suite_ui_gallery_markdown_editor_source_read_only_blocks_edits =
-                ui_gallery_script_requires_markdown_editor_source_read_only_blocks_edits_gate(&src)
+                diag_policy::ui_gallery_script_requires_markdown_editor_source_read_only_blocks_edits_gate(&src)
                     && !check_ui_gallery_markdown_editor_source_read_only_blocks_edits;
             let suite_ui_gallery_markdown_editor_source_disabled_blocks_edits =
-                ui_gallery_script_requires_markdown_editor_source_disabled_blocks_edits_gate(&src)
+                diag_policy::ui_gallery_script_requires_markdown_editor_source_disabled_blocks_edits_gate(&src)
                     && !check_ui_gallery_markdown_editor_source_disabled_blocks_edits;
             let suite_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable =
-                ui_gallery_script_requires_markdown_editor_source_soft_wrap_toggle_stable_gate(
+                diag_policy::ui_gallery_script_requires_markdown_editor_source_soft_wrap_toggle_stable_gate(
                     &src,
                 ) && !check_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable;
             let suite_ui_gallery_markdown_editor_source_word_boundary =
-                ui_gallery_script_requires_markdown_editor_source_word_boundary_gate(&src)
-                    && !check_ui_gallery_markdown_editor_source_word_boundary;
+                diag_policy::ui_gallery_script_requires_markdown_editor_source_word_boundary_gate(
+                    &src,
+                ) && !check_ui_gallery_markdown_editor_source_word_boundary;
             let suite_ui_gallery_web_ime_bridge_enabled =
-                ui_gallery_script_requires_web_ime_bridge_enabled_gate(&src)
+                diag_policy::ui_gallery_script_requires_web_ime_bridge_enabled_gate(&src)
                     && !check_ui_gallery_web_ime_bridge_enabled;
             let suite_ui_gallery_markdown_editor_source_line_boundary_triple_click =
-                ui_gallery_script_requires_markdown_editor_source_line_boundary_triple_click_gate(
+                diag_policy::ui_gallery_script_requires_markdown_editor_source_line_boundary_triple_click_gate(
                     &src,
                 ) && !check_ui_gallery_markdown_editor_source_line_boundary_triple_click;
             let suite_ui_gallery_markdown_editor_source_a11y_composition =
-                ui_gallery_script_requires_markdown_editor_source_a11y_composition_gate(&src)
-                    && !check_ui_gallery_markdown_editor_source_a11y_composition;
+                diag_policy::ui_gallery_script_requires_markdown_editor_source_a11y_composition_gate(
+                    &src,
+                ) && !check_ui_gallery_markdown_editor_source_a11y_composition;
             let suite_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap =
-                ui_gallery_script_requires_markdown_editor_source_a11y_composition_soft_wrap_gate(
+                diag_policy::ui_gallery_script_requires_markdown_editor_source_a11y_composition_soft_wrap_gate(
                     &src,
                 ) && !check_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap;
             let suite_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable =
-                ui_gallery_script_requires_markdown_editor_source_soft_wrap_editing_selection_wrap_stable_gate(&src)
+                diag_policy::ui_gallery_script_requires_markdown_editor_source_soft_wrap_editing_selection_wrap_stable_gate(&src)
                     && !check_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable;
             let suite_ui_gallery_markdown_editor_source_folds_toggle_stable =
-                ui_gallery_script_requires_markdown_editor_source_folds_toggle_stable_gate(&src)
+                diag_policy::ui_gallery_script_requires_markdown_editor_source_folds_toggle_stable_gate(&src)
                     && !check_ui_gallery_markdown_editor_source_folds_toggle_stable;
             let suite_ui_gallery_markdown_editor_source_folds_clamp_selection_out_of_folds =
-                ui_gallery_script_requires_markdown_editor_source_folds_clamp_selection_out_of_folds_gate(&src)
+                diag_policy::ui_gallery_script_requires_markdown_editor_source_folds_clamp_selection_out_of_folds_gate(&src)
                     && !check_ui_gallery_markdown_editor_source_folds_clamp_selection_out_of_folds;
             let suite_ui_gallery_markdown_editor_source_folds_placeholder_present =
-                ui_gallery_script_requires_markdown_editor_source_folds_placeholder_present_gate(
+                diag_policy::ui_gallery_script_requires_markdown_editor_source_folds_placeholder_present_gate(
                     &src,
                 ) && !check_ui_gallery_markdown_editor_source_folds_placeholder_present;
             let suite_ui_gallery_markdown_editor_source_folds_placeholder_present_under_soft_wrap =
-                ui_gallery_script_requires_markdown_editor_source_folds_placeholder_present_under_soft_wrap_gate(&src)
+                diag_policy::ui_gallery_script_requires_markdown_editor_source_folds_placeholder_present_under_soft_wrap_gate(&src)
                     && !check_ui_gallery_markdown_editor_source_folds_placeholder_present_under_soft_wrap;
             let suite_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit =
-                ui_gallery_script_requires_markdown_editor_source_folds_placeholder_absent_under_inline_preedit_gate(&src)
+                diag_policy::ui_gallery_script_requires_markdown_editor_source_folds_placeholder_absent_under_inline_preedit_gate(&src)
                     && !check_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit;
             let suite_ui_gallery_markdown_editor_source_inlays_toggle_stable =
-                ui_gallery_script_requires_markdown_editor_source_inlays_toggle_stable_gate(&src)
+                diag_policy::ui_gallery_script_requires_markdown_editor_source_inlays_toggle_stable_gate(&src)
                     && !check_ui_gallery_markdown_editor_source_inlays_toggle_stable;
             let suite_ui_gallery_markdown_editor_source_inlays_caret_navigation_stable =
-                ui_gallery_script_requires_markdown_editor_source_inlays_caret_navigation_stable_gate(&src)
+                diag_policy::ui_gallery_script_requires_markdown_editor_source_inlays_caret_navigation_stable_gate(&src)
                     && !check_ui_gallery_markdown_editor_source_inlays_caret_navigation_stable;
             let suite_ui_gallery_markdown_editor_source_inlays_present =
-                ui_gallery_script_requires_markdown_editor_source_inlays_present_gate(&src)
-                    && !check_ui_gallery_markdown_editor_source_inlays_present;
+                diag_policy::ui_gallery_script_requires_markdown_editor_source_inlays_present_gate(
+                    &src,
+                ) && !check_ui_gallery_markdown_editor_source_inlays_present;
             let suite_ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap =
-                ui_gallery_script_requires_markdown_editor_source_inlays_present_under_soft_wrap_gate(&src)
+                diag_policy::ui_gallery_script_requires_markdown_editor_source_inlays_present_under_soft_wrap_gate(&src)
                     && !check_ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap;
             let suite_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit =
-                ui_gallery_script_requires_markdown_editor_source_inlays_absent_under_inline_preedit_gate(&src)
+                diag_policy::ui_gallery_script_requires_markdown_editor_source_inlays_absent_under_inline_preedit_gate(&src)
                     && !check_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit;
             let suite_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit =
-                ui_gallery_script_requires_code_editor_torture_folds_placeholder_absent_under_inline_preedit_gate(&src)
+                diag_policy::ui_gallery_script_requires_code_editor_torture_folds_placeholder_absent_under_inline_preedit_gate(&src)
                     && !check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit;
             let suite_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped =
-                ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped_gate(&src)
+                diag_policy::ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped_gate(&src)
                     && !check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped;
             let suite_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations =
-                ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_gate(&src)
+                diag_policy::ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_gate(&src)
                     && !check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations;
             let suite_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed =
-                ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed_gate(&src)
+                diag_policy::ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed_gate(&src)
                     && !check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed;
             let suite_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed =
-                ui_gallery_script_requires_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed_gate(&src)
+                diag_policy::ui_gallery_script_requires_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed_gate(&src)
                     && !check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed;
             let suite_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed =
-                ui_gallery_script_requires_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed_gate(&src)
+                diag_policy::ui_gallery_script_requires_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed_gate(&src)
                     && !check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed;
             let suite_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll =
-                ui_gallery_script_requires_code_editor_torture_composed_preedit_stable_after_wheel_scroll_gate(&src)
+                diag_policy::ui_gallery_script_requires_code_editor_torture_composed_preedit_stable_after_wheel_scroll_gate(&src)
                     && !check_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll;
             let suite_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection =
-                ui_gallery_script_requires_code_editor_torture_composed_preedit_cancels_on_drag_selection_gate(&src)
+                diag_policy::ui_gallery_script_requires_code_editor_torture_composed_preedit_cancels_on_drag_selection_gate(&src)
                     && !check_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection;
             let suite_ui_gallery_code_editor_torture_folds_placeholder_present =
-                ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_gate(&src)
+                diag_policy::ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_gate(&src)
                     && !check_ui_gallery_code_editor_torture_folds_placeholder_present;
             let suite_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap =
-                ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_under_soft_wrap_gate(&src)
+                diag_policy::ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_under_soft_wrap_gate(&src)
                     && !check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap;
             let suite_ui_gallery_code_editor_torture_inlays_present =
-                ui_gallery_script_requires_code_editor_torture_inlays_present_gate(&src)
-                    && !check_ui_gallery_code_editor_torture_inlays_present;
+                diag_policy::ui_gallery_script_requires_code_editor_torture_inlays_present_gate(
+                    &src,
+                ) && !check_ui_gallery_code_editor_torture_inlays_present;
             let suite_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit =
-                ui_gallery_script_requires_code_editor_torture_inlays_absent_under_inline_preedit_gate(&src)
+                diag_policy::ui_gallery_script_requires_code_editor_torture_inlays_absent_under_inline_preedit_gate(&src)
                     && !check_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit;
             let suite_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped =
-                ui_gallery_script_requires_code_editor_torture_inlays_present_under_inline_preedit_unwrapped_gate(&src)
+                diag_policy::ui_gallery_script_requires_code_editor_torture_inlays_present_under_inline_preedit_unwrapped_gate(&src)
                     && !check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped;
             let suite_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations =
-                ui_gallery_script_requires_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_gate(&src)
+                diag_policy::ui_gallery_script_requires_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_gate(&src)
                     && !check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations;
             let suite_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed =
-                ui_gallery_script_requires_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed_gate(&src)
+                diag_policy::ui_gallery_script_requires_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed_gate(&src)
                     && !check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed;
             let suite_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap =
-                ui_gallery_script_requires_code_editor_torture_inlays_present_under_soft_wrap_gate(
+                diag_policy::ui_gallery_script_requires_code_editor_torture_inlays_present_under_soft_wrap_gate(
                     &src,
                 ) && !check_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap;
             let suite_ui_gallery_code_editor_word_boundary =
-                ui_gallery_script_requires_code_editor_word_boundary_gate(&src)
+                diag_policy::ui_gallery_script_requires_code_editor_word_boundary_gate(&src)
                     && !check_ui_gallery_code_editor_word_boundary;
             let suite_ui_gallery_code_editor_a11y_selection =
-                ui_gallery_script_requires_code_editor_a11y_selection_gate(&src)
+                diag_policy::ui_gallery_script_requires_code_editor_a11y_selection_gate(&src)
                     && !check_ui_gallery_code_editor_a11y_selection;
             let suite_ui_gallery_code_editor_a11y_composition =
-                ui_gallery_script_requires_code_editor_a11y_composition_gate(&src)
+                diag_policy::ui_gallery_script_requires_code_editor_a11y_composition_gate(&src)
                     && !check_ui_gallery_code_editor_a11y_composition;
             let suite_ui_gallery_code_editor_a11y_selection_wrap =
-                ui_gallery_script_requires_code_editor_a11y_selection_wrap_gate(&src)
+                diag_policy::ui_gallery_script_requires_code_editor_a11y_selection_wrap_gate(&src)
                     && !check_ui_gallery_code_editor_a11y_selection_wrap;
             let suite_ui_gallery_code_editor_a11y_composition_wrap =
-                ui_gallery_script_requires_code_editor_a11y_composition_wrap_gate(&src)
-                    && !check_ui_gallery_code_editor_a11y_composition_wrap;
+                diag_policy::ui_gallery_script_requires_code_editor_a11y_composition_wrap_gate(
+                    &src,
+                ) && !check_ui_gallery_code_editor_a11y_composition_wrap;
             let suite_ui_gallery_code_editor_a11y_composition_wrap_scroll =
-                ui_gallery_script_requires_code_editor_a11y_composition_wrap_scroll_gate(&src)
+                diag_policy::ui_gallery_script_requires_code_editor_a11y_composition_wrap_scroll_gate(&src)
                     && !check_ui_gallery_code_editor_a11y_composition_wrap_scroll;
             let suite_ui_gallery_code_editor_a11y_composition_drag =
-                ui_gallery_script_requires_code_editor_a11y_composition_drag_gate(&src)
-                    && !check_ui_gallery_code_editor_a11y_composition_drag;
+                diag_policy::ui_gallery_script_requires_code_editor_a11y_composition_drag_gate(
+                    &src,
+                ) && !check_ui_gallery_code_editor_a11y_composition_drag;
             let suite_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps =
-                ui_gallery_script_requires_text_rescan_system_fonts_font_stack_key_bumps_gate(&src)
+                diag_policy::ui_gallery_script_requires_text_rescan_system_fonts_font_stack_key_bumps_gate(&src)
                     && !check_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps;
             let suite_ui_gallery_text_fallback_policy_key_bumps_on_settings_change =
-                ui_gallery_script_requires_text_fallback_policy_key_bumps_on_settings_change_gate(
+                diag_policy::ui_gallery_script_requires_text_fallback_policy_key_bumps_on_settings_change_gate(
                     &src,
                 ) && !check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change;
             let suite_ui_gallery_text_fallback_policy_key_bumps_on_locale_change =
-                ui_gallery_script_requires_text_fallback_policy_key_bumps_on_locale_change_gate(
+                diag_policy::ui_gallery_script_requires_text_fallback_policy_key_bumps_on_locale_change_gate(
                     &src,
                 ) && !check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change;
             let suite_ui_gallery_text_mixed_script_bundled_fallback_conformance =
-                ui_gallery_script_requires_text_mixed_script_bundled_fallback_conformance_gate(
+                diag_policy::ui_gallery_script_requires_text_mixed_script_bundled_fallback_conformance_gate(
                     &src,
                 ) && !check_ui_gallery_text_mixed_script_bundled_fallback_conformance;
             let script_requires_retained_vlist_keep_alive_reuse_gate =
-                ui_gallery_script_requires_retained_vlist_keep_alive_reuse_gate(&src);
+                diag_policy::ui_gallery_script_requires_retained_vlist_keep_alive_reuse_gate(&src);
             let retained_vlist_suite = components_gallery_suite
                 || ai_transcript_suite
                 || vlist_window_boundary_retained_suite;

@@ -86,7 +86,10 @@ pub(crate) fn cmd_perf_baseline_from_bundles(
         let (
             run_paint_cache_hit_test_only_replay_allowed_max,
             run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
-        ) = bundle_paint_cache_hit_test_only_replay_maxes(&bundle_path, warmup_frames)?;
+        ) = diag_policy::bundle_paint_cache_hit_test_only_replay_maxes(
+            &bundle_path,
+            warmup_frames,
+        )?;
         let renderer_encode_scene_us = report.max_renderer_encode_scene_us;
         let renderer_upload_us = report.max_renderer_upload_us;
         let renderer_record_passes_us = report.max_renderer_record_passes_us;
