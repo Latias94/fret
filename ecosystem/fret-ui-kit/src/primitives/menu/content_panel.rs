@@ -15,6 +15,8 @@ use fret_ui::element::{
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
 
+use crate::primitives::portal_inherited;
+
 /// Render a menu content semantics wrapper (`role=menu`) and return its stable element id.
 ///
 /// This is intended for `aria-controls`-style trigger relationships (`controls_element`).
@@ -62,7 +64,8 @@ pub fn menu_content_semantics_id<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     overlay_root_name: &str,
 ) -> GlobalElementId {
-    cx.with_root_name(overlay_root_name, |cx| {
+    let inherited = portal_inherited::PortalInherited::capture(cx);
+    portal_inherited::with_root_name_inheriting(cx, overlay_root_name, inherited, |cx| {
         menu_content_semantics_with_id(cx, LayoutStyle::default(), |_cx| Vec::new()).0
     })
 }

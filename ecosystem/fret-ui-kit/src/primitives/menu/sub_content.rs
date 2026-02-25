@@ -19,6 +19,7 @@ use crate::primitives::direction::{self as direction_prim, LayoutDirection};
 use crate::primitives::menu::content_panel;
 use crate::primitives::menu::sub;
 use crate::primitives::menu::{content, content::RovingFlexProps, content::TypeaheadPolicy};
+use crate::primitives::portal_inherited;
 
 fn with_submenu_value_scope<H: UiHost, R>(
     cx: &mut ElementContext<'_, H>,
@@ -67,7 +68,8 @@ pub fn submenu_content_semantics_id<H: UiHost>(
     overlay_root_name: &str,
     open_value: &Arc<str>,
 ) -> GlobalElementId {
-    cx.with_root_name(overlay_root_name, |cx| {
+    let inherited = portal_inherited::PortalInherited::capture(cx);
+    portal_inherited::with_root_name_inheriting(cx, overlay_root_name, inherited, |cx| {
         submenu_content_semantics_id_in_scope::<H>(cx, open_value)
     })
 }
