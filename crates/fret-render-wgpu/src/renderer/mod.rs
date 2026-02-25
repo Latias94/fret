@@ -12,6 +12,7 @@ use std::sync::Arc;
 // Split from the original single-file renderer for maintainability.
 mod bind_group_builders;
 mod bind_group_caches;
+mod blur_primitive;
 mod clip_path_mask_cache;
 mod gpu_effect_params;
 mod gpu_globals;

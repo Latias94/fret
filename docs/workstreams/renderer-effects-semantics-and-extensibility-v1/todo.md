@@ -60,9 +60,11 @@ This TODO is ordered by implementation priority (P0 first), and is designed to b
     `crates/fret-render-wgpu/src/renderer/shaders.rs`,
     `crates/fret-render-wgpu/tests/effect_filter_content_noise_conformance.rs`.
 
-- [ ] Unify blur implementation into a shared “blur primitive” module:
-  - [ ] Single place that maps `(radius_px, quality, budgets, viewport_size)` → passes + downsample strategy.
-  - [ ] Shared degradation counters + reasons used by `GaussianBlur`, `DropShadow`, and future effects.
+- [x] Unify blur implementation into a shared “blur primitive” module:
+  - [x] Single place that maps `(radius_px, quality, budgets, viewport_size)` → downsample + iteration strategy.
+  - [x] Shared ping-pong blur pass emission helper reused by `GaussianBlur` and `DropShadow`.
+  - Evidence: `crates/fret-render-wgpu/src/renderer/blur_primitive.rs`,
+    `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs`.
 
 - [x] Improve diagnostics for degradations:
   - [x] Add per-effect degradation counters (requested/applied + budget zero/insufficient/target exhausted).

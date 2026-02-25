@@ -1,3 +1,4 @@
+use super::blur_primitive;
 use super::frame_targets::downsampled_size;
 use super::intermediate_pool::estimate_texture_bytes;
 use super::{
@@ -14,8 +15,6 @@ pub(super) struct EffectCompileCtx {
     pub(super) clear: wgpu::Color,
     pub(super) scale_factor: f32,
 }
-
-const BLUR_KERNEL_RADIUS_PX: f32 = 4.0;
 
 pub(super) fn available_scratch_targets(
     in_use_targets: &[PlanTarget],
@@ -211,7 +210,8 @@ pub(super) fn apply_chain_in_place(
                             continue;
                         }
 
-                        let iterations = blur_iterations_for_radius(radius_px, 1, quality);
+                        let iterations =
+                            blur_primitive::blur_iterations_for_radius(radius_px, 1, quality);
                         effect_degradations.gaussian_blur.applied =
                             effect_degradations.gaussian_blur.applied.saturating_add(1);
                         effect_blur_quality.gaussian_blur.record_applied(
@@ -232,8 +232,11 @@ pub(super) fn apply_chain_in_place(
                         );
                         continue;
                     };
-                    let iterations =
-                        blur_iterations_for_radius(radius_px, downsample_scale, quality);
+                    let iterations = blur_primitive::blur_iterations_for_radius(
+                        radius_px,
+                        downsample_scale,
+                        quality,
+                    );
                     effect_degradations.gaussian_blur.applied =
                         effect_degradations.gaussian_blur.applied.saturating_add(1);
                     effect_blur_quality.gaussian_blur.record_applied(
@@ -310,7 +313,7 @@ pub(super) fn apply_chain_in_place(
                         .saturating_add(1);
                     continue;
                 }
-                let iterations = blur_iterations_for_radius(radius_px, 1, quality);
+                let iterations = blur_primitive::blur_iterations_for_radius(radius_px, 1, quality);
                 effect_degradations.gaussian_blur.applied =
                     effect_degradations.gaussian_blur.applied.saturating_add(1);
                 effect_blur_quality
@@ -596,8 +599,11 @@ pub(super) fn apply_chain_in_place(
                     )
                     .unwrap_or(1)
                 };
-                let iterations =
-                    blur_iterations_for_radius(blur_radius_px, downsample_scale, quality);
+                let iterations = blur_primitive::blur_iterations_for_radius(
+                    blur_radius_px,
+                    downsample_scale,
+                    quality,
+                );
                 effect_blur_quality.drop_shadow.record_applied(
                     downsample_scale,
                     iterations,
@@ -628,29 +634,17 @@ pub(super) fn apply_chain_in_place(
                         load: wgpu::LoadOp::Clear(ctx.clear),
                     }));
 
-                    for _ in 1..iterations {
-                        passes.push(RenderPlanPass::Blur(BlurPass {
-                            src: scratch_blurred,
-                            dst: srcdst,
-                            src_size: ctx.viewport_size,
-                            dst_size: ctx.viewport_size,
-                            dst_scissor: Some(LocalScissorRect(scissor)),
-                            mask_uniform_index: None,
-                            mask: None,
-                            axis: BlurAxis::Horizontal,
-                            load: wgpu::LoadOp::Clear(ctx.clear),
-                        }));
-                        passes.push(RenderPlanPass::Blur(BlurPass {
-                            src: srcdst,
-                            dst: scratch_blurred,
-                            src_size: ctx.viewport_size,
-                            dst_size: ctx.viewport_size,
-                            dst_scissor: Some(LocalScissorRect(scissor)),
-                            mask_uniform_index: None,
-                            mask: None,
-                            axis: BlurAxis::Vertical,
-                            load: wgpu::LoadOp::Clear(ctx.clear),
-                        }));
+                    if iterations > 1 {
+                        blur_primitive::append_pingpong_blur_passes(
+                            passes,
+                            scratch_blurred,
+                            srcdst,
+                            ctx.viewport_size,
+                            Some(LocalScissorRect(scissor)),
+                            iterations - 1,
+                            ctx.clear,
+                            wgpu::LoadOp::Clear(ctx.clear),
+                        );
                     }
                 } else {
                     let downsample_scale = if downsample_scale >= 4 { 4 } else { 2 };
@@ -675,30 +669,16 @@ pub(super) fn apply_chain_in_place(
                     }));
 
                     let blur_scissor = down_scissor.map(LocalScissorRect);
-                    for _ in 0..iterations {
-                        passes.push(RenderPlanPass::Blur(BlurPass {
-                            src: srcdst,
-                            dst: scratch_blurred,
-                            src_size: blur_size,
-                            dst_size: blur_size,
-                            dst_scissor: blur_scissor,
-                            mask_uniform_index: None,
-                            mask: None,
-                            axis: BlurAxis::Horizontal,
-                            load: wgpu::LoadOp::Clear(ctx.clear),
-                        }));
-                        passes.push(RenderPlanPass::Blur(BlurPass {
-                            src: scratch_blurred,
-                            dst: srcdst,
-                            src_size: blur_size,
-                            dst_size: blur_size,
-                            dst_scissor: blur_scissor,
-                            mask_uniform_index: None,
-                            mask: None,
-                            axis: BlurAxis::Vertical,
-                            load: wgpu::LoadOp::Clear(ctx.clear),
-                        }));
-                    }
+                    blur_primitive::append_pingpong_blur_passes(
+                        passes,
+                        srcdst,
+                        scratch_blurred,
+                        blur_size,
+                        blur_scissor,
+                        iterations,
+                        ctx.clear,
+                        wgpu::LoadOp::Clear(ctx.clear),
+                    );
 
                     let final_scissor =
                         map_scissor_to_size(Some(scissor), ctx.viewport_size, ctx.viewport_size);
@@ -1025,38 +1005,20 @@ pub(super) fn choose_effect_blur_downsample_scale(
     requested_downsample: u32,
     quality: fret_core::EffectQuality,
 ) -> Option<u32> {
-    if budget_bytes == 0 {
-        return None;
-    }
-
-    let full = estimate_texture_bytes(viewport_size, format, 1);
-    let half = estimate_texture_bytes(downsampled_size(viewport_size, 2), format, 1);
-    let quarter = estimate_texture_bytes(downsampled_size(viewport_size, 4), format, 1);
-
-    let required_half = full.saturating_add(half.saturating_mul(2));
-    let required_quarter = full.saturating_add(quarter.saturating_mul(2));
-
-    let desired = effect_blur_desired_downsample(requested_downsample, quality);
-
-    if desired == 2 && required_half <= budget_bytes {
-        return Some(2);
-    }
-    if required_quarter <= budget_bytes {
-        return Some(4);
-    }
-    None
+    blur_primitive::choose_effect_blur_downsample_scale(
+        viewport_size,
+        format,
+        budget_bytes,
+        requested_downsample,
+        quality,
+    )
 }
 
 pub(super) fn effect_blur_desired_downsample(
     requested_downsample: u32,
     quality: fret_core::EffectQuality,
 ) -> u32 {
-    let desired = match quality {
-        fret_core::EffectQuality::Low => 4,
-        fret_core::EffectQuality::Medium | fret_core::EffectQuality::High => 2,
-        fret_core::EffectQuality::Auto => requested_downsample,
-    };
-    if desired >= 4 { 4 } else { 2 }
+    blur_primitive::effect_blur_desired_downsample(requested_downsample, quality)
 }
 
 pub(super) fn color_adjust_enabled(
@@ -1228,30 +1190,16 @@ fn append_scissored_blur_in_place_two_scratch(
     }));
 
     let blur_scissor = down_scissor.map(LocalScissorRect);
-    for _ in 0..iterations {
-        passes.push(RenderPlanPass::Blur(BlurPass {
-            src: scratch_a,
-            dst: scratch_b,
-            src_size: blur_size,
-            dst_size: blur_size,
-            dst_scissor: blur_scissor,
-            mask_uniform_index: None,
-            mask: None,
-            axis: BlurAxis::Horizontal,
-            load: wgpu::LoadOp::Clear(clear),
-        }));
-        passes.push(RenderPlanPass::Blur(BlurPass {
-            src: scratch_b,
-            dst: scratch_a,
-            src_size: blur_size,
-            dst_size: blur_size,
-            dst_scissor: blur_scissor,
-            mask_uniform_index: None,
-            mask: None,
-            axis: BlurAxis::Vertical,
-            load: wgpu::LoadOp::Clear(clear),
-        }));
-    }
+    blur_primitive::append_pingpong_blur_passes(
+        passes,
+        scratch_a,
+        scratch_b,
+        blur_size,
+        blur_scissor,
+        iterations,
+        clear,
+        wgpu::LoadOp::Clear(clear),
+    );
 
     let final_scissor = map_scissor_to_size(Some(scissor), full_size, full_size);
     passes.push(RenderPlanPass::ScaleNearest(ScaleNearestPass {
@@ -1314,33 +1262,6 @@ fn append_scissored_blur_in_place_single_scratch(
             load: wgpu::LoadOp::Load,
         }));
     }
-}
-
-fn blur_iterations_for_radius(
-    radius_px: f32,
-    downsample_scale: u32,
-    quality: fret_core::EffectQuality,
-) -> u32 {
-    let radius_px = if radius_px.is_finite() {
-        radius_px.max(0.0)
-    } else {
-        0.0
-    };
-    if radius_px <= 0.0 {
-        return 0;
-    }
-
-    let downsample_scale = downsample_scale.max(1) as f32;
-    let per_iter = BLUR_KERNEL_RADIUS_PX * downsample_scale;
-    let mut iterations = (radius_px / per_iter).ceil() as u32;
-    iterations = iterations.max(1);
-
-    let max_iterations = match quality {
-        fret_core::EffectQuality::Low => 2,
-        fret_core::EffectQuality::Auto | fret_core::EffectQuality::Medium => 4,
-        fret_core::EffectQuality::High => 8,
-    };
-    iterations.min(max_iterations)
 }
 
 fn scale_backdrop_warp_v1(
