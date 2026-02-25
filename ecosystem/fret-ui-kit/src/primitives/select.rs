@@ -43,6 +43,7 @@ use crate::overlay;
 use crate::primitives::dialog;
 use crate::primitives::popper;
 use crate::primitives::popper_arrow;
+use crate::primitives::portal_inherited;
 use crate::primitives::trigger_a11y;
 use crate::{OverlayController, OverlayPresence, OverlayRequest};
 
@@ -202,7 +203,8 @@ pub fn select_listbox_semantics_id<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     overlay_root_name: &str,
 ) -> GlobalElementId {
-    cx.with_root_name(overlay_root_name, |cx| {
+    let inherited = portal_inherited::PortalInherited::capture(cx);
+    portal_inherited::with_root_name_inheriting(cx, overlay_root_name, inherited, |cx| {
         select_listbox_semantics_id_in_scope::<H>(cx)
     })
 }
@@ -2347,20 +2349,26 @@ mod tests {
         fret_ui::elements::with_element_cx(&mut app, window, b, "test", |cx| {
             let overlay_root_name = "select-overlay";
             let expected = select_listbox_semantics_id::<App>(cx, overlay_root_name);
-            let actual = cx.with_root_name(overlay_root_name, |cx| {
-                select_listbox_pressable_with_id_props::<App>(cx, |_cx, _st, _id| {
-                    (
-                        PressableProps {
-                            layout: LayoutStyle::default(),
-                            enabled: true,
-                            focusable: false,
-                            ..Default::default()
-                        },
-                        Vec::new(),
-                    )
-                })
-                .id
-            });
+            let inherited = portal_inherited::PortalInherited::capture(cx);
+            let actual = portal_inherited::with_root_name_inheriting(
+                cx,
+                overlay_root_name,
+                inherited,
+                |cx| {
+                    select_listbox_pressable_with_id_props::<App>(cx, |_cx, _st, _id| {
+                        (
+                            PressableProps {
+                                layout: LayoutStyle::default(),
+                                enabled: true,
+                                focusable: false,
+                                ..Default::default()
+                            },
+                            Vec::new(),
+                        )
+                    })
+                    .id
+                },
+            );
             assert_eq!(expected, actual);
         });
     }

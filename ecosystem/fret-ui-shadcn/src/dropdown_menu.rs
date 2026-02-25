@@ -25,6 +25,7 @@ use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::dropdown_menu as menu;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
+use fret_ui_kit::primitives::portal_inherited;
 use fret_ui_kit::primitives::presence as radix_presence;
 use fret_ui_kit::typography;
 use fret_ui_kit::{
@@ -1552,13 +1553,19 @@ impl DropdownMenu {
             let overlay_root_name_for_controls: Arc<str> = Arc::from(overlay_root_name.clone());
             let content_id_for_trigger =
                 menu::content_panel::menu_content_semantics_id(cx, &overlay_root_name);
+            let portal_ctx = portal_inherited::PortalInherited::capture(cx);
             let trigger =
                 menu::trigger::apply_menu_trigger_a11y(trigger, is_open, Some(content_id_for_trigger));
             let on_dismiss_request = self.on_dismiss_request.clone();
             let submenu_cfg = menu::sub::MenuSubmenuConfig::default();
             let submenu =
-                cx.with_root_name(&overlay_root_name, |cx| {
-                    menu::root::sync_root_open_and_ensure_submenu(cx, is_open, cx.root_id(), submenu_cfg)
+                portal_inherited::with_root_name_inheriting(cx, &overlay_root_name, portal_ctx, |cx| {
+                    menu::root::sync_root_open_and_ensure_submenu(
+                        cx,
+                        is_open,
+                        cx.root_id(),
+                        submenu_cfg,
+                    )
                 });
 
             if overlay_presence.present {
@@ -1578,10 +1585,10 @@ impl DropdownMenu {
                 let content_focus_id_for_children = content_focus_id.clone();
                 let first_item_focus_id_for_request = first_item_focus_id.clone();
                 let last_item_focus_id_for_request = last_item_focus_id.clone();
-                let direction = direction_prim::use_direction_in_scope(cx, None);
+                let direction = portal_ctx.direction;
 
                 let (overlay_children, dismissible_on_pointer_move) =
-                     cx.with_root_name(&overlay_root_name, move |cx| {
+                     portal_inherited::with_root_name_inheriting(cx, &overlay_root_name, portal_ctx, move |cx| {
                      let theme = &theme;
 
                      #[derive(Default)]
@@ -3966,14 +3973,20 @@ mod tests {
                         let is_open = cx.app.models_mut().get_copied(&open).unwrap_or(false);
                         let overlay_root_name = menu::dropdown_menu_root_name(cx.root_id());
                         let submenu_cfg = menu::sub::MenuSubmenuConfig::default();
-                        let submenu_models = cx.with_root_name(&overlay_root_name, |cx| {
-                            menu::root::sync_root_open_and_ensure_submenu(
-                                cx,
-                                is_open,
-                                cx.root_id(),
-                                submenu_cfg,
-                            )
-                        });
+                        let portal_ctx = portal_inherited::PortalInherited::capture(cx);
+                        let submenu_models = portal_inherited::with_root_name_inheriting(
+                            cx,
+                            &overlay_root_name,
+                            portal_ctx,
+                            |cx| {
+                                menu::root::sync_root_open_and_ensure_submenu(
+                                    cx,
+                                    is_open,
+                                    cx.root_id(),
+                                    submenu_cfg,
+                                )
+                            },
+                        );
                         let _ = cx
                             .app
                             .models_mut()

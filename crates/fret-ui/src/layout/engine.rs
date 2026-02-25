@@ -1157,6 +1157,102 @@ impl TaffyLayoutEngine {
                     FlexDirection::Column | FlexDirection::ColumnReverse => MainAxis::Column,
                 };
 
+                let compute_intrinsic_main_size =
+                    |engine: &mut Self,
+                     child_id: LayoutId,
+                     main_axis: MainAxis,
+                     use_min_content: bool,
+                     sf: f32,
+                     measure: &mut dyn FnMut(NodeId, LayoutConstraints) -> Size|
+                     -> Option<f32> {
+                        let avail = match (main_axis, use_min_content) {
+                            (MainAxis::Row, true) => taffy::geometry::Size {
+                                width: TaffyAvailableSpace::MinContent,
+                                height: TaffyAvailableSpace::MaxContent,
+                            },
+                            (MainAxis::Row, false) => taffy::geometry::Size {
+                                width: TaffyAvailableSpace::MaxContent,
+                                height: TaffyAvailableSpace::MaxContent,
+                            },
+                            (MainAxis::Column, true) => taffy::geometry::Size {
+                                width: TaffyAvailableSpace::MaxContent,
+                                height: TaffyAvailableSpace::MinContent,
+                            },
+                            (MainAxis::Column, false) => taffy::geometry::Size {
+                                width: TaffyAvailableSpace::MaxContent,
+                                height: TaffyAvailableSpace::MaxContent,
+                            },
+                        };
+
+                        let result = engine.tree.compute_layout_with_measure(
+                            child_id.0,
+                            avail,
+                            |known, avail, _id, ctx, _style| {
+                                let Some(ctx) = ctx else {
+                                    return taffy::geometry::Size::default();
+                                };
+                                if !ctx.measured {
+                                    return taffy::geometry::Size::default();
+                                }
+
+                                let constraints = LayoutConstraints::new(
+                                    LayoutSize::new(
+                                        known.width.map(|w| Px(w / sf)),
+                                        known.height.map(|h| Px(h / sf)),
+                                    ),
+                                    LayoutSize::new(
+                                        match avail.width {
+                                            TaffyAvailableSpace::Definite(w) => {
+                                                AvailableSpace::Definite(Px(w / sf))
+                                            }
+                                            TaffyAvailableSpace::MinContent => {
+                                                if ctx.min_content_width_as_max {
+                                                    AvailableSpace::MaxContent
+                                                } else {
+                                                    AvailableSpace::MinContent
+                                                }
+                                            }
+                                            TaffyAvailableSpace::MaxContent => {
+                                                AvailableSpace::MaxContent
+                                            }
+                                        },
+                                        match avail.height {
+                                            TaffyAvailableSpace::Definite(h) => {
+                                                AvailableSpace::Definite(Px(h / sf))
+                                            }
+                                            TaffyAvailableSpace::MinContent => {
+                                                AvailableSpace::MinContent
+                                            }
+                                            TaffyAvailableSpace::MaxContent => {
+                                                AvailableSpace::MaxContent
+                                            }
+                                        },
+                                    ),
+                                );
+
+                                let s = measure(ctx.node, constraints);
+                                taffy::geometry::Size {
+                                    width: s.width.0 * sf,
+                                    height: s.height.0 * sf,
+                                }
+                            },
+                        );
+                        if result.is_err() {
+                            return None;
+                        }
+
+                        let layout = engine.tree.layout(child_id.0).ok()?;
+                        let main_dp = match main_axis {
+                            MainAxis::Row => layout.size.width,
+                            MainAxis::Column => layout.size.height,
+                        };
+                        if main_dp.is_finite() && main_dp > 0.0 {
+                            Some(main_dp)
+                        } else {
+                            None
+                        }
+                    };
+
                 for child in children.iter().copied() {
                     let Some(mut child_style) = self.styles.get(child).cloned() else {
                         continue;
@@ -1196,84 +1292,25 @@ impl TaffyLayoutEngine {
                         continue;
                     };
 
-                    let avail = match main_axis {
-                        MainAxis::Row => taffy::geometry::Size {
-                            width: TaffyAvailableSpace::MinContent,
-                            height: TaffyAvailableSpace::MaxContent,
-                        },
-                        MainAxis::Column => taffy::geometry::Size {
-                            width: TaffyAvailableSpace::MaxContent,
-                            height: TaffyAvailableSpace::MinContent,
-                        },
-                    };
-
-                    let result = self.tree.compute_layout_with_measure(
-                        child_id.0,
-                        avail,
-                        |known, avail, _id, ctx, _style| {
-                            let Some(ctx) = ctx else {
-                                return taffy::geometry::Size::default();
-                            };
-                            if !ctx.measured {
-                                return taffy::geometry::Size::default();
-                            }
-
-                            let constraints = LayoutConstraints::new(
-                                LayoutSize::new(
-                                    known.width.map(|w| Px(w / sf)),
-                                    known.height.map(|h| Px(h / sf)),
-                                ),
-                                LayoutSize::new(
-                                    match avail.width {
-                                        TaffyAvailableSpace::Definite(w) => {
-                                            AvailableSpace::Definite(Px(w / sf))
-                                        }
-                                        TaffyAvailableSpace::MinContent => {
-                                            if ctx.min_content_width_as_max {
-                                                AvailableSpace::MaxContent
-                                            } else {
-                                                AvailableSpace::MinContent
-                                            }
-                                        }
-                                        TaffyAvailableSpace::MaxContent => {
-                                            AvailableSpace::MaxContent
-                                        }
-                                    },
-                                    match avail.height {
-                                        TaffyAvailableSpace::Definite(h) => {
-                                            AvailableSpace::Definite(Px(h / sf))
-                                        }
-                                        TaffyAvailableSpace::MinContent => {
-                                            AvailableSpace::MinContent
-                                        }
-                                        TaffyAvailableSpace::MaxContent => {
-                                            AvailableSpace::MaxContent
-                                        }
-                                    },
-                                ),
-                            );
-
-                            let s = measure(ctx.node, constraints);
-                            taffy::geometry::Size {
-                                width: s.width.0 * sf,
-                                height: s.height.0 * sf,
-                            }
-                        },
-                    );
-                    if result.is_err() {
-                        continue;
-                    }
-
-                    let Ok(layout) = self.tree.layout(child_id.0) else {
+                    // Taffy supports `MinContent`/`MaxContent` probes for leaf nodes, but some
+                    // internal layout containers (notably shrink-wrapped grid wrappers) may report
+                    // an empty intrinsic size under `MinContent` even when they have non-empty
+                    // children.
+                    //
+                    // Fall back to a `MaxContent` probe in those cases so overflow-visible
+                    // interactive wrappers (e.g. shadcn-style `Pressable` controls inside a
+                    // wrapping row) keep a non-zero main-axis allocation and don't collapse to
+                    // `w=0` hit-test bounds.
+                    let main_dp =
+                        compute_intrinsic_main_size(self, child_id, main_axis, true, sf, measure)
+                            .or_else(|| {
+                                compute_intrinsic_main_size(
+                                    self, child_id, main_axis, false, sf, measure,
+                                )
+                            });
+                    let Some(main_dp) = main_dp else {
                         continue;
                     };
-                    let main_dp = match main_axis {
-                        MainAxis::Row => layout.size.width,
-                        MainAxis::Column => layout.size.height,
-                    };
-                    if !main_dp.is_finite() || main_dp <= 0.0 {
-                        continue;
-                    }
 
                     match main_axis {
                         MainAxis::Row => child_style.min_size.width = Dimension::length(main_dp),

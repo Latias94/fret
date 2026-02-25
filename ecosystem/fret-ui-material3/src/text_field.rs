@@ -217,6 +217,7 @@ fn text_area_style_from_text_input_style(input: fret_ui::TextInputStyle) -> Text
         background: input.background,
         border: input.border,
         border_color: input.border_color,
+        border_color_focused: input.border_color_focused,
         focus_ring: input.focus_ring,
         corner_radii: input.corner_radii,
         text_color: input.text_color,

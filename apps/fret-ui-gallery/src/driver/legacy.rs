@@ -59,6 +59,20 @@ use router::{
     page_from_gallery_location,
 };
 
+fn apply_ui_gallery_text_font_fallback_overrides(config: &mut fret_render::TextFontFamilyConfig) {
+    #[cfg(target_os = "windows")]
+    {
+        if config.common_fallback_injection == fret_core::TextCommonFallbackInjection::PlatformDefault
+        {
+            // UI gallery demos intentionally include symbol glyphs (e.g. "⌘") to align with shadcn
+            // docs. On Windows, relying on system fallback can yield tofu squares. Prefer injecting
+            // the curated common fallback stack so missing glyphs can resolve via "Segoe UI Symbol"
+            // / "Segoe UI Emoji" when available.
+            config.common_fallback_injection = fret_core::TextCommonFallbackInjection::CommonFallback;
+        }
+    }
+}
+
 #[derive(Default)]
 struct DebugHudState {
     last_tick: Option<fret_core::time::Instant>,
@@ -2595,6 +2609,9 @@ pub fn run() -> anyhow::Result<()> {
         })
         .with_default_diagnostics()
         .with_default_config_files_for_root(&project_root)?
+        .configure(|c| {
+            apply_ui_gallery_text_font_fallback_overrides(&mut c.text_font_families);
+        })
         .with_config_files_watcher_for_root(Duration::from_millis(500), &project_root)
         .with_ui_assets_budgets(64 * 1024 * 1024, 4096, 16 * 1024 * 1024, 4096)
         .preload_icon_svgs_on_gpu_ready()
@@ -2625,6 +2642,9 @@ pub fn run_with_event_loop(event_loop: winit::event_loop::EventLoop) -> anyhow::
         })
         .with_default_diagnostics()
         .with_default_config_files_for_root(&project_root)?
+        .configure(|c| {
+            apply_ui_gallery_text_font_fallback_overrides(&mut c.text_font_families);
+        })
         .with_config_files_watcher_for_root(Duration::from_millis(500), &project_root)
         .with_ui_assets_budgets(64 * 1024 * 1024, 4096, 16 * 1024 * 1024, 4096)
         .preload_icon_svgs_on_gpu_ready()

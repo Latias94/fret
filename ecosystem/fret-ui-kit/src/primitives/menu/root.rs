@@ -20,6 +20,7 @@ use std::sync::Arc;
 
 use crate::primitives::dismissable_layer;
 use crate::primitives::menu::sub;
+use crate::primitives::portal_inherited;
 use crate::{OverlayController, OverlayPresence, OverlayRequest};
 
 /// Menu initial focus targets (Radix `onOpenAutoFocus` outcomes).
@@ -219,8 +220,8 @@ pub fn menu_overlay_root_name(id: GlobalElementId) -> String {
 
 /// Ensure submenu models exist and install the menu-root timer handler.
 ///
-/// Call this inside the overlay root scope (e.g. `cx.with_root_name(...)`), so the models are
-/// scoped to that root.
+/// Call this inside the overlay root scope (e.g. `portal_inherited::with_root_name_inheriting(...)`),
+/// so the models are scoped to that root.
 pub fn ensure_submenu<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     timer_handler_element: GlobalElementId,
@@ -254,7 +255,8 @@ pub fn with_root_name_sync_root_open_and_ensure_submenu<H: UiHost>(
     is_open: bool,
     cfg: sub::MenuSubmenuConfig,
 ) -> sub::MenuSubmenuModels {
-    cx.with_root_name(root_name, |cx| {
+    let inherited = portal_inherited::PortalInherited::capture(cx);
+    portal_inherited::with_root_name_inheriting(cx, root_name, inherited, |cx| {
         sync_root_open_and_ensure_submenu(cx, is_open, cx.root_id(), cfg)
     })
 }

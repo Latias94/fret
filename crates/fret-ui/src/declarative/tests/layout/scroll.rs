@@ -1026,6 +1026,104 @@ fn scroll_axis_both_updates_extent_for_axis_growing_at_end() {
 }
 
 #[test]
+fn scroll_observed_extent_does_not_double_count_scroll_offset() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(160.0), Px(48.0)),
+    );
+    let mut text = FakeTextService::default();
+    let scroll_handle = crate::scroll::ScrollHandle::default();
+
+    fn build_root(
+        cx: &mut ElementContext<'_, TestHost>,
+        scroll_handle: crate::scroll::ScrollHandle,
+    ) -> Vec<AnyElement> {
+        let mut scroll_layout = crate::element::LayoutStyle::default();
+        scroll_layout.size.width = crate::element::Length::Fill;
+        scroll_layout.size.height = crate::element::Length::Fill;
+        scroll_layout.overflow = crate::element::Overflow::Clip;
+
+        vec![cx.scroll(
+            crate::element::ScrollProps {
+                layout: scroll_layout,
+                scroll_handle: Some(scroll_handle),
+                ..Default::default()
+            },
+            move |cx| {
+                vec![cx.column(
+                    crate::element::ColumnProps {
+                        gap: Px(0.0).into(),
+                        ..Default::default()
+                    },
+                    move |cx| {
+                        (0..96)
+                            .map(|i| cx.text(format!("row {i}")))
+                            .collect::<Vec<_>>()
+                    },
+                )]
+            },
+        )]
+    }
+
+    // Frame 0: establish a stable content extent.
+    let root0 = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "scroll-observed-extent-offset-regression",
+        |cx| build_root(cx, scroll_handle.clone()),
+    );
+    ui.set_root(root0);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let content0 = scroll_handle.content_size();
+    assert!(
+        content0.height.0 > bounds.size.height.0 + 1.0,
+        "expected scroll content to exceed viewport: content={:?} viewport={:?}",
+        content0,
+        bounds.size
+    );
+
+    // Frame 1: apply a non-zero scroll offset and ensure the content extent remains stable.
+    let max0 = scroll_handle.max_offset().y;
+    assert!(max0.0 > 0.0, "expected a non-zero scroll range");
+    scroll_handle.set_offset(fret_core::Point::new(Px(0.0), Px((max0.0 * 0.6).max(1.0))));
+    app.advance_frame();
+
+    let root1 = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "scroll-observed-extent-offset-regression",
+        |cx| build_root(cx, scroll_handle.clone()),
+    );
+    ui.set_root(root1);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let content1 = scroll_handle.content_size();
+    assert!(
+        scroll_handle.offset().y.0 > 0.5,
+        "expected scroll offset to be non-zero after set_offset: offset={:?}",
+        scroll_handle.offset()
+    );
+    assert!(
+        (content1.height.0 - content0.height.0).abs() <= 0.5,
+        "expected content extent to remain stable under scroll offset: before={:?} after={:?}",
+        content0,
+        content1
+    );
+}
+
+#[test]
 fn scroll_extent_updates_under_view_cache_reconciliation_when_growing_at_end() {
     let mut app = TestHost::new();
     let show_more = app.models_mut().insert(false);

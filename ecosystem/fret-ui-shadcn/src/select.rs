@@ -23,9 +23,9 @@ use fret_ui_kit::declarative::overlay_motion;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::active_descendant as active_desc;
-use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
+use fret_ui_kit::primitives::portal_inherited;
 use fret_ui_kit::primitives::presence as radix_presence;
 use fret_ui_kit::primitives::roving_focus_group;
 use fret_ui_kit::primitives::select as radix_select;
@@ -1876,7 +1876,8 @@ fn select_impl<H: UiHost>(
                     };
 
                     let border_width = resolved.border_width;
-                    let direction = direction_prim::use_direction_in_scope(cx, None);
+                    let portal_ctx = portal_inherited::PortalInherited::capture(cx);
+                    let direction = portal_ctx.direction;
 
                     let (
                         item_aligned_inputs,
@@ -2293,7 +2294,11 @@ fn select_impl<H: UiHost>(
                     let on_value_change_for_overlay_children = on_value_change.clone();
                     let model_for_overlay = model.clone();
 
-                    let overlay_children = cx.with_root_name(&overlay_root_name, move |cx| {
+                    let overlay_children = portal_inherited::with_root_name_inheriting(
+                        cx,
+                        &overlay_root_name,
+                        portal_ctx,
+                        move |cx| {
                         let trigger_state_for_overlay = trigger_state_for_overlay_for_children.clone();
                         let open_for_content = open_for_overlay.clone();
                         let open_for_barrier_children = open_for_overlay.clone();
@@ -3411,7 +3416,8 @@ fn select_impl<H: UiHost>(
                             [probe],
                             animated,
                         )
-                    });
+                        },
+                    );
 
                     let mut request = radix_select::modal_select_request_with_dismiss_handler(
                         trigger_id,
@@ -3427,10 +3433,15 @@ fn select_impl<H: UiHost>(
                         .resolve(cx, cx.window);
                     radix_select::request_select(cx, request);
                 } else {
+            let portal_ctx = portal_inherited::PortalInherited::capture(cx);
             let open_for_overlay = open_for_trigger.clone();
             let mouse_open_guard_for_overlay = mouse_open_guard.clone();
             let on_dismiss_request_for_overlay_children = on_dismiss_request.clone();
-            let overlay_children = cx.with_root_name(&overlay_root_name, move |cx| {
+            let overlay_children = portal_inherited::with_root_name_inheriting(
+                cx,
+                &overlay_root_name,
+                portal_ctx,
+                move |cx| {
                 let barrier = radix_select::select_modal_barrier_with_dismiss_handler(
                     cx,
                     open_for_overlay.clone(),

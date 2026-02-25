@@ -475,15 +475,15 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
         .entry("component.field.description_line_height".to_string())
         .or_insert(21.0);
 
-    // Tooltip defaults in the upstream registry:
-    // - `sideOffset={4}`
-    // - Arrow uses `h-2 w-2` (8px)
+    // Tooltip defaults in the upstream new-york-v4 registry:
+    // - `TooltipContent` uses `sideOffset={0}` by default.
+    // - Arrow uses `size-2.5` (10px).
     metrics
         .entry("component.tooltip.side_offset".to_string())
-        .or_insert(4.0);
+        .or_insert(0.0);
     metrics
         .entry("component.tooltip.arrow_size".to_string())
-        .or_insert(8.0);
+        .or_insert(10.0);
 
     if let Some(ring) = colors.get("ring").cloned() {
         if let Some(ring_50) = with_oklch_alpha(&ring, 0.5) {
