@@ -105,72 +105,6 @@ use run_artifacts::{
 use stats::{
     BundleStatsOptions, BundleStatsReport, BundleStatsSort, ScriptResultSummary,
     bundle_stats_diff_from_paths, bundle_stats_from_path,
-    check_bundle_for_chart_sampling_window_shifts_min, check_bundle_for_dock_drag_min,
-    check_bundle_for_drag_cache_root_paint_only, check_bundle_for_gc_sweep_liveness,
-    check_bundle_for_layout_fast_path_min, check_bundle_for_node_graph_cull_window_shifts_max,
-    check_bundle_for_node_graph_cull_window_shifts_min, check_bundle_for_notify_hotspot_file_max,
-    check_bundle_for_overlay_synthesis_min, check_bundle_for_prepaint_actions_min,
-    check_bundle_for_retained_vlist_attach_detach_max,
-    check_bundle_for_retained_vlist_keep_alive_budget,
-    check_bundle_for_retained_vlist_keep_alive_reuse_min,
-    check_bundle_for_retained_vlist_reconcile_no_notify_min,
-    check_bundle_for_semantics_changed_repainted, check_bundle_for_stale_paint,
-    check_bundle_for_stale_scene, check_bundle_for_ui_gallery_code_editor_a11y_composition,
-    check_bundle_for_ui_gallery_code_editor_a11y_composition_drag,
-    check_bundle_for_ui_gallery_code_editor_a11y_composition_wrap,
-    check_bundle_for_ui_gallery_code_editor_a11y_composition_wrap_scroll,
-    check_bundle_for_ui_gallery_code_editor_a11y_selection,
-    check_bundle_for_ui_gallery_code_editor_a11y_selection_wrap,
-    check_bundle_for_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection,
-    check_bundle_for_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll,
-    check_bundle_for_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed,
-    check_bundle_for_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed,
-    check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit,
-    check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_present,
-    check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped,
-    check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations,
-    check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed,
-    check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap,
-    check_bundle_for_ui_gallery_code_editor_torture_geom_fallbacks_low,
-    check_bundle_for_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit,
-    check_bundle_for_ui_gallery_code_editor_torture_inlays_present,
-    check_bundle_for_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped,
-    check_bundle_for_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations,
-    check_bundle_for_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed,
-    check_bundle_for_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap,
-    check_bundle_for_ui_gallery_code_editor_torture_marker_present,
-    check_bundle_for_ui_gallery_code_editor_torture_marker_undo_redo,
-    check_bundle_for_ui_gallery_code_editor_torture_read_only_blocks_edits,
-    check_bundle_for_ui_gallery_code_editor_word_boundary,
-    check_bundle_for_ui_gallery_markdown_editor_source_a11y_composition,
-    check_bundle_for_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap,
-    check_bundle_for_ui_gallery_markdown_editor_source_disabled_blocks_edits,
-    check_bundle_for_ui_gallery_markdown_editor_source_folds_clamp_selection_out_of_folds,
-    check_bundle_for_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit,
-    check_bundle_for_ui_gallery_markdown_editor_source_folds_placeholder_present,
-    check_bundle_for_ui_gallery_markdown_editor_source_folds_placeholder_present_under_soft_wrap,
-    check_bundle_for_ui_gallery_markdown_editor_source_folds_toggle_stable,
-    check_bundle_for_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit,
-    check_bundle_for_ui_gallery_markdown_editor_source_inlays_caret_navigation_stable,
-    check_bundle_for_ui_gallery_markdown_editor_source_inlays_present,
-    check_bundle_for_ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap,
-    check_bundle_for_ui_gallery_markdown_editor_source_inlays_toggle_stable,
-    check_bundle_for_ui_gallery_markdown_editor_source_line_boundary_triple_click,
-    check_bundle_for_ui_gallery_markdown_editor_source_read_only_blocks_edits,
-    check_bundle_for_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable,
-    check_bundle_for_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable,
-    check_bundle_for_ui_gallery_markdown_editor_source_word_boundary,
-    check_bundle_for_ui_gallery_web_ime_bridge_enabled, check_bundle_for_view_cache_reuse_min,
-    check_bundle_for_view_cache_reuse_stable_min, check_bundle_for_viewport_capture_min,
-    check_bundle_for_viewport_input_min, check_bundle_for_vlist_policy_key_stable,
-    check_bundle_for_vlist_visible_range_refreshes_max,
-    check_bundle_for_vlist_visible_range_refreshes_min,
-    check_bundle_for_vlist_window_shifts_explainable,
-    check_bundle_for_vlist_window_shifts_have_prepaint_actions,
-    check_bundle_for_vlist_window_shifts_kind_max,
-    check_bundle_for_vlist_window_shifts_non_retained_max, check_bundle_for_wheel_scroll,
-    check_bundle_for_wheel_scroll_hit_changes, check_bundle_for_windowed_rows_offset_changes_min,
-    check_bundle_for_windowed_rows_visible_start_changes_repainted,
     check_out_dir_for_ui_gallery_text_fallback_policy_key_bumps_on_locale_change,
     check_out_dir_for_ui_gallery_text_fallback_policy_key_bumps_on_settings_change,
     check_out_dir_for_ui_gallery_text_mixed_script_bundled_fallback_conformance,
@@ -4305,7 +4239,7 @@ fn run_script_suite_collect_bundles(
         if let Some(min) = check_view_cache_reuse_stable_min
             && min > 0
         {
-            check_bundle_for_view_cache_reuse_stable_min(
+            stats::check_bundle_for_view_cache_reuse_stable_min(
                 &bundle_path,
                 &paths.out_dir,
                 min,
@@ -4315,7 +4249,7 @@ fn run_script_suite_collect_bundles(
         if let Some(min) = check_view_cache_reuse_min
             && min > 0
         {
-            check_bundle_for_view_cache_reuse_min(&bundle_path, min, warmup_frames)?;
+            stats::check_bundle_for_view_cache_reuse_min(&bundle_path, min, warmup_frames)?;
         }
         if let Some(min) = check_overlay_synthesis_min
             && min > 0
@@ -4324,7 +4258,7 @@ fn run_script_suite_collect_bundles(
                 .map(|pred| pred(src))
                 .unwrap_or(true);
             if should_gate {
-                check_bundle_for_overlay_synthesis_min(&bundle_path, min, warmup_frames)?;
+                stats::check_bundle_for_overlay_synthesis_min(&bundle_path, min, warmup_frames)?;
             }
         }
         if let Some(min) = check_viewport_input_min
@@ -4334,18 +4268,18 @@ fn run_script_suite_collect_bundles(
                 .map(|pred| pred(src))
                 .unwrap_or(true);
             if should_gate {
-                check_bundle_for_viewport_input_min(&bundle_path, min, warmup_frames)?;
+                stats::check_bundle_for_viewport_input_min(&bundle_path, min, warmup_frames)?;
             }
         }
         if let Some(min) = check_dock_drag_min
             && min > 0
         {
-            check_bundle_for_dock_drag_min(&bundle_path, min, warmup_frames)?;
+            stats::check_bundle_for_dock_drag_min(&bundle_path, min, warmup_frames)?;
         }
         if let Some(min) = check_viewport_capture_min
             && min > 0
         {
-            check_bundle_for_viewport_capture_min(&bundle_path, min, warmup_frames)?;
+            stats::check_bundle_for_viewport_capture_min(&bundle_path, min, warmup_frames)?;
         }
 
         bundle_paths.push(bundle_path);
