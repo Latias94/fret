@@ -51,6 +51,7 @@ pub(super) fn preview_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
             let demo_tooltip = shadcn::Tooltip::new(
                 shadcn::Button::new("Hover")
                     .variant(shadcn::ButtonVariant::Outline)
+                    .test_id("ui-gallery-tooltip-demo-trigger")
                     .into_element(cx),
                 shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(
                     cx,
@@ -59,9 +60,41 @@ pub(super) fn preview_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
                 .into_element(cx),
             )
             .arrow(true)
+            .arrow_test_id("ui-gallery-tooltip-demo-arrow")
             .side(shadcn::TooltipSide::Top)
+            .panel_test_id("ui-gallery-tooltip-demo-panel")
             .into_element(cx)
             .test_id("ui-gallery-tooltip-demo");
+
+            let focus_start = shadcn::Button::new("Focus Start")
+                .variant(shadcn::ButtonVariant::Outline)
+                .test_id("ui-gallery-tooltip-focus-start")
+                .into_element(cx);
+            let focus_tooltip = shadcn::Tooltip::new(
+                shadcn::Button::new("Focus Trigger")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .test_id("ui-gallery-tooltip-focus-trigger")
+                    .into_element(cx),
+                shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(
+                    cx,
+                    "Opens on keyboard focus",
+                )
+                .test_id("ui-gallery-tooltip-focus-text")])
+                .into_element(cx),
+            )
+            .arrow(true)
+            .arrow_test_id("ui-gallery-tooltip-focus-arrow")
+            .side(shadcn::TooltipSide::Top)
+            .panel_test_id("ui-gallery-tooltip-focus-panel")
+            .into_element(cx)
+            .test_id("ui-gallery-tooltip-focus");
+
+            let focus_row = stack::hstack(
+                cx,
+                stack::HStackProps::default().gap(Space::N2).items_center(),
+                |_cx| vec![focus_start, focus_tooltip],
+            )
+            .test_id("ui-gallery-tooltip-focus-row");
 
             let side_row = stack::hstack(
                 cx,
@@ -193,6 +226,24 @@ pub(super) fn preview_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
 .side(shadcn::TooltipSide::Top)
 .into_element(cx);"#,
                 ),
+                    DocSection::new("Keyboard Focus", focus_row)
+                        .description("Tooltips should open when the trigger receives keyboard focus.")
+                        .code(
+                            "rust",
+                            r#"shadcn::Tooltip::new(
+    shadcn::Button::new("Focus Trigger")
+        .variant(shadcn::ButtonVariant::Outline)
+        .into_element(cx),
+    shadcn::TooltipContent::new([shadcn::TooltipContent::text(
+        cx,
+        "Opens on keyboard focus",
+    )])
+    .into_element(cx),
+)
+.side(shadcn::TooltipSide::Top)
+.arrow(true)
+.into_element(cx);"#,
+                        ),
                     DocSection::new("Side", side_row)
                         .description("Tooltips can be placed on the four sides of the trigger.")
                         .code(
