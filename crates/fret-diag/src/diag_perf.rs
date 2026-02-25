@@ -10,6 +10,8 @@ mod reporting;
 mod hints;
 #[path = "diag_perf/stats_rows.rs"]
 mod stats_rows;
+#[path = "diag_perf/outputs.rs"]
+mod outputs;
 #[path = "diag_perf/baseline_rows.rs"]
 mod baseline_rows;
 #[path = "diag_perf/thresholds.rs"]
@@ -2229,57 +2231,38 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
         let policy = seed_policy
             .as_ref()
             .ok_or_else(|| "internal error: missing seed policy".to_string())?;
-        let payload = serde_json::json!({
-            "schema_version": 1,
-            "generated_unix_ms": now_unix_ms(),
-            "kind": "perf_baseline",
-            "out_path": out_path.display().to_string(),
-            "warmup_frames": warmup_frames,
-            "sort": sort.as_str(),
-            "repeat": repeat,
-            "headroom_pct": perf_baseline_headroom_pct,
-            "threshold_seed_policy": policy.threshold_seed_policy_json(),
-            "rows": perf_baseline_rows,
-        });
-        write_json_value(out_path, &payload)?;
-        if !stats_json {
-            println!("wrote perf baseline: {}", out_path.display());
-        }
+        outputs::write_perf_baseline_json(
+            out_path,
+            warmup_frames,
+            sort,
+            repeat,
+            perf_baseline_headroom_pct,
+            policy.threshold_seed_policy_json(),
+            &perf_baseline_rows,
+            stats_json,
+        )?;
     }
 
     let mut perf_threshold_failure: Option<(usize, PathBuf)> = None;
     if wants_perf_thresholds {
-        let out_path = resolved_out_dir.join("check.perf_thresholds.json");
-        let payload = serde_json::json!({
-            "schema_version": 1,
-            "generated_unix_ms": now_unix_ms(),
-            "kind": "perf_thresholds",
-            "out_dir": resolved_out_dir.display().to_string(),
-            "warmup_frames": warmup_frames,
-            "observed_aggregate": perf_threshold_agg.as_str(),
-            "suite_hooks": {
-                "prewarm": perf_suite_prewarm_scripts.iter().map(|p| p.display().to_string()).collect::<Vec<_>>(),
-                "prelude": perf_suite_prelude_scripts.iter().map(|p| p.display().to_string()).collect::<Vec<_>>(),
-                "prelude_each_run": suite_prelude_each_run,
-            },
-            "thresholds": {
-                "max_top_total_us": cli_thresholds.max_top_total_us,
-                "max_top_layout_us": cli_thresholds.max_top_layout_us,
-                "max_top_solve_us": cli_thresholds.max_top_solve_us,
-                "max_pointer_move_dispatch_us": cli_thresholds.max_pointer_move_dispatch_us,
-                "max_pointer_move_hit_test_us": cli_thresholds.max_pointer_move_hit_test_us,
-                "max_pointer_move_global_changes": cli_thresholds.max_pointer_move_global_changes,
-                "min_run_paint_cache_hit_test_only_replay_allowed_max": cli_thresholds.min_run_paint_cache_hit_test_only_replay_allowed_max,
-                "max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": cli_thresholds.max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
-            },
-            "baseline": perf_baseline.as_ref().map(|b| serde_json::json!({
+        let baseline_summary = perf_baseline.as_ref().map(|b| {
+            serde_json::json!({
                 "path": b.path.display().to_string(),
                 "scripts": b.thresholds_by_script.len(),
-            })),
-            "rows": perf_threshold_rows,
-            "failures": perf_threshold_failures,
+            })
         });
-        let _ = write_json_value(&out_path, &payload);
+        let out_path = outputs::write_perf_thresholds_json(
+            &resolved_out_dir,
+            warmup_frames,
+            perf_threshold_agg,
+            &perf_suite_prewarm_scripts,
+            &perf_suite_prelude_scripts,
+            suite_prelude_each_run,
+            &cli_thresholds,
+            baseline_summary,
+            &perf_threshold_rows,
+            &perf_threshold_failures,
+        );
         if !perf_threshold_failures.is_empty() {
             perf_threshold_failure = Some((perf_threshold_failures.len(), out_path.clone()));
         }
@@ -2287,19 +2270,13 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
 
     let mut perf_hint_failure: Option<(usize, PathBuf)> = None;
     if wants_perf_hints {
-        let out_path = resolved_out_dir.join("check.perf_hints.json");
-        let payload = serde_json::json!({
-            "schema_version": 1,
-            "generated_unix_ms": now_unix_ms(),
-            "kind": "perf_hints",
-            "out_dir": resolved_out_dir.display().to_string(),
-            "warmup_frames": warmup_frames,
-            "min_severity": perf_hint_gate_opts.min_severity.as_str(),
-            "deny": perf_hint_gate_opts.deny_codes.iter().cloned().collect::<Vec<_>>(),
-            "rows": perf_hint_rows,
-            "failures": perf_hint_failures,
-        });
-        let _ = write_json_value(&out_path, &payload);
+        let out_path = outputs::write_perf_hints_json(
+            &resolved_out_dir,
+            warmup_frames,
+            &perf_hint_gate_opts,
+            &perf_hint_rows,
+            &perf_hint_failures,
+        );
         if !perf_hint_failures.is_empty() {
             perf_hint_failure = Some((perf_hint_failures.len(), out_path.clone()));
         }
