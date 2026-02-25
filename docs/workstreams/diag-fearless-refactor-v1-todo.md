@@ -189,6 +189,8 @@ This file tracks tasks for `docs/workstreams/diag-fearless-refactor-v1.md`.
   - `crates/fret-diag/src/diag_perf/reporting.rs`
 - [x] Extract `diag perf` perf-hints row assembly into a helper module (reduce churn + keep `diag_perf.rs` shorter):
   - `crates/fret-diag/src/diag_perf/hints.rs`
+- [x] Extract `diag perf` perf stats JSON row assembly into a helper module (reduce churn + keep `diag_perf.rs` shorter):
+  - `crates/fret-diag/src/diag_perf/stats_rows.rs`
 - [x] Extract `diag perf` perf-threshold row assembly into a helper module (reduce churn + keep `diag_perf.rs` shorter):
   - `crates/fret-diag/src/diag_perf/thresholds.rs`
 - [x] Extract `diag perf` perf-baseline row assembly into a helper module (reduce churn + keep `diag_perf.rs` shorter):
