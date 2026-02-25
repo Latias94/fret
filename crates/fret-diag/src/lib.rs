@@ -45,6 +45,7 @@ mod hotspots_lite;
 mod json_bundle;
 mod latest;
 mod lint;
+mod math;
 mod pack_zip;
 mod paths;
 mod perf_hint_gate;
@@ -117,6 +118,8 @@ use tooling_failures::{
     write_tooling_failure_script_result, write_tooling_failure_script_result_if_missing,
 };
 use util::{now_unix_ms, read_json_value, touch, write_json_value, write_script};
+
+pub(crate) use math::{percentile_nearest_rank_sorted, summarize_times_us};
 
 #[derive(Debug, Clone)]
 struct ReproPackItem {
@@ -4287,42 +4290,6 @@ fn run_script_suite_collect_bundles(
 
     let _ = stop_launched_demo(&mut child, &paths.exit_path, poll_ms);
     Ok(bundle_paths)
-}
-
-fn summarize_times_us(values: &[u64]) -> serde_json::Value {
-    if values.is_empty() {
-        return serde_json::json!({
-            "min": 0,
-            "p50": 0,
-            "p95": 0,
-            "max": 0,
-        });
-    }
-
-    let mut sorted = values.to_vec();
-    sorted.sort_unstable();
-    let min = *sorted.first().unwrap_or(&0);
-    let max = *sorted.last().unwrap_or(&0);
-    let p50 = percentile_nearest_rank_sorted(&sorted, 0.50);
-    let p95 = percentile_nearest_rank_sorted(&sorted, 0.95);
-
-    serde_json::json!({
-        "min": min,
-        "p50": p50,
-        "p95": p95,
-        "max": max,
-    })
-}
-
-fn percentile_nearest_rank_sorted(sorted: &[u64], percentile: f64) -> u64 {
-    if sorted.is_empty() {
-        return 0;
-    }
-    let percentile = percentile.clamp(0.0, 1.0);
-    let n = sorted.len();
-    let rank_1_based = (percentile * n as f64).ceil().max(1.0) as usize;
-    let idx = rank_1_based.saturating_sub(1).min(n - 1);
-    sorted[idx]
 }
 
 #[cfg(test)]
