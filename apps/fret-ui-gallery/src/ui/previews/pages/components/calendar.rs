@@ -34,6 +34,7 @@ pub(in crate::ui) fn preview_calendar(
 
     let basic = sections::basic(cx, &theme, &models);
     let range = sections::range(cx, &theme, &models);
+    let responsive_mixed_semantics = sections::responsive_mixed_semantics(cx, &models);
     let month_year_selector = sections::month_year_selector(cx, &models);
     let presets = sections::presets(cx, &models, today);
     let date_and_time_picker = sections::date_and_time_picker(cx, &theme, &models);
@@ -72,6 +73,16 @@ pub(in crate::ui) fn preview_calendar(
                     r#"shadcn::CalendarRange::new(month, selected)
     .number_of_months(2)
     .into_element(cx);"#,
+                ),
+            DocSection::new("Responsive semantics", responsive_mixed_semantics)
+                .max_w(Px(980.0))
+                .test_id_prefix("ui-gallery-calendar-responsive")
+                .code(
+                    "rust",
+                    r#"// Calendar is intentionally mixed:
+// - in panels: container queries (editor-grade)
+// - in popovers: viewport breakpoints (avoid circular sizing)
+"#,
                 ),
             DocSection::new("Month and year selector", month_year_selector)
                 .test_id_prefix("ui-gallery-calendar-caption")

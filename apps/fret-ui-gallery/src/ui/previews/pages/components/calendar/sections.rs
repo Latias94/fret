@@ -111,6 +111,93 @@ pub(super) fn range(
     body
 }
 
+pub(super) fn responsive_mixed_semantics(
+    cx: &mut ElementContext<'_, App>,
+    models: &CalendarHandles,
+) -> AnyElement {
+    #[derive(Default, Clone)]
+    struct ResponsiveModels {
+        popover_open: Option<Model<bool>>,
+    }
+
+    let state = cx.with_state(ResponsiveModels::default, |st| st.clone());
+    let popover_open = match state.popover_open {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(false);
+            cx.with_state(ResponsiveModels::default, |st| {
+                st.popover_open = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let range_month = models.range_month.clone();
+    let range_selected = models.range_selected.clone();
+
+    let panel_calendar = shadcn::CalendarRange::new(range_month.clone(), range_selected.clone())
+        .number_of_months(2)
+        .test_id_prefix("ui-gallery.calendar.responsive.panel")
+        .refine_style(ChromeRefinement::default().border_1().rounded(Radius::Lg))
+        .into_element(cx);
+
+    let panel = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .gap(Space::N2)
+            .items_start()
+            .layout(LayoutRefinement::default().w_px(Px(420.0)).min_w_0()),
+        move |cx| {
+            vec![
+                shadcn::Badge::new("Panel: container queries").into_element(cx),
+                panel_calendar,
+            ]
+        },
+    )
+    .test_id("ui-gallery-calendar-responsive-panel");
+
+    let popover = shadcn::Popover::new(popover_open.clone())
+        .side(shadcn::PopoverSide::Bottom)
+        .align(shadcn::PopoverAlign::Start)
+        .into_element(
+            cx,
+            move |cx| {
+                shadcn::Button::new("Open calendar popover")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .toggle_model(popover_open.clone())
+                    .test_id("ui-gallery-calendar-responsive-popover-trigger")
+                    .into_element(cx)
+            },
+            move |cx| {
+                let calendar =
+                    shadcn::CalendarRange::new(range_month.clone(), range_selected.clone())
+                        .number_of_months(2)
+                        .test_id_prefix("ui-gallery.calendar.responsive.popover")
+                        .into_element(cx);
+
+                shadcn::PopoverContent::new([calendar])
+                    .refine_style(ChromeRefinement::default().p(Space::N0))
+                    .refine_layout(
+                        LayoutRefinement::default()
+                            .w(fret_ui_kit::LengthRefinement::Auto)
+                            .min_w_0()
+                            .overflow_hidden(),
+                    )
+                    .into_element(cx)
+                    .test_id("ui-gallery-calendar-responsive-popover-content")
+            },
+        );
+
+    stack::hstack(
+        cx,
+        stack::HStackProps::default()
+            .gap(Space::N6)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full().min_w_0()),
+        move |_cx| vec![panel, popover],
+    )
+}
+
 pub(super) fn month_year_selector(
     cx: &mut ElementContext<'_, App>,
     models: &CalendarHandles,
