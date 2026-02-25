@@ -11,7 +11,7 @@ use fret_ui::element::{
     PressableProps, RovingFlexProps, RovingFocusProps, SpinnerProps, StackProps, SvgIconProps,
 };
 use fret_ui::elements::GlobalElementId;
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, ThemeSnapshot, UiHost};
 use fret_ui_headless::motion::tolerance::Tolerance;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
@@ -95,33 +95,33 @@ fn apply_trigger_inherited_style(
     element
 }
 
-fn tabs_gap(theme: &Theme) -> Px {
+fn tabs_gap(theme: &ThemeSnapshot) -> Px {
     theme
         .metric_by_key("component.tabs.gap")
         .unwrap_or_else(|| MetricRef::space(Space::N2).resolve(theme))
 }
 
-fn tabs_list_height(theme: &Theme) -> Px {
+fn tabs_list_height(theme: &ThemeSnapshot) -> Px {
     theme
         .metric_by_key("component.tabs.list_height")
         .unwrap_or(Px(36.0))
 }
 
-fn tabs_list_padding(theme: &Theme) -> Px {
+fn tabs_list_padding(theme: &ThemeSnapshot) -> Px {
     theme
         .metric_by_key("component.tabs.list_padding")
         .unwrap_or(Px(3.0))
 }
 
-fn tabs_list_bg(theme: &Theme) -> Color {
+fn tabs_list_bg(theme: &ThemeSnapshot) -> Color {
     theme.color_token("muted")
 }
 
-fn tabs_list_fg_muted(theme: &Theme) -> Color {
+fn tabs_list_fg_muted(theme: &ThemeSnapshot) -> Color {
     theme.color_token("muted-foreground")
 }
 
-fn tabs_trigger_text_style(theme: &Theme) -> TextStyle {
+fn tabs_trigger_text_style(theme: &ThemeSnapshot) -> TextStyle {
     let px = theme
         .metric_by_key("component.tabs.trigger.text_px")
         .or_else(|| theme.metric_by_key("font.size"))
@@ -135,24 +135,24 @@ fn tabs_trigger_text_style(theme: &Theme) -> TextStyle {
     style
 }
 
-fn tabs_trigger_radius(theme: &Theme) -> Px {
+fn tabs_trigger_radius(theme: &ThemeSnapshot) -> Px {
     theme
         .metric_by_key("component.tabs.trigger.radius")
         .unwrap_or_else(|| MetricRef::radius(Radius::Md).resolve(theme))
 }
 
-fn tabs_trigger_bg_active(theme: &Theme) -> Color {
+fn tabs_trigger_bg_active(theme: &ThemeSnapshot) -> Color {
     theme.color_token("background")
 }
 
-fn tabs_trigger_border_active(theme: &Theme) -> Color {
+fn tabs_trigger_border_active(theme: &ThemeSnapshot) -> Color {
     theme
         .color_by_key("input")
         .or_else(|| theme.color_by_key("border"))
         .expect("missing theme token: input/border")
 }
 
-fn tabs_trigger_border_width(theme: &Theme) -> Px {
+fn tabs_trigger_border_width(theme: &ThemeSnapshot) -> Px {
     theme
         .metric_by_key("component.tabs.trigger.border_width")
         .unwrap_or(Px(1.0))
@@ -284,7 +284,7 @@ fn tabs_shared_indicator<H: UiHost>(
             radius,
             spring,
         ) = {
-            let theme = Theme::global(&*cx.app);
+            let theme = Theme::global(&*cx.app).snapshot();
 
             let mut states = WidgetStates::empty();
             if disabled {
@@ -298,17 +298,17 @@ fn tabs_shared_indicator<H: UiHost>(
             // - light: `text-foreground`
             // - dark: `text-muted-foreground`
             let fg_inactive = if theme.color_scheme == Some(ColorScheme::Dark) {
-                ColorRef::Color(tabs_list_fg_muted(theme))
+                ColorRef::Color(tabs_list_fg_muted(&theme))
             } else {
                 ColorRef::Color(theme.color_token("foreground"))
             };
             let fg_active = ColorRef::Color(theme.color_token("foreground"));
             let fg_disabled = ColorRef::Color(alpha_mul(theme.color_token("foreground"), 0.5));
 
-            let bg_active = ColorRef::Color(tabs_trigger_bg_active(theme));
-            let border_active = ColorRef::Color(tabs_trigger_border_active(theme));
-            let border_w = tabs_trigger_border_width(theme);
-            let radius = tabs_trigger_radius(theme);
+            let bg_active = ColorRef::Color(tabs_trigger_bg_active(&theme));
+            let border_active = ColorRef::Color(tabs_trigger_border_active(&theme));
+            let border_w = tabs_trigger_border_width(&theme);
+            let radius = tabs_trigger_radius(&theme);
 
             let default_trigger_fg = WidgetStateProperty::new(fg_inactive)
                 .when(WidgetStates::SELECTED, fg_active)
@@ -325,14 +325,14 @@ fn tabs_shared_indicator<H: UiHost>(
                 &default_trigger_bg,
                 states,
             )
-            .map(|bg| bg.resolve(theme))
+            .map(|bg| bg.resolve(&theme))
             .unwrap_or(Color::TRANSPARENT);
             let border_color = resolve_override_slot_opt(
                 style_override.trigger_border_color.as_ref(),
                 &default_trigger_border,
                 states,
             )
-            .map(|border| border.resolve(theme))
+            .map(|border| border.resolve(&theme))
             .unwrap_or(Color::TRANSPARENT);
 
             let (target_x, target_y, target_width, target_height) = if tab_count > 0 {
@@ -371,8 +371,8 @@ fn tabs_shared_indicator<H: UiHost>(
                 (0.0, 0.0, 0.0, 0.0)
             };
 
-            let shadow =
-                (!disabled && selected_idx.is_some()).then(|| decl_style::shadow_sm(theme, radius));
+            let shadow = (!disabled && selected_idx.is_some())
+                .then(|| decl_style::shadow_sm(&theme, radius));
             let spring = shared_indicator_spring_description(&*cx.app);
 
             (
@@ -1388,7 +1388,7 @@ impl Tabs {
             radix_tabs::tabs_use_value_model(cx, controlled_model, || default_value.clone())
                 .model();
 
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
         let gap = tabs_gap(&theme);
         let text_style = tabs_trigger_text_style(&theme);
 

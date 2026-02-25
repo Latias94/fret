@@ -191,7 +191,7 @@ impl Carousel {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
+            let theme = Theme::global(&*cx.app).snapshot();
             let orientation = self.orientation;
             let root_test_id = self.test_id.unwrap_or_else(|| Arc::from("carousel"));
 

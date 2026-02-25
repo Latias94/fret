@@ -79,8 +79,8 @@ Note: `repo-ref/` is local state (not committed). See `docs/repo-ref.md`.
 
 - [ ] Sweep `Theme::global(&*cx.app).clone()` callsites in `ecosystem/fret-ui-shadcn/src/`:
   - [x] Convert an initial batch to `Theme::global(&*cx.app).snapshot()` when only token reads are needed:
-    - Evidence: `ecosystem/fret-ui-shadcn/src/{accordion,alert_dialog,avatar,badge,button,button_group,calendar_hijri,calendar_multiple,calendar_range,chart,checkbox,collapsible,combobox,command,context_menu,data_grid,data_grid_canvas,data_table,data_table_recipes,date_picker_with_presets,dialog,dropdown_menu,empty,form_field,hover_card,kbd,media_image,menubar,navigation_menu,native_select,pagination,popover,progress,radio_group,resizable,scroll_area,select,sheet,shortcut_hint,skeleton,slider,spinner,textarea,tooltip}.rs`, `ecosystem/fret-ui-shadcn/src/extras/{announcement,avatar_stack,banner,marquee,rating,relative_time,tags,ticker}.rs`
-    - Progress note: reduced remaining `Theme::global(...).clone()` callsites from 135 → 10.
+    - Evidence: `ecosystem/fret-ui-shadcn/src/{accordion,alert_dialog,avatar,badge,button,button_group,calendar_hijri,calendar_multiple,calendar_range,carousel,chart,checkbox,collapsible,combobox,command,context_menu,data_grid,data_grid_canvas,data_table,data_table_recipes,date_picker_with_presets,date_range_picker,dialog,drawer,dropdown_menu,empty,form_field,hover_card,kbd,media_image,menubar,navigation_menu,native_select,pagination,popover,progress,radio_group,resizable,scroll_area,select,sheet,shortcut_hint,skeleton,slider,spinner,tabs,textarea,toggle_group,tooltip}.rs`, `ecosystem/fret-ui-shadcn/src/extras/{announcement,avatar_stack,banner,marquee,rating,relative_time,tags,ticker}.rs`
+    - Progress note: reduced remaining `Theme::global(...).clone()` callsites from 135 → 5.
   - [ ] Continue converting remaining callsites (prioritize hot paths: `input`, `select`, `sheet`, `popover`, `dropdown_menu`).
   - [ ] Keep `Theme` where name/metadata APIs are required (but avoid long-lived borrows across
     `cx.*` calls).

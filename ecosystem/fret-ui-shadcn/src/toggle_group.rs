@@ -7,7 +7,7 @@ use fret_ui::element::{
     AnyElement, CrossAlign, FlexProps, MainAlign, PressableProps, RovingFlexProps,
     RovingFocusProps, SpinnerProps, SvgIconProps,
 };
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::current_color;
@@ -27,50 +27,50 @@ fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c
 }
 
-fn toggle_bg_hover(theme: &Theme) -> Color {
+fn toggle_bg_hover(theme: &ThemeSnapshot) -> Color {
     theme
         .color_by_key("muted")
         .unwrap_or_else(|| theme.color_token("muted"))
 }
 
-fn toggle_bg_on(theme: &Theme) -> Color {
+fn toggle_bg_on(theme: &ThemeSnapshot) -> Color {
     theme
         .color_by_key("accent")
         .unwrap_or_else(|| theme.color_token("accent"))
 }
 
-fn toggle_border(theme: &Theme) -> Color {
+fn toggle_border(theme: &ThemeSnapshot) -> Color {
     theme
         .color_by_key("input")
         .or_else(|| theme.color_by_key("border"))
         .unwrap_or_else(|| theme.color_token("border"))
 }
 
-fn toggle_fg(theme: &Theme) -> Color {
+fn toggle_fg(theme: &ThemeSnapshot) -> Color {
     theme
         .color_by_key("foreground")
         .unwrap_or_else(|| theme.color_token("foreground"))
 }
 
-fn toggle_fg_muted(theme: &Theme) -> Color {
+fn toggle_fg_muted(theme: &ThemeSnapshot) -> Color {
     theme
         .color_by_key("muted-foreground")
         .unwrap_or_else(|| theme.color_token("muted-foreground"))
 }
 
-fn toggle_fg_accent(theme: &Theme) -> Color {
+fn toggle_fg_accent(theme: &ThemeSnapshot) -> Color {
     theme
         .color_by_key("accent-foreground")
         .unwrap_or_else(|| theme.color_token("accent-foreground"))
 }
 
-fn toggle_ring_color(theme: &Theme) -> Color {
+fn toggle_ring_color(theme: &ThemeSnapshot) -> Color {
     theme
         .color_by_key("ring")
         .unwrap_or_else(|| theme.color_token("ring"))
 }
 
-fn toggle_group_item_h(theme: &Theme, size: ToggleSize) -> Px {
+fn toggle_group_item_h(theme: &ThemeSnapshot, size: ToggleSize) -> Px {
     let (key, fallback) = match size {
         ToggleSize::Default => ("component.toggle_group.item_h", Px(36.0)),
         ToggleSize::Sm => ("component.toggle_group.item_h_sm", Px(32.0)),
@@ -79,7 +79,7 @@ fn toggle_group_item_h(theme: &Theme, size: ToggleSize) -> Px {
     theme.metric_by_key(key).unwrap_or(fallback)
 }
 
-fn toggle_group_item_pad_x(theme: &Theme) -> Px {
+fn toggle_group_item_pad_x(theme: &ThemeSnapshot) -> Px {
     theme
         .metric_by_key("component.toggle_group.item_pad_x")
         .unwrap_or(Px(12.0))
@@ -485,7 +485,7 @@ impl ToggleGroup {
         let layout = self.layout;
         let style_override = self.style;
 
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
 
         let (model_single, model_multi, selected_single, selected_multi) = match &model {
             ToggleGroupModel::Single {

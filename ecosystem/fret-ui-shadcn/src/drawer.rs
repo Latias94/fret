@@ -174,7 +174,7 @@ impl DrawerContent {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
         let side = drawer_side_in_scope(cx);
 
         let bg = theme.color_token("background");
