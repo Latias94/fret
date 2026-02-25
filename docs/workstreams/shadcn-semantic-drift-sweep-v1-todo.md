@@ -120,16 +120,24 @@ RadioGroup choice-card checked background alpha:
 
 Approach:
 
-- Add **component-owned color keys** to shadcn theme presets (`shadcn_themes.rs`) that encode the
-  scheme-specific choice.
-- Update recipes to prefer the component key and fall back to the existing branch when the key is
-  missing (custom themes).
+- [x] Add **component-owned color keys** to shadcn theme presets (`shadcn_themes.rs`) that encode
+  the scheme-specific choice.
+- [x] Update recipes to prefer the component key and fall back to the existing branch when the
+  key is missing (custom themes).
 
-Candidate keys (names are a draft; align with existing token naming conventions):
+Candidate keys (landed):
 
 - `component.control.invalid_ring` (light: `destructive/20`, dark: `destructive/40`)
 - `component.tabs.trigger.fg_inactive` (light: `foreground`, dark: `muted-foreground`)
-- `component.radio.choice_card.checked_bg` (light: `primary` @ 0.05, dark: `primary` @ 0.10)
+- `component.radio_group.choice_card.checked_bg` (light: `primary` @ 0.05, dark: `primary` @ 0.10)
+
+Evidence:
+
+- Theme preset seeding + tests: `ecosystem/fret-ui-shadcn/src/shadcn_themes.rs`
+- Callsite migrations:
+  - Invalid ring: `ecosystem/fret-ui-shadcn/src/{checkbox,combobox,input,input_group,input_otp,native_select,radio_group,select,textarea}.rs`
+  - Tabs inactive fg: `ecosystem/fret-ui-shadcn/src/tabs.rs`
+  - Radio choice-card checked bg: `ecosystem/fret-ui-shadcn/src/radio_group.rs`
 
 ## Token read sweep: replace unnecessary `Theme` clones with snapshots
 

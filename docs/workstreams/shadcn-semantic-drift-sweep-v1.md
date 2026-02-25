@@ -90,7 +90,8 @@ Current strategy (implemented):
   - Evidence: `crates/fret-ui/src/theme/mod.rs`
 - Ensure shadcn presets set the metadata explicitly:
   - Evidence: `ecosystem/fret-ui-shadcn/src/shadcn_themes.rs`
-- Remove name heuristics from recipe code and consult `theme.color_scheme` instead:
+- Remove name heuristics from recipe code and consult theme metadata and component-owned variant
+  keys instead (with `theme.color_scheme` as a fallback for custom themes):
   - Evidence: `ecosystem/fret-ui-shadcn/src/checkbox.rs`, `ecosystem/fret-ui-shadcn/src/input.rs`,
     `ecosystem/fret-ui-shadcn/src/input_group.rs`, `ecosystem/fret-ui-shadcn/src/input_otp.rs`,
     `ecosystem/fret-ui-shadcn/src/native_select.rs`, `ecosystem/fret-ui-shadcn/src/combobox.rs`,
@@ -98,16 +99,16 @@ Current strategy (implemented):
     `ecosystem/fret-ui-shadcn/src/textarea.rs`, `ecosystem/fret-ui-shadcn/src/tabs.rs`
 - Regression evidence:
   - `ecosystem/fret-ui-shadcn/src/shadcn_themes.rs` (metadata is set + applied)
-  - `ecosystem/fret-ui-shadcn/src/input_otp.rs` (invalid ring variant follows `color_scheme`)
+  - `ecosystem/fret-ui-shadcn/src/input_otp.rs` (invalid ring variant follows component key)
 
-Follow-up (still open):
+Follow-up:
 
-- Some recipes still branch on `theme.color_scheme` for scheme-specific variant values (invalid
-  rings, tabs inactive foreground, radio choice-card selection background alpha). Prefer moving
-  these decisions into explicit shadcn theme keys so recipes become pure token reads and custom
-  themes can override behavior without code branches. See:
-  - `docs/workstreams/shadcn-semantic-drift-sweep-v1-todo.md` (Inventory: remaining
-    `theme.color_scheme` branches)
+- Recipes now prefer component-owned keys (seeded by shadcn presets) for scheme-specific variants:
+  - `component.control.invalid_ring`
+  - `component.tabs.trigger.fg_inactive`
+  - `component.radio_group.choice_card.checked_bg`
+- Remaining `theme.color_scheme` branches are intentionally retained as a fallback for custom
+  themes that do not define the component keys.
 
 ### 3) Token reads: avoid heavy `Theme` clones in hot codepaths
 
