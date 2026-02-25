@@ -279,6 +279,9 @@ impl Renderer {
             .perf
             .render_plan_degradations_composite_group_blend_to_over
             .saturating_add(frame_perf.render_plan_degradations_composite_group_blend_to_over);
+        self.perf
+            .effect_degradations
+            .saturating_add_assign(frame_perf.effect_degradations);
 
         self.perf.clip_path_mask_cache_bytes_live = self
             .perf
@@ -542,6 +545,7 @@ impl Renderer {
                 .render_plan_degradations_clip_path_disabled,
             render_plan_degradations_composite_group_blend_to_over: frame_perf
                 .render_plan_degradations_composite_group_blend_to_over,
+            effect_degradations: frame_perf.effect_degradations,
             draw_calls: frame_perf.draw_calls,
             quad_draw_calls: frame_perf.quad_draw_calls,
             viewport_draw_calls: frame_perf.viewport_draw_calls,

@@ -30,6 +30,7 @@ pub(super) struct RenderPlanSegment {
 pub(super) struct RenderPlanCompileStats {
     pub(super) estimated_peak_intermediate_bytes: u64,
     pub(super) degradation_count: u64,
+    pub(super) effect_degradations: super::EffectDegradationSnapshot,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -367,6 +368,7 @@ impl RenderPlan {
         clear: wgpu::Color,
         format: wgpu::TextureFormat,
         degradations: Vec<RenderPlanDegradation>,
+        effect_degradations: super::EffectDegradationSnapshot,
     ) -> Self {
         let mut plan = Self {
             segments,
@@ -374,6 +376,7 @@ impl RenderPlan {
             compile_stats: RenderPlanCompileStats {
                 estimated_peak_intermediate_bytes: 0,
                 degradation_count: degradations.len() as u64,
+                effect_degradations,
             },
             degradations,
         };

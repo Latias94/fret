@@ -21,6 +21,7 @@ fn apply_single_step_effect_with_scissor(
     scissor: ScissorRect,
 ) -> Vec<RenderPlanPass> {
     let mut passes: Vec<RenderPlanPass> = Vec::new();
+    let mut degradations = super::super::EffectDegradationSnapshot::default();
     effects::apply_chain_in_place(
         &mut passes,
         &[],
@@ -31,6 +32,7 @@ fn apply_single_step_effect_with_scissor(
         scissor,
         None,
         &[],
+        &mut degradations,
         effects::EffectCompileCtx {
             viewport_size: (100, 100),
             format: wgpu::TextureFormat::Bgra8UnormSrgb,

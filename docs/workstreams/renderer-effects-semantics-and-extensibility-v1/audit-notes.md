@@ -59,8 +59,10 @@ P1/P2 — Diagnostics:
 - Add per-effect degradation counters (requested vs applied) into `RenderPerfSnapshot`:
   - budget zero, insufficient budget, target exhaustion (per effect family).
   - optional: include “applied downsample scale” summaries for blur/drop shadow.
+  Done (initial): `RenderPerfSnapshot.effect_degradations` with per-family `requested/applied` + counters.
   Anchors: `crates/fret-render-wgpu/src/renderer/types.rs`,
-  `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs`.
+  `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs`,
+  `crates/fret-render-wgpu/src/renderer/render_scene/plan_reporting.rs`.
 
 P2 — Higher-end visuals without core bloat:
 

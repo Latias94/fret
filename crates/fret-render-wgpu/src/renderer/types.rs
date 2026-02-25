@@ -174,6 +174,61 @@ pub(super) const SVG_MASK_ATLAS_PAGE_SIZE_PX: u32 = 1024;
 pub(super) const SVG_MASK_ATLAS_PADDING_PX: u32 = 1;
 
 #[derive(Debug, Default, Clone, Copy)]
+pub struct EffectDegradationCounters {
+    pub requested: u64,
+    pub applied: u64,
+    pub degraded_budget_zero: u64,
+    pub degraded_budget_insufficient: u64,
+    pub degraded_target_exhausted: u64,
+}
+
+impl EffectDegradationCounters {
+    pub(crate) fn saturating_add_assign(&mut self, other: Self) {
+        self.requested = self.requested.saturating_add(other.requested);
+        self.applied = self.applied.saturating_add(other.applied);
+        self.degraded_budget_zero = self
+            .degraded_budget_zero
+            .saturating_add(other.degraded_budget_zero);
+        self.degraded_budget_insufficient = self
+            .degraded_budget_insufficient
+            .saturating_add(other.degraded_budget_insufficient);
+        self.degraded_target_exhausted = self
+            .degraded_target_exhausted
+            .saturating_add(other.degraded_target_exhausted);
+    }
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+pub struct EffectDegradationSnapshot {
+    pub gaussian_blur: EffectDegradationCounters,
+    pub drop_shadow: EffectDegradationCounters,
+    pub backdrop_warp: EffectDegradationCounters,
+    pub color_adjust: EffectDegradationCounters,
+    pub color_matrix: EffectDegradationCounters,
+    pub alpha_threshold: EffectDegradationCounters,
+    pub pixelate: EffectDegradationCounters,
+    pub dither: EffectDegradationCounters,
+    pub noise: EffectDegradationCounters,
+}
+
+impl EffectDegradationSnapshot {
+    pub(crate) fn saturating_add_assign(&mut self, other: Self) {
+        self.gaussian_blur
+            .saturating_add_assign(other.gaussian_blur);
+        self.drop_shadow.saturating_add_assign(other.drop_shadow);
+        self.backdrop_warp
+            .saturating_add_assign(other.backdrop_warp);
+        self.color_adjust.saturating_add_assign(other.color_adjust);
+        self.color_matrix.saturating_add_assign(other.color_matrix);
+        self.alpha_threshold
+            .saturating_add_assign(other.alpha_threshold);
+        self.pixelate.saturating_add_assign(other.pixelate);
+        self.dither.saturating_add_assign(other.dither);
+        self.noise.saturating_add_assign(other.noise);
+    }
+}
+
+#[derive(Debug, Default, Clone, Copy)]
 pub struct RenderPerfSnapshot {
     pub frames: u64,
 
@@ -261,6 +316,7 @@ pub struct RenderPerfSnapshot {
     pub render_plan_degradations_filter_content_disabled: u64,
     pub render_plan_degradations_clip_path_disabled: u64,
     pub render_plan_degradations_composite_group_blend_to_over: u64,
+    pub effect_degradations: EffectDegradationSnapshot,
 
     pub clip_path_mask_cache_bytes_live: u64,
     pub clip_path_mask_cache_entries_live: u64,
@@ -393,6 +449,7 @@ pub(super) struct RenderPerfStats {
     pub(super) render_plan_degradations_filter_content_disabled: u64,
     pub(super) render_plan_degradations_clip_path_disabled: u64,
     pub(super) render_plan_degradations_composite_group_blend_to_over: u64,
+    pub(super) effect_degradations: EffectDegradationSnapshot,
 
     pub(super) clip_path_mask_cache_bytes_live: u64,
     pub(super) clip_path_mask_cache_entries_live: u64,

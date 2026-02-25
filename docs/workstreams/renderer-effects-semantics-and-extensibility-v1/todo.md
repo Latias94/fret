@@ -59,9 +59,12 @@ This TODO is ordered by implementation priority (P0 first), and is designed to b
   - [ ] Single place that maps `(radius_px, quality, budgets, viewport_size)` → passes + downsample strategy.
   - [ ] Shared degradation counters + reasons used by `GaussianBlur`, `DropShadow`, and future effects.
 
-- [ ] Improve diagnostics for degradations:
-  - [ ] Add per-effect degradation counters (budget zero, insufficient budget, target exhaustion).
-  - [ ] Include “requested vs applied” summaries in perf snapshots where applicable.
+- [x] Improve diagnostics for degradations:
+  - [x] Add per-effect degradation counters (requested/applied + budget zero/insufficient/target exhausted).
+  - Evidence: `crates/fret-render-wgpu/src/renderer/types.rs`,
+    `crates/fret-render-wgpu/src/renderer/render_plan.rs`,
+    `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs`,
+    `crates/fret-render-wgpu/src/renderer/render_scene/plan_reporting.rs`.
 
 ## P2 — Extensibility (bounded custom effects)
 
