@@ -34,10 +34,10 @@ In-scope (v1):
 - Effect parameter semantics closure:
   - `EffectStep::GaussianBlur { radius_px, downsample }`
   - `EffectStep::DropShadowV1 { blur_radius_px, downsample, ... }`
-  - `EffectStep::Dither` in effect chains (either implement or explicitly no-op with diagnostics).
-- A single shared blur primitive used by multiple effects, with deterministic budgeting/degradation.
-- A documented rule for intermediate color handling (linear intermediates; deterministic encode path).
-- A capability-gated, bounded “custom effect” extension design (start as wgpu-only; decide later if it becomes core).
+  - `EffectStep::Dither` in effect chains.
+  - A single shared blur primitive used by multiple effects, with deterministic budgeting/degradation.
+  - A documented rule for intermediate color handling (linear intermediates; deterministic encode path).
+  - A capability-gated, bounded “custom effect” extension design (start as wgpu-only; decide later if it becomes core).
 
 Out-of-scope (v1):
 
