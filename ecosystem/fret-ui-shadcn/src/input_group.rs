@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use crate::button::{ButtonVariant, variant_colors};
-use fret_core::window::ColorScheme;
 use fret_core::{
     Axis, Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextWrap,
 };
@@ -333,6 +332,7 @@ impl InputGroup {
             focus_ring,
         ) = {
             let theme = Theme::global(&*cx.app);
+            let theme_snapshot = theme.snapshot();
 
             let resolved =
                 resolve_input_chrome(theme, self.size, &self.chrome, InputTokenKeys::none());
@@ -366,19 +366,10 @@ impl InputGroup {
 
                 if self.aria_invalid {
                     let border_color = theme.color_token("destructive");
-                    ring.color = theme
-                        .color_by_key("component.control.invalid_ring")
-                        .or_else(|| {
-                            let ring_key = if theme.color_scheme == Some(ColorScheme::Dark) {
-                                "destructive/40"
-                            } else {
-                                "destructive/20"
-                            };
-                            theme
-                                .color_by_key(ring_key)
-                                .or_else(|| theme.color_by_key("destructive/20"))
-                        })
-                        .unwrap_or(border_color);
+                    ring.color = crate::theme_variants::invalid_control_ring_color(
+                        &theme_snapshot,
+                        border_color,
+                    );
                     (border_color, None, Some(ring))
                 } else {
                     (resolved.border_color, focus_border, Some(ring))

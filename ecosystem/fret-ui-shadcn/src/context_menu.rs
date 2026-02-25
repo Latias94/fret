@@ -62,17 +62,7 @@ fn menu_destructive_focus_bg(
     theme: &ThemeSnapshot,
     destructive_fg: fret_core::Color,
 ) -> fret_core::Color {
-    if let Some(c) = theme.color_by_key("component.menu.destructive_focus_bg") {
-        return c;
-    }
-
-    // Fallback for non-shadcn themes: approximate the upstream `/10` and `dark:/20` alphas.
-    let alpha = if theme.color_scheme == Some(fret_core::window::ColorScheme::Dark) {
-        0.2
-    } else {
-        0.1
-    };
-    alpha_mul(destructive_fg, alpha)
+    crate::theme_variants::menu_destructive_focus_bg(theme, destructive_fg)
 }
 
 const CONTEXT_MENU_CANCEL_OPEN_DELAY: Duration = Duration::from_millis(500);

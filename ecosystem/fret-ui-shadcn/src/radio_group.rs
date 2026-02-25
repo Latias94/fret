@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use fret_core::window::ColorScheme;
 use fret_core::{
     Color, Corners, Edges, FontId, FontWeight, Point, Px, Rect, Size, TextOverflow, TextStyle,
     TextWrap,
@@ -415,20 +414,10 @@ impl RadioGroup {
                         let radius = Px((icon.0 * 0.5).max(0.0));
                         let mut ring_style = decl_style::focus_ring(&theme, radius);
                         if aria_invalid {
-                            ring_style.color = theme
-                                .color_by_key("component.control.invalid_ring")
-                                .or_else(|| {
-                                    let ring_key = if theme.color_scheme == Some(ColorScheme::Dark)
-                                    {
-                                        "destructive/40"
-                                    } else {
-                                        "destructive/20"
-                                    };
-                                    theme
-                                        .color_by_key(ring_key)
-                                        .or_else(|| theme.color_by_key("destructive/20"))
-                                })
-                                .unwrap_or_else(|| theme.color_token("destructive"));
+                            ring_style.color = crate::theme_variants::invalid_control_ring_color(
+                                &theme,
+                                theme.color_token("destructive"),
+                            );
                         }
                         let a11y_label = item.label;
                         let value = item.value;
@@ -674,20 +663,11 @@ impl RadioGroup {
                                             RadioGroupItemVariant::Default => vec![item_content],
                                             RadioGroupItemVariant::ChoiceCard => {
                                                 let primary = radio_indicator(&theme);
-                                                let checked_bg = theme
-                                                    .color_by_key(
-                                                        "component.radio_group.choice_card.checked_bg",
-                                                    )
-                                                    .unwrap_or_else(|| {
-                                                        let bg_alpha = if theme.color_scheme
-                                                            == Some(ColorScheme::Dark)
-                                                        {
-                                                            0.10
-                                                        } else {
-                                                            0.05
-                                                        };
-                                                        alpha_mul(primary, bg_alpha)
-                                                    });
+                                                let checked_bg =
+                                                    crate::theme_variants::radio_group_choice_card_checked_bg(
+                                                        &theme,
+                                                        primary,
+                                                    );
                                                 let border = radio_border(&theme);
 
                                                 let mut chrome = ChromeRefinement::default()
@@ -1071,12 +1051,8 @@ mod tests {
 
         let theme = Theme::global(&app).snapshot();
         let primary = radio_indicator(&theme);
-        let bg_alpha = if theme.color_scheme == Some(ColorScheme::Dark) {
-            0.10
-        } else {
-            0.05
-        };
-        let expected_bg = alpha_mul(primary, bg_alpha);
+        let expected_bg =
+            crate::theme_variants::radio_group_choice_card_checked_bg(&theme, primary);
 
         let mut total_quads = 0usize;
         let mut bg_matches = 0usize;

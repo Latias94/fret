@@ -2,7 +2,6 @@ use std::cell::Cell;
 use std::sync::Arc;
 use std::time::Duration;
 
-use fret_core::window::ColorScheme;
 use fret_core::{Color, Corners, DrawOrder, Edges, FontId, FontWeight, Px, TextStyle};
 use fret_icons::IconId;
 use fret_runtime::Model;
@@ -297,16 +296,7 @@ fn tabs_shared_indicator<H: UiHost>(
             // shadcn new-york-v4 `TabsTrigger` defaults:
             // - light: `text-foreground`
             // - dark: `text-muted-foreground`
-            let fg_inactive = theme
-                .color_by_key("component.tabs.trigger.fg_inactive")
-                .map(ColorRef::Color)
-                .unwrap_or_else(|| {
-                    if theme.color_scheme == Some(ColorScheme::Dark) {
-                        ColorRef::Color(tabs_list_fg_muted(&theme))
-                    } else {
-                        ColorRef::Color(theme.color_token("foreground"))
-                    }
-                });
+            let fg_inactive = crate::theme_variants::tabs_trigger_inactive_fg(&theme);
             let fg_active = ColorRef::Color(theme.color_token("foreground"));
             let fg_disabled = ColorRef::Color(alpha_mul(theme.color_token("foreground"), 0.5));
 
@@ -1596,16 +1586,8 @@ impl Tabs {
                                 // shadcn new-york-v4 `TabsTrigger` defaults:
                                 // - light: `text-foreground`
                                 // - dark: `text-muted-foreground`
-                                let fg_inactive = theme
-                                    .color_by_key("component.tabs.trigger.fg_inactive")
-                                    .map(ColorRef::Color)
-                                    .unwrap_or_else(|| {
-                                        if theme.color_scheme == Some(ColorScheme::Dark) {
-                                            ColorRef::Color(tabs_list_fg_muted(&theme))
-                                        } else {
-                                            ColorRef::Color(theme.color_token("foreground"))
-                                        }
-                                    });
+                                let fg_inactive =
+                                    crate::theme_variants::tabs_trigger_inactive_fg(&theme);
                                 let fg_active = ColorRef::Color(theme.color_token("foreground"));
                                 let fg_disabled =
                                     ColorRef::Color(alpha_mul(theme.color_token("foreground"), 0.5));

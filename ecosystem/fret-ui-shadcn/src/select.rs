@@ -1,6 +1,5 @@
 use crate::popper_arrow::{self, DiamondArrowStyle};
 use crate::test_id::attach_test_id;
-use fret_core::window::ColorScheme;
 use fret_core::{Color, Corners, Edges, FontId, FontWeight, Point, Px, SemanticsRole, TextStyle};
 use fret_icons::ids;
 use fret_runtime::{Effect, Model, TimerToken};
@@ -1294,19 +1293,7 @@ fn select_impl<H: UiHost>(
             border = border_color;
             border_focus = border_color;
 
-            ring.color = theme
-                .color_by_key("component.control.invalid_ring")
-                .or_else(|| {
-                    let ring_key = if theme.color_scheme == Some(ColorScheme::Dark) {
-                        "destructive/40"
-                    } else {
-                        "destructive/20"
-                    };
-                    theme
-                        .color_by_key(ring_key)
-                        .or_else(|| theme.color_by_key("destructive/20"))
-                })
-                .unwrap_or(border_color);
+            ring.color = crate::theme_variants::invalid_control_ring_color(&theme, border_color);
         }
 
         let style_for_trigger = style.clone();

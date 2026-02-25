@@ -1,4 +1,3 @@
-use fret_core::window::ColorScheme;
 use fret_core::{Axis, Color, Corners, Edges, FontId, FontWeight, Px};
 use fret_icons::ids;
 use fret_runtime::Model;
@@ -43,19 +42,7 @@ fn otp_active_ring_color(theme: &ThemeSnapshot) -> Color {
 
 fn otp_invalid_ring_color(theme: &ThemeSnapshot) -> Color {
     let border_color = theme.color_token("destructive");
-    theme
-        .color_by_key("component.control.invalid_ring")
-        .or_else(|| {
-            let ring_key = if theme.color_scheme == Some(ColorScheme::Dark) {
-                "destructive/40"
-            } else {
-                "destructive/20"
-            };
-            theme
-                .color_by_key(ring_key)
-                .or_else(|| theme.color_by_key("destructive/20"))
-        })
-        .unwrap_or(border_color)
+    crate::theme_variants::invalid_control_ring_color(theme, border_color)
 }
 
 fn otp_slot_border_color(
