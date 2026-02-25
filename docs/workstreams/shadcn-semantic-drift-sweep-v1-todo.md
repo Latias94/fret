@@ -90,6 +90,47 @@ Note: `repo-ref/` is local state (not committed). See `docs/repo-ref.md`.
   - inactive tabs foreground selection, or
   - any other behavior currently keyed off the name heuristic.
 
+### Inventory: remaining `theme.color_scheme` branches (post-name-heuristics)
+
+These are cases where recipe code branches on `theme.color_scheme` for variant behavior.
+Long-term, we prefer to express these via explicit shadcn theme tokens so recipes become pure
+"token reads" and custom themes can override the behavior without code changes.
+
+Invalid ring variants (destructive `/20` vs `/40`):
+
+- `ecosystem/fret-ui-shadcn/src/checkbox.rs` (aria-invalid focus ring)
+- `ecosystem/fret-ui-shadcn/src/combobox.rs` (aria-invalid focus ring)
+- `ecosystem/fret-ui-shadcn/src/input.rs` (aria-invalid focus ring)
+- `ecosystem/fret-ui-shadcn/src/input_group.rs` (aria-invalid focus ring)
+- `ecosystem/fret-ui-shadcn/src/input_otp.rs` (invalid ring color)
+- `ecosystem/fret-ui-shadcn/src/native_select.rs` (aria-invalid focus ring)
+- `ecosystem/fret-ui-shadcn/src/radio_group.rs` (aria-invalid focus ring)
+- `ecosystem/fret-ui-shadcn/src/select.rs` (aria-invalid focus ring)
+- `ecosystem/fret-ui-shadcn/src/textarea.rs` (aria-invalid focus ring)
+
+Tabs trigger inactive foreground:
+
+- `ecosystem/fret-ui-shadcn/src/tabs.rs` (light: `foreground`, dark: `muted-foreground`)
+
+RadioGroup choice-card checked background alpha:
+
+- `ecosystem/fret-ui-shadcn/src/radio_group.rs` (light: `primary/5`, dark: `primary/10` equivalent)
+
+### Proposal: replace `theme.color_scheme` branches with explicit component token keys
+
+Approach:
+
+- Add **component-owned color keys** to shadcn theme presets (`shadcn_themes.rs`) that encode the
+  scheme-specific choice.
+- Update recipes to prefer the component key and fall back to the existing branch when the key is
+  missing (custom themes).
+
+Candidate keys (names are a draft; align with existing token naming conventions):
+
+- `component.control.invalid_ring` (light: `destructive/20`, dark: `destructive/40`)
+- `component.tabs.trigger.fg_inactive` (light: `foreground`, dark: `muted-foreground`)
+- `component.radio.choice_card.checked_bg` (light: `primary` @ 0.05, dark: `primary` @ 0.10)
+
 ## Token read sweep: replace unnecessary `Theme` clones with snapshots
 
 - [x] Sweep `Theme::global(&*cx.app).clone()` callsites in `ecosystem/fret-ui-shadcn/src/`:

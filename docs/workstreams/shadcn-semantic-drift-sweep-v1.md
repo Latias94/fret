@@ -100,6 +100,15 @@ Current strategy (implemented):
   - `ecosystem/fret-ui-shadcn/src/shadcn_themes.rs` (metadata is set + applied)
   - `ecosystem/fret-ui-shadcn/src/input_otp.rs` (invalid ring variant follows `color_scheme`)
 
+Follow-up (still open):
+
+- Some recipes still branch on `theme.color_scheme` for scheme-specific variant values (invalid
+  rings, tabs inactive foreground, radio choice-card selection background alpha). Prefer moving
+  these decisions into explicit shadcn theme keys so recipes become pure token reads and custom
+  themes can override behavior without code branches. See:
+  - `docs/workstreams/shadcn-semantic-drift-sweep-v1-todo.md` (Inventory: remaining
+    `theme.color_scheme` branches)
+
 ### 3) Token reads: avoid heavy `Theme` clones in hot codepaths
 
 Many recipe sites use `Theme::global(&*cx.app).clone()` where a token-read-only snapshot is
