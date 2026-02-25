@@ -154,6 +154,9 @@ Evidence:
 
 - [x] Add a regression guard to prevent reintroducing `Theme::global(...).clone()` callsites:
   - `ecosystem/fret-ui-shadcn/tests/no_theme_global_clone_regression.rs`
+  - Note: the guard is intentionally scoped to `ecosystem/fret-ui-shadcn/src/` (production-ish
+    paths). Integration tests under `ecosystem/fret-ui-shadcn/tests/` may still use a cloned
+    `Theme` when it keeps borrow scopes simple.
 
 ## Reduced motion drift: continuous animations should not request frames
 

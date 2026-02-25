@@ -207,3 +207,5 @@ recipe should follow viewport queries (device shell) or container queries (panel
 
 - 2026-02-25: Merged `main` into this workstream branch to pick up latest `fret-ui-kit`/`fret-ui`
   overlay and text-area changes before continuing the sweep.
+- 2026-02-25: Re-validated the token-read sweep after the merge and removed remaining
+  `Theme::global(&app).clone()` usages from module-local tests in `ecosystem/fret-ui-shadcn/src/`.
