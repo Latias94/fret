@@ -8,6 +8,7 @@ mod drag_cache_gates;
 mod drag_cache_gates_streaming;
 mod frames_index_gates;
 mod gc_gates;
+mod gc_gates_streaming;
 mod hover_layout_checks;
 mod interaction_gates;
 mod notify_gates;
@@ -52,6 +53,7 @@ pub(super) use frames_index_gates::{
     check_frames_index_for_viewport_capture_min, check_frames_index_for_viewport_input_min,
 };
 pub(super) use gc_gates::check_bundle_for_gc_sweep_liveness;
+pub(super) use gc_gates_streaming::check_bundle_for_gc_sweep_liveness_streaming;
 pub(super) use hover_layout_checks::check_report_for_hover_layout_invalidations;
 pub(super) use interaction_gates::{
     check_bundle_for_dock_drag_min, check_bundle_for_viewport_capture_min,

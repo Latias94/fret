@@ -86,6 +86,11 @@ pub(crate) const STATS_LITE_SUPPORTED_CHECKS: &[StatsLiteCheckSupport] = &[
         note: "streams bundle JSON; parses debug.notify_requests only",
     },
     StatsLiteCheckSupport {
+        check_name: "check-gc-sweep-liveness",
+        kind: StatsLiteCheckKind::StreamingBundle,
+        note: "streams bundle JSON; parses debug.removed_subtrees + element_runtime lengths",
+    },
+    StatsLiteCheckSupport {
         check_name: "check-retained-vlist-reconcile-no-notify-min",
         kind: StatsLiteCheckKind::StreamingBundle,
         note: "streams bundle JSON; scans retained virtual-list reconciles + dirty_views",

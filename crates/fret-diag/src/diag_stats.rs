@@ -308,7 +308,11 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
             &bundle_path,
             warmup_frames,
         )?;
-        stats::check_bundle_for_gc_sweep_liveness(bundle_path.as_path(), warmup_frames)?;
+        if derived_from_frames_index {
+            stats::check_bundle_for_gc_sweep_liveness_streaming(bundle_path.as_path(), warmup_frames)?;
+        } else {
+            stats::check_bundle_for_gc_sweep_liveness(bundle_path.as_path(), warmup_frames)?;
+        }
     }
     if !check_notify_hotspot_file_max.is_empty() {
         ensure_check_supported_in_stats_mode(
