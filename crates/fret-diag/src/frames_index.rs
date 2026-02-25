@@ -8,7 +8,12 @@ const FRAMES_INDEX_KIND: &str = "frames_index";
 const FRAMES_INDEX_SCHEMA_VERSION: u64 = 1;
 
 const FRAMES_INDEX_FEATURE_WINDOW_AGG_V1: &str = "window_aggregates.v1";
-const FRAMES_INDEX_REQUIRED_FEATURES: &[&str] = &[FRAMES_INDEX_FEATURE_WINDOW_AGG_V1];
+const FRAMES_INDEX_FEATURE_WINDOW_AGG_OVERLAY_SYNTHESIS_V1: &str =
+    "window_aggregates.overlay_synthesis.v1";
+const FRAMES_INDEX_REQUIRED_FEATURES: &[&str] = &[
+    FRAMES_INDEX_FEATURE_WINDOW_AGG_V1,
+    FRAMES_INDEX_FEATURE_WINDOW_AGG_OVERLAY_SYNTHESIS_V1,
+];
 
 // Guardrail: building a frames index that is larger than this is unlikely to be useful for agentic
 // triage. Keep the tail to avoid unbounded memory usage.
@@ -43,6 +48,10 @@ struct FrameRow {
     view_cache_roots_reused: Option<u64>,
     cache_roots_reused: Option<u64>,
     paint_cache_replayed_ops: Option<u64>,
+
+    overlay_synthesis_events_total: u64,
+    overlay_synthesis_events_synthesized: u64,
+    overlay_synthesis_events_suppressed: u64,
 }
 
 impl FrameRow {
@@ -108,6 +117,10 @@ struct WindowAggregates {
     view_cache_active_snapshots_post_warmup: u64,
     view_cache_reuse_events_post_warmup: u64,
     paint_cache_replayed_ops_post_warmup: u64,
+
+    overlay_synthesis_events_total_post_warmup: u64,
+    overlay_synthesis_events_synthesized_post_warmup: u64,
+    overlay_synthesis_events_suppressed_post_warmup: u64,
 }
 
 pub(crate) fn ensure_frames_index_json(
@@ -517,6 +530,18 @@ fn build_frames_index_payload_streaming(
                         .aggregates
                         .paint_cache_replayed_ops_post_warmup
                         .saturating_add(row.paint_cache_replayed_ops.unwrap_or(0));
+                    self.aggregates.overlay_synthesis_events_total_post_warmup = self
+                        .aggregates
+                        .overlay_synthesis_events_total_post_warmup
+                        .saturating_add(row.overlay_synthesis_events_total);
+                    self.aggregates.overlay_synthesis_events_synthesized_post_warmup = self
+                        .aggregates
+                        .overlay_synthesis_events_synthesized_post_warmup
+                        .saturating_add(row.overlay_synthesis_events_synthesized);
+                    self.aggregates.overlay_synthesis_events_suppressed_post_warmup = self
+                        .aggregates
+                        .overlay_synthesis_events_suppressed_post_warmup
+                        .saturating_add(row.overlay_synthesis_events_suppressed);
 
                     self.rows.push_back(row);
                     if self.rows.len() > FRAMES_INDEX_MAX_ROWS_PER_WINDOW {
@@ -640,6 +665,21 @@ fn build_frames_index_payload_streaming(
                         let flags = map.next_value_seed(DockingInteractionSeed)?;
                         self.out.dock_drag_active |= flags.dock_drag_active;
                         self.out.viewport_capture_active |= flags.viewport_capture_active;
+                    }
+                    "overlay_synthesis" | "overlaySynthesis" => {
+                        let counts = map.next_value_seed(OverlaySynthesisSeed)?;
+                        self.out.overlay_synthesis_events_total = self
+                            .out
+                            .overlay_synthesis_events_total
+                            .saturating_add(counts.total);
+                        self.out.overlay_synthesis_events_synthesized = self
+                            .out
+                            .overlay_synthesis_events_synthesized
+                            .saturating_add(counts.synthesized);
+                        self.out.overlay_synthesis_events_suppressed = self
+                            .out
+                            .overlay_synthesis_events_suppressed
+                            .saturating_add(counts.suppressed);
                     }
                     "cache_roots" | "cacheRoots" => {
                         self.out.cache_roots_reused = Some(map.next_value_seed(CacheRootsSeed)?);
@@ -1203,6 +1243,180 @@ fn build_frames_index_payload_streaming(
         }
     }
 
+    #[derive(Debug, Clone, Copy, Default)]
+    struct OverlaySynthesisCounts {
+        total: u64,
+        synthesized: u64,
+        suppressed: u64,
+    }
+
+    struct OverlaySynthesisSeed;
+
+    impl<'de> DeserializeSeed<'de> for OverlaySynthesisSeed {
+        type Value = OverlaySynthesisCounts;
+
+        fn deserialize<D>(self, deserializer: D) -> Result<OverlaySynthesisCounts, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
+            deserializer.deserialize_any(OverlaySynthesisVisitor {
+                out: OverlaySynthesisCounts::default(),
+            })
+        }
+    }
+
+    struct OverlaySynthesisVisitor {
+        out: OverlaySynthesisCounts,
+    }
+
+    impl<'de> Visitor<'de> for OverlaySynthesisVisitor {
+        type Value = OverlaySynthesisCounts;
+
+        fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "an overlay_synthesis array")
+        }
+
+        fn visit_seq<A>(mut self, mut seq: A) -> Result<OverlaySynthesisCounts, A::Error>
+        where
+            A: SeqAccess<'de>,
+        {
+            while let Some(synthesized) = seq.next_element_seed(OverlaySynthesisEventSeed)? {
+                self.out.total = self.out.total.saturating_add(1);
+                if synthesized {
+                    self.out.synthesized = self.out.synthesized.saturating_add(1);
+                } else {
+                    self.out.suppressed = self.out.suppressed.saturating_add(1);
+                }
+            }
+            Ok(self.out)
+        }
+
+        fn visit_map<M>(self, mut map: M) -> Result<OverlaySynthesisCounts, M::Error>
+        where
+            M: MapAccess<'de>,
+        {
+            while map.next_key::<IgnoredAny>()?.is_some() {
+                map.next_value::<IgnoredAny>()?;
+            }
+            Ok(self.out)
+        }
+
+        fn visit_unit<E>(self) -> Result<OverlaySynthesisCounts, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(self.out)
+        }
+
+        fn visit_none<E>(self) -> Result<OverlaySynthesisCounts, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(self.out)
+        }
+    }
+
+    struct OverlaySynthesisEventSeed;
+
+    impl<'de> DeserializeSeed<'de> for OverlaySynthesisEventSeed {
+        type Value = bool;
+
+        fn deserialize<D>(self, deserializer: D) -> Result<bool, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
+            deserializer.deserialize_any(OverlaySynthesisEventVisitor {
+                synthesized: false,
+            })
+        }
+    }
+
+    struct OverlaySynthesisEventVisitor {
+        synthesized: bool,
+    }
+
+    impl<'de> Visitor<'de> for OverlaySynthesisEventVisitor {
+        type Value = bool;
+
+        fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "an overlay synthesis event object")
+        }
+
+        fn visit_map<M>(mut self, mut map: M) -> Result<bool, M::Error>
+        where
+            M: MapAccess<'de>,
+        {
+            while let Some(key) = map.next_key::<String>()? {
+                if key == "outcome" {
+                    let outcome = map.next_value::<Option<String>>()?;
+                    if outcome.as_deref() == Some("synthesized") {
+                        self.synthesized = true;
+                    }
+                } else {
+                    map.next_value::<IgnoredAny>()?;
+                }
+            }
+            Ok(self.synthesized)
+        }
+
+        fn visit_seq<A>(self, mut seq: A) -> Result<bool, A::Error>
+        where
+            A: SeqAccess<'de>,
+        {
+            while seq.next_element::<IgnoredAny>()?.is_some() {}
+            Ok(false)
+        }
+
+        fn visit_unit<E>(self) -> Result<bool, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(false)
+        }
+
+        fn visit_none<E>(self) -> Result<bool, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(false)
+        }
+
+        fn visit_bool<E>(self, _v: bool) -> Result<bool, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(false)
+        }
+
+        fn visit_i64<E>(self, _v: i64) -> Result<bool, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(false)
+        }
+
+        fn visit_u64<E>(self, _v: u64) -> Result<bool, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(false)
+        }
+
+        fn visit_f64<E>(self, _v: f64) -> Result<bool, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(false)
+        }
+
+        fn visit_str<E>(self, _v: &str) -> Result<bool, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(false)
+        }
+    }
+
     struct SemanticsSeed;
 
     impl<'de> DeserializeSeed<'de> for SemanticsSeed {
@@ -1326,6 +1540,9 @@ fn build_frames_index_payload_streaming(
             "view_cache_active_snapshots_post_warmup": w.aggregates.view_cache_active_snapshots_post_warmup,
             "view_cache_reuse_events_post_warmup": w.aggregates.view_cache_reuse_events_post_warmup,
             "paint_cache_replayed_ops_post_warmup": w.aggregates.paint_cache_replayed_ops_post_warmup,
+            "overlay_synthesis_events_total_post_warmup": w.aggregates.overlay_synthesis_events_total_post_warmup,
+            "overlay_synthesis_events_synthesized_post_warmup": w.aggregates.overlay_synthesis_events_synthesized_post_warmup,
+            "overlay_synthesis_events_suppressed_post_warmup": w.aggregates.overlay_synthesis_events_suppressed_post_warmup,
         });
 
         windows_out.push(json!({
@@ -1346,7 +1563,10 @@ fn build_frames_index_payload_streaming(
     Ok(json!({
         "schema_version": FRAMES_INDEX_SCHEMA_VERSION,
         "kind": FRAMES_INDEX_KIND,
-        "features": [FRAMES_INDEX_FEATURE_WINDOW_AGG_V1],
+        "features": [
+            FRAMES_INDEX_FEATURE_WINDOW_AGG_V1,
+            FRAMES_INDEX_FEATURE_WINDOW_AGG_OVERLAY_SYNTHESIS_V1,
+        ],
         "bundle": bundle_path.display().to_string(),
         "generated_unix_ms": crate::util::now_unix_ms(),
         "warmup_frames": warmup_frames,
@@ -1651,8 +1871,8 @@ mod tests {
     "window": 1,
     "snapshots": [
       { "frame_id": 0, "window_snapshot_seq": 1, "timestamp_unix_ms": 1, "debug": { "stats": { "total_time_us": 10 } } },
-      { "frame_id": 5, "window_snapshot_seq": 2, "timestamp_unix_ms": 2, "semantics_fingerprint": 42, "debug": { "viewport_input": [1,2], "docking_interaction": { "dock_drag": {} }, "stats": { "total_time_us": 20, "layout_time_us": 3, "view_cache_active": true, "view_cache_roots_reused": 1, "paint_cache_replayed_ops": 4 }, "semantics": { "nodes": [] } } },
-      { "frame_id": 6, "window_snapshot_seq": 3, "timestamp_unix_ms": 3, "semantics_fingerprint": 43, "debug": { "viewport_input": [1], "docking_interaction": { "viewport_capture": {} }, "stats": { "total_time_us": 30, "view_cache_active": true, "view_cache_roots_reused": 2, "paint_cache_replayed_ops": 1 } } }
+      { "frame_id": 5, "window_snapshot_seq": 2, "timestamp_unix_ms": 2, "semantics_fingerprint": 42, "debug": { "viewport_input": [1,2], "docking_interaction": { "dock_drag": {} }, "overlay_synthesis": [{"outcome":"synthesized"},{"outcome":"suppressed"}], "stats": { "total_time_us": 20, "layout_time_us": 3, "view_cache_active": true, "view_cache_roots_reused": 1, "paint_cache_replayed_ops": 4 }, "semantics": { "nodes": [] } } },
+      { "frame_id": 6, "window_snapshot_seq": 3, "timestamp_unix_ms": 3, "semantics_fingerprint": 43, "debug": { "viewport_input": [1], "docking_interaction": { "viewport_capture": {} }, "overlay_synthesis": [{"outcome":"synthesized"}], "stats": { "total_time_us": 30, "view_cache_active": true, "view_cache_roots_reused": 2, "paint_cache_replayed_ops": 1 } } }
     ]
   }]
 }"#,
@@ -1662,9 +1882,11 @@ mod tests {
         let payload = build_frames_index_payload_streaming(&bundle_path, 5).expect("payload");
         assert_eq!(payload["kind"].as_str(), Some("frames_index"));
         assert_eq!(payload["schema_version"].as_u64(), Some(1));
-        assert!(payload["features"]
-            .as_array()
-            .is_some_and(|v| v.iter().any(|f| f.as_str() == Some("window_aggregates.v1"))));
+        assert!(payload["features"].as_array().is_some_and(|v| {
+            v.iter().any(|f| f.as_str() == Some("window_aggregates.v1"))
+                && v.iter()
+                    .any(|f| f.as_str() == Some("window_aggregates.overlay_synthesis.v1"))
+        }));
         assert_eq!(payload["warmup_frames"].as_u64(), Some(5));
         assert_eq!(payload["has_semantics_table"].as_bool(), Some(true));
         assert_eq!(payload["windows_total"].as_u64(), Some(1));
@@ -1712,6 +1934,21 @@ mod tests {
             aggs.get("paint_cache_replayed_ops_post_warmup")
                 .and_then(|v| v.as_u64()),
             Some(5)
+        );
+        assert_eq!(
+            aggs.get("overlay_synthesis_events_total_post_warmup")
+                .and_then(|v| v.as_u64()),
+            Some(3)
+        );
+        assert_eq!(
+            aggs.get("overlay_synthesis_events_synthesized_post_warmup")
+                .and_then(|v| v.as_u64()),
+            Some(2)
+        );
+        assert_eq!(
+            aggs.get("overlay_synthesis_events_suppressed_post_warmup")
+                .and_then(|v| v.as_u64()),
+            Some(1)
         );
 
         let rows = w.get("rows").and_then(|v| v.as_array()).expect("rows");

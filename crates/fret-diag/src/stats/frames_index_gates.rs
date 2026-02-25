@@ -172,6 +172,52 @@ pub(crate) fn check_frames_index_for_view_cache_reuse_min(
     ))
 }
 
+pub(crate) fn check_frames_index_for_overlay_synthesis_min(
+    bundle_path: &Path,
+    min_synthesized_events: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let (frames_index_path, frames_index) = load_frames_index(bundle_path, warmup_frames)?;
+    let windows = frames_index
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid frames.index.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut synthesized_events: u64 = 0;
+    let mut examined_snapshots: u64 = 0;
+    let mut view_cache_active_snapshots: u64 = 0;
+
+    for w in windows {
+        synthesized_events = synthesized_events.saturating_add(window_agg_u64(
+            w,
+            "overlay_synthesis_events_synthesized_post_warmup",
+        ));
+        examined_snapshots =
+            examined_snapshots.saturating_add(window_agg_u64(w, "examined_snapshots_post_warmup"));
+        view_cache_active_snapshots = view_cache_active_snapshots.saturating_add(window_agg_u64(
+            w,
+            "view_cache_active_snapshots_post_warmup",
+        ));
+    }
+
+    if synthesized_events >= min_synthesized_events {
+        return Ok(());
+    }
+
+    let any_view_cache_active = view_cache_active_snapshots > 0;
+
+    Err(format!(
+        "expected at least {min_synthesized_events} overlay synthesis events, got {synthesized_events} \
+(any_view_cache_active={any_view_cache_active}, warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots}). \
+bundle: {}\n  frames_index: {}",
+        bundle_path.display(),
+        frames_index_path.display()
+    ))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -199,8 +245,8 @@ mod tests {
     "window": 1,
     "snapshots": [
       { "frame_id": 0, "debug": { "stats": { "total_time_us": 10 } } },
-      { "frame_id": 5, "debug": { "viewport_input": [1,2], "docking_interaction": { "dock_drag": {} }, "stats": { "total_time_us": 20, "view_cache_active": true, "view_cache_roots_reused": 1 } } },
-      { "frame_id": 6, "debug": { "viewport_input": [1], "docking_interaction": { "viewport_capture": {} }, "stats": { "total_time_us": 30, "view_cache_active": true, "view_cache_roots_reused": 2 } } }
+      { "frame_id": 5, "debug": { "viewport_input": [1,2], "docking_interaction": { "dock_drag": {} }, "overlay_synthesis": [{"outcome":"synthesized"}], "stats": { "total_time_us": 20, "view_cache_active": true, "view_cache_roots_reused": 1 } } },
+      { "frame_id": 6, "debug": { "viewport_input": [1], "docking_interaction": { "viewport_capture": {} }, "overlay_synthesis": [{"outcome":"synthesized"}], "stats": { "total_time_us": 30, "view_cache_active": true, "view_cache_roots_reused": 2 } } }
     ]
   }]
 }"#,
@@ -211,5 +257,6 @@ mod tests {
         check_frames_index_for_dock_drag_min(&bundle_path, 1, 5).expect("dock drag");
         check_frames_index_for_viewport_capture_min(&bundle_path, 1, 5).expect("viewport capture");
         check_frames_index_for_view_cache_reuse_min(&bundle_path, 3, 5).expect("view cache reuse");
+        check_frames_index_for_overlay_synthesis_min(&bundle_path, 2, 5).expect("overlay synthesis");
     }
 }

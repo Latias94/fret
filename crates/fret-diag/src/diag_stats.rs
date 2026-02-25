@@ -301,13 +301,15 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
     if let Some(min) = check_overlay_synthesis_min
         && min > 0
     {
-        ensure_check_supported_in_stats_mode(
-            derived_from_frames_index,
-            "check-overlay-synthesis-min",
-            &bundle_path,
-            warmup_frames,
-        )?;
-        stats::check_bundle_for_overlay_synthesis_min(bundle_path.as_path(), min, warmup_frames)?;
+        if derived_from_frames_index {
+            stats::check_frames_index_for_overlay_synthesis_min(
+                bundle_path.as_path(),
+                min,
+                warmup_frames,
+            )?;
+        } else {
+            stats::check_bundle_for_overlay_synthesis_min(bundle_path.as_path(), min, warmup_frames)?;
+        }
     }
     if let Some(min) = check_viewport_input_min
         && min > 0
