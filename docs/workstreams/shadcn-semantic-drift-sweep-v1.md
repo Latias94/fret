@@ -144,6 +144,49 @@ Status:
 - `Skeleton` disables pulse under reduced motion.
 - `Spinner` disables rotation under reduced motion.
 
+## Semantic conflicts (what can “fight”) and how we prevent it
+
+As Fret’s semantics surface grows, drift can show up as *conflicting sources of truth* for a single
+decision (layout, tokens, or motion). The goal is not to eliminate choices, but to ensure each
+choice is:
+
+- explicit (a named knob at the right layer),
+- consistent (a stable precedence order),
+- gated (tests/diag that fail on drift).
+
+### Common conflict patterns
+
+1) **Viewport vs container responsiveness**
+
+- Symptom: a recipe uses viewport breakpoints (`sm/md/lg`) where editor-grade UIs expect the *local
+  panel width* to drive behavior.
+- Rule: viewport semantics come from environment queries (ADR 0232). Container semantics come from
+  container query regions (ADR 0231).
+- Mitigation: expose a recipe-level “query source” knob when both are reasonable (default to web
+  parity; allow editor-first override).
+
+2) **Theme-owned scheme vs environment scheme**
+
+- Symptom: code branches on environment `ColorScheme` (per-window) for appearance tokens, but the
+  theme content is app-owned.
+- Rule: theme content remains app/theme-owned (ADR 0032). Environment is a hint for *shell*
+  decisions, not the theme’s palette definition.
+- Mitigation: prefer theme metadata (`Theme.color_scheme`) and explicit component token keys over
+  environment branching; keep environment use localized to shell/policy layers.
+
+3) **Token keys vs literals / heuristics**
+
+- Symptom: values are embedded as literals or keyed off theme names, so custom themes cannot
+  override behavior without code changes.
+- Rule: recipes should be “token reads” whenever possible; policy branches belong above `fret-ui`.
+- Mitigation: add component-owned keys (seeded by shadcn presets) and reduce recipe code branching.
+
+4) **Motion policy vs local animation loops**
+
+- Symptom: widgets keep requesting RAF even when reduced motion is preferred.
+- Rule: reduced-motion is an environment query contract (ADR 0232) and must be respected.
+- Mitigation: make continuous animations conditional and prove “no frame requests” via tests/diag.
+
 ## References (contracts / docs)
 
 - Runtime contract split: `docs/adr/0066-fret-ui-runtime-contract-surface.md`
@@ -159,3 +202,8 @@ Status:
 
 The TODO list also contains a seed “responsive decision table” that records whether a given
 recipe should follow viewport queries (device shell) or container queries (panel width).
+
+## Status log
+
+- 2026-02-25: Merged `main` into this workstream branch to pick up latest `fret-ui-kit`/`fret-ui`
+  overlay and text-area changes before continuing the sweep.
