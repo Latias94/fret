@@ -46,6 +46,11 @@ This TODO is ordered by implementation priority (P0 first), and is designed to b
   - Migrate existing effect recorders to the helpers (including `DropShadow`).
   - Evidence: `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs`.
 
+- [x] Split effect WGSL sources into `*.wgsl` files:
+  - Keep effect shader sources reviewable and reduce `shaders.rs` merge conflict risk.
+  - Evidence: `crates/fret-render-wgpu/src/renderer/shaders.rs`,
+    `crates/fret-render-wgpu/src/renderer/pipelines/wgsl/*.wgsl`.
+
 - [x] Add `EffectStep::NoiseV1` (bounded procedural grain) for acrylic/glass recipes:
   - [x] Deterministic, bounded noise evaluation in effect chains (no hidden time sources).
   - [x] Conformance: scissored FilterContent noise preserves outside-region content and is deterministic.

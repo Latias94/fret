@@ -52,6 +52,8 @@ P1 — Quality and maintainability:
 - Split WGSL sources into `*.wgsl` files and `include_str!()` them:
   - keep per-pass shaders adjacent to their pipeline module.
   - reduce merge conflicts and make shader diffs reviewable.
+  Done (initial): moved effect shaders (blit + explicit sRGB encode, drop shadow, dither, noise) into
+  `crates/fret-render-wgpu/src/renderer/pipelines/wgsl/*.wgsl` and `include_str!()` them from `shaders.rs`.
   Anchor: `crates/fret-render-wgpu/src/renderer/shaders.rs`.
 
 P1/P2 — Diagnostics:
