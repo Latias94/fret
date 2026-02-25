@@ -19,21 +19,21 @@ use fret_ui::element::SemanticsDecoration;
 use fret_ui::element::SizeStyle;
 use fret_ui::element::StackProps;
 use fret_ui::scroll::ScrollHandle;
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::LayoutRefinement;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::scroll_area::DEFAULT_SCROLL_HIDE_DELAY_TICKS;
 use fret_ui_kit::primitives::scroll_area::ScrollAreaType;
 
-fn shadcn_scrollbar_thumb(theme: &Theme) -> Color {
+fn shadcn_scrollbar_thumb(theme: &ThemeSnapshot) -> Color {
     theme.color_token("border")
 }
 
-fn shadcn_scrollbar_thumb_hover(theme: &Theme) -> Color {
+fn shadcn_scrollbar_thumb_hover(theme: &ThemeSnapshot) -> Color {
     theme.color_token("border")
 }
 
-fn shadcn_scrollbar_corner_bg(theme: &Theme) -> Color {
+fn shadcn_scrollbar_corner_bg(theme: &ThemeSnapshot) -> Color {
     theme.color_by_key("border").unwrap_or(Color::TRANSPARENT)
 }
 
@@ -233,7 +233,7 @@ impl ScrollAreaRoot {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
 
         let viewport = self.viewport;
         let scrollbars = self.scrollbars;

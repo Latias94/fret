@@ -312,7 +312,7 @@ pub fn slider<H: UiHost>(
     layout: LayoutRefinement,
     style: SliderStyle,
 ) -> AnyElement {
-    let theme = Theme::global(&*cx.app).clone();
+    let theme = Theme::global(&*cx.app).snapshot();
 
     cx.scope(|cx| {
         #[derive(Default)]
@@ -368,7 +368,6 @@ pub fn slider<H: UiHost>(
             values_before_model
         };
 
-        let snapshot = theme.snapshot();
         let enabled = !disabled;
 
         let SliderStyle {
@@ -395,18 +394,18 @@ pub fn slider<H: UiHost>(
 
         let track_bg = theme
             .color_by_key("muted")
-            .unwrap_or(snapshot.colors.panel_background);
+            .unwrap_or(theme.colors.panel_background);
         let range_bg = theme
             .color_by_key("primary")
             .or_else(|| theme.color_by_key("accent"))
-            .unwrap_or(snapshot.colors.accent);
+            .unwrap_or(theme.colors.accent);
         let thumb_bg = theme
             .color_by_key("background")
-            .unwrap_or(snapshot.colors.surface_background);
+            .unwrap_or(theme.colors.surface_background);
         let thumb_border = theme
             .color_by_key("primary")
             .or_else(|| theme.color_by_key("accent"))
-            .unwrap_or(snapshot.colors.accent);
+            .unwrap_or(theme.colors.accent);
         let ring_color = theme.color_token("ring");
 
         let default_track_background = WidgetStateProperty::new(ColorRef::Color(track_bg));

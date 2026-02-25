@@ -124,7 +124,7 @@ impl Progress {
         cx.scope(|cx| {
             let mirror_in_rtl = self.mirror_in_rtl;
             let a11y_label = self.a11y_label.clone();
-            let theme = Theme::global(&*cx.app).clone();
+            let theme = Theme::global(&*cx.app).snapshot();
             let height = theme
                 .metric_by_key("component.progress.height")
                 .unwrap_or(Px(8.0));

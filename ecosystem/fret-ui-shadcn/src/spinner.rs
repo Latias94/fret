@@ -60,7 +60,7 @@ impl Spinner {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
 
         let base_layout = LayoutRefinement::default()
             .w_px(Px(16.0))
