@@ -14,6 +14,7 @@ publish = false
 anyhow.workspace = true
 serde_json.workspace = true
 
-fret-diag = { path = "../../crates/fret-diag" }
 fret-diag-protocol = { path = "../../crates/fret-diag-protocol" }
 
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+fret-diag = { path = "../../crates/fret-diag" }

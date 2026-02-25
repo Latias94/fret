@@ -30,6 +30,8 @@ hotpatch = [
 node-graph-demos = ["fret-examples/node-graph-demos"]
 
 [dependencies]
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 anyhow.workspace = true
 fret-examples = { path = "../fret-examples" }
 fret-ui-gallery = { path = "../fret-ui-gallery", optional = true }
