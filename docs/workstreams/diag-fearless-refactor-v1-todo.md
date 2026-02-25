@@ -275,6 +275,8 @@ Goal: common tooling should keep working even when `bundle.json` is too large to
     - [x] `--check-view-cache-reuse-min` (post-warmup reuse event count).
   - [ ] Second wave (still sidecar-only, but may need additional signals):
     - [x] `--check-overlay-synthesis-min` (synthesized overlay counts).
+    - [x] `--check-stale-paint` (streaming; does not materialize full bundle JSON).
+    - [x] `--check-stale-scene` (streaming; does not materialize full bundle JSON).
     - [x] `--check-wheel-scroll*` (streaming; does not materialize full bundle JSON).
     - [x] `--check-semantics-changed-repainted` (streaming; does not materialize full bundle JSON; loads schema2 semantics table nodes for diffs).
     - [x] `--check-notify-hotspot-file-max` (streaming; does not materialize full bundle JSON).

@@ -203,7 +203,11 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
             &bundle_path,
             warmup_frames,
         )?;
-        stats::check_bundle_for_stale_paint(&bundle_path, test_id, check_stale_paint_eps)?;
+        if derived_from_frames_index {
+            stats::check_bundle_for_stale_paint_streaming(&bundle_path, test_id, check_stale_paint_eps)?;
+        } else {
+            stats::check_bundle_for_stale_paint(&bundle_path, test_id, check_stale_paint_eps)?;
+        }
     }
     if let Some(test_id) = check_stale_scene_test_id.as_deref() {
         ensure_check_supported_in_stats_mode(
@@ -212,7 +216,11 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
             &bundle_path,
             warmup_frames,
         )?;
-        stats::check_bundle_for_stale_scene(&bundle_path, test_id, check_stale_scene_eps)?;
+        if derived_from_frames_index {
+            stats::check_bundle_for_stale_scene_streaming(&bundle_path, test_id, check_stale_scene_eps)?;
+        } else {
+            stats::check_bundle_for_stale_scene(&bundle_path, test_id, check_stale_scene_eps)?;
+        }
     }
     if let Some(min) = check_idle_no_paint_min {
         ensure_check_supported_in_stats_mode(

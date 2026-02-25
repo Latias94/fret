@@ -31,6 +31,16 @@ pub(crate) const STATS_LITE_SUPPORTED_CHECKS: &[StatsLiteCheckSupport] = &[
         note: "derived from the stats report",
     },
     StatsLiteCheckSupport {
+        check_name: "check-stale-paint",
+        kind: StatsLiteCheckKind::StreamingBundle,
+        note: "streams bundle JSON; resolves semantics via schema2 tables when needed",
+    },
+    StatsLiteCheckSupport {
+        check_name: "check-stale-scene",
+        kind: StatsLiteCheckKind::StreamingBundle,
+        note: "streams bundle JSON; resolves semantics via schema2 tables when needed",
+    },
+    StatsLiteCheckSupport {
         check_name: "check-idle-no-paint-min",
         kind: StatsLiteCheckKind::FramesIndex,
         note: "uses frames.index.json window aggregates (idle streak tail/max)",
