@@ -1,5 +1,8 @@
 use super::*;
 
+#[path = "diag_perf/aux_scripts.rs"]
+mod aux_scripts;
+
 #[derive(Debug, Clone)]
 pub(crate) struct PerfCmdContext {
     pub pack_after_run: bool,
@@ -355,140 +358,23 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
 
     let run_suite_aux_script_must_pass =
         |src: &PathBuf, child: &mut Option<LaunchedDemo>| -> Result<(), String> {
-            if use_devtools_ws {
-                let connected = connected_ws.as_ref().ok_or_else(|| {
-                    "missing DevTools WS transport (this is a tooling bug)".to_string()
-                })?;
-                let script_key = normalize_repo_relative_path(&workspace_root, src);
-                let script_json: serde_json::Value =
-                    serde_json::from_slice(&std::fs::read(src).map_err(|e| {
-                        let err = e.to_string();
-                        write_tooling_failure_script_result(
-                            &resolved_script_result_path,
-                            "tooling.script.read_failed",
-                            &err,
-                            "tooling_error",
-                            Some(script_key.clone()),
-                        );
-                        err
-                    })?)
-                    .map_err(|e| {
-                        let err = e.to_string();
-                        write_tooling_failure_script_result(
-                            &resolved_script_result_path,
-                            "tooling.script.parse_failed",
-                            &err,
-                            "tooling_error",
-                            Some(script_key.clone()),
-                        );
-                        err
-                    })?;
-                let (result, _bundle_path) = run_script_over_transport(
-                    &resolved_out_dir,
-                    connected,
-                    script_json,
-                    false,
-                    false,
-                    None,
-                    None,
-                    timeout_ms,
-                    poll_ms,
-                    &resolved_script_result_path,
-                    &perf_capabilities_check_path,
-                )
-                .inspect_err(|err| {
-                    write_tooling_failure_script_result_if_missing(
-                        &resolved_script_result_path,
-                        "tooling.run.failed",
-                        err,
-                        "tooling_error",
-                        Some(script_key.clone()),
-                    );
-                })?;
-
-                match result.stage {
-                    fret_diag_protocol::UiScriptStageV1::Passed => return Ok(()),
-                    fret_diag_protocol::UiScriptStageV1::Failed => {
-                        eprintln!(
-                            "FAIL {} (run_id={}) step={} reason={} last_bundle_dir={}",
-                            src.display(),
-                            result.run_id,
-                            result.step_index.unwrap_or(0),
-                            result.reason.as_deref().unwrap_or("unknown"),
-                            result.last_bundle_dir.as_deref().unwrap_or("")
-                        );
-                        stop_launched_demo(child, &resolved_exit_path, poll_ms);
-                        std::process::exit(1);
-                    }
-                    _ => {
-                        eprintln!(
-                            "unexpected script stage for {}: {:?}",
-                            src.display(),
-                            result
-                        );
-                        stop_launched_demo(child, &resolved_exit_path, poll_ms);
-                        std::process::exit(1);
-                    }
-                }
-            }
-
-            if !reuse_process {
-                clear_script_result_files(
-                    &resolved_script_result_path,
-                    &resolved_script_result_trigger_path,
-                );
-            }
-
-            let mut result = run_script_and_wait(
+            aux_scripts::run_suite_aux_script_must_pass(
                 src,
+                child,
+                use_devtools_ws,
+                connected_ws.as_ref(),
+                &workspace_root,
+                &resolved_out_dir,
+                &resolved_exit_path,
+                reuse_process,
                 &resolved_script_path,
                 &resolved_script_trigger_path,
                 &resolved_script_result_path,
                 &resolved_script_result_trigger_path,
+                &perf_capabilities_check_path,
                 timeout_ms,
                 poll_ms,
-            );
-            if let Ok(summary) = &result
-                && summary.stage.as_deref() == Some("failed")
-                && let Some(dir) =
-                    wait_for_failure_dump_bundle(&resolved_out_dir, summary, timeout_ms, poll_ms)
-                && let Some(name) = dir.file_name().and_then(|s| s.to_str())
-                && let Ok(summary) = result.as_mut()
-            {
-                summary.last_bundle_dir = Some(name.to_string());
-            }
-            let result = match result {
-                Ok(v) => v,
-                Err(e) => {
-                    stop_launched_demo(child, &resolved_exit_path, poll_ms);
-                    return Err(e);
-                }
-            };
-
-            match result.stage.as_deref() {
-                Some("passed") => Ok(()),
-                Some("failed") => {
-                    eprintln!(
-                        "FAIL {} (run_id={}) step={} reason={} last_bundle_dir={}",
-                        src.display(),
-                        result.run_id,
-                        result.step_index.unwrap_or(0),
-                        result.reason.as_deref().unwrap_or("unknown"),
-                        result.last_bundle_dir.as_deref().unwrap_or("")
-                    );
-                    stop_launched_demo(child, &resolved_exit_path, poll_ms);
-                    std::process::exit(1);
-                }
-                _ => {
-                    eprintln!(
-                        "unexpected script stage for {}: {:?}",
-                        src.display(),
-                        result
-                    );
-                    stop_launched_demo(child, &resolved_exit_path, poll_ms);
-                    std::process::exit(1);
-                }
-            }
+            )
         };
 
     if let Some(baseline) = perf_baseline.as_ref() {

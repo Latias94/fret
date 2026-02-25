@@ -181,6 +181,8 @@ This file tracks tasks for `docs/workstreams/diag-fearless-refactor-v1.md`.
 - [x] Extract triage JSON generation out of the CLI entrypoint file:
   - [x] Move `triage_json_from_stats` into `crates/fret-diag/src/triage_json.rs` (keep a thin wrapper in `crates/fret-diag/src/lib.rs`).
   - [x] Keep existing call sites unchanged (`crate::triage_json_from_stats`), and keep tests compiling.
+- [x] Extract `diag perf` suite aux-script runner into a helper module (reduce churn + keep `diag_perf.rs` shorter):
+  - `crates/fret-diag/src/diag_perf/aux_scripts.rs`
 
 ## Plan 2 (defer until Plan 1 is solid)
 
