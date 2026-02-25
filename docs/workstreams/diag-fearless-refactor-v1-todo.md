@@ -222,7 +222,7 @@ Goal: common tooling should keep working even when `bundle.json` is too large to
     - `crates/fret-diag/src/commands/slice_streaming.rs` (streaming extraction patterns)
 - [x] Add one regression test that `diag lint` can handle a schema2-only bundle with table semantics without materializing the bundle.
 
-- [ ] Make `diag stats` degrade gracefully for large bundle artifacts.
+- [x] Make `diag stats` degrade gracefully for large bundle artifacts.
   - Prefer `bundle.schema2.json` when the user passes a raw `bundle.json` file and schema2 is present next to it.
   - When the bundle artifact is still too large to materialize, fail fast with an actionable message that points to
     `diag triage --lite` / schema2 + sidecar regeneration.
