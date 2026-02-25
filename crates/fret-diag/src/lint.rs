@@ -425,6 +425,7 @@ fn lint_bundle_from_json(
     let payload = serde_json::json!({
         "schema_version": 1,
         "kind": "lint",
+        "bundle_artifact": bundle_path.display().to_string(),
         "bundle_json": bundle_path.display().to_string(),
         "warmup_frames": warmup_frames,
         "options": {
