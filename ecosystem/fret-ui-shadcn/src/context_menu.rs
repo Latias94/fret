@@ -31,6 +31,7 @@ use fret_ui_kit::primitives::context_menu as menu;
 use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
+use fret_ui_kit::primitives::portal_inherited;
 use fret_ui_kit::primitives::presence as radix_presence;
 use fret_ui_kit::typography;
 use fret_ui_kit::{
@@ -2873,10 +2874,16 @@ impl ContextMenu {
                 .read_ref(|m| m.get(&open_model_id).copied())
                 .ok()
                 .flatten();
+            let portal_ctx = portal_inherited::PortalInherited::capture(cx);
             let submenu_cfg = menu::sub::MenuSubmenuConfig::default();
-            let submenu = cx.with_root_name(&overlay_root_name, |cx| {
+            let submenu = portal_inherited::with_root_name_inheriting(
+                cx,
+                &overlay_root_name,
+                portal_ctx,
+                |cx| {
                 menu::root::sync_root_open_and_ensure_submenu(cx, is_open, cx.root_id(), submenu_cfg)
-            });
+                },
+            );
 
             if overlay_presence.present {
                 let align = self.align;
@@ -2896,10 +2903,14 @@ impl ContextMenu {
                 let first_item_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
                 let first_item_focus_id_for_children = first_item_focus_id.clone();
                 let first_item_focus_id_for_request = first_item_focus_id.clone();
-                let direction = direction_prim::use_direction_in_scope(cx, None);
+                let direction = portal_ctx.direction;
 
                 let (overlay_children, dismissible_on_pointer_move) =
-                    cx.with_root_name(&overlay_root_name, move |cx| {
+                    portal_inherited::with_root_name_inheriting(
+                    cx,
+                    &overlay_root_name,
+                    portal_ctx,
+                    move |cx| {
                     let trigger_bounds =
                         overlay::anchor_bounds_for_element(cx, trigger_id);
                     let anchor = anchor_point.or_else(|| trigger_bounds.map(|r| r.origin));
@@ -3949,7 +3960,8 @@ impl ContextMenu {
                             st.geometry = Some(*geometry);
                         }
                         st.geometry
-                    });
+                    },
+                    );
 
                     if submenu_present {
                         let Some(open_value) = submenu_open_value.clone() else {
