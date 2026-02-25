@@ -64,6 +64,8 @@ Note: `repo-ref/` is local state (not committed). See `docs/repo-ref.md`.
     - Evidence: `ecosystem/fret-ui-shadcn/tests/data_table_toolbar_faceted_responsive.rs`
   - [x] `tools/diag-scripts/ui-gallery-data-table-toolbar-faceted-responsive.json` (window resize;
     asserts `data-table-toolbar-faceted-status-badge-*` invariants via `test_id`).
+  - [x] Expose a gallery toggle for the query source (makes drift review interactive):
+    - `apps/fret-ui-gallery/src/ui/previews/gallery/data/table_legacy.rs`
 
 ## Responsive drift: Marquee base width (viewport vs container)
 

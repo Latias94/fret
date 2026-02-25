@@ -34,6 +34,11 @@ struct DemoProcessTableFacetsState {
     status_facets: Option<Model<HashMap<Arc<str>, usize>>>,
 }
 
+#[derive(Default)]
+struct DemoProcessTableToolbarResponsiveState {
+    use_container_query: Option<Model<bool>>,
+}
+
 const CMD_SELECT_ALL_PAGE: &str = "ui_gallery.data_table.select_all_page";
 const TOGGLE_ROW_SELECTED_ROUTE_PREFIX: &str = "ui_gallery.data_table.toggle_row_selected.";
 
@@ -272,6 +277,54 @@ pub(in crate::ui) fn preview_data_table_legacy(
         }
     };
 
+    let use_container_query = cx
+        .with_state(DemoProcessTableToolbarResponsiveState::default, |st| {
+            st.use_container_query.clone()
+        });
+    let use_container_query = match use_container_query {
+        Some(m) => m,
+        None => {
+            let m = cx.app.models_mut().insert(false);
+            let m_for_state = m.clone();
+            cx.with_state(DemoProcessTableToolbarResponsiveState::default, move |st| {
+                st.use_container_query = Some(m_for_state);
+            });
+            m
+        }
+    };
+
+    let faceted_badges_query = if cx
+        .watch_model(&use_container_query)
+        .cloned()
+        .unwrap_or(false)
+    {
+        shadcn::DataTableToolbarResponsiveQuery::Container
+    } else {
+        shadcn::DataTableToolbarResponsiveQuery::Viewport
+    };
+
+    let responsive_toggle = shadcn::FieldGroup::new([shadcn::Field::new([
+        shadcn::FieldContent::new([
+            shadcn::FieldLabel::new("Toolbar responsive query")
+                .for_control("ui-gallery-data-table-toolbar-responsive-query-switch")
+                .into_element(cx),
+            shadcn::FieldDescription::new(
+                "Toggle to drive the faceted-filter badges by the toolbar container width (editor-first) instead of the window viewport width (web parity).",
+            )
+            .into_element(cx),
+        ])
+        .into_element(cx),
+        shadcn::Switch::new(use_container_query.clone())
+            .control_id("ui-gallery-data-table-toolbar-responsive-query-switch")
+            .a11y_label("Toolbar responsive query uses container width")
+            .into_element(cx),
+    ])
+    .orientation(shadcn::FieldOrientation::Horizontal)
+    .into_element(cx)])
+    .refine_layout(LayoutRefinement::default().w_full().max_w(Px(720.0)))
+    .into_element(cx)
+    .test_id("ui-gallery-data-table-toolbar-responsive-query");
+
     let toolbar = shadcn::DataTableToolbar::new(
         state.clone(),
         assets.columns.clone(),
@@ -295,6 +348,7 @@ pub(in crate::ui) fn preview_data_table_legacy(
         ]),
     )
     .faceted_filter_counts(status_facets)
+    .faceted_selected_badges_query(faceted_badges_query)
     .columns_button_label("View")
     .show_pinning_menu(false)
     .show_selected_text(false)
@@ -494,6 +548,7 @@ pub(in crate::ui) fn preview_data_table_legacy(
     let table = table.test_id("ui-gallery-data-table-root");
 
     vec![
+        responsive_toggle,
         toolbar,
         table,
         shadcn::DataTablePagination::new(state, output).into_element(cx),
