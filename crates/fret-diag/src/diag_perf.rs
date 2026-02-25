@@ -4,6 +4,8 @@ use super::*;
 mod aux_scripts;
 #[path = "diag_perf/run_script.rs"]
 mod run_script;
+#[path = "diag_perf/reporting.rs"]
+mod reporting;
 
 #[derive(Debug, Clone)]
 pub(crate) struct PerfCmdContext {
@@ -1198,17 +1200,14 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
                     _ => overall_worst = Some((top_total, src.clone(), bundle_path)),
                 }
             } else if stats_json {
-                perf_json_rows.push(serde_json::json!({
-                    "script": script_key.clone(),
-                    "sort": sort.as_str(),
-                    "error": "no_last_bundle_dir",
-                }));
-            } else {
-                println!(
-                    "PERF {} sort={} (no last_bundle_dir recorded)",
-                    src.display(),
-                    sort.as_str()
+                reporting::push_perf_json_no_last_bundle_dir(
+                    &mut perf_json_rows,
+                    script_key.clone(),
+                    sort,
+                    None,
                 );
+            } else {
+                reporting::print_perf_no_last_bundle_dir(src.as_path(), sort, None);
             }
 
             if !reuse_process {
@@ -1301,19 +1300,14 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
 
             let Some(bundle_path) = bundle_path else {
                 if stats_json {
-                    perf_json_rows.push(serde_json::json!({
-                        "script": src.display().to_string(),
-                        "sort": sort.as_str(),
-                        "repeat": repeat,
-                        "error": "no_last_bundle_dir",
-                    }));
-                } else {
-                    println!(
-                        "PERF {} sort={} repeat={} (no last_bundle_dir recorded)",
-                        src.display(),
-                        sort.as_str(),
-                        repeat
+                    reporting::push_perf_json_no_last_bundle_dir(
+                        &mut perf_json_rows,
+                        src.display().to_string(),
+                        sort,
+                        Some(repeat),
                     );
+                } else {
+                    reporting::print_perf_no_last_bundle_dir(src.as_path(), sort, Some(repeat));
                 }
                 if !reuse_process {
                     stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
@@ -2109,32 +2103,17 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
                 let paint = summarize_times_us(&runs_paint);
                 let dispatch = summarize_times_us(&runs_dispatch);
                 let hit_test = summarize_times_us(&runs_hit_test);
-                println!(
-                    "PERF {} sort={} repeat={} p50.us(total/layout/solve/prepaint/paint/dispatch/hit_test)={}/{}/{}/{}/{}/{}/{} p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)={}/{}/{}/{}/{}/{}/{} max.us(total/layout/solve/prepaint/paint/dispatch/hit_test)={}/{}/{}/{}/{}/{}/{}",
-                    src.display(),
-                    sort.as_str(),
+                reporting::print_perf_repeat_summary(
+                    src.as_path(),
+                    sort,
                     repeat,
-                    total.get("p50").and_then(|v| v.as_u64()).unwrap_or(0),
-                    layout.get("p50").and_then(|v| v.as_u64()).unwrap_or(0),
-                    solve.get("p50").and_then(|v| v.as_u64()).unwrap_or(0),
-                    prepaint.get("p50").and_then(|v| v.as_u64()).unwrap_or(0),
-                    paint.get("p50").and_then(|v| v.as_u64()).unwrap_or(0),
-                    dispatch.get("p50").and_then(|v| v.as_u64()).unwrap_or(0),
-                    hit_test.get("p50").and_then(|v| v.as_u64()).unwrap_or(0),
-                    total.get("p95").and_then(|v| v.as_u64()).unwrap_or(0),
-                    layout.get("p95").and_then(|v| v.as_u64()).unwrap_or(0),
-                    solve.get("p95").and_then(|v| v.as_u64()).unwrap_or(0),
-                    prepaint.get("p95").and_then(|v| v.as_u64()).unwrap_or(0),
-                    paint.get("p95").and_then(|v| v.as_u64()).unwrap_or(0),
-                    dispatch.get("p95").and_then(|v| v.as_u64()).unwrap_or(0),
-                    hit_test.get("p95").and_then(|v| v.as_u64()).unwrap_or(0),
-                    total.get("max").and_then(|v| v.as_u64()).unwrap_or(0),
-                    layout.get("max").and_then(|v| v.as_u64()).unwrap_or(0),
-                    solve.get("max").and_then(|v| v.as_u64()).unwrap_or(0),
-                    prepaint.get("max").and_then(|v| v.as_u64()).unwrap_or(0),
-                    paint.get("max").and_then(|v| v.as_u64()).unwrap_or(0),
-                    dispatch.get("max").and_then(|v| v.as_u64()).unwrap_or(0),
-                    hit_test.get("max").and_then(|v| v.as_u64()).unwrap_or(0),
+                    &total,
+                    &layout,
+                    &solve,
+                    &prepaint,
+                    &paint,
+                    &dispatch,
+                    &hit_test,
                 );
             }
 

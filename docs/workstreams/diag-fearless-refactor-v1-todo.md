@@ -185,6 +185,8 @@ This file tracks tasks for `docs/workstreams/diag-fearless-refactor-v1.md`.
   - `crates/fret-diag/src/diag_perf/aux_scripts.rs`
 - [x] Extract “run perf script + resolve bundle artifact” logic into a helper module (dedupe the two call sites):
   - `crates/fret-diag/src/diag_perf/run_script.rs`
+- [x] Extract `diag perf` output/reporting helpers into a helper module (reduce repeated println/JSON error rows):
+  - `crates/fret-diag/src/diag_perf/reporting.rs`
 
 ## Plan 2 (defer until Plan 1 is solid)
 
