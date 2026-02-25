@@ -1,5 +1,4 @@
 use super::super::*;
-use fret_ui_kit::prelude::ActionHooksExt as _;
 
 use crate::ui::doc_layout::{self, DocSection};
 
