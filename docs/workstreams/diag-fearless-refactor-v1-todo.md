@@ -259,6 +259,7 @@ Goal: common tooling should keep working even when `bundle.json` is too large to
     - [x] `--check-notify-hotspot-file-max` (streaming; does not materialize full bundle JSON).
     - [x] `--check-drag-cache-root-paint-only` (streaming; does not materialize full bundle JSON).
     - [x] `--check-view-cache-reuse-stable-min` (frames-index aggregates; reuse streak tail/max).
+    - [x] `--check-idle-no-paint-min` (frames-index aggregates; idle streak tail/max).
 
 ## Plan 2 (defer until Plan 1 is solid)
 

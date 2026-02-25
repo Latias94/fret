@@ -223,7 +223,11 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
         )?;
         let bundle_dir = resolve_bundle_root_dir(&bundle_path)?;
         let out_dir = bundle_dir.parent().unwrap_or_else(|| Path::new("."));
-        stats::check_bundle_for_idle_no_paint_min(&bundle_path, out_dir, min, warmup_frames)?;
+        if derived_from_frames_index {
+            stats::check_frames_index_for_idle_no_paint_min(&bundle_path, out_dir, min, warmup_frames)?;
+        } else {
+            stats::check_bundle_for_idle_no_paint_min(&bundle_path, out_dir, min, warmup_frames)?;
+        }
     }
     if let Some(test_id) = check_pixels_changed_test_id.as_deref() {
         ensure_check_supported_in_stats_mode(

@@ -47,6 +47,7 @@ pub(super) use frames_index_gates::{
     check_frames_index_for_dock_drag_min, check_frames_index_for_overlay_synthesis_min,
     check_frames_index_for_view_cache_reuse_min, check_frames_index_for_viewport_capture_min,
     check_frames_index_for_view_cache_reuse_stable_min, check_frames_index_for_viewport_input_min,
+    check_frames_index_for_idle_no_paint_min,
 };
 pub(super) use gc_gates::check_bundle_for_gc_sweep_liveness;
 pub(super) use hover_layout_checks::check_report_for_hover_layout_invalidations;

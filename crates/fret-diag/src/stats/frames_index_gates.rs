@@ -174,6 +174,102 @@ pub(crate) fn check_frames_index_for_view_cache_reuse_min(
     ))
 }
 
+pub(crate) fn check_frames_index_for_idle_no_paint_min(
+    bundle_path: &Path,
+    out_dir: &Path,
+    min_idle_frames: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let (frames_index_path, frames_index) = load_frames_index(bundle_path, warmup_frames)?;
+    let windows = frames_index
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid frames.index.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut examined_snapshots: u64 = 0;
+    let mut idle_frames_total: u64 = 0;
+    let mut paint_frames_total: u64 = 0;
+    let mut best_tail: u64 = 0;
+
+    let mut window_reports: Vec<Value> = Vec::new();
+
+    for w in windows {
+        let examined = window_agg_u64(w, "examined_snapshots_post_warmup");
+        examined_snapshots = examined_snapshots.saturating_add(examined);
+
+        let idle_total = window_agg_u64(w, "idle_no_paint_frames_total_post_warmup");
+        let paint_total = window_agg_u64(w, "idle_no_paint_paint_frames_total_post_warmup");
+        idle_frames_total = idle_frames_total.saturating_add(idle_total);
+        paint_frames_total = paint_frames_total.saturating_add(paint_total);
+
+        let tail = window_agg_u64(w, "idle_no_paint_streak_tail_post_warmup");
+        let max = window_agg_u64(w, "idle_no_paint_streak_max_post_warmup");
+        best_tail = best_tail.max(tail);
+
+        let last_paint = w
+            .get("aggregates")
+            .and_then(|v| v.as_object())
+            .and_then(|m| m.get("idle_no_paint_last_paint_post_warmup"))
+            .cloned()
+            .unwrap_or(Value::Null);
+
+        window_reports.push(serde_json::json!( {
+            "window": w.get("window").and_then(|v| v.as_u64()).unwrap_or(0),
+            "examined_snapshots": examined,
+            "idle_frames_total": idle_total,
+            "paint_frames_total": paint_total,
+            "idle_streak_max": max,
+            "idle_streak_tail": tail,
+            "last_paint": last_paint,
+        }));
+    }
+
+    let out_path = out_dir.join("check.idle_no_paint.json");
+    let payload = serde_json::json!( {
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "idle_no_paint",
+        "derived_from_frames_index": true,
+        "bundle_artifact": bundle_path.display().to_string(),
+        "bundle_json": bundle_path.display().to_string(),
+        "out_dir": out_dir.display().to_string(),
+        "frames_index": frames_index_path.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "min_idle_frames": min_idle_frames,
+        "best_idle_streak_tail": best_tail,
+        "examined_snapshots": examined_snapshots,
+        "idle_frames_total": idle_frames_total,
+        "paint_frames_total": paint_frames_total,
+        "windows": window_reports,
+    });
+    let _ = write_json_value(&out_path, &payload);
+
+    if min_idle_frames == 0 {
+        return Ok(());
+    }
+    if examined_snapshots < min_idle_frames {
+        return Err(format!(
+            "idle no-paint gate requires at least {min_idle_frames} examined snapshots post-warmup, got {examined_snapshots} (warmup_frames={warmup_frames})\n  bundle: {}\n  frames_index: {}\n  evidence: {}",
+            bundle_path.display(),
+            frames_index_path.display(),
+            out_path.display()
+        ));
+    }
+    if best_tail >= min_idle_frames {
+        return Ok(());
+    }
+
+    Err(format!(
+        "idle no-paint gate failed (min_idle_frames={min_idle_frames}, best_tail={best_tail}, warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots})\n  bundle: {}\n  frames_index: {}\n  evidence: {}",
+        bundle_path.display(),
+        frames_index_path.display(),
+        out_path.display()
+    ))
+}
+
 pub(crate) fn check_frames_index_for_view_cache_reuse_stable_min(
     bundle_path: &Path,
     out_dir: &Path,
@@ -340,8 +436,8 @@ mod tests {
     "window": 1,
     "snapshots": [
       { "frame_id": 0, "debug": { "stats": { "total_time_us": 10 } } },
-      { "frame_id": 5, "debug": { "viewport_input": [1,2], "docking_interaction": { "dock_drag": {} }, "overlay_synthesis": [{"outcome":"synthesized"}], "stats": { "total_time_us": 20, "view_cache_active": true, "view_cache_roots_reused": 1 } } },
-      { "frame_id": 6, "debug": { "viewport_input": [1], "docking_interaction": { "viewport_capture": {} }, "overlay_synthesis": [{"outcome":"synthesized"}], "stats": { "total_time_us": 30, "view_cache_active": true, "view_cache_roots_reused": 2 } } }
+      { "frame_id": 5, "debug": { "viewport_input": [1,2], "docking_interaction": { "dock_drag": {} }, "overlay_synthesis": [{"outcome":"synthesized"}], "stats": { "total_time_us": 20, "prepaint_time_us": 1, "paint_time_us": 2, "paint_nodes_performed": 1, "view_cache_active": true, "view_cache_roots_reused": 1 } } },
+      { "frame_id": 6, "debug": { "viewport_input": [1], "docking_interaction": { "viewport_capture": {} }, "overlay_synthesis": [{"outcome":"synthesized"}], "stats": { "total_time_us": 30, "prepaint_time_us": 0, "paint_time_us": 0, "paint_nodes_performed": 0, "view_cache_active": true, "view_cache_roots_reused": 2 } } }
     ]
   }]
 }"#,
@@ -355,5 +451,7 @@ mod tests {
         check_frames_index_for_overlay_synthesis_min(&bundle_path, 2, 5).expect("overlay synthesis");
         check_frames_index_for_view_cache_reuse_stable_min(&bundle_path, &dir, 2, 5)
             .expect("view cache reuse stable");
+        check_frames_index_for_idle_no_paint_min(&bundle_path, &dir, 1, 5).expect("idle no paint");
+        assert!(check_frames_index_for_idle_no_paint_min(&bundle_path, &dir, 2, 5).is_err());
     }
 }

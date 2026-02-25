@@ -96,6 +96,11 @@ When `features[]` contains `window_aggregates.v1`, each `windows[i]` object may 
 - `aggregates.view_cache_reuse_streak_max_post_warmup` (requires `window_aggregates.view_cache_reuse_streak.v1`)
 - `aggregates.view_cache_reuse_streak_tail_post_warmup` (requires `window_aggregates.view_cache_reuse_streak.v1`)
 - `aggregates.view_cache_reuse_last_non_signal_post_warmup` (requires `window_aggregates.view_cache_reuse_streak.v1`; nullable)
+- `aggregates.idle_no_paint_frames_total_post_warmup` (requires `window_aggregates.idle_no_paint.v1`)
+- `aggregates.idle_no_paint_paint_frames_total_post_warmup` (requires `window_aggregates.idle_no_paint.v1`)
+- `aggregates.idle_no_paint_streak_max_post_warmup` (requires `window_aggregates.idle_no_paint.v1`)
+- `aggregates.idle_no_paint_streak_tail_post_warmup` (requires `window_aggregates.idle_no_paint.v1`)
+- `aggregates.idle_no_paint_last_paint_post_warmup` (requires `window_aggregates.idle_no_paint.v1`; nullable)
 - `aggregates.overlay_synthesis_events_total_post_warmup`
 - `aggregates.overlay_synthesis_events_synthesized_post_warmup`
 - `aggregates.overlay_synthesis_events_suppressed_post_warmup`

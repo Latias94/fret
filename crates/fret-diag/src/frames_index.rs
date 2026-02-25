@@ -12,10 +12,13 @@ const FRAMES_INDEX_FEATURE_WINDOW_AGG_OVERLAY_SYNTHESIS_V1: &str =
     "window_aggregates.overlay_synthesis.v1";
 const FRAMES_INDEX_FEATURE_WINDOW_AGG_VIEW_CACHE_REUSE_STREAK_V1: &str =
     "window_aggregates.view_cache_reuse_streak.v1";
+const FRAMES_INDEX_FEATURE_WINDOW_AGG_IDLE_NO_PAINT_V1: &str =
+    "window_aggregates.idle_no_paint.v1";
 const FRAMES_INDEX_REQUIRED_FEATURES: &[&str] = &[
     FRAMES_INDEX_FEATURE_WINDOW_AGG_V1,
     FRAMES_INDEX_FEATURE_WINDOW_AGG_OVERLAY_SYNTHESIS_V1,
     FRAMES_INDEX_FEATURE_WINDOW_AGG_VIEW_CACHE_REUSE_STREAK_V1,
+    FRAMES_INDEX_FEATURE_WINDOW_AGG_IDLE_NO_PAINT_V1,
 ];
 
 // Guardrail: building a frames index that is larger than this is unlikely to be useful for agentic
@@ -29,6 +32,7 @@ pub(crate) fn default_frames_index_path(bundle_path: &Path) -> PathBuf {
 
 #[derive(Debug, Clone, Default)]
 struct FrameRow {
+    tick_id: Option<u64>,
     frame_id: Option<u64>,
     window_snapshot_seq: Option<u64>,
     timestamp_unix_ms: Option<u64>,
@@ -37,6 +41,7 @@ struct FrameRow {
     layout_time_us: Option<u64>,
     prepaint_time_us: Option<u64>,
     paint_time_us: Option<u64>,
+    paint_nodes_performed: Option<u64>,
     invalidation_walk_calls: Option<u64>,
     invalidation_walk_nodes: Option<u64>,
 
@@ -123,6 +128,12 @@ struct WindowAggregates {
     view_cache_reuse_streak_max_post_warmup: u64,
     view_cache_reuse_streak_tail_post_warmup: u64,
     view_cache_reuse_last_non_signal_post_warmup: Option<Value>,
+
+    idle_no_paint_frames_total_post_warmup: u64,
+    idle_no_paint_paint_frames_total_post_warmup: u64,
+    idle_no_paint_streak_max_post_warmup: u64,
+    idle_no_paint_streak_tail_post_warmup: u64,
+    idle_no_paint_last_paint_post_warmup: Option<Value>,
 
     overlay_synthesis_events_total_post_warmup: u64,
     overlay_synthesis_events_synthesized_post_warmup: u64,
@@ -564,6 +575,39 @@ fn build_frames_index_payload_streaming(
                             "paint_cache_replayed_ops": paint_cache_replayed_ops,
                         }));
                     }
+
+                    let prepaint_time_us = row.prepaint_time_us.unwrap_or(0);
+                    let paint_time_us = row.paint_time_us.unwrap_or(0);
+                    let paint_nodes_performed = row.paint_nodes_performed.unwrap_or(0);
+                    let is_idle_no_paint =
+                        prepaint_time_us == 0 && paint_time_us == 0 && paint_nodes_performed == 0;
+                    if is_idle_no_paint {
+                        self.aggregates.idle_no_paint_frames_total_post_warmup = self
+                            .aggregates
+                            .idle_no_paint_frames_total_post_warmup
+                            .saturating_add(1);
+                        self.aggregates.idle_no_paint_streak_tail_post_warmup = self
+                            .aggregates
+                            .idle_no_paint_streak_tail_post_warmup
+                            .saturating_add(1);
+                        self.aggregates.idle_no_paint_streak_max_post_warmup = self
+                            .aggregates
+                            .idle_no_paint_streak_max_post_warmup
+                            .max(self.aggregates.idle_no_paint_streak_tail_post_warmup);
+                    } else {
+                        self.aggregates.idle_no_paint_paint_frames_total_post_warmup = self
+                            .aggregates
+                            .idle_no_paint_paint_frames_total_post_warmup
+                            .saturating_add(1);
+                        self.aggregates.idle_no_paint_streak_tail_post_warmup = 0;
+                        self.aggregates.idle_no_paint_last_paint_post_warmup = Some(json!({
+                            "tick_id": row.tick_id,
+                            "frame_id": frame_id,
+                            "prepaint_time_us": prepaint_time_us,
+                            "paint_time_us": paint_time_us,
+                            "paint_nodes_performed": paint_nodes_performed,
+                        }));
+                    }
                     self.aggregates.overlay_synthesis_events_total_post_warmup = self
                         .aggregates
                         .overlay_synthesis_events_total_post_warmup
@@ -624,6 +668,9 @@ fn build_frames_index_payload_streaming(
 
             while let Some(key) = map.next_key::<String>()? {
                 match key.as_str() {
+                    "tick_id" | "tickId" => {
+                        out.tick_id = map.next_value::<Option<u64>>()?;
+                    }
                     "frame_id" | "frameId" => {
                         out.frame_id = map.next_value::<Option<u64>>()?;
                     }
@@ -773,6 +820,9 @@ fn build_frames_index_payload_streaming(
                         self.out.prepaint_time_us = map.next_value::<Option<u64>>()?
                     }
                     "paint_time_us" => self.out.paint_time_us = map.next_value::<Option<u64>>()?,
+                    "paint_nodes_performed" | "paintNodesPerformed" => {
+                        self.out.paint_nodes_performed = map.next_value::<Option<u64>>()?
+                    }
                     "invalidation_walk_calls" => {
                         self.out.invalidation_walk_calls = map.next_value::<Option<u64>>()?
                     }
@@ -1577,6 +1627,11 @@ fn build_frames_index_payload_streaming(
             "view_cache_reuse_streak_max_post_warmup": w.aggregates.view_cache_reuse_streak_max_post_warmup,
             "view_cache_reuse_streak_tail_post_warmup": w.aggregates.view_cache_reuse_streak_tail_post_warmup,
             "view_cache_reuse_last_non_signal_post_warmup": w.aggregates.view_cache_reuse_last_non_signal_post_warmup,
+            "idle_no_paint_frames_total_post_warmup": w.aggregates.idle_no_paint_frames_total_post_warmup,
+            "idle_no_paint_paint_frames_total_post_warmup": w.aggregates.idle_no_paint_paint_frames_total_post_warmup,
+            "idle_no_paint_streak_max_post_warmup": w.aggregates.idle_no_paint_streak_max_post_warmup,
+            "idle_no_paint_streak_tail_post_warmup": w.aggregates.idle_no_paint_streak_tail_post_warmup,
+            "idle_no_paint_last_paint_post_warmup": w.aggregates.idle_no_paint_last_paint_post_warmup,
             "overlay_synthesis_events_total_post_warmup": w.aggregates.overlay_synthesis_events_total_post_warmup,
             "overlay_synthesis_events_synthesized_post_warmup": w.aggregates.overlay_synthesis_events_synthesized_post_warmup,
             "overlay_synthesis_events_suppressed_post_warmup": w.aggregates.overlay_synthesis_events_suppressed_post_warmup,
@@ -1604,6 +1659,7 @@ fn build_frames_index_payload_streaming(
             FRAMES_INDEX_FEATURE_WINDOW_AGG_V1,
             FRAMES_INDEX_FEATURE_WINDOW_AGG_OVERLAY_SYNTHESIS_V1,
             FRAMES_INDEX_FEATURE_WINDOW_AGG_VIEW_CACHE_REUSE_STREAK_V1,
+            FRAMES_INDEX_FEATURE_WINDOW_AGG_IDLE_NO_PAINT_V1,
         ],
         "bundle": bundle_path.display().to_string(),
         "generated_unix_ms": crate::util::now_unix_ms(),
@@ -1909,8 +1965,8 @@ mod tests {
     "window": 1,
     "snapshots": [
       { "frame_id": 0, "window_snapshot_seq": 1, "timestamp_unix_ms": 1, "debug": { "stats": { "total_time_us": 10 } } },
-      { "frame_id": 5, "window_snapshot_seq": 2, "timestamp_unix_ms": 2, "semantics_fingerprint": 42, "debug": { "viewport_input": [1,2], "docking_interaction": { "dock_drag": {} }, "overlay_synthesis": [{"outcome":"synthesized"},{"outcome":"suppressed"}], "stats": { "total_time_us": 20, "layout_time_us": 3, "view_cache_active": true, "view_cache_roots_reused": 1, "paint_cache_replayed_ops": 4 }, "semantics": { "nodes": [] } } },
-      { "frame_id": 6, "window_snapshot_seq": 3, "timestamp_unix_ms": 3, "semantics_fingerprint": 43, "debug": { "viewport_input": [1], "docking_interaction": { "viewport_capture": {} }, "overlay_synthesis": [{"outcome":"synthesized"}], "stats": { "total_time_us": 30, "view_cache_active": true, "view_cache_roots_reused": 2, "paint_cache_replayed_ops": 1 } } }
+      { "frame_id": 5, "window_snapshot_seq": 2, "timestamp_unix_ms": 2, "semantics_fingerprint": 42, "debug": { "viewport_input": [1,2], "docking_interaction": { "dock_drag": {} }, "overlay_synthesis": [{"outcome":"synthesized"},{"outcome":"suppressed"}], "stats": { "total_time_us": 20, "layout_time_us": 3, "prepaint_time_us": 1, "paint_time_us": 2, "paint_nodes_performed": 3, "view_cache_active": true, "view_cache_roots_reused": 1, "paint_cache_replayed_ops": 4 }, "semantics": { "nodes": [] } } },
+      { "frame_id": 6, "window_snapshot_seq": 3, "timestamp_unix_ms": 3, "semantics_fingerprint": 43, "debug": { "viewport_input": [1], "docking_interaction": { "viewport_capture": {} }, "overlay_synthesis": [{"outcome":"synthesized"}], "stats": { "total_time_us": 30, "prepaint_time_us": 0, "paint_time_us": 0, "paint_nodes_performed": 0, "view_cache_active": true, "view_cache_roots_reused": 2, "paint_cache_replayed_ops": 1 } } }
     ]
   }]
 }"#,
@@ -1927,6 +1983,7 @@ mod tests {
                 && v.iter().any(|f| {
                     f.as_str() == Some("window_aggregates.view_cache_reuse_streak.v1")
                 })
+                && v.iter().any(|f| f.as_str() == Some("window_aggregates.idle_no_paint.v1"))
         }));
         assert_eq!(payload["warmup_frames"].as_u64(), Some(5));
         assert_eq!(payload["has_semantics_table"].as_bool(), Some(true));
@@ -1988,6 +2045,32 @@ mod tests {
         );
         assert!(aggs.get("view_cache_reuse_last_non_signal_post_warmup").is_some());
         assert!(aggs["view_cache_reuse_last_non_signal_post_warmup"].is_null());
+        assert_eq!(
+            aggs.get("idle_no_paint_frames_total_post_warmup")
+                .and_then(|v| v.as_u64()),
+            Some(1)
+        );
+        assert_eq!(
+            aggs.get("idle_no_paint_paint_frames_total_post_warmup")
+                .and_then(|v| v.as_u64()),
+            Some(1)
+        );
+        assert_eq!(
+            aggs.get("idle_no_paint_streak_max_post_warmup")
+                .and_then(|v| v.as_u64()),
+            Some(1)
+        );
+        assert_eq!(
+            aggs.get("idle_no_paint_streak_tail_post_warmup")
+                .and_then(|v| v.as_u64()),
+            Some(1)
+        );
+        assert_eq!(
+            aggs.get("idle_no_paint_last_paint_post_warmup")
+                .and_then(|v| v.get("frame_id"))
+                .and_then(|v| v.as_u64()),
+            Some(5)
+        );
         assert_eq!(
             aggs.get("overlay_synthesis_events_total_post_warmup")
                 .and_then(|v| v.as_u64()),

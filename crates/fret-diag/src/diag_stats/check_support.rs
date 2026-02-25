@@ -31,6 +31,11 @@ pub(crate) const STATS_LITE_SUPPORTED_CHECKS: &[StatsLiteCheckSupport] = &[
         note: "derived from the stats report",
     },
     StatsLiteCheckSupport {
+        check_name: "check-idle-no-paint-min",
+        kind: StatsLiteCheckKind::FramesIndex,
+        note: "uses frames.index.json window aggregates (idle streak tail/max)",
+    },
+    StatsLiteCheckSupport {
         check_name: "check-pixels-changed",
         kind: StatsLiteCheckKind::OutDirOnly,
         note: "uses out-dir artifacts",
@@ -94,6 +99,7 @@ mod tests {
     #[test]
     fn stats_lite_support_for_returns_some_for_known_checks() {
         assert!(stats_lite_support_for("check-hover-layout-max").is_some());
+        assert!(stats_lite_support_for("check-idle-no-paint-min").is_some());
         assert!(stats_lite_support_for("check-view-cache-reuse-min").is_some());
         assert!(stats_lite_support_for("check-wheel-scroll").is_some());
         assert!(stats_lite_support_for("check-drag-cache-root-paint-only").is_some());
