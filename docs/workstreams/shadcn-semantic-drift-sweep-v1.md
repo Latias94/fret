@@ -69,8 +69,8 @@ Additional responsive notes:
   - but prefer viewport breakpoints when mounted inside `PopoverContent` to avoid circular sizing.
   - Applies to `calendar.rs`, `calendar_multiple.rs`, and `calendar_range.rs`.
 - Shadcn Extras: `Marquee` currently uses `environment_viewport_width` as the implicit base cycle
-  width. This likely needs a container/region-width default for docking/panels, with a viewport
-  fallback when the region measurement is temporarily unknown.
+  width. We now default to a container query region width for docking/panels, with a viewport
+  fallback when the region measurement is temporarily unknown (ADR 0231).
 
 ### 2) Theme metadata heuristics (remove theme-name coupling)
 
