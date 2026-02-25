@@ -152,6 +152,9 @@ Evidence:
 - [ ] Add a small unit/perf-adjacent test or diagnostic note if this sweep reduces allocation
   churn on common views.
 
+- [x] Add a regression guard to prevent reintroducing `Theme::global(...).clone()` callsites:
+  - `ecosystem/fret-ui-shadcn/tests/no_theme_global_clone_regression.rs`
+
 ## Reduced motion drift: continuous animations should not request frames
 
 - [x] Skeleton pulse respects reduced motion (no RAF requests):
