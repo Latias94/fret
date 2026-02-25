@@ -228,6 +228,7 @@ pub fn textarea<H: UiHost>(
     chrome.background = resolved.background;
     chrome.border = Edges::all(resolved.border_width);
     chrome.border_color = resolved.border_color;
+    chrome.border_color_focused = resolved.border_color_focused;
     chrome.corner_radii = Corners::all(resolved.radius);
     chrome.text_color = resolved.text_color;
     chrome.placeholder_color = theme
@@ -242,6 +243,7 @@ pub fn textarea<H: UiHost>(
     if aria_invalid {
         let border_color = theme.color_token("destructive");
         chrome.border_color = border_color;
+        chrome.border_color_focused = border_color;
         if let Some(mut ring) = chrome.focus_ring.take() {
             ring.color = crate::theme_variants::invalid_control_ring_color(&theme, border_color);
             chrome.focus_ring = Some(ring);
@@ -315,9 +317,10 @@ pub fn textarea<H: UiHost>(
             let grip_color = theme
                 .color_by_key("muted-foreground")
                 .unwrap_or_else(|| theme.color_token("foreground"));
-            let grip_border_color = alpha_mul(grip_color, 0.55);
-            let grip_layout =
-                decl_style::layout_style(&theme, LayoutRefinement::default().size_full());
+            let grip_layout = decl_style::layout_style(
+                &theme,
+                LayoutRefinement::default().relative().size_full(),
+            );
 
             let mut props = props;
             if let Some(px) = override_px {
@@ -338,7 +341,7 @@ pub fn textarea<H: UiHost>(
 
                         host.prevent_default(fret_runtime::DefaultAction::FocusOnPointerDown);
                         host.capture_pointer();
-                        host.set_cursor_icon(CursorIcon::RowResize);
+                        host.set_cursor_icon(CursorIcon::NwseResize);
 
                         let start = down.position_window.unwrap_or(down.position);
                         let start_height = host
@@ -364,7 +367,7 @@ pub fn textarea<H: UiHost>(
                 cx.pressable_on_pointer_move_for(
                     id,
                     Arc::new(move |host, action_cx, mv| {
-                        host.set_cursor_icon(CursorIcon::RowResize);
+                        host.set_cursor_icon(CursorIcon::NwseResize);
 
                         let Some(drag) = host.models_mut().read(&drag_move, |v| *v).ok().flatten()
                         else {
@@ -396,19 +399,54 @@ pub fn textarea<H: UiHost>(
 
                 let mut pressable = PressableProps::default();
                 pressable.layout = resize_handle_layout;
+                let dot_color = alpha_mul(grip_color, 0.65);
+                let dot_size = Px(2.0);
+                let dot_radius = Px(1.0);
+
+                let dot = |cx: &mut ElementContext<'_, H>, right: Px, bottom: Px| {
+                    cx.container(
+                        ContainerProps {
+                            layout: decl_style::layout_style(
+                                &theme,
+                                LayoutRefinement::default()
+                                    .absolute()
+                                    .right_px(right)
+                                    .bottom_px(bottom)
+                                    .w_px(dot_size)
+                                    .h_px(dot_size),
+                            ),
+                            padding: Edges::all(Px(0.0)).into(),
+                            background: Some(dot_color),
+                            shadow: None,
+                            border: Edges::all(Px(0.0)),
+                            border_color: None,
+                            corner_radii: Corners::all(dot_radius),
+                            ..Default::default()
+                        },
+                        move |_cx| [],
+                    )
+                };
+
                 let grip = cx.container(
                     ContainerProps {
                         layout: grip_layout,
                         padding: Edges::all(Px(0.0)).into(),
                         background: None,
                         shadow: None,
-                        border: Edges::all(Px(1.0)),
-                        border_color: Some(grip_border_color),
-                        corner_radii: Corners::all(Px(3.0)),
+                        border: Edges::all(Px(0.0)),
+                        border_color: None,
+                        corner_radii: Corners::all(Px(0.0)),
                         ..Default::default()
                     },
-                    move |_cx| [],
+                    move |cx| {
+                        vec![
+                            dot(cx, Px(2.0), Px(2.0)),
+                            dot(cx, Px(5.0), Px(5.0)),
+                            dot(cx, Px(8.0), Px(8.0)),
+                        ]
+                    },
                 );
+
                 (pressable, vec![grip])
             });
 

@@ -1,8 +1,8 @@
 {
   "schema_version": 2,
   "meta": {
-    "name": "UI Gallery: Popover doc page opens on click (shadcn parity)",
-    "tags": ["ui-gallery", "shadcn", "popover", "overlay", "interaction"],
+    "name": "UI Gallery: Popover escape dismiss restores focus to trigger",
+    "tags": ["ui-gallery", "shadcn", "popover", "overlay", "focus_restore"],
     "required_capabilities": ["diag.script_v2"]
   },
   "steps": [
@@ -63,6 +63,24 @@
       "timeout_frames": 240
     },
     { "type": "wait_frames", "n": 10 },
-    { "type": "capture_bundle", "label": "ui-gallery-popover-doc-page-opens" }
+
+    { "type": "press_key", "key": "escape" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-popover-demo-panel" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-popover-demo-trigger" }
+      }
+    },
+
+    { "type": "capture_bundle", "label": "ui-gallery-popover-escape-focus-restore" }
   ]
 }

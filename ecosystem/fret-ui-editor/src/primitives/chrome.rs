@@ -187,6 +187,7 @@ pub(crate) fn resolve_editor_text_area_style(
         background: sanitize_editor_surface_bg(theme, resolved.background),
         border: Edges::all(resolved.border_width),
         border_color: resolved.border_color,
+        border_color_focused: resolved.border_color_focused,
         focus_ring: Some(RingStyle {
             placement: RingPlacement::Outset,
             width: Px(2.0),

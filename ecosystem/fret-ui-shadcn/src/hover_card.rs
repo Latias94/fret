@@ -16,11 +16,11 @@ use fret_ui_kit::declarative::ModelWatchExt as _;
 use fret_ui_kit::declarative::{scheduling, style as decl_style};
 use fret_ui_kit::headless::safe_hover;
 use fret_ui_kit::overlay;
-use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::hover_card as radix_hover_card;
 use fret_ui_kit::primitives::hover_intent::{HoverIntentConfig, HoverIntentUpdate};
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
+use fret_ui_kit::primitives::portal_inherited;
 use fret_ui_kit::primitives::presence as radix_presence;
 use fret_ui_kit::tooltip_provider;
 use fret_ui_kit::{
@@ -751,9 +751,14 @@ impl HoverCard {
                 return out;
             }
 
-            let direction = direction_prim::use_direction_in_scope(cx, None);
+            let portal_inherited = portal_inherited::PortalInherited::capture(cx);
+            let direction = portal_inherited.direction;
             let overlay_root_name_for_diag = overlay_root_name.clone();
-            let overlay_children = cx.with_root_name(&overlay_root_name, move |cx| {
+            let overlay_children = portal_inherited::with_root_name_inheriting(
+                cx,
+                &overlay_root_name,
+                portal_inherited,
+                move |cx| {
                 let anchor = overlay::anchor_bounds_for_element(cx, anchor_id);
                 let Some(anchor) = anchor else {
                     cx.with_state_for(hover_card_id, HoverCardSharedState::default, |st| {
@@ -998,7 +1003,8 @@ impl HoverCard {
                     transform,
                     vec![wrapper],
                 )]
-            });
+                },
+            );
 
             let request = radix_hover_card::hover_card_request(
                 hover_card_id,
@@ -1530,7 +1536,7 @@ mod tests {
             anchor_bounds,
             desired,
             popper::PopperContentPlacement::new(
-                direction_prim::LayoutDirection::default(),
+                overlay_placement::LayoutDirection::default(),
                 overlay_placement::Side::Bottom,
                 overlay_placement::Align::Start,
                 Px(8.0),

@@ -9,6 +9,7 @@ use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::dismissable_layer as radix_dismissable_layer;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
+use fret_ui_kit::primitives::portal_inherited;
 use fret_ui_kit::primitives::presence as radix_presence;
 use fret_ui_kit::primitives::tooltip as radix_tooltip;
 use fret_ui_kit::tooltip_provider;
@@ -94,6 +95,21 @@ fn tooltip_content_chrome(theme: &ThemeSnapshot) -> ChromeRefinement {
         .bg(ColorRef::Color(bg))
         .px(Space::N3)
         .py(Space::N1p5)
+}
+
+fn tooltip_diamond_arrow_options(
+    enabled: bool,
+    arrow_size: Px,
+    arrow_padding: Px,
+) -> (Option<popper::ArrowOptions>, Px) {
+    let (options, protrusion) = popper::diamond_arrow_options(enabled, arrow_size, arrow_padding);
+    if options.is_none() {
+        return (options, protrusion);
+    }
+
+    // new-york-v4 arrow uses `translate-*- [calc(-50%_-_2px)]`, which effectively adds ~2px of
+    // main-axis offset between the trigger and the panel.
+    (options, Px(protrusion.0 + 2.0))
 }
 
 #[derive(Clone)]
@@ -887,7 +903,7 @@ impl Tooltip {
                 };
 
                 let (arrow_options, arrow_protrusion) =
-                    popper::diamond_arrow_options(arrow, arrow_size, arrow_padding);
+                    tooltip_diamond_arrow_options(arrow, arrow_size, arrow_padding);
                 let direction = direction_prim::use_direction_in_scope(cx, None);
 
                 let layout = popper::popper_content_layout_sized(
@@ -1115,152 +1131,163 @@ impl Tooltip {
             let overlay_root_name = radix_tooltip::tooltip_root_name(tooltip_id);
             let opacity = motion.opacity;
             let scale = motion.scale;
-            let direction = direction_prim::use_direction_in_scope(cx, None);
+            let portal_ctx = portal_inherited::PortalInherited::capture(cx);
+            let direction = portal_ctx.direction;
 
-            let overlay_children = cx.with_root_name(&overlay_root_name, move |cx| {
-                let cursor_for_anchor = if track_cursor_axis.enabled() {
-                    cx.watch_model(&last_pointer_for_overlay)
-                        .layout()
-                        .copied()
-                        .unwrap_or(None)
-                } else {
-                    None
-                };
-                let anchor = overlay::anchor_bounds_for_element(cx, anchor_id).map(|anchor| {
-                    tooltip_anchor_with_cursor_axis(anchor, cursor_for_anchor, track_cursor_axis)
-                });
-                let Some(anchor) = anchor else {
-                    return Vec::new();
-                };
+            let overlay_children = portal_inherited::with_root_name_inheriting(
+                cx,
+                &overlay_root_name,
+                portal_ctx,
+                move |cx| {
+                    let cursor_for_anchor = if track_cursor_axis.enabled() {
+                        cx.watch_model(&last_pointer_for_overlay)
+                            .layout()
+                            .copied()
+                            .unwrap_or(None)
+                    } else {
+                        None
+                    };
+                    let anchor = overlay::anchor_bounds_for_element(cx, anchor_id).map(|anchor| {
+                        tooltip_anchor_with_cursor_axis(
+                            anchor,
+                            cursor_for_anchor,
+                            track_cursor_axis,
+                        )
+                    });
+                    let Some(anchor) = anchor else {
+                        return Vec::new();
+                    };
 
-                let last_content_size = cx.last_bounds_for_element(content_id).map(|r| r.size);
-                let estimated_size = Size::new(Px(240.0), Px(44.0));
-                let content_size = last_content_size.unwrap_or(estimated_size);
+                    let last_content_size = cx.last_bounds_for_element(content_id).map(|r| r.size);
+                    let estimated_size = Size::new(Px(240.0), Px(44.0));
+                    let content_size = last_content_size.unwrap_or(estimated_size);
 
-                let outer = overlay::outer_bounds_with_window_margin_for_environment(
-                    cx,
-                    fret_ui::Invalidation::Layout,
-                    window_margin,
-                );
+                    let outer = overlay::outer_bounds_with_window_margin_for_environment(
+                        cx,
+                        fret_ui::Invalidation::Layout,
+                        window_margin,
+                    );
 
-                let align = match align {
-                    TooltipAlign::Start => Align::Start,
-                    TooltipAlign::Center => Align::Center,
-                    TooltipAlign::End => Align::End,
-                };
-                let side = match side {
-                    TooltipSide::Top => Side::Top,
-                    TooltipSide::Right => Side::Right,
-                    TooltipSide::Bottom => Side::Bottom,
-                    TooltipSide::Left => Side::Left,
-                };
+                    let align = match align {
+                        TooltipAlign::Start => Align::Start,
+                        TooltipAlign::Center => Align::Center,
+                        TooltipAlign::End => Align::End,
+                    };
+                    let side = match side {
+                        TooltipSide::Top => Side::Top,
+                        TooltipSide::Right => Side::Right,
+                        TooltipSide::Bottom => Side::Bottom,
+                        TooltipSide::Left => Side::Left,
+                    };
 
-                let (arrow_options, arrow_protrusion) =
-                    popper::diamond_arrow_options(arrow, arrow_size, arrow_padding);
+                    let (arrow_options, arrow_protrusion) =
+                        tooltip_diamond_arrow_options(arrow, arrow_size, arrow_padding);
 
-                let placement =
-                    popper::PopperContentPlacement::new(direction, side, align, side_offset)
-                        .with_shift_cross_axis(true)
-                        .with_arrow(arrow_options, arrow_protrusion)
-                        .with_hide_when_detached(hide_when_detached);
-                let reference_hidden = placement.reference_hidden(outer, anchor);
+                    let placement =
+                        popper::PopperContentPlacement::new(direction, side, align, side_offset)
+                            .with_shift_cross_axis(true)
+                            .with_arrow(arrow_options, arrow_protrusion)
+                            .with_hide_when_detached(hide_when_detached);
+                    let reference_hidden = placement.reference_hidden(outer, anchor);
 
-                let layout =
-                    popper::popper_content_layout_sized(outer, anchor, content_size, placement);
+                    let layout =
+                        popper::popper_content_layout_sized(outer, anchor, content_size, placement);
 
-                let placed = layout.rect;
-                let mut wrapper_insets = popper_arrow::wrapper_insets(&layout, arrow_protrusion);
-                let slide_insets = overlay_motion::shadcn_slide_insets(layout.side);
-                wrapper_insets.top.0 += slide_insets.top.0;
-                wrapper_insets.right.0 += slide_insets.right.0;
-                wrapper_insets.bottom.0 += slide_insets.bottom.0;
-                wrapper_insets.left.0 += slide_insets.left.0;
+                    let placed = layout.rect;
+                    let mut wrapper_insets =
+                        popper_arrow::wrapper_insets(&layout, arrow_protrusion);
+                    let slide_insets = overlay_motion::shadcn_slide_insets(layout.side);
+                    wrapper_insets.top.0 += slide_insets.top.0;
+                    wrapper_insets.right.0 += slide_insets.right.0;
+                    wrapper_insets.bottom.0 += slide_insets.bottom.0;
+                    wrapper_insets.left.0 += slide_insets.left.0;
 
-                let debug_panel = panel_test_id.as_ref().map(|test_id| {
-                    cx.semantics(
-                        SemanticsProps {
-                            role: fret_core::SemanticsRole::Generic,
-                            test_id: Some(test_id.clone()),
-                            layout: LayoutStyle {
-                                position: PositionStyle::Absolute,
-                                inset: InsetStyle {
-                                    left: Some(placed.origin.x).into(),
-                                    top: Some(placed.origin.y).into(),
-                                    ..Default::default()
-                                },
-                                size: SizeStyle {
-                                    width: Length::Px(placed.size.width),
-                                    height: Length::Px(placed.size.height),
+                    let debug_panel = panel_test_id.as_ref().map(|test_id| {
+                        cx.semantics(
+                            SemanticsProps {
+                                role: fret_core::SemanticsRole::Generic,
+                                test_id: Some(test_id.clone()),
+                                layout: LayoutStyle {
+                                    position: PositionStyle::Absolute,
+                                    inset: InsetStyle {
+                                        left: Some(placed.origin.x).into(),
+                                        top: Some(placed.origin.y).into(),
+                                        ..Default::default()
+                                    },
+                                    size: SizeStyle {
+                                        width: Length::Px(placed.size.width),
+                                        height: Length::Px(placed.size.height),
+                                        ..Default::default()
+                                    },
                                     ..Default::default()
                                 },
                                 ..Default::default()
                             },
-                            ..Default::default()
+                            |_cx| Vec::new(),
+                        )
+                    });
+
+                    let wrapper = popper_content::popper_wrapper_at_with_panel(
+                        cx,
+                        placed,
+                        wrapper_insets,
+                        Overflow::Visible,
+                        move |_cx| vec![content],
+                        move |cx, content| {
+                            // new-york-v4: `size-2.5 rotate-45 rounded-[2px] translate-y-[calc(-50%_-_2px)]`
+                            // (i.e. a slightly outset, lightly rounded diamond).
+                            let arrow_el = popper_arrow::diamond_arrow_element_refined(
+                                cx,
+                                &layout,
+                                wrapper_insets,
+                                arrow_size,
+                                DiamondArrowStyle {
+                                    bg: arrow_bg,
+                                    border: None,
+                                    border_width: Px(0.0),
+                                },
+                                Px(2.0),
+                                Px(2.0),
+                                arrow_test_id.clone(),
+                            );
+
+                            if let Some(arrow_el) = arrow_el {
+                                vec![arrow_el, content]
+                            } else {
+                                vec![content]
+                            }
                         },
-                        |_cx| Vec::new(),
-                    )
-                });
+                    );
 
-                let wrapper = popper_content::popper_wrapper_at_with_panel(
-                    cx,
-                    placed,
-                    wrapper_insets,
-                    Overflow::Visible,
-                    move |_cx| vec![content],
-                    move |cx, content| {
-                        // new-york-v4: `size-2.5 rotate-45 rounded-[2px] translate-y-[calc(-50%_-_2px)]`
-                        // (i.e. a slightly outset, lightly rounded diamond).
-                        let arrow_el = popper_arrow::diamond_arrow_element_refined(
-                            cx,
-                            &layout,
-                            wrapper_insets,
-                            arrow_size,
-                            DiamondArrowStyle {
-                                bg: arrow_bg,
-                                border: None,
-                                border_width: Px(0.0),
-                            },
-                            Px(2.0),
-                            Px(2.0),
-                            arrow_test_id.clone(),
-                        );
+                    let origin = popper::popper_content_transform_origin(
+                        &layout,
+                        anchor,
+                        arrow.then_some(arrow_size),
+                    );
+                    let opacity = if reference_hidden { 0.0 } else { opacity };
+                    let transform = overlay_motion::shadcn_popper_presence_transform(
+                        layout.side,
+                        origin,
+                        opacity,
+                        scale,
+                        opening,
+                    );
 
-                        if let Some(arrow_el) = arrow_el {
-                            vec![arrow_el, content]
-                        } else {
-                            vec![content]
-                        }
-                    },
-                );
+                    let mut children = Vec::new();
+                    if let Some(debug_panel) = debug_panel {
+                        children.push(debug_panel);
+                    }
+                    children.push(wrapper);
 
-                let origin = popper::popper_content_transform_origin(
-                    &layout,
-                    anchor,
-                    arrow.then_some(arrow_size),
-                );
-                let opacity = if reference_hidden { 0.0 } else { opacity };
-                let transform = overlay_motion::shadcn_popper_presence_transform(
-                    layout.side,
-                    origin,
-                    opacity,
-                    scale,
-                    opening,
-                );
-
-                let mut children = Vec::new();
-                if let Some(debug_panel) = debug_panel {
-                    children.push(debug_panel);
-                }
-                children.push(wrapper);
-
-                vec![overlay_motion::wrap_opacity_and_render_transform_gated(
-                    cx,
-                    opacity,
-                    transform,
-                    !reference_hidden,
-                    children,
-                )]
-            });
+                    vec![overlay_motion::wrap_opacity_and_render_transform_gated(
+                        cx,
+                        opacity,
+                        transform,
+                        !reference_hidden,
+                        children,
+                    )]
+                },
+            );
 
             let mut request = radix_tooltip::tooltip_request(
                 tooltip_id,

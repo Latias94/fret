@@ -22,6 +22,7 @@ use fret_ui_kit::primitives::hover_intent::HoverIntentConfig;
 use fret_ui_kit::primitives::popover as radix_popover;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
+use fret_ui_kit::primitives::portal_inherited;
 use fret_ui_kit::primitives::presence as radix_presence;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, OverlayPresence, Space, ui};
 
@@ -784,311 +785,335 @@ impl Popover {
                 let dialog_id_for_trigger = dialog_id_for_trigger.clone();
                 let open_for_barrier = self.open.clone();
                 let hide_when_detached = self.hide_when_detached;
-                let direction = direction_prim::use_direction_in_scope(cx, None);
-                let overlay_children = cx.with_root_name(&overlay_root_name, move |cx| {
-                    let anchor_fallback = overlay::anchor_bounds_for_element(cx, anchor_id);
-                    if anchor_fallback.is_none() {
+                let portal_inherited = portal_inherited::PortalInherited::capture(cx);
+                let direction = portal_inherited.direction;
+                let overlay_children = portal_inherited::with_root_name_inheriting(
+                    cx,
+                    &overlay_root_name,
+                    portal_inherited,
+                    move |cx| {
+                        let anchor_fallback = overlay::anchor_bounds_for_element(cx, anchor_id);
+                        if anchor_fallback.is_none() {
+                            if open_on_hover {
+                                cx.with_state_for(
+                                    popover_id,
+                                    PopoverHoverSharedState::default,
+                                    |st| {
+                                        st.overlay_hovered = false;
+                                        st.anchor_bounds = None;
+                                        st.floating_bounds = None;
+                                    },
+                                );
+                            }
+                            if modal {
+                                return [
+                                    radix_popover::popover_modal_barrier_with_dismiss_handler(
+                                        cx,
+                                        open_for_barrier.clone(),
+                                        true,
+                                        on_dismiss_request_for_children.clone(),
+                                        Vec::new(),
+                                    ),
+                                ]
+                                .into_iter()
+                                .collect::<fret_ui::element::Elements>();
+                            }
+                            return std::iter::empty().collect::<fret_ui::element::Elements>();
+                        }
+
+                        let inner_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+                            Rc::new(Cell::new(None));
+                        let inner_id_for_scope = inner_id.clone();
+                        let inner_size_hint: Rc<Cell<Option<SizeHintPx>>> =
+                            Rc::new(Cell::new(None));
+                        let inner_size_hint_for_scope = inner_size_hint.clone();
+                        let content = radix_popover::popover_dialog_wrapper(cx, None, move |cx| {
+                            let inner = with_surface_slot_provider(
+                                cx,
+                                ShadcnSurfaceSlot::PopoverContent,
+                                |cx| content(cx, anchor_fallback.unwrap_or_default()),
+                            );
+                            inner_id_for_scope.set(Some(inner.id));
+                            inner_size_hint_for_scope.set(Some(size_hint_px(&inner)));
+                            vec![inner]
+                        });
+                        dialog_id_for_trigger.set(Some(content.id));
+
+                        let measure_id = inner_id.get().unwrap_or(content.id);
+                        let last_content_size =
+                            cx.last_bounds_for_element(measure_id).map(|r| r.size);
+                        let estimated = Size::new(Px(288.0), Px(160.0));
+                        let hint = inner_size_hint.get().unwrap_or(SizeHintPx {
+                            fixed_width: None,
+                            fixed_height: None,
+                            max_height: None,
+                        });
+                        let hint_width = hint.fixed_width;
+                        let hint_height = match (hint.fixed_height, hint.max_height) {
+                            // If both a fixed height and a max height exist in the subtree, treat the
+                            // fixed height as "header chrome" and the max height as "scrolling body"
+                            // (cmdk/combobox-style panels). Bias towards *overestimating* so collision
+                            // solving doesn't ignore tall panels.
+                            (Some(fixed), Some(max)) => Some(if fixed.0 <= max.0 {
+                                Px(fixed.0 + max.0)
+                            } else {
+                                fixed
+                            }),
+                            (Some(fixed), None) => Some(fixed),
+                            (None, Some(max)) => Some(max),
+                            (None, None) => None,
+                        };
+                        let mut width = last_content_size
+                            .map(|s| s.width)
+                            .unwrap_or(estimated.width);
+                        if let Some(hint_width) = hint_width {
+                            width = Px(width.0.max(hint_width.0));
+                        }
+                        let mut height = last_content_size
+                            .map(|s| s.height)
+                            .unwrap_or(estimated.height);
+                        if let Some(hint_height) = hint_height {
+                            height = Px(height.0.max(hint_height.0));
+                        }
+                        let content_size = Size::new(width, height);
+
+                        let align = match align {
+                            PopoverAlign::Start => Align::Start,
+                            PopoverAlign::Center => Align::Center,
+                            PopoverAlign::End => Align::End,
+                        };
+                        let side = match side {
+                            PopoverSide::Top => Side::Top,
+                            PopoverSide::Right => Side::Right,
+                            PopoverSide::Bottom => Side::Bottom,
+                            PopoverSide::Left => Side::Left,
+                            PopoverSide::InlineStart => {
+                                if direction == direction_prim::LayoutDirection::Rtl {
+                                    Side::Right
+                                } else {
+                                    Side::Left
+                                }
+                            }
+                            PopoverSide::InlineEnd => {
+                                if direction == direction_prim::LayoutDirection::Rtl {
+                                    Side::Left
+                                } else {
+                                    Side::Right
+                                }
+                            }
+                        };
+
+                        let (arrow_options, arrow_protrusion) =
+                            popper::diamond_arrow_options(arrow, arrow_size, arrow_padding);
+
+                        let outer = overlay::outer_bounds_with_window_margin_for_environment(
+                            cx,
+                            fret_ui::Invalidation::Layout,
+                            window_margin,
+                        );
+                        let placement = popper::PopperContentPlacement::new(
+                            direction,
+                            side,
+                            align,
+                            side_offset,
+                        )
+                        .with_shift_cross_axis(shift_cross_axis)
+                        .with_align_offset(align_offset)
+                        .with_arrow(arrow_options, arrow_protrusion)
+                        .with_collision_padding(collision_padding)
+                        .with_collision_boundary(collision_boundary)
+                        .with_sticky(sticky)
+                        .with_hide_when_detached(hide_when_detached);
+                        let reference_hidden = anchor_fallback
+                            .is_some_and(|anchor| placement.reference_hidden(outer, anchor));
+
+                        let bg = theme.color_token("popover.background");
+                        let border = theme.color_token("border");
+
+                        let anchor = anchor_fallback.unwrap_or_default();
+                        let constrained_height = has_height_constraint_px(hint);
+                        let oversized_for_boundary = content_size.width.0
+                            > outer.size.width.0 + 0.5
+                            || content_size.height.0 > outer.size.height.0 + 0.5;
+                        let (layout, placement_trace) =
+                            if constrained_height || oversized_for_boundary {
+                                popper::popper_layout_sized_with_trace(
+                                    outer,
+                                    anchor,
+                                    content_size,
+                                    placement.side_offset,
+                                    placement.side,
+                                    placement.align,
+                                    placement.options(),
+                                )
+                            } else {
+                                popper::popper_content_layout_size_unclamped_with_trace(
+                                    outer,
+                                    anchor,
+                                    content_size,
+                                    placement,
+                                )
+                            };
+                        let content_element_for_diag = diagnostics_content_element_from_cell
+                            .as_ref()
+                            .and_then(|cell| cell.get())
+                            .unwrap_or(measure_id);
+                        cx.diagnostics_record_overlay_placement_anchored_panel(
+                            Some(overlay_root_name_for_diag.as_ref()),
+                            Some(anchor_id),
+                            Some(content_element_for_diag),
+                            placement_trace,
+                        );
+                        if open_on_hover {
+                            cx.with_state_for(popover_id, PopoverHoverSharedState::default, |st| {
+                                st.anchor_bounds = Some(anchor);
+                                st.floating_bounds = Some(layout.rect);
+                            });
+                        }
+                        let wrapper_insets =
+                            popper_arrow::wrapper_insets(&layout, arrow_protrusion);
+
+                        let allow_intrinsic_wrapper = !arrow && !constrained_height;
+                        let panel_or_content = if allow_intrinsic_wrapper {
+                            content
+                        } else {
+                            popper_content::popper_panel_at(
+                                cx,
+                                layout.rect,
+                                wrapper_insets,
+                                Overflow::Visible,
+                                move |_cx| vec![content],
+                            )
+                        };
+
+                        let arrow_el = popper_arrow::diamond_arrow_element(
+                            cx,
+                            &layout,
+                            wrapper_insets,
+                            arrow_size,
+                            DiamondArrowStyle {
+                                bg,
+                                border: Some(border),
+                                border_width: Px(1.0),
+                            },
+                        );
+
+                        let origin = popper::popper_content_transform_origin(
+                            &layout,
+                            anchor,
+                            arrow.then_some(arrow_size),
+                        );
+                        let opacity = if reference_hidden { 0.0 } else { opacity };
+                        let transform = overlay_motion::shadcn_popper_presence_transform(
+                            layout.side,
+                            origin,
+                            opacity,
+                            scale,
+                            opening,
+                        );
+
+                        // We want the layer root bounds to match the steady-state popper wrapper
+                        // geometry (including arrow protrusion), but we don't want animation transforms
+                        // to affect hit-testing.
+                        //
+                        // We model this by:
+                        // - positioning the layer root via `InteractivityGate` (absolute layout),
+                        // - applying opacity + `VisualTransform` on an inner fill node (paint-only).
+                        let wrapper_layout = if allow_intrinsic_wrapper {
+                            popper_content::popper_wrapper_layout_autosize(layout.rect.origin)
+                        } else {
+                            popper_content::popper_wrapper_layout(layout.rect, wrapper_insets)
+                        };
+                        let mut fill = LayoutStyle::default();
+                        if !allow_intrinsic_wrapper {
+                            fill.size.width = Length::Fill;
+                            fill.size.height = Length::Fill;
+                        }
+
+                        let overlay_children = if let Some(arrow_el) = arrow_el {
+                            vec![arrow_el, panel_or_content]
+                        } else {
+                            vec![panel_or_content]
+                        };
+
+                        let overlay_content = cx.interactivity_gate_props(
+                            InteractivityGateProps {
+                                layout: wrapper_layout,
+                                present: true,
+                                interactive: !reference_hidden,
+                            },
+                            move |cx| {
+                                // `InteractivityGate` itself is pointer-transparent; we add a
+                                // hit-testable wrapper container so the arrow protrusion region counts
+                                // as "inside" the overlay for outside-press semantics.
+                                vec![cx.container(
+                                    ContainerProps {
+                                        layout: fill,
+                                        ..Default::default()
+                                    },
+                                    move |cx| {
+                                        vec![cx.opacity_props(
+                                            OpacityProps {
+                                                layout: fill,
+                                                opacity,
+                                            },
+                                            move |cx| {
+                                                vec![cx.visual_transform_props(
+                                                    VisualTransformProps {
+                                                        layout: fill,
+                                                        transform,
+                                                    },
+                                                    move |_cx| overlay_children,
+                                                )]
+                                            },
+                                        )]
+                                    },
+                                )]
+                            },
+                        );
+
+                        let overlay_content = if open_on_hover {
+                            cx.hover_region(HoverRegionProps::default(), move |cx, hovered| {
+                                cx.with_state_for(
+                                    popover_id,
+                                    PopoverHoverSharedState::default,
+                                    |st| {
+                                        st.overlay_hovered = hovered;
+                                    },
+                                );
+                                vec![overlay_content]
+                            })
+                        } else {
+                            overlay_content
+                        };
+
+                        let overlay_content = if trap_focus_only {
+                            focus_scope_prim::focus_trap(cx, move |_cx| vec![overlay_content])
+                        } else {
+                            overlay_content
+                        };
+
                         if open_on_hover {
                             cx.with_state_for(popover_id, PopoverHoverSharedState::default, |st| {
                                 st.overlay_hovered = false;
-                                st.anchor_bounds = None;
-                                st.floating_bounds = None;
                             });
                         }
+
                         if modal {
-                            return [radix_popover::popover_modal_barrier_with_dismiss_handler(
+                            radix_popover::popover_modal_layer_elements_with_dismiss_handler(
                                 cx,
                                 open_for_barrier.clone(),
-                                true,
                                 on_dismiss_request_for_children.clone(),
-                                Vec::new(),
-                            )]
-                            .into_iter()
-                            .collect::<fret_ui::element::Elements>();
-                        }
-                        return std::iter::empty().collect::<fret_ui::element::Elements>();
-                    }
-
-                    let inner_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
-                        Rc::new(Cell::new(None));
-                    let inner_id_for_scope = inner_id.clone();
-                    let inner_size_hint: Rc<Cell<Option<SizeHintPx>>> = Rc::new(Cell::new(None));
-                    let inner_size_hint_for_scope = inner_size_hint.clone();
-                    let content = radix_popover::popover_dialog_wrapper(cx, None, move |cx| {
-                        let inner = with_surface_slot_provider(
-                            cx,
-                            ShadcnSurfaceSlot::PopoverContent,
-                            |cx| content(cx, anchor_fallback.unwrap_or_default()),
-                        );
-                        inner_id_for_scope.set(Some(inner.id));
-                        inner_size_hint_for_scope.set(Some(size_hint_px(&inner)));
-                        vec![inner]
-                    });
-                    dialog_id_for_trigger.set(Some(content.id));
-
-                    let measure_id = inner_id.get().unwrap_or(content.id);
-                    let last_content_size = cx.last_bounds_for_element(measure_id).map(|r| r.size);
-                    let estimated = Size::new(Px(288.0), Px(160.0));
-                    let hint = inner_size_hint.get().unwrap_or(SizeHintPx {
-                        fixed_width: None,
-                        fixed_height: None,
-                        max_height: None,
-                    });
-                    let hint_width = hint.fixed_width;
-                    let hint_height = match (hint.fixed_height, hint.max_height) {
-                        // If both a fixed height and a max height exist in the subtree, treat the
-                        // fixed height as "header chrome" and the max height as "scrolling body"
-                        // (cmdk/combobox-style panels). Bias towards *overestimating* so collision
-                        // solving doesn't ignore tall panels.
-                        (Some(fixed), Some(max)) => Some(if fixed.0 <= max.0 {
-                            Px(fixed.0 + max.0)
+                                [],
+                                overlay_content,
+                            )
                         } else {
-                            fixed
-                        }),
-                        (Some(fixed), None) => Some(fixed),
-                        (None, Some(max)) => Some(max),
-                        (None, None) => None,
-                    };
-                    let mut width = last_content_size
-                        .map(|s| s.width)
-                        .unwrap_or(estimated.width);
-                    if let Some(hint_width) = hint_width {
-                        width = Px(width.0.max(hint_width.0));
-                    }
-                    let mut height = last_content_size
-                        .map(|s| s.height)
-                        .unwrap_or(estimated.height);
-                    if let Some(hint_height) = hint_height {
-                        height = Px(height.0.max(hint_height.0));
-                    }
-                    let content_size = Size::new(width, height);
-
-                    let align = match align {
-                        PopoverAlign::Start => Align::Start,
-                        PopoverAlign::Center => Align::Center,
-                        PopoverAlign::End => Align::End,
-                    };
-                    let side = match side {
-                        PopoverSide::Top => Side::Top,
-                        PopoverSide::Right => Side::Right,
-                        PopoverSide::Bottom => Side::Bottom,
-                        PopoverSide::Left => Side::Left,
-                        PopoverSide::InlineStart => {
-                            if direction == direction_prim::LayoutDirection::Rtl {
-                                Side::Right
-                            } else {
-                                Side::Left
-                            }
+                            [overlay_content]
+                                .into_iter()
+                                .collect::<fret_ui::element::Elements>()
                         }
-                        PopoverSide::InlineEnd => {
-                            if direction == direction_prim::LayoutDirection::Rtl {
-                                Side::Left
-                            } else {
-                                Side::Right
-                            }
-                        }
-                    };
-
-                    let (arrow_options, arrow_protrusion) =
-                        popper::diamond_arrow_options(arrow, arrow_size, arrow_padding);
-
-                    let outer = overlay::outer_bounds_with_window_margin_for_environment(
-                        cx,
-                        fret_ui::Invalidation::Layout,
-                        window_margin,
-                    );
-                    let placement =
-                        popper::PopperContentPlacement::new(direction, side, align, side_offset)
-                            .with_shift_cross_axis(shift_cross_axis)
-                            .with_align_offset(align_offset)
-                            .with_arrow(arrow_options, arrow_protrusion)
-                            .with_collision_padding(collision_padding)
-                            .with_collision_boundary(collision_boundary)
-                            .with_sticky(sticky)
-                            .with_hide_when_detached(hide_when_detached);
-                    let reference_hidden = anchor_fallback
-                        .is_some_and(|anchor| placement.reference_hidden(outer, anchor));
-
-                    let bg = theme.color_token("popover.background");
-                    let border = theme.color_token("border");
-
-                    let anchor = anchor_fallback.unwrap_or_default();
-                    let constrained_height = has_height_constraint_px(hint);
-                    let oversized_for_boundary = content_size.width.0 > outer.size.width.0 + 0.5
-                        || content_size.height.0 > outer.size.height.0 + 0.5;
-                    let (layout, placement_trace) = if constrained_height || oversized_for_boundary
-                    {
-                        popper::popper_layout_sized_with_trace(
-                            outer,
-                            anchor,
-                            content_size,
-                            placement.side_offset,
-                            placement.side,
-                            placement.align,
-                            placement.options(),
-                        )
-                    } else {
-                        popper::popper_content_layout_size_unclamped_with_trace(
-                            outer,
-                            anchor,
-                            content_size,
-                            placement,
-                        )
-                    };
-                    let content_element_for_diag = diagnostics_content_element_from_cell
-                        .as_ref()
-                        .and_then(|cell| cell.get())
-                        .unwrap_or(measure_id);
-                    cx.diagnostics_record_overlay_placement_anchored_panel(
-                        Some(overlay_root_name_for_diag.as_ref()),
-                        Some(anchor_id),
-                        Some(content_element_for_diag),
-                        placement_trace,
-                    );
-                    if open_on_hover {
-                        cx.with_state_for(popover_id, PopoverHoverSharedState::default, |st| {
-                            st.anchor_bounds = Some(anchor);
-                            st.floating_bounds = Some(layout.rect);
-                        });
-                    }
-                    let wrapper_insets = popper_arrow::wrapper_insets(&layout, arrow_protrusion);
-
-                    let allow_intrinsic_wrapper = !arrow && !constrained_height;
-                    let panel_or_content = if allow_intrinsic_wrapper {
-                        content
-                    } else {
-                        popper_content::popper_panel_at(
-                            cx,
-                            layout.rect,
-                            wrapper_insets,
-                            Overflow::Visible,
-                            move |_cx| vec![content],
-                        )
-                    };
-
-                    let arrow_el = popper_arrow::diamond_arrow_element(
-                        cx,
-                        &layout,
-                        wrapper_insets,
-                        arrow_size,
-                        DiamondArrowStyle {
-                            bg,
-                            border: Some(border),
-                            border_width: Px(1.0),
-                        },
-                    );
-
-                    let origin = popper::popper_content_transform_origin(
-                        &layout,
-                        anchor,
-                        arrow.then_some(arrow_size),
-                    );
-                    let opacity = if reference_hidden { 0.0 } else { opacity };
-                    let transform = overlay_motion::shadcn_popper_presence_transform(
-                        layout.side,
-                        origin,
-                        opacity,
-                        scale,
-                        opening,
-                    );
-
-                    // We want the layer root bounds to match the steady-state popper wrapper
-                    // geometry (including arrow protrusion), but we don't want animation transforms
-                    // to affect hit-testing.
-                    //
-                    // We model this by:
-                    // - positioning the layer root via `InteractivityGate` (absolute layout),
-                    // - applying opacity + `VisualTransform` on an inner fill node (paint-only).
-                    let wrapper_layout = if allow_intrinsic_wrapper {
-                        popper_content::popper_wrapper_layout_autosize(layout.rect.origin)
-                    } else {
-                        popper_content::popper_wrapper_layout(layout.rect, wrapper_insets)
-                    };
-                    let mut fill = LayoutStyle::default();
-                    if !allow_intrinsic_wrapper {
-                        fill.size.width = Length::Fill;
-                        fill.size.height = Length::Fill;
-                    }
-
-                    let overlay_children = if let Some(arrow_el) = arrow_el {
-                        vec![arrow_el, panel_or_content]
-                    } else {
-                        vec![panel_or_content]
-                    };
-
-                    let overlay_content = cx.interactivity_gate_props(
-                        InteractivityGateProps {
-                            layout: wrapper_layout,
-                            present: true,
-                            interactive: !reference_hidden,
-                        },
-                        move |cx| {
-                            // `InteractivityGate` itself is pointer-transparent; we add a
-                            // hit-testable wrapper container so the arrow protrusion region counts
-                            // as "inside" the overlay for outside-press semantics.
-                            vec![cx.container(
-                                ContainerProps {
-                                    layout: fill,
-                                    ..Default::default()
-                                },
-                                move |cx| {
-                                    vec![cx.opacity_props(
-                                        OpacityProps {
-                                            layout: fill,
-                                            opacity,
-                                        },
-                                        move |cx| {
-                                            vec![cx.visual_transform_props(
-                                                VisualTransformProps {
-                                                    layout: fill,
-                                                    transform,
-                                                },
-                                                move |_cx| overlay_children,
-                                            )]
-                                        },
-                                    )]
-                                },
-                            )]
-                        },
-                    );
-
-                    let overlay_content = if open_on_hover {
-                        cx.hover_region(HoverRegionProps::default(), move |cx, hovered| {
-                            cx.with_state_for(popover_id, PopoverHoverSharedState::default, |st| {
-                                st.overlay_hovered = hovered;
-                            });
-                            vec![overlay_content]
-                        })
-                    } else {
-                        overlay_content
-                    };
-
-                    let overlay_content = if trap_focus_only {
-                        focus_scope_prim::focus_trap(cx, move |_cx| vec![overlay_content])
-                    } else {
-                        overlay_content
-                    };
-
-                    if open_on_hover {
-                        cx.with_state_for(popover_id, PopoverHoverSharedState::default, |st| {
-                            st.overlay_hovered = false;
-                        });
-                    }
-
-                    if modal {
-                        radix_popover::popover_modal_layer_elements_with_dismiss_handler(
-                            cx,
-                            open_for_barrier.clone(),
-                            on_dismiss_request_for_children.clone(),
-                            [],
-                            overlay_content,
-                        )
-                    } else {
-                        [overlay_content]
-                            .into_iter()
-                            .collect::<fret_ui::element::Elements>()
-                    }
-                });
+                    },
+                );
 
                 let initial_focus = if let Some(id) = self.initial_focus {
                     Some(id)

@@ -1,9 +1,9 @@
 {
   "schema_version": 2,
   "meta": {
-    "name": "ui-gallery-checkbox-invalid-code-tab-scroll-range",
+    "name": "ui-gallery-typography-inline-code-tab-scroll-range",
     "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
-    "tags": ["ui_gallery", "shadcn", "checkbox", "tabs", "scroll", "regression"]
+    "tags": ["ui_gallery", "shadcn", "typography", "tabs", "scroll", "regression"]
   },
   "steps": [
     { "type": "reset_diagnostics" },
@@ -23,23 +23,23 @@
     { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
     { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
     { "type": "press_key", "key": "backspace" },
-    { "type": "type_text", "text": "checkbox" },
+    { "type": "type_text", "text": "typography" },
     { "type": "wait_frames", "n": 2 },
 
     {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-nav-checkbox" }
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-typography" }
       },
       "timeout_frames": 600
     },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-checkbox" } },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-typography" } },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-page-checkbox" }
+        "target": { "kind": "test_id", "id": "ui-gallery-page-typography" }
       },
       "timeout_frames": 600
     },
@@ -47,7 +47,7 @@
     {
       "type": "scroll_into_view",
       "container": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
-      "target": { "kind": "test_id", "id": "docsec-invalid-state-tabs-trigger-code" },
+      "target": { "kind": "test_id", "id": "docsec-inline-code-tabs-trigger-code" },
       "delta_y": -120.0,
       "require_fully_within_window": true,
       "padding_px": 24.0,
@@ -55,18 +55,35 @@
     },
     {
       "type": "click_stable",
-      "target": { "kind": "test_id", "id": "docsec-invalid-state-tabs-trigger-code" },
+      "target": { "kind": "test_id", "id": "docsec-inline-code-tabs-trigger-code" },
       "stable_frames": 2,
       "max_move_px": 2.0,
       "timeout_frames": 900
     },
-    { "type": "wait_frames", "n": 15 },
-    { "type": "capture_bundle", "label": "ui-gallery-checkbox-invalid-code-tab-scroll-range.after-tab_switch" },
+    { "type": "wait_frames", "n": 12 },
+    { "type": "capture_bundle", "label": "ui-gallery-typography-inline-code-tab-scroll-range.after_tab_switch" },
 
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_scroll_is_finite",
+        "target": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
+        "field": "y_max"
+      }
+    },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-typography-rtl" }
+      },
+      "timeout_frames": 600
+    },
     {
       "type": "scroll_into_view",
       "container": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
-      "target": { "kind": "test_id", "id": "ui-gallery-checkbox-rtl-field" },
+      "target": { "kind": "test_id", "id": "ui-gallery-typography-rtl" },
       "delta_y": -120.0,
       "require_fully_within_window": true,
       "padding_px": 24.0,
@@ -76,13 +93,13 @@
       "type": "wait_until",
       "predicate": {
         "kind": "bounds_within_window",
-        "target": { "kind": "test_id", "id": "ui-gallery-checkbox-rtl-field" },
+        "target": { "kind": "test_id", "id": "ui-gallery-typography-rtl" },
         "padding_px": 24.0,
         "eps_px": 1.0
       },
-      "timeout_frames": 900
+      "timeout_frames": 300
     },
-    { "type": "capture_screenshot", "label": "ui-gallery-checkbox-invalid-code-tab-scroll-range.rtl_visible" },
-    { "type": "capture_bundle", "label": "ui-gallery-checkbox-invalid-code-tab-scroll-range" }
+    { "type": "capture_screenshot", "label": "ui-gallery-typography-inline-code-tab-scroll-range.rtl_visible" },
+    { "type": "capture_bundle", "label": "ui-gallery-typography-inline-code-tab-scroll-range" }
   ]
 }

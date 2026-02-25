@@ -1297,6 +1297,36 @@ impl ElementHostWidget {
                     ScrollLayoutProbeCacheState::default,
                     |state| state.last_max_child = Size::new(content_w, content_h),
                 );
+
+                crate::elements::with_element_state(
+                    &mut *cx.app,
+                    window,
+                    self.element,
+                    crate::element::ScrollState::default,
+                    |state| {
+                        if cx.children.len() == 1 {
+                            state.intrinsic_measure_cache =
+                                Some(crate::element::ScrollIntrinsicMeasureCache {
+                                    key: crate::element::ScrollIntrinsicMeasureCacheKey {
+                                        avail_w: available_space_cache_key(
+                                            child_constraints.available.width,
+                                        ),
+                                        avail_h: available_space_cache_key(
+                                            child_constraints.available.height,
+                                        ),
+                                        axis: match props.axis {
+                                            crate::element::ScrollAxis::X => 0,
+                                            crate::element::ScrollAxis::Y => 1,
+                                            crate::element::ScrollAxis::Both => 2,
+                                        },
+                                        probe_unbounded: props.probe_unbounded,
+                                        scale_bits: cx.scale_factor.to_bits(),
+                                    },
+                                    max_child: Size::new(content_w, content_h),
+                                });
+                        }
+                    },
+                );
             }
 
             if defer_this_frame {
@@ -1344,6 +1374,36 @@ impl ElementHostWidget {
                         self.element,
                         ScrollLayoutProbeCacheState::default,
                         |state| state.last_max_child = Size::new(content_w, content_h),
+                    );
+
+                    crate::elements::with_element_state(
+                        &mut *cx.app,
+                        window,
+                        self.element,
+                        crate::element::ScrollState::default,
+                        |state| {
+                            if cx.children.len() == 1 {
+                                state.intrinsic_measure_cache =
+                                    Some(crate::element::ScrollIntrinsicMeasureCache {
+                                        key: crate::element::ScrollIntrinsicMeasureCacheKey {
+                                            avail_w: available_space_cache_key(
+                                                child_constraints.available.width,
+                                            ),
+                                            avail_h: available_space_cache_key(
+                                                child_constraints.available.height,
+                                            ),
+                                            axis: match props.axis {
+                                                crate::element::ScrollAxis::X => 0,
+                                                crate::element::ScrollAxis::Y => 1,
+                                                crate::element::ScrollAxis::Both => 2,
+                                            },
+                                            probe_unbounded: props.probe_unbounded,
+                                            scale_bits: cx.scale_factor.to_bits(),
+                                        },
+                                        max_child: Size::new(content_w, content_h),
+                                    });
+                            }
+                        },
                     );
                 }
             }
