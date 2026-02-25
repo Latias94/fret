@@ -200,14 +200,27 @@ pub fn textarea<H: UiHost>(
 ) -> AnyElement {
     let show_resize_handle = resizable && !disabled;
 
-    let theme = Theme::global(&*cx.app).clone();
+    let theme = Theme::global(&*cx.app).snapshot();
 
-    let resolved = resolve_input_chrome(&theme, size, &chrome, InputTokenKeys::none());
+    let resolved = resolve_input_chrome(
+        Theme::global(&*cx.app),
+        size,
+        &chrome,
+        InputTokenKeys::none(),
+    );
 
     let text_style = if stable_line_boxes {
-        typography::text_area_control_text_style_scaled(&theme, FontId::ui(), resolved.text_px)
+        typography::text_area_control_text_style_scaled(
+            Theme::global(&*cx.app),
+            FontId::ui(),
+            resolved.text_px,
+        )
     } else {
-        typography::text_area_content_text_style_scaled(&theme, FontId::ui(), resolved.text_px)
+        typography::text_area_content_text_style_scaled(
+            Theme::global(&*cx.app),
+            FontId::ui(),
+            resolved.text_px,
+        )
     };
 
     let mut chrome = TextAreaStyle::default();
@@ -298,7 +311,7 @@ pub fn textarea<H: UiHost>(
                 .ok()
                 .flatten();
 
-            let theme = Theme::global(&*cx.app).clone();
+            let theme = Theme::global(&*cx.app).snapshot();
             let resize_handle_layout = decl_style::layout_style(
                 &theme,
                 LayoutRefinement::default()
