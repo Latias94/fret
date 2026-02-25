@@ -42,7 +42,7 @@ fret-ui = { path = "../../crates/fret-ui", optional = true }
 fret-ui-literals = { path = "../../ecosystem/fret-ui-literals", optional = true }
 fret-ui-kit = { path = "../../ecosystem/fret-ui-kit", optional = true }
 fret-ui-shadcn = { path = "../../ecosystem/fret-ui-shadcn", optional = true }
-fret-bootstrap = { path = "../../ecosystem/fret-bootstrap", optional = true, features = ["ui-app-driver", "ui-app-command-palette", "icons-lucide"] }
+fret-bootstrap = { path = "../../ecosystem/fret-bootstrap", optional = true, features = ["ui-app-driver", "ui-app-command-palette", "icons-lucide", "icons-ui-semantic-lucide"] }
 
 [[bin]]
 name = "ui_gallery"

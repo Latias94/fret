@@ -463,7 +463,12 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
     /// Requires enabling the `fret-bootstrap/icons-lucide` feature.
     #[cfg(feature = "icons-lucide")]
     pub fn with_lucide_icons(self) -> Self {
-        self.install_app(fret_icons_lucide::install_app)
+        let builder = self.register_icon_pack(fret_icons_lucide::register_vendor_icons);
+
+        #[cfg(feature = "icons-ui-semantic-lucide")]
+        let builder = builder.register_icon_pack(fret_icons_lucide::register_ui_semantic_aliases);
+
+        builder
     }
 
     /// Install the Radix icon pack into the global `IconRegistry`.
@@ -471,7 +476,17 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
     /// Requires enabling the `fret-bootstrap/icons-radix` feature.
     #[cfg(feature = "icons-radix")]
     pub fn with_radix_icons(self) -> Self {
-        self.install_app(fret_icons_radix::install_app)
+        let builder = self.register_icon_pack(fret_icons_radix::register_vendor_icons);
+
+        // If both semantic providers are enabled, prefer Lucide's `ui.*` aliases to keep a stable
+        // default (Lucide is the `fret` crate's default icon pack).
+        #[cfg(all(
+            feature = "icons-ui-semantic-radix",
+            not(feature = "icons-ui-semantic-lucide")
+        ))]
+        let builder = builder.register_icon_pack(fret_icons_radix::register_ui_semantic_aliases);
+
+        builder
     }
 
     /// Pre-register all SVG icons from the global `IconRegistry` during `on_gpu_ready`.

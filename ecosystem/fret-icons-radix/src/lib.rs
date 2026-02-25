@@ -15,9 +15,20 @@ pub mod generated_ids;
 struct Assets;
 
 pub fn register_icons(reg: &mut IconRegistry) {
-    register_curated(reg);
+    register_vendor_icons(reg);
 
     #[cfg(feature = "semantic-ui")]
+    register_ui_semantic_aliases(reg);
+}
+
+/// Register Radix vendor icon IDs (`radix.*`) into an [`IconRegistry`].
+pub fn register_vendor_icons(reg: &mut IconRegistry) {
+    register_curated(reg);
+}
+
+/// Register semantic `ui.*` aliases for this icon pack.
+#[cfg(feature = "semantic-ui")]
+pub fn register_ui_semantic_aliases(reg: &mut IconRegistry) {
     semantic_ui::register(reg);
 }
 

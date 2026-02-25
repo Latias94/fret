@@ -17,6 +17,9 @@ ui-assets = ["dep:fret-ui-assets", "fret-ui-assets/app-integration"]
 # Convenience icon pack installers (data-only).
 icons-lucide = ["dep:fret-icons-lucide", "fret-icons-lucide/app-integration"]
 icons-radix = ["dep:fret-icons-radix", "fret-icons-radix/app-integration"]
+# Select a single provider for semantic `ui.*` icon aliases.
+icons-ui-semantic-lucide = ["icons-lucide", "fret-icons-lucide/semantic-ui"]
+icons-ui-semantic-radix = ["icons-radix", "fret-icons-radix/semantic-ui"]
 hotpatch-subsecond = ["fret-launch/hotpatch-subsecond", "dep:subsecond"]
 ui-app-driver = [
   "dep:fret-runtime",
@@ -60,8 +63,8 @@ fret-ui-kit = { path = "../fret-ui-kit", optional = true }
 fret-ui-shadcn = { path = "../fret-ui-shadcn", optional = true }
 fret-ui-assets = { path = "../fret-ui-assets", optional = true }
 fret-ui-literals = { path = "../fret-ui-literals", optional = true }
-fret-icons-lucide = { path = "../fret-icons-lucide", optional = true }
-fret-icons-radix = { path = "../fret-icons-radix", optional = true }
+fret-icons-lucide = { path = "../fret-icons-lucide", optional = true, default-features = false }
+fret-icons-radix = { path = "../fret-icons-radix", optional = true, default-features = false }
 subsecond = { version = "0.7.2", optional = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
