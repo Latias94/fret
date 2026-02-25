@@ -230,6 +230,10 @@ Goal: common tooling should keep working even when `bundle.json` is too large to
     - `crates/fret-diag/src/diag_stats.rs`
     - `crates/fret-diag/src/stats.rs`
 
+- [ ] Audit `diag stats --check-*` flags for stats-lite compatibility.
+  - In stats-lite mode, checks that require full-bundle traversal should fail fast with an actionable message.
+  - When a check can be implemented from sidecars (frames/bundle indexes), port it so it works for huge bundles.
+
 ## Plan 2 (defer until Plan 1 is solid)
 
 - [ ] Prototype manifest-first chunked bundle layout (snapshots/logs/semantics split).

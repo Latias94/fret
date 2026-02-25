@@ -584,6 +584,10 @@ struct BundleStatsModelSourceHotspot {
 }
 
 impl BundleStatsReport {
+    pub(crate) fn derived_from_frames_index(&self) -> bool {
+        self.derived_from_frames_index
+    }
+
     pub(super) fn print_human_brief(&self, bundle_path: &Path) {
         println!("bundle: {}", bundle_path.display());
         if self.derived_from_frames_index {
