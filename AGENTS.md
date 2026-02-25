@@ -1,5 +1,14 @@
 # Repository Guidelines
 
+## Project Context (what Fret is)
+
+Fret is a modular, **GPU-first**, cross-platform Rust UI framework (desktop-first + wasm). It targets
+both general-purpose apps and editor-grade UIs (multi-window/tear-out, docking, multiple viewports,
+layered GPU rendering).
+
+This repo is **docs/ADR-driven**: hard-to-change contracts are written down first to avoid late
+rewrites. When in doubt, prefer contract evidence over local intuition.
+
 ## Start here (quick context pointers)
 
 - Project positioning (user-facing): `README.md`
@@ -11,6 +20,15 @@
 - shadcn parity tracker (declarative-only): `docs/shadcn-declarative-progress.md`
 - Diagnostics + scripted repros: `docs/ui-diagnostics-and-scripted-tests.md`
 - `repo-ref/` policy + pinned SHAs: `docs/repo-ref.md`
+
+## Architecture & Boundaries (non-negotiable)
+
+- `crates/fret-ui` is a **mechanism/contract** layer, not a component policy layer.
+- Interaction policy (dismissal rules, focus trap/restore, hover intent, default sizing/spacing)
+  belongs in `ecosystem/*` (typically `ecosystem/fret-ui-kit` and recipe crates like
+  `ecosystem/fret-ui-shadcn` / `ecosystem/fret-ui-material3`).
+- Reference stack (behavior outcomes): APG (keyboard/focus) + Radix (overlay semantics) + Floating UI
+  (placement vocabulary) + cmdk (command palette details). See `docs/reference-stack-ui-behavior.md`.
 
 ## Project Structure & Module Organization
 
