@@ -23,6 +23,24 @@ pub(super) struct PendingDevtoolsSemanticsNodeGetRequest {
 }
 
 impl UiDiagnosticsService {
+    pub(super) fn drive_devtools_requests_for_window(
+        &mut self,
+        app: &App,
+        window: AppWindowId,
+        scale_factor: f32,
+        ui: Option<&UiTree<App>>,
+    ) -> bool {
+        #[cfg(feature = "diagnostics-ws")]
+        {
+            return self.drive_devtools_ws_requests_for_window(app, window, scale_factor, ui);
+        }
+        #[cfg(not(feature = "diagnostics-ws"))]
+        {
+            let _ = (app, window, scale_factor, ui);
+            return false;
+        }
+    }
+
     #[cfg(feature = "diagnostics-ws")]
     pub(super) fn ws_is_configured(&self) -> bool {
         self.cfg.devtools_ws_url.is_some() && self.cfg.devtools_token.is_some()
@@ -199,18 +217,18 @@ impl UiDiagnosticsService {
                 return false;
             }
 
-            let req = serde_json::json!({
-                "schema_version": 1,
-                "out_dir": self.cfg.out_dir.to_string_lossy(),
-                "bundle_dir_name": bundle_dir_name.clone(),
-                "request_id": pending.request_id_str.clone(),
-                "windows": [{
-                    "window": pending.window_ffi,
-                    "tick_id": app.tick_id().0,
-                    "frame_id": app.frame_id().0,
-                    "scale_factor": scale_factor as f64,
-                }]
-            });
+            let req = DiagScreenshotRequestV1 {
+                schema_version: 1,
+                out_dir: self.cfg.out_dir.to_string_lossy().to_string(),
+                bundle_dir_name: bundle_dir_name.clone(),
+                request_id: Some(pending.request_id_str.clone()),
+                windows: vec![DiagScreenshotWindowRequestV1 {
+                    window: pending.window_ffi,
+                    tick_id: app.tick_id().0,
+                    frame_id: app.frame_id().0,
+                    scale_factor: scale_factor as f64,
+                }],
+            };
 
             let write_ok = serde_json::to_vec_pretty(&req).ok().is_some_and(|bytes| {
                 if let Some(parent) = self.cfg.screenshot_request_path.parent() {

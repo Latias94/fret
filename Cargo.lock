@@ -2275,6 +2275,7 @@ dependencies = [
  "bytemuck",
  "fret-app",
  "fret-core",
+ "fret-diag-protocol",
  "fret-fonts",
  "fret-platform",
  "fret-platform-native",

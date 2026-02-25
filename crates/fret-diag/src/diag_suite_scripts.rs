@@ -193,6 +193,7 @@ pub(crate) fn ui_gallery_shadcn_conformance_suite_scripts() -> Vec<&'static str>
         "tools/diag-scripts/ui-gallery-popover-dialog-escape-underlay.json",
         "tools/diag-scripts/ui-gallery-tooltip-hovercard-scroll-clamp.json",
         "tools/diag-scripts/ui-gallery-tooltip-repeat-hover.json",
+        "tools/diag-scripts/ui-gallery-checkbox-invalid-code-tab-scroll-range.json",
         "tools/diag-scripts/ui-gallery-combobox-open-select-focus-restore.json",
         "tools/diag-scripts/ui-gallery-combobox-custom-items-detail-filter-react.json",
         "tools/diag-scripts/ui-gallery-chart-accessibility-layer-keyboard.json",

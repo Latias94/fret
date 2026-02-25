@@ -6,7 +6,8 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_core::{
-    Color, Corners, Edges, FontId, FontWeight, KeyCode, NodeId, Px, SemanticsRole, TextStyle,
+    AttributedText, Color, Corners, Edges, FontId, FontWeight, KeyCode, NodeId, Px, SemanticsRole,
+    TextAlign, TextOverflow, TextSpan, TextStyle, TextWrap,
 };
 use fret_icons::{IconId, ids};
 use fret_runtime::WindowCommandGatingService;
@@ -20,7 +21,7 @@ use fret_ui::action::ActivateReason;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
     PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps, RowProps,
-    SemanticsDecoration, SizeStyle, TextInputProps,
+    SemanticsDecoration, SizeStyle, StyledTextProps, TextInputProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::scroll::ScrollHandle;
@@ -525,6 +526,70 @@ pub(crate) fn shortcut_text_style(theme: &ThemeSnapshot) -> TextStyle {
     style
 }
 
+fn shortcut_is_symbol_char(ch: char) -> bool {
+    matches!(ch, '⌘' | '⌥' | '⌃' | '⇧')
+}
+
+fn shortcut_needs_symbol_font(text: &str) -> bool {
+    // shadcn command demo uses symbols like "⌘" directly. Our default UI font may not include
+    // these glyphs on Windows, leading to tofu squares. Prefer a symbol-capable UI font there.
+    text.chars().any(shortcut_is_symbol_char)
+}
+
+fn shortcut_symbol_font_for_platform(platform: Platform) -> Option<FontId> {
+    if platform == Platform::Windows {
+        // "Segoe UI Symbol" is available on standard Windows installs and covers common shortcut
+        // glyphs (e.g. ⌘ ⌥ ⌃ ⇧).
+        return Some(FontId::family("Segoe UI Symbol"));
+    }
+
+    None
+}
+
+fn shortcut_attributed_text_with_symbol_fallback(
+    text: Arc<str>,
+    symbol_font: FontId,
+) -> AttributedText {
+    if text.is_empty() {
+        return AttributedText::new(text, Arc::<[TextSpan]>::from([]));
+    }
+
+    let mut spans: Vec<TextSpan> = Vec::new();
+    let mut run_start = 0usize;
+    let mut run_is_symbol: Option<bool> = None;
+
+    for (idx, ch) in text.char_indices() {
+        let is_symbol = shortcut_is_symbol_char(ch);
+        match run_is_symbol {
+            None => {
+                run_start = idx;
+                run_is_symbol = Some(is_symbol);
+            }
+            Some(prev) if prev != is_symbol => {
+                let mut span = TextSpan::new(idx.saturating_sub(run_start));
+                if prev {
+                    span.shaping.font = Some(symbol_font.clone());
+                }
+                spans.push(span);
+
+                run_start = idx;
+                run_is_symbol = Some(is_symbol);
+            }
+            _ => {}
+        }
+    }
+
+    let end = text.len();
+    let prev = run_is_symbol.unwrap_or(false);
+    let mut span = TextSpan::new(end.saturating_sub(run_start));
+    if prev {
+        span.shaping.font = Some(symbol_font);
+    }
+    spans.push(span);
+
+    AttributedText::new(text, Arc::<[TextSpan]>::from(spans))
+}
+
 /// shadcn/ui `CommandShortcut` (v4).
 #[derive(Clone)]
 pub struct CommandShortcut {
@@ -549,6 +614,27 @@ impl CommandShortcut {
         let theme = Theme::global(&*cx.app).snapshot();
         let fg = theme.color_token("muted-foreground");
         let style = shortcut_text_style(&theme);
+        let platform = Platform::current();
+
+        if shortcut_needs_symbol_font(self.text.as_ref())
+            && let Some(symbol_font) = shortcut_symbol_font_for_platform(platform)
+        {
+            let layout = decl_style::layout_style(
+                &theme,
+                LayoutRefinement::default().flex_shrink_0().ml_auto(),
+            );
+            let rich = shortcut_attributed_text_with_symbol_fallback(self.text, symbol_font);
+            return cx.styled_text_props(StyledTextProps {
+                layout,
+                rich,
+                style: Some(style),
+                color: Some(fg),
+                wrap: TextWrap::None,
+                overflow: TextOverflow::Clip,
+                align: TextAlign::Start,
+                ink_overflow: Default::default(),
+            });
+        }
         let mut text = ui::text(cx, self.text)
             .layout(LayoutRefinement::default().flex_shrink_0().ml_auto())
             .text_size_px(style.size)
@@ -565,6 +651,19 @@ impl CommandShortcut {
         }
 
         text.into_element(cx)
+    }
+}
+
+#[cfg(test)]
+mod command_shortcut_tests {
+    use super::*;
+
+    #[test]
+    fn shortcut_symbol_detection() {
+        assert!(shortcut_needs_symbol_font("⌘P"));
+        assert!(shortcut_needs_symbol_font("⌥⇧K"));
+        assert!(!shortcut_needs_symbol_font("Ctrl+P"));
+        assert!(!shortcut_needs_symbol_font("Alt+Shift+K"));
     }
 }
 

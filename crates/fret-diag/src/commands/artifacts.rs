@@ -1,5 +1,6 @@
 use std::path::{Path, PathBuf};
 
+use super::args::resolve_latest_bundle_dir_path;
 use super::sidecars;
 
 use crate::lint::{LintOptions, lint_bundle_from_path};
@@ -11,9 +12,12 @@ pub(crate) fn cmd_pack(
     workspace_root: &Path,
     out_dir: &Path,
     pack_out: Option<PathBuf>,
+    ensure_ai_packet: bool,
+    pack_ai_only: bool,
     pack_include_root_artifacts: bool,
     pack_include_triage: bool,
     pack_include_screenshots: bool,
+    pack_schema2_only: bool,
     stats_top: usize,
     sort_override: Option<BundleStatsSort>,
     warmup_frames: u64,
@@ -27,20 +31,33 @@ pub(crate) fn cmd_pack(
             let src = crate::resolve_path(workspace_root, PathBuf::from(src));
             crate::resolve_bundle_root_dir(&src)?
         }
-        None => crate::read_latest_pointer(out_dir)
-            .or_else(|| crate::find_latest_export_dir(out_dir))
-            .ok_or_else(|| {
-                format!(
-                    "no diagnostics bundle found under {} (try: fretboard diag pack ./target/fret-diag/<timestamp>)",
-                    out_dir.display()
-                )
-            })?,
+        None => resolve_latest_bundle_dir_path(out_dir).map_err(|_err| {
+            format!(
+                "no diagnostics bundle found under {} (try: fretboard diag pack ./target/fret-diag/<timestamp>)",
+                out_dir.display()
+            )
+        })?,
     };
 
     let bundle_dir = crate::resolve_bundle_root_dir(&bundle_dir)?;
     let out = pack_out
         .map(|p| crate::resolve_path(workspace_root, p))
-        .unwrap_or_else(|| crate::default_pack_out_path(out_dir, &bundle_dir));
+        .unwrap_or_else(|| {
+            if pack_ai_only {
+                let name = bundle_dir
+                    .file_name()
+                    .and_then(|s| s.to_str())
+                    .filter(|s| !s.trim().is_empty())
+                    .unwrap_or("bundle");
+                if bundle_dir.starts_with(out_dir) {
+                    out_dir.join("share").join(format!("{name}.ai.zip"))
+                } else {
+                    bundle_dir.with_extension("ai.zip")
+                }
+            } else {
+                crate::default_pack_out_path(out_dir, &bundle_dir)
+            }
+        });
 
     let artifacts_root = if bundle_dir.starts_with(out_dir) {
         out_dir.to_path_buf()
@@ -48,12 +65,47 @@ pub(crate) fn cmd_pack(
         bundle_dir.parent().unwrap_or(out_dir).to_path_buf()
     };
 
+    if ensure_ai_packet || pack_ai_only {
+        let packet_dir = bundle_dir.join("ai.packet");
+        if !packet_dir.is_dir() {
+            if let Err(err) = super::ai_packet::ensure_ai_packet_dir_best_effort(
+                None,
+                &bundle_dir,
+                &packet_dir,
+                pack_include_triage,
+                stats_top,
+                sort_override,
+                warmup_frames,
+                None,
+            ) {
+                // Best-effort: pack may still succeed if `ai.packet/` is already present,
+                // or will fail with a clear `--ai-only requires ai.packet` error.
+                eprintln!("ai-packet: failed to generate ai.packet: {err}");
+            }
+        }
+    }
+
+    if pack_ai_only {
+        let packet_dir = bundle_dir.join("ai.packet");
+        if !packet_dir.is_dir() {
+            return Err(format!(
+                "--ai-only requires ai.packet under the bundle dir (tip: fretboard diag ai-packet {} --packet-out {})",
+                bundle_dir.display(),
+                packet_dir.display()
+            ));
+        }
+        crate::pack_ai_packet_dir_to_zip(&bundle_dir, &out, &artifacts_root)?;
+        println!("{}", out.display());
+        return Ok(());
+    }
+
     crate::pack_bundle_dir_to_zip(
         &bundle_dir,
         &out,
         pack_include_root_artifacts,
         pack_include_triage,
         pack_include_screenshots,
+        pack_schema2_only,
         false,
         false,
         &artifacts_root,
@@ -63,6 +115,107 @@ pub(crate) fn cmd_pack(
     )?;
     println!("{}", out.display());
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn pack_ai_only_can_generate_ai_packet_from_sidecars_only() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-pack-ai-only-sidecars-{}-{}",
+            crate::util::now_unix_ms(),
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).expect("create temp root");
+
+        let bundle_dir = root.join("bundle");
+        std::fs::create_dir_all(&bundle_dir).expect("create bundle dir");
+
+        std::fs::write(
+            bundle_dir.join("bundle.meta.json"),
+            serde_json::to_vec(&serde_json::json!({
+                "kind": "bundle_meta",
+                "schema_version": 1,
+                "warmup_frames": 0,
+                "bundle": "bundle.json",
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        std::fs::write(
+            bundle_dir.join("test_ids.index.json"),
+            b"{\"kind\":\"test_ids_index\",\"schema_version\":1}",
+        )
+        .unwrap();
+        std::fs::write(
+            bundle_dir.join("bundle.index.json"),
+            serde_json::to_vec(&serde_json::json!({
+                "kind": "bundle_index",
+                "schema_version": 1,
+                "warmup_frames": 0,
+                "bundle": "bundle.json",
+                "windows": [],
+                "script": { "steps": [] },
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        std::fs::write(
+            bundle_dir.join("frames.index.json"),
+            serde_json::to_vec(&serde_json::json!({
+                "kind": "frames_index",
+                "schema_version": 1,
+                "bundle": "bundle.json",
+                "generated_unix_ms": 0,
+                "warmup_frames": 0,
+                "has_semantics_table": true,
+                "columns": ["frame_id", "window_snapshot_seq", "timestamp_unix_ms", "total_time_us", "layout_time_us", "paint_time_us", "semantics_fingerprint", "semantics_source_tag"],
+                "windows_total": 0,
+                "snapshots_total": 0,
+                "frames_total": 0,
+                "windows": []
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+
+        let out_path = root.join("out.ai.zip");
+        cmd_pack(
+            &[bundle_dir.to_string_lossy().to_string()],
+            &root,
+            &root,
+            Some(out_path.clone()),
+            false,
+            true,
+            false,
+            false,
+            false,
+            false,
+            10,
+            None,
+            0,
+        )
+        .expect("pack ai-only zip");
+
+        assert!(out_path.is_file(), "expected output zip");
+
+        let f = std::fs::File::open(out_path).expect("open out zip");
+        let mut zip = zip::ZipArchive::new(f).expect("open zip archive");
+        let names: Vec<String> = (0..zip.len())
+            .map(|i| zip.by_index(i).expect("zip entry").name().to_string())
+            .collect();
+        assert!(
+            names
+                .iter()
+                .any(|n| n.ends_with("/_root/ai.packet/bundle.meta.json")),
+            "expected ai.packet/bundle.meta.json in zip"
+        );
+
+        let _ = std::fs::remove_dir_all(&root);
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -126,7 +279,7 @@ pub(crate) fn cmd_triage(
 
     let Some(src) = positionals.first().cloned() else {
         return Err(
-            "missing bundle path (try: fretboard diag triage <bundle_dir|bundle.json|bundle.schema2.json>)"
+            "missing bundle artifact path (try: fretboard diag triage <bundle_dir|bundle.json|bundle.schema2.json>)"
                 .to_string(),
         );
     };
@@ -214,7 +367,7 @@ pub(crate) fn cmd_lint(
     }
     let Some(src) = rest.first().cloned() else {
         return Err(
-            "missing bundle path (try: fretboard diag lint <bundle_dir|bundle.json|bundle.schema2.json>)"
+            "missing bundle artifact path (try: fretboard diag lint <bundle_dir|bundle.json|bundle.schema2.json>)"
                 .to_string(),
         );
     };
@@ -271,7 +424,7 @@ pub(crate) fn cmd_test_ids(
     }
     let Some(src) = rest.first().cloned() else {
         return Err(
-            "missing bundle path (try: fretboard diag test-ids <bundle_dir|bundle.json|bundle.schema2.json>)"
+            "missing bundle artifact path (try: fretboard diag test-ids <bundle_dir|bundle.json|bundle.schema2.json>)"
                 .to_string(),
         );
     };
@@ -331,7 +484,7 @@ pub(crate) fn cmd_test_ids_index(
     }
     let Some(src) = rest.first().cloned() else {
         return Err(
-            "missing bundle path (try: fretboard diag test-ids-index <bundle_dir|bundle.json|bundle.schema2.json>)"
+            "missing bundle artifact path (try: fretboard diag test-ids-index <bundle_dir|bundle.json|bundle.schema2.json>)"
                 .to_string(),
         );
     };
@@ -367,7 +520,7 @@ pub(crate) fn cmd_frames_index(
     }
     let Some(src) = rest.first().cloned() else {
         return Err(
-            "missing bundle path (try: fretboard diag frames-index <bundle_dir|bundle.json|bundle.schema2.json>)"
+            "missing bundle artifact path (try: fretboard diag frames-index <bundle_dir|bundle.json|bundle.schema2.json>)"
                 .to_string(),
         );
     };
@@ -408,7 +561,7 @@ pub(crate) fn cmd_meta(
     }
     let Some(src) = rest.first().cloned() else {
         return Err(
-            "missing bundle path (try: fretboard diag meta <bundle_dir|bundle.json|bundle.schema2.json>)"
+            "missing bundle artifact path (try: fretboard diag meta <bundle_dir|bundle.json|bundle.schema2.json>)"
                 .to_string(),
         );
     };

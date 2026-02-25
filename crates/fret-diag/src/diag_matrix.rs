@@ -146,8 +146,9 @@ pub(crate) fn cmd_matrix(ctx: MatrixCmdContext) -> Result<(), String> {
         None,
         None,
         viewport_input_gate,
-        viewport_input_gate
-            .map(|_| ui_gallery_script_requires_viewport_input_gate as fn(&Path) -> bool),
+        viewport_input_gate.map(|_| {
+            diag_policy::ui_gallery_script_requires_viewport_input_gate as fn(&Path) -> bool
+        }),
         None,
         None,
     )?;
@@ -164,11 +165,13 @@ pub(crate) fn cmd_matrix(ctx: MatrixCmdContext) -> Result<(), String> {
         reuse_stable_gate,
         reuse_gate,
         overlay_synthesis_gate,
-        overlay_synthesis_gate
-            .map(|_| ui_gallery_script_requires_overlay_synthesis_gate as fn(&Path) -> bool),
+        overlay_synthesis_gate.map(|_| {
+            diag_policy::ui_gallery_script_requires_overlay_synthesis_gate as fn(&Path) -> bool
+        }),
         viewport_input_gate,
-        viewport_input_gate
-            .map(|_| ui_gallery_script_requires_viewport_input_gate as fn(&Path) -> bool),
+        viewport_input_gate.map(|_| {
+            diag_policy::ui_gallery_script_requires_viewport_input_gate as fn(&Path) -> bool
+        }),
         None,
         None,
     )?;

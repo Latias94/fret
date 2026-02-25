@@ -354,7 +354,7 @@ pub(crate) fn cmd_repeat(ctx: RepeatCmdContext) -> Result<(), String> {
             Ok(s) => {
                 let stage = s.stage.as_deref().unwrap_or("unknown").to_string();
 
-                let bundle_json = s
+                let bundle_artifact = s
                     .last_bundle_dir
                     .as_deref()
                     .and_then(|d| (!d.trim().is_empty()).then_some(d.trim()))
@@ -405,9 +405,9 @@ pub(crate) fn cmd_repeat(ctx: RepeatCmdContext) -> Result<(), String> {
                 }
 
                 let mut perf: Option<serde_json::Value> = None;
-                if let Some(bundle_json) = bundle_json.as_ref()
+                if let Some(bundle_artifact) = bundle_artifact.as_ref()
                     && let Ok(report) = bundle_stats_from_path(
-                        bundle_json,
+                        bundle_artifact,
                         1,
                         BundleStatsSort::Time,
                         BundleStatsOptions { warmup_frames },
@@ -430,9 +430,9 @@ pub(crate) fn cmd_repeat(ctx: RepeatCmdContext) -> Result<(), String> {
                 }
 
                 let mut lint: Option<serde_json::Value> = None;
-                if let Some(bundle_json) = bundle_json.as_ref()
+                if let Some(bundle_artifact) = bundle_artifact.as_ref()
                     && let Ok(report) = lint_bundle_from_path(
-                        bundle_json,
+                        bundle_artifact,
                         warmup_frames,
                         LintOptions {
                             all_test_ids_bounds: lint_all_test_ids_bounds,
@@ -487,12 +487,12 @@ pub(crate) fn cmd_repeat(ctx: RepeatCmdContext) -> Result<(), String> {
                 let mut compare_to_baseline: Option<serde_json::Value> = None;
                 if stage == "passed" {
                     if baseline_bundle.is_none() {
-                        if let Some(bundle_json) = bundle_json.clone() {
+                        if let Some(bundle_artifact) = bundle_artifact.clone() {
                             baseline_run = Some(run_index);
-                            baseline_bundle = Some(bundle_json);
+                            baseline_bundle = Some(bundle_artifact);
                         }
                     } else if let (Some(base), Some(cur)) =
-                        (baseline_bundle.as_ref(), bundle_json.as_ref())
+                        (baseline_bundle.as_ref(), bundle_artifact.as_ref())
                     {
                         let report = compare_bundles(
                             base,
@@ -548,7 +548,8 @@ pub(crate) fn cmd_repeat(ctx: RepeatCmdContext) -> Result<(), String> {
                     "reason_code": s.reason_code,
                     "reason": s.reason,
                     "last_bundle_dir": s.last_bundle_dir,
-                    "bundle_json": bundle_json.as_ref().map(|p| p.display().to_string()),
+                    "bundle_json": bundle_artifact.as_ref().map(|p| p.display().to_string()),
+                    "bundle_artifact": bundle_artifact.as_ref().map(|p| p.display().to_string()),
                     "perf": perf,
                     "lint": lint,
                     "evidence": evidence,

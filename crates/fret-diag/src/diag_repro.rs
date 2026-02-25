@@ -19,9 +19,12 @@ pub(crate) struct ReproCmdContext {
     pub resolved_script_result_trigger_path: PathBuf,
     pub fs_transport_cfg: crate::transport::FsDiagTransportConfig,
     pub pack_out: Option<PathBuf>,
+    pub ensure_ai_packet: bool,
+    pub pack_ai_only: bool,
     pub pack_include_root_artifacts: bool,
     pub pack_include_triage: bool,
     pub pack_include_screenshots: bool,
+    pub pack_schema2_only: bool,
     pub stats_top: usize,
     pub sort_override: Option<BundleStatsSort>,
     pub warmup_frames: u64,
@@ -54,9 +57,12 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
         resolved_script_result_trigger_path: _resolved_script_result_trigger_path,
         fs_transport_cfg,
         pack_out,
+        ensure_ai_packet,
+        pack_ai_only,
         pack_include_root_artifacts,
         pack_include_triage,
         pack_include_screenshots,
+        pack_schema2_only,
         stats_top,
         sort_override,
         warmup_frames,
@@ -461,7 +467,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
         if let Some(bundle_path) = bundle_path.as_ref() {
             pack_items.push(ReproPackItem {
                 script_path: src.clone(),
-                bundle_json: bundle_path.clone(),
+                bundle_artifact: bundle_path.clone(),
             });
         }
 
@@ -609,13 +615,19 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
 
     let zip_out = pack_out
         .map(|p| resolve_path(&workspace_root, p))
-        .unwrap_or_else(|| resolved_out_dir.join("repro.zip"));
+        .unwrap_or_else(|| {
+            if pack_ai_only {
+                resolved_out_dir.join("repro.ai.zip")
+            } else {
+                resolved_out_dir.join("repro.zip")
+            }
+        });
 
     let mut packed_zip: Option<PathBuf> = None;
-    let mut packed_bundle_json: Option<PathBuf> = None;
+    let mut packed_bundle_artifact: Option<PathBuf> = None;
     if let Some(bundle_path) = selected_bundle_path.as_ref() {
         let bundle_dir = resolve_bundle_root_dir(bundle_path)?;
-        packed_bundle_json = Some(crate::resolve_bundle_artifact_path(&bundle_dir));
+        packed_bundle_artifact = Some(crate::resolve_bundle_artifact_path(&bundle_dir));
     }
 
     let multi_pack = pack_items.len() > 1;
@@ -628,7 +640,8 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
                     serde_json::json!({
                         "zip_prefix": repro_zip_prefix_for_script(item, idx),
                         "script_path": item.script_path.display().to_string(),
-                        "bundle_json": item.bundle_json.display().to_string(),
+                        "bundle_json": item.bundle_artifact.display().to_string(),
+                        "bundle_artifact": item.bundle_artifact.display().to_string(),
                     })
                 })
                 .collect(),
@@ -687,8 +700,10 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
             "check_file": if capabilities_check_path.is_file() { Some("check.capabilities.json") } else { None },
         }),
         "scripts": run_rows,
+        "selected_bundle_artifact": selected_bundle_path.as_ref().map(|p| p.display().to_string()),
         "selected_bundle_json": selected_bundle_path.as_ref().map(|p| p.display().to_string()),
-        "packed_bundle_json": packed_bundle_json.as_ref().map(|p| p.display().to_string()),
+        "packed_bundle_artifact": packed_bundle_artifact.as_ref().map(|p| p.display().to_string()),
+        "packed_bundle_json": packed_bundle_artifact.as_ref().map(|p| p.display().to_string()),
         "packed_bundles": packed_bundles,
         "repro_zip": Some(zip_out.display().to_string()),
         "resources": serde_json::json!({
@@ -727,6 +742,9 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
             &summary_path,
             &zip_out,
             pack_defaults,
+            pack_schema2_only,
+            ensure_ai_packet,
+            pack_ai_only,
             with_renderdoc,
             with_tracy,
             stats_top,
@@ -785,7 +803,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
         eprintln!("WARN failed to write evidence index: {err}");
     }
 
-    if let Some(path) = packed_bundle_json.as_ref() {
+    if let Some(path) = packed_bundle_artifact.as_ref() {
         println!("BUNDLE {}", path.display());
     }
     if let Some(path) = packed_zip.as_ref() {

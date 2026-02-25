@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 use fret_diag_protocol::{UiScriptResultV1, UiScriptStageV1};
 use serde_json::{Value, json};
 
+use super::args::resolve_latest_bundle_dir_path;
 use super::sidecars;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -41,13 +42,6 @@ struct DoctorItem {
     error: Option<String>,
     suggest: String,
     notes: Vec<String>,
-}
-
-fn resolve_latest_bundle_dir_path(out_dir: &Path) -> Result<PathBuf, String> {
-    let latest = crate::read_latest_pointer(out_dir)
-        .or_else(|| crate::find_latest_export_dir(out_dir))
-        .ok_or_else(|| format!("no diagnostics bundle found under {}", out_dir.display()))?;
-    Ok(latest)
 }
 
 fn normalize_bundle_dir(dir: &Path) -> PathBuf {
@@ -98,18 +92,20 @@ pub(crate) fn run_doctor_for_bundle_dir(
 
     let plan_report = doctor_report_json(&bundle_dir, warmup_frames);
     if opts.fix_bundle_json {
-        let has_bundle_json = plan_report.get("bundle_json").is_some_and(|v| !v.is_null());
-        if !has_bundle_json {
+        let has_bundle_artifact = plan_report
+            .get("bundle_artifact")
+            .is_some_and(|v| !v.is_null());
+        if !has_bundle_artifact {
             let chunks = plan_report.get("manifest_chunks");
             let can_materialize = chunks.is_some_and(|c| {
                 c.get("chunks_missing").and_then(|v| v.as_u64()) == Some(0)
                     && c.get("chunks_bytes_mismatch").and_then(|v| v.as_u64()) == Some(0)
             });
             if can_materialize {
-                fixes_planned.push("materialize bundle.json from manifest chunks".to_string());
+                fixes_planned.push("materialize raw bundle.json from manifest chunks".to_string());
             } else {
                 fixes_planned.push(
-                    "materialize bundle.json from manifest chunks (blocked: incomplete/missing manifest chunks)"
+                    "materialize raw bundle.json from manifest chunks (blocked: incomplete/missing manifest chunks)"
                         .to_string(),
                 );
             }
@@ -146,14 +142,16 @@ pub(crate) fn run_doctor_for_bundle_dir(
         }
     }
     if opts.fix_schema2 {
-        let schema2_exists = resolve_bundle_schema2_path_no_materialize(&bundle_dir).is_some();
+        let schema2_exists =
+            crate::resolve_bundle_schema2_artifact_path_no_materialize(&bundle_dir).is_some();
         if !schema2_exists {
-            if resolve_raw_bundle_json_path_no_materialize(&bundle_dir).is_some() {
-                fixes_planned
-                    .push("write bundle.schema2.json from bundle.json (--mode last)".to_string());
+            if crate::resolve_raw_bundle_artifact_path_no_materialize(&bundle_dir).is_some() {
+                fixes_planned.push(
+                    "write bundle.schema2.json from raw bundle.json (--mode last)".to_string(),
+                );
             } else {
                 fixes_planned.push(
-                    "write bundle.schema2.json from bundle.json (blocked: missing bundle.json)"
+                    "write bundle.schema2.json from raw bundle.json (blocked: missing raw bundle.json)"
                         .to_string(),
                 );
             }
@@ -170,7 +168,7 @@ pub(crate) fn run_doctor_for_bundle_dir(
     }
 
     if opts.fix_bundle_json {
-        if resolve_bundle_artifact_path_no_materialize(&bundle_dir).is_none() {
+        if crate::resolve_bundle_artifact_path_no_materialize(&bundle_dir).is_none() {
             let attempts = [bundle_dir.clone(), bundle_dir.join("_root")];
             for dir in &attempts {
                 match crate::run_artifacts::materialize_bundle_json_from_manifest_chunks_if_missing(
@@ -178,7 +176,7 @@ pub(crate) fn run_doctor_for_bundle_dir(
                 ) {
                     Ok(Some(out)) => {
                         fixes_applied.push(format!(
-                            "materialized bundle.json from chunks ({})",
+                            "materialized raw bundle.json from chunks ({})",
                             out.display()
                         ));
                         break;
@@ -186,7 +184,7 @@ pub(crate) fn run_doctor_for_bundle_dir(
                     Ok(_) => {}
                     Err(err) => {
                         fixes_applied.push(format!(
-                            "attempted to materialize bundle.json from chunks, but failed ({})",
+                            "attempted to materialize raw bundle.json from chunks, but failed ({})",
                             err
                         ));
                     }
@@ -196,11 +194,15 @@ pub(crate) fn run_doctor_for_bundle_dir(
     }
 
     if opts.fix_schema2 {
-        let schema2_exists = resolve_bundle_schema2_path_no_materialize(&bundle_dir).is_some();
+        let schema2_exists =
+            crate::resolve_bundle_schema2_artifact_path_no_materialize(&bundle_dir).is_some();
         if !schema2_exists {
-            let Some(bundle_json) = resolve_raw_bundle_json_path_no_materialize(&bundle_dir) else {
-                fixes_applied
-                    .push("skipped writing bundle.schema2.json (missing bundle.json)".to_string());
+            let Some(bundle_json) =
+                crate::resolve_raw_bundle_artifact_path_no_materialize(&bundle_dir)
+            else {
+                fixes_applied.push(
+                    "skipped writing bundle.schema2.json (missing raw bundle.json)".to_string(),
+                );
                 let report = doctor_report_json(&bundle_dir, warmup_frames);
                 return Ok(DoctorRunResult {
                     bundle_dir,
@@ -237,23 +239,22 @@ pub(crate) fn run_doctor_for_bundle_dir(
     }
 
     if opts.fix_sidecars {
-        let bundle_json = resolve_bundle_artifact_path_no_materialize(&bundle_dir).ok_or_else(|| {
-            "unable to regenerate sidecars: missing bundle.json or bundle.schema2.json (tip: re-run with --fix-bundle-json, or provide a bundle dir that contains one of those files)".to_string()
+        let bundle_artifact =
+            crate::resolve_bundle_artifact_path_no_materialize(&bundle_dir).ok_or_else(|| {
+            "unable to regenerate sidecars: missing bundle artifact (bundle.json or bundle.schema2.json) (tip: re-run with --fix-bundle-json, or provide a bundle dir that contains one of those files)".to_string()
         })?;
-        let _ = crate::bundle_index::ensure_bundle_meta_json(&bundle_json, warmup_frames)
+        let _ = crate::bundle_index::ensure_bundle_meta_json(&bundle_artifact, warmup_frames)
             .map(|p| fixes_applied.push(format!("regenerated bundle.meta.json ({})", p.display())));
-        let _ =
-            crate::bundle_index::ensure_test_ids_index_json(&bundle_json, warmup_frames).map(|p| {
+        let _ = crate::bundle_index::ensure_test_ids_index_json(&bundle_artifact, warmup_frames)
+            .map(|p| {
                 fixes_applied.push(format!("regenerated test_ids.index.json ({})", p.display()))
             });
-        let _ =
-            crate::bundle_index::ensure_bundle_index_json(&bundle_json, warmup_frames).map(|p| {
-                fixes_applied.push(format!("regenerated bundle.index.json ({})", p.display()))
-            });
-        let _ =
-            crate::frames_index::ensure_frames_index_json(&bundle_json, warmup_frames).map(|p| {
-                fixes_applied.push(format!("regenerated frames.index.json ({})", p.display()))
-            });
+        let _ = crate::bundle_index::ensure_bundle_index_json(&bundle_artifact, warmup_frames).map(
+            |p| fixes_applied.push(format!("regenerated bundle.index.json ({})", p.display())),
+        );
+        let _ = crate::frames_index::ensure_frames_index_json(&bundle_artifact, warmup_frames).map(
+            |p| fixes_applied.push(format!("regenerated frames.index.json ({})", p.display())),
+        );
     }
 
     let report = doctor_report_json(&bundle_dir, warmup_frames);
@@ -424,24 +425,18 @@ pub(crate) fn cmd_doctor(
 
     // If the user points at an out-dir root (no bundle artifacts directly), prefer the latest
     // bundle directory so `doctor` produces a useful report without requiring another argument.
-    let has_bundleish_artifact = bundle_dir.join("bundle.schema2.json").is_file()
-        || bundle_dir
-            .join("_root")
-            .join("bundle.schema2.json")
-            .is_file()
-        || bundle_dir.join("bundle.json").is_file()
-        || bundle_dir.join("_root").join("bundle.json").is_file()
-        || bundle_dir.join("bundle.index.json").is_file()
-        || bundle_dir.join("_root").join("bundle.index.json").is_file()
-        || bundle_dir.join("bundle.meta.json").is_file()
-        || bundle_dir.join("_root").join("bundle.meta.json").is_file()
-        || bundle_dir.join("test_ids.index.json").is_file()
-        || bundle_dir
-            .join("_root")
-            .join("test_ids.index.json")
-            .is_file()
-        || bundle_dir.join("frames.index.json").is_file()
-        || bundle_dir.join("_root").join("frames.index.json").is_file()
+    let has_bundleish_artifact = crate::resolve_bundle_artifact_path_no_materialize(&bundle_dir)
+        .is_some()
+        || [
+            "bundle.index.json",
+            "bundle.meta.json",
+            "test_ids.index.json",
+            "frames.index.json",
+        ]
+        .into_iter()
+        .any(|name| {
+            bundle_dir.join(name).is_file() || bundle_dir.join("_root").join(name).is_file()
+        })
         || bundle_dir.join("manifest.json").is_file()
         || bundle_dir.join("_root").join("manifest.json").is_file();
     if !has_bundleish_artifact {
@@ -660,50 +655,6 @@ fn doctor_items(bundle_dir: &Path, warmup_frames: u64) -> (Vec<DoctorItem>, bool
     (items, required_ok, ok)
 }
 
-fn resolve_bundle_artifact_path_no_materialize(bundle_dir: &Path) -> Option<PathBuf> {
-    let direct_v2 = bundle_dir.join("bundle.schema2.json");
-    if direct_v2.is_file() {
-        return Some(direct_v2);
-    }
-    let direct = bundle_dir.join("bundle.json");
-    if direct.is_file() {
-        return Some(direct);
-    }
-    let root_v2 = bundle_dir.join("_root").join("bundle.schema2.json");
-    if root_v2.is_file() {
-        return Some(root_v2);
-    }
-    let root = bundle_dir.join("_root").join("bundle.json");
-    if root.is_file() {
-        return Some(root);
-    }
-    None
-}
-
-fn resolve_raw_bundle_json_path_no_materialize(bundle_dir: &Path) -> Option<PathBuf> {
-    let direct = bundle_dir.join("bundle.json");
-    if direct.is_file() {
-        return Some(direct);
-    }
-    let root = bundle_dir.join("_root").join("bundle.json");
-    if root.is_file() {
-        return Some(root);
-    }
-    None
-}
-
-fn resolve_bundle_schema2_path_no_materialize(bundle_dir: &Path) -> Option<PathBuf> {
-    let direct = bundle_dir.join("bundle.schema2.json");
-    if direct.is_file() {
-        return Some(direct);
-    }
-    let root = bundle_dir.join("_root").join("bundle.schema2.json");
-    if root.is_file() {
-        return Some(root);
-    }
-    None
-}
-
 fn resolve_script_result_path(bundle_dir: &Path) -> Option<PathBuf> {
     let direct = bundle_dir.join("script.result.json");
     if direct.is_file() {
@@ -852,22 +803,26 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
     let bundle_dir = normalized.as_path();
 
     let (items, required_ok, ok) = doctor_items(bundle_dir, warmup_frames);
-    let bundle_json = resolve_bundle_artifact_path_no_materialize(bundle_dir);
-    let bundle_json_bytes = bundle_json.as_deref().and_then(file_bytes);
-    let schema2_exists = resolve_bundle_schema2_path_no_materialize(bundle_dir).is_some();
-    let bundle_is_raw_bundle_json = bundle_json
+    let bundle_artifact = crate::resolve_bundle_artifact_path_no_materialize(bundle_dir);
+    let bundle_artifact_bytes = bundle_artifact.as_deref().and_then(file_bytes);
+    let raw_bundle_json = crate::resolve_raw_bundle_artifact_path_no_materialize(bundle_dir);
+    let raw_bundle_json_bytes = raw_bundle_json.as_deref().and_then(file_bytes);
+    let schema2_exists =
+        crate::resolve_bundle_schema2_artifact_path_no_materialize(bundle_dir).is_some();
+    let bundle_is_raw_bundle_json = bundle_artifact
         .as_deref()
         .and_then(|p| p.file_name())
         .and_then(|s| s.to_str())
         == Some("bundle.json");
-    let (bundle_schema_version, bundle_schema_error) = if let Some(path) = bundle_json.as_deref() {
-        match sniff_bundle_schema_version(path) {
-            Ok(v) => (v, None),
-            Err(e) => (None, Some(e)),
-        }
-    } else {
-        (None, None)
-    };
+    let (bundle_schema_version, bundle_schema_error) =
+        if let Some(path) = bundle_artifact.as_deref() {
+            match sniff_bundle_schema_version(path) {
+                Ok(v) => (v, None),
+                Err(e) => (None, Some(e)),
+            }
+        } else {
+            (None, None)
+        };
 
     let script_result_path = resolve_script_result_path(bundle_dir);
     let script_result = script_result_path
@@ -958,7 +913,7 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
             }));
         }
         if schema_version == 1 {
-            if let Some(bytes) = bundle_json_bytes {
+            if let Some(bytes) = bundle_artifact_bytes {
                 const SUGGEST_V2_MIN_BYTES: u64 = 64 * 1024 * 1024;
                 if bytes >= SUGGEST_V2_MIN_BYTES {
                     warnings.push(Value::String(
@@ -974,11 +929,11 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
             }
         }
         if schema_version == 2 && !schema2_exists && bundle_is_raw_bundle_json {
-            if let Some(bytes) = bundle_json_bytes {
+            if let Some(bytes) = bundle_artifact_bytes {
                 const SUGGEST_SCHEMA2_MIN_BYTES: u64 = 64 * 1024 * 1024;
                 if bytes >= SUGGEST_SCHEMA2_MIN_BYTES {
                     warnings.push(Value::String(
-                        "bundle.json is large; consider writing bundle.schema2.json to keep tooling and AI loops fast"
+                        "raw bundle.json is large; consider writing bundle.schema2.json to keep tooling and AI loops fast"
                             .to_string(),
                     ));
                     repairs.push(json!({
@@ -989,7 +944,7 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
                 }
             }
         }
-    } else if bundle_json.is_some() {
+    } else if bundle_artifact.is_some() {
         warnings.push(Value::String(
             "bundle is present but schema_version could not be detected from the file prefix"
                 .to_string(),
@@ -997,7 +952,7 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
         repairs.push(json!({
             "code": "missing_bundle_schema_version",
             "note": "bundle is present but schema_version could not be detected",
-            "repair_hint": "re-capture the bundle or regenerate it; ensure schema_version is at the top-level object",
+                "repair_hint": "re-capture the bundle or regenerate it; ensure schema_version is at the top-level object",
         }));
     }
     if let Some(err) = &bundle_schema_error {
@@ -1006,7 +961,7 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
         )));
     }
 
-    if bundle_json.is_none() {
+    if bundle_artifact.is_none() {
         if let Some(chunks) = &manifest_chunks {
             let missing = chunks
                 .get("chunks_missing")
@@ -1019,13 +974,13 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
             if missing == 0 && bytes_mismatch == 0 {
                 repairs.push(json!({
                     "code": "materialize_bundle_json",
-                    "note": "bundle.json is missing but manifest chunks look complete; materialize it from chunks",
+                    "note": "bundle artifact is missing; manifest chunks look complete, so materialize raw bundle.json from chunks",
                     "command": format!("fretboard diag doctor --fix-bundle-json {} --warmup-frames {}", bundle_dir.display(), warmup_frames),
                 }));
             } else {
                 repairs.push(json!({
                     "code": "incomplete_chunks",
-                    "note": "bundle.json is missing and manifest chunks are incomplete; re-extract the share zip (ensure all chunk files are present) or re-capture the bundle",
+                    "note": "bundle artifact is missing and manifest chunks are incomplete; re-extract the share zip (ensure all chunk files are present) or re-capture the bundle",
                     "chunks_missing": missing,
                     "chunks_bytes_mismatch": bytes_mismatch,
                     "missing_paths_sample": chunks.get("missing_paths_sample"),
@@ -1035,12 +990,12 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
         } else {
             repairs.push(json!({
                 "code": "missing_bundle_json",
-                "note": "bundle.json is missing and no manifest chunks were found; re-capture the bundle",
+                "note": "bundle artifact is missing and no manifest chunks were found; re-capture the bundle",
             }));
         }
     }
 
-    if let Some(bundle_json_bytes) = bundle_json_bytes {
+    if let Some(bundle_json_bytes) = bundle_artifact_bytes {
         const DEFAULT_MAX_FILE_BYTES: u64 = 512 * 1024 * 1024;
         if bundle_json_bytes > DEFAULT_MAX_FILE_BYTES {
             repairs.push(json!({
@@ -1056,8 +1011,12 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
         "ok": ok,
         "required_ok": required_ok,
         "bundle_dir": bundle_dir.display().to_string(),
-        "bundle_json": bundle_json.as_ref().map(|p| p.display().to_string()),
-        "bundle_json_bytes": bundle_json_bytes,
+        "bundle_json": bundle_artifact.as_ref().map(|p| p.display().to_string()),
+        "bundle_json_bytes": bundle_artifact_bytes,
+        "bundle_artifact": bundle_artifact.as_ref().map(|p| p.display().to_string()),
+        "bundle_artifact_bytes": bundle_artifact_bytes,
+        "raw_bundle_json": raw_bundle_json.as_ref().map(|p| p.display().to_string()),
+        "raw_bundle_json_bytes": raw_bundle_json_bytes,
         "bundle_schema_version": bundle_schema_version,
         "bundle_schema_error": bundle_schema_error,
         "warmup_frames": warmup_frames,

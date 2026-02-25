@@ -333,13 +333,16 @@ pub(crate) fn ensure_bundle_meta_json(
     warmup_frames: u64,
 ) -> Result<PathBuf, String> {
     let out = default_bundle_meta_path(bundle_path);
+    let expected_bundle = bundle_path.display().to_string();
     if out.is_file() {
         if let Some(existing) = read_json_value(&out) {
             let kind_ok = existing.get("kind").and_then(|v| v.as_str()) == Some("bundle_meta");
             let schema_ok = existing.get("schema_version").and_then(|v| v.as_u64()) == Some(1u64);
             let warmup_ok =
                 existing.get("warmup_frames").and_then(|v| v.as_u64()) == Some(warmup_frames);
-            if kind_ok && schema_ok && warmup_ok {
+            let bundle_ok =
+                existing.get("bundle").and_then(|v| v.as_str()) == Some(&expected_bundle);
+            if kind_ok && schema_ok && warmup_ok && bundle_ok {
                 return Ok(out);
             }
         }
@@ -355,6 +358,7 @@ pub(crate) fn ensure_test_ids_json(
     max_test_ids: usize,
 ) -> Result<PathBuf, String> {
     let out = default_test_ids_path(bundle_path);
+    let expected_bundle = bundle_path.display().to_string();
     if out.is_file() {
         if let Some(existing) = read_json_value(&out) {
             let kind_ok = existing.get("kind").and_then(|v| v.as_str()) == Some("test_ids");
@@ -363,7 +367,9 @@ pub(crate) fn ensure_test_ids_json(
                 existing.get("warmup_frames").and_then(|v| v.as_u64()) == Some(warmup_frames);
             let max_ok = existing.get("max_test_ids").and_then(|v| v.as_u64())
                 == Some(max_test_ids.min(u64::MAX as usize) as u64);
-            if kind_ok && schema_ok && warmup_ok && max_ok {
+            let bundle_ok =
+                existing.get("bundle").and_then(|v| v.as_str()) == Some(&expected_bundle);
+            if kind_ok && schema_ok && warmup_ok && max_ok && bundle_ok {
                 return Ok(out);
             }
         }
@@ -378,13 +384,16 @@ pub(crate) fn ensure_test_ids_index_json(
     warmup_frames: u64,
 ) -> Result<PathBuf, String> {
     let out = default_test_ids_index_path(bundle_path);
+    let expected_bundle = bundle_path.display().to_string();
     if out.is_file() {
         if let Some(existing) = read_json_value(&out) {
             let kind_ok = existing.get("kind").and_then(|v| v.as_str()) == Some("test_ids_index");
             let schema_ok = existing.get("schema_version").and_then(|v| v.as_u64()) == Some(1u64);
             let warmup_ok =
                 existing.get("warmup_frames").and_then(|v| v.as_u64()) == Some(warmup_frames);
-            if kind_ok && schema_ok && warmup_ok {
+            let bundle_ok =
+                existing.get("bundle").and_then(|v| v.as_str()) == Some(&expected_bundle);
+            if kind_ok && schema_ok && warmup_ok && bundle_ok {
                 return Ok(out);
             }
         }
@@ -399,14 +408,17 @@ pub(crate) fn ensure_bundle_index_json(
     warmup_frames: u64,
 ) -> Result<PathBuf, String> {
     let out = default_bundle_index_path(bundle_path);
+    let expected_bundle = bundle_path.display().to_string();
     if out.is_file() {
         if let Some(existing) = read_json_value(&out) {
             let kind_ok = existing.get("kind").and_then(|v| v.as_str()) == Some("bundle_index");
             let schema_ok = existing.get("schema_version").and_then(|v| v.as_u64()) == Some(1u64);
             let warmup_ok =
                 existing.get("warmup_frames").and_then(|v| v.as_u64()) == Some(warmup_frames);
+            let bundle_ok =
+                existing.get("bundle").and_then(|v| v.as_str()) == Some(&expected_bundle);
 
-            if !kind_ok || !schema_ok || !warmup_ok {
+            if !kind_ok || !schema_ok || !warmup_ok || !bundle_ok {
                 // Fall through and regenerate.
             } else {
                 // Best-effort upgrade: older indexes may be missing the additive `script` markers.
@@ -1047,6 +1059,15 @@ fn build_test_ids_index_payload_from_json(
 mod tests {
     use super::*;
     use serde_json::json;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    fn unique_temp_root(prefix: &str) -> PathBuf {
+        let ms = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis();
+        std::env::temp_dir().join(format!("{prefix}-{ms}"))
+    }
 
     fn sample_v2_bundle() -> Value {
         json!({
@@ -1282,5 +1303,42 @@ mod tests {
         assert_eq!(steps[0]["window_snapshot_seq"].as_u64(), Some(7));
         assert_eq!(steps[0]["semantics_fingerprint"].as_u64(), Some(42));
         assert_eq!(steps[0]["resolve_mode"].as_str(), Some("frame_id"));
+    }
+
+    #[test]
+    fn ensure_bundle_meta_json_regenerates_when_bundle_label_mismatch() {
+        let root = unique_temp_root("fret-diag-ensure-bundle-meta");
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).expect("create temp root");
+
+        let bundle_path = root.join("bundle.json");
+        std::fs::write(&bundle_path, "{\"schema_version\":2,\"windows\":[]}")
+            .expect("write bundle.json");
+
+        let meta_path = root.join("bundle.meta.json");
+        std::fs::write(
+            &meta_path,
+            serde_json::to_vec_pretty(&json!({
+                "kind": "bundle_meta",
+                "schema_version": 1,
+                "bundle": "some/other/path/bundle.json",
+                "warmup_frames": 0,
+                "windows_total": 0,
+                "snapshots_total": 0,
+                "windows": [],
+            }))
+            .expect("encode meta"),
+        )
+        .expect("write bundle.meta.json");
+
+        let out = ensure_bundle_meta_json(&bundle_path, 0).expect("ensure meta");
+        assert_eq!(out, meta_path);
+
+        let v = read_json_value(&meta_path).expect("read meta");
+        let expected = bundle_path.display().to_string();
+        assert_eq!(
+            v.get("bundle").and_then(|v| v.as_str()),
+            Some(expected.as_str())
+        );
     }
 }

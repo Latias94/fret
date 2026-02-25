@@ -257,7 +257,7 @@ pub(crate) fn check_bundle_for_retained_vlist_keep_alive_budget_json(
 
     let evidence_dir = bundle_path
         .parent()
-        .ok_or_else(|| "invalid bundle path: missing parent directory".to_string())?;
+        .ok_or_else(|| "invalid bundle artifact path: missing parent directory".to_string())?;
     let evidence_path = evidence_dir.join("check.retained_vlist_keep_alive_budget.json");
 
     let mut examined_snapshots: u64 = 0;
@@ -321,6 +321,7 @@ pub(crate) fn check_bundle_for_retained_vlist_keep_alive_budget_json(
     let evidence = serde_json::json!({
         "schema_version": 1,
         "kind": "retained_vlist_keep_alive_budget",
+        "bundle_artifact": bundle_path.display().to_string(),
         "bundle_json": bundle_path.display().to_string(),
         "evidence_dir": evidence_dir.display().to_string(),
         "evidence_path": evidence_path.display().to_string(),

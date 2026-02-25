@@ -135,6 +135,12 @@ pub struct UiDiagnosticsConfig {
     pub max_debug_string_bytes: usize,
     pub max_gating_trace_entries: usize,
     pub screenshot_on_dump: bool,
+    /// When enabled, write a compact schema2 bundle artifact (`bundle.schema2.json`) alongside
+    /// the raw bundle artifact (`bundle.json`) during dumps.
+    ///
+    /// This is intended for schema2-first + AI/sidecar-first workflows to avoid requiring
+    /// tooling to parse large raw bundles just to produce a portable artifact.
+    pub write_bundle_schema2: bool,
     /// Optional fixed frame delta (ms) for deterministic diagnostics/scripted tests (ADR 0240).
     ///
     /// When set, the per-window frame clock uses a synthetic monotonic time that advances by this
@@ -515,6 +521,8 @@ impl Default for UiDiagnosticsConfig {
         let screenshot_on_dump = env_flag_override("FRET_DIAG_BUNDLE_SCREENSHOT")
             .or_else(|| config_file.as_ref().and_then(|c| c.screenshot_on_dump))
             .unwrap_or(false);
+        let write_bundle_schema2 =
+            env_flag_override("FRET_DIAG_BUNDLE_WRITE_SCHEMA2").unwrap_or(false);
         let frame_clock_fixed_delta_ms = fret_core::WindowFrameClockService::fixed_delta_from_env()
             .map(|d| d.as_millis())
             .and_then(|ms| u64::try_from(ms).ok())
@@ -558,6 +566,7 @@ impl Default for UiDiagnosticsConfig {
             max_debug_string_bytes,
             max_gating_trace_entries,
             screenshot_on_dump,
+            write_bundle_schema2,
             frame_clock_fixed_delta_ms,
             devtools_ws_url,
             devtools_token,

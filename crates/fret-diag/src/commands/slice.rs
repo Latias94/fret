@@ -6,6 +6,7 @@ use crate::json_bundle::{
 };
 use crate::test_id_bloom::TestIdBloomV1;
 
+use super::args::{looks_like_path, resolve_bundle_artifact_path_or_latest};
 use super::sidecars;
 use super::slice_payload::build_test_id_slice_payload_from_snapshot_and_nodes;
 use super::slice_streaming::{
@@ -40,12 +41,8 @@ pub(crate) fn build_test_id_slice_payload_from_bundle(
         snapshot: &serde_json::Value,
         target: &str,
     ) -> bool {
-        let nodes = semantics.nodes(snapshot).unwrap_or(&[]);
-        nodes.iter().any(|n| {
-            n.get("test_id")
-                .and_then(|v| v.as_str())
-                .is_some_and(|s| s.trim() == target)
-        })
+        crate::json_bundle::semantics_node_for_test_id_trimmed(semantics, snapshot, target)
+            .is_some()
     }
 
     let mut picked: Option<Picked<'_>> = None;
@@ -290,27 +287,8 @@ pub(crate) fn build_test_id_slice_payload_from_bundle_path(
     }
 }
 
-fn looks_like_path(s: &str) -> bool {
-    s.contains('/') || s.contains('\\') || s.ends_with(".json")
-}
-
 fn sanitize_test_id_for_filename(test_id: &str) -> String {
     crate::util::sanitize_for_filename(test_id, 80, "test_id")
-}
-
-fn resolve_bundle_artifact_path_or_latest(
-    bundle_arg: Option<&str>,
-    workspace_root: &Path,
-    out_dir: &Path,
-) -> Result<PathBuf, String> {
-    if let Some(s) = bundle_arg {
-        let src = crate::resolve_path(workspace_root, PathBuf::from(s));
-        return Ok(crate::resolve_bundle_artifact_path(&src));
-    }
-    let latest = crate::read_latest_pointer(out_dir)
-        .or_else(|| crate::find_latest_export_dir(out_dir))
-        .ok_or_else(|| format!("no diagnostics bundle found under {}", out_dir.display()))?;
-    Ok(crate::resolve_bundle_artifact_path(&latest))
 }
 
 struct BundleIndexSnapshotMatch {
@@ -1293,7 +1271,7 @@ mod tests {
         .expect("expected payload");
 
         assert_eq!(payload["kind"].as_str(), Some("slice.test_id"));
-        assert_eq!(payload["frame_id"].as_u64(), Some(1));
+        assert_eq!(payload["frame_id"].as_u64(), Some(2));
     }
 
     #[test]

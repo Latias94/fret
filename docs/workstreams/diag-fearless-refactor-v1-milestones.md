@@ -67,13 +67,16 @@ Definition of done:
 ### M4: Plan 1 closure for AI loops (schema2-first)
 
 - [ ] Ensure “AI packet” is the default shareable artifact path for triage.
-- [ ] Ensure sidecars (`bundle.meta.json`, `bundle.index.json`, `test_ids.index.json`) are consistently available
+  - [x] Add a convenience `--ai-packet` flag for `diag run` and `diag pack` to generate `ai.packet/` next to a bundle dir.
+  - [x] Add a bounded “AI-only” share zip mode (`diag pack --ai-only`) that avoids shipping full bundle artifacts by default.
+- [ ] Ensure sidecars (`bundle.meta.json`, `bundle.index.json`, `test_ids.index.json`, `frames.index.json`) are consistently available
   in pack/repro flows.
   - [x] Runtime writes canonical sidecars on native dumps.
   - [x] Runtime `bundle.index.json` includes a bounded `test_id` bloom (`test_id_bloom_hex`) on tail snapshots for fast `--test-id` triage.
   - [x] Runtime `bundle.index.json` includes bounded `semantics_blooms` keyed by `(window, semantics_fingerprint, semantics_source)` to support `--test-id` triage beyond the tail snapshots.
   - [x] Runtime `bundle.index.json` may include additive script step markers (`script.steps`) when `script.result.json` is present.
   - [x] `diag pack --include-all` includes sidecars under `_root/` (even when the bundle dir is relocated).
+  - [x] `diag repro` multi-pack includes the same sidecars under each script prefix’s `_root/`.
 
 Definition of done:
 
@@ -83,7 +86,26 @@ Definition of done:
 ### M4.1: Remove `bundle.json`-only assumptions in tooling
 
 - [ ] Ensure post-run checks, suite runners, and error messages consistently talk about “bundle artifacts” (not `bundle.json`).
-- [ ] Add one regression test that a schema2-only bundle dir is accepted where we claim it is.
+  - [x] Core path helpers and a large set of CLI hints now prefer “bundle artifact” terminology.
+  - [x] Tooling outputs that previously wrote `bundle_json` now also write `bundle_artifact` (keeping legacy keys as aliases).
+  - [ ] Finish the remaining sweep (especially in tests and narrow helper modules) and keep it consistent with
+        `docs/workstreams/diag-fearless-refactor-v1/debt-removal.md` (compat key removal policy).
+- [x] Extract bundle/repro zip packing into a dedicated module (reduce churn in `crates/fret-diag/src/lib.rs`).
+  - Evidence: `crates/fret-diag/src/pack_zip.rs` (`pack_bundle_dir_to_zip`, `pack_repro_zip_multi`).
+- [x] Extract evidence indexing into a dedicated module (reduce churn in `crates/fret-diag/src/lib.rs`).
+  - Evidence: `crates/fret-diag/src/evidence_index.rs` (`write_evidence_index`).
+- [x] Extract perf-hint gating helpers into a dedicated module (reduce churn in `crates/fret-diag/src/lib.rs`).
+  - Evidence: `crates/fret-diag/src/perf_hint_gate.rs` (`parse_perf_hint_gate_options`, `perf_hint_gate_failures_for_triage_json`).
+- [x] Extract triage JSON generation into a dedicated module (reduce churn in `crates/fret-diag/src/lib.rs`).
+  - Evidence: `crates/fret-diag/src/triage_json.rs` (`triage_json_from_stats`).
+- [x] Add bundle-artifact aliases to repro summary JSON (keep older `*_bundle_json` keys for compatibility).
+  - Evidence: `crates/fret-diag/src/diag_repro.rs` (`selected_bundle_artifact`, `packed_bundle_artifact`, `bundle_artifact` in `packed_bundles`).
+- [x] Add bundle-artifact aliases to `diag repeat` output JSON (keep older `bundle_json` key for compatibility).
+  - Evidence: `crates/fret-diag/src/diag_repeat.rs` (`bundle_artifact`).
+- [x] Add one regression test that a schema2-only bundle dir is accepted where we claim it is.
+  - Evidence: `crates/fret-diag/src/pack_zip.rs` (`pack_bundle_dir_to_zip_accepts_schema2_only`).
+- [x] Add a schema2-only packing option for shareable zips.
+  - Evidence: `crates/fret-diag/src/lib.rs` (`--pack-schema2-only` / `--schema2-only`).
 
 ### M5: Plan 2 prototype (deferred)
 
@@ -92,3 +114,14 @@ Definition of done:
 Definition of done:
 
 - At least one workflow produces a manifest bundle and can materialize `bundle.json` on demand.
+
+### M6: Debt removal kickoff (risk-tiered)
+
+- [ ] Maintain a risk-tiered checklist and land low-risk removals continuously.
+  - Checklist: `docs/workstreams/diag-fearless-refactor-v1/redundancy-removal-checklist.md`
+  - Debt policy: `docs/workstreams/diag-fearless-refactor-v1/debt-removal.md`
+
+Definition of done:
+
+- Low-risk redundancy removals are mostly complete (no duplicated “latest bundle” / “ai.packet ensure” logic scattered around).
+- Medium-risk removals have explicit deprecation windows and exit criteria (documented).

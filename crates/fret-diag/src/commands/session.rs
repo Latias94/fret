@@ -1,7 +1,8 @@
 use std::path::Path;
 
-use crate::compare::{find_latest_export_dir, read_latest_pointer};
 use crate::util::touch;
+
+use super::args::resolve_latest_bundle_dir_path;
 
 pub(crate) fn cmd_poke(
     rest: &[String],
@@ -45,12 +46,7 @@ pub(crate) fn cmd_latest(
     if !rest.is_empty() {
         return Err(format!("unexpected arguments: {}", rest.join(" ")));
     }
-    if let Some(path) = read_latest_pointer(out_dir).or_else(|| find_latest_export_dir(out_dir)) {
-        println!("{}", path.display());
-        return Ok(());
-    }
-    Err(format!(
-        "no diagnostics bundle found under {}",
-        out_dir.display()
-    ))
+    let path = resolve_latest_bundle_dir_path(out_dir)?;
+    println!("{}", path.display());
+    Ok(())
 }

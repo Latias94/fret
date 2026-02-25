@@ -220,7 +220,7 @@ fn lint_script(path: &Path) -> Result<Value, String> {
         findings.push(serde_json::json!({
             "severity": "warning",
             "code": "script.no_capture_bundle",
-            "message": "script has no capture_bundle step; successful runs may produce no portable bundle.json",
+            "message": "script has no capture_bundle step; successful runs may produce no portable bundle artifact",
         }));
     }
 

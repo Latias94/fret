@@ -1,6 +1,6 @@
 # Length percentage semantics v1 — TODO
 
-Last updated: 2026-02-24
+Last updated: 2026-02-25
 
 This file is the *living checklist* for `length-percentage-semantics-v1`.
 Use `length-percentage-semantics-v1-milestones.md` for phase planning.

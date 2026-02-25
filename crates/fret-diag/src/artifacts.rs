@@ -19,7 +19,7 @@ pub struct MaterializedBundle {
     pub export_dir: PathBuf,
 }
 
-/// Materializes an in-memory `bundle.json` payload into:
+/// Materializes an in-memory raw `bundle.json` payload into:
 /// `{export_root}/{exported_unix_ms}/bundle.json`
 pub fn materialize_bundle_json(
     export_root: &Path,
@@ -34,7 +34,7 @@ pub fn materialize_bundle_json(
     let bundle_path = export_dir.join("bundle.json");
     std::fs::write(&bundle_path, bundle_json.as_bytes()).map_err(|e| e.to_string())?;
 
-    // Best-effort sidecars for fast interactive querying (avoid grepping `bundle.json`).
+    // Best-effort sidecars for fast interactive querying (avoid grepping raw `bundle.json`).
     let _ = crate::bundle_index::ensure_bundle_meta_json(&bundle_path, 0);
     let _ = crate::bundle_index::ensure_test_ids_index_json(&bundle_path, 0);
     let _ = crate::bundle_index::ensure_test_ids_json(&bundle_path, 0, 500);
@@ -42,7 +42,7 @@ pub fn materialize_bundle_json(
     Ok(export_dir)
 }
 
-/// Materializes an in-memory `bundle.json` payload into:
+/// Materializes an in-memory raw `bundle.json` payload into:
 /// `{repo_root}/.fret/diag/exports/{exported_unix_ms}/bundle.json`
 pub fn materialize_bundle_json_to_exports(
     repo_root: &Path,
@@ -58,7 +58,7 @@ pub fn materialize_bundle_json_to_exports(
     })
 }
 
-/// Packs an in-memory `bundle.json` into a zip (in bytes) using the same directory layout as `diag pack`:
+/// Packs an in-memory raw `bundle.json` into a zip (in bytes) using the same directory layout as `diag pack`:
 ///
 /// `{bundle_name}/bundle.json`
 ///

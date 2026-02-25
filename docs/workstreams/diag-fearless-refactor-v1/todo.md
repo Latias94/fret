@@ -7,6 +7,11 @@ scope: diagnostics, automation, tooling, refactor
 
 # Diagnostics Fearless Refactor v1 (TODO)
 
+Status note:
+
+- This file contains historical notes and may drift.
+- For the up-to-date tracker, see `docs/workstreams/diag-fearless-refactor-v1-todo.md`.
+
 ## M1: Make the monolith smaller (safe mechanical moves)
 
 - [x] Extract internal script runner state types into `ecosystem/fret-bootstrap/src/ui_diagnostics/script_types.rs`.
@@ -188,6 +193,7 @@ scope: diagnostics, automation, tooling, refactor
     - `crates/fret-diag/src/commands/doctor.rs`
 - [x] Normalize bundle artifact path handling in run/post-run consumers (prefer `resolve_bundle_artifact_path`, avoid hard-coded `join("bundle.json")` reads).
 - [x] Update the offline bundle viewer and docs to accept `bundle.schema2.json` as a primary artifact (prefer schema2 when both exist in a zip).
+- [x] Centralize bundle artifact resolution helpers (including a no-materialize variant) under `crates/fret-diag/src/paths.rs`.
 - [ ] Continue the sweep: remove remaining hard-coded `bundle.json` reads across `crates/fret-diag` tooling and gates (prefer shared helpers).
 
 ## M3: Tooling + AI loop

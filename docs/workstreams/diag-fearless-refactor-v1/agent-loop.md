@@ -8,7 +8,7 @@ scope: diagnostics, automation, tooling, agent
 # Agent-friendly diagnostics loop (recommended)
 
 This document captures a **repeatable**, **agent-friendly** workflow for triaging UI diagnostics bundles.
-The goal is to avoid “open a huge `bundle.json`” during first-pass triage by preferring small sidecars.
+The goal is to avoid “open a huge bundle artifact” (especially `bundle.json`) during first-pass triage by preferring small sidecars.
 
 ## Inputs
 
@@ -32,7 +32,18 @@ Note:
 
 - When using `diag run` / `diag suite` / `diag perf`, `--bundle-doctor fix` will also attempt the schema2 repair (when `bundle.json` exists).
 
-## Step 1: First-pass perf triage (no bundle.json materialization)
+## Optional: Pack a bounded share zip
+
+If you want to share a repro bundle, prefer bounded zips:
+
+- Ensure schema2 exists (or let `--bundle-doctor fix` handle it when possible):
+  - `fretboard diag doctor --fix-schema2 <bundle_dir> --warmup-frames <n>`
+- Preferred (AI-first, bounded; does not ship full bundle artifacts):
+  - `fretboard diag pack <bundle_dir> --ai-only --warmup-frames <n>`
+- Compat (offline viewer-friendly; includes bundle artifact):
+  - `fretboard diag pack <bundle_dir> --include-all --pack-schema2-only --warmup-frames <n>`
+
+## Step 1: First-pass perf triage (no full bundle materialization)
 
 Use `triage --lite` (frames-index based) to identify the worst frames quickly:
 
@@ -43,7 +54,7 @@ Use `triage --lite` (frames-index based) to identify the worst frames quickly:
 
 ## Step 2: Perf “hotspots” fallback (slow frames report)
 
-When `bundle.json` is too large to run JSON-size hotspots, use:
+When the bundle artifact is too large to run JSON-size hotspots, use:
 
 - `fretboard diag hotspots --lite <bundle_dir> --warmup-frames <n> --metric total`
 
@@ -60,7 +71,7 @@ Once you have a candidate frame/window, slice only the relevant snapshot(s):
 - Or, if you have snapshot sequence instead:
   - `fretboard diag slice <bundle_dir> --test-id <test_id> --window <id> --snapshot-seq <seq> --warmup-frames <n>`
 
-## Step 4: Generate an AI packet
+## Step 4: Generate an AI packet (bounded)
 
 To hand off to an AI agent, generate a compact packet directory:
 
@@ -82,6 +93,6 @@ Expected contents include:
 
 If the lite loop points to a specific failure, escalate to heavier artifacts only as needed:
 
-- full `triage.json` (stats-heavy; may require materializing more of `bundle.json`)
+- full `triage.json` (stats-heavy; may require materializing more of a bundle artifact)
 - full `hotspots` (JSON subtree size hotspots)
 - screenshot diffs / renderdoc / tracy traces

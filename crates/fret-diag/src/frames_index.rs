@@ -89,6 +89,7 @@ pub(crate) fn ensure_frames_index_json(
     warmup_frames: u64,
 ) -> Result<PathBuf, String> {
     let out = default_frames_index_path(bundle_path);
+    let expected_bundle = bundle_path.display().to_string();
     if out.is_file() {
         if let Some(existing) = read_frames_index_json_v1(&out, warmup_frames) {
             let kind_ok = existing.get("kind").and_then(|v| v.as_str()) == Some(FRAMES_INDEX_KIND);
@@ -96,7 +97,9 @@ pub(crate) fn ensure_frames_index_json(
                 == Some(FRAMES_INDEX_SCHEMA_VERSION);
             let warmup_ok =
                 existing.get("warmup_frames").and_then(|v| v.as_u64()) == Some(warmup_frames);
-            if kind_ok && schema_ok && warmup_ok {
+            let bundle_ok =
+                existing.get("bundle").and_then(|v| v.as_str()) == Some(&expected_bundle);
+            if kind_ok && schema_ok && warmup_ok && bundle_ok {
                 return Ok(out);
             }
         }
@@ -173,7 +176,7 @@ fn build_frames_index_payload_streaming(
         type Value = ();
 
         fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(f, "bundle.json object")
+            write!(f, "bundle artifact object")
         }
 
         fn visit_map<M>(self, mut map: M) -> Result<(), M::Error>
@@ -1041,7 +1044,7 @@ mod tests {
             ts
         ));
         std::fs::create_dir_all(&dir).expect("create temp dir");
-        let bundle_path = dir.join("bundle.json");
+        let bundle_path = crate::resolve_bundle_artifact_path(&dir);
         std::fs::write(
             &bundle_path,
             r#"{

@@ -316,9 +316,9 @@ pub(super) fn preview_avatar(
                     .delay_ms(120)
                     .into_element(cx);
 
-                let avatar = shadcn::Avatar::new([image, fallback])
-                    .size(shadcn::AvatarSize::Default)
-                    .into_element(cx);
+            let avatar = shadcn::Avatar::new([image, fallback])
+                .size(shadcn::AvatarSize::Default)
+                .into_element(cx);
 
                 // Match shadcn docs: Avatar is composed inside a ghost icon button used as the
                 // dropdown trigger (`asChild`-style).
@@ -377,7 +377,7 @@ pub(super) fn preview_avatar(
                 },
             )]
         })
-        .test_id("ui-gallery-avatar-rtl")
+        .test_id("ui-gallery-avatar-rtl-row")
     };
 
     let notes = doc_layout::notes(

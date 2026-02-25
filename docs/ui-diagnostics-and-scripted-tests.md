@@ -20,7 +20,7 @@ Scope note:
 
 The goal is GPUI/Zed-style "inspectable, shareable repro units":
 
-- capture a portable bundle (`bundle.json`) that can be sent to another developer (or an AI tool),
+- capture a portable bundle artifact (`bundle.json` or `bundle.schema2.json`) that can be sent to another developer (or an AI tool),
 - select targets by **semantics** (ADR 0033) rather than paint output,
 - run deterministic scripted repros without adding ad-hoc debug UI.
 
@@ -135,9 +135,9 @@ $env:FRET_DIAG=1
 $env:FRET_DIAG_REDACT_TEXT=0
 ```
 
-## AI-first triage recipe (avoid sharing full `bundle.json`)
+## AI-first triage recipe (avoid sharing full bundle artifacts)
 
-When `bundle.json` is too large to share or inspect directly, prefer a bounded artifact set:
+When a bundle artifact is too large to share or inspect directly, prefer a bounded artifact set:
 
 1. Get quick context:
    - `cargo run -p fretboard -- diag meta <bundle_dir|bundle.json|bundle.schema2.json> --meta-report`
@@ -185,6 +185,10 @@ Workflow tip:
 - You can also open a `.zip` that contains `bundle.json` or `bundle.schema2.json` anywhere inside it (handy for sharing a full repro directory).
 - To generate a shareable `.zip` for the latest bundle: `cargo run -p fretboard -- diag pack`
 - To include nearby artifacts (`script.json`, `script.result.json`, `pick.result.json`), `triage.json`, and screenshots (when present): `cargo run -p fretboard -- diag pack --include-all`
+- Prefer viewer-friendly zips when schema2 exists (keeps artifacts smaller than raw `bundle.json`):
+  - `cargo run -p fretboard -- diag pack --include-all --pack-schema2-only --warmup-frames <n>`
+  - If needed: `cargo run -p fretboard -- diag doctor --fix-schema2 <bundle_dir> --warmup-frames <n>`
+- For AI-first sharing, prefer `diag pack --ai-only` (see “AI-first sharing” below).
 - The bundle viewer surfaces these zip artifacts (and lets you copy/download them) when they are present under `_root/`.
 - To generate a machine-readable `triage.json` next to a bundle: `cargo run -p fretboard -- diag triage <bundle_dir|bundle.json|bundle.schema2.json>`
 - To generate (or refresh) a cached bundle metadata sidecar (`bundle.meta.json`): `cargo run -p fretboard -- diag meta <bundle_dir|bundle.json|bundle.schema2.json> --json`
@@ -200,8 +204,25 @@ Prefer sharing **bounded artifacts** over the full `bundle.json` (especially in 
 
 - Generate an “AI packet” directory (includes `bundle.meta.json`, `bundle.index.json`, `test_ids.index.json`, and a budget report):
   - `cargo run -p fretboard -- diag ai-packet <bundle_dir|bundle.json|bundle.schema2.json> --packet-out <dir>`
+  - If you already have sidecars but cannot read the bundle artifact (too large / unavailable), you can build a packet
+    without reading the bundle:
+    - `cargo run -p fretboard -- diag ai-packet <bundle_dir> --sidecars-only --packet-out <dir>`
+    - Requires the sidecars (`bundle.meta.json`, `bundle.index.json`, `test_ids.index.json`, `frames.index.json`) to already exist.
   - If `bundle.schema2.json` is present, the packet may also include it (within the packet budget).
     - To generate it: `cargo run -p fretboard -- diag doctor --fix-schema2 <bundle_dir> --warmup-frames <n>`
+- Convenience: generate `ai.packet/` next to a bundle dir during common workflows:
+  - After a scripted run: `cargo run -p fretboard -- diag run <script.json> --ai-packet`
+  - Before packing a share zip: `cargo run -p fretboard -- diag pack <bundle_dir> --ai-packet`
+  - Pack a bounded “AI-only” zip (packs `ai.packet/` + nearby script sources, but does not include the full bundle artifact):
+    - `cargo run -p fretboard -- diag pack <bundle_dir> --ai-only`
+    - If the bundle dir has sidecars but no readable bundle artifact, `diag pack --ai-only` can still succeed by generating
+      `ai.packet/` from sidecars (equivalent to `diag ai-packet <bundle_dir> --sidecars-only`).
+  - For a multi-script repro run, pack a bounded `repro.ai.zip`:
+    - `cargo run -p fretboard -- diag repro <suite|script.json...> --ai-only`
+    - If any repro item bundle artifacts are missing/unreadable but sidecars exist, this may still succeed by generating
+      `ai.packet/` from sidecars for each item (equivalent to `diag ai-packet <bundle_dir> --sidecars-only`).
+  - Agent plan JSON (includes recommended bounded commands like `diag pack --ai-only`):
+    - `cargo run -p fretboard -- diag agent <bundle_dir|bundle.json|bundle.schema2.json>`
 - Focus on a specific target when possible (writes a bounded `slice.*.json` alongside the packet):
   - `cargo run -p fretboard -- diag ai-packet <bundle_dir|bundle.json|bundle.schema2.json> --test-id <test_id> --packet-out <dir>`
 - If you only need a semantics-focused subset, slice directly:
@@ -313,7 +334,8 @@ Script shrinking (automated minimal repro):
    Or run it and wait for a pass/fail result (CI-friendly):
 
    - `cargo run -p fretboard -- diag run .\\script.json`
-   - To also pack the most recent bundle (plus optional artifacts) into a shareable `.zip`: `cargo run -p fretboard -- diag run .\\script.json --pack --include-all`
+   - To also pack a bounded shareable `.zip` for AI triage (does not ship the full bundle artifact): `cargo run -p fretboard -- diag run .\\script.json --bundle-doctor fix --pack --ai-only`
+   - If you need an offline viewer-friendly zip (includes the bundle artifact): `cargo run -p fretboard -- diag run .\\script.json --bundle-doctor fix --pack --include-all --pack-schema2-only`
 
    Or run a pre-defined suite (the app must be running):
 
@@ -564,6 +586,9 @@ Semantics export:
   - `changed`: include semantics only when `semantics_fingerprint` changes (always keeps the last snapshot's semantics).
   - `last`: include semantics only on the last snapshot (default for script-driven dumps; useful for AI triage and very large UIs).
   - `off`: never include semantics in bundles (perf captures where semantics isn't needed).
+- `FRET_DIAG_BUNDLE_WRITE_SCHEMA2=1`: also write a compact `bundle.schema2.json` alongside `bundle.json` during dumps (default disabled).
+  - When launching via `fretboard diag ... --launch`, schema2/AI-focused flows may auto-enable this (e.g. `--ai-packet`, `--ai-only`,
+    `--pack-schema2-only`), unless you already set an explicit value.
 - `FRET_UI_GALLERY_INSPECTOR_KEEP_ALIVE=...`: keep-alive budget for the UI Gallery Inspector torture (retained host; ADR 0177).
 
 Privacy / size:

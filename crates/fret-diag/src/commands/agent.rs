@@ -2,24 +2,7 @@ use std::path::{Path, PathBuf};
 
 use serde_json::json;
 
-fn looks_like_path(s: &str) -> bool {
-    s.contains('/') || s.contains('\\') || s.ends_with(".json")
-}
-
-fn resolve_bundle_artifact_path_or_latest(
-    bundle_arg: Option<&str>,
-    workspace_root: &Path,
-    out_dir: &Path,
-) -> Result<PathBuf, String> {
-    if let Some(s) = bundle_arg {
-        let src = crate::resolve_path(workspace_root, PathBuf::from(s));
-        return Ok(crate::resolve_bundle_artifact_path(&src));
-    }
-    let latest = crate::read_latest_pointer(out_dir)
-        .or_else(|| crate::find_latest_export_dir(out_dir))
-        .ok_or_else(|| format!("no diagnostics bundle found under {}", out_dir.display()))?;
-    Ok(crate::resolve_bundle_artifact_path(&latest))
-}
+use super::args::{looks_like_path, resolve_bundle_artifact_path_or_latest};
 
 pub(crate) fn cmd_agent(
     rest: &[String],
@@ -110,6 +93,16 @@ pub(crate) fn cmd_agent(
                 "why": "Optional: write bundle.schema2.json for large bundles to keep tooling and AI loops fast.",
             },
             {
+                "id": "pack_schema2_only_optional",
+                "command": format!("fretboard diag pack {} --ai-only --warmup-frames {}", bundle_dir.display(), warmup_frames),
+                "why": "Optional: pack a bounded shareable zip for AI triage (ai.packet only; avoids shipping full bundle artifacts).",
+            },
+            {
+                "id": "pack_schema2_only_compat_optional",
+                "command": format!("fretboard diag pack {} --include-all --pack-schema2-only --warmup-frames {}", bundle_dir.display(), warmup_frames),
+                "why": "Optional (compat): pack a schema2-only zip that still includes the bundle artifact (useful for offline viewer workflows).",
+            },
+            {
                 "id": "triage_lite_total",
                 "command": format!("fretboard diag triage --lite {} --warmup-frames {} --metric total", bundle_dir.display(), warmup_frames),
                 "why": "First-pass perf triage (slowest frames) without materializing bundle artifacts.",
@@ -136,8 +129,13 @@ pub(crate) fn cmd_agent(
             },
             {
                 "id": "ai_packet",
-                "command": format!("fretboard diag ai-packet {} --warmup-frames {}", bundle_dir.display(), warmup_frames),
-                "why": "Generate a compact packet for an AI agent (includes doctor + lite reports).",
+                "command": format!("fretboard diag ai-packet {} --sidecars-only --warmup-frames {}", bundle_dir.display(), warmup_frames),
+                "why": "Generate a compact packet for an AI agent without reading the bundle artifact (requires existing sidecars).",
+            },
+            {
+                "id": "ai_packet_full_optional",
+                "command": format!("fretboard diag ai-packet {} --include-triage --warmup-frames {}", bundle_dir.display(), warmup_frames),
+                "why": "Optional: generate a richer AI packet (may read the bundle artifact to include triage.json and slices).",
             },
             {
                 "id": "hotspots_json_size_optional",
