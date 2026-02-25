@@ -253,10 +253,20 @@ Goal: common tooling should keep working even when `bundle.json` is too large to
   - [x] Migrate existing streaming gates to the shared helper (reduce duplication):
     - `crates/fret-diag/src/stats/notify_gates_streaming.rs`
     - `crates/fret-diag/src/stats/drag_cache_gates_streaming.rs`
-    - `crates/fret-diag/src/stats/wheel_scroll_streaming.rs`
-  - [x] Start splitting wheel-scroll streaming gates into a directory module:
-    - `crates/fret-diag/src/stats/wheel_scroll_streaming/mod.rs`
-    - `crates/fret-diag/src/stats/wheel_scroll_streaming/legacy.rs`
+    - `crates/fret-diag/src/stats/wheel_scroll_streaming/`
+  - [x] Split wheel-scroll streaming gates into a directory module (reduce file-size blast radius):
+    - `crates/fret-diag/src/stats/wheel_scroll_streaming/mod.rs` (exports)
+    - `crates/fret-diag/src/stats/wheel_scroll_streaming/checks.rs` (gate entrypoints)
+    - `crates/fret-diag/src/stats/wheel_scroll_streaming/types.rs` (shared structs)
+    - `crates/fret-diag/src/stats/wheel_scroll_streaming/wheel_frames_min.rs` (streamed wheel frame index)
+    - `crates/fret-diag/src/stats/wheel_scroll_streaming/tests.rs` (regression tests)
+    - `crates/fret-diag/src/stats/wheel_scroll_streaming/before_after_metas.rs` (TODO: move impl out of legacy)
+    - `crates/fret-diag/src/stats/wheel_scroll_streaming/inline_semantics_lite.rs` (TODO: move impl out of legacy)
+    - `crates/fret-diag/src/stats/wheel_scroll_streaming/legacy.rs` (stream readers; TODO: delete once migrated)
+  - [ ] Remove the remaining wheel-scroll legacy shim:
+    - move `read_window_before_after_metas` into `before_after_metas.rs`
+    - move `stream_read_inline_semantics_lite_for_pairs` into `inline_semantics_lite.rs`
+    - delete `crates/fret-diag/src/stats/wheel_scroll_streaming/legacy.rs`
   - [x] Split retained virtual-list streaming gates into dedicated submodules:
     - `crates/fret-diag/src/stats/retained_vlist_gates_streaming/`
   - [x] First wave (frames-index aggregates):

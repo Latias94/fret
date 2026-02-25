@@ -4,9 +4,15 @@
 // run on huge `bundle.json` / `bundle.schema2.json` inputs.
 
 mod legacy;
+mod before_after_metas;
+mod checks;
+mod inline_semantics_lite;
 mod types;
 mod wheel_frames_min;
 
-pub(crate) use legacy::{
+#[cfg(test)]
+mod tests;
+
+pub(crate) use checks::{
     check_bundle_for_wheel_scroll_hit_changes_streaming, check_bundle_for_wheel_scroll_streaming,
 };
