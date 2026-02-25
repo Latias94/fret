@@ -23,11 +23,11 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 
 ## Summary
 
-- Last updated: 2026-02-23
-- ADR count (numbered): 263
+- Last updated: 2026-02-25
+- ADR count (numbered): 264
 
 - Aligned: 109
-- Aligned (with known gaps): 94
+- Aligned (with known gaps): 95
 - N/A (superseded): 2
 - Not audited: 18
 - Not implemented: 4
@@ -37,6 +37,7 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 
 | ADR | ADR Status | Implementation Alignment | Notes |
 | --- | --- | --- | --- |
+| [`0299-custom-effect-abi-wgpu-only-mvp.md`](0299-custom-effect-abi-wgpu-only-mvp.md) | Draft | Aligned (with known gaps) | Adds a bounded custom effect ABI (`EffectId`, `EffectParamsV1`, `EffectStep::CustomV1`) with renderer-owned registration (`CustomEffectService`) and deterministic budget-driven degradation (v1 is wgpu-only; other backends may return `Unsupported`/degrade). WGPU backend validates and caches effect programs, invalidates scene encodings via `custom_effects_generation`, compiles per-effect pipelines, and records a single-pass fullscreen effect with scissor/mask semantics. Evidence: contract `crates/fret-core/src/{effects.rs,ids.rs,scene/mod.rs,scene/validate.rs,scene/fingerprint.rs}`, wgpu service `crates/fret-render-wgpu/src/renderer/services.rs`, pipeline `crates/fret-render-wgpu/src/renderer/pipelines/custom_effect.rs` + WGSL parts `crates/fret-render-wgpu/src/renderer/pipelines/wgsl/custom_effect_*.wgsl`, cache key `crates/fret-render-wgpu/src/renderer/render_scene/encoding_cache.rs`, executor/recorder `crates/fret-render-wgpu/src/renderer/render_scene/{executor.rs,recorders/effects.rs}`, gate `crates/fret-render-wgpu/tests/effect_custom_v1_conformance.rs`. |
 | [`0298-a11y-scrollbar-semantics-v1.md`](0298-a11y-scrollbar-semantics-v1.md) | Accepted | Aligned | Adds a portable scrollbar role (`SemanticsRole::ScrollBar`) and publishes structured scroll metadata (`SemanticsNodeExtra.scroll` + `orientation`) from the `Scrollbar` mechanism element, mapping into AccessKit `Role::ScrollBar` and exposing a portable `scroll_by` action surface when the scrollbar is adjustable. Evidence: contract `crates/fret-core/src/semantics.rs`, AccessKit role mapping `crates/fret-a11y-accesskit/src/roles.rs`, UI writers `crates/fret-ui/src/declarative/host_widget/semantics.rs` + `crates/fret-ui/src/declarative/host_widget.rs`, selector label `ecosystem/fret-bootstrap/src/ui_diagnostics/selector.rs`, gates `crates/fret-ui/src/declarative/tests/semantics.rs` + `crates/fret-a11y-accesskit/src/tests.rs`. |
 | [`0297-a11y-heading-semantics-v1.md`](0297-a11y-heading-semantics-v1.md) | Accepted | Aligned | Adds a portable heading semantics role (`SemanticsRole::Heading`) and adopts it in shadcn modal titles, using the existing hierarchy `level` surface (`SemanticsNodeExtra.level`) to publish a 1-based heading level. Evidence: contract `crates/fret-core/src/semantics.rs`, AccessKit role mapping `crates/fret-a11y-accesskit/src/roles.rs` (and `mapping.rs` already maps `level`), ecosystem adoption `ecosystem/fret-ui-shadcn/src/{dialog.rs,alert_dialog.rs}`, shadcn gate `ecosystem/fret-ui-shadcn/tests/snapshots/heading_level_semantics.json`. |
 | [`0296-a11y-live-region-semantics-v1.md`](0296-a11y-live-region-semantics-v1.md) | Accepted | Aligned | Adds a portable live region semantics surface (`SemanticsFlags.live` + `SemanticsFlags.live_atomic`) to represent `aria-live` / `aria-atomic`-like outcomes and map them into platform APIs (AccessKit `live` + `live_atomic`). Evidence: contract `crates/fret-core/src/semantics.rs`, UI writers `crates/fret-ui/src/{widget.rs,element.rs,declarative/host_widget/semantics.rs}`, AccessKit mapping + test `crates/fret-a11y-accesskit/src/{mapping.rs,tests.rs}`, ecosystem adoption `ecosystem/fret-ui-kit/src/window_overlays/render.rs`, shadcn gate `ecosystem/fret-ui-shadcn/tests/snapshots/live_region_semantics.json`, diagnostics snapshot/fingerprint `ecosystem/fret-bootstrap/src/ui_diagnostics/{semantics.rs,ui_diagnostics.rs}`. |
