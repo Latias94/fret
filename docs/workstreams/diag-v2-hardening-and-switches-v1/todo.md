@@ -11,7 +11,7 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
 
 ## P0: Switches consolidation (config layering)
 
-- [ ] Document config resolution order (CLI vs env vs config file vs defaults) and link it from `docs/ui-diagnostics-and-scripted-tests.md`.
+- [x] Document config resolution order (CLI vs env vs config file vs defaults) and link it from `docs/ui-diagnostics-and-scripted-tests.md`.
 - [ ] Audit `tools/diag-configs/diag.config.example.json` for drift; ensure every field is either:
   - implemented, or
   - explicitly documented as “planned / ignored by runtime”.
@@ -26,7 +26,7 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
   - [ ] `FRET_DIAG_REDACT_TEXT`
   - [ ] `FRET_DIAG_FIXED_FRAME_DELTA_MS`
 - [ ] Define “reserved env vars” policy for `--launch` (tooling-owned) and enforce it uniformly.
-- [ ] Add a `diag config doctor` (tooling-side) that prints an effective merged config + highlights deprecated keys/envs.
+- [x] Add a `diag config doctor` (tooling-side) that prints an effective merged config + highlights deprecated keys/envs.
 
 ## P0.5: Script library modularization (UX scalability)
 

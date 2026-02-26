@@ -2808,6 +2808,13 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             &resolved_inspect_trigger_path,
             inspect_consume_clicks,
         ),
+        "config" => commands::config::cmd_config(commands::config::ConfigCmdContext {
+            rest: rest.clone(),
+            workspace_root: workspace_root.clone(),
+            resolved_out_dir: resolved_out_dir.clone(),
+            resolved_ready_path: resolved_ready_path.clone(),
+            resolved_exit_path: resolved_exit_path.clone(),
+        }),
         "pick-arm" => commands::pick::cmd_pick_arm(&rest, &resolved_pick_trigger_path),
         "pick" => commands::pick::cmd_pick(
             &rest,
