@@ -133,6 +133,28 @@ def categorize_script(filename: str) -> tuple[str, str]:
             return ("ui_gallery.drawer", "ui-gallery/drawer")
         if n.startswith("ui-gallery-sonner-"):
             return ("ui_gallery.sonner", "ui-gallery/sonner")
+        if n.startswith("ui-gallery-table-"):
+            return ("ui_gallery.table", "ui-gallery/table")
+        if n.startswith("ui-gallery-code-view-"):
+            return ("ui_gallery.code_view", "ui-gallery/code-view")
+        if n.startswith("ui-gallery-control-chrome-"):
+            return ("ui_gallery.control_chrome", "ui-gallery/control-chrome")
+        if n.startswith("ui-gallery-collapsible-"):
+            return ("ui_gallery.collapsible", "ui-gallery/collapsible")
+        if n.startswith("ui-gallery-dropdown-"):
+            return ("ui_gallery.dropdown", "ui-gallery/dropdown")
+        if n.startswith("ui-gallery-nav-") or n.startswith("ui-gallery-navigation-"):
+            return ("ui_gallery.navigation", "ui-gallery/navigation")
+        if n.startswith("ui-gallery-carousel-"):
+            return ("ui_gallery.carousel", "ui-gallery/carousel")
+        if n.startswith("ui-gallery-toggle-"):
+            return ("ui_gallery.toggle", "ui-gallery/toggle")
+        if n.startswith("ui-gallery-theme-"):
+            return ("ui_gallery.theme", "ui-gallery/theme")
+        if n.startswith("ui-gallery-typography-"):
+            return ("ui_gallery.typography", "ui-gallery/typography")
+        if n.startswith("ui-gallery-virtual-list-"):
+            return ("ui_gallery.virtual_list", "ui-gallery/virtual-list")
 
         # Text buckets: keep IME matching token-based (avoid matching "time").
         if (
@@ -151,6 +173,9 @@ def categorize_script(filename: str) -> tuple[str, str]:
             return ("ui_gallery.text_wrap", "ui-gallery/text-wrap")
         if n.startswith("ui-gallery-text-"):
             return ("ui_gallery.text", "ui-gallery/text")
+
+        if n.startswith("ui-gallery-input-"):
+            return ("ui_gallery.input", "ui-gallery/input")
 
         if n.endswith("-steady.json") or "perf" in n or "resize" in n or "torture" in n:
             return ("ui_gallery.perf", "ui-gallery/perf")

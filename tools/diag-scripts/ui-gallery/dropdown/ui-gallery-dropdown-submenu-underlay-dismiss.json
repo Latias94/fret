@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "steps": [
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-overlay-reset" }
+    },
+    { "type": "wait_frames", "n": 5 },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-dropdown-trigger" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-dropdown-item-more" }
+      },
+      "timeout_frames": 60
+    },
+    {
+      "type": "move_pointer",
+      "target": { "kind": "test_id", "id": "ui-gallery-dropdown-item-more" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-dropdown-submenu-item-nested" }
+      },
+      "timeout_frames": 60
+    },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-overlay-underlay" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-overlay-underlay" }
+      },
+      "timeout_frames": 120
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-dropdown-submenu-underlay-dismiss"
+    }
+  ]
+}
