@@ -966,6 +966,13 @@ For the UI gallery, run:
 
 - `cargo run -p fretboard -- diag suite ui-gallery`
 
+Note:
+
+- The script library is expected to be modularized into subfolders over time (taxonomy + optional registry).
+  Prefer directory- and glob-based inputs (`--script-dir`, `--glob`) for ad-hoc runs, and avoid assuming scripts live
+  only at the top-level. See: `docs/workstreams/diag-v2-hardening-and-switches-v1/README.md`.
+- Migration helper (dry-run by default): `python tools/diag-scripts/migrate-script-library.py`.
+
 For component-focused conformance scripts (built-in suites), run:
 
 - `cargo run -p fretboard -- diag suite ui-gallery-select --timeout-ms 240000 --launch -- cargo run -p fret-ui-gallery --release`
