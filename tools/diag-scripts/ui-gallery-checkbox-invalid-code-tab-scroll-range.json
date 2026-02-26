@@ -20,17 +20,42 @@
       },
       "timeout_frames": 600
     },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
-    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
-    { "type": "press_key", "key": "backspace" },
-    { "type": "type_text", "text": "checkbox" },
-    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "type_text_into",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-search" },
+      "text": "checkbox",
+      "clear_before_type": true,
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 4 },
 
     {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
         "target": { "kind": "test_id", "id": "ui-gallery-nav-checkbox" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-nav-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-checkbox" },
+      "delta_y": -120.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": false,
+      "padding_px": 0.0,
+      "padding_insets_px": { "left_px": 0.0, "top_px": 24.0, "right_px": 0.0, "bottom_px": 24.0 },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-checkbox" },
+        "padding_px": 0.0,
+        "padding_insets_px": { "left_px": 0.0, "top_px": 24.0, "right_px": 0.0, "bottom_px": 24.0 },
+        "eps_px": 1.0
       },
       "timeout_frames": 600
     },
@@ -66,7 +91,7 @@
     {
       "type": "scroll_into_view",
       "container": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
-      "target": { "kind": "test_id", "id": "ui-gallery-checkbox-rtl-field" },
+      "target": { "kind": "test_id", "id": "ui-gallery-checkbox-notes" },
       "delta_y": -120.0,
       "require_fully_within_window": true,
       "padding_px": 24.0,
@@ -76,13 +101,13 @@
       "type": "wait_until",
       "predicate": {
         "kind": "bounds_within_window",
-        "target": { "kind": "test_id", "id": "ui-gallery-checkbox-rtl-field" },
+        "target": { "kind": "test_id", "id": "ui-gallery-checkbox-notes" },
         "padding_px": 24.0,
         "eps_px": 1.0
       },
       "timeout_frames": 900
     },
-    { "type": "capture_screenshot", "label": "ui-gallery-checkbox-invalid-code-tab-scroll-range.rtl_visible" },
+    { "type": "capture_screenshot", "label": "ui-gallery-checkbox-invalid-code-tab-scroll-range.notes_visible" },
     { "type": "capture_bundle", "label": "ui-gallery-checkbox-invalid-code-tab-scroll-range" }
   ]
 }

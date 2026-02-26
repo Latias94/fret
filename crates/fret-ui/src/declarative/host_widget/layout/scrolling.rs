@@ -1052,17 +1052,6 @@ impl ElementHostWidget {
                 }
                 max_child
             }
-        } else if cx.tree.view_cache_enabled()
-            && !at_scroll_extent_edge
-            && !must_probe_for_growing_extent
-            && let Some(cached) = intrinsic_cached_max_child
-            && cached != Size::default()
-        {
-            // Best-effort: reuse intrinsic sizing caches even when the child subtree is currently
-            // marked `needs_layout`. This avoids deep unbounded probe walks on transient
-            // invalidation frames (common under view-cache reconciliation).
-            needs_post_layout_shrink_clamp = true;
-            cached
         } else {
             let measure_started = profile_cfg.is_some().then(Instant::now);
             let mut max_child = Size::new(Px(0.0), Px(0.0));
@@ -1242,8 +1231,8 @@ impl ElementHostWidget {
                 // directly from the layout bounds without incorporating the current scroll offset.
                 let right =
                     (bounds.origin.x.0 + bounds.size.width.0 - content_bounds.origin.x.0).max(0.0);
-                let bottom = (bounds.origin.y.0 + bounds.size.height.0 - content_bounds.origin.y.0)
-                    .max(0.0);
+                let bottom =
+                    (bounds.origin.y.0 + bounds.size.height.0 - content_bounds.origin.y.0).max(0.0);
                 observed.width = Px(observed.width.0.max(right));
                 observed.height = Px(observed.height.0.max(bottom));
             }

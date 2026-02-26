@@ -146,7 +146,6 @@ pub(super) fn semantics_diff_summary_nodes(
     before_nodes: &[serde_json::Value],
     after_nodes: &[serde_json::Value],
 ) -> String {
-
     let mut before_by_id: HashMap<u64, &serde_json::Value> = HashMap::new();
     for node in before_nodes {
         let Some(id) = node.get("id").and_then(|v| v.as_u64()) else {

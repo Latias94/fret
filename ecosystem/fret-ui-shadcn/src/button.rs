@@ -330,6 +330,7 @@ pub struct Button {
     on_hover_change: Option<OnHoverChange>,
     toggle_model: Option<fret_runtime::Model<bool>>,
     disabled: bool,
+    focusable: bool,
     test_id: Option<Arc<str>>,
     render: Option<ButtonRender>,
     variant: ButtonVariant,
@@ -363,6 +364,7 @@ impl std::fmt::Debug for Button {
             .field("on_hover_change", &self.on_hover_change.is_some())
             .field("toggle_model", &self.toggle_model.is_some())
             .field("disabled", &self.disabled)
+            .field("focusable", &self.focusable)
             .field("test_id", &self.test_id)
             .field("render", &self.render)
             .field("variant", &self.variant)
@@ -394,6 +396,7 @@ impl Button {
             on_hover_change: None,
             toggle_model: None,
             disabled: false,
+            focusable: true,
             test_id: None,
             render: None,
             variant: ButtonVariant::default(),
@@ -487,6 +490,11 @@ impl Button {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    pub fn focusable(mut self, focusable: bool) -> Self {
+        self.focusable = focusable;
         self
     }
 
@@ -653,6 +661,7 @@ impl Button {
                 || command
                     .as_ref()
                     .is_some_and(|cmd| !cx.command_is_enabled(cmd));
+            let focusable = self.focusable;
             let user_chrome = self.chrome;
             let user_bg_override = user_chrome.background.is_some();
             let user_border_override = user_chrome.border_color.is_some();
@@ -782,7 +791,7 @@ impl Button {
                 let pressable_props = PressableProps {
                     layout: pressable_layout,
                     enabled: !disabled,
-                    focusable: true,
+                    focusable,
                     focus_ring: Some(decl_style::focus_ring(&theme, focus_radius)),
                     key_activation: render_key_activation,
                     a11y: PressableA11y {

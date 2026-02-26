@@ -1595,9 +1595,11 @@ fn mount_element<H: UiHost + 'static>(
             );
         }
 
-        if transitioned_into_reuse {
-            window_state.touch_view_cache_state_keys_for_subtree_elements(id);
-        }
+        // View-cache reuse skips rerendering declarative closures, so component-owned action hooks
+        // (stored as element state) must be kept alive explicitly while the cached subtree
+        // remains interactive.
+        window_state.touch_view_cache_action_hook_state_for_subtree_elements(id);
+
         inherit_observations_for_existing_subtree(ui, window_state, window_frame, node);
         collect_scroll_handle_bindings_for_existing_subtree(
             ui,

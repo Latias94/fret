@@ -790,7 +790,7 @@ impl Sidebar {
             children,
             collapsed: false,
             side: SidebarSide::Left,
-            collapsible: SidebarCollapsible::Icon,
+            collapsible: SidebarCollapsible::Offcanvas,
             variant: SidebarVariant::Sidebar,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
@@ -857,7 +857,10 @@ impl Sidebar {
 
         publish_sidebar_surface_context(cx, surface_context);
 
-        if is_mobile && let Some(sidebar_ctx) = sidebar_ctx {
+        if is_mobile
+            && !matches!(collapsible, SidebarCollapsible::None)
+            && let Some(sidebar_ctx) = sidebar_ctx
+        {
             let open_model = sidebar_ctx.open.clone();
             let open_mobile_model = sidebar_ctx.open_mobile.clone();
             let is_mobile_for_toggle = sidebar_ctx.is_mobile;
@@ -1080,7 +1083,10 @@ impl Sidebar {
 
         publish_sidebar_surface_context(cx, surface_context);
 
-        if is_mobile && let Some(sidebar_ctx) = sidebar_ctx {
+        if is_mobile
+            && !matches!(collapsible, SidebarCollapsible::None)
+            && let Some(sidebar_ctx) = sidebar_ctx
+        {
             let sheet_side = sidebar_sheet_side(side);
             let (surface_props, sheet_size, sheet_bg, sheet_border) = {
                 let theme = Theme::global(&*cx.app);
@@ -1320,6 +1326,7 @@ impl SidebarTrigger {
                             &ctx.open_mobile,
                             ctx.is_mobile,
                         );
+                        host.request_redraw(action_cx.window);
                     }
                 }))
             };
@@ -1430,7 +1437,8 @@ impl SidebarRail {
                 .absolute()
                 .top_px(Px(0.0))
                 .bottom_px(Px(0.0))
-                .w_px(Px(16.0));
+                .w_px(Px(16.0))
+                .h_full();
 
             layout = match side {
                 SidebarSide::Left => layout.right_neg_px(Px(8.0)),
@@ -1472,6 +1480,7 @@ impl SidebarRail {
                             &ctx.open_mobile,
                             ctx.is_mobile,
                         );
+                        host.request_redraw(action_cx.window);
                     }
                 }))
             };
@@ -1481,7 +1490,8 @@ impl SidebarRail {
                 .as_ref()
                 .is_some_and(|cmd| !cx.command_is_enabled(cmd));
 
-        let mut rail = Button::new("Toggle Sidebar")
+        let mut rail = Button::new("")
+            .a11y_label("Toggle Sidebar")
             .variant(ButtonVariant::Ghost)
             .size(ButtonSize::IconSm)
             .on_hover_change(Arc::new(move |host, acx, hovered| {
@@ -1493,6 +1503,7 @@ impl SidebarRail {
                 }
             }))
             .disabled(disabled)
+            .focusable(false)
             .refine_style(
                 ChromeRefinement::default()
                     .p(Space::N0)
@@ -3577,10 +3588,10 @@ impl SidebarMenuButton {
         let element = cx.pressable(pressable, move |cx, st| {
             cx.pressable_dispatch_command_if_enabled_opt(on_click.clone());
             if let Some(on_navigate) = navigate_handler.clone() {
-                cx.pressable_on_activate(on_navigate);
+                cx.pressable_add_on_activate(on_navigate);
             }
             if let Some(on_activate) = on_activate.clone() {
-                cx.pressable_on_activate(on_activate);
+                cx.pressable_add_on_activate(on_activate);
             }
             let (fg, props, inner_gap, label_style) = {
                 let theme = Theme::global(&*cx.app);
@@ -4256,14 +4267,11 @@ mod tests {
         ui.set_root(root);
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
-        let theme = Theme::global(&app).clone();
-        let icon_w = sidebar_width_icon(&theme).0;
-
         let sidebar_node = *ui.children(root).first().expect("sidebar node");
         let sidebar_bounds = ui.debug_node_bounds(sidebar_node).expect("sidebar bounds");
         assert!(
-            (sidebar_bounds.size.width.0 - icon_w).abs() <= 1.0,
-            "expected provider-collapsed width ~{icon_w}, got {}",
+            sidebar_bounds.size.width.0 <= 1.0,
+            "expected provider-collapsed (default offcanvas) width ~0, got {}",
             sidebar_bounds.size.width.0
         );
     }

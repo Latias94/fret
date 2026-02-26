@@ -2,20 +2,20 @@ use super::*;
 
 #[path = "diag_perf/aux_scripts.rs"]
 mod aux_scripts;
-#[path = "diag_perf/run_script.rs"]
-mod run_script;
-#[path = "diag_perf/reporting.rs"]
-mod reporting;
-#[path = "diag_perf/hints.rs"]
-mod hints;
-#[path = "diag_perf/stats_rows.rs"]
-mod stats_rows;
-#[path = "diag_perf/outputs.rs"]
-mod outputs;
 #[path = "diag_perf/baseline_rows.rs"]
 mod baseline_rows;
+#[path = "diag_perf/hints.rs"]
+mod hints;
+#[path = "diag_perf/outputs.rs"]
+mod outputs;
+#[path = "diag_perf/reporting.rs"]
+mod reporting;
+#[path = "diag_perf/run_script.rs"]
+mod run_script;
 #[path = "diag_perf/runs_rows.rs"]
 mod runs_rows;
+#[path = "diag_perf/stats_rows.rs"]
+mod stats_rows;
 #[path = "diag_perf/thresholds.rs"]
 mod thresholds;
 
@@ -828,7 +828,8 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
                             top_frame,
                             frame_p95_total_time_us: report.p95_total_time_us,
                             frame_p95_layout_time_us: report.p95_layout_time_us,
-                            frame_p95_layout_engine_solve_time_us: report.p95_layout_engine_solve_time_us,
+                            frame_p95_layout_engine_solve_time_us: report
+                                .p95_layout_engine_solve_time_us,
                             pointer_move_frames_present,
                             pointer_move_frames_considered,
                             pointer_move_max_dispatch_time_us,
@@ -861,9 +862,11 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
                             src_pointer_move_hit_test,
                             thr_pointer_move_global_changes,
                             src_pointer_move_global_changes,
-                            thr_paint_cache_hit_test_only_replay_allowed_max: thr_paint_cache_hit_test_only_replay_allowed_max,
+                            thr_paint_cache_hit_test_only_replay_allowed_max:
+                                thr_paint_cache_hit_test_only_replay_allowed_max,
                             src_paint_cache_hit_test_only_replay_allowed_max,
-                            thr_paint_cache_hit_test_only_replay_rejected_key_mismatch_max: thr_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+                            thr_paint_cache_hit_test_only_replay_rejected_key_mismatch_max:
+                                thr_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
                             src_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
                         },
                     );
@@ -1719,9 +1722,11 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
                         src_pointer_move_hit_test,
                         thr_pointer_move_global_changes,
                         src_pointer_move_global_changes,
-                        thr_paint_cache_hit_test_only_replay_allowed_max: thr_paint_cache_hit_test_only_replay_allowed_max,
+                        thr_paint_cache_hit_test_only_replay_allowed_max:
+                            thr_paint_cache_hit_test_only_replay_allowed_max,
                         src_paint_cache_hit_test_only_replay_allowed_max,
-                        thr_paint_cache_hit_test_only_replay_rejected_key_mismatch_max: thr_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+                        thr_paint_cache_hit_test_only_replay_rejected_key_mismatch_max:
+                            thr_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
                         src_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
                     },
                 );
@@ -1796,7 +1801,12 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
     }
 
     if stats_json {
-        outputs::print_perf_stats_stdout_json(sort, repeat, &perf_json_rows, overall_worst.as_ref());
+        outputs::print_perf_stats_stdout_json(
+            sort,
+            repeat,
+            &perf_json_rows,
+            overall_worst.as_ref(),
+        );
     } else if let Some((us, src, bundle)) = overall_worst {
         println!(
             "PERF worst overall: {} us={} bundle={}",

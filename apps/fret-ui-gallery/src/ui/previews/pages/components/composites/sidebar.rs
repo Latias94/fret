@@ -312,6 +312,15 @@ pub(in crate::ui) fn preview_sidebar(cx: &mut ElementContext<'_, App>) -> Vec<An
                 let selected_value =
                     resolve_selected(cx, &controlled_selected, "design-engineering");
 
+                let controlled_open_for_toggle = controlled_open.clone();
+                let on_toggle_controlled_open: fret_ui::action::OnActivate =
+                    Arc::new(move |host, action_cx, _reason| {
+                        let _ = host
+                            .models_mut()
+                            .update(&controlled_open_for_toggle, |v| *v = !*v);
+                        host.request_redraw(action_cx.window);
+                    });
+
                 let header = stack::hstack(
                     cx,
                     stack::HStackProps::default()
@@ -327,7 +336,7 @@ pub(in crate::ui) fn preview_sidebar(cx: &mut ElementContext<'_, App>) -> Vec<An
                             })
                             .variant(shadcn::ButtonVariant::Outline)
                             .size(shadcn::ButtonSize::Sm)
-                            .toggle_model(controlled_open.clone())
+                            .on_activate(on_toggle_controlled_open.clone())
                             .test_id("ui-gallery-sidebar-controlled-toggle")
                             .into_element(cx),
                             shadcn::typography::muted(
@@ -400,7 +409,7 @@ pub(in crate::ui) fn preview_sidebar(cx: &mut ElementContext<'_, App>) -> Vec<An
                     shadcn::Sidebar::new(
                         [shadcn::SidebarContent::new([projects]).into_element(cx)],
                     )
-                    .collapsible(shadcn::SidebarCollapsible::Icon)
+                    .collapsible(shadcn::SidebarCollapsible::Offcanvas)
                     .refine_layout(LayoutRefinement::default().h_full())
                     .into_element(cx)
                     .attach_semantics(
@@ -691,14 +700,43 @@ pub(in crate::ui) fn preview_sidebar(cx: &mut ElementContext<'_, App>) -> Vec<An
                     "rust",
                     r#"shadcn::SidebarProvider::new().with(cx, |cx| {
     let sidebar = shadcn::Sidebar::new([
-        shadcn::SidebarHeader::new([...]).into_element(cx),
-        shadcn::SidebarContent::new([...]).into_element(cx),
-        shadcn::SidebarFooter::new([...]).into_element(cx),
-    ]).into_element(cx);
+        shadcn::SidebarHeader::new([
+            shadcn::SidebarTrigger::new().into_element(cx),
+        ])
+        .into_element(cx),
+        shadcn::SidebarContent::new([
+            shadcn::SidebarGroup::new([
+                shadcn::SidebarGroupLabel::new("Platform").into_element(cx),
+                shadcn::SidebarMenu::new([
+                    shadcn::SidebarMenuItem::new(
+                        shadcn::SidebarMenuButton::new("Playground")
+                            .icon(fret_icons::IconId::new_static("lucide.square-terminal"))
+                            .into_element(cx),
+                    )
+                    .into_element(cx),
+                    shadcn::SidebarMenuItem::new(
+                        shadcn::SidebarMenuButton::new("Documentation")
+                            .icon(fret_icons::IconId::new_static("lucide.book-open"))
+                            .into_element(cx),
+                    )
+                    .into_element(cx),
+                ])
+                .into_element(cx),
+            ])
+            .into_element(cx),
+        ])
+        .into_element(cx),
+        shadcn::SidebarFooter::new([
+            shadcn::typography::small(cx, "shadcn").into_element(cx),
+        ])
+        .into_element(cx),
+    ])
+    .collapsible(shadcn::SidebarCollapsible::Icon)
+    .into_element(cx);
 
     let main = shadcn::SidebarInset::new([
         shadcn::SidebarTrigger::new().into_element(cx),
-        // ...
+        cx.text("Main content"),
     ]).into_element(cx);
 
     [stack::hstack(cx, stack::HStackProps::default(), |_cx| vec![sidebar, main])]
@@ -711,13 +749,32 @@ pub(in crate::ui) fn preview_sidebar(cx: &mut ElementContext<'_, App>) -> Vec<An
                     "rust",
                     r#"let open = cx.app.models_mut().insert(true);
 
+let open_for_toggle = open.clone();
+let on_toggle_open: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
+    let _ = host.models_mut().update(&open_for_toggle, |v| *v = !*v);
+    host.request_redraw(action_cx.window);
+});
+
 shadcn::SidebarProvider::new()
     .open(Some(open.clone()))
     .with(cx, |cx| {
-        let sidebar = shadcn::Sidebar::new([shadcn::SidebarContent::new([...]).into_element(cx)])
-            .into_element(cx);
-        let main = shadcn::SidebarInset::new([shadcn::SidebarTrigger::new().into_element(cx)])
-            .into_element(cx);
+        let sidebar = shadcn::Sidebar::new([
+            shadcn::SidebarContent::new([
+                shadcn::typography::muted(cx, "Sidebar content").into_element(cx),
+            ])
+            .into_element(cx),
+        ])
+        .collapsible(shadcn::SidebarCollapsible::Offcanvas)
+        .into_element(cx);
+
+        let main = shadcn::SidebarInset::new([
+            shadcn::Button::new("Toggle open")
+                .variant(shadcn::ButtonVariant::Outline)
+                .on_activate(on_toggle_open.clone())
+                .into_element(cx),
+            shadcn::SidebarTrigger::new().into_element(cx),
+        ])
+        .into_element(cx);
         [stack::hstack(cx, stack::HStackProps::default(), |_cx| vec![sidebar, main])]
     });"#,
                 ),
@@ -732,11 +789,20 @@ shadcn::SidebarProvider::new()
     .is_mobile(true)
     .open_mobile(Some(open_mobile.clone()))
     .with(cx, |cx| {
-        let sidebar = shadcn::Sidebar::new([shadcn::SidebarContent::new([...]).into_element(cx)])
-            .collapsible(shadcn::SidebarCollapsible::Offcanvas)
-            .into_element(cx);
-        let main = shadcn::SidebarInset::new([shadcn::SidebarTrigger::new().into_element(cx)])
-            .into_element(cx);
+        let sidebar = shadcn::Sidebar::new([
+            shadcn::SidebarContent::new([
+                shadcn::typography::muted(cx, "Mobile sidebar content").into_element(cx),
+            ])
+            .into_element(cx),
+        ])
+        .collapsible(shadcn::SidebarCollapsible::Offcanvas)
+        .into_element(cx);
+
+        let main = shadcn::SidebarInset::new([
+            shadcn::SidebarTrigger::new().into_element(cx),
+            cx.text("Main content"),
+        ])
+        .into_element(cx);
         [stack::vstack(cx, stack::VStackProps::default(), |_cx| vec![sidebar, main])]
     });"#,
                 ),
@@ -746,8 +812,14 @@ shadcn::SidebarProvider::new()
                 .code(
                     "rust",
                     r#"doc_layout::rtl(cx, |cx| {
-    shadcn::Sidebar::new([...]).into_element(cx)
-});"#,
+    shadcn::Sidebar::new([
+        shadcn::SidebarContent::new([
+            shadcn::typography::muted(cx, "RTL sidebar content").into_element(cx),
+        ])
+        .into_element(cx),
+    ])
+    .into_element(cx)
+ });"#,
                 ),
             DocSection::new("Notes", notes)
                 .no_shell()

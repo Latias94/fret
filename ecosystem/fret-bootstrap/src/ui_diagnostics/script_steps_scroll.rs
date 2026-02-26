@@ -239,6 +239,13 @@ pub(super) fn handle_scroll_into_view_step(
 
             let x_mid = (ix0 + ix1) * 0.5;
             let y_mid = (iy0 + iy1) * 0.5;
+            let y_top = (iy0 + pad_y).clamp(iy0, iy1);
+            let y_bottom = (iy1 - pad_y).clamp(iy0, iy1);
+
+            let vx0 = visible_container.origin.x.0;
+            let vx1 = vx0 + visible_container.size.width.0.max(0.0);
+            let edge_pad_x = 2.0f32.min((vx1 - vx0).max(0.0) * 0.5);
+            let x_edge_left = (vx0 + edge_pad_x).clamp(vx0, vx1);
 
             let x_pref = target_node
                 .map(|n| n.bounds.origin.x.0 + n.bounds.size.width.0.max(0.0) * 0.5)
@@ -246,21 +253,72 @@ pub(super) fn handle_scroll_into_view_step(
                 .clamp(ix0 + pad_x, ix1 - pad_x);
 
             let candidates = [
-                Point::new(Px(x_pref), Px(y_mid.clamp(iy0 + pad_y, iy1 - pad_y))),
-                Point::new(Px(x_pref), Px((iy0 + pad_y).clamp(iy0, iy1))),
-                Point::new(Px(x_pref), Px((iy1 - pad_y).clamp(iy0, iy1))),
+                Point::new(Px(x_edge_left), Px(y_mid)),
+                Point::new(Px(x_edge_left), Px(y_top)),
+                Point::new(Px(x_edge_left), Px(y_bottom)),
                 Point::new(Px(x_mid.clamp(ix0 + pad_x, ix1 - pad_x)), Px(y_mid)),
+                Point::new(Px(x_pref), Px(y_mid.clamp(iy0 + pad_y, iy1 - pad_y))),
+                Point::new(Px(x_pref), Px(y_top)),
+                Point::new(Px(x_pref), Px(y_bottom)),
             ];
 
             let intended_id = container_node.id.data().as_ffi();
             let pos = if let Some(ui) = ui.as_deref() {
-                candidates
-                    .into_iter()
-                    .find(|pos| {
-                        pick_semantics_node_at(snapshot, ui, *pos)
-                            .is_some_and(|hit| hit.id.data().as_ffi() != intended_id)
-                    })
-                    .unwrap_or(candidates[0])
+                let index = SemanticsIndex::new(snapshot);
+
+                let nearest_scrollable_ancestor_id = |mut id: u64| -> Option<u64> {
+                    while let Some(node) = index.by_id.get(&id).copied() {
+                        if node.actions.scroll_by {
+                            return Some(id);
+                        }
+                        let parent = node.parent?;
+                        id = parent.data().as_ffi();
+                    }
+                    None
+                };
+
+                let mut best: Option<(i32, Point)> = None;
+                for pos in candidates {
+                    let Some(hit) = pick_semantics_node_at(snapshot, ui, pos) else {
+                        continue;
+                    };
+                    let hit_id = hit.id.data().as_ffi();
+                    if hit.role == fret_core::SemanticsRole::ScrollBar
+                        || !index.is_descendant_of_or_self(hit_id, intended_id)
+                    {
+                        continue;
+                    }
+
+                    let scroll_owner = nearest_scrollable_ancestor_id(hit_id);
+
+                    let mut score: i32 = 0;
+                    if scroll_owner == Some(intended_id) {
+                        score += 100;
+                    } else if scroll_owner.is_some() {
+                        score += 0;
+                    } else {
+                        score -= 50;
+                    }
+                    if hit.role != fret_core::SemanticsRole::Text
+                        && hit.role != fret_core::SemanticsRole::TextField
+                    {
+                        score += 10;
+                    }
+                    if hit.actions.invoke {
+                        score -= 3;
+                    }
+                    if hit.actions.focus {
+                        score -= 1;
+                    }
+
+                    if best
+                        .as_ref()
+                        .is_none_or(|(best_score, _)| score > *best_score)
+                    {
+                        best = Some((score, pos));
+                    }
+                }
+                best.map(|(_, pos)| pos).unwrap_or(candidates[0])
             } else {
                 candidates[0]
             };

@@ -106,4 +106,3 @@ fn wheel_scroll_hit_changes_streaming_passes_when_offset_changes() {
     check_bundle_for_wheel_scroll_hit_changes_streaming(&bundle_path, "root", 0)
         .expect("expected wheel scroll hit-change check to pass");
 }
-
