@@ -89,7 +89,6 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-anyhow = "1"
 fret = { path = "../../ecosystem/fret" }
 fret-selector = { path = "../../ecosystem/fret-selector", features = ["ui"] } # optional
 fret-query = { path = "../../ecosystem/fret-query", features = ["ui"] } # optional
@@ -98,11 +97,38 @@ fret-query = { path = "../../ecosystem/fret-query", features = ["ui"] } # option
 ## Minimal startup
 
 ```rust,ignore
-fn main() -> anyhow::Result<()> {
+fn main() -> fret::Result<()> {
     fret::App::new("todo")
         .window("todo", (560.0, 520.0))
-        .run_mvu::<TodoProgram>()
-        .map_err(anyhow::Error::from)
+        .mvu::<TodoProgram>()?
+        .run()
+}
+```
+
+## Extending the entry (recommended seams)
+
+The builder chain is ecosystem-level and intentionally provides a few stable seams for extending
+apps without dropping down to `fret-bootstrap`:
+
+```rust,ignore
+use fret::prelude::*;
+
+fn install_app(app: &mut App) {
+    // Register app-owned globals, commands, services, etc.
+    // Example:
+    // app.set_global(MyService::default());
+}
+
+fn main() -> fret::Result<()> {
+    fret::App::new("todo")
+        .window("todo", (560.0, 520.0))
+        .install_app(install_app)
+        // Disable filesystem config loading for embedding/minimal builds:
+        .config_files(false)
+        // If you use images/SVG in UI, tune budgets:
+        .ui_assets_budgets(64 * 1024 * 1024, 4096, 16 * 1024 * 1024, 4096)
+        .mvu::<TodoProgram>()?
+        .run()
 }
 ```
 
