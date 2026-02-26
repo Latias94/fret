@@ -231,3 +231,6 @@ recipe should follow viewport queries (device shell) or container queries (panel
   (`tools/diag-scripts/ui-gallery-calendar-mixed-responsive-popover-vs-panel.json`).
 - 2026-02-26: Hardened the DataTable toolbar query-source toggle script by confirming selection
   (Enter) after status item clicks (`tools/diag-scripts/ui-gallery-data-table-toolbar-faceted-query-source-toggle.json`).
+- 2026-02-26: Ensured `Calendar::test_id_prefix` is honored in multi-month mode, adding stable
+  month roots (`.month:<first_day>`) and nav ids (`:nav-prev` / `:nav-next`) for diag targeting
+  parity with single-month mode (`ecosystem/fret-ui-shadcn/src/calendar.rs`).
