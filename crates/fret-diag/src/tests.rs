@@ -463,6 +463,79 @@ fn run_script_over_transport_streams_incremental_script_result_updates() {
 }
 
 #[test]
+fn diag_poke_wait_record_run_writes_run_id_manifest() {
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    let root = std::env::temp_dir().join(format!(
+        "fret-diag-poke-record-run-{}-{}",
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis(),
+        std::process::id()
+    ));
+    let _ = std::fs::remove_dir_all(&root);
+    std::fs::create_dir_all(&root).expect("create temp root");
+
+    let out_dir = root.as_path();
+    let trigger_path = root.join("trigger.touch");
+
+    let runtime_root = root.clone();
+    std::thread::spawn(move || {
+        let deadline = Instant::now() + Duration::from_secs(2);
+        while Instant::now() < deadline {
+            if trigger_path.is_file() {
+                break;
+            }
+            std::thread::sleep(Duration::from_millis(5));
+        }
+
+        let export_dir_name = "1234567890-manual-poke-test";
+        let export_dir = runtime_root.join(export_dir_name);
+        let _ = std::fs::create_dir_all(&export_dir);
+        let _ = std::fs::write(
+            export_dir.join("bundle.json"),
+            br#"{ "schema_version": 1, "windows": [], "config": { "max_snapshots": 0 } }"#,
+        );
+        let _ = std::fs::write(runtime_root.join("latest.txt"), export_dir_name);
+    });
+
+    let rest = vec![
+        "--wait".to_string(),
+        "--record-run".to_string(),
+        "--run-id".to_string(),
+        "42".to_string(),
+    ];
+    crate::commands::session::cmd_poke(
+        &rest,
+        false,
+        out_dir,
+        &root.join("trigger.touch"),
+        5_000,
+        5,
+    )
+    .expect("cmd_poke");
+
+    let run_dir = root.join("42");
+    let bytes = std::fs::read(run_dir.join("manifest.json")).expect("read manifest.json");
+    let v: serde_json::Value = serde_json::from_slice(&bytes).expect("parse manifest.json");
+    assert_eq!(v.get("run_id").and_then(|v| v.as_u64()), Some(42));
+    assert_eq!(
+        v.get("script_result")
+            .and_then(|v| v.get("stage"))
+            .and_then(|v| v.as_str()),
+        Some("passed")
+    );
+    assert_eq!(
+        v.get("script_result")
+            .and_then(|v| v.get("reason_code"))
+            .and_then(|v| v.as_str()),
+        Some("manual.poke.dump")
+    );
+    assert!(run_dir.join("bundle.json").is_file());
+}
+
+#[test]
 fn run_script_over_transport_timeout_writes_failed_tool_script_result() {
     let root = std::env::temp_dir().join(format!(
         "fret-diag-script-timeout-{}-{}",

@@ -61,7 +61,7 @@ Usage:
   fretboard hotpatch status [--tail <n>]
   fretboard hotpatch watch [--path <path>...] [--trigger-path <path>] [--poll-ms <ms>] [--debounce-ms <ms>]
   fretboard diag path [--trigger-path <path>] [--dir <dir>]
-  fretboard diag poke [--trigger-path <path>] [--dir <dir>]
+  fretboard diag poke [--trigger-path <path>] [--dir <dir>] [--label <label>] [--max-snapshots <n>] [--wait] [--record-run] [--run-id <id>]
   fretboard diag latest [--dir <dir>]
   fretboard diag trace <bundle_dir|bundle.json|bundle.schema2.json> [--trace-out <path>]
   fretboard diag pack [<bundle_dir|bundle.json|bundle.schema2.json>] [--dir <dir>] [--pack-out <path>] [--ai-packet] [--ai-only] [--include-all] [--include-root-artifacts] [--include-triage] [--include-screenshots]
@@ -127,6 +127,8 @@ Examples:
   fretboard hotpatch status                 # prints hotpatch-related log tails (runner/bootstrap)
   fretboard hotpatch watch                  # polls workspace sources and auto-pokes on change
   fretboard diag poke                      # touches `target/fret-diag/trigger.touch` (dumps diagnostics when enabled)
+  fretboard diag poke --wait               # waits for `latest.txt` to update and prints the dump directory
+  fretboard diag poke --wait --record-run  # also writes a per-run manifest under `target/fret-diag/<run_id>/manifest.json` (tooling-only)
   fretboard diag latest                    # prints the most recent diagnostics bundle path
   fretboard diag pack                      # zips a bundle directory for sharing (default: latest)
   fretboard diag triage                    # prints a machine-readable triage JSON (built from bundle stats)

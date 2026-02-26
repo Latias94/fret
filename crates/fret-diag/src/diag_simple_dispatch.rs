@@ -58,7 +58,14 @@ pub(crate) fn dispatch_simple(
 ) -> Option<Result<(), String>> {
     let res = match sub {
         "path" => commands::session::cmd_path(rest, pack_after_run, resolved_trigger_path),
-        "poke" => commands::session::cmd_poke(rest, pack_after_run, resolved_trigger_path),
+        "poke" => commands::session::cmd_poke(
+            rest,
+            pack_after_run,
+            resolved_out_dir,
+            resolved_trigger_path,
+            timeout_ms,
+            poll_ms,
+        ),
         "latest" => commands::session::cmd_latest(rest, pack_after_run, resolved_out_dir),
         "trace" => {
             if pack_after_run {

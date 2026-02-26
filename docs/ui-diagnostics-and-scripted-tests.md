@@ -607,6 +607,9 @@ Config resolution order (runtime):
 - `FRET_DIAG_TRIGGER_PATH=...`: dump trigger file (default `<dir>/trigger.touch`).
   - The trigger uses a **stamp** (monotonic integer) rather than mtime. Write a new integer value
     (e.g. unix ms) to trigger a dump; `fretboard diag poke` does this for you.
+  - Tooling convenience:
+    - `fretboard diag poke --wait` waits for `latest.txt` to update and prints the dump directory.
+    - `fretboard diag poke --wait --record-run` writes a tooling-owned per-run manifest directory and chunked bundle copy under `<dir>/<run_id>/`.
   - Optional (filesystem transport): write `<dir>/dump.request.json` (schema v1) before touching the trigger to
     provide dump metadata:
     - `label` (string): appended to the export directory name (`<timestamp>-<label>`),
