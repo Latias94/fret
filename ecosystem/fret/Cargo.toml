@@ -13,8 +13,13 @@ readme = "README.md"
 [features]
 # Desktop-first, batteries-included defaults.
 default = [
-    "config-files",
     "desktop",
+    "batteries",
+]
+
+# “Works out of the box” ecosystem bundle (within the enabled platform features).
+batteries = [
+    "config-files",
     "diagnostics",
     "ui-assets",
     "icons-lucide",

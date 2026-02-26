@@ -19,12 +19,15 @@
 //! }
 //!
 //! fn main() -> fret::Result<()> {
-//!     fret::run("hello", init_window, view)
+//!     fret::App::new("hello")
+//!         .window("Hello", (560.0, 360.0))
+//!         .ui(init_window, view)?
+//!         .run()
 //! }
 //! ```
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
-use fret_app::App;
+use fret_app::App as KernelApp;
 
 /// Re-export the default shadcn/ui surface as `shadcn`.
 #[cfg(feature = "shadcn")]
@@ -46,6 +49,11 @@ pub mod pending_shortcut_overlay;
 pub mod workspace_menu;
 #[cfg(feature = "workspace-shell")]
 pub mod workspace_shell;
+
+#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+mod app_entry;
+#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+pub use app_entry::App;
 
 /// MVU-style authoring helpers (desktop builds).
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
@@ -75,6 +83,9 @@ pub use fret_framework as kernel;
 /// Recommended: `use fret::prelude::*;`
 pub mod prelude {
     pub use fret_ui_kit::prelude::*;
+
+    #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+    pub use crate::App as FretApp;
 
     #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
     pub use crate::interop::embedded_viewport::{
@@ -168,10 +179,10 @@ impl<S> UiAppDriver<S> {
     pub fn on_event(
         mut self,
         f: fn(
-            &mut App,
+            &mut KernelApp,
             &mut dyn fret_core::UiServices,
             fret_core::AppWindowId,
-            &mut fret_ui::UiTree<App>,
+            &mut fret_ui::UiTree<KernelApp>,
             &mut S,
             &fret_core::Event,
         ),
@@ -183,10 +194,10 @@ impl<S> UiAppDriver<S> {
     pub fn on_command(
         mut self,
         f: fn(
-            &mut App,
+            &mut KernelApp,
             &mut dyn fret_core::UiServices,
             fret_core::AppWindowId,
-            &mut fret_ui::UiTree<App>,
+            &mut fret_ui::UiTree<KernelApp>,
             &mut S,
             &fret_runtime::CommandId,
         ),
@@ -198,10 +209,10 @@ impl<S> UiAppDriver<S> {
     pub fn on_preferences(
         mut self,
         f: fn(
-            &mut App,
+            &mut KernelApp,
             &mut dyn fret_core::UiServices,
             fret_core::AppWindowId,
-            &mut fret_ui::UiTree<App>,
+            &mut fret_ui::UiTree<KernelApp>,
             &mut S,
         ),
     ) -> Self {
@@ -212,10 +223,10 @@ impl<S> UiAppDriver<S> {
     pub fn on_hot_reload_window(
         mut self,
         f: fn(
-            &mut App,
+            &mut KernelApp,
             &mut dyn fret_core::UiServices,
             fret_core::AppWindowId,
-            &mut fret_ui::UiTree<App>,
+            &mut fret_ui::UiTree<KernelApp>,
             &mut S,
         ),
     ) -> Self {
@@ -226,9 +237,9 @@ impl<S> UiAppDriver<S> {
     pub fn on_model_changes(
         mut self,
         f: fn(
-            &mut App,
+            &mut KernelApp,
             fret_core::AppWindowId,
-            &mut fret_ui::UiTree<App>,
+            &mut fret_ui::UiTree<KernelApp>,
             &mut S,
             &[fret_app::ModelId],
         ),
@@ -240,9 +251,9 @@ impl<S> UiAppDriver<S> {
     pub fn on_global_changes(
         mut self,
         f: fn(
-            &mut App,
+            &mut KernelApp,
             fret_core::AppWindowId,
-            &mut fret_ui::UiTree<App>,
+            &mut fret_ui::UiTree<KernelApp>,
             &mut S,
             &[std::any::TypeId],
         ),
@@ -253,7 +264,10 @@ impl<S> UiAppDriver<S> {
 
     pub fn window_create_spec(
         mut self,
-        f: fn(&mut App, &fret_app::CreateWindowRequest) -> Option<fret_launch::WindowCreateSpec>,
+        f: fn(
+            &mut KernelApp,
+            &fret_app::CreateWindowRequest,
+        ) -> Option<fret_launch::WindowCreateSpec>,
     ) -> Self {
         self.inner = self.inner.window_create_spec(f);
         self
@@ -261,26 +275,29 @@ impl<S> UiAppDriver<S> {
 
     pub fn window_created(
         mut self,
-        f: fn(&mut App, &fret_app::CreateWindowRequest, fret_core::AppWindowId),
+        f: fn(&mut KernelApp, &fret_app::CreateWindowRequest, fret_core::AppWindowId),
     ) -> Self {
         self.inner = self.inner.window_created(f);
         self
     }
 
-    pub fn before_close_window(mut self, f: fn(&mut App, fret_core::AppWindowId) -> bool) -> Self {
+    pub fn before_close_window(
+        mut self,
+        f: fn(&mut KernelApp, fret_core::AppWindowId) -> bool,
+    ) -> Self {
         self.inner = self.inner.before_close_window(f);
         self
     }
 
     pub fn handle_global_command(
         mut self,
-        f: fn(&mut App, &mut dyn fret_core::UiServices, fret_runtime::CommandId),
+        f: fn(&mut KernelApp, &mut dyn fret_core::UiServices, fret_runtime::CommandId),
     ) -> Self {
         self.inner = self.inner.handle_global_command(f);
         self
     }
 
-    pub fn viewport_input(mut self, f: fn(&mut App, fret_core::ViewportInputEvent)) -> Self {
+    pub fn viewport_input(mut self, f: fn(&mut KernelApp, fret_core::ViewportInputEvent)) -> Self {
         self.inner = self.inner.viewport_input(f);
         self
     }
@@ -288,9 +305,9 @@ impl<S> UiAppDriver<S> {
     pub fn record_engine_frame(
         mut self,
         f: fn(
-            &mut App,
+            &mut KernelApp,
             fret_core::AppWindowId,
-            &mut fret_ui::UiTree<App>,
+            &mut fret_ui::UiTree<KernelApp>,
             &mut S,
             &crate::kernel::render::WgpuContext,
             &mut crate::kernel::render::Renderer,
@@ -303,7 +320,7 @@ impl<S> UiAppDriver<S> {
         self
     }
 
-    pub fn dock_op(mut self, f: fn(&mut App, fret_core::DockOp)) -> Self {
+    pub fn dock_op(mut self, f: fn(&mut KernelApp, fret_core::DockOp)) -> Self {
         self.inner = self.inner.dock_op(f);
         self
     }
@@ -333,19 +350,19 @@ impl<S: 'static> UiAppBuilder<S> {
         }
     }
 
-    pub fn init_app(self, f: impl FnOnce(&mut App)) -> Self {
+    pub fn init_app(self, f: impl FnOnce(&mut KernelApp)) -> Self {
         Self {
             inner: self.inner.init_app(f),
         }
     }
 
-    pub fn install_app(self, install: fn(&mut App)) -> Self {
+    pub fn install_app(self, install: fn(&mut KernelApp)) -> Self {
         Self {
             inner: self.inner.install_app(install),
         }
     }
 
-    pub fn install(self, install: fn(&mut App, &mut dyn fret_core::UiServices)) -> Self {
+    pub fn install(self, install: fn(&mut KernelApp, &mut dyn fret_core::UiServices)) -> Self {
         Self {
             inner: self.inner.install(install),
         }
@@ -378,7 +395,7 @@ impl<S: 'static> UiAppBuilder<S> {
     pub fn on_gpu_ready(
         self,
         f: impl FnOnce(
-            &mut App,
+            &mut KernelApp,
             &crate::kernel::render::WgpuContext,
             &mut crate::kernel::render::Renderer,
         ) + 'static,
@@ -435,7 +452,7 @@ fn apply_desktop_defaults<D: fret_launch::WinitAppDriver + 'static>(
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 pub fn run_native_demo<D: fret_launch::WinitAppDriver + 'static>(
     config: fret_launch::WinitRunnerConfig,
-    app: App,
+    app: KernelApp,
     driver: D,
 ) -> Result<()> {
     let builder = fret_bootstrap::BootstrapBuilder::new(app, driver).configure(move |c| {
@@ -459,8 +476,8 @@ pub fn run_native_demo<D: fret_launch::WinitAppDriver + 'static>(
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 pub fn app_with_hooks<S: 'static>(
     root_name: &'static str,
-    init_window: fn(&mut App, fret_core::AppWindowId) -> S,
-    view: for<'a> fn(&mut fret_ui::ElementContext<'a, App>, &mut S) -> ViewElements,
+    init_window: fn(&mut KernelApp, fret_core::AppWindowId) -> S,
+    view: for<'a> fn(&mut fret_ui::ElementContext<'a, KernelApp>, &mut S) -> ViewElements,
     configure: fn(UiAppDriver<S>) -> UiAppDriver<S>,
 ) -> Result<UiAppBuilder<S>> {
     let driver = fret_bootstrap::ui_app_driver::UiAppDriver::new(root_name, init_window, view)
@@ -469,7 +486,7 @@ pub fn app_with_hooks<S: 'static>(
     let driver = driver
         .on_global_changes_middleware(shadcn_sync_theme_from_environment_on_global_changes::<S>);
     let driver = configure(UiAppDriver::new(driver)).into_inner();
-    let builder = fret_bootstrap::BootstrapBuilder::new(App::new(), driver.into_fn_driver());
+    let builder = fret_bootstrap::BootstrapBuilder::new(KernelApp::new(), driver.into_fn_driver());
 
     #[cfg(feature = "router")]
     let builder = builder.install_app(|app| {
@@ -483,9 +500,9 @@ pub fn app_with_hooks<S: 'static>(
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop", feature = "shadcn"))]
 fn shadcn_sync_theme_from_environment_on_global_changes<S>(
-    app: &mut App,
+    app: &mut KernelApp,
     window: fret_core::AppWindowId,
-    _ui: &mut fret_ui::UiTree<App>,
+    _ui: &mut fret_ui::UiTree<KernelApp>,
     _st: &mut S,
     changed: &[std::any::TypeId],
 ) {
@@ -504,8 +521,8 @@ fn shadcn_sync_theme_from_environment_on_global_changes<S>(
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 pub fn app<S: 'static>(
     root_name: &'static str,
-    init_window: fn(&mut App, fret_core::AppWindowId) -> S,
-    view: for<'a> fn(&mut fret_ui::ElementContext<'a, App>, &mut S) -> ViewElements,
+    init_window: fn(&mut KernelApp, fret_core::AppWindowId) -> S,
+    view: for<'a> fn(&mut fret_ui::ElementContext<'a, KernelApp>, &mut S) -> ViewElements,
 ) -> Result<UiAppBuilder<S>> {
     app_with_hooks(root_name, init_window, view, |d| d)
 }
@@ -514,8 +531,8 @@ pub fn app<S: 'static>(
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 pub fn run_with_hooks<S: 'static>(
     root_name: &'static str,
-    init_window: fn(&mut App, fret_core::AppWindowId) -> S,
-    view: for<'a> fn(&mut fret_ui::ElementContext<'a, App>, &mut S) -> ViewElements,
+    init_window: fn(&mut KernelApp, fret_core::AppWindowId) -> S,
+    view: for<'a> fn(&mut fret_ui::ElementContext<'a, KernelApp>, &mut S) -> ViewElements,
     configure: fn(UiAppDriver<S>) -> UiAppDriver<S>,
 ) -> Result<()> {
     app_with_hooks(root_name, init_window, view, configure)?
@@ -527,8 +544,8 @@ pub fn run_with_hooks<S: 'static>(
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 pub fn run<S: 'static>(
     root_name: &'static str,
-    init_window: fn(&mut App, fret_core::AppWindowId) -> S,
-    view: for<'a> fn(&mut fret_ui::ElementContext<'a, App>, &mut S) -> ViewElements,
+    init_window: fn(&mut KernelApp, fret_core::AppWindowId) -> S,
+    view: for<'a> fn(&mut fret_ui::ElementContext<'a, KernelApp>, &mut S) -> ViewElements,
 ) -> Result<()> {
     run_with_hooks(root_name, init_window, view, |d| d)
 }
@@ -545,11 +562,11 @@ mod tests {
     use fret_core::{AppWindowId, ColorScheme, WindowMetricsService};
     use fret_ui::{Theme, UiTree};
 
-    use super::App;
+    use super::KernelApp;
 
     #[test]
     fn shadcn_auto_theme_middleware_reacts_to_window_metrics() {
-        let mut app = App::new();
+        let mut app = KernelApp::new();
         fret_ui_shadcn::install_app(&mut app);
 
         let window = AppWindowId::from(slotmap::KeyData::from_ffi(1));
@@ -557,7 +574,7 @@ mod tests {
             svc.set_color_scheme(window, Some(ColorScheme::Dark));
         });
 
-        let mut ui = UiTree::<App>::default();
+        let mut ui = UiTree::<KernelApp>::default();
         let mut state = ();
 
         let before_bg = Theme::global(&app).colors.surface_background;
