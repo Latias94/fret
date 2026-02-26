@@ -7,6 +7,7 @@ Design goals:
 - Produces an explicit JSON plan for review.
 - Can optionally write legacy-path redirect stubs (tooling-resolved).
 - Can optionally rewrite repo references (opt-in; exact-string replacement).
+- Supports incremental migrations (filter which scripts are included in a plan).
 
 This script is intentionally dependency-free (stdlib only).
 """
@@ -16,6 +17,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import fnmatch
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
@@ -30,6 +32,17 @@ class MoveOp:
     src: str
     dst: str
     category: str
+
+
+@dataclass(frozen=True)
+class FilterSpec:
+    include_prefixes: tuple[str, ...]
+    include_categories: tuple[str, ...]
+    include_name_globs: tuple[str, ...]
+    exclude_prefixes: tuple[str, ...]
+    exclude_categories: tuple[str, ...]
+    exclude_name_globs: tuple[str, ...]
+    limit: int | None
 
 
 def find_repo_root(start: Path) -> Path:
@@ -96,10 +109,33 @@ def categorize_script(filename: str) -> tuple[str, str]:
     return ("tooling.misc", "tooling")
 
 
-def build_move_plan(repo_root: Path, files: Iterable[Path]) -> list[MoveOp]:
+def matches_filter_spec(filename: str, category: str, spec: FilterSpec) -> bool:
+    def any_glob_match(patterns: tuple[str, ...]) -> bool:
+        return any(fnmatch.fnmatchcase(filename, pat) for pat in patterns)
+
+    if spec.exclude_prefixes and any(filename.startswith(p) for p in spec.exclude_prefixes):
+        return False
+    if spec.exclude_categories and category in spec.exclude_categories:
+        return False
+    if spec.exclude_name_globs and any_glob_match(spec.exclude_name_globs):
+        return False
+
+    if spec.include_prefixes and not any(filename.startswith(p) for p in spec.include_prefixes):
+        return False
+    if spec.include_categories and category not in spec.include_categories:
+        return False
+    if spec.include_name_globs and not any_glob_match(spec.include_name_globs):
+        return False
+
+    return True
+
+
+def build_move_plan(repo_root: Path, files: Iterable[Path], filters: FilterSpec) -> list[MoveOp]:
     out: list[MoveOp] = []
     for p in files:
         category, subdir_rel = categorize_script(p.name)
+        if not matches_filter_spec(p.name, category, filters):
+            continue
         dst = repo_root / SCRIPTS_DIR / subdir_rel / p.name
         out.append(
             MoveOp(
@@ -108,14 +144,27 @@ def build_move_plan(repo_root: Path, files: Iterable[Path]) -> list[MoveOp]:
                 category=category,
             )
         )
+        if filters.limit is not None and len(out) >= filters.limit:
+            break
     return out
 
 
-def write_plan_json(repo_root: Path, plan_out: Path, ops: list[MoveOp]) -> None:
+def write_plan_json(
+    repo_root: Path, plan_out: Path, ops: list[MoveOp], filters: FilterSpec
+) -> None:
     payload = {
         "schema_version": 1,
         "kind": "diag_script_library_migration_plan",
         "scripts_dir": str(SCRIPTS_DIR).replace("\\", "/"),
+        "filters": {
+            "include_prefixes": list(filters.include_prefixes),
+            "include_categories": list(filters.include_categories),
+            "include_name_globs": list(filters.include_name_globs),
+            "exclude_prefixes": list(filters.exclude_prefixes),
+            "exclude_categories": list(filters.exclude_categories),
+            "exclude_name_globs": list(filters.exclude_name_globs),
+            "limit": filters.limit,
+        },
         "ops": [op.__dict__ for op in ops],
     }
     plan_out.parent.mkdir(parents=True, exist_ok=True)
@@ -201,14 +250,69 @@ def main() -> None:
         default=".",
         help="Starting directory used to locate repo root (default: .).",
     )
+
+    # Incremental migration filters (optional).
+    ap.add_argument(
+        "--include-prefix",
+        action="append",
+        default=[],
+        help="Only include scripts whose filenames start with this prefix (repeatable).",
+    )
+    ap.add_argument(
+        "--include-category",
+        action="append",
+        default=[],
+        help="Only include scripts whose inferred category matches exactly (repeatable).",
+    )
+    ap.add_argument(
+        "--include-name-glob",
+        action="append",
+        default=[],
+        help="Only include scripts whose filenames match this glob (repeatable). Example: ui-gallery-select-*.json",
+    )
+    ap.add_argument(
+        "--exclude-prefix",
+        action="append",
+        default=[],
+        help="Exclude scripts whose filenames start with this prefix (repeatable).",
+    )
+    ap.add_argument(
+        "--exclude-category",
+        action="append",
+        default=[],
+        help="Exclude scripts whose inferred category matches exactly (repeatable).",
+    )
+    ap.add_argument(
+        "--exclude-name-glob",
+        action="append",
+        default=[],
+        help="Exclude scripts whose filenames match this glob (repeatable).",
+    )
+    ap.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="Stop after planning N moves (useful for reviewable batches).",
+    )
     args = ap.parse_args()
 
     repo_root = find_repo_root(Path(args.cwd))
     files = list(iter_top_level_scripts(repo_root))
-    ops = build_move_plan(repo_root, files)
+
+    filters = FilterSpec(
+        include_prefixes=tuple(args.include_prefix),
+        include_categories=tuple(args.include_category),
+        include_name_globs=tuple(args.include_name_glob),
+        exclude_prefixes=tuple(args.exclude_prefix),
+        exclude_categories=tuple(args.exclude_category),
+        exclude_name_globs=tuple(args.exclude_name_glob),
+        limit=args.limit,
+    )
+
+    ops = build_move_plan(repo_root, files, filters)
 
     plan_out = repo_root / Path(args.plan_out)
-    write_plan_json(repo_root, plan_out, ops)
+    write_plan_json(repo_root, plan_out, ops, filters)
     print(f"wrote plan: {plan_out}")
     print(f"planned moves: {len(ops)}")
 
