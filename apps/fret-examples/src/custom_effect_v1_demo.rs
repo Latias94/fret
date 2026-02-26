@@ -610,7 +610,12 @@ fn custom_effect_lens(
             downsample: blur_downsample,
         });
     }
-    steps.push(EffectStep::CustomV1 { id: effect, params });
+    let max_sample_offset_px = Px(refraction_amount_px + 8.0);
+    steps.push(EffectStep::CustomV1 {
+        id: effect,
+        params,
+        max_sample_offset_px,
+    });
     let chain = EffectChain::from_steps(&steps).sanitize();
 
     let layer = cx.effect_layer_props(
