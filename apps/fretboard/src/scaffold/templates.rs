@@ -330,9 +330,14 @@ impl MvuProgram for TodoProgram {
     }
 }
 
+fn install_app(_app: &mut App) {
+    // Register app-owned globals, commands, services, etc.
+}
+
 fn main() -> anyhow::Result<()> {
     FretApp::new("todo")
         .window("todo", (560.0, 520.0))
+        .install_app(install_app)
         .run_mvu::<TodoProgram>()
         .map_err(anyhow::Error::from)
 }
