@@ -577,6 +577,7 @@ Core:
   - When an env var is set, it overrides the config file (compat-first manual escape hatch).
   - In `--launch` mode, tooling-owned env vars and paths are reserved; `--env` cannot override them (use `--dir` / `--*-path` flags instead).
   - Example file to copy/modify: `tools/diag-configs/diag.config.example.json`.
+  - Drift audit notes for the example file: `tools/diag-configs/README.md`.
   - Tip: print the effective merged config (and highlight unknown keys/envs):
     - `cargo run -p fretboard -- diag config doctor --mode launch --dir .fret/diag`
     - `cargo run -p fretboard -- diag config doctor --mode manual --report-json` (manual apps)

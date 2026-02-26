@@ -12,7 +12,7 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
 ## P0: Switches consolidation (config layering)
 
 - [x] Document config resolution order (CLI vs env vs config file vs defaults) and link it from `docs/ui-diagnostics-and-scripted-tests.md`.
-- [ ] Audit `tools/diag-configs/diag.config.example.json` for drift; ensure every field is either:
+- [x] Audit `tools/diag-configs/diag.config.example.json` for drift; ensure every field is either:
   - implemented, or
   - explicitly documented as “planned / ignored by runtime”.
 - [x] Make tooling push schema v2 scripts by default (normalize/upgrade on write) and warn when schema v1 scripts are observed.
