@@ -41,11 +41,11 @@
     { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-gallery-nav-scroll" } },
     { "type": "wait_frames", "n": 4 },
 
-    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-nav-scroll" }, "delta_y": 20000.0 },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-nav-scroll" }, "delta_y": -20000.0 },
     { "type": "wait_frames", "n": 2 },
-    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-nav-scroll" }, "delta_y": 20000.0 },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-nav-scroll" }, "delta_y": -20000.0 },
     { "type": "wait_frames", "n": 2 },
-    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-nav-scroll" }, "delta_y": 20000.0 },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-nav-scroll" }, "delta_y": -20000.0 },
     { "type": "wait_frames", "n": 2 },
 
     { "type": "wait_frames", "n": 10 },

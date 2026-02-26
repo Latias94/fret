@@ -1230,32 +1230,19 @@ impl ElementHostWidget {
         }
 
         if !is_probe_layout {
-            let offset = handle.offset();
-            let offset_x = if props.axis.scroll_x() {
-                offset.x.0.max(0.0)
-            } else {
-                0.0
-            };
-            let offset_y = if props.axis.scroll_y() {
-                offset.y.0.max(0.0)
-            } else {
-                0.0
-            };
-
             let mut observed = Size::new(Px(0.0), Px(0.0));
             for &child in cx.children {
                 let Some(bounds) = cx.tree.node_bounds(child) else {
                     continue;
                 };
-                // `node_bounds` are expressed in the same coordinate space as hit-testing and
-                // painting (including any scroll offset transforms). Convert back into
-                // content-space extents by adding the current scroll offset along scroll axes.
-                let right = (bounds.origin.x.0 + bounds.size.width.0 - content_bounds.origin.x.0)
-                    .max(0.0)
-                    + offset_x;
+                // `node_bounds` are expressed in layout-space (pre-transform) coordinates. For
+                // scroll containers, descendants remain in content space while hit-testing/painting
+                // apply `children_render_transform()` separately. Compute content-space extents
+                // directly from the layout bounds without incorporating the current scroll offset.
+                let right =
+                    (bounds.origin.x.0 + bounds.size.width.0 - content_bounds.origin.x.0).max(0.0);
                 let bottom = (bounds.origin.y.0 + bounds.size.height.0 - content_bounds.origin.y.0)
-                    .max(0.0)
-                    + offset_y;
+                    .max(0.0);
                 observed.width = Px(observed.width.0.max(right));
                 observed.height = Px(observed.height.0.max(bottom));
             }
