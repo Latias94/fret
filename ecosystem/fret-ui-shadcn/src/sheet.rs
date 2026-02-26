@@ -8,7 +8,7 @@ use fret_ui::element::{
     PositionStyle, SemanticsDecoration, SizeStyle,
 };
 use fret_ui::overlay_placement::Side;
-use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
+use fret_ui::{ElementContext, Invalidation, Theme, ThemeNamedColorKey, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
@@ -22,13 +22,10 @@ use fret_ui_kit::{
 use crate::layout as shadcn_layout;
 use crate::overlay_motion;
 
-fn default_overlay_color() -> Color {
-    Color {
-        r: 0.0,
-        g: 0.0,
-        b: 0.0,
-        a: 0.5,
-    }
+fn default_overlay_color(theme: &ThemeSnapshot) -> Color {
+    let mut scrim = theme.named_color(ThemeNamedColorKey::Black);
+    scrim.a = 0.5;
+    scrim
 }
 
 type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
@@ -408,7 +405,9 @@ impl Sheet {
 
                 let open = self.open.clone();
                 let open_for_children = open.clone();
-                let overlay_color = self.overlay_color.unwrap_or_else(default_overlay_color);
+                let overlay_color = self
+                    .overlay_color
+                    .unwrap_or_else(|| default_overlay_color(&theme));
                 let overlay_closable = self.overlay_closable;
                 let sheet_side = self.side;
                 let dialog_options = radix_dialog::DialogOptions::default()

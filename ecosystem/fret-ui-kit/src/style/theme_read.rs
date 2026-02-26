@@ -1,5 +1,5 @@
 use fret_core::{Color, Px};
-use fret_ui::{Theme, ThemeSnapshot};
+use fret_ui::{Theme, ThemeNamedColorKey, ThemeSnapshot};
 
 /// Minimal theme token access surface used by style resolution helpers.
 ///
@@ -11,6 +11,10 @@ pub trait ThemeTokenRead {
 
     fn color_token(&self, key: &str) -> Color {
         self.color_required(key)
+    }
+
+    fn named_color(&self, key: ThemeNamedColorKey) -> Color {
+        self.color_token(key.canonical_name())
     }
 
     fn metric_by_key(&self, key: &str) -> Option<Px>;

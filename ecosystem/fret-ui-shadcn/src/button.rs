@@ -5,7 +5,7 @@ use fret_icons::IconId;
 use fret_runtime::{CommandId, Effect};
 use fret_ui::action::{OnActivate, OnHoverChange};
 use fret_ui::element::{AnyElement, PressableA11y, PressableKeyActivation, PressableProps};
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, ThemeNamedColorKey, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
@@ -168,34 +168,36 @@ pub(crate) fn variant_style(variant: ButtonVariant) -> ButtonVariantStyle {
             )),
         },
         ButtonVariant::Destructive => ButtonVariantStyle {
-            background: WidgetStateProperty::new(token("destructive", ColorFallback::ThemeAccent))
-                .when(
-                    WidgetStates::HOVERED,
-                    token(
-                        "destructive.hover.background",
-                        ColorFallback::ThemeTokenAlphaMul {
-                            key: "destructive",
-                            mul: 0.9,
-                        },
-                    ),
-                )
-                .when(
-                    WidgetStates::ACTIVE,
-                    token(
-                        "destructive.active.background",
-                        ColorFallback::ThemeTokenAlphaMul {
-                            key: "destructive",
-                            mul: 0.9,
-                        },
-                    ),
+            background: WidgetStateProperty::new(token(
+                "component.button.destructive.bg",
+                ColorFallback::ThemeTokenAlphaMul {
+                    key: "destructive",
+                    mul: 1.0,
+                },
+            ))
+            .when(
+                WidgetStates::HOVERED,
+                token(
+                    "destructive.hover.background",
+                    ColorFallback::ThemeTokenAlphaMul {
+                        key: "destructive",
+                        mul: 0.9,
+                    },
                 ),
+            )
+            .when(
+                WidgetStates::ACTIVE,
+                token(
+                    "destructive.active.background",
+                    ColorFallback::ThemeTokenAlphaMul {
+                        key: "destructive",
+                        mul: 0.9,
+                    },
+                ),
+            ),
             border_color: WidgetStateProperty::new(transparent.clone()),
-            foreground: WidgetStateProperty::new(ColorRef::Color(Color {
-                r: 1.0,
-                g: 1.0,
-                b: 1.0,
-                a: 1.0,
-            })),
+            // Upstream shadcn button uses `text-white` for destructive.
+            foreground: WidgetStateProperty::new(ColorRef::Named(ThemeNamedColorKey::White)),
         },
         ButtonVariant::Secondary => ButtonVariantStyle {
             background: WidgetStateProperty::new(token(
