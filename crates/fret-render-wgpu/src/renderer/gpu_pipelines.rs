@@ -128,6 +128,12 @@ pub(super) struct GpuPipelines {
         std::collections::HashMap<fret_core::EffectId, CustomEffectPipelines>,
     pub(super) custom_effect_bind_group_layout: Option<wgpu::BindGroupLayout>,
     pub(super) custom_effect_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
+
+    pub(super) custom_effect_v2_pipeline_format: Option<wgpu::TextureFormat>,
+    pub(super) custom_effect_v2_pipelines:
+        std::collections::HashMap<fret_core::EffectId, CustomEffectPipelines>,
+    pub(super) custom_effect_v2_bind_group_layout: Option<wgpu::BindGroupLayout>,
+    pub(super) custom_effect_v2_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
 }
 
 impl Default for GpuPipelines {
@@ -232,6 +238,11 @@ impl Default for GpuPipelines {
             custom_effect_pipelines: std::collections::HashMap::new(),
             custom_effect_bind_group_layout: None,
             custom_effect_mask_bind_group_layout: None,
+
+            custom_effect_v2_pipeline_format: None,
+            custom_effect_v2_pipelines: std::collections::HashMap::new(),
+            custom_effect_v2_bind_group_layout: None,
+            custom_effect_v2_mask_bind_group_layout: None,
         }
     }
 }

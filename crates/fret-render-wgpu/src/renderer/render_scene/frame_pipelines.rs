@@ -24,6 +24,7 @@ impl Renderer {
             |span| {
                 self.ensure_material_catalog_uploaded(queue);
                 self.ensure_mask_image_identity_uploaded(queue);
+                self.ensure_custom_effect_input_fallback_uploaded(queue);
 
                 self.ensure_viewport_pipeline(device, format);
                 self.ensure_quad_pipelines(format);

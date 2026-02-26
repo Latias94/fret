@@ -216,6 +216,24 @@ impl Renderer {
         let mask_image_identity_view =
             mask_image_identity_texture.create_view(&wgpu::TextureViewDescriptor::default());
 
+        let custom_effect_input_fallback_texture =
+            device.create_texture(&wgpu::TextureDescriptor {
+                label: Some("fret custom effect input fallback texture"),
+                size: wgpu::Extent3d {
+                    width: 1,
+                    height: 1,
+                    depth_or_array_layers: 1,
+                },
+                mip_level_count: 1,
+                sample_count: 1,
+                dimension: wgpu::TextureDimension::D2,
+                format: wgpu::TextureFormat::Rgba8Unorm,
+                usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+                view_formats: &[],
+            });
+        let custom_effect_input_fallback_view = custom_effect_input_fallback_texture
+            .create_view(&wgpu::TextureViewDescriptor::default());
+
         let viewport_bind_group_layout =
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                 label: Some("fret viewport texture bind group layout"),
@@ -260,7 +278,11 @@ impl Renderer {
             ..Default::default()
         });
 
-        let textures = GpuTextures::new(mask_image_identity_texture, material_catalog_texture);
+        let textures = GpuTextures::new(
+            mask_image_identity_texture,
+            material_catalog_texture,
+            custom_effect_input_fallback_texture,
+        );
         let globals = GpuGlobals {
             uniform_bind_group_layout,
             viewport_bind_group_layout,
@@ -271,6 +293,7 @@ impl Renderer {
             mask_image_sampler,
             mask_image_sampler_nearest,
             mask_image_identity_view,
+            custom_effect_input_fallback_view,
         };
 
         let uniform_bind_group = super::bind_group_builders::UniformBindGroupGlobals {
@@ -485,6 +508,13 @@ impl Renderer {
             mapped_at_creation: false,
         });
 
+        let custom_effect_v2_input_meta_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("fret custom-effect v2 input meta buffer"),
+            size: 256,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
         let effect_params = super::gpu_effect_params::GpuEffectParams {
             clip_mask_param_buffer,
             clip_mask_param_bind_group,
@@ -499,6 +529,7 @@ impl Renderer {
             noise_param_buffer,
             drop_shadow_param_buffer,
             custom_effect_param_buffer,
+            custom_effect_v2_input_meta_buffer,
         };
 
         let render_plan_strict_output_clear =
@@ -765,5 +796,10 @@ impl Renderer {
 
     pub(super) fn ensure_material_catalog_uploaded(&mut self, queue: &wgpu::Queue) {
         self.textures.ensure_material_catalog_uploaded(queue);
+    }
+
+    pub(super) fn ensure_custom_effect_input_fallback_uploaded(&mut self, queue: &wgpu::Queue) {
+        self.textures
+            .ensure_custom_effect_input_fallback_uploaded(queue);
     }
 }

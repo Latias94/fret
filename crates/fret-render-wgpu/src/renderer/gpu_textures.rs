@@ -4,18 +4,24 @@ pub(super) struct GpuTextures {
 
     material_catalog_texture: wgpu::Texture,
     material_catalog_uploaded: bool,
+
+    custom_effect_input_fallback_texture: wgpu::Texture,
+    custom_effect_input_fallback_uploaded: bool,
 }
 
 impl GpuTextures {
     pub(super) fn new(
         mask_image_identity_texture: wgpu::Texture,
         material_catalog_texture: wgpu::Texture,
+        custom_effect_input_fallback_texture: wgpu::Texture,
     ) -> Self {
         Self {
             mask_image_identity_texture,
             mask_image_identity_uploaded: false,
             material_catalog_texture,
             material_catalog_uploaded: false,
+            custom_effect_input_fallback_texture,
+            custom_effect_input_fallback_uploaded: false,
         }
     }
 
@@ -132,5 +138,38 @@ impl GpuTextures {
         }
 
         self.material_catalog_uploaded = true;
+    }
+
+    pub(super) fn ensure_custom_effect_input_fallback_uploaded(&mut self, queue: &wgpu::Queue) {
+        if self.custom_effect_input_fallback_uploaded {
+            return;
+        }
+
+        // Use a 1x1 `Rgba8Unorm` texture filled with zeros as the deterministic fallback for
+        // missing/disabled CustomV2 input images.
+        let bytes_per_row = wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
+        let bytes = vec![0u8; bytes_per_row as usize];
+
+        queue.write_texture(
+            wgpu::TexelCopyTextureInfo {
+                texture: &self.custom_effect_input_fallback_texture,
+                mip_level: 0,
+                origin: wgpu::Origin3d::ZERO,
+                aspect: wgpu::TextureAspect::All,
+            },
+            &bytes,
+            wgpu::TexelCopyBufferLayout {
+                offset: 0,
+                bytes_per_row: Some(bytes_per_row),
+                rows_per_image: Some(1),
+            },
+            wgpu::Extent3d {
+                width: 1,
+                height: 1,
+                depth_or_array_layers: 1,
+            },
+        );
+
+        self.custom_effect_input_fallback_uploaded = true;
     }
 }

@@ -15,6 +15,7 @@ pub(super) struct GpuEffectParams {
     pub(super) noise_param_buffer: wgpu::Buffer,
     pub(super) drop_shadow_param_buffer: wgpu::Buffer,
     pub(super) custom_effect_param_buffer: wgpu::Buffer,
+    pub(super) custom_effect_v2_input_meta_buffer: wgpu::Buffer,
 }
 
 impl GpuEffectParams {

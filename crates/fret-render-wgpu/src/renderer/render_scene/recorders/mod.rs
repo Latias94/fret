@@ -16,6 +16,7 @@ pub(super) use effects::record_color_adjust_pass;
 pub(super) use effects::record_color_matrix_pass;
 pub(super) use effects::record_composite_premul_pass;
 pub(super) use effects::record_custom_effect_pass;
+pub(super) use effects::record_custom_effect_v2_pass;
 pub(super) use effects::record_dither_pass;
 pub(super) use effects::record_drop_shadow_pass;
 pub(super) use effects::record_noise_pass;

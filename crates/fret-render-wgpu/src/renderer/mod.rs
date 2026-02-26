@@ -194,11 +194,18 @@ struct MaterialEntry {
 
 #[derive(Clone, Debug)]
 struct CustomEffectEntry {
+    abi: CustomEffectAbi,
     raw_source: Arc<str>,
     wgsl_unmasked: Arc<str>,
     wgsl_masked: Arc<str>,
     wgsl_mask: Arc<str>,
     refs: u32,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum CustomEffectAbi {
+    V1,
+    V2,
 }
 
 pub struct RenderSceneParams<'a> {

@@ -3,9 +3,9 @@ use super::frame_targets::downsampled_size;
 use super::intermediate_pool::estimate_texture_bytes;
 use super::{
     AlphaThresholdPass, BackdropWarpPass, BlurAxis, BlurPass, ClipMaskPass, ColorAdjustPass,
-    ColorMatrixPass, CustomEffectPass, DitherPass, DropShadowPass, FullscreenBlitPass,
-    LocalScissorRect, MaskRef, NoisePass, PlanTarget, RenderPlanPass, ScaleMode, ScaleNearestPass,
-    ScissorRect,
+    ColorMatrixPass, CustomEffectPass, CustomEffectV2Pass, DitherPass, DropShadowPass,
+    FullscreenBlitPass, LocalScissorRect, MaskRef, NoisePass, PlanTarget, RenderPlanPass,
+    ScaleMode, ScaleNearestPass, ScissorRect,
 };
 
 #[derive(Clone, Copy, Debug)]
@@ -145,11 +145,14 @@ pub(super) fn apply_chain_in_place(
         let min_budget_for_work = full.saturating_mul(3);
         let has_work = scratch_targets.len() >= 2;
         let has_mask = mask_uniform_index.is_some() || mask.is_some();
-        let last_step_is_custom_v1 = steps
-            .last()
-            .is_some_and(|s| matches!(*s, fret_core::EffectStep::CustomV1 { .. }));
+        let last_step_is_custom = steps.last().is_some_and(|s| {
+            matches!(
+                *s,
+                fret_core::EffectStep::CustomV1 { .. } | fret_core::EffectStep::CustomV2 { .. }
+            )
+        });
         let can_commit_with_mask = !has_mask
-            || last_step_is_custom_v1
+            || last_step_is_custom
             || color_adjust_enabled(ctx.viewport_size, ctx.format, budget_bytes);
 
         if needs_padding
@@ -202,33 +205,68 @@ pub(super) fn apply_chain_in_place(
 
             if let Some(&final_step) = tail_step.first()
                 && let Some(&final_scissor) = tail_scissor.first()
-                && last_step_is_custom_v1
-                && matches!(final_step, fret_core::EffectStep::CustomV1 { .. })
+                && last_step_is_custom
+                && matches!(
+                    final_step,
+                    fret_core::EffectStep::CustomV1 { .. } | fret_core::EffectStep::CustomV2 { .. }
+                )
             {
-                // Optimized path: commit the final CustomV1 step directly into `srcdst`, reading
+                // Optimized path: commit the final Custom effect step directly into `srcdst`, reading
                 // from the padded work buffer and applying clip/mask coverage exactly once.
-                if let fret_core::EffectStep::CustomV1 {
-                    id,
-                    params,
-                    max_sample_offset_px: _,
-                } = final_step
-                {
-                    debug_assert_eq!(
-                        final_scissor, scissor,
-                        "final scissor must be the original bounds"
-                    );
-                    passes.push(RenderPlanPass::CustomEffect(CustomEffectPass {
-                        src: work,
-                        dst: srcdst,
-                        src_size: ctx.viewport_size,
-                        dst_size: ctx.viewport_size,
-                        dst_scissor: Some(LocalScissorRect(scissor)),
-                        mask_uniform_index,
-                        mask,
-                        effect: id,
+                debug_assert_eq!(
+                    final_scissor, scissor,
+                    "final scissor must be the original bounds"
+                );
+                match final_step {
+                    fret_core::EffectStep::CustomV1 {
+                        id,
                         params,
-                        load: wgpu::LoadOp::Load,
-                    }));
+                        max_sample_offset_px: _,
+                    } => {
+                        passes.push(RenderPlanPass::CustomEffect(CustomEffectPass {
+                            src: work,
+                            dst: srcdst,
+                            src_size: ctx.viewport_size,
+                            dst_size: ctx.viewport_size,
+                            dst_scissor: Some(LocalScissorRect(scissor)),
+                            mask_uniform_index,
+                            mask,
+                            effect: id,
+                            params,
+                            load: wgpu::LoadOp::Load,
+                        }));
+                    }
+                    fret_core::EffectStep::CustomV2 {
+                        id,
+                        params,
+                        max_sample_offset_px: _,
+                        input_image,
+                    } => {
+                        let (input_image, input_uv, input_sampling) = match input_image {
+                            None => (
+                                None,
+                                fret_core::scene::UvRect::FULL,
+                                fret_core::scene::ImageSamplingHint::Default,
+                            ),
+                            Some(input) => (Some(input.image), input.uv, input.sampling),
+                        };
+                        passes.push(RenderPlanPass::CustomEffectV2(CustomEffectV2Pass {
+                            src: work,
+                            dst: srcdst,
+                            src_size: ctx.viewport_size,
+                            dst_size: ctx.viewport_size,
+                            dst_scissor: Some(LocalScissorRect(scissor)),
+                            mask_uniform_index,
+                            mask,
+                            effect: id,
+                            params,
+                            input_image,
+                            input_uv,
+                            input_sampling,
+                            load: wgpu::LoadOp::Load,
+                        }));
+                    }
+                    _ => {}
                 }
             } else {
                 // Fallback: apply the final step in-place on the work buffer, then composite the
@@ -1225,6 +1263,68 @@ pub(super) fn apply_chain_in_place(
                     mask,
                 );
             }
+            fret_core::EffectStep::CustomV2 {
+                id,
+                params,
+                max_sample_offset_px: _,
+                input_image,
+            } => {
+                effect_degradations.custom_effect.requested = effect_degradations
+                    .custom_effect
+                    .requested
+                    .saturating_add(1);
+                if !color_adjust_enabled(ctx.viewport_size, ctx.format, budget_bytes) {
+                    if budget_bytes == 0 {
+                        effect_degradations.custom_effect.degraded_budget_zero =
+                            effect_degradations
+                                .custom_effect
+                                .degraded_budget_zero
+                                .saturating_add(1);
+                    } else {
+                        effect_degradations
+                            .custom_effect
+                            .degraded_budget_insufficient = effect_degradations
+                            .custom_effect
+                            .degraded_budget_insufficient
+                            .saturating_add(1);
+                    }
+                    continue;
+                }
+                let Some(&scratch) = scratch_targets.first() else {
+                    effect_degradations.custom_effect.degraded_target_exhausted =
+                        effect_degradations
+                            .custom_effect
+                            .degraded_target_exhausted
+                            .saturating_add(1);
+                    continue;
+                };
+                effect_degradations.custom_effect.applied =
+                    effect_degradations.custom_effect.applied.saturating_add(1);
+
+                let (input_image, input_uv, input_sampling) = match input_image {
+                    None => (
+                        None,
+                        fret_core::scene::UvRect::FULL,
+                        fret_core::scene::ImageSamplingHint::Default,
+                    ),
+                    Some(input) => (Some(input.image), input.uv, input.sampling),
+                };
+                append_custom_effect_v2_in_place_single_scratch(
+                    passes,
+                    srcdst,
+                    scratch,
+                    ctx.viewport_size,
+                    Some(scissor),
+                    id,
+                    params,
+                    input_image,
+                    input_uv,
+                    input_sampling,
+                    ctx.clear,
+                    mask_uniform_index,
+                    mask,
+                );
+            }
         }
     }
 }
@@ -1259,6 +1359,10 @@ fn effect_step_max_sample_pad_px(step: fret_core::EffectStep, scale_factor: f32)
             w.base.strength_px.0 + w.base.chromatic_aberration_px.0
         }
         fret_core::EffectStep::CustomV1 {
+            max_sample_offset_px,
+            ..
+        } => max_sample_offset_px.0,
+        fret_core::EffectStep::CustomV2 {
             max_sample_offset_px,
             ..
         } => max_sample_offset_px.0,
@@ -1738,6 +1842,66 @@ fn apply_step_in_place_with_scratch_targets(
                 Some(scissor),
                 id,
                 params,
+                ctx.clear,
+                None,
+                None,
+            );
+        }
+        fret_core::EffectStep::CustomV2 {
+            id,
+            params,
+            max_sample_offset_px: _,
+            input_image,
+        } => {
+            effect_degradations.custom_effect.requested = effect_degradations
+                .custom_effect
+                .requested
+                .saturating_add(1);
+            if !color_adjust_enabled(ctx.viewport_size, ctx.format, *budget_bytes) {
+                if *budget_bytes == 0 {
+                    effect_degradations.custom_effect.degraded_budget_zero = effect_degradations
+                        .custom_effect
+                        .degraded_budget_zero
+                        .saturating_add(1);
+                } else {
+                    effect_degradations
+                        .custom_effect
+                        .degraded_budget_insufficient = effect_degradations
+                        .custom_effect
+                        .degraded_budget_insufficient
+                        .saturating_add(1);
+                }
+                return;
+            }
+            let Some(&scratch) = scratch_targets.first() else {
+                effect_degradations.custom_effect.degraded_target_exhausted = effect_degradations
+                    .custom_effect
+                    .degraded_target_exhausted
+                    .saturating_add(1);
+                return;
+            };
+            effect_degradations.custom_effect.applied =
+                effect_degradations.custom_effect.applied.saturating_add(1);
+
+            let (input_image, input_uv, input_sampling) = match input_image {
+                None => (
+                    None,
+                    fret_core::scene::UvRect::FULL,
+                    fret_core::scene::ImageSamplingHint::Default,
+                ),
+                Some(input) => (Some(input.image), input.uv, input.sampling),
+            };
+            append_custom_effect_v2_in_place_single_scratch(
+                passes,
+                srcdst,
+                scratch,
+                ctx.viewport_size,
+                Some(scissor),
+                id,
+                params,
+                input_image,
+                input_uv,
+                input_sampling,
                 ctx.clear,
                 None,
                 None,
@@ -2987,6 +3151,84 @@ fn append_custom_effect_in_place_single_scratch(
         mask: None,
         effect,
         params,
+        load: wgpu::LoadOp::Clear(clear),
+    }));
+    passes.push(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
+        src: scratch,
+        dst: srcdst,
+        src_size: size,
+        dst_size: size,
+        dst_scissor: None,
+        encode_output_srgb: false,
+        load: wgpu::LoadOp::Clear(clear),
+    }));
+}
+
+#[allow(clippy::too_many_arguments)]
+fn append_custom_effect_v2_in_place_single_scratch(
+    passes: &mut Vec<RenderPlanPass>,
+    srcdst: PlanTarget,
+    scratch: PlanTarget,
+    size: (u32, u32),
+    scissor: Option<ScissorRect>,
+    effect: fret_core::EffectId,
+    params: fret_core::EffectParamsV1,
+    input_image: Option<fret_core::ImageId>,
+    input_uv: fret_core::scene::UvRect,
+    input_sampling: fret_core::scene::ImageSamplingHint,
+    clear: wgpu::Color,
+    mask_uniform_index: Option<u32>,
+    mask: Option<MaskRef>,
+) {
+    debug_assert_ne!(srcdst, PlanTarget::Output);
+    debug_assert_ne!(scratch, PlanTarget::Output);
+    debug_assert_ne!(srcdst, scratch);
+
+    if let Some(scissor) = scissor {
+        if scissor.w == 0 || scissor.h == 0 {
+            return;
+        }
+
+        passes.push(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
+            src: srcdst,
+            dst: scratch,
+            src_size: size,
+            dst_size: size,
+            dst_scissor: None,
+            encode_output_srgb: false,
+            load: wgpu::LoadOp::Clear(clear),
+        }));
+        passes.push(RenderPlanPass::CustomEffectV2(CustomEffectV2Pass {
+            src: scratch,
+            dst: srcdst,
+            src_size: size,
+            dst_size: size,
+            dst_scissor: Some(LocalScissorRect(scissor)),
+            mask_uniform_index,
+            mask,
+            effect,
+            params,
+            input_image,
+            input_uv,
+            input_sampling,
+            load: wgpu::LoadOp::Load,
+        }));
+        return;
+    }
+
+    passes.push(RenderPlanPass::CustomEffectV2(CustomEffectV2Pass {
+        src: srcdst,
+        dst: scratch,
+        src_size: size,
+        dst_size: size,
+        dst_scissor: None,
+        mask_uniform_index: None,
+        mask: None,
+        effect,
+        params,
+        input_image,
+        input_uv,
+        input_sampling,
         load: wgpu::LoadOp::Clear(clear),
     }));
     passes.push(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {

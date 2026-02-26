@@ -1,6 +1,7 @@
 use super::shaders::{
     custom_effect_mask_shader_source, custom_effect_masked_shader_source,
-    custom_effect_unmasked_shader_source,
+    custom_effect_unmasked_shader_source, custom_effect_v2_mask_shader_source,
+    custom_effect_v2_masked_shader_source, custom_effect_v2_unmasked_shader_source,
 };
 use super::*;
 use std::collections::hash_map::Entry;
@@ -19,6 +20,31 @@ fn build_and_validate_custom_effect_wgsl_v1(
     let wgsl_unmasked = custom_effect_unmasked_shader_source(user_source);
     let wgsl_masked = custom_effect_masked_shader_source(user_source);
     let wgsl_mask = custom_effect_mask_shader_source(user_source);
+
+    let mut validator = Validator::new(ValidationFlags::all(), Capabilities::empty());
+    for src in [&wgsl_unmasked, &wgsl_masked, &wgsl_mask] {
+        let module = naga::front::wgsl::parse_str(src)
+            .map_err(|_err| fret_core::CustomEffectRegistrationError::InvalidSource)?;
+        validator
+            .validate(&module)
+            .map_err(|_err| fret_core::CustomEffectRegistrationError::InvalidSource)?;
+    }
+
+    Ok((wgsl_unmasked, wgsl_masked, wgsl_mask))
+}
+
+fn build_and_validate_custom_effect_wgsl_v2(
+    user_source: &str,
+) -> Result<(String, String, String), fret_core::CustomEffectRegistrationError> {
+    use naga::valid::{Capabilities, ValidationFlags, Validator};
+
+    if user_source.len() > MAX_CUSTOM_EFFECT_WGSL_BYTES {
+        return Err(fret_core::CustomEffectRegistrationError::InvalidSource);
+    }
+
+    let wgsl_unmasked = custom_effect_v2_unmasked_shader_source(user_source);
+    let wgsl_masked = custom_effect_v2_masked_shader_source(user_source);
+    let wgsl_mask = custom_effect_v2_mask_shader_source(user_source);
 
     let mut validator = Validator::new(ValidationFlags::all(), Capabilities::empty());
     for src in [&wgsl_unmasked, &wgsl_masked, &wgsl_mask] {
@@ -382,6 +408,7 @@ impl fret_core::CustomEffectService for Renderer {
         &mut self,
         desc: fret_core::CustomEffectDescriptorV1,
     ) -> Result<fret_core::EffectId, fret_core::CustomEffectRegistrationError> {
+        let abi = CustomEffectAbi::V1;
         if desc.language != fret_core::CustomEffectProgramLanguage::WgslUtf8 {
             return Err(fret_core::CustomEffectRegistrationError::Unsupported);
         }
@@ -390,12 +417,15 @@ impl fret_core::CustomEffectService for Renderer {
             return Err(fret_core::CustomEffectRegistrationError::InvalidSource);
         }
 
-        let h = hash_bytes(desc.source.as_bytes());
+        let h = mix_u64(hash_bytes(desc.source.as_bytes()), 1);
         if let Some(ids) = self.custom_effect_hash_index.get(&h) {
             for &id in ids {
                 let Some(existing) = self.custom_effects.get(id) else {
                     continue;
                 };
+                if existing.abi != abi {
+                    continue;
+                }
                 if existing.raw_source.as_ref() == desc.source.as_str() {
                     if let Some(entry) = self.custom_effects.get_mut(id) {
                         entry.refs = entry.refs.saturating_add(1);
@@ -410,6 +440,55 @@ impl fret_core::CustomEffectService for Renderer {
 
         let raw_source: Arc<str> = Arc::from(desc.source);
         let id = self.custom_effects.insert(super::CustomEffectEntry {
+            abi,
+            raw_source: raw_source.clone(),
+            wgsl_unmasked: Arc::from(wgsl_unmasked),
+            wgsl_masked: Arc::from(wgsl_masked),
+            wgsl_mask: Arc::from(wgsl_mask),
+            refs: 1,
+        });
+        self.custom_effect_hash_index.entry(h).or_default().push(id);
+        self.custom_effects_generation = self.custom_effects_generation.wrapping_add(1);
+        Ok(id)
+    }
+
+    fn register_custom_effect_v2(
+        &mut self,
+        desc: fret_core::CustomEffectDescriptorV2,
+    ) -> Result<fret_core::EffectId, fret_core::CustomEffectRegistrationError> {
+        let abi = CustomEffectAbi::V2;
+        if desc.language != fret_core::CustomEffectProgramLanguage::WgslUtf8 {
+            return Err(fret_core::CustomEffectRegistrationError::Unsupported);
+        }
+
+        if desc.source.len() > MAX_CUSTOM_EFFECT_WGSL_BYTES {
+            return Err(fret_core::CustomEffectRegistrationError::InvalidSource);
+        }
+
+        let h = mix_u64(hash_bytes(desc.source.as_bytes()), 2);
+        if let Some(ids) = self.custom_effect_hash_index.get(&h) {
+            for &id in ids {
+                let Some(existing) = self.custom_effects.get(id) else {
+                    continue;
+                };
+                if existing.abi != abi {
+                    continue;
+                }
+                if existing.raw_source.as_ref() == desc.source.as_str() {
+                    if let Some(entry) = self.custom_effects.get_mut(id) {
+                        entry.refs = entry.refs.saturating_add(1);
+                    }
+                    return Ok(id);
+                }
+            }
+        }
+
+        let (wgsl_unmasked, wgsl_masked, wgsl_mask) =
+            build_and_validate_custom_effect_wgsl_v2(&desc.source)?;
+
+        let raw_source: Arc<str> = Arc::from(desc.source);
+        let id = self.custom_effects.insert(super::CustomEffectEntry {
+            abi,
             raw_source: raw_source.clone(),
             wgsl_unmasked: Arc::from(wgsl_unmasked),
             wgsl_masked: Arc::from(wgsl_masked),
@@ -437,7 +516,13 @@ impl fret_core::CustomEffectService for Renderer {
             return false;
         };
 
-        let h = hash_bytes(entry.raw_source.as_bytes());
+        let h = mix_u64(
+            hash_bytes(entry.raw_source.as_bytes()),
+            match entry.abi {
+                CustomEffectAbi::V1 => 1,
+                CustomEffectAbi::V2 => 2,
+            },
+        );
         if let Some(list) = self.custom_effect_hash_index.get_mut(&h) {
             list.retain(|x| *x != id);
             if list.is_empty() {
@@ -447,6 +532,7 @@ impl fret_core::CustomEffectService for Renderer {
 
         // Drop any cached pipelines for this effect.
         self.pipelines.custom_effect_pipelines.remove(&id);
+        self.pipelines.custom_effect_v2_pipelines.remove(&id);
 
         self.custom_effects_generation = self.custom_effects_generation.wrapping_add(1);
         true
