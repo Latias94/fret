@@ -31,12 +31,11 @@ pub(super) fn todo_template_cargo_toml(
     }
     match opts.icon_pack {
         IconPack::Lucide => {
-            kit_features.push("icons-lucide");
+            kit_features.push("icons");
             kit_features.push("preload-icon-svgs");
         }
         IconPack::Radix => {
-            kit_features.push("icons-radix");
-            kit_features.push("preload-icon-svgs");
+            // Radix icons are installed via an explicit dependency + install hook (no `fret` feature).
         }
         IconPack::None => {}
     }
@@ -48,8 +47,17 @@ pub(super) fn todo_template_cargo_toml(
         .join(", ");
 
     let fret_path = join_workspace_path(workspace_prefix, "ecosystem/fret");
+    let fret_icons_radix_path = join_workspace_path(workspace_prefix, "ecosystem/fret-icons-radix");
     let fret_query_path = join_workspace_path(workspace_prefix, "ecosystem/fret-query");
     let fret_selector_path = join_workspace_path(workspace_prefix, "ecosystem/fret-selector");
+
+    let radix_dep = if matches!(opts.icon_pack, IconPack::Radix) {
+        format!(
+            "fret-icons-radix = {{ path = \"{fret_icons_radix_path}\", features = [\"app-integration\"] }}\n"
+        )
+    } else {
+        String::new()
+    };
 
     format!(
         r#"[package]
@@ -60,7 +68,7 @@ edition = "2024"
 [dependencies]
 anyhow = "1"
 fret = {{ path = "{fret_path}", default-features = false, features = [{kit_features}] }}
-fret-query = {{ path = "{fret_query_path}", features = ["ui"] }}
+{radix_dep}fret-query = {{ path = "{fret_query_path}", features = ["ui"] }}
 fret-selector = {{ path = "{fret_selector_path}", features = ["ui"] }}
 [workspace]
 "#
@@ -81,12 +89,11 @@ pub(super) fn simple_todo_template_cargo_toml(
     }
     match opts.icon_pack {
         IconPack::Lucide => {
-            kit_features.push("icons-lucide");
+            kit_features.push("icons");
             kit_features.push("preload-icon-svgs");
         }
         IconPack::Radix => {
-            kit_features.push("icons-radix");
-            kit_features.push("preload-icon-svgs");
+            // Radix icons are installed via an explicit dependency + install hook (no `fret` feature).
         }
         IconPack::None => {}
     }
@@ -98,6 +105,15 @@ pub(super) fn simple_todo_template_cargo_toml(
         .join(", ");
 
     let fret_path = join_workspace_path(workspace_prefix, "ecosystem/fret");
+    let fret_icons_radix_path = join_workspace_path(workspace_prefix, "ecosystem/fret-icons-radix");
+
+    let radix_dep = if matches!(opts.icon_pack, IconPack::Radix) {
+        format!(
+            "fret-icons-radix = {{ path = \"{fret_icons_radix_path}\", features = [\"app-integration\"] }}\n"
+        )
+    } else {
+        String::new()
+    };
 
     format!(
         r#"[package]
@@ -108,6 +124,7 @@ edition = "2024"
 [dependencies]
 anyhow = "1"
 fret = {{ path = "{fret_path}", default-features = false, features = [{kit_features}] }}
+{radix_dep}
 
 [workspace]
 "#
@@ -140,12 +157,11 @@ pub(super) fn hello_template_cargo_toml(
     }
     match opts.icon_pack {
         IconPack::Lucide => {
-            kit_features.push("icons-lucide");
+            kit_features.push("icons");
             kit_features.push("preload-icon-svgs");
         }
         IconPack::Radix => {
-            kit_features.push("icons-radix");
-            kit_features.push("preload-icon-svgs");
+            // Radix icons are installed via an explicit dependency + install hook (no `fret` feature).
         }
         IconPack::None => {}
     }
@@ -157,6 +173,15 @@ pub(super) fn hello_template_cargo_toml(
         .join(", ");
 
     let fret_path = join_workspace_path(workspace_prefix, "ecosystem/fret");
+    let fret_icons_radix_path = join_workspace_path(workspace_prefix, "ecosystem/fret-icons-radix");
+
+    let radix_dep = if matches!(opts.icon_pack, IconPack::Radix) {
+        format!(
+            "fret-icons-radix = {{ path = \"{fret_icons_radix_path}\", features = [\"app-integration\"] }}\n"
+        )
+    } else {
+        String::new()
+    };
 
     format!(
         r#"[package]
@@ -167,6 +192,7 @@ edition = "2024"
 [dependencies]
 anyhow = "1"
     fret = {{ path = "{fret_path}", default-features = false, features = [{kit_features}] }}
+{radix_dep}
 
 [workspace]
 "#
@@ -208,6 +234,14 @@ pub(super) fn todo_template_main_rs(_package_name: &str, opts: ScaffoldOptions) 
         .on_click(remove_cmd)
         .into_element(cx);
 "#
+    };
+
+    let install_icons = match opts.icon_pack {
+        IconPack::Radix => {
+            r#"    fret_icons_radix::install_app(app);
+"#
+        }
+        IconPack::Lucide | IconPack::None => "",
     };
 
     const TEMPLATE: &str = r#"use std::sync::Arc;
@@ -330,11 +364,17 @@ impl MvuProgram for TodoProgram {
     }
 }
 
+fn install_app(app: &mut App) {
+__INSTALL_ICONS__
+    // Register app-owned globals, commands, services, etc.
+}
+
 fn main() -> anyhow::Result<()> {
-    fret::mvu::app::<TodoProgram>("todo")?
-        .with_main_window("todo", (560.0, 520.0))
-        .run()?;
-    Ok(())
+    FretApp::new("todo")
+        .window("todo", (560.0, 520.0))
+        .install_app(install_app)
+        .run_mvu::<TodoProgram>()
+        .map_err(anyhow::Error::from)
 }
 
 fn init_window(app: &mut App, _window: AppWindowId) -> TodoState {
@@ -734,6 +774,7 @@ fn update(app: &mut App, state: &mut TodoState, msg: Msg) {
     TEMPLATE
         .replace("__ADD_BTN_DEF__", add_btn_def)
         .replace("__REMOVE_BTN_DEF__", remove_btn_def)
+        .replace("__INSTALL_ICONS__", install_icons)
 }
 
 pub(super) fn hello_template_main_rs(package_name: &str, opts: ScaffoldOptions) -> String {
@@ -744,6 +785,14 @@ pub(super) fn hello_template_main_rs(package_name: &str, opts: ScaffoldOptions) 
                     .into_element(cx),"#
     } else {
         ""
+    };
+
+    let install_icons = match opts.icon_pack {
+        IconPack::Radix => {
+            r#"    fret_icons_radix::install_app(app);
+"#
+        }
+        IconPack::Lucide | IconPack::None => "",
     };
 
     format!(
@@ -795,15 +844,22 @@ __PALETTE_BUTTON__
     }}
 }}
 
+fn install_app(app: &mut App) {{
+__INSTALL_ICONS__
+    // Register app-owned globals, commands, services, etc.
+}}
+
 fn main() -> anyhow::Result<()> {{
-    fret::mvu::app::<HelloProgram>("{package_name}")?
-        .with_main_window("{package_name}", (560.0, 360.0))
-        .run()?;
-    Ok(())
+    FretApp::new("{package_name}")
+        .window("{package_name}", (560.0, 360.0))
+        .install_app(install_app)
+        .run_mvu::<HelloProgram>()
+        .map_err(anyhow::Error::from)
 }}
 "#
     )
     .replace("__PALETTE_BUTTON__", palette_button)
+    .replace("__INSTALL_ICONS__", install_icons)
 }
 
 pub(super) fn simple_todo_template_main_rs(_package_name: &str, opts: ScaffoldOptions) -> String {
@@ -845,6 +901,14 @@ pub(super) fn simple_todo_template_main_rs(_package_name: &str, opts: ScaffoldOp
         .ui()
         .rounded_md();
 "#
+    };
+
+    let install_icons = match opts.icon_pack {
+        IconPack::Radix => {
+            r#"    fret_icons_radix::install_app(app);
+"#
+        }
+        IconPack::Lucide | IconPack::None => "",
     };
 
     const TEMPLATE: &str = r#"use std::sync::Arc;
@@ -894,11 +958,17 @@ impl MvuProgram for TodoProgram {
     }
 }
 
+fn install_app(app: &mut App) {
+__INSTALL_ICONS__
+    // Register app-owned globals, commands, services, etc.
+}
+
 fn main() -> anyhow::Result<()> {
-    fret::mvu::app::<TodoProgram>("simple-todo")?
-        .with_main_window("simple-todo", (560.0, 520.0))
-        .run()?;
-    Ok(())
+    FretApp::new("simple-todo")
+        .window("simple-todo", (560.0, 520.0))
+        .install_app(install_app)
+        .run_mvu::<TodoProgram>()
+        .map_err(anyhow::Error::from)
 }
 
 fn init_window(app: &mut App, _window: AppWindowId) -> TodoState {
@@ -1102,6 +1172,7 @@ __REMOVE_BTN_DEF__
     TEMPLATE
         .replace("__ADD_BTN_DEF__", add_btn_def)
         .replace("__REMOVE_BTN_DEF__", remove_btn_def)
+        .replace("__INSTALL_ICONS__", install_icons)
 }
 
 pub(super) fn empty_template_main_rs() -> &'static str {
@@ -1120,8 +1191,8 @@ pub(super) fn todo_template_readme_md(package_name: &str, opts: ScaffoldOptions)
     };
 
     let icons_line = match opts.icon_pack {
-        IconPack::Lucide => "- Icons: Lucide (`fret/icons-lucide`)\n",
-        IconPack::Radix => "- Icons: Radix (`fret/icons-radix`)\n",
+        IconPack::Lucide => "- Icons: enabled (default Lucide pack)\n",
+        IconPack::Radix => "- Icons: Radix (via `fret-icons-radix` dependency)\n",
         IconPack::None => "- Icons: disabled\n",
     };
 
@@ -1188,7 +1259,7 @@ Set-Content -Path .fret/hotpatch.touch -Value (Get-Date).Ticks
 ## Next steps
 
 - Edit UI in `src/main.rs`
-- If you want hotpatch later, keep commands/IDs stable and prefer the `fret::mvu::app::<Program>(...)` golden path (ADR 0105 / 0110).
+- If you want hotpatch later, keep commands/IDs stable and prefer the `FretApp::new(...).run_mvu::<Program>()` golden path (ADR 0105 / 0110).
 "#
     )
 }
@@ -1224,8 +1295,8 @@ pub(super) fn simple_todo_template_readme_md(package_name: &str, opts: ScaffoldO
     };
 
     let icons_line = match opts.icon_pack {
-        IconPack::Lucide => "- Icons: Lucide (`fret/icons-lucide`)\n",
-        IconPack::Radix => "- Icons: Radix (`fret/icons-radix`)\n",
+        IconPack::Lucide => "- Icons: enabled (default Lucide pack)\n",
+        IconPack::Radix => "- Icons: Radix (via `fret-icons-radix` dependency)\n",
         IconPack::None => "- Icons: disabled\n",
     };
 
@@ -1270,8 +1341,8 @@ cargo run --release
 
 pub(super) fn hello_template_readme_md(package_name: &str, opts: ScaffoldOptions) -> String {
     let icons_line = match opts.icon_pack {
-        IconPack::Lucide => "- Icons: Lucide (`fret/icons-lucide`)\n",
-        IconPack::Radix => "- Icons: Radix (`fret/icons-radix`)\n",
+        IconPack::Lucide => "- Icons: enabled (default Lucide pack)\n",
+        IconPack::Radix => "- Icons: Radix (via `fret-icons-radix` dependency)\n",
         IconPack::None => "- Icons: disabled\n",
     };
 

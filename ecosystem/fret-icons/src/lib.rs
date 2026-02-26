@@ -136,6 +136,20 @@ impl IconRegistry {
         self.register(id, IconSource::Alias(target))
     }
 
+    /// Register an alias only if the ID is not already present in the registry.
+    ///
+    /// This is useful when multiple icon packs may provide semantic `ui.*` aliases and we want a
+    /// stable "first registered wins" policy without requiring compile-time feature gating.
+    ///
+    /// Returns `true` if the alias was registered.
+    pub fn alias_if_missing(&mut self, id: IconId, target: IconId) -> bool {
+        if self.icons.contains_key(&id) {
+            return false;
+        }
+        self.icons.insert(id, IconSource::Alias(target));
+        true
+    }
+
     pub fn contains(&self, id: &IconId) -> bool {
         self.icons.contains_key(id)
     }
