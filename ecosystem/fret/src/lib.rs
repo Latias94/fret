@@ -442,7 +442,7 @@ impl<S: 'static> UiAppBuilder<S> {
 
     pub fn install_custom_effects(
         self,
-        install: fn(&mut App, &mut dyn fret_core::CustomEffectService),
+        install: fn(&mut KernelApp, &mut dyn fret_core::CustomEffectService),
     ) -> Self {
         Self {
             inner: self.inner.install_custom_effects(install),
