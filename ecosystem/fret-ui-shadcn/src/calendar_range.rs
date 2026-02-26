@@ -983,7 +983,7 @@ fn calendar_range_multi_month_view<H: UiHost>(
                 .iter()
                 .copied()
                 .map(|m| {
-                    calendar_range_month_view(
+                    let month_el = calendar_range_month_view(
                         cx,
                         theme,
                         m,
@@ -1012,7 +1012,17 @@ fn calendar_range_multi_month_view<H: UiHost>(
                         close_on_select.clone(),
                         initial_focus_out.clone(),
                         grid_text_style.clone(),
-                    )
+                    );
+
+                    let month_test_id = test_id_prefix
+                        .as_ref()
+                        .map(|prefix| Arc::from(format!("{prefix}.month:{}", m.first_day())));
+
+                    if let Some(month_test_id) = month_test_id {
+                        month_el.test_id(month_test_id)
+                    } else {
+                        month_el
+                    }
                 })
                 .collect::<Vec<_>>()
         })
@@ -1026,7 +1036,7 @@ fn calendar_range_multi_month_view<H: UiHost>(
                 .iter()
                 .copied()
                 .map(|m| {
-                    calendar_range_month_view(
+                    let month_el = calendar_range_month_view(
                         cx,
                         theme,
                         m,
@@ -1055,7 +1065,17 @@ fn calendar_range_multi_month_view<H: UiHost>(
                         close_on_select.clone(),
                         initial_focus_out.clone(),
                         grid_text_style.clone(),
-                    )
+                    );
+
+                    let month_test_id = test_id_prefix
+                        .as_ref()
+                        .map(|prefix| Arc::from(format!("{prefix}.month:{}", m.first_day())));
+
+                    if let Some(month_test_id) = month_test_id {
+                        month_el.test_id(month_test_id)
+                    } else {
+                        month_el
+                    }
                 })
                 .collect::<Vec<_>>()
         })

@@ -41,7 +41,7 @@
       "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
       "target": {
         "kind": "test_id",
-        "id": "ui-gallery.calendar.responsive.panel:2026-05-01"
+        "id": "ui-gallery.calendar.responsive.panel.month:2026-05-01"
       },
       "delta_y": -200.0,
       "require_fully_within_container": true,
@@ -56,7 +56,7 @@
         "kind": "exists",
         "target": {
           "kind": "test_id",
-          "id": "ui-gallery.calendar.responsive.panel:2026-06-01"
+          "id": "ui-gallery.calendar.responsive.panel.month:2026-06-01"
         }
       },
       "timeout_frames": 600
@@ -65,8 +65,8 @@
       "type": "assert",
       "predicate": {
         "kind": "bounds_overlapping_x",
-        "a": { "kind": "test_id", "id": "ui-gallery.calendar.responsive.panel:2026-05-01" },
-        "b": { "kind": "test_id", "id": "ui-gallery.calendar.responsive.panel:2026-06-01" },
+        "a": { "kind": "test_id", "id": "ui-gallery.calendar.responsive.panel.month:2026-05-01" },
+        "b": { "kind": "test_id", "id": "ui-gallery.calendar.responsive.panel.month:2026-06-01" },
         "eps_px": 1.0
       }
     },
@@ -74,8 +74,8 @@
       "type": "assert",
       "predicate": {
         "kind": "bounds_non_overlapping",
-        "a": { "kind": "test_id", "id": "ui-gallery.calendar.responsive.panel:2026-05-01" },
-        "b": { "kind": "test_id", "id": "ui-gallery.calendar.responsive.panel:2026-06-01" },
+        "a": { "kind": "test_id", "id": "ui-gallery.calendar.responsive.panel.month:2026-05-01" },
+        "b": { "kind": "test_id", "id": "ui-gallery.calendar.responsive.panel.month:2026-06-01" },
         "eps_px": 1.0
       }
     },
@@ -110,7 +110,7 @@
         "kind": "exists",
         "target": {
           "kind": "test_id",
-          "id": "ui-gallery.calendar.responsive.popover:2026-05-01"
+          "id": "ui-gallery.calendar.responsive.popover.month:2026-05-01"
         }
       },
       "timeout_frames": 600
@@ -121,7 +121,7 @@
         "kind": "exists",
         "target": {
           "kind": "test_id",
-          "id": "ui-gallery.calendar.responsive.popover:2026-06-01"
+          "id": "ui-gallery.calendar.responsive.popover.month:2026-06-01"
         }
       },
       "timeout_frames": 600
@@ -130,8 +130,8 @@
       "type": "assert",
       "predicate": {
         "kind": "bounds_overlapping_y",
-        "a": { "kind": "test_id", "id": "ui-gallery.calendar.responsive.popover:2026-05-01" },
-        "b": { "kind": "test_id", "id": "ui-gallery.calendar.responsive.popover:2026-06-01" },
+        "a": { "kind": "test_id", "id": "ui-gallery.calendar.responsive.popover.month:2026-05-01" },
+        "b": { "kind": "test_id", "id": "ui-gallery.calendar.responsive.popover.month:2026-06-01" },
         "eps_px": 1.0
       }
     },
@@ -139,8 +139,8 @@
       "type": "assert",
       "predicate": {
         "kind": "bounds_non_overlapping",
-        "a": { "kind": "test_id", "id": "ui-gallery.calendar.responsive.popover:2026-05-01" },
-        "b": { "kind": "test_id", "id": "ui-gallery.calendar.responsive.popover:2026-06-01" },
+        "a": { "kind": "test_id", "id": "ui-gallery.calendar.responsive.popover.month:2026-05-01" },
+        "b": { "kind": "test_id", "id": "ui-gallery.calendar.responsive.popover.month:2026-06-01" },
         "eps_px": 1.0
       }
     },
