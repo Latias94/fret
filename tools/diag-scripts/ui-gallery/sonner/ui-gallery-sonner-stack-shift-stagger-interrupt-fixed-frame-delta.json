@@ -1,0 +1,66 @@
+{
+  "schema_version": 2,
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "sonner" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-sonner" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-sonner" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-sonner-demo-show" }
+      },
+      "timeout_frames": 600
+    },
+
+    { "type": "wait_frames", "n": 10 },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-sonner-stack-shift-stagger-interrupt-before"
+    },
+
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-sonner-demo-show" } },
+    { "type": "wait_frames", "n": 1 },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-sonner-demo-show" } },
+    { "type": "wait_frames", "n": 1 },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-sonner-demo-show" } },
+    { "type": "wait_frames", "n": 1 },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-sonner-demo-show" } },
+    { "type": "wait_frames", "n": 1 },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-sonner-demo-show" } },
+
+    { "type": "wait_frames", "n": 80 },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-sonner-stack-shift-stagger-interrupt-after"
+    },
+
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-sonner-stack-shift-stagger-interrupt-fixed-frame-delta"
+    }
+  ]
+}
+
