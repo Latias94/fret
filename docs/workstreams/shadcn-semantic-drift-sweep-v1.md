@@ -188,6 +188,16 @@ choice is:
 - Rule: reduced-motion is an environment query contract (ADR 0232) and must be respected.
 - Mitigation: make continuous animations conditional and prove “no frame requests” via tests/diag.
 
+5) **Diagnostics targets (`test_id`) for repeated elements**
+
+- Symptom: conformance/diag scripts want to target repeated elements (months, rows, chips), but the
+  recipe does not expose a stable per-item `test_id`, forcing brittle selectors or preventing
+  reliable bounds assertions.
+- Rule: any drift gate we add should have stable, typed `test_id` targets; repeated elements should
+  include a type segment and a stable key (e.g. `.month:<first_day>`).
+- Mitigation: add `test_id_prefix` plumbing and emit per-item `test_id` in view builders; update
+  diag scripts when IDs change.
+
 ## References (contracts / docs)
 
 - Runtime contract split: `docs/adr/0066-fret-ui-runtime-contract-surface.md`
@@ -216,3 +226,8 @@ recipe should follow viewport queries (device shell) or container queries (panel
   for Calendar/DataTable/Field/Empty/Drawer/NavigationMenu/Sidebar.
 - 2026-02-26: Added a regression guard to prevent reintroducing theme-name heuristics
   (`ecosystem/fret-ui-shadcn/tests/no_theme_name_heuristics_regression.rs`).
+- 2026-02-26: Stabilized CalendarRange multi-month month `test_id` targets by adding a typed
+  `.month:<first_day>` segment; updated the calendar responsive conformance script accordingly
+  (`tools/diag-scripts/ui-gallery-calendar-mixed-responsive-popover-vs-panel.json`).
+- 2026-02-26: Hardened the DataTable toolbar query-source toggle script by confirming selection
+  (Enter) after status item clicks (`tools/diag-scripts/ui-gallery-data-table-toolbar-faceted-query-source-toggle.json`).
