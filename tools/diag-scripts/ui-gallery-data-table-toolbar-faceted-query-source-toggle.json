@@ -85,11 +85,13 @@
       "type": "click",
       "target": { "kind": "test_id", "id": "data-table-toolbar-faceted-status-item-running" }
     },
+    { "type": "press_key", "key": "enter" },
     { "type": "wait_frames", "n": 2 },
     {
       "type": "click",
       "target": { "kind": "test_id", "id": "data-table-toolbar-faceted-status-item-idle" }
     },
+    { "type": "press_key", "key": "enter" },
     { "type": "wait_frames", "n": 2 },
     { "type": "press_key", "key": "escape" },
     {
@@ -191,4 +193,3 @@
     }
   ]
 }
-
