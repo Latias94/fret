@@ -83,6 +83,11 @@ fn sample_src_bilinear(pixel_pos: vec2<f32>) -> vec4<f32> {
   return mix(top, bot, f.y);
 }
 
+fn unpremul(c: vec4<f32>) -> vec3<f32> {
+  if (c.a <= 1e-6) { return vec3<f32>(0.0); }
+  return c.rgb / c.a;
+}
+
 fn fret_custom_effect(_src: vec4<f32>, _uv: vec2<f32>, pos_px: vec2<f32>, params: EffectParamsV1) -> vec4<f32> {
   let refraction_height_px = max(0.0, params.vec4s[0].x);
   let refraction_amount_px = max(0.0, params.vec4s[0].y);
@@ -114,49 +119,48 @@ fn fret_custom_effect(_src: vec4<f32>, _uv: vec2<f32>, pos_px: vec2<f32>, params
 
   let refracted = pos_px + d * grad;
 
-  if (chromatic <= 0.0) {
-    return sample_src_bilinear(refracted);
+  // Base refracted sample (premul linear).
+  let base = sample_src_bilinear(refracted);
+  var rgb_u = unpremul(base);
+  var a = base.a;
+
+  // Chromatic aberration: sample red/blue with bounded offsets, mix in unpremultiplied space,
+  // then premultiply once. This avoids edge darkening due to premul mismatch.
+  if (chromatic > 0.0) {
+    let disp = chromatic * ((centered.x * centered.y) / max(1.0, half_size.x * half_size.y));
+    let offset = d * grad * disp;
+
+    let red = sample_src_bilinear(refracted + offset);
+    let blue = sample_src_bilinear(refracted - offset);
+
+    let red_u = unpremul(red);
+    let blue_u = unpremul(blue);
+
+    let aberr = vec3<f32>(red_u.r, rgb_u.g, blue_u.b);
+    rgb_u = mix(rgb_u, aberr, chromatic);
+    a = max(a, max(red.a, blue.a));
   }
 
-  let disp = chromatic * ((centered.x * centered.y) / max(1.0, half_size.x * half_size.y));
-  let dispersed = d * grad * disp;
+  // Rim highlight + inner shadow to give the lens a "thicker" edge. This is purely a visual
+  // recipe in the demo shader (not part of the core renderer semantics).
+  let dist_in = max(0.0, -sd);
+  let rim_px = 1.25;
+  let shadow_px0 = 1.5;
+  let shadow_px1 = 10.0;
 
-  // Spectral-ish dispersion sampling (AndroidLiquidGlass-inspired).
-  var color = vec4<f32>(0.0);
+  let rim = smoothstep(rim_px, 0.0, dist_in);
+  let shadow_band = smoothstep(shadow_px0, shadow_px1, dist_in)
+    * (1.0 - smoothstep(shadow_px1, shadow_px1 + 1.5, dist_in));
 
-  let red = sample_src_bilinear(refracted + dispersed);
-  color.r += red.r / 3.5;
-  color.a += red.a / 7.0;
+  let corner_boost = 1.0 + 1.2 * abs(g0.x * g0.y);
+  let rim_strength = 0.08 + 0.10 * depth_effect;
+  let shadow_strength = 0.06 + 0.06 * depth_effect;
 
-  let orange = sample_src_bilinear(refracted + dispersed * (2.0 / 3.0));
-  color.r += orange.r / 3.5;
-  color.g += orange.g / 7.0;
-  color.a += orange.a / 7.0;
+  rgb_u += vec3<f32>(1.0) * rim * rim_strength * corner_boost;
+  rgb_u -= vec3<f32>(1.0) * shadow_band * shadow_strength;
+  rgb_u = clamp(rgb_u, vec3<f32>(0.0), vec3<f32>(4.0));
 
-  let yellow = sample_src_bilinear(refracted + dispersed * (1.0 / 3.0));
-  color.r += yellow.r / 3.5;
-  color.g += yellow.g / 3.5;
-  color.a += yellow.a / 7.0;
-
-  let green = sample_src_bilinear(refracted);
-  color.g += green.g / 3.5;
-  color.a += green.a / 7.0;
-
-  let cyan = sample_src_bilinear(refracted - dispersed * (1.0 / 3.0));
-  color.g += cyan.g / 3.5;
-  color.b += cyan.b / 3.0;
-  color.a += cyan.a / 7.0;
-
-  let blue = sample_src_bilinear(refracted - dispersed * (2.0 / 3.0));
-  color.b += blue.b / 3.0;
-  color.a += blue.a / 7.0;
-
-  let purple = sample_src_bilinear(refracted - dispersed);
-  color.r += purple.r / 7.0;
-  color.b += purple.b / 3.0;
-  color.a += purple.a / 7.0;
-
-  return color;
+  return vec4<f32>(rgb_u * a, a);
 }
 "#;
 
@@ -485,6 +489,7 @@ fn lens_row(
     chromatic_aberration: f32,
     corner_radius_px: f32,
 ) -> AnyElement {
+    let radius = Px(corner_radius_px.clamp(0.0, 64.0));
     shadcn::stack::hstack(
         cx,
         shadcn::stack::HStackProps::default()
@@ -492,7 +497,7 @@ fn lens_row(
             .items_start(),
         move |cx| {
             vec![
-                plain_lens(cx, "Plain (no effect)"),
+                plain_lens(cx, "Plain (no effect)", radius),
                 if enabled {
                     custom_effect_lens(
                         cx,
@@ -507,16 +512,19 @@ fn lens_row(
                         corner_radius_px,
                     )
                 } else {
-                    plain_lens(cx, "CustomV1 lens (disabled)")
+                    plain_lens(cx, "CustomV1 lens (disabled)", radius)
                 },
             ]
         },
     )
 }
 
-fn lens_shell(cx: &mut ElementContext<'_, App>, label: Arc<str>, body: AnyElement) -> AnyElement {
-    let radius = Px(20.0);
-
+fn lens_shell(
+    cx: &mut ElementContext<'_, App>,
+    label: Arc<str>,
+    radius: Px,
+    body: AnyElement,
+) -> AnyElement {
     let mut outer_layout = LayoutStyle::default();
     outer_layout.size.width = Length::Px(Px(380.0));
     outer_layout.size.height = Length::Px(Px(240.0));
@@ -571,7 +579,11 @@ fn lens_shell(cx: &mut ElementContext<'_, App>, label: Arc<str>, body: AnyElemen
     )
 }
 
-fn plain_lens(cx: &mut ElementContext<'_, App>, label: impl Into<Arc<str>>) -> AnyElement {
+fn plain_lens(
+    cx: &mut ElementContext<'_, App>,
+    label: impl Into<Arc<str>>,
+    radius: Px,
+) -> AnyElement {
     let mut layout = LayoutStyle::default();
     layout.size.width = Length::Fill;
     layout.size.height = Length::Fill;
@@ -585,7 +597,7 @@ fn plain_lens(cx: &mut ElementContext<'_, App>, label: impl Into<Arc<str>>) -> A
         |_cx| Vec::<AnyElement>::new(),
     );
 
-    lens_shell(cx, label.into(), body)
+    lens_shell(cx, label.into(), radius, body)
 }
 
 fn custom_effect_lens(
@@ -652,7 +664,7 @@ fn custom_effect_lens(
         |_cx| Vec::<AnyElement>::new(),
     );
 
-    lens_shell(cx, label.into(), layer)
+    lens_shell(cx, label.into(), Px(radius), layer)
 }
 
 fn inspector(
