@@ -58,7 +58,7 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
   - [x] `ui-gallery/overlay` (40 scripts; batch-migrated)
   - [x] `ui-gallery/code-editor` (42 scripts; batch-migrated)
   - [x] `ui-gallery/markdown-editor` (24 scripts)
-  - [ ] `ui-gallery/layout`
+  - [x] `ui-gallery/layout` (4 scripts)
   - [ ] `ui-gallery/perf`
 - [ ] Update references after path moves (choose one):
   - [ ] replace hard-coded lists with registry/directory inputs, or
