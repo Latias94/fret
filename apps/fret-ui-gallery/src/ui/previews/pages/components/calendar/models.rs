@@ -1,11 +1,14 @@
 use super::super::super::super::super::*;
 
 use fret_ui_headless::calendar::DateRangeSelection;
+use fret_ui_headless::calendar_solar_hijri::SolarHijriMonth;
 
 #[derive(Default, Clone)]
 struct CalendarModels {
     caption_month: Option<Model<fret_ui_headless::calendar::CalendarMonth>>,
     caption_selected: Option<Model<Option<Date>>>,
+    locale_month: Option<Model<fret_ui_headless::calendar::CalendarMonth>>,
+    locale_selected: Option<Model<Option<Date>>>,
     range_month: Option<Model<fret_ui_headless::calendar::CalendarMonth>>,
     range_selected: Option<Model<DateRangeSelection>>,
     presets_month: Option<Model<fret_ui_headless::calendar::CalendarMonth>>,
@@ -22,14 +25,16 @@ struct CalendarModels {
     week_number_selected: Option<Model<Option<Date>>>,
     rtl_month: Option<Model<fret_ui_headless::calendar::CalendarMonth>>,
     rtl_selected: Option<Model<Option<Date>>>,
+    hijri_month: Option<Model<SolarHijriMonth>>,
+    hijri_selected: Option<Model<Option<Date>>>,
 }
 
 #[derive(Clone)]
 pub(super) struct CalendarHandles {
-    pub(super) month: Model<fret_ui_headless::calendar::CalendarMonth>,
-    pub(super) selected: Model<Option<Date>>,
     pub(super) caption_month: Model<fret_ui_headless::calendar::CalendarMonth>,
     pub(super) caption_selected: Model<Option<Date>>,
+    pub(super) locale_month: Model<fret_ui_headless::calendar::CalendarMonth>,
+    pub(super) locale_selected: Model<Option<Date>>,
     pub(super) range_month: Model<fret_ui_headless::calendar::CalendarMonth>,
     pub(super) range_selected: Model<DateRangeSelection>,
     pub(super) presets_month: Model<fret_ui_headless::calendar::CalendarMonth>,
@@ -46,12 +51,14 @@ pub(super) struct CalendarHandles {
     pub(super) week_number_selected: Model<Option<Date>>,
     pub(super) rtl_month: Model<fret_ui_headless::calendar::CalendarMonth>,
     pub(super) rtl_selected: Model<Option<Date>>,
+    pub(super) hijri_month: Model<SolarHijriMonth>,
+    pub(super) hijri_selected: Model<Option<Date>>,
 }
 
 pub(super) fn get_or_init(
     cx: &mut ElementContext<'_, App>,
     month: Model<fret_ui_headless::calendar::CalendarMonth>,
-    selected: Model<Option<Date>>,
+    _selected: Model<Option<Date>>,
     today: Date,
 ) -> CalendarHandles {
     let initial_month = cx
@@ -59,6 +66,8 @@ pub(super) fn get_or_init(
         .unwrap_or_else(|| fret_ui_headless::calendar::CalendarMonth::from_date(today));
 
     let state = cx.with_state(CalendarModels::default, |st| st.clone());
+
+    let basic_selected_initial = Some(today);
 
     let caption_month = match state.caption_month {
         Some(model) => model,
@@ -73,7 +82,7 @@ pub(super) fn get_or_init(
     let caption_selected = match state.caption_selected {
         Some(model) => model,
         None => {
-            let model = cx.app.models_mut().insert(None::<Date>);
+            let model = cx.app.models_mut().insert(basic_selected_initial);
             cx.with_state(CalendarModels::default, |st| {
                 st.caption_selected = Some(model.clone())
             });
@@ -81,20 +90,51 @@ pub(super) fn get_or_init(
         }
     };
 
-    let range_month = match state.range_month {
+    let locale_month = match state.locale_month {
         Some(model) => model,
         None => {
             let model = cx.app.models_mut().insert(initial_month);
             cx.with_state(CalendarModels::default, |st| {
-                st.range_month = Some(model.clone())
+                st.locale_month = Some(model.clone())
             });
             model
         }
     };
+    let locale_selected = match state.locale_selected {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(basic_selected_initial);
+            cx.with_state(CalendarModels::default, |st| {
+                st.locale_selected = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let range_from = time::Date::from_calendar_date(today.year(), time::Month::January, 12)
+        .expect("valid range start date");
+    let range_to = range_from + time::Duration::days(30);
+
+    let range_month =
+        match state.range_month {
+            Some(model) => model,
+            None => {
+                let model = cx.app.models_mut().insert(
+                    fret_ui_headless::calendar::CalendarMonth::from_date(range_from),
+                );
+                cx.with_state(CalendarModels::default, |st| {
+                    st.range_month = Some(model.clone())
+                });
+                model
+            }
+        };
     let range_selected = match state.range_selected {
         Some(model) => model,
         None => {
-            let model = cx.app.models_mut().insert(DateRangeSelection::default());
+            let model = cx.app.models_mut().insert(DateRangeSelection {
+                from: Some(range_from),
+                to: Some(range_to),
+            });
             cx.with_state(CalendarModels::default, |st| {
                 st.range_selected = Some(model.clone())
             });
@@ -170,20 +210,29 @@ pub(super) fn get_or_init(
         }
     };
 
-    let booked_month = match state.booked_month {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(initial_month);
-            cx.with_state(CalendarModels::default, |st| {
-                st.booked_month = Some(model.clone())
-            });
-            model
-        }
-    };
+    let booked_month =
+        match state.booked_month {
+            Some(model) => model,
+            None => {
+                let booked_initial =
+                    time::Date::from_calendar_date(today.year(), time::Month::January, 6)
+                        .expect("valid booked initial date");
+                let model = cx.app.models_mut().insert(
+                    fret_ui_headless::calendar::CalendarMonth::from_date(booked_initial),
+                );
+                cx.with_state(CalendarModels::default, |st| {
+                    st.booked_month = Some(model.clone())
+                });
+                model
+            }
+        };
     let booked_selected = match state.booked_selected {
         Some(model) => model,
         None => {
-            let model = cx.app.models_mut().insert(None::<Date>);
+            let booked_initial =
+                time::Date::from_calendar_date(today.year(), time::Month::January, 6)
+                    .expect("valid booked initial date");
+            let model = cx.app.models_mut().insert(Some(booked_initial));
             cx.with_state(CalendarModels::default, |st| {
                 st.booked_selected = Some(model.clone())
             });
@@ -212,20 +261,29 @@ pub(super) fn get_or_init(
         }
     };
 
-    let week_number_month = match state.week_number_month {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(initial_month);
-            cx.with_state(CalendarModels::default, |st| {
-                st.week_number_month = Some(model.clone())
-            });
-            model
-        }
-    };
+    let week_number_month =
+        match state.week_number_month {
+            Some(model) => model,
+            None => {
+                let week_number_initial =
+                    time::Date::from_calendar_date(today.year(), time::Month::January, 12)
+                        .expect("valid week number initial date");
+                let model = cx.app.models_mut().insert(
+                    fret_ui_headless::calendar::CalendarMonth::from_date(week_number_initial),
+                );
+                cx.with_state(CalendarModels::default, |st| {
+                    st.week_number_month = Some(model.clone())
+                });
+                model
+            }
+        };
     let week_number_selected = match state.week_number_selected {
         Some(model) => model,
         None => {
-            let model = cx.app.models_mut().insert(None::<Date>);
+            let week_number_initial =
+                time::Date::from_calendar_date(today.year(), time::Month::January, 12)
+                    .expect("valid week number initial date");
+            let model = cx.app.models_mut().insert(Some(week_number_initial));
             cx.with_state(CalendarModels::default, |st| {
                 st.week_number_selected = Some(model.clone())
             });
@@ -247,7 +305,7 @@ pub(super) fn get_or_init(
     let rtl_selected = match state.rtl_selected {
         Some(model) => model,
         None => {
-            let model = cx.app.models_mut().insert(Some(today));
+            let model = cx.app.models_mut().insert(basic_selected_initial);
             cx.with_state(CalendarModels::default, |st| {
                 st.rtl_selected = Some(model.clone())
             });
@@ -255,11 +313,33 @@ pub(super) fn get_or_init(
         }
     };
 
+    let hijri_month_initial = SolarHijriMonth::from_gregorian(today);
+    let hijri_month = match state.hijri_month {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(hijri_month_initial);
+            cx.with_state(CalendarModels::default, |st| {
+                st.hijri_month = Some(model.clone())
+            });
+            model
+        }
+    };
+    let hijri_selected = match state.hijri_selected {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(Some(today));
+            cx.with_state(CalendarModels::default, |st| {
+                st.hijri_selected = Some(model.clone())
+            });
+            model
+        }
+    };
+
     CalendarHandles {
-        month,
-        selected,
         caption_month,
         caption_selected,
+        locale_month,
+        locale_selected,
         range_month,
         range_selected,
         presets_month,
@@ -276,5 +356,7 @@ pub(super) fn get_or_init(
         week_number_selected,
         rtl_month,
         rtl_selected,
+        hijri_month,
+        hijri_selected,
     }
 }
