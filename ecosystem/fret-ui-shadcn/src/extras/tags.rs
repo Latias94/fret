@@ -108,7 +108,7 @@ impl Tags {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
         let gap = decl_style::space(&theme, self.gap);
         let layout = decl_style::layout_style(&theme, self.layout);
 

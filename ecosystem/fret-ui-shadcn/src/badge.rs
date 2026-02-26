@@ -3,12 +3,13 @@ use std::sync::Arc;
 use fret_core::{Color, Corners, Point, Px, SemanticsRole, Transform2D};
 use fret_icons::IconId;
 use fret_runtime::Effect;
+use fret_ui::ThemeNamedColorKey;
 use fret_ui::action::OnActivate;
 use fret_ui::element::{
     AnyElement, ElementKind, LayoutStyle, Length, PressableA11y, PressableKeyActivation,
     PressableProps, SpinnerProps, SvgIconProps,
 };
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::current_color;
 use fret_ui_kit::declarative::icon as decl_icon;
@@ -168,29 +169,31 @@ impl Badge {
     }
 }
 
-fn border_color(theme: &Theme) -> Color {
+fn border_color(theme: &ThemeSnapshot) -> Color {
     theme.color_token("border")
 }
 
-fn fg_for(theme: &Theme, variant: BadgeVariant) -> Color {
+fn fg_for(theme: &ThemeSnapshot, variant: BadgeVariant) -> Color {
     match variant {
         BadgeVariant::Default => theme.color_token("primary-foreground"),
         BadgeVariant::Secondary => theme.color_token("secondary-foreground"),
         // Upstream shadcn badge uses `text-white` for destructive.
-        BadgeVariant::Destructive => theme
-            .color_by_key("white")
-            .unwrap_or_else(|| theme.color_token("destructive-foreground")),
+        BadgeVariant::Destructive => theme.named_color(ThemeNamedColorKey::White),
         BadgeVariant::Outline => theme.color_token("foreground"),
         BadgeVariant::Ghost => theme.color_token("foreground"),
         BadgeVariant::Link => theme.color_token("primary"),
     }
 }
 
-fn bg_for(theme: &Theme, variant: BadgeVariant) -> Option<Color> {
+fn bg_for(theme: &ThemeSnapshot, variant: BadgeVariant) -> Option<Color> {
     match variant {
         BadgeVariant::Default => Some(theme.color_token("primary")),
         BadgeVariant::Secondary => Some(theme.color_token("secondary")),
-        BadgeVariant::Destructive => Some(theme.color_token("destructive")),
+        BadgeVariant::Destructive => Some(
+            theme
+                .color_by_key("component.badge.destructive.bg")
+                .unwrap_or_else(|| theme.color_token("destructive")),
+        ),
         BadgeVariant::Outline => None,
         BadgeVariant::Ghost => None,
         BadgeVariant::Link => None,
@@ -313,7 +316,7 @@ fn badge_with_patch<H: UiHost>(
     layout_override: LayoutRefinement,
 ) -> AnyElement {
     let label = label.into();
-    let theme = Theme::global(&*cx.app).clone();
+    let theme = Theme::global(&*cx.app).snapshot();
 
     let a11y_label = label.clone();
     let label_for_content = label.clone();
@@ -506,7 +509,7 @@ mod tests {
         let mut app = App::new();
 
         fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
-            let theme = Theme::global(&*cx.app).clone();
+            let theme = Theme::global(&*cx.app).snapshot();
             let expected_fg = fg_for(&theme, BadgeVariant::Default);
 
             let el = Badge::new("Verified")

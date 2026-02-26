@@ -1,6 +1,7 @@
 use super::super::*;
 
 use crate::ui::doc_layout::{self, DocSection};
+use fret_ui::ThemeNamedColorKey;
 
 pub(super) fn preview_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let theme = Theme::global(&*cx.app).snapshot();
@@ -8,21 +9,28 @@ pub(super) fn preview_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     let variants = {
         doc_layout::wrap_controls_row_snapshot(cx, &theme, Space::N2, |cx| {
             vec![
-                shadcn::Badge::new("Default").into_element(cx),
+                shadcn::Badge::new("Default")
+                    .test_id("ui-gallery-badge-variant-default")
+                    .into_element(cx),
                 shadcn::Badge::new("Secondary")
                     .variant(shadcn::BadgeVariant::Secondary)
+                    .test_id("ui-gallery-badge-variant-secondary")
                     .into_element(cx),
                 shadcn::Badge::new("Destructive")
                     .variant(shadcn::BadgeVariant::Destructive)
+                    .test_id("ui-gallery-badge-variant-destructive")
                     .into_element(cx),
                 shadcn::Badge::new("Outline")
                     .variant(shadcn::BadgeVariant::Outline)
+                    .test_id("ui-gallery-badge-variant-outline")
                     .into_element(cx),
                 shadcn::Badge::new("Ghost")
                     .variant(shadcn::BadgeVariant::Ghost)
+                    .test_id("ui-gallery-badge-variant-ghost")
                     .into_element(cx),
                 shadcn::Badge::new("Link")
                     .variant(shadcn::BadgeVariant::Link)
+                    .test_id("ui-gallery-badge-variant-link")
                     .into_element(cx),
             ]
         })
@@ -50,10 +58,12 @@ pub(super) fn preview_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             vec![
                 shadcn::Badge::new("Deleting")
                     .variant(shadcn::BadgeVariant::Destructive)
+                    .test_id("ui-gallery-badge-spinner-destructive")
                     .children([shadcn::Spinner::new().into_element(cx)])
                     .into_element(cx),
                 shadcn::Badge::new("Generating")
                     .variant(shadcn::BadgeVariant::Secondary)
+                    .test_id("ui-gallery-badge-spinner-secondary")
                     .children([shadcn::Spinner::new().into_element(cx)])
                     .into_element(cx),
             ]
@@ -98,6 +108,7 @@ pub(super) fn preview_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                                 b: 1.00,
                                 a: 1.0,
                             }))
+                            .text_color(ColorRef::Named(ThemeNamedColorKey::Black))
                             .merge(border_transparent.clone()),
                     )
                     .into_element(cx),
@@ -111,6 +122,7 @@ pub(super) fn preview_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                                 b: 0.91,
                                 a: 1.0,
                             }))
+                            .text_color(ColorRef::Named(ThemeNamedColorKey::Black))
                             .merge(border_transparent.clone()),
                     )
                     .into_element(cx),
@@ -124,6 +136,7 @@ pub(super) fn preview_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                                 b: 1.00,
                                 a: 1.0,
                             }))
+                            .text_color(ColorRef::Named(ThemeNamedColorKey::Black))
                             .merge(border_transparent.clone()),
                     )
                     .into_element(cx),
@@ -137,6 +150,7 @@ pub(super) fn preview_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                                 b: 1.00,
                                 a: 1.0,
                             }))
+                            .text_color(ColorRef::Named(ThemeNamedColorKey::Black))
                             .merge(border_transparent.clone()),
                     )
                     .into_element(cx),
@@ -150,6 +164,7 @@ pub(super) fn preview_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                                 b: 0.92,
                                 a: 1.0,
                             }))
+                            .text_color(ColorRef::Named(ThemeNamedColorKey::Black))
                             .merge(border_transparent.clone()),
                     )
                     .into_element(cx),

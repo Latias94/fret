@@ -24,6 +24,10 @@ impl Renderer {
             .passes
             .iter()
             .any(|p| matches!(p, RenderPlanPass::FullscreenBlit(_)));
+        let needs_blit_srgb_encode = plan.passes.iter().any(|p| match p {
+            RenderPlanPass::FullscreenBlit(pass) => pass.encode_output_srgb,
+            _ => false,
+        });
         let needs_composite = plan
             .passes
             .iter()
@@ -44,13 +48,33 @@ impl Renderer {
             .passes
             .iter()
             .any(|p| matches!(p, RenderPlanPass::AlphaThreshold(_)));
+        let needs_dither = plan
+            .passes
+            .iter()
+            .any(|p| matches!(p, RenderPlanPass::Dither(_)));
+        let needs_noise = plan
+            .passes
+            .iter()
+            .any(|p| matches!(p, RenderPlanPass::Noise(_)));
         let needs_drop_shadow = plan
             .passes
             .iter()
             .any(|p| matches!(p, RenderPlanPass::DropShadow(_)));
 
+        let mut custom_effects: std::collections::HashSet<fret_core::EffectId> =
+            std::collections::HashSet::new();
+        for pass in &plan.passes {
+            if let RenderPlanPass::CustomEffect(pass) = pass {
+                custom_effects.insert(pass.effect);
+            }
+        }
+        let needs_custom_effect = !custom_effects.is_empty();
+
         if needs_blit || needs_blur {
             self.ensure_blit_pipeline(device, format);
+        }
+        if needs_blit_srgb_encode {
+            self.ensure_blit_srgb_encode_pipeline(device, format);
         }
         if needs_scale {
             self.ensure_scale_nearest_pipelines(device, format);
@@ -76,8 +100,19 @@ impl Renderer {
         if needs_alpha_threshold {
             self.ensure_alpha_threshold_pipeline(device, format);
         }
+        if needs_dither {
+            self.ensure_dither_pipeline(device, format);
+        }
+        if needs_noise {
+            self.ensure_noise_pipeline(device, format);
+        }
         if needs_drop_shadow {
             self.ensure_drop_shadow_pipeline(device, format);
+        }
+        if needs_custom_effect {
+            for id in custom_effects {
+                self.ensure_custom_effect_pipelines(device, format, id);
+            }
         }
 
         if self.intermediate_perf_enabled {

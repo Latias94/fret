@@ -209,117 +209,140 @@ pub(in crate::ui) fn preview_sheet(
                           open_model: Model<bool>| {
             let trigger_open = open_model.clone();
             let save_open = open_model.clone();
-            let cancel_open = open_model.clone();
-            let size = if matches!(side, shadcn::SheetSide::Top | shadcn::SheetSide::Bottom) {
-                Px(320.0)
+
+            let sheet = shadcn::Sheet::new(open_model).side(side);
+            let sheet = if matches!(side, shadcn::SheetSide::Left | shadcn::SheetSide::Right) {
+                sheet.size(Px(420.0))
             } else {
-                Px(420.0)
+                // Upstream shadcn uses `h-auto` for top/bottom sheets; keep them auto-sized so the
+                // footer actions remain fully visible on typical viewport heights.
+                sheet
             };
 
-            shadcn::Sheet::new(open_model)
-                .side(side)
-                .size(size)
-                .into_element(
-                    cx,
-                    |cx| {
-                        shadcn::Button::new(label)
-                            .variant(shadcn::ButtonVariant::Outline)
-                            .toggle_model(trigger_open.clone())
-                            .test_id(format!("ui-gallery-sheet-side-{id}-trigger"))
-                            .into_element(cx)
-                    },
-                    |cx| {
-                        let paragraphs = stack::vstack(
-                            cx,
-                            stack::VStackProps::default().gap(Space::N2),
-                            |cx| {
-                                (0..8)
-                                    .map(|idx| {
-                                        shadcn::typography::muted(
-                                            cx,
-                                            format!(
-                                                "Profile section line {}. Keep this content scrollable for constrained sheets.",
-                                                idx + 1
-                                            ),
-                                        )
-                                    })
-                                    .collect::<Vec<_>>()
-                            },
-                        );
-
-                        let scroll = shadcn::ScrollArea::new([paragraphs])
-                            .axis(fret_ui::element::ScrollAxis::Y)
-                            .refine_layout(LayoutRefinement::default().w_full().h_px(Px(180.0)))
-                            .into_element(cx);
-
-                        shadcn::SheetContent::new([
-                            shadcn::SheetHeader::new([
-                                shadcn::SheetTitle::new("Edit profile").into_element(cx),
-                                shadcn::SheetDescription::new(
-                                    "Use side to control which edge the sheet appears from.",
-                                )
+            sheet.into_element(
+                cx,
+                |cx| {
+                    shadcn::Button::new(label)
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .toggle_model(trigger_open.clone())
+                        .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
+                        .test_id(format!("ui-gallery-sheet-side-{id}-trigger"))
+                        .into_element(cx)
+                },
+                |cx| {
+                    let fields = stack::vstack(
+                        cx,
+                        stack::VStackProps::default()
+                            .gap(Space::N4)
+                            .layout(LayoutRefinement::default().w_full().min_w_0()),
+                        |cx| {
+                            vec![
+                                shadcn::Field::new([
+                                    shadcn::FieldLabel::new("Name").into_element(cx),
+                                    shadcn::Input::new(demo_name.clone())
+                                        .refine_layout(LayoutRefinement::default().w_full())
+                                        .into_element(cx),
+                                ])
                                 .into_element(cx),
-                            ])
-                            .into_element(cx),
-                            scroll,
-                            shadcn::SheetFooter::new([
-                                shadcn::Button::new("Save changes")
-                                    .toggle_model(save_open.clone())
-                                    .into_element(cx),
-                                shadcn::Button::new("Cancel")
-                                    .variant(shadcn::ButtonVariant::Outline)
-                                    .toggle_model(cancel_open.clone())
-                                    .into_element(cx),
-                            ])
+                                shadcn::Field::new([
+                                    shadcn::FieldLabel::new("Username").into_element(cx),
+                                    shadcn::Input::new(demo_username.clone())
+                                        .refine_layout(LayoutRefinement::default().w_full())
+                                        .into_element(cx),
+                                ])
+                                .into_element(cx),
+                            ]
+                        },
+                    );
+
+                    shadcn::SheetContent::new([
+                        shadcn::SheetHeader::new([
+                            shadcn::SheetTitle::new("Edit profile").into_element(cx),
+                            shadcn::SheetDescription::new(
+                                "Make changes to your profile here. Click save when you're done.",
+                            )
                             .into_element(cx),
                         ])
-                        .into_element(cx)
-                    },
-                )
+                        .into_element(cx),
+                        fields,
+                        shadcn::SheetFooter::new([shadcn::Button::new("Save changes")
+                            .toggle_model(save_open.clone())
+                            .test_id(format!("ui-gallery-sheet-side-{id}-save"))
+                            .into_element(cx)])
+                        .into_element(cx),
+                    ])
+                    .into_element(cx)
+                    .attach_semantics(
+                        SemanticsDecoration::default()
+                            .test_id(format!("ui-gallery-sheet-side-{id}-content")),
+                    )
+                },
+            )
         };
 
-        let row = stack::hstack_build(
+        // Match upstream demo layout: a strict 2x2 grid of side triggers.
+        stack::vstack(
             cx,
-            stack::HStackProps::default()
+            stack::VStackProps::default()
                 .gap(Space::N2)
-                .items_center()
-                .layout(LayoutRefinement::default().w_full()),
-            |cx, out| {
-                let items = [
-                    ("top", "Top", shadcn::SheetSide::Top, side_top_open.clone()),
-                    (
-                        "right",
-                        "Right",
-                        shadcn::SheetSide::Right,
-                        side_right_open.clone(),
+                .layout(LayoutRefinement::default().w_full().min_w_0()),
+            |cx| {
+                let row = |cx: &mut ElementContext<'_, App>,
+                           a: (&'static str, &'static str, shadcn::SheetSide, Model<bool>),
+                           b: (&'static str, &'static str, shadcn::SheetSide, Model<bool>)| {
+                    let (id_a, label_a, side_a, open_a) = a;
+                    let (id_b, label_b, side_b, open_b) = b;
+                    stack::hstack_build(
+                        cx,
+                        stack::HStackProps::default()
+                            .gap(Space::N2)
+                            .items_center()
+                            .layout(LayoutRefinement::default().w_full().min_w_0()),
+                        |cx, out| {
+                            out.push(cx.keyed(id_a, |cx| {
+                                side_sheet(cx, id_a, label_a, side_a, open_a.clone())
+                            }));
+                            out.push(cx.keyed(id_b, |cx| {
+                                side_sheet(cx, id_b, label_b, side_b, open_b.clone())
+                            }));
+                        },
+                    )
+                };
+
+                vec![
+                    row(
+                        cx,
+                        ("top", "top", shadcn::SheetSide::Top, side_top_open.clone()),
+                        (
+                            "right",
+                            "right",
+                            shadcn::SheetSide::Right,
+                            side_right_open.clone(),
+                        ),
                     ),
-                    (
-                        "bottom",
-                        "Bottom",
-                        shadcn::SheetSide::Bottom,
-                        side_bottom_open.clone(),
+                    row(
+                        cx,
+                        (
+                            "bottom",
+                            "bottom",
+                            shadcn::SheetSide::Bottom,
+                            side_bottom_open.clone(),
+                        ),
+                        (
+                            "left",
+                            "left",
+                            shadcn::SheetSide::Left,
+                            side_left_open.clone(),
+                        ),
                     ),
-                    (
-                        "left",
-                        "Left",
-                        shadcn::SheetSide::Left,
-                        side_left_open.clone(),
-                    ),
-                ];
-                for (id, label, side, open_model) in items {
-                    out.push(
-                        cx.keyed(id, |cx| side_sheet(cx, id, label, side, open_model.clone())),
-                    );
-                }
+                ]
             },
         )
         .attach_semantics(
             SemanticsDecoration::default()
                 .role(fret_core::SemanticsRole::Group)
                 .test_id("ui-gallery-sheet-side"),
-        );
-
-        row
+        )
     };
 
     let no_close_button = {
@@ -344,6 +367,7 @@ pub(in crate::ui) fn preview_sheet(
                     ])
                     .into_element(cx),
                 ])
+                .show_close_button(false)
                 .into_element(cx)
             },
         )
@@ -414,7 +438,8 @@ pub(in crate::ui) fn preview_sheet(
         cx,
         [
             "Preview follows shadcn Sheet demo (new-york-v4).",
-            "Upstream exposes `SheetClose` and a default close button; Fret currently relies on Escape/outside press + explicit `open` toggles in actions.",
+            "Fret renders a default top-right close affordance in `SheetContent` (disable via `show_close_button(false)`).",
+            "Fret also exposes `SheetClose` for additional close affordances.",
         ],
     );
 
@@ -427,17 +452,72 @@ pub(in crate::ui) fn preview_sheet(
                 .test_id_prefix("ui-gallery-sheet-demo")
                 .code(
                     "rust",
-                    r#"shadcn::Sheet::new(open)
+                    r#"let open = cx.app.models_mut().insert(false);
+let name = cx.app.models_mut().insert(String::from("Pedro Duarte"));
+let username = cx.app.models_mut().insert(String::from("@peduarte"));
+
+shadcn::Sheet::new(open.clone())
     .side(shadcn::SheetSide::Right)
     .size(Px(420.0))
-    .into_element(cx, trigger, content);"#,
+    .into_element(
+        cx,
+        |cx| {
+            shadcn::Button::new("Open")
+                .variant(shadcn::ButtonVariant::Outline)
+                .toggle_model(open.clone())
+                .into_element(cx)
+        },
+        |cx| {
+            shadcn::SheetContent::new([
+                shadcn::SheetHeader::new([
+                    shadcn::SheetTitle::new("Edit profile").into_element(cx),
+                    shadcn::SheetDescription::new(
+                        "Make changes to your profile here. Click save when you're done.",
+                    )
+                    .into_element(cx),
+                ])
+                .into_element(cx),
+                shadcn::FieldSet::new([
+                    shadcn::Field::new([
+                        shadcn::FieldLabel::new("Name").into_element(cx),
+                        shadcn::Input::new(name.clone())
+                            .refine_layout(LayoutRefinement::default().w_full())
+                            .into_element(cx),
+                    ])
+                    .into_element(cx),
+                    shadcn::Field::new([
+                        shadcn::FieldLabel::new("Username").into_element(cx),
+                        shadcn::Input::new(username.clone())
+                            .refine_layout(LayoutRefinement::default().w_full())
+                            .into_element(cx),
+                    ])
+                    .into_element(cx),
+                ])
+                .refine_layout(LayoutRefinement::default().w_full())
+                .into_element(cx),
+                shadcn::SheetFooter::new([
+                    shadcn::Button::new("Save changes")
+                        .toggle_model(open.clone())
+                        .into_element(cx),
+                    shadcn::Button::new("Close")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .toggle_model(open.clone())
+                        .into_element(cx),
+                ])
+                .into_element(cx),
+            ])
+            .into_element(cx)
+        },
+    );"#,
                 ),
             DocSection::new("Side", side)
                 .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-sheet-side")
                 .code(
                     "rust",
-                    r#"shadcn::Sheet::new(open)
+                    r#"let open = cx.app.models_mut().insert(false);
+
+shadcn::Sheet::new(open.clone())
     .side(shadcn::SheetSide::Top)
     .into_element(cx, trigger, content);"#,
                 ),
@@ -446,8 +526,9 @@ pub(in crate::ui) fn preview_sheet(
                 .test_id_prefix("ui-gallery-sheet-no-close")
                 .code(
                     "rust",
-                    r#"shadcn::Sheet::new(open)
-    .into_element(cx, trigger, content);"#,
+                    r#"shadcn::SheetContent::new(content)
+    .show_close_button(false)
+    .into_element(cx);"#,
                 ),
             DocSection::new("RTL", rtl)
                 .max_w(Px(980.0))

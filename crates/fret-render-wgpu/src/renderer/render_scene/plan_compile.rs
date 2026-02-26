@@ -7,6 +7,7 @@ impl Renderer {
         perf_enabled: bool,
         trace_enabled: bool,
         encoding: &SceneEncoding,
+        scale_factor: f32,
         viewport_size: (u32, u32),
         format: wgpu::TextureFormat,
         clear: wgpu::Color,
@@ -21,6 +22,7 @@ impl Renderer {
             || {
                 RenderPlan::compile_for_scene(
                     encoding,
+                    scale_factor,
                     viewport_size,
                     format,
                     clear,

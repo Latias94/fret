@@ -14,12 +14,22 @@ readme = "README.md"
 # Desktop-first, batteries-included defaults.
 default = [
     "desktop",
+    "batteries",
+]
+
+# “Works out of the box” ecosystem bundle (within the enabled platform features).
+batteries = [
+    "config-files",
     "diagnostics",
     "ui-assets",
-    "icons-lucide",
+    "icons",
     "preload-icon-svgs",
     "shadcn",
 ]
+
+# Load layered config files by default (`.fret/settings.json`, `.fret/keymap.json`, `.fret/menubar.json`).
+# Disable for embedding/minimal builds that must not touch the filesystem.
+config-files = []
 
 # Compile the native desktop runner stack (winit + wgpu) via the framework facade bundles.
 desktop = [
@@ -39,14 +49,13 @@ tracing = ["fret-bootstrap/tracing"]
 # Ecosystem integrations.
 shadcn = ["dep:fret-ui-shadcn"]
 ui-assets = ["fret-bootstrap/ui-assets"]
-icons-lucide = ["fret-bootstrap/icons-lucide", "fret-bootstrap/icons-ui-semantic-lucide"]
-icons-radix = ["fret-bootstrap/icons-radix", "fret-bootstrap/icons-ui-semantic-radix"]
-# Vendor namespaces only (no `ui.*` semantic aliases).
-icons-lucide-vendor = ["fret-bootstrap/icons-lucide"]
-icons-radix-vendor = ["fret-bootstrap/icons-radix"]
-# Select a single provider for semantic `ui.*` icon aliases.
-icons-ui-semantic-lucide = ["icons-lucide-vendor", "fret-bootstrap/icons-ui-semantic-lucide"]
-icons-ui-semantic-radix = ["icons-radix-vendor", "fret-bootstrap/icons-ui-semantic-radix"]
+icons = [
+    "fret-bootstrap/icons-lucide",
+    "fret-bootstrap/icons-ui-semantic-lucide",
+    "fret-ui-kit/icons",
+]
+# Backwards-compat alias (prefer `icons`).
+icons-lucide = ["icons"]
 preload-icon-svgs = ["fret-bootstrap/preload-icon-svgs"]
 command-palette = ["fret-bootstrap/ui-app-command-palette"]
 workspace-shell = ["dep:fret-workspace", "fret-workspace/shadcn-context-menu", "shadcn"]

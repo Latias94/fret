@@ -1512,6 +1512,37 @@ fn build_frames_index_payload_streaming(
         where
             D: serde::Deserializer<'de>,
         {
+            deserializer.deserialize_option(SemanticsOptVisitor)
+        }
+    }
+
+    struct SemanticsOptVisitor;
+
+    impl<'de> Visitor<'de> for SemanticsOptVisitor {
+        type Value = bool;
+
+        fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "semantics object or null")
+        }
+
+        fn visit_none<E>(self) -> Result<bool, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(false)
+        }
+
+        fn visit_unit<E>(self) -> Result<bool, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(false)
+        }
+
+        fn visit_some<D>(self, deserializer: D) -> Result<bool, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
             deserializer.deserialize_map(SemanticsVisitor { has_nodes: false })
         }
     }

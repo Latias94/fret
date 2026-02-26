@@ -53,7 +53,9 @@ impl Renderer {
         }
 
         if self.debug_offscreen_blit_enabled {
-            return DebugPostprocess::OffscreenBlit;
+            return DebugPostprocess::OffscreenBlit {
+                src: PlanTarget::Intermediate0,
+            };
         }
 
         DebugPostprocess::None

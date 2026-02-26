@@ -215,12 +215,13 @@ fn gpu_drop_shadow_v1_renders_behind_content_and_is_scissored() {
         "shadow should composite under opaque content (no darkening of the content itself)"
     );
 
-    let shadow_probe_direct = pixel_rgba(&direct_pixels, size.0, 44, 44);
-    let shadow_probe_filtered = pixel_rgba(&filtered_pixels, size.0, 44, 44);
+    // Probe just outside the content rect, where the offset shadow should be clearly visible.
+    let shadow_probe_direct = pixel_rgba(&direct_pixels, size.0, 41, 41);
+    let shadow_probe_filtered = pixel_rgba(&filtered_pixels, size.0, 41, 41);
     assert!(
         shadow_probe_filtered[0] < shadow_probe_direct[0]
             && shadow_probe_filtered[1] < shadow_probe_direct[1]
             && shadow_probe_filtered[2] < shadow_probe_direct[2],
-        "a pixel in the offset shadow region should darken the background"
+        "a pixel in the offset shadow region should darken the background (direct={shadow_probe_direct:?}, filtered={shadow_probe_filtered:?})"
     );
 }

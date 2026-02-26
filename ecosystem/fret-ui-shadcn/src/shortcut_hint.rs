@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use fret_core::{FontWeight, Px};
 use fret_ui::element::{AnyElement, CrossAlign, FlexProps, MainAlign};
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Space};
 use fret_ui_kit::{MetricRef, ui};
@@ -44,7 +44,7 @@ fn shortcut_hint_with_patch<H: UiHost>(
     label: Arc<str>,
     layout_override: LayoutRefinement,
 ) -> AnyElement {
-    let theme = Theme::global(&*cx.app).clone();
+    let theme = Theme::global(&*cx.app).snapshot();
 
     let kbd = crate::Kbd::new(keys).into_element(cx);
     let label = shortcut_hint_label(cx, &theme, label);
@@ -75,7 +75,7 @@ fn shortcut_hint_with_patch<H: UiHost>(
 
 fn shortcut_hint_label<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
+    theme: &ThemeSnapshot,
     label: Arc<str>,
 ) -> AnyElement {
     let fg = theme.color_token("muted-foreground");

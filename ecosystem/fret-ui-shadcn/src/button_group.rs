@@ -104,7 +104,7 @@ impl ButtonGroupText {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
 
         let bg = theme.color_token("muted");
         let fg = theme.color_token("foreground");
@@ -415,7 +415,7 @@ impl ButtonGroup {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
 
         let has_nested_group = self
             .items

@@ -246,6 +246,20 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
     // Menu rows use `data-[variant=destructive]:focus:bg-destructive/10` (and `/20` on dark) in the
     // upstream shadcn v4 recipes.
     if let Some(destructive) = colors.get("destructive").cloned() {
+        // Button / Badge destructive background:
+        // - light: `bg-destructive`
+        // - dark: `dark:bg-destructive/60`
+        let destructive_bg = match scheme {
+            ShadcnColorScheme::Light => destructive.clone(),
+            ShadcnColorScheme::Dark => with_oklch_alpha(&destructive, 0.6)
+                .expect("shadcn new-york-v4 destructive token is oklch"),
+        };
+        colors.insert(
+            "component.button.destructive.bg".to_string(),
+            destructive_bg.clone(),
+        );
+        colors.insert("component.badge.destructive.bg".to_string(), destructive_bg);
+
         let alpha = match scheme {
             ShadcnColorScheme::Light => 0.1,
             ShadcnColorScheme::Dark => 0.2,
@@ -255,6 +269,44 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
         colors.insert(
             "component.menu.destructive_focus_bg".to_string(),
             destructive_focus_bg,
+        );
+
+        // shadcn new-york-v4 invalid control ring color:
+        // - light: `destructive/20`
+        // - dark: `destructive/40`
+        let invalid_alpha = match scheme {
+            ShadcnColorScheme::Light => 0.2,
+            ShadcnColorScheme::Dark => 0.4,
+        };
+        let invalid_ring = with_oklch_alpha(&destructive, invalid_alpha)
+            .expect("shadcn new-york-v4 destructive token is oklch");
+        colors.insert("component.control.invalid_ring".to_string(), invalid_ring);
+    }
+
+    // shadcn new-york-v4 `TabsTrigger` inactive foreground:
+    // - light: `text-foreground`
+    // - dark: `text-muted-foreground`
+    let tabs_inactive_key = match scheme {
+        ShadcnColorScheme::Light => "foreground",
+        ShadcnColorScheme::Dark => "muted-foreground",
+    };
+    if let Some(fg) = colors.get(tabs_inactive_key).cloned() {
+        colors.insert("component.tabs.trigger.fg_inactive".to_string(), fg);
+    }
+
+    // shadcn new-york-v4 `RadioGroup` choice-card checked background:
+    // - light: `bg-primary/5`
+    // - dark: `bg-primary/10`
+    if let Some(primary) = colors.get("primary").cloned() {
+        let alpha = match scheme {
+            ShadcnColorScheme::Light => 0.05,
+            ShadcnColorScheme::Dark => 0.10,
+        };
+        let checked_bg =
+            with_oklch_alpha(&primary, alpha).expect("shadcn new-york-v4 primary token is oklch");
+        colors.insert(
+            "component.radio_group.choice_card.checked_bg".to_string(),
+            checked_bg,
         );
     }
 
@@ -765,6 +817,127 @@ mod tests {
         apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Dark);
         let theme = Theme::global(&app);
         assert_eq!(theme.color_scheme, Some(ColorScheme::Dark));
+    }
+
+    #[test]
+    fn new_york_v4_seeds_component_variant_colors() {
+        for &base in ShadcnBaseColor::ALL {
+            let cfg_light = shadcn_new_york_v4_config(base, ShadcnColorScheme::Light);
+            let cfg_dark = shadcn_new_york_v4_config(base, ShadcnColorScheme::Dark);
+
+            let destructive_light = cfg_light
+                .colors
+                .get("destructive")
+                .cloned()
+                .expect("missing destructive");
+            let destructive_dark = cfg_dark
+                .colors
+                .get("destructive")
+                .cloned()
+                .expect("missing destructive");
+
+            assert_eq!(
+                cfg_light
+                    .colors
+                    .get("component.button.destructive.bg")
+                    .cloned(),
+                Some(destructive_light.clone()),
+                "expected destructive button bg to match destructive in light scheme"
+            );
+            assert_eq!(
+                cfg_light
+                    .colors
+                    .get("component.badge.destructive.bg")
+                    .cloned(),
+                Some(destructive_light),
+                "expected destructive badge bg to match destructive in light scheme"
+            );
+
+            let expected_destructive_dark_bg = with_oklch_alpha(&destructive_dark, 0.6)
+                .expect("shadcn new-york-v4 destructive token is oklch");
+            assert_eq!(
+                cfg_dark
+                    .colors
+                    .get("component.button.destructive.bg")
+                    .cloned(),
+                Some(expected_destructive_dark_bg.clone()),
+                "expected destructive button bg to match destructive/60 in dark scheme"
+            );
+            assert_eq!(
+                cfg_dark
+                    .colors
+                    .get("component.badge.destructive.bg")
+                    .cloned(),
+                Some(expected_destructive_dark_bg),
+                "expected destructive badge bg to match destructive/60 in dark scheme"
+            );
+
+            assert_eq!(
+                cfg_light
+                    .colors
+                    .get("component.control.invalid_ring")
+                    .cloned(),
+                cfg_light.colors.get("destructive/20").cloned(),
+                "expected component.control.invalid_ring to match destructive/20"
+            );
+            assert_eq!(
+                cfg_dark
+                    .colors
+                    .get("component.control.invalid_ring")
+                    .cloned(),
+                cfg_dark.colors.get("destructive/40").cloned(),
+                "expected component.control.invalid_ring to match destructive/40"
+            );
+
+            assert_eq!(
+                cfg_light
+                    .colors
+                    .get("component.tabs.trigger.fg_inactive")
+                    .cloned(),
+                cfg_light.colors.get("foreground").cloned(),
+                "expected tabs inactive fg to match foreground in light scheme"
+            );
+            assert_eq!(
+                cfg_dark
+                    .colors
+                    .get("component.tabs.trigger.fg_inactive")
+                    .cloned(),
+                cfg_dark.colors.get("muted-foreground").cloned(),
+                "expected tabs inactive fg to match muted-foreground in dark scheme"
+            );
+
+            let primary_light = cfg_light
+                .colors
+                .get("primary")
+                .cloned()
+                .expect("missing primary");
+            let expected_light = with_oklch_alpha(&primary_light, 0.05)
+                .expect("shadcn new-york-v4 primary token is oklch");
+            assert_eq!(
+                cfg_light
+                    .colors
+                    .get("component.radio_group.choice_card.checked_bg")
+                    .cloned(),
+                Some(expected_light),
+                "expected choice-card checked bg to match primary/5 in light scheme"
+            );
+
+            let primary_dark = cfg_dark
+                .colors
+                .get("primary")
+                .cloned()
+                .expect("missing primary");
+            let expected_dark = with_oklch_alpha(&primary_dark, 0.10)
+                .expect("shadcn new-york-v4 primary token is oklch");
+            assert_eq!(
+                cfg_dark
+                    .colors
+                    .get("component.radio_group.choice_card.checked_bg")
+                    .cloned(),
+                Some(expected_dark),
+                "expected choice-card checked bg to match primary/10 in dark scheme"
+            );
+        }
     }
 
     #[test]

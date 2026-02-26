@@ -59,6 +59,20 @@ pub enum GlyphQuadKind {
     Subpixel,
 }
 
+#[derive(Debug, Clone, Copy, serde::Serialize)]
+pub(crate) struct DebugGlyphAtlasLookup {
+    pub(crate) font_data_id: u64,
+    pub(crate) face_index: u32,
+    pub(crate) variation_key: u64,
+    pub(crate) synthesis_embolden: bool,
+    pub(crate) synthesis_skew_degrees: i8,
+    pub(crate) glyph_id: u32,
+    pub(crate) size_bits: u32,
+    pub(crate) x_bin: u8,
+    pub(crate) y_bin: u8,
+    pub(crate) kind: &'static str,
+}
+
 #[derive(Debug, Clone)]
 pub struct TextBlob {
     pub shape: Arc<TextShape>,
@@ -1315,6 +1329,53 @@ impl TextSystem {
         let u1 = (entry.x.saturating_add(entry.w) as f32) / w;
         let v1 = (entry.y.saturating_add(entry.h) as f32) / h;
         Some((entry.page, [u0, v0, u1, v1]))
+    }
+
+    pub(crate) fn debug_atlas_dims(&self, kind: GlyphQuadKind) -> (u32, u32) {
+        match kind {
+            GlyphQuadKind::Mask => (self.mask_atlas.width, self.mask_atlas.height),
+            GlyphQuadKind::Color => (self.color_atlas.width, self.color_atlas.height),
+            GlyphQuadKind::Subpixel => (self.subpixel_atlas.width, self.subpixel_atlas.height),
+        }
+    }
+
+    pub(crate) fn debug_lookup_glyph_atlas_entry(
+        &self,
+        kind: GlyphQuadKind,
+        page: u16,
+        x: u32,
+        y: u32,
+        w: u32,
+        h: u32,
+    ) -> Option<DebugGlyphAtlasLookup> {
+        let glyphs = match kind {
+            GlyphQuadKind::Mask => &self.mask_atlas.glyphs,
+            GlyphQuadKind::Color => &self.color_atlas.glyphs,
+            GlyphQuadKind::Subpixel => &self.subpixel_atlas.glyphs,
+        };
+
+        for (k, e) in glyphs.iter() {
+            if e.page == page && e.x == x && e.y == y && e.w == w && e.h == h {
+                return Some(DebugGlyphAtlasLookup {
+                    font_data_id: k.font.font_data_id,
+                    face_index: k.font.face_index,
+                    variation_key: k.font.variation_key,
+                    synthesis_embolden: k.font.synthesis_embolden,
+                    synthesis_skew_degrees: k.font.synthesis_skew_degrees,
+                    glyph_id: k.glyph_id,
+                    size_bits: k.size_bits,
+                    x_bin: k.x_bin,
+                    y_bin: k.y_bin,
+                    kind: match k.kind {
+                        GlyphQuadKind::Mask => "mask",
+                        GlyphQuadKind::Color => "color",
+                        GlyphQuadKind::Subpixel => "subpixel",
+                    },
+                });
+            }
+        }
+
+        None
     }
 
     pub fn prepare_for_scene(&mut self, scene: &Scene, frame_index: u64) {

@@ -1,6 +1,5 @@
 use std::sync::{Arc, Mutex};
 
-use fret_core::window::ColorScheme;
 use fret_core::{Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole};
 use fret_runtime::Model;
 use fret_ui::action::OnCloseAutoFocus;
@@ -284,7 +283,7 @@ pub fn native_select<H: UiHost>(
     layout: LayoutRefinement,
 ) -> AnyElement {
     cx.scope(|cx| {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
 
         let focus_restore_target = {
             let existing = cx.with_state(NativeSelectState::default, |st| {
@@ -305,7 +304,7 @@ pub fn native_select<H: UiHost>(
         let selected: Option<Arc<str>> = cx.watch_model(&model).cloned().unwrap_or_default();
 
         let resolved = resolve_input_chrome(
-            &theme,
+            Theme::global(&*cx.app),
             ComponentSize::default(),
             &chrome,
             InputTokenKeys::none(),
@@ -316,8 +315,11 @@ pub fn native_select<H: UiHost>(
             NativeSelectSize::Default => (Px(36.0), Px(8.0)),
         };
 
-        let mut text_style =
-            typography::control_text_style_scaled(&theme, FontId::ui(), resolved.text_px);
+        let mut text_style = typography::control_text_style_scaled(
+            Theme::global(&*cx.app),
+            FontId::ui(),
+            resolved.text_px,
+        );
         text_style.weight = FontWeight::NORMAL;
 
         let muted_fg = theme.color_token("muted-foreground");
@@ -337,15 +339,8 @@ pub fn native_select<H: UiHost>(
         let mut focus_ring = decl_style::focus_ring(&theme, resolved.radius);
         if aria_invalid {
             border_color = theme.color_token("destructive");
-            let ring_key = if theme.color_scheme == Some(ColorScheme::Dark) {
-                "destructive/40"
-            } else {
-                "destructive/20"
-            };
-            focus_ring.color = theme
-                .color_by_key(ring_key)
-                .or_else(|| theme.color_by_key("destructive/20"))
-                .unwrap_or(border_color);
+            focus_ring.color =
+                crate::theme_variants::invalid_control_ring_color(&theme, border_color);
         }
 
         let layout = decl_style::layout_style(&theme, layout.relative().min_w_0());

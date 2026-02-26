@@ -60,7 +60,10 @@
     {
       "type": "scroll_into_view",
       "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
-      "target": { "kind": "test_id", "id": "ui-gallery-button-loading" },
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-button-loading-destructive"
+      },
       "delta_y": -120.0,
       "require_fully_within_container": true,
       "require_fully_within_window": true,

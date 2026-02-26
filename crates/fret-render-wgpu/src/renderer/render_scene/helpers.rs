@@ -233,7 +233,10 @@ pub(super) fn render_plan_pass_trace_kind(pass: &RenderPlanPass) -> &'static str
         RenderPlanPass::ColorAdjust(_) => "color_adjust",
         RenderPlanPass::ColorMatrix(_) => "color_matrix",
         RenderPlanPass::AlphaThreshold(_) => "alpha_threshold",
+        RenderPlanPass::Dither(_) => "dither",
+        RenderPlanPass::Noise(_) => "noise",
         RenderPlanPass::DropShadow(_) => "drop_shadow",
+        RenderPlanPass::CustomEffect(_) => "custom_effect",
         RenderPlanPass::FullscreenBlit(_) => "fullscreen_blit",
         RenderPlanPass::ClipMask(_) => "clip_mask",
         RenderPlanPass::ReleaseTarget(_) => "release_target",
@@ -394,7 +397,40 @@ pub(super) fn render_plan_pass_trace_meta(pass: &RenderPlanPass) -> RenderPlanPa
             render_origin,
             render_size,
         },
+        RenderPlanPass::Dither(pass) => RenderPlanPassTraceMeta {
+            src: Some(pass.src),
+            dst: Some(pass.dst),
+            load: Some(load_label(pass.load)),
+            scissor: pass.dst_scissor.map(|s| s.0),
+            scissor_space: pass
+                .dst_scissor
+                .map(|_| RenderPlanPassTraceScissorSpace::DstLocal),
+            render_origin,
+            render_size,
+        },
+        RenderPlanPass::Noise(pass) => RenderPlanPassTraceMeta {
+            src: Some(pass.src),
+            dst: Some(pass.dst),
+            load: Some(load_label(pass.load)),
+            scissor: pass.dst_scissor.map(|s| s.0),
+            scissor_space: pass
+                .dst_scissor
+                .map(|_| RenderPlanPassTraceScissorSpace::DstLocal),
+            render_origin,
+            render_size,
+        },
         RenderPlanPass::DropShadow(pass) => RenderPlanPassTraceMeta {
+            src: Some(pass.src),
+            dst: Some(pass.dst),
+            load: Some(load_label(pass.load)),
+            scissor: pass.dst_scissor.map(|s| s.0),
+            scissor_space: pass
+                .dst_scissor
+                .map(|_| RenderPlanPassTraceScissorSpace::DstLocal),
+            render_origin,
+            render_size,
+        },
+        RenderPlanPass::CustomEffect(pass) => RenderPlanPassTraceMeta {
             src: Some(pass.src),
             dst: Some(pass.dst),
             load: Some(load_label(pass.load)),
@@ -496,7 +532,10 @@ pub(super) fn render_plan_pass_render_space(
         RenderPlanPass::ColorAdjust(pass) => Some(((0, 0), pass.dst_size)),
         RenderPlanPass::ColorMatrix(pass) => Some(((0, 0), pass.dst_size)),
         RenderPlanPass::AlphaThreshold(pass) => Some(((0, 0), pass.dst_size)),
+        RenderPlanPass::Dither(pass) => Some(((0, 0), pass.dst_size)),
+        RenderPlanPass::Noise(pass) => Some(((0, 0), pass.dst_size)),
         RenderPlanPass::DropShadow(pass) => Some(((0, 0), pass.dst_size)),
+        RenderPlanPass::CustomEffect(pass) => Some(((0, 0), pass.dst_size)),
         RenderPlanPass::FullscreenBlit(pass) => Some(((0, 0), pass.dst_size)),
         RenderPlanPass::ClipMask(pass) => Some(((0, 0), pass.dst_size)),
         RenderPlanPass::ReleaseTarget(_) => None,
@@ -510,9 +549,10 @@ pub(super) fn require_color_src_view(
     pass_name: &'static str,
 ) -> Option<wgpu::TextureView> {
     match src {
-        PlanTarget::Intermediate0 | PlanTarget::Intermediate1 | PlanTarget::Intermediate2 => {
-            Some(frame_targets.require_target(src, src_size))
-        }
+        PlanTarget::Intermediate0
+        | PlanTarget::Intermediate1
+        | PlanTarget::Intermediate2
+        | PlanTarget::Intermediate3 => Some(frame_targets.require_target(src, src_size)),
         PlanTarget::Output | PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2 => {
             debug_assert!(false, "{pass_name} src cannot be Output/mask targets");
             None
@@ -532,7 +572,10 @@ pub(super) fn ensure_color_dst_view_owned(
 ) -> Option<wgpu::TextureView> {
     match dst {
         PlanTarget::Output => None,
-        PlanTarget::Intermediate0 | PlanTarget::Intermediate1 | PlanTarget::Intermediate2 => {
+        PlanTarget::Intermediate0
+        | PlanTarget::Intermediate1
+        | PlanTarget::Intermediate2
+        | PlanTarget::Intermediate3 => {
             Some(frame_targets.ensure_target(pool, device, dst, dst_size, format, usage))
         }
         PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2 => {
@@ -555,7 +598,8 @@ pub(super) fn require_mask_view(
         PlanTarget::Output
         | PlanTarget::Intermediate0
         | PlanTarget::Intermediate1
-        | PlanTarget::Intermediate2 => {
+        | PlanTarget::Intermediate2
+        | PlanTarget::Intermediate3 => {
             debug_assert!(false, "{pass_name} mask target must be Mask[0-2]");
             None
         }
@@ -585,7 +629,8 @@ pub(super) fn ensure_mask_dst_view(
         PlanTarget::Output
         | PlanTarget::Intermediate0
         | PlanTarget::Intermediate1
-        | PlanTarget::Intermediate2 => {
+        | PlanTarget::Intermediate2
+        | PlanTarget::Intermediate3 => {
             debug_assert!(false, "{pass_name} dst must be Mask[0-2]");
             None
         }

@@ -77,7 +77,7 @@ impl Renderer {
                     },
                     wgpu::BindGroupLayoutEntry {
                         binding: 5,
-                        visibility: wgpu::ShaderStages::VERTEX,
+                        visibility: wgpu::ShaderStages::VERTEX_FRAGMENT,
                         ty: wgpu::BindingType::Buffer {
                             ty: wgpu::BufferBindingType::Uniform,
                             has_dynamic_offset: true,
@@ -464,8 +464,22 @@ impl Renderer {
             mapped_at_creation: false,
         });
 
+        let noise_param_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("fret noise params buffer"),
+            size: 256,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
         let drop_shadow_param_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("fret drop-shadow params buffer"),
+            size: 256,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
+        let custom_effect_param_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("fret custom-effect params buffer"),
             size: 256,
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
@@ -482,7 +496,9 @@ impl Renderer {
             color_adjust_param_buffer,
             color_matrix_param_buffer,
             alpha_threshold_param_buffer,
+            noise_param_buffer,
             drop_shadow_param_buffer,
+            custom_effect_param_buffer,
         };
 
         let render_plan_strict_output_clear =
@@ -562,8 +578,12 @@ impl Renderer {
 
             materials: SlotMap::with_key(),
             materials_by_desc: HashMap::new(),
+            materials_generation: 0,
             material_paint_budget_per_frame: 50_000,
             material_distinct_budget_per_frame: 256,
+            custom_effects: SlotMap::with_key(),
+            custom_effect_hash_index: HashMap::new(),
+            custom_effects_generation: 0,
         }
     }
 

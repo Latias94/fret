@@ -12,6 +12,7 @@ use std::sync::Arc;
 // Split from the original single-file renderer for maintainability.
 mod bind_group_builders;
 mod bind_group_caches;
+mod blur_primitive;
 mod clip_path_mask_cache;
 mod gpu_effect_params;
 mod gpu_globals;
@@ -36,6 +37,7 @@ mod render_plan_compiler;
 mod render_plan_dump;
 mod render_plan_effects;
 mod render_scene;
+mod render_text_dump;
 mod resources;
 mod scene_encoding_cache;
 mod services;
@@ -56,6 +58,8 @@ use path::*;
 use render_plan::*;
 use scene_encoding_cache::SceneEncodingCache;
 use types::*;
+pub use types::{BlurQualityCounters, BlurQualitySnapshot};
+pub use types::{EffectDegradationCounters, EffectDegradationSnapshot};
 pub use types::{IntermediatePerfSnapshot, RenderPerfSnapshot, SvgPerfSnapshot};
 use uniform_resources::UniformResources;
 use util::*;
@@ -165,8 +169,13 @@ pub struct Renderer {
 
     materials: SlotMap<fret_core::MaterialId, MaterialEntry>,
     materials_by_desc: HashMap<fret_core::MaterialDescriptor, fret_core::MaterialId>,
+    materials_generation: u64,
     material_paint_budget_per_frame: u64,
     material_distinct_budget_per_frame: usize,
+
+    custom_effects: SlotMap<fret_core::EffectId, CustomEffectEntry>,
+    custom_effect_hash_index: HashMap<u64, Vec<fret_core::EffectId>>,
+    custom_effects_generation: u64,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -181,6 +190,15 @@ struct RenderPlanSegmentReport {
 #[derive(Clone, Copy, Debug)]
 struct MaterialEntry {
     desc: fret_core::MaterialDescriptor,
+    refs: u32,
+}
+
+#[derive(Clone, Debug)]
+struct CustomEffectEntry {
+    raw_source: Arc<str>,
+    wgsl_unmasked: Arc<str>,
+    wgsl_masked: Arc<str>,
+    wgsl_mask: Arc<str>,
     refs: u32,
 }
 

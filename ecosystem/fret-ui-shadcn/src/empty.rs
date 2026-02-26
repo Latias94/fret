@@ -34,7 +34,7 @@ impl Empty {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
 
         let border = theme.color_token("border");
         let fg = theme.color_token("foreground");
@@ -134,7 +134,7 @@ impl EmptyHeader {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
         let gap = MetricRef::space(Space::N2).resolve(&theme);
         let max_w = MetricRef::Px(Px(384.0));
         let layout = decl_style::layout_style(
@@ -202,7 +202,7 @@ impl EmptyMedia {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
 
         let mut layout = LayoutRefinement::default()
             .mb(Space::N2)
@@ -257,7 +257,7 @@ impl EmptyTitle {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
         let fg = theme.color_token("foreground");
         let px = theme
             .metric_by_key("component.empty.title_px")
@@ -290,7 +290,7 @@ impl EmptyDescription {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
         let fg = theme.color_token("muted-foreground");
         let px = theme
             .metric_by_key("component.empty.description_px")
@@ -336,7 +336,7 @@ impl EmptyContent {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
         let gap = MetricRef::space(Space::N4).resolve(&theme);
         let max_w = MetricRef::Px(Px(384.0));
         let layout = decl_style::layout_style(

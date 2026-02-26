@@ -569,6 +569,21 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
         self
     }
 
+    /// Install an ecosystem crate at the custom effects boundary (ADR 0299).
+    ///
+    /// This runs during `on_gpu_ready`, with `effects` backed by the renderer.
+    pub fn install_custom_effects(
+        mut self,
+        install: fn(&mut App, &mut dyn fret_core::CustomEffectService),
+    ) -> Self {
+        self.on_gpu_ready_hooks
+            .push(Box::new(move |app, _context, renderer| {
+                let effects = renderer as &mut dyn fret_core::CustomEffectService;
+                install(app, effects);
+            }));
+        self
+    }
+
     pub fn on_main_window_created(
         mut self,
         f: impl FnOnce(&mut App, fret_core::AppWindowId) + 'static,

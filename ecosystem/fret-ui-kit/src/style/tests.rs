@@ -2,6 +2,7 @@ use super::*;
 use fret_core::Px;
 use fret_ui::Theme;
 use fret_ui::ThemeConfig;
+use fret_ui::ThemeNamedColorKey;
 use fret_ui::element::PositionStyle;
 
 #[test]
@@ -210,6 +211,23 @@ fn state_specific_token_overrides_fallback_derivation() {
     .resolve(theme);
 
     assert_eq!(resolved, expected);
+}
+
+#[test]
+fn named_color_ref_resolves_via_theme_named_color_tokens() {
+    let mut app = fret_app::App::default();
+
+    let cfg = ThemeConfig {
+        name: "Test".to_string(),
+        colors: std::collections::HashMap::from([("white".to_string(), "#FF0000".to_string())]),
+        ..ThemeConfig::default()
+    };
+    Theme::with_global_mut(&mut app, |theme| theme.apply_config(&cfg));
+
+    let theme = Theme::global(&app);
+    let expected = theme.named_color(ThemeNamedColorKey::White);
+    let actual = ColorRef::Named(ThemeNamedColorKey::White).resolve(theme);
+    assert_eq!(actual, expected);
 }
 
 #[test]

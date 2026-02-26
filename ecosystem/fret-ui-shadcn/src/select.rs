@@ -1,6 +1,5 @@
 use crate::popper_arrow::{self, DiamondArrowStyle};
 use crate::test_id::attach_test_id;
-use fret_core::window::ColorScheme;
 use fret_core::{Color, Corners, Edges, FontId, FontWeight, Point, Px, SemanticsRole, TextStyle};
 use fret_icons::ids;
 use fret_runtime::{Effect, Model, TimerToken};
@@ -12,7 +11,7 @@ use fret_ui::element::{
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side};
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
 use fret_ui_kit::declarative::chrome as decl_chrome;
 use fret_ui_kit::declarative::collection_semantics::CollectionSemanticsExt as _;
@@ -107,7 +106,7 @@ fn select_list_desired_height(
 
 fn select_scroll_with_buttons<H: UiHost, C, I>(
     cx: &mut ElementContext<'_, H>,
-    theme: Theme,
+    theme: ThemeSnapshot,
     item_step: Px,
     predicted_has_scroll: bool,
     allow_hover_scroll_arrows: bool,
@@ -1195,7 +1194,7 @@ fn select_impl<H: UiHost>(
             count
         }
 
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
         let enabled = !disabled;
         let model_open = cx.app.models().get_copied(&open).unwrap_or(false);
         let is_open = model_open && enabled;
@@ -1239,7 +1238,7 @@ fn select_impl<H: UiHost>(
         });
 
         let resolved = resolve_input_chrome(
-            &theme,
+            Theme::global(&*cx.app),
             fret_ui_kit::Size::default(),
             &chrome,
             InputTokenKeys::none(),
@@ -1294,15 +1293,7 @@ fn select_impl<H: UiHost>(
             border = border_color;
             border_focus = border_color;
 
-            let ring_key = if theme.color_scheme == Some(ColorScheme::Dark) {
-                "destructive/40"
-            } else {
-                "destructive/20"
-            };
-            ring.color = theme
-                .color_by_key(ring_key)
-                .or_else(|| theme.color_by_key("destructive/20"))
-                .unwrap_or(border_color);
+            ring.color = crate::theme_variants::invalid_control_ring_color(&theme, border_color);
         }
 
         let style_for_trigger = style.clone();
@@ -1623,7 +1614,7 @@ fn select_impl<H: UiHost>(
                         &mouse_open_guard_for_pointer_down,
                         was_open,
                         now_open,
-                        down.position,
+                        down.position_window.unwrap_or(down.position),
                     );
                 }
                 if !was_open && now_open {
@@ -1726,6 +1717,25 @@ fn select_impl<H: UiHost>(
                             gate.arm_on_open(host, action_cx.window, has_selected_item_in_list);
                         }
                     }
+                    return fret_ui::action::PressablePointerUpResult::SkipActivate;
+                }
+
+                let is_open = host
+                    .models_mut()
+                    .get_copied(&open_for_pointer_up)
+                    .unwrap_or(false);
+                let overlay_mounted = {
+                    let state = state_for_pointer_up
+                        .lock()
+                        .unwrap_or_else(|e| e.into_inner());
+                    state.viewport.is_some()
+                };
+
+                // If the overlay has mounted, allow the barrier's pointer-up guard to consume the
+                // click-release. Consuming the shared guard here can leave the barrier without the
+                // information it needs to suppress an "outside press" dismissal, causing the
+                // select to open and immediately close on mouse up.
+                if is_open && overlay_mounted {
                     return fret_ui::action::PressablePointerUpResult::SkipActivate;
                 }
 
@@ -2663,7 +2673,7 @@ fn select_impl<H: UiHost>(
                                                                                       out: &mut Vec<AnyElement>| {
                                                                     match row {
                                                                         SelectRow::Label(label) => {
-                                                                            let theme = Theme::global(&*cx.app).clone();
+                                                                            let theme = Theme::global(&*cx.app).snapshot();
                                                                             let fg = theme
                                                                                 .color_by_key("muted.foreground")
                                                                                 .or_else(|| theme.color_by_key("muted-foreground"))
@@ -2720,7 +2730,7 @@ fn select_impl<H: UiHost>(
                                                                             ));
                                                                         }
                                                                         SelectRow::Separator => {
-                                                                            let theme = Theme::global(&*cx.app).clone();
+                                                                            let theme = Theme::global(&*cx.app).snapshot();
                                                                             let border = theme
                                                                                 .color_by_key("border")
                                                                                 .unwrap_or_else(|| theme.color_token("border"));
@@ -2955,7 +2965,7 @@ fn select_impl<H: UiHost>(
                                                                                         ));
                                                                                     }
 
-                                                                                    let theme = Theme::global(&*cx.app).clone();
+                                                                                    let theme = Theme::global(&*cx.app).snapshot();
                                                                                     // new-york-v4: items highlight on focus/hover via `bg-accent`.
                                                                                     let bg_accent = theme
                                                                                         .color_by_key("accent")
@@ -6879,6 +6889,98 @@ mod tests {
 
         // Pointer-up at the same location should not close the select, even though the overlay
         // subtree has not mounted yet (the guard is consumed on the trigger).
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: trigger_center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        assert_eq!(app.models().get_copied(&open), Some(true));
+        assert_eq!(
+            app.models().get_cloned(&model).flatten().as_deref(),
+            Some("beta")
+        );
+    }
+
+    #[test]
+    fn select_mouse_release_is_guarded_after_overlay_mount() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(Some(Arc::from("beta")));
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items = vec![
+            SelectItem::new("alpha", "Alpha"),
+            SelectItem::new("beta", "Beta"),
+            SelectItem::new("gamma", "Gamma"),
+        ];
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ComboBox)
+            .expect("select trigger node");
+        let trigger_center = Point::new(
+            Px(trigger.bounds.origin.x.0 + trigger.bounds.size.width.0 * 0.5),
+            Px(trigger.bounds.origin.y.0 + trigger.bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: trigger_center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        assert_eq!(app.models().get_copied(&open), Some(true));
+
+        // Mount the overlay subtree.
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items,
+        );
+
+        // Pointer-up at the same location should not dismiss after the overlay mounts. This
+        // matches Radix's pointer-up suppression outcome when opening on mouse `pointerdown`.
         ui.dispatch_event(
             &mut app,
             &mut services,

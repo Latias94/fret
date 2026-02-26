@@ -5,8 +5,9 @@
 
 use super::render_plan_effects as effects;
 use super::{
-    EffectMarkerKind, OrderedDraw, RenderPlanDegradation, RenderPlanDegradationKind,
-    RenderPlanDegradationReason, RenderPlanPass, SceneDrawRangePass, SceneEncoding, ScissorRect,
+    BlurQualitySnapshot, EffectDegradationSnapshot, EffectMarkerKind, OrderedDraw,
+    RenderPlanDegradation, RenderPlanDegradationKind, RenderPlanDegradationReason, RenderPlanPass,
+    SceneDrawRangePass, SceneEncoding, ScissorRect,
 };
 use crate::renderer::estimate_texture_bytes;
 use slotmap::Key;
@@ -75,6 +76,7 @@ struct ClipPathScope {
 
 pub(super) fn compile_for_scene(
     encoding: &SceneEncoding,
+    scale_factor: f32,
     viewport_size: (u32, u32),
     format: wgpu::TextureFormat,
     clear: wgpu::Color,
@@ -83,6 +85,7 @@ pub(super) fn compile_for_scene(
     intermediate_budget_bytes: u64,
 ) -> super::RenderPlan {
     let mut postprocess = postprocess;
+    let output_transfer_needed = super::output_requires_explicit_srgb_encode(format);
 
     let backdrop_effect_enabled = encoding.effect_markers.iter().any(|m| {
         let EffectMarkerKind::Push {
@@ -100,7 +103,13 @@ pub(super) fn compile_for_scene(
         }
 
         chain.iter().any(|step| match step {
-            fret_core::EffectStep::GaussianBlur { downsample, .. } => {
+            fret_core::EffectStep::GaussianBlur {
+                radius_px,
+                downsample,
+            } => {
+                if !radius_px.0.is_finite() || radius_px.0 <= 0.0 {
+                    return false;
+                }
                 effects::choose_effect_blur_downsample_scale(
                     viewport_size,
                     format,
@@ -133,30 +142,49 @@ pub(super) fn compile_for_scene(
                 intermediate_budget_bytes,
                 scale,
             ),
-            fret_core::EffectStep::Dither { .. } => false,
+            fret_core::EffectStep::Dither { .. } => {
+                effects::dither_enabled(viewport_size, format, intermediate_budget_bytes)
+            }
+            fret_core::EffectStep::NoiseV1(_n) => {
+                effects::noise_enabled(viewport_size, format, intermediate_budget_bytes)
+            }
+            fret_core::EffectStep::CustomV1 { .. } => {
+                effects::color_adjust_enabled(viewport_size, format, intermediate_budget_bytes)
+            }
         })
     });
 
     let needs_intermediate = backdrop_effect_enabled
         || matches!(
             postprocess,
-            super::DebugPostprocess::OffscreenBlit
+            super::DebugPostprocess::OffscreenBlit { .. }
                 | super::DebugPostprocess::Pixelate { .. }
                 | super::DebugPostprocess::Blur { .. }
         );
 
     if needs_intermediate && matches!(postprocess, super::DebugPostprocess::None) {
-        postprocess = super::DebugPostprocess::OffscreenBlit;
+        postprocess = super::DebugPostprocess::OffscreenBlit {
+            src: super::PlanTarget::Intermediate0,
+        };
     }
 
-    let scene_target = if needs_intermediate {
+    let mut scene_target = if needs_intermediate {
         super::PlanTarget::Intermediate0
     } else {
         super::PlanTarget::Output
     };
 
+    if scene_target == super::PlanTarget::Output
+        && output_transfer_needed
+        && matches!(postprocess, super::DebugPostprocess::None)
+    {
+        scene_target = super::PlanTarget::Intermediate3;
+        postprocess = super::DebugPostprocess::OffscreenBlit { src: scene_target };
+    }
+
     compile_for_scene_inner(
         encoding,
+        scale_factor,
         viewport_size,
         format,
         clear,
@@ -169,6 +197,7 @@ pub(super) fn compile_for_scene(
 
 fn compile_for_scene_inner(
     encoding: &SceneEncoding,
+    scale_factor: f32,
     viewport_size: (u32, u32),
     format: wgpu::TextureFormat,
     clear: wgpu::Color,
@@ -189,6 +218,8 @@ fn compile_for_scene_inner(
 
     let mut passes: Vec<RenderPlanPass> = Vec::new();
     let mut degradations: Vec<RenderPlanDegradation> = Vec::new();
+    let mut effect_degradations = EffectDegradationSnapshot::default();
+    let mut effect_blur_quality = BlurQualitySnapshot::default();
     let mut draw_scopes: Vec<DrawScope> = vec![DrawScope {
         target: scene_target,
         origin: (0, 0),
@@ -211,6 +242,7 @@ fn compile_for_scene_inner(
                         super::PlanTarget::Intermediate0
                             | super::PlanTarget::Intermediate1
                             | super::PlanTarget::Intermediate2
+                            | super::PlanTarget::Intermediate3
                     )
                 })
                 .map(|s| estimate_texture_bytes(s.size, format, 1))
@@ -346,7 +378,7 @@ fn compile_for_scene_inner(
             }
         };
 
-    let apply_chain_in_place =
+    let mut apply_chain_in_place =
         |passes: &mut Vec<RenderPlanPass>,
          draw_scopes: &[DrawScope],
          srcdst: super::PlanTarget,
@@ -370,6 +402,7 @@ fn compile_for_scene_inner(
                         super::PlanTarget::Intermediate0
                             | super::PlanTarget::Intermediate1
                             | super::PlanTarget::Intermediate2
+                            | super::PlanTarget::Intermediate3
                     )
                 })
                 .map(|s| estimate_texture_bytes(s.size, format, 1))
@@ -379,6 +412,7 @@ fn compile_for_scene_inner(
                 super::PlanTarget::Intermediate0
                     | super::PlanTarget::Intermediate1
                     | super::PlanTarget::Intermediate2
+                    | super::PlanTarget::Intermediate3
             )
             .then(|| estimate_texture_bytes(ctx_viewport_size, format, 1))
             .unwrap_or(0);
@@ -399,11 +433,14 @@ fn compile_for_scene_inner(
                 scissor,
                 mask_uniform_index,
                 unavailable_mask_targets,
+                &mut effect_degradations,
+                &mut effect_blur_quality,
                 effects::EffectCompileCtx {
                     viewport_size: ctx_viewport_size,
                     format,
                     intermediate_budget_bytes: effective_budget_bytes,
                     clear,
+                    scale_factor,
                 },
             );
         };
@@ -447,6 +484,7 @@ fn compile_for_scene_inner(
                                     super::PlanTarget::Intermediate0,
                                     super::PlanTarget::Intermediate1,
                                     super::PlanTarget::Intermediate2,
+                                    super::PlanTarget::Intermediate3,
                                 ]
                                 .into_iter()
                                 .any(|t| {
@@ -519,6 +557,7 @@ fn compile_for_scene_inner(
                                         super::PlanTarget::Intermediate0,
                                         super::PlanTarget::Intermediate1,
                                         super::PlanTarget::Intermediate2,
+                                        super::PlanTarget::Intermediate3,
                                     ] {
                                         if draw_scopes.iter().any(|s| s.target == t) {
                                             continue;
@@ -595,6 +634,7 @@ fn compile_for_scene_inner(
                                 super::PlanTarget::Intermediate0,
                                 super::PlanTarget::Intermediate1,
                                 super::PlanTarget::Intermediate2,
+                                super::PlanTarget::Intermediate3,
                             ]
                             .into_iter()
                             .any(|t| {
@@ -695,6 +735,7 @@ fn compile_for_scene_inner(
                                 super::PlanTarget::Intermediate0,
                                 super::PlanTarget::Intermediate1,
                                 super::PlanTarget::Intermediate2,
+                                super::PlanTarget::Intermediate3,
                             ] {
                                 if draw_scopes.iter().any(|s| s.target == t) {
                                     continue;
@@ -883,6 +924,7 @@ fn compile_for_scene_inner(
                                 super::PlanTarget::Intermediate0,
                                 super::PlanTarget::Intermediate1,
                                 super::PlanTarget::Intermediate2,
+                                super::PlanTarget::Intermediate3,
                             ] {
                                 if draw_scopes.iter().any(|s| s.target == t) {
                                     continue;
@@ -1046,5 +1088,7 @@ fn compile_for_scene_inner(
         clear,
         format,
         degradations,
+        effect_degradations,
+        effect_blur_quality,
     )
 }

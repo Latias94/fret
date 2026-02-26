@@ -9,7 +9,7 @@ use fret_ui::element::{
     OpacityProps, PressableA11y, PressableProps, RingPlacement, RingStyle, SemanticFlexProps,
     SemanticsDecoration, SizeStyle,
 };
-use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
+use fret_ui::{ElementContext, Invalidation, Theme, ThemeNamedColorKey, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::glass::{GlassPanelProps, glass_panel};
@@ -28,13 +28,10 @@ use fret_ui_kit::{
 use crate::layout as shadcn_layout;
 use crate::overlay_motion;
 
-fn default_overlay_color() -> Color {
-    Color {
-        r: 0.0,
-        g: 0.0,
-        b: 0.0,
-        a: 0.5,
-    }
+fn default_overlay_color(theme: &ThemeSnapshot) -> Color {
+    let mut scrim = theme.named_color(ThemeNamedColorKey::Black);
+    scrim.a = 0.5;
+    scrim
 }
 
 /// Overlay backdrop visual style for shadcn `Dialog`.
@@ -270,7 +267,7 @@ impl Dialog {
         content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
     ) -> AnyElement {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
+            let theme = Theme::global(&*cx.app).snapshot();
             let is_open = cx
                 .watch_model(&self.open)
                 .layout()
@@ -352,7 +349,9 @@ impl Dialog {
                         self.on_close_auto_focus.clone(),
                     );
 
-                let overlay_color = self.overlay_color.unwrap_or_else(default_overlay_color);
+                let overlay_color = self
+                    .overlay_color
+                    .unwrap_or_else(|| default_overlay_color(&theme));
                 let overlay_closable = self.overlay_closable;
                 let window_padding_px = MetricRef::space(self.window_padding).resolve(&theme);
 
@@ -553,7 +552,7 @@ impl DialogContent {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
 
         let chrome = crate::ui_builder_ext::surfaces::dialog_style_chrome().merge(self.chrome);
 
@@ -645,7 +644,7 @@ impl DialogClose {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
+            let theme = Theme::global(&*cx.app).snapshot();
 
             let fg = theme
                 .color_by_key("muted.foreground")
@@ -832,7 +831,7 @@ impl DialogTitle {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
         let fg = theme
             .color_by_key("foreground")
             .unwrap_or_else(|| theme.color_token("foreground"));
@@ -878,7 +877,7 @@ impl DialogDescription {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
         let fg = theme
             .color_by_key("muted.foreground")
             .or_else(|| theme.color_by_key("muted-foreground"))

@@ -112,6 +112,7 @@ pub mod app_integration;
 
 mod surface_slot;
 mod test_id;
+mod theme_variants;
 mod ui_builder_ext;
 mod ui_ext;
 
@@ -270,7 +271,8 @@ pub use select::{
 };
 pub use separator::{Separator, SeparatorOrientation, separator};
 pub use sheet::{
-    Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetSide, SheetTitle,
+    Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetSide,
+    SheetTitle,
 };
 pub use shortcut_hint::ShortcutHint;
 pub use sidebar::{

@@ -18,6 +18,8 @@ Exit criteria:
   - `GaussianBlur`
   - `DropShadowV1`
   - `Backdrop` mode effect
+  - `NoiseV1`
+  - Evidence: `crates/fret-render-wgpu/tests/effect_backdrop_acrylic_recipe_conformance.rs`.
 
 ## M1 — Scene encoding cache correctness
 
@@ -37,13 +39,24 @@ Exit criteria:
 - `DropShadowV1.blur_radius_px` affects plan compilation and output.
 - Deterministic degradation rules are defined and observable in perf/diagnostics.
 
+## M2.1 — Chain clip coverage semantics
+
+Exit criteria:
+
+- Clip/mask coverage is applied exactly once for multi-step effect chains (final step only), preventing `clip^2`
+  edge darkening.
+- A unit test locks this behavior for representative chains (e.g. blur → custom effect).
+
 ## M3 — Intermediate color rule + conformance
 
 Exit criteria:
 
 - A written rule exists (linear intermediates recommended).
 - Effect passes behave consistently with the rule.
-- At least one targeted test/diag gate catches sRGB/linear mismatches for a representative effect chain.
+- Output transfer behavior is explicit and deterministic for non-sRGB 8-bit output formats:
+  - render into an extra color intermediate (`PlanTarget::Intermediate3`),
+  - apply a single final explicit sRGB transfer blit when writing to `Rgba8Unorm` / `Bgra8Unorm`.
+- At least one targeted test/diag gate catches regressions (explicit output transfer + representative effects).
 
 ## M4 — Bounded custom effect design (wgpu-only MVP)
 
@@ -52,4 +65,4 @@ Exit criteria:
 - A design for a bounded, capability-gated custom effect extension point exists and is reviewed.
 - A minimal MVP can render one custom effect (e.g. “glass tint + subtle blur + warp”) without touching core contracts.
 - Budgeting/degradation is deterministic and diagnosable.
-
+ - Evidence: `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-abi-wgpu-mvp.md`.

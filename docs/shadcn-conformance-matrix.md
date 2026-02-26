@@ -85,7 +85,7 @@ Legend:
 | Breadcrumb | `breadcrumb` | `tools/diag-scripts/ui-gallery-breadcrumb-dot-separator-single-line.json` | TODO | Layout (custom separator stays single-line) | In progress | Add RTL dropdown gate + ellipsis-dropdown parity. |
 | Button | `button` | `tools/diag-scripts/ui-gallery-button-with-icon-non-overlap.json` | TODO | Fonts/layout (icon vs label non-overlap) | In progress | Extend: min hit-size + disabled/pressed routing. |
 | Button Group | `button_group` | TODO | TODO | TODO | TODO | |
-| Calendar | `calendar` | TODO | TODO | TODO | TODO | |
+| Calendar | `calendar` | `tools/diag-scripts/ui-gallery-calendar-mixed-responsive-popover-vs-panel.json`, `tools/diag-scripts/ui-gallery-calendar-selected-day-style.json`, `tools/diag-scripts/ui-gallery-calendar-may-2026-centering.json` | `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/calendar.rs` | Layout (responsive multi-month semantics; centering) | In progress | Add keyboard navigation + range selection routing gates if needed. |
 | Card | `card` | `tools/diag-scripts/ui-gallery-card-description-no-early-wrap.json` | TODO | Text layout (subtitle no early wrap) | In progress | Add `CardHeader` title/action spacing invariants. |
 | Carousel | `carousel` | TODO | TODO | TODO | TODO | |
 | Chart | `chart` | TODO | TODO | TODO | TODO | |
@@ -95,14 +95,14 @@ Legend:
 | Command Palette | `command` | TODO | TODO | TODO | TODO | |
 | Context Menu | `context_menu` | `tools/diag-scripts/ui-gallery-context-menu-right-click.json` | TODO | Right-click routing + overlay | In progress | Add click-through + submenu bounds gates. |
 | DataGrid | `data_grid` | TODO | TODO | TODO | TODO | |
-| DataTable | `data_table` | TODO | TODO | TODO | TODO | |
+| DataTable | `data_table` | `tools/diag-scripts/ui-gallery-data-table-smoke.json`, `tools/diag-scripts/ui-gallery-data-table-toolbar-faceted-responsive.json`, `tools/diag-scripts/ui-gallery-data-table-toolbar-faceted-query-source-toggle.json` | `ecosystem/fret-ui-shadcn/tests/data_table_toolbar_faceted_responsive.rs` | Layout (responsive toolbar semantics; smoke) | In progress | Expand: faceted filter overlay interactions + retained table routing gates. |
 | Date Picker | `date_picker` | TODO | TODO | TODO | TODO | |
 | Dialog | `dialog` | `tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json`, `tools/diag-scripts/ui-gallery-dialog-docs-order-smoke.json` | TODO | Escape dismiss + focus restore | In progress | Add underlay/click-through policy gates. |
-| Drawer | `drawer` | TODO | TODO | TODO | TODO | |
+| Drawer | `drawer` | `tools/diag-scripts/ui-gallery-drawer-docs-smoke.json`, `tools/diag-scripts/ui-gallery-drawer-escape-focus-restore.json`, `tools/diag-scripts/ui-gallery-drawer-snap-points-drag-settle.json` | `ecosystem/fret-ui-shadcn/tests/drawer_layout_invariants.rs`, `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/drawer.rs` | Layout + motion (snap-point settle; focus restore) | In progress | Add outside-press + bounds-within-window gates for edge cases. |
 | Dropdown Menu | `dropdown_menu` | `tools/diag-scripts/ui-gallery-dropdown-open-select.json`, `tools/diag-scripts/ui-gallery-dropdown-submenu-underlay-dismiss.json` | TODO | Open/select + submenu dismiss | In progress | Add safe-corridor sweep + bounds gate. |
-| Empty | `empty` | TODO | TODO | TODO | TODO | |
+| Empty | `empty` | `tools/diag-scripts/ui-gallery-empty-background-gradient-screenshot.json` | `ecosystem/fret-ui-shadcn/tests/empty_responsive_padding.rs` | Layout + visuals (responsive padding; background) | In progress | Add non-overlap sub-part anchors if typography changes. |
 | Extras | `shadcn_extras` | `tools/diag-scripts/ui-gallery-shadcn-extras-screenshots.json` | TODO | Visual smoke + layout | In progress | Convert screenshots to specific invariants over time. |
-| Field | `field` | TODO | TODO | TODO | TODO | |
+| Field | `field` | `tools/diag-scripts/ui-gallery-field-docs-smoke.json`, `tools/diag-scripts/ui-gallery-field-responsive-orientation-container-md.json` | `ecosystem/fret-ui-shadcn/tests/field_responsive_orientation.rs` | Layout (container-driven responsive orientation) | In progress | Add focus-visible + invalid ring token gates if needed. |
 | Form | `form` | TODO | TODO | TODO | TODO | |
 | Forms | `forms` | TODO | TODO | TODO | TODO | |
 | Hover Card | `hover_card` | `tools/diag-scripts/ui-gallery-tooltip-hovercard-scroll-clamp.json` | TODO | Overlay scroll clamp | In progress | Add hover-intent + focus behavior gates. |
@@ -115,7 +115,7 @@ Legend:
 | Menubar | `menubar` | `tools/diag-scripts/ui-gallery-menubar-keyboard-nav.json` | TODO | Keyboard navigation | In progress | Add open/close + focus return gates. |
 | Menus | `menus` | TODO | TODO | TODO | TODO | |
 | Native Select | `native_select` | TODO | TODO | TODO | TODO | |
-| Navigation Menu | `navigation_menu` | TODO | TODO | TODO | TODO | |
+| Navigation Menu | `navigation_menu` | `tools/diag-scripts/ui-gallery-navigation-menu-docs-layout-smoke.json`, `tools/diag-scripts/ui-gallery-navigation-menu-hover-switch-and-escape.json`, `tools/diag-scripts/ui-gallery-navigation-menu-md-breakpoint-query-source-toggle.json` | `ecosystem/fret-ui-shadcn/src/navigation_menu.rs` | Layout + interaction (responsive breakpoint semantics; hover/escape) | In progress | Add bounds gates for viewport sizing vs anchor width tracking. |
 | Pagination | `pagination` | TODO | TODO | TODO | TODO | |
 | Popover | `popover` | `tools/diag-scripts/ui-gallery-popover-click-through-outside-press-focus-underlay.json`, `tools/diag-scripts/ui-gallery-popover-dialog-escape-underlay.json` | TODO | Click-through + outside press + focus | In progress | Add placement bounds gate. |
 | Progress | `progress` | TODO | TODO | TODO | TODO | |
@@ -125,7 +125,7 @@ Legend:
 | Select | `select` | `fretboard diag suite ui-gallery-select` (runs `tools/diag-scripts/ui-gallery-select-*.json`) | TODO | Open/close, commit, disabled, bounds | In progress | Add click-through + focus trap variants if needed. |
 | Separator | `separator` | TODO | TODO | TODO | TODO | |
 | Sheet | `sheet` | TODO | TODO | TODO | TODO | |
-| Sidebar | `sidebar` | TODO | TODO | TODO | TODO | |
+| Sidebar | `sidebar` | `tools/diag-scripts/ui-gallery-sidebar-mobile-controlled-open-sync.json`, `tools/diag-scripts/ui-gallery-sidebar-provider-shortcut-toggle-focus.json`, `tools/diag-scripts/ui-gallery-sidebar-mobile-sheet-escape-focus-restore.json` | `ecosystem/fret-ui-shadcn/src/sidebar.rs` | Focus + layout (mobile vs desktop routing) | In progress | Add viewport breakpoint + docking/panel interaction gates if needed. |
 | Skeleton | `skeleton` | TODO | TODO | TODO | TODO | |
 | Slider | `slider` | `tools/diag-scripts/ui-gallery-slider-set-value.json` | TODO | Interaction routing | In progress | Add keyboard + bounds invariants. |
 | Sonner | `sonner` | TODO | TODO | TODO | TODO | |

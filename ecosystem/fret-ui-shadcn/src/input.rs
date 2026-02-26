@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use fret_core::window::ColorScheme;
 use fret_core::{Corners, FontId, KeyCode, NodeId, Px, SemanticsRole};
 use fret_runtime::{CommandId, Model};
 use fret_ui::action::{ActionCx, KeyDownCx, UiFocusActionHost};
@@ -309,6 +308,7 @@ fn input_with_style_and_submit<H: UiHost>(
     corner_radii_override: Option<Corners>,
 ) -> AnyElement {
     let theme = Theme::global(&*cx.app);
+    let theme_snapshot = theme.snapshot();
     let submit_command = submit_command.filter(|cmd| cx.command_is_enabled(cmd));
     let cancel_command = cancel_command.filter(|cmd| cx.command_is_enabled(cmd));
 
@@ -326,7 +326,7 @@ fn input_with_style_and_submit<H: UiHost>(
         },
     );
 
-    let mut chrome = TextInputStyle::from_theme(theme.snapshot());
+    let mut chrome = TextInputStyle::from_theme(theme_snapshot.clone());
     chrome.padding = resolved.padding;
     chrome.corner_radii = Corners::all(resolved.radius);
     chrome.border = fret_core::Edges::all(resolved.border_width);
@@ -364,15 +364,8 @@ fn input_with_style_and_submit<H: UiHost>(
         chrome.border_color = border_color;
         chrome.border_color_focused = border_color;
         if let Some(mut ring) = chrome.focus_ring.take() {
-            let ring_key = if theme.color_scheme == Some(ColorScheme::Dark) {
-                "destructive/40"
-            } else {
-                "destructive/20"
-            };
-            ring.color = theme
-                .color_by_key(ring_key)
-                .or_else(|| theme.color_by_key("destructive/20"))
-                .unwrap_or(border_color);
+            ring.color =
+                crate::theme_variants::invalid_control_ring_color(&theme_snapshot, border_color);
             chrome.focus_ring = Some(ring);
         }
     }

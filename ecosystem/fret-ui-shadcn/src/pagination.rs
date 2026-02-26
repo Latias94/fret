@@ -1,16 +1,18 @@
-use fret_core::{Color, Corners, Edges, Px};
+use fret_core::{Color, Corners, Edges, Px, SemanticsRole};
 use fret_icons::IconId;
 use fret_runtime::CommandId;
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, MainAlign, PressableProps,
+    AnyElement, ContainerProps, CrossAlign, FlexProps, MainAlign, PressableA11y,
+    PressableKeyActivation, PressableProps, SemanticsDecoration,
 };
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, Invalidation, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::viewport_queries;
 use fret_ui_kit::primitives::direction as direction_prim;
-use fret_ui_kit::{LayoutRefinement, MetricRef, Radius, Size as ComponentSize, Space};
+use fret_ui_kit::{LayoutRefinement, MetricRef, Radius, Space};
 use std::sync::Arc;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -27,35 +29,41 @@ fn alpha(color: Color, a: f32) -> Color {
     }
 }
 
-fn radius(theme: &Theme) -> Px {
+fn radius(theme: &ThemeSnapshot) -> Px {
     MetricRef::radius(Radius::Md).resolve(theme)
 }
 
-fn icon_size(theme: &Theme) -> Px {
-    ComponentSize::Medium.icon_button_size(theme)
+fn button_h(theme: &ThemeSnapshot) -> Px {
+    // shadcn/ui v4 button default (`h-9`).
+    theme
+        .metric_by_key("component.size.md.button.h")
+        .unwrap_or(Px(36.0))
 }
 
-fn button_h(theme: &Theme) -> Px {
-    ComponentSize::Medium.button_h(theme)
+fn icon_button_size(theme: &ThemeSnapshot) -> Px {
+    // shadcn/ui v4 icon button default (`size-9`).
+    theme
+        .metric_by_key("component.size.md.icon_button.size")
+        .unwrap_or(Px(36.0))
 }
 
-fn border_color(theme: &Theme) -> Color {
+fn border_color(theme: &ThemeSnapshot) -> Color {
     theme.color_token("border")
 }
 
-fn accent(theme: &Theme) -> Color {
+fn accent(theme: &ThemeSnapshot) -> Color {
     theme.color_token("accent")
 }
 
-fn accent_fg(theme: &Theme) -> Color {
+fn accent_fg(theme: &ThemeSnapshot) -> Color {
     theme.color_token("accent-foreground")
 }
 
-fn base_fg(theme: &Theme) -> Color {
+fn base_fg(theme: &ThemeSnapshot) -> Color {
     theme.color_token("foreground")
 }
 
-fn disabled_fg(theme: &Theme) -> Color {
+fn disabled_fg(theme: &ThemeSnapshot) -> Color {
     alpha(base_fg(theme), 0.5)
 }
 
@@ -81,11 +89,11 @@ impl Pagination {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
         let layout = decl_style::layout_style(&theme, self.layout);
         let children = self.children;
 
-        cx.flex(
+        let el = cx.flex(
             FlexProps {
                 layout,
                 direction: fret_core::Axis::Horizontal,
@@ -96,6 +104,12 @@ impl Pagination {
                 wrap: false,
             },
             move |_cx| children,
+        );
+
+        el.attach_semantics(
+            SemanticsDecoration::default()
+                .role(SemanticsRole::Panel)
+                .label("pagination"),
         )
     }
 }
@@ -113,7 +127,7 @@ impl PaginationContent {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
         let gap = MetricRef::space(Space::N1).resolve(&theme);
         let children = self.children;
 
@@ -155,6 +169,8 @@ pub struct PaginationLink {
     is_active: bool,
     command: Option<CommandId>,
     disabled: bool,
+    a11y_label: Option<Arc<str>>,
+    test_id: Option<Arc<str>>,
 }
 
 impl PaginationLink {
@@ -166,6 +182,8 @@ impl PaginationLink {
             is_active: false,
             command: None,
             disabled: false,
+            a11y_label: None,
+            test_id: None,
         }
     }
 
@@ -189,13 +207,26 @@ impl PaginationLink {
         self
     }
 
+    pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.a11y_label = Some(label.into());
+        self
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
+        let icon_size = icon_button_size(&theme);
+        let button_h = button_h(&theme);
 
         let r = radius(&theme);
         let gap = MetricRef::space(Space::N1).resolve(&theme);
         let px_2p5 = MetricRef::space(Space::N2p5).resolve(&theme);
+        let py_2 = MetricRef::space(Space::N2).resolve(&theme);
 
         let enabled = self
             .command
@@ -210,11 +241,9 @@ impl PaginationLink {
             Color::TRANSPARENT
         };
 
-        let base_border = if self.is_active {
-            border_color(&theme)
-        } else {
-            Color::TRANSPARENT
-        };
+        let border_width = if self.is_active { Px(1.0) } else { Px(0.0) };
+        let base_border = self.is_active.then(|| border_color(&theme));
+        let shadow = self.is_active.then(|| decl_style::shadow_xs(&theme, r));
 
         let acc = accent(&theme);
         let hover_bg = alpha(acc, 1.0);
@@ -227,33 +256,33 @@ impl PaginationLink {
         };
 
         let children = self.children;
+        let a11y_label = self.a11y_label;
+        let test_id = self.test_id;
 
         let (layout, padding, inner_gap, inner_wrap) = match self.size {
-            PaginationLinkSize::Icon => {
-                let s = icon_size(&theme);
-                (
-                    decl_style::layout_style(
-                        &theme,
-                        LayoutRefinement::default()
-                            .w_px(s)
-                            .h_px(s)
-                            .flex_none()
-                            .flex_shrink_0(),
-                    ),
-                    Edges::all(Px(0.0)),
-                    Px(0.0),
-                    false,
-                )
-            }
+            PaginationLinkSize::Icon => (
+                decl_style::layout_style(
+                    &theme,
+                    LayoutRefinement::default()
+                        .w_px(icon_size)
+                        .h_px(icon_size)
+                        .flex_none()
+                        .flex_shrink_0(),
+                ),
+                Edges::all(Px(0.0)),
+                Px(0.0),
+                false,
+            ),
             PaginationLinkSize::Default => (
                 decl_style::layout_style(
                     &theme,
                     LayoutRefinement::default()
-                        .min_h(button_h(&theme))
+                        .h_px(button_h)
+                        .min_h(button_h)
                         .flex_none()
                         .flex_shrink_0(),
                 ),
-                Edges::symmetric(px_2p5, Px(0.0)),
+                Edges::symmetric(px_2p5, py_2),
                 gap,
                 false,
             ),
@@ -264,6 +293,14 @@ impl PaginationLink {
                 layout,
                 enabled,
                 focus_ring: Some(focus_ring),
+                key_activation: PressableKeyActivation::EnterOnly,
+                a11y: PressableA11y {
+                    role: Some(SemanticsRole::Link),
+                    label: a11y_label,
+                    test_id,
+                    selected: self.is_active,
+                    ..Default::default()
+                },
                 ..Default::default()
             },
             move |cx, st| {
@@ -318,8 +355,9 @@ impl PaginationLink {
                         layout,
                         padding: padding.into(),
                         background: Some(bg),
-                        border: Edges::all(Px(1.0)),
-                        border_color: Some(base_border),
+                        shadow,
+                        border: Edges::all(border_width),
+                        border_color: base_border,
                         corner_radii: Corners::all(r),
                         ..Default::default()
                     },
@@ -335,6 +373,7 @@ pub struct PaginationPrevious {
     command: Option<CommandId>,
     disabled: bool,
     text: Option<Arc<str>>,
+    test_id: Option<Arc<str>>,
 }
 
 impl PaginationPrevious {
@@ -343,6 +382,7 @@ impl PaginationPrevious {
             command: None,
             disabled: false,
             text: None,
+            test_id: None,
         }
     }
 
@@ -361,10 +401,21 @@ impl PaginationPrevious {
         self
     }
 
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let dir = direction_prim::use_direction_in_scope(cx, None);
         let text = self.text.unwrap_or_else(|| Arc::<str>::from("Previous"));
+        let show_text = viewport_queries::viewport_width_at_least(
+            cx,
+            Invalidation::Layout,
+            viewport_queries::tailwind::SM,
+            Default::default(),
+        );
         let chevron = if dir == direction_prim::LayoutDirection::Rtl {
             "lucide.chevron-right"
         } else {
@@ -372,15 +423,26 @@ impl PaginationPrevious {
         };
         let icon = decl_icon::icon(cx, IconId::new_static(chevron));
 
-        let children = if dir == direction_prim::LayoutDirection::Rtl {
-            vec![cx.text(text), icon]
+        let mut children = Vec::with_capacity(2);
+        if dir == direction_prim::LayoutDirection::Rtl {
+            if show_text {
+                children.push(cx.text(text));
+            }
+            children.push(icon);
         } else {
-            vec![icon, cx.text(text)]
-        };
+            children.push(icon);
+            if show_text {
+                children.push(cx.text(text));
+            }
+        }
 
         let mut link = PaginationLink::new(children)
             .size(PaginationLinkSize::Default)
+            .a11y_label("Go to previous page")
             .disabled(self.disabled);
+        if let Some(id) = self.test_id {
+            link = link.test_id(id);
+        }
         if let Some(command) = self.command {
             link = link.on_click(command);
         }
@@ -399,6 +461,7 @@ pub struct PaginationNext {
     command: Option<CommandId>,
     disabled: bool,
     text: Option<Arc<str>>,
+    test_id: Option<Arc<str>>,
 }
 
 impl PaginationNext {
@@ -407,6 +470,7 @@ impl PaginationNext {
             command: None,
             disabled: false,
             text: None,
+            test_id: None,
         }
     }
 
@@ -425,10 +489,21 @@ impl PaginationNext {
         self
     }
 
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let dir = direction_prim::use_direction_in_scope(cx, None);
         let text = self.text.unwrap_or_else(|| Arc::<str>::from("Next"));
+        let show_text = viewport_queries::viewport_width_at_least(
+            cx,
+            Invalidation::Layout,
+            viewport_queries::tailwind::SM,
+            Default::default(),
+        );
         let chevron = if dir == direction_prim::LayoutDirection::Rtl {
             "lucide.chevron-left"
         } else {
@@ -436,15 +511,26 @@ impl PaginationNext {
         };
         let icon = decl_icon::icon(cx, IconId::new_static(chevron));
 
-        let children = if dir == direction_prim::LayoutDirection::Rtl {
-            vec![icon, cx.text(text)]
+        let mut children = Vec::with_capacity(2);
+        if dir == direction_prim::LayoutDirection::Rtl {
+            children.push(icon);
+            if show_text {
+                children.push(cx.text(text));
+            }
         } else {
-            vec![cx.text(text), icon]
-        };
+            if show_text {
+                children.push(cx.text(text));
+            }
+            children.push(icon);
+        }
 
         let mut link = PaginationLink::new(children)
             .size(PaginationLinkSize::Default)
+            .a11y_label("Go to next page")
             .disabled(self.disabled);
+        if let Some(id) = self.test_id {
+            link = link.test_id(id);
+        }
         if let Some(command) = self.command {
             link = link.on_click(command);
         }
@@ -468,8 +554,9 @@ impl PaginationEllipsis {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
-        let s = icon_size(&theme);
+        let theme = Theme::global(&*cx.app).snapshot();
+        let s = icon_button_size(&theme);
+        let fg = base_fg(&theme);
         let layout = decl_style::layout_style(
             &theme,
             LayoutRefinement::default()
@@ -479,7 +566,7 @@ impl PaginationEllipsis {
                 .flex_shrink_0(),
         );
         let r = radius(&theme);
-        cx.container(
+        let el = cx.container(
             ContainerProps {
                 layout,
                 padding: Edges::all(Px(0.0)).into(),
@@ -500,10 +587,24 @@ impl PaginationEllipsis {
                         align: CrossAlign::Center,
                         wrap: false,
                     },
-                    move |cx| vec![cx.text("…")],
+                    move |cx| {
+                        vec![decl_icon::icon_with(
+                            cx,
+                            IconId::new_static("lucide.more-horizontal"),
+                            Some(Px(16.0)),
+                            Some(fret_ui_kit::ColorRef::Color(fg)),
+                        )]
+                    },
                 );
                 vec![inner]
             },
+        );
+
+        el.attach_semantics(
+            SemanticsDecoration::default()
+                .role(SemanticsRole::Text)
+                .label("More pages")
+                .hidden(true),
         )
     }
 }

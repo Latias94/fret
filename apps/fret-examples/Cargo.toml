@@ -63,7 +63,8 @@ wgpu.workspace = true
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif", "webp"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-fret = { path = "../../ecosystem/fret" }
+fret = { path = "../../ecosystem/fret", features = ["devloop"] }
+tokio = { version = "1", default-features = false, features = ["rt-multi-thread", "time"] }
 ureq = "2"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif", "webp"] }
 fret-launch = { path = "../../crates/fret-launch", features = ["dev-state", "diag-screenshots"] }

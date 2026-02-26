@@ -13,7 +13,7 @@ use fret_ui::element::{
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side};
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::collection_semantics::CollectionSemanticsExt as _;
 use fret_ui_kit::declarative::current_color;
@@ -41,7 +41,7 @@ fn alpha_mul(mut c: fret_core::Color, mul: f32) -> fret_core::Color {
     c
 }
 
-fn is_dark_background(theme: &Theme) -> bool {
+fn is_dark_background(theme: &ThemeSnapshot) -> bool {
     let bg = theme.color_token("background");
     let luma = 0.2126 * bg.r + 0.7152 * bg.g + 0.0722 * bg.b;
     luma < 0.5
@@ -602,7 +602,7 @@ impl DropdownMenuShortcut {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
         let fg = theme.color_token("muted-foreground");
 
         let base_size = theme.metric_token("font.size");
@@ -1398,7 +1398,7 @@ impl DropdownMenu {
     {
         cx.scope(|cx| {
             let overlay_id = cx.root_id();
-            let theme = Theme::global(&*cx.app).clone();
+            let theme = Theme::global(&*cx.app).snapshot();
             let model_open = cx
                 .watch_model(&self.open)
                 .paint()
@@ -1883,7 +1883,7 @@ impl DropdownMenu {
                                                         theme.color_token("muted-foreground");
                                                     let destructive_fg = theme.color_token("destructive");
                                                     let destructive_bg_alpha =
-                                                        if is_dark_background(&theme) { 0.20 } else { 0.10 };
+                                                        if is_dark_background(theme) { 0.20 } else { 0.10 };
                                                     let destructive_bg = theme
                                                         .color_by_key(if destructive_bg_alpha >= 0.2 {
                                                             "destructive/20"
@@ -2855,7 +2855,7 @@ impl DropdownMenu {
                                                 alpha_mul(theme.color_token("foreground"), 0.5);
                                             let destructive_fg = theme.color_token("destructive");
                                             let destructive_bg_alpha =
-                                                if is_dark_background(&theme) { 0.20 } else { 0.10 };
+                                                if is_dark_background(theme) { 0.20 } else { 0.10 };
                                             let destructive_bg = theme
                                                 .color_by_key(if destructive_bg_alpha >= 0.2 {
                                                     "destructive/20"

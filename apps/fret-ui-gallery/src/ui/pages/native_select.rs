@@ -5,341 +5,248 @@ use crate::ui::doc_layout::{self, DocSection};
 pub(super) fn preview_native_select(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     #[derive(Default)]
     struct NativeSelectPageModels {
-        basic_value: Option<Model<Option<Arc<str>>>>,
-        basic_open: Option<Model<bool>>,
-        basic_native_open: Option<Model<bool>>,
+        demo_value: Option<Model<Option<Arc<str>>>>,
+        demo_open: Option<Model<bool>>,
         groups_value: Option<Model<Option<Arc<str>>>>,
         groups_open: Option<Model<bool>>,
-        groups_native_open: Option<Model<bool>>,
         disabled_value: Option<Model<Option<Arc<str>>>>,
         disabled_open: Option<Model<bool>>,
-        disabled_native_open: Option<Model<bool>>,
-        error_value: Option<Model<Option<Arc<str>>>>,
-        error_open: Option<Model<bool>>,
-        error_native_open: Option<Model<bool>>,
+        invalid_value: Option<Model<Option<Arc<str>>>>,
+        invalid_open: Option<Model<bool>>,
     }
 
     let (
-        basic_value,
-        basic_open,
-        basic_native_open,
+        demo_value,
+        demo_open,
         groups_value,
         groups_open,
-        groups_native_open,
         disabled_value,
         disabled_open,
-        disabled_native_open,
-        error_value,
-        error_open,
-        error_native_open,
+        invalid_value,
+        invalid_open,
     ) = cx.with_state(NativeSelectPageModels::default, |st| {
         (
-            st.basic_value.clone(),
-            st.basic_open.clone(),
-            st.basic_native_open.clone(),
+            st.demo_value.clone(),
+            st.demo_open.clone(),
             st.groups_value.clone(),
             st.groups_open.clone(),
-            st.groups_native_open.clone(),
             st.disabled_value.clone(),
             st.disabled_open.clone(),
-            st.disabled_native_open.clone(),
-            st.error_value.clone(),
-            st.error_open.clone(),
-            st.error_native_open.clone(),
+            st.invalid_value.clone(),
+            st.invalid_open.clone(),
         )
     });
 
     let (
-        basic_value,
-        basic_open,
-        basic_native_open,
+        demo_value,
+        demo_open,
         groups_value,
         groups_open,
-        groups_native_open,
         disabled_value,
         disabled_open,
-        disabled_native_open,
-        error_value,
-        error_open,
-        error_native_open,
+        invalid_value,
+        invalid_open,
     ) = match (
-        basic_value,
-        basic_open,
-        basic_native_open,
+        demo_value,
+        demo_open,
         groups_value,
         groups_open,
-        groups_native_open,
         disabled_value,
         disabled_open,
-        disabled_native_open,
-        error_value,
-        error_open,
-        error_native_open,
+        invalid_value,
+        invalid_open,
     ) {
         (
-            Some(basic_value),
-            Some(basic_open),
-            Some(basic_native_open),
+            Some(demo_value),
+            Some(demo_open),
             Some(groups_value),
             Some(groups_open),
-            Some(groups_native_open),
             Some(disabled_value),
             Some(disabled_open),
-            Some(disabled_native_open),
-            Some(error_value),
-            Some(error_open),
-            Some(error_native_open),
+            Some(invalid_value),
+            Some(invalid_open),
         ) => (
-            basic_value,
-            basic_open,
-            basic_native_open,
+            demo_value,
+            demo_open,
             groups_value,
             groups_open,
-            groups_native_open,
             disabled_value,
             disabled_open,
-            disabled_native_open,
-            error_value,
-            error_open,
-            error_native_open,
+            invalid_value,
+            invalid_open,
         ),
         _ => {
             let models = cx.app.models_mut();
-            let basic_value = models.insert(None);
-            let basic_open = models.insert(false);
-            let basic_native_open = models.insert(false);
+            let demo_value = models.insert(None);
+            let demo_open = models.insert(false);
             let groups_value = models.insert(None);
             let groups_open = models.insert(false);
-            let groups_native_open = models.insert(false);
             let disabled_value = models.insert(None);
             let disabled_open = models.insert(false);
-            let disabled_native_open = models.insert(false);
-            let error_value = models.insert(None);
-            let error_open = models.insert(false);
-            let error_native_open = models.insert(false);
+            let invalid_value = models.insert(None);
+            let invalid_open = models.insert(false);
             cx.with_state(NativeSelectPageModels::default, |st| {
-                st.basic_value = Some(basic_value.clone());
-                st.basic_open = Some(basic_open.clone());
-                st.basic_native_open = Some(basic_native_open.clone());
+                st.demo_value = Some(demo_value.clone());
+                st.demo_open = Some(demo_open.clone());
                 st.groups_value = Some(groups_value.clone());
                 st.groups_open = Some(groups_open.clone());
-                st.groups_native_open = Some(groups_native_open.clone());
                 st.disabled_value = Some(disabled_value.clone());
                 st.disabled_open = Some(disabled_open.clone());
-                st.disabled_native_open = Some(disabled_native_open.clone());
-                st.error_value = Some(error_value.clone());
-                st.error_open = Some(error_open.clone());
-                st.error_native_open = Some(error_native_open.clone());
+                st.invalid_value = Some(invalid_value.clone());
+                st.invalid_open = Some(invalid_open.clone());
             });
             (
-                basic_value,
-                basic_open,
-                basic_native_open,
+                demo_value,
+                demo_open,
                 groups_value,
                 groups_open,
-                groups_native_open,
                 disabled_value,
                 disabled_open,
-                disabled_native_open,
-                error_value,
-                error_open,
-                error_native_open,
+                invalid_value,
+                invalid_open,
             )
         }
     };
 
-    let select_width = LayoutRefinement::default().w_full().max_w(Px(320.0));
+    // shadcn NativeSelect is `w-fit` at the wrapper level; keep the gallery close to that default
+    // (content-driven width), while still clamping to a reasonable max.
+    let select_layout = LayoutRefinement::default().max_w(Px(320.0)).min_w_0();
 
-    let theme = Theme::global(&*cx.app).snapshot();
-    let muted_fg = theme.color_token("muted-foreground");
-
-    let heading = |cx: &mut ElementContext<'_, App>, text: &'static str| {
-        ui::text(cx, text)
-            .text_sm()
-            .font_medium()
-            .text_color(ColorRef::Color(muted_fg))
-            .into_element(cx)
-    };
-
-    let block =
-        |cx: &mut ElementContext<'_, App>, title: &'static str, children: Vec<AnyElement>| {
-            stack::vstack(
-                cx,
-                stack::VStackProps::default()
-                    .gap(Space::N3)
-                    .items_start()
-                    .layout(LayoutRefinement::default().w_full().min_w_0()),
-                |cx| {
-                    vec![
-                        heading(cx, title),
-                        stack::vstack(
-                            cx,
-                            stack::VStackProps::default()
-                                .gap(Space::N4)
-                                .items_start()
-                                .layout(LayoutRefinement::default().w_full().min_w_0()),
-                            move |_cx| children,
-                        ),
-                    ]
-                },
-            )
-        };
-
-    let basic = {
-        let native = shadcn::NativeSelect::new(basic_value.clone(), basic_native_open.clone())
-            .a11y_label("Native select: fruit")
-            .placeholder("Select a fruit")
+    let demo = {
+        let select = shadcn::NativeSelect::new(demo_value, demo_open)
+            .a11y_label("Native select: status")
+            .placeholder("Select status")
             .trigger_test_id("ui-gallery-native-select-basic-native-trigger")
             .test_id_prefix("ui-gallery-native-select-basic-native")
             .options([
-                shadcn::NativeSelectOption::new("apple", "Apple"),
-                shadcn::NativeSelectOption::new("banana", "Banana"),
-                shadcn::NativeSelectOption::new("blueberry", "Blueberry"),
-                shadcn::NativeSelectOption::new("grapes", "Grapes").disabled(true),
-                shadcn::NativeSelectOption::new("pineapple", "Pineapple"),
+                shadcn::NativeSelectOption::placeholder("Select status"),
+                shadcn::NativeSelectOption::new("todo", "Todo"),
+                shadcn::NativeSelectOption::new("in-progress", "In Progress"),
+                shadcn::NativeSelectOption::new("done", "Done"),
+                shadcn::NativeSelectOption::new("cancelled", "Cancelled"),
             ])
-            .refine_layout(select_width.clone())
+            .refine_layout(select_layout.clone())
             .into_element(cx)
             .test_id("ui-gallery-native-select-basic-native");
-        let styled = shadcn::Select::new(basic_value, basic_open)
-            .placeholder("Select a fruit")
-            .trigger_test_id("ui-gallery-native-select-basic-styled-trigger")
-            .items([
-                shadcn::SelectItem::new("apple", "Apple"),
-                shadcn::SelectItem::new("banana", "Banana"),
-                shadcn::SelectItem::new("blueberry", "Blueberry"),
-                shadcn::SelectItem::new("grapes", "Grapes").disabled(true),
-                shadcn::SelectItem::new("pineapple", "Pineapple"),
-            ])
-            .refine_layout(select_width.clone())
-            .into_element(cx);
-        block(cx, "Basic Select", vec![native, styled]).test_id("ui-gallery-native-select-basic")
+
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .items_start()
+                .layout(LayoutRefinement::default().w_full().min_w_0()),
+            |_cx| vec![select],
+        )
+        .test_id("ui-gallery-native-select-demo")
     };
 
     let with_groups = {
-        let native = shadcn::NativeSelect::new(groups_value.clone(), groups_native_open.clone())
-            .a11y_label("Native select: food")
-            .placeholder("Select a food")
+        let select = shadcn::NativeSelect::new(groups_value, groups_open)
+            .a11y_label("Native select: department")
+            .placeholder("Select department")
             .trigger_test_id("ui-gallery-native-select-groups-native-trigger")
             .test_id_prefix("ui-gallery-native-select-groups-native")
+            .options([shadcn::NativeSelectOption::placeholder("Select department")])
             .optgroups([
                 shadcn::NativeSelectOptGroup::new(
-                    "Fruits",
+                    "Engineering",
                     [
-                        shadcn::NativeSelectOption::new("apple", "Apple"),
-                        shadcn::NativeSelectOption::new("banana", "Banana"),
-                        shadcn::NativeSelectOption::new("blueberry", "Blueberry"),
+                        shadcn::NativeSelectOption::new("frontend", "Frontend"),
+                        shadcn::NativeSelectOption::new("backend", "Backend"),
+                        shadcn::NativeSelectOption::new("devops", "DevOps"),
                     ],
                 ),
                 shadcn::NativeSelectOptGroup::new(
-                    "Vegetables",
+                    "Sales",
                     [
-                        shadcn::NativeSelectOption::new("carrot", "Carrot"),
-                        shadcn::NativeSelectOption::new("broccoli", "Broccoli"),
-                        shadcn::NativeSelectOption::new("spinach", "Spinach"),
+                        shadcn::NativeSelectOption::new("sales-rep", "Sales Rep"),
+                        shadcn::NativeSelectOption::new("account-manager", "Account Manager"),
+                        shadcn::NativeSelectOption::new("sales-director", "Sales Director"),
+                    ],
+                ),
+                shadcn::NativeSelectOptGroup::new(
+                    "Operations",
+                    [
+                        shadcn::NativeSelectOption::new("support", "Customer Support"),
+                        shadcn::NativeSelectOption::new("product-manager", "Product Manager"),
+                        shadcn::NativeSelectOption::new("ops-manager", "Operations Manager"),
                     ],
                 ),
             ])
-            .refine_layout(select_width.clone())
+            .refine_layout(select_layout.clone())
             .into_element(cx)
             .test_id("ui-gallery-native-select-groups-native");
 
-        let styled = shadcn::Select::new(groups_value, groups_open)
-            .placeholder("Select a food")
-            .trigger_test_id("ui-gallery-native-select-groups-styled-trigger")
-            .entries([
-                shadcn::SelectGroup::new([
-                    shadcn::SelectLabel::new("Fruits").into(),
-                    shadcn::SelectItem::new("apple", "Apple").into(),
-                    shadcn::SelectItem::new("banana", "Banana").into(),
-                    shadcn::SelectItem::new("blueberry", "Blueberry").into(),
-                ])
-                .into(),
-                shadcn::SelectGroup::new([
-                    shadcn::SelectLabel::new("Vegetables").into(),
-                    shadcn::SelectItem::new("carrot", "Carrot").into(),
-                    shadcn::SelectItem::new("broccoli", "Broccoli").into(),
-                    shadcn::SelectItem::new("spinach", "Spinach").into(),
-                ])
-                .into(),
-            ])
-            .refine_layout(select_width.clone())
-            .into_element(cx);
-
-        block(cx, "With Groups", vec![native, styled]).test_id("ui-gallery-native-select-groups")
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .items_start()
+                .layout(LayoutRefinement::default().w_full().min_w_0()),
+            |_cx| vec![select],
+        )
+        .test_id("ui-gallery-native-select-groups")
     };
 
     let disabled_state = {
-        let native =
-            shadcn::NativeSelect::new(disabled_value.clone(), disabled_native_open.clone())
-                .a11y_label("Native select: disabled")
-                .placeholder("Disabled")
-                .disabled(true)
-                .trigger_test_id("ui-gallery-native-select-disabled-native-trigger")
-                .test_id_prefix("ui-gallery-native-select-disabled-native")
-                .options([
-                    shadcn::NativeSelectOption::new("apple", "Apple"),
-                    shadcn::NativeSelectOption::new("banana", "Banana"),
-                ])
-                .refine_layout(select_width.clone())
-                .into_element(cx)
-                .test_id("ui-gallery-native-select-disabled-native");
-        let styled = shadcn::Select::new(disabled_value, disabled_open)
-            .placeholder("Disabled")
-            .trigger_test_id("ui-gallery-native-select-disabled-styled-trigger")
+        let select = shadcn::NativeSelect::new(disabled_value, disabled_open)
+            .a11y_label("Native select: priority (disabled)")
+            .placeholder("Select priority")
             .disabled(true)
-            .items([
-                shadcn::SelectItem::new("apple", "Apple"),
-                shadcn::SelectItem::new("banana", "Banana"),
+            .trigger_test_id("ui-gallery-native-select-disabled-native-trigger")
+            .test_id_prefix("ui-gallery-native-select-disabled-native")
+            .options([
+                shadcn::NativeSelectOption::placeholder("Select priority"),
+                shadcn::NativeSelectOption::new("low", "Low"),
+                shadcn::NativeSelectOption::new("medium", "Medium"),
+                shadcn::NativeSelectOption::new("high", "High"),
+                shadcn::NativeSelectOption::new("critical", "Critical"),
             ])
-            .refine_layout(select_width.clone())
-            .into_element(cx);
-        block(cx, "Disabled State", vec![native, styled])
-            .test_id("ui-gallery-native-select-disabled")
+            .refine_layout(select_layout.clone())
+            .into_element(cx)
+            .test_id("ui-gallery-native-select-disabled-native");
+
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .items_start()
+                .layout(LayoutRefinement::default().w_full().min_w_0()),
+            |_cx| vec![select],
+        )
+        .test_id("ui-gallery-native-select-disabled")
     };
 
-    let error_state = {
-        let native = shadcn::NativeSelect::new(error_value.clone(), error_native_open.clone())
-            .a11y_label("Native select: error")
-            .placeholder("Error state")
+    let invalid_state = {
+        let select = shadcn::NativeSelect::new(invalid_value, invalid_open)
+            .a11y_label("Native select: role (invalid)")
+            .placeholder("Select role")
             .aria_invalid(true)
             .trigger_test_id("ui-gallery-native-select-error-native-trigger")
             .test_id_prefix("ui-gallery-native-select-error-native")
             .options([
-                shadcn::NativeSelectOption::new("apple", "Apple"),
-                shadcn::NativeSelectOption::new("banana", "Banana"),
+                shadcn::NativeSelectOption::placeholder("Select role"),
+                shadcn::NativeSelectOption::new("admin", "Admin"),
+                shadcn::NativeSelectOption::new("editor", "Editor"),
+                shadcn::NativeSelectOption::new("viewer", "Viewer"),
+                shadcn::NativeSelectOption::new("guest", "Guest"),
             ])
-            .refine_layout(select_width.clone())
+            .refine_layout(select_layout.clone())
             .into_element(cx)
             .test_id("ui-gallery-native-select-error-native");
-        let styled = shadcn::Select::new(error_value, error_open)
-            .placeholder("Error state")
-            .trigger_test_id("ui-gallery-native-select-error-styled-trigger")
-            .aria_invalid(true)
-            .items([
-                shadcn::SelectItem::new("apple", "Apple"),
-                shadcn::SelectItem::new("banana", "Banana"),
-            ])
-            .refine_layout(select_width.clone())
-            .into_element(cx);
-        block(cx, "Error State", vec![native, styled]).test_id("ui-gallery-native-select-error")
-    };
 
-    let demo = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N8)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |_cx| vec![basic, with_groups, disabled_state, error_state],
-    )
-    .test_id("ui-gallery-native-select-demo");
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .items_start()
+                .layout(LayoutRefinement::default().w_full().min_w_0()),
+            |_cx| vec![select],
+        )
+        .test_id("ui-gallery-native-select-error")
+    };
 
     let rtl = doc_layout::rtl(cx, |cx| {
         shadcn::NativeSelect::new_controllable(cx, None, None, None, false)
-            .placeholder("Select language")
+            .placeholder("Choose language")
             .a11y_label("RTL native select")
-            .refine_layout(select_width.clone())
+            .refine_layout(select_layout.clone())
             .into_element(cx)
     })
     .test_id("ui-gallery-native-select-rtl");
@@ -347,7 +254,7 @@ pub(super) fn preview_native_select(cx: &mut ElementContext<'_, App>) -> Vec<Any
     let notes = doc_layout::notes(
         cx,
         [
-            "API reference: `ecosystem/fret-ui-shadcn/src/native_select.rs` and `ecosystem/fret-ui-shadcn/src/select.rs`.",
+            "API reference: `ecosystem/fret-ui-shadcn/src/native_select.rs`.",
             "Gallery alignment note: upstream NativeSelect is a DOM `<select>`; Fret's `NativeSelect` is a popover-backed fallback today (platform-native pickers TBD).",
             "Use `Select` for rich overlays and custom interactions; revisit `NativeSelect` when platform-native select widgets are implemented per backend.",
         ],
@@ -356,61 +263,77 @@ pub(super) fn preview_native_select(cx: &mut ElementContext<'_, App>) -> Vec<Any
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Native Select demo: Basic Select, With Groups, Disabled State, Error State.",
+            "Preview follows shadcn Native Select docs: Demo, With Groups, Disabled State, Invalid State.",
         ),
         vec![
             DocSection::new("Demo", demo)
+                .description("A styled native-select-like control (upstream is a DOM `<select>`).")
                 .no_shell()
                 .max_w(Px(980.0))
                 .code(
                     "rust",
-                    r#"// Basic Select
-let value: Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
-let open: Model<bool> = cx.app.models_mut().insert(false);
-
-shadcn::NativeSelect::new(value, open)
-    .a11y_label("Native select: fruit")
-    .placeholder("Select a fruit")
+                    r#"shadcn::NativeSelect::new(value, open)
+    .a11y_label("Native select: status")
+    .placeholder("Select status")
     .options([
-        shadcn::NativeSelectOption::new("apple", "Apple"),
-        shadcn::NativeSelectOption::new("banana", "Banana"),
-        shadcn::NativeSelectOption::new("blueberry", "Blueberry"),
-        shadcn::NativeSelectOption::new("grapes", "Grapes").disabled(true),
-        shadcn::NativeSelectOption::new("pineapple", "Pineapple"),
+        shadcn::NativeSelectOption::placeholder("Select status"),
+        shadcn::NativeSelectOption::new("todo", "Todo"),
+        shadcn::NativeSelectOption::new("in-progress", "In Progress"),
+        shadcn::NativeSelectOption::new("done", "Done"),
+        shadcn::NativeSelectOption::new("cancelled", "Cancelled"),
     ])
-    .into_element(cx);
-
-shadcn::Select::new(value, open)
-    .placeholder("Select a fruit")
-    .items([
-        shadcn::SelectItem::new("apple", "Apple"),
-        shadcn::SelectItem::new("banana", "Banana"),
-        shadcn::SelectItem::new("blueberry", "Blueberry"),
-        shadcn::SelectItem::new("grapes", "Grapes").disabled(true),
-        shadcn::SelectItem::new("pineapple", "Pineapple"),
+    .into_element(cx);"#,
+                ),
+            DocSection::new("With Groups", with_groups)
+                .description("Organize options using `NativeSelectOptGroup`.")
+                .max_w(Px(980.0))
+                .code(
+                    "rust",
+                    r#"shadcn::NativeSelect::new(value, open)
+    .a11y_label("Native select: department")
+    .placeholder("Select department")
+    .options([shadcn::NativeSelectOption::placeholder("Select department")])
+    .optgroups([
+        shadcn::NativeSelectOptGroup::new(
+            "Engineering",
+            [
+                shadcn::NativeSelectOption::new("frontend", "Frontend"),
+                shadcn::NativeSelectOption::new("backend", "Backend"),
+            ],
+        ),
     ])
-    .into_element(cx);
-
-// With Groups (styled Select supports groups)
-shadcn::Select::new(value, open)
-    .placeholder("Select a food")
-    .entries([
-        shadcn::SelectGroup::new([
-            shadcn::SelectLabel::new("Fruits").into(),
-            shadcn::SelectItem::new("apple", "Apple").into(),
-            shadcn::SelectItem::new("banana", "Banana").into(),
-        ])
-        .into(),
+    .into_element(cx);"#,
+                ),
+            DocSection::new("Disabled State", disabled_state)
+                .description("Disable the select with `disabled(true)`.")
+                .max_w(Px(980.0))
+                .code(
+                    "rust",
+                    r#"shadcn::NativeSelect::new(value, open)
+    .placeholder("Select priority")
+    .disabled(true)
+    .options([
+        shadcn::NativeSelectOption::placeholder("Select priority"),
+        shadcn::NativeSelectOption::new("low", "Low"),
     ])
-    .into_element(cx);
-
-// Disabled / Error use `disabled(true)` + `aria_invalid(true)`.
-//
-// When the control is part of a `Field`, also set `Field::disabled(true)` / `Field::invalid(true)`
-// to match upstream `data-disabled` / `data-invalid` styling."#,
+    .into_element(cx);"#,
+                ),
+            DocSection::new("Invalid State", invalid_state)
+                .description("Show validation errors with `aria_invalid(true)`.")
+                .max_w(Px(980.0))
+                .code(
+                    "rust",
+                    r#"shadcn::NativeSelect::new(value, open)
+    .placeholder("Select role")
+    .aria_invalid(true)
+    .options([
+        shadcn::NativeSelectOption::placeholder("Select role"),
+        shadcn::NativeSelectOption::new("admin", "Admin"),
+    ])
+    .into_element(cx);"#,
                 ),
             DocSection::new("Extras", rtl)
-                .description("RTL smoke check (not present in upstream demo).")
+                .description("RTL smoke check (not present in upstream docs).")
                 .max_w(Px(980.0))
                 .code(
                     "rust",
@@ -418,7 +341,7 @@ shadcn::Select::new(value, open)
     cx,
     fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
     |cx| shadcn::NativeSelect::new_controllable(cx, None, None, None, false)
-        .placeholder("Select language")
+        .placeholder("Choose language")
         .into_element(cx),
 );"#,
                 ),

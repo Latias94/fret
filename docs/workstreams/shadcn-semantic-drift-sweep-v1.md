@@ -62,6 +62,16 @@ Implementation note:
   - Evidence: `fret_ui_shadcn::DataTableToolbarResponsiveQuery` in
     `ecosystem/fret-ui-shadcn/src/data_table_recipes.rs`.
 
+Additional responsive notes:
+
+- Calendar month layout is intentionally **mixed**:
+  - Prefer container width for editor panels (ADR 0231),
+  - but prefer viewport breakpoints when mounted inside `PopoverContent` to avoid circular sizing.
+  - Applies to `calendar.rs`, `calendar_multiple.rs`, and `calendar_range.rs`.
+- Shadcn Extras: `Marquee` currently uses `environment_viewport_width` as the implicit base cycle
+  width. We now default to a container query region width for docking/panels, with a viewport
+  fallback when the region measurement is temporarily unknown (ADR 0231).
+
 ### 2) Theme metadata heuristics (remove theme-name coupling)
 
 We had multiple uses of `theme.name.*` heuristics to decide “dark-mode variant” behavior (e.g.
@@ -80,7 +90,8 @@ Current strategy (implemented):
   - Evidence: `crates/fret-ui/src/theme/mod.rs`
 - Ensure shadcn presets set the metadata explicitly:
   - Evidence: `ecosystem/fret-ui-shadcn/src/shadcn_themes.rs`
-- Remove name heuristics from recipe code and consult `theme.color_scheme` instead:
+- Remove name heuristics from recipe code and consult theme metadata and component-owned variant
+  keys instead (with `theme.color_scheme` as a fallback for custom themes):
   - Evidence: `ecosystem/fret-ui-shadcn/src/checkbox.rs`, `ecosystem/fret-ui-shadcn/src/input.rs`,
     `ecosystem/fret-ui-shadcn/src/input_group.rs`, `ecosystem/fret-ui-shadcn/src/input_otp.rs`,
     `ecosystem/fret-ui-shadcn/src/native_select.rs`, `ecosystem/fret-ui-shadcn/src/combobox.rs`,
@@ -88,7 +99,17 @@ Current strategy (implemented):
     `ecosystem/fret-ui-shadcn/src/textarea.rs`, `ecosystem/fret-ui-shadcn/src/tabs.rs`
 - Regression evidence:
   - `ecosystem/fret-ui-shadcn/src/shadcn_themes.rs` (metadata is set + applied)
-  - `ecosystem/fret-ui-shadcn/src/input_otp.rs` (invalid ring variant follows `color_scheme`)
+  - `ecosystem/fret-ui-shadcn/src/input_otp.rs` (invalid ring variant follows component key)
+  - Guard: `ecosystem/fret-ui-shadcn/tests/no_theme_name_heuristics_regression.rs`
+
+Follow-up:
+
+- Recipes now prefer component-owned keys (seeded by shadcn presets) for scheme-specific variants:
+  - `component.control.invalid_ring`
+  - `component.tabs.trigger.fg_inactive`
+  - `component.radio_group.choice_card.checked_bg`
+- Remaining `theme.color_scheme` branches are intentionally retained as a fallback for custom
+  themes that do not define the component keys.
 
 ### 3) Token reads: avoid heavy `Theme` clones in hot codepaths
 
@@ -102,6 +123,80 @@ Preferred pattern:
 
 This is a sweepable, low-risk refactor as long as callsites do not rely on non-snapshot fields
 (e.g. `theme.name`).
+
+Status:
+
+- Started converting shadcn recipe callsites to `Theme::snapshot()` where only token reads are needed.
+  - Evidence: `ecosystem/fret-ui-shadcn/src/{accordion,alert_dialog,avatar,badge,button,button_group,calendar,calendar_hijri,calendar_multiple,calendar_range,carousel,chart,checkbox,collapsible,combobox,combobox_chips,command,context_menu,data_grid,data_grid_canvas,data_table,data_table_recipes,date_picker_with_presets,date_range_picker,dialog,drawer,dropdown_menu,empty,field,form_field,hover_card,input_otp,kbd,media_image,menubar,navigation_menu,native_select,pagination,popover,progress,radio_group,resizable,scroll_area,select,sheet,shortcut_hint,skeleton,slider,spinner,tabs,textarea,toggle_group,tooltip}.rs`, `ecosystem/fret-ui-shadcn/src/extras/{announcement,avatar_stack,banner,kanban,marquee,rating,relative_time,tags,ticker}.rs`
+  - Tracking: `docs/workstreams/shadcn-semantic-drift-sweep-v1-todo.md` (Token read sweep section)
+
+### 4) Reduced motion semantics: continuous animations must not request frames
+
+Some shadcn-aligned surfaces implement continuous animations (pulse, spin, marquees) by requesting
+animation frames while mounted. This must respect environment reduced-motion queries (ADR 0232):
+
+- When reduced motion is preferred, continuous animations must:
+  - render at rest (no phase/angle drift across frames),
+  - avoid requesting RAF effects while mounted.
+
+Status:
+
+- `Marquee` respects reduced motion (no RAF; stable translation).
+- `Skeleton` disables pulse under reduced motion.
+- `Spinner` disables rotation under reduced motion.
+
+## Semantic conflicts (what can “fight”) and how we prevent it
+
+As Fret’s semantics surface grows, drift can show up as *conflicting sources of truth* for a single
+decision (layout, tokens, or motion). The goal is not to eliminate choices, but to ensure each
+choice is:
+
+- explicit (a named knob at the right layer),
+- consistent (a stable precedence order),
+- gated (tests/diag that fail on drift).
+
+### Common conflict patterns
+
+1) **Viewport vs container responsiveness**
+
+- Symptom: a recipe uses viewport breakpoints (`sm/md/lg`) where editor-grade UIs expect the *local
+  panel width* to drive behavior.
+- Rule: viewport semantics come from environment queries (ADR 0232). Container semantics come from
+  container query regions (ADR 0231).
+- Mitigation: expose a recipe-level “query source” knob when both are reasonable (default to web
+  parity; allow editor-first override).
+
+2) **Theme-owned scheme vs environment scheme**
+
+- Symptom: code branches on environment `ColorScheme` (per-window) for appearance tokens, but the
+  theme content is app-owned.
+- Rule: theme content remains app/theme-owned (ADR 0032). Environment is a hint for *shell*
+  decisions, not the theme’s palette definition.
+- Mitigation: prefer theme metadata (`Theme.color_scheme`) and explicit component token keys over
+  environment branching; keep environment use localized to shell/policy layers.
+
+3) **Token keys vs literals / heuristics**
+
+- Symptom: values are embedded as literals or keyed off theme names, so custom themes cannot
+  override behavior without code changes.
+- Rule: recipes should be “token reads” whenever possible; policy branches belong above `fret-ui`.
+- Mitigation: add component-owned keys (seeded by shadcn presets) and reduce recipe code branching.
+
+4) **Motion policy vs local animation loops**
+
+- Symptom: widgets keep requesting RAF even when reduced motion is preferred.
+- Rule: reduced-motion is an environment query contract (ADR 0232) and must be respected.
+- Mitigation: make continuous animations conditional and prove “no frame requests” via tests/diag.
+
+5) **Diagnostics targets (`test_id`) for repeated elements**
+
+- Symptom: conformance/diag scripts want to target repeated elements (months, rows, chips), but the
+  recipe does not expose a stable per-item `test_id`, forcing brittle selectors or preventing
+  reliable bounds assertions.
+- Rule: any drift gate we add should have stable, typed `test_id` targets; repeated elements should
+  include a type segment and a stable key (e.g. `.month:<first_day>`).
+- Mitigation: add `test_id_prefix` plumbing and emit per-item `test_id` in view builders; update
+  diag scripts when IDs change.
 
 ## References (contracts / docs)
 
@@ -118,3 +213,24 @@ This is a sweepable, low-risk refactor as long as callsites do not rely on non-s
 
 The TODO list also contains a seed “responsive decision table” that records whether a given
 recipe should follow viewport queries (device shell) or container queries (panel width).
+
+## Status log
+
+- 2026-02-25: Merged `main` into this workstream branch to pick up latest `fret-ui-kit`/`fret-ui`
+  overlay and text-area changes before continuing the sweep.
+- 2026-02-25: Re-validated the token-read sweep after the merge and removed remaining
+  `Theme::global(&app).clone()` usages from module-local tests in `ecosystem/fret-ui-shadcn/src/`.
+- 2026-02-26: Wired the new responsive semantics conformance scripts into the built-in diag suites
+  (`fretboard diag suite ui-gallery-shadcn-conformance`) to keep the drift gates executable.
+- 2026-02-26: Updated `docs/shadcn-conformance-matrix.md` with the new responsive semantics gates
+  for Calendar/DataTable/Field/Empty/Drawer/NavigationMenu/Sidebar.
+- 2026-02-26: Added a regression guard to prevent reintroducing theme-name heuristics
+  (`ecosystem/fret-ui-shadcn/tests/no_theme_name_heuristics_regression.rs`).
+- 2026-02-26: Stabilized CalendarRange multi-month month `test_id` targets by adding a typed
+  `.month:<first_day>` segment; updated the calendar responsive conformance script accordingly
+  (`tools/diag-scripts/ui-gallery-calendar-mixed-responsive-popover-vs-panel.json`).
+- 2026-02-26: Hardened the DataTable toolbar query-source toggle script by confirming selection
+  (Enter) after status item clicks (`tools/diag-scripts/ui-gallery-data-table-toolbar-faceted-query-source-toggle.json`).
+- 2026-02-26: Ensured `Calendar::test_id_prefix` is honored in multi-month mode, adding stable
+  month roots (`.month:<first_day>`) and nav ids (`.nav-prev` / `.nav-next`) for diag targeting
+  parity with single-month mode (`ecosystem/fret-ui-shadcn/src/calendar.rs`).

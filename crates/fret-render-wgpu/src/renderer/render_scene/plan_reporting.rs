@@ -23,6 +23,8 @@ impl Renderer {
                 plan.compile_stats.estimated_peak_intermediate_bytes;
             frame_perf.render_plan_segments = plan.segments.len() as u64;
             frame_perf.render_plan_degradations = plan.degradations.len() as u64;
+            frame_perf.effect_degradations = plan.compile_stats.effect_degradations;
+            frame_perf.effect_blur_quality = plan.compile_stats.effect_blur_quality;
             for d in &plan.degradations {
                 match d.reason {
                     DegradationReason::BudgetZero => {

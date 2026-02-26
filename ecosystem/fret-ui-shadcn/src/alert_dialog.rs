@@ -7,7 +7,7 @@ use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
     RenderTransformProps, SemanticFlexProps, SemanticsDecoration, SizeStyle,
 };
-use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
+use fret_ui::{ElementContext, Invalidation, Theme, ThemeNamedColorKey, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::alert_dialog as radix_alert_dialog;
@@ -22,13 +22,10 @@ use crate::overlay_motion;
 
 use crate::button::{Button, ButtonVariant};
 
-fn default_overlay_color() -> Color {
-    Color {
-        r: 0.0,
-        g: 0.0,
-        b: 0.0,
-        a: 0.5,
-    }
+fn default_overlay_color(theme: &ThemeSnapshot) -> Color {
+    let mut scrim = theme.named_color(ThemeNamedColorKey::Black);
+    scrim.a = 0.5;
+    scrim
 }
 
 type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
@@ -173,7 +170,7 @@ impl AlertDialog {
         content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
     ) -> AnyElement {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
+            let theme = Theme::global(&*cx.app).snapshot();
             let is_open = cx.watch_model(&self.open).paint().copied().unwrap_or(false);
             let open_id = self.open.id();
 
@@ -227,7 +224,9 @@ impl AlertDialog {
                     radix_alert_dialog::clear_cancel_for_open_model(cx, open_id);
                 }
 
-                let overlay_color = self.overlay_color.unwrap_or_else(default_overlay_color);
+                let overlay_color = self
+                    .overlay_color
+                    .unwrap_or_else(|| default_overlay_color(&theme));
                 let window_padding_px = MetricRef::space(self.window_padding).resolve(&theme);
                 let opacity = motion.progress;
 
@@ -418,7 +417,7 @@ impl AlertDialogContent {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
 
         let bg = theme.color_token("background");
         let border = theme.color_token("border");
@@ -694,7 +693,7 @@ impl AlertDialogFooter {
             )
         } else if content_is_sm {
             // Tailwind (size=sm): `grid grid-cols-2 gap-2`
-            let theme = Theme::global(&*cx.app).clone();
+            let theme = Theme::global(&*cx.app).snapshot();
             let layout = decl_style::layout_style(
                 &theme,
                 LayoutRefinement::default().flex_1().min_w_0().w_full(),
@@ -750,7 +749,7 @@ impl AlertDialogTitle {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
         let fg = theme
             .color_by_key("foreground")
             .unwrap_or_else(|| theme.color_token("foreground"));
@@ -796,7 +795,7 @@ impl AlertDialogDescription {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
         let fg = theme
             .color_by_key("muted.foreground")
             .or_else(|| theme.color_by_key("muted-foreground"))

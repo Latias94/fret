@@ -297,7 +297,7 @@ where
             text: text.into(),
             style: Some(style),
             color: Some(color),
-            wrap: TextWrap::Word,
+            wrap: TextWrap::WordBreak,
             overflow: TextOverflow::Clip,
             align: fret_core::TextAlign::Start,
             ink_overflow: fret_ui::element::TextInkOverflow::None,
@@ -387,19 +387,19 @@ fn render_section(cx: &mut ElementContext<'_, App>, section: DocSection) -> AnyE
     } else {
         layout_only_shell(cx, max_w, preview)
     };
-    let preview = centered(cx, preview_shell);
+    let preview = preview_shell;
 
     let content = match code {
         Some(code) => preview_code_tabs(cx, test_id_prefix.as_deref(), preview, max_w, code),
         None => preview,
     };
 
-    stack::vstack(
+    let section_body = stack::vstack(
         cx,
         stack::VStackProps::default()
             .gap(Space::N2)
             .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
+            .layout(LayoutRefinement::default().w_full().min_w_0().max_w(max_w)),
         move |cx| {
             let mut out: Vec<AnyElement> = Vec::with_capacity(3);
             let title_el = section_title(cx, title);
@@ -435,7 +435,9 @@ fn render_section(cx: &mut ElementContext<'_, App>, section: DocSection) -> AnyE
             });
             out
         },
-    )
+    );
+
+    centered(cx, section_body)
 }
 
 fn centered(cx: &mut ElementContext<'_, App>, body: AnyElement) -> AnyElement {

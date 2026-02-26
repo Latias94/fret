@@ -77,7 +77,7 @@ pub fn kbd<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>)
 
 #[track_caller]
 pub fn kbd_icon<H: UiHost>(cx: &mut ElementContext<'_, H>, icon: IconId) -> AnyElement {
-    let theme = Theme::global(&*cx.app).clone();
+    let theme = Theme::global(&*cx.app).snapshot();
     let px = theme
         .metric_by_key("component.kbd.text_px")
         .or_else(|| theme.metric_by_key("font.size"))
@@ -91,7 +91,7 @@ fn kbd_with_patch<H: UiHost>(
     chrome_override: ChromeRefinement,
     layout_override: LayoutRefinement,
 ) -> AnyElement {
-    let theme = Theme::global(&*cx.app).clone();
+    let theme = Theme::global(&*cx.app).snapshot();
 
     let bg = theme.color_token("muted");
 
@@ -175,7 +175,7 @@ impl KbdGroup {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
         let gap = MetricRef::space(Space::N1).resolve(&theme);
         let direction = direction_prim::use_direction_in_scope(cx, None);
         let children = match direction {

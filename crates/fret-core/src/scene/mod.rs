@@ -1,7 +1,7 @@
 use crate::{
     Px, SvgFit, ViewportFit,
     geometry::{Corners, Edges, Point, Rect, Transform2D},
-    ids::{ImageId, PathId, RenderTargetId, SvgId, TextBlobId},
+    ids::{EffectId, ImageId, PathId, RenderTargetId, SvgId, TextBlobId},
 };
 use serde::{Deserialize, Serialize};
 use slotmap::Key;
@@ -125,6 +125,86 @@ pub enum EffectQuality {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DitherMode {
     Bayer4x4,
+}
+
+/// Fixed-size custom effect parameters (v1).
+///
+/// This is intentionally a small, bounded payload for capability-gated custom effects.
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct EffectParamsV1 {
+    pub vec4s: [[f32; 4]; 4],
+}
+
+impl EffectParamsV1 {
+    pub const ZERO: Self = Self {
+        vec4s: [[0.0; 4]; 4],
+    };
+
+    pub fn sanitize(self) -> Self {
+        let mut out = self;
+        for v in &mut out.vec4s {
+            for x in v {
+                if !x.is_finite() {
+                    *x = 0.0;
+                }
+            }
+        }
+        out
+    }
+
+    pub fn is_finite(self) -> bool {
+        self.vec4s.iter().flatten().all(|&x| x.is_finite())
+    }
+}
+
+/// Bounded procedural noise parameters (v1).
+///
+/// This is a mechanism-level surface intended to enable authored “grain” layers that are useful
+/// for acrylic/glass recipes (e.g. subtle noise after backdrop blur) while remaining deterministic
+/// (no hidden time dependency).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct NoiseV1 {
+    /// Additive noise magnitude in linear space. Recommended range is ~[0, 0.1].
+    pub strength: f32,
+    /// Spatial scale for the noise field in logical pixels (pre-scale-factor).
+    pub scale_px: crate::Px,
+    /// Deterministic phase/seed value (no hidden time dependency).
+    pub phase: f32,
+}
+
+impl NoiseV1 {
+    pub const MAX_STRENGTH: f32 = 1.0;
+    pub const MIN_SCALE_PX: crate::Px = crate::Px(1.0);
+    pub const MAX_SCALE_PX: crate::Px = crate::Px(1024.0);
+
+    pub fn sanitize(self) -> Self {
+        let strength = if self.strength.is_finite() {
+            self.strength.clamp(0.0, Self::MAX_STRENGTH)
+        } else {
+            0.0
+        };
+        let scale_px = if self.scale_px.0.is_finite() {
+            crate::Px(
+                self.scale_px
+                    .0
+                    .clamp(Self::MIN_SCALE_PX.0, Self::MAX_SCALE_PX.0),
+            )
+        } else {
+            Self::MIN_SCALE_PX
+        };
+        let phase = if self.phase.is_finite() {
+            self.phase
+        } else {
+            0.0
+        };
+
+        Self {
+            strength,
+            scale_px,
+            phase,
+        }
+    }
 }
 
 /// Bounded backdrop warp parameters (v1).
@@ -355,6 +435,7 @@ pub enum EffectStep {
     DropShadowV1(DropShadowV1),
     BackdropWarpV1(BackdropWarpV1),
     BackdropWarpV2(BackdropWarpV2),
+    NoiseV1(NoiseV1),
     ColorAdjust {
         saturation: f32,
         brightness: f32,
@@ -373,6 +454,19 @@ pub enum EffectStep {
     Dither {
         mode: DitherMode,
     },
+    CustomV1 {
+        id: EffectId,
+        params: EffectParamsV1,
+        /// Maximum sampling offset (in logical px) that the custom effect may use when reading
+        /// from its source texture.
+        ///
+        /// This is a bounded contract input used by renderers to deterministically allocate
+        /// enough context ("padding") for effect chains (e.g. blur -> custom refraction) without
+        /// introducing edge artifacts near clipped/scissored bounds.
+        ///
+        /// Backends may clamp or degrade behavior under tight budgets.
+        max_sample_offset_px: crate::Px,
+    },
 }
 
 impl EffectStep {
@@ -389,6 +483,20 @@ impl EffectStep {
             EffectStep::BackdropWarpV1(w) => EffectStep::BackdropWarpV1(w.sanitize()),
             EffectStep::BackdropWarpV2(w) => EffectStep::BackdropWarpV2(w.sanitize()),
             EffectStep::DropShadowV1(s) => EffectStep::DropShadowV1(s.sanitize()),
+            EffectStep::NoiseV1(n) => EffectStep::NoiseV1(n.sanitize()),
+            EffectStep::CustomV1 {
+                id,
+                params,
+                max_sample_offset_px,
+            } => EffectStep::CustomV1 {
+                id,
+                params: params.sanitize(),
+                max_sample_offset_px: if max_sample_offset_px.0.is_finite() {
+                    crate::Px(max_sample_offset_px.0.max(0.0))
+                } else {
+                    crate::Px(0.0)
+                },
+            },
             EffectStep::AlphaThreshold { cutoff, soft } => EffectStep::AlphaThreshold {
                 cutoff: if cutoff.is_finite() { cutoff } else { 0.0 },
                 soft: if soft.is_finite() { soft.max(0.0) } else { 0.0 },

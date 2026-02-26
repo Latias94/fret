@@ -8,7 +8,7 @@ use fret_ui::element::{
     AnyElement, FlexProps, LayoutQueryRegionProps, LayoutStyle, Length, MainAlign, Overflow,
     PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps, TextProps,
 };
-use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
+use fret_ui::{ElementContext, Invalidation, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::stack;
@@ -255,7 +255,7 @@ impl CalendarRange {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
 
         let month_model = self.month.clone();
         let selected_model = self.selected.clone();
@@ -860,7 +860,7 @@ impl CalendarRange {
 #[allow(clippy::too_many_arguments)]
 fn calendar_range_multi_month_view<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
+    theme: &ThemeSnapshot,
     is_row: bool,
     start_month: CalendarMonth,
     month_model: Model<CalendarMonth>,
@@ -983,7 +983,7 @@ fn calendar_range_multi_month_view<H: UiHost>(
                 .iter()
                 .copied()
                 .map(|m| {
-                    calendar_range_month_view(
+                    let month_el = calendar_range_month_view(
                         cx,
                         theme,
                         m,
@@ -1012,7 +1012,17 @@ fn calendar_range_multi_month_view<H: UiHost>(
                         close_on_select.clone(),
                         initial_focus_out.clone(),
                         grid_text_style.clone(),
-                    )
+                    );
+
+                    let month_test_id = test_id_prefix
+                        .as_ref()
+                        .map(|prefix| Arc::from(format!("{prefix}.month:{}", m.first_day())));
+
+                    if let Some(month_test_id) = month_test_id {
+                        month_el.test_id(month_test_id)
+                    } else {
+                        month_el
+                    }
                 })
                 .collect::<Vec<_>>()
         })
@@ -1026,7 +1036,7 @@ fn calendar_range_multi_month_view<H: UiHost>(
                 .iter()
                 .copied()
                 .map(|m| {
-                    calendar_range_month_view(
+                    let month_el = calendar_range_month_view(
                         cx,
                         theme,
                         m,
@@ -1055,7 +1065,17 @@ fn calendar_range_multi_month_view<H: UiHost>(
                         close_on_select.clone(),
                         initial_focus_out.clone(),
                         grid_text_style.clone(),
-                    )
+                    );
+
+                    let month_test_id = test_id_prefix
+                        .as_ref()
+                        .map(|prefix| Arc::from(format!("{prefix}.month:{}", m.first_day())));
+
+                    if let Some(month_test_id) = month_test_id {
+                        month_el.test_id(month_test_id)
+                    } else {
+                        month_el
+                    }
                 })
                 .collect::<Vec<_>>()
         })
@@ -1076,7 +1096,7 @@ fn calendar_range_multi_month_view<H: UiHost>(
 #[allow(clippy::too_many_arguments)]
 fn calendar_range_month_view<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
+    theme: &ThemeSnapshot,
     month: CalendarMonth,
     locale: CalendarLocale,
     test_id_prefix: Option<Arc<str>>,
@@ -1502,9 +1522,15 @@ fn calendar_icon_button<H: UiHost>(
     enabled: bool,
     on_activate: impl Fn(&mut dyn fret_ui::action::UiActionHost) + 'static,
 ) -> AnyElement {
-    let theme = Theme::global(&*cx.app).clone();
+    let theme = Theme::global(&*cx.app).snapshot();
 
-    let (bg, bg_hover, bg_pressed, border, fg) = crate::button::variant_colors(&theme, variant);
+    let (bg, bg_hover, bg_pressed, border, fg, text_style) = {
+        let theme_full = Theme::global(&*cx.app);
+        let (bg, bg_hover, bg_pressed, border, fg) =
+            crate::button::variant_colors(theme_full, variant);
+        let text_style = crate::button::button_text_style(theme_full, size);
+        (bg, bg_hover, bg_pressed, border, fg, text_style)
+    };
 
     let radius = theme
         .metric_by_key("component.button.radius")
@@ -1547,7 +1573,7 @@ fn calendar_icon_button<H: UiHost>(
 
         let chrome_props = decl_style::container_props(&theme, chrome, LayoutRefinement::default());
 
-        let style = crate::button::button_text_style(&theme, size);
+        let style = text_style.clone();
         let children = move |cx: &mut ElementContext<'_, H>| {
             let mut label = ui::label(cx, text.clone())
                 .text_size_px(style.size)
@@ -1569,7 +1595,7 @@ fn calendar_icon_button<H: UiHost>(
 
 fn calendar_range_hidden_day_cell<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
+    theme: &ThemeSnapshot,
     size: Px,
     week_row_gap: Px,
 ) -> AnyElement {
@@ -1607,7 +1633,7 @@ fn calendar_range_hidden_day_cell<H: UiHost>(
 #[allow(clippy::too_many_arguments)]
 fn calendar_range_day_cell<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
+    theme: &ThemeSnapshot,
     locale: CalendarLocale,
     test_id_prefix: Option<Arc<str>>,
     date: Date,

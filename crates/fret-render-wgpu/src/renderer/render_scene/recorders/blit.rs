@@ -38,7 +38,11 @@ pub(in super::super) fn record_fullscreen_blit_pass(
     let layout = renderer.blit_bind_group_layout_ref();
     let blit_bind_group =
         create_texture_bind_group(device, "fret blit bind group", layout, &src_view);
-    let blit_pipeline = renderer.blit_pipeline_ref();
+    let blit_pipeline = if pass.encode_output_srgb {
+        renderer.blit_srgb_encode_pipeline_ref()
+    } else {
+        renderer.blit_pipeline_ref()
+    };
 
     run_fullscreen_triangle_pass(
         encoder,
