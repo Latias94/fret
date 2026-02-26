@@ -593,6 +593,10 @@ Canonical env vars (recommended):
 - `FRET_DIAG_REDACT_TEXT`
 - `FRET_DIAG_FIXED_FRAME_DELTA_MS`
 
+Deprecated aliases + removal plan:
+
+- `docs/workstreams/diag-v2-hardening-and-switches-v1/deprecations.md`.
+
 Config resolution order (runtime):
 
 1. Tooling may set reserved env vars in `--launch` mode (including `FRET_DIAG_DIR` and `FRET_DIAG_*_PATH`), overriding any values from the parent shell.

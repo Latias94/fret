@@ -16,7 +16,7 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
   - implemented, or
   - explicitly documented as “planned / ignored by runtime”.
 - [x] Make tooling push schema v2 scripts by default (normalize/upgrade on write) and warn when schema v1 scripts are observed.
-- [ ] Add a runtime compat switch for schema v1 scripts:
+- [x] Add a runtime compat switch for schema v1 scripts:
   - [x] enable/disable v1 script parsing explicitly (default: enabled for manual, disabled for tool-launched runs),
   - [x] record legacy usage in `script.result.json` evidence (so triage can detect compat paths).
 - [x] Ensure `diag config doctor` validates the example config (no unknown keys).
@@ -26,7 +26,7 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
   - [x] `FRET_DIAG_GPU_SCREENSHOTS`
   - [x] `FRET_DIAG_REDACT_TEXT`
   - [x] `FRET_DIAG_FIXED_FRAME_DELTA_MS`
-  - [ ] Document deprecated aliases + removal plan (P2/P3).
+  - [x] Document deprecated aliases + removal plan (P2/P3): `docs/workstreams/diag-v2-hardening-and-switches-v1/deprecations.md`.
 - [x] Define “reserved env vars” policy for `--launch` (tooling-owned) and enforce it uniformly.
 - [x] Add a `diag config doctor` (tooling-side) that prints an effective merged config + highlights deprecated keys/envs.
 

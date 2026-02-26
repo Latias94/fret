@@ -124,7 +124,7 @@ fn read_config_file_value(path: &Path) -> Result<serde_json::Value, String> {
 
 fn runtime_known_env_vars() -> BTreeSet<&'static str> {
     // Keep this list aligned with the runtime config loader:
-    // `ecosystem/fret-bootstrap/src/ui_diagnostics/config.rs`.
+    // `ecosystem/fret-bootstrap/src/ui_diagnostics/config.rs` and related diagnostics modules.
     BTreeSet::from([
         "FRET_DIAG",
         "FRET_DIAG_CONFIG_PATH",
@@ -159,6 +159,11 @@ fn runtime_known_env_vars() -> BTreeSet<&'static str> {
         "FRET_DIAG_MAX_DEBUG_STRING_BYTES",
         "FRET_DIAG_MAX_GATING_TRACE_ENTRIES",
         "FRET_DIAG_BUNDLE_SCREENSHOT",
+        "FRET_DIAG_BUNDLE_JSON_FORMAT",
+        "FRET_DIAG_BUNDLE_SEMANTICS_MODE",
+        "FRET_DIAG_BUNDLE_WRITE_INDEX",
+        "FRET_DIAG_BUNDLE_DUMP_MAX_SEMANTICS_NODES",
+        "FRET_DIAG_BUNDLE_DUMP_SEMANTICS_TEST_IDS_ONLY",
         "FRET_DIAG_BUNDLE_WRITE_SCHEMA2",
         "FRET_DEVTOOLS_WS",
         "FRET_DEVTOOLS_TOKEN",
