@@ -123,6 +123,115 @@ pub(super) fn apply_chain_in_place(
         None
     };
 
+    // Padded blur -> custom effect chain (common "lens" pattern):
+    //
+    // - We must preserve outside-region content in `srcdst`.
+    // - But the final custom effect may sample slightly outside the clipped/scissored bounds.
+    // - If the preceding blur only prepares the scissored region (treating outside as transparent),
+    //   the custom effect will see edge artifacts when sampling near bounds.
+    //
+    // We solve this deterministically by:
+    // 1) copying `srcdst` into a work target,
+    // 2) applying blur into that work target on an expanded ("padded") scissor rect,
+    // 3) running the custom effect from the work target back into `srcdst` on the original scissor,
+    //    applying clip/mask coverage exactly once.
+    if let [
+        fret_core::EffectStep::GaussianBlur {
+            radius_px,
+            downsample,
+        },
+        fret_core::EffectStep::CustomV1 {
+            id: custom_id,
+            params: custom_params,
+            max_sample_offset_px,
+        },
+    ] = steps.as_slice()
+    {
+        let blur_radius_px = if radius_px.0.is_finite() {
+            (radius_px.0 * ctx.scale_factor).max(0.0)
+        } else {
+            0.0
+        };
+        let max_sample_offset_px = if max_sample_offset_px.0.is_finite() {
+            (max_sample_offset_px.0 * ctx.scale_factor).max(0.0)
+        } else {
+            0.0
+        };
+        let pad_px =
+            (blur_radius_px.ceil() as u32).saturating_add(max_sample_offset_px.ceil() as u32);
+
+        if pad_px > 0 && !scratch_targets.is_empty() {
+            let work_scissor = inflate_scissor_to_viewport(scissor, pad_px, ctx.viewport_size);
+            let work = scratch_targets[0];
+
+            // Prepare work buffer with the full (unmodified) source so blur/custom can sample
+            // outside the original scissor bounds.
+            passes.push(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
+                src: srcdst,
+                dst: work,
+                src_size: ctx.viewport_size,
+                dst_size: ctx.viewport_size,
+                dst_scissor: None,
+                encode_output_srgb: false,
+                load: wgpu::LoadOp::Clear(ctx.clear),
+            }));
+
+            // Apply blur on the expanded scissor, without applying clip coverage yet.
+            compile_gaussian_blur_in_place(
+                passes,
+                &scratch_targets[1..],
+                work,
+                quality,
+                work_scissor,
+                *downsample,
+                blur_radius_px,
+                ctx,
+                &mut budget_bytes,
+                effect_degradations,
+                effect_blur_quality,
+            );
+
+            // Apply CustomV1 from the work buffer into the original destination scissor.
+            effect_degradations.custom_effect.requested = effect_degradations
+                .custom_effect
+                .requested
+                .saturating_add(1);
+            if !color_adjust_enabled(ctx.viewport_size, ctx.format, budget_bytes) {
+                if budget_bytes == 0 {
+                    effect_degradations.custom_effect.degraded_budget_zero = effect_degradations
+                        .custom_effect
+                        .degraded_budget_zero
+                        .saturating_add(1);
+                } else {
+                    effect_degradations
+                        .custom_effect
+                        .degraded_budget_insufficient = effect_degradations
+                        .custom_effect
+                        .degraded_budget_insufficient
+                        .saturating_add(1);
+                }
+                return;
+            }
+
+            effect_degradations.custom_effect.applied =
+                effect_degradations.custom_effect.applied.saturating_add(1);
+
+            passes.push(RenderPlanPass::CustomEffect(CustomEffectPass {
+                src: work,
+                dst: srcdst,
+                src_size: ctx.viewport_size,
+                dst_size: ctx.viewport_size,
+                dst_scissor: Some(LocalScissorRect(scissor)),
+                mask_uniform_index,
+                mask,
+                effect: *custom_id,
+                params: *custom_params,
+                load: wgpu::LoadOp::Load,
+            }));
+            return;
+        }
+    }
+
     // Clip/shape masks are coverage (alpha) multipliers. If we apply them at every effect step in a
     // chain, coverage compounds (e.g. clip^2) and produces visible edge darkening (especially
     // around rounded corners) for common chains like blur -> custom refraction.
@@ -1014,7 +1123,11 @@ pub(super) fn apply_chain_in_place(
                     mask,
                 );
             }
-            fret_core::EffectStep::CustomV1 { id, params } => {
+            fret_core::EffectStep::CustomV1 {
+                id,
+                params,
+                max_sample_offset_px: _,
+            } => {
                 effect_degradations.custom_effect.requested = effect_degradations
                     .custom_effect
                     .requested
@@ -1061,6 +1174,177 @@ pub(super) fn apply_chain_in_place(
             }
         }
     }
+}
+
+fn inflate_scissor_to_viewport(
+    scissor: ScissorRect,
+    pad_px: u32,
+    viewport_size: (u32, u32),
+) -> ScissorRect {
+    if pad_px == 0 {
+        return scissor;
+    }
+
+    let max_w = viewport_size.0;
+    let max_h = viewport_size.1;
+
+    let x0 = scissor.x.saturating_sub(pad_px).min(max_w);
+    let y0 = scissor.y.saturating_sub(pad_px).min(max_h);
+    let x1 = scissor
+        .x
+        .saturating_add(scissor.w)
+        .saturating_add(pad_px)
+        .min(max_w);
+    let y1 = scissor
+        .y
+        .saturating_add(scissor.h)
+        .saturating_add(pad_px)
+        .min(max_h);
+
+    if x1 <= x0 || y1 <= y0 {
+        return scissor;
+    }
+
+    ScissorRect {
+        x: x0,
+        y: y0,
+        w: x1 - x0,
+        h: y1 - y0,
+    }
+}
+
+fn compile_gaussian_blur_in_place(
+    passes: &mut Vec<RenderPlanPass>,
+    scratch_targets: &[PlanTarget],
+    srcdst: PlanTarget,
+    quality: fret_core::EffectQuality,
+    scissor: ScissorRect,
+    downsample: u32,
+    radius_px: f32,
+    ctx: EffectCompileCtx,
+    budget_bytes: &mut u64,
+    effect_degradations: &mut super::EffectDegradationSnapshot,
+    effect_blur_quality: &mut super::BlurQualitySnapshot,
+) {
+    if radius_px <= 0.0 || scissor.w == 0 || scissor.h == 0 {
+        return;
+    }
+    effect_degradations.gaussian_blur.requested = effect_degradations
+        .gaussian_blur
+        .requested
+        .saturating_add(1);
+
+    let requested_downsample = if downsample >= 4 { 4 } else { 2 };
+    let desired_downsample = effect_blur_desired_downsample(requested_downsample, quality);
+
+    // Prefer two-scratch downsampled blur when available.
+    if scratch_targets.len() >= 2 {
+        if let Some(downsample_scale) = choose_effect_blur_downsample_scale(
+            ctx.viewport_size,
+            ctx.format,
+            *budget_bytes,
+            requested_downsample,
+            quality,
+        ) {
+            let iterations =
+                blur_primitive::blur_iterations_for_radius(radius_px, downsample_scale, quality);
+            effect_degradations.gaussian_blur.applied =
+                effect_degradations.gaussian_blur.applied.saturating_add(1);
+            effect_blur_quality.gaussian_blur.record_applied(
+                downsample_scale,
+                iterations,
+                desired_downsample,
+            );
+            append_scissored_blur_in_place_two_scratch(
+                passes,
+                srcdst,
+                scratch_targets[0],
+                scratch_targets[1],
+                ctx.viewport_size,
+                downsample_scale,
+                iterations,
+                scissor,
+                ctx.clear,
+                None,
+                None,
+            );
+            return;
+        }
+    }
+
+    // Fallback: single-scratch blur (still deterministic, but may be more expensive).
+    let Some(&scratch) = scratch_targets.first() else {
+        effect_degradations.gaussian_blur.degraded_target_exhausted = effect_degradations
+            .gaussian_blur
+            .degraded_target_exhausted
+            .saturating_add(1);
+        effect_blur_quality
+            .gaussian_blur
+            .record_applied(1, 0, desired_downsample);
+        effect_blur_quality
+            .gaussian_blur
+            .quality_degraded_blur_removed = effect_blur_quality
+            .gaussian_blur
+            .quality_degraded_blur_removed
+            .saturating_add(1);
+        return;
+    };
+
+    if *budget_bytes == 0 {
+        effect_degradations.gaussian_blur.degraded_budget_zero = effect_degradations
+            .gaussian_blur
+            .degraded_budget_zero
+            .saturating_add(1);
+        effect_blur_quality
+            .gaussian_blur
+            .record_applied(1, 0, desired_downsample);
+        effect_blur_quality
+            .gaussian_blur
+            .quality_degraded_blur_removed = effect_blur_quality
+            .gaussian_blur
+            .quality_degraded_blur_removed
+            .saturating_add(1);
+        return;
+    }
+
+    let full = estimate_texture_bytes(ctx.viewport_size, ctx.format, 1);
+    let required = full.saturating_mul(2);
+    if required > *budget_bytes {
+        effect_degradations
+            .gaussian_blur
+            .degraded_budget_insufficient = effect_degradations
+            .gaussian_blur
+            .degraded_budget_insufficient
+            .saturating_add(1);
+        effect_blur_quality
+            .gaussian_blur
+            .record_applied(1, 0, desired_downsample);
+        effect_blur_quality
+            .gaussian_blur
+            .quality_degraded_blur_removed = effect_blur_quality
+            .gaussian_blur
+            .quality_degraded_blur_removed
+            .saturating_add(1);
+        return;
+    }
+
+    let iterations = blur_primitive::blur_iterations_for_radius(radius_px, 1, quality);
+    effect_degradations.gaussian_blur.applied =
+        effect_degradations.gaussian_blur.applied.saturating_add(1);
+    effect_blur_quality
+        .gaussian_blur
+        .record_applied(1, iterations, desired_downsample);
+    append_scissored_blur_in_place_single_scratch(
+        passes,
+        srcdst,
+        scratch,
+        ctx.viewport_size,
+        iterations,
+        scissor,
+        ctx.clear,
+        None,
+        None,
+    );
 }
 
 pub(super) fn choose_effect_blur_downsample_scale(
@@ -1377,6 +1661,7 @@ mod tests {
                     params: fret_core::scene::EffectParamsV1 {
                         vec4s: [[0.0; 4]; 4],
                     },
+                    max_sample_offset_px: fret_core::Px(0.0),
                 },
             ]),
             fret_core::EffectQuality::Medium,
@@ -1404,6 +1689,82 @@ mod tests {
         assert!(
             custom.is_some_and(|p| p.mask_uniform_index.is_some() || p.mask.is_some()),
             "the final step must apply clip coverage"
+        );
+    }
+
+    #[test]
+    fn padded_blur_then_custom_uses_work_buffer() {
+        let ctx = EffectCompileCtx {
+            viewport_size: (64, 64),
+            format: wgpu::TextureFormat::Rgba8Unorm,
+            intermediate_budget_bytes: 1u64 << 60,
+            clear: wgpu::Color::TRANSPARENT,
+            scale_factor: 1.0,
+        };
+        let scissor = ScissorRect {
+            x: 10,
+            y: 12,
+            w: 20,
+            h: 18,
+        };
+
+        let mut passes = Vec::new();
+        let mut degradations = super::super::EffectDegradationSnapshot::default();
+        let mut blur_quality = super::super::BlurQualitySnapshot::default();
+        apply_chain_in_place(
+            &mut passes,
+            &[],
+            PlanTarget::Intermediate0,
+            fret_core::EffectMode::Backdrop,
+            fret_core::EffectChain::from_steps(&[
+                fret_core::EffectStep::GaussianBlur {
+                    radius_px: fret_core::Px(14.0),
+                    downsample: 2,
+                },
+                fret_core::EffectStep::CustomV1 {
+                    id: fret_core::EffectId::default(),
+                    params: fret_core::scene::EffectParamsV1 {
+                        vec4s: [[0.0; 4]; 4],
+                    },
+                    max_sample_offset_px: fret_core::Px(12.0),
+                },
+            ]),
+            fret_core::EffectQuality::Medium,
+            scissor,
+            Some(7),
+            &[],
+            &mut degradations,
+            &mut blur_quality,
+            ctx,
+        );
+
+        let copied_to_work = passes.iter().any(|p| {
+            matches!(
+                p,
+                RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
+                    src: PlanTarget::Intermediate0,
+                    dst: PlanTarget::Intermediate1,
+                    ..
+                })
+            )
+        });
+        assert!(
+            copied_to_work,
+            "padded blur->custom should copy srcdst into a work buffer"
+        );
+
+        let custom = passes.iter().find_map(|p| match p {
+            RenderPlanPass::CustomEffect(pass) => Some(pass),
+            _ => None,
+        });
+        assert!(
+            custom.is_some_and(|p| {
+                p.src == PlanTarget::Intermediate1
+                    && p.dst == PlanTarget::Intermediate0
+                    && p.dst_scissor == Some(LocalScissorRect(scissor))
+                    && (p.mask_uniform_index.is_some() || p.mask.is_some())
+            }),
+            "final CustomEffect should read from the work buffer and apply clip coverage once"
         );
     }
 

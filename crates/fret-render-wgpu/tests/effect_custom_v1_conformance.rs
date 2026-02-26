@@ -208,7 +208,11 @@ fn fret_custom_effect(src: vec4<f32>, _uv: vec2<f32>, _pos_px: vec2<f32>, params
     with_effect.push(SceneOp::PushEffect {
         bounds: Rect::new(Point::new(Px(24.0), Px(0.0)), Size::new(Px(16.0), Px(64.0))),
         mode: EffectMode::Backdrop,
-        chain: EffectChain::from_steps(&[EffectStep::CustomV1 { id: effect, params }]),
+        chain: EffectChain::from_steps(&[EffectStep::CustomV1 {
+            id: effect,
+            params,
+            max_sample_offset_px: Px(0.0),
+        }]),
         quality: EffectQuality::Auto,
     });
     with_effect.push(foreground);
