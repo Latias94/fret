@@ -62,6 +62,7 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
   - [x] `ui-gallery/markdown-editor` (24 scripts)
   - [x] `ui-gallery/layout` (4 scripts)
   - [x] `ui-gallery/perf` (70 scripts; batch-migrated)
+  - [x] `ui-gallery/date-picker` (5 scripts)
   - [ ] `ui-gallery/misc` (367 scripts; needs new buckets before migrating)
   - [x] `docking/arbitration` (33 scripts)
   - [x] `tooling/external-texture-imports` (9 scripts)

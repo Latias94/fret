@@ -101,6 +101,8 @@ def categorize_script(filename: str) -> tuple[str, str]:
             return ("ui_gallery.markdown_editor", "ui-gallery/markdown-editor")
         if n.startswith("ui-gallery-combobox-"):
             return ("ui_gallery.combobox", "ui-gallery/combobox")
+        if n.startswith("ui-gallery-date-picker-") or "date-picker" in n:
+            return ("ui_gallery.date_picker", "ui-gallery/date-picker")
         if n.startswith("ui-gallery-select-"):
             return ("ui_gallery.select", "ui-gallery/select")
         if "shadcn" in n or "conformance" in n:
