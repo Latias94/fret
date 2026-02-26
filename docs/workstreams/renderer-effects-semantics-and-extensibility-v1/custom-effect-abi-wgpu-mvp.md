@@ -44,7 +44,7 @@ Add a small, portable handle and param surface in `fret-core`, similar to `Mater
 
 - `EffectId`: opaque ID (slotmap key) in `fret-core`.
 - `EffectParamsV1`: fixed-size params (e.g. 16 floats, like `MaterialParams`).
-- `EffectStep::CustomV1 { id: EffectId, params: EffectParamsV1 }`.
+- `EffectStep::CustomV1 { id: EffectId, params: EffectParamsV1, max_sample_offset_px: Px }`.
 
 Renderers expose a runtime service for registration:
 
@@ -87,6 +87,8 @@ MVP scoping constraints:
 - Single pass (no user-declared multi-pass bundles).
 - Params-only (fixed 64-byte payload) + a single source texture.
 - No user-provided textures in v1 (use built-in `BackdropWarpV2` + built-in effects for distortion).
+- Custom effects declare a bounded sampling extent (`max_sample_offset_px`) so the renderer can
+  deterministically allocate enough padding for common chains (e.g. blur → custom refraction).
 
 Binding shapes are versioned and strictly limited:
 
@@ -117,6 +119,9 @@ MVP rule:
 
 - Custom effect pass uses the same budget gate as other single-scratch in-place passes:
   requires `full * 2` bytes available (source + scratch).
+- If the custom effect declares `max_sample_offset_px > 0` and the chain contains a preceding blur,
+  the renderer may allocate extra context ("padding") deterministically by evaluating the blur on an
+  expanded scissor rect and applying clip coverage only on the final custom pass.
 - On insufficient budget or target exhaustion:
   - degrade deterministically to no-op (tracked in counters),
   - optionally allow a renderer-provided fallback chain (pre-registered).
@@ -170,6 +175,10 @@ Notes:
 - The renderer applies clip/mask coverage *after* the custom function, so authors do not need to implement masking.
 - In wgpu, custom effects also receive a renderer-owned `render_space` uniform that provides the
   effect bounds (`origin_px`, `size_px`) for local coordinate math (Android/Flutter-style shaders).
+- `max_sample_offset_px` should conservatively bound how far the shader may read from `pos_px`
+  when sampling the source texture (e.g. maximum displacement + dispersion offset). This is used
+  by the render plan to add deterministic padding for chains that include blur before the custom
+  pass.
 - Backends may impose a maximum WGSL source size (wgpu MVP caps v1 sources at 64KiB) and reject oversized programs.
 
 ## Usage (ecosystem / app code)

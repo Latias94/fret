@@ -35,7 +35,7 @@ Add a fixed-size parameter payload:
 
 Extend the effect chain surface:
 
-- `EffectStep::CustomV1 { id: EffectId, params: EffectParamsV1 }`.
+- `EffectStep::CustomV1 { id: EffectId, params: EffectParamsV1, max_sample_offset_px: Px }`.
 
 ### 2) Registration is renderer-owned and capability-gated
 
@@ -53,6 +53,7 @@ The MVP is intentionally small and landable:
 - single-pass fullscreen effect,
 - params-only (fixed 64B payload),
 - no user-provided textures in v1,
+- effect declares a bounded sampling extent (`max_sample_offset_px`) to enable deterministic padding when needed,
 - WGSL sources are size-capped and validated at registration time,
 - expressed only inside `EffectChain` between `PushEffect`/`PopEffect`,
 - deterministic degradation to no-op under budget/target exhaustion (tracked in counters).
