@@ -20,7 +20,7 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
   - [x] enable/disable v1 script parsing explicitly (default: enabled for manual, disabled for tool-launched runs),
   - [x] record legacy usage in `script.result.json` evidence (so triage can detect compat paths).
 - [x] Ensure `diag config doctor` validates the example config (no unknown keys).
-- [ ] Define and document a minimal env var set (the rest become deprecated aliases):
+- [x] Define and document a minimal env var set (the rest become deprecated aliases):
   - [x] `FRET_DIAG`
   - [x] `FRET_DIAG_CONFIG_PATH`
   - [x] `FRET_DIAG_GPU_SCREENSHOTS`
