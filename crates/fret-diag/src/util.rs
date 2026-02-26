@@ -39,14 +39,6 @@ pub(crate) fn touch(path: &Path) -> Result<(), String> {
     f.flush().map_err(|e| e.to_string())
 }
 
-pub(crate) fn write_script(src: &Path, dst: &Path) -> Result<(), String> {
-    let bytes = std::fs::read(src).map_err(|e| e.to_string())?;
-    if let Some(parent) = dst.parent() {
-        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
-    }
-    std::fs::write(dst, bytes).map_err(|e| e.to_string())
-}
-
 pub(crate) fn sanitize_for_filename(raw: &str, max_len: usize, fallback: &str) -> String {
     let mut out = String::with_capacity(raw.len().min(max_len.max(1)));
     for ch in raw.chars().take(max_len.max(1)) {

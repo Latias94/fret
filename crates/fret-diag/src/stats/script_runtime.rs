@@ -50,7 +50,16 @@ pub(crate) fn run_script_and_wait(
     let mut target_run_id: Option<u64> = None;
 
     let resolved = crate::script_tooling::read_script_json_resolving_redirects(src)?;
-    write_json_value(script_path, &resolved.value)?;
+    let (mut value, upgraded) =
+        crate::script_tooling::upgrade_script_json_value_to_v2_if_needed(resolved.value)?;
+    crate::script_tooling::canonicalize_json_value(&mut value);
+    if upgraded {
+        eprintln!(
+            "warning: script schema_version=1 detected; tooling upgraded to schema_version=2 for execution (source={})",
+            src.display()
+        );
+    }
+    write_json_value(script_path, &value)?;
     touch(script_trigger_path)?;
 
     let start_deadline =

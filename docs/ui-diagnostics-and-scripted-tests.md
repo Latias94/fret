@@ -265,11 +265,14 @@ Notes:
 
    - `FRET_DIAG_REDACT_TEXT=0`
 
-3. Write a `script.json` file (schema v1):
+3. Write a `script.json` file (schema v2; schema v1 is deprecated but still accepted):
 
 ```json
 {
-  "schema_version": 1,
+  "schema_version": 2,
+  "meta": {
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"]
+  },
   "steps": [
     { "type": "click", "target": { "kind": "role_and_name", "role": "button", "name": "Open" } },
     { "type": "wait_until", "predicate": { "kind": "exists", "target": { "kind": "role_and_name", "role": "dialog", "name": "Settings" } }, "timeout_frames": 60 },
@@ -305,6 +308,9 @@ Script tooling (no app required):
 - Normalize formatting (stable diffs):
   - `cargo run -p fretboard -- diag script normalize .\\script.json --write`
   - `cargo run -p fretboard -- diag script normalize .\\script.json --check`
+- Upgrade legacy schema v1 → v2 (schema-only; does not rewrite v2 scripts):
+  - `cargo run -p fretboard -- diag script upgrade .\\script.json --write`
+  - `cargo run -p fretboard -- diag script upgrade .\\script.json --check`
 - PowerShell note: `diag script validate|lint` accept globs and directories (the CLI expands them):
   - `cargo run -p fretboard -- diag script lint tools/diag-scripts/ui-gallery-select-*.json`
   - `cargo run -p fretboard -- diag script validate tools/diag-scripts`

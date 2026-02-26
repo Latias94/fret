@@ -368,6 +368,29 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
                 break;
             }
         };
+        let (mut script_json, upgraded) =
+            match crate::script_tooling::upgrade_script_json_value_to_v2_if_needed(script_json) {
+                Ok(v) => v,
+                Err(err) => {
+                    overall_reason_code = Some("tooling.script.upgrade_failed".to_string());
+                    write_tooling_failure_script_result(
+                        &resolved_script_result_path,
+                        "tooling.script.upgrade_failed",
+                        &err,
+                        "tooling_error",
+                        Some(src.display().to_string()),
+                    );
+                    overall_error = Some(err);
+                    break;
+                }
+            };
+        crate::script_tooling::canonicalize_json_value(&mut script_json);
+        if upgraded {
+            eprintln!(
+                "warning: script schema_version=1 detected; tooling upgraded to schema_version=2 for execution (source={})",
+                src.display()
+            );
+        }
 
         let (raw_result, _bundle_path) = match run_script_over_transport(
             &resolved_out_dir,

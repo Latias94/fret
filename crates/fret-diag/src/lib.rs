@@ -119,7 +119,7 @@ use tooling_failures::{
     mark_existing_script_result_tooling_failure, push_tooling_event_log_entry,
     write_tooling_failure_script_result, write_tooling_failure_script_result_if_missing,
 };
-use util::{now_unix_ms, read_json_value, touch, write_json_value, write_script};
+use util::{now_unix_ms, read_json_value, touch, write_json_value};
 
 pub(crate) use math::{percentile_nearest_rank_sorted, summarize_times_us};
 

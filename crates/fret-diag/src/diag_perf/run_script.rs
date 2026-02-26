@@ -55,6 +55,24 @@ pub(super) fn run_perf_script_and_resolve_bundle_artifact_path(
                     );
                 })?
                 .value;
+        let (mut script_json, upgraded) =
+            crate::script_tooling::upgrade_script_json_value_to_v2_if_needed(script_json)
+                .inspect_err(|err| {
+                    write_tooling_failure_script_result(
+                        resolved_script_result_path,
+                        "tooling.script.upgrade_failed",
+                        err,
+                        "tooling_error",
+                        Some(script_key.to_string()),
+                    );
+                })?;
+        crate::script_tooling::canonicalize_json_value(&mut script_json);
+        if upgraded {
+            eprintln!(
+                "warning: script schema_version=1 detected; tooling upgraded to schema_version=2 for execution (source={})",
+                src.display()
+            );
+        }
         let (result, bundle_path) = run_script_over_transport(
             resolved_out_dir,
             connected,

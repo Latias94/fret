@@ -1408,6 +1408,24 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
                         );
                     })?
                     .value;
+            let (mut script_json, upgraded) =
+                crate::script_tooling::upgrade_script_json_value_to_v2_if_needed(script_json)
+                    .inspect_err(|err| {
+                        write_tooling_failure_script_result(
+                            &resolved_script_result_path,
+                            "tooling.script.upgrade_failed",
+                            err,
+                            "tooling_error",
+                            Some(script_key.clone()),
+                        );
+                    })?;
+            crate::script_tooling::canonicalize_json_value(&mut script_json);
+            if upgraded {
+                eprintln!(
+                    "warning: script schema_version=1 detected; tooling upgraded to schema_version=2 for execution (source={})",
+                    src.display()
+                );
+            }
 
             // Always dump a bounded bundle for suite runs so lint and post-run checks can
             // operate on a local artifact (parity across transports).

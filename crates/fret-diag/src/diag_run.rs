@@ -333,10 +333,27 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         let script_value: serde_json::Value =
             serde_json::from_slice(&std::fs::read(&src).map_err(|e| e.to_string())?)
                 .map_err(|e| e.to_string())?;
-        let script_json =
+        let resolved_script =
             crate::script_tooling::resolve_script_json_redirects_from_value(&src, script_value)
-                .map_err(|e| e.to_string())?
-                .value;
+                .map_err(|e| e.to_string())?;
+        let (mut script_json, upgraded) =
+            crate::script_tooling::upgrade_script_json_value_to_v2_if_needed(resolved_script.value)
+                .inspect_err(|err| {
+                    write_tooling_failure_script_result_if_missing(
+                        &resolved_script_result_path,
+                        "tooling.script.upgrade_failed",
+                        err,
+                        "tooling_error",
+                        Some("upgrade_script_json_value_to_v2_if_needed".to_string()),
+                    );
+                })?;
+        crate::script_tooling::canonicalize_json_value(&mut script_json);
+        if upgraded {
+            eprintln!(
+                "warning: script schema_version=1 detected; tooling upgraded to schema_version=2 for execution (source={})",
+                src.display()
+            );
+        }
 
         let wants_post_run_checks = check_stale_paint_test_id.is_some()
             || check_stale_scene_test_id.is_some()
@@ -424,7 +441,7 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
             || check_retained_vlist_keep_alive_reuse_min.is_some()
             || check_retained_vlist_keep_alive_budget.is_some();
 
-        let _ = write_script(&src, &resolved_script_path);
+        let _ = write_json_value(&resolved_script_path, &script_json);
 
         let connected = connect_devtools_ws_tooling(
             ws_url.as_str(),
@@ -681,6 +698,25 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
                 );
             })?
             .value;
+    let (mut script_json, upgraded) =
+        crate::script_tooling::upgrade_script_json_value_to_v2_if_needed(script_json).inspect_err(
+            |err| {
+                write_tooling_failure_script_result_if_missing(
+                    &resolved_script_result_path,
+                    "tooling.script.upgrade_failed",
+                    err,
+                    "tooling_error",
+                    Some("upgrade_script_json_value_to_v2_if_needed".to_string()),
+                );
+            },
+        )?;
+    crate::script_tooling::canonicalize_json_value(&mut script_json);
+    if upgraded {
+        eprintln!(
+            "warning: script schema_version=1 detected; tooling upgraded to schema_version=2 for execution (source={})",
+            src.display()
+        );
+    }
     let (script_result, _bundle_path) = run_script_over_transport(
         &resolved_out_dir,
         &connected,

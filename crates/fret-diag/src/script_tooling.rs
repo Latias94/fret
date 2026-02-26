@@ -27,6 +27,35 @@ pub(crate) struct ResolvedScriptJson {
     pub(crate) redirect_chain: Vec<PathBuf>,
 }
 
+pub(crate) fn upgrade_script_json_value_to_v2_if_needed(
+    value: Value,
+) -> Result<(Value, bool), String> {
+    let schema_version = value
+        .get("schema_version")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0)
+        .min(u32::MAX as u64) as u32;
+
+    match schema_version {
+        1 => {
+            let script: UiActionScriptV1 =
+                serde_json::from_value(value).map_err(|e| e.to_string())?;
+            let upgraded = UiActionScriptV2 {
+                schema_version: 2,
+                meta: script.meta,
+                steps: script.steps.into_iter().map(UiActionStepV2::from).collect(),
+            };
+            let value = serde_json::to_value(upgraded).map_err(|e| e.to_string())?;
+            Ok((value, true))
+        }
+        2 => Ok((value, false)),
+        _ => Err(format!(
+            "unknown script schema_version (expected 1 or 2): {}",
+            schema_version
+        )),
+    }
+}
+
 pub(crate) fn normalize_script_from_path(path: &Path) -> Result<NormalizedScript, String> {
     let resolved = read_script_json_resolving_redirects(path)?;
 
@@ -221,6 +250,14 @@ fn lint_script(path: &Path) -> Result<Value, String> {
             "message": "script path is a redirect stub; tooling resolved it before execution",
             "resolved_path": resolved.write_path.display().to_string(),
             "redirect_chain": resolved.redirect_chain.iter().map(|p| p.display().to_string()).collect::<Vec<_>>(),
+        }));
+    }
+
+    if schema_version == 1 {
+        findings.push(serde_json::json!({
+            "severity": "warning",
+            "code": "script.schema_v1_deprecated",
+            "message": "script schema_version=1 is deprecated; prefer schema_version=2 (tooling upgrades v1→v2 on execution)",
         }));
     }
 

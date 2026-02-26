@@ -3,11 +3,11 @@ use std::path::{Path, PathBuf};
 use crate::compare::{maybe_launch_demo, stop_launched_demo};
 use crate::script_tooling::{
     NormalizedScript, ScriptLintReport, ScriptSchemaReport, lint_scripts,
-    normalize_script_from_path, validate_scripts,
+    normalize_script_from_path, upgrade_script_json_value_to_v2_if_needed, validate_scripts,
 };
 use crate::shrink;
 use crate::stats::{ScriptResultSummary, run_script_and_wait};
-use crate::util::{touch, write_script};
+use crate::util::{touch, write_json_value};
 
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn cmd_script(
@@ -134,6 +134,110 @@ pub(crate) fn cmd_script(
             }
 
             if script_tool_check && any_changed {
+                std::process::exit(1);
+            }
+            Ok(())
+        }
+        "upgrade" => {
+            if script_tool_check && script_tool_write {
+                return Err("--check cannot be combined with --write".to_string());
+            }
+            if script_tool_check_out.is_some() {
+                return Err("--check-out is not supported with `diag script upgrade`".to_string());
+            }
+
+            let inputs: Vec<String> = rest[1..].to_vec();
+            if inputs.is_empty() {
+                return Err(
+                    "missing script path (try: fretboard diag script upgrade ./script.json)"
+                        .to_string(),
+                );
+            }
+            if inputs.len() != 1 && !script_tool_check && !script_tool_write {
+                return Err(
+                    "upgrade expects exactly one script unless --check or --write is used"
+                        .to_string(),
+                );
+            }
+
+            let scripts = crate::expand_script_inputs(workspace_root, &inputs)?;
+            if scripts.len() != 1 && !script_tool_check && !script_tool_write {
+                return Err(
+                    "upgrade expects exactly one script unless --check or --write is used"
+                        .to_string(),
+                );
+            }
+
+            let mut any_needs_upgrade = false;
+            for src in scripts {
+                let resolved = crate::script_tooling::read_script_json_resolving_redirects(&src)?;
+                let schema_version = resolved
+                    .value
+                    .get("schema_version")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0)
+                    .min(u32::MAX as u64) as u32;
+
+                let needs_upgrade = schema_version == 1;
+                any_needs_upgrade |= needs_upgrade;
+
+                if script_tool_check {
+                    if needs_upgrade {
+                        if resolved.redirect_chain.is_empty() && resolved.write_path == src {
+                            eprintln!("needs upgrade (schema v1): {}", src.display());
+                        } else {
+                            eprintln!(
+                                "needs upgrade (schema v1): {} (resolved: {})",
+                                src.display(),
+                                resolved.write_path.display()
+                            );
+                        }
+                    } else {
+                        if resolved.redirect_chain.is_empty() && resolved.write_path == src {
+                            println!("{}", src.display());
+                        } else {
+                            println!(
+                                "{} (resolved: {})",
+                                src.display(),
+                                resolved.write_path.display()
+                            );
+                        }
+                    }
+                    continue;
+                }
+
+                let mut value = if needs_upgrade {
+                    let (value, _upgraded) =
+                        upgrade_script_json_value_to_v2_if_needed(resolved.value)?;
+                    value
+                } else {
+                    resolved.value
+                };
+                crate::script_tooling::canonicalize_json_value(&mut value);
+                let mut pretty = serde_json::to_string_pretty(&value).map_err(|e| e.to_string())?;
+                pretty.push('\n');
+
+                if script_tool_write {
+                    if needs_upgrade {
+                        std::fs::write(&resolved.write_path, pretty.as_bytes())
+                            .map_err(|e| e.to_string())?;
+                    }
+                    if resolved.redirect_chain.is_empty() && resolved.write_path == src {
+                        println!("{}", src.display());
+                    } else {
+                        println!(
+                            "{} (resolved: {})",
+                            src.display(),
+                            resolved.write_path.display()
+                        );
+                    }
+                    continue;
+                }
+
+                print!("{pretty}");
+            }
+
+            if script_tool_check && any_needs_upgrade {
                 std::process::exit(1);
             }
             Ok(())
@@ -562,7 +666,22 @@ pub(crate) fn cmd_script(
             }
 
             let src = crate::resolve_path(workspace_root, PathBuf::from(src));
-            write_script(&src, script_path)?;
+            let script_value: serde_json::Value =
+                serde_json::from_slice(&std::fs::read(&src).map_err(|e| e.to_string())?)
+                    .map_err(|e| e.to_string())?;
+            let resolved_script =
+                crate::script_tooling::resolve_script_json_redirects_from_value(&src, script_value)
+                    .map_err(|e| e.to_string())?;
+            let (mut script_json, upgraded) =
+                upgrade_script_json_value_to_v2_if_needed(resolved_script.value)?;
+            crate::script_tooling::canonicalize_json_value(&mut script_json);
+            if upgraded {
+                eprintln!(
+                    "warning: script schema_version=1 detected; tooling upgraded to schema_version=2 for execution (source={})",
+                    src.display()
+                );
+            }
+            write_json_value(script_path, &script_json)?;
             touch(script_trigger_path)?;
             println!("{}", script_trigger_path.display());
             Ok(())
