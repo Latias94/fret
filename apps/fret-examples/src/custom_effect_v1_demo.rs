@@ -12,8 +12,8 @@ use fret_core::scene::{EffectChain, EffectMode, EffectParamsV1, EffectQuality, E
 use fret_core::{Color, Corners, Edges, EffectId, Px};
 use fret_runtime::Model;
 use fret_ui::element::{
-    ContainerProps, EffectLayerProps, LayoutStyle, Length, Overflow, PositionStyle, SizeStyle,
-    SpacerProps, TextProps,
+    ContainerProps, EffectLayerProps, LayoutStyle, Length, Overflow, PositionStyle, SpacerProps,
+    TextProps,
 };
 use fret_ui_kit::custom_effects::CustomEffectProgramV1;
 use fret_ui_kit::{Space, UiIntoElement};
@@ -117,124 +117,126 @@ fn view(
     st: &mut CustomEffectV1State,
     msg: &mut MessageRouter<Msg>,
 ) -> Elements {
-    let enabled = cx.watch_model(&st.enabled).layout().copied_or(true);
-    let strength = watch_first_f32(cx, &st.strength, 0.85);
-
     let Some(effect) = cx.app.global::<DemoEffect>().map(|v| v.0) else {
         return vec![shadcn::typography::h3(cx, "Custom effects unavailable")].into();
     };
 
-    let stage = stage(cx);
+    let enabled = cx.watch_model(&st.enabled).layout().copied_or(true);
+    let strength = watch_first_f32(cx, &st.strength, 0.85);
 
     let inspector = inspector(cx, st, strength, msg);
+    let stage = stage(cx, enabled, effect, strength);
 
-    let lenses = lens_row(cx, enabled, effect, strength);
-
-    let mut overlay_layout = LayoutStyle::default();
-    overlay_layout.position = PositionStyle::Absolute;
-    overlay_layout.inset.left = Some(Px(24.0)).into();
-    overlay_layout.inset.top = Some(Px(24.0)).into();
-    overlay_layout.size.width = Length::Fill;
-
-    let overlay = cx.container(
-        ContainerProps {
-            layout: overlay_layout,
-            ..Default::default()
-        },
-        move |cx| vec![lenses, cx.spacer(SpacerProps::default()), inspector],
-    );
-
-    let mut root_layout = LayoutStyle::default();
-    root_layout.size = SizeStyle {
-        width: Length::Fill,
-        height: Length::Fill,
-        ..Default::default()
-    };
-
-    let root = cx.container(
-        ContainerProps {
-            layout: root_layout,
-            background: Some(srgb(9, 12, 18, 1.0)),
-            ..Default::default()
-        },
-        move |_cx| vec![stage, overlay],
+    let root = shadcn::stack::hstack(
+        cx,
+        shadcn::stack::HStackProps::default()
+            .layout(LayoutRefinement::default().size_full())
+            .items_stretch()
+            .gap(Space::N0),
+        move |_cx| vec![inspector, stage],
     );
 
     vec![root].into()
 }
 
-fn stage(cx: &mut ElementContext<'_, App>) -> AnyElement {
-    let mut layout = LayoutStyle::default();
-    layout.size.width = Length::Fill;
-    layout.size.height = Length::Fill;
+fn stage(
+    cx: &mut ElementContext<'_, App>,
+    enabled: bool,
+    effect: EffectId,
+    strength: f32,
+) -> AnyElement {
+    let lenses = lens_row(cx, enabled, effect, strength);
+
+    let title = shadcn::typography::h3(cx, "Custom Effect V1 (CustomV1)");
+    let subtitle = shadcn::typography::muted(
+        cx,
+        "The lens on the right runs a custom WGSL function and is clipped/scissored.",
+    );
+
+    let stripes = shadcn::stack::hstack(
+        cx,
+        shadcn::stack::HStackProps::default()
+            .layout(LayoutRefinement::default().size_full())
+            .gap(Space::N0)
+            .items_stretch(),
+        |cx| {
+            (0..10)
+                .map(|i| {
+                    let t = (i as f32) / 9.0;
+                    let c = Color {
+                        r: (t * std::f32::consts::TAU).sin() * 0.5 + 0.5,
+                        g: ((t + 0.33) * std::f32::consts::TAU).sin() * 0.5 + 0.5,
+                        b: ((t + 0.66) * std::f32::consts::TAU).sin() * 0.5 + 0.5,
+                        a: 1.0,
+                    };
+
+                    let mut stripe_layout = LayoutStyle::default();
+                    stripe_layout.flex.grow = 1.0;
+                    stripe_layout.size.height = Length::Fill;
+
+                    cx.container(
+                        ContainerProps {
+                            layout: stripe_layout,
+                            background: Some(c),
+                            ..Default::default()
+                        },
+                        |_cx| Vec::<AnyElement>::new(),
+                    )
+                })
+                .collect::<Vec<_>>()
+        },
+    );
+
+    let mut stage_layout = LayoutStyle::default();
+    stage_layout.size.width = Length::Fill;
+    stage_layout.size.height = Length::Fill;
+    stage_layout.flex.grow = 1.0;
 
     cx.container(
         ContainerProps {
-            layout,
-            padding: Edges::all(Px(24.0)).into(),
+            layout: stage_layout,
+            background: Some(srgb(9, 12, 18, 1.0)),
             ..Default::default()
         },
         move |cx| {
-            let title = cx.text_props(TextProps {
-                layout: Default::default(),
-                text: Arc::from("Custom Effect V1 (CustomV1)"),
-                style: Some(fret_core::TextStyle {
-                    size: Px(28.0),
-                    weight: fret_core::FontWeight::BOLD,
+            let stripes = stripes;
+
+            let mut header_layout = LayoutStyle::default();
+            header_layout.position = PositionStyle::Absolute;
+            header_layout.inset.left = Some(Px(24.0)).into();
+            header_layout.inset.top = Some(Px(20.0)).into();
+
+            let header = cx.container(
+                ContainerProps {
+                    layout: header_layout,
+                    padding: Edges::all(Px(12.0)).into(),
+                    background: Some(srgb(0, 0, 0, 0.38)),
+                    corner_radii: Corners::all(Px(12.0)),
                     ..Default::default()
-                }),
-                color: Some(srgb(245, 245, 245, 0.92)),
-                align: fret_core::TextAlign::Start,
-                wrap: fret_core::TextWrap::None,
-                overflow: fret_core::TextOverflow::Clip,
-                ink_overflow: Default::default(),
-            });
-
-            let subtitle = shadcn::typography::muted(
-                cx,
-                "The lens on the right runs a custom WGSL function and is clipped/scissored.",
-            );
-
-            let stripes = shadcn::stack::hstack(
-                cx,
-                shadcn::stack::HStackProps::default()
-                    .gap(Space::N0)
-                    .items_stretch(),
-                |cx| {
-                    (0..10)
-                        .map(|i| {
-                            let t = (i as f32) / 9.0;
-                            let c = Color {
-                                r: (t * std::f32::consts::TAU).sin() * 0.5 + 0.5,
-                                g: ((t + 0.33) * std::f32::consts::TAU).sin() * 0.5 + 0.5,
-                                b: ((t + 0.66) * std::f32::consts::TAU).sin() * 0.5 + 0.5,
-                                a: 1.0,
-                            };
-
-                            let mut stripe_layout = LayoutStyle::default();
-                            stripe_layout.flex.grow = 1.0;
-                            stripe_layout.size.height = Length::Px(Px(160.0));
-
-                            cx.container(
-                                ContainerProps {
-                                    layout: stripe_layout,
-                                    background: Some(c),
-                                    ..Default::default()
-                                },
-                                |_cx| Vec::<AnyElement>::new(),
-                            )
-                        })
-                        .collect::<Vec<_>>()
+                },
+                move |cx| {
+                    vec![shadcn::stack::vstack(
+                        cx,
+                        shadcn::stack::VStackProps::default().gap(Space::N1),
+                        |_cx| vec![title, subtitle],
+                    )]
                 },
             );
 
-            vec![shadcn::stack::vstack(
-                cx,
-                shadcn::stack::VStackProps::default()
-                    .gap(Space::N3)
-                    .items_stretch(),
-                |cx| vec![title.into_element(cx), subtitle, stripes],
-            )]
+            let mut lenses_layout = LayoutStyle::default();
+            lenses_layout.position = PositionStyle::Absolute;
+            lenses_layout.inset.left = Some(Px(24.0)).into();
+            lenses_layout.inset.top = Some(Px(120.0)).into();
+
+            let lenses = cx.container(
+                ContainerProps {
+                    layout: lenses_layout,
+                    ..Default::default()
+                },
+                move |_cx| vec![lenses],
+            );
+
+            vec![stripes, header, lenses]
         },
     )
 }
