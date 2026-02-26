@@ -125,6 +125,8 @@ In-repo suites can also be checked as a closure (“template ↔ JSON”):
 - `cargo run -p fret-diag-scriptgen -- check-suite ui-gallery-combobox`
 - `cargo run -p fret-diag-scriptgen -- check-suite ui-gallery-text-ime`
 
+Note: `check-suite` resolves `script_redirect` stubs, so path migrations can leave redirects behind without breaking the closure.
+
 The goal is to treat scripts like compiled assets: authored or generated, but always reviewable and reproducible.
 
 ## Bundle lint (post-run sanity checks)
