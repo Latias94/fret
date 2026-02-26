@@ -440,6 +440,10 @@ impl<S: 'static> UiAppBuilder<S> {
         }
     }
 
+    /// Install custom GPU effects at the renderer boundary (ADR 0299).
+    ///
+    /// Note: the callback receives the **kernel** app type (`fret_app::App`, re-exported here as
+    /// `KernelApp`), not the `fret::App` builder-chain facade.
     pub fn install_custom_effects(
         self,
         install: fn(&mut KernelApp, &mut dyn fret_core::CustomEffectService),
