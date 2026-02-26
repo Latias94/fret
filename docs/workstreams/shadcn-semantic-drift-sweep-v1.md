@@ -100,6 +100,7 @@ Current strategy (implemented):
 - Regression evidence:
   - `ecosystem/fret-ui-shadcn/src/shadcn_themes.rs` (metadata is set + applied)
   - `ecosystem/fret-ui-shadcn/src/input_otp.rs` (invalid ring variant follows component key)
+  - Guard: `ecosystem/fret-ui-shadcn/tests/no_theme_name_heuristics_regression.rs`
 
 Follow-up:
 
