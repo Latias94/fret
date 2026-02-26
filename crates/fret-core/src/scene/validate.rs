@@ -379,6 +379,25 @@ impl SceneRecording {
                                 max_sample_offset_px,
                                 ..
                             } => params.is_finite() && px_is_finite(max_sample_offset_px),
+                            EffectStep::CustomV2 {
+                                params,
+                                max_sample_offset_px,
+                                input_image,
+                                ..
+                            } => {
+                                let base_ok =
+                                    params.is_finite() && px_is_finite(max_sample_offset_px);
+                                if !base_ok {
+                                    false
+                                } else if let Some(input) = input_image {
+                                    input.uv.u0.is_finite()
+                                        && input.uv.v0.is_finite()
+                                        && input.uv.u1.is_finite()
+                                        && input.uv.v1.is_finite()
+                                } else {
+                                    true
+                                }
+                            }
                         };
                         if !ok {
                             return Err(SceneValidationError {

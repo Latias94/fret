@@ -440,6 +440,40 @@ pub(super) fn mix_scene_op(state: u64, op: SceneOp) -> u64 {
                         }
                         state
                     }
+                    EffectStep::CustomV2 {
+                        id,
+                        params,
+                        max_sample_offset_px,
+                        input_image,
+                    } => {
+                        let mut state = mix_u64(state, 12);
+                        state = mix_u64(state, id.data().as_ffi());
+                        state = mix_px(state, max_sample_offset_px);
+                        for v in &params.vec4s {
+                            for x in v {
+                                state = mix_f32(state, *x);
+                            }
+                        }
+                        match input_image {
+                            None => mix_u64(state, 0),
+                            Some(input) => {
+                                let mut state = mix_u64(state, 1);
+                                state = mix_u64(state, input.image.data().as_ffi());
+                                state = mix_f32(state, input.uv.u0);
+                                state = mix_f32(state, input.uv.v0);
+                                state = mix_f32(state, input.uv.u1);
+                                state = mix_f32(state, input.uv.v1);
+                                mix_u64(
+                                    state,
+                                    match input.sampling {
+                                        ImageSamplingHint::Default => 0,
+                                        ImageSamplingHint::Linear => 1,
+                                        ImageSamplingHint::Nearest => 2,
+                                    },
+                                )
+                            }
+                        }
+                    }
                 };
             }
 

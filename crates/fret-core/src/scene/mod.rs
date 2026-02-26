@@ -426,6 +426,27 @@ impl DropShadowV1 {
     }
 }
 
+/// Optional user image input for bounded custom effects (v2).
+///
+/// This is intentionally small and portable: it references an `ImageId` registered through the
+/// existing image service and uses the existing `ImageSamplingHint` vocabulary.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct CustomEffectImageInputV1 {
+    pub image: ImageId,
+    pub uv: UvRect,
+    pub sampling: ImageSamplingHint,
+}
+
+impl CustomEffectImageInputV1 {
+    pub const fn new(image: ImageId) -> Self {
+        Self {
+            image,
+            uv: UvRect::FULL,
+            sampling: ImageSamplingHint::Default,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum EffectStep {
     GaussianBlur {
@@ -467,6 +488,17 @@ pub enum EffectStep {
         /// Backends may clamp or degrade behavior under tight budgets.
         max_sample_offset_px: crate::Px,
     },
+    CustomV2 {
+        id: EffectId,
+        params: EffectParamsV1,
+        /// Maximum sampling offset (in logical px) that the custom effect may use when reading
+        /// from its source texture.
+        ///
+        /// This preserves the deterministic chain padding story from v1.
+        max_sample_offset_px: crate::Px,
+        /// Optional user-provided image input (v2 ceiling bump).
+        input_image: Option<CustomEffectImageInputV1>,
+    },
 }
 
 impl EffectStep {
@@ -496,6 +528,35 @@ impl EffectStep {
                 } else {
                     crate::Px(0.0)
                 },
+            },
+            EffectStep::CustomV2 {
+                id,
+                params,
+                max_sample_offset_px,
+                input_image,
+            } => EffectStep::CustomV2 {
+                id,
+                params: params.sanitize(),
+                max_sample_offset_px: if max_sample_offset_px.0.is_finite() {
+                    crate::Px(max_sample_offset_px.0.max(0.0))
+                } else {
+                    crate::Px(0.0)
+                },
+                input_image: input_image.map(|mut input| {
+                    if !input.uv.u0.is_finite() {
+                        input.uv.u0 = 0.0;
+                    }
+                    if !input.uv.v0.is_finite() {
+                        input.uv.v0 = 0.0;
+                    }
+                    if !input.uv.u1.is_finite() {
+                        input.uv.u1 = 1.0;
+                    }
+                    if !input.uv.v1.is_finite() {
+                        input.uv.v1 = 1.0;
+                    }
+                    input
+                }),
             },
             EffectStep::AlphaThreshold { cutoff, soft } => EffectStep::AlphaThreshold {
                 cutoff: if cutoff.is_finite() { cutoff } else { 0.0 },
