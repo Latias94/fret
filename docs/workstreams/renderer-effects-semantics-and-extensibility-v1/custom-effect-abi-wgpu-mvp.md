@@ -122,6 +122,10 @@ MVP rule:
 - If the custom effect declares `max_sample_offset_px > 0` and the chain contains a preceding blur,
   the renderer may allocate extra context ("padding") deterministically by evaluating the blur on an
   expanded scissor rect and applying clip coverage only on the final custom pass.
+  - Implemented: per-step scissor expansion for sampling-extending chains (blur / warp / custom), with a final
+    commit back into the destination under the original scissor.
+  - Evidence: `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs`,
+    `crates/fret-render-wgpu/tests/effect_custom_v1_conformance.rs`.
 - On insufficient budget or target exhaustion:
   - degrade deterministically to no-op (tracked in counters),
   - optionally allow a renderer-provided fallback chain (pre-registered).

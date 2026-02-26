@@ -96,6 +96,13 @@ This TODO is ordered by implementation priority (P0 first), and is designed to b
   - Demo: `apps/fret-examples/src/custom_effect_v1_demo.rs` (wired via `apps/fret-demo`).
   - Conformance: `crates/fret-render-wgpu/tests/effect_custom_v1_conformance.rs`.
 
+- [x] Implement deterministic chain padding for sampling-extending effects:
+  - Use `EffectStep::CustomV1.max_sample_offset_px` and warp/blur bounded parameters to expand earlier step scissors
+    when later steps may sample outside their output pixel.
+  - Keep clip/mask coverage applied exactly once (final commit back into `srcdst`) to avoid `clip^2` darkening.
+  - Evidence: `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs`,
+    `crates/fret-render-wgpu/tests/effect_custom_v1_conformance.rs`.
+
 ## Suggested regression gates
 
 - Unit tests:

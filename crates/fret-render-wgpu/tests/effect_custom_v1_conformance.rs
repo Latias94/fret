@@ -144,6 +144,7 @@ fn fret_custom_effect(src: vec4<f32>, _uv: vec2<f32>, _pos_px: vec2<f32>, params
   return vec4<f32>(rgb, src.a);
 }
 "#;
+
     let effect = renderer
         .register_custom_effect_v1(CustomEffectDescriptorV1::wgsl_utf8(wgsl))
         .expect("custom effect registration must succeed on wgpu backends");
@@ -251,4 +252,171 @@ fn fret_custom_effect(src: vec4<f32>, _uv: vec2<f32>, _pos_px: vec2<f32>, params
         fg[0] > 200 && fg[1] < 40 && fg[2] < 40 && fg[3] > 200,
         "foreground quad should remain visible on top of the custom effect"
     );
+}
+
+#[test]
+fn gpu_custom_effect_v1_can_read_render_space_in_fragment() {
+    let ctx = match pollster::block_on(WgpuContext::new()) {
+        Ok(ctx) => ctx,
+        Err(_err) => {
+            // No adapter/device available (common in some headless environments).
+            return;
+        }
+    };
+
+    let mut renderer = Renderer::new(&ctx.adapter, &ctx.device);
+    renderer.set_intermediate_budget_bytes(u64::MAX);
+
+    // Exercise `@group(0) @binding(5) render_space` from the fragment stage.
+    let wgsl = r#"
+fn fret_custom_effect(src: vec4<f32>, _uv: vec2<f32>, pos_px: vec2<f32>, _params: EffectParamsV1) -> vec4<f32> {
+  let p = pos_px - render_space.origin_px;
+  let nx = clamp(p.x / max(render_space.size_px.x, 1.0), 0.0, 1.0);
+  // Simple left-to-right tint based on render-space normalized x.
+  return vec4<f32>(src.r * (1.0 - nx), src.g, src.b * nx, src.a);
+}
+"#;
+
+    let effect = renderer
+        .register_custom_effect_v1(CustomEffectDescriptorV1::wgsl_utf8(wgsl))
+        .expect("custom effect registration must succeed on wgpu backends");
+
+    let size = (64u32, 64u32);
+    let mut scene = Scene::default();
+    scene.push(SceneOp::Quad {
+        order: DrawOrder(0),
+        rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(64.0), Px(64.0))),
+        background: Paint::Solid(Color {
+            r: 1.0,
+            g: 1.0,
+            b: 1.0,
+            a: 1.0,
+        }),
+        border: Edges::all(Px(0.0)),
+        border_paint: Paint::Solid(Color::TRANSPARENT),
+        corner_radii: Default::default(),
+    });
+    scene.push(SceneOp::PushEffect {
+        bounds: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(64.0), Px(64.0))),
+        mode: EffectMode::Backdrop,
+        chain: EffectChain::from_steps(&[EffectStep::CustomV1 {
+            id: effect,
+            params: EffectParamsV1 {
+                vec4s: [[0.0; 4]; 4],
+            },
+            max_sample_offset_px: Px(0.0),
+        }]),
+        quality: EffectQuality::Auto,
+    });
+    scene.push(SceneOp::PopEffect);
+
+    // Ensure the pipeline compiles and renders without wgpu validation errors.
+    let _pixels = render_and_readback(&ctx, &mut renderer, &scene, size);
+}
+
+#[test]
+fn gpu_custom_effect_v1_chain_padding_matches_expanded_bounds_reference() {
+    let ctx = match pollster::block_on(WgpuContext::new()) {
+        Ok(ctx) => ctx,
+        Err(_err) => {
+            // No adapter/device available (common in some headless environments).
+            return;
+        }
+    };
+
+    let mut renderer = Renderer::new(&ctx.adapter, &ctx.device);
+    renderer.set_intermediate_budget_bytes(u64::MAX);
+
+    // Custom effect that samples a fixed +8px X offset from the source texture, so it requires
+    // padding when it follows a blur in an effect chain.
+    let wgsl = r#"
+fn fret_custom_effect(_src: vec4<f32>, _uv: vec2<f32>, pos_px: vec2<f32>, _params: EffectParamsV1) -> vec4<f32> {
+  let dims_u = textureDimensions(src_texture);
+  let x = clamp(i32(floor(pos_px.x)) + 8, 0, i32(dims_u.x) - 1);
+  let y = clamp(i32(floor(pos_px.y)), 0, i32(dims_u.y) - 1);
+  return textureLoad(src_texture, vec2<i32>(x, y), 0);
+}
+"#;
+    let effect = renderer
+        .register_custom_effect_v1(CustomEffectDescriptorV1::wgsl_utf8(wgsl))
+        .expect("custom effect registration must succeed on wgpu backends");
+
+    let chain = EffectChain::from_steps(&[
+        EffectStep::GaussianBlur {
+            radius_px: Px(4.0),
+            downsample: 2,
+        },
+        EffectStep::CustomV1 {
+            id: effect,
+            params: EffectParamsV1 {
+                vec4s: [[0.0; 4]; 4],
+            },
+            max_sample_offset_px: Px(8.0),
+        },
+    ]);
+
+    let size = (64u32, 64u32);
+    let mut base = Scene::default();
+    // Left half white, right half black: sharp edge at x=32.
+    base.push(SceneOp::Quad {
+        order: DrawOrder(0),
+        rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(32.0), Px(64.0))),
+        background: Paint::Solid(Color {
+            r: 1.0,
+            g: 1.0,
+            b: 1.0,
+            a: 1.0,
+        }),
+        border: Edges::all(Px(0.0)),
+        border_paint: Paint::Solid(Color::TRANSPARENT),
+        corner_radii: Default::default(),
+    });
+    base.push(SceneOp::Quad {
+        order: DrawOrder(1),
+        rect: Rect::new(Point::new(Px(32.0), Px(0.0)), Size::new(Px(32.0), Px(64.0))),
+        background: Paint::Solid(Color {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+            a: 1.0,
+        }),
+        border: Edges::all(Px(0.0)),
+        border_paint: Paint::Solid(Color::TRANSPARENT),
+        corner_radii: Default::default(),
+    });
+
+    let bounds_a = Rect::new(Point::new(Px(24.0), Px(0.0)), Size::new(Px(16.0), Px(64.0)));
+    let bounds_b = Rect::new(Point::new(Px(16.0), Px(0.0)), Size::new(Px(32.0), Px(64.0)));
+
+    let mut scene_a = base.clone();
+    scene_a.push(SceneOp::PushEffect {
+        bounds: bounds_a,
+        mode: EffectMode::Backdrop,
+        chain,
+        quality: EffectQuality::Auto,
+    });
+    scene_a.push(SceneOp::PopEffect);
+
+    let mut scene_b = base;
+    scene_b.push(SceneOp::PushEffect {
+        bounds: bounds_b,
+        mode: EffectMode::Backdrop,
+        chain,
+        quality: EffectQuality::Auto,
+    });
+    scene_b.push(SceneOp::PopEffect);
+
+    let a = render_and_readback(&ctx, &mut renderer, &scene_a, size);
+    let b = render_and_readback(&ctx, &mut renderer, &scene_b, size);
+
+    // Within the original bounds, results should match the expanded-bounds reference when padding
+    // semantics are correct.
+    for x in 24..40 {
+        let ya = pixel_rgba(&a, size.0, x, 32);
+        let yb = pixel_rgba(&b, size.0, x, 32);
+        assert_eq!(
+            ya, yb,
+            "padding mismatch at x={x}; expected chain evaluation to match expanded bounds"
+        );
+    }
 }
