@@ -93,8 +93,8 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
   - [x] `tooling/external-texture-imports` (9 scripts)
   - [x] `tooling/todo` (4 scripts)
   - [x] `_prelude/*` (2 scripts)
-- [ ] Update references after path moves (choose one):
-  - [ ] replace hard-coded lists with registry/directory inputs, or
+- [x] Update references after path moves (chosen approach):
+  - [x] replace hard-coded lists with registry/directory inputs, or
   - [ ] scripted rewrite of code/docs references (large diff; less preferred).
 - [ ] (If needed) write a migration script to move scripts into subfolders and update references:
   - [ ] updates `crates/fret-diag/src/diag_suite_scripts.rs` (or replaces it with a registry reader),
