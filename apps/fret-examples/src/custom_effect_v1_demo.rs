@@ -121,12 +121,42 @@ fn fret_custom_effect(_src: vec4<f32>, _uv: vec2<f32>, pos_px: vec2<f32>, params
   let disp = chromatic * ((centered.x * centered.y) / max(1.0, half_size.x * half_size.y));
   let dispersed = d * grad * disp;
 
+  // Spectral-ish dispersion sampling (AndroidLiquidGlass-inspired).
+  var color = vec4<f32>(0.0);
+
   let red = sample_src_bilinear(refracted + dispersed);
+  color.r += red.r / 3.5;
+  color.a += red.a / 7.0;
+
+  let orange = sample_src_bilinear(refracted + dispersed * (2.0 / 3.0));
+  color.r += orange.r / 3.5;
+  color.g += orange.g / 7.0;
+  color.a += orange.a / 7.0;
+
+  let yellow = sample_src_bilinear(refracted + dispersed * (1.0 / 3.0));
+  color.r += yellow.r / 3.5;
+  color.g += yellow.g / 3.5;
+  color.a += yellow.a / 7.0;
+
   let green = sample_src_bilinear(refracted);
-  let blue = sample_src_bilinear(refracted - dispersed);
-  let rgb = vec3<f32>(red.r, green.g, blue.b);
-  let a = (red.a + green.a + blue.a) / 3.0;
-  return vec4<f32>(rgb, a);
+  color.g += green.g / 3.5;
+  color.a += green.a / 7.0;
+
+  let cyan = sample_src_bilinear(refracted - dispersed * (1.0 / 3.0));
+  color.g += cyan.g / 3.5;
+  color.b += cyan.b / 3.0;
+  color.a += cyan.a / 7.0;
+
+  let blue = sample_src_bilinear(refracted - dispersed * (2.0 / 3.0));
+  color.b += blue.b / 3.0;
+  color.a += blue.a / 7.0;
+
+  let purple = sample_src_bilinear(refracted - dispersed);
+  color.r += purple.r / 7.0;
+  color.b += purple.b / 3.0;
+  color.a += purple.a / 7.0;
+
+  return color;
 }
 "#;
 
@@ -136,7 +166,13 @@ struct DemoEffect(EffectId);
 #[derive(Debug)]
 struct CustomEffectV1State {
     enabled: Model<bool>,
-    strength: Model<Vec<f32>>,
+    blur_radius_px: Model<Vec<f32>>,
+    blur_downsample: Model<Vec<f32>>,
+    refraction_height_px: Model<Vec<f32>>,
+    refraction_amount_px: Model<Vec<f32>>,
+    depth_effect: Model<Vec<f32>>,
+    chromatic_aberration: Model<Vec<f32>>,
+    corner_radius_px: Model<Vec<f32>>,
 }
 
 struct CustomEffectV1Program;
@@ -176,14 +212,40 @@ impl MvuProgram for CustomEffectV1Program {
     fn init(app: &mut App, _window: AppWindowId) -> Self::State {
         Self::State {
             enabled: app.models_mut().insert(true),
-            strength: app.models_mut().insert(vec![0.85]),
+            blur_radius_px: app.models_mut().insert(vec![14.0]),
+            blur_downsample: app.models_mut().insert(vec![2.0]),
+            refraction_height_px: app.models_mut().insert(vec![20.0]),
+            refraction_amount_px: app.models_mut().insert(vec![12.0]),
+            depth_effect: app.models_mut().insert(vec![0.35]),
+            chromatic_aberration: app.models_mut().insert(vec![0.75]),
+            corner_radius_px: app.models_mut().insert(vec![20.0]),
         }
     }
 
     fn update(app: &mut App, st: &mut Self::State, message: Self::Message) {
         if matches!(message, Msg::Reset) {
             let _ = app.models_mut().update(&st.enabled, |v| *v = true);
-            let _ = app.models_mut().update(&st.strength, |v| *v = vec![0.85]);
+            let _ = app
+                .models_mut()
+                .update(&st.blur_radius_px, |v| *v = vec![14.0]);
+            let _ = app
+                .models_mut()
+                .update(&st.blur_downsample, |v| *v = vec![2.0]);
+            let _ = app
+                .models_mut()
+                .update(&st.refraction_height_px, |v| *v = vec![20.0]);
+            let _ = app
+                .models_mut()
+                .update(&st.refraction_amount_px, |v| *v = vec![12.0]);
+            let _ = app
+                .models_mut()
+                .update(&st.depth_effect, |v| *v = vec![0.35]);
+            let _ = app
+                .models_mut()
+                .update(&st.chromatic_aberration, |v| *v = vec![0.75]);
+            let _ = app
+                .models_mut()
+                .update(&st.corner_radius_px, |v| *v = vec![20.0]);
         }
     }
 
@@ -223,10 +285,38 @@ fn view(
     };
 
     let enabled = cx.watch_model(&st.enabled).layout().copied_or(true);
-    let strength = watch_first_f32(cx, &st.strength, 0.85);
+    let blur_radius_px = watch_first_f32(cx, &st.blur_radius_px, 14.0);
+    let blur_downsample = watch_first_f32(cx, &st.blur_downsample, 2.0);
+    let refraction_height_px = watch_first_f32(cx, &st.refraction_height_px, 20.0);
+    let refraction_amount_px = watch_first_f32(cx, &st.refraction_amount_px, 12.0);
+    let depth_effect = watch_first_f32(cx, &st.depth_effect, 0.35);
+    let chromatic_aberration = watch_first_f32(cx, &st.chromatic_aberration, 0.75);
+    let corner_radius_px = watch_first_f32(cx, &st.corner_radius_px, 20.0);
 
-    let inspector = inspector(cx, st, strength, msg);
-    let stage = stage(cx, enabled, effect, strength);
+    let inspector = inspector(
+        cx,
+        st,
+        blur_radius_px,
+        blur_downsample,
+        refraction_height_px,
+        refraction_amount_px,
+        depth_effect,
+        chromatic_aberration,
+        corner_radius_px,
+        msg,
+    );
+    let stage = stage(
+        cx,
+        enabled,
+        effect,
+        blur_radius_px,
+        blur_downsample,
+        refraction_height_px,
+        refraction_amount_px,
+        depth_effect,
+        chromatic_aberration,
+        corner_radius_px,
+    );
 
     let root = shadcn::stack::hstack(
         cx,
@@ -244,9 +334,26 @@ fn stage(
     cx: &mut ElementContext<'_, App>,
     enabled: bool,
     effect: EffectId,
-    strength: f32,
+    blur_radius_px: f32,
+    blur_downsample: f32,
+    refraction_height_px: f32,
+    refraction_amount_px: f32,
+    depth_effect: f32,
+    chromatic_aberration: f32,
+    corner_radius_px: f32,
 ) -> AnyElement {
-    let lenses = lens_row(cx, enabled, effect, strength);
+    let lenses = lens_row(
+        cx,
+        enabled,
+        effect,
+        blur_radius_px,
+        blur_downsample,
+        refraction_height_px,
+        refraction_amount_px,
+        depth_effect,
+        chromatic_aberration,
+        corner_radius_px,
+    );
 
     let title = shadcn::typography::h3(cx, "Custom Effect V1 (CustomV1)");
     let subtitle = shadcn::typography::muted(
@@ -346,7 +453,13 @@ fn lens_row(
     cx: &mut ElementContext<'_, App>,
     enabled: bool,
     effect: EffectId,
-    strength: f32,
+    blur_radius_px: f32,
+    blur_downsample: f32,
+    refraction_height_px: f32,
+    refraction_amount_px: f32,
+    depth_effect: f32,
+    chromatic_aberration: f32,
+    corner_radius_px: f32,
 ) -> AnyElement {
     shadcn::stack::hstack(
         cx,
@@ -357,7 +470,18 @@ fn lens_row(
             vec![
                 plain_lens(cx, "Plain (no effect)"),
                 if enabled {
-                    custom_effect_lens(cx, "CustomV1 lens", effect, strength)
+                    custom_effect_lens(
+                        cx,
+                        "CustomV1 lens",
+                        effect,
+                        blur_radius_px,
+                        blur_downsample,
+                        refraction_height_px,
+                        refraction_amount_px,
+                        depth_effect,
+                        chromatic_aberration,
+                        corner_radius_px,
+                    )
                 } else {
                     plain_lens(cx, "CustomV1 lens (disabled)")
                 },
@@ -444,17 +568,26 @@ fn custom_effect_lens(
     cx: &mut ElementContext<'_, App>,
     label: impl Into<Arc<str>>,
     effect: EffectId,
-    strength: f32,
+    blur_radius_px: f32,
+    blur_downsample: f32,
+    refraction_height_px: f32,
+    refraction_amount_px: f32,
+    depth_effect: f32,
+    chromatic_aberration: f32,
+    corner_radius_px: f32,
 ) -> AnyElement {
     let mut layout = LayoutStyle::default();
     layout.size.width = Length::Fill;
     layout.size.height = Length::Fill;
 
-    let refraction_height_px = 20.0;
-    let refraction_amount_px = strength.clamp(0.0, 1.0) * 14.0;
-    let depth_effect = 0.35;
-    let chromatic_aberration = 0.75;
-    let radius = 20.0;
+    let blur_radius_px = blur_radius_px.clamp(0.0, 64.0);
+    let blur_downsample = blur_downsample.round().clamp(1.0, 4.0) as u32;
+
+    let refraction_height_px = refraction_height_px.clamp(0.0, 64.0);
+    let refraction_amount_px = refraction_amount_px.clamp(0.0, 32.0);
+    let depth_effect = depth_effect.clamp(0.0, 1.0);
+    let chromatic_aberration = chromatic_aberration.clamp(0.0, 1.0);
+    let radius = corner_radius_px.clamp(0.0, 64.0);
 
     let params = EffectParamsV1 {
         vec4s: [
@@ -470,14 +603,15 @@ fn custom_effect_lens(
         ],
     };
 
-    let chain = EffectChain::from_steps(&[
-        EffectStep::GaussianBlur {
-            radius_px: Px(14.0),
-            downsample: 2,
-        },
-        EffectStep::CustomV1 { id: effect, params },
-    ])
-    .sanitize();
+    let mut steps = Vec::new();
+    if blur_radius_px > 0.0 {
+        steps.push(EffectStep::GaussianBlur {
+            radius_px: Px(blur_radius_px),
+            downsample: blur_downsample,
+        });
+    }
+    steps.push(EffectStep::CustomV1 { id: effect, params });
+    let chain = EffectChain::from_steps(&steps).sanitize();
 
     let layer = cx.effect_layer_props(
         EffectLayerProps {
@@ -495,14 +629,26 @@ fn custom_effect_lens(
 fn inspector(
     cx: &mut ElementContext<'_, App>,
     st: &mut CustomEffectV1State,
-    strength: f32,
+    blur_radius_px: f32,
+    blur_downsample: f32,
+    refraction_height_px: f32,
+    refraction_amount_px: f32,
+    depth_effect: f32,
+    chromatic_aberration: f32,
+    corner_radius_px: f32,
     msg: &mut MessageRouter<Msg>,
 ) -> AnyElement {
     let theme = Theme::global(&*cx.app).snapshot();
 
     let reset_cmd = msg.cmd(Msg::Reset);
     let enabled_model = st.enabled.clone();
-    let strength_model = st.strength.clone();
+    let blur_radius_model = st.blur_radius_px.clone();
+    let blur_downsample_model = st.blur_downsample.clone();
+    let refraction_height_model = st.refraction_height_px.clone();
+    let refraction_amount_model = st.refraction_amount_px.clone();
+    let depth_effect_model = st.depth_effect.clone();
+    let chromatic_model = st.chromatic_aberration.clone();
+    let corner_radius_model = st.corner_radius_px.clone();
 
     let mut layout = LayoutStyle::default();
     layout.size.width = Length::Px(Px(360.0));
@@ -548,15 +694,120 @@ fn inspector(
                     .gap(Space::N3)
                     .items_stretch(),
                 move |cx| {
-                    let strength_row = shadcn::stack::vstack(
+                    let blur_radius_row = shadcn::stack::vstack(
                         cx,
                         shadcn::stack::VStackProps::default().gap(Space::N2),
                         move |cx| {
                             vec![
-                                label_row(cx, "Strength", format!("{strength:.2}")),
-                                shadcn::Slider::new(strength_model.clone())
+                                label_row(
+                                    cx,
+                                    "Blur radius (px)",
+                                    format!("{:.1}", blur_radius_px.clamp(0.0, 64.0)),
+                                ),
+                                shadcn::Slider::new(blur_radius_model.clone())
+                                    .range(0.0, 48.0)
+                                    .step(0.5)
+                                    .into_element(cx),
+                            ]
+                        },
+                    );
+
+                    let blur_downsample_row = shadcn::stack::vstack(
+                        cx,
+                        shadcn::stack::VStackProps::default().gap(Space::N2),
+                        move |cx| {
+                            let v = blur_downsample.round().clamp(1.0, 4.0) as u32;
+                            vec![
+                                label_row(cx, "Blur downsample", format!("{v}x")),
+                                shadcn::Slider::new(blur_downsample_model.clone())
+                                    .range(1.0, 4.0)
+                                    .step(1.0)
+                                    .into_element(cx),
+                            ]
+                        },
+                    );
+
+                    let refraction_height_row = shadcn::stack::vstack(
+                        cx,
+                        shadcn::stack::VStackProps::default().gap(Space::N2),
+                        move |cx| {
+                            vec![
+                                label_row(
+                                    cx,
+                                    "Refraction height (px)",
+                                    format!("{:.1}", refraction_height_px.clamp(0.0, 64.0)),
+                                ),
+                                shadcn::Slider::new(refraction_height_model.clone())
+                                    .range(0.0, 64.0)
+                                    .step(0.5)
+                                    .into_element(cx),
+                            ]
+                        },
+                    );
+
+                    let refraction_amount_row = shadcn::stack::vstack(
+                        cx,
+                        shadcn::stack::VStackProps::default().gap(Space::N2),
+                        move |cx| {
+                            vec![
+                                label_row(
+                                    cx,
+                                    "Refraction amount (px)",
+                                    format!("{:.1}", refraction_amount_px.clamp(0.0, 32.0)),
+                                ),
+                                shadcn::Slider::new(refraction_amount_model.clone())
+                                    .range(0.0, 24.0)
+                                    .step(0.25)
+                                    .into_element(cx),
+                            ]
+                        },
+                    );
+
+                    let depth_effect_row = shadcn::stack::vstack(
+                        cx,
+                        shadcn::stack::VStackProps::default().gap(Space::N2),
+                        move |cx| {
+                            vec![
+                                label_row(cx, "Depth effect", format!("{depth_effect:.2}")),
+                                shadcn::Slider::new(depth_effect_model.clone())
                                     .range(0.0, 1.0)
                                     .step(0.01)
+                                    .into_element(cx),
+                            ]
+                        },
+                    );
+
+                    let chromatic_row = shadcn::stack::vstack(
+                        cx,
+                        shadcn::stack::VStackProps::default().gap(Space::N2),
+                        move |cx| {
+                            vec![
+                                label_row(
+                                    cx,
+                                    "Chromatic aberration",
+                                    format!("{chromatic_aberration:.2}"),
+                                ),
+                                shadcn::Slider::new(chromatic_model.clone())
+                                    .range(0.0, 1.0)
+                                    .step(0.01)
+                                    .into_element(cx),
+                            ]
+                        },
+                    );
+
+                    let corner_radius_row = shadcn::stack::vstack(
+                        cx,
+                        shadcn::stack::VStackProps::default().gap(Space::N2),
+                        move |cx| {
+                            vec![
+                                label_row(
+                                    cx,
+                                    "Corner radius (px)",
+                                    format!("{:.1}", corner_radius_px.clamp(0.0, 64.0)),
+                                ),
+                                shadcn::Slider::new(corner_radius_model.clone())
+                                    .range(0.0, 48.0)
+                                    .step(0.5)
                                     .into_element(cx),
                             ]
                         },
@@ -587,7 +838,14 @@ fn inspector(
                                 ]
                             },
                         ),
-                        strength_row,
+                        blur_radius_row,
+                        blur_downsample_row,
+                        shadcn::Separator::new().into_element(cx),
+                        refraction_height_row,
+                        refraction_amount_row,
+                        depth_effect_row,
+                        chromatic_row,
+                        corner_radius_row,
                         shadcn::Button::new("Reset")
                             .variant(shadcn::ButtonVariant::Secondary)
                             .on_click(reset_cmd.clone())
