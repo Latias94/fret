@@ -54,7 +54,7 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
   - [x] `ui-gallery/select` (17 scripts)
   - [x] `ui-gallery/combobox` (22 scripts)
   - [x] `ui-gallery/text-ime` (2 scripts)
-  - [ ] `ui-gallery/text-wrap`
+  - [x] `ui-gallery/text-wrap` (5 scripts)
   - [ ] `ui-gallery/overlay`
   - [ ] `ui-gallery/code-editor`
   - [ ] `ui-gallery/markdown-editor`
