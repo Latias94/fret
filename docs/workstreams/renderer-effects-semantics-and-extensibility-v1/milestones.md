@@ -58,11 +58,31 @@ Exit criteria:
   - apply a single final explicit sRGB transfer blit when writing to `Rgba8Unorm` / `Bgra8Unorm`.
 - At least one targeted test/diag gate catches regressions (explicit output transfer + representative effects).
 
-## M4 — Bounded custom effect design (wgpu-only MVP)
+## M4 — Bounded custom effects (CustomV1, wgpu-only MVP)
 
 Exit criteria:
 
 - A design for a bounded, capability-gated custom effect extension point exists and is reviewed.
 - A minimal MVP can render one custom effect (e.g. “glass tint + subtle blur + warp”) without touching core contracts.
 - Budgeting/degradation is deterministic and diagnosable.
- - Evidence: `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-abi-wgpu-mvp.md`.
+ - CustomV1 semantics are documented (stable WGSL contract surface + rules):
+   - `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-v1-semantics.md`
+ - `render_space` is effect-local for CustomV1 (origin/size match bounds scissor).
+ - A renderer-owned deterministic pattern atlas is available for v1 recipes (no user textures).
+ - Conformance tests exist for:
+   - determinism + scissoring + ordering,
+   - `render_space` origin/size semantics,
+   - pattern atlas helper availability.
+ - Evidence:
+   - `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-abi-wgpu-mvp.md`
+   - `crates/fret-render-wgpu/tests/effect_custom_v1_conformance.rs`
+
+## M5 — CustomV2 ceiling bump (planned)
+
+Exit criteria:
+
+- The CustomV2 “one extra input” story is locked (with rationale and capability gating).
+- A versioned ABI exists with explicit cost model + deterministic degradation rules.
+- Conformance tests cover the extra input and chain padding semantics.
+- Evidence:
+  - `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-v2/README.md`

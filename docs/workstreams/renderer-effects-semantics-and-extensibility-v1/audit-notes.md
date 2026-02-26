@@ -80,8 +80,10 @@ P2 — Higher-end visuals without core bloat:
   - versioned, fixed bind shapes (params-only; params + 1 catalog texture; params + 1 user texture).
   - explicit cost model so the plan can reject/degrade deterministically.
   - capability discovery surfaced through the renderer context (not ad-hoc env vars).
+  - close semantics with a stable `render_space` meaning (effect-local origin/size) and a small deterministic
+    renderer-owned pattern atlas for grain/dither-like recipes (no user textures in v1).
   Anchors: `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/todo.md`,
-  `docs/adr/0117-effect-layers-and-backdrop-filters-scene-semantics-v1.md`.
+    `docs/adr/0117-effect-layers-and-backdrop-filters-scene-semantics-v1.md`.
 
 ## “Missing semantics” candidates (intentionally deferred)
 

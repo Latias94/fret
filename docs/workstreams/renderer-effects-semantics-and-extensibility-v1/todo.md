@@ -96,6 +96,19 @@ This TODO is ordered by implementation priority (P0 first), and is designed to b
   - Demo: `apps/fret-examples/src/custom_effect_v1_demo.rs` (wired via `apps/fret-demo`).
   - Conformance: `crates/fret-render-wgpu/tests/effect_custom_v1_conformance.rs`.
 
+- [x] Close CustomV1 semantics (“escape hatch with a ceiling”):
+  - [x] Define the stable WGSL contract surface (required entrypoint + premul rules + `render_space`):
+    - `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-v1-semantics.md`
+  - [x] Ensure `render_space` is effect-local for CustomV1 (origin/size match the effect bounds scissor):
+    - `crates/fret-render-wgpu/src/renderer/render_scene/helpers.rs`
+    - Conformance: `crates/fret-render-wgpu/tests/effect_custom_v1_conformance.rs`
+  - [x] Provide a renderer-owned deterministic pattern atlas for v1 recipes (no user textures):
+    - WGSL helpers: `crates/fret-render-wgpu/src/renderer/pipelines/wgsl/custom_effect_*_part_a.wgsl`
+    - Upload: `crates/fret-render-wgpu/src/renderer/gpu_textures.rs`
+    - Conformance: `crates/fret-render-wgpu/tests/effect_custom_v1_conformance.rs`
+  - [x] Optimize “padded blur → final CustomV1” so clip/mask coverage is applied exactly once:
+    - `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` (unit test)
+
 - [x] Implement deterministic chain padding for sampling-extending effects:
   - Use `EffectStep::CustomV1.max_sample_offset_px` and warp/blur bounded parameters to expand earlier step scissors
     when later steps may sample outside their output pixel.
@@ -116,3 +129,8 @@ This TODO is ordered by implementation priority (P0 first), and is designed to b
   - [ ] When output transfer is required, allow rendering into a float intermediate (e.g. `RGBA16Float`) under budgets,
         then encode once to `Rgba8Unorm` / `Bgra8Unorm`.
   - Rationale: avoid the extra unorm quantization step in linear space for display-referred non-sRGB outputs.
+
+- [ ] CustomV2 ceiling bump (bounded):
+  - [ ] Lock the “one extra input” story (user texture vs catalog atlas vs small table).
+  - [ ] Add versioned ABI + capability discovery + conformance.
+  - Plan: `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-v2/README.md`
