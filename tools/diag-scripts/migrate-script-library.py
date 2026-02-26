@@ -156,6 +156,93 @@ def categorize_script(filename: str) -> tuple[str, str]:
         if n.startswith("ui-gallery-virtual-list-"):
             return ("ui_gallery.virtual_list", "ui-gallery/virtual-list")
 
+        if n.startswith("ui-gallery-magic-"):
+            return ("ui_gallery.magic", "ui-gallery/magic")
+        if n.startswith("ui-gallery-accordion-"):
+            return ("ui_gallery.accordion", "ui-gallery/accordion")
+        if n.startswith("ui-gallery-hover-card-") or n.startswith("ui-gallery-hovercard-"):
+            return ("ui_gallery.hover_card", "ui-gallery/hover-card")
+        if n.startswith("ui-gallery-motion-presets-"):
+            return ("ui_gallery.motion_presets", "ui-gallery/motion-presets")
+        if n.startswith("ui-gallery-spinner-"):
+            return ("ui_gallery.spinner", "ui-gallery/spinner")
+        if n.startswith("ui-gallery-node-graph-"):
+            return ("ui_gallery.node_graph", "ui-gallery/node-graph")
+        if n.startswith("ui-gallery-native-select-"):
+            return ("ui_gallery.native_select", "ui-gallery/native-select")
+        if n.startswith("ui-gallery-intro-"):
+            return ("ui_gallery.intro", "ui-gallery/intro")
+        if n.startswith("ui-gallery-avatar-"):
+            return ("ui_gallery.avatar", "ui-gallery/avatar")
+        if n.startswith("ui-gallery-breadcrumb-"):
+            return ("ui_gallery.breadcrumb", "ui-gallery/breadcrumb")
+        if n.startswith("ui-gallery-calendar-"):
+            return ("ui_gallery.calendar", "ui-gallery/calendar")
+        if n.startswith("ui-gallery-card-"):
+            return ("ui_gallery.card", "ui-gallery/card")
+        if n.startswith("ui-gallery-alert-"):
+            return ("ui_gallery.alert", "ui-gallery/alert")
+        if n.startswith("ui-gallery-empty-"):
+            return ("ui_gallery.empty", "ui-gallery/empty")
+        if n.startswith("ui-gallery-image-"):
+            return ("ui_gallery.image", "ui-gallery/image")
+        if n.startswith("ui-gallery-item-"):
+            return ("ui_gallery.item", "ui-gallery/item")
+        if n.startswith("ui-gallery-chart-"):
+            return ("ui_gallery.chart", "ui-gallery/chart")
+        if n.startswith("ui-gallery-clipboard-"):
+            return ("ui_gallery.clipboard", "ui-gallery/clipboard")
+        if n.startswith("ui-gallery-field-"):
+            return ("ui_gallery.field", "ui-gallery/field")
+        if n.startswith("ui-gallery-form-"):
+            return ("ui_gallery.form", "ui-gallery/form")
+        if n.startswith("ui-gallery-kbd-"):
+            return ("ui_gallery.kbd", "ui-gallery/kbd")
+        if n.startswith("ui-gallery-label-"):
+            return ("ui_gallery.label", "ui-gallery/label")
+        if n.startswith("ui-gallery-badge-"):
+            return ("ui_gallery.badge", "ui-gallery/badge")
+        if n.startswith("ui-gallery-aspect-ratio-"):
+            return ("ui_gallery.aspect_ratio", "ui-gallery/aspect-ratio")
+        if n.startswith("ui-gallery-portal-"):
+            return ("ui_gallery.portal", "ui-gallery/portal")
+        if n.startswith("ui-gallery-progress-"):
+            return ("ui_gallery.progress", "ui-gallery/progress")
+        if n.startswith("ui-gallery-radio-group-"):
+            return ("ui_gallery.radio_group", "ui-gallery/radio-group")
+        if n.startswith("ui-gallery-resizable-"):
+            return ("ui_gallery.resizable", "ui-gallery/resizable")
+        if n.startswith("ui-gallery-settings-"):
+            return ("ui_gallery.settings", "ui-gallery/settings")
+        if n.startswith("ui-gallery-slider-"):
+            return ("ui_gallery.slider", "ui-gallery/slider")
+        if n.startswith("ui-gallery-switch-"):
+            return ("ui_gallery.switch", "ui-gallery/switch")
+        if n.startswith("ui-gallery-tabs-"):
+            return ("ui_gallery.tabs", "ui-gallery/tabs")
+        if n.startswith("ui-gallery-textarea-"):
+            return ("ui_gallery.textarea", "ui-gallery/textarea")
+        if n.startswith("ui-gallery-toast-"):
+            return ("ui_gallery.toast", "ui-gallery/toast")
+        if n.startswith("ui-gallery-topbar-"):
+            return ("ui_gallery.topbar", "ui-gallery/topbar")
+        if n.startswith("ui-gallery-tree-"):
+            return ("ui_gallery.tree", "ui-gallery/tree")
+        if n.startswith("ui-gallery-window-"):
+            return ("ui_gallery.window", "ui-gallery/window")
+        if n.startswith("ui-gallery-windowed-rows-"):
+            return ("ui_gallery.windowed_rows", "ui-gallery/windowed-rows")
+        if n.startswith("ui-gallery-ui-kit-"):
+            return ("ui_gallery.ui_kit", "ui-gallery/ui-kit")
+        if n.startswith("ui-gallery-diag-") or n.startswith("ui-gallery-hit-test-only-"):
+            return ("ui_gallery.diag", "ui-gallery/diag")
+        if n.startswith("ui-gallery-incoming-"):
+            return ("ui_gallery.incoming", "ui-gallery/incoming")
+        if n.startswith("ui-gallery-contextmenu-"):
+            return ("ui_gallery.context_menu", "ui-gallery/context-menu")
+        if n.startswith("ui-gallery-centered-fixed-chrome-"):
+            return ("ui_gallery.control_chrome", "ui-gallery/control-chrome")
+
         # Text buckets: keep IME matching token-based (avoid matching "time").
         if (
             n.startswith("ui-gallery-web-ime-")
@@ -179,7 +266,14 @@ def categorize_script(filename: str) -> tuple[str, str]:
 
         if n.endswith("-steady.json") or "perf" in n or "resize" in n or "torture" in n:
             return ("ui_gallery.perf", "ui-gallery/perf")
-        if "overlay" in n or "dialog" in n or "popover" in n or "tooltip" in n:
+        if (
+            "overlay" in n
+            or "dialog" in n
+            or "popover" in n
+            or "tooltip" in n
+            or "sheet" in n
+            or "modal" in n
+        ):
             return ("ui_gallery.overlay", "ui-gallery/overlay")
         return ("ui_gallery.misc", "ui-gallery/misc")
 
