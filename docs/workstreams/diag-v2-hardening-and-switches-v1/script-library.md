@@ -62,6 +62,8 @@ Long-term:
     - `--exclude-category ui_gallery.misc`
     - `--limit 15`
   - consider using `--plan-out .fret/diag-script-library-migration.<label>.plan.json` to keep batch plans separate
+  - when shrinking an intermediate bucket folder (e.g. `tools/diag-scripts/ui-gallery/misc/`), pass:
+    - `--scan-dir tools/diag-scripts/ui-gallery/misc`
   - redirect stubs (`kind: script_redirect`) are ignored by the planner (only canonical scripts are migrated)
 
 2) Apply moves with redirects (recommended):
