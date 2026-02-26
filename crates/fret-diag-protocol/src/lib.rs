@@ -250,6 +250,13 @@ pub struct UiDiagnosticsConfigFileV1 {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub paths: Option<UiDiagnosticsConfigPathsV1>,
 
+    /// Whether the diagnostics runtime should accept script schema v1 inputs.
+    ///
+    /// When `None`, the runtime uses its default policy (currently: allow in manual flows; tooling
+    /// typically writes an explicit `false` for launched runs).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub allow_script_schema_v1: Option<bool>,
+
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub script_keepalive: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]

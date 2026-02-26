@@ -67,6 +67,7 @@ struct SourcedPath {
 #[derive(Debug, Clone)]
 struct EffectiveConfig {
     enabled: SourcedBool,
+    allow_script_schema_v1: SourcedBool,
     out_dir: SourcedPath,
     trigger_path: SourcedPath,
     ready_path: SourcedPath,
@@ -188,6 +189,7 @@ fn runtime_known_config_keys() -> BTreeSet<&'static str> {
         "enabled",
         "out_dir",
         "paths",
+        "allow_script_schema_v1",
         "script_keepalive",
         "script_auto_dump",
         "pick_auto_dump",
@@ -314,6 +316,19 @@ fn compute_effective_runtime_config(
     } else {
         SourcedBool {
             value: false,
+            source: ValueSource::Default,
+        }
+    };
+
+    let allow_script_schema_v1 = if let Some(v) = config_file.and_then(|c| c.allow_script_schema_v1)
+    {
+        SourcedBool {
+            value: v,
+            source: ValueSource::ConfigFile("config:allow_script_schema_v1"),
+        }
+    } else {
+        SourcedBool {
+            value: true,
             source: ValueSource::Default,
         }
     };
@@ -592,6 +607,7 @@ fn compute_effective_runtime_config(
 
     EffectiveConfig {
         enabled,
+        allow_script_schema_v1,
         out_dir,
         trigger_path,
         ready_path,
@@ -773,6 +789,7 @@ fn config_doctor_report_json(
         },
         "effective": {
             "enabled": { "value": effective.enabled.value, "source": effective.enabled.source.as_str() },
+            "allow_script_schema_v1": { "value": effective.allow_script_schema_v1.value, "source": effective.allow_script_schema_v1.source.as_str() },
             "out_dir": { "value": effective.out_dir.value.display().to_string(), "source": effective.out_dir.source.as_str() },
             "trigger_path": { "value": effective.trigger_path.value.display().to_string(), "source": effective.trigger_path.source.as_str() },
             "ready_path": { "value": effective.ready_path.value.display().to_string(), "source": effective.ready_path.source.as_str() },
@@ -1112,6 +1129,7 @@ Use `--mode manual` to report what the runtime would see from the current proces
 
     println!("effective:");
     print_sourced_bool("enabled", &effective.enabled);
+    print_sourced_bool("allow_script_schema_v1", &effective.allow_script_schema_v1);
     print_sourced_path("out_dir", &effective.out_dir);
     print_sourced_path("trigger_path", &effective.trigger_path);
     print_sourced_path("ready_path", &effective.ready_path);

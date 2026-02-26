@@ -35,6 +35,10 @@ Notes:
   - iOS note: relative paths may be re-rooted to `$HOME`/`tmp` (see `resolve_ios_diag_out_dir`).
 - `paths`:
   - Runtime: `c.paths.*` is used for all supported trigger/result/script/inspect/screenshot files.
+- `allow_script_schema_v1`:
+  - Runtime: `c.allow_script_schema_v1` controls whether script schema v1 inputs are accepted.
+  - Default: `true` (manual/backwards-compat).
+  - Tool-launched runs: tooling writes `false` into its generated `diag.config.json` so the runtime stays on the v2-only path.
 - `max_events`:
   - Runtime: `c.max_events` (fallback default `2000`).
   - Env override: `FRET_DIAG_MAX_EVENTS`.

@@ -381,6 +381,29 @@ impl UiDiagnosticsService {
 
         let script = match schema_version {
             1 => {
+                if !self.cfg.allow_script_schema_v1 {
+                    self.pending_script_run_id = None;
+                    self.write_script_result(UiScriptResultV1 {
+                        schema_version: 1,
+                        run_id,
+                        updated_unix_ms: unix_ms_now(),
+                        window: None,
+                        stage: UiScriptStageV1::Failed,
+                        step_index: None,
+                        reason_code: Some("script.schema_v1_disabled".to_string()),
+                        reason: Some(
+                            "script schema_version=1 is disabled; upgrade to schema_version=2"
+                                .to_string(),
+                        ),
+                        evidence: None,
+                        last_bundle_dir: self
+                            .last_dump_dir
+                            .as_ref()
+                            .map(|p| display_path(&self.cfg.out_dir, p)),
+                        last_bundle_artifact: self.last_dump_artifact_stats.clone(),
+                    });
+                    return;
+                }
                 let Ok(script) = serde_json::from_slice::<UiActionScriptV1>(&bytes) else {
                     self.pending_script_run_id = None;
                     self.write_script_result(UiScriptResultV1 {

@@ -732,6 +732,9 @@ pub(crate) fn maybe_launch_demo(
             ),
             ..Default::default()
         }),
+        // Tooling upgrades scripts to schema v2 on execution; keep the runtime v2-only in
+        // tool-launched runs so compat paths stay removable.
+        allow_script_schema_v1: Some(false),
         screenshots_enabled: Some(wants_screenshots),
         // Keep script-driven bundle dumps reasonably small by default.
         //

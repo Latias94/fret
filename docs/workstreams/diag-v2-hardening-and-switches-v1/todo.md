@@ -17,8 +17,8 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
   - explicitly documented as “planned / ignored by runtime”.
 - [x] Make tooling push schema v2 scripts by default (normalize/upgrade on write) and warn when schema v1 scripts are observed.
 - [ ] Add a runtime compat switch for schema v1 scripts:
-  - [ ] enable/disable v1 script parsing explicitly (default: enabled for manual, disabled for tool-launched runs),
-  - [ ] record legacy usage in `script.result.json` evidence (so triage can detect compat paths).
+  - [x] enable/disable v1 script parsing explicitly (default: enabled for manual, disabled for tool-launched runs),
+  - [x] record legacy usage in `script.result.json` evidence (so triage can detect compat paths).
 - [x] Ensure `diag config doctor` validates the example config (no unknown keys).
 - [ ] Define and document a minimal env var set (the rest become deprecated aliases):
   - [x] `FRET_DIAG`

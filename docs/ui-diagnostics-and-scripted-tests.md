@@ -578,6 +578,9 @@ Core:
   - In `--launch` mode, tooling-owned env vars and paths are reserved; `--env` cannot override them (use `--dir` / `--*-path` flags instead).
   - Example file to copy/modify: `tools/diag-configs/diag.config.example.json`.
   - Drift audit notes for the example file: `tools/diag-configs/README.md`.
+  - Schema v1 script compatibility:
+    - Config file key: `allow_script_schema_v1` (default: `true`).
+    - Tool-launched runs write `allow_script_schema_v1=false` so the runtime stays v2-only.
   - Tip: print the effective merged config (and highlight unknown keys/envs):
     - `cargo run -p fretboard -- diag config doctor --mode launch --dir .fret/diag`
     - `cargo run -p fretboard -- diag config doctor --mode manual --report-json` (manual apps)
