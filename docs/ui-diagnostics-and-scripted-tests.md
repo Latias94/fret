@@ -573,7 +573,15 @@ Core:
   - Example file to copy/modify: `tools/diag-configs/diag.config.example.json`.
   - Tip: print the effective merged config (and highlight unknown keys/envs):
     - `cargo run -p fretboard -- diag config doctor --mode launch --dir .fret/diag`
-    - `cargo run -p fretboard -- diag config doctor --mode manual --json` (manual apps)
+    - `cargo run -p fretboard -- diag config doctor --mode manual --report-json` (manual apps)
+
+Canonical env vars (recommended):
+
+- `FRET_DIAG_CONFIG_PATH` (preferred)
+- `FRET_DIAG`
+- `FRET_DIAG_GPU_SCREENSHOTS`
+- `FRET_DIAG_REDACT_TEXT`
+- `FRET_DIAG_FIXED_FRAME_DELTA_MS`
 
 Config resolution order (runtime):
 

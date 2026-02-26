@@ -19,13 +19,14 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
 - [ ] Add a runtime compat switch for schema v1 scripts:
   - [ ] enable/disable v1 script parsing explicitly (default: enabled for manual, disabled for tool-launched runs),
   - [ ] record legacy usage in `script.result.json` evidence (so triage can detect compat paths).
+- [x] Ensure `diag config doctor` validates the example config (no unknown keys).
 - [ ] Define and document a minimal env var set (the rest become deprecated aliases):
-  - [ ] `FRET_DIAG`
-  - [ ] `FRET_DIAG_CONFIG_PATH`
-  - [ ] `FRET_DIAG_GPU_SCREENSHOTS`
-  - [ ] `FRET_DIAG_REDACT_TEXT`
-  - [ ] `FRET_DIAG_FIXED_FRAME_DELTA_MS`
-- [ ] Define “reserved env vars” policy for `--launch` (tooling-owned) and enforce it uniformly.
+  - [x] `FRET_DIAG`
+  - [x] `FRET_DIAG_CONFIG_PATH`
+  - [x] `FRET_DIAG_GPU_SCREENSHOTS`
+  - [x] `FRET_DIAG_REDACT_TEXT`
+  - [x] `FRET_DIAG_FIXED_FRAME_DELTA_MS`
+  - [ ] Document deprecated aliases + removal plan (P2/P3).
 - [x] Define “reserved env vars” policy for `--launch` (tooling-owned) and enforce it uniformly.
 - [x] Add a `diag config doctor` (tooling-side) that prints an effective merged config + highlights deprecated keys/envs.
 

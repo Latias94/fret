@@ -168,6 +168,19 @@ fn runtime_known_env_vars() -> BTreeSet<&'static str> {
     ])
 }
 
+fn canonical_env_vars() -> BTreeSet<&'static str> {
+    // Canonical env vars for runtime diagnostics config.
+    //
+    // Most other `FRET_DIAG_*` env vars are compatibility/escape-hatch inputs.
+    BTreeSet::from([
+        "FRET_DIAG",
+        "FRET_DIAG_CONFIG_PATH",
+        "FRET_DIAG_GPU_SCREENSHOTS",
+        "FRET_DIAG_REDACT_TEXT",
+        "FRET_DIAG_FIXED_FRAME_DELTA_MS",
+    ])
+}
+
 fn runtime_known_config_keys() -> BTreeSet<&'static str> {
     // Keep this list aligned with `UiDiagnosticsConfigFileV1`.
     BTreeSet::from([
@@ -803,7 +816,7 @@ fn print_sourced_usize(name: &str, v: &SourcedUsize) {
 
 fn cmd_config_doctor(ctx: ConfigCmdContext, rest: &[String]) -> Result<(), String> {
     let mut mode: DoctorMode = DoctorMode::Launch;
-    let mut as_json: bool = false;
+    let mut report_json: bool = false;
     let mut config_path_override: Option<PathBuf> = None;
     let mut show_env_all: bool = false;
 
@@ -811,8 +824,8 @@ fn cmd_config_doctor(ctx: ConfigCmdContext, rest: &[String]) -> Result<(), Strin
     while i < rest.len() {
         let arg = rest[i].as_str();
         match arg {
-            "--json" => {
-                as_json = true;
+            "--report-json" => {
+                report_json = true;
                 i += 1;
             }
             "--show-env" => {
@@ -850,7 +863,7 @@ fn cmd_config_doctor(ctx: ConfigCmdContext, rest: &[String]) -> Result<(), Strin
             }
             "--help" | "-h" => {
                 println!(
-                    "Usage: fretboard diag config doctor [--mode launch|manual] [--config-path <path>] [--show-env set|all] [--json]\n\n\
+                    "Usage: fretboard diag config doctor [--mode launch|manual] [--config-path <path>] [--show-env set|all] [--report-json]\n\n\
 Default mode is `launch`, which overlays the tooling-reserved env vars (FRET_DIAG*, ready/exit paths) as if you were using `--launch`.\n\
 Use `--mode manual` to report what the runtime would see from the current process env only."
                 );
@@ -1008,9 +1021,29 @@ Use `--mode manual` to report what the runtime would see from the current proces
         }));
     }
 
+    if mode == DoctorMode::Manual {
+        let canonical = canonical_env_vars();
+        let mut compat_env: Vec<String> = effective_env
+            .iter()
+            .filter(|(k, v)| k.starts_with("FRET_DIAG_") && !v.trim().is_empty())
+            .map(|(k, _)| k.clone())
+            .filter(|k| !canonical.contains(k.as_str()))
+            .collect();
+        compat_env.sort();
+        if !compat_env.is_empty() && config_path.is_some() && config_file.is_some() {
+            warnings.push(serde_json::json!({
+                "severity": "info",
+                "code": "diag.config.compat_env_vars_present",
+                "message": "compatibility env vars are set; prefer FRET_DIAG_CONFIG_PATH + the canonical overrides",
+                "canonical": canonical.into_iter().collect::<Vec<_>>(),
+                "compat": compat_env,
+            }));
+        }
+    }
+
     let effective = compute_effective_runtime_config(&effective_env, config_file.as_ref());
 
-    if as_json {
+    if report_json {
         let report = config_doctor_report_json(
             &effective_env,
             config_path.as_deref(),
@@ -1138,6 +1171,15 @@ pub(crate) fn cmd_config(ctx: ConfigCmdContext) -> Result<(), String> {
 mod tests {
     use super::*;
 
+    fn repo_root_for_tests() -> PathBuf {
+        // `CARGO_MANIFEST_DIR` is `<repo>/crates/fret-diag`.
+        let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        dir.parent()
+            .and_then(|p| p.parent())
+            .map(|p| p.to_path_buf())
+            .expect("repo root")
+    }
+
     #[test]
     fn unknown_env_vars_are_reported_by_list_membership() {
         let mut env = BTreeMap::new();
@@ -1168,5 +1210,29 @@ mod tests {
         let cfg = compute_effective_runtime_config(&env, None);
         assert_eq!(cfg.max_snapshots.value, 10);
         assert_eq!(cfg.script_dump_max_snapshots.value, 10);
+    }
+
+    #[test]
+    fn example_config_file_has_no_unknown_keys() {
+        let root = repo_root_for_tests();
+        let path = root.join("tools/diag-configs/diag.config.example.json");
+        assert!(path.is_file(), "missing example config: {}", path.display());
+
+        let value = read_config_file_value(&path).expect("read example config");
+        let unknown = collect_unknown_config_keys(&value);
+        assert!(
+            unknown.is_empty(),
+            "example config has unknown keys: {:?}",
+            unknown
+        );
+        let unknown_paths = collect_unknown_config_paths_keys(&value);
+        assert!(
+            unknown_paths.is_empty(),
+            "example config has unknown paths keys: {:?}",
+            unknown_paths
+        );
+        let cfg: UiDiagnosticsConfigFileV1 =
+            serde_json::from_value(value).expect("parse example config");
+        assert_eq!(cfg.schema_version, 1);
     }
 }
