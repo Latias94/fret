@@ -39,6 +39,7 @@ fn record_fullscreen_param_effect_pass<
     ctx: &RecordPassCtx<'_>,
     pass_name: &'static str,
     labels: FullscreenEffectLabels,
+    unmasked_uses_uniforms: bool,
     src: PlanTarget,
     dst: PlanTarget,
     src_size: (u32, u32),
@@ -210,19 +211,38 @@ fn record_fullscreen_param_effect_pass<
             &src_view,
             buffer.as_entire_binding(),
         );
-        let pipeline = pipeline_unmasked(renderer);
-        run_fullscreen_triangle_pass(
-            encoder,
-            labels.pass_unmasked,
-            pipeline,
-            dst_view,
-            dst_size,
-            load,
-            &bind_group,
-            &[],
-            dst_scissor,
-            perf_enabled.then_some(frame_perf),
-        );
+
+        if unmasked_uses_uniforms {
+            let pipeline = pipeline_unmasked(renderer);
+            run_fullscreen_triangle_pass_uniform_texture(
+                encoder,
+                labels.pass_unmasked,
+                pipeline,
+                dst_view,
+                load,
+                renderer.pick_uniform_bind_group_for_mask_image(None),
+                &[0, ctx.render_space_offset_u32],
+                &bind_group,
+                &[],
+                dst_scissor,
+                dst_size,
+                if perf_enabled { Some(frame_perf) } else { None },
+            );
+        } else {
+            let pipeline = pipeline_unmasked(renderer);
+            run_fullscreen_triangle_pass(
+                encoder,
+                labels.pass_unmasked,
+                pipeline,
+                dst_view,
+                dst_size,
+                load,
+                &bind_group,
+                &[],
+                dst_scissor,
+                perf_enabled.then_some(frame_perf),
+            );
+        }
     }
 }
 
@@ -410,6 +430,7 @@ pub(in super::super) fn record_color_adjust_pass(
             pass_masked: "fret color-adjust masked pass",
             pass_mask: "fret color-adjust mask pass",
         },
+        false,
         pass.src,
         pass.dst,
         pass.src_size,
@@ -448,6 +469,7 @@ pub(in super::super) fn record_alpha_threshold_pass(
             pass_masked: "fret alpha-threshold masked pass",
             pass_mask: "fret alpha-threshold mask pass",
         },
+        false,
         pass.src,
         pass.dst,
         pass.src_size,
@@ -494,6 +516,7 @@ pub(in super::super) fn record_color_matrix_pass(
             pass_masked: "fret color-matrix masked pass",
             pass_mask: "fret color-matrix mask pass",
         },
+        false,
         pass.src,
         pass.dst,
         pass.src_size,
@@ -568,6 +591,7 @@ pub(in super::super) fn record_noise_pass(
             pass_masked: "fret noise masked pass",
             pass_mask: "fret noise mask pass",
         },
+        false,
         pass.src,
         pass.dst,
         pass.src_size,
@@ -615,6 +639,7 @@ pub(in super::super) fn record_drop_shadow_pass(
             pass_masked: "fret drop-shadow masked pass",
             pass_mask: "fret drop-shadow mask pass",
         },
+        false,
         pass.src,
         pass.dst,
         pass.src_size,
@@ -690,6 +715,7 @@ pub(in super::super) fn record_custom_effect_pass(
             pass_masked: "fret custom-effect masked pass",
             pass_mask: "fret custom-effect mask pass",
         },
+        true,
         pass.src,
         pass.dst,
         pass.src_size,

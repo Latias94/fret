@@ -19,6 +19,13 @@ struct Viewport {
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
 
+struct RenderSpace {
+  origin_px: vec2<f32>,
+  size_px: vec2<f32>,
+};
+
+@group(0) @binding(5) var<uniform> render_space: RenderSpace;
+
 @group(1) @binding(0) var src_texture: texture_2d<f32>;
 @group(1) @binding(2) var mask_texture: texture_2d<f32>;
 
@@ -43,4 +50,3 @@ fn vs_main(@builtin(vertex_index) vid: u32) -> VsOut {
   out.pos = vec4<f32>(pos[vid], 0.0, 1.0);
   return out;
 }
-
