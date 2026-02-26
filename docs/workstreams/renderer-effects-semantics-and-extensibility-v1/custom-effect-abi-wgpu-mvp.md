@@ -169,3 +169,39 @@ Notes:
 - `uv` is derived from the source texture dimensions.
 - The renderer applies clip/mask coverage *after* the custom function, so authors do not need to implement masking.
 - Backends may impose a maximum WGSL source size (wgpu MVP caps v1 sources at 64KiB) and reject oversized programs.
+
+## Usage (ecosystem / app code)
+
+The intended usage pattern is:
+
+1. Author the WGSL snippet in an ecosystem crate (or app crate).
+2. Register it once during `on_gpu_ready` (so the renderer is available).
+3. Cache the resulting `EffectId` for use in `EffectChain` steps.
+
+To avoid having every component manage renderer lifetimes directly, `fret-ui-kit` provides a small helper:
+`CustomEffectProgramV1` (caches an `EffectId` and can be invalidated on renderer recreation).
+
+Example (registration during bootstrap):
+
+```rust
+use fret_bootstrap::BootstrapBuilder;
+use fret_ui_kit::custom_effects::CustomEffectProgramV1;
+
+#[derive(Clone)]
+struct GlassEffectId(fret_core::EffectId);
+
+fn install_effect(app: &mut fret_app::App, effects: &mut dyn fret_core::CustomEffectService) {
+    let mut program = CustomEffectProgramV1::wgsl_utf8(include_str!("glass_effect.wgsl"));
+    let id = program
+        .ensure_registered(effects)
+        .expect("custom effect registration must succeed for this demo");
+
+    app.set_global(GlassEffectId(id));
+}
+
+fn main() -> Result<(), fret_launch::RunnerError> {
+    BootstrapBuilder::new()
+        .install_custom_effects(install_effect)
+        .run()
+}
+```
