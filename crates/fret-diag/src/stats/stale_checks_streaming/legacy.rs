@@ -50,7 +50,9 @@ pub(crate) fn check_bundle_for_stale_scene_streaming(
     scan_stale_scene(bundle_path, &table, test_id, eps)
 }
 
-fn collect_wanted_table_semantics_keys(bundle_path: &Path) -> Result<HashSet<SemanticsKey>, String> {
+fn collect_wanted_table_semantics_keys(
+    bundle_path: &Path,
+) -> Result<HashSet<SemanticsKey>, String> {
     #[derive(Debug, Default)]
     struct State {
         wanted: HashSet<SemanticsKey>,
@@ -453,7 +455,10 @@ fn collect_wanted_table_semantics_keys(bundle_path: &Path) -> Result<HashSet<Sem
 
     let state = std::rc::Rc::new(std::cell::RefCell::new(State::default()));
     crate::json_stream::with_bundle_json_deserializer(bundle_path, |de| {
-        RootSeed { state: state.clone() }.deserialize(de)
+        RootSeed {
+            state: state.clone(),
+        }
+        .deserialize(de)
     })?;
 
     Ok(state.borrow().wanted.clone())
@@ -891,7 +896,9 @@ fn build_semantics_table_fields_map(
         {
             while let Some(key) = map.next_key::<String>()? {
                 match key.as_str() {
-                    "test_id" | "testId" => self.node_test_id = map.next_value::<Option<String>>()?,
+                    "test_id" | "testId" => {
+                        self.node_test_id = map.next_value::<Option<String>>()?
+                    }
                     "bounds" => self.out.y = map.next_value_seed(BoundsYSeed)?,
                     "label" => {
                         let v = map.next_value::<Option<String>>()?;
@@ -966,7 +973,12 @@ fn build_semantics_table_fields_map(
     crate::json_stream::with_bundle_json_deserializer_allow_stop(
         bundle_path,
         FOUND_ALL_MARKER,
-        |de| RootSeed { state: state.clone() }.deserialize(de),
+        |de| {
+            RootSeed {
+                state: state.clone(),
+            }
+            .deserialize(de)
+        },
     )?;
 
     Ok(state.borrow().out.clone())
@@ -1291,8 +1303,9 @@ fn scan_stale_paint(
                         self.out.semantics_fingerprint = map.next_value::<Option<u64>>()?;
                     }
                     "semantics_window_id" | "semanticsWindowId" => {
-                        self.out.semantics_window_id =
-                            map.next_value::<Option<u64>>()?.unwrap_or(self.window_id_default);
+                        self.out.semantics_window_id = map
+                            .next_value::<Option<u64>>()?
+                            .unwrap_or(self.window_id_default);
                     }
                     "debug" => {
                         let (has_nodes, y, paint_nodes, paint_ops) =
@@ -1453,7 +1466,9 @@ fn scan_stale_paint(
         where
             D: serde::Deserializer<'de>,
         {
-            deserializer.deserialize_any(SemanticsInlineYVisitor { test_id: self.test_id })
+            deserializer.deserialize_any(SemanticsInlineYVisitor {
+                test_id: self.test_id,
+            })
         }
     }
 
@@ -1476,8 +1491,9 @@ fn scan_stale_paint(
             let mut y: Option<f64> = None;
             while let Some(key) = map.next_key::<String>()? {
                 if key == "nodes" {
-                    let (present, found) =
-                        map.next_value_seed(NodesInlineYSeed { test_id: self.test_id.clone() })?;
+                    let (present, found) = map.next_value_seed(NodesInlineYSeed {
+                        test_id: self.test_id.clone(),
+                    })?;
                     has_nodes = present;
                     y = found;
                 } else {
@@ -1513,7 +1529,9 @@ fn scan_stale_paint(
         where
             D: serde::Deserializer<'de>,
         {
-            deserializer.deserialize_any(NodesInlineYVisitor { test_id: self.test_id })
+            deserializer.deserialize_any(NodesInlineYVisitor {
+                test_id: self.test_id,
+            })
         }
     }
 
@@ -1596,7 +1614,9 @@ fn scan_stale_paint(
         {
             while let Some(key) = map.next_key::<String>()? {
                 match key.as_str() {
-                    "test_id" | "testId" => self.node_test_id = map.next_value::<Option<String>>()?,
+                    "test_id" | "testId" => {
+                        self.node_test_id = map.next_value::<Option<String>>()?
+                    }
                     "bounds" => self.y = map.next_value_seed(BoundsYSeed)?,
                     _ => {
                         map.next_value::<IgnoredAny>()?;
@@ -1661,11 +1681,13 @@ fn scan_stale_paint(
         suspicious: Vec::new(),
     }));
 
-    crate::json_stream::with_bundle_json_deserializer_allow_stop(
-        bundle_path,
-        STOP_MARKER,
-        |de| RootSeed { state: state.clone(), table }.deserialize(de),
-    )?;
+    crate::json_stream::with_bundle_json_deserializer_allow_stop(bundle_path, STOP_MARKER, |de| {
+        RootSeed {
+            state: state.clone(),
+            table,
+        }
+        .deserialize(de)
+    })?;
 
     let st = state.borrow();
     if st.missing_scene_fingerprint {
@@ -1680,7 +1702,9 @@ fn scan_stale_paint(
     }
 
     let mut msg = String::new();
-    msg.push_str("stale paint suspected (semantics bounds moved but scene fingerprint did not change)\n");
+    msg.push_str(
+        "stale paint suspected (semantics bounds moved but scene fingerprint did not change)\n",
+    );
     msg.push_str(&format!("bundle: {}\n", bundle_path.display()));
     for line in st.suspicious.iter() {
         msg.push_str("  ");
@@ -1924,7 +1948,9 @@ fn scan_stale_scene(
                         .fields
                         .y
                         .zip(Some(prev_y_val))
-                        .is_some_and(|(y, prev_y)| (y - prev_y).abs() >= self.state.borrow().eps as f64);
+                        .is_some_and(|(y, prev_y)| {
+                            (y - prev_y).abs() >= self.state.borrow().eps as f64
+                        });
                     let label_changed = snap.fields.label != prev_label;
                     let value_changed = snap.fields.value != prev_value;
                     let changed = moved || label_changed || value_changed;
@@ -2036,8 +2062,9 @@ fn scan_stale_scene(
                         self.out.semantics_fingerprint = map.next_value::<Option<u64>>()?;
                     }
                     "semantics_window_id" | "semanticsWindowId" => {
-                        self.out.semantics_window_id =
-                            map.next_value::<Option<u64>>()?.unwrap_or(self.window_id_default);
+                        self.out.semantics_window_id = map
+                            .next_value::<Option<u64>>()?
+                            .unwrap_or(self.window_id_default);
                     }
                     "debug" => {
                         let (has_nodes, fields) = map.next_value_seed(DebugSceneSeed {
@@ -2130,7 +2157,9 @@ fn scan_stale_scene(
         where
             D: serde::Deserializer<'de>,
         {
-            deserializer.deserialize_any(SemanticsInlineFieldsVisitor { test_id: self.test_id })
+            deserializer.deserialize_any(SemanticsInlineFieldsVisitor {
+                test_id: self.test_id,
+            })
         }
     }
 
@@ -2153,8 +2182,9 @@ fn scan_stale_scene(
             let mut fields: Option<SemNodeFieldsLite> = None;
             while let Some(key) = map.next_key::<String>()? {
                 if key == "nodes" {
-                    let (present, found) =
-                        map.next_value_seed(NodesInlineFieldsSeed { test_id: self.test_id.clone() })?;
+                    let (present, found) = map.next_value_seed(NodesInlineFieldsSeed {
+                        test_id: self.test_id.clone(),
+                    })?;
                     has_nodes = present;
                     fields = found;
                 } else {
@@ -2190,7 +2220,9 @@ fn scan_stale_scene(
         where
             D: serde::Deserializer<'de>,
         {
-            deserializer.deserialize_any(NodesInlineFieldsVisitor { test_id: self.test_id })
+            deserializer.deserialize_any(NodesInlineFieldsVisitor {
+                test_id: self.test_id,
+            })
         }
     }
 
@@ -2273,7 +2305,9 @@ fn scan_stale_scene(
         {
             while let Some(key) = map.next_key::<String>()? {
                 match key.as_str() {
-                    "test_id" | "testId" => self.node_test_id = map.next_value::<Option<String>>()?,
+                    "test_id" | "testId" => {
+                        self.node_test_id = map.next_value::<Option<String>>()?
+                    }
                     "bounds" => self.out.y = map.next_value_seed(BoundsYSeed)?,
                     "label" => {
                         let v = map.next_value::<Option<String>>()?;
@@ -2346,11 +2380,13 @@ fn scan_stale_scene(
         suspicious: Vec::new(),
     }));
 
-    crate::json_stream::with_bundle_json_deserializer_allow_stop(
-        bundle_path,
-        STOP_MARKER,
-        |de| RootSeed { state: state.clone(), table }.deserialize(de),
-    )?;
+    crate::json_stream::with_bundle_json_deserializer_allow_stop(bundle_path, STOP_MARKER, |de| {
+        RootSeed {
+            state: state.clone(),
+            table,
+        }
+        .deserialize(de)
+    })?;
 
     let st = state.borrow();
     if st.missing_scene_fingerprint {
@@ -2365,7 +2401,9 @@ fn scan_stale_scene(
     }
 
     let mut msg = String::new();
-    msg.push_str("stale scene suspected (semantics changed but scene fingerprint did not change)\n");
+    msg.push_str(
+        "stale scene suspected (semantics changed but scene fingerprint did not change)\n",
+    );
     msg.push_str(&format!("bundle: {}\n", bundle_path.display()));
     for line in st.suspicious.iter() {
         msg.push_str("  ");

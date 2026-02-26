@@ -358,27 +358,7 @@ pub fn app_with_hooks<P: Program>(
 
     let builder = fret_bootstrap::BootstrapBuilder::new(App::new(), driver.into_fn_driver());
 
-    #[cfg(feature = "diagnostics")]
-    let builder = builder.with_default_diagnostics();
-
-    let builder = builder
-        .with_default_config_files()
-        .map_err(BootstrapError::from)?;
-
-    #[cfg(feature = "shadcn")]
-    let builder = builder.install_app(fret_ui_shadcn::install_app);
-
-    #[cfg(feature = "ui-assets")]
-    let builder = builder.with_ui_assets_budgets(64 * 1024 * 1024, 4096, 16 * 1024 * 1024, 4096);
-
-    #[cfg(feature = "icons-lucide")]
-    let builder = builder.with_lucide_icons();
-
-    #[cfg(feature = "icons-radix")]
-    let builder = builder.with_radix_icons();
-
-    #[cfg(feature = "preload-icon-svgs")]
-    let builder = builder.preload_icon_svgs_on_gpu_ready();
+    let builder = crate::apply_desktop_defaults(builder).map_err(BootstrapError::from)?;
 
     Ok(UiAppBuilder::new(builder))
 }

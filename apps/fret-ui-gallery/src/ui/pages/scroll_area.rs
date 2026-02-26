@@ -11,8 +11,8 @@ pub(super) fn preview_scroll_area(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
         let content = {
             let content = ui::container(cx, move |cx| {
                 let heading = ui::text(cx, "Tags")
-                    .text_size_px(Px(12.0))
-                    .line_height_px(Px(12.0))
+                    .text_size_px(Px(14.0))
+                    .line_height_px(Px(14.0))
                     .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
                     .font_medium()
                     .into_element(cx);
@@ -27,8 +27,8 @@ pub(super) fn preview_scroll_area(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
                         for tag in tags {
                             out.push(
                                 ui::text(cx, tag)
-                                    .text_size_px(Px(12.0))
-                                    .line_height_px(Px(16.0))
+                                    .text_size_px(Px(14.0))
+                                    .line_height_px(Px(20.0))
                                     .line_height_policy(
                                         fret_core::TextLineHeightPolicy::FixedFromStyle,
                                     )
@@ -63,6 +63,7 @@ pub(super) fn preview_scroll_area(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
 
         let area = shadcn::ScrollArea::new([content])
             .axis(fret_ui::element::ScrollAxis::Y)
+            .viewport_test_id("ui-gallery-scroll-area-demo-viewport")
             .refine_layout(LayoutRefinement::default().w_full().h_full())
             .into_element(cx)
             .attach_semantics(
@@ -75,7 +76,10 @@ pub(super) fn preview_scroll_area(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
             decl_style::container_props(
                 theme,
                 ChromeRefinement::default().border_1().rounded(Radius::Md),
-                LayoutRefinement::default().w_px(Px(192.0)).h_px(Px(288.0)),
+                LayoutRefinement::default()
+                    .w_px(Px(192.0))
+                    .h_px(Px(288.0))
+                    .overflow_hidden(),
             )
         });
         cx.container(props, move |_cx| [area])
@@ -117,6 +121,7 @@ pub(super) fn preview_scroll_area(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
 
         let area = shadcn::ScrollArea::new([rail])
             .axis(fret_ui::element::ScrollAxis::X)
+            .viewport_test_id("ui-gallery-scroll-area-horizontal-viewport")
             .refine_layout(LayoutRefinement::default().w_full())
             .into_element(cx)
             .attach_semantics(
@@ -132,7 +137,10 @@ pub(super) fn preview_scroll_area(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
                     .border_1()
                     .rounded(Radius::Md)
                     .p(Space::N4),
-                LayoutRefinement::default().w_full().max_w(Px(384.0)),
+                LayoutRefinement::default()
+                    .w_full()
+                    .max_w(Px(384.0))
+                    .overflow_hidden(),
             )
         });
         cx.container(props, move |_cx| [area])
@@ -160,6 +168,7 @@ pub(super) fn preview_scroll_area(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
 
         shadcn::ScrollArea::new([content])
             .axis(fret_ui::element::ScrollAxis::Y)
+            .viewport_test_id("ui-gallery-scroll-area-rtl-viewport")
             .refine_layout(LayoutRefinement::default().w_full().h_full())
             .into_element(cx)
     })
@@ -174,7 +183,10 @@ pub(super) fn preview_scroll_area(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
             decl_style::container_props(
                 theme,
                 ChromeRefinement::default().border_1().rounded(Radius::Md),
-                LayoutRefinement::default().w_px(Px(192.0)).h_px(Px(288.0)),
+                LayoutRefinement::default()
+                    .w_px(Px(192.0))
+                    .h_px(Px(288.0))
+                    .overflow_hidden(),
             )
         });
         cx.container(props, move |_cx| [rtl])
@@ -197,8 +209,9 @@ pub(super) fn preview_scroll_area(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
                 .description("Vertical scroll region with tags and separators.")
                 .code(
                     "rust",
-                    r#"shadcn::ScrollArea::new([content])
+                    r#"let scroll = shadcn::ScrollArea::new([content])
     .axis(fret_ui::element::ScrollAxis::Y)
+    .viewport_test_id("scroll-area-viewport")
     .refine_layout(LayoutRefinement::default().w_full().h_full())
     .into_element(cx);"#,
                 ),
@@ -208,6 +221,7 @@ pub(super) fn preview_scroll_area(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
                     "rust",
                     r#"shadcn::ScrollArea::new([rail])
     .axis(fret_ui::element::ScrollAxis::X)
+    .viewport_test_id("scroll-area-horizontal-viewport")
     .into_element(cx);"#,
                 ),
             DocSection::new("RTL", rtl)
@@ -217,7 +231,9 @@ pub(super) fn preview_scroll_area(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
                     r#"fret_ui_kit::primitives::direction::with_direction_provider(
     cx,
     fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-    |cx| shadcn::ScrollArea::new([content]).into_element(cx),
+    |cx| shadcn::ScrollArea::new([content])
+        .viewport_test_id("scroll-area-rtl-viewport")
+        .into_element(cx),
 );"#,
                 ),
             DocSection::new("Notes", notes).description("Usage notes and caveats."),

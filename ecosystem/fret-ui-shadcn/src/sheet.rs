@@ -98,6 +98,34 @@ fn sheet_side_in_scope<H: UiHost>(cx: &ElementContext<'_, H>) -> SheetSide {
     inherited_sheet_side(cx).unwrap_or_default()
 }
 
+#[derive(Debug, Default)]
+struct SheetOpenProviderState {
+    current: Option<Model<bool>>,
+}
+
+fn inherited_sheet_open<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<Model<bool>> {
+    cx.inherited_state_where::<SheetOpenProviderState>(|st| st.current.is_some())
+        .and_then(|st| st.current.clone())
+}
+
+#[track_caller]
+fn with_sheet_open_provider<H: UiHost, R>(
+    cx: &mut ElementContext<'_, H>,
+    open: Model<bool>,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
+) -> R {
+    let prev = cx.with_state(SheetOpenProviderState::default, |st| {
+        let prev = st.current.clone();
+        st.current = Some(open);
+        prev
+    });
+    let out = f(cx);
+    cx.with_state(SheetOpenProviderState::default, |st| {
+        st.current = prev;
+    });
+    out
+}
+
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum SheetSide {
     Left,
@@ -432,7 +460,10 @@ impl Sheet {
                             |_cx| Vec::new(),
                         );
 
-                        let content = with_sheet_side_provider(cx, sheet_side, |cx| content(cx));
+                        let content =
+                            with_sheet_open_provider(cx, open_for_children.clone(), |cx| {
+                                with_sheet_side_provider(cx, sheet_side, |cx| content(cx))
+                            });
                         let vertical_auto_max_height_fraction = if vertical_auto_max_height_fraction
                             .is_finite()
                             && vertical_auto_max_height_fraction > 0.0
@@ -625,12 +656,54 @@ impl Sheet {
     }
 }
 
+/// shadcn/ui `SheetClose` (v4).
+///
+/// Upstream `SheetClose` is a thin wrapper around the underlying primitive's `Close` component.
+/// In Fret, sheets are backed by modal overlays, so this delegates to `DialogClose`.
+#[derive(Clone)]
+pub struct SheetClose {
+    inner: crate::DialogClose,
+}
+
+impl std::fmt::Debug for SheetClose {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SheetClose").finish()
+    }
+}
+
+impl SheetClose {
+    pub fn new(open: Model<bool>) -> Self {
+        Self {
+            // SheetClose should behave like a primitive close affordance (no forced positioning).
+            // Delegate visuals to `DialogClose`, but override the default absolute positioning.
+            inner: crate::DialogClose::new(open)
+                .refine_layout(LayoutRefinement::default().relative().inset(Space::N0)),
+        }
+    }
+
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.inner = self.inner.refine_style(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.inner = self.inner.refine_layout(layout);
+        self
+    }
+
+    #[track_caller]
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self.inner.into_element(cx)
+    }
+}
+
 /// shadcn/ui `SheetContent` (v4).
 #[derive(Debug)]
 pub struct SheetContent {
     children: Vec<AnyElement>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
+    show_close_button: bool,
 }
 
 impl SheetContent {
@@ -640,6 +713,7 @@ impl SheetContent {
             children,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
+            show_close_button: true,
         }
     }
 
@@ -650,6 +724,12 @@ impl SheetContent {
 
     pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
         self.layout = self.layout.merge(layout);
+        self
+    }
+
+    /// Controls whether the default top-right close affordance is rendered.
+    pub fn show_close_button(mut self, show: bool) -> Self {
+        self.show_close_button = show;
         self
     }
 
@@ -753,7 +833,14 @@ impl SheetContent {
             };
             props
         };
-        let children = self.children;
+
+        let mut children = self.children;
+        if self.show_close_button {
+            if let Some(open) = inherited_sheet_open(cx) {
+                let close = crate::dialog::DialogClose::new(open).into_element(cx);
+                children.push(close);
+            }
+        }
         let container = shadcn_layout::container_vstack(
             cx,
             ContainerProps {
@@ -1809,6 +1896,148 @@ mod tests {
                 click_count: 1,
             }),
         );
+        assert_eq!(app.models().get_copied(&open), Some(false));
+    }
+
+    #[test]
+    fn sheet_close_button_closes() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let content_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        // First frame: render closed.
+        let _ = render_sheet_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            None,
+            true,
+            SheetSide::Right,
+            content_id.clone(),
+            Rc::new(Cell::new(None)),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        // Open via trigger click.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        assert_eq!(app.models().get_copied(&open), Some(true));
+
+        // Render open + let the enter transition settle so hit-testing is deterministic.
+        let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_500,
+        ) as usize
+            + 4;
+        for _ in 0..settle_frames {
+            let _ = render_sheet_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                open.clone(),
+                None,
+                true,
+                SheetSide::Right,
+                content_id.clone(),
+                Rc::new(Cell::new(None)),
+            );
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        }
+
+        ui.request_semantics_snapshot();
+        let _ = render_sheet_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            None,
+            true,
+            SheetSide::Right,
+            content_id.clone(),
+            Rc::new(Cell::new(None)),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let close = snap
+            .nodes
+            .iter()
+            .find(|n| {
+                n.role == fret_core::SemanticsRole::Button && n.label.as_deref() == Some("Close")
+            })
+            .expect("close button semantics node");
+        let close_center = Point::new(
+            Px(close.bounds.origin.x.0 + close.bounds.size.width.0 / 2.0),
+            Px(close.bounds.origin.y.0 + close.bounds.size.height.0 / 2.0),
+        );
+
+        // Click the default top-right close affordance (same positioning as shadcn/Radix).
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: close_center,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: close_center,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
         assert_eq!(app.models().get_copied(&open), Some(false));
     }
 

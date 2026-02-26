@@ -15,7 +15,7 @@
 //! }
 //!
 //! fn view<'a>(cx: &mut ElementContext<'a, App>, _st: &mut ()) -> ViewElements {
-//!     ui::text("Hello, Fret!").into_element(cx).into()
+//!     ui::text(cx, "Hello, Fret!").into_element(cx).into()
 //! }
 //!
 //! fn main() -> fret::Result<()> {
@@ -58,6 +58,14 @@ pub mod mvu_router;
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 pub mod interop;
 
+/// Dev-only helpers (hotpatch/dev-state) for iteration workflows.
+#[cfg(all(not(target_arch = "wasm32"), feature = "desktop", feature = "devloop"))]
+pub mod dev {
+    pub use fret_launch::dev_state::{
+        DevStateExport, DevStateHook, DevStateHooks, DevStateSnapshot, DevStateWindowKeyRegistry,
+    };
+}
+
 /// Re-export the kernel facade (desktop builds).
 #[cfg(feature = "desktop")]
 pub use fret_framework as kernel;
@@ -66,15 +74,13 @@ pub use fret_framework as kernel;
 ///
 /// Recommended: `use fret::prelude::*;`
 pub mod prelude {
+    pub use fret_ui_kit::prelude::*;
+
     #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
     pub use crate::interop::embedded_viewport::{
         EmbeddedViewportForeignMvuUiAppDriverExt, EmbeddedViewportForeignUiAppDriverExt,
         EmbeddedViewportMvuUiAppDriverExt, EmbeddedViewportUiAppDriverExt,
     };
-    #[cfg(feature = "shadcn")]
-    pub use crate::shadcn;
-    #[cfg(feature = "shadcn")]
-    pub use crate::shadcn::prelude::*;
     pub use crate::workspace_menu::{
         InWindowMenubarFocusHandle, MenubarFromRuntimeOptions, menubar_from_runtime,
         menubar_from_runtime_with_focus_handle,
@@ -82,29 +88,19 @@ pub mod prelude {
 
     #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
     pub use crate::ViewElements;
-    pub use fret_app::App;
-    pub use fret_app::Effect;
-    pub use fret_core::{AppWindowId, Event, Px, SemanticsRole, UiServices};
-    pub use fret_runtime::CommandId;
-    pub use fret_runtime::Model;
-    pub use fret_ui::element::{
-        AnyElement, AnyElementIterExt, Elements, HoverRegionProps, Length, SemanticsProps,
-        TextProps,
-    };
-    pub use fret_ui::{ElementContext, Invalidation, Theme, ThemeSnapshot, UiTree};
-    pub use fret_ui_kit::declarative::AnyElementSemanticsExt;
-    pub use fret_ui_kit::declarative::ModelWatchExt;
-    #[cfg(not(feature = "shadcn"))]
-    pub use fret_ui_kit::{
-        UiBuilder, UiExt, UiIntoElement, UiPatch, UiPatchTarget, UiSupportsChrome,
-        UiSupportsLayout, ui,
-    };
+    pub use fret_app::{App, Effect};
+    pub use fret_core::{Event, SemanticsRole};
+    pub use fret_ui::ThemeSnapshot;
+    pub use fret_ui::element::{Elements, HoverRegionProps, Length, SemanticsProps};
 
     #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
     pub use crate::mvu::{KeyedMessageRouter, MessageRouter, Program as MvuProgram};
 
     #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
     pub use crate::interop;
+
+    #[cfg(feature = "shadcn")]
+    pub use crate::shadcn;
 
     #[cfg(feature = "workspace-shell")]
     pub use crate::workspace;
@@ -398,6 +394,40 @@ impl<S: 'static> UiAppBuilder<S> {
     }
 }
 
+#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+fn apply_desktop_defaults<D: fret_launch::WinitAppDriver + 'static>(
+    builder: fret_bootstrap::BootstrapBuilder<D>,
+) -> std::result::Result<fret_bootstrap::BootstrapBuilder<D>, fret_bootstrap::BootstrapError> {
+    // Always ensure an i18n backend exists unless the app provides one.
+    let builder = builder.init_app(fret_bootstrap::install_default_i18n_backend);
+
+    #[cfg(feature = "diagnostics")]
+    let builder = builder.with_default_diagnostics();
+
+    #[cfg(feature = "config-files")]
+    let builder = builder.with_default_config_files()?;
+
+    #[cfg(not(feature = "config-files"))]
+    let builder = builder.with_command_default_keybindings();
+
+    #[cfg(feature = "shadcn")]
+    let builder = builder.install_app(fret_ui_shadcn::install_app);
+
+    #[cfg(feature = "ui-assets")]
+    let builder = builder.with_ui_assets_budgets(64 * 1024 * 1024, 4096, 16 * 1024 * 1024, 4096);
+
+    #[cfg(feature = "icons-lucide")]
+    let builder = builder.with_lucide_icons();
+
+    #[cfg(feature = "icons-radix")]
+    let builder = builder.with_radix_icons();
+
+    #[cfg(feature = "preload-icon-svgs")]
+    let builder = builder.preload_icon_svgs_on_gpu_ready();
+
+    Ok(builder)
+}
+
 /// Run a native desktop demo using the `winit + wgpu` stack.
 ///
 /// This is a small convenience wrapper for examples that implement `WinitAppDriver` directly,
@@ -412,21 +442,7 @@ pub fn run_native_demo<D: fret_launch::WinitAppDriver + 'static>(
         *c = config;
     });
 
-    #[cfg(feature = "diagnostics")]
-    let builder = builder.with_default_diagnostics();
-
-    let builder = builder
-        .with_default_config_files()
-        .map_err(BootstrapError::from)?;
-
-    #[cfg(feature = "icons-lucide")]
-    let builder = builder.with_lucide_icons();
-
-    #[cfg(feature = "icons-radix")]
-    let builder = builder.with_radix_icons();
-
-    #[cfg(feature = "preload-icon-svgs")]
-    let builder = builder.preload_icon_svgs_on_gpu_ready();
+    let builder = apply_desktop_defaults(builder).map_err(BootstrapError::from)?;
 
     builder.run().map_err(RunnerError::from)?;
     Ok(())
@@ -460,27 +476,7 @@ pub fn app_with_hooks<S: 'static>(
         fret_router_ui::register_router_commands(app.commands_mut());
     });
 
-    #[cfg(feature = "diagnostics")]
-    let builder = builder.with_default_diagnostics();
-
-    let builder = builder
-        .with_default_config_files()
-        .map_err(BootstrapError::from)?;
-
-    #[cfg(feature = "shadcn")]
-    let builder = builder.install_app(fret_ui_shadcn::install_app);
-
-    #[cfg(feature = "ui-assets")]
-    let builder = builder.with_ui_assets_budgets(64 * 1024 * 1024, 4096, 16 * 1024 * 1024, 4096);
-
-    #[cfg(feature = "icons-lucide")]
-    let builder = builder.with_lucide_icons();
-
-    #[cfg(feature = "icons-radix")]
-    let builder = builder.with_radix_icons();
-
-    #[cfg(feature = "preload-icon-svgs")]
-    let builder = builder.preload_icon_svgs_on_gpu_ready();
+    let builder = apply_desktop_defaults(builder).map_err(BootstrapError::from)?;
 
     Ok(UiAppBuilder::new(builder))
 }

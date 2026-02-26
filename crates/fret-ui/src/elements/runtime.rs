@@ -1176,6 +1176,63 @@ impl WindowElementState {
         self.view_cache_state_keys_next.insert(root, keys);
     }
 
+    /// Keep action-hook state alive for a cached subtree, even when view-cache reuse skips the
+    /// declarative closures that normally re-register those hooks.
+    ///
+    /// `touch_view_cache_state_keys_if_recorded` is the primary mechanism, but action hooks can be
+    /// missed if they are installed outside the view-cache scope (or if a refactor temporarily
+    /// disrupts state-key recording). Touching known hook state types for all recorded subtree
+    /// elements provides a conservative fallback.
+    pub(crate) fn touch_view_cache_action_hook_state_for_subtree_elements(
+        &mut self,
+        root: GlobalElementId,
+    ) {
+        let Some(elements) = self.view_cache_elements_for_root(root) else {
+            return;
+        };
+        if elements.is_empty() {
+            return;
+        }
+
+        let elements: Vec<GlobalElementId> = elements.iter().copied().collect();
+        for element in elements {
+            self.touch_state_key((element, TypeId::of::<crate::action::PressableActionHooks>()));
+            self.touch_state_key((
+                element,
+                TypeId::of::<crate::action::PressableHoverActionHooks>(),
+            ));
+            self.touch_state_key((
+                element,
+                TypeId::of::<crate::action::DismissibleActionHooks>(),
+            ));
+            self.touch_state_key((element, TypeId::of::<crate::action::PointerActionHooks>()));
+            self.touch_state_key((element, TypeId::of::<crate::action::KeyActionHooks>()));
+            self.touch_state_key((element, TypeId::of::<crate::action::CommandActionHooks>()));
+            self.touch_state_key((
+                element,
+                TypeId::of::<crate::action::CommandAvailabilityActionHooks>(),
+            ));
+            self.touch_state_key((element, TypeId::of::<crate::action::TimerActionHooks>()));
+            self.touch_state_key((element, TypeId::of::<crate::action::RovingActionHooks>()));
+            self.touch_state_key((
+                element,
+                TypeId::of::<crate::action::SelectableTextActionHooks>(),
+            ));
+            self.touch_state_key((
+                element,
+                TypeId::of::<crate::action::TextInputRegionActionHooks>(),
+            ));
+            self.touch_state_key((
+                element,
+                TypeId::of::<crate::action::InternalDragActionHooks>(),
+            ));
+            self.touch_state_key((
+                element,
+                TypeId::of::<crate::action::ExternalDragActionHooks>(),
+            ));
+        }
+    }
+
     pub(crate) fn record_view_cache_subtree_elements(
         &mut self,
         root: GlobalElementId,

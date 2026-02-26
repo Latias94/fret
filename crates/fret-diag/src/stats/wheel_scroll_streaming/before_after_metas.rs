@@ -539,4 +539,3 @@ pub(super) fn read_window_before_after_metas(
     })?;
     Ok(out.borrow().clone())
 }
-

@@ -128,6 +128,12 @@ pub(super) fn content_view(
                 }
             },
             |cx| {
+                // Read `selected_page` within the view-cache scope so model invalidations can mark
+                // this cache root dirty and force a rerender. If the model is only read outside the
+                // boundary, view-cache reuse can incorrectly keep showing the previous page.
+                let selected = cx
+                    .get_model_cloned(selected_page, Invalidation::Layout)
+                    .unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
                 vec![cx.keyed(("ui_gallery.content", selected.as_ref()), |cx| {
                     if (bisect & BISECT_SIMPLE_CONTENT) != 0 {
                         cx.container(

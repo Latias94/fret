@@ -1,0 +1,126 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-sheet-side-top-bottom-screenshots",
+    "tags": ["ui-gallery", "shadcn", "sheet", "layout", "side", "screenshots"],
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "target_hints": [
+      "Navigate to the UI Gallery Sheet page.",
+      "Force a narrow window width to catch clipped side trigger rows.",
+      "Capture screenshots for Side trigger layout + Top/Bottom sheets."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "set_window_inner_size", "width_px": 520.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 15 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-sheet" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-content-scroll" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 20 },
+
+    {
+      "type": "ensure_visible",
+      "target": { "kind": "test_id", "id": "ui-gallery-sheet-side-top-trigger" },
+      "within_window": true,
+      "padding_px": 12.0,
+      "timeout_frames": 600
+    },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-sheet-side-top-trigger" },
+        "padding_px": 2.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-sheet-side-right-trigger" },
+        "padding_px": 2.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-sheet-side-bottom-trigger" },
+        "padding_px": 2.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-sheet-side-left-trigger" },
+        "padding_px": 2.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 600
+    },
+
+    { "type": "capture_bundle", "label": "ui-gallery-sheet-side-triggers-narrow" },
+    { "type": "capture_screenshot", "label": "ui-gallery-sheet-side-triggers-narrow" },
+
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-sheet-side-top-trigger" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-sheet-side-top-content" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 16 },
+    { "type": "capture_bundle", "label": "ui-gallery-sheet-side-top-open" },
+    { "type": "capture_screenshot", "label": "ui-gallery-sheet-side-top-open" },
+    { "type": "press_key", "key": "escape" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-sheet-side-top-content" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 4 },
+
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-sheet-side-bottom-trigger" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-sheet-side-bottom-content" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 16 },
+    { "type": "capture_bundle", "label": "ui-gallery-sheet-side-bottom-open" },
+    { "type": "capture_screenshot", "label": "ui-gallery-sheet-side-bottom-open" }
+  ]
+}

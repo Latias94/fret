@@ -12,8 +12,7 @@ const FRAMES_INDEX_FEATURE_WINDOW_AGG_OVERLAY_SYNTHESIS_V1: &str =
     "window_aggregates.overlay_synthesis.v1";
 const FRAMES_INDEX_FEATURE_WINDOW_AGG_VIEW_CACHE_REUSE_STREAK_V1: &str =
     "window_aggregates.view_cache_reuse_streak.v1";
-const FRAMES_INDEX_FEATURE_WINDOW_AGG_IDLE_NO_PAINT_V1: &str =
-    "window_aggregates.idle_no_paint.v1";
+const FRAMES_INDEX_FEATURE_WINDOW_AGG_IDLE_NO_PAINT_V1: &str = "window_aggregates.idle_no_paint.v1";
 const FRAMES_INDEX_REQUIRED_FEATURES: &[&str] = &[
     FRAMES_INDEX_FEATURE_WINDOW_AGG_V1,
     FRAMES_INDEX_FEATURE_WINDOW_AGG_OVERLAY_SYNTHESIS_V1,
@@ -511,8 +510,10 @@ fn build_frames_index_payload_streaming(
                 let frame_id = row.frame_id.unwrap_or(0);
                 let keep = self.warmup_frames == 0 || frame_id >= self.warmup_frames;
                 if keep {
-                    self.aggregates.examined_snapshots_post_warmup =
-                        self.aggregates.examined_snapshots_post_warmup.saturating_add(1);
+                    self.aggregates.examined_snapshots_post_warmup = self
+                        .aggregates
+                        .examined_snapshots_post_warmup
+                        .saturating_add(1);
                     self.aggregates.viewport_input_events_post_warmup = self
                         .aggregates
                         .viewport_input_events_post_warmup
@@ -567,13 +568,14 @@ fn build_frames_index_payload_streaming(
                         } else {
                             "view_cache_inactive"
                         };
-                        self.aggregates.view_cache_reuse_last_non_signal_post_warmup = Some(json!({
-                            "frame_id": frame_id,
-                            "reason": reason,
-                            "view_cache_active": row.view_cache_active,
-                            "reuse_events": reuse_events,
-                            "paint_cache_replayed_ops": paint_cache_replayed_ops,
-                        }));
+                        self.aggregates.view_cache_reuse_last_non_signal_post_warmup =
+                            Some(json!({
+                                "frame_id": frame_id,
+                                "reason": reason,
+                                "view_cache_active": row.view_cache_active,
+                                "reuse_events": reuse_events,
+                                "paint_cache_replayed_ops": paint_cache_replayed_ops,
+                            }));
                     }
 
                     let prepaint_time_us = row.prepaint_time_us.unwrap_or(0);
@@ -612,11 +614,13 @@ fn build_frames_index_payload_streaming(
                         .aggregates
                         .overlay_synthesis_events_total_post_warmup
                         .saturating_add(row.overlay_synthesis_events_total);
-                    self.aggregates.overlay_synthesis_events_synthesized_post_warmup = self
+                    self.aggregates
+                        .overlay_synthesis_events_synthesized_post_warmup = self
                         .aggregates
                         .overlay_synthesis_events_synthesized_post_warmup
                         .saturating_add(row.overlay_synthesis_events_synthesized);
-                    self.aggregates.overlay_synthesis_events_suppressed_post_warmup = self
+                    self.aggregates
+                        .overlay_synthesis_events_suppressed_post_warmup = self
                         .aggregates
                         .overlay_synthesis_events_suppressed_post_warmup
                         .saturating_add(row.overlay_synthesis_events_suppressed);
@@ -1409,9 +1413,7 @@ fn build_frames_index_payload_streaming(
         where
             D: serde::Deserializer<'de>,
         {
-            deserializer.deserialize_any(OverlaySynthesisEventVisitor {
-                synthesized: false,
-            })
+            deserializer.deserialize_any(OverlaySynthesisEventVisitor { synthesized: false })
         }
     }
 
@@ -1980,10 +1982,10 @@ mod tests {
             v.iter().any(|f| f.as_str() == Some("window_aggregates.v1"))
                 && v.iter()
                     .any(|f| f.as_str() == Some("window_aggregates.overlay_synthesis.v1"))
-                && v.iter().any(|f| {
-                    f.as_str() == Some("window_aggregates.view_cache_reuse_streak.v1")
-                })
-                && v.iter().any(|f| f.as_str() == Some("window_aggregates.idle_no_paint.v1"))
+                && v.iter()
+                    .any(|f| f.as_str() == Some("window_aggregates.view_cache_reuse_streak.v1"))
+                && v.iter()
+                    .any(|f| f.as_str() == Some("window_aggregates.idle_no_paint.v1"))
         }));
         assert_eq!(payload["warmup_frames"].as_u64(), Some(5));
         assert_eq!(payload["has_semantics_table"].as_bool(), Some(true));
@@ -1997,7 +1999,10 @@ mod tests {
         assert_eq!(w.get("frames_total").and_then(|v| v.as_u64()), Some(2));
         assert_eq!(w.get("first_frame_id").and_then(|v| v.as_u64()), Some(5));
 
-        let aggs = w.get("aggregates").and_then(|v| v.as_object()).expect("aggregates");
+        let aggs = w
+            .get("aggregates")
+            .and_then(|v| v.as_object())
+            .expect("aggregates");
         assert_eq!(
             aggs.get("examined_snapshots_post_warmup")
                 .and_then(|v| v.as_u64()),
@@ -2043,7 +2048,10 @@ mod tests {
                 .and_then(|v| v.as_u64()),
             Some(2)
         );
-        assert!(aggs.get("view_cache_reuse_last_non_signal_post_warmup").is_some());
+        assert!(
+            aggs.get("view_cache_reuse_last_non_signal_post_warmup")
+                .is_some()
+        );
         assert!(aggs["view_cache_reuse_last_non_signal_post_warmup"].is_null());
         assert_eq!(
             aggs.get("idle_no_paint_frames_total_post_warmup")

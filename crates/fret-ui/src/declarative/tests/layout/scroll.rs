@@ -1084,6 +1084,7 @@ fn scroll_observed_extent_does_not_double_count_scroll_offset() {
     ui.layout_all(&mut app, &mut text, bounds, 1.0);
 
     let content0 = scroll_handle.content_size();
+    let max0 = scroll_handle.max_offset().y;
     assert!(
         content0.height.0 > bounds.size.height.0 + 1.0,
         "expected scroll content to exceed viewport: content={:?} viewport={:?}",
@@ -1092,7 +1093,6 @@ fn scroll_observed_extent_does_not_double_count_scroll_offset() {
     );
 
     // Frame 1: apply a non-zero scroll offset and ensure the content extent remains stable.
-    let max0 = scroll_handle.max_offset().y;
     assert!(max0.0 > 0.0, "expected a non-zero scroll range");
     scroll_handle.set_offset(fret_core::Point::new(Px(0.0), Px((max0.0 * 0.6).max(1.0))));
     app.advance_frame();
@@ -1110,10 +1110,15 @@ fn scroll_observed_extent_does_not_double_count_scroll_offset() {
     ui.layout_all(&mut app, &mut text, bounds, 1.0);
 
     let content1 = scroll_handle.content_size();
+    let max1 = scroll_handle.max_offset().y;
     assert!(
         scroll_handle.offset().y.0 > 0.5,
         "expected scroll offset to be non-zero after set_offset: offset={:?}",
         scroll_handle.offset()
+    );
+    assert!(
+        (max1.0 - max0.0).abs() <= 0.5,
+        "expected max offset to remain stable under scroll offset: before={max0:?} after={max1:?}",
     );
     assert!(
         (content1.height.0 - content0.height.0).abs() <= 0.5,

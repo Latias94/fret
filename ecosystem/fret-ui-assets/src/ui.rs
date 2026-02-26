@@ -46,7 +46,11 @@ impl<H: UiHost> ImageSourceElementContextExt for ElementContext<'_, H> {
         source: &ImageSource,
         options: ImageSourceOptions,
     ) -> ImageSourceState {
-        self.use_image_source_state_with_options_and_invalidation(source, options, Invalidation::Paint)
+        self.use_image_source_state_with_options_and_invalidation(
+            source,
+            options,
+            Invalidation::Paint,
+        )
     }
 
     fn use_image_source_state_with_options_and_invalidation(

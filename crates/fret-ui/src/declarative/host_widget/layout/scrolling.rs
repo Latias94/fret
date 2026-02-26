@@ -971,6 +971,11 @@ impl ElementHostWidget {
             },
         );
 
+        // Some fast paths intentionally reuse cached extents to avoid deep unbounded probe walks
+        // during transient invalidation. Those cached extents can temporarily overestimate the true
+        // content size after shrink (e.g. filtering a nav list), so we later apply an observed
+        // post-layout shrink clamp when possible.
+        let mut needs_post_layout_shrink_clamp = false;
         let max_child = if must_probe_for_growing_extent {
             let measure_started = profile_cfg.is_some().then(Instant::now);
             let mut max_child = Size::new(Px(0.0), Px(0.0));
@@ -1047,15 +1052,6 @@ impl ElementHostWidget {
                 }
                 max_child
             }
-        } else if cx.tree.view_cache_enabled()
-            && !must_probe_for_growing_extent
-            && let Some(cached) = intrinsic_cached_max_child
-            && cached != Size::default()
-        {
-            // Best-effort: reuse intrinsic sizing caches even when the child subtree is currently
-            // marked `needs_layout`. This avoids deep unbounded probe walks on transient
-            // invalidation frames (common under view-cache reconciliation).
-            cached
         } else {
             let measure_started = profile_cfg.is_some().then(Instant::now);
             let mut max_child = Size::new(Px(0.0), Px(0.0));
@@ -1224,32 +1220,19 @@ impl ElementHostWidget {
         }
 
         if !is_probe_layout {
-            let offset = handle.offset();
-            let offset_x = if props.axis.scroll_x() {
-                offset.x.0.max(0.0)
-            } else {
-                0.0
-            };
-            let offset_y = if props.axis.scroll_y() {
-                offset.y.0.max(0.0)
-            } else {
-                0.0
-            };
-
             let mut observed = Size::new(Px(0.0), Px(0.0));
             for &child in cx.children {
                 let Some(bounds) = cx.tree.node_bounds(child) else {
                     continue;
                 };
-                // `node_bounds` are expressed in the same coordinate space as hit-testing and
-                // painting (including any scroll offset transforms). Convert back into
-                // content-space extents by adding the current scroll offset along scroll axes.
-                let right = (bounds.origin.x.0 + bounds.size.width.0 - content_bounds.origin.x.0)
-                    .max(0.0)
-                    + offset_x;
-                let bottom = (bounds.origin.y.0 + bounds.size.height.0 - content_bounds.origin.y.0)
-                    .max(0.0)
-                    + offset_y;
+                // `node_bounds` are expressed in layout-space (pre-transform) coordinates. For
+                // scroll containers, descendants remain in content space while hit-testing/painting
+                // apply `children_render_transform()` separately. Compute content-space extents
+                // directly from the layout bounds without incorporating the current scroll offset.
+                let right =
+                    (bounds.origin.x.0 + bounds.size.width.0 - content_bounds.origin.x.0).max(0.0);
+                let bottom =
+                    (bounds.origin.y.0 + bounds.size.height.0 - content_bounds.origin.y.0).max(0.0);
                 observed.width = Px(observed.width.0.max(right));
                 observed.height = Px(observed.height.0.max(bottom));
             }
@@ -1329,10 +1312,11 @@ impl ElementHostWidget {
                 );
             }
 
-            if defer_this_frame {
-                // In deferred-probe mode, the cached `last_max_child` can temporarily overestimate
-                // the true scroll extent after content shrinks. Clamp down when possible without
-                // triggering an extra deep measurement walk.
+            if defer_this_frame || needs_post_layout_shrink_clamp {
+                // When we reuse cached extents (deferred probe or view-cache intrinsic caches),
+                // the cached `last_max_child` can temporarily overestimate the true scroll extent
+                // after content shrinks. Clamp down when possible without triggering an extra deep
+                // measurement walk.
                 let mut changed = false;
                 if props.axis.scroll_x()
                     && observed.width.0 > 0.0
