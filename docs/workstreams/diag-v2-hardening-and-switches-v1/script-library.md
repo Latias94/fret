@@ -55,6 +55,7 @@ Long-term:
 
 - `python tools/diag-scripts/migrate-script-library.py`
   - writes `.fret/diag-script-library-migration.plan.json` by default
+  - for small batches, use filters like `--include-category ui_gallery.select` and `--limit 15`
 
 2) Apply moves with redirects (recommended):
 
