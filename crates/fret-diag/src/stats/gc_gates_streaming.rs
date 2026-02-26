@@ -332,8 +332,12 @@ fn scan_gc_sweep_liveness_streaming(
                     "tick_id" | "tickId" => self.out.tick_id = map.next_value::<u64>()?,
                     "frame_id" | "frameId" => self.out.frame_id = map.next_value::<u64>()?,
                     "debug" => {
-                        let (removed, node_entry_overwrites_len, reuse_root_samples_len, keep_alive_roots_len) =
-                            map.next_value_seed(DebugSeed)?;
+                        let (
+                            removed,
+                            node_entry_overwrites_len,
+                            reuse_root_samples_len,
+                            keep_alive_roots_len,
+                        ) = map.next_value_seed(DebugSeed)?;
                         self.out.removed_subtrees = removed;
                         self.out.node_entry_root_overwrites_len = node_entry_overwrites_len;
                         self.out.view_cache_reuse_root_element_samples_len = reuse_root_samples_len;
@@ -525,7 +529,10 @@ fn scan_gc_sweep_liveness_streaming(
     }));
 
     crate::json_stream::with_bundle_json_deserializer(bundle_path, |de| {
-        RootSeed { state: state.clone() }.deserialize(de)
+        RootSeed {
+            state: state.clone(),
+        }
+        .deserialize(de)
     })?;
 
     Ok(state.borrow().scan.clone())

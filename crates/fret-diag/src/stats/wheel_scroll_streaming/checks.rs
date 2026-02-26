@@ -227,7 +227,9 @@ pub(crate) fn check_bundle_for_wheel_scroll_hit_changes_streaming(
     }
 
     let mut msg = String::new();
-    msg.push_str("wheel scroll hit-change check failed (expected wheel to affect the scrolled content)\n");
+    msg.push_str(
+        "wheel scroll hit-change check failed (expected wheel to affect the scrolled content)\n",
+    );
     msg.push_str(&format!("bundle: {}\n", bundle_path.display()));
     for line in failures {
         msg.push_str("  ");
@@ -236,4 +238,3 @@ pub(crate) fn check_bundle_for_wheel_scroll_hit_changes_streaming(
     }
     Err(msg)
 }
-

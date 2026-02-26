@@ -5,7 +5,8 @@ use serde_json::Value;
 use crate::util::{now_unix_ms, write_json_value};
 
 fn load_frames_index(bundle_path: &Path, warmup_frames: u64) -> Result<(PathBuf, Value), String> {
-    let frames_index_path = crate::frames_index::ensure_frames_index_json(bundle_path, warmup_frames)?;
+    let frames_index_path =
+        crate::frames_index::ensure_frames_index_json(bundle_path, warmup_frames)?;
     let Some(frames_index) =
         crate::frames_index::read_frames_index_json_v1(&frames_index_path, warmup_frames)
     else {
@@ -154,10 +155,8 @@ pub(crate) fn check_frames_index_for_view_cache_reuse_min(
             reuse_events.saturating_add(window_agg_u64(w, "view_cache_reuse_events_post_warmup"));
         examined_snapshots =
             examined_snapshots.saturating_add(window_agg_u64(w, "examined_snapshots_post_warmup"));
-        view_cache_active_snapshots = view_cache_active_snapshots.saturating_add(window_agg_u64(
-            w,
-            "view_cache_active_snapshots_post_warmup",
-        ));
+        view_cache_active_snapshots = view_cache_active_snapshots
+            .saturating_add(window_agg_u64(w, "view_cache_active_snapshots_post_warmup"));
     }
     let any_view_cache_active = view_cache_active_snapshots > 0;
 
@@ -388,10 +387,8 @@ pub(crate) fn check_frames_index_for_overlay_synthesis_min(
         ));
         examined_snapshots =
             examined_snapshots.saturating_add(window_agg_u64(w, "examined_snapshots_post_warmup"));
-        view_cache_active_snapshots = view_cache_active_snapshots.saturating_add(window_agg_u64(
-            w,
-            "view_cache_active_snapshots_post_warmup",
-        ));
+        view_cache_active_snapshots = view_cache_active_snapshots
+            .saturating_add(window_agg_u64(w, "view_cache_active_snapshots_post_warmup"));
     }
 
     if synthesized_events >= min_synthesized_events {
@@ -448,7 +445,8 @@ mod tests {
         check_frames_index_for_dock_drag_min(&bundle_path, 1, 5).expect("dock drag");
         check_frames_index_for_viewport_capture_min(&bundle_path, 1, 5).expect("viewport capture");
         check_frames_index_for_view_cache_reuse_min(&bundle_path, 3, 5).expect("view cache reuse");
-        check_frames_index_for_overlay_synthesis_min(&bundle_path, 2, 5).expect("overlay synthesis");
+        check_frames_index_for_overlay_synthesis_min(&bundle_path, 2, 5)
+            .expect("overlay synthesis");
         check_frames_index_for_view_cache_reuse_stable_min(&bundle_path, &dir, 2, 5)
             .expect("view cache reuse stable");
         check_frames_index_for_idle_no_paint_min(&bundle_path, &dir, 1, 5).expect("idle no paint");
