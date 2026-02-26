@@ -289,6 +289,7 @@ fn header_bar(
     let title = ui::text(cx, "Async Playground")
         .text_sm()
         .font_semibold()
+        .truncate()
         .into_element(cx);
 
     let slow_label = ui::text(cx, "Slow network (x2)")
@@ -378,6 +379,8 @@ fn catalog_panel(
     })
     .gap(Space::N1)
     .p(Space::N2)
+    .w_full()
+    .items_stretch()
     .into_element(cx)])
     .scroll_handle(st.catalog_scroll.clone())
     .type_(ScrollAreaType::Hover)
@@ -449,6 +452,7 @@ fn catalog_item(
                     .border_color(ColorRef::Color(theme.color_token("border")))
                     .rounded_md()
                     .p(Space::N2)
+                    .w_full()
                     .into_element(cx),
             ]
         },
@@ -534,6 +538,7 @@ fn main_panel(
         .p(Space::N4)
         .w_full()
         .h_full()
+        .items_stretch()
         .into_element(cx);
 
     let scroll = shadcn::ScrollArea::new([content])
@@ -632,6 +637,8 @@ fn inspector_panel(
         .into_element(cx),
         shadcn::CardContent::new([summary, ns_row, policy_editor]).into_element(cx),
     ])
+    .ui()
+    .w_full()
     .into_element(cx);
 
     let scroll = shadcn::ScrollArea::new([card])
