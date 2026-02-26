@@ -96,29 +96,22 @@ Note: `repo-ref/` is local state (not committed). See `docs/repo-ref.md`.
 
 ### Inventory: remaining `theme.color_scheme` branches (post-name-heuristics)
 
-These are cases where recipe code branches on `theme.color_scheme` for variant behavior.
-Long-term, we prefer to express these via explicit shadcn theme tokens so recipes become pure
-"token reads" and custom themes can override the behavior without code changes.
+As of 2026-02-26, `ecosystem/fret-ui-shadcn/src/*` no longer branches on `theme.color_scheme`
+directly; the remaining scheme-dependent fallbacks are centralized in
+`ecosystem/fret-ui-shadcn/src/theme_variants.rs`.
 
-Invalid ring variants (destructive `/20` vs `/40`):
+Long-term, we still prefer to express these purely via explicit theme tokens (so custom themes can
+override without code changes), but the current state is acceptable because:
 
-- `ecosystem/fret-ui-shadcn/src/checkbox.rs` (aria-invalid focus ring)
-- `ecosystem/fret-ui-shadcn/src/combobox.rs` (aria-invalid focus ring)
-- `ecosystem/fret-ui-shadcn/src/input.rs` (aria-invalid focus ring)
-- `ecosystem/fret-ui-shadcn/src/input_group.rs` (aria-invalid focus ring)
-- `ecosystem/fret-ui-shadcn/src/input_otp.rs` (invalid ring color)
-- `ecosystem/fret-ui-shadcn/src/native_select.rs` (aria-invalid focus ring)
-- `ecosystem/fret-ui-shadcn/src/radio_group.rs` (aria-invalid focus ring)
-- `ecosystem/fret-ui-shadcn/src/select.rs` (aria-invalid focus ring)
-- `ecosystem/fret-ui-shadcn/src/textarea.rs` (aria-invalid focus ring)
+- shadcn presets seed the component-owned keys in `ecosystem/fret-ui-shadcn/src/shadcn_themes.rs`,
+- scheme-dependent logic is isolated behind helpers, avoiding per-component drift.
 
-Tabs trigger inactive foreground:
+Remaining scheme-dependent fallbacks (centralized):
 
-- `ecosystem/fret-ui-shadcn/src/tabs.rs` (light: `foreground`, dark: `muted-foreground`)
-
-RadioGroup choice-card checked background alpha:
-
-- `ecosystem/fret-ui-shadcn/src/radio_group.rs` (light: `primary/5`, dark: `primary/10` equivalent)
+- `invalid_control_ring_color` (invalid ring variants: `destructive/20` vs `destructive/40`)
+- `tabs_trigger_inactive_fg` (inactive foreground: `foreground` vs `muted-foreground`)
+- `radio_group_choice_card_checked_bg` (checked bg alpha)
+- `menu_destructive_focus_bg` (destructive focus bg alpha)
 
 ### Proposal: replace `theme.color_scheme` branches with explicit component token keys
 
