@@ -99,11 +99,10 @@ fret-query = { path = "../../ecosystem/fret-query", features = ["ui"] } # option
 
 ```rust,ignore
 fn main() -> anyhow::Result<()> {
-    fret::mvu::app::<TodoProgram>("todo")?
-        .with_main_window("todo", (560.0, 520.0))
-        .run()?;
-
-    Ok(())
+    fret::App::new("todo")
+        .window("todo", (560.0, 520.0))
+        .run_mvu::<TodoProgram>()
+        .map_err(anyhow::Error::from)
 }
 ```
 

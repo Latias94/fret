@@ -331,10 +331,10 @@ impl MvuProgram for TodoProgram {
 }
 
 fn main() -> anyhow::Result<()> {
-    fret::mvu::app::<TodoProgram>("todo")?
-        .with_main_window("todo", (560.0, 520.0))
-        .run()?;
-    Ok(())
+    FretApp::new("todo")
+        .window("todo", (560.0, 520.0))
+        .run_mvu::<TodoProgram>()
+        .map_err(anyhow::Error::from)
 }
 
 fn init_window(app: &mut App, _window: AppWindowId) -> TodoState {
@@ -796,10 +796,10 @@ __PALETTE_BUTTON__
 }}
 
 fn main() -> anyhow::Result<()> {{
-    fret::mvu::app::<HelloProgram>("{package_name}")?
-        .with_main_window("{package_name}", (560.0, 360.0))
-        .run()?;
-    Ok(())
+    FretApp::new("{package_name}")
+        .window("{package_name}", (560.0, 360.0))
+        .run_mvu::<HelloProgram>()
+        .map_err(anyhow::Error::from)
 }}
 "#
     )
@@ -895,10 +895,10 @@ impl MvuProgram for TodoProgram {
 }
 
 fn main() -> anyhow::Result<()> {
-    fret::mvu::app::<TodoProgram>("simple-todo")?
-        .with_main_window("simple-todo", (560.0, 520.0))
-        .run()?;
-    Ok(())
+    FretApp::new("simple-todo")
+        .window("simple-todo", (560.0, 520.0))
+        .run_mvu::<TodoProgram>()
+        .map_err(anyhow::Error::from)
 }
 
 fn init_window(app: &mut App, _window: AppWindowId) -> TodoState {
@@ -1188,7 +1188,7 @@ Set-Content -Path .fret/hotpatch.touch -Value (Get-Date).Ticks
 ## Next steps
 
 - Edit UI in `src/main.rs`
-- If you want hotpatch later, keep commands/IDs stable and prefer the `fret::mvu::app::<Program>(...)` golden path (ADR 0105 / 0110).
+- If you want hotpatch later, keep commands/IDs stable and prefer the `FretApp::new(...).run_mvu::<Program>()` golden path (ADR 0105 / 0110).
 "#
     )
 }
