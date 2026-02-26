@@ -1,0 +1,117 @@
+{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "ai file tree" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-ai-file-tree-demo" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-ai-file-tree-demo" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-ai-file-tree-large-root" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-ai-file-tree-large-folder-big" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "ui-ai-file-tree-large-file-500" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-ai-file-tree-large-folder-big" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-ai-file-tree-large-file-0000" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wheel",
+      "target": { "kind": "test_id", "id": "ui-ai-file-tree-large-root" },
+      "delta_y": -2400.0
+    },
+    {
+      "type": "wheel",
+      "target": { "kind": "test_id", "id": "ui-ai-file-tree-large-root" },
+      "delta_y": -2400.0
+    },
+    {
+      "type": "wheel",
+      "target": { "kind": "test_id", "id": "ui-ai-file-tree-large-root" },
+      "delta_y": -2400.0
+    },
+    {
+      "type": "wheel",
+      "target": { "kind": "test_id", "id": "ui-ai-file-tree-large-root" },
+      "delta_y": -2400.0
+    },
+    {
+      "type": "wheel",
+      "target": { "kind": "test_id", "id": "ui-ai-file-tree-large-root" },
+      "delta_y": -2400.0
+    },
+    {
+      "type": "wheel",
+      "target": { "kind": "test_id", "id": "ui-ai-file-tree-large-root" },
+      "delta_y": -1000.0
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-ai-file-tree-large-file-500" }
+      },
+      "timeout_frames": 1800
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-ai-file-tree-large-file-500" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-ai-file-tree-large-selected-marker" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 10 },
+    { "type": "capture_bundle", "label": "ui-gallery-ai-file-tree-large-scroll" }
+  ]
+}
