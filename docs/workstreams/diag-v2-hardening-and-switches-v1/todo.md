@@ -64,9 +64,9 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
   - [x] `ui-gallery/perf` (70 scripts; batch-migrated)
   - [ ] `ui-gallery/misc` (367 scripts; needs new buckets before migrating)
   - [x] `docking/arbitration` (33 scripts)
-  - [ ] `tooling/external-texture-imports` (9 scripts)
-  - [ ] `tooling/todo` (4 scripts)
-  - [ ] `_prelude/*` (2 scripts)
+  - [x] `tooling/external-texture-imports` (9 scripts)
+  - [x] `tooling/todo` (4 scripts)
+  - [x] `_prelude/*` (2 scripts)
 - [ ] Update references after path moves (choose one):
   - [ ] replace hard-coded lists with registry/directory inputs, or
   - [ ] scripted rewrite of code/docs references (large diff; less preferred).
