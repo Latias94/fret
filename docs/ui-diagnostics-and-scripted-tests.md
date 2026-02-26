@@ -1005,6 +1005,9 @@ Note:
 - The script library is expected to be modularized into subfolders over time (taxonomy + optional registry).
   Prefer directory- and glob-based inputs (`--script-dir`, `--glob`) for ad-hoc runs, and avoid assuming scripts live
   only at the top-level. See: `docs/workstreams/diag-v2-hardening-and-switches-v1/README.md`.
+- Built-in suites are defined as curated directory inputs under `tools/diag-scripts/suites/<suite-name>/`.
+  Each entry is a small `script_redirect` JSON stub that points at the canonical script path; tooling resolves
+  redirects before pushing scripts to the runtime (so redirects never reach the runtime).
 - Migration helper (dry-run by default): `python tools/diag-scripts/migrate-script-library.py`.
 - During migration, legacy script paths may be left behind as small `script_redirect` JSON stubs. Tooling resolves these
   stubs before pushing scripts to the runtime, so redirects never become part of the runtime contract surface.

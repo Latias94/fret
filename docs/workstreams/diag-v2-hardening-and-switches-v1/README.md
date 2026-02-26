@@ -89,7 +89,9 @@ required, inconsistent semantics, or transport divergence). Each item includes e
 - Why it matters: as scripts accumulate, a single `tools/diag-scripts/` folder becomes hard to navigate, review, and
   refactor. It also makes suite definitions brittle when they rely on filenames rather than a stable registry.
 - Evidence:
-  - suite lists hard-code many script paths: `crates/fret-diag/src/diag_suite_scripts.rs`
+  - built-in suites are curated directory inputs via redirect stubs: `tools/diag-scripts/suites/` and
+    `crates/fret-diag/src/diag_suite_scripts.rs`
+  - some suites/helpers still hard-code individual script paths: `crates/fret-diag/src/diag_suite.rs`
 
 ## Goals
 
@@ -217,8 +219,8 @@ Goal: allow scripts to grow without turning `tools/diag-scripts/` into an unmain
 
 Today, script paths appear in many places beyond the folder itself:
 
-- Tooling hard-codes script paths for built-in suites and perf helpers:
-  - `crates/fret-diag/src/diag_suite_scripts.rs`
+- Tooling hard-codes script paths for some suites and perf helpers:
+  - built-in suites are directory inputs (membership lives in `tools/diag-scripts/suites/`): `crates/fret-diag/src/diag_suite_scripts.rs`
   - `crates/fret-diag/src/diag_suite.rs`
   - `crates/fret-diag/src/diag_perf.rs`
 - Docs and ADR evidence anchors reference script paths (many files under `docs/`).

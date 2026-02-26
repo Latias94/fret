@@ -190,7 +190,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
         pack_include_screenshots,
     );
 
-    let (scripts, suite_name) = scripts::resolve_repro_scripts(&rest, &workspace_root);
+    let (scripts, suite_name) = scripts::resolve_repro_scripts(&rest, &workspace_root)?;
 
     let summary_path = resolved_out_dir.join("repro.summary.json");
 

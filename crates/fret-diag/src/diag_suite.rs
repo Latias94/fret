@@ -283,21 +283,13 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
         // post-run gate. Enable screenshots so those checks can resolve semantics
         // bounds against captured PNGs.
         push_env_if_missing(&mut launch_env, "FRET_DIAG_GPU_SCREENSHOTS", "1");
-        (
-            diag_suite_scripts::ui_gallery_suite_scripts()
-                .into_iter()
-                .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-                .collect(),
-            Some(BuiltinSuite::UiGallery),
-        )
+        let inputs = diag_suite_scripts::ui_gallery_suite_scripts();
+        let scripts = expand_script_inputs(&workspace_root, &inputs)?;
+        (scripts, Some(BuiltinSuite::UiGallery))
     } else if is_ui_gallery_overlay_steady_suite {
-        (
-            diag_suite_scripts::ui_gallery_overlay_steady_suite_scripts()
-                .into_iter()
-                .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-                .collect(),
-            Some(BuiltinSuite::UiGallery),
-        )
+        let inputs = diag_suite_scripts::ui_gallery_overlay_steady_suite_scripts();
+        let scripts = expand_script_inputs(&workspace_root, &inputs)?;
+        (scripts, Some(BuiltinSuite::UiGallery))
     } else if is_ui_gallery_motion_pilot_suite {
         // The motion pilot suite relies on stable semantics surfaces; keep diagnostics
         // redaction disabled so any role-and-name selectors remain usable in scripts.
@@ -374,65 +366,41 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
         // The code-editor-focused UI Gallery suite also includes the pixels-changed
         // gate (soft-wrap editing baseline), so screenshots must be enabled.
         push_env_if_missing(&mut launch_env, "FRET_DIAG_GPU_SCREENSHOTS", "1");
-        (
-            diag_suite_scripts::ui_gallery_code_editor_suite_scripts()
-                .into_iter()
-                .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-                .collect(),
-            Some(BuiltinSuite::UiGalleryCodeEditor),
-        )
+        let inputs = diag_suite_scripts::ui_gallery_code_editor_suite_scripts();
+        let scripts = expand_script_inputs(&workspace_root, &inputs)?;
+        (scripts, Some(BuiltinSuite::UiGalleryCodeEditor))
     } else if is_ui_gallery_date_picker_suite {
         // Keep date picker scripts deterministic (date + page seed) so keyboard navigation and
         // disabled-day skipping are repeatable.
         push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_START_PAGE", "date_picker");
         push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_DIAG_CALENDAR_ROVING", "1");
         push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_FIXED_TODAY", "2024-02-01");
-        (
-            diag_suite_scripts::ui_gallery_date_picker_suite_scripts()
-                .into_iter()
-                .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-                .collect(),
-            Some(BuiltinSuite::UiGallery),
-        )
+        let inputs = diag_suite_scripts::ui_gallery_date_picker_suite_scripts();
+        let scripts = expand_script_inputs(&workspace_root, &inputs)?;
+        (scripts, Some(BuiltinSuite::UiGallery))
     } else if is_ui_gallery_text_ime_suite {
-        (
-            diag_suite_scripts::ui_gallery_text_ime_suite_scripts()
-                .into_iter()
-                .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-                .collect(),
-            Some(BuiltinSuite::UiGallery),
-        )
+        let inputs = diag_suite_scripts::ui_gallery_text_ime_suite_scripts();
+        let scripts = expand_script_inputs(&workspace_root, &inputs)?;
+        (scripts, Some(BuiltinSuite::UiGallery))
     } else if is_ui_gallery_text_wrap_suite {
         // Text wrap/baseline gates rely on screenshots and should run with deterministic
         // bundled fonts on desktop.
         push_env_if_missing(&mut launch_env, "FRET_DIAG_GPU_SCREENSHOTS", "1");
         push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_BOOTSTRAP_FONTS", "1");
 
-        (
-            diag_suite_scripts::ui_gallery_text_wrap_suite_scripts()
-                .into_iter()
-                .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-                .collect(),
-            Some(BuiltinSuite::UiGallery),
-        )
+        let inputs = diag_suite_scripts::ui_gallery_text_wrap_suite_scripts();
+        let scripts = expand_script_inputs(&workspace_root, &inputs)?;
+        (scripts, Some(BuiltinSuite::UiGallery))
     } else if is_ui_gallery_select_suite {
         // Keep this suite redaction-friendly: scripts should prefer `test_id` selectors
         // so we can share bundles by default without leaking labels/values.
-        (
-            diag_suite_scripts::ui_gallery_select_suite_scripts()
-                .into_iter()
-                .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-                .collect(),
-            Some(BuiltinSuite::UiGallery),
-        )
+        let inputs = diag_suite_scripts::ui_gallery_select_suite_scripts();
+        let scripts = expand_script_inputs(&workspace_root, &inputs)?;
+        (scripts, Some(BuiltinSuite::UiGallery))
     } else if is_ui_gallery_combobox_suite {
-        (
-            diag_suite_scripts::ui_gallery_combobox_suite_scripts()
-                .into_iter()
-                .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-                .collect(),
-            Some(BuiltinSuite::UiGallery),
-        )
+        let inputs = diag_suite_scripts::ui_gallery_combobox_suite_scripts();
+        let scripts = expand_script_inputs(&workspace_root, &inputs)?;
+        (scripts, Some(BuiltinSuite::UiGallery))
     } else if is_ui_gallery_shadcn_conformance_suite {
         // Conformance scripts rely on stable role-and-name semantics selectors and use
         // screenshot evidence for overlap regressions.
@@ -440,27 +408,19 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
         push_env_if_missing(&mut launch_env, "FRET_DIAG_GPU_SCREENSHOTS", "1");
         // Ensure bundled fonts are loaded on desktop so font metrics are deterministic.
         push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_BOOTSTRAP_FONTS", "1");
-
-        let mut scripts: Vec<PathBuf> =
-            diag_suite_scripts::ui_gallery_shadcn_conformance_suite_scripts()
-                .into_iter()
-                .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-                .collect();
-        scripts.extend(
-            diag_suite_scripts::ui_gallery_select_suite_scripts()
-                .into_iter()
-                .map(|p| resolve_path(&workspace_root, PathBuf::from(p))),
-        );
-
+        let mut scripts = expand_script_inputs(
+            &workspace_root,
+            &diag_suite_scripts::ui_gallery_shadcn_conformance_suite_scripts(),
+        )?;
+        scripts.extend(expand_script_inputs(
+            &workspace_root,
+            &diag_suite_scripts::ui_gallery_select_suite_scripts(),
+        )?);
         (scripts, Some(BuiltinSuite::UiGallery))
     } else if is_ui_gallery_layout_suite {
-        (
-            diag_suite_scripts::ui_gallery_layout_suite_scripts()
-                .into_iter()
-                .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-                .collect(),
-            Some(BuiltinSuite::UiGalleryLayout),
-        )
+        let inputs = diag_suite_scripts::ui_gallery_layout_suite_scripts();
+        let scripts = expand_script_inputs(&workspace_root, &inputs)?;
+        (scripts, Some(BuiltinSuite::UiGalleryLayout))
     } else if is_ui_gallery_virt_retained_suite || is_ui_gallery_virt_retained_measured_suite {
         (
             vec![resolve_path(
@@ -1014,13 +974,9 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
             Some(BuiltinSuite::DockingMotionPilot),
         )
     } else if is_docking_arbitration_suite {
-        (
-            diag_suite_scripts::docking_arbitration_suite_scripts()
-                .into_iter()
-                .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-                .collect(),
-            Some(BuiltinSuite::DockingArbitration),
-        )
+        let inputs = diag_suite_scripts::docking_arbitration_suite_scripts();
+        let scripts = expand_script_inputs(&workspace_root, &inputs)?;
+        (scripts, Some(BuiltinSuite::DockingArbitration))
     } else {
         (
             suite_args

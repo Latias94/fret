@@ -59,10 +59,8 @@ pub(crate) fn cmd_matrix(ctx: MatrixCmdContext) -> Result<(), String> {
         );
     };
 
-    let scripts: Vec<PathBuf> = diag_suite_scripts::ui_gallery_suite_scripts()
-        .into_iter()
-        .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-        .collect();
+    let inputs = diag_suite_scripts::ui_gallery_suite_scripts();
+    let scripts: Vec<PathBuf> = expand_script_inputs(&workspace_root, &inputs)?;
 
     let compare_opts = CompareOptions {
         warmup_frames,

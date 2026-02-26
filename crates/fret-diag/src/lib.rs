@@ -2867,33 +2867,24 @@ fn parse_bool(s: &str) -> Result<bool, ()> {
 }
 
 pub(crate) fn script_requests_screenshots(script: &Path) -> bool {
-    let Ok(bytes) = std::fs::read(script) else {
+    let Ok(resolved) = crate::script_tooling::read_script_json_resolving_redirects(script) else {
         return false;
     };
-    let Ok(value) = serde_json::from_slice::<serde_json::Value>(&bytes) else {
-        return false;
-    };
-    script_requests_screenshots_value(&value)
+    script_requests_screenshots_value(&resolved.value)
 }
 
 fn script_required_capabilities(script: &Path) -> Vec<String> {
-    let Ok(bytes) = std::fs::read(script) else {
+    let Ok(resolved) = crate::script_tooling::read_script_json_resolving_redirects(script) else {
         return Vec::new();
     };
-    let Ok(value) = serde_json::from_slice::<serde_json::Value>(&bytes) else {
-        return Vec::new();
-    };
-    script_required_capabilities_value(&value)
+    script_required_capabilities_value(&resolved.value)
 }
 
 fn script_env_defaults(script: &Path) -> Vec<(String, String)> {
-    let Ok(bytes) = std::fs::read(script) else {
+    let Ok(resolved) = crate::script_tooling::read_script_json_resolving_redirects(script) else {
         return Vec::new();
     };
-    let Ok(value) = serde_json::from_slice::<serde_json::Value>(&bytes) else {
-        return Vec::new();
-    };
-    script_env_defaults_value(&value)
+    script_env_defaults_value(&resolved.value)
 }
 
 fn script_requests_screenshots_value(value: &serde_json::Value) -> bool {
