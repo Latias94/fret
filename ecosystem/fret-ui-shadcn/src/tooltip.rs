@@ -1235,7 +1235,7 @@ impl Tooltip {
                         move |_cx| vec![content],
                         move |cx, content| {
                             // new-york-v4: `size-2.5 rotate-45 rounded-[2px] translate-y-[calc(-50%_-_2px)]`
-                            // (i.e. a slightly outset, lightly rounded diamond).
+                            // (i.e. a lightly rounded diamond that overlaps the panel edge).
                             let arrow_el = popper_arrow::diamond_arrow_element_refined(
                                 cx,
                                 &layout,
@@ -1247,7 +1247,7 @@ impl Tooltip {
                                     border_width: Px(0.0),
                                 },
                                 Px(2.0),
-                                Px(2.0),
+                                Px(-2.0),
                                 arrow_test_id.clone(),
                             );
 
