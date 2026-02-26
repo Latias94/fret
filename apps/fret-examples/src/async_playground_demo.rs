@@ -433,6 +433,7 @@ fn catalog_item(
             let title = ui::text(cx, id.label())
                 .font_medium()
                 .text_sm()
+                .truncate()
                 .into_element(cx);
             let badge = status_badge(cx, diag.as_ref());
 
@@ -508,6 +509,8 @@ fn main_panel(
         ))
         .into_element(cx),
     ])
+    .ui()
+    .w_full()
     .into_element(cx);
 
     let sync_panel = if mode == FetchMode::Sync {
@@ -531,6 +534,8 @@ fn main_panel(
             shadcn::TabsItem::new("sync", "Sync", [sync_panel]),
             shadcn::TabsItem::new("async", "Async (tokio)", [async_panel]),
         ])
+        .ui()
+        .w_full()
         .into_element(cx);
 
     let content = ui::v_flex(cx, |_cx| [callout, tabs])
@@ -607,6 +612,8 @@ fn inspector_panel(
         );
     })
     .gap(Space::N1)
+    .w_full()
+    .items_stretch()
     .into_element(cx);
 
     let policy_editor = policy_editor(cx, st, theme.clone(), selected);
@@ -614,6 +621,7 @@ fn inspector_panel(
     let ns_row = ui::h_flex(cx, |cx| {
         let input = shadcn::Input::new(st.namespace_input.clone())
             .placeholder("tip/search/stock/status")
+            .refine_layout(LayoutRefinement::default().flex_grow(1.0))
             .into_element(cx);
         let btn = shadcn::Button::new("Invalidate ns")
             .variant(shadcn::ButtonVariant::Secondary)
@@ -624,6 +632,7 @@ fn inspector_panel(
     })
     .gap(Space::N2)
     .items_center()
+    .w_full()
     .into_element(cx);
 
     let card = shadcn::Card::new([
@@ -784,6 +793,7 @@ fn query_panel_for_mode(
     ui::v_flex(cx, |_cx| [inputs, view])
         .gap(Space::N4)
         .w_full()
+        .items_stretch()
         .into_element(cx)
 }
 
@@ -813,6 +823,7 @@ fn query_inputs_row(
             children.push(
                 shadcn::Input::new(st.search_input.clone())
                     .placeholder("Search query…")
+                    .refine_layout(LayoutRefinement::default().w_full())
                     .into_element(cx),
             );
         }
@@ -820,6 +831,7 @@ fn query_inputs_row(
             children.push(
                 shadcn::Input::new(st.stock_symbol.clone())
                     .placeholder("Symbol…")
+                    .refine_layout(LayoutRefinement::default().w_full())
                     .into_element(cx),
             );
         }
@@ -829,6 +841,7 @@ fn query_inputs_row(
     ui::v_flex(cx, |_cx| children)
         .gap(Space::N2)
         .w_full()
+        .items_stretch()
         .into_element(cx)
 }
 
@@ -923,6 +936,8 @@ fn query_result_view(
         shadcn::CardHeader::new([header, meta]).into_element(cx),
         shadcn::CardContent::new([body]).into_element(cx),
     ])
+    .ui()
+    .w_full()
     .into_element(cx)
 }
 
