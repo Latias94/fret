@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
 use fret_diag_protocol::{
-    DevtoolsBundleDumpedV1, DiagTransportMessageV1, FilesystemCapabilitiesV1,
+    DevtoolsBundleDumpV1, DevtoolsBundleDumpedV1, DiagTransportMessageV1, FilesystemCapabilitiesV1,
 };
 
 use crate::util::{now_unix_ms, read_json_value, touch, write_json_value};
@@ -126,7 +126,21 @@ impl DiagTransport for FsDiagTransport {
                 let _ = touch(&st.cfg.pick_trigger_path);
             }
             "bundle.dump" => {
-                // File-trigger dump does not currently support labels; always uses the default dump path.
+                // Extend the filesystem trigger surface with an optional request envelope so the
+                // runtime can mirror WS semantics (label/max_snapshots/request_id).
+                //
+                // This is best-effort: if the runtime ignores it, we still fall back to the
+                // legacy trigger touch.
+                if let Ok(parsed) = serde_json::from_value::<DevtoolsBundleDumpV1>(msg.payload) {
+                    let request_path = st.cfg.out_dir.join("dump.request.json");
+                    let payload = serde_json::json!({
+                        "schema_version": 1,
+                        "label": parsed.label,
+                        "max_snapshots": parsed.max_snapshots,
+                        "request_id": msg.request_id,
+                    });
+                    let _ = write_json_value(&request_path, &payload);
+                }
                 let _ = touch(&st.cfg.trigger_path);
             }
             "script.push" | "script.run" => {

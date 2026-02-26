@@ -301,6 +301,7 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
     };
     let wants_perf_thresholds = cli_thresholds.any() || perf_baseline.is_some();
     let mut child: Option<LaunchedDemo> = None;
+    let mut connected_fs: Option<ConnectedToolingTransport> = None;
     let launched_by_fretboard = reuse_launch && launch.is_some();
     let mut perf_launch_env = launch_env.clone();
     std::fs::create_dir_all(&resolved_out_dir).map_err(|e| e.to_string())?;
@@ -372,26 +373,27 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
         .map(|p| resolve_path(&workspace_root, p))
         .collect();
 
-    let run_suite_aux_script_must_pass =
-        |src: &PathBuf, child: &mut Option<LaunchedDemo>| -> Result<(), String> {
-            aux_scripts::run_suite_aux_script_must_pass(
-                src,
-                child,
-                use_devtools_ws,
-                connected_ws.as_ref(),
-                &workspace_root,
-                &resolved_out_dir,
-                &resolved_exit_path,
-                reuse_process,
-                &resolved_script_path,
-                &resolved_script_trigger_path,
-                &resolved_script_result_path,
-                &resolved_script_result_trigger_path,
-                &perf_capabilities_check_path,
-                timeout_ms,
-                poll_ms,
-            )
-        };
+    let run_suite_aux_script_must_pass = |src: &PathBuf,
+                                          child: &mut Option<LaunchedDemo>,
+                                          connected_fs: Option<&ConnectedToolingTransport>|
+     -> Result<(), String> {
+        aux_scripts::run_suite_aux_script_must_pass(
+            src,
+            child,
+            use_devtools_ws,
+            connected_ws.as_ref(),
+            connected_fs,
+            &workspace_root,
+            &resolved_out_dir,
+            &resolved_exit_path,
+            reuse_process,
+            &resolved_script_result_path,
+            &resolved_script_result_trigger_path,
+            &perf_capabilities_check_path,
+            timeout_ms,
+            poll_ms,
+        )
+    };
 
     if let Some(baseline) = perf_baseline.as_ref() {
         for src in &scripts {
@@ -426,11 +428,22 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
             poll_ms,
             launch_high_priority,
         )?;
+        connected_fs = None;
     }
 
     if reuse_process && !reuse_process_per_script && !perf_suite_prewarm_scripts.is_empty() {
+        ensure_perf_fs_transport_connected(
+            &mut connected_fs,
+            use_devtools_ws,
+            &launch_fs_transport_cfg,
+            &resolved_ready_path,
+            child.is_some(),
+            timeout_ms,
+            poll_ms,
+            &resolved_script_result_path,
+        )?;
         for prewarm in &perf_suite_prewarm_scripts {
-            run_suite_aux_script_must_pass(prewarm, &mut child)?;
+            run_suite_aux_script_must_pass(prewarm, &mut child, connected_fs.as_ref())?;
         }
     }
 
@@ -438,6 +451,7 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
         if reuse_process_per_script && launched_by_fretboard && script_index > 0 {
             stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
             child = None;
+            connected_fs = None;
         }
         if reuse_process_per_script && launched_by_fretboard && child.is_none() {
             child = maybe_launch_demo(
@@ -452,9 +466,20 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
                 poll_ms,
                 launch_high_priority,
             )?;
+            connected_fs = None;
             if !perf_suite_prewarm_scripts.is_empty() {
+                ensure_perf_fs_transport_connected(
+                    &mut connected_fs,
+                    use_devtools_ws,
+                    &launch_fs_transport_cfg,
+                    &resolved_ready_path,
+                    child.is_some(),
+                    timeout_ms,
+                    poll_ms,
+                    &resolved_script_result_path,
+                )?;
                 for prewarm in &perf_suite_prewarm_scripts {
-                    run_suite_aux_script_must_pass(prewarm, &mut child)?;
+                    run_suite_aux_script_must_pass(prewarm, &mut child, connected_fs.as_ref())?;
                 }
             }
         }
@@ -473,6 +498,7 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
                     poll_ms,
                     launch_high_priority,
                 )?;
+                connected_fs = None;
             }
 
             if !reuse_process {
@@ -483,16 +509,46 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
             }
 
             if !reuse_process && !perf_suite_prewarm_scripts.is_empty() {
+                ensure_perf_fs_transport_connected(
+                    &mut connected_fs,
+                    use_devtools_ws,
+                    &launch_fs_transport_cfg,
+                    &resolved_ready_path,
+                    child.is_some(),
+                    timeout_ms,
+                    poll_ms,
+                    &resolved_script_result_path,
+                )?;
                 for prewarm in &perf_suite_prewarm_scripts {
-                    run_suite_aux_script_must_pass(prewarm, &mut child)?;
+                    run_suite_aux_script_must_pass(prewarm, &mut child, connected_fs.as_ref())?;
                 }
             }
             if !perf_suite_prelude_scripts.is_empty() {
+                ensure_perf_fs_transport_connected(
+                    &mut connected_fs,
+                    use_devtools_ws,
+                    &launch_fs_transport_cfg,
+                    &resolved_ready_path,
+                    child.is_some(),
+                    timeout_ms,
+                    poll_ms,
+                    &resolved_script_result_path,
+                )?;
                 for prelude in &perf_suite_prelude_scripts {
-                    run_suite_aux_script_must_pass(prelude, &mut child)?;
+                    run_suite_aux_script_must_pass(prelude, &mut child, connected_fs.as_ref())?;
                 }
             }
 
+            ensure_perf_fs_transport_connected(
+                &mut connected_fs,
+                use_devtools_ws,
+                &launch_fs_transport_cfg,
+                &resolved_ready_path,
+                child.is_some(),
+                timeout_ms,
+                poll_ms,
+                &resolved_script_result_path,
+            )?;
             let script_key = normalize_repo_relative_path(&workspace_root, &src);
             let bundle_path = run_script::run_perf_script_and_resolve_bundle_artifact_path(
                 &src,
@@ -500,12 +556,10 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
                 &mut child,
                 use_devtools_ws,
                 connected_ws.as_ref(),
+                connected_fs.as_ref(),
                 &resolved_out_dir,
                 &resolved_exit_path,
-                &resolved_script_path,
-                &resolved_script_trigger_path,
                 &resolved_script_result_path,
-                &resolved_script_result_trigger_path,
                 &perf_capabilities_check_path,
                 timeout_ms,
                 poll_ms,
@@ -897,6 +951,7 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
 
             if !reuse_process {
                 stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                connected_fs = None;
             }
             continue;
         }
@@ -943,6 +998,7 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
                     poll_ms,
                     launch_high_priority,
                 )?;
+                connected_fs = None;
             }
 
             if !reuse_process {
@@ -953,18 +1009,48 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
             }
 
             if !reuse_process && !perf_suite_prewarm_scripts.is_empty() {
+                ensure_perf_fs_transport_connected(
+                    &mut connected_fs,
+                    use_devtools_ws,
+                    &launch_fs_transport_cfg,
+                    &resolved_ready_path,
+                    child.is_some(),
+                    timeout_ms,
+                    poll_ms,
+                    &resolved_script_result_path,
+                )?;
                 for prewarm in &perf_suite_prewarm_scripts {
-                    run_suite_aux_script_must_pass(prewarm, &mut child)?;
+                    run_suite_aux_script_must_pass(prewarm, &mut child, connected_fs.as_ref())?;
                 }
             }
             if !perf_suite_prelude_scripts.is_empty()
                 && (!reuse_process || suite_prelude_each_run || run_index == 0)
             {
+                ensure_perf_fs_transport_connected(
+                    &mut connected_fs,
+                    use_devtools_ws,
+                    &launch_fs_transport_cfg,
+                    &resolved_ready_path,
+                    child.is_some(),
+                    timeout_ms,
+                    poll_ms,
+                    &resolved_script_result_path,
+                )?;
                 for prelude in &perf_suite_prelude_scripts {
-                    run_suite_aux_script_must_pass(prelude, &mut child)?;
+                    run_suite_aux_script_must_pass(prelude, &mut child, connected_fs.as_ref())?;
                 }
             }
 
+            ensure_perf_fs_transport_connected(
+                &mut connected_fs,
+                use_devtools_ws,
+                &launch_fs_transport_cfg,
+                &resolved_ready_path,
+                child.is_some(),
+                timeout_ms,
+                poll_ms,
+                &resolved_script_result_path,
+            )?;
             let script_key = normalize_repo_relative_path(&workspace_root, &src);
             let bundle_path = run_script::run_perf_script_and_resolve_bundle_artifact_path(
                 &src,
@@ -972,12 +1058,10 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
                 &mut child,
                 use_devtools_ws,
                 connected_ws.as_ref(),
+                connected_fs.as_ref(),
                 &resolved_out_dir,
                 &resolved_exit_path,
-                &resolved_script_path,
-                &resolved_script_trigger_path,
                 &resolved_script_result_path,
-                &resolved_script_result_trigger_path,
                 &perf_capabilities_check_path,
                 timeout_ms,
                 poll_ms,
@@ -996,6 +1080,7 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
                 }
                 if !reuse_process {
                     stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                    connected_fs = None;
                 }
                 break;
             };
@@ -1155,6 +1240,7 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
 
             if !reuse_process {
                 stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                connected_fs = None;
             }
         }
 
@@ -1842,4 +1928,45 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
     }
 
     std::process::exit(0);
+}
+
+fn ensure_perf_fs_transport_connected(
+    connected_fs: &mut Option<ConnectedToolingTransport>,
+    use_devtools_ws: bool,
+    fs_transport_cfg: &crate::transport::FsDiagTransportConfig,
+    ready_path: &Path,
+    require_ready: bool,
+    timeout_ms: u64,
+    poll_ms: u64,
+    script_result_path: &Path,
+) -> Result<(), String> {
+    if use_devtools_ws {
+        return Ok(());
+    }
+    if connected_fs.is_some() {
+        return Ok(());
+    }
+
+    match connect_filesystem_tooling(
+        fs_transport_cfg,
+        ready_path,
+        require_ready,
+        timeout_ms,
+        poll_ms,
+    ) {
+        Ok(v) => {
+            *connected_fs = Some(v);
+            Ok(())
+        }
+        Err(err) => {
+            write_tooling_failure_script_result(
+                script_result_path,
+                "tooling.connect.failed",
+                &err,
+                "tooling_error",
+                Some("connect_filesystem_tooling".to_string()),
+            );
+            Err(err)
+        }
+    }
 }

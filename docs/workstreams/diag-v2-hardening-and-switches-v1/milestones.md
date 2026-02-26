@@ -44,8 +44,8 @@ Exit criteria:
 
 Evidence anchors:
 
-- Tooling: `crates/fret-diag/src/run_artifacts.rs`, `crates/fret-diag/src/tooling_failures.rs`
-- Runtime: `ecosystem/fret-bootstrap/src/ui_diagnostics/*`
+- Tooling: `crates/fret-diag/src/run_artifacts.rs`, `crates/fret-diag/src/tooling_failures.rs`, `crates/fret-diag/src/transport/fs.rs`
+- Runtime: `ecosystem/fret-bootstrap/src/ui_diagnostics/*`, `ecosystem/fret-bootstrap/src/ui_diagnostics/fs_triggers.rs`
 
 ## M2: Manifest-first pack + AI packet (P1)
 

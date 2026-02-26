@@ -450,6 +450,16 @@ fn run_script_over_transport_streams_incremental_script_result_updates() {
         serde_json::from_slice(&bytes).expect("parse run_id script.result.json");
     assert_eq!(v.get("run_id").and_then(|v| v.as_u64()), Some(1));
     assert_eq!(v.get("stage").and_then(|v| v.as_str()), Some("passed"));
+
+    let bytes = std::fs::read(root.join("1").join("manifest.json")).expect("read manifest.json");
+    let v: serde_json::Value = serde_json::from_slice(&bytes).expect("parse manifest.json");
+    assert_eq!(v.get("run_id").and_then(|v| v.as_u64()), Some(1));
+    assert_eq!(
+        v.get("script_result")
+            .and_then(|v| v.get("stage"))
+            .and_then(|v| v.as_str()),
+        Some("passed")
+    );
 }
 
 #[test]

@@ -105,11 +105,12 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
 ## P1: Manifest-first artifacts (transport-neutral)
 
 - [ ] Write a single “canonical per-run layout” doc (point to `docs/workstreams/diag-simplification-v1.md` and reconcile terminology).
-- [ ] Ensure filesystem transport always produces a per-run manifest (even in manual `poke` workflows).
-- [ ] Ensure DevTools WS transport always materializes a per-run manifest alongside `script.result.json`.
+- [x] Ensure filesystem transport produces a per-run manifest for `diag run/suite/repro/perf` (manual `diag poke` remains legacy export-only for now).
+- [x] Ensure DevTools WS transport always materializes a per-run manifest alongside `script.result.json`.
 - [ ] Add an FS dump request surface to carry dump metadata (label/max snapshots/request id), matching WS:
-  - [ ] tooling writes `dump.request.json` (or equivalent) and touches a trigger,
-  - [ ] runtime consumes it and includes metadata in `bundle.dumped` event logs.
+  - [x] tooling writes `dump.request.json` and touches a trigger (`crates/fret-diag/src/transport/fs.rs`),
+  - [x] runtime consumes `dump.request.json` for trigger-driven dumps (`ecosystem/fret-bootstrap/src/ui_diagnostics/fs_triggers.rs`),
+  - [ ] runtime records dump metadata in `bundle.dumped` event logs (beyond the directory name).
 - [ ] Make `diag pack --ai-only` succeed from manifest + sidecars without `bundle.json`.
 - [ ] Add `diag artifact lint` that validates:
   - [ ] manifest schema,

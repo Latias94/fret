@@ -77,7 +77,10 @@ impl UiDiagnosticsService {
                     unix_ms: unix_ms_now(),
                     kind: "compat.script_schema_v1".to_string(),
                     step_index: Some(0),
-                    note: Some("script schema_version=1 was accepted and upgraded to v2 for execution".to_string()),
+                    note: Some(
+                        "script schema_version=1 was accepted and upgraded to v2 for execution"
+                            .to_string(),
+                    ),
                     bundle_dir: None,
                     window: Some(anchor_window.data().as_ffi()),
                     tick_id: Some(app.tick_id().0),

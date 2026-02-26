@@ -607,6 +607,11 @@ Config resolution order (runtime):
 - `FRET_DIAG_TRIGGER_PATH=...`: dump trigger file (default `<dir>/trigger.touch`).
   - The trigger uses a **stamp** (monotonic integer) rather than mtime. Write a new integer value
     (e.g. unix ms) to trigger a dump; `fretboard diag poke` does this for you.
+  - Optional (filesystem transport): write `<dir>/dump.request.json` (schema v1) before touching the trigger to
+    provide dump metadata:
+    - `label` (string): appended to the export directory name (`<timestamp>-<label>`),
+    - `max_snapshots` (u32): overrides the dump snapshot cap (clamped by runtime config),
+    - `request_id` (u64): best-effort correlation id (tooling-owned).
 - `FRET_DIAG_MAX_EVENTS=...`: ring size for events.
 - `FRET_DIAG_MAX_SNAPSHOTS=...`: ring size for snapshots.
 

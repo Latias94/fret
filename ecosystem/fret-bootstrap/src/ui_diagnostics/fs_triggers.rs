@@ -10,6 +10,17 @@ use super::{
     sanitize_label, unix_ms_now,
 };
 
+#[derive(Debug, Clone, serde::Deserialize)]
+struct DumpRequestV1 {
+    schema_version: u32,
+    #[serde(default)]
+    label: Option<String>,
+    #[serde(default)]
+    max_snapshots: Option<u32>,
+    #[serde(default)]
+    request_id: Option<u64>,
+}
+
 #[derive(Debug, Clone)]
 pub(super) struct PendingForceDumpRequest {
     pub(super) label: String,
@@ -123,7 +134,33 @@ impl UiDiagnosticsService {
         }
         self.last_trigger_stamp = Some(stamp);
 
-        self.dump_bundle(None)
+        let request_path = self.cfg.out_dir.join("dump.request.json");
+        let mut label: Option<String> = None;
+        let mut max_snapshots: Option<usize> = None;
+        let mut request_id: Option<u64> = None;
+        if let Ok(bytes) = std::fs::read(&request_path) {
+            let parsed = serde_json::from_slice::<DumpRequestV1>(&bytes).ok();
+            // Best-effort: consume the request once per trigger so stale metadata doesn't leak
+            // into subsequent dumps.
+            let _ = std::fs::remove_file(&request_path);
+            if let Some(parsed) = parsed
+                && parsed.schema_version == 1
+            {
+                label = parsed
+                    .label
+                    .as_deref()
+                    .map(|s| sanitize_label(s))
+                    .filter(|s| !s.is_empty());
+                max_snapshots = parsed.max_snapshots.map(|v| v as usize);
+                request_id = parsed.request_id;
+            }
+        }
+
+        if label.is_some() || max_snapshots.is_some() || request_id.is_some() {
+            self.dump_bundle_with_options(label.as_deref(), max_snapshots, request_id)
+        } else {
+            self.dump_bundle(None)
+        }
     }
 
     pub fn poll_exit_trigger(&mut self) -> bool {
