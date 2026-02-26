@@ -353,6 +353,12 @@ impl SceneRecording {
                                     }
                                 }
                             }
+                            EffectStep::NoiseV1(n) => {
+                                n.strength.is_finite()
+                                    && px_is_finite(n.scale_px)
+                                    && n.scale_px.0 > 0.0
+                                    && n.phase.is_finite()
+                            }
                             EffectStep::ColorAdjust {
                                 saturation,
                                 brightness,
@@ -368,6 +374,11 @@ impl SceneRecording {
                             }
                             EffectStep::Pixelate { scale } => scale > 0,
                             EffectStep::Dither { .. } => true,
+                            EffectStep::CustomV1 {
+                                params,
+                                max_sample_offset_px,
+                                ..
+                            } => params.is_finite() && px_is_finite(max_sample_offset_px),
                         };
                         if !ok {
                             return Err(SceneValidationError {

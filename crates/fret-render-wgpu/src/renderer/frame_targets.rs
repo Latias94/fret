@@ -6,6 +6,7 @@ pub(in crate::renderer) struct FrameTargets {
     intermediate0: Option<FrameTarget>,
     intermediate1: Option<FrameTarget>,
     intermediate2: Option<FrameTarget>,
+    intermediate3: Option<FrameTarget>,
     mask0: Option<FrameTarget>,
     mask1: Option<FrameTarget>,
     mask2: Option<FrameTarget>,
@@ -34,6 +35,7 @@ impl FrameTargets {
             PlanTarget::Intermediate0 => self.intermediate0.as_ref(),
             PlanTarget::Intermediate1 => self.intermediate1.as_ref(),
             PlanTarget::Intermediate2 => self.intermediate2.as_ref(),
+            PlanTarget::Intermediate3 => self.intermediate3.as_ref(),
             PlanTarget::Mask0 => self.mask0.as_ref(),
             PlanTarget::Mask1 => self.mask1.as_ref(),
             PlanTarget::Mask2 => self.mask2.as_ref(),
@@ -57,6 +59,7 @@ impl FrameTargets {
             PlanTarget::Intermediate0 => &mut self.intermediate0,
             PlanTarget::Intermediate1 => &mut self.intermediate1,
             PlanTarget::Intermediate2 => &mut self.intermediate2,
+            PlanTarget::Intermediate3 => &mut self.intermediate3,
             PlanTarget::Mask0 => &mut self.mask0,
             PlanTarget::Mask1 => &mut self.mask1,
             PlanTarget::Mask2 => &mut self.mask2,
@@ -117,6 +120,7 @@ impl FrameTargets {
             PlanTarget::Intermediate0 => self.intermediate0.as_ref(),
             PlanTarget::Intermediate1 => self.intermediate1.as_ref(),
             PlanTarget::Intermediate2 => self.intermediate2.as_ref(),
+            PlanTarget::Intermediate3 => self.intermediate3.as_ref(),
             PlanTarget::Mask0 => self.mask0.as_ref(),
             PlanTarget::Mask1 => self.mask1.as_ref(),
             PlanTarget::Mask2 => self.mask2.as_ref(),
@@ -135,6 +139,7 @@ impl FrameTargets {
             PlanTarget::Intermediate0 => &mut self.intermediate0,
             PlanTarget::Intermediate1 => &mut self.intermediate1,
             PlanTarget::Intermediate2 => &mut self.intermediate2,
+            PlanTarget::Intermediate3 => &mut self.intermediate3,
             PlanTarget::Mask0 => &mut self.mask0,
             PlanTarget::Mask1 => &mut self.mask1,
             PlanTarget::Mask2 => &mut self.mask2,
@@ -150,6 +155,7 @@ impl FrameTargets {
         self.release_target(pool, PlanTarget::Intermediate0);
         self.release_target(pool, PlanTarget::Intermediate1);
         self.release_target(pool, PlanTarget::Intermediate2);
+        self.release_target(pool, PlanTarget::Intermediate3);
         self.release_target(pool, PlanTarget::Mask0);
         self.release_target(pool, PlanTarget::Mask1);
         self.release_target(pool, PlanTarget::Mask2);

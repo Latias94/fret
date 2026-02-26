@@ -12,7 +12,9 @@ pub(super) struct GpuEffectParams {
     pub(super) color_adjust_param_buffer: wgpu::Buffer,
     pub(super) color_matrix_param_buffer: wgpu::Buffer,
     pub(super) alpha_threshold_param_buffer: wgpu::Buffer,
+    pub(super) noise_param_buffer: wgpu::Buffer,
     pub(super) drop_shadow_param_buffer: wgpu::Buffer,
+    pub(super) custom_effect_param_buffer: wgpu::Buffer,
 }
 
 impl GpuEffectParams {

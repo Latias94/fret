@@ -4,12 +4,68 @@ use super::super::helpers::{
     ensure_color_dst_view_owned, ensure_mask_dst_view, require_color_src_view, require_mask_view,
     run_composite_premul_quad_pass,
 };
+use super::blit::record_fullscreen_blit_pass;
 
-pub(in super::super) fn record_color_adjust_pass(
+struct FullscreenEffectLabels {
+    bind_group: &'static str,
+    bind_group_mask: &'static str,
+    pass_unmasked: &'static str,
+    pass_masked: &'static str,
+    pass_mask: &'static str,
+}
+
+fn pack_effect_params_v1(params: fret_core::EffectParamsV1) -> [u8; 64] {
+    let mut out = [0u8; 64];
+    let mut cursor = 0usize;
+    for v in params.vec4s {
+        for x in v {
+            out[cursor..cursor + 4].copy_from_slice(&x.to_bits().to_le_bytes());
+            cursor += 4;
+        }
+    }
+    out
+}
+
+#[allow(clippy::too_many_arguments)]
+fn record_fullscreen_param_effect_pass<
+    ParamBuffer,
+    BindGroupLayoutUnmasked,
+    BindGroupLayoutMask,
+    PipelineUnmasked,
+    PipelineMasked,
+    PipelineMask,
+>(
     exec: &mut RenderSceneExecutor<'_>,
     ctx: &RecordPassCtx<'_>,
-    pass: &ColorAdjustPass,
-) {
+    pass_name: &'static str,
+    labels: FullscreenEffectLabels,
+    unmasked_uses_uniforms: bool,
+    src: PlanTarget,
+    dst: PlanTarget,
+    src_size: (u32, u32),
+    dst_size: (u32, u32),
+    dst_scissor: Option<LocalScissorRect>,
+    mask_uniform_index: Option<u32>,
+    mask: Option<MaskRef>,
+    load: wgpu::LoadOp<wgpu::Color>,
+    param_bytes: &[u8],
+    param_uniform_bytes: u64,
+    param_buffer: ParamBuffer,
+    layout_unmasked: BindGroupLayoutUnmasked,
+    layout_mask: BindGroupLayoutMask,
+    pipeline_unmasked: PipelineUnmasked,
+    pipeline_masked: PipelineMasked,
+    pipeline_mask: PipelineMask,
+    clip_full_size_msg: Option<&'static str>,
+    mask_full_size_msg: Option<&'static str>,
+) where
+    ParamBuffer: for<'a> Fn(&'a Renderer) -> &'a wgpu::Buffer,
+    BindGroupLayoutUnmasked: for<'a> Fn(&'a Renderer) -> &'a wgpu::BindGroupLayout,
+    BindGroupLayoutMask: for<'a> Fn(&'a Renderer) -> &'a wgpu::BindGroupLayout,
+    PipelineUnmasked: for<'a> Fn(&'a Renderer) -> &'a wgpu::RenderPipeline,
+    PipelineMasked: for<'a> Fn(&'a Renderer) -> &'a wgpu::RenderPipeline,
+    PipelineMask: for<'a> Fn(&'a Renderer) -> &'a wgpu::RenderPipeline,
+{
     let device = exec.device;
     let queue = exec.queue;
     let format = exec.format;
@@ -24,20 +80,15 @@ pub(in super::super) fn record_color_adjust_pass(
 
     let renderer = &mut *exec.renderer;
 
-    queue.write_buffer(
-        &renderer.effect_params.color_adjust_param_buffer,
-        0,
-        bytemuck::cast_slice(&[pass.saturation, pass.brightness, pass.contrast, 0.0]),
-    );
+    {
+        let buffer = param_buffer(renderer);
+        queue.write_buffer(buffer, 0, param_bytes);
+    }
     if perf_enabled {
-        frame_perf.uniform_bytes = frame_perf
-            .uniform_bytes
-            .saturating_add(std::mem::size_of::<[f32; 4]>() as u64);
+        frame_perf.uniform_bytes = frame_perf.uniform_bytes.saturating_add(param_uniform_bytes);
     }
 
-    let Some(src_view) =
-        require_color_src_view(frame_targets, pass.src, pass.src_size, "ColorAdjust")
-    else {
+    let Some(src_view) = require_color_src_view(frame_targets, src, src_size, pass_name) else {
         return;
     };
 
@@ -45,38 +96,37 @@ pub(in super::super) fn record_color_adjust_pass(
         frame_targets,
         &mut renderer.intermediate_pool,
         device,
-        pass.dst,
-        pass.dst_size,
+        dst,
+        dst_size,
         format,
         usage,
-        "ColorAdjust",
+        pass_name,
     );
     let dst_view = dst_view_owned.as_ref().unwrap_or(target_view);
 
-    if let Some(mask) = pass.mask {
+    let uniform_stride = renderer.uniforms.uniform_stride;
+
+    if let Some(mask) = mask {
         debug_assert!(matches!(
             mask.target,
             PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2
         ));
-        debug_assert_eq!(
-            pass.dst_size, viewport_size,
-            "mask-based color-adjust expects full-size destination"
-        );
+        if let Some(msg) = mask_full_size_msg {
+            debug_assert_eq!(dst_size, viewport_size, "{msg}");
+        }
 
-        let mask_uniform_index = pass
-            .mask_uniform_index
-            .expect("mask color-adjust needs uniform index");
-        let uniform_offset =
-            (u64::from(mask_uniform_index) * renderer.uniforms.uniform_stride) as u32;
+        let mask_uniform_index = mask_uniform_index.expect("mask pass needs uniform index");
+        let uniform_offset = (u64::from(mask_uniform_index) * uniform_stride) as u32;
 
-        let Some(mask_view) =
-            require_mask_view(frame_targets, mask.target, mask.size, "ColorAdjust")
+        let Some(mask_view) = require_mask_view(frame_targets, mask.target, mask.size, pass_name)
         else {
             return;
         };
-        let layout = renderer.color_adjust_mask_bind_group_layout_ref();
+
+        let layout = layout_mask(renderer);
+        let buffer = param_buffer(renderer);
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("fret color-adjust mask bind group"),
+            label: Some(labels.bind_group_mask),
             layout,
             entries: &[
                 wgpu::BindGroupEntry {
@@ -85,10 +135,7 @@ pub(in super::super) fn record_color_adjust_pass(
                 },
                 wgpu::BindGroupEntry {
                     binding: 1,
-                    resource: renderer
-                        .effect_params
-                        .color_adjust_param_buffer
-                        .as_entire_binding(),
+                    resource: buffer.as_entire_binding(),
                 },
                 wgpu::BindGroupEntry {
                     binding: 2,
@@ -97,14 +144,13 @@ pub(in super::super) fn record_color_adjust_pass(
             ],
         });
 
-        let pipeline = renderer.color_adjust_mask_pipeline_ref();
-
+        let pipeline = pipeline_mask(renderer);
         run_fullscreen_triangle_pass_uniform_texture(
             encoder,
-            "fret color-adjust mask pass",
+            labels.pass_mask,
             pipeline,
             dst_view,
-            pass.load,
+            load,
             renderer.pick_uniform_bind_group_for_mask_image(
                 encoding
                     .uniform_mask_images
@@ -115,32 +161,32 @@ pub(in super::super) fn record_color_adjust_pass(
             &[uniform_offset, ctx.render_space_offset_u32],
             &bind_group,
             &[],
-            pass.dst_scissor,
-            pass.dst_size,
+            dst_scissor,
+            dst_size,
             if perf_enabled { Some(frame_perf) } else { None },
         );
-    } else if let Some(mask_uniform_index) = pass.mask_uniform_index {
-        let layout = renderer.color_adjust_bind_group_layout_ref();
+    } else if let Some(mask_uniform_index) = mask_uniform_index {
+        if let Some(msg) = clip_full_size_msg {
+            debug_assert_eq!(dst_size, viewport_size, "{msg}");
+        }
+
+        let uniform_offset = (u64::from(mask_uniform_index) * uniform_stride) as u32;
+        let layout = layout_unmasked(renderer);
+        let buffer = param_buffer(renderer);
         let bind_group = create_texture_uniform_bind_group(
             device,
-            "fret color-adjust bind group",
+            labels.bind_group,
             layout,
             &src_view,
-            renderer
-                .effect_params
-                .color_adjust_param_buffer
-                .as_entire_binding(),
+            buffer.as_entire_binding(),
         );
-        let pipeline = renderer.color_adjust_masked_pipeline_ref();
-        let uniform_offset =
-            (u64::from(mask_uniform_index) * renderer.uniforms.uniform_stride) as u32;
-
+        let pipeline = pipeline_masked(renderer);
         run_fullscreen_triangle_pass_uniform_texture(
             encoder,
-            "fret color-adjust masked pass",
+            labels.pass_masked,
             pipeline,
             dst_view,
-            pass.load,
+            load,
             renderer.pick_uniform_bind_group_for_mask_image(
                 encoding
                     .uniform_mask_images
@@ -151,36 +197,259 @@ pub(in super::super) fn record_color_adjust_pass(
             &[uniform_offset, ctx.render_space_offset_u32],
             &bind_group,
             &[],
-            pass.dst_scissor,
-            pass.dst_size,
+            dst_scissor,
+            dst_size,
             if perf_enabled { Some(frame_perf) } else { None },
         );
     } else {
-        let layout = renderer.color_adjust_bind_group_layout_ref();
+        let layout = layout_unmasked(renderer);
+        let buffer = param_buffer(renderer);
         let bind_group = create_texture_uniform_bind_group(
             device,
-            "fret color-adjust bind group",
+            labels.bind_group,
             layout,
             &src_view,
-            renderer
-                .effect_params
-                .color_adjust_param_buffer
-                .as_entire_binding(),
+            buffer.as_entire_binding(),
         );
-        let pipeline = renderer.color_adjust_pipeline_ref();
-        run_fullscreen_triangle_pass(
+
+        if unmasked_uses_uniforms {
+            let pipeline = pipeline_unmasked(renderer);
+            run_fullscreen_triangle_pass_uniform_texture(
+                encoder,
+                labels.pass_unmasked,
+                pipeline,
+                dst_view,
+                load,
+                renderer.pick_uniform_bind_group_for_mask_image(None),
+                &[0, ctx.render_space_offset_u32],
+                &bind_group,
+                &[],
+                dst_scissor,
+                dst_size,
+                if perf_enabled { Some(frame_perf) } else { None },
+            );
+        } else {
+            let pipeline = pipeline_unmasked(renderer);
+            run_fullscreen_triangle_pass(
+                encoder,
+                labels.pass_unmasked,
+                pipeline,
+                dst_view,
+                dst_size,
+                load,
+                &bind_group,
+                &[],
+                dst_scissor,
+                perf_enabled.then_some(frame_perf),
+            );
+        }
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn record_fullscreen_texture_effect_pass<
+    BindGroupLayoutUnmasked,
+    BindGroupLayoutMask,
+    PipelineUnmasked,
+    PipelineMasked,
+    PipelineMask,
+>(
+    exec: &mut RenderSceneExecutor<'_>,
+    ctx: &RecordPassCtx<'_>,
+    pass_name: &'static str,
+    labels: FullscreenEffectLabels,
+    src: PlanTarget,
+    dst: PlanTarget,
+    src_size: (u32, u32),
+    dst_size: (u32, u32),
+    dst_scissor: Option<LocalScissorRect>,
+    mask_uniform_index: Option<u32>,
+    mask: Option<MaskRef>,
+    load: wgpu::LoadOp<wgpu::Color>,
+    layout_unmasked: BindGroupLayoutUnmasked,
+    layout_mask: BindGroupLayoutMask,
+    pipeline_unmasked: PipelineUnmasked,
+    pipeline_masked: PipelineMasked,
+    pipeline_mask: PipelineMask,
+    clip_full_size_msg: Option<&'static str>,
+    mask_full_size_msg: Option<&'static str>,
+) where
+    BindGroupLayoutUnmasked: for<'a> Fn(&'a Renderer) -> &'a wgpu::BindGroupLayout,
+    BindGroupLayoutMask: for<'a> Fn(&'a Renderer) -> &'a wgpu::BindGroupLayout,
+    PipelineUnmasked: for<'a> Fn(&'a Renderer) -> &'a wgpu::RenderPipeline,
+    PipelineMasked: for<'a> Fn(&'a Renderer) -> &'a wgpu::RenderPipeline,
+    PipelineMask: for<'a> Fn(&'a Renderer) -> &'a wgpu::RenderPipeline,
+{
+    let device = exec.device;
+    let format = exec.format;
+    let target_view = exec.target_view;
+    let viewport_size = exec.viewport_size;
+    let usage = exec.usage;
+    let encoder = &mut *exec.encoder;
+    let frame_targets = &mut *exec.frame_targets;
+    let encoding = exec.encoding;
+    let perf_enabled = exec.perf_enabled;
+    let frame_perf = &mut *exec.frame_perf;
+
+    let renderer = &mut *exec.renderer;
+
+    let Some(src_view) = require_color_src_view(frame_targets, src, src_size, pass_name) else {
+        return;
+    };
+
+    let dst_view_owned = ensure_color_dst_view_owned(
+        frame_targets,
+        &mut renderer.intermediate_pool,
+        device,
+        dst,
+        dst_size,
+        format,
+        usage,
+        pass_name,
+    );
+    let dst_view = dst_view_owned.as_ref().unwrap_or(target_view);
+
+    let uniform_stride = renderer.uniforms.uniform_stride;
+
+    if let Some(mask) = mask {
+        debug_assert!(matches!(
+            mask.target,
+            PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2
+        ));
+        if let Some(msg) = mask_full_size_msg {
+            debug_assert_eq!(dst_size, viewport_size, "{msg}");
+        }
+
+        let mask_uniform_index = mask_uniform_index.expect("mask pass needs uniform index");
+        let uniform_offset = (u64::from(mask_uniform_index) * uniform_stride) as u32;
+
+        let Some(mask_view) = require_mask_view(frame_targets, mask.target, mask.size, pass_name)
+        else {
+            return;
+        };
+
+        let layout = layout_mask(renderer);
+        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some(labels.bind_group_mask),
+            layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::TextureView(&src_view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::TextureView(&mask_view),
+                },
+            ],
+        });
+
+        let pipeline = pipeline_mask(renderer);
+        run_fullscreen_triangle_pass_uniform_texture(
             encoder,
-            "fret color-adjust pass",
+            labels.pass_mask,
             pipeline,
             dst_view,
-            pass.dst_size,
-            pass.load,
+            load,
+            renderer.pick_uniform_bind_group_for_mask_image(
+                encoding
+                    .uniform_mask_images
+                    .get(mask_uniform_index as usize)
+                    .copied()
+                    .flatten(),
+            ),
+            &[uniform_offset, ctx.render_space_offset_u32],
             &bind_group,
             &[],
-            pass.dst_scissor,
+            dst_scissor,
+            dst_size,
+            if perf_enabled { Some(frame_perf) } else { None },
+        );
+    } else if let Some(mask_uniform_index) = mask_uniform_index {
+        if let Some(msg) = clip_full_size_msg {
+            debug_assert_eq!(dst_size, viewport_size, "{msg}");
+        }
+
+        let uniform_offset = (u64::from(mask_uniform_index) * uniform_stride) as u32;
+        let layout = layout_unmasked(renderer);
+        let bind_group = create_texture_bind_group(device, labels.bind_group, layout, &src_view);
+        let pipeline = pipeline_masked(renderer);
+        run_fullscreen_triangle_pass_uniform_texture(
+            encoder,
+            labels.pass_masked,
+            pipeline,
+            dst_view,
+            load,
+            renderer.pick_uniform_bind_group_for_mask_image(
+                encoding
+                    .uniform_mask_images
+                    .get(mask_uniform_index as usize)
+                    .copied()
+                    .flatten(),
+            ),
+            &[uniform_offset, ctx.render_space_offset_u32],
+            &bind_group,
+            &[],
+            dst_scissor,
+            dst_size,
+            if perf_enabled { Some(frame_perf) } else { None },
+        );
+    } else {
+        let layout = layout_unmasked(renderer);
+        let bind_group = create_texture_bind_group(device, labels.bind_group, layout, &src_view);
+        let pipeline = pipeline_unmasked(renderer);
+        run_fullscreen_triangle_pass(
+            encoder,
+            labels.pass_unmasked,
+            pipeline,
+            dst_view,
+            dst_size,
+            load,
+            &bind_group,
+            &[],
+            dst_scissor,
             perf_enabled.then_some(frame_perf),
         );
     }
+}
+
+pub(in super::super) fn record_color_adjust_pass(
+    exec: &mut RenderSceneExecutor<'_>,
+    ctx: &RecordPassCtx<'_>,
+    pass: &ColorAdjustPass,
+) {
+    let packed = [pass.saturation, pass.brightness, pass.contrast, 0.0];
+    record_fullscreen_param_effect_pass(
+        exec,
+        ctx,
+        "ColorAdjust",
+        FullscreenEffectLabels {
+            bind_group: "fret color-adjust bind group",
+            bind_group_mask: "fret color-adjust mask bind group",
+            pass_unmasked: "fret color-adjust pass",
+            pass_masked: "fret color-adjust masked pass",
+            pass_mask: "fret color-adjust mask pass",
+        },
+        false,
+        pass.src,
+        pass.dst,
+        pass.src_size,
+        pass.dst_size,
+        pass.dst_scissor,
+        pass.mask_uniform_index,
+        pass.mask,
+        pass.load,
+        bytemuck::cast_slice(&packed),
+        std::mem::size_of_val(&packed) as u64,
+        |r| &r.effect_params.color_adjust_param_buffer,
+        |r| r.color_adjust_bind_group_layout_ref(),
+        |r| r.color_adjust_mask_bind_group_layout_ref(),
+        |r| r.color_adjust_pipeline_ref(),
+        |r| r.color_adjust_masked_pipeline_ref(),
+        |r| r.color_adjust_mask_pipeline_ref(),
+        None,
+        Some("mask-based color-adjust expects full-size destination"),
+    );
 }
 
 pub(in super::super) fn record_alpha_threshold_pass(
@@ -188,176 +457,38 @@ pub(in super::super) fn record_alpha_threshold_pass(
     ctx: &RecordPassCtx<'_>,
     pass: &AlphaThresholdPass,
 ) {
-    let device = exec.device;
-    let queue = exec.queue;
-    let format = exec.format;
-    let target_view = exec.target_view;
-    let viewport_size = exec.viewport_size;
-    let usage = exec.usage;
-    let encoder = &mut *exec.encoder;
-    let frame_targets = &mut *exec.frame_targets;
-    let encoding = exec.encoding;
-    let perf_enabled = exec.perf_enabled;
-    let frame_perf = &mut *exec.frame_perf;
-
-    let renderer = &mut *exec.renderer;
-
-    queue.write_buffer(
-        &renderer.effect_params.alpha_threshold_param_buffer,
-        0,
-        bytemuck::cast_slice(&[pass.cutoff, pass.soft, 0.0, 0.0]),
-    );
-    if perf_enabled {
-        frame_perf.uniform_bytes = frame_perf
-            .uniform_bytes
-            .saturating_add(std::mem::size_of::<[f32; 4]>() as u64);
-    }
-
-    let Some(src_view) =
-        require_color_src_view(frame_targets, pass.src, pass.src_size, "AlphaThreshold")
-    else {
-        return;
-    };
-
-    let dst_view_owned = ensure_color_dst_view_owned(
-        frame_targets,
-        &mut renderer.intermediate_pool,
-        device,
-        pass.dst,
-        pass.dst_size,
-        format,
-        usage,
+    let packed = [pass.cutoff, pass.soft, 0.0, 0.0];
+    record_fullscreen_param_effect_pass(
+        exec,
+        ctx,
         "AlphaThreshold",
+        FullscreenEffectLabels {
+            bind_group: "fret alpha-threshold bind group",
+            bind_group_mask: "fret alpha-threshold mask bind group",
+            pass_unmasked: "fret alpha-threshold pass",
+            pass_masked: "fret alpha-threshold masked pass",
+            pass_mask: "fret alpha-threshold mask pass",
+        },
+        false,
+        pass.src,
+        pass.dst,
+        pass.src_size,
+        pass.dst_size,
+        pass.dst_scissor,
+        pass.mask_uniform_index,
+        pass.mask,
+        pass.load,
+        bytemuck::cast_slice(&packed),
+        std::mem::size_of_val(&packed) as u64,
+        |r| &r.effect_params.alpha_threshold_param_buffer,
+        |r| r.alpha_threshold_bind_group_layout_ref(),
+        |r| r.alpha_threshold_mask_bind_group_layout_ref(),
+        |r| r.alpha_threshold_pipeline_ref(),
+        |r| r.alpha_threshold_masked_pipeline_ref(),
+        |r| r.alpha_threshold_mask_pipeline_ref(),
+        None,
+        Some("mask-based alpha-threshold expects full-size destination"),
     );
-    let dst_view = dst_view_owned.as_ref().unwrap_or(target_view);
-
-    if let Some(mask) = pass.mask {
-        debug_assert!(matches!(
-            mask.target,
-            PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2
-        ));
-        debug_assert_eq!(
-            pass.dst_size, viewport_size,
-            "mask-based alpha-threshold expects full-size destination"
-        );
-
-        let mask_uniform_index = pass
-            .mask_uniform_index
-            .expect("mask alpha-threshold needs uniform index");
-        let uniform_offset =
-            (u64::from(mask_uniform_index) * renderer.uniforms.uniform_stride) as u32;
-
-        let Some(mask_view) =
-            require_mask_view(frame_targets, mask.target, mask.size, "AlphaThreshold")
-        else {
-            return;
-        };
-        let layout = renderer.alpha_threshold_mask_bind_group_layout_ref();
-        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("fret alpha-threshold mask bind group"),
-            layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: wgpu::BindingResource::TextureView(&src_view),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: renderer
-                        .effect_params
-                        .alpha_threshold_param_buffer
-                        .as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: wgpu::BindingResource::TextureView(&mask_view),
-                },
-            ],
-        });
-        let pipeline = renderer.alpha_threshold_mask_pipeline_ref();
-
-        run_fullscreen_triangle_pass_uniform_texture(
-            encoder,
-            "fret alpha-threshold mask pass",
-            pipeline,
-            dst_view,
-            pass.load,
-            renderer.pick_uniform_bind_group_for_mask_image(
-                encoding
-                    .uniform_mask_images
-                    .get(mask_uniform_index as usize)
-                    .copied()
-                    .flatten(),
-            ),
-            &[uniform_offset, ctx.render_space_offset_u32],
-            &bind_group,
-            &[],
-            pass.dst_scissor,
-            pass.dst_size,
-            if perf_enabled { Some(frame_perf) } else { None },
-        );
-    } else if let Some(mask_uniform_index) = pass.mask_uniform_index {
-        let layout = renderer.alpha_threshold_bind_group_layout_ref();
-        let bind_group = create_texture_uniform_bind_group(
-            device,
-            "fret alpha-threshold bind group",
-            layout,
-            &src_view,
-            renderer
-                .effect_params
-                .alpha_threshold_param_buffer
-                .as_entire_binding(),
-        );
-        let pipeline = renderer.alpha_threshold_masked_pipeline_ref();
-        let uniform_offset =
-            (u64::from(mask_uniform_index) * renderer.uniforms.uniform_stride) as u32;
-
-        run_fullscreen_triangle_pass_uniform_texture(
-            encoder,
-            "fret alpha-threshold masked pass",
-            pipeline,
-            dst_view,
-            pass.load,
-            renderer.pick_uniform_bind_group_for_mask_image(
-                encoding
-                    .uniform_mask_images
-                    .get(mask_uniform_index as usize)
-                    .copied()
-                    .flatten(),
-            ),
-            &[uniform_offset, ctx.render_space_offset_u32],
-            &bind_group,
-            &[],
-            pass.dst_scissor,
-            pass.dst_size,
-            if perf_enabled { Some(frame_perf) } else { None },
-        );
-    } else {
-        let layout = renderer.alpha_threshold_bind_group_layout_ref();
-        let bind_group = create_texture_uniform_bind_group(
-            device,
-            "fret alpha-threshold bind group",
-            layout,
-            &src_view,
-            renderer
-                .effect_params
-                .alpha_threshold_param_buffer
-                .as_entire_binding(),
-        );
-        let pipeline = renderer.alpha_threshold_pipeline_ref();
-        run_fullscreen_triangle_pass(
-            encoder,
-            "fret alpha-threshold pass",
-            pipeline,
-            dst_view,
-            pass.dst_size,
-            pass.load,
-            &bind_group,
-            &[],
-            pass.dst_scissor,
-            perf_enabled.then_some(frame_perf),
-        );
-    }
 }
 
 pub(in super::super) fn record_color_matrix_pass(
@@ -365,20 +496,6 @@ pub(in super::super) fn record_color_matrix_pass(
     ctx: &RecordPassCtx<'_>,
     pass: &ColorMatrixPass,
 ) {
-    let device = exec.device;
-    let queue = exec.queue;
-    let format = exec.format;
-    let target_view = exec.target_view;
-    let viewport_size = exec.viewport_size;
-    let usage = exec.usage;
-    let encoder = &mut *exec.encoder;
-    let frame_targets = &mut *exec.frame_targets;
-    let encoding = exec.encoding;
-    let perf_enabled = exec.perf_enabled;
-    let frame_perf = &mut *exec.frame_perf;
-
-    let renderer = &mut *exec.renderer;
-
     let m = pass.matrix;
     let packed: [f32; 20] = [
         // row0 (col0..3)
@@ -388,162 +505,112 @@ pub(in super::super) fn record_color_matrix_pass(
         m[15], m[16], m[17], m[18], // bias (col4)
         m[4], m[9], m[14], m[19],
     ];
-    queue.write_buffer(
-        &renderer.effect_params.color_matrix_param_buffer,
-        0,
-        bytemuck::cast_slice(&packed),
-    );
-    if perf_enabled {
-        frame_perf.uniform_bytes = frame_perf
-            .uniform_bytes
-            .saturating_add(std::mem::size_of::<[f32; 20]>() as u64);
-    }
-
-    let Some(src_view) =
-        require_color_src_view(frame_targets, pass.src, pass.src_size, "ColorMatrix")
-    else {
-        return;
-    };
-
-    let dst_view_owned = ensure_color_dst_view_owned(
-        frame_targets,
-        &mut renderer.intermediate_pool,
-        device,
-        pass.dst,
-        pass.dst_size,
-        format,
-        usage,
+    record_fullscreen_param_effect_pass(
+        exec,
+        ctx,
         "ColorMatrix",
+        FullscreenEffectLabels {
+            bind_group: "fret color-matrix bind group",
+            bind_group_mask: "fret color-matrix mask bind group",
+            pass_unmasked: "fret color-matrix pass",
+            pass_masked: "fret color-matrix masked pass",
+            pass_mask: "fret color-matrix mask pass",
+        },
+        false,
+        pass.src,
+        pass.dst,
+        pass.src_size,
+        pass.dst_size,
+        pass.dst_scissor,
+        pass.mask_uniform_index,
+        pass.mask,
+        pass.load,
+        bytemuck::cast_slice(&packed),
+        std::mem::size_of_val(&packed) as u64,
+        |r| &r.effect_params.color_matrix_param_buffer,
+        |r| r.color_matrix_bind_group_layout_ref(),
+        |r| r.color_matrix_mask_bind_group_layout_ref(),
+        |r| r.color_matrix_pipeline_ref(),
+        |r| r.color_matrix_masked_pipeline_ref(),
+        |r| r.color_matrix_mask_pipeline_ref(),
+        None,
+        Some("mask-based color-matrix expects full-size destination"),
     );
-    let dst_view = dst_view_owned.as_ref().unwrap_or(target_view);
+}
 
-    if let Some(mask) = pass.mask {
-        debug_assert!(matches!(
-            mask.target,
-            PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2
-        ));
-        debug_assert_eq!(
-            pass.dst_size, viewport_size,
-            "mask-based color-matrix expects full-size destination"
-        );
+pub(in super::super) fn record_dither_pass(
+    exec: &mut RenderSceneExecutor<'_>,
+    ctx: &RecordPassCtx<'_>,
+    pass: &DitherPass,
+) {
+    debug_assert!(matches!(pass.mode, fret_core::DitherMode::Bayer4x4));
 
-        let mask_uniform_index = pass
-            .mask_uniform_index
-            .expect("mask color-matrix needs uniform index");
-        let uniform_offset =
-            (u64::from(mask_uniform_index) * renderer.uniforms.uniform_stride) as u32;
+    record_fullscreen_texture_effect_pass(
+        exec,
+        ctx,
+        "Dither",
+        FullscreenEffectLabels {
+            bind_group: "fret dither bind group",
+            bind_group_mask: "fret dither mask bind group",
+            pass_unmasked: "fret dither pass",
+            pass_masked: "fret dither masked pass",
+            pass_mask: "fret dither mask pass",
+        },
+        pass.src,
+        pass.dst,
+        pass.src_size,
+        pass.dst_size,
+        pass.dst_scissor,
+        pass.mask_uniform_index,
+        pass.mask,
+        pass.load,
+        |r| r.dither_bind_group_layout_ref(),
+        |r| r.dither_mask_bind_group_layout_ref(),
+        |r| r.dither_pipeline_ref(),
+        |r| r.dither_masked_pipeline_ref(),
+        |r| r.dither_mask_pipeline_ref(),
+        Some("clip-based dither expects full-size destination"),
+        Some("mask-based dither expects full-size destination"),
+    );
+}
 
-        let Some(mask_view) =
-            require_mask_view(frame_targets, mask.target, mask.size, "ColorMatrix")
-        else {
-            return;
-        };
-        let layout = renderer.color_matrix_mask_bind_group_layout_ref();
-        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("fret color-matrix mask bind group"),
-            layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: wgpu::BindingResource::TextureView(&src_view),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: renderer
-                        .effect_params
-                        .color_matrix_param_buffer
-                        .as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: wgpu::BindingResource::TextureView(&mask_view),
-                },
-            ],
-        });
-        let pipeline = renderer.color_matrix_mask_pipeline_ref();
-
-        run_fullscreen_triangle_pass_uniform_texture(
-            encoder,
-            "fret color-matrix mask pass",
-            pipeline,
-            dst_view,
-            pass.load,
-            renderer.pick_uniform_bind_group_for_mask_image(
-                encoding
-                    .uniform_mask_images
-                    .get(mask_uniform_index as usize)
-                    .copied()
-                    .flatten(),
-            ),
-            &[uniform_offset, ctx.render_space_offset_u32],
-            &bind_group,
-            &[],
-            pass.dst_scissor,
-            pass.dst_size,
-            if perf_enabled { Some(frame_perf) } else { None },
-        );
-    } else if let Some(mask_uniform_index) = pass.mask_uniform_index {
-        let layout = renderer.color_matrix_bind_group_layout_ref();
-        let bind_group = create_texture_uniform_bind_group(
-            device,
-            "fret color-matrix bind group",
-            layout,
-            &src_view,
-            renderer
-                .effect_params
-                .color_matrix_param_buffer
-                .as_entire_binding(),
-        );
-        let pipeline = renderer.color_matrix_masked_pipeline_ref();
-        let uniform_offset =
-            (u64::from(mask_uniform_index) * renderer.uniforms.uniform_stride) as u32;
-
-        run_fullscreen_triangle_pass_uniform_texture(
-            encoder,
-            "fret color-matrix masked pass",
-            pipeline,
-            dst_view,
-            pass.load,
-            renderer.pick_uniform_bind_group_for_mask_image(
-                encoding
-                    .uniform_mask_images
-                    .get(mask_uniform_index as usize)
-                    .copied()
-                    .flatten(),
-            ),
-            &[uniform_offset, ctx.render_space_offset_u32],
-            &bind_group,
-            &[],
-            pass.dst_scissor,
-            pass.dst_size,
-            if perf_enabled { Some(frame_perf) } else { None },
-        );
-    } else {
-        let layout = renderer.color_matrix_bind_group_layout_ref();
-        let bind_group = create_texture_uniform_bind_group(
-            device,
-            "fret color-matrix bind group",
-            layout,
-            &src_view,
-            renderer
-                .effect_params
-                .color_matrix_param_buffer
-                .as_entire_binding(),
-        );
-        let pipeline = renderer.color_matrix_pipeline_ref();
-        run_fullscreen_triangle_pass(
-            encoder,
-            "fret color-matrix pass",
-            pipeline,
-            dst_view,
-            pass.dst_size,
-            pass.load,
-            &bind_group,
-            &[],
-            pass.dst_scissor,
-            perf_enabled.then_some(frame_perf),
-        );
-    }
+pub(in super::super) fn record_noise_pass(
+    exec: &mut RenderSceneExecutor<'_>,
+    ctx: &RecordPassCtx<'_>,
+    pass: &NoisePass,
+) {
+    let packed = [pass.strength, pass.scale_px, pass.phase, 0.0];
+    record_fullscreen_param_effect_pass(
+        exec,
+        ctx,
+        "Noise",
+        FullscreenEffectLabels {
+            bind_group: "fret noise bind group",
+            bind_group_mask: "fret noise mask bind group",
+            pass_unmasked: "fret noise pass",
+            pass_masked: "fret noise masked pass",
+            pass_mask: "fret noise mask pass",
+        },
+        false,
+        pass.src,
+        pass.dst,
+        pass.src_size,
+        pass.dst_size,
+        pass.dst_scissor,
+        pass.mask_uniform_index,
+        pass.mask,
+        pass.load,
+        bytemuck::cast_slice(&packed),
+        std::mem::size_of_val(&packed) as u64,
+        |r| &r.effect_params.noise_param_buffer,
+        |r| r.noise_bind_group_layout_ref(),
+        |r| r.noise_mask_bind_group_layout_ref(),
+        |r| r.noise_pipeline_ref(),
+        |r| r.noise_masked_pipeline_ref(),
+        |r| r.noise_mask_pipeline_ref(),
+        Some("clip-based noise expects full-size destination"),
+        Some("mask-based noise expects full-size destination"),
+    );
 }
 
 pub(in super::super) fn record_drop_shadow_pass(
@@ -551,186 +618,123 @@ pub(in super::super) fn record_drop_shadow_pass(
     ctx: &RecordPassCtx<'_>,
     pass: &DropShadowPass,
 ) {
-    let device = exec.device;
-    let queue = exec.queue;
-    let format = exec.format;
-    let target_view = exec.target_view;
-    let viewport_size = exec.viewport_size;
-    let usage = exec.usage;
-    let encoder = &mut *exec.encoder;
-    let frame_targets = &mut *exec.frame_targets;
-    let encoding = exec.encoding;
-    let perf_enabled = exec.perf_enabled;
-    let frame_perf = &mut *exec.frame_perf;
-
-    let renderer = &mut *exec.renderer;
-
-    queue.write_buffer(
-        &renderer.effect_params.drop_shadow_param_buffer,
-        0,
-        bytemuck::cast_slice(&[
-            pass.offset_px.0,
-            pass.offset_px.1,
-            0.0,
-            0.0,
-            pass.color.r,
-            pass.color.g,
-            pass.color.b,
-            pass.color.a,
-        ]),
-    );
-    if perf_enabled {
-        frame_perf.uniform_bytes = frame_perf
-            .uniform_bytes
-            .saturating_add(std::mem::size_of::<[f32; 8]>() as u64);
-    }
-
-    let Some(src_view) =
-        require_color_src_view(frame_targets, pass.src, pass.src_size, "DropShadow")
-    else {
-        return;
-    };
-
-    let dst_view_owned = ensure_color_dst_view_owned(
-        frame_targets,
-        &mut renderer.intermediate_pool,
-        device,
-        pass.dst,
-        pass.dst_size,
-        format,
-        usage,
+    let packed = [
+        pass.offset_px.0,
+        pass.offset_px.1,
+        0.0,
+        0.0,
+        pass.color.r,
+        pass.color.g,
+        pass.color.b,
+        pass.color.a,
+    ];
+    record_fullscreen_param_effect_pass(
+        exec,
+        ctx,
         "DropShadow",
+        FullscreenEffectLabels {
+            bind_group: "fret drop-shadow bind group",
+            bind_group_mask: "fret drop-shadow mask bind group",
+            pass_unmasked: "fret drop-shadow pass",
+            pass_masked: "fret drop-shadow masked pass",
+            pass_mask: "fret drop-shadow mask pass",
+        },
+        false,
+        pass.src,
+        pass.dst,
+        pass.src_size,
+        pass.dst_size,
+        pass.dst_scissor,
+        pass.mask_uniform_index,
+        pass.mask,
+        pass.load,
+        bytemuck::cast_slice(&packed),
+        std::mem::size_of_val(&packed) as u64,
+        |r| &r.effect_params.drop_shadow_param_buffer,
+        |r| r.drop_shadow_bind_group_layout_ref(),
+        |r| r.drop_shadow_mask_bind_group_layout_ref(),
+        |r| r.drop_shadow_pipeline_ref(),
+        |r| r.drop_shadow_masked_pipeline_ref(),
+        |r| r.drop_shadow_mask_pipeline_ref(),
+        Some("clip-based drop-shadow expects full-size destination"),
+        Some("mask-based drop-shadow expects full-size destination"),
     );
-    let dst_view = dst_view_owned.as_ref().unwrap_or(target_view);
+}
 
-    if let Some(mask) = pass.mask {
-        debug_assert!(matches!(
-            mask.target,
-            PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2
-        ));
-        debug_assert_eq!(
-            pass.dst_size, viewport_size,
-            "mask-based drop-shadow expects full-size destination"
-        );
+pub(in super::super) fn record_custom_effect_pass(
+    exec: &mut RenderSceneExecutor<'_>,
+    ctx: &RecordPassCtx<'_>,
+    pass: &CustomEffectPass,
+) {
+    let effect = pass.effect;
 
-        let mask_uniform_index = pass
-            .mask_uniform_index
-            .expect("mask drop-shadow needs uniform index");
-        let uniform_offset =
-            (u64::from(mask_uniform_index) * renderer.uniforms.uniform_stride) as u32;
-
-        let Some(mask_view) =
-            require_mask_view(frame_targets, mask.target, mask.size, "DropShadow")
-        else {
-            return;
+    if exec.renderer.custom_effects.get(effect).is_none() {
+        let blit = FullscreenBlitPass {
+            src: pass.src,
+            dst: pass.dst,
+            src_size: pass.src_size,
+            dst_size: pass.dst_size,
+            dst_scissor: pass.dst_scissor,
+            encode_output_srgb: false,
+            load: pass.load,
         };
-        let layout = renderer.drop_shadow_mask_bind_group_layout_ref();
-        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("fret drop-shadow mask bind group"),
-            layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: wgpu::BindingResource::TextureView(&src_view),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: renderer
-                        .effect_params
-                        .drop_shadow_param_buffer
-                        .as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: wgpu::BindingResource::TextureView(&mask_view),
-                },
-            ],
-        });
-
-        let pipeline = renderer.drop_shadow_mask_pipeline_ref();
-
-        run_fullscreen_triangle_pass_uniform_texture(
-            encoder,
-            "fret drop-shadow mask pass",
-            pipeline,
-            dst_view,
-            pass.load,
-            renderer.pick_uniform_bind_group_for_mask_image(
-                encoding
-                    .uniform_mask_images
-                    .get(mask_uniform_index as usize)
-                    .copied()
-                    .flatten(),
-            ),
-            &[uniform_offset, ctx.render_space_offset_u32],
-            &bind_group,
-            &[],
-            pass.dst_scissor,
-            pass.dst_size,
-            if perf_enabled { Some(frame_perf) } else { None },
-        );
-    } else if let Some(mask_uniform_index) = pass.mask_uniform_index {
-        let layout = renderer.drop_shadow_bind_group_layout_ref();
-        let bind_group = create_texture_uniform_bind_group(
-            device,
-            "fret drop-shadow bind group",
-            layout,
-            &src_view,
-            renderer
-                .effect_params
-                .drop_shadow_param_buffer
-                .as_entire_binding(),
-        );
-        let pipeline = renderer.drop_shadow_masked_pipeline_ref();
-        let uniform_offset =
-            (u64::from(mask_uniform_index) * renderer.uniforms.uniform_stride) as u32;
-
-        run_fullscreen_triangle_pass_uniform_texture(
-            encoder,
-            "fret drop-shadow masked pass",
-            pipeline,
-            dst_view,
-            pass.load,
-            renderer.pick_uniform_bind_group_for_mask_image(
-                encoding
-                    .uniform_mask_images
-                    .get(mask_uniform_index as usize)
-                    .copied()
-                    .flatten(),
-            ),
-            &[uniform_offset, ctx.render_space_offset_u32],
-            &bind_group,
-            &[],
-            pass.dst_scissor,
-            pass.dst_size,
-            if perf_enabled { Some(frame_perf) } else { None },
-        );
-    } else {
-        let layout = renderer.drop_shadow_bind_group_layout_ref();
-        let bind_group = create_texture_uniform_bind_group(
-            device,
-            "fret drop-shadow bind group",
-            layout,
-            &src_view,
-            renderer
-                .effect_params
-                .drop_shadow_param_buffer
-                .as_entire_binding(),
-        );
-        let pipeline = renderer.drop_shadow_pipeline_ref();
-        run_fullscreen_triangle_pass(
-            encoder,
-            "fret drop-shadow pass",
-            pipeline,
-            dst_view,
-            pass.dst_size,
-            pass.load,
-            &bind_group,
-            &[],
-            pass.dst_scissor,
-            perf_enabled.then_some(frame_perf),
-        );
+        record_fullscreen_blit_pass(exec, &blit);
+        return;
     }
+
+    exec.renderer
+        .ensure_custom_effect_pipelines(exec.device, exec.format, effect);
+    if !exec
+        .renderer
+        .pipelines
+        .custom_effect_pipelines
+        .contains_key(&effect)
+    {
+        let blit = FullscreenBlitPass {
+            src: pass.src,
+            dst: pass.dst,
+            src_size: pass.src_size,
+            dst_size: pass.dst_size,
+            dst_scissor: pass.dst_scissor,
+            encode_output_srgb: false,
+            load: pass.load,
+        };
+        record_fullscreen_blit_pass(exec, &blit);
+        return;
+    }
+
+    let packed = pack_effect_params_v1(pass.params);
+    record_fullscreen_param_effect_pass(
+        exec,
+        ctx,
+        "CustomEffectV1",
+        FullscreenEffectLabels {
+            bind_group: "fret custom-effect bind group",
+            bind_group_mask: "fret custom-effect mask bind group",
+            pass_unmasked: "fret custom-effect pass",
+            pass_masked: "fret custom-effect masked pass",
+            pass_mask: "fret custom-effect mask pass",
+        },
+        true,
+        pass.src,
+        pass.dst,
+        pass.src_size,
+        pass.dst_size,
+        pass.dst_scissor,
+        pass.mask_uniform_index,
+        pass.mask,
+        pass.load,
+        packed.as_ref(),
+        packed.len() as u64,
+        |r| &r.effect_params.custom_effect_param_buffer,
+        |r| r.custom_effect_bind_group_layout_ref(),
+        |r| r.custom_effect_mask_bind_group_layout_ref(),
+        move |r| r.custom_effect_pipeline_ref(effect),
+        move |r| r.custom_effect_masked_pipeline_ref(effect),
+        move |r| r.custom_effect_mask_pipeline_ref(effect),
+        Some("clip-based custom effect expects full-size destination"),
+        Some("mask-based custom effect expects full-size destination"),
+    );
 }
 
 pub(in super::super) fn record_composite_premul_pass(

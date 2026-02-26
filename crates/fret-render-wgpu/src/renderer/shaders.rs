@@ -234,15 +234,7 @@ fn linear_to_srgb(rgb: vec3<f32>) -> vec3<f32> {
 }
 
 fn encode_output_premul(c: vec4<f32>) -> vec4<f32> {
-  if (viewport.output_is_srgb != 0u) {
-    return c;
-  }
-  if (c.a <= 0.0) {
-    return c;
-  }
-  let un = c.rgb / c.a;
-  let enc = linear_to_srgb(un);
-  return vec4<f32>(enc * c.a, c.a);
+  return c;
 }
 
 fn dist2(a: vec2<f32>, b: vec2<f32>) -> f32 {
@@ -1234,15 +1226,7 @@ fn linear_to_srgb(rgb: vec3<f32>) -> vec3<f32> {
 }
 
 fn encode_output_premul(c: vec4<f32>) -> vec4<f32> {
-  if (viewport.output_is_srgb != 0u) {
-    return c;
-  }
-  if (c.a <= 0.0) {
-    return c;
-  }
-  let un = c.rgb / c.a;
-  let enc = linear_to_srgb(un);
-  return vec4<f32>(enc * c.a, c.a);
+  return c;
 }
 
 @vertex
@@ -1271,240 +1255,19 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
 }
 "#;
 
-pub(super) const BLIT_SHADER: &str = r#"
-@group(0) @binding(0) var src_texture: texture_2d<f32>;
+// Large effect shaders live as external WGSL files for reviewable diffs and lower merge conflict risk.
+pub(super) const BLIT_SHADER: &str = include_str!("pipelines/wgsl/blit.wgsl");
 
-struct VsOut {
-  @builtin(position) pos: vec4<f32>,
-};
+pub(super) const BLIT_SRGB_ENCODE_SHADER: &str =
+    include_str!("pipelines/wgsl/blit_srgb_encode.wgsl");
 
-@vertex
-fn vs_main(@builtin(vertex_index) vid: u32) -> VsOut {
-  var pos = array<vec2<f32>, 3>(
-    vec2<f32>(-1.0, -3.0),
-    vec2<f32>( 3.0,  1.0),
-    vec2<f32>(-1.0,  1.0),
-  );
-  var out: VsOut;
-  out.pos = vec4<f32>(pos[vid], 0.0, 1.0);
-  return out;
-}
+pub(super) const DROP_SHADOW_SHADER: &str = include_str!("pipelines/wgsl/drop_shadow.wgsl");
 
-@fragment
-fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
-  let dims = textureDimensions(src_texture);
-  let x = u32(floor(pos.x));
-  let y = u32(floor(pos.y));
-  if (x >= dims.x || y >= dims.y) {
-    return vec4<f32>(0.0);
-  }
-  return textureLoad(src_texture, vec2<i32>(i32(x), i32(y)), 0);
-}
-"#;
+const DROP_SHADOW_MASKED_SHADER_PART_A: &str =
+    include_str!("pipelines/wgsl/drop_shadow_masked_part_a.wgsl");
 
-pub(super) const DROP_SHADOW_SHADER: &str = r#"
-@group(0) @binding(0) var src_texture: texture_2d<f32>;
-
-struct Params {
-  offset_px: vec2<f32>,
-  _pad0: vec2<f32>,
-  color: vec4<f32>,
-};
-
-@group(0) @binding(1) var<uniform> params: Params;
-
-struct VsOut {
-  @builtin(position) pos: vec4<f32>,
-};
-
-@vertex
-fn vs_main(@builtin(vertex_index) vid: u32) -> VsOut {
-  var pos = array<vec2<f32>, 3>(
-    vec2<f32>(-1.0, -3.0),
-    vec2<f32>( 3.0,  1.0),
-    vec2<f32>(-1.0,  1.0),
-  );
-  var out: VsOut;
-  out.pos = vec4<f32>(pos[vid], 0.0, 1.0);
-  return out;
-}
-
-fn sample_premul_bilinear(p_px: vec2<f32>) -> vec4<f32> {
-  let dims_u = textureDimensions(src_texture);
-  if (dims_u.x == 0u || dims_u.y == 0u) {
-    return vec4<f32>(0.0);
-  }
-
-  let max_p = vec2<f32>(f32(dims_u.x) - 0.5, f32(dims_u.y) - 0.5);
-  let p = clamp(p_px, vec2<f32>(0.5), max_p);
-
-  let t = p - vec2<f32>(0.5);
-  let base_f = floor(t);
-  let f = fract(t);
-
-  let x0 = clamp(i32(base_f.x), 0, i32(dims_u.x) - 1);
-  let y0 = clamp(i32(base_f.y), 0, i32(dims_u.y) - 1);
-  let x1 = min(x0 + 1, i32(dims_u.x) - 1);
-  let y1 = min(y0 + 1, i32(dims_u.y) - 1);
-
-  let c00 = textureLoad(src_texture, vec2<i32>(x0, y0), 0);
-  let c10 = textureLoad(src_texture, vec2<i32>(x1, y0), 0);
-  let c01 = textureLoad(src_texture, vec2<i32>(x0, y1), 0);
-  let c11 = textureLoad(src_texture, vec2<i32>(x1, y1), 0);
-
-  let cx0 = mix(c00, c10, f.x);
-  let cx1 = mix(c01, c11, f.x);
-  return mix(cx0, cx1, f.y);
-}
-
-@fragment
-fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
-  let dims = textureDimensions(src_texture);
-  let x = i32(floor(pos.x));
-  let y = i32(floor(pos.y));
-  if (x < 0 || y < 0 || x >= i32(dims.x) || y >= i32(dims.y)) {
-    return vec4<f32>(0.0);
-  }
-
-  let p = pos.xy - params.offset_px;
-  let src = sample_premul_bilinear(p);
-  let a = src.a * clamp(params.color.a, 0.0, 1.0);
-  let rgb = clamp(params.color.rgb, vec3<f32>(0.0), vec3<f32>(1.0)) * a;
-  return vec4<f32>(rgb, a);
-}
-"#;
-
-const DROP_SHADOW_MASKED_SHADER_PART_A: &str = r#"
-struct ClipRRect {
-  rect: vec4<f32>,
-  corner_radii: vec4<f32>,
-  inv0: vec4<f32>,
-  inv1: vec4<f32>,
-};
-
-struct Viewport {
-  viewport_size: vec2<f32>,
-  clip_head: u32,
-  clip_count: u32,
-  mask_head: u32,
-  mask_count: u32,
-  mask_scope_head: u32,
-  mask_scope_count: u32,
-  output_is_srgb: u32,
-  _pad0: u32,
-  mask_viewport_origin: vec2<f32>,
-  mask_viewport_size: vec2<f32>,
-};
-
-@group(0) @binding(0) var<uniform> viewport: Viewport;
-
-struct RenderSpace {
-  origin_px: vec2<f32>,
-  size_px: vec2<f32>,
-};
-
-@group(0) @binding(5) var<uniform> render_space: RenderSpace;
-struct ClipStack {
-  clips: array<ClipRRect>,
-};
-
-@group(0) @binding(1) var<storage, read> clip_stack: ClipStack;
-
-@group(1) @binding(0) var src_texture: texture_2d<f32>;
-
-struct Params {
-  offset_px: vec2<f32>,
-  _pad0: vec2<f32>,
-  color: vec4<f32>,
-};
-
-@group(1) @binding(1) var<uniform> params: Params;
-
-struct VsOut {
-  @builtin(position) pos: vec4<f32>,
-};
-
-@vertex
-fn vs_main(@builtin(vertex_index) vid: u32) -> VsOut {
-  var pos = array<vec2<f32>, 3>(
-    vec2<f32>(-1.0, -3.0),
-    vec2<f32>( 3.0,  1.0),
-    vec2<f32>(-1.0,  1.0),
-  );
-  var out: VsOut;
-  out.pos = vec4<f32>(pos[vid], 0.0, 1.0);
-  return out;
-}
-"#;
-
-const DROP_SHADOW_MASKED_SHADER_PART_B: &str = r#"
-fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
-  var alpha = 1.0;
-  var idx = viewport.clip_head;
-  for (var i = 0u; i < 64u; i = i + 1u) {
-    if (i >= viewport.clip_count) {
-      break;
-    }
-    if (idx == 0xffffffffu) {
-      break;
-    }
-    let clip = clip_stack.clips[idx];
-    idx = bitcast<u32>(clip.inv0.w);
-    let clip_local = vec2<f32>(
-      dot(clip.inv0.xy, pixel_pos) + clip.inv0.z,
-      dot(clip.inv1.xy, pixel_pos) + clip.inv1.z
-    );
-    let sdf = quad_sdf(clip_local, clip.rect.xy, clip.rect.zw, clip.corner_radii);
-    alpha = alpha * sdf_coverage_linear(sdf);
-  }
-  return alpha;
-}
-
-fn sample_premul_bilinear(p_px: vec2<f32>) -> vec4<f32> {
-  let dims_u = textureDimensions(src_texture);
-  if (dims_u.x == 0u || dims_u.y == 0u) {
-    return vec4<f32>(0.0);
-  }
-
-  let max_p = vec2<f32>(f32(dims_u.x) - 0.5, f32(dims_u.y) - 0.5);
-  let p = clamp(p_px, vec2<f32>(0.5), max_p);
-
-  let t = p - vec2<f32>(0.5);
-  let base_f = floor(t);
-  let f = fract(t);
-
-  let x0 = clamp(i32(base_f.x), 0, i32(dims_u.x) - 1);
-  let y0 = clamp(i32(base_f.y), 0, i32(dims_u.y) - 1);
-  let x1 = min(x0 + 1, i32(dims_u.x) - 1);
-  let y1 = min(y0 + 1, i32(dims_u.y) - 1);
-
-  let c00 = textureLoad(src_texture, vec2<i32>(x0, y0), 0);
-  let c10 = textureLoad(src_texture, vec2<i32>(x1, y0), 0);
-  let c01 = textureLoad(src_texture, vec2<i32>(x0, y1), 0);
-  let c11 = textureLoad(src_texture, vec2<i32>(x1, y1), 0);
-
-  let cx0 = mix(c00, c10, f.x);
-  let cx1 = mix(c01, c11, f.x);
-  return mix(cx0, cx1, f.y);
-}
-
-@fragment
-fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
-  let dims = textureDimensions(src_texture);
-  let x = i32(floor(pos.x));
-  let y = i32(floor(pos.y));
-  if (x < 0 || y < 0 || x >= i32(dims.x) || y >= i32(dims.y)) {
-    return vec4<f32>(0.0);
-  }
-
-  let p = pos.xy - params.offset_px;
-  let src = sample_premul_bilinear(p);
-  let clip = clip_alpha(pos.xy);
-  let a = src.a * clamp(params.color.a, 0.0, 1.0) * clip;
-  let rgb = clamp(params.color.rgb, vec3<f32>(0.0), vec3<f32>(1.0)) * a;
-  return vec4<f32>(rgb, a);
-}
-"#;
+const DROP_SHADOW_MASKED_SHADER_PART_B: &str =
+    include_str!("pipelines/wgsl/drop_shadow_masked_part_b.wgsl");
 
 pub(super) fn drop_shadow_masked_shader_source() -> String {
     format!(
@@ -1512,125 +1275,8 @@ pub(super) fn drop_shadow_masked_shader_source() -> String {
     )
 }
 
-pub(super) const DROP_SHADOW_MASK_SHADER: &str = r#"
-struct ClipRRect {
-  rect: vec4<f32>,
-  corner_radii: vec4<f32>,
-  inv0: vec4<f32>,
-  inv1: vec4<f32>,
-};
-
-struct Viewport {
-  viewport_size: vec2<f32>,
-  clip_head: u32,
-  clip_count: u32,
-  mask_head: u32,
-  mask_count: u32,
-  mask_scope_head: u32,
-  mask_scope_count: u32,
-  output_is_srgb: u32,
-  _pad0: u32,
-  mask_viewport_origin: vec2<f32>,
-  mask_viewport_size: vec2<f32>,
-};
-
-@group(0) @binding(0) var<uniform> viewport: Viewport;
-
-struct RenderSpace {
-  origin_px: vec2<f32>,
-  size_px: vec2<f32>,
-};
-
-@group(0) @binding(5) var<uniform> render_space: RenderSpace;
-struct ClipStack {
-  clips: array<ClipRRect>,
-};
-
-@group(0) @binding(1) var<storage, read> clip_stack: ClipStack;
-
-@group(1) @binding(0) var src_texture: texture_2d<f32>;
-
-struct Params {
-  offset_px: vec2<f32>,
-  _pad0: vec2<f32>,
-  color: vec4<f32>,
-};
-
-@group(1) @binding(1) var<uniform> params: Params;
-@group(1) @binding(2) var mask_texture: texture_2d<f32>;
-
-struct VsOut {
-  @builtin(position) pos: vec4<f32>,
-};
-
-@vertex
-fn vs_main(@builtin(vertex_index) vid: u32) -> VsOut {
-  var pos = array<vec2<f32>, 3>(
-    vec2<f32>(-1.0, -3.0),
-    vec2<f32>( 3.0,  1.0),
-    vec2<f32>(-1.0,  1.0),
-  );
-  var out: VsOut;
-  out.pos = vec4<f32>(pos[vid], 0.0, 1.0);
-  return out;
-}
-
-fn sample_premul_bilinear(p_px: vec2<f32>) -> vec4<f32> {
-  let dims_u = textureDimensions(src_texture);
-  if (dims_u.x == 0u || dims_u.y == 0u) {
-    return vec4<f32>(0.0);
-  }
-
-  let max_p = vec2<f32>(f32(dims_u.x) - 0.5, f32(dims_u.y) - 0.5);
-  let p = clamp(p_px, vec2<f32>(0.5), max_p);
-
-  let t = p - vec2<f32>(0.5);
-  let base_f = floor(t);
-  let f = fract(t);
-
-  let x0 = clamp(i32(base_f.x), 0, i32(dims_u.x) - 1);
-  let y0 = clamp(i32(base_f.y), 0, i32(dims_u.y) - 1);
-  let x1 = min(x0 + 1, i32(dims_u.x) - 1);
-  let y1 = min(y0 + 1, i32(dims_u.y) - 1);
-
-  let c00 = textureLoad(src_texture, vec2<i32>(x0, y0), 0);
-  let c10 = textureLoad(src_texture, vec2<i32>(x1, y0), 0);
-  let c01 = textureLoad(src_texture, vec2<i32>(x0, y1), 0);
-  let c11 = textureLoad(src_texture, vec2<i32>(x1, y1), 0);
-
-  let cx0 = mix(c00, c10, f.x);
-  let cx1 = mix(c01, c11, f.x);
-  return mix(cx0, cx1, f.y);
-}
-
-@fragment
-fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
-  let dims = textureDimensions(src_texture);
-  let x = i32(floor(pos.x));
-  let y = i32(floor(pos.y));
-  if (x < 0 || y < 0 || x >= i32(dims.x) || y >= i32(dims.y)) {
-    return vec4<f32>(0.0);
-  }
-
-  let mdims_u = textureDimensions(mask_texture);
-  let mdims = vec2<f32>(f32(mdims_u.x), f32(mdims_u.y));
-  let local_x = (f32(x) + 0.5) - viewport.mask_viewport_origin.x;
-  let local_y = (f32(y) + 0.5) - viewport.mask_viewport_origin.y;
-  if (local_x < 0.0 || local_y < 0.0 ||
-      local_x >= viewport.mask_viewport_size.x || local_y >= viewport.mask_viewport_size.y) {
-    return vec4<f32>(0.0);
-  }
-  let mx = clamp(i32(floor(local_x * mdims.x / viewport.mask_viewport_size.x)), 0, i32(mdims_u.x) - 1);
-  let my = clamp(i32(floor(local_y * mdims.y / viewport.mask_viewport_size.y)), 0, i32(mdims_u.y) - 1);
-  let mask = textureLoad(mask_texture, vec2<i32>(mx, my), 0).x;
-
-  let p = pos.xy - params.offset_px;
-  let src = sample_premul_bilinear(p);
-  let a = src.a * clamp(params.color.a, 0.0, 1.0) * mask;
-  let rgb = clamp(params.color.rgb, vec3<f32>(0.0), vec3<f32>(1.0)) * a;
-  return vec4<f32>(rgb, a);
-}
-"#;
+pub(super) const DROP_SHADOW_MASK_SHADER: &str =
+    include_str!("pipelines/wgsl/drop_shadow_mask.wgsl");
 
 pub(super) const DOWNSAMPLE_NEAREST_SHADER: &str = r#"
 @group(0) @binding(0) var src_texture: texture_2d<f32>;
@@ -4055,612 +3701,72 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
 }
 "#;
 
-pub(super) const BLUR_H_SHADER: &str = r#"
-@group(0) @binding(0) var src_texture: texture_2d<f32>;
+pub(super) const DITHER_SHADER: &str = include_str!("pipelines/wgsl/dither.wgsl");
 
-struct VsOut {
-  @builtin(position) pos: vec4<f32>,
-};
+const DITHER_MASKED_SHADER_PART_A: &str = include_str!("pipelines/wgsl/dither_masked_part_a.wgsl");
 
-@vertex
-fn vs_main(@builtin(vertex_index) vid: u32) -> VsOut {
-  var pos = array<vec2<f32>, 3>(
-    vec2<f32>(-1.0, -3.0),
-    vec2<f32>( 3.0,  1.0),
-    vec2<f32>(-1.0,  1.0),
-  );
-  var out: VsOut;
-  out.pos = vec4<f32>(pos[vid], 0.0, 1.0);
-  return out;
+const DITHER_MASKED_SHADER_PART_B: &str = include_str!("pipelines/wgsl/dither_masked_part_b.wgsl");
+
+pub(super) fn dither_masked_shader_source() -> String {
+    format!("{DITHER_MASKED_SHADER_PART_A}{CLIP_SDF_CORE_WGSL}{DITHER_MASKED_SHADER_PART_B}")
 }
 
-fn clamp_i32(x: i32, lo: i32, hi: i32) -> i32 {
-  return min(max(x, lo), hi);
+pub(super) const DITHER_MASK_SHADER: &str = include_str!("pipelines/wgsl/dither_mask.wgsl");
+
+const CUSTOM_EFFECT_UNMASKED_SHADER_PART_A: &str =
+    include_str!("pipelines/wgsl/custom_effect_unmasked_part_a.wgsl");
+const CUSTOM_EFFECT_UNMASKED_SHADER_PART_B: &str =
+    include_str!("pipelines/wgsl/custom_effect_unmasked_part_b.wgsl");
+
+const CUSTOM_EFFECT_MASKED_SHADER_PART_A: &str =
+    include_str!("pipelines/wgsl/custom_effect_masked_part_a.wgsl");
+const CUSTOM_EFFECT_MASKED_SHADER_PART_B: &str =
+    include_str!("pipelines/wgsl/custom_effect_masked_part_b.wgsl");
+
+const CUSTOM_EFFECT_MASK_SHADER_PART_A: &str =
+    include_str!("pipelines/wgsl/custom_effect_mask_part_a.wgsl");
+const CUSTOM_EFFECT_MASK_SHADER_PART_B: &str =
+    include_str!("pipelines/wgsl/custom_effect_mask_part_b.wgsl");
+
+pub(super) fn custom_effect_unmasked_shader_source(user_source: &str) -> String {
+    format!(
+        "{CUSTOM_EFFECT_UNMASKED_SHADER_PART_A}{user_source}\n{CUSTOM_EFFECT_UNMASKED_SHADER_PART_B}"
+    )
 }
 
-@fragment
-fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
-  let dims = textureDimensions(src_texture);
-  let x = i32(floor(pos.x));
-  let y = i32(floor(pos.y));
-  if (x < 0 || y < 0 || x >= i32(dims.x) || y >= i32(dims.y)) {
-    return vec4<f32>(0.0);
-  }
-
-  // 9-tap separable gaussian-ish kernel (radius 4).
-  let w0 = 0.227027;
-  let w1 = 0.1945946;
-  let w2 = 0.1216216;
-  let w3 = 0.054054;
-  let w4 = 0.016216;
-
-  let max_x = i32(dims.x) - 1;
-  let sx0 = clamp_i32(x, 0, max_x);
-  let c0 = textureLoad(src_texture, vec2<i32>(sx0, y), 0) * w0;
-
-  let sx1p = clamp_i32(x + 1, 0, max_x);
-  let sx1n = clamp_i32(x - 1, 0, max_x);
-  let c1 = (textureLoad(src_texture, vec2<i32>(sx1p, y), 0) +
-            textureLoad(src_texture, vec2<i32>(sx1n, y), 0)) * w1;
-
-  let sx2p = clamp_i32(x + 2, 0, max_x);
-  let sx2n = clamp_i32(x - 2, 0, max_x);
-  let c2 = (textureLoad(src_texture, vec2<i32>(sx2p, y), 0) +
-            textureLoad(src_texture, vec2<i32>(sx2n, y), 0)) * w2;
-
-  let sx3p = clamp_i32(x + 3, 0, max_x);
-  let sx3n = clamp_i32(x - 3, 0, max_x);
-  let c3 = (textureLoad(src_texture, vec2<i32>(sx3p, y), 0) +
-            textureLoad(src_texture, vec2<i32>(sx3n, y), 0)) * w3;
-
-  let sx4p = clamp_i32(x + 4, 0, max_x);
-  let sx4n = clamp_i32(x - 4, 0, max_x);
-  let c4 = (textureLoad(src_texture, vec2<i32>(sx4p, y), 0) +
-            textureLoad(src_texture, vec2<i32>(sx4n, y), 0)) * w4;
-
-  return c0 + c1 + c2 + c3 + c4;
-}
-"#;
-
-pub(super) const BLUR_V_SHADER: &str = r#"
-@group(0) @binding(0) var src_texture: texture_2d<f32>;
-
-struct VsOut {
-  @builtin(position) pos: vec4<f32>,
-};
-
-@vertex
-fn vs_main(@builtin(vertex_index) vid: u32) -> VsOut {
-  var pos = array<vec2<f32>, 3>(
-    vec2<f32>(-1.0, -3.0),
-    vec2<f32>( 3.0,  1.0),
-    vec2<f32>(-1.0,  1.0),
-  );
-  var out: VsOut;
-  out.pos = vec4<f32>(pos[vid], 0.0, 1.0);
-  return out;
+pub(super) fn custom_effect_masked_shader_source(user_source: &str) -> String {
+    format!(
+        "{CUSTOM_EFFECT_MASKED_SHADER_PART_A}{CLIP_SDF_CORE_WGSL}{user_source}\n{CUSTOM_EFFECT_MASKED_SHADER_PART_B}"
+    )
 }
 
-fn clamp_i32(x: i32, lo: i32, hi: i32) -> i32 {
-  return min(max(x, lo), hi);
+pub(super) fn custom_effect_mask_shader_source(user_source: &str) -> String {
+    format!("{CUSTOM_EFFECT_MASK_SHADER_PART_A}{user_source}\n{CUSTOM_EFFECT_MASK_SHADER_PART_B}")
 }
 
-@fragment
-fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
-  let dims = textureDimensions(src_texture);
-  let x = i32(floor(pos.x));
-  let y = i32(floor(pos.y));
-  if (x < 0 || y < 0 || x >= i32(dims.x) || y >= i32(dims.y)) {
-    return vec4<f32>(0.0);
-  }
+pub(super) const BLUR_H_SHADER: &str = include_str!("pipelines/wgsl/blur_h.wgsl");
 
-  // 9-tap separable gaussian-ish kernel (radius 4).
-  let w0 = 0.227027;
-  let w1 = 0.1945946;
-  let w2 = 0.1216216;
-  let w3 = 0.054054;
-  let w4 = 0.016216;
+pub(super) const BLUR_V_SHADER: &str = include_str!("pipelines/wgsl/blur_v.wgsl");
 
-  let max_y = i32(dims.y) - 1;
-  let sy0 = clamp_i32(y, 0, max_y);
-  let c0 = textureLoad(src_texture, vec2<i32>(x, sy0), 0) * w0;
+const BLUR_H_MASKED_SHADER_PART_A: &str = include_str!("pipelines/wgsl/blur_h_masked_part_a.wgsl");
 
-  let sy1p = clamp_i32(y + 1, 0, max_y);
-  let sy1n = clamp_i32(y - 1, 0, max_y);
-  let c1 = (textureLoad(src_texture, vec2<i32>(x, sy1p), 0) +
-            textureLoad(src_texture, vec2<i32>(x, sy1n), 0)) * w1;
-
-  let sy2p = clamp_i32(y + 2, 0, max_y);
-  let sy2n = clamp_i32(y - 2, 0, max_y);
-  let c2 = (textureLoad(src_texture, vec2<i32>(x, sy2p), 0) +
-            textureLoad(src_texture, vec2<i32>(x, sy2n), 0)) * w2;
-
-  let sy3p = clamp_i32(y + 3, 0, max_y);
-  let sy3n = clamp_i32(y - 3, 0, max_y);
-  let c3 = (textureLoad(src_texture, vec2<i32>(x, sy3p), 0) +
-            textureLoad(src_texture, vec2<i32>(x, sy3n), 0)) * w3;
-
-  let sy4p = clamp_i32(y + 4, 0, max_y);
-  let sy4n = clamp_i32(y - 4, 0, max_y);
-  let c4 = (textureLoad(src_texture, vec2<i32>(x, sy4p), 0) +
-            textureLoad(src_texture, vec2<i32>(x, sy4n), 0)) * w4;
-
-  return c0 + c1 + c2 + c3 + c4;
-}
-"#;
-
-const BLUR_H_MASKED_SHADER_PART_A: &str = r#"
-struct ClipRRect {
-  rect: vec4<f32>,
-  corner_radii: vec4<f32>,
-  inv0: vec4<f32>,
-  inv1: vec4<f32>,
-};
-
-struct Viewport {
-  viewport_size: vec2<f32>,
-  clip_head: u32,
-  clip_count: u32,
-  mask_head: u32,
-  mask_count: u32,
-  mask_scope_head: u32,
-  mask_scope_count: u32,
-  output_is_srgb: u32,
-  _pad0: u32,
-  mask_viewport_origin: vec2<f32>,
-  mask_viewport_size: vec2<f32>,
-};
-
-@group(0) @binding(0) var<uniform> viewport: Viewport;
-
-struct RenderSpace {
-  origin_px: vec2<f32>,
-  size_px: vec2<f32>,
-};
-
-@group(0) @binding(5) var<uniform> render_space: RenderSpace;
-struct ClipStack {
-  clips: array<ClipRRect>,
-};
-
-@group(0) @binding(1) var<storage, read> clip_stack: ClipStack;
-
-@group(1) @binding(0) var src_texture: texture_2d<f32>;
-
-struct VsOut {
-  @builtin(position) pos: vec4<f32>,
-};
-
-@vertex
-fn vs_main(@builtin(vertex_index) vid: u32) -> VsOut {
-  var pos = array<vec2<f32>, 3>(
-    vec2<f32>(-1.0, -3.0),
-    vec2<f32>( 3.0,  1.0),
-    vec2<f32>(-1.0,  1.0),
-  );
-  var out: VsOut;
-  out.pos = vec4<f32>(pos[vid], 0.0, 1.0);
-  return out;
-}
-"#;
-
-const BLUR_H_MASKED_SHADER_PART_B: &str = r#"
-fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
-  var alpha = 1.0;
-  var idx = viewport.clip_head;
-  for (var i = 0u; i < 64u; i = i + 1u) {
-    if (i >= viewport.clip_count) {
-      break;
-    }
-    if (idx == 0xffffffffu) {
-      break;
-    }
-    let clip = clip_stack.clips[idx];
-    idx = bitcast<u32>(clip.inv0.w);
-    let clip_local = vec2<f32>(
-      dot(clip.inv0.xy, pixel_pos) + clip.inv0.z,
-      dot(clip.inv1.xy, pixel_pos) + clip.inv1.z
-    );
-    let sdf = quad_sdf(clip_local, clip.rect.xy, clip.rect.zw, clip.corner_radii);
-    alpha = alpha * sdf_coverage_linear(sdf);
-  }
-  return alpha;
-}
-
-fn clamp_i32(x: i32, lo: i32, hi: i32) -> i32 {
-  return min(max(x, lo), hi);
-}
-
-@fragment
-fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
-  let dims = textureDimensions(src_texture);
-  let x = i32(floor(pos.x));
-  let y = i32(floor(pos.y));
-  if (x < 0 || y < 0 || x >= i32(dims.x) || y >= i32(dims.y)) {
-    return vec4<f32>(0.0);
-  }
-
-  // 9-tap separable gaussian-ish kernel (radius 4).
-  let w0 = 0.227027;
-  let w1 = 0.1945946;
-  let w2 = 0.1216216;
-  let w3 = 0.054054;
-  let w4 = 0.016216;
-
-  let max_x = i32(dims.x) - 1;
-  let sx0 = clamp_i32(x, 0, max_x);
-  let c0 = textureLoad(src_texture, vec2<i32>(sx0, y), 0) * w0;
-
-  let sx1p = clamp_i32(x + 1, 0, max_x);
-  let sx1n = clamp_i32(x - 1, 0, max_x);
-  let c1 = (textureLoad(src_texture, vec2<i32>(sx1p, y), 0) +
-            textureLoad(src_texture, vec2<i32>(sx1n, y), 0)) * w1;
-
-  let sx2p = clamp_i32(x + 2, 0, max_x);
-  let sx2n = clamp_i32(x - 2, 0, max_x);
-  let c2 = (textureLoad(src_texture, vec2<i32>(sx2p, y), 0) +
-            textureLoad(src_texture, vec2<i32>(sx2n, y), 0)) * w2;
-
-  let sx3p = clamp_i32(x + 3, 0, max_x);
-  let sx3n = clamp_i32(x - 3, 0, max_x);
-  let c3 = (textureLoad(src_texture, vec2<i32>(sx3p, y), 0) +
-            textureLoad(src_texture, vec2<i32>(sx3n, y), 0)) * w3;
-
-  let sx4p = clamp_i32(x + 4, 0, max_x);
-  let sx4n = clamp_i32(x - 4, 0, max_x);
-  let c4 = (textureLoad(src_texture, vec2<i32>(sx4p, y), 0) +
-            textureLoad(src_texture, vec2<i32>(sx4n, y), 0)) * w4;
-
-  let out = c0 + c1 + c2 + c3 + c4;
-  let clip = clip_alpha(pos.xy);
-  return vec4<f32>(out.rgb * clip, clip);
-}
-"#;
+const BLUR_H_MASKED_SHADER_PART_B: &str = include_str!("pipelines/wgsl/blur_h_masked_part_b.wgsl");
 
 pub(super) fn blur_h_masked_shader_source() -> String {
     format!("{BLUR_H_MASKED_SHADER_PART_A}{CLIP_SDF_CORE_WGSL}{BLUR_H_MASKED_SHADER_PART_B}")
 }
 
-const BLUR_V_MASKED_SHADER_PART_A: &str = r#"
-struct ClipRRect {
-  rect: vec4<f32>,
-  corner_radii: vec4<f32>,
-  inv0: vec4<f32>,
-  inv1: vec4<f32>,
-};
+const BLUR_V_MASKED_SHADER_PART_A: &str = include_str!("pipelines/wgsl/blur_v_masked_part_a.wgsl");
 
-struct Viewport {
-  viewport_size: vec2<f32>,
-  clip_head: u32,
-  clip_count: u32,
-  mask_head: u32,
-  mask_count: u32,
-  mask_scope_head: u32,
-  mask_scope_count: u32,
-  output_is_srgb: u32,
-  _pad0: u32,
-  mask_viewport_origin: vec2<f32>,
-  mask_viewport_size: vec2<f32>,
-};
-
-@group(0) @binding(0) var<uniform> viewport: Viewport;
-struct ClipStack {
-  clips: array<ClipRRect>,
-};
-
-@group(0) @binding(1) var<storage, read> clip_stack: ClipStack;
-
-@group(1) @binding(0) var src_texture: texture_2d<f32>;
-
-struct VsOut {
-  @builtin(position) pos: vec4<f32>,
-};
-
-@vertex
-fn vs_main(@builtin(vertex_index) vid: u32) -> VsOut {
-  var pos = array<vec2<f32>, 3>(
-    vec2<f32>(-1.0, -3.0),
-    vec2<f32>( 3.0,  1.0),
-    vec2<f32>(-1.0,  1.0),
-  );
-  var out: VsOut;
-  out.pos = vec4<f32>(pos[vid], 0.0, 1.0);
-  return out;
-}
-"#;
-
-const BLUR_V_MASKED_SHADER_PART_B: &str = r#"
-fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
-  var alpha = 1.0;
-  var idx = viewport.clip_head;
-  for (var i = 0u; i < 64u; i = i + 1u) {
-    if (i >= viewport.clip_count) {
-      break;
-    }
-    if (idx == 0xffffffffu) {
-      break;
-    }
-    let clip = clip_stack.clips[idx];
-    idx = bitcast<u32>(clip.inv0.w);
-    let clip_local = vec2<f32>(
-      dot(clip.inv0.xy, pixel_pos) + clip.inv0.z,
-      dot(clip.inv1.xy, pixel_pos) + clip.inv1.z
-    );
-    let sdf = quad_sdf(clip_local, clip.rect.xy, clip.rect.zw, clip.corner_radii);
-    alpha = alpha * sdf_coverage_linear(sdf);
-  }
-  return alpha;
-}
-
-fn clamp_i32(x: i32, lo: i32, hi: i32) -> i32 {
-  return min(max(x, lo), hi);
-}
-
-@fragment
-fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
-  let dims = textureDimensions(src_texture);
-  let x = i32(floor(pos.x));
-  let y = i32(floor(pos.y));
-  if (x < 0 || y < 0 || x >= i32(dims.x) || y >= i32(dims.y)) {
-    return vec4<f32>(0.0);
-  }
-
-  // 9-tap separable gaussian-ish kernel (radius 4).
-  let w0 = 0.227027;
-  let w1 = 0.1945946;
-  let w2 = 0.1216216;
-  let w3 = 0.054054;
-  let w4 = 0.016216;
-
-  let max_y = i32(dims.y) - 1;
-  let sy0 = clamp_i32(y, 0, max_y);
-  let c0 = textureLoad(src_texture, vec2<i32>(x, sy0), 0) * w0;
-
-  let sy1p = clamp_i32(y + 1, 0, max_y);
-  let sy1n = clamp_i32(y - 1, 0, max_y);
-  let c1 = (textureLoad(src_texture, vec2<i32>(x, sy1p), 0) +
-            textureLoad(src_texture, vec2<i32>(x, sy1n), 0)) * w1;
-
-  let sy2p = clamp_i32(y + 2, 0, max_y);
-  let sy2n = clamp_i32(y - 2, 0, max_y);
-  let c2 = (textureLoad(src_texture, vec2<i32>(x, sy2p), 0) +
-            textureLoad(src_texture, vec2<i32>(x, sy2n), 0)) * w2;
-
-  let sy3p = clamp_i32(y + 3, 0, max_y);
-  let sy3n = clamp_i32(y - 3, 0, max_y);
-  let c3 = (textureLoad(src_texture, vec2<i32>(x, sy3p), 0) +
-            textureLoad(src_texture, vec2<i32>(x, sy3n), 0)) * w3;
-
-  let sy4p = clamp_i32(y + 4, 0, max_y);
-  let sy4n = clamp_i32(y - 4, 0, max_y);
-  let c4 = (textureLoad(src_texture, vec2<i32>(x, sy4p), 0) +
-            textureLoad(src_texture, vec2<i32>(x, sy4n), 0)) * w4;
-
-  let out = c0 + c1 + c2 + c3 + c4;
-  let clip = clip_alpha(pos.xy);
-  return vec4<f32>(out.rgb * clip, clip);
-}
-"#;
+const BLUR_V_MASKED_SHADER_PART_B: &str = include_str!("pipelines/wgsl/blur_v_masked_part_b.wgsl");
 
 pub(super) fn blur_v_masked_shader_source() -> String {
     format!("{BLUR_V_MASKED_SHADER_PART_A}{CLIP_SDF_CORE_WGSL}{BLUR_V_MASKED_SHADER_PART_B}")
 }
 
-pub(super) const BLUR_H_MASK_SHADER: &str = r#"
-struct ClipRRect {
-  rect: vec4<f32>,
-  corner_radii: vec4<f32>,
-  inv0: vec4<f32>,
-  inv1: vec4<f32>,
-};
+pub(super) const BLUR_H_MASK_SHADER: &str = include_str!("pipelines/wgsl/blur_h_mask.wgsl");
 
-struct Viewport {
-  viewport_size: vec2<f32>,
-  clip_head: u32,
-  clip_count: u32,
-  mask_head: u32,
-  mask_count: u32,
-  mask_scope_head: u32,
-  mask_scope_count: u32,
-  output_is_srgb: u32,
-  _pad0: u32,
-  mask_viewport_origin: vec2<f32>,
-  mask_viewport_size: vec2<f32>,
-};
-
-@group(0) @binding(0) var<uniform> viewport: Viewport;
-struct ClipStack {
-  clips: array<ClipRRect>,
-};
-
-@group(0) @binding(1) var<storage, read> clip_stack: ClipStack;
-
-@group(1) @binding(0) var src_texture: texture_2d<f32>;
-@group(1) @binding(1) var mask_texture: texture_2d<f32>;
-
-struct VsOut {
-  @builtin(position) pos: vec4<f32>,
-};
-
-@vertex
-fn vs_main(@builtin(vertex_index) vid: u32) -> VsOut {
-  var pos = array<vec2<f32>, 3>(
-    vec2<f32>(-1.0, -3.0),
-    vec2<f32>( 3.0,  1.0),
-    vec2<f32>(-1.0,  1.0),
-  );
-  var out: VsOut;
-  out.pos = vec4<f32>(pos[vid], 0.0, 1.0);
-  return out;
-}
-
-fn clamp_i32(x: i32, lo: i32, hi: i32) -> i32 {
-  return min(max(x, lo), hi);
-}
-
-@fragment
-fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
-  let dims = textureDimensions(src_texture);
-  let x = i32(floor(pos.x));
-  let y = i32(floor(pos.y));
-  if (x < 0 || y < 0 || x >= i32(dims.x) || y >= i32(dims.y)) {
-    return vec4<f32>(0.0);
-  }
-
-  // 9-tap separable gaussian-ish kernel (radius 4).
-  let w0 = 0.227027;
-  let w1 = 0.1945946;
-  let w2 = 0.1216216;
-  let w3 = 0.054054;
-  let w4 = 0.016216;
-
-  let max_x = i32(dims.x) - 1;
-  let sx0 = clamp_i32(x, 0, max_x);
-  let c0 = textureLoad(src_texture, vec2<i32>(sx0, y), 0) * w0;
-
-  let sx1p = clamp_i32(x + 1, 0, max_x);
-  let sx1n = clamp_i32(x - 1, 0, max_x);
-  let c1 = (textureLoad(src_texture, vec2<i32>(sx1p, y), 0) +
-            textureLoad(src_texture, vec2<i32>(sx1n, y), 0)) * w1;
-
-  let sx2p = clamp_i32(x + 2, 0, max_x);
-  let sx2n = clamp_i32(x - 2, 0, max_x);
-  let c2 = (textureLoad(src_texture, vec2<i32>(sx2p, y), 0) +
-            textureLoad(src_texture, vec2<i32>(sx2n, y), 0)) * w2;
-
-  let sx3p = clamp_i32(x + 3, 0, max_x);
-  let sx3n = clamp_i32(x - 3, 0, max_x);
-  let c3 = (textureLoad(src_texture, vec2<i32>(sx3p, y), 0) +
-            textureLoad(src_texture, vec2<i32>(sx3n, y), 0)) * w3;
-
-  let sx4p = clamp_i32(x + 4, 0, max_x);
-  let sx4n = clamp_i32(x - 4, 0, max_x);
-  let c4 = (textureLoad(src_texture, vec2<i32>(sx4p, y), 0) +
-            textureLoad(src_texture, vec2<i32>(sx4n, y), 0)) * w4;
-
-  let out = c0 + c1 + c2 + c3 + c4;
-  let mdims_u = textureDimensions(mask_texture);
-  let mdims = vec2<f32>(f32(mdims_u.x), f32(mdims_u.y));
-  let local_x = (f32(x) + 0.5) - viewport.mask_viewport_origin.x;
-  let local_y = (f32(y) + 0.5) - viewport.mask_viewport_origin.y;
-  if (local_x < 0.0 || local_y < 0.0 ||
-      local_x >= viewport.mask_viewport_size.x || local_y >= viewport.mask_viewport_size.y) {
-    return vec4<f32>(0.0);
-  }
-  let mx = clamp(i32(floor(local_x * mdims.x / viewport.mask_viewport_size.x)), 0, i32(mdims_u.x) - 1);
-  let my = clamp(i32(floor(local_y * mdims.y / viewport.mask_viewport_size.y)), 0, i32(mdims_u.y) - 1);
-  let mask = textureLoad(mask_texture, vec2<i32>(mx, my), 0).x;
-  return vec4<f32>(out.rgb * mask, mask);
-}
-"#;
-
-pub(super) const BLUR_V_MASK_SHADER: &str = r#"
-struct ClipRRect {
-  rect: vec4<f32>,
-  corner_radii: vec4<f32>,
-  inv0: vec4<f32>,
-  inv1: vec4<f32>,
-};
-
-struct Viewport {
-  viewport_size: vec2<f32>,
-  clip_head: u32,
-  clip_count: u32,
-  mask_head: u32,
-  mask_count: u32,
-  mask_scope_head: u32,
-  mask_scope_count: u32,
-  output_is_srgb: u32,
-  _pad0: u32,
-  mask_viewport_origin: vec2<f32>,
-  mask_viewport_size: vec2<f32>,
-};
-
-@group(0) @binding(0) var<uniform> viewport: Viewport;
-struct ClipStack {
-  clips: array<ClipRRect>,
-};
-
-@group(0) @binding(1) var<storage, read> clip_stack: ClipStack;
-
-@group(1) @binding(0) var src_texture: texture_2d<f32>;
-@group(1) @binding(1) var mask_texture: texture_2d<f32>;
-
-struct VsOut {
-  @builtin(position) pos: vec4<f32>,
-};
-
-@vertex
-fn vs_main(@builtin(vertex_index) vid: u32) -> VsOut {
-  var pos = array<vec2<f32>, 3>(
-    vec2<f32>(-1.0, -3.0),
-    vec2<f32>( 3.0,  1.0),
-    vec2<f32>(-1.0,  1.0),
-  );
-  var out: VsOut;
-  out.pos = vec4<f32>(pos[vid], 0.0, 1.0);
-  return out;
-}
-
-fn clamp_i32(x: i32, lo: i32, hi: i32) -> i32 {
-  return min(max(x, lo), hi);
-}
-
-@fragment
-fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
-  let dims = textureDimensions(src_texture);
-  let x = i32(floor(pos.x));
-  let y = i32(floor(pos.y));
-  if (x < 0 || y < 0 || x >= i32(dims.x) || y >= i32(dims.y)) {
-    return vec4<f32>(0.0);
-  }
-
-  // 9-tap separable gaussian-ish kernel (radius 4).
-  let w0 = 0.227027;
-  let w1 = 0.1945946;
-  let w2 = 0.1216216;
-  let w3 = 0.054054;
-  let w4 = 0.016216;
-
-  let max_y = i32(dims.y) - 1;
-  let sy0 = clamp_i32(y, 0, max_y);
-  let c0 = textureLoad(src_texture, vec2<i32>(x, sy0), 0) * w0;
-
-  let sy1p = clamp_i32(y + 1, 0, max_y);
-  let sy1n = clamp_i32(y - 1, 0, max_y);
-  let c1 = (textureLoad(src_texture, vec2<i32>(x, sy1p), 0) +
-            textureLoad(src_texture, vec2<i32>(x, sy1n), 0)) * w1;
-
-  let sy2p = clamp_i32(y + 2, 0, max_y);
-  let sy2n = clamp_i32(y - 2, 0, max_y);
-  let c2 = (textureLoad(src_texture, vec2<i32>(x, sy2p), 0) +
-            textureLoad(src_texture, vec2<i32>(x, sy2n), 0)) * w2;
-
-  let sy3p = clamp_i32(y + 3, 0, max_y);
-  let sy3n = clamp_i32(y - 3, 0, max_y);
-  let c3 = (textureLoad(src_texture, vec2<i32>(x, sy3p), 0) +
-            textureLoad(src_texture, vec2<i32>(x, sy3n), 0)) * w3;
-
-  let sy4p = clamp_i32(y + 4, 0, max_y);
-  let sy4n = clamp_i32(y - 4, 0, max_y);
-  let c4 = (textureLoad(src_texture, vec2<i32>(x, sy4p), 0) +
-            textureLoad(src_texture, vec2<i32>(x, sy4n), 0)) * w4;
-
-  let out = c0 + c1 + c2 + c3 + c4;
-  let mdims_u = textureDimensions(mask_texture);
-  let mdims = vec2<f32>(f32(mdims_u.x), f32(mdims_u.y));
-  let local_x = (f32(x) + 0.5) - viewport.mask_viewport_origin.x;
-  let local_y = (f32(y) + 0.5) - viewport.mask_viewport_origin.y;
-  if (local_x < 0.0 || local_y < 0.0 ||
-      local_x >= viewport.mask_viewport_size.x || local_y >= viewport.mask_viewport_size.y) {
-    return vec4<f32>(0.0);
-  }
-  let mx = clamp(i32(floor(local_x * mdims.x / viewport.mask_viewport_size.x)), 0, i32(mdims_u.x) - 1);
-  let my = clamp(i32(floor(local_y * mdims.y / viewport.mask_viewport_size.y)), 0, i32(mdims_u.y) - 1);
-  let mask = textureLoad(mask_texture, vec2<i32>(mx, my), 0).x;
-  return vec4<f32>(out.rgb * mask, mask);
-}
-"#;
+pub(super) const BLUR_V_MASK_SHADER: &str = include_str!("pipelines/wgsl/blur_v_mask.wgsl");
 
 pub(super) const COMPOSITE_PREMUL_SHADER: &str = r#"
 struct ClipRRect {
@@ -4959,15 +4065,7 @@ fn linear_to_srgb(rgb: vec3<f32>) -> vec3<f32> {
 }
 
 fn encode_output_premul(c: vec4<f32>) -> vec4<f32> {
-  if (viewport.output_is_srgb != 0u) {
-    return c;
-  }
-  if (c.a <= 0.0) {
-    return c;
-  }
-  let un = c.rgb / c.a;
-  let enc = linear_to_srgb(un);
-  return vec4<f32>(enc * c.a, c.a);
+  return c;
 }
 
 @vertex
@@ -5225,15 +4323,7 @@ fn linear_to_srgb(rgb: vec3<f32>) -> vec3<f32> {
 }
 
 fn encode_output_premul(c: vec4<f32>) -> vec4<f32> {
-  if (viewport.output_is_srgb != 0u) {
-    return c;
-  }
-  if (c.a <= 0.0) {
-    return c;
-  }
-  let un = c.rgb / c.a;
-  let enc = linear_to_srgb(un);
-  return vec4<f32>(enc * c.a, c.a);
+  return c;
 }
 
 @vertex
@@ -5743,15 +4833,7 @@ fn linear_to_srgb(rgb: vec3<f32>) -> vec3<f32> {
 }
 
 fn encode_output_premul(c: vec4<f32>) -> vec4<f32> {
-  if (viewport.output_is_srgb != 0u) {
-    return c;
-  }
-  if (c.a <= 0.0) {
-    return c;
-  }
-  let un = c.rgb / c.a;
-  let enc = linear_to_srgb(un);
-  return vec4<f32>(enc * c.a, c.a);
+  return c;
 }
 
 @vertex
@@ -6255,15 +5337,7 @@ fn apply_contrast_and_gamma_correction(sample: f32, color: vec3<f32>) -> f32 {
 }
 
 fn encode_output_premul(c: vec4<f32>) -> vec4<f32> {
-  if (viewport.output_is_srgb != 0u) {
-    return c;
-  }
-  if (c.a <= 0.0) {
-    return c;
-  }
-  let un = c.rgb / c.a;
-  let enc = linear_to_srgb(un);
-  return vec4<f32>(enc * c.a, c.a);
+  return c;
 }
 
 @vertex
@@ -6839,15 +5913,7 @@ fn linear_to_srgb(rgb: vec3<f32>) -> vec3<f32> {
 }
 
 fn encode_output_premul(c: vec4<f32>) -> vec4<f32> {
-  if (viewport.output_is_srgb != 0u) {
-    return c;
-  }
-  if (c.a <= 0.0) {
-    return c;
-  }
-  let un = c.rgb / c.a;
-  let enc = linear_to_srgb(un);
-  return vec4<f32>(enc * c.a, c.a);
+  return c;
 }
 
 @vertex
@@ -7429,15 +6495,7 @@ fn glyph_dilate_max_rgb(uv: vec2<f32>, radius: u32) -> f32 {
 }
 
 fn encode_output_premul(c: vec4<f32>) -> vec4<f32> {
-  if (viewport.output_is_srgb != 0u) {
-    return c;
-  }
-  if (c.a <= 0.0) {
-    return c;
-  }
-  let un = c.rgb / c.a;
-  let enc = linear_to_srgb(un);
-  return vec4<f32>(enc * c.a, c.a);
+  return c;
 }
 
 @vertex
@@ -7792,15 +6850,7 @@ fn linear_to_srgb(rgb: vec3<f32>) -> vec3<f32> {
 }
 
 fn encode_output_premul(c: vec4<f32>) -> vec4<f32> {
-  if (viewport.output_is_srgb != 0u) {
-    return c;
-  }
-  if (c.a <= 0.0) {
-    return c;
-  }
-  let un = c.rgb / c.a;
-  let enc = linear_to_srgb(un);
-  return vec4<f32>(enc * c.a, c.a);
+  return c;
 }
 
 @vertex
@@ -7824,3 +6874,15 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   return encode_output_premul(out);
 }
 "#;
+
+pub(super) const NOISE_SHADER: &str = include_str!("pipelines/wgsl/noise.wgsl");
+
+const NOISE_MASKED_SHADER_PART_A: &str = include_str!("pipelines/wgsl/noise_masked_part_a.wgsl");
+
+const NOISE_MASKED_SHADER_PART_B: &str = include_str!("pipelines/wgsl/noise_masked_part_b.wgsl");
+
+pub(super) fn noise_masked_shader_source() -> String {
+    format!("{NOISE_MASKED_SHADER_PART_A}{CLIP_SDF_CORE_WGSL}{NOISE_MASKED_SHADER_PART_B}")
+}
+
+pub(super) const NOISE_MASK_SHADER: &str = include_str!("pipelines/wgsl/noise_mask.wgsl");

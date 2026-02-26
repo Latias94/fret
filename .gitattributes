@@ -7,5 +7,6 @@
 *.yml text eol=lf
 *.yaml text eol=lf
 *.json text eol=lf
+*.wgsl text eol=lf
 *.scm text eol=lf
 .gitattributes text eol=lf
