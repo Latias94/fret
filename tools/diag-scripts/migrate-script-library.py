@@ -236,6 +236,8 @@ def categorize_script(filename: str) -> tuple[str, str]:
             return ("ui_gallery.ui_kit", "ui-gallery/ui-kit")
         if n.startswith("ui-gallery-diag-") or n.startswith("ui-gallery-hit-test-only-"):
             return ("ui_gallery.diag", "ui-gallery/diag")
+        if n.startswith("ui-gallery-view-cache-"):
+            return ("ui_gallery.diag", "ui-gallery/diag")
         if n.startswith("ui-gallery-incoming-"):
             return ("ui_gallery.incoming", "ui-gallery/incoming")
         if n.startswith("ui-gallery-contextmenu-"):

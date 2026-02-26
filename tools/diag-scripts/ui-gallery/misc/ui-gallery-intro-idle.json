@@ -1,7 +1,5 @@
 {
   "schema_version": 1,
-  "steps": [
-    { "type": "wait_frames", "n": 180 },
-    { "type": "capture_bundle", "label": "ui-gallery-intro-idle" }
-  ]
+  "kind": "script_redirect",
+  "to": "tools/diag-scripts/ui-gallery/intro/ui-gallery-intro-idle.json"
 }
