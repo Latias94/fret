@@ -52,6 +52,7 @@ fn main() -> fret::Result<()> {
 ## Features
 
 - `desktop`: enable the native desktop stack (winit + wgpu) via `fret-framework/native-wgpu`.
+- `config-files`: load layered config files from `.fret/` (settings/keymap/menubar). Enabled by default.
 - `diagnostics`: enable default diagnostics (tracing + panic hook).
 - `ui-assets`: enable UI render-asset caches (images/SVG) and install default budgets.
 - `icons-lucide` / `icons-radix`: install a built-in icon pack (mutually exclusive).
