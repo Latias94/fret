@@ -971,6 +971,11 @@ impl ElementHostWidget {
             },
         );
 
+        // Some fast paths intentionally reuse cached extents to avoid deep unbounded probe walks
+        // during transient invalidation. Those cached extents can temporarily overestimate the true
+        // content size after shrink (e.g. filtering a nav list), so we later apply an observed
+        // post-layout shrink clamp when possible.
+        let mut needs_post_layout_shrink_clamp = false;
         let max_child = if must_probe_for_growing_extent {
             let measure_started = profile_cfg.is_some().then(Instant::now);
             let mut max_child = Size::new(Px(0.0), Px(0.0));
@@ -1055,6 +1060,7 @@ impl ElementHostWidget {
             // Best-effort: reuse intrinsic sizing caches even when the child subtree is currently
             // marked `needs_layout`. This avoids deep unbounded probe walks on transient
             // invalidation frames (common under view-cache reconciliation).
+            needs_post_layout_shrink_clamp = true;
             cached
         } else {
             let measure_started = profile_cfg.is_some().then(Instant::now);
@@ -1329,10 +1335,11 @@ impl ElementHostWidget {
                 );
             }
 
-            if defer_this_frame {
-                // In deferred-probe mode, the cached `last_max_child` can temporarily overestimate
-                // the true scroll extent after content shrinks. Clamp down when possible without
-                // triggering an extra deep measurement walk.
+            if defer_this_frame || needs_post_layout_shrink_clamp {
+                // When we reuse cached extents (deferred probe or view-cache intrinsic caches),
+                // the cached `last_max_child` can temporarily overestimate the true scroll extent
+                // after content shrinks. Clamp down when possible without triggering an extra deep
+                // measurement walk.
                 let mut changed = false;
                 if props.axis.scroll_x()
                     && observed.width.0 > 0.0
