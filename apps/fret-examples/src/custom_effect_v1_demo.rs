@@ -19,13 +19,114 @@ use fret_ui_kit::custom_effects::CustomEffectProgramV1;
 use fret_ui_kit::{Space, UiIntoElement};
 
 const WGSL: &str = r#"
-fn fret_custom_effect(src: vec4<f32>, uv: vec2<f32>, _pos_px: vec2<f32>, params: EffectParamsV1) -> vec4<f32> {
-  let strength = clamp(params.vec4s[0].x, 0.0, 1.0);
-  let r = distance(uv, vec2<f32>(0.5, 0.5));
-  let vignette = 1.0 - smoothstep(0.2, 0.85, r);
-  let inv = vec3<f32>(1.0, 1.0, 1.0) - src.rgb;
-  let rgb = mix(src.rgb, inv, strength * vignette);
-  return vec4<f32>(rgb, src.a);
+// Params packing (EffectParamsV1 is 64 bytes):
+// - vec4s[0].x: refraction_height_px
+// - vec4s[0].y: refraction_amount_px
+// - vec4s[0].z: depth_effect (0..1)
+// - vec4s[0].w: chromatic_aberration (0..1)
+// - vec4s[1]: corner_radii_px (tl, tr, br, bl)
+
+fn radius_at(centered: vec2<f32>, radii: vec4<f32>) -> f32 {
+  if (centered.x >= 0.0) {
+    if (centered.y <= 0.0) { return radii.y; } // top-right
+    return radii.z; // bottom-right
+  }
+  if (centered.y <= 0.0) { return radii.x; } // top-left
+  return radii.w; // bottom-left
+}
+
+fn sd_rounded_rect(centered: vec2<f32>, half_size: vec2<f32>, radius: f32) -> f32 {
+  let corner = abs(centered) - (half_size - vec2<f32>(radius));
+  let outside = length(max(corner, vec2<f32>(0.0))) - radius;
+  let inside = min(max(corner.x, corner.y), 0.0);
+  return outside + inside;
+}
+
+fn grad_sd_rounded_rect(centered: vec2<f32>, half_size: vec2<f32>, radius: f32) -> vec2<f32> {
+  let corner = abs(centered) - (half_size - vec2<f32>(radius));
+  if (corner.x >= 0.0 || corner.y >= 0.0) {
+    return sign(centered) * normalize(max(corner, vec2<f32>(0.0)));
+  }
+  let grad_x = select(0.0, 1.0, corner.y <= corner.x);
+  return sign(centered) * vec2<f32>(grad_x, 1.0 - grad_x);
+}
+
+fn circle_map(x: f32) -> f32 {
+  return 1.0 - sqrt(max(0.0, 1.0 - x * x));
+}
+
+fn clamp_pixel_pos(p: vec2<f32>) -> vec2<f32> {
+  let dims_u = textureDimensions(src_texture);
+  let dims = vec2<f32>(f32(dims_u.x), f32(dims_u.y));
+  return clamp(p, vec2<f32>(0.5), dims - vec2<f32>(0.5));
+}
+
+fn sample_src_bilinear(pixel_pos: vec2<f32>) -> vec4<f32> {
+  let dims_u = textureDimensions(src_texture);
+  let px = clamp_pixel_pos(pixel_pos);
+
+  let base = floor(px - vec2<f32>(0.5));
+  let f = px - (base + vec2<f32>(0.5));
+
+  let x0 = clamp(i32(base.x), 0, i32(dims_u.x) - 1);
+  let y0 = clamp(i32(base.y), 0, i32(dims_u.y) - 1);
+  let x1 = clamp(x0 + 1, 0, i32(dims_u.x) - 1);
+  let y1 = clamp(y0 + 1, 0, i32(dims_u.y) - 1);
+
+  let c00 = textureLoad(src_texture, vec2<i32>(x0, y0), 0);
+  let c10 = textureLoad(src_texture, vec2<i32>(x1, y0), 0);
+  let c01 = textureLoad(src_texture, vec2<i32>(x0, y1), 0);
+  let c11 = textureLoad(src_texture, vec2<i32>(x1, y1), 0);
+
+  let top = mix(c00, c10, f.x);
+  let bot = mix(c01, c11, f.x);
+  return mix(top, bot, f.y);
+}
+
+fn fret_custom_effect(_src: vec4<f32>, _uv: vec2<f32>, pos_px: vec2<f32>, params: EffectParamsV1) -> vec4<f32> {
+  let refraction_height_px = max(0.0, params.vec4s[0].x);
+  let refraction_amount_px = max(0.0, params.vec4s[0].y);
+  let depth_effect = clamp(params.vec4s[0].z, 0.0, 1.0);
+  let chromatic = clamp(params.vec4s[0].w, 0.0, 1.0);
+  let corner_radii = max(params.vec4s[1], vec4<f32>(0.0));
+
+  if (refraction_height_px <= 0.0 || refraction_amount_px <= 0.0) {
+    return sample_src_bilinear(pos_px);
+  }
+
+  let size = render_space.size_px;
+  let half_size = size * 0.5;
+  let coord = pos_px - render_space.origin_px;
+  let centered = coord - half_size;
+  let radius = radius_at(centered, corner_radii);
+
+  var sd = sd_rounded_rect(centered, half_size, radius);
+  if (-sd >= refraction_height_px) {
+    return sample_src_bilinear(pos_px);
+  }
+  sd = min(sd, 0.0);
+
+  let d = circle_map(1.0 - (-sd / refraction_height_px)) * refraction_amount_px;
+  let grad_radius = min(radius * 1.5, min(half_size.x, half_size.y));
+  let g0 = grad_sd_rounded_rect(centered, half_size, grad_radius);
+  let g1 = select(vec2<f32>(0.0), normalize(centered), length(centered) > 1e-3);
+  let grad = normalize(g0 + depth_effect * g1);
+
+  let refracted = pos_px + d * grad;
+
+  if (chromatic <= 0.0) {
+    return sample_src_bilinear(refracted);
+  }
+
+  let disp = chromatic * ((centered.x * centered.y) / max(1.0, half_size.x * half_size.y));
+  let dispersed = d * grad * disp;
+
+  let red = sample_src_bilinear(refracted + dispersed);
+  let green = sample_src_bilinear(refracted);
+  let blue = sample_src_bilinear(refracted - dispersed);
+  let rgb = vec3<f32>(red.r, green.g, blue.b);
+  let a = (red.a + green.a + blue.a) / 3.0;
+  return vec4<f32>(rgb, a);
 }
 "#;
 
@@ -347,16 +448,34 @@ fn custom_effect_lens(
     layout.size.width = Length::Fill;
     layout.size.height = Length::Fill;
 
+    let refraction_height_px = 20.0;
+    let refraction_amount_px = strength.clamp(0.0, 1.0) * 14.0;
+    let depth_effect = 0.35;
+    let chromatic_aberration = 0.75;
+    let radius = 20.0;
+
     let params = EffectParamsV1 {
         vec4s: [
-            [strength.clamp(0.0, 1.0), 0.0, 0.0, 0.0],
-            [0.0; 4],
+            [
+                refraction_height_px,
+                refraction_amount_px,
+                depth_effect,
+                chromatic_aberration,
+            ],
+            [radius, radius, radius, radius],
             [0.0; 4],
             [0.0; 4],
         ],
     };
 
-    let chain = EffectChain::from_steps(&[EffectStep::CustomV1 { id: effect, params }]).sanitize();
+    let chain = EffectChain::from_steps(&[
+        EffectStep::GaussianBlur {
+            radius_px: Px(14.0),
+            downsample: 2,
+        },
+        EffectStep::CustomV1 { id: effect, params },
+    ])
+    .sanitize();
 
     let layer = cx.effect_layer_props(
         EffectLayerProps {
