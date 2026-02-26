@@ -181,7 +181,7 @@ def categorize_script(filename: str) -> tuple[str, str]:
             return ("ui_gallery.perf", "ui-gallery/perf")
         if "overlay" in n or "dialog" in n or "popover" in n or "tooltip" in n:
             return ("ui_gallery.overlay", "ui-gallery/overlay")
-        return ("ui_gallery.misc", "ui-gallery")
+        return ("ui_gallery.misc", "ui-gallery/misc")
 
     return ("tooling.misc", "tooling")
 

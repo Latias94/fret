@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "steps": [
+    {
+      "type": "click",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-nav-windowed-rows-surface-interactive-torture"
+      }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-nav-windowed-rows-surface-interactive-torture"
+        }
+      },
+      "timeout_frames": 60
+    },
+    { "type": "press_key", "key": "enter" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-windowed-rows-interactive-root"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "move_pointer",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-windowed-rows-interactive-canvas"
+      }
+    },
+    {
+      "type": "wheel",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-windowed-rows-interactive-canvas"
+      },
+      "delta_y": 240.0
+    },
+    { "type": "wait_frames", "n": 5 },
+    {
+      "type": "wheel",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-windowed-rows-interactive-canvas"
+      },
+      "delta_y": -240.0
+    },
+    { "type": "wait_frames", "n": 5 },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-windowed-rows-interactive-scroll-hover"
+    }
+  ]
+}
+

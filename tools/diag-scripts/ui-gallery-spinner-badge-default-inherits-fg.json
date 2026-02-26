@@ -1,46 +1,5 @@
 {
   "schema_version": 1,
-  "steps": [
-    {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
-      },
-      "timeout_frames": 600
-    },
-    { "type": "press_key", "key": "escape" },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
-    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
-    { "type": "press_key", "key": "backspace" },
-    { "type": "type_text", "text": "spinner" },
-    { "type": "wait_frames", "n": 2 },
-    {
-      "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-nav-spinner" }
-    },
-    {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-page-spinner" }
-      },
-      "timeout_frames": 600
-    },
-    {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-spinner-badge" }
-      },
-      "timeout_frames": 600
-    },
-    { "type": "wait_frames", "n": 10 },
-    {
-      "type": "capture_bundle",
-      "label": "ui-gallery-spinner-badge-default-inherits-fg"
-    }
-  ]
+  "kind": "script_redirect",
+  "to": "tools/diag-scripts/ui-gallery/misc/ui-gallery-spinner-badge-default-inherits-fg.json"
 }
-
