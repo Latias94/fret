@@ -51,7 +51,7 @@ Workstream entry:
 - For each behavior-changing migration (responsive decisions, theme metadata, motion outcomes),
   at least one gate exists:
   - unit tests for invariants, and/or
-  - diag scripts with stable `test_id` targets.
+  - diag scripts with stable `test_id` targets, wired into a `fretboard diag suite`.
 
 ## M5 — Closure pass
 

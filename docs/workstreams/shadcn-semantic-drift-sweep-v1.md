@@ -209,3 +209,5 @@ recipe should follow viewport queries (device shell) or container queries (panel
   overlay and text-area changes before continuing the sweep.
 - 2026-02-25: Re-validated the token-read sweep after the merge and removed remaining
   `Theme::global(&app).clone()` usages from module-local tests in `ecosystem/fret-ui-shadcn/src/`.
+- 2026-02-26: Wired the new responsive semantics conformance scripts into the built-in diag suites
+  (`fretboard diag suite ui-gallery-shadcn-conformance`) to keep the drift gates executable.

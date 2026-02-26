@@ -73,7 +73,7 @@
     {
       "type": "assert",
       "predicate": {
-        "kind": "bounds_non_overlapping_y",
+        "kind": "bounds_non_overlapping",
         "a": { "kind": "test_id", "id": "ui-gallery.calendar.responsive.panel:2026-05-01" },
         "b": { "kind": "test_id", "id": "ui-gallery.calendar.responsive.panel:2026-06-01" },
         "eps_px": 1.0
@@ -138,7 +138,7 @@
     {
       "type": "assert",
       "predicate": {
-        "kind": "bounds_non_overlapping_x",
+        "kind": "bounds_non_overlapping",
         "a": { "kind": "test_id", "id": "ui-gallery.calendar.responsive.popover:2026-05-01" },
         "b": { "kind": "test_id", "id": "ui-gallery.calendar.responsive.popover:2026-06-01" },
         "eps_px": 1.0
@@ -149,4 +149,3 @@
     { "type": "capture_bundle", "label": "ui-gallery-calendar-mixed-responsive-popover-vs-panel" }
   ]
 }
-

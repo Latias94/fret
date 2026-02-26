@@ -93,7 +93,7 @@
     {
       "type": "assert",
       "predicate": {
-        "kind": "bounds_non_overlapping_y",
+        "kind": "bounds_non_overlapping",
         "a": { "kind": "test_id", "id": "ui-gallery-field-responsive-name-content" },
         "b": { "kind": "test_id", "id": "ui-gallery-field-responsive-name-input" },
         "eps_px": 1.0
@@ -124,7 +124,7 @@
     {
       "type": "assert",
       "predicate": {
-        "kind": "bounds_non_overlapping_x",
+        "kind": "bounds_non_overlapping",
         "a": { "kind": "test_id", "id": "ui-gallery-field-responsive-name-content" },
         "b": { "kind": "test_id", "id": "ui-gallery-field-responsive-name-input" },
         "eps_px": 1.0
@@ -135,4 +135,3 @@
     { "type": "capture_bundle", "label": "ui-gallery-field-responsive-orientation-container-md" }
   ]
 }
-

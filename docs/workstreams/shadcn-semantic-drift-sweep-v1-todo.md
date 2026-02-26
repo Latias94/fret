@@ -173,6 +173,9 @@ Evidence:
 
 ## Docs / closure
 
+- [x] Ensure newly-added conformance scripts are wired into the built-in diag suites
+  (so `fretboard diag suite ui-gallery-shadcn-conformance` runs them):
+  - `crates/fret-diag/src/diag_suite_scripts.rs`
 - [ ] Update the drift inventory in `docs/workstreams/shadcn-semantic-drift-sweep-v1.md` as new
   issues are found.
 - [ ] For any “hard-to-change” contract additions (theme metadata, new token namespaces), add/update
