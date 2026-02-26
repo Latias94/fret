@@ -1,34 +1,5 @@
 {
-  "schema_version": 2,
-  "meta": {
-    "name": "Docking arbitration demo: default layout signature (dock graph shape)",
-    "tags": ["docking", "gate", "layout", "signature"],
-    "required_capabilities": ["diag.script_v2"],
-    "target_hints": [
-      "Asserts the default dock graph shape for the docking arbitration demo (dockview-style).",
-      "This gate intentionally does not include split fractions/shares."
-    ]
-  },
-  "steps": [
-    { "type": "press_key", "key": "escape" },
-    { "type": "wait_frames", "n": 5 },
-    {
-      "type": "wait_until",
-      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-dock-space" } },
-      "timeout_frames": 240
-    },
-    {
-      "type": "assert",
-      "predicate": {
-        "kind": "dock_graph_signature_is",
-        "signature": "dock(root=split(v,[split(h,[tabs([demo.viewport.left]),tabs([demo.viewport.right])]),tabs([demo.controls])]);floatings=[])"
-      }
-    },
-    {
-      "type": "assert",
-      "predicate": { "kind": "dock_graph_canonical_is", "canonical": true }
-    },
-    { "type": "capture_bundle", "label": "docking-arbitration-demo-default-layout-signature" }
-  ]
+  "schema_version": 1,
+  "kind": "script_redirect",
+  "to": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-default-layout-signature.json"
 }
-

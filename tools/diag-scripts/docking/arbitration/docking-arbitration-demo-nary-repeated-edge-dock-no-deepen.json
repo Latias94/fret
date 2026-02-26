@@ -1,0 +1,203 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Docking arbitration demo: repeated edge-dock stays shallow (n-ary)",
+    "tags": ["docking", "nary", "gate"],
+    "required_capabilities": ["diag.script_v2"]
+  },
+  "steps": [
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 5 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-dock-space" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-left" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-right" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "dock_graph_canonical_is", "canonical": true },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "dock_graph_signature_is",
+        "signature": "dock(root=split(v,[split(h,[tabs([demo.viewport.left]),tabs([demo.viewport.right])]),tabs([demo.controls])]);floatings=[])"
+      }
+    },
+
+    {
+      "type": "pointer_down",
+      "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-right" },
+      "button": "left"
+    },
+    {
+      "type": "pointer_move",
+      "delta_x": -245.0,
+      "delta_y": 260.0,
+      "steps": 24
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "dock_drag_active_is", "active": true },
+      "timeout_frames": 120
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "dock_drop_preview_kind_is", "preview_kind": "insert_into_split" },
+      "timeout_frames": 120
+    },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "pointer_up" },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "dock_drag_active_is", "active": false },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "dock_graph_canonical_is", "canonical": true },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "pointer_down",
+      "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-left" },
+      "button": "left"
+    },
+    {
+      "type": "pointer_move",
+      "delta_x": 245.0,
+      "delta_y": 260.0,
+      "steps": 24
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "dock_drag_active_is", "active": true },
+      "timeout_frames": 120
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "dock_drop_preview_kind_is", "preview_kind": "insert_into_split" },
+      "timeout_frames": 120
+    },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "pointer_up" },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "dock_drag_active_is", "active": false },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "dock_graph_canonical_is", "canonical": true },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "pointer_down",
+      "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-right" },
+      "button": "left"
+    },
+    {
+      "type": "pointer_move",
+      "delta_x": -245.0,
+      "delta_y": 260.0,
+      "steps": 24
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "dock_drag_active_is", "active": true },
+      "timeout_frames": 120
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "dock_drop_preview_kind_is", "preview_kind": "insert_into_split" },
+      "timeout_frames": 120
+    },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "pointer_up" },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "dock_drag_active_is", "active": false },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "dock_graph_canonical_is", "canonical": true },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "pointer_down",
+      "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-left" },
+      "button": "left"
+    },
+    {
+      "type": "pointer_move",
+      "delta_x": 245.0,
+      "delta_y": 260.0,
+      "steps": 24
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "dock_drag_active_is", "active": true },
+      "timeout_frames": 120
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "dock_drop_preview_kind_is", "preview_kind": "insert_into_split" },
+      "timeout_frames": 120
+    },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "pointer_up" },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "dock_drag_active_is", "active": false },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "dock_graph_canonical_is", "canonical": true },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "assert",
+      "predicate": { "kind": "dock_graph_has_nested_same_axis_splits_is", "has_nested": false }
+    },
+    {
+      "type": "assert",
+      "predicate": { "kind": "dock_graph_node_count_le", "max": 20 }
+    },
+    {
+      "type": "assert",
+      "predicate": { "kind": "dock_graph_max_split_depth_le", "max": 4 }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "dock_graph_signature_is",
+        "signature": "dock(root=split(v,[split(h,[tabs([demo.viewport.left]),tabs([demo.viewport.right])]),tabs([demo.controls])]);floatings=[])"
+      }
+    },
+    {
+      "type": "capture_bundle",
+      "label": "docking-arbitration-demo-nary-repeated-edge-dock-no-deepen"
+    }
+  ]
+}
