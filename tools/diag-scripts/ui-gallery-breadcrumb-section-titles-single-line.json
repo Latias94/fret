@@ -1,5 +1,5 @@
 {
   "schema_version": 1,
   "kind": "script_redirect",
-  "to": "tools/diag-scripts/ui-gallery/misc/ui-gallery-breadcrumb-section-titles-single-line.json"
+  "to": "tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-section-titles-single-line.json"
 }

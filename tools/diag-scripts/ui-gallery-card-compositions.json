@@ -1,5 +1,5 @@
 {
   "schema_version": 1,
   "kind": "script_redirect",
-  "to": "tools/diag-scripts/ui-gallery/misc/ui-gallery-card-compositions.json"
+  "to": "tools/diag-scripts/ui-gallery/card/ui-gallery-card-compositions.json"
 }

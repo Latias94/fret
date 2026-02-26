@@ -1,5 +1,5 @@
 {
   "schema_version": 1,
   "kind": "script_redirect",
-  "to": "tools/diag-scripts/ui-gallery/misc/ui-gallery-hit-test-only-paint-cache-probe-sweep.json"
+  "to": "tools/diag-scripts/ui-gallery/diag/ui-gallery-hit-test-only-paint-cache-probe-sweep.json"
 }

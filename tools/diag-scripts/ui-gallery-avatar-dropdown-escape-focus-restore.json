@@ -1,5 +1,5 @@
 {
   "schema_version": 1,
   "kind": "script_redirect",
-  "to": "tools/diag-scripts/ui-gallery/misc/ui-gallery-avatar-dropdown-escape-focus-restore.json"
+  "to": "tools/diag-scripts/ui-gallery/avatar/ui-gallery-avatar-dropdown-escape-focus-restore.json"
 }

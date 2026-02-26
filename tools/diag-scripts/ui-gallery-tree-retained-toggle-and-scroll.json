@@ -1,5 +1,5 @@
 {
   "schema_version": 1,
   "kind": "script_redirect",
-  "to": "tools/diag-scripts/ui-gallery/misc/ui-gallery-tree-retained-toggle-and-scroll.json"
+  "to": "tools/diag-scripts/ui-gallery/tree/ui-gallery-tree-retained-toggle-and-scroll.json"
 }
