@@ -25,6 +25,8 @@ const WGSL: &str = r#"
 // - vec4s[0].z: depth_effect (0..1)
 // - vec4s[0].w: chromatic_aberration (0..1)
 // - vec4s[1]: corner_radii_px (tl, tr, br, bl)
+// - vec4s[2].x: grain_strength (0..1)
+// - vec4s[2].y: grain_scale (>= 0.1)
 
 fn radius_at(centered: vec2<f32>, radii: vec4<f32>) -> f32 {
   if (centered.x >= 0.0) {
@@ -94,6 +96,8 @@ fn fret_custom_effect(_src: vec4<f32>, _uv: vec2<f32>, pos_px: vec2<f32>, params
   let depth_effect = clamp(params.vec4s[0].z, 0.0, 1.0);
   let chromatic = clamp(params.vec4s[0].w, 0.0, 1.0);
   let corner_radii = max(params.vec4s[1], vec4<f32>(0.0));
+  let grain_strength = max(0.0, params.vec4s[2].x);
+  let grain_scale = max(0.1, params.vec4s[2].y);
 
   if (refraction_height_px <= 0.0 || refraction_amount_px <= 0.0) {
     return sample_src_bilinear(pos_px);
@@ -158,6 +162,12 @@ fn fret_custom_effect(_src: vec4<f32>, _uv: vec2<f32>, pos_px: vec2<f32>, params
 
   rgb_u += vec3<f32>(1.0) * rim * rim_strength * corner_boost;
   rgb_u -= vec3<f32>(1.0) * shadow_band * shadow_strength;
+
+  // Subtle deterministic grain, anchored to the effect bounds (local space).
+  if (grain_strength > 0.0) {
+    let n = fret_catalog_hash_noise01(fret_local_px(pos_px) * grain_scale) - 0.5;
+    rgb_u += vec3<f32>(n) * grain_strength;
+  }
   rgb_u = clamp(rgb_u, vec3<f32>(0.0), vec3<f32>(4.0));
 
   return vec4<f32>(rgb_u * a, a);
@@ -177,6 +187,8 @@ struct CustomEffectV1State {
     depth_effect: Model<Vec<f32>>,
     chromatic_aberration: Model<Vec<f32>>,
     corner_radius_px: Model<Vec<f32>>,
+    grain_strength: Model<Vec<f32>>,
+    grain_scale: Model<Vec<f32>>,
 }
 
 struct CustomEffectV1Program;
@@ -223,6 +235,8 @@ impl MvuProgram for CustomEffectV1Program {
             depth_effect: app.models_mut().insert(vec![0.35]),
             chromatic_aberration: app.models_mut().insert(vec![0.75]),
             corner_radius_px: app.models_mut().insert(vec![20.0]),
+            grain_strength: app.models_mut().insert(vec![0.06]),
+            grain_scale: app.models_mut().insert(vec![1.0]),
         }
     }
 
@@ -250,6 +264,10 @@ impl MvuProgram for CustomEffectV1Program {
             let _ = app
                 .models_mut()
                 .update(&st.corner_radius_px, |v| *v = vec![20.0]);
+            let _ = app
+                .models_mut()
+                .update(&st.grain_strength, |v| *v = vec![0.06]);
+            let _ = app.models_mut().update(&st.grain_scale, |v| *v = vec![1.0]);
         }
     }
 
@@ -296,6 +314,8 @@ fn view(
     let depth_effect = watch_first_f32(cx, &st.depth_effect, 0.35);
     let chromatic_aberration = watch_first_f32(cx, &st.chromatic_aberration, 0.75);
     let corner_radius_px = watch_first_f32(cx, &st.corner_radius_px, 20.0);
+    let grain_strength = watch_first_f32(cx, &st.grain_strength, 0.06);
+    let grain_scale = watch_first_f32(cx, &st.grain_scale, 1.0);
 
     let inspector = inspector(
         cx,
@@ -307,6 +327,8 @@ fn view(
         depth_effect,
         chromatic_aberration,
         corner_radius_px,
+        grain_strength,
+        grain_scale,
         msg,
     );
     let stage = stage(
@@ -320,6 +342,8 @@ fn view(
         depth_effect,
         chromatic_aberration,
         corner_radius_px,
+        grain_strength,
+        grain_scale,
     );
 
     let root = shadcn::stack::hstack(
@@ -345,6 +369,8 @@ fn stage(
     depth_effect: f32,
     chromatic_aberration: f32,
     corner_radius_px: f32,
+    grain_strength: f32,
+    grain_scale: f32,
 ) -> AnyElement {
     let lenses = lens_row(
         cx,
@@ -357,6 +383,8 @@ fn stage(
         depth_effect,
         chromatic_aberration,
         corner_radius_px,
+        grain_strength,
+        grain_scale,
     );
 
     let title = shadcn::typography::h3(cx, "Custom Effect V1 (CustomV1)");
@@ -488,6 +516,8 @@ fn lens_row(
     depth_effect: f32,
     chromatic_aberration: f32,
     corner_radius_px: f32,
+    grain_strength: f32,
+    grain_scale: f32,
 ) -> AnyElement {
     let radius = Px(corner_radius_px.clamp(0.0, 64.0));
     shadcn::stack::hstack(
@@ -510,6 +540,8 @@ fn lens_row(
                         depth_effect,
                         chromatic_aberration,
                         corner_radius_px,
+                        grain_strength,
+                        grain_scale,
                     )
                 } else {
                     plain_lens(cx, "CustomV1 lens (disabled)", radius)
@@ -611,6 +643,8 @@ fn custom_effect_lens(
     depth_effect: f32,
     chromatic_aberration: f32,
     corner_radius_px: f32,
+    grain_strength: f32,
+    grain_scale: f32,
 ) -> AnyElement {
     let mut layout = LayoutStyle::default();
     layout.size.width = Length::Fill;
@@ -624,6 +658,8 @@ fn custom_effect_lens(
     let depth_effect = depth_effect.clamp(0.0, 1.0);
     let chromatic_aberration = chromatic_aberration.clamp(0.0, 1.0);
     let radius = corner_radius_px.clamp(0.0, 64.0);
+    let grain_strength = grain_strength.clamp(0.0, 0.25);
+    let grain_scale = grain_scale.clamp(0.1, 8.0);
 
     let params = EffectParamsV1 {
         vec4s: [
@@ -634,7 +670,7 @@ fn custom_effect_lens(
                 chromatic_aberration,
             ],
             [radius, radius, radius, radius],
-            [0.0; 4],
+            [grain_strength, grain_scale, 0.0, 0.0],
             [0.0; 4],
         ],
     };
@@ -677,6 +713,8 @@ fn inspector(
     depth_effect: f32,
     chromatic_aberration: f32,
     corner_radius_px: f32,
+    grain_strength: f32,
+    grain_scale: f32,
     msg: &mut MessageRouter<Msg>,
 ) -> AnyElement {
     let theme = Theme::global(&*cx.app).snapshot();
@@ -690,6 +728,8 @@ fn inspector(
     let depth_effect_model = st.depth_effect.clone();
     let chromatic_model = st.chromatic_aberration.clone();
     let corner_radius_model = st.corner_radius_px.clone();
+    let grain_strength_model = st.grain_strength.clone();
+    let grain_scale_model = st.grain_scale.clone();
 
     let mut layout = LayoutStyle::default();
     layout.size.width = Length::Px(Px(360.0));
@@ -863,6 +903,34 @@ fn inspector(
                         },
                     );
 
+                    let grain_strength_row = shadcn::stack::vstack(
+                        cx,
+                        shadcn::stack::VStackProps::default().gap(Space::N2),
+                        move |cx| {
+                            vec![
+                                label_row(cx, "Grain strength", format!("{grain_strength:.2}")),
+                                shadcn::Slider::new(grain_strength_model.clone())
+                                    .range(0.0, 0.2)
+                                    .step(0.01)
+                                    .into_element(cx),
+                            ]
+                        },
+                    );
+
+                    let grain_scale_row = shadcn::stack::vstack(
+                        cx,
+                        shadcn::stack::VStackProps::default().gap(Space::N2),
+                        move |cx| {
+                            vec![
+                                label_row(cx, "Grain scale", format!("{grain_scale:.2}")),
+                                shadcn::Slider::new(grain_scale_model.clone())
+                                    .range(0.25, 6.0)
+                                    .step(0.05)
+                                    .into_element(cx),
+                            ]
+                        },
+                    );
+
                     vec![
                         shadcn::stack::hstack(
                             cx,
@@ -887,6 +955,9 @@ fn inspector(
                         depth_effect_row,
                         chromatic_row,
                         corner_radius_row,
+                        shadcn::Separator::new().into_element(cx),
+                        grain_strength_row,
+                        grain_scale_row,
                         shadcn::Button::new("Reset")
                             .variant(shadcn::ButtonVariant::Secondary)
                             .on_click(reset_cmd.clone())
