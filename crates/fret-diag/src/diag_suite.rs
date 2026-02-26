@@ -1373,7 +1373,7 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
                 &connected_fs_iter
             };
 
-            let script_json: serde_json::Value =
+            let script_value: serde_json::Value =
                 serde_json::from_slice(&std::fs::read(&src).map_err(|e| {
                     let err = e.to_string();
                     write_tooling_failure_script_result(
@@ -1396,6 +1396,18 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
                     );
                     err
                 })?;
+            let script_json =
+                crate::script_tooling::resolve_script_json_redirects_from_value(&src, script_value)
+                    .inspect_err(|err| {
+                        write_tooling_failure_script_result(
+                            &resolved_script_result_path,
+                            "tooling.script.redirect_failed",
+                            err,
+                            "tooling_error",
+                            Some(script_key.clone()),
+                        );
+                    })?
+                    .value;
 
             // Always dump a bounded bundle for suite runs so lint and post-run checks can
             // operate on a local artifact (parity across transports).

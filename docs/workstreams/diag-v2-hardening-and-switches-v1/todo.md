@@ -39,14 +39,18 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
   - [ ] file: `tools/diag-scripts/index.json` (or `index.toml`)
   - [ ] fields: `id`, `path`, `tags`, `target_hints`, `required_capabilities`, `suite_memberships`
 - [ ] Prefer `--suite-prelude` for shared resets (`tools/diag-scripts/_prelude/*`) and document the convention.
-- [ ] Document a migration runbook (dry-run plan → apply moves → validate suites) and link it from `docs/ui-diagnostics-and-scripted-tests.md`.
+- [x] Document a migration runbook (dry-run plan → apply moves → validate suites) and link it from `docs/ui-diagnostics-and-scripted-tests.md`.
 - [ ] Decide path-move compatibility strategy:
   - [ ] registry-first (no moves) to decouple suites from filenames,
   - [ ] then move to folders with either redirects (preferred) or “big bang” rewrites.
-- [ ] If using redirects, implement tooling redirect resolution:
-  - [ ] add `script_redirect` stub support with loop detection,
-  - [ ] ensure redirects never reach the runtime (tooling resolves before push).
-- [ ] Write a migration script to move scripts into subfolders and update references:
+- [x] If using redirects, implement tooling redirect resolution:
+  - [x] add `script_redirect` stub support with loop detection,
+  - [x] ensure redirects never reach the runtime (tooling resolves before push).
+- [x] Add a migration helper script (plan + apply moves + optional redirects/rewrite).
+- [ ] Update references after path moves (choose one):
+  - [ ] replace hard-coded lists with registry/directory inputs, or
+  - [ ] scripted rewrite of code/docs references (large diff; less preferred).
+- [ ] (If needed) write a migration script to move scripts into subfolders and update references:
   - [ ] updates `crates/fret-diag/src/diag_suite_scripts.rs` (or replaces it with a registry reader),
   - [ ] updates any other hard-coded references under `crates/fret-diag/src` (search for `tools/diag-scripts/`),
   - [ ] updates any docs that reference old paths,

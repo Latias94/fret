@@ -1,10 +1,13 @@
 use fret_diag_protocol::{UiActionScriptV1, UiActionScriptV2, UiActionStepV1, UiActionStepV2};
 use serde_json::Value;
+use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
 pub(crate) struct NormalizedScript {
     pub(crate) normalized: String,
     pub(crate) changed: bool,
+    pub(crate) write_path: PathBuf,
+    pub(crate) redirect_chain: Vec<PathBuf>,
 }
 
 pub(crate) struct ScriptSchemaReport {
@@ -17,13 +20,22 @@ pub(crate) struct ScriptLintReport {
     pub(crate) error_scripts: usize,
 }
 
+#[derive(Debug, Clone)]
+pub(crate) struct ResolvedScriptJson {
+    pub(crate) value: Value,
+    pub(crate) write_path: PathBuf,
+    pub(crate) redirect_chain: Vec<PathBuf>,
+}
+
 pub(crate) fn normalize_script_from_path(path: &Path) -> Result<NormalizedScript, String> {
-    let bytes = std::fs::read(path).map_err(|e| e.to_string())?;
-    let mut value: Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    let resolved = read_script_json_resolving_redirects(path)?;
+
+    let mut value = resolved.value;
     canonicalize_json_value(&mut value);
     let mut normalized = serde_json::to_string_pretty(&value).map_err(|e| e.to_string())?;
     normalized.push('\n');
 
+    let bytes = std::fs::read(&resolved.write_path).map_err(|e| e.to_string())?;
     let mut original = String::from_utf8_lossy(&bytes).to_string();
     original = original.replace("\r\n", "\n");
     if !original.ends_with('\n') {
@@ -33,6 +45,8 @@ pub(crate) fn normalize_script_from_path(path: &Path) -> Result<NormalizedScript
     Ok(NormalizedScript {
         changed: original != normalized,
         normalized,
+        write_path: resolved.write_path,
+        redirect_chain: resolved.redirect_chain,
     })
 }
 
@@ -110,8 +124,8 @@ pub(crate) fn lint_scripts(scripts: &[PathBuf]) -> ScriptLintReport {
 }
 
 fn validate_script(path: &Path) -> Result<Value, String> {
-    let bytes = std::fs::read(path).map_err(|e| e.to_string())?;
-    let value: Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    let resolved = read_script_json_resolving_redirects(path)?;
+    let value = resolved.value;
 
     let schema_version = value
         .get("schema_version")
@@ -125,6 +139,8 @@ fn validate_script(path: &Path) -> Result<Value, String> {
                 serde_json::from_value(value).map_err(|e| e.to_string())?;
             Ok(serde_json::json!({
                 "path": path.display().to_string(),
+                "resolved_path": resolved.write_path.display().to_string(),
+                "redirect_chain": resolved.redirect_chain.iter().map(|p| p.display().to_string()).collect::<Vec<_>>(),
                 "schema_version": 1,
             }))
         }
@@ -133,6 +149,8 @@ fn validate_script(path: &Path) -> Result<Value, String> {
                 serde_json::from_value(value).map_err(|e| e.to_string())?;
             Ok(serde_json::json!({
                 "path": path.display().to_string(),
+                "resolved_path": resolved.write_path.display().to_string(),
+                "redirect_chain": resolved.redirect_chain.iter().map(|p| p.display().to_string()).collect::<Vec<_>>(),
                 "schema_version": 2,
             }))
         }
@@ -144,8 +162,8 @@ fn validate_script(path: &Path) -> Result<Value, String> {
 }
 
 fn lint_script(path: &Path) -> Result<Value, String> {
-    let bytes = std::fs::read(path).map_err(|e| e.to_string())?;
-    let value: Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    let resolved = read_script_json_resolving_redirects(path)?;
+    let value = resolved.value;
 
     let schema_version = value
         .get("schema_version")
@@ -196,6 +214,16 @@ fn lint_script(path: &Path) -> Result<Value, String> {
         }
     }
 
+    if !resolved.redirect_chain.is_empty() {
+        findings.push(serde_json::json!({
+            "severity": "info",
+            "code": "script.redirect_resolved",
+            "message": "script path is a redirect stub; tooling resolved it before execution",
+            "resolved_path": resolved.write_path.display().to_string(),
+            "redirect_chain": resolved.redirect_chain.iter().map(|p| p.display().to_string()).collect::<Vec<_>>(),
+        }));
+    }
+
     if inferred_required.iter().any(|c| c == "diag.screenshot_png")
         && !declared_required.iter().any(|c| c == "diag.screenshot_png")
     {
@@ -235,6 +263,8 @@ fn lint_script(path: &Path) -> Result<Value, String> {
 
     Ok(serde_json::json!({
         "path": path.display().to_string(),
+        "resolved_path": resolved.write_path.display().to_string(),
+        "redirect_chain": resolved.redirect_chain.iter().map(|p| p.display().to_string()).collect::<Vec<_>>(),
         "status": "passed",
         "schema_version": schema_version,
         "capabilities": {
@@ -245,6 +275,109 @@ fn lint_script(path: &Path) -> Result<Value, String> {
         "steps": step_summary,
         "findings": findings,
     }))
+}
+
+pub(crate) fn read_script_json_resolving_redirects(
+    path: &Path,
+) -> Result<ResolvedScriptJson, String> {
+    let bytes = std::fs::read(path).map_err(|e| e.to_string())?;
+    let value: Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    resolve_script_json_redirects_from_value(path, value)
+}
+
+pub(crate) fn resolve_script_json_redirects_from_value(
+    path: &Path,
+    mut value: Value,
+) -> Result<ResolvedScriptJson, String> {
+    const MAX_REDIRECT_DEPTH: usize = 8;
+
+    fn find_repo_root_for_path(p: &Path) -> Option<PathBuf> {
+        let mut cur = p;
+        while let Some(parent) = cur.parent() {
+            if parent.join("Cargo.toml").is_file() {
+                return Some(parent.to_path_buf());
+            }
+            cur = parent;
+        }
+        None
+    }
+
+    fn resolve_to_path(from: &Path, to: &str) -> PathBuf {
+        let to_path = PathBuf::from(to);
+        if to_path.is_absolute() {
+            return to_path;
+        }
+
+        let looks_repo_relative = to.starts_with("tools/")
+            || to.starts_with("crates/")
+            || to.starts_with("apps/")
+            || to.starts_with("docs/")
+            || to.starts_with(".fret/");
+
+        if looks_repo_relative {
+            if let Some(root) = find_repo_root_for_path(from) {
+                return root.join(to_path);
+            }
+        }
+
+        from.parent()
+            .unwrap_or_else(|| Path::new("."))
+            .join(to_path)
+    }
+
+    let mut read_path = path.to_path_buf();
+    let mut write_path = path.to_path_buf();
+    let mut redirect_chain: Vec<PathBuf> = Vec::new();
+    let mut visited: BTreeSet<PathBuf> = BTreeSet::new();
+
+    for _ in 0..=MAX_REDIRECT_DEPTH {
+        let canon = std::fs::canonicalize(&read_path).unwrap_or_else(|_| read_path.clone());
+        if !visited.insert(canon.clone()) {
+            return Err(format!(
+                "script redirect loop detected (revisiting): {}",
+                canon.display()
+            ));
+        }
+
+        let is_redirect = value
+            .get("kind")
+            .and_then(|v| v.as_str())
+            .map(|s| s == "script_redirect")
+            .unwrap_or(false);
+        if !is_redirect {
+            return Ok(ResolvedScriptJson {
+                value,
+                write_path,
+                redirect_chain,
+            });
+        }
+
+        let schema_version = value
+            .get("schema_version")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+        if schema_version != 1 {
+            return Err(format!(
+                "invalid script_redirect schema_version (expected 1): {schema_version}"
+            ));
+        }
+
+        let to = value
+            .get("to")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| "invalid script_redirect (missing string field: to)".to_string())?;
+
+        redirect_chain.push(read_path.clone());
+        read_path = resolve_to_path(&read_path, to);
+        write_path = read_path.clone();
+
+        let bytes = std::fs::read(&read_path).map_err(|e| e.to_string())?;
+        value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    }
+
+    Err(format!(
+        "script redirect depth exceeded (max_depth={MAX_REDIRECT_DEPTH})"
+    ))
 }
 
 fn infer_required_capabilities_v1(script: &UiActionScriptV1) -> Vec<String> {

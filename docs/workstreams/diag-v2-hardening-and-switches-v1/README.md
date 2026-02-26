@@ -316,7 +316,8 @@ Rules:
 
 - Redirect resolution MUST be loop-safe (depth cap + visited set).
 - Tooling SHOULD normalize the final resolved script JSON before pushing/writing.
-- `diag script normalize --check` should fail on redirect stubs (so stubs are not accidentally treated as “real scripts”).
+- Script tooling (`diag script validate|lint|normalize`) SHOULD resolve redirect stubs before operating, and `--write` SHOULD
+  update the resolved target script (not the stub).
 
 Option B: “big bang” path updates
 

@@ -89,14 +89,29 @@ pub(crate) fn cmd_script(
                 let NormalizedScript {
                     normalized,
                     changed,
+                    write_path,
+                    redirect_chain,
+                    ..
                 } = normalize_script_from_path(&src)?;
 
                 if script_tool_check {
                     if changed {
                         any_changed = true;
-                        eprintln!("not normalized: {}", src.display());
+                        if redirect_chain.is_empty() && write_path == src {
+                            eprintln!("not normalized: {}", src.display());
+                        } else {
+                            eprintln!(
+                                "not normalized: {} (resolved: {})",
+                                src.display(),
+                                write_path.display()
+                            );
+                        }
                     } else {
-                        println!("{}", src.display());
+                        if redirect_chain.is_empty() && write_path == src {
+                            println!("{}", src.display());
+                        } else {
+                            println!("{} (resolved: {})", src.display(), write_path.display());
+                        }
                     }
                     continue;
                 }
@@ -104,9 +119,14 @@ pub(crate) fn cmd_script(
                 if script_tool_write {
                     if changed {
                         any_changed = true;
-                        std::fs::write(&src, normalized.as_bytes()).map_err(|e| e.to_string())?;
+                        std::fs::write(&write_path, normalized.as_bytes())
+                            .map_err(|e| e.to_string())?;
                     }
-                    println!("{}", src.display());
+                    if redirect_chain.is_empty() && write_path == src {
+                        println!("{}", src.display());
+                    } else {
+                        println!("{} (resolved: {})", src.display(), write_path.display());
+                    }
                     continue;
                 }
 

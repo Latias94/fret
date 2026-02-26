@@ -330,8 +330,13 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         })?;
 
         std::fs::create_dir_all(&resolved_out_dir).map_err(|e| e.to_string())?;
-        let script_json = serde_json::from_slice(&std::fs::read(&src).map_err(|e| e.to_string())?)
-            .map_err(|e| e.to_string())?;
+        let script_value: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&src).map_err(|e| e.to_string())?)
+                .map_err(|e| e.to_string())?;
+        let script_json =
+            crate::script_tooling::resolve_script_json_redirects_from_value(&src, script_value)
+                .map_err(|e| e.to_string())?
+                .value;
 
         let wants_post_run_checks = check_stale_paint_test_id.is_some()
             || check_stale_scene_test_id.is_some()
@@ -641,7 +646,7 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
             Some("connect_filesystem_tooling".to_string()),
         );
     })?;
-    let script_json: serde_json::Value =
+    let script_value: serde_json::Value =
         serde_json::from_slice(&std::fs::read(&src).map_err(|e| {
             let err = e.to_string();
             write_tooling_failure_script_result_if_missing(
@@ -664,6 +669,18 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
             );
             err
         })?;
+    let script_json =
+        crate::script_tooling::resolve_script_json_redirects_from_value(&src, script_value)
+            .inspect_err(|err| {
+                write_tooling_failure_script_result_if_missing(
+                    &resolved_script_result_path,
+                    "tooling.script.redirect_failed",
+                    err,
+                    "tooling_error",
+                    Some("resolve_script_json_redirects".to_string()),
+                );
+            })?
+            .value;
     let (script_result, _bundle_path) = run_script_over_transport(
         &resolved_out_dir,
         &connected,

@@ -334,7 +334,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
                 break;
             }
         };
-        let script_json: serde_json::Value = match serde_json::from_slice(&script_json_bytes) {
+        let script_value: serde_json::Value = match serde_json::from_slice(&script_json_bytes) {
             Ok(v) => v,
             Err(e) => {
                 let err = e.to_string();
@@ -342,6 +342,24 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
                 write_tooling_failure_script_result(
                     &resolved_script_result_path,
                     "tooling.script.parse_failed",
+                    &err,
+                    "tooling_error",
+                    Some(src.display().to_string()),
+                );
+                overall_error = Some(err);
+                break;
+            }
+        };
+        let script_json = match crate::script_tooling::resolve_script_json_redirects_from_value(
+            &src,
+            script_value,
+        ) {
+            Ok(v) => v.value,
+            Err(err) => {
+                overall_reason_code = Some("tooling.script.redirect_failed".to_string());
+                write_tooling_failure_script_result(
+                    &resolved_script_result_path,
+                    "tooling.script.redirect_failed",
                     &err,
                     "tooling_error",
                     Some(src.display().to_string()),

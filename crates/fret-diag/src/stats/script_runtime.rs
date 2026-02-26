@@ -3,7 +3,7 @@ use std::time::{Duration, Instant};
 
 use crate::util::{
     read_pick_result, read_pick_result_run_id, read_script_result, read_script_result_run_id,
-    touch, write_script,
+    touch, write_json_value,
 };
 
 #[derive(Debug, Clone)]
@@ -49,7 +49,8 @@ pub(crate) fn run_script_and_wait(
     let prev_run_id = read_script_result_run_id(script_result_path).unwrap_or(0);
     let mut target_run_id: Option<u64> = None;
 
-    write_script(src, script_path)?;
+    let resolved = crate::script_tooling::read_script_json_resolving_redirects(src)?;
+    write_json_value(script_path, &resolved.value)?;
     touch(script_trigger_path)?;
 
     let start_deadline =
