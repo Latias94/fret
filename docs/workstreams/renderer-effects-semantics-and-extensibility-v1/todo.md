@@ -116,6 +116,10 @@ This TODO is ordered by implementation priority (P0 first), and is designed to b
   - Evidence: `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs`,
     `crates/fret-render-wgpu/tests/effect_custom_v1_conformance.rs`.
 
+- [ ] Add a “theme-like postprocess” demo to validate the CustomV1 ceiling (policy-only, no core changes):
+  - [x] Implement and wire: `apps/fret-examples/src/postprocess_theme_demo.rs` (via `apps/fret-demo`).
+  - [ ] Add a `fretboard diag` script that captures a small, shareable baseline bundle (screenshots + perf snapshot).
+
 ## Suggested regression gates
 
 - Unit tests:

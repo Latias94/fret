@@ -114,6 +114,8 @@ pub mod plot_image_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod plot_stress_demo;
 #[cfg(not(target_arch = "wasm32"))]
+pub mod postprocess_theme_demo;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod query_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod router_query_demo;

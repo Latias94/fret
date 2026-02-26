@@ -1,0 +1,851 @@
+//! Theme-like post-processing demo (CustomV1 + built-in effect steps).
+//!
+//! This demo exists to validate the “high ceiling” story without expanding the portable core
+//! contract: authoring policy lives in app/ecosystem code, while the renderer stays bounded.
+
+#![cfg(not(target_arch = "wasm32"))]
+
+use std::sync::Arc;
+
+use fret::prelude::*;
+use fret_core::scene::{
+    DitherMode, EffectChain, EffectMode, EffectParamsV1, EffectQuality, EffectStep,
+};
+use fret_core::{Color, Corners, Edges, EffectId, Px};
+use fret_runtime::Model;
+use fret_ui::element::{
+    ContainerProps, EffectLayerProps, LayoutStyle, Length, Overflow, PositionStyle, SpacerProps,
+    TextProps,
+};
+use fret_ui_kit::custom_effects::CustomEffectProgramV1;
+use fret_ui_kit::{Space, UiIntoElement};
+
+const WGSL: &str = r#"
+// Params packing (EffectParamsV1 is 64 bytes):
+// - vec4s[0].x: chromatic_offset_px
+// - vec4s[0].y: scanline_strength (0..1)
+// - vec4s[0].z: scanline_spacing_px (>= 1)
+// - vec4s[0].w: vignette_strength (0..1)
+// - vec4s[1].x: grain_strength (0..1)
+// - vec4s[1].y: grain_scale (>= 0.1)
+
+const TAU: f32 = 6.28318530718;
+
+fn unpremul(c: vec4<f32>) -> vec3<f32> {
+  if (c.a <= 1e-6) { return vec3<f32>(0.0); }
+  return c.rgb / c.a;
+}
+
+fn clamp_i2(p: vec2<i32>, dims: vec2<i32>) -> vec2<i32> {
+  return vec2<i32>(
+    clamp(p.x, 0, dims.x - 1),
+    clamp(p.y, 0, dims.y - 1),
+  );
+}
+
+fn sample_src_nearest_i(p: vec2<i32>) -> vec4<f32> {
+  return textureLoad(src_texture, p, 0);
+}
+
+fn smooth01(x: f32) -> f32 {
+  // cubic Hermite smoothstep on [0,1]
+  let t = clamp(x, 0.0, 1.0);
+  return t * t * (3.0 - 2.0 * t);
+}
+
+fn fret_custom_effect(src: vec4<f32>, _uv: vec2<f32>, pos_px: vec2<f32>, params: EffectParamsV1) -> vec4<f32> {
+  let chromatic_offset_px = clamp(params.vec4s[0].x, 0.0, 6.0);
+  let scanline_strength = clamp(params.vec4s[0].y, 0.0, 1.0);
+  let scanline_spacing_px = max(1.0, params.vec4s[0].z);
+  let vignette_strength = clamp(params.vec4s[0].w, 0.0, 1.0);
+
+  let grain_strength = clamp(params.vec4s[1].x, 0.0, 0.25);
+  let grain_scale = clamp(params.vec4s[1].y, 0.1, 8.0);
+
+  let dims_u = textureDimensions(src_texture);
+  let dims_i = vec2<i32>(i32(dims_u.x), i32(dims_u.y));
+  let xi = clamp(i32(floor(pos_px.x)), 0, dims_i.x - 1);
+  let yi = clamp(i32(floor(pos_px.y)), 0, dims_i.y - 1);
+
+  var base_u = unpremul(src);
+  var a = src.a;
+
+  // Chromatic offset: sample red/blue with bounded integer offsets, then mix in unpremul space.
+  if (chromatic_offset_px > 0.0) {
+    let off = i32(round(chromatic_offset_px));
+    let red = sample_src_nearest_i(clamp_i2(vec2<i32>(xi + off, yi), dims_i));
+    let blue = sample_src_nearest_i(clamp_i2(vec2<i32>(xi - off, yi), dims_i));
+    let red_u = unpremul(red);
+    let blue_u = unpremul(blue);
+    let aberr = vec3<f32>(red_u.r, base_u.g, blue_u.b);
+    base_u = mix(base_u, aberr, min(1.0, chromatic_offset_px / 6.0));
+    a = max(a, max(red.a, blue.a));
+  }
+
+  // Vignette: effect-local radial falloff from the render-space center.
+  if (vignette_strength > 0.0) {
+    let local = fret_local_px(pos_px);
+    let size = max(render_space.size_px, vec2<f32>(1.0));
+    let uv = (local / size) * 2.0 - vec2<f32>(1.0);
+    let r = length(uv);
+    let t = smooth01((r - 0.55) / 0.45);
+    let vig = 1.0 - t;
+    base_u *= mix(1.0, vig, vignette_strength);
+  }
+
+  // Scanlines: effect-local periodic modulation along Y.
+  if (scanline_strength > 0.0) {
+    let ly = fret_local_px(pos_px).y;
+    let s = 0.5 + 0.5 * sin((ly / scanline_spacing_px) * TAU);
+    let shade = 1.0 - scanline_strength * s;
+    base_u *= shade;
+  }
+
+  // Deterministic grain anchored to effect bounds.
+  if (grain_strength > 0.0) {
+    let n = fret_catalog_hash_noise01(fret_local_px(pos_px) * grain_scale) - 0.5;
+    base_u += vec3<f32>(n) * grain_strength;
+  }
+
+  base_u = clamp(base_u, vec3<f32>(0.0), vec3<f32>(4.0));
+  return vec4<f32>(base_u * a, a);
+}
+"#;
+
+#[derive(Debug, Clone, Copy)]
+struct DemoEffect(EffectId);
+
+#[derive(Debug)]
+struct ThemePostprocessState {
+    enabled: Model<bool>,
+
+    theme: Model<Option<Arc<str>>>,
+    theme_open: Model<bool>,
+
+    chromatic_offset_px: Model<Vec<f32>>,
+    scanline_strength: Model<Vec<f32>>,
+    scanline_spacing_px: Model<Vec<f32>>,
+    vignette_strength: Model<Vec<f32>>,
+    grain_strength: Model<Vec<f32>>,
+    grain_scale: Model<Vec<f32>>,
+
+    retro_pixel_scale: Model<Vec<f32>>,
+    retro_dither: Model<bool>,
+}
+
+struct ThemePostprocessProgram;
+
+#[derive(Debug, Clone)]
+enum Msg {
+    Reset,
+}
+
+pub fn run() -> anyhow::Result<()> {
+    fret::mvu::app::<ThemePostprocessProgram>("postprocess-theme-demo")?
+        .with_main_window("postprocess_theme_demo", (1200.0, 760.0))
+        .init_app(|app| {
+            shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+                app,
+                shadcn::shadcn_themes::ShadcnBaseColor::Slate,
+                shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+            );
+        })
+        .install_custom_effects(install_custom_effect)
+        .run()?;
+    Ok(())
+}
+
+fn install_custom_effect(app: &mut App, effects: &mut dyn fret_core::CustomEffectService) {
+    let mut program = CustomEffectProgramV1::wgsl_utf8(WGSL);
+    let id = program
+        .ensure_registered(effects)
+        .expect("custom effect registration must succeed on wgpu backends");
+    app.set_global(DemoEffect(id));
+}
+
+impl MvuProgram for ThemePostprocessProgram {
+    type State = ThemePostprocessState;
+    type Message = Msg;
+
+    fn init(app: &mut App, _window: AppWindowId) -> Self::State {
+        Self::State {
+            enabled: app.models_mut().insert(true),
+            theme: app
+                .models_mut()
+                .insert(Option::<Arc<str>>::Some(Arc::from("cyberpunk"))),
+            theme_open: app.models_mut().insert(false),
+
+            chromatic_offset_px: app.models_mut().insert(vec![2.0]),
+            scanline_strength: app.models_mut().insert(vec![0.18]),
+            scanline_spacing_px: app.models_mut().insert(vec![3.0]),
+            vignette_strength: app.models_mut().insert(vec![0.35]),
+            grain_strength: app.models_mut().insert(vec![0.06]),
+            grain_scale: app.models_mut().insert(vec![1.5]),
+
+            retro_pixel_scale: app.models_mut().insert(vec![10.0]),
+            retro_dither: app.models_mut().insert(true),
+        }
+    }
+
+    fn update(app: &mut App, st: &mut Self::State, message: Self::Message) {
+        if matches!(message, Msg::Reset) {
+            let _ = app.models_mut().update(&st.enabled, |v| *v = true);
+            let _ = app
+                .models_mut()
+                .update(&st.theme, |v| *v = Some(Arc::from("cyberpunk")));
+            let _ = app
+                .models_mut()
+                .update(&st.chromatic_offset_px, |v| *v = vec![2.0]);
+            let _ = app
+                .models_mut()
+                .update(&st.scanline_strength, |v| *v = vec![0.18]);
+            let _ = app
+                .models_mut()
+                .update(&st.scanline_spacing_px, |v| *v = vec![3.0]);
+            let _ = app
+                .models_mut()
+                .update(&st.vignette_strength, |v| *v = vec![0.35]);
+            let _ = app
+                .models_mut()
+                .update(&st.grain_strength, |v| *v = vec![0.06]);
+            let _ = app.models_mut().update(&st.grain_scale, |v| *v = vec![1.5]);
+            let _ = app
+                .models_mut()
+                .update(&st.retro_pixel_scale, |v| *v = vec![10.0]);
+            let _ = app.models_mut().update(&st.retro_dither, |v| *v = true);
+        }
+    }
+
+    fn view(
+        cx: &mut ElementContext<'_, App>,
+        st: &mut Self::State,
+        msg: &mut MessageRouter<Self::Message>,
+    ) -> Elements {
+        view(cx, st, msg)
+    }
+}
+
+fn srgb(r: u8, g: u8, b: u8, a: f32) -> Color {
+    Color {
+        r: (r as f32) / 255.0,
+        g: (g as f32) / 255.0,
+        b: (b as f32) / 255.0,
+        a: a.clamp(0.0, 1.0),
+    }
+}
+
+fn watch_first_f32(cx: &mut ElementContext<'_, App>, model: &Model<Vec<f32>>, default: f32) -> f32 {
+    cx.watch_model(model)
+        .layout()
+        .read_ref(|v| v.first().copied().unwrap_or(default))
+        .ok()
+        .unwrap_or(default)
+}
+
+fn view(
+    cx: &mut ElementContext<'_, App>,
+    st: &mut ThemePostprocessState,
+    msg: &mut MessageRouter<Msg>,
+) -> Elements {
+    let Some(effect) = cx.app.global::<DemoEffect>().map(|v| v.0) else {
+        return vec![shadcn::typography::h3(cx, "Custom effects unavailable")].into();
+    };
+
+    let enabled = cx.watch_model(&st.enabled).layout().copied_or(true);
+    let theme = cx
+        .watch_model(&st.theme)
+        .layout()
+        .cloned_or(Option::<Arc<str>>::None);
+
+    let chromatic_offset_px = watch_first_f32(cx, &st.chromatic_offset_px, 2.0);
+    let scanline_strength = watch_first_f32(cx, &st.scanline_strength, 0.18);
+    let scanline_spacing_px = watch_first_f32(cx, &st.scanline_spacing_px, 3.0);
+    let vignette_strength = watch_first_f32(cx, &st.vignette_strength, 0.35);
+    let grain_strength = watch_first_f32(cx, &st.grain_strength, 0.06);
+    let grain_scale = watch_first_f32(cx, &st.grain_scale, 1.5);
+
+    let retro_pixel_scale = watch_first_f32(cx, &st.retro_pixel_scale, 10.0);
+    let retro_dither = cx.watch_model(&st.retro_dither).layout().copied_or(true);
+
+    let inspector = inspector(
+        cx,
+        st,
+        theme.as_deref().unwrap_or("cyberpunk"),
+        chromatic_offset_px,
+        scanline_strength,
+        scanline_spacing_px,
+        vignette_strength,
+        grain_strength,
+        grain_scale,
+        retro_pixel_scale,
+        retro_dither,
+        msg,
+    );
+
+    let stage = stage(
+        cx,
+        enabled,
+        theme.as_deref().unwrap_or("cyberpunk"),
+        effect,
+        chromatic_offset_px,
+        scanline_strength,
+        scanline_spacing_px,
+        vignette_strength,
+        grain_strength,
+        grain_scale,
+        retro_pixel_scale,
+        retro_dither,
+    );
+
+    let root = shadcn::stack::hstack(
+        cx,
+        shadcn::stack::HStackProps::default()
+            .layout(LayoutRefinement::default().size_full())
+            .items_stretch()
+            .gap(Space::N0),
+        move |_cx| vec![inspector, stage],
+    );
+
+    vec![root].into()
+}
+
+fn stage(
+    cx: &mut ElementContext<'_, App>,
+    enabled: bool,
+    theme: &str,
+    effect: EffectId,
+    chromatic_offset_px: f32,
+    scanline_strength: f32,
+    scanline_spacing_px: f32,
+    vignette_strength: f32,
+    grain_strength: f32,
+    grain_scale: f32,
+    retro_pixel_scale: f32,
+    retro_dither: bool,
+) -> AnyElement {
+    let mut layout = LayoutStyle::default();
+    layout.size.width = Length::Fill;
+    layout.size.height = Length::Fill;
+    layout.flex.grow = 1.0;
+
+    let theme = theme.to_string();
+    let enabled = enabled && theme != "none";
+
+    let params = EffectParamsV1 {
+        vec4s: [
+            [
+                chromatic_offset_px.clamp(0.0, 6.0),
+                scanline_strength.clamp(0.0, 1.0),
+                scanline_spacing_px.clamp(1.0, 12.0),
+                vignette_strength.clamp(0.0, 1.0),
+            ],
+            [
+                grain_strength.clamp(0.0, 0.25),
+                grain_scale.clamp(0.1, 8.0),
+                0.0,
+                0.0,
+            ],
+            [0.0; 4],
+            [0.0; 4],
+        ],
+    };
+
+    let pixel_scale_u32 = retro_pixel_scale.round().clamp(2.0, 24.0) as u32;
+    let max_sample_offset_px = Px(chromatic_offset_px.clamp(0.0, 6.0));
+
+    let mut steps = Vec::new();
+    if enabled {
+        match theme.as_str() {
+            "retro" => {
+                steps.push(EffectStep::Pixelate {
+                    scale: pixel_scale_u32,
+                });
+                if retro_dither {
+                    steps.push(EffectStep::Dither {
+                        mode: DitherMode::Bayer4x4,
+                    });
+                }
+            }
+            "cyberpunk" => {
+                steps.push(EffectStep::ColorAdjust {
+                    saturation: 1.15,
+                    brightness: 1.0,
+                    contrast: 1.15,
+                });
+            }
+            _ => {}
+        }
+        steps.push(EffectStep::CustomV1 {
+            id: effect,
+            params,
+            max_sample_offset_px,
+        });
+    }
+
+    let chain = EffectChain::from_steps(&steps).sanitize();
+
+    let body = stage_body(cx, enabled);
+
+    if !enabled {
+        return body;
+    }
+
+    cx.effect_layer_props(
+        EffectLayerProps {
+            layout,
+            mode: EffectMode::FilterContent,
+            chain,
+            quality: EffectQuality::Auto,
+        },
+        move |_cx| vec![body],
+    )
+}
+
+fn stage_body(cx: &mut ElementContext<'_, App>, enabled: bool) -> AnyElement {
+    let mut layout = LayoutStyle::default();
+    layout.size.width = Length::Fill;
+    layout.size.height = Length::Fill;
+    layout.overflow = Overflow::Clip;
+
+    cx.container(
+        ContainerProps {
+            layout,
+            background: Some(srgb(6, 8, 14, 1.0)),
+            ..Default::default()
+        },
+        move |cx| {
+            let enabled_badge = if enabled {
+                shadcn::Badge::new("Postprocess ON")
+                    .variant(shadcn::BadgeVariant::Secondary)
+                    .into_element(cx)
+            } else {
+                shadcn::Badge::new("Postprocess OFF")
+                    .variant(shadcn::BadgeVariant::Outline)
+                    .into_element(cx)
+            };
+
+            let mut header_layout = LayoutStyle::default();
+            header_layout.position = PositionStyle::Absolute;
+            header_layout.inset.left = Some(Px(20.0)).into();
+            header_layout.inset.top = Some(Px(18.0)).into();
+
+            let title = cx.text_props(TextProps {
+                layout: Default::default(),
+                text: Arc::<str>::from("Theme-like Postprocess (CustomV1)"),
+                style: None,
+                color: Some(srgb(255, 255, 255, 0.92)),
+                align: fret_core::TextAlign::Start,
+                wrap: fret_core::TextWrap::None,
+                overflow: fret_core::TextOverflow::Clip,
+                ink_overflow: Default::default(),
+            });
+
+            let subtitle = cx.text_props(TextProps {
+                layout: Default::default(),
+                text: Arc::<str>::from(
+                    "Scanlines + vignette + chromatic + grain (bounded, deterministic).",
+                ),
+                style: None,
+                color: Some(srgb(255, 255, 255, 0.68)),
+                align: fret_core::TextAlign::Start,
+                wrap: fret_core::TextWrap::None,
+                overflow: fret_core::TextOverflow::Clip,
+                ink_overflow: Default::default(),
+            });
+
+            let header = cx.container(
+                ContainerProps {
+                    layout: header_layout,
+                    padding: Edges {
+                        left: Px(14.0),
+                        right: Px(14.0),
+                        top: Px(12.0),
+                        bottom: Px(12.0),
+                    }
+                    .into(),
+                    background: Some(srgb(0, 0, 0, 0.28)),
+                    border: Edges::all(Px(1.0)),
+                    border_color: Some(srgb(255, 255, 255, 0.12)),
+                    corner_radii: Corners::all(Px(14.0)),
+                    ..Default::default()
+                },
+                move |cx| {
+                    vec![shadcn::stack::vstack(
+                        cx,
+                        shadcn::stack::VStackProps::default()
+                            .gap(Space::N1)
+                            .items_start(),
+                        move |cx| {
+                            vec![
+                                title.into_element(cx),
+                                subtitle.into_element(cx),
+                                shadcn::stack::hstack(
+                                    cx,
+                                    shadcn::stack::HStackProps::default()
+                                        .gap(Space::N2)
+                                        .items_center(),
+                                    move |_cx| vec![enabled_badge],
+                                ),
+                            ]
+                        },
+                    )]
+                },
+            );
+
+            let sample_cards = sample_cards(cx);
+            vec![header, sample_cards]
+        },
+    )
+}
+
+fn sample_cards(cx: &mut ElementContext<'_, App>) -> AnyElement {
+    let mut layout = LayoutStyle::default();
+    layout.size.width = Length::Fill;
+    layout.size.height = Length::Fill;
+    let padding: Edges = Edges {
+        left: Px(28.0),
+        right: Px(28.0),
+        top: Px(110.0),
+        bottom: Px(28.0),
+    };
+
+    cx.container(
+        ContainerProps {
+            layout,
+            padding: padding.into(),
+            ..Default::default()
+        },
+        move |cx| {
+            let card = |cx: &mut ElementContext<'_, App>, title: &str, desc: &str| {
+                shadcn::Card::new([
+                    shadcn::CardHeader::new([
+                        shadcn::CardTitle::new(title).into_element(cx),
+                        shadcn::CardDescription::new(desc).into_element(cx),
+                    ])
+                    .into_element(cx),
+                    shadcn::CardContent::new([shadcn::stack::vstack(
+                        cx,
+                        shadcn::stack::VStackProps::default()
+                            .gap(Space::N2)
+                            .items_stretch(),
+                        |cx| {
+                            vec![
+                                shadcn::Button::new("Primary")
+                                    .test_id("postprocess.button.primary")
+                                    .into_element(cx),
+                                shadcn::Button::new("Secondary")
+                                    .variant(shadcn::ButtonVariant::Secondary)
+                                    .test_id("postprocess.button.secondary")
+                                    .into_element(cx),
+                            ]
+                        },
+                    )])
+                    .into_element(cx),
+                ])
+                .ui()
+                .w_full()
+                .into_element(cx)
+            };
+
+            let row = shadcn::stack::hstack(
+                cx,
+                shadcn::stack::HStackProps::default()
+                    .gap(Space::N4)
+                    .items_start()
+                    .layout(LayoutRefinement::default().w_full()),
+                move |cx| {
+                    vec![
+                        card(cx, "UI sample", "Buttons + text to reveal postprocess."),
+                        card(
+                            cx,
+                            "Small details",
+                            "Scanlines + dither make edges obvious.",
+                        ),
+                    ]
+                },
+            );
+
+            vec![row]
+        },
+    )
+}
+
+fn inspector(
+    cx: &mut ElementContext<'_, App>,
+    st: &mut ThemePostprocessState,
+    theme: &str,
+    chromatic_offset_px: f32,
+    scanline_strength: f32,
+    scanline_spacing_px: f32,
+    vignette_strength: f32,
+    grain_strength: f32,
+    grain_scale: f32,
+    retro_pixel_scale: f32,
+    retro_dither: bool,
+    msg: &mut MessageRouter<Msg>,
+) -> AnyElement {
+    let theme_snapshot = Theme::global(&*cx.app).snapshot();
+
+    let reset_cmd = msg.cmd(Msg::Reset);
+
+    let enabled_model = st.enabled.clone();
+    let theme_model = st.theme.clone();
+    let theme_open_model = st.theme_open.clone();
+
+    let chromatic_model = st.chromatic_offset_px.clone();
+    let scanline_strength_model = st.scanline_strength.clone();
+    let scanline_spacing_model = st.scanline_spacing_px.clone();
+    let vignette_model = st.vignette_strength.clone();
+    let grain_strength_model = st.grain_strength.clone();
+    let grain_scale_model = st.grain_scale.clone();
+    let retro_pixel_scale_model = st.retro_pixel_scale.clone();
+    let retro_dither_model = st.retro_dither.clone();
+
+    let mut layout = LayoutStyle::default();
+    layout.size.width = Length::Px(Px(380.0));
+    layout.size.height = Length::Fill;
+    layout.flex.shrink = 0.0;
+
+    cx.container(
+        ContainerProps {
+            layout,
+            padding: Edges::all(Px(16.0)).into(),
+            background: Some(theme_snapshot.color_token("background")),
+            border: Edges {
+                left: Px(0.0),
+                right: Px(1.0),
+                top: Px(0.0),
+                bottom: Px(0.0),
+            },
+            border_color: Some(theme_snapshot.color_token("border")),
+            ..Default::default()
+        },
+        move |cx| {
+            let label_row = |cx: &mut ElementContext<'_, App>, label: &str, value: String| {
+                shadcn::stack::hstack(
+                    cx,
+                    shadcn::stack::HStackProps::default()
+                        .gap(Space::N2)
+                        .items_center(),
+                    move |cx| {
+                        vec![
+                            shadcn::Label::new(label).into_element(cx),
+                            cx.spacer(SpacerProps::default()),
+                            shadcn::Badge::new(value)
+                                .variant(shadcn::BadgeVariant::Secondary)
+                                .into_element(cx),
+                        ]
+                    },
+                )
+            };
+
+            let header = shadcn::CardHeader::new([
+                shadcn::CardTitle::new("Theme Postprocess").into_element(cx),
+                shadcn::CardDescription::new(
+                    "Built-in steps (Pixelate/Dither/ColorAdjust) + CustomV1 (scanlines/vignette/chromatic/grain).",
+                )
+                .into_element(cx),
+            ])
+            .into_element(cx);
+
+            let theme_row = shadcn::stack::vstack(
+                cx,
+                shadcn::stack::VStackProps::default().gap(Space::N2),
+                move |cx| {
+                    vec![
+                        label_row(cx, "Theme", theme.to_string()),
+                        shadcn::Select::new(theme_model.clone(), theme_open_model.clone())
+                            .placeholder("Pick a theme")
+                            .items([
+                                shadcn::SelectItem::new("none", "None"),
+                                shadcn::SelectItem::new("cyberpunk", "Cyberpunk"),
+                                shadcn::SelectItem::new("retro", "Retro"),
+                            ])
+                            .into_element(cx),
+                    ]
+                },
+            );
+
+            let chromatic_row = shadcn::stack::vstack(
+                cx,
+                shadcn::stack::VStackProps::default().gap(Space::N2),
+                move |cx| {
+                    vec![
+                        label_row(
+                            cx,
+                            "Chromatic offset (px)",
+                            format!("{:.2}", chromatic_offset_px.clamp(0.0, 6.0)),
+                        ),
+                        shadcn::Slider::new(chromatic_model.clone())
+                            .range(0.0, 6.0)
+                            .step(0.25)
+                            .into_element(cx),
+                    ]
+                },
+            );
+
+            let scanline_strength_row = shadcn::stack::vstack(
+                cx,
+                shadcn::stack::VStackProps::default().gap(Space::N2),
+                move |cx| {
+                    vec![
+                        label_row(
+                            cx,
+                            "Scanline strength",
+                            format!("{scanline_strength:.2}"),
+                        ),
+                        shadcn::Slider::new(scanline_strength_model.clone())
+                            .range(0.0, 0.5)
+                            .step(0.01)
+                            .into_element(cx),
+                    ]
+                },
+            );
+
+            let scanline_spacing_row = shadcn::stack::vstack(
+                cx,
+                shadcn::stack::VStackProps::default().gap(Space::N2),
+                move |cx| {
+                    vec![
+                        label_row(
+                            cx,
+                            "Scanline spacing (px)",
+                            format!("{:.2}", scanline_spacing_px.clamp(1.0, 12.0)),
+                        ),
+                        shadcn::Slider::new(scanline_spacing_model.clone())
+                            .range(1.0, 10.0)
+                            .step(0.25)
+                            .into_element(cx),
+                    ]
+                },
+            );
+
+            let vignette_row = shadcn::stack::vstack(
+                cx,
+                shadcn::stack::VStackProps::default().gap(Space::N2),
+                move |cx| {
+                    vec![
+                        label_row(cx, "Vignette strength", format!("{vignette_strength:.2}")),
+                        shadcn::Slider::new(vignette_model.clone())
+                            .range(0.0, 0.9)
+                            .step(0.01)
+                            .into_element(cx),
+                    ]
+                },
+            );
+
+            let grain_strength_row = shadcn::stack::vstack(
+                cx,
+                shadcn::stack::VStackProps::default().gap(Space::N2),
+                move |cx| {
+                    vec![
+                        label_row(cx, "Grain strength", format!("{grain_strength:.2}")),
+                        shadcn::Slider::new(grain_strength_model.clone())
+                            .range(0.0, 0.2)
+                            .step(0.01)
+                            .into_element(cx),
+                    ]
+                },
+            );
+
+            let grain_scale_row = shadcn::stack::vstack(
+                cx,
+                shadcn::stack::VStackProps::default().gap(Space::N2),
+                move |cx| {
+                    vec![
+                        label_row(cx, "Grain scale", format!("{grain_scale:.2}")),
+                        shadcn::Slider::new(grain_scale_model.clone())
+                            .range(0.25, 6.0)
+                            .step(0.05)
+                            .into_element(cx),
+                    ]
+                },
+            );
+
+            let retro_pixel_row = shadcn::stack::vstack(
+                cx,
+                shadcn::stack::VStackProps::default().gap(Space::N2),
+                move |cx| {
+                    vec![
+                        label_row(
+                            cx,
+                            "Retro pixel scale",
+                            format!("{:.0}", retro_pixel_scale.clamp(2.0, 24.0)),
+                        ),
+                        shadcn::Slider::new(retro_pixel_scale_model.clone())
+                            .range(2.0, 24.0)
+                            .step(1.0)
+                            .into_element(cx),
+                    ]
+                },
+            );
+
+            let retro_dither_row = shadcn::stack::hstack(
+                cx,
+                shadcn::stack::HStackProps::default()
+                    .gap(Space::N2)
+                    .items_center(),
+                move |cx| {
+                    vec![
+                        shadcn::Switch::new(retro_dither_model.clone())
+                            .a11y_label("Enable retro dither")
+                            .test_id("postprocess.retro.dither")
+                            .into_element(cx),
+                        shadcn::Label::new(format!("Retro dither ({retro_dither})")).into_element(cx),
+                    ]
+                },
+            );
+
+            let content = shadcn::CardContent::new([shadcn::stack::vstack(
+                cx,
+                shadcn::stack::VStackProps::default()
+                    .gap(Space::N3)
+                    .items_stretch(),
+                move |cx| {
+                    vec![
+                        shadcn::stack::hstack(
+                            cx,
+                            shadcn::stack::HStackProps::default()
+                                .gap(Space::N2)
+                                .items_center(),
+                            |cx| {
+                                vec![
+                                    shadcn::Switch::new(enabled_model.clone())
+                                        .a11y_label("Enable postprocess")
+                                        .test_id("postprocess.enabled")
+                                        .into_element(cx),
+                                    shadcn::Label::new("Enable").into_element(cx),
+                                ]
+                            },
+                        ),
+                        theme_row,
+                        shadcn::Separator::new().into_element(cx),
+                        chromatic_row,
+                        vignette_row,
+                        scanline_strength_row,
+                        scanline_spacing_row,
+                        shadcn::Separator::new().into_element(cx),
+                        grain_strength_row,
+                        grain_scale_row,
+                        shadcn::Separator::new().into_element(cx),
+                        retro_pixel_row,
+                        retro_dither_row,
+                        shadcn::Button::new("Reset")
+                            .variant(shadcn::ButtonVariant::Secondary)
+                            .on_click(reset_cmd.clone())
+                            .test_id("postprocess.reset")
+                            .into_element(cx),
+                    ]
+                },
+            )])
+            .into_element(cx);
+
+            vec![
+                shadcn::Card::new([header, content])
+                    .ui()
+                    .w_full()
+                    .into_element(cx),
+            ]
+        },
+    )
+}

@@ -73,6 +73,8 @@ Exit criteria:
    - determinism + scissoring + ordering,
    - `render_space` origin/size semantics,
    - pattern atlas helper availability.
+ - Optional demo evidence:
+   - `apps/fret-examples/src/postprocess_theme_demo.rs` (wired via `apps/fret-demo`).
  - Evidence:
    - `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-abi-wgpu-mvp.md`
    - `crates/fret-render-wgpu/tests/effect_custom_v1_conformance.rs`
