@@ -532,16 +532,9 @@ pub(crate) fn apply_desktop_defaults_with<D: fret_launch::WinitAppDriver + 'stat
         builder
     };
 
-    #[cfg(feature = "icons-lucide")]
+    #[cfg(feature = "icons")]
     let builder = if defaults.icons {
         builder.with_lucide_icons()
-    } else {
-        builder
-    };
-
-    #[cfg(feature = "icons-radix")]
-    let builder = if defaults.icons {
-        builder.with_radix_icons()
     } else {
         builder
     };
