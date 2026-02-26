@@ -1,5 +1,6 @@
 use fret_ui::element::AnyElement;
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
+use fret_ui_kit::declarative::prefers_reduced_motion;
 use fret_ui_kit::declarative::scheduling;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
@@ -60,19 +61,22 @@ impl Skeleton {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
 
         let mut bg = theme.color_token("accent");
 
+        let reduced_motion = prefers_reduced_motion(cx, Invalidation::Paint, false);
+        let animate_pulse = self.animate_pulse && !reduced_motion;
+
         let mut alpha_mul = if self.secondary { 0.5 } else { 1.0 };
-        if self.animate_pulse {
+        if animate_pulse {
             // Approximate a 2s pulse cycle without storing state.
             let t = cx.app.frame_id().0 as f32;
             let phase = t * 0.12;
             let v = 0.75 + 0.25 * phase.sin(); // [0.5, 1.0]
             alpha_mul *= v;
         }
-        scheduling::set_continuous_frames(cx, self.animate_pulse);
+        scheduling::set_continuous_frames(cx, animate_pulse);
         bg.a = (bg.a * alpha_mul).clamp(0.0, 1.0);
 
         let chrome = ChromeRefinement::default()

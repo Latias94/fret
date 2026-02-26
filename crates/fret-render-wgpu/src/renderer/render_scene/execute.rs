@@ -107,6 +107,8 @@ impl Renderer {
             &mut frame_perf,
         );
 
+        self.maybe_dump_render_text_json(frame_index, viewport_size, &encoding);
+
         if perf_enabled {
             frame_perf.material_quad_ops = frame_perf
                 .material_quad_ops
@@ -131,6 +133,7 @@ impl Renderer {
             perf_enabled,
             trace_enabled,
             &encoding,
+            scale_factor,
             viewport_size,
             format,
             clear.0,

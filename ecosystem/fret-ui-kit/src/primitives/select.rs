@@ -501,6 +501,18 @@ pub fn select_mouse_open_guard_pointer_up_decision(
     guard: &mut SelectMouseOpenGuardState,
     up: PointerUpCx,
 ) -> SelectMouseOpenGuardPointerUpDecision {
+    if let (Some(last_tick), Some(decision)) = (
+        guard.last_pointer_up_tick_id,
+        guard.last_pointer_up_decision,
+    ) {
+        // The same platform pointer-up can be routed to multiple elements (e.g. trigger capture +
+        // barrier dismissal). Prefer a tolerant tick match so both consumers observe the same
+        // decision even if the runtime assigns adjacent `TickId`s during routing.
+        if up.tick_id == last_tick || up.tick_id.0 == last_tick.0 + 1 {
+            return decision;
+        }
+    }
+
     if up.button != fret_core::MouseButton::Left {
         return SelectMouseOpenGuardPointerUpDecision::NoGuard;
     }
@@ -508,15 +520,21 @@ pub fn select_mouse_open_guard_pointer_up_decision(
         return SelectMouseOpenGuardPointerUpDecision::NoGuard;
     }
 
-    let Some(down) = guard.take() else {
-        return SelectMouseOpenGuardPointerUpDecision::NoGuard;
+    let decision = if let Some(down) = guard.take() {
+        let up_pos = up.position_window.unwrap_or(up.position);
+        if select_mouse_open_is_within_click_slop(down, up_pos) {
+            SelectMouseOpenGuardPointerUpDecision::Suppress
+        } else {
+            SelectMouseOpenGuardPointerUpDecision::Allow
+        }
+    } else {
+        SelectMouseOpenGuardPointerUpDecision::NoGuard
     };
 
-    if select_mouse_open_is_within_click_slop(down, up.position) {
-        SelectMouseOpenGuardPointerUpDecision::Suppress
-    } else {
-        SelectMouseOpenGuardPointerUpDecision::Allow
-    }
+    guard.last_pointer_up_tick_id = Some(up.tick_id);
+    guard.last_pointer_up_decision = Some(decision);
+
+    decision
 }
 
 pub fn select_mouse_open_guard_pointer_up_decision_shared(
@@ -1069,11 +1087,15 @@ impl SelectTriggerKeyState {
 #[derive(Debug, Default)]
 pub struct SelectMouseOpenGuardState {
     mouse_open_down_pos: Option<Point>,
+    last_pointer_up_tick_id: Option<fret_runtime::TickId>,
+    last_pointer_up_decision: Option<SelectMouseOpenGuardPointerUpDecision>,
 }
 
 impl SelectMouseOpenGuardState {
     pub fn clear(&mut self) {
         self.mouse_open_down_pos = None;
+        self.last_pointer_up_tick_id = None;
+        self.last_pointer_up_decision = None;
     }
 
     pub fn record_if_opened(&mut self, was_open: bool, now_open: bool, down_pos: Point) {
@@ -1082,6 +1104,8 @@ impl SelectMouseOpenGuardState {
         } else {
             self.mouse_open_down_pos = None;
         }
+        self.last_pointer_up_tick_id = None;
+        self.last_pointer_up_decision = None;
     }
 
     pub fn take(&mut self) -> Option<Point> {
@@ -2834,6 +2858,60 @@ mod tests {
         ));
         assert!(host.models_mut().get_copied(&open).unwrap_or(false));
         assert!(host.prevented_focus_on_pointer_down);
+    }
+
+    #[test]
+    fn mouse_open_guard_pointer_up_decision_is_reusable_within_tick() {
+        let guard = select_mouse_open_guard();
+
+        select_mouse_open_guard_record_if_opened(
+            &guard,
+            false,
+            true,
+            Point::new(Px(10.0), Px(12.0)),
+        );
+
+        let up = PointerUpCx {
+            pointer_id: fret_core::PointerId(0),
+            position: Point::new(Px(10.0), Px(12.0)),
+            position_local: Point::new(Px(10.0), Px(12.0)),
+            position_window: Some(Point::new(Px(10.0), Px(12.0))),
+            tick_id: fret_runtime::TickId(42),
+            pixels_per_point: 1.0,
+            velocity_window: None,
+            button: fret_core::MouseButton::Left,
+            modifiers: Modifiers::default(),
+            is_click: true,
+            click_count: 1,
+            pointer_type: PointerType::Mouse,
+        };
+
+        assert_eq!(
+            select_mouse_open_guard_pointer_up_decision_shared(&guard, up),
+            SelectMouseOpenGuardPointerUpDecision::Suppress
+        );
+        assert_eq!(
+            select_mouse_open_guard_pointer_up_decision_shared(&guard, up),
+            SelectMouseOpenGuardPointerUpDecision::Suppress
+        );
+
+        let up_next_tick = PointerUpCx {
+            tick_id: fret_runtime::TickId(43),
+            ..up
+        };
+        assert_eq!(
+            select_mouse_open_guard_pointer_up_decision_shared(&guard, up_next_tick),
+            SelectMouseOpenGuardPointerUpDecision::Suppress
+        );
+
+        let up_clear = PointerUpCx {
+            tick_id: fret_runtime::TickId(44),
+            ..up
+        };
+        assert_eq!(
+            select_mouse_open_guard_pointer_up_decision_shared(&guard, up_clear),
+            SelectMouseOpenGuardPointerUpDecision::NoGuard
+        );
     }
 
     #[test]

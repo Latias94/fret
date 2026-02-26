@@ -2,6 +2,12 @@ use super::Renderer;
 use super::gpu_globals::GpuGlobals;
 use super::types::QuadPipelineKey;
 
+pub(super) struct CustomEffectPipelines {
+    pub(super) unmasked: wgpu::RenderPipeline,
+    pub(super) masked: wgpu::RenderPipeline,
+    pub(super) mask: wgpu::RenderPipeline,
+}
+
 pub(super) struct GpuPipelines {
     pub(super) quad_pipeline_format: Option<wgpu::TextureFormat>,
     pub(super) quad_pipelines: std::collections::HashMap<QuadPipelineKey, wgpu::RenderPipeline>,
@@ -42,6 +48,7 @@ pub(super) struct GpuPipelines {
 
     pub(super) blit_pipeline_format: Option<wgpu::TextureFormat>,
     pub(super) blit_pipeline: Option<wgpu::RenderPipeline>,
+    pub(super) blit_srgb_encode_pipeline: Option<wgpu::RenderPipeline>,
     pub(super) blit_bind_group_layout: Option<wgpu::BindGroupLayout>,
 
     pub(super) blur_pipeline_format: Option<wgpu::TextureFormat>,
@@ -95,12 +102,32 @@ pub(super) struct GpuPipelines {
     pub(super) alpha_threshold_bind_group_layout: Option<wgpu::BindGroupLayout>,
     pub(super) alpha_threshold_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
 
+    pub(super) dither_pipeline_format: Option<wgpu::TextureFormat>,
+    pub(super) dither_pipeline: Option<wgpu::RenderPipeline>,
+    pub(super) dither_masked_pipeline: Option<wgpu::RenderPipeline>,
+    pub(super) dither_mask_pipeline: Option<wgpu::RenderPipeline>,
+    pub(super) dither_bind_group_layout: Option<wgpu::BindGroupLayout>,
+    pub(super) dither_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
+
+    pub(super) noise_pipeline_format: Option<wgpu::TextureFormat>,
+    pub(super) noise_pipeline: Option<wgpu::RenderPipeline>,
+    pub(super) noise_masked_pipeline: Option<wgpu::RenderPipeline>,
+    pub(super) noise_mask_pipeline: Option<wgpu::RenderPipeline>,
+    pub(super) noise_bind_group_layout: Option<wgpu::BindGroupLayout>,
+    pub(super) noise_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
+
     pub(super) drop_shadow_pipeline_format: Option<wgpu::TextureFormat>,
     pub(super) drop_shadow_pipeline: Option<wgpu::RenderPipeline>,
     pub(super) drop_shadow_masked_pipeline: Option<wgpu::RenderPipeline>,
     pub(super) drop_shadow_mask_pipeline: Option<wgpu::RenderPipeline>,
     pub(super) drop_shadow_bind_group_layout: Option<wgpu::BindGroupLayout>,
     pub(super) drop_shadow_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
+
+    pub(super) custom_effect_pipeline_format: Option<wgpu::TextureFormat>,
+    pub(super) custom_effect_pipelines:
+        std::collections::HashMap<fret_core::EffectId, CustomEffectPipelines>,
+    pub(super) custom_effect_bind_group_layout: Option<wgpu::BindGroupLayout>,
+    pub(super) custom_effect_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
 }
 
 impl Default for GpuPipelines {
@@ -133,6 +160,7 @@ impl Default for GpuPipelines {
             clip_mask_pipeline: None,
             blit_pipeline_format: None,
             blit_pipeline: None,
+            blit_srgb_encode_pipeline: None,
             blit_bind_group_layout: None,
             blur_pipeline_format: None,
             blur_h_pipeline: None,
@@ -178,12 +206,32 @@ impl Default for GpuPipelines {
             alpha_threshold_mask_pipeline: None,
             alpha_threshold_bind_group_layout: None,
             alpha_threshold_mask_bind_group_layout: None,
+
+            dither_pipeline_format: None,
+            dither_pipeline: None,
+            dither_masked_pipeline: None,
+            dither_mask_pipeline: None,
+            dither_bind_group_layout: None,
+            dither_mask_bind_group_layout: None,
+
+            noise_pipeline_format: None,
+            noise_pipeline: None,
+            noise_masked_pipeline: None,
+            noise_mask_pipeline: None,
+            noise_bind_group_layout: None,
+            noise_mask_bind_group_layout: None,
+
             drop_shadow_pipeline_format: None,
             drop_shadow_pipeline: None,
             drop_shadow_masked_pipeline: None,
             drop_shadow_mask_pipeline: None,
             drop_shadow_bind_group_layout: None,
             drop_shadow_mask_bind_group_layout: None,
+
+            custom_effect_pipeline_format: None,
+            custom_effect_pipelines: std::collections::HashMap::new(),
+            custom_effect_bind_group_layout: None,
+            custom_effect_mask_bind_group_layout: None,
         }
     }
 }

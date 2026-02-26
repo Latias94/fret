@@ -225,6 +225,7 @@ pub(in crate::ui) fn preview_sheet(
                     shadcn::Button::new(label)
                         .variant(shadcn::ButtonVariant::Outline)
                         .toggle_model(trigger_open.clone())
+                        .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
                         .test_id(format!("ui-gallery-sheet-side-{id}-trigger"))
                         .into_element(cx)
                 },
@@ -279,37 +280,64 @@ pub(in crate::ui) fn preview_sheet(
             )
         };
 
-        let theme = Theme::global(&*cx.app).snapshot();
-        doc_layout::wrap_controls_row_snapshot(cx, &theme, Space::N2, |cx| {
-            let items = [
-                ("top", "top", shadcn::SheetSide::Top, side_top_open.clone()),
-                (
-                    "right",
-                    "right",
-                    shadcn::SheetSide::Right,
-                    side_right_open.clone(),
-                ),
-                (
-                    "bottom",
-                    "bottom",
-                    shadcn::SheetSide::Bottom,
-                    side_bottom_open.clone(),
-                ),
-                (
-                    "left",
-                    "left",
-                    shadcn::SheetSide::Left,
-                    side_left_open.clone(),
-                ),
-            ];
+        // Match upstream demo layout: a strict 2x2 grid of side triggers.
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap(Space::N2)
+                .layout(LayoutRefinement::default().w_full().min_w_0()),
+            |cx| {
+                let row = |cx: &mut ElementContext<'_, App>,
+                           a: (&'static str, &'static str, shadcn::SheetSide, Model<bool>),
+                           b: (&'static str, &'static str, shadcn::SheetSide, Model<bool>)| {
+                    let (id_a, label_a, side_a, open_a) = a;
+                    let (id_b, label_b, side_b, open_b) = b;
+                    stack::hstack_build(
+                        cx,
+                        stack::HStackProps::default()
+                            .gap(Space::N2)
+                            .items_center()
+                            .layout(LayoutRefinement::default().w_full().min_w_0()),
+                        |cx, out| {
+                            out.push(cx.keyed(id_a, |cx| {
+                                side_sheet(cx, id_a, label_a, side_a, open_a.clone())
+                            }));
+                            out.push(cx.keyed(id_b, |cx| {
+                                side_sheet(cx, id_b, label_b, side_b, open_b.clone())
+                            }));
+                        },
+                    )
+                };
 
-            items
-                .into_iter()
-                .map(|(id, label, side, open_model)| {
-                    cx.keyed(id, |cx| side_sheet(cx, id, label, side, open_model.clone()))
-                })
-                .collect::<Vec<_>>()
-        })
+                vec![
+                    row(
+                        cx,
+                        ("top", "top", shadcn::SheetSide::Top, side_top_open.clone()),
+                        (
+                            "right",
+                            "right",
+                            shadcn::SheetSide::Right,
+                            side_right_open.clone(),
+                        ),
+                    ),
+                    row(
+                        cx,
+                        (
+                            "bottom",
+                            "bottom",
+                            shadcn::SheetSide::Bottom,
+                            side_bottom_open.clone(),
+                        ),
+                        (
+                            "left",
+                            "left",
+                            shadcn::SheetSide::Left,
+                            side_left_open.clone(),
+                        ),
+                    ),
+                ]
+            },
+        )
         .attach_semantics(
             SemanticsDecoration::default()
                 .role(fret_core::SemanticsRole::Group)
@@ -339,6 +367,7 @@ pub(in crate::ui) fn preview_sheet(
                     ])
                     .into_element(cx),
                 ])
+                .show_close_button(false)
                 .into_element(cx)
             },
         )
@@ -409,7 +438,8 @@ pub(in crate::ui) fn preview_sheet(
         cx,
         [
             "Preview follows shadcn Sheet demo (new-york-v4).",
-            "Upstream exposes `SheetClose` and a default close button; Fret currently relies on Escape/outside press + explicit `open` toggles in actions.",
+            "Fret renders a default top-right close affordance in `SheetContent` (disable via `show_close_button(false)`).",
+            "Fret also exposes `SheetClose` for additional close affordances.",
         ],
     );
 
@@ -422,10 +452,63 @@ pub(in crate::ui) fn preview_sheet(
                 .test_id_prefix("ui-gallery-sheet-demo")
                 .code(
                     "rust",
-                    r#"shadcn::Sheet::new(open)
+                    r#"let open = cx.app.models_mut().insert(false);
+let name = cx.app.models_mut().insert(String::from("Pedro Duarte"));
+let username = cx.app.models_mut().insert(String::from("@peduarte"));
+
+shadcn::Sheet::new(open.clone())
     .side(shadcn::SheetSide::Right)
     .size(Px(420.0))
-    .into_element(cx, trigger, content);"#,
+    .into_element(
+        cx,
+        |cx| {
+            shadcn::Button::new("Open")
+                .variant(shadcn::ButtonVariant::Outline)
+                .toggle_model(open.clone())
+                .into_element(cx)
+        },
+        |cx| {
+            shadcn::SheetContent::new([
+                shadcn::SheetHeader::new([
+                    shadcn::SheetTitle::new("Edit profile").into_element(cx),
+                    shadcn::SheetDescription::new(
+                        "Make changes to your profile here. Click save when you're done.",
+                    )
+                    .into_element(cx),
+                ])
+                .into_element(cx),
+                shadcn::FieldSet::new([
+                    shadcn::Field::new([
+                        shadcn::FieldLabel::new("Name").into_element(cx),
+                        shadcn::Input::new(name.clone())
+                            .refine_layout(LayoutRefinement::default().w_full())
+                            .into_element(cx),
+                    ])
+                    .into_element(cx),
+                    shadcn::Field::new([
+                        shadcn::FieldLabel::new("Username").into_element(cx),
+                        shadcn::Input::new(username.clone())
+                            .refine_layout(LayoutRefinement::default().w_full())
+                            .into_element(cx),
+                    ])
+                    .into_element(cx),
+                ])
+                .refine_layout(LayoutRefinement::default().w_full())
+                .into_element(cx),
+                shadcn::SheetFooter::new([
+                    shadcn::Button::new("Save changes")
+                        .toggle_model(open.clone())
+                        .into_element(cx),
+                    shadcn::Button::new("Close")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .toggle_model(open.clone())
+                        .into_element(cx),
+                ])
+                .into_element(cx),
+            ])
+            .into_element(cx)
+        },
+    );"#,
                 ),
             DocSection::new("Side", side)
                 .max_w(Px(980.0))
@@ -443,8 +526,9 @@ shadcn::Sheet::new(open.clone())
                 .test_id_prefix("ui-gallery-sheet-no-close")
                 .code(
                     "rust",
-                    r#"shadcn::Sheet::new(open)
-    .into_element(cx, trigger, content);"#,
+                    r#"shadcn::SheetContent::new(content)
+    .show_close_button(false)
+    .into_element(cx);"#,
                 ),
             DocSection::new("RTL", rtl)
                 .max_w(Px(980.0))

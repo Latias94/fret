@@ -48,7 +48,7 @@ impl ResizablePanel {
     }
 
     fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
         let layout = decl_style::layout_style(&theme, self.layout.relative().w_full().h_full());
 
         let props = ContainerProps {
@@ -216,10 +216,11 @@ fn resizable_panel_group_with_entries<H: UiHost>(
     test_id_prefix: Option<Arc<str>>,
     entries: Vec<ResizableEntry>,
 ) -> AnyElement {
-    let theme = Theme::global(&*cx.app).clone();
+    let theme = Theme::global(&*cx.app).snapshot();
 
-    let mut style =
-        style.unwrap_or_else(|| resizable_recipe::default_resizable_panel_group_style(&theme));
+    let mut style = style.unwrap_or_else(|| {
+        resizable_recipe::default_resizable_panel_group_style(Theme::global(&*cx.app))
+    });
 
     let mut panels: Vec<ResizablePanel> = Vec::new();
     let mut saw_handles = false;

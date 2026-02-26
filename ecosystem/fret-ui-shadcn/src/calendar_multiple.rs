@@ -8,7 +8,7 @@ use fret_ui::element::{
     AnyElement, FlexProps, LayoutQueryRegionProps, LayoutStyle, Length, MainAlign, Overflow,
     PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps, TextProps,
 };
-use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
+use fret_ui::{ElementContext, Invalidation, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::stack;
@@ -233,7 +233,7 @@ impl CalendarMultiple {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
 
         let month_model = self.month.clone();
         let selected_model = self.selected.clone();
@@ -391,7 +391,7 @@ impl CalendarMultiple {
 #[allow(clippy::too_many_arguments)]
 fn calendar_multi_month_view<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
+    theme: &ThemeSnapshot,
     is_row: bool,
     start_month: CalendarMonth,
     month_model: Model<CalendarMonth>,
@@ -592,7 +592,7 @@ fn calendar_multi_month_view<H: UiHost>(
 #[allow(clippy::too_many_arguments)]
 fn calendar_month_view<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
+    theme: &ThemeSnapshot,
     month: CalendarMonth,
     locale: CalendarLocale,
     month_bounds: Option<(CalendarMonth, CalendarMonth)>,
@@ -922,9 +922,15 @@ fn calendar_icon_button<H: UiHost>(
     enabled: bool,
     on_activate: impl Fn(&mut dyn fret_ui::action::UiActionHost) + 'static,
 ) -> AnyElement {
-    let theme = Theme::global(&*cx.app).clone();
+    let theme = Theme::global(&*cx.app).snapshot();
 
-    let (bg, bg_hover, bg_pressed, border, fg) = crate::button::variant_colors(&theme, variant);
+    let (bg, bg_hover, bg_pressed, border, fg, text_style) = {
+        let theme_full = Theme::global(&*cx.app);
+        let (bg, bg_hover, bg_pressed, border, fg) =
+            crate::button::variant_colors(theme_full, variant);
+        let text_style = crate::button::button_text_style(theme_full, size);
+        (bg, bg_hover, bg_pressed, border, fg, text_style)
+    };
 
     let radius = theme
         .metric_by_key("component.button.radius")
@@ -971,7 +977,7 @@ fn calendar_icon_button<H: UiHost>(
 
         let chrome_props = decl_style::container_props(&theme, chrome, LayoutRefinement::default());
 
-        let style = crate::button::button_text_style(&theme, size);
+        let style = text_style.clone();
         let children = move |cx: &mut ElementContext<'_, H>| {
             let mut label = ui::label(cx, text.clone())
                 .text_size_px(style.size)
@@ -993,7 +999,7 @@ fn calendar_icon_button<H: UiHost>(
 
 fn calendar_hidden_day_cell<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
+    theme: &ThemeSnapshot,
     size: Px,
     week_row_gap: Px,
 ) -> AnyElement {
@@ -1030,7 +1036,7 @@ fn calendar_hidden_day_cell<H: UiHost>(
 
 fn calendar_multi_day_cell<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
+    theme: &ThemeSnapshot,
     locale: CalendarLocale,
     date: Date,
     in_month: bool,

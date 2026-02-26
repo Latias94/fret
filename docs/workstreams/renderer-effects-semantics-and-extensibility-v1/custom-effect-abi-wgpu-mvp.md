@@ -1,0 +1,222 @@
+---
+title: Custom Effect ABI (wgpu-only MVP)
+status: draft
+date: 2026-02-25
+scope: renderer, effects, extensibility, capabilities, budgeting
+---
+
+# Custom Effect ABI (wgpu-only MVP)
+
+## Goal
+
+Enable ecosystem/component authors to ship **high-end visual effects** (e.g. acrylic/glass/refraction stacks)
+without forking the renderer, while preserving:
+
+- **boundedness**: fixed binding shapes + fixed parameter sizes,
+- **determinism**: explicit inputs only (no hidden time), deterministic degradation,
+- **diagnosability**: per-effect counters + plan dump visibility,
+- **layering**: no `wgpu` leakage into contract crates (`fret-core`, `fret-ui`).
+
+This is explicitly **wgpu-only** for the MVP. Other backends may degrade the effect deterministically.
+
+## Non-goals (v1)
+
+- Unbounded effect graphs or user-provided arbitrary render graphs.
+- Backend-agnostic shader portability (this is wgpu-only to start).
+- Full HDR/wide-gamut correctness end-to-end.
+- Allowing effects to allocate arbitrary GPU resources outside the renderer’s budgeting model.
+
+## Problem statement
+
+The current `EffectChain` covers the core primitives needed to reproduce most “UI standard” looks
+(`GaussianBlur`, `ColorAdjust`, `BackdropWarpV2`, `NoiseV1`, etc.). That is great for *replication*.
+
+What’s missing is an **escape hatch with a ceiling**:
+
+- app/ecosystem authors want to author a small fullscreen shader (or a tiny fixed multi-pass bundle),
+  while still respecting Fret’s ordering, scissoring, masking, and budgeting semantics.
+
+## Options
+
+### Option A (recommended): core-level `EffectId` + renderer-owned registration service
+
+Add a small, portable handle and param surface in `fret-core`, similar to `MaterialId`:
+
+- `EffectId`: opaque ID (slotmap key) in `fret-core`.
+- `EffectParamsV1`: fixed-size params (e.g. 16 floats, like `MaterialParams`).
+- `EffectStep::CustomV1 { id: EffectId, params: EffectParamsV1, max_sample_offset_px: Px }`.
+
+Renderers expose a runtime service for registration:
+
+- `EffectService::register_effect(desc) -> EffectId`
+- `EffectService::unregister_effect(id) -> bool`
+
+The **renderer** owns:
+
+- pipeline creation,
+- any catalog textures it exposes,
+- capability gating,
+- deterministic fallbacks (no-op / degraded variant / substitute built-in steps).
+
+Why this fits Fret:
+
+- `Scene` remains the single ordering contract.
+- The effect is still bounded: fixed params + fixed bind shapes.
+- Authors can ship high-end looks as ecosystem policy, but the mechanism stays small.
+
+### Option B: renderer-only custom pass API (no core changes)
+
+Not viable for effects applied via `SceneOp`, because `SceneOp` is defined in `fret-core`.
+Anything that needs to be expressed in the display list needs a portable handle.
+
+### Option C: “everything is a material”
+
+Useful for many visual recipes, but insufficient for backdrop sampling / multi-pass cases.
+Materials are draw-time; effects are plan-time (ordering + offscreen/backdrop semantics).
+
+## Proposed ABI surface (MVP)
+
+### 1) Fixed binding shapes
+
+The MVP supports **one-pass fullscreen effects** that read from the current effect source
+(`src_texture`) and write to the current destination (`dst_texture`), under scissor/mask.
+
+MVP scoping constraints:
+
+- Only expressed via `EffectStep::CustomV1` inside an `EffectChain` (`SceneOp::PushEffect`).
+- Single pass (no user-declared multi-pass bundles).
+- Params-only (fixed 64-byte payload) + a single source texture.
+- No user-provided textures in v1 (use built-in `BackdropWarpV2` + built-in effects for distortion).
+- Custom effects declare a bounded sampling extent (`max_sample_offset_px`) so the renderer can
+  deterministically allocate enough padding for common chains (e.g. blur → custom refraction).
+
+Binding shapes are versioned and strictly limited:
+
+- **Shape v1 (ParamsOnly)**:
+  - `src_texture: texture_2d<f32>`
+  - `params: uniform` (fixed-size, e.g. 64 bytes)
+  - optional: mask binding via the existing renderer mask path (uniform mask image or mask texture)
+
+Future shapes (v2+) may add:
+
+- one renderer-owned catalog texture (e.g. blue noise),
+- one user-provided sampled texture (for normal maps / displacement fields),
+- explicit sampler controls (bounded).
+
+### 2) Capability gating
+
+Renderers expose support via capabilities:
+
+- `RendererCapabilities.custom_effects: bool`
+- supported binding shapes list
+- max custom effects per frame / per app (bounded)
+
+### 3) Cost model + deterministic degradation
+
+Custom effects must participate in the `RenderPlan` budgeting model.
+
+MVP rule:
+
+- Custom effect pass uses the same budget gate as other single-scratch in-place passes:
+  requires `full * 2` bytes available (source + scratch).
+- If the custom effect declares `max_sample_offset_px > 0` and the chain contains a preceding blur,
+  the renderer may allocate extra context ("padding") deterministically by evaluating the blur on an
+  expanded scissor rect and applying clip coverage only on the final custom pass.
+  - Implemented: per-step scissor expansion for sampling-extending chains (blur / warp / custom), with a final
+    commit back into the destination under the original scissor.
+  - Evidence: `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs`,
+    `crates/fret-render-wgpu/tests/effect_custom_v1_conformance.rs`.
+- On insufficient budget or target exhaustion:
+  - degrade deterministically to no-op (tracked in counters),
+  - optionally allow a renderer-provided fallback chain (pre-registered).
+
+### 4) Diagnostics hooks
+
+Per-effect counters should answer:
+
+- requested vs applied,
+- degraded (budget zero / insufficient / target exhausted),
+- applied binding shape + variant.
+
+Plan dumps should include:
+
+- effect ID,
+- shape,
+- pass count,
+- degradation reason.
+
+## Integration points (implementation sketch)
+
+- `fret-core`:
+  - add `EffectId` + `EffectParamsV1`
+  - extend `EffectStep` with `CustomV1`
+  - extend scene fingerprint mixing so cache keys remain correct
+
+- `fret-render-wgpu`:
+  - add an effect registry (slotmap) keyed by `EffectId`
+  - increment an `effects_generation` counter on register/unregister and include it in the scene encoding cache key
+  - compile `CustomV1` into a `RenderPlanPass::CustomEffect`
+  - executor records the fullscreen pass using the same masking/scissor helpers
+
+## Open questions
+
+- Do we allow custom effects in both `FilterContent` and `Backdrop` modes?
+  - MVP: yes, but they operate on the current effect source (content or backdrop).
+- Do we allow multi-pass custom bundles?
+  - MVP: no (start with one pass). If needed later, it must declare pass count and scratch usage
+    so budgeting stays deterministic.
+
+## WGSL contract (v1)
+
+Custom effects register a WGSL snippet that must define:
+
+- `fn fret_custom_effect(src: vec4<f32>, uv: vec2<f32>, pos_px: vec2<f32>, params: EffectParamsV1) -> vec4<f32>`
+
+Notes:
+
+- Inputs and outputs are treated as **premultiplied RGBA** in the renderer’s working space.
+- `uv` is derived from the source texture dimensions.
+- The renderer applies clip/mask coverage *after* the custom function, so authors do not need to implement masking.
+- In wgpu, custom effects also receive a renderer-owned `render_space` uniform that provides the
+  effect bounds (`origin_px`, `size_px`) for local coordinate math (Android/Flutter-style shaders).
+- `max_sample_offset_px` should conservatively bound how far the shader may read from `pos_px`
+  when sampling the source texture (e.g. maximum displacement + dispersion offset). This is used
+  by the render plan to add deterministic padding for chains that include blur before the custom
+  pass.
+- Backends may impose a maximum WGSL source size (wgpu MVP caps v1 sources at 64KiB) and reject oversized programs.
+
+## Usage (ecosystem / app code)
+
+The intended usage pattern is:
+
+1. Author the WGSL snippet in an ecosystem crate (or app crate).
+2. Register it once during `on_gpu_ready` (so the renderer is available).
+3. Cache the resulting `EffectId` for use in `EffectChain` steps.
+
+To avoid having every component manage renderer lifetimes directly, `fret-ui-kit` provides a small helper:
+`CustomEffectProgramV1` (caches an `EffectId` and can be invalidated on renderer recreation).
+
+Example (registration during bootstrap):
+
+```rust
+use fret_bootstrap::BootstrapBuilder;
+use fret_ui_kit::custom_effects::CustomEffectProgramV1;
+
+#[derive(Clone)]
+struct GlassEffectId(fret_core::EffectId);
+
+fn install_effect(app: &mut fret_app::App, effects: &mut dyn fret_core::CustomEffectService) {
+    let mut program = CustomEffectProgramV1::wgsl_utf8(include_str!("glass_effect.wgsl"));
+    let id = program
+        .ensure_registered(effects)
+        .expect("custom effect registration must succeed for this demo");
+
+    app.set_global(GlassEffectId(id));
+}
+
+fn main() -> Result<(), fret_launch::RunnerError> {
+    BootstrapBuilder::new()
+        .install_custom_effects(install_effect)
+        .run()
+}
+```

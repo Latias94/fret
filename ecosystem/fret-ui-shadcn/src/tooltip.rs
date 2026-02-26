@@ -28,7 +28,7 @@ use fret_ui::element::{
     SpinnerProps, SvgIconProps,
 };
 use fret_ui::overlay_placement::{Align, Side};
-use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
+use fret_ui::{ElementContext, Invalidation, Theme, ThemeSnapshot, UiHost};
 
 use crate::overlay_motion;
 
@@ -65,11 +65,11 @@ fn apply_tooltip_inherited_fg(mut element: AnyElement, fg: fret_core::Color) -> 
     element
 }
 
-fn tooltip_text_fg(theme: &Theme) -> fret_core::Color {
+fn tooltip_text_fg(theme: &ThemeSnapshot) -> fret_core::Color {
     theme.color_token("background")
 }
 
-fn tooltip_text_style(theme: &Theme) -> TextStyle {
+fn tooltip_text_style(theme: &ThemeSnapshot) -> TextStyle {
     // new-york-v4 uses `text-xs` for tooltips (base is `text-sm`).
     let base_px = theme.metric_token("font.size");
     let base_line_height = theme.metric_token("font.line_height");
@@ -86,7 +86,7 @@ fn tooltip_text_style(theme: &Theme) -> TextStyle {
     style
 }
 
-fn tooltip_content_chrome(theme: &Theme) -> ChromeRefinement {
+fn tooltip_content_chrome(theme: &ThemeSnapshot) -> ChromeRefinement {
     // shadcn/ui v4 (2025-09-22): tooltip uses `bg-foreground text-background`.
     let bg = theme.color_token("foreground");
 
@@ -706,7 +706,7 @@ impl Tooltip {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
 
         let layout = decl_style::layout_style(&theme, self.layout);
         let side_offset = if self.side_offset == Px(0.0) {
@@ -1235,7 +1235,7 @@ impl Tooltip {
                         move |_cx| vec![content],
                         move |cx, content| {
                             // new-york-v4: `size-2.5 rotate-45 rounded-[2px] translate-y-[calc(-50%_-_2px)]`
-                            // (i.e. a slightly outset, lightly rounded diamond).
+                            // (i.e. a lightly rounded diamond that overlaps the panel edge).
                             let arrow_el = popper_arrow::diamond_arrow_element_refined(
                                 cx,
                                 &layout,
@@ -1247,7 +1247,7 @@ impl Tooltip {
                                     border_width: Px(0.0),
                                 },
                                 Px(2.0),
-                                Px(2.0),
+                                Px(-2.0),
                                 arrow_test_id.clone(),
                             );
 
@@ -1383,7 +1383,7 @@ impl TooltipContent {
         cx: &mut ElementContext<'_, H>,
         text: impl Into<Arc<str>>,
     ) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
         let text = text.into();
 
         let text_style = tooltip_text_style(&theme);
@@ -1415,7 +1415,7 @@ impl TooltipContent {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
 
         let base_layout = LayoutRefinement::default().flex_shrink_0();
         let chrome = tooltip_content_chrome(&theme).merge(self.chrome);

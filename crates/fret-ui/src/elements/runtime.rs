@@ -1176,61 +1176,61 @@ impl WindowElementState {
         self.view_cache_state_keys_next.insert(root, keys);
     }
 
-    /// Repair view-cache state liveness for a reused root by touching *all* state keys for the
-    /// recorded subtree membership.
+    /// Keep action-hook state alive for a cached subtree, even when view-cache reuse skips the
+    /// declarative closures that normally re-register those hooks.
     ///
-    /// View-cache reuse skips rerendering declarative closures, so per-frame state (e.g. action
-    /// hooks) must be kept alive explicitly. The primary mechanism is
-    /// `touch_view_cache_state_keys_if_recorded`, but that list may be incomplete on the first
-    /// cache-hit frame (or after refactors).
-    pub(crate) fn touch_view_cache_state_keys_for_subtree_elements(&mut self, root: GlobalElementId) {
-        let Some(elements) = self
-            .view_cache_elements_next
-            .get(&root)
-            .cloned()
-            .or_else(|| self.view_cache_elements_rendered.get(&root).cloned())
-        else {
+    /// `touch_view_cache_state_keys_if_recorded` is the primary mechanism, but action hooks can be
+    /// missed if they are installed outside the view-cache scope (or if a refactor temporarily
+    /// disrupts state-key recording). Touching known hook state types for all recorded subtree
+    /// elements provides a conservative fallback.
+    pub(crate) fn touch_view_cache_action_hook_state_for_subtree_elements(
+        &mut self,
+        root: GlobalElementId,
+    ) {
+        let Some(elements) = self.view_cache_elements_for_root(root) else {
             return;
         };
-
-        let element_set: HashSet<GlobalElementId> = elements.into_iter().collect();
-        if element_set.is_empty() {
+        if elements.is_empty() {
             return;
         }
 
-        let mut keys: Vec<(GlobalElementId, TypeId)> = Vec::new();
-        keys.reserve(self.next_state.len().min(256) + self.rendered_state.len().min(256));
-
-        for &key in self.next_state.keys() {
-            if element_set.contains(&key.0) {
-                keys.push(key);
-            }
+        let elements: Vec<GlobalElementId> = elements.iter().copied().collect();
+        for element in elements {
+            self.touch_state_key((element, TypeId::of::<crate::action::PressableActionHooks>()));
+            self.touch_state_key((
+                element,
+                TypeId::of::<crate::action::PressableHoverActionHooks>(),
+            ));
+            self.touch_state_key((
+                element,
+                TypeId::of::<crate::action::DismissibleActionHooks>(),
+            ));
+            self.touch_state_key((element, TypeId::of::<crate::action::PointerActionHooks>()));
+            self.touch_state_key((element, TypeId::of::<crate::action::KeyActionHooks>()));
+            self.touch_state_key((element, TypeId::of::<crate::action::CommandActionHooks>()));
+            self.touch_state_key((
+                element,
+                TypeId::of::<crate::action::CommandAvailabilityActionHooks>(),
+            ));
+            self.touch_state_key((element, TypeId::of::<crate::action::TimerActionHooks>()));
+            self.touch_state_key((element, TypeId::of::<crate::action::RovingActionHooks>()));
+            self.touch_state_key((
+                element,
+                TypeId::of::<crate::action::SelectableTextActionHooks>(),
+            ));
+            self.touch_state_key((
+                element,
+                TypeId::of::<crate::action::TextInputRegionActionHooks>(),
+            ));
+            self.touch_state_key((
+                element,
+                TypeId::of::<crate::action::InternalDragActionHooks>(),
+            ));
+            self.touch_state_key((
+                element,
+                TypeId::of::<crate::action::ExternalDragActionHooks>(),
+            ));
         }
-        for &key in self.rendered_state.keys() {
-            if element_set.contains(&key.0) {
-                keys.push(key);
-            }
-        }
-        for map in &self.lag_state {
-            for &key in map.keys() {
-                if element_set.contains(&key.0) {
-                    keys.push(key);
-                }
-            }
-        }
-
-        if keys.is_empty() {
-            return;
-        }
-
-        let mut seen: HashSet<(GlobalElementId, TypeId)> = HashSet::with_capacity(keys.len());
-        keys.retain(|&key| seen.insert(key));
-
-        for &key in &keys {
-            self.touch_state_key(key);
-        }
-
-        self.view_cache_state_keys_next.insert(root, keys);
     }
 
     pub(crate) fn record_view_cache_subtree_elements(

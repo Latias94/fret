@@ -21,6 +21,8 @@ fn apply_single_step_effect_with_scissor(
     scissor: ScissorRect,
 ) -> Vec<RenderPlanPass> {
     let mut passes: Vec<RenderPlanPass> = Vec::new();
+    let mut degradations = super::super::EffectDegradationSnapshot::default();
+    let mut blur_quality = super::super::BlurQualitySnapshot::default();
     effects::apply_chain_in_place(
         &mut passes,
         &[],
@@ -31,11 +33,14 @@ fn apply_single_step_effect_with_scissor(
         scissor,
         None,
         &[],
+        &mut degradations,
+        &mut blur_quality,
         effects::EffectCompileCtx {
             viewport_size: (100, 100),
             format: wgpu::TextureFormat::Bgra8UnormSrgb,
             intermediate_budget_bytes: u64::MAX,
             clear: wgpu::Color::TRANSPARENT,
+            scale_factor: 1.0,
         },
     );
     passes
@@ -54,7 +59,10 @@ fn first_output_write(passes: &[RenderPlanPass]) -> Option<&RenderPlanPass> {
         RenderPlanPass::ColorAdjust(p) => p.dst == PlanTarget::Output,
         RenderPlanPass::ColorMatrix(p) => p.dst == PlanTarget::Output,
         RenderPlanPass::AlphaThreshold(p) => p.dst == PlanTarget::Output,
+        RenderPlanPass::Dither(p) => p.dst == PlanTarget::Output,
+        RenderPlanPass::Noise(p) => p.dst == PlanTarget::Output,
         RenderPlanPass::DropShadow(p) => p.dst == PlanTarget::Output,
+        RenderPlanPass::CustomEffect(p) => p.dst == PlanTarget::Output,
         RenderPlanPass::ClipMask(_) => false,
         RenderPlanPass::ReleaseTarget(_) => false,
     })
@@ -93,7 +101,16 @@ fn assert_first_output_write_is_clear(passes: &[RenderPlanPass]) {
         RenderPlanPass::AlphaThreshold(p) => {
             assert!(matches!(p.load, wgpu::LoadOp::Clear(_)));
         }
+        RenderPlanPass::Dither(p) => {
+            assert!(matches!(p.load, wgpu::LoadOp::Clear(_)));
+        }
+        RenderPlanPass::Noise(p) => {
+            assert!(matches!(p.load, wgpu::LoadOp::Clear(_)));
+        }
         RenderPlanPass::DropShadow(p) => {
+            assert!(matches!(p.load, wgpu::LoadOp::Clear(_)));
+        }
+        RenderPlanPass::CustomEffect(p) => {
             assert!(matches!(p.load, wgpu::LoadOp::Clear(_)));
         }
         RenderPlanPass::PathClipMask(_)
@@ -176,6 +193,7 @@ fn compile_for_scene_path_msaa_batch_initializes_output_via_empty_clear_pass() {
     let viewport_size = (64, 64);
     let plan = RenderPlan::compile_for_scene(
         &encoding,
+        1.0,
         viewport_size,
         wgpu::TextureFormat::Bgra8UnormSrgb,
         wgpu::Color::TRANSPARENT,
@@ -339,6 +357,7 @@ fn insert_early_releases_inserts_release_after_last_use() {
             src_size: (64, 64),
             dst_size: (64, 64),
             dst_scissor: None,
+            encode_output_srgb: false,
             load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
         }),
     ];
@@ -359,6 +378,49 @@ fn insert_early_releases_inserts_release_after_last_use() {
         .position(|p| matches!(p, RenderPlanPass::ReleaseTarget(PlanTarget::Intermediate0)))
         .unwrap();
     assert!(release_at > last_use);
+}
+
+#[test]
+fn non_srgb_output_forces_intermediate_and_explicit_srgb_encode_blit() {
+    let encoding = SceneEncoding::default();
+    let plan = RenderPlan::compile_for_scene(
+        &encoding,
+        1.0,
+        (64, 64),
+        wgpu::TextureFormat::Rgba8Unorm,
+        wgpu::Color::TRANSPARENT,
+        1,
+        DebugPostprocess::None,
+        u64::MAX,
+    );
+
+    let first_scene_target = plan
+        .passes
+        .iter()
+        .find_map(|p| match p {
+            RenderPlanPass::SceneDrawRange(p) => Some(p.target),
+            _ => None,
+        })
+        .expect("expected a SceneDrawRange pass");
+    assert_eq!(
+        first_scene_target,
+        PlanTarget::Intermediate3,
+        "non-sRGB output must render into an intermediate to keep effect math linear"
+    );
+
+    let final_blit = plan
+        .passes
+        .iter()
+        .rev()
+        .find_map(|p| match p {
+            RenderPlanPass::FullscreenBlit(p) if p.dst == PlanTarget::Output => Some(*p),
+            _ => None,
+        })
+        .expect("expected a final FullscreenBlit to Output");
+    assert!(
+        final_blit.encode_output_srgb,
+        "non-sRGB output must apply an explicit sRGB transfer on the final blit"
+    );
 }
 
 #[test]
@@ -538,6 +600,7 @@ fn compile_for_scene_none_targets_output() {
     let encoding = SceneEncoding::default();
     let plan = RenderPlan::compile_for_scene(
         &encoding,
+        1.0,
         (100, 100),
         wgpu::TextureFormat::Bgra8UnormSrgb,
         wgpu::Color::TRANSPARENT,
@@ -560,11 +623,14 @@ fn compile_for_scene_offscreen_blit_adds_fullscreen_blit() {
     let encoding = SceneEncoding::default();
     let plan = RenderPlan::compile_for_scene(
         &encoding,
+        1.0,
         (100, 100),
         wgpu::TextureFormat::Bgra8UnormSrgb,
         wgpu::Color::TRANSPARENT,
         1,
-        DebugPostprocess::OffscreenBlit,
+        DebugPostprocess::OffscreenBlit {
+            src: PlanTarget::Intermediate0,
+        },
         u64::MAX,
     );
 
@@ -599,6 +665,7 @@ fn compile_for_scene_pixelate_adds_scale_chain_then_blit() {
     let viewport_size = (128, 64);
     let plan = RenderPlan::compile_for_scene(
         &encoding,
+        1.0,
         viewport_size,
         wgpu::TextureFormat::Bgra8UnormSrgb,
         wgpu::Color::TRANSPARENT,
@@ -731,11 +798,14 @@ fn compile_for_scene_backdrop_color_adjust_emits_mask_target_when_budget_allows(
 
     let plan = RenderPlan::compile_for_scene(
         &encoding,
+        1.0,
         viewport_size,
         wgpu::TextureFormat::Bgra8UnormSrgb,
         wgpu::Color::TRANSPARENT,
         1,
-        DebugPostprocess::OffscreenBlit,
+        DebugPostprocess::OffscreenBlit {
+            src: PlanTarget::Intermediate0,
+        },
         u64::MAX,
     );
 
@@ -786,11 +856,14 @@ fn compile_for_scene_backdrop_blur_caps_clip_mask_tier_when_forced_to_quarter() 
 
     let plan = RenderPlan::compile_for_scene(
         &encoding,
+        1.0,
         viewport_size,
         format,
         clear,
         1,
-        DebugPostprocess::OffscreenBlit,
+        DebugPostprocess::OffscreenBlit {
+            src: PlanTarget::Intermediate0,
+        },
         required_quarter,
     );
 
@@ -837,6 +910,7 @@ fn compile_for_scene_filter_content_composite_does_not_allocate_clip_mask() {
 
     let plan = RenderPlan::compile_for_scene(
         &encoding,
+        1.0,
         viewport_size,
         wgpu::TextureFormat::Bgra8UnormSrgb,
         wgpu::Color::TRANSPARENT,
@@ -894,6 +968,7 @@ fn compile_for_scene_composite_group_preserves_output_clear_guardrail() {
 
     let plan = RenderPlan::compile_for_scene(
         &encoding,
+        1.0,
         viewport_size,
         wgpu::TextureFormat::Bgra8UnormSrgb,
         wgpu::Color::TRANSPARENT,
@@ -958,6 +1033,7 @@ fn compile_for_scene_clip_path_preserves_output_clear_guardrail() {
 
     let plan = RenderPlan::compile_for_scene(
         &encoding,
+        1.0,
         viewport_size,
         wgpu::TextureFormat::Bgra8UnormSrgb,
         wgpu::Color::TRANSPARENT,
@@ -988,6 +1064,7 @@ fn compile_for_scene_blur_emits_separable_passes() {
     let viewport_size = (128, 64);
     let plan = RenderPlan::compile_for_scene(
         &encoding,
+        1.0,
         viewport_size,
         wgpu::TextureFormat::Bgra8UnormSrgb,
         wgpu::Color::TRANSPARENT,
@@ -1192,6 +1269,7 @@ fn blur_scissor_is_mapped_per_pass_dst_size() {
     let viewport_size = (100, 100);
     let plan = RenderPlan::compile_for_scene(
         &encoding,
+        1.0,
         viewport_size,
         wgpu::TextureFormat::Bgra8UnormSrgb,
         wgpu::Color::TRANSPARENT,
@@ -1263,13 +1341,13 @@ fn blur_scissor_is_mapped_per_pass_dst_size() {
         .iter()
         .find_map(|p| match p {
             RenderPlanPass::ScaleNearest(p)
-                if p.mode == ScaleMode::Upscale && p.dst == PlanTarget::Output =>
+                if p.mode == ScaleMode::Upscale && p.dst == PlanTarget::Intermediate0 =>
             {
                 Some(*p)
             }
             _ => None,
         })
-        .expect("expected upscale-to-output pass");
+        .expect("expected upscale-to-intermediate pass");
     assert_eq!(
         upscale.dst_scissor.map(|s| s.0),
         Some(ScissorRect {

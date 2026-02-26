@@ -21,7 +21,8 @@ pub(crate) fn push_perf_repeat_run_json_row(
     let top_hit_test_queries = top.map(|r| r.hit_test_queries).unwrap_or(0);
 
     let top_hit_test_bounds_tree_queries = top.map(|r| r.hit_test_bounds_tree_queries).unwrap_or(0);
-    let top_hit_test_bounds_tree_disabled = top.map(|r| r.hit_test_bounds_tree_disabled).unwrap_or(0);
+    let top_hit_test_bounds_tree_disabled =
+        top.map(|r| r.hit_test_bounds_tree_disabled).unwrap_or(0);
     let top_hit_test_bounds_tree_misses = top.map(|r| r.hit_test_bounds_tree_misses).unwrap_or(0);
     let top_hit_test_bounds_tree_hits = top.map(|r| r.hit_test_bounds_tree_hits).unwrap_or(0);
     let top_hit_test_bounds_tree_candidate_rejected = top
@@ -54,20 +55,22 @@ pub(crate) fn push_perf_repeat_run_json_row(
         .unwrap_or(0);
     let top_view_cache_roots_needs_rerender =
         top.map(|r| r.view_cache_roots_needs_rerender).unwrap_or(0);
-    let top_view_cache_roots_layout_invalidated =
-        top.map(|r| r.view_cache_roots_layout_invalidated).unwrap_or(0);
+    let top_view_cache_roots_layout_invalidated = top
+        .map(|r| r.view_cache_roots_layout_invalidated)
+        .unwrap_or(0);
     let top_view_cache_roots_manual = top.map(|r| r.view_cache_roots_manual).unwrap_or(0);
 
     let top_cache_roots_contained_relayout =
         top.map(|r| r.cache_roots_contained_relayout).unwrap_or(0);
-    let top_set_children_barrier_writes =
-        top.map(|r| r.set_children_barrier_writes).unwrap_or(0);
+    let top_set_children_barrier_writes = top.map(|r| r.set_children_barrier_writes).unwrap_or(0);
     let top_barrier_relayouts_scheduled = top.map(|r| r.barrier_relayouts_scheduled).unwrap_or(0);
     let top_barrier_relayouts_performed = top.map(|r| r.barrier_relayouts_performed).unwrap_or(0);
-    let top_virtual_list_visible_range_checks =
-        top.map(|r| r.virtual_list_visible_range_checks).unwrap_or(0);
-    let top_virtual_list_visible_range_refreshes =
-        top.map(|r| r.virtual_list_visible_range_refreshes).unwrap_or(0);
+    let top_virtual_list_visible_range_checks = top
+        .map(|r| r.virtual_list_visible_range_checks)
+        .unwrap_or(0);
+    let top_virtual_list_visible_range_refreshes = top
+        .map(|r| r.virtual_list_visible_range_refreshes)
+        .unwrap_or(0);
 
     let top_renderer_tick_id = top.map(|r| r.renderer_tick_id).unwrap_or(0);
     let top_renderer_frame_id = top.map(|r| r.renderer_frame_id).unwrap_or(0);
@@ -76,15 +79,15 @@ pub(crate) fn push_perf_repeat_run_json_row(
     let top_renderer_prepare_svg_us = top.map(|r| r.renderer_prepare_svg_us).unwrap_or(0);
     let top_renderer_draw_calls = top.map(|r| r.renderer_draw_calls).unwrap_or(0);
     let top_renderer_pipeline_switches = top.map(|r| r.renderer_pipeline_switches).unwrap_or(0);
-    let top_renderer_bind_group_switches =
-        top.map(|r| r.renderer_bind_group_switches).unwrap_or(0);
+    let top_renderer_bind_group_switches = top.map(|r| r.renderer_bind_group_switches).unwrap_or(0);
     let top_renderer_scissor_sets = top.map(|r| r.renderer_scissor_sets).unwrap_or(0);
     let top_renderer_scene_encoding_cache_misses = top
         .map(|r| r.renderer_scene_encoding_cache_misses)
         .unwrap_or(0);
     let top_renderer_material_quad_ops = top.map(|r| r.renderer_material_quad_ops).unwrap_or(0);
-    let top_renderer_material_sampled_quad_ops =
-        top.map(|r| r.renderer_material_sampled_quad_ops).unwrap_or(0);
+    let top_renderer_material_sampled_quad_ops = top
+        .map(|r| r.renderer_material_sampled_quad_ops)
+        .unwrap_or(0);
     let top_renderer_material_distinct = top.map(|r| r.renderer_material_distinct).unwrap_or(0);
     let top_renderer_material_unknown_ids =
         top.map(|r| r.renderer_material_unknown_ids).unwrap_or(0);
@@ -93,38 +96,47 @@ pub(crate) fn push_perf_repeat_run_json_row(
         .unwrap_or(0);
     let top_renderer_text_atlas_upload_bytes =
         top.map(|r| r.renderer_text_atlas_upload_bytes).unwrap_or(0);
-    let top_renderer_text_atlas_evicted_pages =
-        top.map(|r| r.renderer_text_atlas_evicted_pages).unwrap_or(0);
+    let top_renderer_text_atlas_evicted_pages = top
+        .map(|r| r.renderer_text_atlas_evicted_pages)
+        .unwrap_or(0);
     let top_renderer_svg_upload_bytes = top.map(|r| r.renderer_svg_upload_bytes).unwrap_or(0);
     let top_renderer_image_upload_bytes = top.map(|r| r.renderer_image_upload_bytes).unwrap_or(0);
     let top_renderer_svg_raster_cache_misses =
         top.map(|r| r.renderer_svg_raster_cache_misses).unwrap_or(0);
-    let top_renderer_svg_raster_budget_evictions =
-        top.map(|r| r.renderer_svg_raster_budget_evictions).unwrap_or(0);
+    let top_renderer_svg_raster_budget_evictions = top
+        .map(|r| r.renderer_svg_raster_budget_evictions)
+        .unwrap_or(0);
     let top_renderer_svg_raster_budget_bytes =
         top.map(|r| r.renderer_svg_raster_budget_bytes).unwrap_or(0);
     let top_renderer_svg_rasters_live = top.map(|r| r.renderer_svg_rasters_live).unwrap_or(0);
     let top_renderer_svg_standalone_bytes_live = top
         .map(|r| r.renderer_svg_standalone_bytes_live)
         .unwrap_or(0);
-    let top_renderer_svg_mask_atlas_pages_live =
-        top.map(|r| r.renderer_svg_mask_atlas_pages_live).unwrap_or(0);
-    let top_renderer_svg_mask_atlas_bytes_live =
-        top.map(|r| r.renderer_svg_mask_atlas_bytes_live).unwrap_or(0);
+    let top_renderer_svg_mask_atlas_pages_live = top
+        .map(|r| r.renderer_svg_mask_atlas_pages_live)
+        .unwrap_or(0);
+    let top_renderer_svg_mask_atlas_bytes_live = top
+        .map(|r| r.renderer_svg_mask_atlas_bytes_live)
+        .unwrap_or(0);
     let top_renderer_svg_mask_atlas_used_px =
         top.map(|r| r.renderer_svg_mask_atlas_used_px).unwrap_or(0);
-    let top_renderer_svg_mask_atlas_capacity_px =
-        top.map(|r| r.renderer_svg_mask_atlas_capacity_px).unwrap_or(0);
+    let top_renderer_svg_mask_atlas_capacity_px = top
+        .map(|r| r.renderer_svg_mask_atlas_capacity_px)
+        .unwrap_or(0);
     let top_renderer_svg_raster_cache_hits =
         top.map(|r| r.renderer_svg_raster_cache_hits).unwrap_or(0);
-    let top_renderer_svg_mask_atlas_page_evictions =
-        top.map(|r| r.renderer_svg_mask_atlas_page_evictions).unwrap_or(0);
-    let top_renderer_svg_mask_atlas_entries_evicted =
-        top.map(|r| r.renderer_svg_mask_atlas_entries_evicted).unwrap_or(0);
-    let top_renderer_intermediate_budget_bytes =
-        top.map(|r| r.renderer_intermediate_budget_bytes).unwrap_or(0);
-    let top_renderer_intermediate_in_use_bytes =
-        top.map(|r| r.renderer_intermediate_in_use_bytes).unwrap_or(0);
+    let top_renderer_svg_mask_atlas_page_evictions = top
+        .map(|r| r.renderer_svg_mask_atlas_page_evictions)
+        .unwrap_or(0);
+    let top_renderer_svg_mask_atlas_entries_evicted = top
+        .map(|r| r.renderer_svg_mask_atlas_entries_evicted)
+        .unwrap_or(0);
+    let top_renderer_intermediate_budget_bytes = top
+        .map(|r| r.renderer_intermediate_budget_bytes)
+        .unwrap_or(0);
+    let top_renderer_intermediate_in_use_bytes = top
+        .map(|r| r.renderer_intermediate_in_use_bytes)
+        .unwrap_or(0);
     let top_renderer_intermediate_peak_in_use_bytes = top
         .map(|r| r.renderer_intermediate_peak_in_use_bytes)
         .unwrap_or(0);
@@ -134,14 +146,18 @@ pub(crate) fn push_perf_repeat_run_json_row(
     let top_renderer_intermediate_pool_allocations = top
         .map(|r| r.renderer_intermediate_pool_allocations)
         .unwrap_or(0);
-    let top_renderer_intermediate_pool_reuses =
-        top.map(|r| r.renderer_intermediate_pool_reuses).unwrap_or(0);
-    let top_renderer_intermediate_pool_releases =
-        top.map(|r| r.renderer_intermediate_pool_releases).unwrap_or(0);
-    let top_renderer_intermediate_pool_evictions =
-        top.map(|r| r.renderer_intermediate_pool_evictions).unwrap_or(0);
-    let top_renderer_intermediate_pool_free_bytes =
-        top.map(|r| r.renderer_intermediate_pool_free_bytes).unwrap_or(0);
+    let top_renderer_intermediate_pool_reuses = top
+        .map(|r| r.renderer_intermediate_pool_reuses)
+        .unwrap_or(0);
+    let top_renderer_intermediate_pool_releases = top
+        .map(|r| r.renderer_intermediate_pool_releases)
+        .unwrap_or(0);
+    let top_renderer_intermediate_pool_evictions = top
+        .map(|r| r.renderer_intermediate_pool_evictions)
+        .unwrap_or(0);
+    let top_renderer_intermediate_pool_free_bytes = top
+        .map(|r| r.renderer_intermediate_pool_free_bytes)
+        .unwrap_or(0);
     let top_renderer_intermediate_pool_free_textures = top
         .map(|r| r.renderer_intermediate_pool_free_textures)
         .unwrap_or(0);
@@ -266,4 +282,3 @@ pub(crate) fn push_perf_repeat_run_json_row(
         "bundle": bundle_path.display().to_string(),
     }));
 }
-

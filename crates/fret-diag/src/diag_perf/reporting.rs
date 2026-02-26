@@ -4,7 +4,11 @@ fn json_u64(v: &serde_json::Value, key: &str) -> u64 {
     v.get(key).and_then(|v| v.as_u64()).unwrap_or(0)
 }
 
-pub(super) fn print_perf_no_last_bundle_dir(src: &Path, sort: BundleStatsSort, repeat: Option<usize>) {
+pub(super) fn print_perf_no_last_bundle_dir(
+    src: &Path,
+    sort: BundleStatsSort,
+    repeat: Option<usize>,
+) {
     match repeat {
         Some(repeat) => {
             println!(
@@ -160,17 +164,22 @@ pub(super) fn push_perf_json_repeat_summary_row(
         top_frame_arena_capacity_estimate_bytes
             .push(json_u64(run, "top_frame_arena_capacity_estimate_bytes"));
         top_frame_arena_grow_events.push(json_u64(run, "top_frame_arena_grow_events"));
-        top_element_children_vec_pool_reuses.push(json_u64(run, "top_element_children_vec_pool_reuses"));
-        top_element_children_vec_pool_misses.push(json_u64(run, "top_element_children_vec_pool_misses"));
-        top_view_cache_contained_relayouts.push(json_u64(run, "top_view_cache_contained_relayouts"));
+        top_element_children_vec_pool_reuses
+            .push(json_u64(run, "top_element_children_vec_pool_reuses"));
+        top_element_children_vec_pool_misses
+            .push(json_u64(run, "top_element_children_vec_pool_misses"));
+        top_view_cache_contained_relayouts
+            .push(json_u64(run, "top_view_cache_contained_relayouts"));
         top_view_cache_roots_total.push(json_u64(run, "top_view_cache_roots_total"));
         top_view_cache_roots_reused.push(json_u64(run, "top_view_cache_roots_reused"));
         top_view_cache_roots_cache_key_mismatch
             .push(json_u64(run, "top_view_cache_roots_cache_key_mismatch"));
-        top_view_cache_roots_needs_rerender.push(json_u64(run, "top_view_cache_roots_needs_rerender"));
+        top_view_cache_roots_needs_rerender
+            .push(json_u64(run, "top_view_cache_roots_needs_rerender"));
         top_view_cache_roots_layout_invalidated
             .push(json_u64(run, "top_view_cache_roots_layout_invalidated"));
-        top_cache_roots_contained_relayout.push(json_u64(run, "top_cache_roots_contained_relayout"));
+        top_cache_roots_contained_relayout
+            .push(json_u64(run, "top_cache_roots_contained_relayout"));
         top_set_children_barrier_writes.push(json_u64(run, "top_set_children_barrier_writes"));
         top_barrier_relayouts_scheduled.push(json_u64(run, "top_barrier_relayouts_scheduled"));
         top_barrier_relayouts_performed.push(json_u64(run, "top_barrier_relayouts_performed"));
@@ -190,9 +199,12 @@ pub(super) fn push_perf_json_repeat_summary_row(
             .push(json_u64(run, "top_renderer_material_sampled_quad_ops"));
         top_renderer_material_distinct.push(json_u64(run, "top_renderer_material_distinct"));
         top_renderer_material_unknown_ids.push(json_u64(run, "top_renderer_material_unknown_ids"));
-        top_renderer_material_degraded_due_to_budget
-            .push(json_u64(run, "top_renderer_material_degraded_due_to_budget"));
-        top_renderer_text_atlas_upload_bytes.push(json_u64(run, "top_renderer_text_atlas_upload_bytes"));
+        top_renderer_material_degraded_due_to_budget.push(json_u64(
+            run,
+            "top_renderer_material_degraded_due_to_budget",
+        ));
+        top_renderer_text_atlas_upload_bytes
+            .push(json_u64(run, "top_renderer_text_atlas_upload_bytes"));
         top_renderer_text_atlas_evicted_pages
             .push(json_u64(run, "top_renderer_text_atlas_evicted_pages"));
         top_renderer_svg_upload_bytes.push(json_u64(run, "top_renderer_svg_upload_bytes"));
@@ -204,7 +216,8 @@ pub(super) fn push_perf_json_repeat_summary_row(
         top_renderer_svg_rasters_live.push(json_u64(run, "top_renderer_svg_rasters_live"));
         top_renderer_svg_mask_atlas_pages_live
             .push(json_u64(run, "top_renderer_svg_mask_atlas_pages_live"));
-        top_renderer_svg_mask_atlas_used_px.push(json_u64(run, "top_renderer_svg_mask_atlas_used_px"));
+        top_renderer_svg_mask_atlas_used_px
+            .push(json_u64(run, "top_renderer_svg_mask_atlas_used_px"));
         top_renderer_intermediate_budget_bytes
             .push(json_u64(run, "top_renderer_intermediate_budget_bytes"));
         top_renderer_intermediate_in_use_bytes
@@ -223,8 +236,10 @@ pub(super) fn push_perf_json_repeat_summary_row(
             .push(json_u64(run, "top_renderer_intermediate_pool_evictions"));
         top_renderer_intermediate_pool_free_bytes
             .push(json_u64(run, "top_renderer_intermediate_pool_free_bytes"));
-        top_renderer_intermediate_pool_free_textures
-            .push(json_u64(run, "top_renderer_intermediate_pool_free_textures"));
+        top_renderer_intermediate_pool_free_textures.push(json_u64(
+            run,
+            "top_renderer_intermediate_pool_free_textures",
+        ));
     }
 
     perf_json_rows.push(serde_json::json!({

@@ -1,4 +1,3 @@
-use fret_core::window::ColorScheme;
 use fret_core::{Axis, Color, Corners, Edges, FontId, FontWeight, Px};
 use fret_icons::ids;
 use fret_runtime::Model;
@@ -6,7 +5,7 @@ use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
     PositionStyle, SemanticsDecoration, ShadowLayerStyle, ShadowStyle, SizeStyle, TextInputProps,
 };
-use fret_ui::{ElementContext, TextInputStyle, Theme, UiHost};
+use fret_ui::{ElementContext, TextInputStyle, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::scheduling;
@@ -18,44 +17,36 @@ use fret_ui_kit::{
 };
 use std::sync::Arc;
 
-fn otp_gap(theme: &Theme) -> Px {
+fn otp_gap(theme: &ThemeSnapshot) -> Px {
     theme
         .metric_by_key("component.input_otp.gap")
         .unwrap_or_else(|| MetricRef::space(Space::N2).resolve(theme))
 }
 
-fn otp_separator_color(theme: &Theme) -> Color {
+fn otp_separator_color(theme: &ThemeSnapshot) -> Color {
     theme.color_token("muted-foreground")
 }
 
-fn otp_active_ring_width(theme: &Theme) -> Px {
+fn otp_active_ring_width(theme: &ThemeSnapshot) -> Px {
     theme
         .metric_by_key("component.ring.width")
         .unwrap_or(Px(3.0))
 }
 
-fn otp_active_ring_color(theme: &Theme) -> Color {
+fn otp_active_ring_color(theme: &ThemeSnapshot) -> Color {
     theme
         .color_by_key("ring/50")
         .or_else(|| theme.color_by_key("ring"))
         .unwrap_or_else(|| theme.color_token("ring"))
 }
 
-fn otp_invalid_ring_color(theme: &Theme) -> Color {
+fn otp_invalid_ring_color(theme: &ThemeSnapshot) -> Color {
     let border_color = theme.color_token("destructive");
-    let ring_key = if theme.color_scheme == Some(ColorScheme::Dark) {
-        "destructive/40"
-    } else {
-        "destructive/20"
-    };
-    theme
-        .color_by_key(ring_key)
-        .or_else(|| theme.color_by_key("destructive/20"))
-        .unwrap_or(border_color)
+    crate::theme_variants::invalid_control_ring_color(theme, border_color)
 }
 
 fn otp_slot_border_color(
-    theme: &Theme,
+    theme: &ThemeSnapshot,
     border_color: Color,
     border_color_focused: Color,
     is_active: bool,
@@ -72,7 +63,7 @@ fn otp_slot_border_color(
     }
 }
 
-fn otp_slot_ring_color(theme: &Theme, aria_invalid: bool) -> Color {
+fn otp_slot_ring_color(theme: &ThemeSnapshot, aria_invalid: bool) -> Color {
     if aria_invalid {
         otp_invalid_ring_color(theme)
     } else {
@@ -258,7 +249,7 @@ impl InputOtp {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
 
         let length = self.length;
         let mut value = cx.watch_model(&self.model).cloned().unwrap_or_default();
@@ -270,8 +261,12 @@ impl InputOtp {
         }
 
         let chars: Vec<char> = value.chars().collect();
-        let resolved =
-            resolve_input_chrome(&theme, self.size, &self.chrome, InputTokenKeys::none());
+        let resolved = resolve_input_chrome(
+            Theme::global(&*cx.app),
+            self.size,
+            &self.chrome,
+            InputTokenKeys::none(),
+        );
 
         let default_slot_w = Px(resolved.min_height.0.max(0.0));
         let default_slot_h = Px(resolved.min_height.0.max(0.0));
@@ -319,7 +314,7 @@ impl InputOtp {
                     start = end;
                 }
 
-                let mut chrome = TextInputStyle::from_theme(theme.snapshot());
+                let mut chrome = TextInputStyle::from_theme(theme.clone());
                 chrome.padding = Edges::all(Px(0.0));
                 chrome.corner_radii = Corners::all(Px(0.0));
                 chrome.border = Edges::all(Px(0.0));
@@ -758,7 +753,7 @@ mod tests {
                 ..ThemeConfig::default()
             });
         });
-        let theme = Theme::global(&app).clone();
+        let theme = Theme::global(&app).snapshot();
         assert_eq!(
             otp_invalid_ring_color(&theme),
             theme.color_by_key("destructive/40").unwrap()
@@ -770,7 +765,7 @@ mod tests {
                 ..ThemeConfig::default()
             });
         });
-        let theme = Theme::global(&app).clone();
+        let theme = Theme::global(&app).snapshot();
         assert_eq!(
             otp_invalid_ring_color(&theme),
             theme.color_by_key("destructive/20").unwrap()
@@ -827,9 +822,10 @@ mod tests {
     #[test]
     fn input_otp_aria_invalid_uses_destructive_border_color() {
         let app = App::new();
-        let theme = Theme::global(&app).clone();
+        let theme_full = Theme::global(&app);
+        let theme = theme_full.snapshot();
         let resolved = resolve_input_chrome(
-            &theme,
+            theme_full,
             ComponentSize::default(),
             &ChromeRefinement::default(),
             InputTokenKeys::none(),

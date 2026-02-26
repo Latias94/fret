@@ -8,7 +8,7 @@ use fret_ui::element::{
     AnyElement, ElementKind, LayoutStyle, Length, PressableA11y, PressableKeyActivation,
     PressableProps, SpinnerProps, SvgIconProps,
 };
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::current_color;
 use fret_ui_kit::declarative::icon as decl_icon;
@@ -168,11 +168,11 @@ impl Badge {
     }
 }
 
-fn border_color(theme: &Theme) -> Color {
+fn border_color(theme: &ThemeSnapshot) -> Color {
     theme.color_token("border")
 }
 
-fn fg_for(theme: &Theme, variant: BadgeVariant) -> Color {
+fn fg_for(theme: &ThemeSnapshot, variant: BadgeVariant) -> Color {
     match variant {
         BadgeVariant::Default => theme.color_token("primary-foreground"),
         BadgeVariant::Secondary => theme.color_token("secondary-foreground"),
@@ -186,7 +186,7 @@ fn fg_for(theme: &Theme, variant: BadgeVariant) -> Color {
     }
 }
 
-fn bg_for(theme: &Theme, variant: BadgeVariant) -> Option<Color> {
+fn bg_for(theme: &ThemeSnapshot, variant: BadgeVariant) -> Option<Color> {
     match variant {
         BadgeVariant::Default => Some(theme.color_token("primary")),
         BadgeVariant::Secondary => Some(theme.color_token("secondary")),
@@ -313,7 +313,7 @@ fn badge_with_patch<H: UiHost>(
     layout_override: LayoutRefinement,
 ) -> AnyElement {
     let label = label.into();
-    let theme = Theme::global(&*cx.app).clone();
+    let theme = Theme::global(&*cx.app).snapshot();
 
     let a11y_label = label.clone();
     let label_for_content = label.clone();
@@ -506,7 +506,7 @@ mod tests {
         let mut app = App::new();
 
         fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
-            let theme = Theme::global(&*cx.app).clone();
+            let theme = Theme::global(&*cx.app).snapshot();
             let expected_fg = fg_for(&theme, BadgeVariant::Default);
 
             let el = Badge::new("Verified")

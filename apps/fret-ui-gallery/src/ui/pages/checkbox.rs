@@ -567,7 +567,8 @@ pub(super) fn preview_checkbox(
             "Table selection patterns should keep row-level and header-level states explicit; avoid hidden coupling in demos.",
             "When validating parity, test both keyboard focus ring and RTL label alignment in addition to pointer clicks.",
         ],
-    );
+    )
+    .test_id("ui-gallery-checkbox-notes");
 
     let body = doc_layout::render_doc_page(
         cx,

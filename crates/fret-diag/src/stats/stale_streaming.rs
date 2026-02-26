@@ -289,7 +289,9 @@ fn scan_semantics_changed_repainted_streaming(
                     self.state.borrow_mut().scan.missing_semantics_fingerprint = true;
                 }
 
-                let (Some(scene_fp), Some(sem_fp)) = (snap.scene_fingerprint, snap.semantics_fingerprint) else {
+                let (Some(scene_fp), Some(sem_fp)) =
+                    (snap.scene_fingerprint, snap.semantics_fingerprint)
+                else {
                     prev_scene = None;
                     prev_sem = None;
                     prev_tick = snap.tick_id;
@@ -451,8 +453,7 @@ fn scan_semantics_changed_repainted_streaming(
                         self.semantics_window_id = map.next_value::<Option<u64>>()?;
                     }
                     "debug" => {
-                        let (paint_nodes, paint_cache_ops) =
-                            map.next_value_seed(DebugStatsSeed)?;
+                        let (paint_nodes, paint_cache_ops) = map.next_value_seed(DebugStatsSeed)?;
                         self.paint_nodes_performed = paint_nodes;
                         self.paint_cache_replayed_ops = paint_cache_ops;
                     }
@@ -576,7 +577,12 @@ fn scan_semantics_changed_repainted_streaming(
     let res = crate::json_stream::with_bundle_json_deserializer_allow_stop(
         bundle_path,
         STOP_MARKER,
-        |de| RootSeed { state: state.clone() }.deserialize(de),
+        |de| {
+            RootSeed {
+                state: state.clone(),
+            }
+            .deserialize(de)
+        },
     );
     if let Err(msg) = res {
         return Err(msg);
@@ -592,8 +598,12 @@ fn enrich_semantics_changed_repainted_findings(
     // The streaming scan pre-populates findings with stable fields and a null semantics_diff. Here
     // we attempt to fill the semantics diff from schema2 semantics tables for each finding.
     for (idx, finding) in scan.findings.iter_mut().enumerate() {
-        let Some(prev) = finding.get("prev") else { continue };
-        let Some(now) = finding.get("now") else { continue };
+        let Some(prev) = finding.get("prev") else {
+            continue;
+        };
+        let Some(now) = finding.get("now") else {
+            continue;
+        };
 
         let prev_fp = prev.get("semantics_fingerprint").and_then(|v| v.as_u64());
         let prev_window_id = prev.get("semantics_window_id").and_then(|v| v.as_u64());

@@ -376,7 +376,7 @@ impl Kanban {
         render_card: impl Fn(&mut ElementContext<'_, H>, &KanbanItem, KanbanCardCtx) -> AnyElement,
     ) -> AnyElement {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
+            let theme = Theme::global(&*cx.app).snapshot();
 
             let items = self.items.clone();
             let columns: Arc<[KanbanColumn]> = Arc::from(self.columns.into_boxed_slice());

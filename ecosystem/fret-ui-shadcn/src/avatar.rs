@@ -98,7 +98,7 @@ impl Avatar {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let size_variant = self.size;
         with_avatar_size_provider(cx, size_variant, |cx| {
-            let theme = Theme::global(&*cx.app).clone();
+            let theme = Theme::global(&*cx.app).snapshot();
 
             let size = match size_variant {
                 AvatarSize::Sm => Space::N6,
@@ -497,7 +497,7 @@ impl AvatarImage {
                 ..Default::default()
             };
             let children = if let Some(image) = image {
-                let theme = Theme::global(&*cx.app).clone();
+                let theme = Theme::global(&*cx.app).snapshot();
                 let layout = LayoutRefinement::default()
                     .absolute()
                     .inset(Space::N0)
@@ -608,7 +608,7 @@ impl AvatarFallback {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             let id = cx.root_id();
-            let theme = Theme::global(&*cx.app).clone();
+            let theme = Theme::global(&*cx.app).snapshot();
 
             let image_loaded = self
                 .show_when_image_missing

@@ -161,7 +161,7 @@ impl Banner {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
+            let theme = Theme::global(&*cx.app).snapshot();
 
             let visible = use_controllable_model(cx, self.visible, || self.default_visible);
             let is_visible = cx
@@ -239,7 +239,7 @@ impl BannerIcon {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
         let base = theme.color_token("background");
         let border = alpha_mul(base, 0.20);
         let bg = alpha_mul(base, 0.10);
@@ -343,7 +343,7 @@ impl BannerAction {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
         let fg = theme.color_token("primary-foreground");
         let mut hover_bg = theme.color_token("background");
         hover_bg = alpha_mul(hover_bg, 0.10);
@@ -413,7 +413,7 @@ impl BannerClose {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
         let fg = theme.color_token("primary-foreground");
         let mut hover_bg = theme.color_token("background");
         hover_bg = alpha_mul(hover_bg, 0.10);

@@ -167,6 +167,21 @@ cargo run -p fretboard -- diag perf ui-gallery `
 
 ## 1) GPU / renderer: debug specific passes
 
+### 1.0 Uncaptured wgpu errors
+
+`wgpu` treats uncaptured errors as fatal by default (panic). Fret installs an uncaptured error handler on the device so
+the error details are always emitted through the app's tracing logs.
+
+```powershell
+# Options: "log" (default) or "panic".
+$env:FRET_WGPU_UNCAPTURED_ERROR="log"
+```
+
+Notes:
+
+- In `log` mode, `OutOfMemory` and `Internal` errors remain fatal.
+- Use `panic` mode when you want fail-fast behavior (e.g. CI or minimal crash repro).
+
 ### 1.1 Capture a frame (RenderDoc)
 
 On Windows, prefer Vulkan for capture reliability.

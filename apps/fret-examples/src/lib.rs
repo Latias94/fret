@@ -35,6 +35,8 @@ pub mod components_gallery;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod container_queries_docking_demo;
 #[cfg(not(target_arch = "wasm32"))]
+pub mod custom_effect_v1_demo;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod datatable_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod date_picker_demo;

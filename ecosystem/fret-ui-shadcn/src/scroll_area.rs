@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret_core::{Color, Px, SemanticsRole};
+use fret_core::{Color, Px};
 use fret_ui::element::AnyElement;
 use fret_ui::element::ContainerProps;
 use fret_ui::element::HoverRegionProps;
@@ -15,25 +15,24 @@ use fret_ui::element::ScrollProps;
 use fret_ui::element::ScrollbarAxis;
 use fret_ui::element::ScrollbarProps;
 use fret_ui::element::ScrollbarStyle;
-use fret_ui::element::SemanticsDecoration;
 use fret_ui::element::SizeStyle;
 use fret_ui::element::StackProps;
 use fret_ui::scroll::ScrollHandle;
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::LayoutRefinement;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::scroll_area::DEFAULT_SCROLL_HIDE_DELAY_TICKS;
 use fret_ui_kit::primitives::scroll_area::ScrollAreaType;
 
-fn shadcn_scrollbar_thumb(theme: &Theme) -> Color {
+fn shadcn_scrollbar_thumb(theme: &ThemeSnapshot) -> Color {
     theme.color_token("border")
 }
 
-fn shadcn_scrollbar_thumb_hover(theme: &Theme) -> Color {
+fn shadcn_scrollbar_thumb_hover(theme: &ThemeSnapshot) -> Color {
     theme.color_token("border")
 }
 
-fn shadcn_scrollbar_corner_bg(theme: &Theme) -> Color {
+fn shadcn_scrollbar_corner_bg(theme: &ThemeSnapshot) -> Color {
     theme.color_by_key("border").unwrap_or(Color::TRANSPARENT)
 }
 
@@ -233,7 +232,7 @@ impl ScrollAreaRoot {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
 
         let viewport = self.viewport;
         let scrollbars = self.scrollbars;
@@ -292,24 +291,16 @@ impl ScrollAreaRoot {
             if matches!(layout.size.width, Length::Auto) {
                 layout.size.width = Length::Fill;
             }
-            // Radix/shadcn ScrollArea roots typically behave like `size: 100%` containers. When the
-            // author provides a `max-height` (cmdk-style lists), we keep `height: auto` so the root
-            // can shrink-wrap the content up to the cap.
-            if matches!(layout.size.height, Length::Auto) && layout.size.max_height.is_none() {
-                layout.size.height = Length::Fill;
-            }
             layout.size.min_width.get_or_insert(Length::Px(Px(0.0)));
             layout.size.min_height.get_or_insert(Length::Px(Px(0.0)));
-            let shrinkwrap_height_via_max_h =
-                matches!(layout.size.height, Length::Auto) && layout.size.max_height.is_some();
+            let shrinkwrap_height = matches!(layout.size.height, Length::Auto);
             vec![cx.stack_props(StackProps { layout }, move |cx| {
                 let mut scroll_layout = LayoutStyle::default();
                 scroll_layout.size.width = Length::Fill;
-                // When the root is shrink-wrapped via `max-height` (cmdk-style
-                // `max-h-[...] overflow-y-auto`), avoid `Fill` (percent sizing) on the viewport.
+                // Avoid `Fill` (percent sizing) under an auto-height containing block.
                 // Percent heights under an auto-height containing block resolve to 0 in layout
                 // engines like Taffy, which breaks hit-testing and hover-driven selection.
-                scroll_layout.size.height = if shrinkwrap_height_via_max_h {
+                scroll_layout.size.height = if shrinkwrap_height {
                     Length::Auto
                 } else {
                     Length::Fill
@@ -332,11 +323,7 @@ impl ScrollAreaRoot {
 
                 let scroll_id = scroll.id;
                 let viewport = match viewport_test_id {
-                    Some(test_id) => scroll.attach_semantics(
-                        SemanticsDecoration::default()
-                            .role(SemanticsRole::Group)
-                            .test_id(test_id),
-                    ),
+                    Some(test_id) => scroll.test_id(test_id),
                     None => scroll,
                 };
                 let mut children = vec![viewport];

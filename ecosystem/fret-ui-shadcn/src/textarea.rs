@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use fret_core::window::ColorScheme;
 use fret_core::{Color, Corners, CursorIcon, Edges, FontId, MouseButton, Px};
 use fret_runtime::Model;
 use fret_ui::element::{
@@ -200,14 +199,27 @@ pub fn textarea<H: UiHost>(
 ) -> AnyElement {
     let show_resize_handle = resizable && !disabled;
 
-    let theme = Theme::global(&*cx.app).clone();
+    let theme = Theme::global(&*cx.app).snapshot();
 
-    let resolved = resolve_input_chrome(&theme, size, &chrome, InputTokenKeys::none());
+    let resolved = resolve_input_chrome(
+        Theme::global(&*cx.app),
+        size,
+        &chrome,
+        InputTokenKeys::none(),
+    );
 
     let text_style = if stable_line_boxes {
-        typography::text_area_control_text_style_scaled(&theme, FontId::ui(), resolved.text_px)
+        typography::text_area_control_text_style_scaled(
+            Theme::global(&*cx.app),
+            FontId::ui(),
+            resolved.text_px,
+        )
     } else {
-        typography::text_area_content_text_style_scaled(&theme, FontId::ui(), resolved.text_px)
+        typography::text_area_content_text_style_scaled(
+            Theme::global(&*cx.app),
+            FontId::ui(),
+            resolved.text_px,
+        )
     };
 
     let mut chrome = TextAreaStyle::default();
@@ -233,15 +245,7 @@ pub fn textarea<H: UiHost>(
         chrome.border_color = border_color;
         chrome.border_color_focused = border_color;
         if let Some(mut ring) = chrome.focus_ring.take() {
-            let ring_key = if theme.color_scheme == Some(ColorScheme::Dark) {
-                "destructive/40"
-            } else {
-                "destructive/20"
-            };
-            ring.color = theme
-                .color_by_key(ring_key)
-                .or_else(|| theme.color_by_key("destructive/20"))
-                .unwrap_or(border_color);
+            ring.color = crate::theme_variants::invalid_control_ring_color(&theme, border_color);
             chrome.focus_ring = Some(ring);
         }
     }
@@ -300,7 +304,7 @@ pub fn textarea<H: UiHost>(
                 .ok()
                 .flatten();
 
-            let theme = Theme::global(&*cx.app).clone();
+            let theme = Theme::global(&*cx.app).snapshot();
             let resize_handle_layout = decl_style::layout_style(
                 &theme,
                 LayoutRefinement::default()

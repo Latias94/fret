@@ -440,6 +440,15 @@ impl<S: 'static> UiAppBuilder<S> {
         }
     }
 
+    pub fn install_custom_effects(
+        self,
+        install: fn(&mut App, &mut dyn fret_core::CustomEffectService),
+    ) -> Self {
+        Self {
+            inner: self.inner.install_custom_effects(install),
+        }
+    }
+
     pub fn register_icon_pack(self, register: fn(&mut IconRegistry)) -> Self {
         Self {
             inner: self.inner.register_icon_pack(register),

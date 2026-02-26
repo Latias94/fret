@@ -12,6 +12,7 @@
 
 pub mod cursor;
 pub mod dock;
+pub mod effects;
 pub mod file_dialog;
 pub mod geometry;
 pub mod ids;
@@ -49,14 +50,18 @@ pub use dock::{
     Axis, DockFloatingWindow, DockGraph, DockNode, DockOpApplyError, DockOpApplyErrorKind,
     DropZone, EdgeDockDecision,
 };
+pub use effects::{
+    CustomEffectDescriptorV1, CustomEffectProgramLanguage, CustomEffectRegistrationError,
+    CustomEffectService,
+};
 pub use file_dialog::{
     FileDialogDataEvent, FileDialogFilter, FileDialogOptions, FileDialogSelection,
 };
 pub use geometry::{Corners, Edges, Point, Px, Rect, RectPx, Size, Transform2D};
 pub use ids::{
-    AppWindowId, ClipboardToken, DockNodeId, ExternalDropToken, FileDialogToken, FontId, FrameId,
-    ImageId, ImageUpdateToken, ImageUploadToken, IncomingOpenToken, MaterialId, NodeId, PathId,
-    PointerId, RenderTargetId, ShareSheetToken, SvgId, TextBlobId, TimerToken, ViewId,
+    AppWindowId, ClipboardToken, DockNodeId, EffectId, ExternalDropToken, FileDialogToken, FontId,
+    FrameId, ImageId, ImageUpdateToken, ImageUploadToken, IncomingOpenToken, MaterialId, NodeId,
+    PathId, PointerId, RenderTargetId, ShareSheetToken, SvgId, TextBlobId, TimerToken, ViewId,
 };
 pub use image::{
     AlphaMode, ChromaSiting, ColorPrimaries, ColorRange, ImageColorInfo, ImageColorSpace,
@@ -84,8 +89,8 @@ pub use render_text::{
 };
 pub use scene::{
     BlendMode, Color, ColorSpace, CompositeGroupDesc, DitherMode, DrawOrder, EffectChain,
-    EffectMode, EffectQuality, EffectStep, GradientStop, LinearGradient, MAX_STOPS, MaterialParams,
-    Paint, RadialGradient, Scene, SceneOp, SceneRecording, SceneValidationError,
+    EffectMode, EffectParamsV1, EffectQuality, EffectStep, GradientStop, LinearGradient, MAX_STOPS,
+    MaterialParams, Paint, RadialGradient, Scene, SceneOp, SceneRecording, SceneValidationError,
     SceneValidationErrorKind, SweepGradient, TileMode, UvRect,
 };
 pub use semantics::{

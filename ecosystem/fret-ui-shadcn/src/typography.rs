@@ -26,8 +26,15 @@ fn text_props(
     color: Option<Color>,
     wrap: TextWrap,
 ) -> TextProps {
+    let mut layout = LayoutStyle::default();
+    // Typography helpers are intended for long-form / block-like content (shadcn docs parity).
+    // Default to full-width layout for wrapped text so headings/paragraphs don't shrink-wrap to
+    // min-content widths under intrinsic sizing probes.
+    if !matches!(wrap, TextWrap::None) {
+        layout.size.width = Length::Fill;
+    }
     TextProps {
-        layout: LayoutStyle::default(),
+        layout,
         text,
         style,
         color,
@@ -40,7 +47,7 @@ fn text_props(
 
 fn base_text_style(theme: &Theme) -> TextStyle {
     let px = theme.metric_by_key("font.size").unwrap_or(Px(14.0));
-    let line_height = theme.metric_by_key("font.line_height");
+    let line_height = scaled_line_height(theme, px);
     TextStyle {
         font: FontId::default(),
         size: px,
@@ -50,10 +57,25 @@ fn base_text_style(theme: &Theme) -> TextStyle {
     }
 }
 
+fn scaled_line_height(theme: &Theme, size: Px) -> Option<Px> {
+    let base_size = theme.metric_by_key("font.size").unwrap_or(Px(14.0)).0;
+    if base_size <= 0.0 {
+        return None;
+    }
+    let base_line_height = theme.metric_by_key("font.line_height")?.0;
+    if base_line_height <= 0.0 {
+        return None;
+    }
+
+    let ratio = base_line_height / base_size;
+    Some(Px((size.0 * ratio).max(size.0)))
+}
+
 fn heading_style(theme: &Theme, px: f32, weight: FontWeight) -> TextStyle {
     TextStyle {
         size: Px(px),
         weight,
+        line_height: scaled_line_height(theme, Px(px)),
         ..base_text_style(theme)
     }
 }
@@ -118,6 +140,7 @@ pub fn lead<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>
         let theme = Theme::global(&*cx.app);
         let style = TextStyle {
             size: Px(18.0),
+            line_height: scaled_line_height(theme, Px(18.0)),
             ..base_text_style(theme)
         };
         (style, muted_color(theme))
@@ -136,6 +159,7 @@ pub fn large<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>
         TextStyle {
             size: Px(18.0),
             weight: FontWeight::SEMIBOLD,
+            line_height: scaled_line_height(theme, Px(18.0)),
             ..base_text_style(theme)
         }
     };
@@ -148,6 +172,7 @@ pub fn small<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>
         TextStyle {
             size: Px(12.0),
             weight: FontWeight::MEDIUM,
+            line_height: scaled_line_height(theme, Px(12.0)),
             ..base_text_style(theme)
         }
     };
@@ -159,6 +184,7 @@ pub fn muted<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>
         let theme = Theme::global(&*cx.app);
         let style = TextStyle {
             size: Px(12.0),
+            line_height: scaled_line_height(theme, Px(12.0)),
             ..base_text_style(theme)
         };
         (style, muted_color(theme))
@@ -175,7 +201,7 @@ pub fn inline_code<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     text: impl Into<Arc<str>>,
 ) -> AnyElement {
-    let (props, base_style) = {
+    let (props, base_style, line_height) = {
         let theme = Theme::global(&*cx.app);
         let chrome = ChromeRefinement::default()
             .bg(ColorRef::Color(theme.color_token("muted")))
@@ -185,12 +211,14 @@ pub fn inline_code<H: UiHost>(
         let layout = LayoutRefinement::default();
         let props = container_props(theme, chrome, layout);
         let base_style = base_text_style(theme);
-        (props, base_style)
+        let line_height = scaled_line_height(theme, Px(12.0));
+        (props, base_style, line_height)
     };
     cx.container(props, move |cx| {
         let style = TextStyle {
             size: Px(12.0),
             weight: FontWeight::MEDIUM,
+            line_height,
             ..base_style.clone()
         };
         [cx.text_props(text_props(text.into(), Some(style), None, TextWrap::None))]

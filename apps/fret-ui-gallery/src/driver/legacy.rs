@@ -18,7 +18,7 @@ use fret_runtime::{
     ImageUpdateToken, MenuItemToggle, MenuItemToggleKind, PlatformCapabilities,
     WindowCommandAvailabilityService, WindowCommandEnabledService,
 };
-use fret_ui::UiTree;
+use fret_ui::{PaintCachePolicy, UiTree};
 use fret_ui::action::{UiActionHost, UiActionHostAdapter};
 use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui_shadcn as shadcn;
@@ -1155,6 +1155,30 @@ impl UiGalleryDriver {
             env_bool(env_name, default)
         };
 
+        let config_paint_cache_policy = |env_name: &str, _query_name: &str| {
+            #[cfg(target_arch = "wasm32")]
+            {
+                if let Some(v) = bool_from_window_query(_query_name) {
+                    return if v {
+                        PaintCachePolicy::Enabled
+                    } else {
+                        PaintCachePolicy::Disabled
+                    };
+                }
+            }
+
+            let Some(v) = std::env::var_os(env_name).filter(|v| !v.is_empty()) else {
+                return PaintCachePolicy::Auto;
+            };
+
+            match v.to_string_lossy().trim().to_ascii_lowercase().as_str() {
+                "0" | "false" | "no" | "off" | "disabled" => PaintCachePolicy::Disabled,
+                "1" | "true" | "yes" | "on" | "enabled" => PaintCachePolicy::Enabled,
+                "auto" => PaintCachePolicy::Auto,
+                _ => PaintCachePolicy::Auto,
+            }
+        };
+
         let view_cache_enabled_value =
             config_bool("FRET_UI_GALLERY_VIEW_CACHE", "fret_ui_gallery_view_cache", false);
         let view_cache_enabled = app.models_mut().insert(view_cache_enabled_value);
@@ -1213,6 +1237,10 @@ impl UiGalleryDriver {
             "FRET_UI_GALLERY_VIEW_CACHE",
             "fret_ui_gallery_view_cache",
             false,
+        ));
+        ui.set_paint_cache_policy(config_paint_cache_policy(
+            "FRET_UI_GALLERY_PAINT_CACHE",
+            "fret_ui_gallery_paint_cache",
         ));
         ui.set_debug_enabled(
             std::env::var_os("FRET_UI_DEBUG_STATS").is_some_and(|v| !v.is_empty())

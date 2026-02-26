@@ -19,9 +19,8 @@ pub(super) fn run_suite_aux_script_must_pass(
     poll_ms: u64,
 ) -> Result<(), String> {
     if use_devtools_ws {
-        let connected = connected_ws.ok_or_else(|| {
-            "missing DevTools WS transport (this is a tooling bug)".to_string()
-        })?;
+        let connected = connected_ws
+            .ok_or_else(|| "missing DevTools WS transport (this is a tooling bug)".to_string())?;
         let script_key = normalize_repo_relative_path(workspace_root, src);
         let script_json: serde_json::Value =
             serde_json::from_slice(&std::fs::read(src).map_err(|e| {
@@ -84,7 +83,11 @@ pub(super) fn run_suite_aux_script_must_pass(
                 std::process::exit(1);
             }
             _ => {
-                eprintln!("unexpected script stage for {}: {:?}", src.display(), result);
+                eprintln!(
+                    "unexpected script stage for {}: {:?}",
+                    src.display(),
+                    result
+                );
                 stop_launched_demo(child, resolved_exit_path, poll_ms);
                 std::process::exit(1);
             }
@@ -92,7 +95,10 @@ pub(super) fn run_suite_aux_script_must_pass(
     }
 
     if !reuse_process {
-        clear_script_result_files(resolved_script_result_path, resolved_script_result_trigger_path);
+        clear_script_result_files(
+            resolved_script_result_path,
+            resolved_script_result_trigger_path,
+        );
     }
 
     let mut result = run_script_and_wait(
@@ -106,7 +112,8 @@ pub(super) fn run_suite_aux_script_must_pass(
     );
     if let Ok(summary) = &result
         && summary.stage.as_deref() == Some("failed")
-        && let Some(dir) = wait_for_failure_dump_bundle(resolved_out_dir, summary, timeout_ms, poll_ms)
+        && let Some(dir) =
+            wait_for_failure_dump_bundle(resolved_out_dir, summary, timeout_ms, poll_ms)
         && let Some(name) = dir.file_name().and_then(|s| s.to_str())
         && let Ok(summary) = result.as_mut()
     {
@@ -129,7 +136,11 @@ pub(super) fn run_suite_aux_script_must_pass(
                 std::process::exit(1);
             }
             _ => {
-                eprintln!("unexpected script stage for {}: {:?}", src.display(), result);
+                eprintln!(
+                    "unexpected script stage for {}: {:?}",
+                    src.display(),
+                    result
+                );
                 stop_launched_demo(child, resolved_exit_path, poll_ms);
                 std::process::exit(1);
             }

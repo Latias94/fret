@@ -330,6 +330,7 @@ pub struct Button {
     on_hover_change: Option<OnHoverChange>,
     toggle_model: Option<fret_runtime::Model<bool>>,
     disabled: bool,
+    focusable: bool,
     test_id: Option<Arc<str>>,
     render: Option<ButtonRender>,
     variant: ButtonVariant,
@@ -363,6 +364,7 @@ impl std::fmt::Debug for Button {
             .field("on_hover_change", &self.on_hover_change.is_some())
             .field("toggle_model", &self.toggle_model.is_some())
             .field("disabled", &self.disabled)
+            .field("focusable", &self.focusable)
             .field("test_id", &self.test_id)
             .field("render", &self.render)
             .field("variant", &self.variant)
@@ -394,6 +396,7 @@ impl Button {
             on_hover_change: None,
             toggle_model: None,
             disabled: false,
+            focusable: true,
             test_id: None,
             render: None,
             variant: ButtonVariant::default(),
@@ -490,6 +493,11 @@ impl Button {
         self
     }
 
+    pub fn focusable(mut self, focusable: bool) -> Self {
+        self.focusable = focusable;
+        self
+    }
+
     pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
         self.test_id = Some(id.into());
         self
@@ -565,7 +573,7 @@ impl Button {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
+            let theme = Theme::global(&*cx.app).snapshot();
 
             let variant_style = variant_style(self.variant);
             let has_outline_shadow = self.variant == ButtonVariant::Outline;
@@ -588,7 +596,7 @@ impl Button {
                 ButtonSize::Icon | ButtonSize::IconSm | ButtonSize::IconLg
             );
             if is_icon_button {
-                let icon = size.icon_button_size(&theme);
+                let icon = size.icon_button_size(Theme::global(&*cx.app));
                 let has_explicit_w = base_layout
                     .size
                     .as_ref()
@@ -610,7 +618,7 @@ impl Button {
                     base_layout = base_layout.h_px(icon).min_h(icon);
                 }
             } else {
-                let min_h = size.button_h(&theme);
+                let min_h = size.button_h(Theme::global(&*cx.app));
 
                 // shadcn/ui v4 buttons use Tailwind `h-*` to pin the border-box height across
                 // variants (including `outline`). Using `min-height` alone allows chrome padding +
@@ -653,6 +661,7 @@ impl Button {
                 || command
                     .as_ref()
                     .is_some_and(|cmd| !cx.command_is_enabled(cmd));
+            let focusable = self.focusable;
             let user_chrome = self.chrome;
             let user_bg_override = user_chrome.background.is_some();
             let user_border_override = user_chrome.border_color.is_some();
@@ -660,7 +669,7 @@ impl Button {
             let border_override = self.border_override;
             let border_width_override = self.border_width_override;
             let corner_radii_override = self.corner_radii_override;
-            let text_style = button_text_style(&theme, self.size);
+            let text_style = button_text_style(Theme::global(&*cx.app), self.size);
             let text_px = text_style.size;
             let text_weight = self.text_weight_override.unwrap_or(text_style.weight);
             let text_line_height = text_style
@@ -782,7 +791,7 @@ impl Button {
                 let pressable_props = PressableProps {
                     layout: pressable_layout,
                     enabled: !disabled,
-                    focusable: true,
+                    focusable,
                     focus_ring: Some(decl_style::focus_ring(&theme, focus_radius)),
                     key_activation: render_key_activation,
                     a11y: PressableA11y {
@@ -1046,10 +1055,14 @@ mod tests {
         let mut app = App::new();
         let window = AppWindowId::default();
 
-        let theme = Theme::global(&app).clone();
-        let expected_sm = fret_ui_kit::Size::Small.icon_button_size(&theme);
-        let expected_md = fret_ui_kit::Size::Medium.icon_button_size(&theme);
-        let expected_lg = fret_ui_kit::Size::Large.icon_button_size(&theme);
+        let (expected_sm, expected_md, expected_lg) = {
+            let theme = Theme::global(&app);
+            (
+                fret_ui_kit::Size::Small.icon_button_size(theme),
+                fret_ui_kit::Size::Medium.icon_button_size(theme),
+                fret_ui_kit::Size::Large.icon_button_size(theme),
+            )
+        };
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -1099,7 +1112,7 @@ mod tests {
     fn button_padding_x_compacts_when_icon_present() {
         let mut app = App::new();
         let window = AppWindowId::default();
-        let theme = Theme::global(&app).clone();
+        let theme = Theme::global(&app).snapshot();
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -1192,8 +1205,7 @@ mod tests {
         );
         let mut services = FakeServices;
 
-        let theme = Theme::global(&app).clone();
-        let ring = theme.color_token("ring");
+        let ring = Theme::global(&app).snapshot().color_token("ring");
 
         let id_out: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
 
@@ -1606,9 +1618,10 @@ mod tests {
         let mut scene = Scene::default();
         ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
 
-        let theme = Theme::global(&app).clone();
-        let (expected_bg, _expected_bg_hover, _expected_bg_active, _border, _fg) =
-            variant_colors(&theme, ButtonVariant::Default);
+        let (expected_bg, _expected_bg_hover, _expected_bg_active, _border, _fg) = {
+            let theme = Theme::global(&app);
+            variant_colors(theme, ButtonVariant::Default)
+        };
 
         let mut best_quad: Option<(Rect, Color, f32)> = None;
         for op in scene.ops() {

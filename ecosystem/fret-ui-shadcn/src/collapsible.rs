@@ -150,21 +150,27 @@ impl Collapsible {
             let open = open_root.use_open_model(cx).model();
             let is_open = cx.watch_model(&open).layout().copied().unwrap_or(false);
 
-            let theme = fret_ui::Theme::global(&*cx.app).clone();
-
             let trigger = apply_disabled_to_trigger(trigger(cx, open.clone(), is_open), disabled);
 
-            let toggle_duration = theme
-                .duration_ms_by_key("duration.shadcn.motion.collapsible.toggle")
-                .or_else(|| theme.duration_ms_by_key("duration.motion.collapsible.toggle"))
-                .or_else(|| theme.duration_ms_by_key("duration.shadcn.motion.200"))
-                .map(|ms| Duration::from_millis(ms as u64))
-                .unwrap_or(Duration::from_millis(200));
+            let theme = fret_ui::Theme::global(&*cx.app).snapshot();
+
+            let toggle_duration = {
+                let theme_full = fret_ui::Theme::global(&*cx.app);
+                theme_full
+                    .duration_ms_by_key("duration.shadcn.motion.collapsible.toggle")
+                    .or_else(|| theme_full.duration_ms_by_key("duration.motion.collapsible.toggle"))
+                    .or_else(|| theme_full.duration_ms_by_key("duration.shadcn.motion.200"))
+            }
+            .map(|ms| Duration::from_millis(ms as u64))
+            .unwrap_or(Duration::from_millis(200));
             let toggle_ticks = ticks_60hz_for_duration(toggle_duration);
-            let toggle_easing = theme
-                .easing_by_key("easing.shadcn.motion.collapsible.toggle")
-                .or_else(|| theme.easing_by_key("easing.motion.collapsible.toggle"))
-                .unwrap_or_else(|| overlay_motion::shadcn_motion_ease_bezier(cx));
+            let toggle_easing = {
+                let theme_full = fret_ui::Theme::global(&*cx.app);
+                theme_full
+                    .easing_by_key("easing.shadcn.motion.collapsible.toggle")
+                    .or_else(|| theme_full.easing_by_key("easing.motion.collapsible.toggle"))
+            }
+            .unwrap_or_else(|| overlay_motion::shadcn_motion_ease_bezier(cx));
 
             let motion = radix_collapsible::measured_height_motion_for_root_with_cubic_bezier(
                 cx,
@@ -365,7 +371,7 @@ impl CollapsibleContent {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = fret_ui::Theme::global(&*cx.app).clone();
+        let theme = fret_ui::Theme::global(&*cx.app).snapshot();
         let wrapper = decl_style::container_props(&theme, self.chrome, LayoutRefinement::default());
         let layout = self.layout;
         let children = self.children;

@@ -123,7 +123,7 @@ impl FormField {
 
         let mut control = self.control;
         if self.decorate_control {
-            let theme = fret_ui::Theme::global(&*cx.app).clone();
+            let theme = fret_ui::Theme::global(&*cx.app).snapshot();
             let destructive = theme.color_token("destructive");
             let ring_color = Color {
                 a: 0.35,

@@ -30,6 +30,8 @@ pub(super) struct RenderPlanSegment {
 pub(super) struct RenderPlanCompileStats {
     pub(super) estimated_peak_intermediate_bytes: u64,
     pub(super) degradation_count: u64,
+    pub(super) effect_degradations: super::EffectDegradationSnapshot,
+    pub(super) effect_blur_quality: super::BlurQualitySnapshot,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -60,9 +62,20 @@ pub(super) enum PlanTarget {
     Intermediate0,
     Intermediate1,
     Intermediate2,
+    Intermediate3,
     Mask0,
     Mask1,
     Mask2,
+}
+
+pub(super) fn output_requires_explicit_srgb_encode(format: wgpu::TextureFormat) -> bool {
+    if format.is_srgb() {
+        return false;
+    }
+    matches!(
+        format,
+        wgpu::TextureFormat::Bgra8Unorm | wgpu::TextureFormat::Rgba8Unorm
+    )
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -83,7 +96,9 @@ pub(super) struct LocalScissorRect(pub(super) ScissorRect);
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum DebugPostprocess {
     None,
-    OffscreenBlit,
+    OffscreenBlit {
+        src: PlanTarget,
+    },
     Pixelate {
         scale: u32,
     },
@@ -117,7 +132,10 @@ pub(super) enum RenderPlanPass {
     ColorAdjust(ColorAdjustPass),
     ColorMatrix(ColorMatrixPass),
     AlphaThreshold(AlphaThresholdPass),
+    Dither(DitherPass),
+    Noise(NoisePass),
     DropShadow(DropShadowPass),
+    CustomEffect(CustomEffectPass),
     ClipMask(ClipMaskPass),
     ReleaseTarget(PlanTarget),
 }
@@ -229,6 +247,34 @@ pub(super) struct AlphaThresholdPass {
 }
 
 #[derive(Debug, Clone, Copy)]
+pub(super) struct DitherPass {
+    pub(super) src: PlanTarget,
+    pub(super) dst: PlanTarget,
+    pub(super) src_size: (u32, u32),
+    pub(super) dst_size: (u32, u32),
+    pub(super) dst_scissor: Option<LocalScissorRect>,
+    pub(super) mask_uniform_index: Option<u32>,
+    pub(super) mask: Option<MaskRef>,
+    pub(super) mode: fret_core::DitherMode,
+    pub(super) load: wgpu::LoadOp<wgpu::Color>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(super) struct NoisePass {
+    pub(super) src: PlanTarget,
+    pub(super) dst: PlanTarget,
+    pub(super) src_size: (u32, u32),
+    pub(super) dst_size: (u32, u32),
+    pub(super) dst_scissor: Option<LocalScissorRect>,
+    pub(super) mask_uniform_index: Option<u32>,
+    pub(super) mask: Option<MaskRef>,
+    pub(super) strength: f32,
+    pub(super) scale_px: f32,
+    pub(super) phase: f32,
+    pub(super) load: wgpu::LoadOp<wgpu::Color>,
+}
+
+#[derive(Debug, Clone, Copy)]
 pub(super) struct DropShadowPass {
     pub(super) src: PlanTarget,
     pub(super) dst: PlanTarget,
@@ -243,12 +289,31 @@ pub(super) struct DropShadowPass {
 }
 
 #[derive(Debug, Clone, Copy)]
+pub(super) struct CustomEffectPass {
+    pub(super) src: PlanTarget,
+    pub(super) dst: PlanTarget,
+    pub(super) src_size: (u32, u32),
+    pub(super) dst_size: (u32, u32),
+    pub(super) dst_scissor: Option<LocalScissorRect>,
+    pub(super) mask_uniform_index: Option<u32>,
+    pub(super) mask: Option<MaskRef>,
+    pub(super) effect: fret_core::EffectId,
+    pub(super) params: fret_core::EffectParamsV1,
+    pub(super) load: wgpu::LoadOp<wgpu::Color>,
+}
+
+#[derive(Debug, Clone, Copy)]
 pub(super) struct FullscreenBlitPass {
     pub(super) src: PlanTarget,
     pub(super) dst: PlanTarget,
     pub(super) src_size: (u32, u32),
     pub(super) dst_size: (u32, u32),
     pub(super) dst_scissor: Option<LocalScissorRect>,
+    /// Apply an explicit linear->sRGB transfer to the output (premul-aware).
+    ///
+    /// This must only be used for the final write to a non-sRGB display surface format (see ADR
+    /// 0040 / ADR 0117).
+    pub(super) encode_output_srgb: bool,
     pub(super) load: wgpu::LoadOp<wgpu::Color>,
 }
 
@@ -319,6 +384,8 @@ impl RenderPlan {
         clear: wgpu::Color,
         format: wgpu::TextureFormat,
         degradations: Vec<RenderPlanDegradation>,
+        effect_degradations: super::EffectDegradationSnapshot,
+        effect_blur_quality: super::BlurQualitySnapshot,
     ) -> Self {
         let mut plan = Self {
             segments,
@@ -326,10 +393,12 @@ impl RenderPlan {
             compile_stats: RenderPlanCompileStats {
                 estimated_peak_intermediate_bytes: 0,
                 degradation_count: degradations.len() as u64,
+                effect_degradations,
+                effect_blur_quality,
             },
             degradations,
         };
-        append_postprocess(&mut plan, viewport_size, postprocess, clear);
+        append_postprocess(&mut plan, viewport_size, postprocess, clear, format);
         insert_early_releases(&mut plan.passes);
         plan.compile_stats.estimated_peak_intermediate_bytes =
             estimate_plan_peak_intermediate_bytes(&plan.passes, format);
@@ -339,6 +408,7 @@ impl RenderPlan {
 
     pub(super) fn compile_for_scene(
         encoding: &SceneEncoding,
+        scale_factor: f32,
         viewport_size: (u32, u32),
         format: wgpu::TextureFormat,
         clear: wgpu::Color,
@@ -348,6 +418,7 @@ impl RenderPlan {
     ) -> Self {
         super::render_plan_compiler::compile_for_scene(
             encoding,
+            scale_factor,
             viewport_size,
             format,
             clear,
@@ -388,9 +459,10 @@ fn validate_plan_target_lifetimes(passes: &[RenderPlanPass]) -> Result<(), Strin
             PlanTarget::Intermediate0 => Some(0),
             PlanTarget::Intermediate1 => Some(1),
             PlanTarget::Intermediate2 => Some(2),
-            PlanTarget::Mask0 => Some(3),
-            PlanTarget::Mask1 => Some(4),
-            PlanTarget::Mask2 => Some(5),
+            PlanTarget::Intermediate3 => Some(3),
+            PlanTarget::Mask0 => Some(4),
+            PlanTarget::Mask1 => Some(5),
+            PlanTarget::Mask2 => Some(6),
             PlanTarget::Output => None,
         }
     }
@@ -401,18 +473,19 @@ fn validate_plan_target_lifetimes(passes: &[RenderPlanPass]) -> Result<(), Strin
             PlanTarget::Intermediate0 => "Intermediate0",
             PlanTarget::Intermediate1 => "Intermediate1",
             PlanTarget::Intermediate2 => "Intermediate2",
+            PlanTarget::Intermediate3 => "Intermediate3",
             PlanTarget::Mask0 => "Mask0",
             PlanTarget::Mask1 => "Mask1",
             PlanTarget::Mask2 => "Mask2",
         }
     }
 
-    let mut live: [bool; 6] = [false; 6];
-    let mut initialized: [bool; 6] = [false; 6];
+    let mut live: [bool; 7] = [false; 7];
+    let mut initialized: [bool; 7] = [false; 7];
 
     fn mark_read(
-        live: &[bool; 6],
-        initialized: &[bool; 6],
+        live: &[bool; 7],
+        initialized: &[bool; 7],
         pass_index: usize,
         t: PlanTarget,
     ) -> Result<(), String> {
@@ -435,8 +508,8 @@ fn validate_plan_target_lifetimes(passes: &[RenderPlanPass]) -> Result<(), Strin
     }
 
     fn mark_write(
-        live: &mut [bool; 6],
-        initialized: &mut [bool; 6],
+        live: &mut [bool; 7],
+        initialized: &mut [bool; 7],
         pass_index: usize,
         t: PlanTarget,
         load: Option<wgpu::LoadOp<wgpu::Color>>,
@@ -467,8 +540,8 @@ fn validate_plan_target_lifetimes(passes: &[RenderPlanPass]) -> Result<(), Strin
     }
 
     fn mark_release(
-        live: &mut [bool; 6],
-        initialized: &mut [bool; 6],
+        live: &mut [bool; 7],
+        initialized: &mut [bool; 7],
         pass_index: usize,
         t: PlanTarget,
     ) -> Result<(), String> {
@@ -598,8 +671,47 @@ fn validate_plan_target_lifetimes(passes: &[RenderPlanPass]) -> Result<(), Strin
                 }
                 mark_write(&mut live, &mut initialized, pass_index, dst, Some(load))?;
             }
+            RenderPlanPass::Dither(DitherPass {
+                src,
+                dst,
+                mask,
+                load,
+                ..
+            }) => {
+                mark_read(&live, &initialized, pass_index, src)?;
+                if let Some(mask) = mask {
+                    mark_read(&live, &initialized, pass_index, mask.target)?;
+                }
+                mark_write(&mut live, &mut initialized, pass_index, dst, Some(load))?;
+            }
+            RenderPlanPass::Noise(NoisePass {
+                src,
+                dst,
+                mask,
+                load,
+                ..
+            }) => {
+                mark_read(&live, &initialized, pass_index, src)?;
+                if let Some(mask) = mask {
+                    mark_read(&live, &initialized, pass_index, mask.target)?;
+                }
+                mark_write(&mut live, &mut initialized, pass_index, dst, Some(load))?;
+            }
             RenderPlanPass::DropShadow(DropShadowPass { src, dst, load, .. }) => {
                 mark_read(&live, &initialized, pass_index, src)?;
+                mark_write(&mut live, &mut initialized, pass_index, dst, Some(load))?;
+            }
+            RenderPlanPass::CustomEffect(CustomEffectPass {
+                src,
+                dst,
+                mask,
+                load,
+                ..
+            }) => {
+                mark_read(&live, &initialized, pass_index, src)?;
+                if let Some(mask) = mask {
+                    mark_read(&live, &initialized, pass_index, mask.target)?;
+                }
                 mark_write(&mut live, &mut initialized, pass_index, dst, Some(load))?;
             }
             RenderPlanPass::ReleaseTarget(t) => {
@@ -885,6 +997,40 @@ fn validate_plan_scissors(passes: &[RenderPlanPass]) -> Result<(), String> {
                     validate_mask_ref(pass_index, "AlphaThreshold", pass.dst_size, mask)?;
                 }
             }
+            RenderPlanPass::Dither(pass) => {
+                if let Some(scissor) = pass.dst_scissor.map(|s| s.0)
+                    && !within_local(scissor, pass.dst_size)
+                {
+                    return Err(format!(
+                        "pass[{pass_index}] Dither dst_scissor exceeds destination size"
+                    ));
+                }
+                if let Some(mask) = pass.mask {
+                    if pass.mask_uniform_index.is_none() {
+                        return Err(format!(
+                            "pass[{pass_index}] Dither mask requires mask_uniform_index"
+                        ));
+                    }
+                    validate_mask_ref(pass_index, "Dither", pass.dst_size, mask)?;
+                }
+            }
+            RenderPlanPass::Noise(pass) => {
+                if let Some(scissor) = pass.dst_scissor.map(|s| s.0)
+                    && !within_local(scissor, pass.dst_size)
+                {
+                    return Err(format!(
+                        "pass[{pass_index}] Noise dst_scissor exceeds destination size"
+                    ));
+                }
+                if let Some(mask) = pass.mask {
+                    if pass.mask_uniform_index.is_none() {
+                        return Err(format!(
+                            "pass[{pass_index}] Noise mask requires mask_uniform_index"
+                        ));
+                    }
+                    validate_mask_ref(pass_index, "Noise", pass.dst_size, mask)?;
+                }
+            }
             RenderPlanPass::DropShadow(pass) => {
                 if let Some(scissor) = pass.dst_scissor.map(|s| s.0)
                     && !within_local(scissor, pass.dst_size)
@@ -900,6 +1046,23 @@ fn validate_plan_scissors(passes: &[RenderPlanPass]) -> Result<(), String> {
                         ));
                     }
                     validate_mask_ref(pass_index, "DropShadow", pass.dst_size, mask)?;
+                }
+            }
+            RenderPlanPass::CustomEffect(pass) => {
+                if let Some(scissor) = pass.dst_scissor.map(|s| s.0)
+                    && !within_local(scissor, pass.dst_size)
+                {
+                    return Err(format!(
+                        "pass[{pass_index}] CustomEffect dst_scissor exceeds destination size"
+                    ));
+                }
+                if let Some(mask) = pass.mask {
+                    if pass.mask_uniform_index.is_none() {
+                        return Err(format!(
+                            "pass[{pass_index}] CustomEffect mask requires mask_uniform_index"
+                        ));
+                    }
+                    validate_mask_ref(pass_index, "CustomEffect", pass.dst_size, mask)?;
                 }
             }
             RenderPlanPass::FullscreenBlit(pass) => {
@@ -984,7 +1147,18 @@ fn validate_plan_first_output_write_is_clear(passes: &[RenderPlanPass]) -> Resul
             {
                 Some(load)
             }
+            RenderPlanPass::Dither(DitherPass { dst, load, .. }) if dst == PlanTarget::Output => {
+                Some(load)
+            }
+            RenderPlanPass::Noise(NoisePass { dst, load, .. }) if dst == PlanTarget::Output => {
+                Some(load)
+            }
             RenderPlanPass::DropShadow(DropShadowPass { dst, load, .. })
+                if dst == PlanTarget::Output =>
+            {
+                Some(load)
+            }
+            RenderPlanPass::CustomEffect(CustomEffectPass { dst, load, .. })
                 if dst == PlanTarget::Output =>
             {
                 Some(load)
@@ -1020,9 +1194,10 @@ fn estimate_plan_peak_intermediate_bytes(
             PlanTarget::Intermediate0 => 1,
             PlanTarget::Intermediate1 => 2,
             PlanTarget::Intermediate2 => 3,
-            PlanTarget::Mask0 => 4,
-            PlanTarget::Mask1 => 5,
-            PlanTarget::Mask2 => 6,
+            PlanTarget::Intermediate3 => 4,
+            PlanTarget::Mask0 => 5,
+            PlanTarget::Mask1 => 6,
+            PlanTarget::Mask2 => 7,
         }
     }
 
@@ -1031,20 +1206,21 @@ fn estimate_plan_peak_intermediate_bytes(
             PlanTarget::Output
             | PlanTarget::Intermediate0
             | PlanTarget::Intermediate1
-            | PlanTarget::Intermediate2 => scene_format,
+            | PlanTarget::Intermediate2
+            | PlanTarget::Intermediate3 => scene_format,
             PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2 => {
                 wgpu::TextureFormat::R8Unorm
             }
         }
     }
 
-    let mut live: [bool; 7] = [false; 7];
-    let mut sizes: [(u32, u32); 7] = [(0, 0); 7];
+    let mut live: [bool; 8] = [false; 8];
+    let mut sizes: [(u32, u32); 8] = [(0, 0); 8];
     let mut peak: u64 = 0;
 
     fn mark_live(
-        live: &mut [bool; 7],
-        sizes: &mut [(u32, u32); 7],
+        live: &mut [bool; 8],
+        sizes: &mut [(u32, u32); 8],
         t: PlanTarget,
         size: (u32, u32),
     ) {
@@ -1101,7 +1277,16 @@ fn estimate_plan_peak_intermediate_bytes(
             RenderPlanPass::AlphaThreshold(AlphaThresholdPass { dst, dst_size, .. }) => {
                 mark_live(&mut live, &mut sizes, dst, dst_size);
             }
+            RenderPlanPass::Dither(DitherPass { dst, dst_size, .. }) => {
+                mark_live(&mut live, &mut sizes, dst, dst_size);
+            }
+            RenderPlanPass::Noise(NoisePass { dst, dst_size, .. }) => {
+                mark_live(&mut live, &mut sizes, dst, dst_size);
+            }
             RenderPlanPass::DropShadow(DropShadowPass { dst, dst_size, .. }) => {
+                mark_live(&mut live, &mut sizes, dst, dst_size);
+            }
+            RenderPlanPass::CustomEffect(CustomEffectPass { dst, dst_size, .. }) => {
                 mark_live(&mut live, &mut sizes, dst, dst_size);
             }
             RenderPlanPass::ReleaseTarget(t) => {
@@ -1114,6 +1299,7 @@ fn estimate_plan_peak_intermediate_bytes(
             PlanTarget::Intermediate0,
             PlanTarget::Intermediate1,
             PlanTarget::Intermediate2,
+            PlanTarget::Intermediate3,
             PlanTarget::Mask0,
             PlanTarget::Mask1,
             PlanTarget::Mask2,
@@ -1134,7 +1320,7 @@ fn estimate_plan_peak_intermediate_bytes(
 }
 
 fn insert_early_releases(passes: &mut Vec<RenderPlanPass>) -> u64 {
-    let mut last_use: [Option<usize>; 6] = [None, None, None, None, None, None];
+    let mut last_use: [Option<usize>; 7] = [None, None, None, None, None, None, None];
 
     for (idx, pass) in passes.iter().enumerate() {
         let mut mark = |t: PlanTarget| {
@@ -1142,9 +1328,10 @@ fn insert_early_releases(passes: &mut Vec<RenderPlanPass>) -> u64 {
                 PlanTarget::Intermediate0 => Some(0),
                 PlanTarget::Intermediate1 => Some(1),
                 PlanTarget::Intermediate2 => Some(2),
-                PlanTarget::Mask0 => Some(3),
-                PlanTarget::Mask1 => Some(4),
-                PlanTarget::Mask2 => Some(5),
+                PlanTarget::Intermediate3 => Some(3),
+                PlanTarget::Mask0 => Some(4),
+                PlanTarget::Mask1 => Some(5),
+                PlanTarget::Mask2 => Some(6),
                 PlanTarget::Output => None,
             };
             if let Some(slot) = slot {
@@ -1168,6 +1355,13 @@ fn insert_early_releases(passes: &mut Vec<RenderPlanPass>) -> u64 {
                 }
             }
             RenderPlanPass::ScaleNearest(p) => {
+                mark(p.src);
+                mark(p.dst);
+                if let Some(mask) = p.mask {
+                    mark(mask.target);
+                }
+            }
+            RenderPlanPass::CustomEffect(p) => {
                 mark(p.src);
                 mark(p.dst);
                 if let Some(mask) = p.mask {
@@ -1209,6 +1403,20 @@ fn insert_early_releases(passes: &mut Vec<RenderPlanPass>) -> u64 {
                     mark(mask.target);
                 }
             }
+            RenderPlanPass::Dither(p) => {
+                mark(p.src);
+                mark(p.dst);
+                if let Some(mask) = p.mask {
+                    mark(mask.target);
+                }
+            }
+            RenderPlanPass::Noise(p) => {
+                mark(p.src);
+                mark(p.dst);
+                if let Some(mask) = p.mask {
+                    mark(mask.target);
+                }
+            }
             RenderPlanPass::DropShadow(p) => {
                 mark(p.src);
                 mark(p.dst);
@@ -1221,9 +1429,10 @@ fn insert_early_releases(passes: &mut Vec<RenderPlanPass>) -> u64 {
     let last0 = last_use[0];
     let last1 = last_use[1];
     let last2 = last_use[2];
-    let last_mask0 = last_use[3];
-    let last_mask1 = last_use[4];
-    let last_mask2 = last_use[5];
+    let last3 = last_use[3];
+    let last_mask0 = last_use[4];
+    let last_mask1 = last_use[5];
+    let last_mask2 = last_use[6];
 
     let old = std::mem::take(passes);
     let mut out: Vec<RenderPlanPass> = Vec::with_capacity(old.len() + 4);
@@ -1245,6 +1454,9 @@ fn insert_early_releases(passes: &mut Vec<RenderPlanPass>) -> u64 {
         }
         if last2 == Some(idx) {
             push_release(PlanTarget::Intermediate2);
+        }
+        if last3 == Some(idx) {
+            push_release(PlanTarget::Intermediate3);
         }
         if last_mask0 == Some(idx) {
             push_release(PlanTarget::Mask0);
@@ -1310,6 +1522,7 @@ fn push_fullscreen_blit(
     src_size: (u32, u32),
     dst_size: (u32, u32),
     dst_scissor: Option<ScissorRect>,
+    encode_output_srgb: bool,
     load: wgpu::LoadOp<wgpu::Color>,
 ) {
     plan.passes
@@ -1319,6 +1532,7 @@ fn push_fullscreen_blit(
             src_size,
             dst_size,
             dst_scissor: dst_scissor.map(LocalScissorRect),
+            encode_output_srgb,
             load,
         }));
 }
@@ -1458,7 +1672,7 @@ fn append_upsample_chain(
             PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2 => {
                 unreachable!("upsample chain must read from Intermediate1/2")
             }
-            PlanTarget::Intermediate0 | PlanTarget::Output => {
+            PlanTarget::Intermediate0 | PlanTarget::Intermediate3 | PlanTarget::Output => {
                 unreachable!("upsample chain must read from Intermediate1/2")
             }
         };
@@ -1485,17 +1699,20 @@ fn append_postprocess(
     viewport_size: (u32, u32),
     postprocess: DebugPostprocess,
     clear: wgpu::Color,
+    format: wgpu::TextureFormat,
 ) {
+    let encode_output_srgb = output_requires_explicit_srgb_encode(format);
     match postprocess {
         DebugPostprocess::None => {}
-        DebugPostprocess::OffscreenBlit => {
+        DebugPostprocess::OffscreenBlit { src } => {
             push_fullscreen_blit(
                 plan,
-                PlanTarget::Intermediate0,
+                src,
                 PlanTarget::Output,
                 viewport_size,
                 viewport_size,
                 None,
+                encode_output_srgb,
                 wgpu::LoadOp::Clear(clear),
             );
         }
@@ -1574,6 +1791,7 @@ fn append_postprocess(
                 viewport_size,
                 viewport_size,
                 None,
+                encode_output_srgb,
                 wgpu::LoadOp::Clear(clear),
             );
         }
@@ -1637,6 +1855,17 @@ fn append_postprocess(
 
             let final_scissor = map_scissor_to_size(scissor, viewport_size, viewport_size);
             if scissor.is_some() {
+                push_scale_nearest(
+                    plan,
+                    blur_src,
+                    PlanTarget::Intermediate0,
+                    blur_size,
+                    viewport_size,
+                    final_scissor,
+                    ScaleMode::Upscale,
+                    downsample_scale,
+                    wgpu::LoadOp::Load,
+                );
                 push_fullscreen_blit(
                     plan,
                     PlanTarget::Intermediate0,
@@ -1644,18 +1873,8 @@ fn append_postprocess(
                     viewport_size,
                     viewport_size,
                     None,
+                    encode_output_srgb,
                     wgpu::LoadOp::Clear(clear),
-                );
-                push_scale_nearest(
-                    plan,
-                    blur_src,
-                    PlanTarget::Output,
-                    blur_size,
-                    viewport_size,
-                    final_scissor,
-                    ScaleMode::Upscale,
-                    downsample_scale,
-                    wgpu::LoadOp::Load,
                 );
             } else {
                 push_scale_nearest(
@@ -1676,6 +1895,7 @@ fn append_postprocess(
                     viewport_size,
                     viewport_size,
                     final_scissor,
+                    encode_output_srgb,
                     wgpu::LoadOp::Clear(clear),
                 );
             }

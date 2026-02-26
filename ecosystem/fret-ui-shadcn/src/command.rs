@@ -25,7 +25,7 @@ use fret_ui::element::{
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::scroll::ScrollHandle;
-use fret_ui::{ElementContext, TextInputStyle, Theme, UiHost};
+use fret_ui::{ElementContext, TextInputStyle, Theme, ThemeSnapshot, UiHost};
 use fret_ui_headless::cmdk_score;
 use fret_ui_headless::cmdk_selection;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
@@ -245,21 +245,21 @@ pub fn command_entries_from_host_commands_with_gating_snapshot<H: UiHost>(
     entries
 }
 
-fn border(theme: &Theme) -> Color {
+fn border(theme: &ThemeSnapshot) -> Color {
     theme
         .color_by_key("border")
         .or_else(|| theme.color_by_key("input"))
         .expect("missing theme token: border/input")
 }
 
-fn bg(theme: &Theme) -> Color {
+fn bg(theme: &ThemeSnapshot) -> Color {
     theme
         .color_by_key("popover")
         .or_else(|| theme.color_by_key("background"))
         .expect("missing theme token: popover/background")
 }
 
-fn item_bg_hover(theme: &Theme) -> Color {
+fn item_bg_hover(theme: &ThemeSnapshot) -> Color {
     theme
         .color_by_key("accent")
         .or_else(|| theme.color_by_key("muted"))
@@ -320,14 +320,13 @@ fn command_text_input<H: UiHost>(
     expanded: Option<bool>,
     height: Px,
 ) -> AnyElement {
-    let theme = Theme::global(&*cx.app).clone();
-    let theme = &theme;
+    let theme = Theme::global(&*cx.app).snapshot();
 
     let fg = theme.color_token("foreground");
     let placeholder_fg = theme.color_token("muted-foreground");
-    let pad_y = MetricRef::space(Space::N3).resolve(theme);
+    let pad_y = MetricRef::space(Space::N3).resolve(&theme);
 
-    let mut chrome = TextInputStyle::from_theme(theme.snapshot());
+    let mut chrome = TextInputStyle::from_theme(theme.clone());
     // shadcn/ui v4: cmdk input uses `py-3` and relies on the wrapper for horizontal padding.
     chrome.padding = Edges {
         top: pad_y,
@@ -357,7 +356,7 @@ fn command_text_input<H: UiHost>(
     props.active_descendant = active_descendant;
     props.expanded = expanded;
     props.chrome = chrome;
-    props.text_style = item_text_style(theme);
+    props.text_style = item_text_style(&theme);
     props.layout.size = SizeStyle {
         width: Length::Fill,
         height: Length::Px(height),
@@ -480,7 +479,7 @@ fn cmdk_highlighted_label<H: UiHost>(
     )
 }
 
-pub(crate) fn item_text_style(theme: &Theme) -> TextStyle {
+pub(crate) fn item_text_style(theme: &ThemeSnapshot) -> TextStyle {
     let px = theme
         .metric_by_key("component.command.item.text_px")
         .or_else(|| theme.metric_by_key("font.size"))
@@ -494,7 +493,7 @@ pub(crate) fn item_text_style(theme: &Theme) -> TextStyle {
     style
 }
 
-fn heading_text_style(theme: &Theme) -> TextStyle {
+fn heading_text_style(theme: &ThemeSnapshot) -> TextStyle {
     // shadcn/ui v4: command group headings use `text-xs` / `leading-4`.
     let size = theme
         .metric_by_key("component.command.heading.text_px")
@@ -508,7 +507,7 @@ fn heading_text_style(theme: &Theme) -> TextStyle {
     style
 }
 
-pub(crate) fn shortcut_text_style(theme: &Theme) -> TextStyle {
+pub(crate) fn shortcut_text_style(theme: &ThemeSnapshot) -> TextStyle {
     let base_size = theme.metric_token("font.size");
     let base_line_height = theme.metric_token("font.line_height");
 
@@ -612,17 +611,16 @@ impl CommandShortcut {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
-        let theme = &theme;
+        let theme = Theme::global(&*cx.app).snapshot();
         let fg = theme.color_token("muted-foreground");
-        let style = shortcut_text_style(theme);
+        let style = shortcut_text_style(&theme);
         let platform = Platform::current();
 
         if shortcut_needs_symbol_font(self.text.as_ref())
             && let Some(symbol_font) = shortcut_symbol_font_for_platform(platform)
         {
             let layout = decl_style::layout_style(
-                theme,
+                &theme,
                 LayoutRefinement::default().flex_shrink_0().ml_auto(),
             );
             let rich = shortcut_attributed_text_with_symbol_fallback(self.text, symbol_font);
@@ -637,7 +635,6 @@ impl CommandShortcut {
                 ink_overflow: Default::default(),
             });
         }
-
         let mut text = ui::text(cx, self.text)
             .layout(LayoutRefinement::default().flex_shrink_0().ml_auto())
             .text_size_px(style.size)
@@ -708,17 +705,17 @@ impl Command {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let props = {
-            let theme = Theme::global(&*cx.app);
+            let theme = Theme::global(&*cx.app).snapshot();
             let base = ChromeRefinement::default()
                 .rounded(Radius::Lg)
                 .merge(
                     ChromeRefinement::default()
                         .border_width(Px(1.0))
-                        .border_color(ColorRef::Color(border(theme)))
-                        .bg(ColorRef::Color(bg(theme))),
+                        .border_color(ColorRef::Color(border(&theme)))
+                        .bg(ColorRef::Color(bg(&theme))),
                 )
                 .merge(self.chrome);
-            decl_style::container_props(theme, base, self.layout)
+            decl_style::container_props(&theme, base, self.layout)
         };
         let children = self.children;
         shadcn_layout::container_flow(cx, props, children)
@@ -787,7 +784,7 @@ impl CommandInput {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             cx.watch_model(&self.model).observe();
-            let theme = Theme::global(&*cx.app).clone();
+            let theme = Theme::global(&*cx.app).snapshot();
             let theme = &theme;
 
             let border = border(theme);
@@ -1162,9 +1159,9 @@ impl CommandEmpty {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let (fg, text_style) = {
-            let theme = Theme::global(&*cx.app);
+            let theme = Theme::global(&*cx.app).snapshot();
             let fg = theme.color_token("muted-foreground");
-            let text_style = item_text_style(theme);
+            let text_style = item_text_style(&theme);
             (fg, text_style)
         };
         cx.container(
@@ -1269,9 +1266,9 @@ impl CommandLoading {
         let progress = self.progress;
 
         let (fg, text_style) = {
-            let theme = Theme::global(&*cx.app);
+            let theme = Theme::global(&*cx.app).snapshot();
             let fg = theme.color_token("muted-foreground");
-            let text_style = item_text_style(theme);
+            let text_style = item_text_style(&theme);
             (fg, text_style)
         };
 
@@ -1515,20 +1512,20 @@ impl CommandList {
                 text_style,
                 item_layout,
             ) = {
-                let theme = Theme::global(&*cx.app);
-                let row_h = MetricRef::space(Space::N8).resolve(theme);
-                let row_gap = MetricRef::space(Space::N2).resolve(theme);
-                let pad_x = MetricRef::space(Space::N2).resolve(theme);
+                let theme = Theme::global(&*cx.app).snapshot();
+                let row_h = MetricRef::space(Space::N8).resolve(&theme);
+                let row_gap = MetricRef::space(Space::N2).resolve(&theme);
+                let pad_x = MetricRef::space(Space::N2).resolve(&theme);
                 // new-york-v4: `py-1.5` for `CommandItem` in the base `Command` surface.
-                let pad_y = MetricRef::space(Space::N1p5).resolve(theme);
-                let radius = MetricRef::radius(Radius::Sm).resolve(theme);
-                let ring = decl_style::focus_ring(theme, radius);
-                let bg_hover = item_bg_hover(theme);
+                let pad_y = MetricRef::space(Space::N1p5).resolve(&theme);
+                let radius = MetricRef::radius(Radius::Sm).resolve(&theme);
+                let ring = decl_style::focus_ring(&theme, radius);
+                let bg_hover = item_bg_hover(&theme);
                 let fg = theme.color_token("foreground");
                 let fg_disabled = alpha_mul(fg, 0.5);
-                let text_style = item_text_style(theme);
+                let text_style = item_text_style(&theme);
                 let item_layout = decl_style::layout_style(
-                    theme,
+                    &theme,
                     LayoutRefinement::default().w_full().min_h(row_h).min_w_0(),
                 );
                 (
@@ -1547,11 +1544,11 @@ impl CommandList {
 
             let scroll = self.scroll.w_full().min_w_0();
 
-            let theme = Theme::global(&*cx.app);
-            let border = border(theme);
-            let heading_style = heading_text_style(theme);
+            let theme = Theme::global(&*cx.app).snapshot();
+            let border = border(&theme);
+            let heading_style = heading_text_style(&theme);
             let fg_heading = theme.color_token("muted-foreground");
-            let group_pad_y = MetricRef::space(Space::N1).resolve(theme);
+            let group_pad_y = MetricRef::space(Space::N1).resolve(&theme);
 
             ScrollArea::new(vec![cx.roving_flex(
                 RovingFlexProps {
@@ -2483,7 +2480,7 @@ impl CommandPalette {
         }
 
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
+            let theme = Theme::global(&*cx.app).snapshot();
             let input_wrapper_h_fallback = self.input_wrapper_h.resolve(&theme);
             let input_h_fallback = self.input_h.resolve(&theme);
             let input_icon_size_fallback = self.input_icon_size.resolve(&theme);
