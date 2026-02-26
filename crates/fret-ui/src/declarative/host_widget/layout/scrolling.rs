@@ -1053,6 +1053,7 @@ impl ElementHostWidget {
                 max_child
             }
         } else if cx.tree.view_cache_enabled()
+            && !at_scroll_extent_edge
             && !must_probe_for_growing_extent
             && let Some(cached) = intrinsic_cached_max_child
             && cached != Size::default()

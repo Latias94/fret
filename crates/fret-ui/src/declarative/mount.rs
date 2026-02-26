@@ -1594,6 +1594,10 @@ fn mount_element<H: UiHost + 'static>(
                 ),
             );
         }
+
+        if transitioned_into_reuse {
+            window_state.touch_view_cache_state_keys_for_subtree_elements(id);
+        }
         inherit_observations_for_existing_subtree(ui, window_state, window_frame, node);
         collect_scroll_handle_bindings_for_existing_subtree(
             ui,
