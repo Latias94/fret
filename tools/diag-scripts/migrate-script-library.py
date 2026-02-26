@@ -53,10 +53,10 @@ def find_repo_root(start: Path) -> Path:
     raise SystemExit(f"error: failed to locate repo root (missing {REPO_ROOT_SENTINEL} in ancestors)")
 
 
-def iter_top_level_scripts(repo_root: Path) -> Iterable[Path]:
-    base = repo_root / SCRIPTS_DIR
+def iter_scripts_in_dir(repo_root: Path, scan_dir: Path) -> Iterable[Path]:
+    base = repo_root / scan_dir
     if not base.is_dir():
-        raise SystemExit(f"error: scripts dir not found: {base}")
+        raise SystemExit(f"error: scan dir not found: {base}")
     for p in sorted(base.glob("*.json")):
         name = p.name
         if name in {"index.json"}:
@@ -214,6 +214,8 @@ def build_move_plan(repo_root: Path, files: Iterable[Path], filters: FilterSpec)
         if not matches_filter_spec(p.name, category, filters):
             continue
         dst = repo_root / SCRIPTS_DIR / subdir_rel / p.name
+        if p.resolve() == dst.resolve():
+            continue
         out.append(
             MoveOp(
                 src=str(p.relative_to(repo_root)).replace("\\", "/"),
@@ -227,12 +229,17 @@ def build_move_plan(repo_root: Path, files: Iterable[Path], filters: FilterSpec)
 
 
 def write_plan_json(
-    repo_root: Path, plan_out: Path, ops: list[MoveOp], filters: FilterSpec
+    repo_root: Path,
+    plan_out: Path,
+    ops: list[MoveOp],
+    filters: FilterSpec,
+    scan_dirs: list[Path],
 ) -> None:
     payload = {
         "schema_version": 1,
         "kind": "diag_script_library_migration_plan",
         "scripts_dir": str(SCRIPTS_DIR).replace("\\", "/"),
+        "scan_dirs": [str(p).replace("\\", "/") for p in scan_dirs],
         "filters": {
             "include_prefixes": list(filters.include_prefixes),
             "include_categories": list(filters.include_categories),
@@ -327,6 +334,15 @@ def main() -> None:
         default=".",
         help="Starting directory used to locate repo root (default: .).",
     )
+    ap.add_argument(
+        "--scan-dir",
+        action="append",
+        default=[],
+        help=(
+            "Repo-relative directory to scan for scripts (non-recursive; *.json). "
+            "Repeatable. Default: tools/diag-scripts (top-level only)."
+        ),
+    )
 
     # Incremental migration filters (optional).
     ap.add_argument(
@@ -374,7 +390,12 @@ def main() -> None:
     args = ap.parse_args()
 
     repo_root = find_repo_root(Path(args.cwd))
-    files = list(iter_top_level_scripts(repo_root))
+    scan_dirs = [Path(s) for s in args.scan_dir]
+    if not scan_dirs:
+        scan_dirs = [SCRIPTS_DIR]
+    files: list[Path] = []
+    for d in scan_dirs:
+        files.extend(iter_scripts_in_dir(repo_root, d))
 
     filters = FilterSpec(
         include_prefixes=tuple(args.include_prefix),
@@ -389,7 +410,7 @@ def main() -> None:
     ops = build_move_plan(repo_root, files, filters)
 
     plan_out = repo_root / Path(args.plan_out)
-    write_plan_json(repo_root, plan_out, ops, filters)
+    write_plan_json(repo_root, plan_out, ops, filters, scan_dirs)
     print(f"wrote plan: {plan_out}")
     print(f"planned moves: {len(ops)}")
 
