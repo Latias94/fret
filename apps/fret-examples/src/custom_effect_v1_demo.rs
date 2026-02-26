@@ -395,6 +395,13 @@ fn stage(
         },
     );
 
+    let mut stripes_layer_layout = LayoutStyle::default();
+    stripes_layer_layout.position = PositionStyle::Absolute;
+    stripes_layer_layout.inset.left = Some(Px(0.0)).into();
+    stripes_layer_layout.inset.right = Some(Px(0.0)).into();
+    stripes_layer_layout.inset.top = Some(Px(0.0)).into();
+    stripes_layer_layout.inset.bottom = Some(Px(0.0)).into();
+
     let mut stage_layout = LayoutStyle::default();
     stage_layout.size.width = Length::Fill;
     stage_layout.size.height = Length::Fill;
@@ -403,16 +410,19 @@ fn stage(
     cx.container(
         ContainerProps {
             layout: stage_layout,
-            background: Some(srgb(9, 12, 18, 1.0)),
             ..Default::default()
         },
         move |cx| {
-            let stripes = stripes;
+            let stripes = cx.container(
+                ContainerProps {
+                    layout: stripes_layer_layout,
+                    ..Default::default()
+                },
+                move |_cx| vec![stripes],
+            );
 
             let mut header_layout = LayoutStyle::default();
-            header_layout.position = PositionStyle::Absolute;
-            header_layout.inset.left = Some(Px(24.0)).into();
-            header_layout.inset.top = Some(Px(20.0)).into();
+            header_layout.size.width = Length::Fill;
 
             let header = cx.container(
                 ContainerProps {
@@ -431,20 +441,34 @@ fn stage(
                 },
             );
 
-            let mut lenses_layout = LayoutStyle::default();
-            lenses_layout.position = PositionStyle::Absolute;
-            lenses_layout.inset.left = Some(Px(24.0)).into();
-            lenses_layout.inset.top = Some(Px(120.0)).into();
+            let mut content_layout = LayoutStyle::default();
+            content_layout.size.width = Length::Fill;
+            content_layout.size.height = Length::Fill;
 
-            let lenses = cx.container(
+            let content = cx.container(
                 ContainerProps {
-                    layout: lenses_layout,
+                    layout: content_layout,
+                    padding: Edges {
+                        left: Px(24.0),
+                        right: Px(24.0),
+                        top: Px(20.0),
+                        bottom: Px(24.0),
+                    }
+                    .into(),
                     ..Default::default()
                 },
-                move |_cx| vec![lenses],
+                move |cx| {
+                    vec![shadcn::stack::vstack(
+                        cx,
+                        shadcn::stack::VStackProps::default()
+                            .gap(Space::N4)
+                            .items_start(),
+                        move |_cx| vec![header, lenses],
+                    )]
+                },
             );
 
-            vec![stripes, header, lenses]
+            vec![stripes, content]
         },
     )
 }
@@ -664,7 +688,7 @@ fn inspector(
         ContainerProps {
             layout,
             padding: Edges::all(Px(16.0)).into(),
-            background: Some(theme.color_token("card")),
+            background: Some(theme.color_token("background")),
             border: Edges {
                 left: Px(0.0),
                 right: Px(1.0),
@@ -693,7 +717,16 @@ fn inspector(
                 )
             };
 
-            vec![shadcn::stack::vstack(
+            let header = shadcn::CardHeader::new([
+                shadcn::CardTitle::new("Custom Effect V1").into_element(cx),
+                shadcn::CardDescription::new(
+                    "Registers WGSL at on_gpu_ready and applies EffectStep::CustomV1.",
+                )
+                .into_element(cx),
+            ])
+            .into_element(cx);
+
+            let content = shadcn::CardContent::new([shadcn::stack::vstack(
                 cx,
                 shadcn::stack::VStackProps::default()
                     .gap(Space::N3)
@@ -819,15 +852,6 @@ fn inspector(
                     );
 
                     vec![
-                        shadcn::CardHeader::new([
-                            shadcn::CardTitle::new("Custom Effect V1").into_element(cx),
-                            shadcn::CardDescription::new(
-                                "Registers WGSL at on_gpu_ready and applies EffectStep::CustomV1.",
-                            )
-                            .into_element(cx),
-                        ])
-                        .into_element(cx),
-                        shadcn::Separator::new().into_element(cx),
                         shadcn::stack::hstack(
                             cx,
                             shadcn::stack::HStackProps::default()
@@ -858,7 +882,15 @@ fn inspector(
                             .into_element(cx),
                     ]
                 },
-            )]
+            )])
+            .into_element(cx);
+
+            vec![
+                shadcn::Card::new([header, content])
+                    .ui()
+                    .w_full()
+                    .into_element(cx),
+            ]
         },
     )
 }
