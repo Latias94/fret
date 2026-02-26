@@ -379,7 +379,7 @@ fn lens_shell(cx: &mut ElementContext<'_, App>, label: Arc<str>, body: AnyElemen
             layout: outer_layout,
             corner_radii: Corners::all(radius),
             border: Edges::all(Px(1.0)),
-            border_color: Some(srgb(255, 255, 255, 0.22)),
+            border_color: Some(srgb(255, 255, 255, 0.24)),
             ..Default::default()
         },
         move |cx| {
@@ -409,7 +409,9 @@ fn lens_shell(cx: &mut ElementContext<'_, App>, label: Arc<str>, body: AnyElemen
                         bottom: Px(6.0),
                     }
                     .into(),
-                    background: Some(srgb(0, 0, 0, 0.45)),
+                    background: Some(srgb(10, 12, 18, 0.32)),
+                    border: Edges::all(Px(1.0)),
+                    border_color: Some(srgb(255, 255, 255, 0.18)),
                     corner_radii: Corners::all(Px(999.0)),
                     ..Default::default()
                 },
@@ -496,6 +498,8 @@ fn inspector(
     strength: f32,
     msg: &mut MessageRouter<Msg>,
 ) -> AnyElement {
+    let theme = Theme::global(&*cx.app).snapshot();
+
     let reset_cmd = msg.cmd(Msg::Reset);
     let enabled_model = st.enabled.clone();
     let strength_model = st.strength.clone();
@@ -509,10 +513,35 @@ fn inspector(
         ContainerProps {
             layout,
             padding: Edges::all(Px(16.0)).into(),
-            background: Some(srgb(17, 19, 24, 0.92)),
+            background: Some(theme.color_token("card")),
+            border: Edges {
+                left: Px(0.0),
+                right: Px(1.0),
+                top: Px(0.0),
+                bottom: Px(0.0),
+            },
+            border_color: Some(theme.color_token("border")),
             ..Default::default()
         },
         move |cx| {
+            let label_row = |cx: &mut ElementContext<'_, App>, label: &str, value: String| {
+                shadcn::stack::hstack(
+                    cx,
+                    shadcn::stack::HStackProps::default()
+                        .gap(Space::N2)
+                        .items_center(),
+                    move |cx| {
+                        vec![
+                            shadcn::Label::new(label).into_element(cx),
+                            cx.spacer(SpacerProps::default()),
+                            shadcn::Badge::new(value)
+                                .variant(shadcn::BadgeVariant::Secondary)
+                                .into_element(cx),
+                        ]
+                    },
+                )
+            };
+
             vec![shadcn::stack::vstack(
                 cx,
                 shadcn::stack::VStackProps::default()
@@ -524,21 +553,7 @@ fn inspector(
                         shadcn::stack::VStackProps::default().gap(Space::N2),
                         move |cx| {
                             vec![
-                                shadcn::stack::hstack(
-                                    cx,
-                                    shadcn::stack::HStackProps::default()
-                                        .gap(Space::N2)
-                                        .items_center(),
-                                    move |cx| {
-                                        vec![
-                                            shadcn::Label::new("Strength").into_element(cx),
-                                            cx.spacer(SpacerProps::default()),
-                                            shadcn::Badge::new(format!("{strength:.2}"))
-                                                .variant(shadcn::BadgeVariant::Secondary)
-                                                .into_element(cx),
-                                        ]
-                                    },
-                                ),
+                                label_row(cx, "Strength", format!("{strength:.2}")),
                                 shadcn::Slider::new(strength_model.clone())
                                     .range(0.0, 1.0)
                                     .step(0.01)
@@ -548,11 +563,14 @@ fn inspector(
                     );
 
                     vec![
-                        shadcn::typography::h4(cx, "Custom Effect V1"),
-                        shadcn::typography::muted(
-                            cx,
-                            "Registers WGSL at on_gpu_ready and applies EffectStep::CustomV1.",
-                        ),
+                        shadcn::CardHeader::new([
+                            shadcn::CardTitle::new("Custom Effect V1").into_element(cx),
+                            shadcn::CardDescription::new(
+                                "Registers WGSL at on_gpu_ready and applies EffectStep::CustomV1.",
+                            )
+                            .into_element(cx),
+                        ])
+                        .into_element(cx),
                         shadcn::Separator::new().into_element(cx),
                         shadcn::stack::hstack(
                             cx,
