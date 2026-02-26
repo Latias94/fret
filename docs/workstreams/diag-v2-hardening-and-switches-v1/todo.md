@@ -50,6 +50,16 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
   - [x] add `script_redirect` stub support with loop detection,
   - [x] ensure redirects never reach the runtime (tooling resolves before push).
 - [x] Add a migration helper script (plan + apply moves + optional redirects/rewrite).
+- [ ] Execute incremental taxonomy migrations (small batches + redirects + closure checks):
+  - [x] `ui-gallery/select` (17 scripts)
+  - [x] `ui-gallery/combobox` (22 scripts)
+  - [x] `ui-gallery/text-ime` (2 scripts)
+  - [ ] `ui-gallery/text-wrap`
+  - [ ] `ui-gallery/overlay`
+  - [ ] `ui-gallery/code-editor`
+  - [ ] `ui-gallery/markdown-editor`
+  - [ ] `ui-gallery/layout`
+  - [ ] `ui-gallery/perf`
 - [ ] Update references after path moves (choose one):
   - [ ] replace hard-coded lists with registry/directory inputs, or
   - [ ] scripted rewrite of code/docs references (large diff; less preferred).
