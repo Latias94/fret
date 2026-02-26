@@ -1429,10 +1429,10 @@ fn calendar_multi_month_view<H: UiHost>(
 
         let prev_test_id = test_id_prefix
             .as_ref()
-            .map(|p| Arc::from(format!("{p}:nav-prev")));
+            .map(|p| Arc::from(format!("{p}.nav-prev")));
         let next_test_id = test_id_prefix
             .as_ref()
-            .map(|p| Arc::from(format!("{p}:nav-next")));
+            .map(|p| Arc::from(format!("{p}.nav-next")));
 
         let month_model_prev = month_model.clone();
         let prev = calendar_nav_icon_button(
