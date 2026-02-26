@@ -457,6 +457,15 @@ pub enum EffectStep {
     CustomV1 {
         id: EffectId,
         params: EffectParamsV1,
+        /// Maximum sampling offset (in logical px) that the custom effect may use when reading
+        /// from its source texture.
+        ///
+        /// This is a bounded contract input used by renderers to deterministically allocate
+        /// enough context ("padding") for effect chains (e.g. blur -> custom refraction) without
+        /// introducing edge artifacts near clipped/scissored bounds.
+        ///
+        /// Backends may clamp or degrade behavior under tight budgets.
+        max_sample_offset_px: crate::Px,
     },
 }
 
@@ -475,9 +484,18 @@ impl EffectStep {
             EffectStep::BackdropWarpV2(w) => EffectStep::BackdropWarpV2(w.sanitize()),
             EffectStep::DropShadowV1(s) => EffectStep::DropShadowV1(s.sanitize()),
             EffectStep::NoiseV1(n) => EffectStep::NoiseV1(n.sanitize()),
-            EffectStep::CustomV1 { id, params } => EffectStep::CustomV1 {
+            EffectStep::CustomV1 {
+                id,
+                params,
+                max_sample_offset_px,
+            } => EffectStep::CustomV1 {
                 id,
                 params: params.sanitize(),
+                max_sample_offset_px: if max_sample_offset_px.0.is_finite() {
+                    crate::Px(max_sample_offset_px.0.max(0.0))
+                } else {
+                    crate::Px(0.0)
+                },
             },
             EffectStep::AlphaThreshold { cutoff, soft } => EffectStep::AlphaThreshold {
                 cutoff: if cutoff.is_finite() { cutoff } else { 0.0 },

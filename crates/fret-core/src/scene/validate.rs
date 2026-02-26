@@ -374,7 +374,11 @@ impl SceneRecording {
                             }
                             EffectStep::Pixelate { scale } => scale > 0,
                             EffectStep::Dither { .. } => true,
-                            EffectStep::CustomV1 { params, .. } => params.is_finite(),
+                            EffectStep::CustomV1 {
+                                params,
+                                max_sample_offset_px,
+                                ..
+                            } => params.is_finite() && px_is_finite(max_sample_offset_px),
                         };
                         if !ok {
                             return Err(SceneValidationError {

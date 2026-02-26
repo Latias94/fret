@@ -425,9 +425,14 @@ pub(super) fn mix_scene_op(state: u64, op: SceneOp) -> u64 {
                             DitherMode::Bayer4x4 => 1,
                         },
                     ),
-                    EffectStep::CustomV1 { id, params } => {
+                    EffectStep::CustomV1 {
+                        id,
+                        params,
+                        max_sample_offset_px,
+                    } => {
                         let mut state = mix_u64(state, 11);
                         state = mix_u64(state, id.data().as_ffi());
+                        state = mix_px(state, max_sample_offset_px);
                         for v in &params.vec4s {
                             for x in v {
                                 state = mix_f32(state, *x);
