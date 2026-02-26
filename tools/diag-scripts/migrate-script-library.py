@@ -99,16 +99,25 @@ def categorize_script(filename: str) -> tuple[str, str]:
             return ("ui_gallery.code_editor", "ui-gallery/code-editor")
         if n.startswith("ui-gallery-markdown-editor-") or "markdown-editor" in n:
             return ("ui_gallery.markdown_editor", "ui-gallery/markdown-editor")
-        if n.startswith("ui-gallery-text-") or "-ime-" in n or "ime" in n:
-            return ("ui_gallery.text_ime", "ui-gallery/text-ime")
-        if "wrap" in n:
-            return ("ui_gallery.text_wrap", "ui-gallery/text-wrap")
         if n.startswith("ui-gallery-combobox-"):
             return ("ui_gallery.combobox", "ui-gallery/combobox")
         if n.startswith("ui-gallery-select-"):
             return ("ui_gallery.select", "ui-gallery/select")
         if "shadcn" in n or "conformance" in n:
             return ("ui_gallery.shadcn_conformance", "ui-gallery/shadcn-conformance")
+
+        # Text buckets: keep IME matching token-based (avoid matching "time").
+        if (
+            n.startswith("ui-gallery-web-ime-")
+            or n.startswith("ui-gallery-input-ime-")
+            or "-ime-" in n
+        ):
+            return ("ui_gallery.text_ime", "ui-gallery/text-ime")
+        if n.startswith("ui-gallery-text-wrap-"):
+            return ("ui_gallery.text_wrap", "ui-gallery/text-wrap")
+        if n.startswith("ui-gallery-text-"):
+            return ("ui_gallery.text", "ui-gallery/text")
+
         if n.endswith("-steady.json") or "perf" in n or "resize" in n or "torture" in n:
             return ("ui_gallery.perf", "ui-gallery/perf")
         if "overlay" in n or "dialog" in n or "popover" in n or "tooltip" in n:
