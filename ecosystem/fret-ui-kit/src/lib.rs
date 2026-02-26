@@ -176,6 +176,7 @@ macro_rules! ui_into_element_render_once {
 
 pub mod command;
 mod corners4;
+pub mod custom_effects;
 pub mod declarative;
 #[cfg(feature = "dnd")]
 pub mod dnd;
