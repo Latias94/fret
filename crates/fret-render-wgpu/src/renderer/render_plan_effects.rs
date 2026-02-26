@@ -57,12 +57,17 @@ pub(super) fn apply_chain_in_place(
         return;
     }
 
+    let steps: Vec<fret_core::EffectStep> = chain.iter().collect();
+    if steps.is_empty() {
+        return;
+    }
+
     let mut budget_bytes = ctx.intermediate_budget_bytes;
     let srcdst_bytes = estimate_texture_bytes(ctx.viewport_size, ctx.format, 1);
 
     let scratch_targets = available_scratch_targets(in_use_targets, srcdst);
     let forced_quarter_blur = scratch_targets.len() >= 2
-        && chain.iter().any(|step| match step {
+        && steps.iter().any(|step| match *step {
             fret_core::EffectStep::GaussianBlur {
                 radius_px,
                 downsample,
@@ -118,7 +123,21 @@ pub(super) fn apply_chain_in_place(
         None
     };
 
-    for step in chain.iter() {
+    // Clip/shape masks are coverage (alpha) multipliers. If we apply them at every effect step in a
+    // chain, coverage compounds (e.g. clip^2) and produces visible edge darkening (especially
+    // around rounded corners) for common chains like blur -> custom refraction.
+    //
+    // To avoid this, we apply clip/mask only on the final step of the chain and keep intermediate
+    // steps unmasked.
+    let chain_mask_uniform_index = mask_uniform_index;
+    let chain_mask = mask;
+    let step_count = steps.len();
+
+    for (step_index, step) in steps.into_iter().enumerate() {
+        let apply_mask = step_index + 1 == step_count;
+        let mask_uniform_index = apply_mask.then_some(chain_mask_uniform_index).flatten();
+        let mask = apply_mask.then_some(chain_mask).flatten();
+
         match step {
             fret_core::EffectStep::GaussianBlur {
                 radius_px,
@@ -1328,6 +1347,65 @@ fn scale_backdrop_warp_v1(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn chain_applies_clip_only_on_final_step() {
+        let ctx = EffectCompileCtx {
+            viewport_size: (64, 64),
+            format: wgpu::TextureFormat::Rgba8Unorm,
+            intermediate_budget_bytes: 1u64 << 60,
+            clear: wgpu::Color::TRANSPARENT,
+            scale_factor: 1.0,
+        };
+        let scissor = ScissorRect::full(64, 64);
+
+        let mut passes = Vec::new();
+        let mut degradations = super::super::EffectDegradationSnapshot::default();
+        let mut blur_quality = super::super::BlurQualitySnapshot::default();
+        apply_chain_in_place(
+            &mut passes,
+            &[],
+            PlanTarget::Intermediate0,
+            fret_core::EffectMode::Backdrop,
+            fret_core::EffectChain::from_steps(&[
+                fret_core::EffectStep::GaussianBlur {
+                    radius_px: fret_core::Px(14.0),
+                    downsample: 2,
+                },
+                fret_core::EffectStep::CustomV1 {
+                    id: fret_core::EffectId::default(),
+                    params: fret_core::scene::EffectParamsV1 {
+                        vec4s: [[0.0; 4]; 4],
+                    },
+                },
+            ]),
+            fret_core::EffectQuality::Medium,
+            scissor,
+            Some(7),
+            &[],
+            &mut degradations,
+            &mut blur_quality,
+            ctx,
+        );
+
+        let blur_masked = passes.iter().any(|p| match p {
+            RenderPlanPass::Blur(pass) => pass.mask_uniform_index.is_some() || pass.mask.is_some(),
+            _ => false,
+        });
+        assert!(
+            !blur_masked,
+            "intermediate blur passes must not apply clip coverage; apply it once at chain end"
+        );
+
+        let custom = passes.iter().find_map(|p| match p {
+            RenderPlanPass::CustomEffect(pass) => Some(pass),
+            _ => None,
+        });
+        assert!(
+            custom.is_some_and(|p| p.mask_uniform_index.is_some() || p.mask.is_some()),
+            "the final step must apply clip coverage"
+        );
+    }
 
     #[test]
     fn gaussian_blur_radius_affects_pass_count() {
