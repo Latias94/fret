@@ -19,9 +19,9 @@ for advanced looks (acrylic / glass / refraction-like effects) via bounded mecha
 
 ## Why now
 
-The contract already exposes effect parameters (e.g. `GaussianBlur.radius_px`, `DropShadowV1.blur_radius_px`), but the
-wgpu backend currently compiles blur passes with a fixed kernel and does not consume radius in the plan. That makes the
-contract misleading and blocks accurate replication.
+The contract already exposes effect parameters (e.g. `GaussianBlur.radius_px`, `DropShadowV1.blur_radius_px`). This
+workstream closes the remaining gaps by ensuring the wgpu backend consumes those parameters in the render plan and
+degrades deterministically under budgets.
 
 Separately, scene encoding is cached, but the cache key does not include some encode-time inputs (material registry
 generation + encode budgets/config). That can yield stale encodings after configuration or registration changes.
@@ -38,7 +38,7 @@ In-scope (v1):
   - `EffectStep::NoiseV1` (bounded procedural grain for acrylic/glass recipes).
   - A single shared blur primitive used by multiple effects, with deterministic budgeting/degradation.
   - A documented rule for intermediate color handling (linear intermediates; deterministic encode path).
-  - A capability-gated, bounded “custom effect” extension design (start as wgpu-only; decide later if it becomes core).
+  - A capability-gated, bounded “custom effect” extension point (wgpu-only MVP first; `CustomV1`).
 
 Out-of-scope (v1):
 

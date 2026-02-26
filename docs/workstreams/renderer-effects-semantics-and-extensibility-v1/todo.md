@@ -28,6 +28,12 @@ This TODO is ordered by implementation priority (P0 first), and is designed to b
   - Implemented: ordered Bayer 4x4 dithering in effect chains (portable, deterministic).
   - Evidence: `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs`.
 
+- [x] Avoid compounding clip coverage across multi-step effect chains:
+  - Apply clip/mask coverage only on the final step of a chain to avoid `clip^2` edge darkening
+    (e.g. blur → custom refraction with rounded clips).
+  - Evidence: `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs`,
+    `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` (unit test).
+
 ## P1 — Consistency (color, intermediates, diagnostics)
 
 - [x] Document and enforce intermediate color rules:
@@ -78,18 +84,17 @@ This TODO is ordered by implementation priority (P0 first), and is designed to b
 
 ## P2 — Extensibility (bounded custom effects)
 
-- [ ] Design a capability-gated custom effect extension point (wgpu-only first):
-  - [ ] Fixed, versioned bind shapes (params-only; params + 1 catalog texture; params + 1 user texture) with strict limits.
-  - [ ] Explicit cost model + budgeting hooks so the plan can reject/degrade deterministically.
-  - [ ] Clear layering: core contract stays small; ecosystem can provide “recipes” that map to the extension.
-  - Non-goal: arbitrary user-provided WGSL in core without a bounded ABI and capability gates.
+- [x] Design a capability-gated custom effect extension point (wgpu-only first):
+  - Fixed, versioned bind shapes with strict limits.
+  - Clear layering: core contract stays small; ecosystem provides “recipes” and installation helpers.
   - Design doc: `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-abi-wgpu-mvp.md`.
 
-- [ ] Implement CustomV1 (wgpu-only MVP):
-  - [ ] `fret-core`: `EffectId`, `EffectParamsV1`, `EffectStep::CustomV1` + fingerprint/validate.
-  - [ ] `fret-render-wgpu`: registry + `effects_generation` + cache key inclusion.
-  - [ ] `fret-render-wgpu`: `RenderPlanPass::CustomEffect` + recorder/executor support.
-  - [ ] Conformance: scissored + ordering + determinism for a registered custom effect.
+- [x] Implement CustomV1 (wgpu-only MVP):
+  - `fret-core`: `EffectId`, `EffectParamsV1`, `EffectStep::CustomV1` + fingerprint/validate.
+  - `fret-render-wgpu`: registry + `effects_generation` + cache key inclusion.
+  - `fret-render-wgpu`: `RenderPlanPass::CustomEffect` + recorder/executor support.
+  - Demo: `apps/fret-examples/src/custom_effect_v1_demo.rs` (wired via `apps/fret-demo`).
+  - Conformance: `crates/fret-render-wgpu/tests/effect_custom_v1_conformance.rs`.
 
 ## Suggested regression gates
 

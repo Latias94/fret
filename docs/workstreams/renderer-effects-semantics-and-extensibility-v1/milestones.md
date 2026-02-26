@@ -39,6 +39,14 @@ Exit criteria:
 - `DropShadowV1.blur_radius_px` affects plan compilation and output.
 - Deterministic degradation rules are defined and observable in perf/diagnostics.
 
+## M2.1 — Chain clip coverage semantics
+
+Exit criteria:
+
+- Clip/mask coverage is applied exactly once for multi-step effect chains (final step only), preventing `clip^2`
+  edge darkening.
+- A unit test locks this behavior for representative chains (e.g. blur → custom effect).
+
 ## M3 — Intermediate color rule + conformance
 
 Exit criteria:
@@ -57,4 +65,4 @@ Exit criteria:
 - A design for a bounded, capability-gated custom effect extension point exists and is reviewed.
 - A minimal MVP can render one custom effect (e.g. “glass tint + subtle blur + warp”) without touching core contracts.
 - Budgeting/degradation is deterministic and diagnosable.
- - Evidence: `docs/adr/0299-custom-effect-abi-wgpu-only-mvp.md`.
+ - Evidence: `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-abi-wgpu-mvp.md`.
