@@ -61,6 +61,15 @@ def iter_top_level_scripts(repo_root: Path) -> Iterable[Path]:
         name = p.name
         if name in {"index.json"}:
             continue
+        # Avoid re-migrating redirect stubs written by previous runs.
+        # Redirect stubs are suite/tooling-only compatibility artifacts, not canonical script sources.
+        try:
+            raw = json.loads(p.read_text(encoding="utf-8"))
+            if isinstance(raw, dict) and raw.get("kind") == "script_redirect":
+                continue
+        except Exception:
+            # If it's not valid JSON, keep the previous behavior and include it in the plan.
+            pass
         yield p
 
 
