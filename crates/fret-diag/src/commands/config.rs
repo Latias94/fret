@@ -10,6 +10,7 @@ pub(crate) struct ConfigCmdContext {
     pub(crate) resolved_out_dir: PathBuf,
     pub(crate) resolved_ready_path: PathBuf,
     pub(crate) resolved_exit_path: PathBuf,
+    pub(crate) fs_transport_cfg: crate::transport::FsDiagTransportConfig,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -607,18 +608,95 @@ fn env_snapshot_from_process() -> BTreeMap<String, String> {
 
 fn overlay_launch_reserved_env(
     base: &BTreeMap<String, String>,
-    out_dir: &Path,
     ready_path: &Path,
     exit_path: &Path,
+    fs_transport_cfg: &crate::transport::FsDiagTransportConfig,
 ) -> (BTreeMap<String, String>, Vec<String>) {
     let mut env = base.clone();
     let mut overridden: Vec<String> = Vec::new();
 
-    let reserved: [(&'static str, String); 4] = [
+    let out_dir = &fs_transport_cfg.out_dir;
+    let config_path = out_dir.join("diag.config.json");
+    let reserved: [(&'static str, String); 19] = [
         ("FRET_DIAG", "1".to_string()),
         ("FRET_DIAG_DIR", out_dir.display().to_string()),
+        (
+            "FRET_DIAG_TRIGGER_PATH",
+            fs_transport_cfg.trigger_path.display().to_string(),
+        ),
         ("FRET_DIAG_READY_PATH", ready_path.display().to_string()),
         ("FRET_DIAG_EXIT_PATH", exit_path.display().to_string()),
+        ("FRET_DIAG_CONFIG_PATH", config_path.display().to_string()),
+        (
+            "FRET_DIAG_SCRIPT_PATH",
+            fs_transport_cfg.script_path.display().to_string(),
+        ),
+        (
+            "FRET_DIAG_SCRIPT_TRIGGER_PATH",
+            fs_transport_cfg.script_trigger_path.display().to_string(),
+        ),
+        (
+            "FRET_DIAG_SCRIPT_RESULT_PATH",
+            fs_transport_cfg.script_result_path.display().to_string(),
+        ),
+        (
+            "FRET_DIAG_SCRIPT_RESULT_TRIGGER_PATH",
+            fs_transport_cfg
+                .script_result_trigger_path
+                .display()
+                .to_string(),
+        ),
+        (
+            "FRET_DIAG_PICK_TRIGGER_PATH",
+            fs_transport_cfg.pick_trigger_path.display().to_string(),
+        ),
+        (
+            "FRET_DIAG_PICK_RESULT_PATH",
+            fs_transport_cfg.pick_result_path.display().to_string(),
+        ),
+        (
+            "FRET_DIAG_PICK_RESULT_TRIGGER_PATH",
+            fs_transport_cfg
+                .pick_result_trigger_path
+                .display()
+                .to_string(),
+        ),
+        (
+            "FRET_DIAG_INSPECT_PATH",
+            fs_transport_cfg.inspect_path.display().to_string(),
+        ),
+        (
+            "FRET_DIAG_INSPECT_TRIGGER_PATH",
+            fs_transport_cfg.inspect_trigger_path.display().to_string(),
+        ),
+        (
+            "FRET_DIAG_SCREENSHOT_REQUEST_PATH",
+            fs_transport_cfg
+                .screenshots_request_path
+                .display()
+                .to_string(),
+        ),
+        (
+            "FRET_DIAG_SCREENSHOT_TRIGGER_PATH",
+            fs_transport_cfg
+                .screenshots_trigger_path
+                .display()
+                .to_string(),
+        ),
+        (
+            "FRET_DIAG_SCREENSHOT_RESULT_PATH",
+            fs_transport_cfg
+                .screenshots_result_path
+                .display()
+                .to_string(),
+        ),
+        (
+            "FRET_DIAG_SCREENSHOT_RESULT_TRIGGER_PATH",
+            fs_transport_cfg
+                .screenshots_result_trigger_path
+                .display()
+                .to_string(),
+        ),
     ];
 
     for (k, v) in reserved {
@@ -794,13 +872,13 @@ Use `--mode manual` to report what the runtime would see from the current proces
         DoctorMode::Manual => (env_base, Vec::new()),
         DoctorMode::Launch => overlay_launch_reserved_env(
             &env_base,
-            &ctx.resolved_out_dir,
             &ctx.resolved_ready_path,
             &ctx.resolved_exit_path,
+            &ctx.fs_transport_cfg,
         ),
     };
 
-    let default_launch_cfg_path = ctx.resolved_out_dir.join("diag.config.json");
+    let default_launch_cfg_path = ctx.fs_transport_cfg.out_dir.join("diag.config.json");
     let config_path = config_path_override
         .or_else(|| {
             effective_env

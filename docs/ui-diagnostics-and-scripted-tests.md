@@ -569,6 +569,7 @@ Core:
 - `FRET_DIAG_CONFIG_PATH=...`: optional JSON config file (schema v1) for diagnostics runtime settings and paths.
   - Tooling writes `<dir>/diag.config.json` by default when launching via `fretboard diag run/suite/repro --launch`.
   - When an env var is set, it overrides the config file (compat-first manual escape hatch).
+  - In `--launch` mode, tooling-owned env vars and paths are reserved; `--env` cannot override them (use `--dir` / `--*-path` flags instead).
   - Example file to copy/modify: `tools/diag-configs/diag.config.example.json`.
   - Tip: print the effective merged config (and highlight unknown keys/envs):
     - `cargo run -p fretboard -- diag config doctor --mode launch --dir .fret/diag`
@@ -576,10 +577,11 @@ Core:
 
 Config resolution order (runtime):
 
-1. Tooling may set reserved env vars in `--launch` mode (for example `FRET_DIAG_DIR`, `FRET_DIAG_READY_PATH`, `FRET_DIAG_EXIT_PATH`).
+1. Tooling may set reserved env vars in `--launch` mode (including `FRET_DIAG_DIR` and `FRET_DIAG_*_PATH`), overriding any values from the parent shell.
 2. If `FRET_DIAG_CONFIG_PATH` points to a readable config file, the runtime loads `UiDiagnosticsConfigFileV1` from it.
 3. For most fields, non-empty env vars override config file values (manual escape hatch).
 4. Any missing fields fall back to runtime defaults (for example `out_dir=target/fret-diag`, `max_events=2000`, `max_snapshots=300`).
+
 - `FRET_DIAG_TRIGGER_PATH=...`: dump trigger file (default `<dir>/trigger.touch`).
   - The trigger uses a **stamp** (monotonic integer) rather than mtime. Write a new integer value
     (e.g. unix ms) to trigger a dump; `fretboard diag poke` does this for you.

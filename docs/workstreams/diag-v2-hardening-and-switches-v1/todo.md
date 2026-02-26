@@ -26,6 +26,7 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
   - [ ] `FRET_DIAG_REDACT_TEXT`
   - [ ] `FRET_DIAG_FIXED_FRAME_DELTA_MS`
 - [ ] Define “reserved env vars” policy for `--launch` (tooling-owned) and enforce it uniformly.
+- [x] Define “reserved env vars” policy for `--launch` (tooling-owned) and enforce it uniformly.
 - [x] Add a `diag config doctor` (tooling-side) that prints an effective merged config + highlights deprecated keys/envs.
 
 ## P0.5: Script library modularization (UX scalability)

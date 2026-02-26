@@ -212,9 +212,9 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
         &prepared_launch.launch,
         &prepared_launch.launch_env,
         &workspace_root,
-        &resolved_out_dir,
         &resolved_ready_path,
         &resolved_exit_path,
+        &fs_transport_cfg,
         pack_defaults.2
             || check_pixels_changed_test_id.is_some()
             || scripts.iter().any(|p| script_requests_screenshots(p)),

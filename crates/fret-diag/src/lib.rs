@@ -2814,6 +2814,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             resolved_out_dir: resolved_out_dir.clone(),
             resolved_ready_path: resolved_ready_path.clone(),
             resolved_exit_path: resolved_exit_path.clone(),
+            fs_transport_cfg: fs_transport_cfg.clone(),
         }),
         "pick-arm" => commands::pick::cmd_pick_arm(&rest, &resolved_pick_trigger_path),
         "pick" => commands::pick::cmd_pick(
@@ -4181,13 +4182,19 @@ fn run_script_suite_collect_bundles(
     std::fs::create_dir_all(&paths.out_dir).map_err(|e| e.to_string())?;
 
     let launch = Some(launch.to_vec());
+    let mut launch_fs_transport_cfg =
+        crate::transport::FsDiagTransportConfig::from_out_dir(paths.out_dir.clone());
+    launch_fs_transport_cfg.script_path = paths.script_path.clone();
+    launch_fs_transport_cfg.script_trigger_path = paths.script_trigger_path.clone();
+    launch_fs_transport_cfg.script_result_path = paths.script_result_path.clone();
+    launch_fs_transport_cfg.script_result_trigger_path = paths.script_result_trigger_path.clone();
     let mut child = maybe_launch_demo(
         &launch,
         launch_env,
         workspace_root,
-        &paths.out_dir,
         &paths.ready_path,
         &paths.exit_path,
+        &launch_fs_transport_cfg,
         scripts.iter().any(|src| script_requests_screenshots(src)),
         timeout_ms,
         poll_ms,

@@ -405,14 +405,22 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
         }
     }
 
+    let mut launch_fs_transport_cfg =
+        crate::transport::FsDiagTransportConfig::from_out_dir(resolved_out_dir.clone());
+    launch_fs_transport_cfg.script_path = resolved_script_path.clone();
+    launch_fs_transport_cfg.script_trigger_path = resolved_script_trigger_path.clone();
+    launch_fs_transport_cfg.script_result_path = resolved_script_result_path.clone();
+    launch_fs_transport_cfg.script_result_trigger_path =
+        resolved_script_result_trigger_path.clone();
+
     if launched_by_fretboard && !reuse_process_per_script {
         child = maybe_launch_demo(
             &launch,
             &perf_launch_env,
             &workspace_root,
-            &resolved_out_dir,
             &resolved_ready_path,
             &resolved_exit_path,
+            &launch_fs_transport_cfg,
             false,
             timeout_ms,
             poll_ms,
@@ -436,9 +444,9 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
                 &launch,
                 &perf_launch_env,
                 &workspace_root,
-                &resolved_out_dir,
                 &resolved_ready_path,
                 &resolved_exit_path,
+                &launch_fs_transport_cfg,
                 false,
                 timeout_ms,
                 poll_ms,
@@ -457,9 +465,9 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
                     &launch,
                     &perf_launch_env,
                     &workspace_root,
-                    &resolved_out_dir,
                     &resolved_ready_path,
                     &resolved_exit_path,
+                    &launch_fs_transport_cfg,
                     false,
                     timeout_ms,
                     poll_ms,
@@ -927,9 +935,9 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
                     &launch,
                     &perf_launch_env,
                     &workspace_root,
-                    &resolved_out_dir,
                     &resolved_ready_path,
                     &resolved_exit_path,
+                    &launch_fs_transport_cfg,
                     false,
                     timeout_ms,
                     poll_ms,
