@@ -144,7 +144,12 @@ pub(super) fn apply_chain_in_place(
         let full = estimate_texture_bytes(ctx.viewport_size, ctx.format, 1);
         let min_budget_for_work = full.saturating_mul(3);
         let has_work = scratch_targets.len() >= 2;
-        let can_commit_with_mask = mask_uniform_index.is_none()
+        let has_mask = mask_uniform_index.is_some() || mask.is_some();
+        let last_step_is_custom_v1 = steps
+            .last()
+            .is_some_and(|s| matches!(*s, fret_core::EffectStep::CustomV1 { .. }));
+        let can_commit_with_mask = !has_mask
+            || last_step_is_custom_v1
             || color_adjust_enabled(ctx.viewport_size, ctx.format, budget_bytes);
 
         if needs_padding
@@ -167,7 +172,19 @@ pub(super) fn apply_chain_in_place(
             }));
 
             let mut work_budget_bytes = budget_bytes.saturating_sub(full);
-            for (step, step_scissor) in steps.iter().copied().zip(step_scissors.iter().copied()) {
+
+            // Apply all steps except the final one in-place on the work buffer using per-step
+            // padded scissors. The final step is handled separately so we can commit the result
+            // back into `srcdst` while applying clip/mask coverage exactly once.
+            let (head_steps, tail_step) = steps.split_at(steps.len().saturating_sub(1));
+            let (head_scissors, tail_scissor) =
+                step_scissors.split_at(step_scissors.len().saturating_sub(1));
+
+            for (step, step_scissor) in head_steps
+                .iter()
+                .copied()
+                .zip(head_scissors.iter().copied())
+            {
                 apply_step_in_place_with_scratch_targets(
                     passes,
                     work_scratch_targets,
@@ -183,35 +200,85 @@ pub(super) fn apply_chain_in_place(
                 );
             }
 
-            // Composite the chain result back into `srcdst` under the original scissor.
-            //
-            // For clip/mask coverage, we want the "masked blend" semantics used by effect passes
-            // (blend RGB, keep destination alpha), so we reuse a no-op ColorAdjust pass when a mask
-            // is present. This avoids having to introduce a dedicated masked blit pass.
-            if mask_uniform_index.is_some() || mask.is_some() {
-                passes.push(RenderPlanPass::ColorAdjust(ColorAdjustPass {
-                    src: work,
-                    dst: srcdst,
-                    src_size: ctx.viewport_size,
-                    dst_size: ctx.viewport_size,
-                    dst_scissor: Some(LocalScissorRect(scissor)),
-                    mask_uniform_index,
-                    mask,
-                    saturation: 1.0,
-                    brightness: 1.0,
-                    contrast: 1.0,
-                    load: wgpu::LoadOp::Load,
-                }));
+            if let Some(&final_step) = tail_step.first()
+                && let Some(&final_scissor) = tail_scissor.first()
+                && last_step_is_custom_v1
+                && matches!(final_step, fret_core::EffectStep::CustomV1 { .. })
+            {
+                // Optimized path: commit the final CustomV1 step directly into `srcdst`, reading
+                // from the padded work buffer and applying clip/mask coverage exactly once.
+                if let fret_core::EffectStep::CustomV1 {
+                    id,
+                    params,
+                    max_sample_offset_px: _,
+                } = final_step
+                {
+                    debug_assert_eq!(
+                        final_scissor, scissor,
+                        "final scissor must be the original bounds"
+                    );
+                    passes.push(RenderPlanPass::CustomEffect(CustomEffectPass {
+                        src: work,
+                        dst: srcdst,
+                        src_size: ctx.viewport_size,
+                        dst_size: ctx.viewport_size,
+                        dst_scissor: Some(LocalScissorRect(scissor)),
+                        mask_uniform_index,
+                        mask,
+                        effect: id,
+                        params,
+                        load: wgpu::LoadOp::Load,
+                    }));
+                }
             } else {
-                passes.push(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
-                    src: work,
-                    dst: srcdst,
-                    src_size: ctx.viewport_size,
-                    dst_size: ctx.viewport_size,
-                    dst_scissor: Some(LocalScissorRect(scissor)),
-                    encode_output_srgb: false,
-                    load: wgpu::LoadOp::Load,
-                }));
+                // Fallback: apply the final step in-place on the work buffer, then composite the
+                // chain result back into `srcdst` under the original scissor.
+                if let Some(&final_step) = tail_step.first()
+                    && let Some(&final_scissor) = tail_scissor.first()
+                {
+                    apply_step_in_place_with_scratch_targets(
+                        passes,
+                        work_scratch_targets,
+                        work,
+                        mode,
+                        final_step,
+                        quality,
+                        final_scissor,
+                        &mut work_budget_bytes,
+                        effect_degradations,
+                        effect_blur_quality,
+                        ctx,
+                    );
+                }
+
+                // For clip/mask coverage, we want the "masked blend" semantics used by effect passes
+                // (blend RGB, keep destination alpha), so we reuse a no-op ColorAdjust pass when a mask
+                // is present. This avoids having to introduce a dedicated masked blit pass.
+                if has_mask {
+                    passes.push(RenderPlanPass::ColorAdjust(ColorAdjustPass {
+                        src: work,
+                        dst: srcdst,
+                        src_size: ctx.viewport_size,
+                        dst_size: ctx.viewport_size,
+                        dst_scissor: Some(LocalScissorRect(scissor)),
+                        mask_uniform_index,
+                        mask,
+                        saturation: 1.0,
+                        brightness: 1.0,
+                        contrast: 1.0,
+                        load: wgpu::LoadOp::Load,
+                    }));
+                } else {
+                    passes.push(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
+                        src: work,
+                        dst: srcdst,
+                        src_size: ctx.viewport_size,
+                        dst_size: ctx.viewport_size,
+                        dst_scissor: Some(LocalScissorRect(scissor)),
+                        encode_output_srgb: false,
+                        load: wgpu::LoadOp::Load,
+                    }));
+                }
             }
 
             return;

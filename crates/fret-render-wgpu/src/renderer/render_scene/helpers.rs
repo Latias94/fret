@@ -535,7 +535,17 @@ pub(super) fn render_plan_pass_render_space(
         RenderPlanPass::Dither(pass) => Some(((0, 0), pass.dst_size)),
         RenderPlanPass::Noise(pass) => Some(((0, 0), pass.dst_size)),
         RenderPlanPass::DropShadow(pass) => Some(((0, 0), pass.dst_size)),
-        RenderPlanPass::CustomEffect(pass) => Some(((0, 0), pass.dst_size)),
+        RenderPlanPass::CustomEffect(pass) => {
+            if let Some(LocalScissorRect(scissor)) = pass.dst_scissor {
+                if scissor.w == 0 || scissor.h == 0 {
+                    None
+                } else {
+                    Some(((scissor.x, scissor.y), (scissor.w, scissor.h)))
+                }
+            } else {
+                Some(((0, 0), pass.dst_size))
+            }
+        }
         RenderPlanPass::FullscreenBlit(pass) => Some(((0, 0), pass.dst_size)),
         RenderPlanPass::ClipMask(pass) => Some(((0, 0), pass.dst_size)),
         RenderPlanPass::ReleaseTarget(_) => None,
