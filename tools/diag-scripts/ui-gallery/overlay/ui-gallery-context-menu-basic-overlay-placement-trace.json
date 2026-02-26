@@ -1,0 +1,76 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-context-menu-basic-overlay-placement-trace",
+    "required_capabilities": ["diag.script_v2", "diag.overlay_placement_trace"]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "context menu" },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-context-menu" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-context-menu" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-context-menu" }
+      },
+      "timeout_frames": 600
+    },
+
+    { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-gallery-context-menu-basic-trigger" } },
+    { "type": "click", "button": "right", "target": { "kind": "test_id", "id": "ui-gallery-context-menu-basic-trigger" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-context-menu-basic-profile" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_overlay_placement_trace",
+      "query": {
+        "kind": "anchored_panel",
+        "content_test_id": "ui-gallery-context-menu-basic-content"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-context-menu-basic-content" },
+        "padding_px": 2.0,
+        "eps_px": 0.5
+      },
+      "timeout_frames": 240
+    },
+
+    { "type": "capture_bundle", "label": "ui-gallery-context-menu-basic-overlay-placement-trace" }
+  ]
+}
+
