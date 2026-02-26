@@ -22,6 +22,7 @@ Related / prerequisites:
 - AI packet + indexing: `docs/workstreams/diag-ai-agent-debugging-v1.md`
 - Bundle schema v2 tracker: `docs/workstreams/diag-bundle-schema-v2.md`
 - Contracts: `docs/adr/0159-ui-diagnostics-snapshot-and-scripted-interaction-tests.md`, `docs/adr/0189-ui-diagnostics-extensibility-and-capabilities-v1.md`
+- Script library modularization (taxonomy + suites): `docs/workstreams/diag-v2-hardening-and-switches-v1/script-library.md`
 
 ## Problem statement
 

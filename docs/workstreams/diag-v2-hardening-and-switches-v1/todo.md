@@ -32,10 +32,10 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
 
 ## P0.5: Script library modularization (UX scalability)
 
-- [ ] Define a folder taxonomy for `tools/diag-scripts/` (by product area + suite intent).
+- [x] Define a folder taxonomy for `tools/diag-scripts/` (by product area + suite intent). See: `docs/workstreams/diag-v2-hardening-and-switches-v1/script-library.md`.
 - [ ] Decide whether suites should be:
   - [ ] registry-driven (preferred), or
-  - [ ] glob-driven (acceptable for small sets, but brittle long-term).
+  - [x] glob-driven (acceptable for small sets, but brittle long-term). (v1 decision: curated suite directories + redirect stubs)
 - [x] As an intermediate step, switch built-in suites from hard-coded file lists to directory inputs (deterministic `**/*.json` expansion).
 - [x] Ensure capability inference resolves `script_redirect` stubs (screenshots / required caps / env defaults).
 - [ ] Add a script registry file (draft):
