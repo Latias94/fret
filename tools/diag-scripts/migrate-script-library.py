@@ -113,7 +113,13 @@ def categorize_script(filename: str) -> tuple[str, str]:
             or "-ime-" in n
         ):
             return ("ui_gallery.text_ime", "ui-gallery/text-ime")
-        if n.startswith("ui-gallery-text-wrap-"):
+        if (
+            n.startswith("ui-gallery-text-wrap-")
+            or n.startswith("ui-gallery-text-measure-overlay-")
+            or n.startswith("ui-gallery-markdown-wrap-")
+            or n.startswith("ui-gallery-markdown-span-")
+            or n.startswith("ui-gallery-tabs-wrap-")
+        ):
             return ("ui_gallery.text_wrap", "ui-gallery/text-wrap")
         if n.startswith("ui-gallery-text-"):
             return ("ui_gallery.text", "ui-gallery/text")
