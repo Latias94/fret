@@ -118,6 +118,7 @@ struct DemoEffect(EffectId);
 #[derive(Debug)]
 struct ThemePostprocessState {
     enabled: Model<bool>,
+    compare: Model<bool>,
 
     theme: Model<Option<Arc<str>>>,
     theme_open: Model<bool>,
@@ -170,16 +171,17 @@ impl MvuProgram for ThemePostprocessProgram {
     fn init(app: &mut App, _window: AppWindowId) -> Self::State {
         Self::State {
             enabled: app.models_mut().insert(true),
+            compare: app.models_mut().insert(true),
             theme: app
                 .models_mut()
                 .insert(Option::<Arc<str>>::Some(Arc::from("cyberpunk"))),
             theme_open: app.models_mut().insert(false),
 
-            chromatic_offset_px: app.models_mut().insert(vec![2.0]),
-            scanline_strength: app.models_mut().insert(vec![0.18]),
+            chromatic_offset_px: app.models_mut().insert(vec![4.0]),
+            scanline_strength: app.models_mut().insert(vec![0.32]),
             scanline_spacing_px: app.models_mut().insert(vec![3.0]),
-            vignette_strength: app.models_mut().insert(vec![0.35]),
-            grain_strength: app.models_mut().insert(vec![0.06]),
+            vignette_strength: app.models_mut().insert(vec![0.6]),
+            grain_strength: app.models_mut().insert(vec![0.12]),
             grain_scale: app.models_mut().insert(vec![1.5]),
 
             retro_pixel_scale: app.models_mut().insert(vec![10.0]),
@@ -190,24 +192,25 @@ impl MvuProgram for ThemePostprocessProgram {
     fn update(app: &mut App, st: &mut Self::State, message: Self::Message) {
         if matches!(message, Msg::Reset) {
             let _ = app.models_mut().update(&st.enabled, |v| *v = true);
+            let _ = app.models_mut().update(&st.compare, |v| *v = true);
             let _ = app
                 .models_mut()
                 .update(&st.theme, |v| *v = Some(Arc::from("cyberpunk")));
             let _ = app
                 .models_mut()
-                .update(&st.chromatic_offset_px, |v| *v = vec![2.0]);
+                .update(&st.chromatic_offset_px, |v| *v = vec![4.0]);
             let _ = app
                 .models_mut()
-                .update(&st.scanline_strength, |v| *v = vec![0.18]);
+                .update(&st.scanline_strength, |v| *v = vec![0.32]);
             let _ = app
                 .models_mut()
                 .update(&st.scanline_spacing_px, |v| *v = vec![3.0]);
             let _ = app
                 .models_mut()
-                .update(&st.vignette_strength, |v| *v = vec![0.35]);
+                .update(&st.vignette_strength, |v| *v = vec![0.6]);
             let _ = app
                 .models_mut()
-                .update(&st.grain_strength, |v| *v = vec![0.06]);
+                .update(&st.grain_strength, |v| *v = vec![0.12]);
             let _ = app.models_mut().update(&st.grain_scale, |v| *v = vec![1.5]);
             let _ = app
                 .models_mut()
@@ -252,6 +255,7 @@ fn view(
     };
 
     let enabled = cx.watch_model(&st.enabled).layout().copied_or(true);
+    let compare = cx.watch_model(&st.compare).layout().copied_or(true);
     let theme = cx
         .watch_model(&st.theme)
         .layout()
@@ -285,6 +289,7 @@ fn view(
     let stage = stage(
         cx,
         enabled,
+        compare,
         theme.as_deref().unwrap_or("cyberpunk"),
         effect,
         chromatic_offset_px,
@@ -312,6 +317,7 @@ fn view(
 fn stage(
     cx: &mut ElementContext<'_, App>,
     enabled: bool,
+    compare: bool,
     theme: &str,
     effect: EffectId,
     chromatic_offset_px: f32,
@@ -330,6 +336,7 @@ fn stage(
 
     let theme = theme.to_string();
     let enabled = enabled && theme != "none";
+    let compare = compare && enabled;
 
     let params = EffectParamsV1 {
         vec4s: [
@@ -369,8 +376,8 @@ fn stage(
             "cyberpunk" => {
                 steps.push(EffectStep::ColorAdjust {
                     saturation: 1.15,
-                    brightness: 1.0,
-                    contrast: 1.15,
+                    brightness: 1.05,
+                    contrast: 1.2,
                 });
             }
             _ => {}
@@ -384,24 +391,68 @@ fn stage(
 
     let chain = EffectChain::from_steps(&steps).sanitize();
 
-    let body = stage_body(cx, enabled);
+    let raw_body = stage_body(cx, false, "Raw (unprocessed)");
+    let processed_body = stage_body(cx, true, "Postprocess (filtered)");
 
     if !enabled {
-        return body;
+        return raw_body;
     }
 
-    cx.effect_layer_props(
+    let processed = cx.effect_layer_props(
         EffectLayerProps {
             layout,
             mode: EffectMode::FilterContent,
             chain,
             quality: EffectQuality::Auto,
         },
-        move |_cx| vec![body],
+        move |_cx| vec![processed_body],
+    );
+
+    if !compare {
+        return processed;
+    }
+
+    shadcn::stack::hstack(
+        cx,
+        shadcn::stack::HStackProps::default()
+            .layout(LayoutRefinement::default().size_full())
+            .items_stretch()
+            .gap(Space::N0),
+        move |cx| {
+            let mut cell_layout = LayoutStyle::default();
+            cell_layout.size.width = Length::Fill;
+            cell_layout.size.height = Length::Fill;
+            cell_layout.flex.grow = 1.0;
+
+            vec![
+                cx.container(
+                    ContainerProps {
+                        layout: cell_layout,
+                        ..Default::default()
+                    },
+                    move |_cx| vec![raw_body],
+                ),
+                shadcn::Separator::new()
+                    .orientation(shadcn::SeparatorOrientation::Vertical)
+                    .flex_stretch_cross_axis(true)
+                    .into_element(cx),
+                cx.container(
+                    ContainerProps {
+                        layout: cell_layout,
+                        ..Default::default()
+                    },
+                    move |_cx| vec![processed],
+                ),
+            ]
+        },
     )
 }
 
-fn stage_body(cx: &mut ElementContext<'_, App>, enabled: bool) -> AnyElement {
+fn stage_body(
+    cx: &mut ElementContext<'_, App>,
+    postprocess_applied: bool,
+    label: &str,
+) -> AnyElement {
     let mut layout = LayoutStyle::default();
     layout.size.width = Length::Fill;
     layout.size.height = Length::Fill;
@@ -414,12 +465,12 @@ fn stage_body(cx: &mut ElementContext<'_, App>, enabled: bool) -> AnyElement {
             ..Default::default()
         },
         move |cx| {
-            let enabled_badge = if enabled {
-                shadcn::Badge::new("Postprocess ON")
+            let enabled_badge = if postprocess_applied {
+                shadcn::Badge::new("ON")
                     .variant(shadcn::BadgeVariant::Secondary)
                     .into_element(cx)
             } else {
-                shadcn::Badge::new("Postprocess OFF")
+                shadcn::Badge::new("OFF")
                     .variant(shadcn::BadgeVariant::Outline)
                     .into_element(cx)
             };
@@ -484,7 +535,14 @@ fn stage_body(cx: &mut ElementContext<'_, App>, enabled: bool) -> AnyElement {
                                     shadcn::stack::HStackProps::default()
                                         .gap(Space::N2)
                                         .items_center(),
-                                    move |_cx| vec![enabled_badge],
+                                    move |cx| {
+                                        vec![
+                                            shadcn::Badge::new(label)
+                                                .variant(shadcn::BadgeVariant::Outline)
+                                                .into_element(cx),
+                                            enabled_badge,
+                                        ]
+                                    },
                                 ),
                             ]
                         },
@@ -530,12 +588,9 @@ fn sample_cards(cx: &mut ElementContext<'_, App>) -> AnyElement {
                             .items_stretch(),
                         |cx| {
                             vec![
-                                shadcn::Button::new("Primary")
-                                    .test_id("postprocess.button.primary")
-                                    .into_element(cx),
+                                shadcn::Button::new("Primary").into_element(cx),
                                 shadcn::Button::new("Secondary")
                                     .variant(shadcn::ButtonVariant::Secondary)
-                                    .test_id("postprocess.button.secondary")
                                     .into_element(cx),
                             ]
                         },
@@ -589,6 +644,7 @@ fn inspector(
     let reset_cmd = msg.cmd(Msg::Reset);
 
     let enabled_model = st.enabled.clone();
+    let compare_model = st.compare.clone();
     let theme_model = st.theme.clone();
     let theme_open_model = st.theme_open.clone();
 
@@ -815,6 +871,22 @@ fn inspector(
                                         .test_id("postprocess.enabled")
                                         .into_element(cx),
                                     shadcn::Label::new("Enable").into_element(cx),
+                                ]
+                            },
+                        ),
+                        shadcn::stack::hstack(
+                            cx,
+                            shadcn::stack::HStackProps::default()
+                                .gap(Space::N2)
+                                .items_center(),
+                            |cx| {
+                                vec![
+                                    shadcn::Switch::new(compare_model.clone())
+                                        .a11y_label("Compare raw vs processed")
+                                        .test_id("postprocess.compare")
+                                        .into_element(cx),
+                                    shadcn::Label::new("Compare (Raw vs Processed)")
+                                        .into_element(cx),
                                 ]
                             },
                         ),
