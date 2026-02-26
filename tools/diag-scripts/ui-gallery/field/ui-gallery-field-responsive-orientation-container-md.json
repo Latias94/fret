@@ -1,0 +1,137 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-field-responsive-orientation-container-md",
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 10 },
+
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-nav-scroll" } },
+      "timeout_frames": 600
+    },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "field" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-nav-field" } },
+      "timeout_frames": 600
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-nav-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-field" },
+      "delta_y": -240.0,
+      "timeout_frames": 600
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-field" } },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-page-field" } },
+      "timeout_frames": 600
+    },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-field-responsive-width-switch" },
+      "delta_y": -240.0,
+      "timeout_frames": 1800
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-field-responsive-width-switch" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "checked_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-field-responsive-width-switch" },
+        "checked": false
+      }
+    },
+
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-field-responsive-name-content" } },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-field-responsive-name-input" } },
+      "timeout_frames": 600
+    },
+
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_overlapping_x",
+        "a": { "kind": "test_id", "id": "ui-gallery-field-responsive-name-content" },
+        "b": { "kind": "test_id", "id": "ui-gallery-field-responsive-name-input" },
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_non_overlapping",
+        "a": { "kind": "test_id", "id": "ui-gallery-field-responsive-name-content" },
+        "b": { "kind": "test_id", "id": "ui-gallery-field-responsive-name-input" },
+        "eps_px": 1.0
+      }
+    },
+    { "type": "capture_screenshot", "label": "ui-gallery-field-responsive-orientation-narrow" },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-field-responsive-width-switch" } },
+    { "type": "wait_frames", "n": 8 },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "checked_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-field-responsive-width-switch" },
+        "checked": true
+      }
+    },
+
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_overlapping_y",
+        "a": { "kind": "test_id", "id": "ui-gallery-field-responsive-name-content" },
+        "b": { "kind": "test_id", "id": "ui-gallery-field-responsive-name-input" },
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_non_overlapping",
+        "a": { "kind": "test_id", "id": "ui-gallery-field-responsive-name-content" },
+        "b": { "kind": "test_id", "id": "ui-gallery-field-responsive-name-input" },
+        "eps_px": 1.0
+      }
+    },
+    { "type": "capture_screenshot", "label": "ui-gallery-field-responsive-orientation-wide" },
+
+    { "type": "capture_bundle", "label": "ui-gallery-field-responsive-orientation-container-md" }
+  ]
+}

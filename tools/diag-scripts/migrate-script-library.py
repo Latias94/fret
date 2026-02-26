@@ -204,6 +204,10 @@ def categorize_script(filename: str) -> tuple[str, str]:
             return ("ui_gallery.badge", "ui-gallery/badge")
         if n.startswith("ui-gallery-aspect-ratio-"):
             return ("ui_gallery.aspect_ratio", "ui-gallery/aspect-ratio")
+        if n.startswith("ui-gallery-pagination-"):
+            return ("ui_gallery.pagination", "ui-gallery/pagination")
+        if n.startswith("ui-gallery-scroll-area-"):
+            return ("ui_gallery.scroll_area", "ui-gallery/scroll-area")
         if n.startswith("ui-gallery-portal-"):
             return ("ui_gallery.portal", "ui-gallery/portal")
         if n.startswith("ui-gallery-progress-"):

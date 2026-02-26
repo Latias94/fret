@@ -70,6 +70,12 @@ Long-term:
 
 - `python tools/diag-scripts/migrate-script-library.py --apply --write-redirects`
 
+Tip (maintenance):
+
+- After merging/pulling `main`, newly added scripts may land back in the flat `tools/diag-scripts/` root.
+  Prefer re-running the migrator on a narrow filter (for example `--include-prefix ui-gallery-`) to keep the taxonomy
+  invariant and avoid reintroducing “misc buckets”.
+
 3) Validate closures:
 
 - Suites still run (redirect chains are supported):

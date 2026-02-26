@@ -87,6 +87,8 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
   - [x] `ui-gallery/typography` (4 scripts)
   - [x] `ui-gallery/virtual-list` (5 scripts)
   - [x] `ui-gallery/input` (4 scripts)
+  - [x] `ui-gallery/pagination` (1 script; post-merge batch)
+  - [x] `ui-gallery/scroll-area` (1 script; post-merge batch)
   - [x] `ui-gallery/misc` (redirect-only; 0 canonical scripts)
   - [ ] Replace misc redirects with direct suite references (optional; reduce redirect chain depth)
   - [x] `docking/arbitration` (33 scripts)
