@@ -71,33 +71,33 @@ mod semantic_ui {
     use super::*;
 
     pub fn register(reg: &mut IconRegistry) {
-        let _ = reg.alias(
+        let _ = reg.alias_if_missing(
             ids::ui::ALERT_TRIANGLE,
             IconId::new("radix.exclamation-triangle"),
         );
-        let _ = reg.alias(ids::ui::ARROW_LEFT, IconId::new("radix.arrow-left"));
-        let _ = reg.alias(ids::ui::ARROW_RIGHT, IconId::new("radix.arrow-right"));
-        let _ = reg.alias(ids::ui::BOOK, IconId::new("radix.bookmark"));
-        let _ = reg.alias(ids::ui::CHECK, IconId::new("radix.check"));
-        let _ = reg.alias(ids::ui::CHEVRON_LEFT, IconId::new("radix.chevron-left"));
-        let _ = reg.alias(ids::ui::CHEVRON_DOWN, IconId::new("radix.chevron-down"));
-        let _ = reg.alias(ids::ui::CHEVRON_RIGHT, IconId::new("radix.chevron-right"));
-        let _ = reg.alias(ids::ui::CHEVRON_UP, IconId::new("radix.chevron-up"));
-        let _ = reg.alias(ids::ui::CLOSE, IconId::new("radix.cross-1"));
-        let _ = reg.alias(ids::ui::LOADER, IconId::new("radix.update-icon"));
-        let _ = reg.alias(ids::ui::SEARCH, IconId::new("radix.magnifying-glass"));
-        let _ = reg.alias(ids::ui::RESET, IconId::new("radix.reset"));
-        let _ = reg.alias(ids::ui::SETTINGS, IconId::new("radix.gear"));
-        let _ = reg.alias(ids::ui::PLAY, IconId::new("radix.play"));
-        let _ = reg.alias(ids::ui::EYE, IconId::new("radix.eye-open"));
-        let _ = reg.alias(ids::ui::EYE_OFF, IconId::new("radix.eye-closed"));
-        let _ = reg.alias(ids::ui::STATUS_FAILED, IconId::new("radix.cross-circled"));
-        let _ = reg.alias(ids::ui::STATUS_PENDING, IconId::new("radix.circle"));
-        let _ = reg.alias(ids::ui::STATUS_RUNNING, IconId::new("radix.dot-filled"));
-        let _ = reg.alias(
+        let _ = reg.alias_if_missing(ids::ui::ARROW_LEFT, IconId::new("radix.arrow-left"));
+        let _ = reg.alias_if_missing(ids::ui::ARROW_RIGHT, IconId::new("radix.arrow-right"));
+        let _ = reg.alias_if_missing(ids::ui::BOOK, IconId::new("radix.bookmark"));
+        let _ = reg.alias_if_missing(ids::ui::CHECK, IconId::new("radix.check"));
+        let _ = reg.alias_if_missing(ids::ui::CHEVRON_LEFT, IconId::new("radix.chevron-left"));
+        let _ = reg.alias_if_missing(ids::ui::CHEVRON_DOWN, IconId::new("radix.chevron-down"));
+        let _ = reg.alias_if_missing(ids::ui::CHEVRON_RIGHT, IconId::new("radix.chevron-right"));
+        let _ = reg.alias_if_missing(ids::ui::CHEVRON_UP, IconId::new("radix.chevron-up"));
+        let _ = reg.alias_if_missing(ids::ui::CLOSE, IconId::new("radix.cross-1"));
+        let _ = reg.alias_if_missing(ids::ui::LOADER, IconId::new("radix.update-icon"));
+        let _ = reg.alias_if_missing(ids::ui::SEARCH, IconId::new("radix.magnifying-glass"));
+        let _ = reg.alias_if_missing(ids::ui::RESET, IconId::new("radix.reset"));
+        let _ = reg.alias_if_missing(ids::ui::SETTINGS, IconId::new("radix.gear"));
+        let _ = reg.alias_if_missing(ids::ui::PLAY, IconId::new("radix.play"));
+        let _ = reg.alias_if_missing(ids::ui::EYE, IconId::new("radix.eye-open"));
+        let _ = reg.alias_if_missing(ids::ui::EYE_OFF, IconId::new("radix.eye-closed"));
+        let _ = reg.alias_if_missing(ids::ui::STATUS_FAILED, IconId::new("radix.cross-circled"));
+        let _ = reg.alias_if_missing(ids::ui::STATUS_PENDING, IconId::new("radix.circle"));
+        let _ = reg.alias_if_missing(ids::ui::STATUS_RUNNING, IconId::new("radix.dot-filled"));
+        let _ = reg.alias_if_missing(
             ids::ui::STATUS_SUCCEEDED,
             IconId::new("radix.check-circled"),
         );
-        let _ = reg.alias(ids::ui::TOOL, IconId::new("radix.gear"));
+        let _ = reg.alias_if_missing(ids::ui::TOOL, IconId::new("radix.gear"));
     }
 }
