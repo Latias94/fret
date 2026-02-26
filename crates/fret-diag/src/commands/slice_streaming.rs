@@ -415,6 +415,39 @@ pub(super) fn try_build_test_id_slice_payload_streaming_inline(
         where
             D: serde::Deserializer<'de>,
         {
+            deserializer.deserialize_option(SemanticsOptVisitor { nodes: self.nodes })
+        }
+    }
+
+    struct SemanticsOptVisitor<'a> {
+        nodes: &'a mut Option<Vec<serde_json::Value>>,
+    }
+
+    impl<'de> Visitor<'de> for SemanticsOptVisitor<'_> {
+        type Value = ();
+
+        fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "semantics object or null")
+        }
+
+        fn visit_none<E>(self) -> Result<(), E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(())
+        }
+
+        fn visit_unit<E>(self) -> Result<(), E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(())
+        }
+
+        fn visit_some<D>(self, deserializer: D) -> Result<(), D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
             deserializer.deserialize_map(SemanticsVisitor { nodes: self.nodes })
         }
     }
