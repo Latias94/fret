@@ -55,6 +55,78 @@ mod app_entry;
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 pub use app_entry::App;
 
+/// Runtime defaults applied by the `fret` facade (within the enabled crate features).
+///
+/// This is an ecosystem-level convenience (not a kernel contract).
+#[derive(Debug, Clone, Copy)]
+pub struct Defaults {
+    /// Enable default diagnostics wiring (tracing + panic hook).
+    pub diagnostics: bool,
+    /// Enable layered `.fret/*` config file loading (settings/keymap/menubar).
+    pub config_files: bool,
+    /// Install the default shadcn integration into the app.
+    pub shadcn: bool,
+    /// Install UI asset caches (images/SVG) with budgets.
+    pub ui_assets: bool,
+    /// Optional override budgets for UI assets.
+    pub ui_assets_budgets: Option<(u64, usize, u64, usize)>,
+    /// Install built-in icon packs (controlled by crate features).
+    pub icons: bool,
+    /// Preload icon SVGs on GPU ready (controlled by crate features).
+    pub preload_icon_svgs: bool,
+}
+
+impl Defaults {
+    /// Recommended desktop-first “batteries included” defaults.
+    pub const fn desktop_batteries() -> Self {
+        Self {
+            diagnostics: true,
+            config_files: true,
+            shadcn: true,
+            ui_assets: true,
+            ui_assets_budgets: None,
+            icons: true,
+            preload_icon_svgs: true,
+        }
+    }
+
+    /// Minimal defaults that avoid filesystem config loading and other batteries.
+    pub const fn minimal() -> Self {
+        Self {
+            diagnostics: false,
+            config_files: false,
+            shadcn: false,
+            ui_assets: false,
+            ui_assets_budgets: None,
+            icons: false,
+            preload_icon_svgs: false,
+        }
+    }
+
+    pub const fn with_ui_assets_budgets(
+        mut self,
+        image_budget_bytes: u64,
+        image_max_ready_entries: usize,
+        svg_budget_bytes: u64,
+        svg_max_ready_entries: usize,
+    ) -> Self {
+        self.ui_assets = true;
+        self.ui_assets_budgets = Some((
+            image_budget_bytes,
+            image_max_ready_entries,
+            svg_budget_bytes,
+            svg_max_ready_entries,
+        ));
+        self
+    }
+}
+
+impl Default for Defaults {
+    fn default() -> Self {
+        Self::desktop_batteries()
+    }
+}
+
 /// MVU-style authoring helpers (desktop builds).
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 pub mod mvu;
@@ -340,7 +412,7 @@ pub struct UiAppBuilder<S> {
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 impl<S: 'static> UiAppBuilder<S> {
-    fn new(inner: fret_bootstrap::UiAppBootstrapBuilder<S>) -> Self {
+    pub(crate) fn from_bootstrap(inner: fret_bootstrap::UiAppBootstrapBuilder<S>) -> Self {
         Self { inner }
     }
 
@@ -412,37 +484,106 @@ impl<S: 'static> UiAppBuilder<S> {
 }
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
-fn apply_desktop_defaults<D: fret_launch::WinitAppDriver + 'static>(
+pub(crate) fn apply_desktop_defaults_with<D: fret_launch::WinitAppDriver + 'static>(
     builder: fret_bootstrap::BootstrapBuilder<D>,
+    defaults: Defaults,
 ) -> std::result::Result<fret_bootstrap::BootstrapBuilder<D>, fret_bootstrap::BootstrapError> {
     // Always ensure an i18n backend exists unless the app provides one.
     let builder = builder.init_app(fret_bootstrap::install_default_i18n_backend);
+    let _ = defaults;
 
     #[cfg(feature = "diagnostics")]
-    let builder = builder.with_default_diagnostics();
+    let builder = if defaults.diagnostics {
+        builder.with_default_diagnostics()
+    } else {
+        builder
+    };
 
     #[cfg(feature = "config-files")]
-    let builder = builder.with_default_config_files()?;
+    let builder = if defaults.config_files {
+        builder.with_default_config_files()?
+    } else {
+        builder.with_command_default_keybindings()
+    };
 
     #[cfg(not(feature = "config-files"))]
     let builder = builder.with_command_default_keybindings();
 
     #[cfg(feature = "shadcn")]
-    let builder = builder.install_app(fret_ui_shadcn::install_app);
+    let builder = if defaults.shadcn {
+        builder.install_app(fret_ui_shadcn::install_app)
+    } else {
+        builder
+    };
 
     #[cfg(feature = "ui-assets")]
-    let builder = builder.with_ui_assets_budgets(64 * 1024 * 1024, 4096, 16 * 1024 * 1024, 4096);
+    let builder = if defaults.ui_assets {
+        let (image_budget_bytes, image_max_ready_entries, svg_budget_bytes, svg_max_ready_entries) =
+            defaults
+                .ui_assets_budgets
+                .unwrap_or((64 * 1024 * 1024, 4096, 16 * 1024 * 1024, 4096));
+        builder.with_ui_assets_budgets(
+            image_budget_bytes,
+            image_max_ready_entries,
+            svg_budget_bytes,
+            svg_max_ready_entries,
+        )
+    } else {
+        builder
+    };
 
     #[cfg(feature = "icons-lucide")]
-    let builder = builder.with_lucide_icons();
+    let builder = if defaults.icons {
+        builder.with_lucide_icons()
+    } else {
+        builder
+    };
 
     #[cfg(feature = "icons-radix")]
-    let builder = builder.with_radix_icons();
+    let builder = if defaults.icons {
+        builder.with_radix_icons()
+    } else {
+        builder
+    };
 
     #[cfg(feature = "preload-icon-svgs")]
-    let builder = builder.preload_icon_svgs_on_gpu_ready();
+    let builder = if defaults.preload_icon_svgs {
+        builder.preload_icon_svgs_on_gpu_ready()
+    } else {
+        builder
+    };
 
     Ok(builder)
+}
+
+#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+pub(crate) fn apply_desktop_defaults<D: fret_launch::WinitAppDriver + 'static>(
+    builder: fret_bootstrap::BootstrapBuilder<D>,
+) -> std::result::Result<fret_bootstrap::BootstrapBuilder<D>, fret_bootstrap::BootstrapError> {
+    apply_desktop_defaults_with(builder, Defaults::default())
+}
+
+#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+pub(crate) fn ui_bootstrap_builder_with_hooks<S: 'static>(
+    root_name: &'static str,
+    init_window: fn(&mut KernelApp, fret_core::AppWindowId) -> S,
+    view: for<'a> fn(&mut fret_ui::ElementContext<'a, KernelApp>, &mut S) -> ViewElements,
+    configure: fn(UiAppDriver<S>) -> UiAppDriver<S>,
+) -> fret_bootstrap::UiAppBootstrapBuilder<S> {
+    let driver = fret_bootstrap::ui_app_driver::UiAppDriver::new(root_name, init_window, view)
+        .on_preferences(fret_bootstrap::ui_app_driver::default_on_preferences::<S>);
+    #[cfg(feature = "shadcn")]
+    let driver = driver
+        .on_global_changes_middleware(shadcn_sync_theme_from_environment_on_global_changes::<S>);
+    let driver = configure(UiAppDriver::new(driver)).into_inner();
+    let builder = fret_bootstrap::BootstrapBuilder::new(KernelApp::new(), driver.into_fn_driver());
+
+    #[cfg(feature = "router")]
+    let builder = builder.install_app(|app| {
+        fret_router_ui::register_router_commands(app.commands_mut());
+    });
+
+    builder
 }
 
 /// Run a native desktop demo using the `winit + wgpu` stack.
@@ -480,22 +621,10 @@ pub fn app_with_hooks<S: 'static>(
     view: for<'a> fn(&mut fret_ui::ElementContext<'a, KernelApp>, &mut S) -> ViewElements,
     configure: fn(UiAppDriver<S>) -> UiAppDriver<S>,
 ) -> Result<UiAppBuilder<S>> {
-    let driver = fret_bootstrap::ui_app_driver::UiAppDriver::new(root_name, init_window, view)
-        .on_preferences(fret_bootstrap::ui_app_driver::default_on_preferences::<S>);
-    #[cfg(feature = "shadcn")]
-    let driver = driver
-        .on_global_changes_middleware(shadcn_sync_theme_from_environment_on_global_changes::<S>);
-    let driver = configure(UiAppDriver::new(driver)).into_inner();
-    let builder = fret_bootstrap::BootstrapBuilder::new(KernelApp::new(), driver.into_fn_driver());
-
-    #[cfg(feature = "router")]
-    let builder = builder.install_app(|app| {
-        fret_router_ui::register_router_commands(app.commands_mut());
-    });
-
-    let builder = apply_desktop_defaults(builder).map_err(BootstrapError::from)?;
-
-    Ok(UiAppBuilder::new(builder))
+    let builder = ui_bootstrap_builder_with_hooks(root_name, init_window, view, configure);
+    let builder =
+        apply_desktop_defaults_with(builder, Defaults::default()).map_err(BootstrapError::from)?;
+    Ok(UiAppBuilder::from_bootstrap(builder))
 }
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop", feature = "shadcn"))]

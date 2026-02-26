@@ -3,7 +3,7 @@
 //! This module provides an ergonomic, desktop-first entry surface (ecosystem-level) while
 //! preserving the golden-path driver's hotpatch-friendly posture (function-pointer hooks).
 
-use crate::{Result, UiAppBuilder, ViewElements};
+use crate::{Defaults, Result, UiAppBuilder, ViewElements};
 
 /// Builder-chain facade for creating and running a desktop-first Fret UI app.
 ///
@@ -15,6 +15,10 @@ use crate::{Result, UiAppBuilder, ViewElements};
 pub struct App {
     root_name: &'static str,
     main_window: Option<(String, (f64, f64))>,
+    defaults: Defaults,
+    install_app_hooks: Vec<fn(&mut fret_app::App)>,
+    install_hooks: Vec<fn(&mut fret_app::App, &mut dyn fret_core::UiServices)>,
+    register_icon_pack_hooks: Vec<fn(&mut crate::IconRegistry)>,
 }
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
@@ -26,7 +30,70 @@ impl App {
         Self {
             root_name,
             main_window: None,
+            defaults: Defaults::default(),
+            install_app_hooks: Vec::new(),
+            install_hooks: Vec::new(),
+            register_icon_pack_hooks: Vec::new(),
         }
+    }
+
+    /// Override the default runtime defaults applied by the `fret` facade.
+    pub fn defaults(mut self, defaults: Defaults) -> Self {
+        self.defaults = defaults;
+        self
+    }
+
+    /// Apply the minimal defaults preset (no config files, no diagnostics, no shadcn integration).
+    pub fn minimal_defaults(mut self) -> Self {
+        self.defaults = Defaults::minimal();
+        self
+    }
+
+    /// Enable/disable layered `.fret/*` config file loading.
+    pub fn config_files(mut self, enabled: bool) -> Self {
+        self.defaults.config_files = enabled;
+        self
+    }
+
+    /// Override UI assets budgets and enable UI assets caches.
+    pub fn ui_assets_budgets(
+        mut self,
+        image_budget_bytes: u64,
+        image_max_ready_entries: usize,
+        svg_budget_bytes: u64,
+        svg_max_ready_entries: usize,
+    ) -> Self {
+        self.defaults = self.defaults.with_ui_assets_budgets(
+            image_budget_bytes,
+            image_max_ready_entries,
+            svg_budget_bytes,
+            svg_max_ready_entries,
+        );
+        self
+    }
+
+    /// Install app-owned services/globals/commands during bootstrap.
+    ///
+    /// Prefer calling this before enabling config files so command defaults/keymap layering see
+    /// the full command registry.
+    pub fn install_app(mut self, install: fn(&mut fret_app::App)) -> Self {
+        self.install_app_hooks.push(install);
+        self
+    }
+
+    /// Install wiring that needs `UiServices` during bootstrap.
+    pub fn install(
+        mut self,
+        install: fn(&mut fret_app::App, &mut dyn fret_core::UiServices),
+    ) -> Self {
+        self.install_hooks.push(install);
+        self
+    }
+
+    /// Register one or more custom icon packs (runs during bootstrap).
+    pub fn register_icon_pack(mut self, register: fn(&mut crate::IconRegistry)) -> Self {
+        self.register_icon_pack_hooks.push(register);
+        self
     }
 
     /// Configure the main window (title + size).
@@ -39,8 +106,31 @@ impl App {
     pub fn mvu<P: crate::mvu::Program>(
         self,
     ) -> Result<UiAppBuilder<crate::mvu::MvuWindowState<P::State, P::Message>>> {
-        let mut builder = crate::mvu::app::<P>(self.root_name)?;
-        builder = self.apply_main_window(builder);
+        let App {
+            root_name,
+            main_window,
+            defaults,
+            install_app_hooks,
+            install_hooks,
+            register_icon_pack_hooks,
+        } = self;
+
+        let mut builder = crate::mvu::mvu_bootstrap_builder_with_hooks::<P>(root_name, |d| d);
+
+        for f in install_app_hooks {
+            builder = builder.install_app(f);
+        }
+        for f in install_hooks {
+            builder = builder.install(f);
+        }
+        for f in register_icon_pack_hooks {
+            builder = builder.register_icon_pack(f);
+        }
+
+        let builder = crate::apply_desktop_defaults_with(builder, defaults)
+            .map_err(crate::BootstrapError::from)?;
+        let mut builder = UiAppBuilder::from_bootstrap(builder);
+        builder = apply_main_window(root_name, main_window, builder);
         Ok(builder)
     }
 
@@ -50,8 +140,32 @@ impl App {
         init_window: fn(&mut fret_app::App, fret_core::AppWindowId) -> S,
         view: for<'a> fn(&mut fret_ui::ElementContext<'a, fret_app::App>, &mut S) -> ViewElements,
     ) -> Result<UiAppBuilder<S>> {
-        let mut builder = crate::app(self.root_name, init_window, view)?;
-        builder = self.apply_main_window(builder);
+        let App {
+            root_name,
+            main_window,
+            defaults,
+            install_app_hooks,
+            install_hooks,
+            register_icon_pack_hooks,
+        } = self;
+
+        let mut builder =
+            crate::ui_bootstrap_builder_with_hooks(root_name, init_window, view, |d| d);
+
+        for f in install_app_hooks {
+            builder = builder.install_app(f);
+        }
+        for f in install_hooks {
+            builder = builder.install(f);
+        }
+        for f in register_icon_pack_hooks {
+            builder = builder.register_icon_pack(f);
+        }
+
+        let builder = crate::apply_desktop_defaults_with(builder, defaults)
+            .map_err(crate::BootstrapError::from)?;
+        let mut builder = UiAppBuilder::from_bootstrap(builder);
+        builder = apply_main_window(root_name, main_window, builder);
         Ok(builder)
     }
 
@@ -68,12 +182,17 @@ impl App {
     ) -> Result<()> {
         self.ui(init_window, view)?.run()
     }
+}
 
-    fn apply_main_window<S: 'static>(self, builder: UiAppBuilder<S>) -> UiAppBuilder<S> {
-        if let Some((title, size)) = self.main_window {
-            return builder.with_main_window(title, size);
-        }
-
-        builder.with_main_window(self.root_name, (960.0, 720.0))
+#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+fn apply_main_window<S: 'static>(
+    root_name: &'static str,
+    main_window: Option<(String, (f64, f64))>,
+    builder: UiAppBuilder<S>,
+) -> UiAppBuilder<S> {
+    if let Some((title, size)) = main_window {
+        return builder.with_main_window(title, size);
     }
+
+    builder.with_main_window(root_name, (960.0, 720.0))
 }
