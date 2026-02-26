@@ -55,7 +55,14 @@ Long-term:
 
 - `python tools/diag-scripts/migrate-script-library.py`
   - writes `.fret/diag-script-library-migration.plan.json` by default
-  - for small batches, use filters like `--include-category ui_gallery.select` and `--limit 15`
+  - for small batches, use filters like:
+    - `--include-category ui_gallery.select`
+    - `--include-prefix ui-gallery-select-`
+    - `--include-name-glob ui-gallery-virtual-list-*.json`
+    - `--exclude-category ui_gallery.misc`
+    - `--limit 15`
+  - consider using `--plan-out .fret/diag-script-library-migration.<label>.plan.json` to keep batch plans separate
+  - redirect stubs (`kind: script_redirect`) are ignored by the planner (only canonical scripts are migrated)
 
 2) Apply moves with redirects (recommended):
 

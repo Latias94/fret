@@ -33,7 +33,7 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
 ## P0.5: Script library modularization (UX scalability)
 
 - [x] Define a folder taxonomy for `tools/diag-scripts/` (by product area + suite intent). See: `docs/workstreams/diag-v2-hardening-and-switches-v1/script-library.md`.
-- [ ] Decide whether suites should be:
+- [x] Decide whether suites should be:
   - [ ] registry-driven (preferred), or
   - [x] glob-driven (acceptable for small sets, but brittle long-term). (v1 decision: curated suite directories + redirect stubs)
 - [x] As an intermediate step, switch built-in suites from hard-coded file lists to directory inputs (deterministic `**/*.json` expansion).
@@ -55,11 +55,18 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
   - [x] `ui-gallery/combobox` (22 scripts)
   - [x] `ui-gallery/text-ime` (2 scripts)
   - [x] `ui-gallery/text-wrap` (5 scripts)
+  - [x] `ui-gallery/text` (5 scripts)
+  - [x] `ui-gallery/shadcn-conformance` (7 scripts)
   - [x] `ui-gallery/overlay` (40 scripts; batch-migrated)
   - [x] `ui-gallery/code-editor` (42 scripts; batch-migrated)
   - [x] `ui-gallery/markdown-editor` (24 scripts)
   - [x] `ui-gallery/layout` (4 scripts)
-  - [ ] `ui-gallery/perf` (in progress; batch-migrated)
+  - [x] `ui-gallery/perf` (70 scripts; batch-migrated)
+  - [ ] `ui-gallery/misc` (367 scripts; needs new buckets before migrating)
+  - [x] `docking/arbitration` (33 scripts)
+  - [ ] `tooling/external-texture-imports` (9 scripts)
+  - [ ] `tooling/todo` (4 scripts)
+  - [ ] `_prelude/*` (2 scripts)
 - [ ] Update references after path moves (choose one):
   - [ ] replace hard-coded lists with registry/directory inputs, or
   - [ ] scripted rewrite of code/docs references (large diff; less preferred).
