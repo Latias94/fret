@@ -108,6 +108,32 @@ def categorize_script(filename: str) -> tuple[str, str]:
         if "shadcn" in n or "conformance" in n:
             return ("ui_gallery.shadcn_conformance", "ui-gallery/shadcn-conformance")
 
+        # Larger UI gallery buckets (break up ui_gallery.misc).
+        if n.startswith("ui-gallery-material3-"):
+            return ("ui_gallery.material3", "ui-gallery/material3")
+        if n.startswith("ui-gallery-ai-"):
+            return ("ui_gallery.ai", "ui-gallery/ai")
+        if n.startswith("ui-gallery-menubar-"):
+            return ("ui_gallery.menubar", "ui-gallery/menubar")
+        if n.startswith("ui-gallery-command-"):
+            return ("ui_gallery.command", "ui-gallery/command")
+        if n.startswith("ui-gallery-data-table-"):
+            return ("ui_gallery.data_table", "ui-gallery/data-table")
+        if n.startswith("ui-gallery-context-menu-"):
+            return ("ui_gallery.context_menu", "ui-gallery/context-menu")
+        if n.startswith("ui-gallery-dropdown-menu-"):
+            return ("ui_gallery.dropdown_menu", "ui-gallery/dropdown-menu")
+        if n.startswith("ui-gallery-button-"):
+            return ("ui_gallery.button", "ui-gallery/button")
+        if n.startswith("ui-gallery-checkbox-"):
+            return ("ui_gallery.checkbox", "ui-gallery/checkbox")
+        if n.startswith("ui-gallery-sidebar-"):
+            return ("ui_gallery.sidebar", "ui-gallery/sidebar")
+        if n.startswith("ui-gallery-drawer-"):
+            return ("ui_gallery.drawer", "ui-gallery/drawer")
+        if n.startswith("ui-gallery-sonner-"):
+            return ("ui_gallery.sonner", "ui-gallery/sonner")
+
         # Text buckets: keep IME matching token-based (avoid matching "time").
         if (
             n.startswith("ui-gallery-web-ime-")
