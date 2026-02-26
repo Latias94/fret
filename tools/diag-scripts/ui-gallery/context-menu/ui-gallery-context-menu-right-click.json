@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "steps": [
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-overlay-reset" }
+    },
+    { "type": "wait_frames", "n": 10 },
+    {
+      "type": "move_pointer",
+      "target": { "kind": "test_id", "id": "ui-gallery-context-trigger" }
+    },
+    {
+      "type": "click",
+      "button": "right",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-context-trigger"
+      }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-context-item-action" }
+      },
+      "timeout_frames": 180
+    },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-context-item-action" }
+    },
+    { "type": "capture_bundle", "label": "ui-gallery-context-action" }
+  ]
+}

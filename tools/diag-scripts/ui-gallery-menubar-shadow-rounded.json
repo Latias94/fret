@@ -1,42 +1,5 @@
 {
   "schema_version": 1,
-  "steps": [
-    { "type": "press_key", "key": "escape" },
-    { "type": "wait_frames", "n": 2 },
-    {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "exists",
-        "target": { "kind": "test_id", "id": "menubar-trigger-file" }
-      },
-      "timeout_frames": 240
-    },
-    {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-content-viewport" }
-      },
-      "timeout_frames": 240
-    },
-
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-content-viewport" } },
-    { "type": "wait_frames", "n": 2 },
-
-    { "type": "click", "target": { "kind": "test_id", "id": "menubar-trigger-file" } },
-    { "type": "wait_frames", "n": 8 },
-    {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "exists",
-        "target": { "kind": "test_id", "id": "menubar-item-ui_gallery-app-open" }
-      },
-      "timeout_frames": 240
-    },
-    { "type": "wait_frames", "n": 4 },
-
-    { "type": "capture_screenshot", "label": "ui-gallery-menubar-shadow-rounded" },
-    { "type": "capture_bundle", "label": "ui-gallery-menubar-shadow-rounded" }
-  ]
+  "kind": "script_redirect",
+  "to": "tools/diag-scripts/ui-gallery/menubar/ui-gallery-menubar-shadow-rounded.json"
 }
-
