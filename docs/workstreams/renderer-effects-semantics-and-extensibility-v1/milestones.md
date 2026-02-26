@@ -83,7 +83,9 @@ Exit criteria:
 
 Exit criteria:
 
-- The CustomV2 “one extra input” story is locked (with rationale and capability gating).
+- The CustomV2 “one extra input” story is locked (with rationale and capability gating):
+  - Decision ADR: `docs/adr/0300-custom-effect-v2-user-image-input.md`
+  - Workstream: `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-v2/README.md`
 - A versioned ABI exists with explicit cost model + deterministic degradation rules.
 - Conformance tests cover the extra input and chain padding semantics.
 - Evidence:

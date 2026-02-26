@@ -11,8 +11,10 @@ scope: renderer, effects, extensibility, abi
 
 Exit criteria:
 
-- One v2 binding shape is chosen (with rationale) and written down.
-- Capability discovery shape is specified (what does the app learn at runtime?).
+- [x] One v2 binding shape is chosen (with rationale) and written down:
+  - A single user-provided image input referenced by `ImageId` (plus `UvRect` + `ImageSamplingHint`).
+  - Evidence: `README.md`, `docs/adr/0300-custom-effect-v2-user-image-input.md`.
+- [ ] Capability discovery shape is specified (what does the app learn at runtime?).
 
 ## M1 — Core surface + backend skeleton
 
@@ -37,4 +39,3 @@ Exit criteria:
 
 - At least one “high-end” recipe is shipped as ecosystem policy using CustomV2 (not a renderer fork).
 - A demo page exists (gallery or `fret-examples`) and has a scripted diagnostics bundle for regressions.
-

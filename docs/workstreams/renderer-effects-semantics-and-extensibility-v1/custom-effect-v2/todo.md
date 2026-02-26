@@ -9,10 +9,10 @@ scope: renderer, effects, extensibility, abi
 
 ## P0 — Decide the “one extra input” story
 
-- [ ] Pick one (and only one) additional input to unlock most high-end recipes:
-  - Option A: a single **user texture** input (bound via an existing portable handle such as `MaterialId`), or
-  - Option B: a single **renderer-owned catalog** input that can be extended over time (noise/LUT atlas), or
-  - Option C: a “small resource table” (bounded length, e.g. up to 2 textures) with strict capability gating.
+- [x] Decision locked: add a single **user-provided image texture** input referenced by `ImageId`.
+  - Rationale: unlocks LUT/noise/normal-map recipes without growing a renderer-owned catalog into an implicit “asset system”.
+  - Boundedness: exactly one extra sampled image (+ sampler) with fixed bind shape; no resource tables in v2.
+  - See: `docs/adr/0300-custom-effect-v2-user-image-input.md` and `README.md`.
 
 Constraints:
 
@@ -40,4 +40,3 @@ Constraints:
   - acrylic (blur + tint + grain),
   - cyberpunk postprocess (scanlines + chromatic + vignette),
   - glass highlight overlay (separate chrome layer, not in the postprocess shader).
-

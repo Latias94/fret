@@ -23,20 +23,21 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 
 ## Summary
 
-- Last updated: 2026-02-25
-- ADR count (numbered): 264
+- Last updated: 2026-02-26
+- ADR count (numbered): 265
 
 - Aligned: 109
 - Aligned (with known gaps): 95
 - N/A (superseded): 2
 - Not audited: 18
-- Not implemented: 4
+- Not implemented: 5
 - Partially aligned: 36
 
 ## Matrix
 
 | ADR | ADR Status | Implementation Alignment | Notes |
 | --- | --- | --- | --- |
+| [`0300-custom-effect-v2-user-image-input.md`](0300-custom-effect-v2-user-image-input.md) | Draft | Not implemented | Locks the CustomV2 “one extra input” story: a single user-provided image input referenced by `ImageId` (plus `UvRect` + `ImageSamplingHint`) to unlock LUT/noise/normal-map recipes while keeping the ABI bounded and capability-gated. Evidence: `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-v2/README.md`, `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-v2/todo.md`. |
 | [`0299-custom-effect-abi-wgpu-only-mvp.md`](0299-custom-effect-abi-wgpu-only-mvp.md) | Draft | Aligned (with known gaps) | Adds a bounded custom effect ABI (`EffectId`, `EffectParamsV1`, `EffectStep::CustomV1`) with renderer-owned registration (`CustomEffectService`) and deterministic budget-driven degradation (v1 is wgpu-only; other backends may return `Unsupported`/degrade). WGPU backend validates and caches effect programs, invalidates scene encodings via `custom_effects_generation`, compiles per-effect pipelines, and records a single-pass fullscreen effect with scissor/mask semantics. Evidence: contract `crates/fret-core/src/{effects.rs,ids.rs,scene/mod.rs,scene/validate.rs,scene/fingerprint.rs}`, wgpu service `crates/fret-render-wgpu/src/renderer/services.rs`, pipeline `crates/fret-render-wgpu/src/renderer/pipelines/custom_effect.rs` + WGSL parts `crates/fret-render-wgpu/src/renderer/pipelines/wgsl/custom_effect_*.wgsl`, cache key `crates/fret-render-wgpu/src/renderer/render_scene/encoding_cache.rs`, executor/recorder `crates/fret-render-wgpu/src/renderer/render_scene/{executor.rs,recorders/effects.rs}`, gate `crates/fret-render-wgpu/tests/effect_custom_v1_conformance.rs`. |
 | [`0298-a11y-scrollbar-semantics-v1.md`](0298-a11y-scrollbar-semantics-v1.md) | Accepted | Aligned | Adds a portable scrollbar role (`SemanticsRole::ScrollBar`) and publishes structured scroll metadata (`SemanticsNodeExtra.scroll` + `orientation`) from the `Scrollbar` mechanism element, mapping into AccessKit `Role::ScrollBar` and exposing a portable `scroll_by` action surface when the scrollbar is adjustable. Evidence: contract `crates/fret-core/src/semantics.rs`, AccessKit role mapping `crates/fret-a11y-accesskit/src/roles.rs`, UI writers `crates/fret-ui/src/declarative/host_widget/semantics.rs` + `crates/fret-ui/src/declarative/host_widget.rs`, selector label `ecosystem/fret-bootstrap/src/ui_diagnostics/selector.rs`, gates `crates/fret-ui/src/declarative/tests/semantics.rs` + `crates/fret-a11y-accesskit/src/tests.rs`. |
 | [`0297-a11y-heading-semantics-v1.md`](0297-a11y-heading-semantics-v1.md) | Accepted | Aligned | Adds a portable heading semantics role (`SemanticsRole::Heading`) and adopts it in shadcn modal titles, using the existing hierarchy `level` surface (`SemanticsNodeExtra.level`) to publish a 1-based heading level. Evidence: contract `crates/fret-core/src/semantics.rs`, AccessKit role mapping `crates/fret-a11y-accesskit/src/roles.rs` (and `mapping.rs` already maps `level`), ecosystem adoption `ecosystem/fret-ui-shadcn/src/{dialog.rs,alert_dialog.rs}`, shadcn gate `ecosystem/fret-ui-shadcn/tests/snapshots/heading_level_semantics.json`. |
