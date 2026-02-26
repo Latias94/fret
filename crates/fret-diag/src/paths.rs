@@ -248,6 +248,26 @@ pub(crate) fn resolve_bundle_artifact_path(path: &Path) -> PathBuf {
     direct
 }
 
+pub(crate) fn prefer_schema2_sibling_for_bundle_json_path(bundle_path: &Path) -> PathBuf {
+    if bundle_path.is_dir() {
+        return resolve_bundle_artifact_path(bundle_path);
+    }
+    let Some(file_name) = bundle_path.file_name() else {
+        return bundle_path.to_path_buf();
+    };
+    if !file_name.eq_ignore_ascii_case("bundle.json") {
+        return bundle_path.to_path_buf();
+    }
+    let Some(parent) = bundle_path.parent() else {
+        return bundle_path.to_path_buf();
+    };
+    let schema2 = parent.join("bundle.schema2.json");
+    if schema2.is_file() {
+        return schema2;
+    }
+    bundle_path.to_path_buf()
+}
+
 pub(crate) fn resolve_bundle_artifact_path_no_materialize(bundle_dir: &Path) -> Option<PathBuf> {
     if !bundle_dir.is_dir() {
         return bundle_dir.is_file().then(|| bundle_dir.to_path_buf());

@@ -69,6 +69,8 @@ Definition of done:
 - [ ] Ensure “AI packet” is the default shareable artifact path for triage.
   - [x] Add a convenience `--ai-packet` flag for `diag run` and `diag pack` to generate `ai.packet/` next to a bundle dir.
   - [x] Add a bounded “AI-only” share zip mode (`diag pack --ai-only`) that avoids shipping full bundle artifacts by default.
+- [x] Expose the stats-lite `diag stats --check-*` compat matrix as machine-readable JSON (agent/tooling friendly):
+  - `fretboard diag stats --stats-lite-checks-json`
 - [ ] Ensure sidecars (`bundle.meta.json`, `bundle.index.json`, `test_ids.index.json`, `frames.index.json`) are consistently available
   in pack/repro flows.
   - [x] Runtime writes canonical sidecars on native dumps.
@@ -106,6 +108,8 @@ Definition of done:
   - Evidence: `crates/fret-diag/src/pack_zip.rs` (`pack_bundle_dir_to_zip_accepts_schema2_only`).
 - [x] Add a schema2-only packing option for shareable zips.
   - Evidence: `crates/fret-diag/src/lib.rs` (`--pack-schema2-only` / `--schema2-only`).
+- [x] Ensure `diag lint` does not require materializing the full bundle artifact in memory (streaming reader path for large bundles).
+  - Evidence: `crates/fret-diag/src/lint.rs`
 
 ### M5: Plan 2 prototype (deferred)
 

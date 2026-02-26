@@ -25,7 +25,8 @@ pub(super) fn preview_typography(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
                     cx,
                     "After all, everyone enjoys a good joke, so it's only fair that they should pay for the privilege.",
                 ),
-                shadcn::typography::h3(cx, "The Joke Tax"),
+                shadcn::typography::h3(cx, "The Joke Tax")
+                    .test_id("ui-gallery-typography-demo-h3-joke-tax"),
                 shadcn::typography::list(
                     cx,
                     [
@@ -33,7 +34,8 @@ pub(super) fn preview_typography(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
                         Arc::<str>::from("2nd level of jokes: 10 gold coins"),
                         Arc::<str>::from("3rd level of one-liners: 20 gold coins"),
                     ],
-                ),
+                )
+                .test_id("ui-gallery-typography-demo-list-joke-tax"),
             ]
         },
     )

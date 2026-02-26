@@ -8,12 +8,18 @@ pub(super) fn semantics_diff_detail(
     before: &serde_json::Value,
     after: &serde_json::Value,
 ) -> serde_json::Value {
-    use serde_json::json;
-
     let (Some(before_nodes), Some(after_nodes)) = (semantics.nodes(before), semantics.nodes(after))
     else {
         return serde_json::Value::Null;
     };
+    semantics_diff_detail_nodes(before_nodes, after_nodes)
+}
+
+pub(super) fn semantics_diff_detail_nodes(
+    before_nodes: &[serde_json::Value],
+    after_nodes: &[serde_json::Value],
+) -> serde_json::Value {
+    use serde_json::json;
 
     let mut before_by_id: HashMap<u64, &serde_json::Value> = HashMap::new();
     for node in before_nodes {
@@ -133,6 +139,13 @@ pub(super) fn semantics_diff_summary(
     else {
         return String::new();
     };
+    semantics_diff_summary_nodes(before_nodes, after_nodes)
+}
+
+pub(super) fn semantics_diff_summary_nodes(
+    before_nodes: &[serde_json::Value],
+    after_nodes: &[serde_json::Value],
+) -> String {
 
     let mut before_by_id: HashMap<u64, &serde_json::Value> = HashMap::new();
     for node in before_nodes {

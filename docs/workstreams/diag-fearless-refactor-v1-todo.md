@@ -113,10 +113,10 @@ This file tracks tasks for `docs/workstreams/diag-fearless-refactor-v1.md`.
   - [x] Ensure `diag doctor` distinguishes raw `bundle.json` from the resolved bundle artifact in `doctor.json`.
   - [x] Add bundle-artifact aliases to `repro.summary.json` (keep older `*_bundle_json` keys for compatibility).
   - [x] Add bundle-artifact aliases to `diag repeat` output (keep older `bundle_json` key for compatibility).
-  - [x] Add bundle-artifact aliases to stats check JSON evidence payloads (keep older `bundle_json` key for compatibility).
+  - [x] Add bundle-artifact aliases to stats/lint check JSON evidence payloads (keep older `bundle_json` key for compatibility).
     - Evidence: `crates/fret-diag/src/stats/stale.rs`, `crates/fret-diag/src/stats/vlist.rs`,
       `crates/fret-diag/src/stats/windowed_rows.rs`, `crates/fret-diag/src/stats/ui_gallery_code_editor.rs`,
-      `crates/fret-diag/src/stats/ui_gallery_markdown_editor.rs`.
+      `crates/fret-diag/src/stats/ui_gallery_markdown_editor.rs`, `crates/fret-diag/src/lint.rs`.
   - [x] Update CLI user-facing hints to prefer “bundle artifact” wording where supported:
     - `crates/fret-diag/src/diag_simple_dispatch.rs` (`diag trace`)
     - `crates/fret-diag/src/diag_perf_baseline.rs` (`perf-baseline-from-bundles`)
@@ -206,6 +206,89 @@ This file tracks tasks for `docs/workstreams/diag-fearless-refactor-v1.md`.
   - `crates/fret-diag/src/diag_perf/thresholds.rs`
 - [x] Extract `diag perf` perf-baseline row assembly into a helper module (reduce churn + keep `diag_perf.rs` shorter):
   - `crates/fret-diag/src/diag_perf/baseline_rows.rs`
+
+## Large-bundle ergonomics (avoid materializing `bundle.json`)
+
+Goal: common tooling should keep working even when `bundle.json` is too large to load into memory as `serde_json::Value`.
+
+- [x] Make `diag lint` stream bundle artifacts instead of reading+materializing the full JSON.
+  - Prefer schema2 semantics tables (`tables.semantics.entries[*]`) when a snapshot has `semantics_fingerprint`.
+  - Fall back to extracting inline semantics nodes (`debug.semantics.nodes`) when table entries are missing.
+  - Keep output JSON stable (additive-only); do not remove legacy keys.
+  - Evidence anchors (implementation targets):
+    - `crates/fret-diag/src/lint.rs`
+    - `crates/fret-diag/src/lint/streaming.rs`
+    - `crates/fret-diag/src/json_bundle.rs` (`stream_read_semantics_table_nodes`)
+    - `crates/fret-diag/src/commands/slice_streaming.rs` (streaming extraction patterns)
+- [x] Add one regression test that `diag lint` can handle a schema2-only bundle with table semantics without materializing the bundle.
+
+- [x] Make `diag stats` degrade gracefully for large bundle artifacts.
+  - Prefer `bundle.schema2.json` when the user passes a raw `bundle.json` file and schema2 is present next to it.
+  - When the bundle artifact is too large to materialize, fall back to a stats-lite report derived from `frames.index.json`
+    (and keep a clear hint to regen sidecars / use `diag triage --lite`).
+  - Evidence anchors:
+    - `crates/fret-diag/src/diag_stats.rs`
+    - `crates/fret-diag/src/stats.rs`
+
+- [x] Audit `diag stats --check-*` flags for stats-lite compatibility.
+  - In stats-lite mode, checks that are not on the allowlist fail fast with an actionable message.
+  - When a check can be implemented from sidecars (frames/bundle indexes) or streaming, port it so it works for huge bundles.
+  - Evidence anchors:
+    - `crates/fret-diag/src/diag_stats.rs`
+    - `crates/fret-diag/src/diag_stats/check_support.rs`
+
+- [x] Evolve `frames.index.json` (schema v1, additive) so stats-lite can run more checks.
+  - [x] Add top-level `features: string[]` (additive; do not bump `schema_version` yet).
+  - [x] Add optional per-window aggregates to `windows[i].aggregates` for gate-friendly counters that are:
+    - small,
+    - stable across schema evolution,
+    - computable via streaming (no need to materialize the bundle).
+  - [x] Update `ensure_frames_index_json` to treat missing required `features[]` as "outdated" and regenerate.
+  - [x] Document the new fields in `docs/workstreams/diag-fearless-refactor-v1/frames-index.md`.
+
+- [ ] Port selected `diag stats --check-*` gates to sidecars (so they work in stats-lite mode).
+  - [x] Define a small “compat matrix” in code (agent-friendly): `check -> stats-lite data source`.
+  - [x] Expose the compat matrix as machine-readable JSON for agents:
+    - `fretboard diag stats --stats-lite-checks-json`
+  - [x] Reduce streaming gate churn by extracting shared deserializer helpers:
+    - `crates/fret-diag/src/json_stream.rs`
+  - [x] Migrate existing streaming gates to the shared helper (reduce duplication):
+    - `crates/fret-diag/src/stats/notify_gates_streaming.rs`
+    - `crates/fret-diag/src/stats/drag_cache_gates_streaming.rs`
+    - `crates/fret-diag/src/stats/wheel_scroll_streaming/`
+  - [x] Split wheel-scroll streaming gates into a directory module (reduce file-size blast radius):
+    - `crates/fret-diag/src/stats/wheel_scroll_streaming/mod.rs` (exports)
+    - `crates/fret-diag/src/stats/wheel_scroll_streaming/checks.rs` (gate entrypoints)
+    - `crates/fret-diag/src/stats/wheel_scroll_streaming/types.rs` (shared structs)
+    - `crates/fret-diag/src/stats/wheel_scroll_streaming/wheel_frames_min.rs` (streamed wheel frame index)
+    - `crates/fret-diag/src/stats/wheel_scroll_streaming/tests.rs` (regression tests)
+    - `crates/fret-diag/src/stats/wheel_scroll_streaming/before_after_metas.rs` (stream reader)
+    - `crates/fret-diag/src/stats/wheel_scroll_streaming/inline_semantics_lite.rs` (stream reader)
+  - [x] Remove the remaining wheel-scroll legacy shim:
+    - move `read_window_before_after_metas` into `before_after_metas.rs`
+    - move `stream_read_inline_semantics_lite_for_pairs` into `inline_semantics_lite.rs`
+    - delete the `legacy.rs` shim module
+  - [x] Split retained virtual-list streaming gates into dedicated submodules:
+    - `crates/fret-diag/src/stats/retained_vlist_gates_streaming/`
+  - [x] First wave (frames-index aggregates):
+    - [x] `--check-viewport-input-min` (post-warmup viewport_input event count).
+    - [x] `--check-dock-drag-min` (post-warmup dock-drag-active frames).
+    - [x] `--check-viewport-capture-min` (post-warmup capture-active frames).
+    - [x] `--check-view-cache-reuse-min` (post-warmup reuse event count).
+  - [ ] Second wave (still sidecar-only, but may need additional signals):
+    - [x] `--check-overlay-synthesis-min` (synthesized overlay counts).
+    - [x] `--check-stale-paint` (streaming; does not materialize full bundle JSON).
+    - [x] `--check-stale-scene` (streaming; does not materialize full bundle JSON).
+    - [x] `--check-wheel-scroll*` (streaming; does not materialize full bundle JSON).
+    - [x] `--check-semantics-changed-repainted` (streaming; does not materialize full bundle JSON; loads schema2 semantics table nodes for diffs).
+    - [x] `--check-notify-hotspot-file-max` (streaming; does not materialize full bundle JSON).
+    - [x] `--check-gc-sweep-liveness` (streaming; does not materialize full bundle JSON).
+    - [x] `--check-drag-cache-root-paint-only` (streaming; does not materialize full bundle JSON).
+    - [x] `--check-view-cache-reuse-stable-min` (frames-index aggregates; reuse streak tail/max).
+    - [x] `--check-idle-no-paint-min` (frames-index aggregates; idle streak tail/max).
+    - [x] `--check-retained-vlist-reconcile-no-notify-min` (streaming; does not materialize full bundle JSON; legacy alias: `--check-retained-vlist-reconcile-no-notify`).
+    - [x] `--check-retained-vlist-keep-alive-reuse-min` (streaming; does not materialize full bundle JSON).
+    - [x] `--check-retained-vlist-attach-detach-max` (streaming; does not materialize full bundle JSON).
 
 ## Plan 2 (defer until Plan 1 is solid)
 

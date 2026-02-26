@@ -6,6 +6,8 @@ use crate::json_bundle::{
     SemanticsResolver, pick_last_snapshot_with_resolved_semantics_after_warmup,
 };
 
+mod streaming;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum LintLevel {
     Error,
@@ -122,244 +124,241 @@ pub(super) fn lint_bundle_from_path(
     warmup_frames: u64,
     opts: LintOptions,
 ) -> Result<LintReport, String> {
+    const STREAMING_THRESHOLD_BYTES: u64 = 16 * 1024 * 1024;
+    let file_len = std::fs::metadata(bundle_path)
+        .map(|m| m.len())
+        .unwrap_or(STREAMING_THRESHOLD_BYTES + 1);
+    if file_len > STREAMING_THRESHOLD_BYTES {
+        return streaming::lint_bundle_from_path_streaming(bundle_path, warmup_frames, opts);
+    }
+
     let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
     let bundle: Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
     lint_bundle_from_json(&bundle, bundle_path, warmup_frames, opts)
 }
 
-fn lint_bundle_from_json(
-    bundle: &Value,
-    bundle_path: &Path,
-    warmup_frames: u64,
+fn focused_node_id_from_nodes(nodes: &[Value]) -> Option<u64> {
+    nodes.iter().find_map(|n| {
+        let id = n.get("id").and_then(|v| v.as_u64())?;
+        let flags = n.get("flags");
+        let is_focused = flags
+            .and_then(|v| v.get("focused"))
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false)
+            || n.get("focused").and_then(|v| v.as_bool()).unwrap_or(false);
+        if is_focused { Some(id) } else { None }
+    })
+}
+
+fn lint_nodes_for_window(
+    findings: &mut Vec<Value>,
+    window_id: u64,
+    frame_id: u64,
+    window_bounds_value: &Value,
+    nodes: &[Value],
+    mut focus: Option<u64>,
     opts: LintOptions,
-) -> Result<LintReport, String> {
-    let windows = bundle
-        .get("windows")
-        .and_then(|v| v.as_array())
-        .ok_or_else(|| "invalid bundle artifact: missing windows".to_string())?;
+) {
+    let window_bounds = rect_from_bounds(window_bounds_value).unwrap_or(RectF64 {
+        x: 0.0,
+        y: 0.0,
+        w: 0.0,
+        h: 0.0,
+    });
 
-    let semantics = SemanticsResolver::new(bundle);
+    if focus.is_none() {
+        focus = focused_node_id_from_nodes(nodes);
+    }
 
-    let mut findings: Vec<Value> = Vec::new();
+    let mut by_id: HashMap<u64, &Value> = HashMap::new();
+    let mut test_id_to_nodes: HashMap<&str, Vec<u64>> = HashMap::new();
 
-    for w in windows {
-        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
-        let snaps = w
-            .get("snapshots")
-            .and_then(|v| v.as_array())
-            .map_or(&[][..], |v| v);
-        let Some(snapshot) = pick_last_snapshot_with_resolved_semantics_after_warmup(
-            snaps,
-            warmup_frames,
-            &semantics,
-        ) else {
+    for n in nodes {
+        let Some(id) = n.get("id").and_then(|v| v.as_u64()) else {
             continue;
         };
-
-        let frame_id = crate::json_bundle::snapshot_frame_id(snapshot);
-        let window_bounds = snapshot
-            .get("window_bounds")
-            .and_then(rect_from_bounds)
-            .unwrap_or(RectF64 {
-                x: 0.0,
-                y: 0.0,
-                w: 0.0,
-                h: 0.0,
-            });
-
-        let focus = semantics
-            .semantics_snapshot(snapshot)
-            .and_then(|v| v.get("focus"))
-            .and_then(|v| v.as_u64());
-
-        let nodes = semantics.nodes(snapshot).unwrap_or(&[]);
-        if nodes.is_empty() {
-            continue;
-        }
-
-        let mut by_id: HashMap<u64, &Value> = HashMap::new();
-        let mut test_id_to_nodes: HashMap<&str, Vec<u64>> = HashMap::new();
-
-        for n in nodes {
-            let Some(id) = n.get("id").and_then(|v| v.as_u64()) else {
-                continue;
-            };
-            by_id.insert(id, n);
-            if let Some(test_id) = n.get("test_id").and_then(|v| v.as_str())
-                && !test_id.trim().is_empty()
-            {
-                test_id_to_nodes.entry(test_id).or_default().push(id);
-            }
-        }
-
-        for (test_id, ids) in test_id_to_nodes.iter() {
-            if ids.len() <= 1 {
-                continue;
-            }
-            let mut ids_sorted = ids.clone();
-            ids_sorted.sort_unstable();
-            push_finding(
-                &mut findings,
-                LintLevel::Error,
-                "semantics.duplicate_test_id",
-                window_id,
-                frame_id,
-                None,
-                Some(test_id.to_string()),
-                None,
-                format!("duplicate test_id: {test_id}"),
-                serde_json::json!({ "node_ids": ids_sorted }),
-            );
-        }
-
-        for n in nodes {
-            let Some(id) = n.get("id").and_then(|v| v.as_u64()) else {
-                continue;
-            };
-            let role = n
-                .get("role")
-                .and_then(|v| v.as_str())
-                .map(|s| s.to_string());
-            let test_id = n
-                .get("test_id")
-                .and_then(|v| v.as_str())
-                .map(|s| s.to_string());
-
-            let active_descendant = n.get("active_descendant").and_then(|v| v.as_u64());
-            if let Some(active_descendant) = active_descendant
-                && !by_id.contains_key(&active_descendant)
-            {
-                push_finding(
-                    &mut findings,
-                    LintLevel::Error,
-                    "semantics.active_descendant_missing",
-                    window_id,
-                    frame_id,
-                    Some(id),
-                    test_id.clone(),
-                    role.clone(),
-                    "active_descendant points to a missing node",
-                    serde_json::json!({ "active_descendant": active_descendant }),
-                );
-            }
-
-            let label = n.get("label").and_then(|v| v.as_str());
-            let value = n.get("value").and_then(|v| v.as_str());
-            let role_str = role.as_deref().unwrap_or("");
-            if role_requires_label(role_str) && label.is_none() && value.is_none() {
-                push_finding(
-                    &mut findings,
-                    LintLevel::Warning,
-                    "semantics.missing_label",
-                    window_id,
-                    frame_id,
-                    Some(id),
-                    test_id.clone(),
-                    role.clone(),
-                    "interactive semantics node is missing label/value",
-                    Value::Null,
-                );
-            }
-
-            let Some(bounds) = n.get("bounds").and_then(rect_from_bounds) else {
-                continue;
-            };
-            let eps = opts.eps_px.max(0.0) as f64;
-
-            let is_focused = focus == Some(id);
-
-            if !rect_is_non_empty(bounds, eps) {
-                let level = if is_focused {
-                    LintLevel::Error
-                } else {
-                    LintLevel::Warning
-                };
-                if test_id.is_some() || is_focused {
-                    push_finding(
-                        &mut findings,
-                        level,
-                        "layout.zero_size",
-                        window_id,
-                        frame_id,
-                        Some(id),
-                        test_id.clone(),
-                        role.clone(),
-                        "semantics bounds are empty (w/h too small)",
-                        serde_json::json!({ "bounds": n.get("bounds").cloned().unwrap_or(Value::Null) }),
-                    );
-                }
-            }
-
-            if is_focused && !rects_intersect(bounds, window_bounds, eps) {
-                push_finding(
-                    &mut findings,
-                    LintLevel::Error,
-                    "layout.focused_out_of_window",
-                    window_id,
-                    frame_id,
-                    Some(id),
-                    test_id.clone(),
-                    role.clone(),
-                    "focused semantics node is outside the window bounds",
-                    serde_json::json!({
-                        "bounds": n.get("bounds").cloned().unwrap_or(Value::Null),
-                        "window_bounds": snapshot.get("window_bounds").cloned().unwrap_or(Value::Null),
-                    }),
-                );
-            }
-
-            if opts.all_test_ids_bounds
-                && test_id.is_some()
-                && !rects_intersect(bounds, window_bounds, eps)
-            {
-                push_finding(
-                    &mut findings,
-                    LintLevel::Warning,
-                    "layout.test_id_out_of_window",
-                    window_id,
-                    frame_id,
-                    Some(id),
-                    test_id.clone(),
-                    role.clone(),
-                    "test_id node is outside the window bounds",
-                    serde_json::json!({
-                        "bounds": n.get("bounds").cloned().unwrap_or(Value::Null),
-                        "window_bounds": snapshot.get("window_bounds").cloned().unwrap_or(Value::Null),
-                    }),
-                );
-            }
-
-            if is_focused
-                && let Some(active) = active_descendant
-                && let Some(active_node) = by_id.get(&active)
-                && let Some(active_bounds) = active_node.get("bounds").and_then(rect_from_bounds)
-                && !rects_intersect(active_bounds, window_bounds, eps)
-            {
-                push_finding(
-                    &mut findings,
-                    LintLevel::Error,
-                    "layout.active_item_out_of_window",
-                    window_id,
-                    frame_id,
-                    Some(active),
-                    active_node
-                        .get("test_id")
-                        .and_then(|v| v.as_str())
-                        .map(|s| s.to_string()),
-                    active_node
-                        .get("role")
-                        .and_then(|v| v.as_str())
-                        .map(|s| s.to_string()),
-                    "active item is outside the window bounds",
-                    serde_json::json!({
-                        "bounds": active_node.get("bounds").cloned().unwrap_or(Value::Null),
-                        "window_bounds": snapshot.get("window_bounds").cloned().unwrap_or(Value::Null),
-                    }),
-                );
-            }
+        by_id.insert(id, n);
+        if let Some(test_id) = n.get("test_id").and_then(|v| v.as_str())
+            && !test_id.trim().is_empty()
+        {
+            test_id_to_nodes.entry(test_id).or_default().push(id);
         }
     }
 
+    for (test_id, ids) in test_id_to_nodes.iter() {
+        if ids.len() <= 1 {
+            continue;
+        }
+        let mut ids_sorted = ids.clone();
+        ids_sorted.sort_unstable();
+        push_finding(
+            findings,
+            LintLevel::Error,
+            "semantics.duplicate_test_id",
+            window_id,
+            frame_id,
+            None,
+            Some(test_id.to_string()),
+            None,
+            format!("duplicate test_id: {test_id}"),
+            serde_json::json!({ "node_ids": ids_sorted }),
+        );
+    }
+
+    for n in nodes {
+        let Some(id) = n.get("id").and_then(|v| v.as_u64()) else {
+            continue;
+        };
+        let role = n
+            .get("role")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+        let test_id = n
+            .get("test_id")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+
+        let active_descendant = n.get("active_descendant").and_then(|v| v.as_u64());
+        if let Some(active_descendant) = active_descendant
+            && !by_id.contains_key(&active_descendant)
+        {
+            push_finding(
+                findings,
+                LintLevel::Error,
+                "semantics.active_descendant_missing",
+                window_id,
+                frame_id,
+                Some(id),
+                test_id.clone(),
+                role.clone(),
+                "active_descendant points to a missing node",
+                serde_json::json!({ "active_descendant": active_descendant }),
+            );
+        }
+
+        let label = n.get("label").and_then(|v| v.as_str());
+        let value = n.get("value").and_then(|v| v.as_str());
+        let role_str = role.as_deref().unwrap_or("");
+        if role_requires_label(role_str) && label.is_none() && value.is_none() {
+            push_finding(
+                findings,
+                LintLevel::Warning,
+                "semantics.missing_label",
+                window_id,
+                frame_id,
+                Some(id),
+                test_id.clone(),
+                role.clone(),
+                "interactive semantics node is missing label/value",
+                Value::Null,
+            );
+        }
+
+        let Some(bounds) = n.get("bounds").and_then(rect_from_bounds) else {
+            continue;
+        };
+        let eps = opts.eps_px.max(0.0) as f64;
+
+        let is_focused = focus == Some(id);
+
+        if !rect_is_non_empty(bounds, eps) {
+            let level = if is_focused {
+                LintLevel::Error
+            } else {
+                LintLevel::Warning
+            };
+            if test_id.is_some() || is_focused {
+                push_finding(
+                    findings,
+                    level,
+                    "layout.zero_size",
+                    window_id,
+                    frame_id,
+                    Some(id),
+                    test_id.clone(),
+                    role.clone(),
+                    "semantics bounds are empty (w/h too small)",
+                    serde_json::json!({ "bounds": n.get("bounds").cloned().unwrap_or(Value::Null) }),
+                );
+            }
+        }
+
+        if is_focused && !rects_intersect(bounds, window_bounds, eps) {
+            push_finding(
+                findings,
+                LintLevel::Error,
+                "layout.focused_out_of_window",
+                window_id,
+                frame_id,
+                Some(id),
+                test_id.clone(),
+                role.clone(),
+                "focused semantics node is outside the window bounds",
+                serde_json::json!({
+                    "bounds": n.get("bounds").cloned().unwrap_or(Value::Null),
+                    "window_bounds": window_bounds_value.clone(),
+                }),
+            );
+        }
+
+        if opts.all_test_ids_bounds
+            && test_id.is_some()
+            && !rects_intersect(bounds, window_bounds, eps)
+        {
+            push_finding(
+                findings,
+                LintLevel::Warning,
+                "layout.test_id_out_of_window",
+                window_id,
+                frame_id,
+                Some(id),
+                test_id.clone(),
+                role.clone(),
+                "test_id node is outside the window bounds",
+                serde_json::json!({
+                    "bounds": n.get("bounds").cloned().unwrap_or(Value::Null),
+                    "window_bounds": window_bounds_value.clone(),
+                }),
+            );
+        }
+
+        if is_focused
+            && let Some(active) = active_descendant
+            && let Some(active_node) = by_id.get(&active)
+            && let Some(active_bounds) = active_node.get("bounds").and_then(rect_from_bounds)
+            && !rects_intersect(active_bounds, window_bounds, eps)
+        {
+            push_finding(
+                findings,
+                LintLevel::Error,
+                "layout.active_item_out_of_window",
+                window_id,
+                frame_id,
+                Some(active),
+                active_node
+                    .get("test_id")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string()),
+                active_node
+                    .get("role")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string()),
+                "active item is outside the window bounds",
+                serde_json::json!({
+                    "bounds": active_node.get("bounds").cloned().unwrap_or(Value::Null),
+                    "window_bounds": window_bounds_value.clone(),
+                }),
+            );
+        }
+    }
+}
+
+fn finish_lint_report(
+    mut findings: Vec<Value>,
+    bundle_path: &Path,
+    warmup_frames: u64,
+    opts: LintOptions,
+) -> LintReport {
     findings.sort_by(|a, b| {
         let la = a.get("level").and_then(|v| v.as_str()).unwrap_or("");
         let lb = b.get("level").and_then(|v| v.as_str()).unwrap_or("");
@@ -425,6 +424,7 @@ fn lint_bundle_from_json(
     let payload = serde_json::json!({
         "schema_version": 1,
         "kind": "lint",
+        "bundle_artifact": bundle_path.display().to_string(),
         "bundle_json": bundle_path.display().to_string(),
         "warmup_frames": warmup_frames,
         "options": {
@@ -437,15 +437,80 @@ fn lint_bundle_from_json(
         "findings": findings,
     });
 
-    Ok(LintReport {
+    LintReport {
         error_issues,
         payload,
-    })
+    }
+}
+
+fn lint_bundle_from_json(
+    bundle: &Value,
+    bundle_path: &Path,
+    warmup_frames: u64,
+    opts: LintOptions,
+) -> Result<LintReport, String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle artifact: missing windows".to_string())?;
+
+    let semantics = SemanticsResolver::new(bundle);
+
+    let mut findings: Vec<Value> = Vec::new();
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+        let Some(snapshot) = pick_last_snapshot_with_resolved_semantics_after_warmup(
+            snaps,
+            warmup_frames,
+            &semantics,
+        ) else {
+            continue;
+        };
+
+        let frame_id = crate::json_bundle::snapshot_frame_id(snapshot);
+        let window_bounds_value = snapshot
+            .get("window_bounds")
+            .cloned()
+            .unwrap_or(Value::Null);
+
+        let focus = semantics
+            .semantics_snapshot(snapshot)
+            .and_then(|v| v.get("focus"))
+            .and_then(|v| v.as_u64());
+
+        let nodes = semantics.nodes(snapshot).unwrap_or(&[]);
+        if nodes.is_empty() {
+            continue;
+        }
+
+        lint_nodes_for_window(
+            &mut findings,
+            window_id,
+            frame_id,
+            &window_bounds_value,
+            nodes,
+            focus,
+            opts,
+        );
+    }
+
+    Ok(finish_lint_report(
+        findings,
+        bundle_path,
+        warmup_frames,
+        opts,
+    ))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::time::{SystemTime, UNIX_EPOCH};
 
     #[test]
     fn lint_detects_duplicate_test_id_and_missing_active_descendant() {
@@ -541,6 +606,173 @@ mod tests {
                     == Some("semantics.active_descendant_missing")
             }),
             "expected active_descendant missing finding"
+        );
+    }
+
+    #[test]
+    fn lint_streaming_supports_inline_semantics() {
+        let bundle = serde_json::json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        {
+                            "frame_id": 10,
+                            "window_bounds": { "x": 0.0, "y": 0.0, "w": 100.0, "h": 100.0 },
+                            "debug": {
+                                "semantics": {
+                                    "nodes": [
+                                        {
+                                            "id": 1,
+                                            "parent": null,
+                                            "role": "list_box",
+                                            "bounds": { "x": 0.0, "y": 0.0, "w": 100.0, "h": 100.0 },
+                                            "flags": { "focused": true },
+                                            "test_id": "dup",
+                                            "active_descendant": 999
+                                        },
+                                        {
+                                            "id": 2,
+                                            "parent": 1,
+                                            "role": "list_box_option",
+                                            "bounds": { "x": 0.0, "y": 0.0, "w": 100.0, "h": 20.0 },
+                                            "flags": { "focused": false },
+                                            "test_id": "dup",
+                                            "active_descendant": null,
+                                            "label": "A"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        let tmp_name = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("time")
+            .as_nanos();
+        let tmp_path =
+            std::env::temp_dir().join(format!("fret-diag-lint-streaming-{tmp_name}.json"));
+        std::fs::write(&tmp_path, serde_json::to_vec(&bundle).expect("json")).expect("write");
+
+        let report = streaming::lint_bundle_from_path_streaming(
+            &tmp_path,
+            0,
+            LintOptions {
+                all_test_ids_bounds: false,
+                eps_px: 0.5,
+            },
+        )
+        .expect("streaming lint should succeed");
+
+        let _ = std::fs::remove_file(&tmp_path);
+
+        let findings = report
+            .payload
+            .get("findings")
+            .and_then(|v| v.as_array())
+            .expect("expected findings");
+        assert!(
+            findings.iter().any(|f| {
+                f.get("code").and_then(|v| v.as_str()) == Some("semantics.duplicate_test_id")
+            }),
+            "expected duplicate test_id finding"
+        );
+    }
+
+    #[test]
+    fn lint_streaming_supports_schema_v2_table_semantics() {
+        // Keep key ordering stable for streaming readers that avoid materializing the full table entry.
+        let bundle = r#"
+{
+  "schema_version": 2,
+  "windows": [
+    {
+      "window": 1,
+      "snapshots": [
+        {
+          "frame_id": 10,
+          "window": 1,
+          "semantics_fingerprint": 42,
+          "window_bounds": { "x": 0.0, "y": 0.0, "w": 100.0, "h": 100.0 },
+          "debug": {}
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "semantics": {
+      "schema_version": 1,
+      "entries": [
+        {
+          "window": 1,
+          "semantics_fingerprint": 42,
+          "semantics": {
+            "window": 1,
+            "focus": 1,
+            "nodes": [
+              {
+                "id": 1,
+                "parent": null,
+                "role": "list_box",
+                "bounds": { "x": 0.0, "y": 0.0, "w": 100.0, "h": 100.0 },
+                "flags": { "focused": true },
+                "test_id": "dup",
+                "active_descendant": 999
+              },
+              {
+                "id": 2,
+                "parent": 1,
+                "role": "list_box_option",
+                "bounds": { "x": 0.0, "y": 0.0, "w": 100.0, "h": 20.0 },
+                "flags": { "focused": false },
+                "test_id": "dup",
+                "active_descendant": null,
+                "label": "A"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}
+"#;
+
+        let tmp_name = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("time")
+            .as_nanos();
+        let tmp_path =
+            std::env::temp_dir().join(format!("fret-diag-lint-streaming-v2-{tmp_name}.json"));
+        std::fs::write(&tmp_path, bundle.as_bytes()).expect("write");
+
+        let report = streaming::lint_bundle_from_path_streaming(
+            &tmp_path,
+            0,
+            LintOptions {
+                all_test_ids_bounds: false,
+                eps_px: 0.5,
+            },
+        )
+        .expect("streaming lint should succeed");
+
+        let _ = std::fs::remove_file(&tmp_path);
+
+        let findings = report
+            .payload
+            .get("findings")
+            .and_then(|v| v.as_array())
+            .expect("expected findings");
+        assert!(
+            findings.iter().any(|f| {
+                f.get("code").and_then(|v| v.as_str()) == Some("semantics.duplicate_test_id")
+            }),
+            "expected duplicate test_id finding"
         );
     }
 

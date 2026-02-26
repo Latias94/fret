@@ -41,6 +41,7 @@ Top-level required fields (see sidecar policy for the full rules):
 - `schema_version = 1`
 - `warmup_frames`
 - `bundle` (best-effort label)
+- `features[]` (optional; additive schema evolution flags)
 - `columns[]`
 - `windows[]`
 
@@ -79,3 +80,32 @@ Current columns:
 
 - `warmup_frames` is interpreted as a **frame_id threshold** (consistent with existing warmup handling).
 - To avoid unbounded memory usage, generators keep only a tail of frames per window and report clipping metadata.
+
+## Optional window aggregates (additive, v1)
+
+When `features[]` contains `window_aggregates.v1`, each `windows[i]` object may include:
+
+- `aggregates.schema_version = 1`
+- `aggregates.examined_snapshots_post_warmup`
+- `aggregates.viewport_input_events_post_warmup`
+- `aggregates.dock_drag_active_frames_post_warmup`
+- `aggregates.viewport_capture_active_frames_post_warmup`
+- `aggregates.view_cache_active_snapshots_post_warmup`
+- `aggregates.view_cache_reuse_events_post_warmup`
+- `aggregates.paint_cache_replayed_ops_post_warmup`
+- `aggregates.view_cache_reuse_streak_max_post_warmup` (requires `window_aggregates.view_cache_reuse_streak.v1`)
+- `aggregates.view_cache_reuse_streak_tail_post_warmup` (requires `window_aggregates.view_cache_reuse_streak.v1`)
+- `aggregates.view_cache_reuse_last_non_signal_post_warmup` (requires `window_aggregates.view_cache_reuse_streak.v1`; nullable)
+- `aggregates.idle_no_paint_frames_total_post_warmup` (requires `window_aggregates.idle_no_paint.v1`)
+- `aggregates.idle_no_paint_paint_frames_total_post_warmup` (requires `window_aggregates.idle_no_paint.v1`)
+- `aggregates.idle_no_paint_streak_max_post_warmup` (requires `window_aggregates.idle_no_paint.v1`)
+- `aggregates.idle_no_paint_streak_tail_post_warmup` (requires `window_aggregates.idle_no_paint.v1`)
+- `aggregates.idle_no_paint_last_paint_post_warmup` (requires `window_aggregates.idle_no_paint.v1`; nullable)
+- `aggregates.overlay_synthesis_events_total_post_warmup`
+- `aggregates.overlay_synthesis_events_synthesized_post_warmup`
+- `aggregates.overlay_synthesis_events_suppressed_post_warmup`
+
+These counters are computed over the full streamed snapshot sequence (post-warmup), even if `rows[]`
+is tail-clipped.
+
+Additional counters may be present as new `features[]` are added (e.g. reuse streaks, overlay synthesis totals).

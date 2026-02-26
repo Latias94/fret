@@ -44,6 +44,7 @@ mod frames_index;
 mod gates;
 mod hotspots_lite;
 mod json_bundle;
+mod json_stream;
 mod latest;
 mod lint;
 mod math;
@@ -77,9 +78,9 @@ pub(crate) use perf_hint_gate::{
 
 pub(crate) use paths::{
     default_lint_out_path, default_meta_out_path, default_pack_out_path, default_test_ids_out_path,
-    default_triage_out_path, expand_script_inputs, resolve_bundle_artifact_path,
-    resolve_bundle_artifact_path_no_materialize, resolve_bundle_root_dir,
-    resolve_bundle_schema2_artifact_path_no_materialize, resolve_path,
+    default_triage_out_path, expand_script_inputs, prefer_schema2_sibling_for_bundle_json_path,
+    resolve_bundle_artifact_path, resolve_bundle_artifact_path_no_materialize,
+    resolve_bundle_root_dir, resolve_bundle_schema2_artifact_path_no_materialize, resolve_path,
     resolve_raw_bundle_artifact_path_no_materialize, wait_for_bundle_artifact_from_script_result,
     wait_for_bundle_artifact_in_dir,
 };
@@ -353,6 +354,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut stats_verbose: bool = false;
     let mut sort_override: Option<BundleStatsSort> = None;
     let mut stats_json: bool = false;
+    let mut stats_lite_checks_json: bool = false;
     let mut stats_diff: Option<(PathBuf, PathBuf)> = None;
     let mut trace_chrome: bool = false;
     let mut trace_out: Option<PathBuf> = None;
@@ -1793,16 +1795,19 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     })?);
                 i += 1;
             }
-            "--check-retained-vlist-reconcile-no-notify" => {
+            "--check-retained-vlist-reconcile-no-notify"
+            | "--check-retained-vlist-reconcile-no-notify-min" => {
                 i += 1;
                 let Some(v) = args.get(i).cloned() else {
                     return Err(
-                        "missing value for --check-retained-vlist-reconcile-no-notify".to_string(),
+                        "missing value for --check-retained-vlist-reconcile-no-notify[-min]"
+                            .to_string(),
                     );
                 };
                 check_retained_vlist_reconcile_no_notify_min =
                     Some(v.parse::<u64>().map_err(|_| {
-                        "invalid value for --check-retained-vlist-reconcile-no-notify".to_string()
+                        "invalid value for --check-retained-vlist-reconcile-no-notify[-min]"
+                            .to_string()
                     })?);
                 i += 1;
             }
@@ -1873,6 +1878,10 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             }
             "--json" => {
                 stats_json = true;
+                i += 1;
+            }
+            "--stats-lite-checks-json" | "--stats-lite-matrix-json" => {
+                stats_lite_checks_json = true;
                 i += 1;
             }
             "--meta-report" => {
@@ -2733,6 +2742,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 sort_override: sort_override.clone(),
                 stats_top,
                 stats_json,
+                stats_lite_checks_json,
                 stats_verbose,
                 warmup_frames,
                 check_stale_paint_test_id: check_stale_paint_test_id.clone(),

@@ -617,26 +617,20 @@ pub(crate) fn stream_read_semantics_table_nodes(
         }
     }
 
-    let file = std::fs::File::open(bundle_path).map_err(|e| e.to_string())?;
-    let reader = std::io::BufReader::new(file);
-    let mut de = serde_json::Deserializer::from_reader(reader);
-
     let out: std::rc::Rc<std::cell::RefCell<Option<Vec<Value>>>> =
         std::rc::Rc::new(std::cell::RefCell::new(None));
-
-    let res = RootSeed {
-        window_id,
-        semantics_fingerprint,
-        out: out.clone(),
-    }
-    .deserialize(&mut de);
-
-    if let Err(err) = res {
-        let msg = err.to_string();
-        if !msg.starts_with(FOUND_TABLE_MARKER) {
-            return Err(err.to_string());
-        }
-    }
+    crate::json_stream::with_bundle_json_deserializer_allow_stop(
+        bundle_path,
+        FOUND_TABLE_MARKER,
+        |de| {
+            RootSeed {
+                window_id,
+                semantics_fingerprint,
+                out: out.clone(),
+            }
+            .deserialize(de)
+        },
+    )?;
 
     Ok(out.borrow_mut().take())
 }
