@@ -98,7 +98,8 @@ if left unspecified.
 - [x] Support material/texture paints for `SceneOp::Path` (wgpu backend):
   - Allow `PaintMaterialPolicy::Allow` for paths and implement material evaluation in the path shader.
   - Evidence: `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/path.rs`,
-    `crates/fret-render-wgpu/src/renderer/shaders.rs` (`PATH_SHADER`).
+    `crates/fret-render-wgpu/src/renderer/shaders.rs` (`PATH_SHADER`),
+    `crates/fret-render-wgpu/tests/path_material_paint_conformance.rs`.
 
 - [ ] Dash semantics consistency:
   - `StrokeRRect` dashes are evaluated in the quad shader using an rrect-perimeter parameterization,
