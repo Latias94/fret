@@ -1,9 +1,17 @@
-//! Web/WASM smoke demo for Custom Effect V2.
+//! Web/WASM inspector demo for Custom Effect V2.
 //!
-//! This demo exists to keep the WebGPU path honest:
+//! This demo exists to keep the WebGPU path honest and provide a small parameter harness:
 //! - register a CustomV2 program in `gpu_ready`,
 //! - upload and register a filterable `ImageId` as the v2 user input,
-//! - render a small `EffectLayer` in `Backdrop` mode so the effect is visually obvious.
+//! - expose an inspector UI that lets you validate wiring for:
+//!   - mode/quality,
+//!   - input sampling + `UvRect`,
+//!   - blur radius/downsample,
+//!   - rounded clip radii for the lens and stage tiles.
+//!
+//! Keys:
+//! - `V`: toggle the lens surface
+//! - `R`: reset controls
 
 use std::sync::Arc;
 
