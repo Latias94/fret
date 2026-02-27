@@ -36,6 +36,36 @@ const WGSL: &str = r#"
 // - vec4s[0].z: input_debug (0 or 1)
 // - vec4s[0].w: unused
 
+fn sample_src_premul_bilinear(p_px: vec2<f32>) -> vec4<f32> {
+  let dims_u = textureDimensions(src_texture);
+  if (dims_u.x == 0u || dims_u.y == 0u) {
+    return vec4<f32>(0.0);
+  }
+
+  let dims = vec2<f32>(f32(dims_u.x), f32(dims_u.y));
+  let max_p = vec2<f32>(dims.x - 0.5, dims.y - 0.5);
+  let p = clamp(p_px, vec2<f32>(0.5), max_p);
+
+  // Convert from pixel-center coordinates to texel coordinates for manual bilinear sampling.
+  let t = p - vec2<f32>(0.5);
+  let base_f = floor(t);
+  let f = fract(t);
+
+  let x0 = clamp(i32(base_f.x), 0, i32(dims_u.x) - 1);
+  let y0 = clamp(i32(base_f.y), 0, i32(dims_u.y) - 1);
+  let x1 = min(x0 + 1, i32(dims_u.x) - 1);
+  let y1 = min(y0 + 1, i32(dims_u.y) - 1);
+
+  let c00 = textureLoad(src_texture, vec2<i32>(x0, y0), 0);
+  let c10 = textureLoad(src_texture, vec2<i32>(x1, y0), 0);
+  let c01 = textureLoad(src_texture, vec2<i32>(x0, y1), 0);
+  let c11 = textureLoad(src_texture, vec2<i32>(x1, y1), 0);
+
+  let cx0 = mix(c00, c10, f.x);
+  let cx1 = mix(c01, c11, f.x);
+  return mix(cx0, cx1, f.y);
+}
+
 fn fret_custom_effect(src: vec4<f32>, _uv: vec2<f32>, pos_px: vec2<f32>, params: EffectParamsV1) -> vec4<f32> {
   let strength_px = clamp(params.vec4s[0].x, 0.0, 24.0);
   let tint_strength = clamp(params.vec4s[0].y, 0.0, 1.0);
@@ -48,16 +78,12 @@ fn fret_custom_effect(src: vec4<f32>, _uv: vec2<f32>, pos_px: vec2<f32>, params:
     return vec4<f32>(inp.rgb, 1.0);
   }
 
-  // Simple warp driven by the input image (two channels).
+  // Warp driven by the input image (two channels). Use the blue channel as a falloff so
+  // the center stays stable while edges distort more.
   let n = vec2<f32>(inp.r * 2.0 - 1.0, inp.g * 2.0 - 1.0);
-  let offset_px = n * strength_px;
-
-  let dims_u = textureDimensions(src_texture);
-  let base = vec2<i32>(i32(floor(pos_px.x)), i32(floor(pos_px.y)));
-  let p = base + vec2<i32>(i32(round(offset_px.x)), i32(round(offset_px.y)));
-  let x = clamp(p.x, 0, i32(dims_u.x) - 1);
-  let y = clamp(p.y, 0, i32(dims_u.y) - 1);
-  let warped = textureLoad(src_texture, vec2<i32>(x, y), 0);
+  let amp = clamp(1.0 - inp.b, 0.0, 1.0);
+  let offset_px = n * (strength_px * amp);
+  let warped = sample_src_premul_bilinear(pos_px + offset_px);
 
   // Subtle tint so the effect is visible even on low-frequency backgrounds.
   let tint = vec3<f32>(0.10, 0.18, 0.30) * (0.35 + 0.65 * inp.b) * tint_strength;
@@ -138,10 +164,26 @@ impl CustomEffectV2WebDriver {
         for y in 0..size.1 {
             for x in 0..size.0 {
                 let i = ((y * size.0 + x) * 4) as usize;
-                let check = ((x / 4) ^ (y / 4)) & 1;
-                let r = if check == 0 { 20u8 } else { 230u8 };
-                let g = ((x * 4) & 0xff) as u8;
-                let b = ((y * 4) & 0xff) as u8;
+
+                // Smooth "normal-map like" data texture:
+                // - R/G encode a signed vector field in [-1, 1]
+                // - B encodes a falloff term (higher near center).
+                let fx = (x as f32 + 0.5) / (size.0 as f32) * 2.0 - 1.0;
+                let fy = (y as f32 + 0.5) / (size.1 as f32) * 2.0 - 1.0;
+                let r2 = fx * fx + fy * fy;
+                let falloff = (-r2 * 2.5).exp().clamp(0.0, 1.0);
+
+                // Bump gradient (unnormalized).
+                let dh_dx = -fx * falloff;
+                let dh_dy = -fy * falloff;
+                let inv_len = 1.0 / (dh_dx * dh_dx + dh_dy * dh_dy + 1.0).sqrt();
+                let nx = (dh_dx * inv_len).clamp(-1.0, 1.0);
+                let ny = (dh_dy * inv_len).clamp(-1.0, 1.0);
+
+                let r = ((nx * 0.5 + 0.5) * 255.0).round() as u8;
+                let g = ((ny * 0.5 + 0.5) * 255.0).round() as u8;
+                let b = (falloff * 255.0).round() as u8;
+
                 bytes[i] = r;
                 bytes[i + 1] = g;
                 bytes[i + 2] = b;
@@ -214,14 +256,14 @@ impl CustomEffectV2WebDriver {
         body_layout.size.height = Length::Fill;
 
         let body = if let (true, Some(effect)) = (supported, effect) {
-            let strength_px = 10.0;
+            let strength_px = 14.0;
             let params = EffectParamsV1 {
                 vec4s: [[strength_px, 0.8, 0.0, 0.0], [0.0; 4], [0.0; 4], [0.0; 4]],
             };
             let chain = EffectChain::from_steps(&[
                 EffectStep::GaussianBlur {
-                    radius_px: Px(10.0),
-                    downsample: 2,
+                    radius_px: Px(12.0),
+                    downsample: 1,
                 },
                 EffectStep::CustomV2 {
                     id: effect,
@@ -241,7 +283,7 @@ impl CustomEffectV2WebDriver {
                     layout: body_layout,
                     mode: EffectMode::Backdrop,
                     chain,
-                    quality: EffectQuality::Auto,
+                    quality: EffectQuality::High,
                 },
                 |_cx| Vec::<AnyElement>::new(),
             )
