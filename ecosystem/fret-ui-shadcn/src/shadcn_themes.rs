@@ -460,6 +460,14 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
         .entry(theme_tokens::metric::COMPONENT_TEXT_PROSE_LINE_HEIGHT.to_string())
         .or_insert(24.0);
 
+    // Kbd (new-york-v4): `text-xs` inside a fixed `h-5` keycap.
+    metrics
+        .entry("component.kbd.text_px".to_string())
+        .or_insert(12.0);
+    metrics
+        .entry("component.kbd.line_height".to_string())
+        .or_insert(16.0);
+
     // Calendar (shadcn `Calendar` uses `h-8 w-8` day cells with `space-y-2` between week rows).
     metrics
         .entry("component.calendar.day_size".to_string())
@@ -881,6 +889,31 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn new_york_v4_seeds_kbd_metrics() {
+        let cfg = shadcn_new_york_v4_config(ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        assert_eq!(
+            cfg.metrics.get("component.kbd.text_px").copied(),
+            Some(12.0)
+        );
+        assert_eq!(
+            cfg.metrics.get("component.kbd.line_height").copied(),
+            Some(16.0)
+        );
+
+        let mut app = fret_app::App::new();
+        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        let theme = Theme::global(&app);
+        assert_eq!(
+            theme.metric_by_key("component.kbd.text_px"),
+            Some(fret_core::Px(12.0))
+        );
+        assert_eq!(
+            theme.metric_by_key("component.kbd.line_height"),
+            Some(fret_core::Px(16.0))
+        );
     }
 
     #[test]
