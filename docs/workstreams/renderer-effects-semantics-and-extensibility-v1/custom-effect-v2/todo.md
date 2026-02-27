@@ -65,7 +65,8 @@ Constraints:
   rounded clips).
   - Evidence: `apps/fret-examples/src/custom_effect_v2_web_demo.rs`.
 - [ ] Provide demo-oriented “authoring templates” (in `apps/fret-examples/`), not ecosystem recipes:
-  - an identity/starter CustomV2 (register + params + input image),
+  - [x] an identity/starter CustomV2 (register + params + input image),
+    - Evidence: `apps/fret-examples/src/custom_effect_v2_identity_web_demo.rs` (web runner via `apps/fret-demo-web`)
   - [x] a LUT color grade example:
     - Evidence: `apps/fret-examples/src/custom_effect_v2_lut_web_demo.rs` (web runner via `apps/fret-demo-web`)
   - a simple “glass chrome” highlight driven by a normal/noise map input.

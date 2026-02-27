@@ -123,6 +123,9 @@ Done (evidence anchors):
   - Purpose: a parameter validation harness for CustomV2 authoring (sampling, `UvRect`, blur radius/downsample,
     strength/tint, mode/quality, rounded clips).
   - Keys: `V` toggles the lens surface, `R` resets the controls.
+- Web demo (identity starter template): `apps/fret-examples/src/custom_effect_v2_identity_web_demo.rs` (run via
+  `apps/fret-demo-web` with `?demo=custom_effect_v2_identity_web_demo`).
+  - Purpose: a minimal copy/paste template that wires up the v2 input image, sampling + `UvRect`, and params.
 - Web demo (LUT template): `apps/fret-examples/src/custom_effect_v2_lut_web_demo.rs` (run via
   `apps/fret-demo-web` with `?demo=custom_effect_v2_lut_web_demo`).
   - Purpose: show a minimal LUT color grade effect where the v2 input image is a data texture

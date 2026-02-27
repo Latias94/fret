@@ -55,5 +55,6 @@ Exit criteria:
 - [x] Add at least one additional “authoring template” demo that uses the v2 input image (e.g. LUT/noise/normal-map)
   and documents the expected input color space and sampling hints.
   - Evidence: `apps/fret-examples/src/custom_effect_v2_web_demo.rs`,
+    `apps/fret-examples/src/custom_effect_v2_identity_web_demo.rs`,
     `apps/fret-examples/src/custom_effect_v2_lut_web_demo.rs`,
     `apps/fret-demo-web/src/wasm.rs`.
