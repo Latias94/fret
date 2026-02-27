@@ -131,17 +131,19 @@ impl ToolStatus {
                     a: 1.0,
                 },
             )),
-            Self::OutputError => Some(theme.color_by_key("component.tool.status.output_error.icon").unwrap_or_else(
-                || {
-                    theme.color_by_key("destructive").unwrap_or(Color {
-                        // Tailwind: red-600 (#dc2626).
-                        r: 0.863,
-                        g: 0.149,
-                        b: 0.149,
-                        a: 1.0,
-                    })
-                },
-            )),
+            Self::OutputError => Some(
+                theme
+                    .color_by_key("component.tool.status.output_error.icon")
+                    .unwrap_or_else(|| {
+                        theme.color_by_key("destructive").unwrap_or(Color {
+                            // Tailwind: red-600 (#dc2626).
+                            r: 0.863,
+                            g: 0.149,
+                            b: 0.149,
+                            a: 1.0,
+                        })
+                    }),
+            ),
             _ => None,
         }
     }
