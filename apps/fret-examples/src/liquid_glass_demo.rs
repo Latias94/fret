@@ -15,9 +15,7 @@ use fret_core::scene::{
     CustomEffectImageInputV1, DitherMode, EffectChain, EffectMode, EffectParamsV1, EffectQuality,
     EffectStep, ImageSamplingHint, UvRect, WarpMapEncodingV1,
 };
-use fret_core::{
-    Color, Corners, CustomEffectRegistrationError, Edges, EffectId, ImageColorSpace, Px,
-};
+use fret_core::{Color, Corners, Edges, EffectId, ImageColorSpace, Px};
 use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui::element::{
@@ -111,11 +109,10 @@ fn fret_custom_effect(_src: vec4<f32>, _uv: vec2<f32>, pos_px: vec2<f32>, params
   let radius = radius_at(centered, corner_radii);
   let sd = sd_rounded_rect(centered, half_size, radius);
   let dist_in = max(0.0, -sd);
-  let falloff = if edge_falloff_px > 0.0 {
-    smoothstep(0.0, edge_falloff_px, dist_in)
-  } else {
-    1.0
-  };
+  var falloff = 1.0;
+  if (edge_falloff_px > 0.0) {
+    falloff = smoothstep(0.0, edge_falloff_px, dist_in);
+  }
 
   // Sample a tiled displacement field from the user input (RGBA8 in our demo, linear color space).
   // Encoding matches `WarpMapEncodingV1::RgSigned`: RG store dx/dy in [-1, 1].
@@ -142,11 +139,10 @@ fn fret_custom_effect(_src: vec4<f32>, _uv: vec2<f32>, pos_px: vec2<f32>, params
 
   // Rim + inner shadow: this is a recipe-only visual, not part of core semantics.
   let rim = smoothstep(1.5, 0.0, dist_in);
-  let inner = if edge_falloff_px > 0.0 {
-    smoothstep(edge_falloff_px * 0.25, edge_falloff_px, dist_in)
-  } else {
-    1.0
-  };
+  var inner = 1.0;
+  if (edge_falloff_px > 0.0) {
+    inner = smoothstep(edge_falloff_px * 0.25, edge_falloff_px, dist_in);
+  }
   rgb += vec3<f32>(1.0) * rim * (0.04 + 0.16 * rim_strength);
   rgb -= vec3<f32>(1.0) * (1.0 - inner) * (0.03 + 0.12 * shadow_strength);
 
@@ -405,8 +401,10 @@ fn install_custom_v2_effect(app: &mut App, effects: &mut dyn fret_core::CustomEf
     let mut program = CustomEffectProgramV2::wgsl_utf8(CUSTOM_WARP_V2_WGSL);
     let id = match program.ensure_registered(effects) {
         Ok(id) => Some(id),
-        Err(CustomEffectRegistrationError::Unsupported) => None,
-        Err(CustomEffectRegistrationError::InvalidSource) => None,
+        Err(err) => {
+            tracing::warn!(?err, "liquid-glass custom effect v2 registration failed");
+            None
+        }
     };
     app.set_global(LiquidGlassCustomV2Effect(id));
 }
