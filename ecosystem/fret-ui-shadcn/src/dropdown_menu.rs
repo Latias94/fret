@@ -194,7 +194,9 @@ impl DropdownMenuItem {
         self
     }
 
-    /// Prefer this over `leading(icon(cx, ...))` so the icon can inherit the item's `currentColor`.
+    /// Prefer this over `leading(icon(cx, ...))` so the icon follows shadcn's menu icon rules
+    /// (default items use muted foreground; destructive items force destructive foreground) without
+    /// relying on per-callsite color configuration.
     pub fn leading_icon(mut self, icon: IconId) -> Self {
         self.leading = None;
         self.leading_icon = Some(icon);
@@ -946,9 +948,12 @@ fn checkable_menu_row_children<H: UiHost>(
     pad_x_inset: Px,
     pad_y: Px,
     radius_sm: Px,
-    text_disabled: fret_core::Color,
 ) -> Vec<AnyElement> {
-    let effective_fg = if disabled { text_disabled } else { row_fg };
+    let effective_fg = if disabled {
+        alpha_mul(row_fg, 0.5)
+    } else {
+        row_fg
+    };
     let indicator_fg = effective_fg;
 
     vec![
@@ -1063,11 +1068,7 @@ fn checkable_menu_row_children<H: UiHost>(
                         .text_size_px(style.size)
                         .font_weight(style.weight)
                         .nowrap()
-                        .text_color(ColorRef::Color(if disabled {
-                            text_disabled
-                        } else {
-                            row_fg
-                        }));
+                        .text_color(ColorRef::Color(effective_fg));
 
                     if let Some(line_height) = style.line_height {
                         text = text.fixed_line_box_px(line_height).line_box_in_bounds();
@@ -1877,8 +1878,6 @@ impl DropdownMenu {
                                                     let font_size = theme.metric_token("font.size");
                                                     let font_line_height =
                                                         theme.metric_token("font.line_height");
-                                                    let text_disabled =
-                                                        alpha_mul(theme.color_token("foreground"), 0.5);
                                                     let icon_muted_fg =
                                                         theme.color_token("muted-foreground");
                                                     let destructive_fg = theme.color_token("destructive");
@@ -1916,7 +1915,6 @@ impl DropdownMenu {
                                                         font_size: Px,
                                                         font_line_height: Px,
                                                         text_style: TextStyle,
-                                                        text_disabled: fret_core::Color,
                                                         label_fg: fret_core::Color,
                                                         accent: fret_core::Color,
                                                         accent_fg: fret_core::Color,
@@ -1954,7 +1952,6 @@ impl DropdownMenu {
                                                         let font_size = env.font_size;
                                                         let font_line_height = env.font_line_height;
                                                         let text_style = env.text_style.clone();
-                                                        let text_disabled = env.text_disabled;
                                                         let label_fg = env.label_fg;
                                                         let accent = env.accent;
                                                         let accent_fg = env.accent_fg;
@@ -2160,9 +2157,10 @@ impl DropdownMenu {
                                                                     let mut row_bg =
                                                                         fret_core::Color::TRANSPARENT;
                                                                     let mut row_fg = fg;
-                                                                    if st.hovered
-                                                                        || st.pressed
-                                                                        || st.focused
+                                                                    if !disabled
+                                                                        && (st.hovered
+                                                                            || st.pressed
+                                                                            || st.focused)
                                                                     {
                                                                         row_bg = accent;
                                                                         row_fg = accent_fg;
@@ -2202,7 +2200,6 @@ impl DropdownMenu {
                                                                         pad_x_inset,
                                                                         pad_y,
                                                                         radius_sm,
-                                                                        text_disabled,
                                                                     );
 
                                                                     (props, children)
@@ -2307,9 +2304,10 @@ impl DropdownMenu {
                                                                     let mut row_bg =
                                                                         fret_core::Color::TRANSPARENT;
                                                                     let mut row_fg = fg;
-                                                                    if st.hovered
-                                                                        || st.pressed
-                                                                        || st.focused
+                                                                    if !disabled
+                                                                        && (st.hovered
+                                                                            || st.pressed
+                                                                            || st.focused)
                                                                     {
                                                                         row_bg = accent;
                                                                         row_fg = accent_fg;
@@ -2349,7 +2347,6 @@ impl DropdownMenu {
                                                                         pad_x_inset,
                                                                         pad_y,
                                                                         radius_sm,
-                                                                        text_disabled,
                                                                     );
 
                                                                     (props, children)
@@ -2505,10 +2502,11 @@ impl DropdownMenu {
                                                                 } else {
                                                                     fg
                                                                 };
-                                                                if st.hovered
-                                                                    || st.pressed
-                                                                    || st.focused
-                                                                    || is_open_submenu
+                                                                if !disabled
+                                                                    && (st.hovered
+                                                                        || st.pressed
+                                                                        || st.focused
+                                                                        || is_open_submenu)
                                                                 {
                                                                     if variant
                                                                         == DropdownMenuItemVariant::Destructive
@@ -2556,10 +2554,22 @@ impl DropdownMenu {
                                                                                  ..Default::default()
                                                                              },
                                                                      move |cx| {
-                                                                        let effective_fg = if disabled {
-                                                                            text_disabled
+                                                                        let text_fg = if disabled {
+                                                                            alpha_mul(row_fg, 0.5)
                                                                         } else {
                                                                             row_fg
+                                                                        };
+                                                                        let icon_fg_base = if variant
+                                                                            == DropdownMenuItemVariant::Destructive
+                                                                        {
+                                                                            destructive_fg
+                                                                        } else {
+                                                                            icon_muted_fg
+                                                                        };
+                                                                        let icon_fg = if disabled {
+                                                                            alpha_mul(icon_fg_base, 0.5)
+                                                                        } else {
+                                                                            icon_fg_base
                                                                         };
                                                                         let mut content = content;
                                                                         let mut leading = leading;
@@ -2568,7 +2578,7 @@ impl DropdownMenu {
 
                                                                         current_color::scope_children(
                                                                             cx,
-                                                                            ColorRef::Color(effective_fg),
+                                                                            ColorRef::Color(icon_fg),
                                                                             |cx| {
                                                                                 if let Some(custom) = content.take() {
                                                                                     return vec![custom];
@@ -2599,7 +2609,7 @@ impl DropdownMenu {
                                                                                     .text_size_px(style.size)
                                                                                     .font_weight(style.weight)
                                                                                     .nowrap()
-                                                                                    .text_color(ColorRef::Color(if disabled { text_disabled } else { row_fg }));
+                                                                                    .text_color(ColorRef::Color(text_fg));
 
                                                                                 if let Some(line_height) =
                                                                                     style.line_height
@@ -2625,11 +2635,7 @@ impl DropdownMenu {
                                                                                 if has_submenu {
                                                                                     row.push(submenu_chevron_right_text(
                                                                                         cx,
-                                                                                        if disabled {
-                                                                                            text_disabled
-                                                                                        } else {
-                                                                                            icon_muted_fg
-                                                                                        },
+                                                                                        icon_fg,
                                                                                         font_size,
                                                                                         font_line_height,
                                                                                     ));
@@ -2688,7 +2694,6 @@ impl DropdownMenu {
                                                         font_size,
                                                         font_line_height,
                                                         text_style,
-                                                        text_disabled,
                                                         label_fg: icon_muted_fg,
                                                         accent,
                                                         accent_fg,
@@ -2851,8 +2856,6 @@ impl DropdownMenu {
                                             let font_size = theme.metric_token("font.size");
                                             let font_line_height =
                                                 theme.metric_token("font.line_height");
-                                            let text_disabled =
-                                                alpha_mul(theme.color_token("foreground"), 0.5);
                                             let destructive_fg = theme.color_token("destructive");
                                             let destructive_bg_alpha =
                                                 if is_dark_background(theme) { 0.20 } else { 0.10 };
@@ -2934,7 +2937,6 @@ impl DropdownMenu {
                                                         font_size: Px,
                                                         font_line_height: Px,
                                                         text_style: TextStyle,
-                                                        text_disabled: fret_core::Color,
                                                         label_fg: fret_core::Color,
                                                         accent: fret_core::Color,
                                                         accent_fg: fret_core::Color,
@@ -2969,7 +2971,6 @@ impl DropdownMenu {
                                                         let font_size = env.font_size;
                                                         let font_line_height = env.font_line_height;
                                                         let text_style = env.text_style.clone();
-                                                        let text_disabled = env.text_disabled;
                                                         let label_fg = env.label_fg;
                                                         let accent = env.accent;
                                                         let accent_fg = env.accent_fg;
@@ -3172,7 +3173,11 @@ impl DropdownMenu {
                                                                             let mut row_bg =
                                                                                 fret_core::Color::TRANSPARENT;
                                                                             let mut row_fg = fg;
-                                                                            if st.hovered || st.pressed || st.focused {
+                                                                            if !disabled
+                                                                                && (st.hovered
+                                                                                    || st.pressed
+                                                                                    || st.focused)
+                                                                            {
                                                                                 row_bg = accent;
                                                                                 row_fg = accent_fg;
                                                                             }
@@ -3211,7 +3216,6 @@ impl DropdownMenu {
                                                                                 pad_x_inset,
                                                                                 pad_y,
                                                                                 radius_sm,
-                                                                                text_disabled,
                                                                             );
 
                                                                             (props, children)
@@ -3299,7 +3303,11 @@ impl DropdownMenu {
                                                                             let mut row_bg =
                                                                                 fret_core::Color::TRANSPARENT;
                                                                             let mut row_fg = fg;
-                                                                            if st.hovered || st.pressed || st.focused {
+                                                                            if !disabled
+                                                                                && (st.hovered
+                                                                                    || st.pressed
+                                                                                    || st.focused)
+                                                                            {
                                                                                 row_bg = accent;
                                                                                 row_fg = accent_fg;
                                                                             }
@@ -3338,7 +3346,6 @@ impl DropdownMenu {
                                                                                 pad_x_inset,
                                                                                 pad_y,
                                                                                 radius_sm,
-                                                                                text_disabled,
                                                                             );
 
                                                                             (props, children)
@@ -3366,6 +3373,7 @@ impl DropdownMenu {
                                                                  command.as_ref(),
                                                              );
                                                          let leading = item.leading;
+                                                         let leading_icon = item.leading_icon;
                                                          let trailing = item.trailing;
                                                          let variant = item.variant;
                                                          let pad_left =
@@ -3417,7 +3425,11 @@ impl DropdownMenu {
                                                                             } else {
                                                                                 fg
                                                                             };
-                                                                            if st.hovered || st.pressed || st.focused {
+                                                                            if !disabled
+                                                                                && (st.hovered
+                                                                                    || st.pressed
+                                                                                    || st.focused)
+                                                                            {
                                                                                 if variant
                                                                                     == DropdownMenuItemVariant::Destructive
                                                                                 {
@@ -3458,67 +3470,98 @@ impl DropdownMenu {
                                                                                         left: pad_left,
                                                                                     }.into(),
                                                                                     background: Some(row_bg),
-                                                                                    corner_radii: fret_core::Corners::all(radius_sm),
-                                                                                    ..Default::default()
-                                                                                },
-                                                                                move |cx| {
-                                                                                    let has_leading = leading.is_some();
-                                                                                    let has_trailing = trailing.is_some();
-                                                                                    let mut row: Vec<AnyElement> = Vec::with_capacity(
-                                                                                        1 + usize::from(
-                                                                                            has_leading
-                                                                                                || reserve_leading_slot_enabled,
-                                                                                        ) + usize::from(has_trailing),
-                                                                                    );
-                                                                                    if let Some(l) = leading {
-                                                                                        row.push(menu_icon_slot(cx, l));
-                                                                                    } else if reserve_leading_slot_enabled {
-                                                                                        row.push(menu_icon_slot_empty(cx));
-                                                                                    }
-                                                                                    let style = text_style.clone();
-                                                                                    let mut text = ui::text(cx, label.clone())
-                                                                                        .layout(LayoutRefinement::default().min_w_0().flex_1())
-                                                                                        .text_size_px(style.size)
-                                                                                        .font_weight(style.weight)
-                                                                                        .nowrap()
-                                                                                        .text_color(ColorRef::Color(if disabled { text_disabled } else { row_fg }));
+                                                                                corner_radii: fret_core::Corners::all(radius_sm),
+                                                                                ..Default::default()
+                                                                            },
+                                                                            move |cx| {
+                                                                                let text_fg = if disabled {
+                                                                                    alpha_mul(row_fg, 0.5)
+                                                                                } else {
+                                                                                    row_fg
+                                                                                };
+                                                                                let icon_fg_base = if variant
+                                                                                    == DropdownMenuItemVariant::Destructive
+                                                                                {
+                                                                                    destructive_fg
+                                                                                } else {
+                                                                                    label_fg
+                                                                                };
+                                                                                let icon_fg = if disabled {
+                                                                                    alpha_mul(icon_fg_base, 0.5)
+                                                                                } else {
+                                                                                    icon_fg_base
+                                                                                };
 
-                                                                                    if let Some(line_height) = style.line_height {
-                                                                                        text = text
-                                                                                            .line_height_px(line_height)
-                                                                                            .line_height_policy(
-                                                                                                fret_core::TextLineHeightPolicy::FixedFromStyle,
+                                                                                current_color::scope_children(
+                                                                                    cx,
+                                                                                    ColorRef::Color(icon_fg),
+                                                                                    |cx| {
+                                                                                        let has_leading = leading.is_some()
+                                                                                            || leading_icon.is_some()
+                                                                                            || reserve_leading_slot_enabled;
+                                                                                        let has_trailing = trailing.is_some();
+                                                                                        let mut row: Vec<AnyElement> =
+                                                                                            Vec::with_capacity(
+                                                                                                1 + usize::from(has_leading)
+                                                                                                    + usize::from(has_trailing),
                                                                                             );
-                                                                                    }
+                                                                                        if let Some(icon) = leading_icon {
+                                                                                            let icon_el =
+                                                                                                decl_icon::icon(cx, icon);
+                                                                                            row.push(menu_icon_slot(
+                                                                                                cx, icon_el,
+                                                                                            ));
+                                                                                        } else if let Some(l) = leading {
+                                                                                            row.push(menu_icon_slot(cx, l));
+                                                                                        } else if reserve_leading_slot_enabled {
+                                                                                            row.push(menu_icon_slot_empty(cx));
+                                                                                        }
+                                                                                        let style = text_style.clone();
+                                                                                        let mut text = ui::text(cx, label.clone())
+                                                                                            .layout(LayoutRefinement::default().min_w_0().flex_1())
+                                                                                            .text_size_px(style.size)
+                                                                                            .font_weight(style.weight)
+                                                                                            .nowrap()
+                                                                                            .text_color(ColorRef::Color(text_fg));
 
-                                                                                    if let Some(letter_spacing_em) = style.letter_spacing_em {
-                                                                                        text = text.letter_spacing_em(letter_spacing_em);
-                                                                                    }
+                                                                                if let Some(line_height) = style.line_height {
+                                                                                    text = text
+                                                                                        .line_height_px(line_height)
+                                                                                        .line_height_policy(
+                                                                                            fret_core::TextLineHeightPolicy::FixedFromStyle,
+                                                                                        );
+                                                                                }
 
-                                                                                    row.push(text.into_element(cx));
+                                                                                if let Some(letter_spacing_em) = style.letter_spacing_em {
+                                                                                    text = text.letter_spacing_em(letter_spacing_em);
+                                                                                }
 
-                                                                                    if let Some(t) = trailing {
-                                                                                        row.push(t);
-                                                                                    }
+                                                                                row.push(text.into_element(cx));
 
-                                                                                    vec![cx.flex(
-                                                                                        FlexProps {
-                                                                                            layout: {
-                                                                                                let mut layout = LayoutStyle::default();
-                                                                                                layout.size.width = Length::Fill;
-                                                                                                layout
-                                                                                            },
-                                                                                            direction: fret_core::Axis::Horizontal,
-                                                                                            gap: Px(8.0).into(),
-                                                                                            padding: Edges::all(Px(0.0)).into(),
-                                                                                            justify: MainAlign::Start,
-                                                                                            align: CrossAlign::Center,
-                                                                                            wrap: false,
+                                                                                if let Some(t) = trailing {
+                                                                                    row.push(t);
+                                                                                }
+
+                                                                                        vec![cx.flex(
+                                                                                    FlexProps {
+                                                                                        layout: {
+                                                                                            let mut layout = LayoutStyle::default();
+                                                                                            layout.size.width = Length::Fill;
+                                                                                            layout
                                                                                         },
-                                                                                        move |_cx| row,
-                                                                                    )]
-                                                                                },
-                                                                            )];
+                                                                                        direction: fret_core::Axis::Horizontal,
+                                                                                        gap: Px(8.0).into(),
+                                                                                        padding: Edges::all(Px(0.0)).into(),
+                                                                                        justify: MainAlign::Start,
+                                                                                        align: CrossAlign::Center,
+                                                                                        wrap: false,
+                                                                                    },
+                                                                                    move |_cx| row,
+                                                                                )]
+                                                                                    },
+                                                                                )
+                                                                            },
+                                                                        )];
 
                                                                             (props, children)
                                                                         },
@@ -3543,7 +3586,6 @@ impl DropdownMenu {
                                                         font_size,
                                                         font_line_height,
                                                         text_style,
-                                                        text_disabled,
                                                         label_fg,
                                                         accent,
                                                         accent_fg,
