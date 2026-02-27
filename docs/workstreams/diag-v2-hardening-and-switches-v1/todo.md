@@ -42,6 +42,7 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
   - `perf_seed_policy::scripts_for_perf_suite_name` is now used by `diag perf` for suite name expansion.
 - [x] Move `diag suite` specialized harnesses off Rust-side hard-coded script lists:
   - scripts now live under `tools/diag-scripts/suites/<suite-name>/` and are expanded deterministically at runtime.
+- [x] Normalize `perf_seed_policy` suite script paths to canonical taxonomy (keep compatibility for redirect-stub scopes in preset files).
 - [x] Ensure capability inference resolves `script_redirect` stubs (screenshots / required caps / env defaults).
 - [x] Add a script registry file (v1, generated; scope: suites + `_prelude`):
   - [x] file: `tools/diag-scripts/index.json`
