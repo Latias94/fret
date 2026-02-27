@@ -50,6 +50,10 @@ fn web_demos() -> &'static [&'static str] {
         "simple-todo",
         // Lightweight examples gallery (separate app from `fret-ui-gallery`).
         "components_gallery",
+        // Custom effect authoring templates (WebGPU/WGSL; see workstreams renderer-effects-semantics-and-extensibility-v1).
+        "custom_effect_v2_web_demo",
+        "custom_effect_v2_lut_web_demo",
+        "custom_effect_v2_identity_web_demo",
         // External texture imports (web copy path; ADR 0234).
         "external_texture_imports_web_demo",
         "chart_demo",
