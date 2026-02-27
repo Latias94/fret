@@ -11,9 +11,9 @@ use fret_runtime::{
     WindowCommandGatingService, WindowCommandGatingSnapshot,
 };
 use fret_ui::element::{
-    AnyElement, ContainerProps, Elements, FlexProps, LayoutQueryRegionProps, LayoutStyle, Length,
-    MainAlign, PointerRegionProps, PressableA11y, PressableProps, RenderTransformProps,
-    SemanticsDecoration, SizeStyle, StackProps, VisualTransformProps,
+    AnyElement, ContainerProps, ElementKind, Elements, FlexProps, LayoutQueryRegionProps,
+    LayoutStyle, Length, MainAlign, PointerRegionProps, PressableA11y, PressableProps,
+    RenderTransformProps, SemanticsDecoration, SizeStyle, StackProps, VisualTransformProps,
 };
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, GlobalElementId, Invalidation, Theme, ThemeSnapshot, UiHost};
@@ -85,6 +85,22 @@ fn nav_menu_trigger_text_style(theme: &ThemeSnapshot) -> TextStyle {
     let mut style = typography::fixed_line_box_style(FontId::ui(), px, line_height);
     style.weight = FontWeight::MEDIUM;
     style
+}
+
+fn nav_menu_link_text_style(theme: &ThemeSnapshot) -> TextStyle {
+    let px = theme
+        .metric_by_key("component.navigation_menu.link.text_px")
+        .or_else(|| theme.metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_PX))
+        .or_else(|| theme.metric_by_key("metric.font.size"))
+        .or_else(|| theme.metric_by_key("font.size"))
+        .unwrap_or_else(|| theme.metric_token(theme_tokens::metric::COMPONENT_TEXT_SM_PX));
+    let line_height = theme
+        .metric_by_key("component.navigation_menu.link.line_height")
+        .or_else(|| theme.metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT))
+        .or_else(|| theme.metric_by_key("metric.font.line_height"))
+        .or_else(|| theme.metric_by_key("font.line_height"))
+        .unwrap_or_else(|| theme.metric_token(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT));
+    typography::fixed_line_box_style(FontId::ui(), px, line_height)
 }
 
 fn nav_menu_trigger_padding_x(theme: &ThemeSnapshot) -> Px {
@@ -358,6 +374,9 @@ pub struct NavigationMenuLink {
     command: Option<CommandId>,
     disabled: bool,
     dismiss_on_ctrl_or_meta: bool,
+    active: bool,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
 }
 
 impl NavigationMenuLink {
@@ -374,6 +393,9 @@ impl NavigationMenuLink {
             command: None,
             disabled: false,
             dismiss_on_ctrl_or_meta: false,
+            active: false,
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
         }
     }
 
@@ -407,6 +429,22 @@ impl NavigationMenuLink {
         self
     }
 
+    /// Marks the link as active (Radix `data-active=true` styling outcome).
+    pub fn active(mut self, active: bool) -> Self {
+        self.active = active;
+        self
+    }
+
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         #[derive(Default)]
@@ -421,6 +459,9 @@ impl NavigationMenuLink {
         let test_id = self.test_id.clone();
         let children = self.children;
         let dismiss_on_ctrl_or_meta = self.dismiss_on_ctrl_or_meta;
+        let active = self.active;
+        let chrome = self.chrome;
+        let layout = self.layout;
 
         let fallback_input_ctx = navigation_menu_input_context(&*cx.app);
         let gating = cx
@@ -438,7 +479,75 @@ impl NavigationMenuLink {
         let disabled =
             disabled_explicit || command_is_disabled_by_gating(&*cx.app, &gating, command.as_ref());
 
-        cx.pressable_with_id_props(move |cx, _st, link_id| {
+        fn apply_link_inherited_style(
+            mut element: AnyElement,
+            fg: Color,
+            text_style: &TextStyle,
+            icon_fg: Color,
+            default_icon_color: Color,
+        ) -> AnyElement {
+            match &mut element.kind {
+                ElementKind::Text(props) => {
+                    if props.style.is_none() {
+                        props.style = Some(text_style.clone());
+                    }
+                    if props.color.is_none() {
+                        props.color = Some(fg);
+                    }
+                }
+                ElementKind::StyledText(props) => {
+                    if props.style.is_none() {
+                        props.style = Some(text_style.clone());
+                    }
+                    if props.color.is_none() {
+                        props.color = Some(fg);
+                    }
+                }
+                ElementKind::SelectableText(props) => {
+                    if props.style.is_none() {
+                        props.style = Some(text_style.clone());
+                    }
+                    if props.color.is_none() {
+                        props.color = Some(fg);
+                    }
+                }
+                ElementKind::SvgIcon(props) => {
+                    // Align shadcn: `[&_svg:not([class*='text-'])]:text-muted-foreground`.
+                    //
+                    // Heuristic:
+                    // - `declarative::icon::icon(...)` defaults to `muted-foreground` and inherits
+                    //   `currentColor` unless an explicit color was provided.
+                    // - Older callsites may build an `SvgIcon` with the default white color.
+                    //
+                    // In `NavigationMenuLink`, default icons should remain muted even when the
+                    // link foreground changes on hover/focus/active.
+                    let is_default_white = props.color
+                        == Color {
+                            r: 1.0,
+                            g: 1.0,
+                            b: 1.0,
+                            a: 1.0,
+                        };
+                    let is_default_muted_fg = props.color == default_icon_color;
+                    if props.inherit_color && (is_default_white || is_default_muted_fg) {
+                        props.inherit_color = false;
+                        props.color = icon_fg;
+                    }
+                }
+                _ => {}
+            }
+
+            element.children = element
+                .children
+                .into_iter()
+                .map(|child| {
+                    apply_link_inherited_style(child, fg, text_style, icon_fg, default_icon_color)
+                })
+                .collect();
+            element
+        }
+
+        cx.pressable_with_id_props(move |cx, st, link_id| {
             let modifier_state: Arc<std::sync::Mutex<ModifierState>> = cx.with_state_for(
                 link_id,
                 || Arc::new(std::sync::Mutex::new(ModifierState::default())),
@@ -481,9 +590,43 @@ impl NavigationMenuLink {
                 let _ = host.models_mut().update(&model_for_activate, |v| *v = None);
             }));
 
+            let theme = Theme::global(&*cx.app).snapshot();
+            let radius = MetricRef::radius(Radius::Sm).resolve(&theme);
+            let ring = decl_style::focus_ring(&theme, radius);
+
+            let hovered = st.hovered && !st.pressed;
+            let focused = st.focused;
+            let pressed = st.pressed;
+
+            let accent = theme.color_token("accent");
+            let accent_fg = theme.color_token("accent-foreground");
+            let default_fg = theme.color_token("foreground");
+
+            let mut bg_active = accent;
+            bg_active.a *= 0.5;
+
+            let use_hover_chrome = hovered || focused || pressed;
+            let bg = if use_hover_chrome {
+                Some(accent)
+            } else if active {
+                Some(bg_active)
+            } else {
+                None
+            };
+            let fg = if use_hover_chrome || active {
+                accent_fg
+            } else {
+                default_fg
+            };
+
             let mut pressable = PressableProps::default();
             pressable.enabled = !disabled;
             pressable.focusable = !disabled;
+            pressable.focus_ring = Some(ring);
+            pressable.layout = decl_style::layout_style(
+                &theme,
+                LayoutRefinement::default().w_full().min_w_0().merge(layout),
+            );
             pressable.a11y = PressableA11y {
                 role: Some(SemanticsRole::Button),
                 label: label.clone(),
@@ -491,7 +634,54 @@ impl NavigationMenuLink {
                 ..Default::default()
             };
 
-            (pressable, children)
+            let icon_fg = theme.color_token("muted-foreground");
+            let default_icon_color = theme
+                .color_by_key("muted-foreground")
+                .unwrap_or_else(|| theme.color_token("muted-foreground"));
+            let text_style = nav_menu_link_text_style(&theme);
+
+            let content = if children.len() <= 1 {
+                children
+            } else {
+                vec![cx.flex(
+                    FlexProps {
+                        layout: LayoutStyle::default(),
+                        direction: fret_core::Axis::Vertical,
+                        gap: MetricRef::space(Space::N1).resolve(&theme).into(),
+                        padding: Edges::all(Px(0.0)).into(),
+                        justify: MainAlign::Start,
+                        align: fret_ui::element::CrossAlign::Start,
+                        wrap: false,
+                    },
+                    move |_cx| children,
+                )]
+            };
+
+            let styled: Vec<AnyElement> = content
+                .into_iter()
+                .map(|child| {
+                    apply_link_inherited_style(child, fg, &text_style, icon_fg, default_icon_color)
+                })
+                .collect();
+
+            let mut base_props = decl_style::container_props(
+                &theme,
+                ChromeRefinement::default()
+                    .rounded(Radius::Sm)
+                    .p(Space::N2)
+                    .merge(chrome.clone()),
+                LayoutRefinement::default().w_full().min_w_0(),
+            );
+            base_props.background = bg;
+
+            let content = cx.container(base_props, move |_cx| styled);
+            let content = if disabled {
+                cx.opacity(0.5, move |_cx| vec![content])
+            } else {
+                content
+            };
+
+            (pressable, vec![content])
         })
     }
 }
@@ -2849,6 +3039,39 @@ mod tests {
 
         let selected = app.models().get_cloned(&model).flatten();
         assert_eq!(selected, None);
+    }
+
+    #[test]
+    fn navigation_menu_link_default_icons_do_not_inherit_current_color() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(240.0)),
+        );
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            NavigationMenuLink::new(
+                model.clone(),
+                [decl_icon::icon(cx, ids::ui::CHEVRON_DOWN), cx.text("Go")],
+            )
+            .into_element(cx)
+        });
+
+        fn find_svg_icon(el: &AnyElement) -> Option<&fret_ui::element::SvgIconProps> {
+            match &el.kind {
+                fret_ui::element::ElementKind::SvgIcon(props) => Some(props),
+                _ => el.children.iter().find_map(find_svg_icon),
+            }
+        }
+
+        let icon = find_svg_icon(&element).expect("expected an SvgIcon under NavigationMenuLink");
+        assert!(
+            !icon.inherit_color,
+            "expected default link icon to opt out of inheriting currentColor"
+        );
     }
 
     #[test]
