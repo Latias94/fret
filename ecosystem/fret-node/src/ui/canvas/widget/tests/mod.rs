@@ -91,6 +91,7 @@ mod set_viewport_conformance;
 mod skin_cache_key_includes_dash_conformance;
 mod skin_paint_only_does_not_rebuild_geometry_conformance;
 mod skin_per_node_header_palette_conformance;
+mod skin_port_chrome_hints_conformance;
 mod spatial_index_equivalence_conformance;
 mod threshold_zoom_conformance;
 mod translate_extent_conformance;

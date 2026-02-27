@@ -1,5 +1,6 @@
 use crate::ui::canvas::geometry::node_size_default_px;
 use crate::ui::canvas::widget::*;
+use crate::ui::{NodeChromeHint, PortChromeHint};
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(in super::super) fn paint_nodes_dynamic_from_geometry<H: UiHost>(
@@ -93,18 +94,69 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             }
         }
 
+        let skin = self.skin.clone();
         for node in snapshot.selected_nodes.iter().copied() {
             let Some(node_geom) = geom.nodes.get(&node) else {
                 continue;
             };
             let rect = node_geom.rect;
+
+            let hint: NodeChromeHint = if let Some(skin) = skin.as_ref() {
+                self.graph
+                    .read_ref(cx.app, |g| {
+                        skin.node_chrome_hint(g, node, &self.style, true)
+                    })
+                    .ok()
+                    .unwrap_or_default()
+            } else {
+                NodeChromeHint::default()
+            };
+
+            let background = hint.background.unwrap_or(self.style.node_background);
+            let border_color = hint
+                .border_selected
+                .or(hint.border)
+                .unwrap_or(self.style.node_border_selected);
+
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(3),
                 rect,
-                background: fret_core::Paint::Solid(self.style.node_background),
+                background: fret_core::Paint::Solid(background),
+
+                border: Edges::all(Px(0.0)),
+                border_paint: fret_core::Paint::TRANSPARENT,
+
+                corner_radii: Corners::all(corner),
+            });
+
+            if let Some(color) = hint.header_background {
+                cx.scene.push(SceneOp::Quad {
+                    order: DrawOrder(3),
+                    rect: Rect::new(
+                        rect.origin,
+                        Size::new(rect.size.width, Px(title_h.min(rect.size.height.0))),
+                    ),
+                    background: fret_core::Paint::Solid(color),
+
+                    border: Edges::all(Px(0.0)),
+                    border_paint: fret_core::Paint::TRANSPARENT,
+
+                    corner_radii: Corners {
+                        top_left: corner,
+                        top_right: corner,
+                        bottom_right: Px(0.0),
+                        bottom_left: Px(0.0),
+                    },
+                });
+            }
+
+            cx.scene.push(SceneOp::Quad {
+                order: DrawOrder(3),
+                rect,
+                background: fret_core::Paint::TRANSPARENT,
 
                 border: Edges::all(Px(1.0 / zoom)),
-                border_paint: fret_core::Paint::Solid(self.style.node_border_selected),
+                border_paint: fret_core::Paint::Solid(border_color),
 
                 corner_radii: Corners::all(corner),
             });
@@ -150,7 +202,16 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             let bounds = handle.bounds;
             let color = self
                 .graph
-                .read_ref(cx.app, |g| self.presenter.port_color(g, port, &self.style))
+                .read_ref(cx.app, |g| {
+                    let base = self.presenter.port_color(g, port, &self.style);
+                    if let Some(skin) = skin.as_ref() {
+                        let hint: PortChromeHint =
+                            skin.port_chrome_hint(g, port, &self.style, base);
+                        hint.fill.unwrap_or(base)
+                    } else {
+                        base
+                    }
+                })
                 .ok()?;
             Some((bounds, color))
         };

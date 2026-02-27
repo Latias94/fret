@@ -309,7 +309,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             });
         }
 
-        for (port_id, rect, color) in &render.pins {
+        for (port_id, rect, color, _hint) in &render.pins {
             let port_id = *port_id;
             let rect = *rect;
             let color = *color;

@@ -104,3 +104,11 @@ Recommended focused command while iterating:
   - `ecosystem/fret-node/src/ui/canvas/widget/paint_render_data/collect.rs` (hint collection)
   - `ecosystem/fret-node/src/ui/canvas/widget/paint_nodes/static_nodes.rs` (header quad + title paint)
   - Conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/skin_per_node_header_palette_conformance.rs`
+
+- Per-port paint-only chrome hints are implemented for pins:
+  - `ecosystem/fret-node/src/ui/skin.rs` (`PortChromeHint`, `PortShapeHint`)
+  - `ecosystem/fret-node/src/ui/canvas/widget/paint_render_data/collect.rs` (port hint collection)
+  - `ecosystem/fret-node/src/ui/canvas/widget/paint_nodes/static_nodes.rs` (fill + stroke + inner scale)
+  - Dynamic overlays (hover/focus rings) use skin-resolved base fill:
+    `ecosystem/fret-node/src/ui/canvas/widget/paint_nodes/dynamic_from_geometry.rs`
+  - Conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/skin_port_chrome_hints_conformance.rs`

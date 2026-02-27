@@ -8,7 +8,7 @@ use std::sync::Arc;
 use fret_core::Color;
 use fret_core::scene::DashPatternV1;
 
-use crate::core::{EdgeId, Graph, NodeId};
+use crate::core::{EdgeId, Graph, NodeId, PortId};
 
 use super::presenter::EdgeRenderHint;
 use super::style::NodeGraphStyle;
@@ -36,6 +36,42 @@ pub struct EdgeChromeHint {
     pub dash: Option<DashPatternV1>,
 }
 
+/// Port shape hint.
+///
+/// v1 only guarantees `Circle` rendering; other variants may fall back to circle until a vector
+/// path-based implementation is added.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum PortShapeHint {
+    Circle,
+    Diamond,
+    Triangle,
+}
+
+impl Default for PortShapeHint {
+    fn default() -> Self {
+        Self::Circle
+    }
+}
+
+/// Per-port chrome overrides (UI-only).
+///
+/// v1 is paint-only: it must not change hit-testing or derived geometry. Size/shape changes should
+/// be implemented as paint-only (e.g. inner scaling) unless explicitly paired with geometry
+/// invalidation contracts and conformance tests.
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
+pub struct PortChromeHint {
+    /// Optional port fill override (defaults to presenter color).
+    pub fill: Option<Color>,
+    /// Optional port stroke color (drawn as an overlay).
+    pub stroke: Option<Color>,
+    /// Optional port stroke width in screen-space logical px.
+    pub stroke_width: Option<f32>,
+    /// Optional paint-only inner scale factor (0..=1) applied to the port rect.
+    pub inner_scale: Option<f32>,
+    /// Optional port shape hint (v1 only guarantees circle).
+    pub shape: Option<PortShapeHint>,
+}
+
 /// Skin resolver for node graph visuals.
 ///
 /// This is UI-only policy: it must not be serialized into the graph document.
@@ -56,6 +92,16 @@ pub trait NodeGraphSkin: Send + Sync {
         _selected: bool,
     ) -> NodeChromeHint {
         NodeChromeHint::default()
+    }
+
+    fn port_chrome_hint(
+        &self,
+        _graph: &Graph,
+        _port: PortId,
+        _style: &NodeGraphStyle,
+        _base_fill: Color,
+    ) -> PortChromeHint {
+        PortChromeHint::default()
     }
 
     /// Refines an edge render hint after presenter + `edgeTypes` resolution.

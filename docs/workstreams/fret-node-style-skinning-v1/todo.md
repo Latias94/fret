@@ -12,8 +12,9 @@ scope: ecosystem/fret-node
 - [x] Add UI-only skin surface (`NodeGraphSkin`) with revision invalidation.
 - [x] Plumb dashed wires end-to-end (renderer-native `StrokeV2.dash`) + cache key coverage.
 - [x] Per-node header palette (header background + title text color) on the main paint path.
+- [x] Port chrome hints (paint-only) for fill/stroke/inner scale with conformance coverage.
 - [ ] Node chrome: selected/hover/focus ring contract (paint-only) with conformance tests.
-- [ ] Port chrome hints (shape/size/color) with a minimal v1 surface (only `Circle` implemented).
+- [ ] Port chrome hints: shape enum contract (only `Circle` implemented).
 - [ ] Edge chrome hints: marker/arrowhead overrides (policy stays in ecosystem).
 - [ ] Ensure skin ordering is explicit and deterministic (style → presenter → edgeTypes → skin).
 

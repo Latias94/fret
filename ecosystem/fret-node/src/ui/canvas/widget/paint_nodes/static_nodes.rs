@@ -182,9 +182,25 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             });
         }
 
-        for (_port_id, rect, color) in &render.pins {
-            let rect = *rect;
+        for (_port_id, rect, color, hint) in &render.pins {
+            let mut rect = *rect;
             let color = *color;
+
+            if let Some(scale) = hint.inner_scale {
+                if scale.is_finite() {
+                    let scale = scale.clamp(0.05, 1.0);
+                    let cx = rect.origin.x.0 + 0.5 * rect.size.width.0;
+                    let cy = rect.origin.y.0 + 0.5 * rect.size.height.0;
+                    let w = rect.size.width.0 * scale;
+                    let h = rect.size.height.0 * scale;
+                    rect = Rect::new(
+                        Point::new(Px(cx - 0.5 * w), Px(cy - 0.5 * h)),
+                        Size::new(Px(w), Px(h)),
+                    );
+                }
+            }
+
+            // v1: only circle is guaranteed. Other shapes may fall back to circle.
             let r = Px(0.5 * rect.size.width.0);
             scene.push(SceneOp::Quad {
                 order: DrawOrder(4),
@@ -196,6 +212,22 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 
                 corner_radii: Corners::all(r),
             });
+
+            if let Some(stroke) = hint.stroke {
+                let w = hint.stroke_width.unwrap_or(1.0);
+                if w.is_finite() && w > 0.0 {
+                    scene.push(SceneOp::Quad {
+                        order: DrawOrder(4),
+                        rect,
+                        background: fret_core::Paint::TRANSPARENT,
+
+                        border: Edges::all(Px(w / zoom)),
+                        border_paint: fret_core::Paint::Solid(stroke),
+
+                        corner_radii: Corners::all(r),
+                    });
+                }
+            }
         }
     }
 }
