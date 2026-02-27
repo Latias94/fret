@@ -57,7 +57,8 @@ that should be addressed at the correct layer (mechanism vs policy/recipes).
   deterministic “snap + buttons + swipe” surface only; `opts` is supported only for snap model
   semantics (not for the full Embla options set).
 - No event hook surface (e.g. `select`, `reInit`) because there is no `setApi` equivalent yet.
-- No carousel-internal “selected index” contract exposed to callers (required for slide counters).
+- No Embla-style imperative API surface. Fret does expose a small, deterministic snapshot surface
+  (`CarouselApiSnapshot`) that supports slide counters without introducing event subscriptions.
 
 ### Behavior/physics
 

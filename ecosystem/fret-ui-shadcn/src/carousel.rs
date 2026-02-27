@@ -20,6 +20,16 @@ use crate::{Button, ButtonSize, ButtonVariant};
 
 const CAROUSEL_SETTLE_TICKS: u64 = 12;
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct CarouselApiSnapshot {
+    /// Zero-based selected slide index.
+    pub selected_index: usize,
+    /// Total snap count (when measurable).
+    pub snap_count: usize,
+    pub can_scroll_prev: bool,
+    pub can_scroll_next: bool,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum CarouselOrientation {
     #[default]
@@ -149,6 +159,7 @@ pub struct Carousel {
     item_basis_main_px: Option<Px>,
     options: CarouselOptions,
     drag_config: headless_carousel::CarouselDragConfig,
+    api_snapshot: Option<Model<CarouselApiSnapshot>>,
     test_id: Option<Arc<str>>,
 }
 
@@ -243,6 +254,7 @@ impl Carousel {
             item_basis_main_px: None,
             options: CarouselOptions::default(),
             drag_config: headless_carousel::CarouselDragConfig::default(),
+            api_snapshot: None,
             test_id: None,
         }
     }
@@ -305,6 +317,15 @@ impl Carousel {
 
     pub fn touch_scroll_lock_threshold_px(mut self, threshold: Px) -> Self {
         self.drag_config.touch_scroll_lock_threshold_px = threshold.0;
+        self
+    }
+
+    /// Exposes a small, deterministic API surface as a snapshot model (policy-only).
+    ///
+    /// This exists to support shadcn-style "API" examples (slide counters, etc.) without exposing
+    /// Embla's full imperative API surface.
+    pub fn api_snapshot_model(mut self, model: Model<CarouselApiSnapshot>) -> Self {
+        self.api_snapshot = Some(model);
         self
     }
 
@@ -1026,6 +1047,16 @@ impl Carousel {
             let extent_ready = view_size_now.0 > 0.0 && snaps_len > 0;
             let prev_disabled = !extent_ready || clamped_index == 0 || snaps_len <= 1;
             let next_disabled = !extent_ready || clamped_index + 1 >= snaps_len || snaps_len <= 1;
+
+            if let Some(api_snapshot) = self.api_snapshot {
+                let snapshot = CarouselApiSnapshot {
+                    selected_index: clamped_index,
+                    snap_count: if extent_ready { snaps_len } else { 0 },
+                    can_scroll_prev: !prev_disabled,
+                    can_scroll_next: !next_disabled,
+                };
+                let _ = cx.app.models_mut().update(&api_snapshot, |v| *v = snapshot);
+            }
 
             let prev_test_id = Arc::from(format!("{}-previous", root_test_id.as_ref()));
             let next_test_id = Arc::from(format!("{}-next", root_test_id.as_ref()));
