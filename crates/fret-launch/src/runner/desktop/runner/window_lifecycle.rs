@@ -13,7 +13,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
         let mut attrs = winit::window::WindowAttributes::default()
             .with_title(spec.title)
-            .with_surface_size(spec.size)
+            .with_surface_size(winit::dpi::LogicalSize::new(
+                spec.size.width,
+                spec.size.height,
+            ))
             .with_visible(if accessibility_enabled {
                 false
             } else {
@@ -24,6 +27,14 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             attrs = attrs.with_active(active);
         }
         if let Some(position) = spec.position {
+            let position = match position {
+                WindowPosition::Logical(pos) => winit::dpi::Position::Logical(
+                    winit::dpi::LogicalPosition::new(pos.x as f64, pos.y as f64),
+                ),
+                WindowPosition::Physical(pos) => {
+                    winit::dpi::Position::Physical(winit::dpi::PhysicalPosition::new(pos.x, pos.y))
+                }
+            };
             attrs = attrs.with_position(position);
         }
         #[cfg(windows)]

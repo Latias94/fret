@@ -8,10 +8,7 @@ use fret_render::SurfaceState;
 use std::collections::HashMap;
 #[cfg(target_os = "macos")]
 use std::collections::HashMap;
-use winit::{
-    dpi::{PhysicalPosition, Position},
-    window::Window,
-};
+use winit::{dpi::PhysicalPosition, window::Window};
 
 #[cfg(target_os = "windows")]
 use winit::raw_window_handle::{HasWindowHandle as _, RawWindowHandle};
@@ -630,7 +627,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
     pub(super) fn compute_window_position_from_anchor(
         &self,
         anchor: fret_core::WindowAnchor,
-    ) -> Option<Position> {
+    ) -> Option<WindowPosition> {
         let anchor_state = self.windows.get(anchor.window)?;
         // `WindowAnchor::position` is in surface-local logical coordinates (matching pointer
         // events), so start from the surface origin in desktop coordinates.
@@ -659,13 +656,16 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             y = y.clamp(min_y, max_y);
         }
 
-        Some(PhysicalPosition::new(x.round() as i32, y.round() as i32).into())
+        Some(WindowPosition::Physical(WindowPhysicalPosition::new(
+            x.round() as i32,
+            y.round() as i32,
+        )))
     }
 
     pub(super) fn compute_window_position_from_cursor(
         &self,
         reference_window: fret_core::AppWindowId,
-    ) -> Option<Position> {
+    ) -> Option<WindowPosition> {
         let screen_pos = self.cursor_screen_pos?;
         let ref_state = self.windows.get(reference_window)?;
         let (ox, oy) = self.config.new_window_anchor_offset;
@@ -685,15 +685,18 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             y = y.clamp(min_y, max_y);
         }
 
-        Some(PhysicalPosition::new(x.round() as i32, y.round() as i32).into())
+        Some(WindowPosition::Physical(WindowPhysicalPosition::new(
+            x.round() as i32,
+            y.round() as i32,
+        )))
     }
 
     pub(super) fn compute_window_position_from_cursor_grab_estimate(
         &self,
         reference_window: fret_core::AppWindowId,
-        new_window_inner_size: winit::dpi::LogicalSize<f64>,
+        new_window_inner_size: WindowLogicalSize,
         grab_offset_logical: Point,
-    ) -> Option<Position> {
+    ) -> Option<WindowPosition> {
         let screen_pos = self.cursor_screen_pos?;
         let state = self.windows.get(reference_window)?;
         let scale = state.window.scale_factor();
@@ -726,7 +729,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
         // Best-effort clamping: avoid creating "off-screen" floating windows due to
         // platform-specific coordinate spaces and DPI conversions.
-        let outer_size = new_window_inner_size.to_physical::<u32>(scale);
+        let outer_size =
+            winit::dpi::LogicalSize::new(new_window_inner_size.width, new_window_inner_size.height)
+                .to_physical::<u32>(scale);
 
         #[cfg(target_os = "windows")]
         if let Some(work) = super::win32::monitor_work_area_for_point(screen_pos) {
@@ -755,14 +760,17 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             }
         }
 
-        Some(PhysicalPosition::new(x.round() as i32, y.round() as i32).into())
+        Some(WindowPosition::Physical(WindowPhysicalPosition::new(
+            x.round() as i32,
+            y.round() as i32,
+        )))
     }
 
     pub(super) fn compute_window_outer_position_from_cursor_grab(
         &self,
         target_window: fret_core::AppWindowId,
         grab_offset_logical: Point,
-    ) -> Option<Position> {
+    ) -> Option<WindowPosition> {
         let screen_pos = self.cursor_screen_pos?;
         let state = self.windows.get(target_window)?;
         let scale = state.window.scale_factor();
@@ -851,7 +859,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             }
         }
 
-        Some(PhysicalPosition::new(x.round() as i32, y.round() as i32).into())
+        Some(WindowPosition::Physical(WindowPhysicalPosition::new(
+            x.round() as i32,
+            y.round() as i32,
+        )))
     }
 
     pub(super) fn cursor_screen_pos_fallback_for_window(

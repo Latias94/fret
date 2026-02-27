@@ -374,8 +374,11 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             };
             let scale_factor = state.window.scale_factor();
             match pos {
-                Position::Physical(p) => p,
-                Position::Logical(p) => p.to_physical::<i32>(scale_factor),
+                WindowPosition::Physical(p) => winit::dpi::PhysicalPosition::new(p.x, p.y),
+                WindowPosition::Logical(p) => {
+                    winit::dpi::LogicalPosition::new(p.x as f64, p.y as f64)
+                        .to_physical::<i32>(scale_factor)
+                }
             }
         };
 
@@ -386,6 +389,14 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         }
 
         if let Some(state) = self.windows.get(window) {
+            let pos = match pos {
+                WindowPosition::Logical(p) => winit::dpi::Position::Logical(
+                    winit::dpi::LogicalPosition::new(p.x as f64, p.y as f64),
+                ),
+                WindowPosition::Physical(p) => {
+                    winit::dpi::Position::Physical(winit::dpi::PhysicalPosition::new(p.x, p.y))
+                }
+            };
             state.window.set_outer_position(pos);
         }
 

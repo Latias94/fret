@@ -268,7 +268,7 @@ pub fn build_app() -> App {
 pub fn build_runner_config() -> WinitRunnerConfig {
     WinitRunnerConfig {
         main_window_title: "fret-demo inf_lines_demo (caller-owned overlays: InfLines)".to_string(),
-        main_window_size: winit::dpi::LogicalSize::new(960.0, 640.0),
+        main_window_size: fret_launch::WindowLogicalSize::new(960.0, 640.0),
         ..Default::default()
     }
 }

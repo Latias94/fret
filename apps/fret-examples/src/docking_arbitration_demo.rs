@@ -2420,10 +2420,10 @@ impl WinitAppDriver for DockingArbitrationDriver {
         match &request.kind {
             CreateWindowKind::DockFloating { panel, .. } => Some(WindowCreateSpec::new(
                 format!("fret-demo docking_arbitration_demo — {}", panel.kind.0),
-                winit::dpi::LogicalSize::new(720.0, 520.0),
+                fret_launch::WindowLogicalSize::new(720.0, 520.0),
             )),
             CreateWindowKind::DockRestore { logical_window_id } => {
-                let mut size = winit::dpi::LogicalSize::new(980.0, 720.0);
+                let mut size = fret_launch::WindowLogicalSize::new(980.0, 720.0);
                 if let Some(restore) = &self.restore
                     && let Some(window) = restore
                         .layout
@@ -2432,7 +2432,7 @@ impl WinitAppDriver for DockingArbitrationDriver {
                         .find(|w| w.logical_window_id == logical_window_id.as_str())
                     && let Some(p) = &window.placement
                 {
-                    size = winit::dpi::LogicalSize::new(p.width as f64, p.height as f64);
+                    size = fret_launch::WindowLogicalSize::new(p.width as f64, p.height as f64);
                 }
                 Some(WindowCreateSpec::new(
                     format!("fret-demo docking_arbitration_demo — {logical_window_id}"),
@@ -2735,7 +2735,7 @@ pub fn run() -> anyhow::Result<()> {
 
     let config = WinitRunnerConfig {
         main_window_title: "fret-demo docking_arbitration_demo".to_string(),
-        main_window_size: winit::dpi::LogicalSize::new(980.0, 720.0),
+        main_window_size: fret_launch::WindowLogicalSize::new(980.0, 720.0),
         ..Default::default()
     };
 

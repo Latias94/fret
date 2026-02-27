@@ -769,7 +769,7 @@ pub fn run() -> anyhow::Result<()> {
     crate::run_native_demo(
         WinitRunnerConfig {
             main_window_title: "effects_demo".to_string(),
-            main_window_size: winit::dpi::LogicalSize::new(1100.0, 520.0),
+            main_window_size: fret_launch::WindowLogicalSize::new(1100.0, 520.0),
             ..Default::default()
         },
         App::new(),

@@ -19,6 +19,7 @@ This is a TODO list for the workstream described in `design.md`.
 
 ## M1 — Consumption profiles as buildable targets
 
+- [x] Add a portable consumption profiles gate (`python3 tools/check_consumption_profiles.py`) and run it in CI (`.github/workflows/consistency-checks.yml`).
 - [ ] Add a minimal “contracts-only” build gate:
   - [ ] `cargo check -p fret-core`
 - [ ] Add a minimal “UI substrate” build gate:
@@ -31,6 +32,7 @@ This is a TODO list for the workstream described in `design.md`.
 
 ## M2 — Reduce glue bloat (launcher refactor)
 
+- [x] Replace `winit::dpi` types in the public launcher config/spec with Fret-owned window geometry types (`WindowLogicalSize`, `WindowPosition`) to keep the public surface backend-agnostic.
 - [ ] Audit `crates/fret-launch` for platform-specific “weight”:
   - [ ] winit event loop / window state / IME routing
   - [ ] web RAF + browser event mapping

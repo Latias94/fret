@@ -156,7 +156,7 @@ pub fn build_runner_config() -> WinitRunnerConfig {
     WinitRunnerConfig {
         main_window_title: "fret-demo histogram2d_demo (Histogram2D + colormap + colorbar)"
             .to_string(),
-        main_window_size: winit::dpi::LogicalSize::new(960.0, 640.0),
+        main_window_size: fret_launch::WindowLogicalSize::new(960.0, 640.0),
         ..Default::default()
     }
 }

@@ -138,6 +138,40 @@ Concrete TODO direction:
   - `fret-launch-web` (wasm/web-sys specifics)
 - Ensure the assembly surface can opt out of unneeded platforms via features.
 
+#### Proposed crate split (packaging / maintenance)
+
+Goal: keep a stable app-facing entrypoint (`fret-launch`) while separating ownership and dependencies.
+
+Target crates:
+
+- `fret-launch-core`
+  - Owns the **shared runner API surface** and cross-platform GPU-facing utilities used by both desktop and web.
+  - Must not depend on `objc` / `windows` / `web-sys` (platform SDK crates).
+  - May depend on `wgpu` and core Fret crates as needed.
+- `fret-launch-desktop`
+  - Owns `winit` desktop event loop wiring, native window lifecycle, platform services draining.
+  - Platform SDK deps live here (`objc*`, `windows*`, `zbus`, etc).
+- `fret-launch-web`
+  - Owns wasm/web wiring (canvas mounting, RAF scheduling, web platform services draining).
+  - Web deps live here (`web-sys`, `js-sys`, `wasm-bindgen`, etc).
+- `fret-launch` (facade)
+  - Re-exports `fret-launch-core` and the platform implementation for the current target.
+  - Keeps the *crate name* stable for app authors (minimizes churn).
+
+Dependency direction:
+
+- `fret-launch` → `fret-launch-core` + (`fret-launch-desktop` OR `fret-launch-web`)
+- `fret-launch-desktop` → `fret-launch-core`
+- `fret-launch-web` → `fret-launch-core`
+- `fret-launch-core` must not depend on `fret-launch-*` implementation crates.
+
+Migration strategy (incremental):
+
+1) Move public API types that should be stable into `fret-launch-core` first (config/spec/driver traits).
+2) Move desktop/web implementations next (keep the same public re-exports from `fret-launch`).
+3) Add a “profile build gate” to ensure `fret-launch-core` stays platform-SDK-free.
+4) Update `fret-framework` feature bundles to depend on the correct launcher crates, but keep aliases stable.
+
 ### 3) Add “profile gates” (prevent regressions)
 
 Layering is already enforced. We also need “profile build” gates so modular consumption does not rot.
@@ -176,4 +210,3 @@ Concrete TODO direction:
 2) Do we want a new *kernel-only* facade crate (no backends), or is `fret-framework`’s feature model sufficient?
 3) Should we rename “runner” crates to “backend” crates for clarity (ADR 0092 future work)?
 4) What is the acceptable exception policy for ecosystem -> backend deps (keep allowlist tiny)?
-
