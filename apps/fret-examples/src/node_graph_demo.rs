@@ -55,9 +55,9 @@ use fret_node::ui::{
     NodeGraphEditQueue, NodeGraphEditor, NodeGraphInternalsStore, NodeGraphMiniMapOverlay,
     NodeGraphNodeToolbar, NodeGraphNodeTypes, NodeGraphOverlayHost, NodeGraphOverlayState,
     NodeGraphPanel, NodeGraphPanelPosition, NodeGraphPortalHost, NodeGraphPortalNodeLayout,
-    NodeGraphToolbarAlign, NodeGraphToolbarPosition, PortalNumberEditHandler, PortalNumberEditSpec,
-    PortalNumberEditSubmit, PortalNumberEditor, RegistryNodeGraphPresenter,
-    register_node_graph_commands,
+    NodeGraphPresetFamily, NodeGraphPresetSkinV1, NodeGraphToolbarAlign, NodeGraphToolbarPosition,
+    PortalNumberEditHandler, PortalNumberEditSpec, PortalNumberEditSubmit, PortalNumberEditor,
+    RegistryNodeGraphPresenter, register_node_graph_commands,
 };
 
 #[derive(Clone)]
@@ -81,6 +81,7 @@ const CMD_LOG_INTERNALS: &str = "node_graph_demo.log_internals";
 const CMD_LOG_MEASURED: &str = "node_graph_demo.log_measured";
 const CMD_BUMP_FLOAT_VALUE: &str = "node_graph_demo.bump_float_value";
 const CMD_CYCLE_BACKGROUND_PATTERN: &str = "node_graph_demo.cycle_background_pattern";
+const CMD_CYCLE_PRESET_FAMILY: &str = "node_graph_demo.cycle_preset_family";
 const CMD_RESET_GRAPH: &str = "node_graph_demo.reset_graph";
 const CMD_SPAWN_STRESS_1K: &str = "node_graph_demo.spawn_stress_1k";
 const CMD_SPAWN_STRESS_5K: &str = "node_graph_demo.spawn_stress_5k";
@@ -1417,12 +1418,20 @@ impl NodeGraphDemoDriver {
                 })
             },
         );
+
+        let preset_skin = app
+            .global::<Arc<NodeGraphPresetSkinV1>>()
+            .cloned()
+            .unwrap_or_else(|| {
+                NodeGraphPresetSkinV1::new_builtin(NodeGraphPresetFamily::WorkflowClean)
+            });
         let canvas = NodeGraphCanvas::new(graph.clone(), view)
             .with_store(store.clone())
             .with_middleware(RejectNonFiniteTx)
             .with_presenter(presenter)
             .with_edge_types(edge_types)
             .with_style(style.clone())
+            .with_skin(preset_skin)
             .with_edit_queue(edits.clone())
             .with_overlay_state(overlays.clone())
             .with_internals_store(internals)
@@ -1853,6 +1862,22 @@ impl WinitAppDriver for NodeGraphDemoDriver {
             return;
         }
 
+        if command.as_str() == CMD_CYCLE_PRESET_FAMILY {
+            let Some(skin) = app.global::<Arc<NodeGraphPresetSkinV1>>().cloned() else {
+                return;
+            };
+
+            let next = skin.cycle();
+            tracing::info!(
+                preset = next.display_name(),
+                "node graph demo preset changed"
+            );
+
+            *state = Self::build_ui(app, window);
+            app.request_redraw(window);
+            return;
+        }
+
         if command.as_str() == CMD_TOGGLE_HELP_OVERLAY {
             let Some(toggles) = app.global::<Arc<NodeGraphDemoOverlayToggles>>().cloned() else {
                 return;
@@ -2159,6 +2184,9 @@ pub fn run() -> anyhow::Result<()> {
     app.set_global(Arc::new(DemoWeirdLayoutMeasuredState::new()));
     app.set_global(Arc::new(NodeGraphDemoStyleState::new()));
     app.set_global(Arc::new(NodeGraphDemoOverlayToggles::new()));
+    app.set_global(NodeGraphPresetSkinV1::new_builtin(
+        NodeGraphPresetFamily::WorkflowClean,
+    ));
 
     let config = WinitRunnerConfig {
         main_window_title: "fret-demo node_graph_demo".to_string(),
@@ -2188,12 +2216,34 @@ fn register_demo_commands(registry: &mut CommandRegistry) {
             },
         )
     };
+    let mac_cmd_shift = |key: KeyCode| {
+        kb(
+            PlatformFilter::Macos,
+            key,
+            Modifiers {
+                meta: true,
+                shift: true,
+                ..Default::default()
+            },
+        )
+    };
     let win_ctrl = |key: KeyCode| {
         kb(
             PlatformFilter::Windows,
             key,
             Modifiers {
                 ctrl: true,
+                ..Default::default()
+            },
+        )
+    };
+    let win_ctrl_shift = |key: KeyCode| {
+        kb(
+            PlatformFilter::Windows,
+            key,
+            Modifiers {
+                ctrl: true,
+                shift: true,
                 ..Default::default()
             },
         )
@@ -2208,12 +2258,34 @@ fn register_demo_commands(registry: &mut CommandRegistry) {
             },
         )
     };
+    let linux_ctrl_shift = |key: KeyCode| {
+        kb(
+            PlatformFilter::Linux,
+            key,
+            Modifiers {
+                ctrl: true,
+                shift: true,
+                ..Default::default()
+            },
+        )
+    };
     let web_ctrl = |key: KeyCode| {
         kb(
             PlatformFilter::Web,
             key,
             Modifiers {
                 ctrl: true,
+                ..Default::default()
+            },
+        )
+    };
+    let web_ctrl_shift = |key: KeyCode| {
+        kb(
+            PlatformFilter::Web,
+            key,
+            Modifiers {
+                ctrl: true,
+                shift: true,
                 ..Default::default()
             },
         )
@@ -2291,6 +2363,21 @@ fn register_demo_commands(registry: &mut CommandRegistry) {
                 win_ctrl(KeyCode::KeyB),
                 linux_ctrl(KeyCode::KeyB),
                 web_ctrl(KeyCode::KeyB),
+            ]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_CYCLE_PRESET_FAMILY),
+        CommandMeta::new("Cycle NodeGraph Preset Family")
+            .with_category("Demo")
+            .with_keywords(["preset", "theme", "skin", "style"])
+            .with_scope(CommandScope::App)
+            .with_when(WhenExpr::parse("!focus.is_text_input").expect("valid when expr"))
+            .with_default_keybindings([
+                mac_cmd_shift(KeyCode::KeyP),
+                win_ctrl_shift(KeyCode::KeyP),
+                linux_ctrl_shift(KeyCode::KeyP),
+                web_ctrl_shift(KeyCode::KeyP),
             ]),
     );
 
