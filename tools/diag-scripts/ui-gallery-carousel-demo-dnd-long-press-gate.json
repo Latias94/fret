@@ -68,15 +68,15 @@
       "timeout_frames": 240
     },
 
-    { "type": "pointer_down", "target": { "kind": "test_id", "id": "ui-gallery-carousel-demo-dnd-long-press" } },
+    { "type": "pointer_down", "pointer_kind": "touch", "target": { "kind": "test_id", "id": "ui-gallery-carousel-demo-dnd-long-press" } },
     { "type": "wait_frames", "n": 20 },
-    { "type": "pointer_move", "delta_x": -8.0, "delta_y": 0.0, "steps": 8 },
+    { "type": "pointer_move", "pointer_kind": "touch", "delta_x": -8.0, "delta_y": 0.0, "steps": 8 },
     {
       "type": "wait_until",
       "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-carousel-demo-dnd-active" } },
       "timeout_frames": 240
     },
-    { "type": "pointer_up" },
+    { "type": "pointer_up", "pointer_kind": "touch" },
     { "type": "wait_frames", "n": 6 },
     {
       "type": "assert",
