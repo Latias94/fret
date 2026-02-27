@@ -24,7 +24,7 @@ This is a TODO list for the workstream described in `design.md`.
 - [ ] Add a minimal “UI substrate” build gate:
   - [ ] `cargo check -p fret-ui`
 - [ ] Add a minimal “manual assembly” build gate:
-  - [ ] `cargo check -p fret-framework --no-default-features --features core,ui,runtime,render`
+  - [ ] `cargo check -p fret-framework --no-default-features --features core,runtime,ui`
 - [ ] Add a minimal “batteries” build gate:
   - [ ] `cargo check -p fret` (ecosystem meta crate, default features)
 - [ ] Ensure `python3 tools/check_layering.py` remains a required gate.
@@ -56,4 +56,3 @@ This is a TODO list for the workstream described in `design.md`.
 - [ ] CI (or local gates) prevents drift for all profiles.
 - [ ] Launcher glue is not a growth hotspot (bounded ownership + platform splits).
 - [ ] Boundary rules stay green (`tools/check_layering.py`).
-
