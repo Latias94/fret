@@ -322,7 +322,7 @@ fn command_text_input<H: UiHost>(
 ) -> AnyElement {
     let theme = Theme::global(&*cx.app).snapshot();
 
-    let fg = theme.color_token("foreground");
+    let fg = theme.color_token("popover-foreground");
     let placeholder_fg = theme.color_token("muted-foreground");
     let pad_y = MetricRef::space(Space::N3).resolve(&theme);
 
@@ -703,7 +703,7 @@ impl Command {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let props = {
+        let (props, fg_root) = {
             let theme = Theme::global(&*cx.app).snapshot();
             let base = ChromeRefinement::default()
                 .rounded(Radius::Lg)
@@ -714,9 +714,13 @@ impl Command {
                         .bg(ColorRef::Color(bg(&theme))),
                 )
                 .merge(self.chrome);
-            decl_style::container_props(&theme, base, self.layout)
+            (
+                decl_style::container_props(&theme, base, self.layout),
+                theme.color_token("popover-foreground"),
+            )
         };
-        let children = self.children;
+        let children =
+            current_color::scope_children(cx, ColorRef::Color(fg_root), move |_cx| self.children);
         shadcn_layout::container_flow(cx, props, children)
     }
 }
@@ -828,7 +832,7 @@ impl CommandInput {
             let pad_bottom = padding.bottom.map(|m| m.resolve(theme)).unwrap_or(Px(0.0));
             let pad_left = padding.left.map(|m| m.resolve(theme)).unwrap_or(pad_x);
 
-            let icon_fg = theme.color_token("muted-foreground");
+            let icon_fg = theme.color_token("popover-foreground");
 
             let mut wrapper = decl_style::container_props(
                 theme,
