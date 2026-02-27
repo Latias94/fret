@@ -143,15 +143,16 @@ impl SourcesBlock {
         let excerpt_color = theme
             .color_by_key("muted-foreground")
             .unwrap_or_else(|| theme.color_token("muted-foreground"));
-        let title_color = theme.color_token("foreground");
+        // Upstream `sources.tsx` styles the entire block as `text-primary text-xs`.
+        // Reference: `repo-ref/ai-elements/packages/elements/src/sources.tsx`.
+        let title_color = theme.color_token("primary");
 
         let icon_color = ColorRef::Token {
-            key: "foreground",
-            fallback: ColorFallback::ThemeTextPrimary,
+            key: "primary",
+            fallback: ColorFallback::ThemeAccent,
         };
         let list_theme = theme.clone();
         let trigger_theme = theme.clone();
-        let list_icon_color = icon_color.clone();
         let trigger_icon_color = icon_color.clone();
 
         let highlight_bg = theme
@@ -200,18 +201,32 @@ impl SourcesBlock {
                         .as_ref()
                         .is_some_and(|id| id.as_ref() == item.id.as_ref());
 
+                    let row_title_color = if is_highlighted {
+                        list_theme.color_token("accent-foreground")
+                    } else {
+                        title_color
+                    };
+                    let row_icon_color = if is_highlighted {
+                        ColorRef::Token {
+                            key: "accent-foreground",
+                            fallback: ColorFallback::ThemeTextPrimary,
+                        }
+                    } else {
+                        icon_color.clone()
+                    };
+
                     let icon = decl_icon::icon_with(
                         cx,
                         ids::ui::BOOK,
                         Some(Px(16.0)),
-                        Some(list_icon_color.clone()),
+                        Some(row_icon_color),
                     );
 
                     let title_text = cx.text_props(TextProps {
                         layout: LayoutStyle::default(),
                         text: item.title.clone(),
                         style: Some(text_xs_style(&list_theme, FontWeight::MEDIUM)),
-                        color: Some(title_color),
+                        color: Some(row_title_color),
                         wrap: TextWrap::None,
                         overflow: TextOverflow::Ellipsis,
                         align: TextAlign::Start,
