@@ -5,6 +5,8 @@
 
 use fret_core::{Axis, Point, Px};
 
+use crate::snap_points as headless_snap_points;
+
 pub const DEFAULT_DRAG_THRESHOLD_PX: f32 = 10.0;
 pub const DEFAULT_SNAP_THRESHOLD_FRACTION: f32 = 0.25;
 pub const DEFAULT_TOUCH_SCROLL_LOCK_THRESHOLD_PX: f32 = 2.0;
@@ -271,6 +273,89 @@ pub fn on_pointer_up_with_snaps(
     }
 
     let target_offset = snaps[next_index];
+
+    *state = CarouselDragState::default();
+    Some(CarouselDragReleaseOutput {
+        next_index,
+        target_offset,
+    })
+}
+
+pub fn on_pointer_up_with_snaps_options(
+    config: CarouselDragConfig,
+    state: &mut CarouselDragState,
+    axis: Axis,
+    position: Point,
+    snaps: &[Px],
+    max_offset: Px,
+    loop_enabled: bool,
+    skip_snaps: bool,
+    drag_free: bool,
+) -> Option<CarouselDragReleaseOutput> {
+    if !state.dragging {
+        state.armed = false;
+        state.dragging = false;
+        return None;
+    }
+
+    if snaps.is_empty() {
+        *state = CarouselDragState::default();
+        return Some(CarouselDragReleaseOutput {
+            next_index: 0,
+            target_offset: Px(0.0),
+        });
+    }
+
+    let start_offset = state.start_offset;
+    let start_index = headless_snap_points::closest_index_px(snaps, start_offset).unwrap_or(0);
+    let start_index = start_index.min(snaps.len().saturating_sub(1));
+    let start_snap = snaps[start_index];
+
+    let delta = axis_delta(axis, state.start, position);
+    let projected_offset = Px(start_offset.0 - delta);
+    let projected_offset = clamp_px(projected_offset, Px(0.0), max_offset);
+    let projected_offset = round_3(projected_offset);
+
+    let (next_index, target_offset) = if drag_free {
+        let ix =
+            headless_snap_points::closest_index_px(snaps, projected_offset).unwrap_or(start_index);
+        (ix.min(snaps.len().saturating_sub(1)), projected_offset)
+    } else if skip_snaps {
+        let ix =
+            headless_snap_points::closest_index_px(snaps, projected_offset).unwrap_or(start_index);
+        let ix = ix.min(snaps.len().saturating_sub(1));
+        (ix, snaps[ix])
+    } else {
+        let mut next_index = start_index;
+        if snaps.len() > 1 {
+            let neighbor = if delta > 0.0 {
+                if loop_enabled {
+                    headless_snap_points::step_index_wrapped(snaps.len(), start_index, -1)
+                } else {
+                    start_index.checked_sub(1)
+                }
+            } else if delta < 0.0 {
+                if loop_enabled {
+                    headless_snap_points::step_index_wrapped(snaps.len(), start_index, 1)
+                } else {
+                    Some((start_index + 1).min(snaps.len().saturating_sub(1)))
+                }
+            } else {
+                None
+            };
+
+            if let Some(neighbor_index) = neighbor {
+                let neighbor_snap = snaps[neighbor_index];
+                let distance = (neighbor_snap.0 - start_snap.0).abs();
+                let threshold = distance * config.snap_threshold_fraction;
+                if distance > 0.0 && delta.abs() > threshold {
+                    next_index = neighbor_index;
+                }
+            }
+        }
+
+        (next_index, snaps[next_index])
+    };
 
     *state = CarouselDragState::default();
     Some(CarouselDragReleaseOutput {
@@ -825,6 +910,120 @@ mod tests {
 
         assert_eq!(release.next_index, 2usize);
         assert_eq!(release.target_offset, Px(180.0));
+    }
+
+    #[test]
+    fn release_with_skip_snaps_allows_skipping_multiple_snaps() {
+        let mut state = CarouselDragState::default();
+        on_pointer_down(&mut state, true, Point::new(Px(0.0), Px(0.0)), Px(100.0));
+
+        let _ = on_pointer_move(
+            CarouselDragConfig {
+                drag_threshold_px: 0.0,
+                ..Default::default()
+            },
+            &mut state,
+            Axis::Horizontal,
+            Point::new(Px(-12.0), Px(0.0)),
+            true,
+            CarouselDragInputKind::Mouse,
+            Px(300.0),
+        );
+
+        let snaps = [Px(0.0), Px(100.0), Px(200.0), Px(300.0)];
+
+        let release_neighbor_only = on_pointer_up_with_snaps_options(
+            CarouselDragConfig {
+                drag_threshold_px: 0.0,
+                ..Default::default()
+            },
+            &mut state,
+            Axis::Horizontal,
+            Point::new(Px(-240.0), Px(0.0)),
+            &snaps,
+            Px(300.0),
+            false,
+            false,
+            false,
+        )
+        .expect("release");
+
+        assert_eq!(release_neighbor_only.next_index, 2);
+        assert_eq!(release_neighbor_only.target_offset, Px(200.0));
+
+        // Re-arm the drag state for a second release with skipSnaps enabled.
+        on_pointer_down(&mut state, true, Point::new(Px(0.0), Px(0.0)), Px(100.0));
+        let _ = on_pointer_move(
+            CarouselDragConfig {
+                drag_threshold_px: 0.0,
+                ..Default::default()
+            },
+            &mut state,
+            Axis::Horizontal,
+            Point::new(Px(-12.0), Px(0.0)),
+            true,
+            CarouselDragInputKind::Mouse,
+            Px(300.0),
+        );
+
+        let release_skipping = on_pointer_up_with_snaps_options(
+            CarouselDragConfig {
+                drag_threshold_px: 0.0,
+                ..Default::default()
+            },
+            &mut state,
+            Axis::Horizontal,
+            Point::new(Px(-240.0), Px(0.0)),
+            &snaps,
+            Px(300.0),
+            false,
+            true,
+            false,
+        )
+        .expect("release");
+
+        assert_eq!(release_skipping.next_index, 3);
+        assert_eq!(release_skipping.target_offset, Px(300.0));
+    }
+
+    #[test]
+    fn release_with_drag_free_settles_to_projected_offset() {
+        let mut state = CarouselDragState::default();
+        on_pointer_down(&mut state, true, Point::new(Px(0.0), Px(0.0)), Px(100.0));
+
+        let _ = on_pointer_move(
+            CarouselDragConfig {
+                drag_threshold_px: 0.0,
+                ..Default::default()
+            },
+            &mut state,
+            Axis::Horizontal,
+            Point::new(Px(-12.0), Px(0.0)),
+            true,
+            CarouselDragInputKind::Mouse,
+            Px(300.0),
+        );
+
+        let snaps = [Px(0.0), Px(100.0), Px(200.0), Px(300.0)];
+
+        let release = on_pointer_up_with_snaps_options(
+            CarouselDragConfig {
+                drag_threshold_px: 0.0,
+                ..Default::default()
+            },
+            &mut state,
+            Axis::Horizontal,
+            Point::new(Px(-160.0), Px(0.0)),
+            &snaps,
+            Px(300.0),
+            false,
+            false,
+            true,
+        )
+        .expect("release");
+
+        assert_eq!(release.next_index, 3);
+        assert_eq!(release.target_offset, Px(260.0));
     }
 
     #[test]

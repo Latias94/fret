@@ -10,11 +10,14 @@ Non-goals (v1):
 
 - Full Embla API surface (`setApi`, plugins, event subscriptions).
 - Full Embla plugin surface (plugin registry, events, arbitrary plugin chaining).
-- Momentum physics / drag-free scrolling.
+- Momentum physics / inertial drag-free scrolling.
 - Virtualization or lazy mounting of slides.
 
 Note: v1 *does* include a small, deterministic "API snapshot" surface and a recipe-level autoplay
 policy surface to align with shadcn docs examples without importing Embla's imperative API.
+It also includes best-effort parity for a small subset of Embla options (e.g. `duration`,
+`skipSnaps`, `dragFree`, and a non-seamless `loop` selection wrap) without implementing Embla's full
+physics or loop engine.
 
 Upstream references (local snapshots):
 
@@ -73,7 +76,8 @@ In-tree surfaces:
   extent approximation.
   - Evidence: `ecosystem/fret-ui-shadcn/src/carousel.rs` (snap input derived from item bounds)
 - [x] CAR-220 Add a minimal recipe-level option surface that stays policy-only:
-  - `align` + `containScroll` + `slidesToScroll` (no Embla API exposure)
+  - `align` + `containScroll` + `slidesToScroll` + `duration` + `skipSnaps` + `dragFree` + `loop`
+    (no Embla API exposure)
   - Evidence: `ecosystem/fret-ui-shadcn/src/carousel.rs`, `ecosystem/fret-ui-shadcn/src/lib.rs`
   - Note: upstream examples mix defaults + overrides:
     - `carousel-demo` / `carousel-spacing`: use Embla defaults (no `opts`)
