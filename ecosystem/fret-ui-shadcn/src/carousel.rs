@@ -13,6 +13,7 @@ use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::headless::carousel as headless_carousel;
+use fret_ui_kit::headless::snap_points as headless_snap_points;
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement, LengthRefinement, MetricRef, Radius, Space};
 
 use crate::{Button, ButtonSize, ButtonVariant};
@@ -642,11 +643,18 @@ impl Carousel {
                         .read(&index_for_prev, |v| *v)
                         .ok()
                         .unwrap_or(0);
-                    if snaps.len() <= 1 || index == 0 {
+                    if snaps.len() <= 1 {
                         return;
                     }
 
-                    let target_index = index.saturating_sub(1);
+                    let Some(target_index) =
+                        headless_snap_points::step_index_clamped(snaps.len(), index, -1)
+                    else {
+                        return;
+                    };
+                    if target_index == index {
+                        return;
+                    }
                     let target = snaps[target_index];
                     let cur = host
                         .models_mut()
@@ -683,11 +691,18 @@ impl Carousel {
                         .read(&index_for_next, |v| *v)
                         .ok()
                         .unwrap_or(0);
-                    if snaps.len() <= 1 || index + 1 >= snaps.len() {
+                    if snaps.len() <= 1 {
                         return;
                     }
 
-                    let target_index = (index + 1).min(snaps.len().saturating_sub(1));
+                    let Some(target_index) =
+                        headless_snap_points::step_index_clamped(snaps.len(), index, 1)
+                    else {
+                        return;
+                    };
+                    if target_index == index {
+                        return;
+                    }
                     let target = snaps[target_index];
                     let cur = host
                         .models_mut()
@@ -739,17 +754,15 @@ impl Carousel {
                         .ok()
                         .unwrap_or(0);
 
-                    let target_index = if down.key == prev_key {
-                        if index == 0 {
-                            return true;
-                        }
-                        index.saturating_sub(1)
-                    } else {
-                        if index + 1 >= snaps.len() {
-                            return true;
-                        }
-                        (index + 1).min(snaps.len().saturating_sub(1))
+                    let delta = if down.key == prev_key { -1 } else { 1 };
+                    let Some(target_index) =
+                        headless_snap_points::step_index_clamped(snaps.len(), index, delta)
+                    else {
+                        return true;
                     };
+                    if target_index == index {
+                        return true;
+                    }
 
                     let target = snaps[target_index];
                     let cur = host
