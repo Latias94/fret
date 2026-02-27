@@ -120,6 +120,7 @@ struct DemoControls {
     sampling_open: Model<bool>,
     uv_span: Model<Vec<f32>>,
     strength_px: Model<Vec<f32>>,
+    max_sample_offset_px: Model<Vec<f32>>,
     tint_strength: Model<Vec<f32>>,
     blur_radius_px: Model<Vec<f32>>,
     blur_downsample: Model<Vec<f32>>,
@@ -169,6 +170,7 @@ impl CustomEffectV2WebDriver {
             sampling_open: app.models_mut().insert(false),
             uv_span: app.models_mut().insert(vec![1.0]),
             strength_px: app.models_mut().insert(vec![14.0]),
+            max_sample_offset_px: app.models_mut().insert(vec![18.0]),
             tint_strength: app.models_mut().insert(vec![0.8]),
             blur_radius_px: app.models_mut().insert(vec![12.0]),
             blur_downsample: app.models_mut().insert(vec![1.0]),
@@ -254,6 +256,9 @@ impl CustomEffectV2WebDriver {
         let _ = app
             .models_mut()
             .update(&controls.strength_px, |v| *v = vec![14.0]);
+        let _ = app
+            .models_mut()
+            .update(&controls.max_sample_offset_px, |v| *v = vec![18.0]);
         let _ = app
             .models_mut()
             .update(&controls.tint_strength, |v| *v = vec![0.8]);
@@ -391,6 +396,8 @@ impl CustomEffectV2WebDriver {
         let sampling_value = Self::watch_opt_string(cx, &controls.sampling, "linear");
         let uv_span = Self::watch_first_f32(cx, &controls.uv_span, 1.0).clamp(0.05, 1.0);
         let strength_px = Self::watch_first_f32(cx, &controls.strength_px, 14.0).clamp(0.0, 24.0);
+        let max_sample_offset_px =
+            Self::watch_first_f32(cx, &controls.max_sample_offset_px, 18.0).clamp(0.0, 96.0);
         let tint_strength = Self::watch_first_f32(cx, &controls.tint_strength, 0.8).clamp(0.0, 1.0);
         let blur_radius_px =
             Self::watch_first_f32(cx, &controls.blur_radius_px, 12.0).clamp(0.0, 48.0);
@@ -456,7 +463,7 @@ impl CustomEffectV2WebDriver {
                 EffectStep::CustomV2 {
                     id: effect,
                     params,
-                    max_sample_offset_px: Px(strength_px),
+                    max_sample_offset_px: Px(max_sample_offset_px),
                     input_image: input_image.map(|image| CustomEffectImageInputV1 {
                         image,
                         uv,
@@ -566,6 +573,8 @@ impl CustomEffectV2WebDriver {
 
         let uv_span = Self::watch_first_f32(cx, &controls.uv_span, 1.0).clamp(0.05, 1.0);
         let strength_px = Self::watch_first_f32(cx, &controls.strength_px, 14.0).clamp(0.0, 24.0);
+        let max_sample_offset_px =
+            Self::watch_first_f32(cx, &controls.max_sample_offset_px, 18.0).clamp(0.0, 96.0);
         let tint_strength = Self::watch_first_f32(cx, &controls.tint_strength, 0.8).clamp(0.0, 1.0);
         let blur_radius_px =
             Self::watch_first_f32(cx, &controls.blur_radius_px, 12.0).clamp(0.0, 48.0);
@@ -586,6 +595,7 @@ impl CustomEffectV2WebDriver {
             let _ = models.update(&reset_controls.sampling, |v| *v = Some(Arc::from("linear")));
             let _ = models.update(&reset_controls.uv_span, |v| *v = vec![1.0]);
             let _ = models.update(&reset_controls.strength_px, |v| *v = vec![14.0]);
+            let _ = models.update(&reset_controls.max_sample_offset_px, |v| *v = vec![18.0]);
             let _ = models.update(&reset_controls.tint_strength, |v| *v = vec![0.8]);
             let _ = models.update(&reset_controls.blur_radius_px, |v| *v = vec![12.0]);
             let _ = models.update(&reset_controls.blur_downsample, |v| *v = vec![1.0]);
@@ -730,6 +740,24 @@ impl CustomEffectV2WebDriver {
                     },
                 );
 
+                let max_sample_offset_row = shadcn::stack::vstack(
+                    cx,
+                    shadcn::stack::VStackProps::default().gap(Space::N2),
+                    move |cx| {
+                        vec![
+                            label_row(
+                                cx,
+                                "Max sample offset (px)",
+                                format!("{max_sample_offset_px:.1}"),
+                            ),
+                            shadcn::Slider::new(controls.max_sample_offset_px.clone())
+                                .range(0.0, 96.0)
+                                .step(0.5)
+                                .into_element(cx),
+                        ]
+                    },
+                );
+
                 let tint_row = shadcn::stack::vstack(
                     cx,
                     shadcn::stack::VStackProps::default().gap(Space::N2),
@@ -840,6 +868,7 @@ impl CustomEffectV2WebDriver {
                             sampling_row,
                             uv_span_row,
                             strength_row,
+                            max_sample_offset_row,
                             tint_row,
                             blur_radius_row,
                             blur_downsample_row,
