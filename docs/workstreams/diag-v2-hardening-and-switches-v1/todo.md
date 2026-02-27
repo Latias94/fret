@@ -38,6 +38,8 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
   - [ ] registry-driven (preferred), or
   - [x] glob-driven (acceptable for small sets, but brittle long-term). (v1 decision: curated suite directories + redirect stubs)
 - [x] As an intermediate step, switch built-in suites from hard-coded file lists to directory inputs (deterministic `**/*.json` expansion).
+- [x] De-duplicate `diag perf` suite script lists by using a single source of truth:
+  - `perf_seed_policy::scripts_for_perf_suite_name` is now used by `diag perf` for suite name expansion.
 - [x] Ensure capability inference resolves `script_redirect` stubs (screenshots / required caps / env defaults).
 - [x] Add a script registry file (v1, generated; scope: suites + `_prelude`):
   - [x] file: `tools/diag-scripts/index.json`

@@ -97,7 +97,7 @@ required, inconsistent semantics, or transport divergence). Each item includes e
 
 6) Script library layout is flat; discoverability and ownership do not scale
 
-- Why it matters: as scripts accumulate, a single `tools/diag-scripts/` folder becomes hard to navigate, review, and
+- Why it matters: as scripts accumulate, a single `tools/diag-scripts/` folder becomes hard to navigate, review, and maintain.
 - Status (2026-02-27): **mostly closed for “flat root”**. Canonical scripts are moved into a taxonomy with redirect
   stubs, and CI checks prevent new canonical scripts from landing back in `tools/diag-scripts/*.json`.
   A minimal, generated registry exists at `tools/diag-scripts/index.json` (scope: scripts reachable from in-tree suites
@@ -106,6 +106,30 @@ required, inconsistent semantics, or transport divergence). Each item includes e
   - built-in suites are curated directory inputs via redirect stubs: `tools/diag-scripts/suites/` and
     `crates/fret-diag/src/diag_suite_scripts.rs`
   - some suites/helpers still hard-code individual script paths: `crates/fret-diag/src/diag_suite.rs`
+
+7) `diag perf <suite-name>` suite expansion drift risk (duplicate lists)
+
+- Why it matters: perf suite expansion and perf baseline seed policy both depend on “what scripts are in the suite”.
+  Duplicating suite lists creates silent inconsistencies (different scripts, different ordering, different keys).
+- Status (2026-02-27): **closed**. `diag perf` now expands suite names through the shared
+  `perf_seed_policy::scripts_for_perf_suite_name` helper.
+- Evidence:
+  - perf entrypoint: `crates/fret-diag/src/diag_perf.rs`
+  - shared suite list: `crates/fret-diag/src/perf_seed_policy.rs`
+
+8) Pointer kind (“mouse/touch/pen”) is supported, but needs a single canonical doc section
+
+- Why it matters: for automation/debugging, “works with mouse” is not equivalent to “works with touch” (hover, capture,
+  gesture recognizers, focus semantics, scroll/wheel behavior). Scripts should be able to express intent, and tooling
+  should capability-gate + surface evidence of the effective pointer type.
+- Status (2026-02-27): **supported end-to-end**. Script steps can carry optional `pointer_kind`, tooling infers required
+  capabilities, runtime synthesizes events with the right `pointer_type`, and bundles surface a `primary_pointer_type`.
+- Evidence:
+  - protocol: `crates/fret-diag-protocol/src/lib.rs` (`UiPointerKindV1` + `pointer_kind` fields on steps)
+  - capability inference: `crates/fret-diag/src/script_tooling.rs`
+  - runtime event synthesis + labels: `ecosystem/fret-bootstrap/src/ui_diagnostics/input_event_synthesis.rs`,
+    `ecosystem/fret-bootstrap/src/ui_diagnostics/labels.rs`
+  - runtime script execution: `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_pointer.rs`
 
 ## Goals
 
