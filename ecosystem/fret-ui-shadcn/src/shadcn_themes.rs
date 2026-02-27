@@ -377,6 +377,18 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
         colors.insert("component.navigation_menu.trigger.bg_open".to_string(), v);
     }
 
+    // AI Elements + some shadcn recipes use `dark:hover:bg-accent/50` to soften hover in dark
+    // schemes (e.g. attachment chips/rows). Our baseline theme defaults `color.menu.item.hover` to
+    // `accent` when not explicitly configured, so we seed an explicit dark alpha here to keep
+    // zinc/dark parity consistent.
+    if scheme == ShadcnColorScheme::Dark
+        && !colors.contains_key("color.menu.item.hover")
+        && let Some(accent) = colors.get("accent").cloned()
+    {
+        let v = with_oklch_alpha(&accent, 0.5).unwrap_or(accent);
+        colors.insert("color.menu.item.hover".to_string(), v);
+    }
+
     let mut metrics: HashMap<String, f32> = HashMap::new();
     if let Some(radius) = colors.remove("radius") {
         if let Some(px) = parse_css_length_px(&radius) {
@@ -1225,6 +1237,17 @@ mod tests {
                 "expected choice-card checked bg to match primary/10 in dark scheme"
             );
         }
+    }
+
+    #[test]
+    fn new_york_v4_seeds_menu_item_hover_in_dark_scheme() {
+        let cfg = shadcn_new_york_v4_config(ShadcnBaseColor::Neutral, ShadcnColorScheme::Dark);
+        let accent = cfg.colors.get("accent").cloned().expect("missing accent");
+        let expected = with_oklch_alpha(&accent, 0.5).expect("accent token is oklch");
+        assert_eq!(
+            cfg.colors.get("color.menu.item.hover").cloned(),
+            Some(expected)
+        );
     }
 
     #[test]
