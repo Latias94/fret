@@ -54,6 +54,8 @@ Notes:
 - Drawer snapping operates in **offset space** (target offsets), derived from snap fractions and
   the computed drawer height.
 - It additionally has a close/dismiss threshold which is not part of a generic "snap points" helper.
+- Nearest target selection uses the shared headless helper:
+  - `ecosystem/fret-ui-headless/src/snap_points.rs` (`closest_value_px`)
 
 ### Slider — quantized value snapping (C)
 
@@ -86,6 +88,11 @@ If duplication persists (e.g. multiple components pick a "nearest target" from a
 list), factor the smallest pure helper(s) into `fret-ui-headless` and re-export via
 `fret-ui-kit::headless`.
 
+Status:
+
+- Implemented minimal `Px` closest-point helpers in `ecosystem/fret-ui-headless/src/snap_points.rs`
+  and re-exported via `ecosystem/fret-ui-kit/src/headless/mod.rs`.
+
 Candidate functions (examples, not commitments):
 
 - `closest_index_px(points: &[Px], target: Px) -> usize`
@@ -97,4 +104,3 @@ Constraints:
 - Must remain coordinate-space agnostic (callers map their own spaces).
 - Must not depend on `fret-dnd` or UI runtime types.
 - Must come with unit tests that lock behavior.
-

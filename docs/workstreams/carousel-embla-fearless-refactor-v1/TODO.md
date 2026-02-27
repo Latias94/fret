@@ -92,9 +92,12 @@ keeping their higher-level semantics separate (Carousel vs Drawer vs Slider).
   - Quantized value snaps (step/ticks): Slider / progress-like controls
   - Pixel snapping (rendering): `snap_to_device_pixels` (out of scope)
   - Evidence: `docs/workstreams/carousel-embla-fearless-refactor-v1/snap-inventory.md`
-- [ ] CAR-420 Add a tiny headless snap-point helper surface (if duplication persists):
+- [x] CAR-420 Add a tiny headless snap-point helper surface (if duplication persists):
   - candidates: `nearest_point`, `next_prev_point`, `projected_release_target`
   - keep it independent of `fret-dnd` and UI runtime types
+  - Evidence:
+    - `ecosystem/fret-ui-headless/src/snap_points.rs`
+    - `ecosystem/fret-ui-shadcn/src/drawer.rs` (nearest snap selection)
 - [ ] CAR-430 Decide how Carousel drag and `fret-dnd` sensors should arbitrate pointer capture.
   - scope: policy only (likely `fret-ui-kit::dnd` sensor config + recipe opt-outs)
   - references: ADR 0149/0150/0151/0157
