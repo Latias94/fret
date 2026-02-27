@@ -30,6 +30,7 @@ mod compare;
 mod compat;
 pub mod devtools;
 mod diag_compare;
+mod diag_list;
 mod diag_matrix;
 mod diag_perf;
 mod diag_perf_baseline;
@@ -355,6 +356,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut timeout_ms: u64 = 240_000;
     let mut poll_ms: u64 = 50;
     let mut stats_top: usize = 5;
+    let mut stats_top_override: Option<usize> = None;
     let mut stats_verbose: bool = false;
     let mut sort_override: Option<BundleStatsSort> = None;
     let mut stats_json: bool = false;
@@ -951,6 +953,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 stats_top = v
                     .parse::<usize>()
                     .map_err(|_| "invalid value for --top".to_string())?;
+                stats_top_override = Some(stats_top);
                 i += 1;
             }
             "--warmup-frames" => {
@@ -2442,6 +2445,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     };
 
     match sub.as_str() {
+        "list" => diag_list::cmd_list(&rest, &workspace_root, stats_json, stats_top_override),
         "artifact" | "artifacts" => commands::artifact::cmd_artifact(
             &rest,
             pack_after_run,

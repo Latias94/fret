@@ -42,9 +42,11 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
   - [x] file: `tools/diag-scripts/index.json`
   - [x] generator/check: `python tools/check_diag_scripts_registry.py [--write]` (stdlib-only; suitable for CI)
   - [x] fields: `id`, `path`, `tags`, `target_hints`, `required_capabilities`, `suite_memberships`
-  - [x] CI guardrail: `.github/workflows/consistency-checks.yml`
+- [x] CI guardrail: `.github/workflows/consistency-checks.yml`
 - [x] Allow `diag run` to accept a promoted `script_id` from `tools/diag-scripts/index.json` (in addition to explicit paths),
   and print suggestions when the id is unknown.
+- [x] Add a small discoverability helper to list promoted scripts:
+  - [x] `fretboard diag list scripts` (reads `tools/diag-scripts/index.json` and prints `id -> path`)
 - [x] Prefer `--suite-prelude` for shared resets (`tools/diag-scripts/_prelude/*`) and document the convention.
 - [x] Document a migration runbook (dry-run plan → apply moves → validate suites) and link it from `docs/ui-diagnostics-and-scripted-tests.md`.
 - [x] Decide path-move compatibility strategy:
@@ -100,9 +102,11 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
   - [x] `ui-gallery/misc` (redirect-only; 0 canonical scripts)
   - [ ] Replace misc redirects with direct suite references (optional; reduce redirect chain depth)
   - [x] `docking/arbitration` (33 scripts)
-  - [x] `tooling/external-texture-imports` (9 scripts)
-  - [x] `tooling/todo` (4 scripts)
-  - [x] `_prelude/*` (2 scripts)
+- [x] `tooling/external-texture-imports` (9 scripts)
+- [x] `tooling/todo` (4 scripts)
+- [x] `_prelude/*` (2 scripts)
+- [x] post-merge drift batches:
+  - [x] `*zinc-dark.json` screenshot scripts (7 scripts; moved into `ui-gallery/ai`, `ui-gallery/command`, and `ui-gallery/dropdown-menu` with redirects)
 - [x] Update references after path moves (chosen approach):
   - [x] replace hard-coded lists with registry/directory inputs, or
   - [ ] scripted rewrite of code/docs references (large diff; less preferred).

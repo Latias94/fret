@@ -43,6 +43,7 @@ Today:
 - suites are directory-driven (curated stubs + deterministic `**/*.json` expansion),
 - ad-hoc runs should prefer `--script-dir` / `--glob` inputs.
 - `diag run` accepts either an explicit script path or a promoted `script_id` (resolved via `tools/diag-scripts/index.json`).
+- `diag list scripts` prints `script_id -> path` for promoted scripts (same registry; intended for discoverability).
 
 Long-term:
 
@@ -77,6 +78,8 @@ Tip (maintenance):
 - After merging/pulling `main`, newly added scripts may land back in the flat `tools/diag-scripts/` root.
   Prefer re-running the migrator on a narrow filter (for example `--include-prefix ui-gallery-`) to keep the taxonomy
   invariant and avoid reintroducing “misc buckets”.
+  - Example (batch-migrate a small set of newly added screenshot scripts):
+    - `python tools/diag-scripts/migrate-script-library.py --apply --write-redirects --include-name-glob "*zinc-dark.json"`
 
 3) Validate closures:
 
