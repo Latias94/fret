@@ -65,6 +65,11 @@ List promoted scripts (discoverability):
 
 - `cargo run -p fretboard -- diag list scripts`
 
+List known suites (from promoted registry `suite_memberships`):
+
+- `cargo run -p fretboard -- diag list suites`
+- (filter) `cargo run -p fretboard -- diag list suites --contains perf-`
+
 Check script library drift (taxonomy + redirects + registry):
 
 - `cargo run -p fretboard -- diag doctor scripts`

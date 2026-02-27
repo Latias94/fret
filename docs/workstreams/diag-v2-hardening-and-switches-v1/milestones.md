@@ -28,6 +28,8 @@ Exit criteria:
 - Basic script discoverability exists (avoid “grep the repo”):
   - `diag run` accepts promoted `script_id` (registry-backed),
   - `diag list scripts` prints `script_id -> path` from the promoted registry.
+- Basic suite discoverability exists (avoid “find the right folder”):
+  - `diag list suites` prints known `suite_memberships` (registry-derived).
 - Script library drift is detectable via a bounded, read-only tooling command:
   - `diag doctor scripts` checks for root canonical scripts, broken redirects, and registry drift.
 

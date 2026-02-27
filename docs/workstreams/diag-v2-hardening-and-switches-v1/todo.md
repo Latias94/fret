@@ -55,6 +55,8 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
   and print suggestions when the id is unknown.
 - [x] Add a small discoverability helper to list promoted scripts:
   - [x] `fretboard diag list scripts` (reads `tools/diag-scripts/index.json` and prints `id -> path`)
+- [x] Add a small discoverability helper to list known suites:
+  - [x] `fretboard diag list suites` (reads `tools/diag-scripts/index.json` and prints `suite_memberships` counts)
 - [x] Ensure promoted canonical scripts are schema v2 (keep `script_redirect` stubs as schema v1):
   - [x] `fretboard diag doctor scripts` reports and suggests upgrades for promoted schema v1 scripts.
   - [x] Upgrade the remaining promoted schema v1 scripts via `diag script upgrade --write`.
