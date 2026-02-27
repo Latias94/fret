@@ -1023,6 +1023,9 @@ Note:
 - Built-in suites are defined as curated directory inputs under `tools/diag-scripts/suites/<suite-name>/`.
   Each entry is a small `script_redirect` JSON stub that points at the canonical script path; tooling resolves
   redirects before pushing scripts to the runtime (so redirects never reach the runtime).
+- Use `--suite-prelude <script.json>` to run shared reset/normalization scripts from `tools/diag-scripts/_prelude/*`.
+  When the suite reuses a single process, preludes run once before the first script by default; use
+  `--suite-prelude-each-run` to run preludes before every script.
 - Migration helper (dry-run by default): `python tools/diag-scripts/migrate-script-library.py`.
 - During migration, legacy script paths may be left behind as small `script_redirect` JSON stubs. Tooling resolves these
   stubs before pushing scripts to the runtime, so redirects never become part of the runtime contract surface.

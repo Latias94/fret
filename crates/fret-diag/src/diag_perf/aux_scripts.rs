@@ -1,7 +1,7 @@
 use super::*;
 
 #[allow(clippy::too_many_arguments)]
-pub(super) fn run_suite_aux_script_must_pass(
+pub(crate) fn run_suite_aux_script_must_pass(
     src: &PathBuf,
     child: &mut Option<LaunchedDemo>,
     use_devtools_ws: bool,
@@ -10,6 +10,7 @@ pub(super) fn run_suite_aux_script_must_pass(
     workspace_root: &Path,
     resolved_out_dir: &Path,
     resolved_exit_path: &Path,
+    stop_demo_on_fail: bool,
     reuse_process: bool,
     resolved_script_result_path: &Path,
     resolved_script_result_trigger_path: &Path,
@@ -116,25 +117,31 @@ pub(super) fn run_suite_aux_script_must_pass(
     match result.stage {
         fret_diag_protocol::UiScriptStageV1::Passed => Ok(()),
         fret_diag_protocol::UiScriptStageV1::Failed => {
-            eprintln!(
-                "FAIL {} (run_id={}) step={} reason={} last_bundle_dir={}",
+            let msg = format!(
+                "aux script failed: {} (run_id={}) step={} reason={} last_bundle_dir={}",
                 src.display(),
                 result.run_id,
                 result.step_index.unwrap_or(0),
                 result.reason.as_deref().unwrap_or("unknown"),
                 result.last_bundle_dir.as_deref().unwrap_or("")
             );
-            stop_launched_demo(child, resolved_exit_path, poll_ms);
-            std::process::exit(1);
+            eprintln!("FAIL {msg}");
+            if stop_demo_on_fail {
+                stop_launched_demo(child, resolved_exit_path, poll_ms);
+            }
+            Err(msg)
         }
         _ => {
-            eprintln!(
-                "unexpected script stage for {}: {:?}",
+            let msg = format!(
+                "unexpected aux script stage for {}: {:?}",
                 src.display(),
                 result
             );
-            stop_launched_demo(child, resolved_exit_path, poll_ms);
-            std::process::exit(1);
+            eprintln!("{msg}");
+            if stop_demo_on_fail {
+                stop_launched_demo(child, resolved_exit_path, poll_ms);
+            }
+            Err(msg)
         }
     }
 }

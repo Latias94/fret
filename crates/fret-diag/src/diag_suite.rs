@@ -41,9 +41,9 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
         pack_after_run,
         rest,
         suite_script_inputs,
-        suite_prewarm_scripts: _suite_prewarm_scripts,
-        suite_prelude_scripts: _suite_prelude_scripts,
-        suite_prelude_each_run: _suite_prelude_each_run,
+        suite_prewarm_scripts,
+        suite_prelude_scripts,
+        suite_prelude_each_run,
         workspace_root,
         resolved_out_dir,
         resolved_ready_path,
@@ -1066,9 +1066,18 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
         resolve_path(&workspace_root, raw)
     };
 
+    let resolved_script_result_trigger_path = {
+        let raw = std::env::var_os("FRET_DIAG_SCRIPT_RESULT_TRIGGER_PATH")
+            .filter(|v| !v.is_empty())
+            .map(PathBuf::from)
+            .unwrap_or_else(|| resolved_out_dir.join("script.result.touch"));
+        resolve_path(&workspace_root, raw)
+    };
+
     let mut fs_transport_cfg =
         crate::transport::FsDiagTransportConfig::from_out_dir(resolved_out_dir.clone());
     fs_transport_cfg.script_result_path = resolved_script_result_path.clone();
+    fs_transport_cfg.script_result_trigger_path = resolved_script_result_trigger_path.clone();
 
     let trace_chrome = false;
 
@@ -1081,6 +1090,16 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
         std::collections::BTreeMap::new();
     let mut suite_rows: Vec<serde_json::Value> = Vec::new();
     let mut suite_evidence_agg = suite_summary::SuiteEvidenceAggregate::default();
+
+    let capabilities_check_path = resolved_out_dir.join("check.capabilities.json");
+    let resolved_suite_prewarm_scripts: Vec<PathBuf> = suite_prewarm_scripts
+        .into_iter()
+        .map(|p| resolve_path(&workspace_root, p))
+        .collect();
+    let resolved_suite_prelude_scripts: Vec<PathBuf> = suite_prelude_scripts
+        .into_iter()
+        .map(|p| resolve_path(&workspace_root, p))
+        .collect();
 
     let connected_ws: Option<ConnectedToolingTransport> = if use_devtools_ws {
         if launch.is_some() || reuse_launch {
@@ -1300,6 +1319,7 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
             };
         }
         let result: Result<crate::stats::ScriptResultSummary, String> = (|| {
+            let child_running = child.is_some();
             let connected_fs_iter: ConnectedToolingTransport;
             let connected: &ConnectedToolingTransport = if use_devtools_ws {
                 connected_ws.as_ref().ok_or_else(|| {
@@ -1313,7 +1333,7 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
                 connected_fs_iter = connect_filesystem_tooling(
                     &fs_transport_cfg,
                     &resolved_ready_path,
-                    child.is_some(),
+                    child_running,
                     timeout_ms,
                     poll_ms,
                 )
@@ -1328,6 +1348,56 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
                 })?;
                 &connected_fs_iter
             };
+
+            let connected_fs_for_aux = if use_devtools_ws {
+                None
+            } else {
+                Some(connected)
+            };
+            if !resolved_suite_prewarm_scripts.is_empty() && (!reuse_process || idx == 0) {
+                for prewarm in &resolved_suite_prewarm_scripts {
+                    crate::diag_perf::run_suite_aux_script_must_pass(
+                        prewarm,
+                        &mut child,
+                        use_devtools_ws,
+                        connected_ws.as_ref(),
+                        connected_fs_for_aux,
+                        &workspace_root,
+                        &resolved_out_dir,
+                        &resolved_exit_path,
+                        !keep_open,
+                        reuse_process,
+                        &resolved_script_result_path,
+                        &resolved_script_result_trigger_path,
+                        &capabilities_check_path,
+                        timeout_ms,
+                        poll_ms,
+                    )?;
+                }
+            }
+            if !resolved_suite_prelude_scripts.is_empty()
+                && (!reuse_process || suite_prelude_each_run || idx == 0)
+            {
+                for prelude in &resolved_suite_prelude_scripts {
+                    crate::diag_perf::run_suite_aux_script_must_pass(
+                        prelude,
+                        &mut child,
+                        use_devtools_ws,
+                        connected_ws.as_ref(),
+                        connected_fs_for_aux,
+                        &workspace_root,
+                        &resolved_out_dir,
+                        &resolved_exit_path,
+                        !keep_open,
+                        reuse_process,
+                        &resolved_script_result_path,
+                        &resolved_script_result_trigger_path,
+                        &capabilities_check_path,
+                        timeout_ms,
+                        poll_ms,
+                    )?;
+                }
+            }
 
             let script_value: serde_json::Value =
                 serde_json::from_slice(&std::fs::read(&src).map_err(|e| {
@@ -1423,7 +1493,7 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
                 timeout_ms,
                 poll_ms,
                 &resolved_script_result_path,
-                &resolved_out_dir.join("check.capabilities.json"),
+                &capabilities_check_path,
             )
             .inspect_err(|err| {
                 write_tooling_failure_script_result_if_missing(

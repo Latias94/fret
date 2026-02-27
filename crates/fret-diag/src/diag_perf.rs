@@ -2,6 +2,7 @@ use super::*;
 
 #[path = "diag_perf/aux_scripts.rs"]
 mod aux_scripts;
+pub(crate) use aux_scripts::run_suite_aux_script_must_pass;
 #[path = "diag_perf/baseline_rows.rs"]
 mod baseline_rows;
 #[path = "diag_perf/hints.rs"]
@@ -386,6 +387,7 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
             &workspace_root,
             &resolved_out_dir,
             &resolved_exit_path,
+            true,
             reuse_process,
             &resolved_script_result_path,
             &resolved_script_result_trigger_path,

@@ -43,7 +43,7 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
   - [x] generator/check: `python tools/check_diag_scripts_registry.py [--write]` (stdlib-only; suitable for CI)
   - [x] fields: `id`, `path`, `tags`, `target_hints`, `required_capabilities`, `suite_memberships`
   - [x] CI guardrail: `.github/workflows/consistency-checks.yml`
-- [ ] Prefer `--suite-prelude` for shared resets (`tools/diag-scripts/_prelude/*`) and document the convention.
+- [x] Prefer `--suite-prelude` for shared resets (`tools/diag-scripts/_prelude/*`) and document the convention.
 - [x] Document a migration runbook (dry-run plan → apply moves → validate suites) and link it from `docs/ui-diagnostics-and-scripted-tests.md`.
 - [x] Decide path-move compatibility strategy:
   - [ ] registry-first (no moves) to decouple suites from filenames,
