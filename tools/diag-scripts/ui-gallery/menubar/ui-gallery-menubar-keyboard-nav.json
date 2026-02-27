@@ -1,44 +1,102 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "steps": [
-    { "type": "press_key", "key": "escape" },
-    { "type": "wait_frames", "n": 2 },
     {
-      "type": "wait_until",
+      "key": "escape",
+      "modifiers": {
+        "alt": false,
+        "ctrl": false,
+        "meta": false,
+        "shift": false
+      },
+      "repeat": false,
+      "type": "press_key"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "menubar-trigger-file" }
+        "target": {
+          "id": "menubar-trigger-file",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 240
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
-    { "type": "click", "target": { "kind": "test_id", "id": "menubar-trigger-file" } },
     {
-      "type": "wait_until",
+      "button": "left",
+      "target": {
+        "id": "menubar-trigger-file",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "menubar-item-ui_gallery-app-open" }
+        "target": {
+          "id": "menubar-item-ui_gallery-app-open",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 120
+      "timeout_frames": 120,
+      "type": "wait_until"
     },
-    { "type": "press_key", "key": "down" },
     {
-      "type": "wait_until",
+      "key": "down",
+      "modifiers": {
+        "alt": false,
+        "ctrl": false,
+        "meta": false,
+        "shift": false
+      },
+      "repeat": false,
+      "type": "press_key"
+    },
+    {
       "predicate": {
         "kind": "focus_is",
-        "target": { "kind": "test_id", "id": "menubar-item-ui_gallery-app-open" }
+        "target": {
+          "id": "menubar-item-ui_gallery-app-open",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 120
+      "timeout_frames": 120,
+      "type": "wait_until"
     },
-    { "type": "press_key", "key": "escape" },
-    { "type": "wait_frames", "n": 5 },
     {
-      "type": "wait_until",
+      "key": "escape",
+      "modifiers": {
+        "alt": false,
+        "ctrl": false,
+        "meta": false,
+        "shift": false
+      },
+      "repeat": false,
+      "type": "press_key"
+    },
+    {
+      "n": 5,
+      "type": "wait_frames"
+    },
+    {
       "predicate": {
         "kind": "focus_is",
-        "target": { "kind": "test_id", "id": "menubar-trigger-file" }
+        "target": {
+          "id": "menubar-trigger-file",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 120
+      "timeout_frames": 120,
+      "type": "wait_until"
     },
-    { "type": "capture_bundle", "label": "ui-gallery-menubar-file-escape-focus-restore" }
+    {
+      "label": "ui-gallery-menubar-file-escape-focus-restore",
+      "type": "capture_bundle"
+    }
   ]
 }

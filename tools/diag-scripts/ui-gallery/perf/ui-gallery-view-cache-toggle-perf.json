@@ -1,41 +1,102 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "steps": [
     {
-      "type": "move_pointer",
-      "target": { "kind": "test_id", "id": "ui-gallery-nav-view-cache" }
+      "target": {
+        "id": "ui-gallery-nav-view-cache",
+        "kind": "test_id"
+      },
+      "type": "move_pointer"
     },
     {
-      "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-nav-view-cache" }
+      "button": "left",
+      "target": {
+        "id": "ui-gallery-nav-view-cache",
+        "kind": "test_id"
+      },
+      "type": "click"
     },
     {
-      "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-view-cache-root" }
+        "target": {
+          "id": "ui-gallery-view-cache-root",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 360
+      "timeout_frames": 360,
+      "type": "wait_until"
     },
-
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-view-cache-enabled" } },
-    { "type": "wait_frames", "n": 2 },
     {
-      "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-view-cache-bump-counter" }
+      "button": "left",
+      "target": {
+        "id": "ui-gallery-view-cache-enabled",
+        "kind": "test_id"
+      },
+      "type": "click"
     },
-    { "type": "wait_frames", "n": 2 },
     {
-      "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-view-cache-popover-trigger" }
+      "n": 2,
+      "type": "wait_frames"
     },
-    { "type": "wait_frames", "n": 10 },
-    { "type": "press_key", "key": "escape" },
-    { "type": "wait_frames", "n": 2 },
-
-    { "type": "capture_bundle", "label": "ui-gallery-view-cache-toggle-perf" },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-view-cache-enabled" } },
-    { "type": "wait_frames", "n": 2 }
+    {
+      "button": "left",
+      "target": {
+        "id": "ui-gallery-view-cache-bump-counter",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "button": "left",
+      "target": {
+        "id": "ui-gallery-view-cache-popover-trigger",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "n": 10,
+      "type": "wait_frames"
+    },
+    {
+      "key": "escape",
+      "modifiers": {
+        "alt": false,
+        "ctrl": false,
+        "meta": false,
+        "shift": false
+      },
+      "repeat": false,
+      "type": "press_key"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "label": "ui-gallery-view-cache-toggle-perf",
+      "type": "capture_bundle"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "button": "left",
+      "target": {
+        "id": "ui-gallery-view-cache-enabled",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    }
   ]
 }

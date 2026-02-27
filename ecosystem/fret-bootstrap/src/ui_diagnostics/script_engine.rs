@@ -37,6 +37,8 @@ pub(super) fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> b
     match step {
         UiActionStepV2::Click { .. }
         | UiActionStepV2::Tap { .. }
+        | UiActionStepV2::LongPress { .. }
+        | UiActionStepV2::Swipe { .. }
         | UiActionStepV2::Pinch { .. }
         | UiActionStepV2::ClickStable { .. }
         | UiActionStepV2::ClickSelectableTextSpanStable { .. }
@@ -85,6 +87,8 @@ pub(super) fn script_step_kind_name(step: &UiActionStepV2) -> &'static str {
     match step {
         UiActionStepV2::Click { .. } => "click",
         UiActionStepV2::Tap { .. } => "tap",
+        UiActionStepV2::LongPress { .. } => "long_press",
+        UiActionStepV2::Swipe { .. } => "swipe",
         UiActionStepV2::Pinch { .. } => "pinch",
         UiActionStepV2::ClickStable { .. } => "click_stable",
         UiActionStepV2::ClickSelectableTextSpanStable { .. } => "click_selectable_text_span_stable",
@@ -351,6 +355,52 @@ pub(super) fn dispatch_drive_script_step(
         }
         step @ UiActionStepV2::Tap { .. } => {
             let should_return = script_steps_pointer::handle_tap_step(
+                service,
+                app,
+                window,
+                window_bounds,
+                anchor_window,
+                step_index,
+                step,
+                element_runtime,
+                semantics_snapshot,
+                ui.as_deref_mut(),
+                active,
+                output,
+                force_dump_label,
+                handoff_to,
+                stop_script,
+                failure_reason,
+            );
+            if should_return {
+                return DriveScriptStepDispatchOutcome::ReturnOutput;
+            }
+        }
+        step @ UiActionStepV2::LongPress { .. } => {
+            let should_return = script_steps_pointer::handle_long_press_step(
+                service,
+                app,
+                window,
+                window_bounds,
+                anchor_window,
+                step_index,
+                step,
+                element_runtime,
+                semantics_snapshot,
+                ui.as_deref_mut(),
+                active,
+                output,
+                force_dump_label,
+                handoff_to,
+                stop_script,
+                failure_reason,
+            );
+            if should_return {
+                return DriveScriptStepDispatchOutcome::ReturnOutput;
+            }
+        }
+        step @ UiActionStepV2::Swipe { .. } => {
+            let should_return = script_steps_pointer::handle_swipe_step(
                 service,
                 app,
                 window,

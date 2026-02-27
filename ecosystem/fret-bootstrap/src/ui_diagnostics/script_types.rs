@@ -111,6 +111,7 @@ impl PendingScript {
 pub(super) enum V2StepState {
     ClickStable(V2ClickStableState),
     ClickSelectableTextSpanStable(V2ClickSelectableTextSpanStableState),
+    LongPress(V2LongPressState),
     WaitBoundsStable(V2WaitBoundsStableState),
     EnsureVisible(V2EnsureVisibleState),
     ScrollIntoView(V2ScrollIntoViewState),
@@ -157,6 +158,18 @@ pub(super) struct V2ClickSelectableTextSpanStableState {
     pub(super) remaining_frames: u32,
     pub(super) stable_count: u32,
     pub(super) last_pos: Option<Point>,
+}
+
+#[derive(Debug, Clone)]
+pub(super) struct V2LongPressState {
+    pub(super) step_index: usize,
+    pub(super) window: AppWindowId,
+    pub(super) position: Point,
+    pub(super) pointer_type: fret_core::PointerType,
+    pub(super) modifiers: Modifiers,
+    pub(super) duration_ms: u64,
+    pub(super) started_monotonic_ms: Option<u64>,
+    pub(super) down_issued: bool,
 }
 
 #[derive(Debug, Clone)]

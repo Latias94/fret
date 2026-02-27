@@ -376,6 +376,499 @@ pub(super) fn handle_tap_step(
     false
 }
 
+pub(super) fn handle_long_press_step(
+    svc: &mut UiDiagnosticsService,
+    app: &App,
+    window: AppWindowId,
+    window_bounds: Rect,
+    anchor_window: AppWindowId,
+    step_index: usize,
+    step: UiActionStepV2,
+    element_runtime: Option<&ElementRuntime>,
+    semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
+    mut ui: Option<&mut UiTree<App>>,
+    active: &mut ActiveScript,
+    output: &mut UiScriptFrameOutput,
+    force_dump_label: &mut Option<String>,
+    handoff_to: &mut Option<AppWindowId>,
+    stop_script: &mut bool,
+    failure_reason: &mut Option<String>,
+) -> bool {
+    let UiActionStepV2::LongPress {
+        window: target_window,
+        pointer_kind,
+        target,
+        duration_ms,
+        modifiers,
+    } = step
+    else {
+        return false;
+    };
+
+    // Multi-frame step state: if already started, keep injecting into the original window.
+    if let Some(V2StepState::LongPress(mut state)) = active.v2_step_state.take() {
+        if state.step_index == step_index {
+            if state.window != window {
+                *handoff_to = Some(state.window);
+                output
+                    .effects
+                    .push(Effect::RequestAnimationFrame(state.window));
+                output.request_redraw = true;
+                active.v2_step_state = Some(V2StepState::LongPress(state));
+                return false;
+            }
+
+            let now_ms = now_monotonic_ms_for_window(app, window).unwrap_or_else(unix_ms_now);
+            if !state.down_issued {
+                output.events.push(move_pointer_event_with_modifiers(
+                    state.position,
+                    state.modifiers,
+                    state.pointer_type,
+                ));
+                output.events.push(pointer_down_event_with_modifiers(
+                    state.position,
+                    UiMouseButtonV1::Left,
+                    1,
+                    state.modifiers,
+                    state.pointer_type,
+                ));
+                state.down_issued = true;
+                state.started_monotonic_ms = Some(now_ms);
+            } else if let Some(start) = state.started_monotonic_ms
+                && now_ms.saturating_sub(start) >= state.duration_ms
+            {
+                output.events.push(pointer_up_event_with_modifiers(
+                    state.position,
+                    UiMouseButtonV1::Left,
+                    1,
+                    state.modifiers,
+                    state.pointer_type,
+                    false,
+                ));
+
+                active.v2_step_state = None;
+                active.wait_until = None;
+                active.screenshot_wait = None;
+                active.next_step = active.next_step.saturating_add(1);
+                output.request_redraw = true;
+                if svc.cfg.script_auto_dump {
+                    *force_dump_label = Some(format!("script-step-{step_index:04}-long-press"));
+                }
+                return false;
+            }
+
+            output.request_redraw = true;
+            active.wait_until = None;
+            active.screenshot_wait = None;
+            active.v2_step_state = Some(V2StepState::LongPress(state));
+            return false;
+        }
+
+        // Different step: keep the state (should not happen, but avoid losing it).
+        active.v2_step_state = Some(V2StepState::LongPress(state));
+    }
+
+    if let Some(target_window) =
+        svc.resolve_window_target_for_active_step(window, anchor_window, target_window.as_ref())
+    {
+        if target_window != window {
+            *handoff_to = Some(target_window);
+            output
+                .effects
+                .push(Effect::RequestAnimationFrame(target_window));
+            output.request_redraw = true;
+        }
+    } else if target_window.is_some() {
+        *force_dump_label = Some(format!(
+            "script-step-{step_index:04}-long-press-window-not-found"
+        ));
+        *stop_script = true;
+        *failure_reason = Some("window_target_unresolved".to_string());
+        output.request_redraw = true;
+    }
+
+    if *stop_script {
+        active.v2_step_state = None;
+        active.wait_until = None;
+        active.screenshot_wait = None;
+        return false;
+    }
+    if handoff_to.is_some() {
+        active.v2_step_state = None;
+        active.wait_until = None;
+        active.screenshot_wait = None;
+        return false;
+    }
+
+    let Some(snapshot) = semantics_snapshot else {
+        output.request_redraw = true;
+        let label = format!("script-step-{step_index:04}-long-press-no-semantics");
+        if svc.cfg.script_auto_dump {
+            svc.dump_bundle(Some(&label));
+        }
+        push_script_event_log(
+            active,
+            &svc.cfg,
+            UiScriptEventLogEntryV1 {
+                unix_ms: unix_ms_now(),
+                kind: "script_failed".to_string(),
+                step_index: Some(step_index as u32),
+                note: Some("no_semantics_snapshot".to_string()),
+                bundle_dir: None,
+                window: Some(window.data().as_ffi()),
+                tick_id: Some(app.tick_id().0),
+                frame_id: Some(app.frame_id().0),
+                window_snapshot_seq: None,
+            },
+        );
+        svc.write_script_result(UiScriptResultV1 {
+            schema_version: 1,
+            run_id: active.run_id,
+            updated_unix_ms: unix_ms_now(),
+            window: Some(window.data().as_ffi()),
+            stage: UiScriptStageV1::Failed,
+            step_index: Some(step_index as u32),
+            reason_code: Some("semantics.missing".to_string()),
+            reason: Some("no_semantics_snapshot".to_string()),
+            evidence: script_evidence_for_active(active),
+            last_bundle_dir: svc
+                .last_dump_dir
+                .as_ref()
+                .map(|p| display_path(&svc.cfg.out_dir, p)),
+            last_bundle_artifact: svc.last_dump_artifact_stats.clone(),
+        });
+        return true;
+    };
+
+    let Some(node) = select_semantics_node_with_trace(
+        snapshot,
+        window,
+        element_runtime,
+        &target,
+        step_index as u32,
+        svc.cfg.redact_text,
+        &mut active.selector_resolution_trace,
+    ) else {
+        output.request_redraw = true;
+        let label = format!("script-step-{step_index:04}-long-press-no-semantics-match");
+        if svc.cfg.script_auto_dump {
+            svc.dump_bundle(Some(&label));
+        }
+        push_script_event_log(
+            active,
+            &svc.cfg,
+            UiScriptEventLogEntryV1 {
+                unix_ms: unix_ms_now(),
+                kind: "script_failed".to_string(),
+                step_index: Some(step_index as u32),
+                note: Some("long_press_no_semantics_match".to_string()),
+                bundle_dir: None,
+                window: Some(window.data().as_ffi()),
+                tick_id: Some(app.tick_id().0),
+                frame_id: Some(app.frame_id().0),
+                window_snapshot_seq: None,
+            },
+        );
+        svc.write_script_result(UiScriptResultV1 {
+            schema_version: 1,
+            run_id: active.run_id,
+            updated_unix_ms: unix_ms_now(),
+            window: Some(window.data().as_ffi()),
+            stage: UiScriptStageV1::Failed,
+            step_index: Some(step_index as u32),
+            reason_code: Some("selector.not_found".to_string()),
+            reason: Some("long_press_no_semantics_match".to_string()),
+            evidence: script_evidence_for_active(active),
+            last_bundle_dir: svc
+                .last_dump_dir
+                .as_ref()
+                .map(|p| display_path(&svc.cfg.out_dir, p)),
+            last_bundle_artifact: svc.last_dump_artifact_stats.clone(),
+        });
+        return true;
+    };
+
+    let pos = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
+    if let Some(ui) = ui.as_deref_mut() {
+        record_hit_test_trace_for_selector(
+            &mut active.hit_test_trace,
+            ui,
+            element_runtime,
+            window,
+            Some(snapshot),
+            &target,
+            step_index as u32,
+            pos,
+            Some(node),
+            Some("long_press"),
+            svc.cfg.max_debug_string_bytes,
+        );
+    }
+    record_overlay_placement_trace(
+        &mut active.overlay_placement_trace,
+        element_runtime,
+        Some(snapshot),
+        window,
+        step_index as u32,
+        "long_press",
+    );
+
+    let modifiers = core_modifiers_from_ui(modifiers);
+    let pointer_type = pointer_type_from_kind(pointer_kind.or(Some(UiPointerKindV1::Touch)));
+
+    active.v2_step_state = Some(V2StepState::LongPress(V2LongPressState {
+        step_index,
+        window,
+        position: pos,
+        pointer_type,
+        modifiers,
+        duration_ms,
+        started_monotonic_ms: None,
+        down_issued: false,
+    }));
+    active.wait_until = None;
+    active.screenshot_wait = None;
+    output.request_redraw = true;
+
+    false
+}
+
+pub(super) fn handle_swipe_step(
+    svc: &mut UiDiagnosticsService,
+    app: &App,
+    window: AppWindowId,
+    window_bounds: Rect,
+    anchor_window: AppWindowId,
+    step_index: usize,
+    step: UiActionStepV2,
+    element_runtime: Option<&ElementRuntime>,
+    semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
+    mut ui: Option<&mut UiTree<App>>,
+    active: &mut ActiveScript,
+    output: &mut UiScriptFrameOutput,
+    force_dump_label: &mut Option<String>,
+    handoff_to: &mut Option<AppWindowId>,
+    stop_script: &mut bool,
+    failure_reason: &mut Option<String>,
+) -> bool {
+    let UiActionStepV2::Swipe {
+        window: target_window,
+        pointer_kind,
+        target,
+        delta_x,
+        delta_y,
+        steps,
+        modifiers,
+    } = step
+    else {
+        return false;
+    };
+
+    if let Some(target_window) =
+        svc.resolve_window_target_for_active_step(window, anchor_window, target_window.as_ref())
+    {
+        if target_window != window {
+            *handoff_to = Some(target_window);
+            output
+                .effects
+                .push(Effect::RequestAnimationFrame(target_window));
+            output.request_redraw = true;
+        }
+    } else if target_window.is_some() {
+        *force_dump_label = Some(format!(
+            "script-step-{step_index:04}-swipe-window-not-found"
+        ));
+        *stop_script = true;
+        *failure_reason = Some("window_target_unresolved".to_string());
+        output.request_redraw = true;
+    }
+    if *stop_script {
+        active.v2_step_state = None;
+        active.wait_until = None;
+        active.screenshot_wait = None;
+        return false;
+    }
+    if handoff_to.is_some() {
+        active.v2_step_state = None;
+        active.wait_until = None;
+        active.screenshot_wait = None;
+        return false;
+    }
+
+    let Some(snapshot) = semantics_snapshot else {
+        output.request_redraw = true;
+        let label = format!("script-step-{step_index:04}-swipe-no-semantics");
+        if svc.cfg.script_auto_dump {
+            svc.dump_bundle(Some(&label));
+        }
+        push_script_event_log(
+            active,
+            &svc.cfg,
+            UiScriptEventLogEntryV1 {
+                unix_ms: unix_ms_now(),
+                kind: "script_failed".to_string(),
+                step_index: Some(step_index as u32),
+                note: Some("no_semantics_snapshot".to_string()),
+                bundle_dir: None,
+                window: Some(window.data().as_ffi()),
+                tick_id: Some(app.tick_id().0),
+                frame_id: Some(app.frame_id().0),
+                window_snapshot_seq: None,
+            },
+        );
+        svc.write_script_result(UiScriptResultV1 {
+            schema_version: 1,
+            run_id: active.run_id,
+            updated_unix_ms: unix_ms_now(),
+            window: Some(window.data().as_ffi()),
+            stage: UiScriptStageV1::Failed,
+            step_index: Some(step_index as u32),
+            reason_code: Some("semantics.missing".to_string()),
+            reason: Some("no_semantics_snapshot".to_string()),
+            evidence: script_evidence_for_active(active),
+            last_bundle_dir: svc
+                .last_dump_dir
+                .as_ref()
+                .map(|p| display_path(&svc.cfg.out_dir, p)),
+            last_bundle_artifact: svc.last_dump_artifact_stats.clone(),
+        });
+        return true;
+    };
+
+    let Some(node) = select_semantics_node_with_trace(
+        snapshot,
+        window,
+        element_runtime,
+        &target,
+        step_index as u32,
+        svc.cfg.redact_text,
+        &mut active.selector_resolution_trace,
+    ) else {
+        output.request_redraw = true;
+        let label = format!("script-step-{step_index:04}-swipe-no-semantics-match");
+        if svc.cfg.script_auto_dump {
+            svc.dump_bundle(Some(&label));
+        }
+        push_script_event_log(
+            active,
+            &svc.cfg,
+            UiScriptEventLogEntryV1 {
+                unix_ms: unix_ms_now(),
+                kind: "script_failed".to_string(),
+                step_index: Some(step_index as u32),
+                note: Some("swipe_no_semantics_match".to_string()),
+                bundle_dir: None,
+                window: Some(window.data().as_ffi()),
+                tick_id: Some(app.tick_id().0),
+                frame_id: Some(app.frame_id().0),
+                window_snapshot_seq: None,
+            },
+        );
+        svc.write_script_result(UiScriptResultV1 {
+            schema_version: 1,
+            run_id: active.run_id,
+            updated_unix_ms: unix_ms_now(),
+            window: Some(window.data().as_ffi()),
+            stage: UiScriptStageV1::Failed,
+            step_index: Some(step_index as u32),
+            reason_code: Some("selector.not_found".to_string()),
+            reason: Some("swipe_no_semantics_match".to_string()),
+            evidence: script_evidence_for_active(active),
+            last_bundle_dir: svc
+                .last_dump_dir
+                .as_ref()
+                .map(|p| display_path(&svc.cfg.out_dir, p)),
+            last_bundle_artifact: svc.last_dump_artifact_stats.clone(),
+        });
+        return true;
+    };
+
+    let start = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
+    let end = clamp_point_to_rect(
+        Point::new(
+            fret_core::Px(start.x.0 + delta_x),
+            fret_core::Px(start.y.0 + delta_y),
+        ),
+        window_bounds,
+    );
+
+    if let Some(ui) = ui.as_deref_mut() {
+        record_hit_test_trace_for_selector(
+            &mut active.hit_test_trace,
+            ui,
+            element_runtime,
+            window,
+            Some(snapshot),
+            &target,
+            step_index as u32,
+            start,
+            Some(node),
+            Some("swipe"),
+            svc.cfg.max_debug_string_bytes,
+        );
+    }
+    record_overlay_placement_trace(
+        &mut active.overlay_placement_trace,
+        element_runtime,
+        Some(snapshot),
+        window,
+        step_index as u32,
+        "swipe",
+    );
+
+    let modifiers = core_modifiers_from_ui(modifiers);
+    let pointer_type = pointer_type_from_kind(pointer_kind.or(Some(UiPointerKindV1::Touch)));
+    let steps = steps.max(1);
+
+    output.events.push(move_pointer_event_with_modifiers(
+        start,
+        modifiers,
+        pointer_type,
+    ));
+    output.events.push(pointer_down_event_with_modifiers(
+        start,
+        UiMouseButtonV1::Left,
+        1,
+        modifiers,
+        pointer_type,
+    ));
+
+    for i in 1..=steps {
+        let t = i as f32 / steps as f32;
+        let x = start.x.0 + (end.x.0 - start.x.0) * t;
+        let y = start.y.0 + (end.y.0 - start.y.0) * t;
+        let pos = Point::new(fret_core::Px(x), fret_core::Px(y));
+        output
+            .events
+            .push(pointer_move_event_with_buttons_modifiers(
+                UiMouseButtonV1::Left,
+                pos,
+                modifiers,
+                pointer_type,
+            ));
+    }
+
+    output.events.push(pointer_up_event_with_modifiers(
+        end,
+        UiMouseButtonV1::Left,
+        1,
+        modifiers,
+        pointer_type,
+        false,
+    ));
+
+    active.v2_step_state = None;
+    active.wait_until = None;
+    active.screenshot_wait = None;
+    active.next_step = active.next_step.saturating_add(1);
+    output.request_redraw = true;
+    if svc.cfg.script_auto_dump {
+        *force_dump_label = Some(format!("script-step-{step_index:04}-swipe"));
+    }
+
+    false
+}
+
 pub(super) fn handle_pinch_step(
     svc: &mut UiDiagnosticsService,
     app: &App,
@@ -565,6 +1058,24 @@ pub(super) fn handle_pinch_step(
     }
 
     false
+}
+
+fn now_monotonic_ms_for_window(app: &App, window: AppWindowId) -> Option<u64> {
+    let svc = app.global::<fret_core::WindowFrameClockService>()?;
+    let snapshot = svc.snapshot(window)?;
+    let ms = snapshot.now_monotonic.as_millis();
+    Some(ms.min(u64::MAX as u128) as u64)
+}
+
+fn clamp_point_to_rect(point: Point, rect: Rect) -> Point {
+    let x0 = rect.origin.x.0;
+    let y0 = rect.origin.y.0;
+    let x1 = x0 + rect.size.width.0.max(0.0);
+    let y1 = y0 + rect.size.height.0.max(0.0);
+    Point::new(
+        fret_core::Px(point.x.0.clamp(x0, x1)),
+        fret_core::Px(point.y.0.clamp(y0, y1)),
+    )
 }
 
 pub(super) fn handle_click_stable_step(

@@ -1,43 +1,165 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "steps": [
     {
-      "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "components-gallery-file-tree-root" }
+        "target": {
+          "id": "components-gallery-file-tree-root",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 240
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
     {
-      "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "components-gallery-file-tree-node-1" }
+        "target": {
+          "id": "components-gallery-file-tree-node-1",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 240
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
-    { "type": "move_pointer", "target": { "kind": "test_id", "id": "components-gallery-file-tree-node-1" } },
-    { "type": "click", "target": { "kind": "test_id", "id": "components-gallery-file-tree-node-1" } },
-    { "type": "wait_frames", "n": 3 },
-    { "type": "move_pointer", "target": { "kind": "test_id", "id": "components-gallery-file-tree-root" } },
-    { "type": "wait_frames", "n": 10 },
-    { "type": "wheel", "target": { "kind": "test_id", "id": "components-gallery-file-tree-root" }, "delta_y": -240.0 },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "wheel", "target": { "kind": "test_id", "id": "components-gallery-file-tree-root" }, "delta_y": -240.0 },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "wheel", "target": { "kind": "test_id", "id": "components-gallery-file-tree-root" }, "delta_y": -240.0 },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "wheel", "target": { "kind": "test_id", "id": "components-gallery-file-tree-root" }, "delta_y": -240.0 },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "wheel", "target": { "kind": "test_id", "id": "components-gallery-file-tree-root" }, "delta_y": -240.0 },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "wheel", "target": { "kind": "test_id", "id": "components-gallery-file-tree-root" }, "delta_y": -240.0 },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "wheel", "target": { "kind": "test_id", "id": "components-gallery-file-tree-root" }, "delta_y": -240.0 },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "wheel", "target": { "kind": "test_id", "id": "components-gallery-file-tree-root" }, "delta_y": -240.0 },
-    { "type": "wait_frames", "n": 5 },
-    { "type": "capture_bundle", "label": "components-gallery-file-tree-toggle-and-scroll" }
+    {
+      "target": {
+        "id": "components-gallery-file-tree-node-1",
+        "kind": "test_id"
+      },
+      "type": "move_pointer"
+    },
+    {
+      "button": "left",
+      "target": {
+        "id": "components-gallery-file-tree-node-1",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "n": 3,
+      "type": "wait_frames"
+    },
+    {
+      "target": {
+        "id": "components-gallery-file-tree-root",
+        "kind": "test_id"
+      },
+      "type": "move_pointer"
+    },
+    {
+      "n": 10,
+      "type": "wait_frames"
+    },
+    {
+      "delta_x": 0.0,
+      "delta_y": -240.0,
+      "target": {
+        "id": "components-gallery-file-tree-root",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "delta_x": 0.0,
+      "delta_y": -240.0,
+      "target": {
+        "id": "components-gallery-file-tree-root",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "delta_x": 0.0,
+      "delta_y": -240.0,
+      "target": {
+        "id": "components-gallery-file-tree-root",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "delta_x": 0.0,
+      "delta_y": -240.0,
+      "target": {
+        "id": "components-gallery-file-tree-root",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "delta_x": 0.0,
+      "delta_y": -240.0,
+      "target": {
+        "id": "components-gallery-file-tree-root",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "delta_x": 0.0,
+      "delta_y": -240.0,
+      "target": {
+        "id": "components-gallery-file-tree-root",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "delta_x": 0.0,
+      "delta_y": -240.0,
+      "target": {
+        "id": "components-gallery-file-tree-root",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "delta_x": 0.0,
+      "delta_y": -240.0,
+      "target": {
+        "id": "components-gallery-file-tree-root",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 5,
+      "type": "wait_frames"
+    },
+    {
+      "label": "components-gallery-file-tree-toggle-and-scroll",
+      "type": "capture_bundle"
+    }
   ]
 }
