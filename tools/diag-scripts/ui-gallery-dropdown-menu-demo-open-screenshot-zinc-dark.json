@@ -7,7 +7,7 @@
     "target_hints": [
       "Sets theme preset to zinc/dark.",
       "Navigates to the Dropdown Menu page.",
-      "Opens the demo menu via keyboard activation and captures a screenshot."
+      "Opens the demo menu and captures a screenshot."
     ]
   },
   "steps": [
@@ -59,7 +59,6 @@
     },
     { "type": "wait_frames", "n": 2 },
     { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-dropdown-menu-demo-trigger" } },
-    { "type": "press_key", "key": "enter" },
     { "type": "wait_frames", "n": 2 },
     {
       "type": "wait_until",
@@ -72,4 +71,3 @@
     { "type": "capture_bundle", "label": "ui-gallery-dropdown-menu-demo-open-zinc-dark" }
   ]
 }
-
