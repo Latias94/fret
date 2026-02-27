@@ -986,6 +986,27 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-gesture-tap-smoke",
+      "path": "tools/diag-scripts/ui-gallery/diag/ui-gallery-gesture-tap-smoke.json",
+      "required_capabilities": [
+        "diag.gesture_tap",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery"
+      ],
+      "tags": [
+        "diag",
+        "gesture",
+        "tap",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Exercises the intent-level tap step (touch-first).",
+        "Fails fast when the runner does not advertise diag.gesture_tap."
+      ]
+    },
+    {
       "id": "ui-gallery-hover-layout-torture",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-hover-layout-torture.json",
       "required_capabilities": [],
