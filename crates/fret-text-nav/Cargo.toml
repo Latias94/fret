@@ -8,9 +8,9 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 documentation.workspace = true
+description = "Text navigation utilities (word/line boundaries, selection movement) for Fret."
 
 [dependencies]
-fret-runtime = { path = "../fret-runtime" }
+fret-runtime = { version = "0.1.0", path = "../fret-runtime" }
 unicode-segmentation.workspace = true
 unicode-ident.workspace = true
-

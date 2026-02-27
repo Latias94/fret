@@ -168,18 +168,11 @@ impl Paint {
         }
 
         fn degrade_tile_mode(tile_mode: TileMode) -> TileMode {
-            match tile_mode {
-                TileMode::Clamp => TileMode::Clamp,
-                TileMode::Repeat => TileMode::Repeat,
-                TileMode::Mirror => TileMode::Mirror,
-            }
+            tile_mode
         }
 
         fn degrade_color_space(color_space: ColorSpace) -> ColorSpace {
-            match color_space {
-                ColorSpace::Srgb => ColorSpace::Srgb,
-                ColorSpace::Oklab => ColorSpace::Oklab,
-            }
+            color_space
         }
 
         fn maybe_solid_from_degenerate(

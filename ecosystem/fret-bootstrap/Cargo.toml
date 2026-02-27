@@ -8,6 +8,7 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 documentation.workspace = true
+description = "Golden-path bootstrap utilities and app defaults for the Fret UI framework."
 
 [features]
 default = []
@@ -45,33 +46,33 @@ serde_json.workspace = true
 slotmap.workspace = true
 blake3.workspace = true
 
-fret-app = { path = "../../crates/fret-app" }
-fret-core = { path = "../../crates/fret-core" }
-fret-i18n = { path = "../../crates/fret-i18n" }
-fret-runtime = { path = "../../crates/fret-runtime", optional = true }
-fret-icons = { path = "../fret-icons" }
-fret-launch = { path = "../../crates/fret-launch" }
-fret-render = { path = "../../crates/fret-render" }
-fret-diag-protocol = { path = "../../crates/fret-diag-protocol" }
-fret-ui = { path = "../../crates/fret-ui", optional = true }
-fret-ui-app = { path = "../../crates/fret-ui-app", optional = true }
-fret-canvas = { path = "../fret-canvas", optional = true }
-fret-query = { path = "../fret-query", optional = true }
+fret-app = { version = "0.1.0", path = "../../crates/fret-app" }
+fret-core = { version = "0.1.0", path = "../../crates/fret-core" }
+fret-i18n = { version = "0.1.0", path = "../../crates/fret-i18n" }
+fret-runtime = { version = "0.1.0", path = "../../crates/fret-runtime", optional = true }
+fret-icons = { version = "0.1.0", path = "../fret-icons" }
+fret-launch = { version = "0.1.0", path = "../../crates/fret-launch" }
+fret-render = { version = "0.1.0", path = "../../crates/fret-render" }
+fret-diag-protocol = { version = "0.1.0", path = "../../crates/fret-diag-protocol" }
+fret-ui = { version = "0.1.0", path = "../../crates/fret-ui", optional = true }
+fret-ui-app = { version = "0.1.0", path = "../../crates/fret-ui-app", optional = true }
+fret-canvas = { version = "0.1.0", path = "../fret-canvas", optional = true }
+fret-query = { version = "0.1.0", path = "../fret-query", optional = true }
 
-fret-i18n-fluent = { path = "../fret-i18n-fluent" }
-fret-ui-kit = { path = "../fret-ui-kit", optional = true }
-fret-ui-shadcn = { path = "../fret-ui-shadcn", optional = true }
-fret-ui-assets = { path = "../fret-ui-assets", optional = true }
-fret-ui-literals = { path = "../fret-ui-literals", optional = true }
-fret-icons-lucide = { path = "../fret-icons-lucide", optional = true, default-features = false }
-fret-icons-radix = { path = "../fret-icons-radix", optional = true, default-features = false }
+fret-i18n-fluent = { version = "0.1.0", path = "../fret-i18n-fluent" }
+fret-ui-kit = { version = "0.1.0", path = "../fret-ui-kit", optional = true }
+fret-ui-shadcn = { version = "0.1.0", path = "../fret-ui-shadcn", optional = true }
+fret-ui-assets = { version = "0.1.0", path = "../fret-ui-assets", optional = true }
+fret-ui-literals = { version = "0.1.0", path = "../fret-ui-literals", optional = true }
+fret-icons-lucide = { version = "0.1.0", path = "../fret-icons-lucide", optional = true, default-features = false }
+fret-icons-radix = { version = "0.1.0", path = "../fret-icons-radix", optional = true, default-features = false }
 subsecond = { version = "0.7.2", optional = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-fret-diag-ws = { path = "../../crates/fret-diag-ws", optional = true, default-features = false, features = ["client-native"] }
+fret-diag-ws = { version = "0.1.0", path = "../../crates/fret-diag-ws", optional = true, default-features = false, features = ["client-native"] }
 
 [target.'cfg(windows)'.dependencies]
 windows-sys.workspace = true
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-fret-diag-ws = { path = "../../crates/fret-diag-ws", optional = true, default-features = false, features = ["client-wasm"] }
+fret-diag-ws = { version = "0.1.0", path = "../../crates/fret-diag-ws", optional = true, default-features = false, features = ["client-wasm"] }

@@ -1099,70 +1099,76 @@ fn validate_plan_scissors(passes: &[RenderPlanPass]) -> Result<(), String> {
 fn validate_plan_first_output_write_is_clear(passes: &[RenderPlanPass]) -> Result<(), String> {
     fn output_write_load(pass: &RenderPlanPass) -> Option<wgpu::LoadOp<wgpu::Color>> {
         match *pass {
-            RenderPlanPass::SceneDrawRange(SceneDrawRangePass { target, load, .. })
-                if target == PlanTarget::Output =>
-            {
-                Some(load)
-            }
-            RenderPlanPass::PathMsaaBatch(PathMsaaBatchPass { target, load, .. })
-                if target == PlanTarget::Output =>
-            {
-                Some(load)
-            }
-            RenderPlanPass::FullscreenBlit(FullscreenBlitPass { dst, load, .. })
-                if dst == PlanTarget::Output =>
-            {
-                Some(load)
-            }
-            RenderPlanPass::CompositePremul(CompositePremulPass { dst, load, .. })
-                if dst == PlanTarget::Output =>
-            {
-                Some(load)
-            }
-            RenderPlanPass::ScaleNearest(ScaleNearestPass { dst, load, .. })
-                if dst == PlanTarget::Output =>
-            {
-                Some(load)
-            }
-            RenderPlanPass::Blur(BlurPass { dst, load, .. }) if dst == PlanTarget::Output => {
-                Some(load)
-            }
-            RenderPlanPass::BackdropWarp(BackdropWarpPass { dst, load, .. })
-                if dst == PlanTarget::Output =>
-            {
-                Some(load)
-            }
-            RenderPlanPass::ColorAdjust(ColorAdjustPass { dst, load, .. })
-                if dst == PlanTarget::Output =>
-            {
-                Some(load)
-            }
-            RenderPlanPass::ColorMatrix(ColorMatrixPass { dst, load, .. })
-                if dst == PlanTarget::Output =>
-            {
-                Some(load)
-            }
-            RenderPlanPass::AlphaThreshold(AlphaThresholdPass { dst, load, .. })
-                if dst == PlanTarget::Output =>
-            {
-                Some(load)
-            }
-            RenderPlanPass::Dither(DitherPass { dst, load, .. }) if dst == PlanTarget::Output => {
-                Some(load)
-            }
-            RenderPlanPass::Noise(NoisePass { dst, load, .. }) if dst == PlanTarget::Output => {
-                Some(load)
-            }
-            RenderPlanPass::DropShadow(DropShadowPass { dst, load, .. })
-                if dst == PlanTarget::Output =>
-            {
-                Some(load)
-            }
-            RenderPlanPass::CustomEffect(CustomEffectPass { dst, load, .. })
-                if dst == PlanTarget::Output =>
-            {
-                Some(load)
-            }
+            RenderPlanPass::SceneDrawRange(SceneDrawRangePass {
+                target: PlanTarget::Output,
+                load,
+                ..
+            }) => Some(load),
+            RenderPlanPass::PathMsaaBatch(PathMsaaBatchPass {
+                target: PlanTarget::Output,
+                load,
+                ..
+            }) => Some(load),
+            RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
+                dst: PlanTarget::Output,
+                load,
+                ..
+            }) => Some(load),
+            RenderPlanPass::CompositePremul(CompositePremulPass {
+                dst: PlanTarget::Output,
+                load,
+                ..
+            }) => Some(load),
+            RenderPlanPass::ScaleNearest(ScaleNearestPass {
+                dst: PlanTarget::Output,
+                load,
+                ..
+            }) => Some(load),
+            RenderPlanPass::Blur(BlurPass {
+                dst: PlanTarget::Output,
+                load,
+                ..
+            }) => Some(load),
+            RenderPlanPass::BackdropWarp(BackdropWarpPass {
+                dst: PlanTarget::Output,
+                load,
+                ..
+            }) => Some(load),
+            RenderPlanPass::ColorAdjust(ColorAdjustPass {
+                dst: PlanTarget::Output,
+                load,
+                ..
+            }) => Some(load),
+            RenderPlanPass::ColorMatrix(ColorMatrixPass {
+                dst: PlanTarget::Output,
+                load,
+                ..
+            }) => Some(load),
+            RenderPlanPass::AlphaThreshold(AlphaThresholdPass {
+                dst: PlanTarget::Output,
+                load,
+                ..
+            }) => Some(load),
+            RenderPlanPass::Dither(DitherPass {
+                dst: PlanTarget::Output,
+                load,
+                ..
+            }) => Some(load),
+            RenderPlanPass::Noise(NoisePass {
+                dst: PlanTarget::Output,
+                load,
+                ..
+            }) => Some(load),
+            RenderPlanPass::DropShadow(DropShadowPass {
+                dst: PlanTarget::Output,
+                load,
+                ..
+            }) => Some(load),
+            RenderPlanPass::CustomEffect(CustomEffectPass {
+                dst: PlanTarget::Output,
+                load,
+                ..
+            }) => Some(load),
             _ => None,
         }
     }

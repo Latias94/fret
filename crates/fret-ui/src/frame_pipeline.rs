@@ -36,6 +36,7 @@ pub fn propagate_changes<H: UiHost>(
 ///
 /// This helper exists to make the "propagate changes before mount" ordering hard to get wrong in
 /// runner/driver code.
+#[allow(clippy::too_many_arguments)]
 pub fn render_root_with_changes<H, I>(
     ui: &mut UiTree<H>,
     app: &mut H,
@@ -56,6 +57,7 @@ where
 }
 
 /// Convenience wrapper around [`render_root_with_changes`] for base-layer roots.
+#[allow(clippy::too_many_arguments)]
 pub fn render_base_root_with_changes<H, I>(
     ui: &mut UiTree<H>,
     app: &mut H,

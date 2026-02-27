@@ -1,10 +1,10 @@
 use super::ElementHostWidget;
 use crate::declarative::prelude::*;
 
-fn interactive_span_at_index<'a>(
-    spans: &'a [crate::element::SelectableTextInteractiveSpan],
+fn interactive_span_at_index(
+    spans: &[crate::element::SelectableTextInteractiveSpan],
     idx: usize,
-) -> Option<&'a crate::element::SelectableTextInteractiveSpan> {
+) -> Option<&crate::element::SelectableTextInteractiveSpan> {
     if spans.is_empty() {
         return None;
     }

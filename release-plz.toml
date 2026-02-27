@@ -194,3 +194,87 @@ name = "fret-viewport-tooling"
 release = true
 publish = true
 version_group = "fret-0-1"
+
+[[package]]
+name = "fret-bootstrap"
+release = true
+publish = true
+version_group = "fret-0-1"
+
+[[package]]
+name = "fret-diag-protocol"
+release = true
+publish = true
+version_group = "fret-0-1"
+
+[[package]]
+name = "fret-framework"
+release = true
+publish = true
+version_group = "fret-0-1"
+
+[[package]]
+name = "fret-interaction"
+release = true
+publish = true
+version_group = "fret-0-1"
+
+[[package]]
+name = "fret-perf"
+release = true
+publish = true
+version_group = "fret-0-1"
+
+[[package]]
+name = "fret-render-text"
+release = true
+publish = true
+version_group = "fret-0-1"
+
+[[package]]
+name = "fret-text-nav"
+release = true
+publish = true
+version_group = "fret-0-1"
+
+[[package]]
+name = "fret-asset-cache"
+release = true
+publish = true
+version_group = "fret-0-1"
+
+[[package]]
+name = "fret-diag-ws"
+release = true
+publish = true
+version_group = "fret-0-1"
+
+[[package]]
+name = "fret-i18n-fluent"
+release = true
+publish = true
+version_group = "fret-0-1"
+
+[[package]]
+name = "fret-icons-lucide"
+release = true
+publish = true
+version_group = "fret-0-1"
+
+[[package]]
+name = "fret-icons-radix"
+release = true
+publish = true
+version_group = "fret-0-1"
+
+[[package]]
+name = "fret-ui-assets"
+release = true
+publish = true
+version_group = "fret-0-1"
+
+[[package]]
+name = "fret-ui-literals"
+release = true
+publish = true
+version_group = "fret-0-1"

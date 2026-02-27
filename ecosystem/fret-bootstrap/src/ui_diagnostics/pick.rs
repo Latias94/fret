@@ -46,32 +46,6 @@ pub(super) fn pick_semantics_node_at<'a>(
     pick_semantics_node_by_bounds(snapshot, position)
 }
 
-pub(super) fn pick_semantics_node_at_routing<'a>(
-    snapshot: &'a fret_core::SemanticsSnapshot,
-    ui: &mut UiTree<App>,
-    position: Point,
-) -> Option<&'a fret_core::SemanticsNode> {
-    let index = super::SemanticsIndex::new(snapshot);
-
-    let hit = ui.debug_hit_test_routing(position).hit;
-    if let Some(hit) = hit {
-        let mut cur = Some(hit.data().as_ffi());
-        while let Some(id) = cur {
-            if index.is_selectable(id)
-                && let Some(node) = index.by_id.get(&id).copied()
-            {
-                return Some(node);
-            }
-            cur = index
-                .by_id
-                .get(&id)
-                .and_then(|n| n.parent.map(|p| p.data().as_ffi()));
-        }
-    }
-
-    pick_semantics_node_by_bounds(snapshot, position)
-}
-
 pub(crate) fn pick_semantics_node_by_bounds<'a>(
     snapshot: &'a fret_core::SemanticsSnapshot,
     position: Point,

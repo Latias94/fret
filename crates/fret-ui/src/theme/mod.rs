@@ -995,11 +995,11 @@ impl Theme {
 
         let mut changed = false;
 
-        if let Some(scheme) = cfg.color_scheme {
-            if self.color_scheme != Some(scheme) {
-                self.color_scheme = Some(scheme);
-                changed = true;
-            }
+        if let Some(scheme) = cfg.color_scheme
+            && self.color_scheme != Some(scheme)
+        {
+            self.color_scheme = Some(scheme);
+            changed = true;
         }
 
         let mut next_numbers = HashMap::new();
@@ -1747,11 +1747,11 @@ impl Theme {
 
         let mut changed = false;
 
-        if let Some(scheme) = cfg.color_scheme {
-            if self.color_scheme != Some(scheme) {
-                self.color_scheme = Some(scheme);
-                changed = true;
-            }
+        if let Some(scheme) = cfg.color_scheme
+            && self.color_scheme != Some(scheme)
+        {
+            self.color_scheme = Some(scheme);
+            changed = true;
         }
 
         let colors = canonicalize_config_map(ThemeTokenKind::Color, &cfg.colors);

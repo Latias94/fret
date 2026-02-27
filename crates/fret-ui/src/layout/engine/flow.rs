@@ -1136,18 +1136,15 @@ fn style_for_item_in_parent<H: UiHost>(
         ParentLayoutKind::Root => {}
     }
 
-    match parent_kind {
-        ParentLayoutKind::PassthroughOverlayNoStretch => {
-            // Behavioral wrappers (Semantics/Opacity/Container/...) should not stretch their
-            // single child; leave sizing to the child so shrink-wrapped widgets (e.g. button
-            // triggers) keep intrinsic bounds.
-            //
-            // Note: per-item stretching is controlled by the wrapper node's `align_items` /
-            // `justify_items` (set in `build_flow_subtree_impl`). Keeping `*_self` unset here lets
-            // the wrapper decide when it's appropriate to stretch layout containers vs. keep
-            // intrinsic sizing.
-        }
-        _ => {}
+    if let ParentLayoutKind::PassthroughOverlayNoStretch = parent_kind {
+        // Behavioral wrappers (Semantics/Opacity/Container/...) should not stretch their
+        // single child; leave sizing to the child so shrink-wrapped widgets (e.g. button
+        // triggers) keep intrinsic bounds.
+        //
+        // Note: per-item stretching is controlled by the wrapper node's `align_items` /
+        // `justify_items` (set in `build_flow_subtree_impl`). Keeping `*_self` unset here lets
+        // the wrapper decide when it's appropriate to stretch layout containers vs. keep
+        // intrinsic sizing.
     }
 
     if let Some(size) = root_override_size {

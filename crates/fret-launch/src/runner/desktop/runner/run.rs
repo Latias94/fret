@@ -79,8 +79,6 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             last_window_surface_size_changed_at: None,
             no_services: NoUiServices,
             diag_bundle_screenshots: DiagBundleScreenshotCapture::from_env(),
-            #[cfg(feature = "webview-wry")]
-            webviews_wry: fret_webview_wry::wry_host::WryWebViewHost::new(),
             windows: SlotMap::with_key(),
             window_registry: fret_runner_winit::window_registry::WinitWindowRegistry::default(),
             main_window: None,

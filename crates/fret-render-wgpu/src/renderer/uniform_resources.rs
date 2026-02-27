@@ -181,7 +181,7 @@ impl UniformResources {
         }
 
         queue.write_buffer(&self.clip_buffer, 0, bytemuck::cast_slice(clips));
-        std::mem::size_of::<super::ClipRRectUniform>() * clips.len()
+        std::mem::size_of_val(clips)
     }
 
     pub(super) fn write_masks(
@@ -194,7 +194,7 @@ impl UniformResources {
         }
 
         queue.write_buffer(&self.mask_buffer, 0, bytemuck::cast_slice(masks));
-        std::mem::size_of::<super::MaskGradientUniform>() * masks.len()
+        std::mem::size_of_val(masks)
     }
 
     pub(super) fn write_render_space_bytes(

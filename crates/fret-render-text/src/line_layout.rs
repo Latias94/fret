@@ -20,6 +20,7 @@ pub struct TextLineLayout {
 }
 
 impl TextLineLayout {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         start: usize,
         end: usize,

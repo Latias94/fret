@@ -30,10 +30,6 @@ use fret_app::App;
 #[cfg(feature = "shadcn")]
 pub use fret_ui_shadcn as shadcn;
 
-/// Re-export workspace-shell building blocks (editor-grade chrome) as `workspace`.
-#[cfg(feature = "workspace-shell")]
-pub use fret_workspace as workspace;
-
 /// Re-export the `IconRegistry` type for app code that wants to install a custom icon pack.
 pub use fret_icons::IconRegistry;
 
@@ -41,11 +37,7 @@ pub use fret_icons::IconRegistry;
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 pub use fret_bootstrap::ui_app_driver::ViewElements;
 
-#[cfg(feature = "workspace-shell")]
-pub mod pending_shortcut_overlay;
 pub mod workspace_menu;
-#[cfg(feature = "workspace-shell")]
-pub mod workspace_shell;
 
 /// MVU-style authoring helpers (desktop builds).
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
@@ -101,21 +93,6 @@ pub mod prelude {
 
     #[cfg(feature = "shadcn")]
     pub use crate::shadcn;
-
-    #[cfg(feature = "workspace-shell")]
-    pub use crate::workspace;
-    #[cfg(feature = "workspace-shell")]
-    pub use crate::workspace::layout::{WorkspaceLayout, WorkspaceLayoutV1};
-    #[cfg(feature = "workspace-shell")]
-    pub use crate::workspace::menu::{WorkspaceMenuCommands, workspace_default_menu_bar};
-    #[cfg(feature = "workspace-shell")]
-    pub use crate::workspace::tabs::{TabCycleMode, WorkspaceTabs, WorkspaceTabsV1};
-    #[cfg(feature = "workspace-shell")]
-    pub use crate::workspace::{
-        WorkspaceFrame, WorkspaceStatusBar, WorkspaceTab, WorkspaceTabStrip, WorkspaceTopBar,
-    };
-    #[cfg(feature = "workspace-shell")]
-    pub use crate::workspace_shell::{workspace_shell_model, workspace_shell_model_default_menu};
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -479,11 +456,6 @@ pub fn app_with_hooks<S: 'static>(
         .on_global_changes_middleware(shadcn_sync_theme_from_environment_on_global_changes::<S>);
     let driver = configure(UiAppDriver::new(driver)).into_inner();
     let builder = fret_bootstrap::BootstrapBuilder::new(App::new(), driver.into_fn_driver());
-
-    #[cfg(feature = "router")]
-    let builder = builder.install_app(|app| {
-        fret_router_ui::register_router_commands(app.commands_mut());
-    });
 
     let builder = apply_desktop_defaults(builder).map_err(BootstrapError::from)?;
 

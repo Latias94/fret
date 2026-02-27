@@ -329,18 +329,6 @@ impl PendingInvalidationBatch {
         self.globals_seen.clear();
         (models, globals)
     }
-
-    fn flush(&mut self, app: &mut App, ui: &mut UiTree<App>) {
-        if self.models.is_empty() && self.globals.is_empty() {
-            return;
-        }
-
-        fret_ui::frame_pipeline::propagate_changes(ui, app, &self.models, &self.globals);
-        self.models.clear();
-        self.globals.clear();
-        self.models_seen.clear();
-        self.globals_seen.clear();
-    }
 }
 
 #[cfg(feature = "ui-app-command-palette")]

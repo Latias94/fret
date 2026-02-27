@@ -9,6 +9,7 @@ repository.workspace = true
 homepage.workspace = true
 documentation.workspace = true
 readme = "README.md"
+description = "Batteries-included meta crate for the Fret UI framework (golden path entry point)."
 
 [features]
 # Desktop-first, batteries-included defaults.
@@ -62,29 +63,25 @@ icons-ui-semantic-lucide = ["icons-lucide-vendor", "fret-bootstrap/icons-ui-sema
 icons-ui-semantic-radix = ["icons-radix-vendor", "fret-bootstrap/icons-ui-semantic-radix"]
 preload-icon-svgs = ["fret-bootstrap/preload-icon-svgs"]
 command-palette = ["fret-bootstrap/ui-app-command-palette"]
-workspace-shell = ["dep:fret-workspace", "fret-workspace/shadcn-context-menu", "shadcn"]
-router = ["dep:fret-router-ui"]
 
 [dependencies]
 thiserror.workspace = true
 
 # Re-exported stable surface for kernel/backends (advanced assembly surface).
-fret-framework = { path = "../../crates/fret-framework", package = "fret-framework", optional = true, default-features = false }
+fret-framework = { version = "0.1.0", path = "../../crates/fret-framework", package = "fret-framework", optional = true, default-features = false }
 
 # Golden-path wiring and optional ecosystem integrations.
-fret-bootstrap = { path = "../fret-bootstrap", default-features = false }
-fret-icons = { path = "../fret-icons" }
-fret-router-ui = { path = "../fret-router-ui", optional = true }
-fret-ui-shadcn = { path = "../fret-ui-shadcn", optional = true, features = ["app-integration"] }
-fret-ui-kit = { path = "../fret-ui-kit" }
-fret-workspace = { path = "../fret-workspace", optional = true }
+fret-bootstrap = { version = "0.1.0", path = "../fret-bootstrap", default-features = false }
+fret-icons = { version = "0.1.0", path = "../fret-icons" }
+fret-ui-shadcn = { version = "0.1.0", path = "../fret-ui-shadcn", optional = true, features = ["app-integration"] }
+fret-ui-kit = { version = "0.1.0", path = "../fret-ui-kit" }
 
 # Used by the public signatures and error types.
-fret-app = { path = "../../crates/fret-app" }
-fret-core = { path = "../../crates/fret-core" }
-fret-launch = { path = "../../crates/fret-launch" }
-fret-runtime = { path = "../../crates/fret-runtime" }
-fret-ui = { path = "../../crates/fret-ui" }
+fret-app = { version = "0.1.0", path = "../../crates/fret-app" }
+fret-core = { version = "0.1.0", path = "../../crates/fret-core" }
+fret-launch = { version = "0.1.0", path = "../../crates/fret-launch" }
+fret-runtime = { version = "0.1.0", path = "../../crates/fret-runtime" }
+fret-ui = { version = "0.1.0", path = "../../crates/fret-ui" }
 wgpu = { workspace = true, optional = true }
 
 [dev-dependencies]

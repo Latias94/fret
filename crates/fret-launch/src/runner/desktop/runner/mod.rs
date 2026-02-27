@@ -185,8 +185,6 @@ pub struct WinitRunner<D: WinitAppDriver> {
     last_window_surface_size_changed_at: Option<Instant>,
     no_services: NoUiServices,
     diag_bundle_screenshots: DiagBundleScreenshotCapture,
-    #[cfg(feature = "webview-wry")]
-    webviews_wry: fret_webview_wry::wry_host::WryWebViewHost,
 
     windows: SlotMap<fret_core::AppWindowId, WindowRuntime<D::WindowState>>,
     window_registry: fret_runner_winit::window_registry::WinitWindowRegistry,

@@ -326,15 +326,6 @@ impl BackdropWarpV2 {
                 } else {
                     UvRect::FULL
                 };
-                let sampling = match sampling {
-                    ImageSamplingHint::Default => ImageSamplingHint::Default,
-                    ImageSamplingHint::Linear => ImageSamplingHint::Linear,
-                    ImageSamplingHint::Nearest => ImageSamplingHint::Nearest,
-                };
-                let encoding = match encoding {
-                    WarpMapEncodingV1::RgSigned => WarpMapEncodingV1::RgSigned,
-                    WarpMapEncodingV1::NormalRgb => WarpMapEncodingV1::NormalRgb,
-                };
                 BackdropWarpFieldV2::ImageDisplacementMap {
                     image,
                     uv,

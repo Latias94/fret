@@ -12,7 +12,7 @@
 //!   the backend. Both remain capability-gated.
 
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex};
+use std::{cell::RefCell, rc::Rc};
 
 use super::{
     EngineFrameKeepalive, NativeExternalImportError, NativeExternalImportedFrame,
@@ -25,7 +25,7 @@ use fret_render::{
 
 #[derive(Clone)]
 pub struct AvfVideoNativeExternalImporter {
-    inner: Arc<Mutex<AvfVideoNativeExternalState>>,
+    inner: Rc<RefCell<AvfVideoNativeExternalState>>,
 }
 
 struct AvfVideoNativeExternalState {
@@ -38,17 +38,17 @@ struct AvfVideoNativeExternalState {
 }
 
 struct AvfVideoNativeExternalFrame {
-    inner: Arc<Mutex<AvfVideoNativeExternalState>>,
+    inner: Rc<RefCell<AvfVideoNativeExternalState>>,
 }
 
 struct AvfVideoNativeExternalKeepalive {
-    _inner: Arc<Mutex<AvfVideoNativeExternalState>>,
+    _inner: Rc<RefCell<AvfVideoNativeExternalState>>,
 }
 
 impl AvfVideoNativeExternalImporter {
     pub fn new(path: impl Into<String>) -> Self {
         Self {
-            inner: Arc::new(Mutex::new(AvfVideoNativeExternalState {
+            inner: Rc::new(RefCell::new(AvfVideoNativeExternalState {
                 path: path.into(),
                 #[cfg(target_os = "macos")]
                 reader: None,
@@ -61,14 +61,14 @@ impl AvfVideoNativeExternalImporter {
 
     pub fn path(&self) -> String {
         self.inner
-            .lock()
+            .try_borrow()
             .ok()
             .map(|v| v.path.clone())
             .unwrap_or_default()
     }
 
     pub fn last_size(&self) -> Option<(u32, u32)> {
-        self.inner.lock().ok().and_then(|v| {
+        self.inner.try_borrow().ok().and_then(|v| {
             if v.texture.is_some() && v.texture_size.0 > 0 && v.texture_size.1 > 0 {
                 Some(v.texture_size)
             } else {
@@ -104,12 +104,12 @@ impl NativeExternalTextureFrame for AvfVideoNativeExternalFrame {
             _inner: self.inner.clone(),
         });
 
-        let mut guard = self
-            .inner
-            .lock()
-            .map_err(|_| NativeExternalImportError::Failed {
-                reason: "avf_native_external_state_lock_poisoned",
-            })?;
+        let mut guard =
+            self.inner
+                .try_borrow_mut()
+                .map_err(|_| NativeExternalImportError::Failed {
+                    reason: "avf_native_external_state_borrow_failed",
+                })?;
 
         let raw_path = guard.path.trim().to_string();
         if raw_path.is_empty() {
