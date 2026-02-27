@@ -157,7 +157,8 @@ if left unspecified.
 
 - [ ] Add a “theme-like postprocess” demo to validate the CustomV1 ceiling (policy-only, no core changes):
   - [x] Implement and wire: `apps/fret-examples/src/postprocess_theme_demo.rs` (via `apps/fret-demo`).
-  - [ ] Add a `fretboard diag` script that captures a small, shareable baseline bundle (screenshots + perf snapshot).
+  - [x] Add a `fretboard diag` script that captures a small, shareable baseline bundle (screenshots + perf snapshot):
+    - Evidence: `tools/diag-scripts/postprocess-theme-baseline.json`.
 
 - [x] Keep stitched effect shaders WebGPU/Tint-valid (uniformity + bindings):
   - Ensure masked variants evaluate clip coverage before any non-uniform early returns so SDF AA derivatives remain
