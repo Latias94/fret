@@ -48,10 +48,13 @@ Constraints:
   - Evidence: `crates/fret-render-wgpu/src/renderer/shaders.rs`,
     `crates/fret-render-wgpu/src/renderer/pipelines/wgsl/*_masked_part_b.wgsl`,
     `crates/fret-render-wgpu/src/renderer/tests.rs` (`shaders_validate_for_webgpu`).
-- [ ] Allow CustomV2 user WGSL to use derivatives on WebGPU:
+- [x] Allow CustomV2 user WGSL to use derivatives on WebGPU:
   - Remove non-uniform early returns prior to calling `fret_custom_effect(...)` (replace bounds checks with clamped
     sampling + a final `select(...)`).
   - Add a small “derivatives smoke” custom effect that compiles under Tint (browser WebGPU).
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/pipelines/wgsl/custom_effect_v2_*_part_b.wgsl`
+    - `crates/fret-render-wgpu/src/renderer/tests.rs` (`CUSTOM_EFFECT_DERIVATIVES_SMOKE_WGSL`)
 
 ## P3 — Ecosystem authoring ergonomics
 
