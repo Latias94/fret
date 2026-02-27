@@ -14,6 +14,7 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
             demo_dnd_pointer: Option<Model<Option<fret_core::PointerId>>>,
             demo_dnd_dragging: Option<Model<bool>>,
             demo_dnd_long_press_pointer: Option<Model<Option<fret_core::PointerId>>>,
+            api_snapshot: Option<Model<shadcn::CarouselApiSnapshot>>,
             expandable_selected: Option<Model<Option<usize>>>,
         }
 
@@ -694,6 +695,93 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
         .test_id("ui-gallery-carousel-spacing")
         .into_element(cx);
 
+    // API: expose a small snapshot surface so demos can render slide counters without wiring an
+    // Embla-like imperative API.
+    let api_snapshot = cx.with_state(CarouselPageState::default, |st| st.api_snapshot.clone());
+    let api_snapshot = match api_snapshot {
+        Some(model) => model,
+        None => {
+            let model: Model<shadcn::CarouselApiSnapshot> =
+                cx.app.models_mut().insert(shadcn::CarouselApiSnapshot::default());
+            cx.with_state(CarouselPageState::default, |st| {
+                st.api_snapshot = Some(model.clone());
+            });
+            model
+        }
+    };
+    let api_snapshot_now = cx
+        .watch_model(&api_snapshot)
+        .copied()
+        .unwrap_or_default();
+
+    let api_visual = SlideVisual {
+        text_px: Px(36.0),
+        line_height_px: Px(44.0),
+    };
+    let api_items = (1..=5).map(|idx| slide(cx, idx, api_visual)).collect::<Vec<_>>();
+    let api_carousel = shadcn::Carousel::new(api_items)
+        .api_snapshot_model(api_snapshot.clone())
+        .refine_track_layout(LayoutRefinement::default().w_px(Px(336.0)))
+        .refine_layout(
+            LayoutRefinement::default()
+                .w_full()
+                .max_w(max_w_xs)
+                .mx_auto(),
+        )
+        .test_id("ui-gallery-carousel-api")
+        .into_element(cx);
+
+    let api_counter_text = if api_snapshot_now.snap_count > 0 {
+        format!(
+            "Slide {} of {}",
+            api_snapshot_now.selected_index.saturating_add(1),
+            api_snapshot_now.snap_count
+        )
+    } else {
+        "Slide 0 of 0".to_string()
+    };
+    let api_counter = {
+        let theme = Theme::global(&*cx.app);
+        let style = fret_ui_kit::typography::control_text_style(
+            theme,
+            fret_ui_kit::typography::UiTextSize::Sm,
+        );
+        let color = theme
+            .color_by_key("muted-foreground")
+            .or_else(|| theme.color_by_key("muted_foreground"))
+            .unwrap_or_else(|| theme.color_token("foreground"));
+
+        let text = cx.text_props(TextProps {
+            layout: {
+                let mut layout = fret_ui::element::LayoutStyle::default();
+                layout.size.width = fret_ui::element::Length::Fill;
+                layout
+            },
+            text: Arc::from(api_counter_text),
+            style: Some(style),
+            color: Some(color),
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Center,
+            ink_overflow: fret_ui::element::TextInkOverflow::None,
+        });
+
+        ui::container(cx, move |_cx| vec![text]).py_2().into_element(cx)
+    };
+
+    let api_gap = decl_style::space(&Theme::global(&*cx.app).snapshot(), Space::N2);
+    let api = cx.flex(
+        FlexProps {
+            layout: decl_style::layout_style(&Theme::global(&*cx.app).snapshot(), Default::default()),
+            direction: fret_core::Axis::Vertical,
+            justify: MainAlign::Start,
+            align: CrossAlign::Stretch,
+            gap: api_gap.into(),
+            ..Default::default()
+        },
+        move |_cx| vec![api_carousel, api_counter],
+    );
+
     let notes_stack = doc_layout::notes(
         cx,
         [
@@ -896,6 +984,32 @@ shadcn::Carousel::new(items)
     .item_padding_start(Space::N1)
     .refine_layout(LayoutRefinement::default().w_full().max_w(Px(384.0)).mx_auto())
     .into_element(cx);"#,
+                ),
+            DocSection::new("API", api)
+                .description("A carousel with a slide counter (shadcn `setApi`-style outcome).")
+                .max_w(Px(760.0))
+                .test_id_prefix("ui-gallery-carousel-api")
+                .code(
+                    "rust",
+                    r#"let api = cx.app.models_mut().insert(shadcn::CarouselApiSnapshot::default());
+let api_now = cx.watch_model(&api).copied().unwrap_or_default();
+
+let carousel = shadcn::Carousel::new(items)
+    .api_snapshot_model(api.clone())
+    .refine_track_layout(LayoutRefinement::default().w_px(Px(336.0)))
+    .refine_layout(LayoutRefinement::default().w_full().max_w(Px(320.0)).mx_auto())
+    .into_element(cx);
+
+let counter = ui::text(
+    cx,
+    format!(
+        \"Slide {} of {}\",
+        api_now.selected_index + 1,
+        api_now.snap_count
+    ),
+)
+.text_sm()
+.into_element(cx);"#,
                 ),
             DocSection::new("Expandable", expandable)
                 .description("Content-driven height changes (used by the motion pilot suite).")
