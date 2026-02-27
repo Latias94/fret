@@ -819,8 +819,8 @@ impl Carousel {
                 },
             );
 
-            let mut first_item_id = None;
-            let first_item_id_ref = &mut first_item_id;
+            let mut item_ids = Vec::with_capacity(items_len);
+            let item_ids_ref = &mut item_ids;
             let track = cx.flex(
                 FlexProps {
                     layout: track_layout,
@@ -899,9 +899,7 @@ impl Carousel {
                                 move |_cx| vec![content],
                             );
 
-                            if idx == 0 {
-                                *first_item_id_ref = Some(item.id);
-                            }
+                            item_ids_ref.push(item.id);
 
                             item.attach_semantics(
                                 SemanticsDecoration::default()
@@ -970,33 +968,48 @@ impl Carousel {
             let mut max_offset_now = Px(0.0);
 
             if view_size_now.0 > 0.0 {
-                if let (Some(viewport_bounds), Some(first_item_id)) =
-                    (viewport_bounds, first_item_id)
-                    && let Some(first_bounds) = cx.last_bounds_for_element(first_item_id)
-                {
-                    let (first_start, item_main_size) = match orientation {
-                        CarouselOrientation::Horizontal => (
-                            Px(first_bounds.origin.x.0 - viewport_bounds.origin.x.0),
-                            first_bounds.size.width,
-                        ),
-                        CarouselOrientation::Vertical => (
-                            Px(first_bounds.origin.y.0 - viewport_bounds.origin.y.0),
-                            first_bounds.size.height,
-                        ),
-                    };
+                if let Some(viewport_bounds) = viewport_bounds {
+                    let mut slides = Vec::with_capacity(items_len);
+                    for id in &item_ids {
+                        let Some(bounds) = cx.last_bounds_for_element(*id) else {
+                            continue;
+                        };
 
-                    if item_main_size.0 > 0.0 {
-                        let slides = (0..items_len)
-                            .map(|i| headless_carousel::CarouselSlide1D {
-                                start: Px(first_start.0 + (i as f32) * item_main_size.0),
-                                size: item_main_size,
-                            })
-                            .collect::<Vec<_>>();
+                        let (start, size) = match orientation {
+                            CarouselOrientation::Horizontal => (
+                                Px(bounds.origin.x.0 - viewport_bounds.origin.x.0),
+                                bounds.size.width,
+                            ),
+                            CarouselOrientation::Vertical => (
+                                Px(bounds.origin.y.0 - viewport_bounds.origin.y.0),
+                                bounds.size.height,
+                            ),
+                        };
+                        slides.push(headless_carousel::CarouselSlide1D { start, size });
+                    }
 
+                    let mut start_gap = Px(0.0);
+                    if slides.len() == items_len {
+                        let min_start = slides
+                            .iter()
+                            .map(|s| s.start)
+                            .fold(Px(f32::INFINITY), |a, b| Px(a.0.min(b.0)));
+                        if min_start.0.is_finite() && min_start.0 > 0.0 {
+                            start_gap = min_start;
+                            for s in &mut slides {
+                                s.start = Px(s.start.0 - min_start.0);
+                            }
+                        }
+                    }
+
+                    let slides_ready =
+                        slides.len() == items_len && slides.iter().all(|s| s.size.0 > 0.0);
+
+                    if slides_ready {
                         let model = headless_carousel::snap_model_1d(
                             view_size_now,
                             &slides,
-                            Px(0.0),
+                            start_gap,
                             Px(0.0),
                             options.slides_to_scroll.to_headless(),
                             false,
@@ -1006,8 +1019,46 @@ impl Carousel {
                         );
                         snaps_now = model.snaps_px;
                         max_offset_now = model.max_offset_px;
+                    } else if let Some(first_item_id) = item_ids.first().copied()
+                        && let Some(first_bounds) = cx.last_bounds_for_element(first_item_id)
+                    {
+                        // Fallback: keep the previous "uniform item" approximation when we don't
+                        // have stable bounds for all items yet (e.g. first frame).
+                        let (first_start, item_main_size) = match orientation {
+                            CarouselOrientation::Horizontal => (
+                                Px(first_bounds.origin.x.0 - viewport_bounds.origin.x.0),
+                                first_bounds.size.width,
+                            ),
+                            CarouselOrientation::Vertical => (
+                                Px(first_bounds.origin.y.0 - viewport_bounds.origin.y.0),
+                                first_bounds.size.height,
+                            ),
+                        };
+
+                        if item_main_size.0 > 0.0 {
+                            let slides = (0..items_len)
+                                .map(|i| headless_carousel::CarouselSlide1D {
+                                    start: Px(first_start.0 + (i as f32) * item_main_size.0),
+                                    size: item_main_size,
+                                })
+                                .collect::<Vec<_>>();
+
+                            let model = headless_carousel::snap_model_1d(
+                                view_size_now,
+                                &slides,
+                                Px(0.0),
+                                Px(0.0),
+                                options.slides_to_scroll.to_headless(),
+                                false,
+                                options.align.to_headless(),
+                                options.contain_scroll.to_headless(),
+                                options.pixel_tolerance_px.max(0.0),
+                            );
+                            snaps_now = model.snaps_px;
+                            max_offset_now = model.max_offset_px;
+                        }
                     }
-                }
+                };
             }
 
             let snaps_arc: Arc<[Px]> = Arc::from(snaps_now.clone().into_boxed_slice());
