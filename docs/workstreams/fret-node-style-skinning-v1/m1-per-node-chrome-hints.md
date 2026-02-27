@@ -97,3 +97,10 @@ Recommended focused command while iterating:
 
 - `cargo nextest run -p fret-node dash edge_types_invalidation perf_cache hit_testing threshold_zoom_conformance`
 
+## Status (evidence anchors)
+
+- Per-node header palette is implemented on the main paint path:
+  - `ecosystem/fret-node/src/ui/skin.rs` (`NodeChromeHint::{header_background,title_text}`)
+  - `ecosystem/fret-node/src/ui/canvas/widget/paint_render_data/collect.rs` (hint collection)
+  - `ecosystem/fret-node/src/ui/canvas/widget/paint_nodes/static_nodes.rs` (header quad + title paint)
+  - Conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/skin_per_node_header_palette_conformance.rs`
