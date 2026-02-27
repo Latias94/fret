@@ -57,6 +57,10 @@ Constraints:
 
 - [x] Provide `fret-ui-kit` helper(s) for registering and caching CustomV2 programs.
   - Evidence: `ecosystem/fret-ui-kit/src/custom_effects.rs` (`CustomEffectProgramV2`).
+- [x] Turn the web demo into a small inspector-style parameter harness so effect authors can verify that each
+  contract field is wired correctly (sampling, `UvRect`, blur radius/downsample, strength/tint, mode/quality,
+  rounded clips).
+  - Evidence: `apps/fret-examples/src/custom_effect_v2_web_demo.rs`.
 - [ ] Provide demo-oriented “authoring templates” (in `apps/fret-examples/`), not ecosystem recipes:
   - an identity/starter CustomV2 (register + params + input image),
   - a LUT color grade example,

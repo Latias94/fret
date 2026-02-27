@@ -91,6 +91,23 @@ CustomV2 remains capability-gated:
 - Backends may support CustomV1 but not CustomV2; capability discovery must allow the app/ecosystem
   to choose a fallback.
 
+## Registration and IDs (ecosystem authoring)
+
+`EffectId` is **renderer-scoped** and is assigned at runtime. Component authors should not hardcode
+numeric IDs or assume cross-run stability.
+
+Recommended pattern:
+
+- Keep a `CustomEffectProgramV2` (from `ecosystem/fret-ui-kit/src/custom_effects.rs`) inside your kit/module state.
+- On GPU-ready (or first render), call `ensure_registered(&mut dyn CustomEffectService)` and cache the returned
+  `EffectId` in your module state (or a global/model owned by the app).
+- Expose a single `install(app: &mut App)` entrypoint for consumers, which wires up:
+  - theme/tokens (if any),
+  - custom effect program registration (v1/v2),
+  - default input textures (optional).
+
+If the renderer is recreated (device loss), call `invalidate()` on the program and re-register.
+
 ## Implementation status (as of 2026-02-27)
 
 Done (evidence anchors):
@@ -101,7 +118,11 @@ Done (evidence anchors):
 - Conformance: `crates/fret-render-wgpu/tests/effect_custom_v2_conformance.rs`.
 - Ecosystem helper: `ecosystem/fret-ui-kit/src/custom_effects.rs` (`CustomEffectProgramV2`).
 - Demo: `apps/fret-examples/src/custom_effect_v2_demo.rs` (run via `cargo run -p fret-demo -- custom_effect_v2_demo`).
-- Web demo (smoke): `apps/fret-examples/src/custom_effect_v2_web_demo.rs` (run via `apps/fret-demo-web` with `?demo=custom_effect_v2_web_demo`).
+- Web demo (inspector harness): `apps/fret-examples/src/custom_effect_v2_web_demo.rs` (run via
+  `apps/fret-demo-web` with `?demo=custom_effect_v2_web_demo`).
+  - Purpose: a parameter validation harness for CustomV2 authoring (sampling, `UvRect`, blur radius/downsample,
+    strength/tint, mode/quality, rounded clips).
+  - Keys: `V` toggles the lens surface, `R` resets the controls.
 - Liquid glass demo + scripted diagnostics: `apps/fret-examples/src/liquid_glass_demo.rs`,
   `tools/diag-scripts/liquid-glass-custom-v2-corners-screenshot.json`,
   `tools/diag-scripts/liquid-glass-lens-corners-screenshots.json`.
