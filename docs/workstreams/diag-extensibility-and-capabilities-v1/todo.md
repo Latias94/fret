@@ -51,6 +51,10 @@ Doc: `docs/workstreams/diag-extensibility-and-capabilities-v1/capabilities.md`
   - [x] add at least one small script/demo that exercises pen kind (and fails fast when unsupported):
     - [x] `tools/diag-scripts/ui-gallery/diag/ui-gallery-pointer-kind-pen-click-smoke.json`
 
+- [ ] Gesture steps are explicit and capability-gated:
+  - [x] add a `tap` step (touch-first) and gate it behind `diag.gesture_tap`,
+  - [ ] define at least one additional gesture (`swipe` or `pinch`) and gate it behind a capability.
+
 ## Evidence & trace (debuggability surfaces)
 
 Doc: `docs/workstreams/diag-extensibility-and-capabilities-v1/evidence-and-trace.md`

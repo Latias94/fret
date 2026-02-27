@@ -131,6 +131,24 @@ impl ScriptV2Builder {
         })
     }
 
+    pub fn tap(self, target: UiSelectorV1) -> Self {
+        self.push(UiActionStepV2::Tap {
+            window: None,
+            pointer_kind: None,
+            target,
+            modifiers: None,
+        })
+    }
+
+    pub fn tap_pen(self, target: UiSelectorV1) -> Self {
+        self.push(UiActionStepV2::Tap {
+            window: None,
+            pointer_kind: Some(UiPointerKindV1::Pen),
+            target,
+            modifiers: None,
+        })
+    }
+
     pub fn click_with_modifiers(self, target: UiSelectorV1, modifiers: UiKeyModifiersV1) -> Self {
         self.push(UiActionStepV2::Click {
             window: None,

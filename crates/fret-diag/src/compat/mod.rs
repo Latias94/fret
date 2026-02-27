@@ -17,6 +17,7 @@ pub(crate) fn normalize_capability(raw: &str) -> Option<String> {
         "multi_window" => "diag.multi_window",
         "pointer_kind_touch" => "diag.pointer_kind_touch",
         "pointer_kind_pen" => "diag.pointer_kind_pen",
+        "gesture_tap" => "diag.gesture_tap",
         "gesture_pinch" => "diag.gesture_pinch",
         _ => raw,
     };

@@ -402,6 +402,20 @@ pub enum UiActionStepV2 {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         modifiers: Option<UiKeyModifiersV1>,
     },
+    /// A high-level “tap” gesture (touch-first) resolved via semantics selectors.
+    ///
+    /// This is intended for mobile-style interaction policies where "click" is an imprecise term.
+    /// Runtime injection still maps to unified pointer events with `PointerType::Touch` by default.
+    Tap {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
+        /// Optional override; when omitted, defaults to `touch`.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pointer_kind: Option<UiPointerKindV1>,
+        target: UiSelectorV1,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        modifiers: Option<UiKeyModifiersV1>,
+    },
     ResetDiagnostics,
     MovePointer {
         #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -2549,6 +2563,40 @@ mod tests {
             parsed,
             UiActionStepV2::Click {
                 pointer_kind: Some(UiPointerKindV1::Touch),
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn tap_step_pointer_kind_round_trips_and_omits_none() {
+        let step = UiActionStepV2::Tap {
+            window: None,
+            pointer_kind: None,
+            target: UiSelectorV1::TestId {
+                id: "a".to_string(),
+            },
+            modifiers: None,
+        };
+        let value = serde_json::to_value(step.clone()).unwrap();
+        assert_eq!(
+            value,
+            serde_json::json!({
+              "type": "tap",
+              "target": {"kind":"test_id","id":"a"}
+            })
+        );
+
+        let parsed: UiActionStepV2 = serde_json::from_value(serde_json::json!({
+          "type": "tap",
+          "pointer_kind": "pen",
+          "target": {"kind":"test_id","id":"a"}
+        }))
+        .unwrap();
+        assert!(matches!(
+            parsed,
+            UiActionStepV2::Tap {
+                pointer_kind: Some(UiPointerKindV1::Pen),
                 ..
             }
         ));

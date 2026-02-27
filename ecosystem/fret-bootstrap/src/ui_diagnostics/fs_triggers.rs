@@ -293,6 +293,7 @@ impl UiDiagnosticsService {
         }
         caps.push("diag.pointer_kind_touch".to_string());
         caps.push("diag.pointer_kind_pen".to_string());
+        caps.push("diag.gesture_tap".to_string());
         caps.push("diag.inject_ime".to_string());
         if !cfg!(target_arch = "wasm32") {
             caps.push("diag.multi_window".to_string());

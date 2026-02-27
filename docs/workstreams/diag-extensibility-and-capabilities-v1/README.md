@@ -92,10 +92,10 @@ The script runner/tooling must make “what is supported” explicit. Examples:
 
 Pointer kind status (2026-02-27):
 
-- Script schema v2 exposes an optional `pointer_kind` on pointer-driven steps (`mouse` default; `touch` supported).
 - Script schema v2 exposes an optional `pointer_kind` on pointer-driven steps (`mouse` default; `touch`/`pen` supported).
 - Tooling infers `diag.pointer_kind_touch` / `diag.pointer_kind_pen` when requested and fails fast when missing.
 - `fret-bootstrap` advertises `diag.pointer_kind_touch` / `diag.pointer_kind_pen` via both `capabilities.json` and the DevTools WS hello.
+- Script schema v2 also exposes a touch-first `tap` step, capability-gated behind `diag.gesture_tap`.
 
 Tooling should:
 
