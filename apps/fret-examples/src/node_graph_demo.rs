@@ -1423,7 +1423,10 @@ impl NodeGraphDemoDriver {
             .global::<Arc<NodeGraphPresetSkinV1>>()
             .cloned()
             .unwrap_or_else(|| {
-                NodeGraphPresetSkinV1::new_builtin(NodeGraphPresetFamily::WorkflowClean)
+                NodeGraphPresetSkinV1::new_from_snapshot(
+                    Theme::global(app).snapshot(),
+                    NodeGraphPresetFamily::WorkflowClean,
+                )
             });
         let canvas = NodeGraphCanvas::new(graph.clone(), view)
             .with_store(store.clone())
@@ -2184,7 +2187,8 @@ pub fn run() -> anyhow::Result<()> {
     app.set_global(Arc::new(DemoWeirdLayoutMeasuredState::new()));
     app.set_global(Arc::new(NodeGraphDemoStyleState::new()));
     app.set_global(Arc::new(NodeGraphDemoOverlayToggles::new()));
-    app.set_global(NodeGraphPresetSkinV1::new_builtin(
+    app.set_global(NodeGraphPresetSkinV1::new_from_snapshot(
+        Theme::global(&app).snapshot(),
         NodeGraphPresetFamily::WorkflowClean,
     ));
 
