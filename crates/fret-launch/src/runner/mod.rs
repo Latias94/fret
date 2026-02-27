@@ -52,9 +52,8 @@ pub use fret_launch_desktop::runner::desktop::{
 pub use fret_launch_desktop::runner::desktop::windows_msg_hook;
 
 #[cfg(target_arch = "wasm32")]
-mod web;
-
+pub use fret_launch_web::runner::{
+    WebRunnerHandle, run_app_with_event_loop_and_handle, run_app_with_handle,
+};
 #[cfg(target_arch = "wasm32")]
-pub use web::{WebRunnerHandle, run_app_with_event_loop_and_handle, run_app_with_handle};
-#[cfg(target_arch = "wasm32")]
-pub use web::{WinitRunner, run_app, run_app_with_event_loop};
+pub use fret_launch_web::runner::{WinitRunner, run_app, run_app_with_event_loop};

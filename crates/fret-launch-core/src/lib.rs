@@ -9,6 +9,8 @@
 pub mod common;
 mod error;
 
+#[doc(hidden)]
+pub mod font_catalog;
 pub mod imported_viewport_target;
 pub mod native_external_import;
 #[doc(hidden)]

@@ -1,6 +1,7 @@
 use fret_runtime::{FontCatalogEntry, FontCatalogUpdate, FontFamilyDefaultsPolicy, GlobalsHost};
 
-pub(super) fn apply_renderer_font_catalog_update(
+#[doc(hidden)]
+pub fn apply_renderer_font_catalog_update(
     app: &mut impl GlobalsHost,
     renderer: &mut fret_render::Renderer,
     policy: FontFamilyDefaultsPolicy,

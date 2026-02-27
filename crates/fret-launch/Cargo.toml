@@ -20,8 +20,8 @@ dev-state = ["fret-launch-desktop/dev-state"]
 # into normal builds. See ADR 0105.
 hotpatch-subsecond = ["fret-launch-desktop/hotpatch-subsecond"]
 diag-screenshots = ["fret-launch-desktop/diag-screenshots"]
-wasm-emoji-fonts = ["fret-fonts/emoji"]
-wasm-cjk-lite-fonts = ["fret-fonts/cjk-lite"]
+wasm-emoji-fonts = ["fret-launch-web/wasm-emoji-fonts"]
+wasm-cjk-lite-fonts = ["fret-launch-web/wasm-cjk-lite-fonts"]
 
 [dependencies]
 fret-launch-core = { version = "0.1.0", path = "../fret-launch-core" }
@@ -30,19 +30,4 @@ fret-launch-core = { version = "0.1.0", path = "../fret-launch-core" }
 fret-launch-desktop = { version = "0.1.0", path = "../fret-launch-desktop" }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-fret-app = { version = "0.1.0", path = "../fret-app" }
-fret-core = { version = "0.1.0", path = "../fret-core" }
-fret-fonts = { version = "0.1.0", path = "../fret-fonts" }
-fret-platform-web = { version = "0.1.0", path = "../fret-platform-web" }
-fret-render = { version = "0.1.0", path = "../fret-render" }
-fret-runtime = { version = "0.1.0", path = "../fret-runtime" }
-fret-runner-winit = { version = "0.1.0", path = "../fret-runner-winit" }
-fret-runner-web = { version = "0.1.0", path = "../fret-runner-web" }
-getrandom = { workspace = true, features = ["wasm_js"] }
-tracing.workspace = true
-wgpu.workspace = true
-winit.workspace = true
-wasm-bindgen = "0.2"
-wasm-bindgen-futures = "0.4"
-js-sys = "0.3"
-web-sys = { version = "0.3", features = ["CssStyleDeclaration", "Document", "Element", "EventTarget", "File", "FilePropertyBag", "HtmlCanvasElement", "HtmlElement", "Location", "MediaQueryList", "MediaQueryListEvent", "Node", "UrlSearchParams", "VisualViewport", "Window", "console"] }
+fret-launch-web = { version = "0.1.0", path = "../fret-launch-web" }

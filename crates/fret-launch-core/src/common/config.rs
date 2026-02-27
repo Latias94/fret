@@ -5,6 +5,7 @@ use std::sync::Arc;
 
 use fret_render::{ClearColor, WgpuContext};
 
+#[cfg(not(target_arch = "wasm32"))]
 use crate::RunnerError;
 
 pub struct WinitRunnerConfig {
