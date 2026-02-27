@@ -185,6 +185,7 @@ Workflow tip:
 - You can also open a `.zip` that contains `bundle.json` or `bundle.schema2.json` anywhere inside it (handy for sharing a full repro directory).
 - To generate a shareable `.zip` for the latest bundle: `cargo run -p fretboard -- diag pack`
 - To include nearby artifacts (`script.json`, `script.result.json`, `pick.result.json`), `triage.json`, and screenshots (when present): `cargo run -p fretboard -- diag pack --include-all`
+- To validate a per-run artifact directory (manifest + chunks + sidecars + run_id/timestamps): `cargo run -p fretboard -- diag artifact lint <run_dir|out_dir>`
 - Prefer viewer-friendly zips when schema2 exists (keeps artifacts smaller than raw `bundle.json`):
   - `cargo run -p fretboard -- diag pack --include-all --pack-schema2-only --warmup-frames <n>`
   - If needed: `cargo run -p fretboard -- diag doctor --fix-schema2 <bundle_dir> --warmup-frames <n>`

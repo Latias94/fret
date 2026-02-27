@@ -41,10 +41,12 @@ Exit criteria:
 - `diag run/suite/repro/perf` always emits `<out_dir>/<run_id>/manifest.json`.
 - Tooling failures still write a local `script.result.json` with stable `reason_code`.
 - Filesystem dump requests can carry dump metadata (label/max snapshots/request id), matching WS semantics.
+- Tooling can validate per-run directories via `diag artifact lint` (manifest + chunks + sidecars + run_id/timestamps).
 
 Evidence anchors:
 
 - Tooling: `crates/fret-diag/src/run_artifacts.rs`, `crates/fret-diag/src/tooling_failures.rs`, `crates/fret-diag/src/transport/fs.rs`
+- Tooling lint: `crates/fret-diag/src/artifact_lint.rs`, `crates/fret-diag/src/commands/artifact.rs`
 - Runtime: `ecosystem/fret-bootstrap/src/ui_diagnostics/*`, `ecosystem/fret-bootstrap/src/ui_diagnostics/fs_triggers.rs`
 
 ## M2: Manifest-first pack + AI packet (P1)

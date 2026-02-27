@@ -67,6 +67,7 @@ Usage:
   fretboard diag pack [<bundle_dir|bundle.json|bundle.schema2.json>] [--dir <dir>] [--pack-out <path>] [--ai-packet] [--ai-only] [--include-all] [--include-root-artifacts] [--include-triage] [--include-screenshots]
   fretboard diag triage <bundle_dir|bundle.json|bundle.schema2.json> [--top <n>] [--sort <key>] [--warmup-frames <n>] [--json] [--out <path>]
     fretboard diag lint <bundle_dir|bundle.json|bundle.schema2.json> [--warmup-frames <n>] [--all-test-ids] [--lint-eps-px <px>] [--json] [--out <path>]
+    fretboard diag artifact lint [<run_dir|out_dir|manifest.json|script.result.json>] [--warmup-frames <n>] [--json] [--out <path>]
     fretboard diag hotspots [<bundle_dir|bundle.json|bundle.schema2.json>] [--hotspots-top <n>] [--max-depth <n>] [--min-bytes <n>] [--force] [--json] [--out <path>]
     fretboard diag bundle-v2 [<bundle_dir|bundle.json|bundle.schema2.json>] [--mode <all|changed|last|off>] [--pretty] [--force] [--json] [--out <path>]
     fretboard diag meta <bundle_dir|bundle.json|bundle.schema2.json> [--warmup-frames <n>] [--json] [--out <path>]

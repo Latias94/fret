@@ -21,6 +21,7 @@ use fret_diag_protocol::{
 };
 
 pub mod api;
+mod artifact_lint;
 pub mod artifacts;
 mod bundle_index;
 mod cli;
@@ -326,6 +327,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut pack_ai_only: bool = false;
     let mut triage_out: Option<PathBuf> = None;
     let mut lint_out: Option<PathBuf> = None;
+    let mut artifact_lint_out: Option<PathBuf> = None;
     let mut meta_out: Option<PathBuf> = None;
     let mut meta_report: bool = false;
     let mut index_out: Option<PathBuf> = None;
@@ -818,6 +820,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 pick_apply_out = Some(p.clone());
                 triage_out = Some(p.clone());
                 lint_out = Some(p.clone());
+                artifact_lint_out = Some(p.clone());
                 meta_out = Some(p.clone());
                 index_out = Some(p.clone());
                 hotspots_out = Some(p.clone());
@@ -2437,6 +2440,16 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     };
 
     match sub.as_str() {
+        "artifact" | "artifacts" => commands::artifact::cmd_artifact(
+            &rest,
+            pack_after_run,
+            &workspace_root,
+            &resolved_out_dir,
+            &resolved_script_result_path,
+            artifact_lint_out.clone(),
+            warmup_frames,
+            stats_json,
+        ),
         "run" => {
             diag_run::cmd_run(diag_run::RunCmdContext {
                 pack_after_run,
