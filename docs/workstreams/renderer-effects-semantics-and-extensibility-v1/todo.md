@@ -82,6 +82,36 @@ This TODO is ordered by implementation priority (P0 first), and is designed to b
     `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs`,
     `crates/fret-render-wgpu/src/renderer/render_scene/plan_reporting.rs`.
 
+## P1.5 — Vector path semantics closure (paint + dash + MSAA)
+
+These are common “editor-grade UI” needs that often become a long-tail source of visual mismatch
+if left unspecified.
+
+- [ ] Document the current path paint limitation and make it diagnosable:
+  - Today `SceneOp::Path` encoding degrades sampled materials to a solid base color.
+  - Add a plan/perf reporting counter so it’s visible when this happens (similar to effect degradations).
+  - Evidence (current behavior): `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/path.rs`.
+
+- [ ] Decide whether material/texture paints are supported for `SceneOp::Path` (wgpu backend):
+  - If supported: extend the path pipeline bind group(s) to include the material catalog sampler/texture,
+    and allow `PaintMaterialPolicy::Allow` for paths.
+  - If not supported (for now): expose an explicit capability flag and keep deterministic degradation.
+
+- [ ] Dash semantics consistency:
+  - `StrokeRRect` dashes are evaluated in the quad shader using an rrect-perimeter parameterization,
+    while `PathStyle::StrokeV2` uses CPU-side dash splitting before tessellation.
+  - Write down the expected semantics for `DashPatternV1` (units, phase origin/direction, scale-factor behavior)
+    and add one targeted conformance test that compares rrect vs path outcomes for a “rect-like path” shape.
+  - Evidence (current implementations): `crates/fret-render-wgpu/src/renderer/shaders.rs` (rrect),
+    `crates/fret-render-wgpu/src/renderer/path.rs` (path dashes).
+
+- [ ] Path MSAA correctness on Vulkan:
+  - There is a known correctness risk for the MSAA path pipeline on Vulkan (currently gated by
+    `FRET_ALLOW_VULKAN_PATH_MSAA`).
+  - Add a small conformance/diag gate that catches the incorrect outcome, then either fix or keep it
+    deterministically disabled behind a capability/config knob.
+  - Evidence: `crates/fret-render-wgpu/src/renderer/config.rs` and `crates/fret-render-wgpu/src/renderer/pipelines/path.rs`.
+
 ## P2 — Extensibility (bounded custom effects)
 
 - [x] Design a capability-gated custom effect extension point (wgpu-only first):

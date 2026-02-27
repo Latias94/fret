@@ -127,3 +127,13 @@ P2 — Higher-end visuals without core bloat:
   Prefer bounded custom effects first.
 - End-to-end HDR / wide-gamut correctness: requires a broader contract and platform integration.
   Keep hooks (`RenderTargetColorEncoding`) but defer full pipeline work.
+- Vector path “material paint” support:
+  - Today `SceneOp::Path` encoding degrades sampled/material paints to a solid base color (mechanism-level fallback).
+  - If editor-grade charts/graphs rely heavily on textured/material strokes/fills, we should either:
+    - support material paints on the path pipeline (capability-gated), or
+    - keep deterministic degradation but make it visible via counters.
+  - Anchor: `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/path.rs`.
+- Dash semantics unification:
+  - `StrokeRRect` dashes are shader-evaluated via rrect perimeter, while `PathStyle::StrokeV2` uses CPU dash splitting.
+  - This is acceptable, but the shared `DashPatternV1` semantics (phase origin/direction) should be written down and
+    tested to prevent subtle visual drift across primitives.

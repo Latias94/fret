@@ -94,3 +94,20 @@ Exit criteria:
 - Evidence:
   - `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-v2/README.md`
   - `crates/fret-render-wgpu/tests/effect_custom_v2_conformance.rs`
+
+## M6 (Optional) — Vector path + dash semantics closure
+
+Exit criteria:
+
+- `SceneOp::Path` paint semantics are explicit:
+  - Either sampled/material paints are supported (capability-gated, tested), or they deterministically degrade with
+    an observable counter in perf/diagnostics.
+  - Evidence: `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/path.rs` and reporting in
+    `crates/fret-render-wgpu/src/renderer/render_scene/plan_reporting.rs`.
+
+- Dash semantics are consistent and tested across primitives:
+  - One targeted conformance test compares a rect-like dashed path with a dashed `StrokeRRect`.
+  - Evidence: `crates/fret-render-wgpu/tests/*dash*` and `crates/fret-render-wgpu/tests/path_stroke_style_v2_conformance.rs`.
+
+- Path MSAA correctness on Vulkan is either fixed or deterministically gated:
+  - Evidence: `crates/fret-render-wgpu/src/renderer/config.rs` and a small conformance/diag gate.
