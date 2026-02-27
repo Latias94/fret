@@ -1,4 +1,4 @@
-use fret_runtime::{CommandId, Model, WeakModel};
+use fret_runtime::{CommandId, Effect, Model, WeakModel};
 use fret_ui::ElementContext;
 use fret_ui::UiHost;
 use fret_ui::action::UiActionHostExt;
@@ -118,8 +118,10 @@ impl<H: UiHost> ActionHooksExt for ElementContext<'_, H> {
         F: Fn(&mut T) + 'static,
     {
         let model = model.clone();
-        self.pressable_add_on_activate(Arc::new(move |host, _cx, _reason| {
+        self.pressable_add_on_activate(Arc::new(move |host, acx, _reason| {
             let _ = host.models_mut().update(&model, |v| update(v));
+            host.request_redraw(acx.window);
+            host.push_effect(Effect::RequestAnimationFrame(acx.window));
         }));
     }
 
@@ -129,8 +131,10 @@ impl<H: UiHost> ActionHooksExt for ElementContext<'_, H> {
         F: Fn(&mut T) + 'static,
     {
         let model = model.clone();
-        self.pressable_add_on_activate(Arc::new(move |host, _cx, _reason| {
+        self.pressable_add_on_activate(Arc::new(move |host, acx, _reason| {
             let _ = host.update_weak_model(&model, |v| update(v));
+            host.request_redraw(acx.window);
+            host.push_effect(Effect::RequestAnimationFrame(acx.window));
         }));
     }
 
