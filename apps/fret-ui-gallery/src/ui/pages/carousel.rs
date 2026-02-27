@@ -194,6 +194,7 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
         .map(|idx| slide(cx, idx, align_start_visual))
         .collect::<Vec<_>>();
     let sizes = shadcn::Carousel::new(align_start_items)
+        .opts(shadcn::CarouselOptions::new().align(shadcn::CarouselAlign::Start))
         // Approximate the `lg:basis-1/3` docs example deterministically (see web-vs-fret harness).
         .item_basis_main_px(Px(133.328))
         .refine_track_layout(LayoutRefinement::default().w_px(Px(400.0)))
@@ -364,6 +365,7 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
 
     let orientation_vertical = shadcn::Carousel::new(vertical_items)
         .orientation(shadcn::CarouselOrientation::Vertical)
+        .opts(shadcn::CarouselOptions::new().align(shadcn::CarouselAlign::Start))
         .refine_viewport_layout(LayoutRefinement::default().h_px(Px(196.0)))
         .refine_track_layout(LayoutRefinement::default().h_px(Px(200.0)))
         .track_start_neg_margin(Space::N1)
@@ -407,6 +409,7 @@ shadcn::Carousel::new(items)
                     r#"// Upstream: responsive widths (`md:basis-1/2` / `lg:basis-1/3`).
 // Here: fixed basis for deterministic native layout.
 shadcn::Carousel::new(items)
+    .opts(shadcn::CarouselOptions::new().align(shadcn::CarouselAlign::Start))
     .item_basis_main_px(Px(133.328)) // approx `basis-1/3` in docs/web goldens
     .refine_track_layout(LayoutRefinement::default().w_px(Px(400.0)))
     .refine_layout(LayoutRefinement::default().w_full().max_w(Px(384.0)).mx_auto())
@@ -435,7 +438,19 @@ shadcn::Carousel::new(items)
             DocSection::new("Orientation (Vertical)", orientation_vertical)
                 .description("A vertical carousel (orientation=\"vertical\").")
                 .max_w(Px(760.0))
-                .test_id_prefix("ui-gallery-carousel-orientation-vertical"),
+                .test_id_prefix("ui-gallery-carousel-orientation-vertical")
+                .code(
+                    "rust",
+                    r#"shadcn::Carousel::new(items)
+    .orientation(shadcn::CarouselOrientation::Vertical)
+    .opts(shadcn::CarouselOptions::new().align(shadcn::CarouselAlign::Start))
+    .refine_viewport_layout(LayoutRefinement::default().h_px(Px(196.0)))
+    .refine_track_layout(LayoutRefinement::default().h_px(Px(200.0)))
+    .track_start_neg_margin(Space::N1)
+    .item_padding_start(Space::N1)
+    .refine_layout(LayoutRefinement::default().w_full().max_w(Px(320.0)).mx_auto())
+    .into_element(cx);"#,
+                ),
             DocSection::new("Notes", notes_stack).max_w(Px(760.0)),
         ],
     );

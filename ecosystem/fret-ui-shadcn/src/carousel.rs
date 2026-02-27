@@ -26,6 +26,115 @@ pub enum CarouselOrientation {
     Vertical,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum CarouselAlign {
+    Start,
+    #[default]
+    Center,
+    End,
+}
+
+impl CarouselAlign {
+    fn to_headless(self) -> headless_carousel::CarouselSnapAlign {
+        match self {
+            CarouselAlign::Start => headless_carousel::CarouselSnapAlign::Start,
+            CarouselAlign::Center => headless_carousel::CarouselSnapAlign::Center,
+            CarouselAlign::End => headless_carousel::CarouselSnapAlign::End,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CarouselSlidesToScroll {
+    Fixed(usize),
+    Auto,
+}
+
+impl Default for CarouselSlidesToScroll {
+    fn default() -> Self {
+        Self::Fixed(1)
+    }
+}
+
+impl CarouselSlidesToScroll {
+    fn to_headless(self) -> headless_carousel::CarouselSlidesToScrollOption {
+        match self {
+            CarouselSlidesToScroll::Fixed(n) => {
+                headless_carousel::CarouselSlidesToScrollOption::Fixed(n.max(1))
+            }
+            CarouselSlidesToScroll::Auto => headless_carousel::CarouselSlidesToScrollOption::Auto,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum CarouselContainScroll {
+    None,
+    KeepSnaps,
+    #[default]
+    TrimSnaps,
+}
+
+impl CarouselContainScroll {
+    fn to_headless(self) -> headless_carousel::CarouselContainScrollOption {
+        match self {
+            CarouselContainScroll::None => headless_carousel::CarouselContainScrollOption::None,
+            CarouselContainScroll::KeepSnaps => {
+                headless_carousel::CarouselContainScrollOption::KeepSnaps
+            }
+            CarouselContainScroll::TrimSnaps => {
+                headless_carousel::CarouselContainScrollOption::TrimSnaps
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct CarouselOptions {
+    pub align: CarouselAlign,
+    pub slides_to_scroll: CarouselSlidesToScroll,
+    pub contain_scroll: CarouselContainScroll,
+    pub pixel_tolerance_px: f32,
+}
+
+impl Default for CarouselOptions {
+    fn default() -> Self {
+        Self {
+            // Match Embla defaults unless examples override via `opts`.
+            align: CarouselAlign::Center,
+            slides_to_scroll: CarouselSlidesToScroll::Fixed(1),
+            contain_scroll: CarouselContainScroll::TrimSnaps,
+            pixel_tolerance_px: 2.0,
+        }
+    }
+}
+
+impl CarouselOptions {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn align(mut self, align: CarouselAlign) -> Self {
+        self.align = align;
+        self
+    }
+
+    pub fn slides_to_scroll(mut self, slides_to_scroll: CarouselSlidesToScroll) -> Self {
+        self.slides_to_scroll = slides_to_scroll;
+        self
+    }
+
+    pub fn contain_scroll(mut self, contain_scroll: CarouselContainScroll) -> Self {
+        self.contain_scroll = contain_scroll;
+        self
+    }
+
+    pub fn pixel_tolerance_px(mut self, pixel_tolerance_px: f32) -> Self {
+        self.pixel_tolerance_px = pixel_tolerance_px;
+        self
+    }
+}
+
 #[derive(Debug)]
 pub struct Carousel {
     items: Vec<AnyElement>,
@@ -37,6 +146,7 @@ pub struct Carousel {
     track_start_neg_margin: Space,
     item_padding_start: Space,
     item_basis_main_px: Option<Px>,
+    options: CarouselOptions,
     drag_config: headless_carousel::CarouselDragConfig,
     test_id: Option<Arc<str>>,
 }
@@ -130,6 +240,7 @@ impl Carousel {
             track_start_neg_margin: Space::N4,
             item_padding_start: Space::N4,
             item_basis_main_px: None,
+            options: CarouselOptions::default(),
             drag_config: headless_carousel::CarouselDragConfig::default(),
             test_id: None,
         }
@@ -162,6 +273,12 @@ impl Carousel {
 
     pub fn orientation(mut self, orientation: CarouselOrientation) -> Self {
         self.orientation = orientation;
+        self
+    }
+
+    /// Embla-style options that influence snap model generation (alignment, containment, etc).
+    pub fn opts(mut self, opts: CarouselOptions) -> Self {
+        self.options = opts;
         self
     }
 
@@ -215,6 +332,7 @@ impl Carousel {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).snapshot();
             let orientation = self.orientation;
+            let options = self.options;
             let root_test_id = self.test_id.unwrap_or_else(|| Arc::from("carousel"));
 
             let (
@@ -833,11 +951,11 @@ impl Carousel {
                             &slides,
                             Px(0.0),
                             Px(0.0),
-                            headless_carousel::CarouselSlidesToScrollOption::Fixed(1),
+                            options.slides_to_scroll.to_headless(),
                             false,
-                            headless_carousel::CarouselSnapAlign::Start,
-                            headless_carousel::CarouselContainScrollOption::TrimSnaps,
-                            2.0,
+                            options.align.to_headless(),
+                            options.contain_scroll.to_headless(),
+                            options.pixel_tolerance_px.max(0.0),
                         );
                         snaps_now = model.snaps_px;
                         max_offset_now = model.max_offset_px;

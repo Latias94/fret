@@ -94,6 +94,10 @@ fn web_vs_fret_layout_carousel_size_geometry_matches_web() {
                 .collect::<Vec<_>>();
 
             fret_ui_shadcn::Carousel::new(slides)
+                .opts(
+                    fret_ui_shadcn::CarouselOptions::new()
+                        .align(fret_ui_shadcn::CarouselAlign::Start),
+                )
                 .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(384.0))))
                 .refine_track_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(400.0))))
                 .track_start_neg_margin(Space::N4)
@@ -151,6 +155,10 @@ fn web_vs_fret_layout_carousel_orientation_geometry_matches_web() {
 
             fret_ui_shadcn::Carousel::new(slides)
                 .orientation(fret_ui_shadcn::CarouselOrientation::Vertical)
+                .opts(
+                    fret_ui_shadcn::CarouselOptions::new()
+                        .align(fret_ui_shadcn::CarouselAlign::Start),
+                )
                 .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(320.0))))
                 .refine_viewport_layout(LayoutRefinement::default().h_px(MetricRef::Px(Px(196.0))))
                 .refine_track_layout(LayoutRefinement::default().h_px(MetricRef::Px(Px(200.0))))
