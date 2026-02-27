@@ -34,6 +34,11 @@ use fret_ui_kit::{
 
 use crate::overlay_motion;
 
+fn alpha_mul(mut c: Color, mul: f32) -> Color {
+    c.a = (c.a * mul).clamp(0.0, 1.0);
+    c
+}
+
 fn navigation_menu_input_context<H: UiHost>(app: &H) -> InputContext {
     let caps = app
         .global::<PlatformCapabilities>()
@@ -180,6 +185,12 @@ fn nav_menu_trigger_radius(theme: &ThemeSnapshot) -> Px {
 
 fn nav_menu_trigger_bg_hover(theme: &ThemeSnapshot) -> Color {
     theme.color_token("accent")
+}
+
+fn nav_menu_trigger_bg_open(theme: &ThemeSnapshot) -> Color {
+    theme
+        .color_by_key("component.navigation_menu.trigger.bg_open")
+        .unwrap_or_else(|| alpha_mul(theme.color_token("accent"), 0.5))
 }
 
 fn nav_menu_trigger_fg(theme: &ThemeSnapshot) -> Color {
@@ -884,6 +895,7 @@ impl NavigationMenu {
         let trigger_pad_y = nav_menu_trigger_padding_y(&theme);
         let trigger_radius = nav_menu_trigger_radius(&theme);
         let trigger_bg_hover = nav_menu_trigger_bg_hover(&theme);
+        let trigger_bg_open = nav_menu_trigger_bg_open(&theme);
         let trigger_fg = nav_menu_trigger_fg(&theme);
         let trigger_fg_muted = nav_menu_trigger_fg_muted(&theme);
         let trigger_text_style = nav_menu_trigger_text_style(&theme);
@@ -896,7 +908,15 @@ impl NavigationMenu {
                 WidgetStates::ACTIVE,
                 Some(ColorRef::Color(trigger_bg_hover)),
             )
-            .when(WidgetStates::OPEN, Some(ColorRef::Color(trigger_bg_hover)));
+            .when(WidgetStates::OPEN, Some(ColorRef::Color(trigger_bg_open)))
+            .when(
+                WidgetStates::OPEN | WidgetStates::HOVERED,
+                Some(ColorRef::Color(trigger_bg_hover)),
+            )
+            .when(
+                WidgetStates::OPEN | WidgetStates::ACTIVE,
+                Some(ColorRef::Color(trigger_bg_hover)),
+            );
         let default_trigger_fg = WidgetStateProperty::new(ColorRef::Color(trigger_fg))
             .when(WidgetStates::DISABLED, ColorRef::Color(trigger_fg_muted));
 

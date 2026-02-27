@@ -364,6 +364,15 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
         colors.insert("sidebar-ring".to_string(), "oklch(0.439 0 0)".to_string());
     }
 
+    // shadcn new-york-v4 `NavigationMenuTrigger` open background:
+    // - `data-[state=open]:bg-accent/50`
+    if !colors.contains_key("component.navigation_menu.trigger.bg_open")
+        && let Some(accent) = colors.get("accent").cloned()
+    {
+        let v = with_oklch_alpha(&accent, 0.5).unwrap_or(accent);
+        colors.insert("component.navigation_menu.trigger.bg_open".to_string(), v);
+    }
+
     let mut metrics: HashMap<String, f32> = HashMap::new();
     if let Some(radius) = colors.remove("radius") {
         if let Some(px) = parse_css_length_px(&radius) {
@@ -1145,6 +1154,39 @@ mod tests {
                         .expect("shadcn new-york-v4 input token is oklch"),
                 ),
                 "expected switch off bg to match input/80 in dark scheme"
+            );
+
+            let accent_light = cfg_light
+                .colors
+                .get("accent")
+                .cloned()
+                .expect("missing accent");
+            let accent_dark = cfg_dark
+                .colors
+                .get("accent")
+                .cloned()
+                .expect("missing accent");
+            assert_eq!(
+                cfg_light
+                    .colors
+                    .get("component.navigation_menu.trigger.bg_open")
+                    .cloned(),
+                Some(
+                    with_oklch_alpha(&accent_light, 0.5)
+                        .expect("shadcn new-york-v4 accent token is oklch"),
+                ),
+                "expected nav-menu open bg to match accent/50 in light scheme"
+            );
+            assert_eq!(
+                cfg_dark
+                    .colors
+                    .get("component.navigation_menu.trigger.bg_open")
+                    .cloned(),
+                Some(
+                    with_oklch_alpha(&accent_dark, 0.5)
+                        .expect("shadcn new-york-v4 accent token is oklch"),
+                ),
+                "expected nav-menu open bg to match accent/50 in dark scheme"
             );
 
             let primary_light = cfg_light
