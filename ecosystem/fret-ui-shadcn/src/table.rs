@@ -5,13 +5,14 @@ use fret_core::{Axis, FontId, FontWeight, TextOverflow, TextStyle, TextWrap};
 use fret_ui::action::OnActivate;
 use fret_ui::element::{
     AnyElement, CrossAlign, ElementKind, Elements, FlexProps, GridProps, MainAlign, Overflow,
-    PressableProps,
+    PressableProps, ScrollAxis,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::primitives::scroll_area::ScrollAreaType;
 use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Space, ui};
 
@@ -75,9 +76,8 @@ fn apply_table_cell_text_defaults(mut child: AnyElement) -> AnyElement {
 
 /// shadcn/ui `Table` root.
 ///
-/// Upstream wraps `<table>` in a horizontally scrollable container. Fret does not support
-/// horizontal scrolling in the core Scroll primitive yet; for now, `Table` is a layout + styling
-/// facade. Wrap it in a `ScrollArea` if you need clipping/scroll behavior.
+/// Upstream wraps `<table>` in a horizontally scrollable container (`overflow-x-auto`). We model
+/// that outcome by defaulting `Table` to a horizontal [`ScrollArea`] wrapper (best-effort).
 #[derive(Debug)]
 pub struct Table {
     children: Vec<AnyElement>,
@@ -110,16 +110,23 @@ impl Table {
         let theme = Theme::global(&*cx.app);
 
         // shadcn: `w-full caption-bottom text-sm`.
-        let mut props = decl_style::container_props(theme, self.chrome, self.layout.w_full());
+        let table_layout = LayoutRefinement::default().w_full().merge(self.layout);
+        let mut props = decl_style::container_props(theme, self.chrome, table_layout);
         props.layout.overflow = Overflow::Visible;
 
         let children = self.children;
-        shadcn_layout::container_vstack(
+        let table = shadcn_layout::container_vstack(
             cx,
             props,
             stack::VStackProps::default().layout(LayoutRefinement::default().w_full()),
             children,
-        )
+        );
+
+        crate::ScrollArea::new([table])
+            .axis(ScrollAxis::X)
+            .type_(ScrollAreaType::Auto)
+            .refine_layout(LayoutRefinement::default().w_full().relative())
+            .into_element(cx)
     }
 }
 
@@ -141,7 +148,8 @@ impl TableHeader {
         let props = decl_style::container_props(
             theme,
             ChromeRefinement::default(),
-            LayoutRefinement::default(),
+            // HTML table sections behave like block containers and fill the table width.
+            LayoutRefinement::default().w_full(),
         );
         let children = self.children;
         shadcn_layout::container_vstack(
@@ -171,9 +179,13 @@ impl TableBody {
         let props = decl_style::container_props(
             theme,
             ChromeRefinement::default(),
-            LayoutRefinement::default(),
+            // HTML table sections behave like block containers and fill the table width.
+            LayoutRefinement::default().w_full(),
         );
-        let children = self.children;
+        let mut children = self.children;
+        if let Some(last) = children.last_mut() {
+            clear_table_row_border_bottom(last);
+        }
         shadcn_layout::container_vstack(
             cx,
             props,
@@ -207,7 +219,9 @@ impl TableFooter {
             .bg(ColorRef::Color(bg))
             .border_1()
             .border_color(ColorRef::Color(border));
-        let mut props = decl_style::container_props(theme, chrome, LayoutRefinement::default());
+        // HTML table sections behave like block containers and fill the table width.
+        let mut props =
+            decl_style::container_props(theme, chrome, LayoutRefinement::default().w_full());
         props.border = Edges {
             top: fret_core::Px(1.0),
             right: fret_core::Px(0.0),
@@ -215,7 +229,10 @@ impl TableFooter {
             left: fret_core::Px(0.0),
         };
 
-        let children = self.children;
+        let mut children = self.children;
+        if let Some(last) = children.last_mut() {
+            clear_table_row_border_bottom(last);
+        }
         shadcn_layout::container_vstack(
             cx,
             props,
@@ -223,6 +240,29 @@ impl TableFooter {
             children,
         )
     }
+}
+
+fn clear_table_row_border_bottom(el: &mut AnyElement) -> bool {
+    match &mut el.kind {
+        ElementKind::Container(props) => {
+            if props.border.top.0 == 0.0
+                && props.border.right.0 == 0.0
+                && props.border.left.0 == 0.0
+                && props.border.bottom.0 > 0.0
+            {
+                props.border.bottom = fret_core::Px(0.0);
+                return true;
+            }
+        }
+        _ => {}
+    }
+
+    for child in &mut el.children {
+        if clear_table_row_border_bottom(child) {
+            return true;
+        }
+    }
+    false
 }
 
 /// shadcn/ui `TableRow` (`tr`).
@@ -615,5 +655,141 @@ impl TableCaption {
             }
             vec![caption_text.into_element(cx)]
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Color, Point, Px, Rect, Size};
+    use fret_ui::element::{ContainerProps, Length, Overflow};
+
+    fn find_container_with_background(el: &AnyElement, bg: Color) -> Option<&ContainerProps> {
+        match &el.kind {
+            ElementKind::Container(props) => {
+                if props.background == Some(bg) {
+                    return Some(props);
+                }
+            }
+            _ => {}
+        }
+        for child in &el.children {
+            if let Some(found) = find_container_with_background(child, bg) {
+                return Some(found);
+            }
+        }
+        None
+    }
+
+    #[test]
+    fn table_root_defaults_to_w_full_but_allows_overrides() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        let bg = Color {
+            r: 1.0,
+            g: 0.0,
+            b: 1.0,
+            a: 1.0,
+        };
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let el = Table::new([cx.text("body")])
+                .refine_style(ChromeRefinement::default().bg(ColorRef::Color(bg)))
+                .into_element(cx);
+            let props = find_container_with_background(&el, bg).expect("table inner container");
+            assert_eq!(props.layout.size.width, Length::Fill);
+            assert_eq!(props.layout.overflow, Overflow::Visible);
+        });
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let el = Table::new([cx.text("body")])
+                .refine_style(ChromeRefinement::default().bg(ColorRef::Color(bg)))
+                .refine_layout(LayoutRefinement::default().w_px(Px(320.0)))
+                .into_element(cx);
+            let props = find_container_with_background(&el, bg).expect("table inner container");
+            assert_eq!(props.layout.size.width, Length::Px(Px(320.0)));
+        });
+    }
+
+    #[test]
+    fn table_body_clears_last_row_border_bottom() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let row1 =
+                TableRow::new(1, [TableCell::new(cx.text("a")).into_element(cx)]).into_element(cx);
+            let row2 =
+                TableRow::new(1, [TableCell::new(cx.text("b")).into_element(cx)]).into_element(cx);
+
+            let body = TableBody::new([row1, row2]).into_element(cx);
+
+            fn find_row_border_container(el: &AnyElement) -> Option<&ContainerProps> {
+                match &el.kind {
+                    ElementKind::Container(props) => {
+                        if props.border.top.0 == 0.0
+                            && props.border.right.0 == 0.0
+                            && props.border.left.0 == 0.0
+                            && props.border.bottom.0 >= 0.0
+                            && props.border_color.is_some()
+                        {
+                            return Some(props);
+                        }
+                    }
+                    _ => {}
+                }
+                for child in &el.children {
+                    if let Some(found) = find_row_border_container(child) {
+                        return Some(found);
+                    }
+                }
+                None
+            }
+
+            fn collect_pressable_borders(el: &AnyElement, out: &mut Vec<fret_core::Px>) {
+                if matches!(el.kind, ElementKind::Pressable(_)) {
+                    let border = find_row_border_container(el)
+                        .expect("expected TableRow to contain a border container")
+                        .border
+                        .bottom;
+                    out.push(border);
+                }
+                for child in &el.children {
+                    collect_pressable_borders(child, out);
+                }
+            }
+
+            let mut borders = Vec::new();
+            collect_pressable_borders(&body, &mut borders);
+            assert!(
+                borders.len() >= 2,
+                "expected at least two TableRow pressables"
+            );
+
+            let first_border = borders[0];
+            let last_border = borders[borders.len() - 1];
+
+            assert_eq!(
+                first_border,
+                Px(1.0),
+                "expected non-last row to keep border-bottom"
+            );
+            assert_eq!(
+                last_border,
+                Px(0.0),
+                "expected TableBody to clear the last row border-bottom (shadcn: [&_tr:last-child]:border-0)"
+            );
+        });
     }
 }
