@@ -30,7 +30,23 @@ This plan summarizes what is already landed and proposes the next, highest-lever
 
 ## Next steps (recommended order)
 
-### 1) Evidence hardening (P3)
+### 1) Motion alignment: `duration` semantics (P2)
+
+Goal: ensure carousel settle timing uses the same motion foundations as other shadcn/Radix-like
+surfaces (duration-based API, deterministic timeline, refresh-rate scaling, reduced-motion).
+
+- Replace the carousel-specific fixed-tick settle with a duration-driven transition driver:
+  - source: `ecosystem/fret-ui-kit/src/declarative/transition.rs`
+  - use `Duration` inputs and map via `ticks_60hz_for_duration(...)`
+  - keep deterministic behavior in tests/diags (fixed delta support)
+
+Exit criteria:
+
+- Carousel `duration` feels stable across 60/120/144Hz.
+- Reduced-motion disables settle animation (snaps instantly).
+- Existing carousel gates remain green (web-vs-fret layout + diag scripts).
+
+### 2) Evidence hardening (P3)
 
 Goal: turn the current alignment into stable, repeatable gates.
 
@@ -47,7 +63,7 @@ Exit criteria:
 - A minimal diag suite can be executed in one command and produces screenshots/bundles with stable
   `test_id` selectors.
 
-### 1.5) Close any remaining visual drift (UI gallery)
+### 2.5) Close any remaining visual drift (UI gallery)
 
 Goal: resolve any remaining shadcn docs mismatches found in the Carousel page demos.
 
@@ -56,7 +72,7 @@ Goal: resolve any remaining shadcn docs mismatches found in the Carousel page de
 - If vertical orientation layout drifts, prefer fixing recipe constraints over adding new
   layout-engine defaults.
 
-### 2) Shared snap utilities (P4, optional but likely valuable)
+### 3) Shared snap utilities (P4, optional but likely valuable)
 
 Goal: reduce duplicated “nearest snap point” math across components without conflating semantics.
 
@@ -74,7 +90,7 @@ Exit criteria:
 - At least one other component (likely Drawer) uses the shared helper without changing its public
   behavior.
 
-### 3) Carousel vs DnD gesture arbitration (P4, later)
+### 4) Carousel vs DnD gesture arbitration (P4, later)
 
 Goal: extend the current mouse-handle policy to touch-friendly recipes (long-press).
 
