@@ -30,12 +30,17 @@ Milestone design notes (implementation-oriented):
 - `docs/workstreams/fret-node-style-skinning-v1/m0-style-contracts-and-gates.md`
 - `docs/workstreams/fret-node-style-skinning-v1/m1-per-node-chrome-hints.md`
 - `docs/workstreams/fret-node-style-skinning-v1/m2-theme-presets.md`
+- `docs/workstreams/fret-node-style-skinning-v1/m3-blueprint-grade-styling.md`
 
 ## Current state (evidence anchors)
 
 - Skin surface: `ecosystem/fret-node/src/ui/skin.rs`
   - `NodeGraphSkin::revision()` invalidates paint caches (v1 is paint-only).
   - `NodeChromeHint` supports per-node header palette (`header_background`, `title_text`).
+  - `CanvasChromeHint` + `InteractionChromeHint` provide canvas/grid + interaction chrome overrides.
+- Built-in preset families (paint-only JSON → `NodeGraphSkin`):
+  - Data: `themes/node-graph-presets.v1.json`
+  - Loader + skin impl: `ecosystem/fret-node/src/ui/presets.rs`
 - Per-node header palette paints via the main node paint path:
   - `ecosystem/fret-node/src/ui/canvas/widget/paint_render_data/collect.rs`
   - `ecosystem/fret-node/src/ui/canvas/widget/paint_nodes/static_nodes.rs`
@@ -43,6 +48,12 @@ Milestone design notes (implementation-oriented):
 - Dashed wires are supported end-to-end using renderer-native dash:
   - Hint surface: `ecosystem/fret-node/src/ui/presenter.rs` (`EdgeRenderHint.dash`)
   - Path build + cache key: `ecosystem/fret-node/src/ui/canvas/paint.rs`
+  - Drag preview dash/color are skin-driven:
+    - `ecosystem/fret-node/src/ui/canvas/widget/paint_edges/main.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/paint_nodes/dynamic_from_geometry.rs`
+  - Grid + canvas chrome are skin-driven:
+    - `ecosystem/fret-node/src/ui/canvas/widget/paint_grid.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/paint_root/cached.rs`
 
 ## Contract notes (hard-to-change)
 

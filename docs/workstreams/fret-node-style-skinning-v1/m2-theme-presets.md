@@ -10,6 +10,15 @@ scope: ecosystem/fret-node (kit presets), ecosystem/fret-ui-kit / shadcn tokens
 This milestone turns the M1 mechanics into “product-level” outcomes: named presets and a clear,
 theme-first authoring workflow.
 
+Current implementation status (2026-02-27):
+
+- Built-in preset families are shipped as a paint-only JSON file and loaded via `NodeGraphSkin`:
+  - `themes/node-graph-presets.v1.json`
+  - `ecosystem/fret-node/src/ui/presets.rs` (`NodeGraphPresetSkinV1`)
+- Preset switching is runtime and paint-only (revision bumps to invalidate paint caches).
+- Theme-derived presets are still a follow-up (see “Next: theme integration”). The current presets
+  are explicitly hard-coded palettes intended to validate the skin surface and paint plumbing.
+
 ## Goals
 
 - Provide a “best default” that matches the host `ThemeSnapshot` (shadcn-aligned).
@@ -30,6 +39,15 @@ Add kit-only helpers (headless-safe, but UI-only code behind `fret-ui`):
 
 Contract: presets must be **pure functions** of `ThemeSnapshot` + optional tuning knobs.
 
+## Current API shape (in-tree, UI-only)
+
+The current preset surface is implemented directly in `ecosystem/fret-node` to validate the
+plumbing before extracting to a kit layer:
+
+- `NodeGraphPresetFamily::{WorkflowClean, SchematicContrast, GraphDark}`
+- `NodeGraphPresetSkinV1::new_builtin(...)` → `Arc<dyn NodeGraphSkin>`
+- `NodeGraphPresetSkinV1::{cycle,set_preset_family}` bumps `revision()` to invalidate paint caches.
+
 ## Theme token mapping guidance
 
 Use `ThemeSnapshot` tokens as the source of truth:
@@ -38,6 +56,16 @@ Use `ThemeSnapshot` tokens as the source of truth:
 - metrics: `metric.padding.*`, `metric.radius.*`, `metric.font.size`
 
 Do not “invent” hard-coded colors unless the preset explicitly opts out of theme colors.
+
+## Next: theme integration
+
+Once the preset switching UX is validated, migrate the preset authoring model from “hard-coded JSON
+palettes” to “theme-derived presets”:
+
+- Map `ThemeSnapshot` into a small “node-graph paint token bundle” (semantic, not raw colors).
+- Keep the skin surface paint-only (do not let presets change geometry-affecting metrics in v1).
+- Provide a thin compatibility layer to keep the built-in JSON presets as an opt-in debug baseline
+  (useful for screenshots/regressions and for non-theme-aligned demos).
 
 ## UX considerations (editor-grade)
 
