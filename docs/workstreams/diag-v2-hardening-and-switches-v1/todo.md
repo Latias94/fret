@@ -139,7 +139,8 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
   - [x] `runner_kind`, `runner_version`,
   - [x] optional `protocol_versions`/`schemas` hints for tooling.
 - [ ] Create `transport/` seam contract and ensure all FS vs WS differences are isolated there.
-- [ ] Add a “legacy usage” marker into `triage.json` / `ai.packet.json` when compat fallbacks were used.
+- [x] Add a “legacy usage” marker into `triage.json` / `ai.packet.json` when compat fallbacks were used.
+  - Evidence: `crates/fret-diag/src/triage_json.rs`, `crates/fret-diag/src/commands/ai_packet/budget.rs`
 
 ## P3: Deprecations + debt removal
 
