@@ -365,6 +365,97 @@ fn fret_custom_effect(_src: vec4<f32>, _uv: vec2<f32>, pos_px: vec2<f32>, _param
 }
 
 #[test]
+fn gpu_custom_effect_v2_rejects_non_filterable_input_format_by_falling_back() {
+    let ctx = match pollster::block_on(WgpuContext::new()) {
+        Ok(ctx) => ctx,
+        Err(_err) => return,
+    };
+
+    let mut renderer = Renderer::new(&ctx.adapter, &ctx.device);
+    renderer.set_intermediate_budget_bytes(u64::MAX);
+
+    // Create a non-filterable float format and register it as an ImageId. The CustomV2 ABI requires
+    // filterable sampled textures; the backend should deterministically fall back instead of
+    // triggering a wgpu validation error at bind group creation time.
+    let size = (1u32, 1u32);
+    let texture = ctx.device.create_texture(&wgpu::TextureDescriptor {
+        label: Some("effect_custom_v2_conformance non-filterable input"),
+        size: wgpu::Extent3d {
+            width: size.0,
+            height: size.1,
+            depth_or_array_layers: 1,
+        },
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D2,
+        format: wgpu::TextureFormat::Rgba32Float,
+        usage: wgpu::TextureUsages::TEXTURE_BINDING,
+        view_formats: &[],
+    });
+    let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+    let non_filterable = renderer.register_image(ImageDescriptor {
+        view,
+        size,
+        format: wgpu::TextureFormat::Rgba32Float,
+        color_space: ImageColorSpace::Linear,
+        alpha_mode: AlphaMode::Opaque,
+    });
+
+    let wgsl = r#"
+fn fret_custom_effect(_src: vec4<f32>, _uv: vec2<f32>, pos_px: vec2<f32>, _params: EffectParamsV1) -> vec4<f32> {
+  // If the input image is incompatible, the backend should bind the deterministic fallback
+  // (1x1 transparent black) rather than crashing.
+  return fret_sample_input_at_pos(pos_px);
+}
+"#;
+    let effect = renderer
+        .register_custom_effect_v2(CustomEffectDescriptorV2::wgsl_utf8(wgsl))
+        .expect("custom effect v2 registration must succeed on wgpu backends");
+
+    let bounds = Rect::new(Point::new(Px(3.0), Px(2.0)), Size::new(Px(18.0), Px(12.0)));
+    let size = (32u32, 24u32);
+
+    let mut scene = Scene::default();
+    scene.push(SceneOp::PushEffect {
+        bounds,
+        mode: EffectMode::FilterContent,
+        chain: EffectChain::from_steps(&[EffectStep::CustomV2 {
+            id: effect,
+            params: EffectParamsV1::ZERO,
+            max_sample_offset_px: Px(0.0),
+            input_image: Some(CustomEffectImageInputV1 {
+                image: non_filterable,
+                uv: UvRect::FULL,
+                sampling: ImageSamplingHint::Linear,
+            }),
+        }]),
+        quality: EffectQuality::Auto,
+    });
+    scene.push(SceneOp::Quad {
+        order: DrawOrder(0),
+        rect: bounds,
+        background: Paint::Solid(Color {
+            r: 1.0,
+            g: 1.0,
+            b: 1.0,
+            a: 1.0,
+        }),
+        border: Edges::all(Px(0.0)),
+        border_paint: Paint::Solid(Color::TRANSPARENT),
+        corner_radii: Default::default(),
+    });
+    scene.push(SceneOp::PopEffect);
+
+    let pixels = render_and_readback(&ctx, &mut renderer, &scene, size);
+    let inside = pixel_rgba(&pixels, size.0, 10, 10);
+    assert_eq!(
+        inside,
+        [0, 0, 0, 0],
+        "expected deterministic fallback sampling for incompatible input formats"
+    );
+}
+
+#[test]
 fn gpu_custom_effect_v2_compiles_and_runs_in_masked_path() {
     let ctx = match pollster::block_on(WgpuContext::new()) {
         Ok(ctx) => ctx,

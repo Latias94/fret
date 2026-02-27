@@ -848,7 +848,17 @@ pub(in super::super) fn record_custom_effect_v2_pass(
 
     let input_view = pass
         .input_image
-        .and_then(|id| exec.renderer.gpu_resources.image_view(id))
+        .and_then(|id| {
+            let view = exec.renderer.gpu_resources.image_view(id)?;
+            let format = exec.renderer.gpu_resources.image_format(id)?;
+            let f = exec.renderer.adapter.get_texture_format_features(format);
+            let ok_usage = f
+                .allowed_usages
+                .contains(wgpu::TextureUsages::TEXTURE_BINDING);
+            let ok_sample_type = format.sample_type(None, Some(exec.device.features()))
+                == Some(wgpu::TextureSampleType::Float { filterable: true });
+            (ok_usage && ok_sample_type).then_some(view)
+        })
         .unwrap_or(&exec.renderer.globals.custom_effect_input_fallback_view);
 
     let input_sampler = match pass.input_sampling {

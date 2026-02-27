@@ -461,6 +461,20 @@ impl fret_core::CustomEffectService for Renderer {
             return Err(fret_core::CustomEffectRegistrationError::Unsupported);
         }
 
+        // V2 requires a filterable sampled input texture (the user image input). Gate the feature
+        // on a conservative and widely supported format so apps can reliably probe support.
+        let fmt = wgpu::TextureFormat::Rgba8Unorm;
+        let f = self.adapter.get_texture_format_features(fmt);
+        if !f
+            .allowed_usages
+            .contains(wgpu::TextureUsages::TEXTURE_BINDING)
+            || !f
+                .flags
+                .contains(wgpu::TextureFormatFeatureFlags::FILTERABLE)
+        {
+            return Err(fret_core::CustomEffectRegistrationError::Unsupported);
+        }
+
         if desc.source.len() > MAX_CUSTOM_EFFECT_WGSL_BYTES {
             return Err(fret_core::CustomEffectRegistrationError::InvalidSource);
         }
