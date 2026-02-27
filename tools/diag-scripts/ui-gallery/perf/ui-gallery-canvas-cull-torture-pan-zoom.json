@@ -1,78 +1,135 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "steps": [
     {
-      "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-nav-canvas-cull-torture" }
+      "button": "left",
+      "target": {
+        "id": "ui-gallery-nav-canvas-cull-torture",
+        "kind": "test_id"
+      },
+      "type": "click"
     },
     {
-      "type": "wait_until",
       "predicate": {
         "kind": "focus_is",
-        "target": { "kind": "test_id", "id": "ui-gallery-nav-canvas-cull-torture" }
+        "target": {
+          "id": "ui-gallery-nav-canvas-cull-torture",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 60
+      "timeout_frames": 60,
+      "type": "wait_until"
     },
-    { "type": "press_key", "key": "enter" },
     {
-      "type": "wait_until",
+      "key": "enter",
+      "modifiers": {
+        "alt": false,
+        "ctrl": false,
+        "meta": false,
+        "shift": false
+      },
+      "repeat": false,
+      "type": "press_key"
+    },
+    {
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-canvas-cull-root" }
+        "target": {
+          "id": "ui-gallery-canvas-cull-root",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 240
-    },
-    { "type": "wait_frames", "n": 30 },
-    {
-      "type": "capture_bundle",
-      "label": "ui-gallery-canvas-cull-pan-zoom-before"
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
     {
-      "type": "capture_screenshot",
-      "label": "ui-gallery-canvas-cull-pan-zoom-before"
+      "n": 30,
+      "type": "wait_frames"
     },
     {
-      "type": "move_pointer",
-      "target": { "kind": "test_id", "id": "ui-gallery-canvas-cull-root" }
+      "label": "ui-gallery-canvas-cull-pan-zoom-before",
+      "type": "capture_bundle"
     },
     {
-      "type": "drag_pointer",
-      "target": { "kind": "test_id", "id": "ui-gallery-canvas-cull-root" },
+      "label": "ui-gallery-canvas-cull-pan-zoom-before",
+      "timeout_frames": 300,
+      "type": "capture_screenshot"
+    },
+    {
+      "target": {
+        "id": "ui-gallery-canvas-cull-root",
+        "kind": "test_id"
+      },
+      "type": "move_pointer"
+    },
+    {
       "button": "middle",
       "delta_x": 120.0,
       "delta_y": 80.0,
-      "steps": 10
+      "steps": 10,
+      "target": {
+        "id": "ui-gallery-canvas-cull-root",
+        "kind": "test_id"
+      },
+      "type": "drag_pointer"
     },
-    { "type": "wait_frames", "n": 5 },
     {
-      "type": "wheel",
-      "target": { "kind": "test_id", "id": "ui-gallery-canvas-cull-root" },
-      "delta_y": -240.0
+      "n": 5,
+      "type": "wait_frames"
     },
-    { "type": "wait_frames", "n": 5 },
     {
-      "type": "drag_pointer",
-      "target": { "kind": "test_id", "id": "ui-gallery-canvas-cull-root" },
+      "delta_x": 0.0,
+      "delta_y": -240.0,
+      "target": {
+        "id": "ui-gallery-canvas-cull-root",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 5,
+      "type": "wait_frames"
+    },
+    {
       "button": "middle",
       "delta_x": -360.0,
       "delta_y": -240.0,
-      "steps": 18
-    },
-    { "type": "wait_frames", "n": 5 },
-    {
-      "type": "wheel",
-      "target": { "kind": "test_id", "id": "ui-gallery-canvas-cull-root" },
-      "delta_y": 360.0
-    },
-    { "type": "wait_frames", "n": 5 },
-    {
-      "type": "capture_bundle",
-      "label": "ui-gallery-canvas-cull-pan-zoom-after"
+      "steps": 18,
+      "target": {
+        "id": "ui-gallery-canvas-cull-root",
+        "kind": "test_id"
+      },
+      "type": "drag_pointer"
     },
     {
-      "type": "capture_screenshot",
-      "label": "ui-gallery-canvas-cull-pan-zoom-after"
+      "n": 5,
+      "type": "wait_frames"
     },
-    { "type": "capture_bundle", "label": "ui-gallery-canvas-cull-pan-zoom" }
+    {
+      "delta_x": 0.0,
+      "delta_y": 360.0,
+      "target": {
+        "id": "ui-gallery-canvas-cull-root",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 5,
+      "type": "wait_frames"
+    },
+    {
+      "label": "ui-gallery-canvas-cull-pan-zoom-after",
+      "type": "capture_bundle"
+    },
+    {
+      "label": "ui-gallery-canvas-cull-pan-zoom-after",
+      "timeout_frames": 300,
+      "type": "capture_screenshot"
+    },
+    {
+      "label": "ui-gallery-canvas-cull-pan-zoom",
+      "type": "capture_bundle"
+    }
   ]
 }

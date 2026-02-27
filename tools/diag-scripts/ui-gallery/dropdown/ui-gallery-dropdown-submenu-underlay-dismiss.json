@@ -1,52 +1,92 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "steps": [
-    { "type": "press_key", "key": "escape" },
-    { "type": "wait_frames", "n": 2 },
     {
-      "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-overlay-reset" }
+      "key": "escape",
+      "modifiers": {
+        "alt": false,
+        "ctrl": false,
+        "meta": false,
+        "shift": false
+      },
+      "repeat": false,
+      "type": "press_key"
     },
-    { "type": "wait_frames", "n": 5 },
     {
-      "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-dropdown-trigger" }
+      "n": 2,
+      "type": "wait_frames"
     },
     {
-      "type": "wait_until",
+      "button": "left",
+      "target": {
+        "id": "ui-gallery-overlay-reset",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "n": 5,
+      "type": "wait_frames"
+    },
+    {
+      "button": "left",
+      "target": {
+        "id": "ui-gallery-dropdown-trigger",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-dropdown-item-more" }
+        "target": {
+          "id": "ui-gallery-dropdown-item-more",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 60
+      "timeout_frames": 60,
+      "type": "wait_until"
     },
     {
-      "type": "move_pointer",
-      "target": { "kind": "test_id", "id": "ui-gallery-dropdown-item-more" }
+      "target": {
+        "id": "ui-gallery-dropdown-item-more",
+        "kind": "test_id"
+      },
+      "type": "move_pointer"
     },
     {
-      "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-dropdown-submenu-item-nested" }
+        "target": {
+          "id": "ui-gallery-dropdown-submenu-item-nested",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 60
+      "timeout_frames": 60,
+      "type": "wait_until"
     },
     {
-      "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-overlay-underlay" }
+      "button": "left",
+      "target": {
+        "id": "ui-gallery-overlay-underlay",
+        "kind": "test_id"
+      },
+      "type": "click"
     },
     {
-      "type": "wait_until",
       "predicate": {
         "kind": "focus_is",
-        "target": { "kind": "test_id", "id": "ui-gallery-overlay-underlay" }
+        "target": {
+          "id": "ui-gallery-overlay-underlay",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 120
+      "timeout_frames": 120,
+      "type": "wait_until"
     },
     {
-      "type": "capture_bundle",
-      "label": "ui-gallery-dropdown-submenu-underlay-dismiss"
+      "label": "ui-gallery-dropdown-submenu-underlay-dismiss",
+      "type": "capture_bundle"
     }
   ]
 }

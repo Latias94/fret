@@ -3,6 +3,7 @@ use super::*;
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn run_suite_aux_script_must_pass(
     src: &PathBuf,
+    tool_launched: bool,
     child: &mut Option<LaunchedDemo>,
     use_devtools_ws: bool,
     connected_ws: Option<&ConnectedToolingTransport>,
@@ -36,54 +37,16 @@ pub(crate) fn run_suite_aux_script_must_pass(
     }
 
     let script_key = normalize_repo_relative_path(workspace_root, src);
-    let script_value: serde_json::Value =
-        serde_json::from_slice(&std::fs::read(src).map_err(|e| {
-            let err = e.to_string();
-            write_tooling_failure_script_result(
-                resolved_script_result_path,
-                "tooling.script.read_failed",
-                &err,
-                "tooling_error",
-                Some(script_key.clone()),
-            );
-            err
-        })?)
-        .map_err(|e| {
-            let err = e.to_string();
-            write_tooling_failure_script_result(
-                resolved_script_result_path,
-                "tooling.script.parse_failed",
-                &err,
-                "tooling_error",
-                Some(script_key.clone()),
-            );
-            err
-        })?;
-    let script_json =
-        crate::script_tooling::resolve_script_json_redirects_from_value(src, script_value)
-            .inspect_err(|err| {
-                write_tooling_failure_script_result(
-                    resolved_script_result_path,
-                    "tooling.script.redirect_failed",
-                    err,
-                    "tooling_error",
-                    Some(script_key.clone()),
-                );
-            })?
-            .value;
-    let (mut script_json, upgraded) =
-        crate::compat::script::upgrade_script_json_value_to_v2_if_needed(script_json).inspect_err(
-            |err| {
-                write_tooling_failure_script_result(
-                    resolved_script_result_path,
-                    "tooling.script.upgrade_failed",
-                    err,
-                    "tooling_error",
-                    Some(script_key.clone()),
-                );
-            },
-        )?;
-    crate::script_tooling::canonicalize_json_value(&mut script_json);
+    let (script_json, upgraded) = crate::script_execution::load_script_json_for_execution(
+        src,
+        crate::script_execution::ScriptLoadPolicy {
+            tool_launched,
+            write_failure: write_tooling_failure_script_result,
+            failure_note: Some(script_key.clone()),
+            include_stage_in_note: false,
+        },
+        resolved_script_result_path,
+    )?;
     if upgraded {
         eprintln!(
             "warning: script schema_version=1 detected; tooling upgraded to schema_version=2 for execution (source={})",

@@ -1,69 +1,123 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "steps": [
     {
-      "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-nav-virtual-list-torture" }
+      "button": "left",
+      "target": {
+        "id": "ui-gallery-nav-virtual-list-torture",
+        "kind": "test_id"
+      },
+      "type": "click"
     },
     {
-      "type": "wait_until",
       "predicate": {
         "kind": "focus_is",
-        "target": { "kind": "test_id", "id": "ui-gallery-nav-virtual-list-torture" }
+        "target": {
+          "id": "ui-gallery-nav-virtual-list-torture",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 60
+      "timeout_frames": 60,
+      "type": "wait_until"
     },
-    { "type": "press_key", "key": "enter" },
     {
-      "type": "wait_until",
+      "key": "enter",
+      "modifiers": {
+        "alt": false,
+        "ctrl": false,
+        "meta": false,
+        "shift": false
+      },
+      "repeat": false,
+      "type": "press_key"
+    },
+    {
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-virtual-list-root" }
+        "target": {
+          "id": "ui-gallery-virtual-list-root",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 240
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
     {
-      "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-virtual-list-jump-button" }
+      "button": "left",
+      "target": {
+        "id": "ui-gallery-virtual-list-jump-button",
+        "kind": "test_id"
+      },
+      "type": "click"
     },
     {
-      "type": "wait_until",
       "predicate": {
         "kind": "visible_in_window",
-        "target": { "kind": "test_id", "id": "ui-gallery-virtual-list-row-9000-label" }
+        "target": {
+          "id": "ui-gallery-virtual-list-row-9000-label",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 240
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
     {
-      "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-virtual-list-row-9000-edit" }
+      "button": "left",
+      "target": {
+        "id": "ui-gallery-virtual-list-row-9000-edit",
+        "kind": "test_id"
+      },
+      "type": "click"
     },
     {
-      "type": "wait_until",
       "predicate": {
         "kind": "visible_in_window",
-        "target": { "kind": "test_id", "id": "ui-gallery-virtual-list-edit-input" }
+        "target": {
+          "id": "ui-gallery-virtual-list-edit-input",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 120
+      "timeout_frames": 120,
+      "type": "wait_until"
     },
     {
-      "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-virtual-list-edit-input" }
-    },
-    { "type": "type_text", "text": " hello" },
-    { "type": "capture_bundle", "label": "ui-gallery-virtual-list-edit-9000" },
-    {
-      "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-virtual-list-bottom-button" }
+      "button": "left",
+      "target": {
+        "id": "ui-gallery-virtual-list-edit-input",
+        "kind": "test_id"
+      },
+      "type": "click"
     },
     {
-      "type": "wait_until",
+      "text": " hello",
+      "type": "type_text"
+    },
+    {
+      "label": "ui-gallery-virtual-list-edit-9000",
+      "type": "capture_bundle"
+    },
+    {
+      "button": "left",
+      "target": {
+        "id": "ui-gallery-virtual-list-bottom-button",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-virtual-list-row-9999-label" }
+        "target": {
+          "id": "ui-gallery-virtual-list-row-9999-label",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 240
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
-    { "type": "capture_bundle", "label": "ui-gallery-virtual-list-bottom" }
+    {
+      "label": "ui-gallery-virtual-list-bottom",
+      "type": "capture_bundle"
+    }
   ]
 }

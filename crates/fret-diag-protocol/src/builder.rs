@@ -149,6 +149,38 @@ impl ScriptV2Builder {
         })
     }
 
+    pub fn long_press(self, target: UiSelectorV1) -> Self {
+        self.push(UiActionStepV2::LongPress {
+            window: None,
+            pointer_kind: None,
+            target,
+            duration_ms: 500,
+            modifiers: None,
+        })
+    }
+
+    pub fn long_press_pen(self, target: UiSelectorV1) -> Self {
+        self.push(UiActionStepV2::LongPress {
+            window: None,
+            pointer_kind: Some(UiPointerKindV1::Pen),
+            target,
+            duration_ms: 500,
+            modifiers: None,
+        })
+    }
+
+    pub fn swipe(self, target: UiSelectorV1, delta_x: f32, delta_y: f32) -> Self {
+        self.push(UiActionStepV2::Swipe {
+            window: None,
+            pointer_kind: None,
+            target,
+            delta_x,
+            delta_y,
+            steps: 8,
+            modifiers: None,
+        })
+    }
+
     pub fn pinch(self, target: UiSelectorV1, delta: f32) -> Self {
         self.push(UiActionStepV2::Pinch {
             window: None,

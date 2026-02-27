@@ -322,6 +322,7 @@ Script tooling (no app required):
 - Upgrade legacy schema v1 → v2 (schema-only; does not rewrite v2 scripts):
   - `cargo run -p fretboard -- diag script upgrade .\\script.json --write`
   - `cargo run -p fretboard -- diag script upgrade .\\script.json --check`
+  - Note: tool-launched runs (`--launch` / `--reuse-launch`) reject `schema_version=1` scripts by default; upgrade first.
 - PowerShell note: `diag script validate|lint` accept globs and directories (the CLI expands them):
   - `cargo run -p fretboard -- diag script lint tools/diag-scripts/ui-gallery-select-*.json`
   - `cargo run -p fretboard -- diag script validate tools/diag-scripts`
@@ -709,6 +710,8 @@ Supported selectors (v1 MVP):
 
 - `click` (optional `button`: `left`/`right`/`middle`; default `left`; optional `pointer_kind`; schema v2 only: optional `window` target)
 - `tap` (schema v2 only; touch-first gesture; optional `pointer_kind`; default `touch`; optional `window` target; capability-gated behind `diag.gesture_tap`)
+- `long_press` (schema v2 only; touch-first gesture; optional `duration_ms` (default 500); optional `pointer_kind`; default `touch`; optional `window` target; capability-gated behind `diag.gesture_long_press`)
+- `swipe` (schema v2 only; touch-first gesture; `delta_x`, `delta_y` movement; optional `steps` (default 8); optional `pointer_kind`; default `touch`; optional `window` target; capability-gated behind `diag.gesture_swipe`)
 - `pinch` (schema v2 only; touch-first gesture; `delta` zoom amount (positive=in, negative=out); optional `steps` (default 8); optional `pointer_kind`; default `touch`; optional `window` target; capability-gated behind `diag.gesture_pinch`)
 - `move_pointer` (schema v2 only: optional `window` target)
 - `pointer_down` (schema v2 only; optional `window` target; starts a cross-step pointer session for "drag + key" flows)
@@ -1042,6 +1045,9 @@ Note:
   `python tools/check_diag_scripts_registry.py --write`).
   `fretboard diag run` accepts either an explicit path or a promoted `script_id` from this registry.
   For discoverability, use `fretboard diag list scripts` to print `script_id -> path` mappings.
+  To detect taxonomy/registry drift without grepping, use `fretboard diag doctor scripts` (read-only;
+  suggests repair commands like `migrate-script-library.py --apply --write-redirects` and
+  `check_diag_scripts_registry.py --write`). Use `--strict` to fail when promoted scripts drift back to schema v1.
   Prefer directory- and glob-based inputs (`--script-dir`, `--glob`) for ad-hoc runs, and avoid assuming scripts live
   only at the top-level. See: `docs/workstreams/diag-v2-hardening-and-switches-v1/README.md`.
 - Built-in suites are defined as curated directory inputs under `tools/diag-scripts/suites/<suite-name>/`.

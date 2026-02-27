@@ -251,7 +251,11 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
         // - dark: `dark:bg-destructive/60`
         let destructive_bg = match scheme {
             ShadcnColorScheme::Light => destructive.clone(),
-            ShadcnColorScheme::Dark => with_oklch_alpha(&destructive, 0.6)
+            // Note: CSS alpha blending is not perceptually identical across renderers.
+            // Our GPU pipeline blends in linear space, which can make `*/60` backgrounds appear
+            // slightly brighter than upstream web screenshots. Nudge the derived token darker so
+            // `text-white` remains legible and closer to shadcn docs.
+            ShadcnColorScheme::Dark => with_oklch_alpha(&destructive, 0.5)
                 .expect("shadcn new-york-v4 destructive token is oklch"),
         };
         colors.insert(
@@ -963,7 +967,7 @@ mod tests {
                 "expected destructive badge bg to match destructive in light scheme"
             );
 
-            let expected_destructive_dark_bg = with_oklch_alpha(&destructive_dark, 0.6)
+            let expected_destructive_dark_bg = with_oklch_alpha(&destructive_dark, 0.5)
                 .expect("shadcn new-york-v4 destructive token is oklch");
             assert_eq!(
                 cfg_dark
@@ -971,7 +975,7 @@ mod tests {
                     .get("component.button.destructive.bg")
                     .cloned(),
                 Some(expected_destructive_dark_bg.clone()),
-                "expected destructive button bg to match destructive/60 in dark scheme"
+                "expected destructive button bg to match destructive-derived dark token"
             );
             assert_eq!(
                 cfg_dark
@@ -979,7 +983,7 @@ mod tests {
                     .get("component.badge.destructive.bg")
                     .cloned(),
                 Some(expected_destructive_dark_bg),
-                "expected destructive badge bg to match destructive/60 in dark scheme"
+                "expected destructive badge bg to match destructive-derived dark token"
             );
 
             let outline_bg_light = cfg_light

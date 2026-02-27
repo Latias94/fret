@@ -6,6 +6,7 @@ pub(crate) mod artifacts;
 pub(crate) mod bundle_v2;
 pub(crate) mod config;
 pub(crate) mod doctor;
+pub(crate) mod doctor_scripts;
 pub(crate) mod hotspots;
 pub(crate) mod index;
 pub(crate) mod inspect;

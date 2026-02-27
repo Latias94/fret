@@ -197,6 +197,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
     let required_caps = scripts::compute_required_caps(&scripts);
 
     let mut overall_reason_code: Option<String> = None;
+    let tool_launched = launch.is_some();
 
     let prepared_launch = launch::prepare_repro_launch(
         &resolved_out_dir,
@@ -318,73 +319,24 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
         if overall_error.is_some() {
             break;
         }
-        let script_json_bytes = match std::fs::read(&src) {
-            Ok(v) => v,
-            Err(e) => {
-                let err = e.to_string();
-                overall_reason_code = Some("tooling.script.read_failed".to_string());
-                write_tooling_failure_script_result(
-                    &resolved_script_result_path,
-                    "tooling.script.read_failed",
-                    &err,
-                    "tooling_error",
-                    Some(src.display().to_string()),
-                );
-                overall_error = Some(err);
-                break;
-            }
-        };
-        let script_value: serde_json::Value = match serde_json::from_slice(&script_json_bytes) {
-            Ok(v) => v,
-            Err(e) => {
-                let err = e.to_string();
-                overall_reason_code = Some("tooling.script.parse_failed".to_string());
-                write_tooling_failure_script_result(
-                    &resolved_script_result_path,
-                    "tooling.script.parse_failed",
-                    &err,
-                    "tooling_error",
-                    Some(src.display().to_string()),
-                );
-                overall_error = Some(err);
-                break;
-            }
-        };
-        let script_json = match crate::script_tooling::resolve_script_json_redirects_from_value(
+        let (script_json, upgraded) = match crate::script_execution::load_script_json_for_execution(
             &src,
-            script_value,
+            crate::script_execution::ScriptLoadPolicy {
+                tool_launched,
+                write_failure: write_tooling_failure_script_result,
+                failure_note: Some(src.display().to_string()),
+                include_stage_in_note: false,
+            },
+            &resolved_script_result_path,
         ) {
-            Ok(v) => v.value,
+            Ok(v) => v,
             Err(err) => {
-                overall_reason_code = Some("tooling.script.redirect_failed".to_string());
-                write_tooling_failure_script_result(
-                    &resolved_script_result_path,
-                    "tooling.script.redirect_failed",
-                    &err,
-                    "tooling_error",
-                    Some(src.display().to_string()),
-                );
+                overall_reason_code = util::read_tooling_reason_code(&resolved_script_result_path)
+                    .or_else(|| Some("tooling.script.load_failed".to_string()));
                 overall_error = Some(err);
                 break;
             }
         };
-        let (mut script_json, upgraded) =
-            match crate::compat::script::upgrade_script_json_value_to_v2_if_needed(script_json) {
-                Ok(v) => v,
-                Err(err) => {
-                    overall_reason_code = Some("tooling.script.upgrade_failed".to_string());
-                    write_tooling_failure_script_result(
-                        &resolved_script_result_path,
-                        "tooling.script.upgrade_failed",
-                        &err,
-                        "tooling_error",
-                        Some(src.display().to_string()),
-                    );
-                    overall_error = Some(err);
-                    break;
-                }
-            };
-        crate::script_tooling::canonicalize_json_value(&mut script_json);
         if upgraded {
             eprintln!(
                 "warning: script schema_version=1 detected; tooling upgraded to schema_version=2 for execution (source={})",

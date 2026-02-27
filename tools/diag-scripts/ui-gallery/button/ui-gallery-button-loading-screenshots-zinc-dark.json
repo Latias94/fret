@@ -52,7 +52,7 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-button" }
+        "target": { "kind": "test_id", "id": "ui-gallery-page-button" }
       },
       "timeout_frames": 600
     },
@@ -62,7 +62,7 @@
       "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
       "target": {
         "kind": "test_id",
-        "id": "ui-gallery-button-loading-destructive"
+        "id": "ui-gallery-button-loading-submit"
       },
       "delta_y": -120.0,
       "require_fully_within_container": true,

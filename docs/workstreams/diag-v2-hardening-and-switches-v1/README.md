@@ -97,7 +97,7 @@ required, inconsistent semantics, or transport divergence). Each item includes e
 
 6) Script library layout is flat; discoverability and ownership do not scale
 
-- Why it matters: as scripts accumulate, a single `tools/diag-scripts/` folder becomes hard to navigate, review, and
+- Why it matters: as scripts accumulate, a single `tools/diag-scripts/` folder becomes hard to navigate, review, and maintain.
 - Status (2026-02-27): **mostly closed for “flat root”**. Canonical scripts are moved into a taxonomy with redirect
   stubs, and CI checks prevent new canonical scripts from landing back in `tools/diag-scripts/*.json`.
   A minimal, generated registry exists at `tools/diag-scripts/index.json` (scope: scripts reachable from in-tree suites
@@ -105,7 +105,32 @@ required, inconsistent semantics, or transport divergence). Each item includes e
 - Evidence:
   - built-in suites are curated directory inputs via redirect stubs: `tools/diag-scripts/suites/` and
     `crates/fret-diag/src/diag_suite_scripts.rs`
-  - some suites/helpers still hard-code individual script paths: `crates/fret-diag/src/diag_suite.rs`
+  - `diag suite` no longer hard-codes script file lists; specialized harness suites are also directory-driven via
+    `tools/diag-scripts/suites/<suite-name>/`: `crates/fret-diag/src/diag_suite.rs`
+
+7) `diag perf <suite-name>` suite expansion drift risk (duplicate lists)
+
+- Why it matters: perf suite expansion and perf baseline seed policy both depend on “what scripts are in the suite”.
+  Duplicating suite lists creates silent inconsistencies (different scripts, different ordering, different keys).
+- Status (2026-02-27): **closed**. `diag perf` now expands suite names through the shared
+  `perf_seed_policy::scripts_for_perf_suite_name` helper.
+- Evidence:
+  - perf entrypoint: `crates/fret-diag/src/diag_perf.rs`
+  - shared suite list: `crates/fret-diag/src/perf_seed_policy.rs`
+
+8) Pointer kind (“mouse/touch/pen”) is supported, but needs a single canonical doc section
+
+- Why it matters: for automation/debugging, “works with mouse” is not equivalent to “works with touch” (hover, capture,
+  gesture recognizers, focus semantics, scroll/wheel behavior). Scripts should be able to express intent, and tooling
+  should capability-gate + surface evidence of the effective pointer type.
+- Status (2026-02-27): **supported end-to-end**. Script steps can carry optional `pointer_kind`, tooling infers required
+  capabilities, runtime synthesizes events with the right `pointer_type`, and bundles surface a `primary_pointer_type`.
+- Evidence:
+  - protocol: `crates/fret-diag-protocol/src/lib.rs` (`UiPointerKindV1` + `pointer_kind` fields on steps)
+  - capability inference: `crates/fret-diag/src/script_tooling.rs`
+  - runtime event synthesis + labels: `ecosystem/fret-bootstrap/src/ui_diagnostics/input_event_synthesis.rs`,
+    `ecosystem/fret-bootstrap/src/ui_diagnostics/labels.rs`
+  - runtime script execution: `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_pointer.rs`
 
 ## Goals
 
@@ -133,6 +158,51 @@ Compatibility must be explicit and removable:
 - isolate “legacy bundle/script readers” behind `compat/` modules,
 - isolate filesystem vs WS differences behind `transport/` and `artifact_store/`,
 - ensure failures always produce a local `script.result.json` with stable `reason_code` (tooling-side too).
+
+## Compatibility inventory (snapshot)
+
+This section is a “what still exists” checklist. It is intentionally explicit so we can remove compat paths without
+accidentally breaking day-to-day debugging.
+
+### Capabilities
+
+- **Legacy capability aliases (tooling-side):** tooling maps un-namespaced runner capabilities (e.g. `script_v2`) to
+  namespaced `diag.*` (see `crates/fret-diag/src/compat/mod.rs`).
+- **Legacy control-plane capabilities (DevTools WS):** WS session descriptors may include un-namespaced control-plane
+  caps (`inspect`, `pick`, `scripts`, `bundles`) alongside namespaced `devtools.*` (see
+  `ecosystem/fret-bootstrap/src/ui_diagnostics_ws_bridge.rs`).
+
+Exit plan:
+
+1) Stop advertising un-namespaced control-plane caps once downstream tooling no longer relies on them.
+2) Remove `compat::normalize_capability` mappings once all runners advertise only `diag.*`.
+
+### Script schema v1
+
+- **Tooling auto-upgrade (manual-only):** tooling can upgrade `schema_version=1` scripts to schema v2 on execution
+  (`crates/fret-diag/src/compat/script.rs`). This keeps old scripts runnable when iterating manually.
+- **Tool-launched runs are v2-only:** when using `--launch` / `--reuse-launch`, tooling rejects schema v1 scripts
+  (requires an explicit `diag script upgrade --write` migration).
+- **Runtime gating:** runtime can reject schema v1 scripts when `allow_script_schema_v1=false` (tooling writes this
+  explicitly for `--launch` runs via the config file).
+
+Exit plan (fearless):
+
+1) Ensure in-repo committed scripts are schema v2 only (except `script_redirect` stubs).
+2) Add a CI gate that fails if canonical scripts regress to schema v1.
+3) Keep manual upgrade available (`diag script normalize`) but stop auto-upgrading for tool-launched runs.
+
+### Bundle schema + artifact views
+
+- **Schema sniffing:** tooling sniffs bundle schema versions from a bounded JSON prefix (to avoid loading large JSON)
+  and records compat markers (see `crates/fret-diag/src/compat/bundle.rs`, `crates/fret-diag/src/triage_json.rs`).
+- **Legacy views:** per-run directories may include `bundle.json` and/or `bundle.schema2.json` as compatibility views,
+  with sidecars as accelerators (see `docs/workstreams/diag-v2-hardening-and-switches-v1/per-run-layout.md`).
+
+Exit plan:
+
+1) Prefer manifest + sidecars for all tooling flows.
+2) Stop materializing/writing `bundle.json` unless explicitly requested (`diag pack` / share flows should not require it).
 
 ## Non-goals
 

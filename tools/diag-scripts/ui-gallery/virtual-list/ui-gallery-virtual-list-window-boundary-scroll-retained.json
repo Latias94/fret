@@ -1,89 +1,354 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "steps": [
     {
-      "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-nav-virtual-list-torture" }
+      "button": "left",
+      "target": {
+        "id": "ui-gallery-nav-virtual-list-torture",
+        "kind": "test_id"
+      },
+      "type": "click"
     },
     {
-      "type": "wait_until",
       "predicate": {
         "kind": "focus_is",
-        "target": { "kind": "test_id", "id": "ui-gallery-nav-virtual-list-torture" }
+        "target": {
+          "id": "ui-gallery-nav-virtual-list-torture",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 60
+      "timeout_frames": 60,
+      "type": "wait_until"
     },
-    { "type": "press_key", "key": "enter" },
     {
-      "type": "wait_until",
+      "key": "enter",
+      "modifiers": {
+        "alt": false,
+        "ctrl": false,
+        "meta": false,
+        "shift": false
+      },
+      "repeat": false,
+      "type": "press_key"
+    },
+    {
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-virtual-list-root" }
+        "target": {
+          "id": "ui-gallery-virtual-list-root",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 240
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
     {
-      "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-virtual-list-row-0-label" }
+        "target": {
+          "id": "ui-gallery-virtual-list-row-0-label",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 240
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
     {
-      "type": "move_pointer",
-      "target": { "kind": "test_id", "id": "ui-gallery-virtual-list-row-0-label" }
+      "target": {
+        "id": "ui-gallery-virtual-list-row-0-label",
+        "kind": "test_id"
+      },
+      "type": "move_pointer"
     },
-
-    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-virtual-list-root" }, "delta_y": 120.0 },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-virtual-list-root" }, "delta_y": 120.0 },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-virtual-list-root" }, "delta_y": 120.0 },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-virtual-list-root" }, "delta_y": 120.0 },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-virtual-list-root" }, "delta_y": 120.0 },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-virtual-list-root" }, "delta_y": 120.0 },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-virtual-list-root" }, "delta_y": 120.0 },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-virtual-list-root" }, "delta_y": 120.0 },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-virtual-list-root" }, "delta_y": 120.0 },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-virtual-list-root" }, "delta_y": 120.0 },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-virtual-list-root" }, "delta_y": 120.0 },
-    { "type": "wait_frames", "n": 5 },
-
-    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-virtual-list-root" }, "delta_y": -120.0 },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-virtual-list-root" }, "delta_y": -120.0 },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-virtual-list-root" }, "delta_y": -120.0 },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-virtual-list-root" }, "delta_y": -120.0 },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-virtual-list-root" }, "delta_y": -120.0 },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-virtual-list-root" }, "delta_y": -120.0 },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-virtual-list-root" }, "delta_y": -120.0 },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-virtual-list-root" }, "delta_y": -120.0 },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-virtual-list-root" }, "delta_y": -120.0 },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-virtual-list-root" }, "delta_y": -120.0 },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-virtual-list-root" }, "delta_y": -120.0 },
-    { "type": "wait_frames", "n": 5 },
-
     {
-      "type": "capture_bundle",
-      "label": "ui-gallery-virtual-list-window-boundary-scroll-retained"
+      "delta_x": 0.0,
+      "delta_y": 120.0,
+      "target": {
+        "id": "ui-gallery-virtual-list-root",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "delta_x": 0.0,
+      "delta_y": 120.0,
+      "target": {
+        "id": "ui-gallery-virtual-list-root",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "delta_x": 0.0,
+      "delta_y": 120.0,
+      "target": {
+        "id": "ui-gallery-virtual-list-root",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "delta_x": 0.0,
+      "delta_y": 120.0,
+      "target": {
+        "id": "ui-gallery-virtual-list-root",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "delta_x": 0.0,
+      "delta_y": 120.0,
+      "target": {
+        "id": "ui-gallery-virtual-list-root",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "delta_x": 0.0,
+      "delta_y": 120.0,
+      "target": {
+        "id": "ui-gallery-virtual-list-root",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "delta_x": 0.0,
+      "delta_y": 120.0,
+      "target": {
+        "id": "ui-gallery-virtual-list-root",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "delta_x": 0.0,
+      "delta_y": 120.0,
+      "target": {
+        "id": "ui-gallery-virtual-list-root",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "delta_x": 0.0,
+      "delta_y": 120.0,
+      "target": {
+        "id": "ui-gallery-virtual-list-root",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "delta_x": 0.0,
+      "delta_y": 120.0,
+      "target": {
+        "id": "ui-gallery-virtual-list-root",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "delta_x": 0.0,
+      "delta_y": 120.0,
+      "target": {
+        "id": "ui-gallery-virtual-list-root",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 5,
+      "type": "wait_frames"
+    },
+    {
+      "delta_x": 0.0,
+      "delta_y": -120.0,
+      "target": {
+        "id": "ui-gallery-virtual-list-root",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "delta_x": 0.0,
+      "delta_y": -120.0,
+      "target": {
+        "id": "ui-gallery-virtual-list-root",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "delta_x": 0.0,
+      "delta_y": -120.0,
+      "target": {
+        "id": "ui-gallery-virtual-list-root",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "delta_x": 0.0,
+      "delta_y": -120.0,
+      "target": {
+        "id": "ui-gallery-virtual-list-root",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "delta_x": 0.0,
+      "delta_y": -120.0,
+      "target": {
+        "id": "ui-gallery-virtual-list-root",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "delta_x": 0.0,
+      "delta_y": -120.0,
+      "target": {
+        "id": "ui-gallery-virtual-list-root",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "delta_x": 0.0,
+      "delta_y": -120.0,
+      "target": {
+        "id": "ui-gallery-virtual-list-root",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "delta_x": 0.0,
+      "delta_y": -120.0,
+      "target": {
+        "id": "ui-gallery-virtual-list-root",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "delta_x": 0.0,
+      "delta_y": -120.0,
+      "target": {
+        "id": "ui-gallery-virtual-list-root",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "delta_x": 0.0,
+      "delta_y": -120.0,
+      "target": {
+        "id": "ui-gallery-virtual-list-root",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "delta_x": 0.0,
+      "delta_y": -120.0,
+      "target": {
+        "id": "ui-gallery-virtual-list-root",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 5,
+      "type": "wait_frames"
+    },
+    {
+      "label": "ui-gallery-virtual-list-window-boundary-scroll-retained",
+      "type": "capture_bundle"
     }
   ]
 }
