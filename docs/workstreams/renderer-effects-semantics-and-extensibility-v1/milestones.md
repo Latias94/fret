@@ -79,14 +79,17 @@ Exit criteria:
    - `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-abi-wgpu-mvp.md`
    - `crates/fret-render-wgpu/tests/effect_custom_v1_conformance.rs`
 
-## M5 — CustomV2 ceiling bump (planned)
+## M5 — CustomV2 ceiling bump
 
 Exit criteria:
 
-- The CustomV2 “one extra input” story is locked (with rationale and capability gating):
+- [x] The CustomV2 “one extra input” story is locked (with rationale and capability gating):
   - Decision ADR: `docs/adr/0300-custom-effect-v2-user-image-input.md`
   - Workstream: `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-v2/README.md`
-- A versioned ABI exists with explicit cost model + deterministic degradation rules.
-- Conformance tests cover the extra input and chain padding semantics.
+- [x] A versioned ABI exists with deterministic degradation rules and capability gating (wgpu backend).
+- [x] Conformance tests cover the extra input and scissor/mask semantics.
+- [x] At least one demo/harness uses CustomV2 with a stable `fretboard diag` script gate.
+- [ ] Optional follow-up: extract a “recipe” crate into ecosystem once the authoring patterns stabilize.
 - Evidence:
   - `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-v2/README.md`
+  - `crates/fret-render-wgpu/tests/effect_custom_v2_conformance.rs`

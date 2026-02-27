@@ -134,9 +134,10 @@ This TODO is ordered by implementation priority (P0 first), and is designed to b
         then encode once to `Rgba8Unorm` / `Bgra8Unorm`.
   - Rationale: avoid the extra unorm quantization step in linear space for display-referred non-sRGB outputs.
 
-- [ ] CustomV2 ceiling bump (bounded):
-  - [ ] Lock the “one extra input” story (chosen: single user image input via `ImageId`):
+- [x] CustomV2 ceiling bump (bounded):
+  - [x] Lock the “one extra input” story (chosen: single user image input via `ImageId`):
     - `docs/adr/0300-custom-effect-v2-user-image-input.md`
     - `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-v2/README.md`
-  - [ ] Add versioned ABI + capability discovery + conformance.
-  - Plan: `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-v2/README.md`
+  - [x] Versioned ABI + capability discovery + conformance exist (wgpu backend).
+  - Follow-ups: demo-oriented authoring templates + WebGPU/wasm runtime story tracked under
+    `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-v2/README.md`.

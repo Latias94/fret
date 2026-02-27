@@ -36,6 +36,26 @@ for extending the renderer’s effect semantics without turning the backend into
   - some combinations (non-sRGB 8-bit output + explicit output transfer) can introduce an extra
     quantization step in linear space.
 
+## Wasm/WebGPU compatibility notes (CustomV2 focus)
+
+- **WGSL validation needs a WebGPU/Tint backstop**:
+  - native validation via Naga is necessary but not sufficient for wasm, because the browser WebGPU
+    implementation validates WGSL via Tint.
+  - Guardrail: `crates/fret-render-wgpu/src/renderer/tests.rs` includes stitched CustomV1/V2 WGSL modules
+    in both `shaders_validate_for_webgpu` (Naga/WebGPU rules) and the optional browser
+    `wasm-webgpu-tests` Tint compile gate.
+- **Ensure Naga WGSL parsing is available on wasm32 builds**:
+  - Custom effect registration parses and validates stitched WGSL via `naga::front::wgsl`.
+  - `fret-render-wgpu` must enable `naga`'s `wgsl-in` feature so wasm32 builds can compile.
+  - Evidence: `crates/fret-render-wgpu/Cargo.toml`.
+- **Capability gating is conservative and likely portable**:
+  - `RendererCapabilities.custom_effect_v2_user_image` is based on `Rgba8Unorm` being filterable and usable
+    as a sampled texture, which should hold on most WebGPU adapters.
+  - Apps should still treat this as a runtime probe and fall back to CustomV1/no-op deterministically.
+- **Not related, but worth remembering**:
+  - WebGPU `ExternalTexture` import is currently reported as unsupported on wasm32 in
+    `crates/fret-render-wgpu/src/capabilities.rs` (wgpu web backend limitation as of wgpu 28).
+
 ## Landable next steps (recommended)
 
 P1 — Quality and maintainability:
@@ -55,6 +75,15 @@ P1 — Quality and maintainability:
   Done (initial): moved effect shaders (blit + explicit sRGB encode, drop shadow, dither, noise) into
   `crates/fret-render-wgpu/src/renderer/pipelines/wgsl/*.wgsl` and `include_str!()` them from `shaders.rs`.
   Anchor: `crates/fret-render-wgpu/src/renderer/shaders.rs`.
+
+P1 — Visual correctness:
+
+- Rounded-rect edge coverage should not “thin out” at corners (a common artifact when AA width is derived from
+  `fwidth` for diagonals and when border coverage is computed by subtracting two AA-ed shapes).
+  - Fix: use an isotropic gradient AA estimate for SDF coverage and compute border coverage via multiplication
+    (`alpha_outer * (1 - alpha_inner)`).
+  - Evidence: `crates/fret-render-wgpu/src/renderer/shaders.rs`.
+  - Regression harness: `tools/diag-scripts/liquid-glass-custom-v2-corners-screenshot.json`.
 
 P1/P2 — Diagnostics:
 

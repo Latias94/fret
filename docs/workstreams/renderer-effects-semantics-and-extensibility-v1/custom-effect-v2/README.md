@@ -101,12 +101,19 @@ Done (evidence anchors):
 - Conformance: `crates/fret-render-wgpu/tests/effect_custom_v2_conformance.rs`.
 - Ecosystem helper: `ecosystem/fret-ui-kit/src/custom_effects.rs` (`CustomEffectProgramV2`).
 - Demo: `apps/fret-examples/src/custom_effect_v2_demo.rs` (run via `cargo run -p fret-demo -- custom_effect_v2_demo`).
+- Liquid glass demo + scripted diagnostics: `apps/fret-examples/src/liquid_glass_demo.rs`,
+  `tools/diag-scripts/liquid-glass-custom-v2-corners-screenshot.json`,
+  `tools/diag-scripts/liquid-glass-lens-corners-screenshots.json`.
+- WebGPU/WGSL guardrails: `crates/fret-render-wgpu/src/renderer/tests.rs` (`shaders_validate_for_webgpu` and the
+  optional browser `wasm-webgpu-tests` Tint compile guardrail).
 
 Pending / follow-ups:
 
-- Capability discovery: expose whether the current backend supports CustomV2 (so apps can pick
-  `CustomV1` or no-op).
-- Web backend story: define how/when CustomV2 is supported in WebGPU and how it degrades in wasm.
+- Demo-oriented authoring templates: keep a few “copy/paste” examples in `apps/fret-examples/` that show
+  how to register a CustomV2 program, pass an `ImageId` input, and tune parameters.
+  (Intentionally not shipping ecosystem recipes as part of this workstream.)
+- WebGPU/wasm story: confirm which adapters report `custom_effect_v2_user_image`, and keep deterministic fallback
+  paths (unsupported backend, incompatible input formats) visible in diagnostics.
 
 ## References
 

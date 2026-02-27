@@ -21,22 +21,33 @@ Constraints:
 
 ## P1 — Versioned ABI and capability discovery
 
-- [ ] Define `CustomEffectDescriptorV2` + `EffectStep::CustomV2 { ... }` shape.
-- [ ] Extend renderer capabilities to report supported custom effect shapes.
+- [x] Define `CustomEffectDescriptorV2` + `EffectStep::CustomV2 { ... }` shape.
+  - Evidence: `crates/fret-core/src/effects.rs`, `crates/fret-core/src/scene/mod.rs`.
+- [x] Extend renderer capabilities to report supported custom effect shapes.
+  - Evidence: `crates/fret-render-wgpu/src/capabilities.rs` (`RendererCapabilities.custom_effect_v2_user_image`).
 - [ ] Add plan reporting fields (shape + pass count + scratch usage summary).
+  - Note: current plan reporting covers effect pass counts and degradation; it does not yet emit a per-effect ABI shape
+    summary for custom effects.
 
 ## P2 — Implementation and conformance
 
-- [ ] Implement v2 registry + pipeline/cache key generation bump (similar to CustomV1).
-- [ ] Add conformance tests:
+- [x] Implement v2 registry + pipeline/cache key generation bump (similar to CustomV1).
+  - Evidence: `crates/fret-render-wgpu/src/renderer/services.rs`,
+    `crates/fret-render-wgpu/src/renderer/pipelines/custom_effect.rs`,
+    `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs`.
+- [x] Add conformance tests:
   - effect reads user texture deterministically under scissor,
   - chain padding + clip coverage semantics remain correct,
   - deterministic degradation paths under budget exhaustion.
+  - Evidence: `crates/fret-render-wgpu/tests/effect_custom_v2_conformance.rs`.
+- [x] Extend WebGPU/WGSL guardrails to cover stitched CustomV1/V2 modules (not just built-in shaders).
+  - Evidence: `crates/fret-render-wgpu/src/renderer/tests.rs`.
 
 ## P3 — Ecosystem authoring ergonomics
 
-- [ ] Provide `fret-ui-kit` helper(s) for registering and caching CustomV2 programs.
-- [ ] Provide “recipe templates” for:
-  - acrylic (blur + tint + grain),
-  - cyberpunk postprocess (scanlines + chromatic + vignette),
-  - glass highlight overlay (separate chrome layer, not in the postprocess shader).
+- [x] Provide `fret-ui-kit` helper(s) for registering and caching CustomV2 programs.
+  - Evidence: `ecosystem/fret-ui-kit/src/custom_effects.rs` (`CustomEffectProgramV2`).
+- [ ] Provide demo-oriented “authoring templates” (in `apps/fret-examples/`), not ecosystem recipes:
+  - an identity/starter CustomV2 (register + params + input image),
+  - a LUT color grade example,
+  - a simple “glass chrome” highlight driven by a normal/noise map input.
