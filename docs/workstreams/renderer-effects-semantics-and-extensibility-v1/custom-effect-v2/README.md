@@ -123,6 +123,10 @@ Done (evidence anchors):
   - Purpose: a parameter validation harness for CustomV2 authoring (sampling, `UvRect`, blur radius/downsample,
     strength/tint, mode/quality, rounded clips).
   - Keys: `V` toggles the lens surface, `R` resets the controls.
+- Web demo (LUT template): `apps/fret-examples/src/custom_effect_v2_lut_web_demo.rs` (run via
+  `apps/fret-demo-web` with `?demo=custom_effect_v2_lut_web_demo`).
+  - Purpose: show a minimal LUT color grade effect where the v2 input image is a data texture
+    (`ImageColorSpace::Linear`) encoded as a 3D LUT in 2D.
 - Liquid glass demo + scripted diagnostics: `apps/fret-examples/src/liquid_glass_demo.rs`,
   `tools/diag-scripts/liquid-glass-custom-v2-corners-screenshot.json`,
   `tools/diag-scripts/liquid-glass-lens-corners-screenshots.json`.
