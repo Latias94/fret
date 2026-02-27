@@ -64,6 +64,8 @@ Usage:
   fretboard diag poke [--trigger-path <path>] [--dir <dir>] [--label <label>] [--max-snapshots <n>] [--wait] [--record-run] [--run-id <id>]
   fretboard diag latest [--dir <dir>]
   fretboard diag list scripts [--contains <needle>] [--all] [--top <n>] [--case-sensitive] [--json]
+  fretboard diag doctor [<bundle_dir|bundle.json|bundle.schema2.json>] [--check|--strict] [--fix|--fix-dry-run] [--fix-schema2] [--json]
+  fretboard diag doctor scripts [--max-examples <n>] [--json]
   fretboard diag trace <bundle_dir|bundle.json|bundle.schema2.json> [--trace-out <path>]
   fretboard diag pack [<bundle_dir|bundle.json|bundle.schema2.json>] [--dir <dir>] [--pack-out <path>] [--ai-packet] [--ai-only] [--include-all] [--include-root-artifacts] [--include-triage] [--include-screenshots]
   fretboard diag triage <bundle_dir|bundle.json|bundle.schema2.json> [--top <n>] [--sort <key>] [--warmup-frames <n>] [--json] [--out <path>]

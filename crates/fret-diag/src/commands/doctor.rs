@@ -357,6 +357,10 @@ pub(crate) fn cmd_doctor(
         return Err("--pack is only supported with `diag run`".to_string());
     }
 
+    if rest.first().is_some_and(|s| s == "scripts") {
+        return super::doctor_scripts::cmd_doctor_scripts(&rest[1..], workspace_root, stats_json);
+    }
+
     let mut fix_bundle_json: bool = false;
     let mut fix_schema2: bool = false;
     let mut fix_sidecars: bool = false;

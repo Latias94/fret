@@ -83,6 +83,9 @@ Tip (maintenance):
 
 3) Validate closures:
 
+- Tooling-side health check (bounded, read-only; no Python required):
+  - `cargo run -p fretboard -- diag doctor scripts`
+
 - Taxonomy drift check (for already-migrated areas):
   - `python tools/diag-scripts/migrate-script-library.py --check-root`
   - (optional) for incremental adoption, scope it:
