@@ -41,6 +41,17 @@ fn fret_custom_effect(tex: vec4<f32>, uv: vec2<f32>, pos_px: vec2<f32>, params: 
 }
 "#;
 
+#[allow(dead_code)]
+const CUSTOM_EFFECT_DERIVATIVES_SMOKE_WGSL: &str = r#"
+fn fret_custom_effect(tex: vec4<f32>, uv: vec2<f32>, pos_px: vec2<f32>, params: EffectParamsV1) -> vec4<f32> {
+  // WebGPU/Tint requires derivatives to be used from uniform control flow.
+  // This shader ensures the *host* custom effect fragment shaders do not guard the custom effect call
+  // behind non-uniform bounds checks or early returns.
+  let d = fwidth(pos_px.x);
+  return tex + vec4<f32>(0.0, 0.0, 0.0, 0.0) * d;
+}
+"#;
+
 #[test]
 fn shaders_parse_as_wgsl() {
     let quad_src = quad_shader_source();
@@ -251,6 +262,12 @@ mod webgpu_tint_guardrail {
             custom_effect_v2_masked_shader_source(CUSTOM_EFFECT_IDENTITY_WGSL);
         let custom_effect_v2_mask_src =
             custom_effect_v2_mask_shader_source(CUSTOM_EFFECT_IDENTITY_WGSL);
+        let custom_effect_v2_unmasked_derivatives_src =
+            custom_effect_v2_unmasked_shader_source(CUSTOM_EFFECT_DERIVATIVES_SMOKE_WGSL);
+        let custom_effect_v2_masked_derivatives_src =
+            custom_effect_v2_masked_shader_source(CUSTOM_EFFECT_DERIVATIVES_SMOKE_WGSL);
+        let custom_effect_v2_mask_derivatives_src =
+            custom_effect_v2_mask_shader_source(CUSTOM_EFFECT_DERIVATIVES_SMOKE_WGSL);
         for (name, src) in [
             ("viewport", VIEWPORT_SHADER),
             ("quad", quad_src.as_str()),
@@ -298,6 +315,18 @@ mod webgpu_tint_guardrail {
                 custom_effect_v2_masked_src.as_str(),
             ),
             ("custom_effect_v2_mask", custom_effect_v2_mask_src.as_str()),
+            (
+                "custom_effect_v2_derivatives",
+                custom_effect_v2_unmasked_derivatives_src.as_str(),
+            ),
+            (
+                "custom_effect_v2_masked_derivatives",
+                custom_effect_v2_masked_derivatives_src.as_str(),
+            ),
+            (
+                "custom_effect_v2_mask_derivatives",
+                custom_effect_v2_mask_derivatives_src.as_str(),
+            ),
         ] {
             device.push_error_scope(wgpu::ErrorFilter::Validation);
             let _module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
