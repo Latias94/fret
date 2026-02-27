@@ -51,6 +51,7 @@ Base UI `Tabs.Root` behavior.
 
 - Pass: Root/list/trigger tokens align with shadcn v4 defaults (`h-9`, `p-[3px]`, muted list chrome,
   active trigger background/border/shadow conventions).
+- Pass: `TabsContent` defaults to filling the remaining main-axis space (shadcn `flex-1` intent).
 - Pass: Trigger content remains rich (icons/badges/custom children).
 
 ## Known gaps
