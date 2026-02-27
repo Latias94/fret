@@ -2276,6 +2276,7 @@ dependencies = [
  "fret-core",
  "fret-diag-protocol",
  "fret-fonts",
+ "fret-launch-core",
  "fret-platform",
  "fret-platform-native",
  "fret-platform-web",
@@ -2311,6 +2312,20 @@ dependencies = [
  "windows-sys 0.61.2",
  "winit",
  "zbus",
+]
+
+[[package]]
+name = "fret-launch-core"
+version = "0.1.0"
+dependencies = [
+ "fret-app",
+ "fret-core",
+ "fret-render",
+ "fret-runtime",
+ "subsecond",
+ "thiserror 2.0.18",
+ "wgpu",
+ "winit",
 ]
 
 [[package]]

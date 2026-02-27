@@ -135,7 +135,8 @@ impl Default for WinitRunnerConfig {
 
 impl WinitRunnerConfig {
     #[cfg(not(target_arch = "wasm32"))]
-    pub(crate) fn main_window_spec(&self) -> super::WindowCreateSpec {
+    #[doc(hidden)]
+    pub fn main_window_spec(&self) -> super::WindowCreateSpec {
         let mut spec =
             super::WindowCreateSpec::new(self.main_window_title.clone(), self.main_window_size);
         if let Some(position) = self.main_window_position {
@@ -145,7 +146,8 @@ impl WinitRunnerConfig {
     }
 
     #[cfg(not(target_arch = "wasm32"))]
-    pub(crate) fn default_window_spec(&self) -> super::WindowCreateSpec {
+    #[doc(hidden)]
+    pub fn default_window_spec(&self) -> super::WindowCreateSpec {
         let mut spec = super::WindowCreateSpec::new(
             self.default_window_title.clone(),
             self.default_window_size,

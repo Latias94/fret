@@ -18,12 +18,18 @@ cargo-clippy = []
 dev-state = ["dep:serde", "dep:serde_json"]
 # Dev-only hotpatch integration (Subsecond). Feature-gated to avoid leaking dev tooling deps
 # into normal builds. See ADR 0105.
-hotpatch-subsecond = ["dep:serde_json", "dep:subsecond", "dep:tungstenite"]
+hotpatch-subsecond = [
+    "dep:serde_json",
+    "dep:subsecond",
+    "dep:tungstenite",
+    "fret-launch-core/hotpatch-subsecond",
+]
 diag-screenshots = ["dep:serde_json", "dep:image", "dep:fret-diag-protocol"]
 wasm-emoji-fonts = ["fret-fonts/emoji"]
 wasm-cjk-lite-fonts = ["fret-fonts/cjk-lite"]
 
 [dependencies]
+fret-launch-core = { version = "0.1.0", path = "../fret-launch-core" }
 fret-app = { version = "0.1.0", path = "../fret-app" }
 fret-core = { version = "0.1.0", path = "../fret-core" }
 fret-diag-protocol = { version = "0.1.0", path = "../fret-diag-protocol", optional = true }
