@@ -45,9 +45,9 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
   - [x] CI guardrail: `.github/workflows/consistency-checks.yml`
 - [ ] Prefer `--suite-prelude` for shared resets (`tools/diag-scripts/_prelude/*`) and document the convention.
 - [x] Document a migration runbook (dry-run plan → apply moves → validate suites) and link it from `docs/ui-diagnostics-and-scripted-tests.md`.
-- [ ] Decide path-move compatibility strategy:
+- [x] Decide path-move compatibility strategy:
   - [ ] registry-first (no moves) to decouple suites from filenames,
-  - [ ] then move to folders with either redirects (preferred) or “big bang” rewrites.
+  - [x] then move to folders with either redirects (preferred) or “big bang” rewrites.
 - [x] If using redirects, implement tooling redirect resolution:
   - [x] add `script_redirect` stub support with loop detection,
   - [x] ensure redirects never reach the runtime (tooling resolves before push).
