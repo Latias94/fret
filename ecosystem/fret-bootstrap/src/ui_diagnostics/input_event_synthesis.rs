@@ -297,6 +297,38 @@ fn pointer_move_with_internal_over_events(
     [move_event, over]
 }
 
+fn pointer_move_event_with_buttons_modifiers(
+    button: UiMouseButtonV1,
+    position: Point,
+    modifiers: Modifiers,
+    pointer_type: PointerType,
+) -> Event {
+    let pointer_id = PointerId(0);
+
+    let pressed_buttons = match button {
+        UiMouseButtonV1::Left => MouseButtons {
+            left: true,
+            ..Default::default()
+        },
+        UiMouseButtonV1::Right => MouseButtons {
+            right: true,
+            ..Default::default()
+        },
+        UiMouseButtonV1::Middle => MouseButtons {
+            middle: true,
+            ..Default::default()
+        },
+    };
+
+    Event::Pointer(PointerEvent::Move {
+        pointer_id,
+        position,
+        buttons: pressed_buttons,
+        modifiers,
+        pointer_type,
+    })
+}
+
 fn pointer_up_with_internal_drop_events(
     button: UiMouseButtonV1,
     position: Point,
