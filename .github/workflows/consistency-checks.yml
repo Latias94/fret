@@ -32,8 +32,8 @@ jobs:
       - name: Check stringly command parsing
         run: python3 tools/check_stringly_command_parsing.py
 
-      - name: Check diag script taxonomy drift (ui-gallery)
-        run: python3 tools/diag-scripts/migrate-script-library.py --check-root --include-prefix ui-gallery-
+      - name: Check diag script taxonomy drift
+        run: python3 tools/diag-scripts/migrate-script-library.py --check-root
 
       - name: Check generated icon artifacts
         run: python3 tools/check_icons_generation.py --pack all
