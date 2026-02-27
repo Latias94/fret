@@ -144,11 +144,11 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
     let mut suite_name: Option<String> = None;
     let scripts: Vec<PathBuf> = if rest.len() == 1 {
         let name = rest[0].as_str();
-        if let Some(paths) = perf_seed_policy::scripts_for_perf_suite_name(name) {
+        if let Some(paths) = perf_seed_policy::scripts_for_perf_suite_name(&workspace_root, name)? {
             suite_name = Some(name.to_string());
             paths
                 .iter()
-                .map(|p| resolve_path(&workspace_root, PathBuf::from(*p)))
+                .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
                 .collect()
         } else {
             vec![resolve_path(&workspace_root, PathBuf::from(name))]

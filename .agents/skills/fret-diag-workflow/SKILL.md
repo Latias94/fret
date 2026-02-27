@@ -14,6 +14,16 @@ description: "Runs and triages Fret UI diagnostics via `fretboard diag` (scripts
 
 Use `fret-ui-review` when the goal is an architecture/UX audit rather than producing repro artifacts.
 
+## Safety (bounded output)
+
+- Do **not** run `rg` on `bundle.json` (or on `target/fret-diag/**` / `.fret/diag/**`) — it can explode to tens of
+  thousands of lines.
+- Prefer bounded tooling queries:
+  - `fretboard diag meta ...`
+  - `fretboard diag query ...`
+  - `fretboard diag slice ...`
+- When you need repository-wide search, use `tools/rg-safe.ps1` (excludes diag artifact directories).
+
 ## When to use
 
 - A UI bug is hard to reproduce, flaky, or requires “human timing”.

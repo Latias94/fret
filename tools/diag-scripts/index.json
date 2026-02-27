@@ -64,11 +64,72 @@
       "target_hints": []
     },
     {
+      "id": "docking-arbitration-demo-nary-splitter-drag-perf-large-layout-steady",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-nary-splitter-drag-perf-large-layout-steady.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "perf-docking-arbitration-steady"
+      ],
+      "tags": [
+        "docking",
+        "nary",
+        "perf",
+        "steady"
+      ],
+      "target_hints": [
+        "Run with env: FRET_DOCK_ARB_PRESET=large",
+        "Optional: FRET_DOCK_ARB_NO_PERSIST=1 to avoid writing .fret/layout.json"
+      ]
+    },
+    {
+      "id": "docking-arbitration-demo-nary-tab-drag-hover-perf-large-layout-steady",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-nary-tab-drag-hover-perf-large-layout-steady.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "perf-docking-arbitration-steady"
+      ],
+      "tags": [
+        "docking",
+        "nary",
+        "perf",
+        "steady"
+      ],
+      "target_hints": [
+        "Run with env: FRET_DOCK_ARB_PRESET=large",
+        "Recommended: FRET_DOCK_ARB_DISALLOW_DROP_TARGETS=1 (avoid layout mutation on drop)",
+        "Optional: FRET_DOCK_ARB_NO_PERSIST=1 to avoid writing .fret/layout.json"
+      ]
+    },
+    {
       "id": "docking-demo-split-toggle-retarget-fixed-frame-delta",
       "path": "tools/diag-scripts/docking/demo/docking-demo-split-toggle-retarget-fixed-frame-delta.json",
       "required_capabilities": [],
       "suite_memberships": [
         "docking-motion-pilot"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "extras-marquee-steady",
+      "path": "tools/diag-scripts/extras/extras-marquee-steady.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "perf-extras-marquee-steady"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "liquid-glass-backdrop-warp-steady",
+      "path": "tools/diag-scripts/renderer/effects/liquid-glass-backdrop-warp-steady.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "perf-liquid-glass-backdrop-warp-steady"
       ],
       "tags": [],
       "target_hints": []
@@ -378,6 +439,26 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-chrome-torture-steady",
+      "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-chrome-torture-steady.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "perf-ui-gallery-complex-steady"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-chrome-torture-typical",
+      "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-chrome-torture-typical.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "perf-ui-gallery-complex-typical"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-code-editor-a11y-composition-baseline",
       "path": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-a11y-composition-baseline.json",
       "required_capabilities": [],
@@ -458,6 +539,16 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-code-editor-torture-autoscroll-steady",
+      "path": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-autoscroll-steady.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "perf-ui-gallery-complex-steady"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-baseline",
       "path": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-baseline.json",
       "required_capabilities": [],
@@ -519,6 +610,16 @@
       "suite_memberships": [
         "ui-gallery",
         "ui-gallery-code-editor"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-code-editor-torture-idle-typical",
+      "path": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-idle-typical.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "perf-ui-gallery-complex-typical"
       ],
       "tags": [],
       "target_hints": []
@@ -618,6 +719,16 @@
       "suite_memberships": [
         "ui-gallery",
         "ui-gallery-code-editor"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-code-editor-window-resize-drag-jitter-steady",
+      "path": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-window-resize-drag-jitter-steady.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "perf-ui-code-editor-resize-probes"
       ],
       "tags": [],
       "target_hints": []
@@ -937,6 +1048,7 @@
       "path": "tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-right-click.json",
       "required_capabilities": [],
       "suite_memberships": [
+        "perf-ui-gallery",
         "ui-gallery"
       ],
       "tags": [],
@@ -947,6 +1059,7 @@
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-context-menu-right-click-steady.json",
       "required_capabilities": [],
       "suite_memberships": [
+        "perf-ui-gallery-steady",
         "ui-gallery-overlay-steady"
       ],
       "tags": [],
@@ -1184,6 +1297,7 @@
       "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-dialog-escape-focus-restore.json",
       "required_capabilities": [],
       "suite_memberships": [
+        "perf-ui-gallery",
         "ui-gallery",
         "ui-gallery-shadcn-conformance"
       ],
@@ -1195,6 +1309,7 @@
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-dialog-escape-focus-restore-steady.json",
       "required_capabilities": [],
       "suite_memberships": [
+        "perf-ui-gallery-steady",
         "ui-gallery-overlay-steady"
       ],
       "tags": [],
@@ -1225,6 +1340,7 @@
       "path": "tools/diag-scripts/ui-gallery/dropdown/ui-gallery-dropdown-open-select.json",
       "required_capabilities": [],
       "suite_memberships": [
+        "perf-ui-gallery",
         "ui-gallery",
         "ui-gallery-shadcn-conformance"
       ],
@@ -1236,6 +1352,7 @@
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-dropdown-open-select-steady.json",
       "required_capabilities": [],
       "suite_memberships": [
+        "perf-ui-gallery-steady",
         "ui-gallery-overlay-steady"
       ],
       "tags": [],
@@ -1384,6 +1501,16 @@
       "suite_memberships": [
         "ui-gallery",
         "ui-gallery-layout"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-hover-layout-torture-steady",
+      "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-hover-layout-torture-steady.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "perf-ui-gallery-steady"
       ],
       "tags": [],
       "target_hints": []
@@ -1737,7 +1864,18 @@
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-material3-tabs-switch-perf.json",
       "required_capabilities": [],
       "suite_memberships": [
+        "perf-ui-gallery",
         "ui-gallery"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-material3-tabs-switch-perf-steady",
+      "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-material3-tabs-switch-perf-steady.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "perf-ui-gallery-steady"
       ],
       "tags": [],
       "target_hints": []
@@ -1747,7 +1885,18 @@
       "path": "tools/diag-scripts/ui-gallery/menubar/ui-gallery-menubar-keyboard-nav.json",
       "required_capabilities": [],
       "suite_memberships": [
+        "perf-ui-gallery",
         "ui-gallery"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-menubar-keyboard-nav-steady",
+      "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-menubar-keyboard-nav-steady.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "perf-ui-gallery-steady"
       ],
       "tags": [],
       "target_hints": []
@@ -1820,6 +1969,7 @@
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-overlay-torture.json",
       "required_capabilities": [],
       "suite_memberships": [
+        "perf-ui-gallery",
         "ui-gallery",
         "ui-gallery-cache005"
       ],
@@ -1831,7 +1981,19 @@
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-overlay-torture-steady.json",
       "required_capabilities": [],
       "suite_memberships": [
+        "perf-ui-gallery-complex-steady",
+        "perf-ui-gallery-steady",
         "ui-gallery-overlay-steady"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-overlay-torture-typical",
+      "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-overlay-torture-typical.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "perf-ui-gallery-complex-typical"
       ],
       "tags": [],
       "target_hints": []
@@ -2493,7 +2655,18 @@
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-view-cache-toggle-perf.json",
       "required_capabilities": [],
       "suite_memberships": [
+        "perf-ui-gallery",
         "ui-gallery"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-view-cache-toggle-perf-steady",
+      "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-view-cache-toggle-perf-steady.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "perf-ui-gallery-steady"
       ],
       "tags": [],
       "target_hints": []
@@ -2513,7 +2686,29 @@
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-virtual-list-torture.json",
       "required_capabilities": [],
       "suite_memberships": [
+        "perf-ui-gallery",
         "ui-gallery"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-virtual-list-torture-steady",
+      "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-virtual-list-torture-steady.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "perf-ui-gallery-complex-steady",
+        "perf-ui-gallery-steady"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-virtual-list-torture-typical",
+      "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-virtual-list-torture-typical.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "perf-ui-gallery-complex-typical"
       ],
       "tags": [],
       "target_hints": []
@@ -2537,6 +2732,37 @@
         "ui-gallery-retained-measured",
         "ui-gallery-virt-retained",
         "ui-gallery-virt-retained-measured"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-window-resize-drag-jitter-steady",
+      "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-drag-jitter-steady.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "perf-ui-resize-probes"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-window-resize-stress",
+      "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "perf-ui-gallery"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-window-resize-stress-steady",
+      "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress-steady.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "perf-ui-gallery-steady",
+        "perf-ui-resize-probes"
       ],
       "tags": [],
       "target_hints": []

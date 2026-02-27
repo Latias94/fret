@@ -112,11 +112,16 @@ required, inconsistent semantics, or transport divergence). Each item includes e
 
 - Why it matters: perf suite expansion and perf baseline seed policy both depend on “what scripts are in the suite”.
   Duplicating suite lists creates silent inconsistencies (different scripts, different ordering, different keys).
-- Status (2026-02-27): **closed**. `diag perf` now expands suite names through the shared
-  `perf_seed_policy::scripts_for_perf_suite_name` helper.
+- Status (2026-02-27): **closed**. `diag perf` suite expansion and perf baseline seed scoping are both derived from the
+  **promoted script registry** (`tools/diag-scripts/index.json`) via `suite_memberships`.
+  - Perf suites are expressed as curated `script_redirect` stubs under `tools/diag-scripts/suites/perf-*/`.
+  - Tooling resolves redirects and generates the promoted registry; Rust-side suite name expansion reads the registry and
+    selects scripts by suite membership, with deterministic ordering.
 - Evidence:
   - perf entrypoint: `crates/fret-diag/src/diag_perf.rs`
-  - shared suite list: `crates/fret-diag/src/perf_seed_policy.rs`
+  - suite membership resolver: `crates/fret-diag/src/perf_seed_policy.rs`
+  - promoted registry: `tools/diag-scripts/index.json`, `tools/check_diag_scripts_registry.py`
+  - suites: `tools/diag-scripts/suites/perf-*/`
 
 8) Pointer kind (“mouse/touch/pen”) is supported, but needs a single canonical doc section
 

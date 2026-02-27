@@ -37,7 +37,9 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
 - [x] Decide whether suites should be:
   - [ ] registry-driven (preferred), or
   - [x] glob-driven (acceptable for small sets, but brittle long-term). (v1 decision: curated suite directories + redirect stubs)
-- [x] As an intermediate step, switch built-in suites from hard-coded file lists to directory inputs (deterministic `**/*.json` expansion).
+- [x] As an intermediate step, switch built-in suite definitions away from Rust-side hard-coded file lists:
+  - `diag suite`: curated suite directories + deterministic `**/*.json` expansion,
+  - `diag perf`: suite membership resolved via the promoted registry (`tools/diag-scripts/index.json` `suite_memberships`).
 - [x] De-duplicate `diag perf` suite script lists by using a single source of truth:
   - `perf_seed_policy::scripts_for_perf_suite_name` is now used by `diag perf` for suite name expansion.
 - [x] Move `diag suite` specialized harnesses off Rust-side hard-coded script lists:
