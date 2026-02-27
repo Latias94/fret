@@ -86,11 +86,12 @@ This is intentionally *not* "one snap model to rule them all". The goal is to sh
 headless helpers (e.g. nearest snap selection) across components that have snap-like behavior while
 keeping their higher-level semantics separate (Carousel vs Drawer vs Slider).
 
-- [ ] CAR-410 Inventory snap-like behaviors in-tree and classify them:
+- [x] CAR-410 Inventory snap-like behaviors in-tree and classify them:
   - Scroll/track snaps (Embla-like): Carousel
   - Drag-settle snap points (sheet-like): Drawer
   - Quantized value snaps (step/ticks): Slider / progress-like controls
   - Pixel snapping (rendering): `snap_to_device_pixels` (out of scope)
+  - Evidence: `docs/workstreams/carousel-embla-fearless-refactor-v1/snap-inventory.md`
 - [ ] CAR-420 Add a tiny headless snap-point helper surface (if duplication persists):
   - candidates: `nearest_point`, `next_prev_point`, `projected_release_target`
   - keep it independent of `fret-dnd` and UI runtime types
