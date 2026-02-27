@@ -1306,7 +1306,6 @@ impl MenubarMenuEntries {
             let radius = MetricRef::radius(Radius::Sm).resolve(&theme);
             let ring = decl_style::focus_ring(&theme, radius);
             let bg_hover = theme.color_token("accent");
-            let bg_open = alpha_mul(bg_hover, 0.35);
             let fg = theme.color_token("foreground");
             let fg_muted = theme.color_token("muted-foreground");
 
@@ -1455,10 +1454,10 @@ impl MenubarMenuEntries {
                 states.set(WidgetState::Open, is_open);
 
                 let trigger_bg_prop = WidgetStateProperty::new(None)
-                    .when(WidgetStates::HOVERED, Some(alpha_mul(bg_hover, 0.8)))
-                    .when(WidgetStates::ACTIVE, Some(alpha_mul(bg_hover, 0.8)))
-                    .when(WidgetStates::FOCUSED, Some(alpha_mul(bg_hover, 0.8)))
-                    .when(WidgetStates::OPEN, Some(bg_open))
+                    .when(WidgetStates::HOVERED, Some(bg_hover))
+                    .when(WidgetStates::ACTIVE, Some(bg_hover))
+                    .when(WidgetStates::FOCUSED, Some(bg_hover))
+                    .when(WidgetStates::OPEN, Some(bg_hover))
                     .when(WidgetStates::DISABLED, None);
 
                 let trigger_bg = *trigger_bg_prop.resolve(states);
