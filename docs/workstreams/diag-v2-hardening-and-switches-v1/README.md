@@ -100,7 +100,8 @@ required, inconsistent semantics, or transport divergence). Each item includes e
 - Why it matters: as scripts accumulate, a single `tools/diag-scripts/` folder becomes hard to navigate, review, and
 - Status (2026-02-27): **mostly closed for “flat root”**. Canonical scripts are moved into a taxonomy with redirect
   stubs, and CI checks prevent new canonical scripts from landing back in `tools/diag-scripts/*.json`.
-  Long-term work remains to reduce suite brittleness via a registry.
+  A minimal, generated registry exists at `tools/diag-scripts/index.json` (scope: scripts reachable from in-tree suites
+  + `_prelude`) and is validated in CI.
 - Evidence:
   - built-in suites are curated directory inputs via redirect stubs: `tools/diag-scripts/suites/` and
     `crates/fret-diag/src/diag_suite_scripts.rs`
@@ -276,16 +277,26 @@ Notes:
 - `diag suite` already supports directory inputs and expands `**/*.json` with deterministic ordering (sorted set),
   which makes folder-based suites a viable intermediate step before a full registry.
 
-#### Registry shape (draft)
+#### Registry shape (v1, generated)
 
-If we add `tools/diag-scripts/index.json`, keep it minimal and additive:
+`tools/diag-scripts/index.json` is generated (do not edit by hand) via:
+
+- `python tools/check_diag_scripts_registry.py --write`
+
+Design constraints (v1):
+
+- Scope is intentionally small: scripts reachable from in-tree suites plus `_prelude/*` (not the entire library).
+- IDs are path-independent by default (derived from file stem). If needed, a script may provide `meta.id` to override the
+  default and avoid collisions while still allowing fearless path moves.
+
+Fields:
 
 - `schema_version`
 - `scripts[]`:
-  - `id` (stable, dotted): e.g. `ui_gallery.dialog.escape_focus_restore`
+  - `id` (stable, path-independent): `meta.id` or file stem
   - `path` (repo-relative)
   - `tags[]` (small): e.g. `smoke`, `overlay`, `ime`, `perf`
-  - `suites[]` (optional): e.g. `ui-gallery`, `ui-gallery-text-ime`
+  - `suite_memberships[]` (optional): e.g. `ui-gallery`, `ui-gallery-text-ime`, `_prelude`
   - `required_capabilities[]` (optional; mirrors `meta.required_capabilities`)
   - `target_hints[]` (optional; mirrors script meta)
 

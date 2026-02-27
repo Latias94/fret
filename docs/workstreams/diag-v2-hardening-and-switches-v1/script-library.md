@@ -45,8 +45,9 @@ Today:
 
 Long-term:
 
-- prefer a registry (`tools/diag-scripts/index.json` or similar) so suite membership can be tag-driven and stable even as
-  filenames evolve,
+- a minimal, generated registry exists at `tools/diag-scripts/index.json` (v1 scope: scripts reachable from in-tree
+  suites + `_prelude`),
+- in the future, prefer making suite membership tag-driven via the registry so it stays stable even as filenames evolve,
 - keep directory/glob inputs as an escape hatch.
 
 ## Migration runbook (fearless refactor)
@@ -89,6 +90,8 @@ Tip (maintenance):
   - `cargo run -p fret-diag-scriptgen -- check-suite ui-gallery-select`
   - `cargo run -p fret-diag-scriptgen -- check-suite ui-gallery-combobox`
   - `cargo run -p fret-diag-scriptgen -- check-suite ui-gallery-text-ime`
+- Registry stays in sync:
+  - `python tools/check_diag_scripts_registry.py`
 
 4) Normalize scripts (stable diffs):
 

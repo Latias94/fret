@@ -1015,7 +1015,9 @@ For the UI gallery, run:
 
 Note:
 
-- The script library is expected to be modularized into subfolders over time (taxonomy + optional registry).
+- The script library is modularized via a taxonomy plus a minimal, generated registry for “promoted” scripts
+  (`tools/diag-scripts/index.json`, scope: suite-reachable + `_prelude`; regenerate via
+  `python tools/check_diag_scripts_registry.py --write`).
   Prefer directory- and glob-based inputs (`--script-dir`, `--glob`) for ad-hoc runs, and avoid assuming scripts live
   only at the top-level. See: `docs/workstreams/diag-v2-hardening-and-switches-v1/README.md`.
 - Built-in suites are defined as curated directory inputs under `tools/diag-scripts/suites/<suite-name>/`.

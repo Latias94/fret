@@ -59,11 +59,13 @@ Exit criteria:
 
 - `diag pack --ai-only` succeeds using manifest + sidecars (no `bundle.json` required).
 - `diag ai-packet` prefers manifest/chunks and records clip/drop decisions in `ai.packet.json`.
-- Script suites are not tightly coupled to flat filenames; either a registry is in use or suites are updated for the new folder layout.
+- Script suites are not tightly coupled to flat filenames; suites are directory + redirect-stub driven, and a minimal
+  generated registry exists for “promoted” scripts (suite-reachable + `_prelude`) to make drift visible and reviewable.
 
 Evidence anchors:
 
 - Tooling: `crates/fret-diag/src/commands/ai_packet.rs`, `crates/fret-diag/src/pack_zip.rs`
+- Scripts: `tools/diag-scripts/index.json`, `tools/check_diag_scripts_registry.py`
 - Workstream: `docs/workstreams/diag-ai-agent-debugging-v1.md`
 
 ## M3: Compatibility logic boxed (P2)

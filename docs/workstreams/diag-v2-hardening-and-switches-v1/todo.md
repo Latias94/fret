@@ -38,9 +38,11 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
   - [x] glob-driven (acceptable for small sets, but brittle long-term). (v1 decision: curated suite directories + redirect stubs)
 - [x] As an intermediate step, switch built-in suites from hard-coded file lists to directory inputs (deterministic `**/*.json` expansion).
 - [x] Ensure capability inference resolves `script_redirect` stubs (screenshots / required caps / env defaults).
-- [ ] Add a script registry file (draft):
-  - [ ] file: `tools/diag-scripts/index.json` (or `index.toml`)
-  - [ ] fields: `id`, `path`, `tags`, `target_hints`, `required_capabilities`, `suite_memberships`
+- [x] Add a script registry file (v1, generated; scope: suites + `_prelude`):
+  - [x] file: `tools/diag-scripts/index.json`
+  - [x] generator/check: `python tools/check_diag_scripts_registry.py [--write]` (stdlib-only; suitable for CI)
+  - [x] fields: `id`, `path`, `tags`, `target_hints`, `required_capabilities`, `suite_memberships`
+  - [x] CI guardrail: `.github/workflows/consistency-checks.yml`
 - [ ] Prefer `--suite-prelude` for shared resets (`tools/diag-scripts/_prelude/*`) and document the convention.
 - [x] Document a migration runbook (dry-run plan → apply moves → validate suites) and link it from `docs/ui-diagnostics-and-scripted-tests.md`.
 - [ ] Decide path-move compatibility strategy:
