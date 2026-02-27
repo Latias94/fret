@@ -1,14 +1,15 @@
 use std::sync::Arc;
+use std::time::Duration;
 
 use fret_core::{Edges, KeyCode, MouseButton, Point, Px, SemanticsRole};
 use fret_icons::ids;
-use fret_runtime::Model;
+use fret_runtime::{Effect, Model, TimerToken};
 use fret_ui::action::{ActionCx, ActivateReason, KeyDownCx, OnKeyDown, UiActionHost};
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, ElementKind, FlexProps, LayoutStyle, MainAlign,
-    PointerRegionProps, RenderTransformProps, SemanticsDecoration, VisualTransformProps,
+    AnyElement, ContainerProps, CrossAlign, ElementKind, FlexProps, HoverRegionProps, LayoutStyle,
+    MainAlign, PointerRegionProps, RenderTransformProps, SemanticsDecoration, VisualTransformProps,
 };
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
@@ -28,6 +29,49 @@ pub struct CarouselApiSnapshot {
     pub snap_count: usize,
     pub can_scroll_prev: bool,
     pub can_scroll_next: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CarouselAutoplayConfig {
+    pub delay: Duration,
+    pub stop_on_interaction: bool,
+    pub pause_on_hover: bool,
+    pub reset_on_hover_leave: bool,
+}
+
+impl Default for CarouselAutoplayConfig {
+    fn default() -> Self {
+        Self {
+            delay: Duration::from_millis(2000),
+            stop_on_interaction: true,
+            pause_on_hover: true,
+            reset_on_hover_leave: true,
+        }
+    }
+}
+
+impl CarouselAutoplayConfig {
+    pub fn new(delay: Duration) -> Self {
+        Self {
+            delay,
+            ..Default::default()
+        }
+    }
+
+    pub fn stop_on_interaction(mut self, stop_on_interaction: bool) -> Self {
+        self.stop_on_interaction = stop_on_interaction;
+        self
+    }
+
+    pub fn pause_on_hover(mut self, pause_on_hover: bool) -> Self {
+        self.pause_on_hover = pause_on_hover;
+        self
+    }
+
+    pub fn reset_on_hover_leave(mut self, reset_on_hover_leave: bool) -> Self {
+        self.reset_on_hover_leave = reset_on_hover_leave;
+        self
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -160,6 +204,7 @@ pub struct Carousel {
     options: CarouselOptions,
     drag_config: headless_carousel::CarouselDragConfig,
     api_snapshot: Option<Model<CarouselApiSnapshot>>,
+    autoplay: Option<CarouselAutoplayConfig>,
     test_id: Option<Arc<str>>,
 }
 
@@ -170,6 +215,9 @@ struct CarouselRuntime {
     settle_from: Px,
     settle_to: Px,
     settle_tick: u64,
+    autoplay_token: Option<TimerToken>,
+    autoplay_paused: bool,
+    autoplay_hovered: bool,
 }
 
 #[derive(Default)]
@@ -255,6 +303,7 @@ impl Carousel {
             options: CarouselOptions::default(),
             drag_config: headless_carousel::CarouselDragConfig::default(),
             api_snapshot: None,
+            autoplay: None,
             test_id: None,
         }
     }
@@ -329,6 +378,12 @@ impl Carousel {
         self
     }
 
+    /// Adds an Embla-style autoplay policy surface (shadcn `carousel-plugin` outcome).
+    pub fn autoplay(mut self, config: CarouselAutoplayConfig) -> Self {
+        self.autoplay = Some(config);
+        self
+    }
+
     pub fn track_start_neg_margin(mut self, margin: Space) -> Self {
         self.track_start_neg_margin = margin;
         self
@@ -355,6 +410,9 @@ impl Carousel {
             let theme = Theme::global(&*cx.app).snapshot();
             let orientation = self.orientation;
             let options = self.options;
+            let autoplay_cfg = self.autoplay;
+            let autoplay_stop_on_interaction =
+                autoplay_cfg.is_some_and(|cfg| cfg.stop_on_interaction);
             let root_test_id = self.test_id.unwrap_or_else(|| Arc::from("carousel"));
 
             let (
@@ -442,6 +500,7 @@ impl Carousel {
 
             let offset_for_down = offset_model.clone();
             let runtime_for_down = runtime_model.clone();
+            let autoplay_stop_for_down = autoplay_stop_on_interaction;
             let on_down: fret_ui::action::OnPointerDown = Arc::new(move |host, _cx, down| {
                 if down.button != MouseButton::Left {
                     return false;
@@ -449,6 +508,22 @@ impl Carousel {
                 if down.hit_is_text_input {
                     return false;
                 }
+
+                if autoplay_stop_for_down {
+                    let token = host
+                        .models_mut()
+                        .read(&runtime_for_down, |st| st.autoplay_token)
+                        .ok()
+                        .flatten();
+                    if let Some(token) = token {
+                        host.push_effect(Effect::CancelTimer { token });
+                    }
+                    let _ = host.models_mut().update(&runtime_for_down, |st| {
+                        st.autoplay_token = None;
+                        st.autoplay_paused = true;
+                    });
+                }
+
                 let start_offset = host
                     .models_mut()
                     .read(&offset_for_down, |v| *v)
@@ -665,8 +740,24 @@ impl Carousel {
             let runtime_for_prev = runtime_model.clone();
             let index_for_prev = index_model.clone();
             let snaps_for_prev = snaps_model.clone();
+            let autoplay_stop_for_prev = autoplay_stop_on_interaction;
             let on_prev: fret_ui::action::OnActivate = Arc::new(
                 move |host: &mut dyn UiActionHost, cx: ActionCx, _reason: ActivateReason| {
+                    if autoplay_stop_for_prev {
+                        let token = host
+                            .models_mut()
+                            .read(&runtime_for_prev, |st| st.autoplay_token)
+                            .ok()
+                            .flatten();
+                        if let Some(token) = token {
+                            host.push_effect(Effect::CancelTimer { token });
+                        }
+                        let _ = host.models_mut().update(&runtime_for_prev, |st| {
+                            st.autoplay_token = None;
+                            st.autoplay_paused = true;
+                        });
+                    }
+
                     let snaps: Arc<[Px]> = host
                         .models_mut()
                         .read(&snaps_for_prev, |v| v.clone())
@@ -713,8 +804,24 @@ impl Carousel {
             let runtime_for_next = runtime_model.clone();
             let index_for_next = index_model.clone();
             let snaps_for_next = snaps_model.clone();
+            let autoplay_stop_for_next = autoplay_stop_on_interaction;
             let on_next: fret_ui::action::OnActivate = Arc::new(
                 move |host: &mut dyn UiActionHost, cx: ActionCx, _reason: ActivateReason| {
+                    if autoplay_stop_for_next {
+                        let token = host
+                            .models_mut()
+                            .read(&runtime_for_next, |st| st.autoplay_token)
+                            .ok()
+                            .flatten();
+                        if let Some(token) = token {
+                            host.push_effect(Effect::CancelTimer { token });
+                        }
+                        let _ = host.models_mut().update(&runtime_for_next, |st| {
+                            st.autoplay_token = None;
+                            st.autoplay_paused = true;
+                        });
+                    }
+
                     let snaps: Arc<[Px]> = host
                         .models_mut()
                         .read(&snaps_for_next, |v| v.clone())
@@ -761,6 +868,7 @@ impl Carousel {
             let offset_for_key = offset_model.clone();
             let runtime_for_key = runtime_model.clone();
             let snaps_for_key = snaps_model.clone();
+            let autoplay_stop_for_key = autoplay_stop_on_interaction;
             let on_key_down: OnKeyDown = Arc::new(
                 move |host: &mut dyn fret_ui::action::UiFocusActionHost,
                       cx: ActionCx,
@@ -780,6 +888,21 @@ impl Carousel {
 
                     if down.key != prev_key && down.key != next_key {
                         return false;
+                    }
+
+                    if autoplay_stop_for_key {
+                        let token = host
+                            .models_mut()
+                            .read(&runtime_for_key, |st| st.autoplay_token)
+                            .ok()
+                            .flatten();
+                        if let Some(token) = token {
+                            host.push_effect(Effect::CancelTimer { token });
+                        }
+                        let _ = host.models_mut().update(&runtime_for_key, |st| {
+                            st.autoplay_token = None;
+                            st.autoplay_paused = true;
+                        });
                     }
 
                     let index: usize = host
@@ -1218,13 +1341,171 @@ impl Carousel {
                 move |_cx| vec![next_button],
             );
 
-            let root = cx.container(
-                fret_ui::element::ContainerProps {
+            let pointer_can_hover =
+                fret_ui_kit::declarative::primary_pointer_can_hover(cx, Invalidation::Layout, true);
+            let runtime_for_hover = runtime_model.clone();
+            let snaps_for_hover = snaps_model.clone();
+            let root = cx.hover_region(
+                HoverRegionProps {
                     layout: root_layout,
-                    ..Default::default()
                 },
-                move |_cx| vec![viewport, prev_wrapper, next_wrapper],
+                move |cx, hovered| {
+                    let hovered = hovered && pointer_can_hover;
+
+                    if let Some(cfg) = autoplay_cfg {
+                        let runtime_snapshot = cx
+                            .watch_model(&runtime_for_hover)
+                            .copied()
+                            .unwrap_or_default();
+
+                        let was_hovered = runtime_snapshot.autoplay_hovered;
+                        let left_hover = was_hovered && !hovered;
+                        let entered_hover = !was_hovered && hovered;
+
+                        if was_hovered != hovered {
+                            let _ = cx.app.models_mut().update(&runtime_for_hover, |st| {
+                                st.autoplay_hovered = hovered;
+                            });
+                        }
+
+                        if entered_hover && cfg.pause_on_hover {
+                            if let Some(token) = runtime_snapshot.autoplay_token {
+                                cx.app.push_effect(Effect::CancelTimer { token });
+                            }
+                            let _ = cx.app.models_mut().update(&runtime_for_hover, |st| {
+                                st.autoplay_token = None;
+                            });
+                        }
+
+                        if left_hover
+                            && cfg.reset_on_hover_leave
+                            && !runtime_snapshot.autoplay_paused
+                        {
+                            let snaps: Arc<[Px]> = cx
+                                .watch_model(&snaps_for_hover)
+                                .layout()
+                                .cloned()
+                                .unwrap_or_else(|| Arc::from(Vec::<Px>::new()));
+
+                            if snaps.len() > 1 && runtime_snapshot.autoplay_token.is_none() {
+                                let token = cx.app.next_timer_token();
+                                let _ = cx.app.models_mut().update(&runtime_for_hover, |st| {
+                                    st.autoplay_token = Some(token);
+                                });
+                                cx.app.push_effect(Effect::SetTimer {
+                                    window: Some(cx.window),
+                                    token,
+                                    after: cfg.delay,
+                                    repeat: None,
+                                });
+                            }
+                        }
+
+                        if !hovered
+                            && !runtime_snapshot.autoplay_paused
+                            && runtime_snapshot.autoplay_token.is_none()
+                        {
+                            let snaps: Arc<[Px]> = cx
+                                .watch_model(&snaps_for_hover)
+                                .layout()
+                                .cloned()
+                                .unwrap_or_else(|| Arc::from(Vec::<Px>::new()));
+
+                            if snaps.len() > 1 {
+                                let token = cx.app.next_timer_token();
+                                let _ = cx.app.models_mut().update(&runtime_for_hover, |st| {
+                                    st.autoplay_token = Some(token);
+                                });
+                                cx.app.push_effect(Effect::SetTimer {
+                                    window: Some(cx.window),
+                                    token,
+                                    after: cfg.delay,
+                                    repeat: None,
+                                });
+                            }
+                        }
+                    }
+
+                    vec![viewport, prev_wrapper, next_wrapper]
+                },
             );
+
+            if let Some(cfg) = autoplay_cfg {
+                let runtime_for_timer = runtime_model.clone();
+                let snaps_for_timer = snaps_model.clone();
+                let index_for_timer = index_model.clone();
+                let offset_for_timer = offset_model.clone();
+                cx.timer_on_timer_for(
+                    root.id,
+                    Arc::new(move |host, action_cx, token| {
+                        let runtime = host
+                            .models_mut()
+                            .read(&runtime_for_timer, |st| *st)
+                            .ok()
+                            .unwrap_or_default();
+                        if runtime.autoplay_token.as_ref() != Some(&token) {
+                            return false;
+                        }
+                        if runtime.autoplay_paused
+                            || (cfg.pause_on_hover && runtime.autoplay_hovered)
+                        {
+                            let _ = host.models_mut().update(&runtime_for_timer, |st| {
+                                st.autoplay_token = None;
+                            });
+                            return true;
+                        }
+
+                        let snaps: Arc<[Px]> = host
+                            .models_mut()
+                            .read(&snaps_for_timer, |v| v.clone())
+                            .ok()
+                            .unwrap_or_else(|| Arc::from(Vec::<Px>::new()));
+                        if snaps.len() <= 1 {
+                            let _ = host.models_mut().update(&runtime_for_timer, |st| {
+                                st.autoplay_token = None;
+                            });
+                            return true;
+                        }
+
+                        let index: usize = host
+                            .models_mut()
+                            .read(&index_for_timer, |v| *v)
+                            .ok()
+                            .unwrap_or(0);
+                        let target_index = if index + 1 < snaps.len() {
+                            index + 1
+                        } else {
+                            0
+                        };
+
+                        let target = snaps[target_index];
+                        let cur = host
+                            .models_mut()
+                            .read(&offset_for_timer, |v| *v)
+                            .ok()
+                            .unwrap_or(Px(0.0));
+                        let _ = host
+                            .models_mut()
+                            .update(&index_for_timer, |v| *v = target_index);
+                        let _ = host.models_mut().update(&runtime_for_timer, |st| {
+                            st.drag = headless_carousel::CarouselDragState::default();
+                            st.settling = true;
+                            st.settle_from = cur;
+                            st.settle_to = target;
+                            st.settle_tick = 0;
+                        });
+                        host.request_redraw(action_cx.window);
+
+                        host.push_effect(Effect::SetTimer {
+                            window: Some(action_cx.window),
+                            token,
+                            after: cfg.delay,
+                            repeat: None,
+                        });
+                        true
+                    }),
+                );
+            }
 
             cx.key_add_on_key_down_capture_for(root.id, on_key_down);
 
