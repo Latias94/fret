@@ -133,6 +133,11 @@ Done (evidence anchors):
   `cargo run -p fretboard -- dev web --open --demo custom_effect_v2_lut_web_demo`).
   - Purpose: show a minimal LUT color grade effect where the v2 input image is a data texture
     (`ImageColorSpace::Linear`) encoded as a 3D LUT in 2D.
+- Web demo (glass/chrome template): `apps/fret-examples/src/custom_effect_v2_glass_chrome_web_demo.rs` (run via
+  `apps/fret-demo-web` with `?demo=custom_effect_v2_glass_chrome_web_demo`, or via `fretboard` with
+  `cargo run -p fretboard -- dev web --open --demo custom_effect_v2_glass_chrome_web_demo`).
+  - Purpose: show a higher-ceiling CustomV2 effect that interprets the v2 input image as a normal/noise map and
+    generates a simple specular highlight (no derivatives required).
 - Liquid glass demo + scripted diagnostics: `apps/fret-examples/src/liquid_glass_demo.rs`,
   `tools/diag-scripts/liquid-glass-custom-v2-corners-screenshot.json`,
   `tools/diag-scripts/liquid-glass-lens-corners-screenshots.json`.

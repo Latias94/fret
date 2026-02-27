@@ -37,6 +37,8 @@ pub mod custom_effect_v1_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod custom_effect_v2_demo;
 #[cfg(target_arch = "wasm32")]
+pub mod custom_effect_v2_glass_chrome_web_demo;
+#[cfg(target_arch = "wasm32")]
 pub mod custom_effect_v2_identity_web_demo;
 #[cfg(target_arch = "wasm32")]
 pub mod custom_effect_v2_lut_web_demo;

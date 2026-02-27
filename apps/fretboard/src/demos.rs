@@ -54,6 +54,7 @@ fn web_demos() -> &'static [&'static str] {
         "custom_effect_v2_web_demo",
         "custom_effect_v2_lut_web_demo",
         "custom_effect_v2_identity_web_demo",
+        "custom_effect_v2_glass_chrome_web_demo",
         // External texture imports (web copy path; ADR 0234).
         "external_texture_imports_web_demo",
         "chart_demo",
