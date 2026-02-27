@@ -149,7 +149,7 @@ Definition of done:
 
 - [x] Extend pointer-driven steps with optional `pointer_kind` (default: `mouse`; supported: `touch`).
 - [x] Tooling infers and gates `diag.pointer_kind_touch` (fail fast with `check.capabilities.json` evidence).
-- [ ] Add at least one small script that demonstrates touch injection (or a deterministic “unsupported” failure) without
+- [x] Add at least one small script that demonstrates touch injection (or a deterministic “unsupported” failure) without
   relying on screenshots.
 - [ ] Define minimal gesture steps (tap/long-press/swipe/pinch) and gate them behind explicit capabilities.
 

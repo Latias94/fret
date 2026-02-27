@@ -1370,6 +1370,27 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-pointer-kind-touch-click-smoke",
+      "path": "tools/diag-scripts/ui-gallery/diag/ui-gallery-pointer-kind-touch-click-smoke.json",
+      "required_capabilities": [
+        "diag.pointer_kind_touch",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery"
+      ],
+      "tags": [
+        "diag",
+        "pointer-kind",
+        "touch",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Exercises touch pointer injection via pointer_kind=touch.",
+        "Fails fast when the runner does not advertise diag.pointer_kind_touch."
+      ]
+    },
+    {
       "id": "ui-gallery-popover-click-through-outside-press-focus-underlay",
       "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-popover-click-through-outside-press-focus-underlay.json",
       "required_capabilities": [],

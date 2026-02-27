@@ -44,7 +44,8 @@ Doc: `docs/workstreams/diag-extensibility-and-capabilities-v1/capabilities.md`
   - [x] decide protocol shape (optional `pointer_kind` on pointer-driven steps; default: `mouse`),
   - [x] implement runner support for `pointer_kind=touch` (and advertise `diag.pointer_kind_touch` when available),
   - [x] tooling infers required capability when a script requests `pointer_kind=touch`,
-  - [ ] add at least one small script/demo that exercises touch kind (and fails fast when unsupported).
+  - [x] add at least one small script/demo that exercises touch kind (and fails fast when unsupported):
+    - [x] `tools/diag-scripts/ui-gallery/diag/ui-gallery-pointer-kind-touch-click-smoke.json`
 
 ## Evidence & trace (debuggability surfaces)
 
