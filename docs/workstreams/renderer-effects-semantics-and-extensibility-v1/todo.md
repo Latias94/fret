@@ -87,10 +87,13 @@ This TODO is ordered by implementation priority (P0 first), and is designed to b
 These are common “editor-grade UI” needs that often become a long-tail source of visual mismatch
 if left unspecified.
 
-- [ ] Document the current path paint limitation and make it diagnosable:
+- [x] Document the current path paint limitation and make it diagnosable:
   - Today `SceneOp::Path` encoding degrades sampled materials to a solid base color.
   - Add a plan/perf reporting counter so it’s visible when this happens (similar to effect degradations).
   - Evidence (current behavior): `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/path.rs`.
+  - Evidence (perf counter): `crates/fret-render-wgpu/src/renderer/types.rs`,
+    `crates/fret-render-wgpu/src/renderer/render_scene/encode/state.rs`,
+    `crates/fret-render-wgpu/src/renderer/render_scene/perf_finalize.rs`.
 
 - [ ] Decide whether material/texture paints are supported for `SceneOp::Path` (wgpu backend):
   - If supported: extend the path pipeline bind group(s) to include the material catalog sampler/texture,
