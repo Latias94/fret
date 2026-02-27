@@ -1920,7 +1920,7 @@ impl PromptInputActionMenuTrigger {
     pub fn into_element_with_open<H: UiHost + 'static>(
         self,
         cx: &mut ElementContext<'_, H>,
-        open: Model<bool>,
+        _open: Model<bool>,
     ) -> AnyElement {
         let cfg = use_prompt_input_config(cx);
         let disabled = cfg
@@ -1928,15 +1928,9 @@ impl PromptInputActionMenuTrigger {
             .map(|c| c.disabled || c.loading)
             .unwrap_or(false);
 
-        let on_toggle: OnActivate = Arc::new(move |host, action_cx, _reason| {
-            let _ = host.models_mut().update(&open, |v| *v = !*v);
-            host.notify(action_cx);
-        });
-
         let mut btn = PromptInputButton::new("Prompt actions")
             .icon(IconId::new("lucide.plus"))
             .disabled(disabled)
-            .on_activate(on_toggle)
             .refine_layout(self.layout);
 
         if let Some(id) = self.test_id {

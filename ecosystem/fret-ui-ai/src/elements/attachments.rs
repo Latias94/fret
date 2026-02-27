@@ -49,6 +49,12 @@ fn resolve_border(theme: &Theme) -> Color {
         .unwrap_or_else(|| theme.color_token("border"))
 }
 
+fn resolve_accent_hover(theme: &Theme) -> Color {
+    theme
+        .color_by_key("color.menu.item.hover")
+        .unwrap_or_else(|| theme.color_token("accent"))
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AttachmentVariant {
     Grid,
@@ -401,7 +407,10 @@ impl Attachment {
         let variant = self.variant;
 
         let label = attachment_label_for(&data);
-        let hover_bg = alpha(resolve_muted(&theme), 0.5);
+        let hover_bg_inline = resolve_accent_hover(&theme);
+        // Upstream: `hover:bg-accent/50` for list rows.
+        let hover_bg_list = alpha(theme.color_token("accent"), 0.5);
+        let hover_fg_inline = theme.color_token("accent-foreground");
 
         let base_chrome = match variant {
             AttachmentVariant::Grid => ChromeRefinement::default().rounded(Radius::Lg),
@@ -486,9 +495,8 @@ impl Attachment {
 
                 let bg = match variant {
                     AttachmentVariant::Grid => None,
-                    AttachmentVariant::Inline | AttachmentVariant::List => {
-                        hovered.then_some(hover_bg)
-                    }
+                    AttachmentVariant::Inline => hovered.then_some(hover_bg_inline),
+                    AttachmentVariant::List => hovered.then_some(hover_bg_list),
                 };
 
                 let chrome_layout = match variant {
@@ -507,6 +515,10 @@ impl Attachment {
                 let info = AttachmentInfo::new(data.clone())
                     .variant(variant)
                     .show_media_type(show_media_type)
+                    .label_color_opt(
+                        (variant == AttachmentVariant::Inline && hovered)
+                            .then_some(hover_fg_inline),
+                    )
                     .test_id_opt(info_test_id.clone())
                     .into_element(cx);
 
@@ -706,6 +718,7 @@ pub struct AttachmentInfo {
     data: AttachmentData,
     variant: AttachmentVariant,
     show_media_type: bool,
+    label_color: Option<Color>,
     test_id: Option<Arc<str>>,
     layout: LayoutRefinement,
 }
@@ -716,6 +729,7 @@ impl AttachmentInfo {
             data,
             variant: AttachmentVariant::Grid,
             show_media_type: false,
+            label_color: None,
             test_id: None,
             layout: LayoutRefinement::default(),
         }
@@ -728,6 +742,16 @@ impl AttachmentInfo {
 
     pub fn show_media_type(mut self, show: bool) -> Self {
         self.show_media_type = show;
+        self
+    }
+
+    pub fn label_color(mut self, color: Color) -> Self {
+        self.label_color = Some(color);
+        self
+    }
+
+    fn label_color_opt(mut self, color: Option<Color>) -> Self {
+        self.label_color = color;
         self
     }
 
@@ -753,6 +777,9 @@ impl AttachmentInfo {
 
         let theme = Theme::global(&*cx.app).clone();
         let muted_fg = resolve_muted_fg(&theme);
+        let label_fg = self
+            .label_color
+            .unwrap_or_else(|| theme.color_token("foreground"));
 
         let label = attachment_label_for(&self.data);
         let label_el = cx.text_props(TextProps {
@@ -762,7 +789,7 @@ impl AttachmentInfo {
                 typography::TypographyPreset::control_ui(typography::UiTextSize::Sm)
                     .resolve(&theme),
             ),
-            color: Some(theme.color_token("foreground")),
+            color: Some(label_fg),
             wrap: TextWrap::None,
             overflow: TextOverflow::Ellipsis,
             align: fret_core::TextAlign::Start,
