@@ -71,6 +71,7 @@ In-tree surfaces:
 - [x] CAR-310 Add/refresh diagnostics scripts for reproducible regressions.
   - Evidence: `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-*.json`
     - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-screenshot.json`
+    - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-api-screenshot.json`
     - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-basic-screenshot.json`
     - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-sizes-screenshot.json`
     - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-spacing-screenshot.json`

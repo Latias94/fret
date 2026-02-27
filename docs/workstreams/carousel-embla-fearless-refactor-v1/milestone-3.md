@@ -13,9 +13,11 @@ diagnostics/scripts to catch regressions.
     - Sizes
     - Spacing
     - Orientation (Vertical)
+    - API (slide counter)
   - code samples are complete and copyable
 - Diagnostics gates (existing scripts may be updated):
   - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-screenshot.json`
+  - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-api-screenshot.json`
   - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-dnd-handle-gate.json`
   - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-dnd-long-press-gate.json`
   - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-basic-screenshot.json`

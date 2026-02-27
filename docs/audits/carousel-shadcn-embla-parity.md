@@ -40,6 +40,10 @@ that should be addressed at the correct layer (mechanism vs policy/recipes).
 - **Snap semantics (Embla-aligned, headless)**: deterministic snap model with Embla-like vocabulary:
   `align` (start/center/end), `containScroll` (none/keepSnaps/trimSnaps), `slidesToScroll`
   (fixed/auto), and `pixelTolerance` edge handling.
+- **Measured slide geometry (recipe)**: the shadcn recipe derives `CarouselSlide1D` inputs from each
+  rendered slide's measured bounds (with a first-frame uniform fallback) before calling
+  `snap_model_1d`.
+  - Evidence: `ecosystem/fret-ui-shadcn/src/carousel.rs` (snap model generation)
 - **Recipe-level `opts` (policy-only)**: shadcn-style `CarouselOptions` maps the docs examples:
   `carousel-size` / `carousel-orientation` use `align: start`, while other examples rely on defaults.
 - **Orientation**: vertical tracks stack items and rotate controls; keyboard mapping stays left/right
