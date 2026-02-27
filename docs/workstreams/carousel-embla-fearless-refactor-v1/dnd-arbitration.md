@@ -58,9 +58,8 @@ Rationale: the user intent signal is explicit and avoids ambiguous gesture compe
 Rationale: on touch, "drag to scroll" is the dominant gesture; long-press is the common DnD intent
 signal.
 
-Note: current diag scripts synthesize pointer events as mouse input. The "long-press" gate uses the
-same delay+distance activation constraint to exercise the touch-friendly policy deterministically,
-even though it is not a true touch pointer stream.
+Note: the long-press gate uses `pointer_kind: "touch"` in the diag script so the runtime receives a
+touch pointer stream while still being deterministic in desktop runners.
 
 3) Keyboard:
 
