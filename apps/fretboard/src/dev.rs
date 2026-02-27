@@ -1146,9 +1146,6 @@ pub(crate) fn dev_web(args: Vec<String>) -> Result<(), String> {
     if let Some(port) = port {
         cmd.args(["--port", &port.to_string()]);
     }
-    if open {
-        cmd.arg("--open");
-    }
 
     let mut child = cmd.spawn().map_err(|e| {
         if e.kind() == std::io::ErrorKind::NotFound {
@@ -1177,12 +1174,22 @@ pub(crate) fn dev_web(args: Vec<String>) -> Result<(), String> {
             while start.elapsed() < deadline {
                 if TcpStream::connect_timeout(&addr, Duration::from_millis(150)).is_ok() {
                     eprintln!("Open: {url}");
+                    if open {
+                        if let Err(err) = open_url(&url) {
+                            eprintln!("warning: failed to open browser: {err}");
+                        }
+                    }
                     return;
                 }
                 std::thread::sleep(Duration::from_millis(200));
             }
 
             eprintln!("Open (may still be building): {url}");
+            if open {
+                if let Err(err) = open_url(&url) {
+                    eprintln!("warning: failed to open browser: {err}");
+                }
+            }
         }
     });
 
@@ -1191,6 +1198,44 @@ pub(crate) fn dev_web(args: Vec<String>) -> Result<(), String> {
         return Err(format!("trunk exited with status: {status}"));
     }
     Ok(())
+}
+
+fn open_url(url: &str) -> Result<(), String> {
+    #[cfg(windows)]
+    {
+        let status = Command::new("cmd")
+            .args(["/C", "start", "", url])
+            .status()
+            .map_err(|e| e.to_string())?;
+        if !status.success() {
+            return Err(format!("cmd start exited with status: {status}"));
+        }
+        return Ok(());
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        let status = Command::new("open")
+            .arg(url)
+            .status()
+            .map_err(|e| e.to_string())?;
+        if !status.success() {
+            return Err(format!("open exited with status: {status}"));
+        }
+        return Ok(());
+    }
+
+    #[cfg(all(not(windows), not(target_os = "macos")))]
+    {
+        let status = Command::new("xdg-open")
+            .arg(url)
+            .status()
+            .map_err(|e| e.to_string())?;
+        if !status.success() {
+            return Err(format!("xdg-open exited with status: {status}"));
+        }
+        return Ok(());
+    }
 }
 
 fn dev_native_hotpatch_dx(
