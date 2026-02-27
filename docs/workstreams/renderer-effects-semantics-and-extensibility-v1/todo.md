@@ -115,9 +115,11 @@ if left unspecified.
 - [ ] Path MSAA correctness on Vulkan:
   - There is a known correctness risk for the MSAA path pipeline on Vulkan (currently gated by
     `FRET_ALLOW_VULKAN_PATH_MSAA`).
-  - [x] Add a small regression gate that locks the safety valve behavior (MSAA disabled by default on Vulkan).
+  - [x] Add a small regression gate that locks the safety valve behavior (MSAA disabled by default on Vulkan for
+    non-allowlisted adapters; allowlisted vendors may opt in by default).
     - Evidence: `crates/fret-render-wgpu/tests/vulkan_path_msaa_visibility_conformance.rs`.
-  - [ ] Either fix the forced MSAA path (so the safety valve can be removed) or keep it deterministically disabled:
+  - [ ] Either fix the forced MSAA path (so the safety valve can be removed) or keep it deterministically disabled
+    (potentially narrowed via allowlists/blacklists as evidence arrives):
     - Evidence (safety valve): `crates/fret-render-wgpu/src/renderer/config.rs`.
     - Evidence (pipeline): `crates/fret-render-wgpu/src/renderer/pipelines/path.rs` and
       `crates/fret-render-wgpu/src/renderer/render_scene/recorders/path_msaa.rs`.

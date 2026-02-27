@@ -123,9 +123,11 @@ fn vulkan_path_msaa_safety_valve_avoids_invisible_output() {
     if ctx.adapter.get_info().backend != wgpu::Backend::Vulkan {
         return;
     }
+    let allowlisted = ctx.adapter.get_info().vendor == 0x10DE;
 
     // This test asserts the current "safety valve" behavior: path MSAA is disabled on Vulkan by
-    // default because it has been observed to produce invisible output on some drivers.
+    // default for non-allowlisted adapters because it has been observed to produce invisible output
+    // on some drivers.
     //
     // If the opt-in env var is already set (e.g. developer testing), skip to avoid a false
     // failure.
@@ -223,18 +225,27 @@ fn vulkan_path_msaa_safety_valve_avoids_invisible_output() {
     let snap = renderer
         .take_last_frame_perf_snapshot()
         .expect("perf snapshot");
-    assert!(
-        snap.pipeline_switches_path_msaa == 0,
-        "expected Vulkan path MSAA pipeline to be disabled by default; got pipeline_switches_path_msaa={}",
-        snap.pipeline_switches_path_msaa
-    );
     assert_eq!(snap.path_msaa_samples_requested, 4);
-    assert_eq!(snap.path_msaa_samples_effective, 1);
-    assert!(
-        snap.path_msaa_vulkan_safety_valve_degradations >= 1,
-        "expected Vulkan MSAA safety valve to be observed; got path_msaa_vulkan_safety_valve_degradations={}",
-        snap.path_msaa_vulkan_safety_valve_degradations
-    );
+    if allowlisted {
+        assert!(
+            snap.pipeline_switches_path_msaa > 0,
+            "expected Vulkan path MSAA pipeline to be enabled by default on allowlisted adapters; got pipeline_switches_path_msaa=0"
+        );
+        assert_eq!(snap.path_msaa_samples_effective, 4);
+        assert_eq!(snap.path_msaa_vulkan_safety_valve_degradations, 0);
+    } else {
+        assert!(
+            snap.pipeline_switches_path_msaa == 0,
+            "expected Vulkan path MSAA pipeline to be disabled by default; got pipeline_switches_path_msaa={}",
+            snap.pipeline_switches_path_msaa
+        );
+        assert_eq!(snap.path_msaa_samples_effective, 1);
+        assert!(
+            snap.path_msaa_vulkan_safety_valve_degradations >= 1,
+            "expected Vulkan MSAA safety valve to be observed; got path_msaa_vulkan_safety_valve_degradations={}",
+            snap.path_msaa_vulkan_safety_valve_degradations
+        );
+    }
 
     let pixels = read_texture_rgba8(&ctx.device, &ctx.queue, &target, viewport_size);
     let sample = pixel_rgba(&pixels, viewport_size.0, u(128.0, 1.0), u(128.0, 1.0));

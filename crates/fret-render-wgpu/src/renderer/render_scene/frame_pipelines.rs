@@ -55,6 +55,7 @@ impl Renderer {
                 && self.path_msaa_samples > 1
                 && path_samples == 1
                 && std::env::var_os("FRET_ALLOW_VULKAN_PATH_MSAA").is_none()
+                && !self.vulkan_path_msaa_is_allowlisted()
             {
                 frame_perf.path_msaa_vulkan_safety_valve_degradations = frame_perf
                     .path_msaa_vulkan_safety_valve_degradations
