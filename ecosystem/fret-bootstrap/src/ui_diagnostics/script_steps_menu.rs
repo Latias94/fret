@@ -16,6 +16,7 @@ pub(super) fn handle_menu_select_step(
     failure_reason: &mut Option<String>,
 ) -> bool {
     let UiActionStepV2::MenuSelect {
+        window: _,
         menu,
         item,
         timeout_frames,
@@ -215,6 +216,7 @@ pub(super) fn handle_menu_select_path_step(
     failure_reason: &mut Option<String>,
 ) -> bool {
     let UiActionStepV2::MenuSelectPath {
+        window: _,
         path,
         timeout_frames,
     } = step

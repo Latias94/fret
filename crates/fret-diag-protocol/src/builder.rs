@@ -158,6 +158,7 @@ impl ScriptV2Builder {
 
     pub fn click_stable(self, target: UiSelectorV1) -> Self {
         self.push(UiActionStepV2::ClickStable {
+            window: None,
             target,
             button: UiMouseButtonV1::Left,
             click_count: 1,
@@ -174,6 +175,7 @@ impl ScriptV2Builder {
         tag: impl Into<String>,
     ) -> Self {
         self.push(UiActionStepV2::ClickSelectableTextSpanStable {
+            window: None,
             target,
             tag: tag.into(),
             button: UiMouseButtonV1::Left,
@@ -191,6 +193,7 @@ impl ScriptV2Builder {
         modifiers: UiKeyModifiersV1,
     ) -> Self {
         self.push(UiActionStepV2::ClickStable {
+            window: None,
             target,
             button: UiMouseButtonV1::Left,
             click_count: 1,
@@ -203,6 +206,7 @@ impl ScriptV2Builder {
 
     pub fn wait_bounds_stable(self, target: UiSelectorV1) -> Self {
         self.push(UiActionStepV2::WaitBoundsStable {
+            window: None,
             target,
             stable_frames: 2,
             max_move_px: 1.0,
@@ -267,6 +271,7 @@ impl ScriptV2Builder {
 
     pub fn type_text_into(self, target: UiSelectorV1, text: impl Into<String>) -> Self {
         self.push(UiActionStepV2::TypeTextInto {
+            window: None,
             target,
             text: text.into(),
             clear_before_type: false,

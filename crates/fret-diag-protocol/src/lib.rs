@@ -131,6 +131,8 @@ pub enum UiActionStepV1 {
     },
     ResetDiagnostics,
     MovePointer {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
         target: UiSelectorV1,
     },
     DragPointer {
@@ -400,6 +402,8 @@ pub enum UiActionStepV2 {
     },
     ResetDiagnostics,
     MovePointer {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
         target: UiSelectorV1,
     },
     /// Move the pointer to a target and issue a pointer down, keeping the session active across
@@ -450,6 +454,8 @@ pub enum UiActionStepV2 {
         button: Option<UiMouseButtonV1>,
     },
     MovePointerSweep {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
         target: UiSelectorV1,
         delta_x: f32,
         delta_y: f32,
@@ -459,6 +465,8 @@ pub enum UiActionStepV2 {
         frames_per_step: u32,
     },
     Wheel {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
         target: UiSelectorV1,
         #[serde(default)]
         delta_x: f32,
@@ -538,6 +546,8 @@ pub enum UiActionStepV2 {
     /// across frames (e.g. estimate -> measured), causing clicks to land at stale
     /// positions when using a single-frame snapshot.
     ClickStable {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
         target: UiSelectorV1,
         #[serde(default)]
         button: UiMouseButtonV1,
@@ -562,6 +572,8 @@ pub enum UiActionStepV2 {
     /// semantics node bounds (e.g. link spans inside a paragraph), and where clicking the center
     /// of the node can miss the span.
     ClickSelectableTextSpanStable {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
         target: UiSelectorV1,
         tag: String,
         #[serde(default)]
@@ -586,6 +598,8 @@ pub enum UiActionStepV2 {
     /// frames (estimate -> measured, placement flip/shift, scroll settle), and you want a
     /// deterministic “ready” point without relying on wall-clock sleeps.
     WaitBoundsStable {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
         target: UiSelectorV1,
         #[serde(default = "default_bounds_stable_frames")]
         stable_frames: u32,
@@ -595,6 +609,8 @@ pub enum UiActionStepV2 {
         timeout_frames: u32,
     },
     EnsureVisible {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
         target: UiSelectorV1,
         #[serde(default)]
         within_window: bool,
@@ -604,6 +620,8 @@ pub enum UiActionStepV2 {
         timeout_frames: u32,
     },
     ScrollIntoView {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
         container: UiSelectorV1,
         target: UiSelectorV1,
         #[serde(default)]
@@ -622,6 +640,8 @@ pub enum UiActionStepV2 {
         timeout_frames: u32,
     },
     TypeTextInto {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
         target: UiSelectorV1,
         text: String,
         #[serde(default)]
@@ -630,12 +650,16 @@ pub enum UiActionStepV2 {
         timeout_frames: u32,
     },
     MenuSelect {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
         menu: UiSelectorV1,
         item: UiSelectorV1,
         #[serde(default = "default_action_timeout_frames")]
         timeout_frames: u32,
     },
     MenuSelectPath {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
         path: Vec<UiSelectorV1>,
         #[serde(default = "default_action_timeout_frames")]
         timeout_frames: u32,
@@ -653,6 +677,8 @@ pub enum UiActionStepV2 {
         timeout_frames: u32,
     },
     SetSliderValue {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
         target: UiSelectorV1,
         value: f32,
         #[serde(default = "default_slider_min")]
@@ -791,7 +817,7 @@ impl From<UiActionStepV1> for UiActionStepV2 {
                 modifiers: None,
             },
             UiActionStepV1::ResetDiagnostics => Self::ResetDiagnostics,
-            UiActionStepV1::MovePointer { target } => Self::MovePointer { target },
+            UiActionStepV1::MovePointer { window, target } => Self::MovePointer { window, target },
             UiActionStepV1::DragPointer {
                 target,
                 button,
@@ -811,6 +837,7 @@ impl From<UiActionStepV1> for UiActionStepV2 {
                 delta_x,
                 delta_y,
             } => Self::Wheel {
+                window: None,
                 target,
                 delta_x,
                 delta_y,

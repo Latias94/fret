@@ -2929,6 +2929,28 @@ fn script_required_capabilities_value(value: &serde_json::Value) -> Vec<String> 
         required.push("diag.screenshot_png".to_string());
     }
 
+    if schema_version >= 2 {
+        fn window_target_requires_multi_window(window: &serde_json::Value) -> bool {
+            let Some(kind) = window.get("kind").and_then(|v| v.as_str()) else {
+                return false;
+            };
+            matches!(kind, "first_seen_other" | "last_seen_other" | "window_ffi")
+        }
+
+        if value
+            .get("steps")
+            .and_then(|v| v.as_array())
+            .is_some_and(|steps| {
+                steps.iter().any(|s| {
+                    s.get("window")
+                        .is_some_and(|w| window_target_requires_multi_window(w))
+                })
+            })
+        {
+            required.push("diag.multi_window".to_string());
+        }
+    }
+
     if let Some(meta_required) = value
         .get("meta")
         .and_then(|m| m.get("required_capabilities"))

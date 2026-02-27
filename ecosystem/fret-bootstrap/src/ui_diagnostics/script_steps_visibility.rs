@@ -19,6 +19,7 @@ pub(super) fn handle_ensure_visible_step(
     failure_reason: &mut Option<String>,
 ) -> bool {
     let UiActionStepV2::EnsureVisible {
+        window: _,
         target,
         within_window,
         padding_px,

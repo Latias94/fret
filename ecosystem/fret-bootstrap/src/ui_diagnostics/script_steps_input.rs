@@ -194,6 +194,7 @@ pub(super) fn handle_type_text_into_step(
     failure_reason: &mut Option<String>,
 ) -> bool {
     let UiActionStepV2::TypeTextInto {
+        window: _,
         target,
         text,
         clear_before_type,

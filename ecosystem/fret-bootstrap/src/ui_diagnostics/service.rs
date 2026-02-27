@@ -200,12 +200,24 @@ impl UiDiagnosticsService {
             // established; those depend on `known_windows`, which is maintained at runtime.
             let step_window_target: Option<&UiWindowTargetV1> = match step {
                 UiActionStepV2::Click { window, .. }
+                | UiActionStepV2::MovePointer { window, .. }
+                | UiActionStepV2::MovePointerSweep { window, .. }
                 | UiActionStepV2::PointerDown { window, .. }
                 | UiActionStepV2::PointerMove { window, .. }
                 | UiActionStepV2::PointerUp { window, .. }
                 | UiActionStepV2::DragPointer { window, .. }
                 | UiActionStepV2::DragPointerUntil { window, .. }
                 | UiActionStepV2::DragTo { window, .. }
+                | UiActionStepV2::Wheel { window, .. }
+                | UiActionStepV2::ClickStable { window, .. }
+                | UiActionStepV2::ClickSelectableTextSpanStable { window, .. }
+                | UiActionStepV2::WaitBoundsStable { window, .. }
+                | UiActionStepV2::EnsureVisible { window, .. }
+                | UiActionStepV2::ScrollIntoView { window, .. }
+                | UiActionStepV2::TypeTextInto { window, .. }
+                | UiActionStepV2::MenuSelect { window, .. }
+                | UiActionStepV2::MenuSelectPath { window, .. }
+                | UiActionStepV2::SetSliderValue { window, .. }
                 | UiActionStepV2::SetWindowInnerSize { window, .. }
                 | UiActionStepV2::SetWindowOuterPosition { window, .. }
                 | UiActionStepV2::SetCursorInWindow { window, .. }
@@ -240,12 +252,24 @@ impl UiDiagnosticsService {
         let step = active.steps.get(active.next_step)?;
         let step_window_target: Option<&UiWindowTargetV1> = match step {
             UiActionStepV2::Click { window, .. }
+            | UiActionStepV2::MovePointer { window, .. }
+            | UiActionStepV2::MovePointerSweep { window, .. }
             | UiActionStepV2::PointerDown { window, .. }
             | UiActionStepV2::PointerMove { window, .. }
             | UiActionStepV2::PointerUp { window, .. }
             | UiActionStepV2::DragPointer { window, .. }
             | UiActionStepV2::DragPointerUntil { window, .. }
             | UiActionStepV2::DragTo { window, .. }
+            | UiActionStepV2::Wheel { window, .. }
+            | UiActionStepV2::ClickStable { window, .. }
+            | UiActionStepV2::ClickSelectableTextSpanStable { window, .. }
+            | UiActionStepV2::WaitBoundsStable { window, .. }
+            | UiActionStepV2::EnsureVisible { window, .. }
+            | UiActionStepV2::ScrollIntoView { window, .. }
+            | UiActionStepV2::TypeTextInto { window, .. }
+            | UiActionStepV2::MenuSelect { window, .. }
+            | UiActionStepV2::MenuSelectPath { window, .. }
+            | UiActionStepV2::SetSliderValue { window, .. }
             | UiActionStepV2::SetWindowInnerSize { window, .. }
             | UiActionStepV2::SetWindowOuterPosition { window, .. }
             | UiActionStepV2::SetCursorInWindow { window, .. }

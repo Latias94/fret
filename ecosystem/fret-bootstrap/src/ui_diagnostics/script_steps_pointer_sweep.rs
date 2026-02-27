@@ -14,6 +14,7 @@ pub(super) fn handle_move_pointer_sweep_step(
     force_dump_label: &mut Option<String>,
 ) -> bool {
     let UiActionStepV2::MovePointerSweep {
+        window: _,
         target,
         delta_x,
         delta_y,

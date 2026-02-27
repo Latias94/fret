@@ -1,4 +1,6 @@
-use fret_diag_protocol::{UiActionScriptV1, UiActionScriptV2, UiActionStepV1, UiActionStepV2};
+use fret_diag_protocol::{
+    UiActionScriptV1, UiActionScriptV2, UiActionStepV1, UiActionStepV2, UiWindowTargetV1,
+};
 use serde_json::Value;
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
@@ -389,8 +391,53 @@ fn infer_required_capabilities_v1(script: &UiActionScriptV1) -> Vec<String> {
 
 fn infer_required_capabilities_v2(script: &UiActionScriptV2) -> Vec<String> {
     let mut caps: Vec<String> = Vec::new();
+    fn window_target_requires_multi_window(window: &UiWindowTargetV1) -> bool {
+        matches!(
+            window,
+            UiWindowTargetV1::FirstSeenOther
+                | UiWindowTargetV1::LastSeenOther
+                | UiWindowTargetV1::WindowFfi { .. }
+        )
+    }
+    fn step_window_target(step: &UiActionStepV2) -> Option<&UiWindowTargetV1> {
+        match step {
+            UiActionStepV2::Click { window, .. }
+            | UiActionStepV2::MovePointer { window, .. }
+            | UiActionStepV2::PointerDown { window, .. }
+            | UiActionStepV2::DragPointer { window, .. }
+            | UiActionStepV2::PointerMove { window, .. }
+            | UiActionStepV2::PointerUp { window, .. }
+            | UiActionStepV2::MovePointerSweep { window, .. }
+            | UiActionStepV2::Wheel { window, .. }
+            | UiActionStepV2::WaitUntil { window, .. }
+            | UiActionStepV2::Assert { window, .. }
+            | UiActionStepV2::ClickStable { window, .. }
+            | UiActionStepV2::ClickSelectableTextSpanStable { window, .. }
+            | UiActionStepV2::WaitBoundsStable { window, .. }
+            | UiActionStepV2::EnsureVisible { window, .. }
+            | UiActionStepV2::ScrollIntoView { window, .. }
+            | UiActionStepV2::TypeTextInto { window, .. }
+            | UiActionStepV2::MenuSelect { window, .. }
+            | UiActionStepV2::MenuSelectPath { window, .. }
+            | UiActionStepV2::DragTo { window, .. }
+            | UiActionStepV2::SetSliderValue { window, .. }
+            | UiActionStepV2::SetWindowInnerSize { window, .. }
+            | UiActionStepV2::SetWindowOuterPosition { window, .. }
+            | UiActionStepV2::SetCursorInWindow { window, .. }
+            | UiActionStepV2::SetCursorInWindowLogical { window, .. }
+            | UiActionStepV2::SetMouseButtons { window, .. }
+            | UiActionStepV2::RaiseWindow { window, .. }
+            | UiActionStepV2::DragPointerUntil { window, .. } => window.as_ref(),
+            _ => None,
+        }
+    }
     push_cap(&mut caps, "diag.script_v2");
     for step in &script.steps {
+        if let Some(window) = step_window_target(step)
+            && window_target_requires_multi_window(window)
+        {
+            push_cap(&mut caps, "diag.multi_window");
+        }
         if matches!(step, UiActionStepV2::CaptureScreenshot { .. }) {
             push_cap(&mut caps, "diag.screenshot_png");
         }

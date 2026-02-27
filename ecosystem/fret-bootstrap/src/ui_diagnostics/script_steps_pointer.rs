@@ -203,6 +203,7 @@ pub(super) fn handle_click_stable_step(
     failure_reason: &mut Option<String>,
 ) -> bool {
     let UiActionStepV2::ClickStable {
+        window: _,
         target,
         button,
         click_count,
@@ -419,6 +420,7 @@ pub(super) fn handle_click_selectable_text_span_stable_step(
     failure_reason: &mut Option<String>,
 ) -> bool {
     let UiActionStepV2::ClickSelectableTextSpanStable {
+        window: _,
         target,
         tag,
         button,
@@ -688,6 +690,7 @@ pub(super) fn handle_wheel_step(
     force_dump_label: &mut Option<String>,
 ) -> bool {
     let UiActionStepV2::Wheel {
+        window: _,
         target,
         delta_x,
         delta_y,
@@ -827,7 +830,7 @@ pub(super) fn handle_move_pointer_step(
     output: &mut UiScriptFrameOutput,
     force_dump_label: &mut Option<String>,
 ) -> bool {
-    let UiActionStepV2::MovePointer { target } = step else {
+    let UiActionStepV2::MovePointer { window: _, target } = step else {
         return false;
     };
 

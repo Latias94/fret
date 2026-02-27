@@ -16,6 +16,7 @@ pub(super) fn handle_set_slider_value_step(
     failure_reason: &mut Option<String>,
 ) -> bool {
     let UiActionStepV2::SetSliderValue {
+        window: _,
         target,
         value,
         min,

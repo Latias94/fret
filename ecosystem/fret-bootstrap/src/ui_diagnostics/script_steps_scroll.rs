@@ -49,6 +49,7 @@ pub(super) fn handle_scroll_into_view_step(
     failure_reason: &mut Option<String>,
 ) -> bool {
     let UiActionStepV2::ScrollIntoView {
+        window: _,
         container,
         target,
         delta_x,
