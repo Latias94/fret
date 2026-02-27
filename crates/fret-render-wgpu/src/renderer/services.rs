@@ -22,12 +22,19 @@ fn build_and_validate_custom_effect_wgsl_v1(
     let wgsl_mask = custom_effect_mask_shader_source(user_source);
 
     let mut validator = Validator::new(ValidationFlags::all(), Capabilities::empty());
-    for src in [&wgsl_unmasked, &wgsl_masked, &wgsl_mask] {
-        let module = naga::front::wgsl::parse_str(src)
-            .map_err(|_err| fret_core::CustomEffectRegistrationError::InvalidSource)?;
-        validator
-            .validate(&module)
-            .map_err(|_err| fret_core::CustomEffectRegistrationError::InvalidSource)?;
+    for (label, src) in [
+        ("unmasked", &wgsl_unmasked),
+        ("masked", &wgsl_masked),
+        ("mask", &wgsl_mask),
+    ] {
+        let module = naga::front::wgsl::parse_str(src).map_err(|err| {
+            tracing::warn!(?err, %label, "custom effect v1 wgsl parse failed");
+            fret_core::CustomEffectRegistrationError::InvalidSource
+        })?;
+        validator.validate(&module).map_err(|err| {
+            tracing::warn!(?err, %label, "custom effect v1 wgsl validation failed");
+            fret_core::CustomEffectRegistrationError::InvalidSource
+        })?;
     }
 
     Ok((wgsl_unmasked, wgsl_masked, wgsl_mask))
@@ -47,12 +54,19 @@ fn build_and_validate_custom_effect_wgsl_v2(
     let wgsl_mask = custom_effect_v2_mask_shader_source(user_source);
 
     let mut validator = Validator::new(ValidationFlags::all(), Capabilities::empty());
-    for src in [&wgsl_unmasked, &wgsl_masked, &wgsl_mask] {
-        let module = naga::front::wgsl::parse_str(src)
-            .map_err(|_err| fret_core::CustomEffectRegistrationError::InvalidSource)?;
-        validator
-            .validate(&module)
-            .map_err(|_err| fret_core::CustomEffectRegistrationError::InvalidSource)?;
+    for (label, src) in [
+        ("unmasked", &wgsl_unmasked),
+        ("masked", &wgsl_masked),
+        ("mask", &wgsl_mask),
+    ] {
+        let module = naga::front::wgsl::parse_str(src).map_err(|err| {
+            tracing::warn!(?err, %label, "custom effect v2 wgsl parse failed");
+            fret_core::CustomEffectRegistrationError::InvalidSource
+        })?;
+        validator.validate(&module).map_err(|err| {
+            tracing::warn!(?err, %label, "custom effect v2 wgsl validation failed");
+            fret_core::CustomEffectRegistrationError::InvalidSource
+        })?;
     }
 
     Ok((wgsl_unmasked, wgsl_masked, wgsl_mask))
