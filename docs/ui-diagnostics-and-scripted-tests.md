@@ -698,12 +698,12 @@ Supported selectors (v1 MVP):
 ## Supported scripted steps (v1 MVP)
 
 - `click` (optional `button`: `left`/`right`/`middle`; default `left`; schema v2 only: optional `window` target)
-- `move_pointer`
+- `move_pointer` (schema v2 only: optional `window` target)
 - `pointer_down` (schema v2 only; optional `window` target; starts a cross-step pointer session for "drag + key" flows)
 - `pointer_move` (schema v2 only; optional `window` target; moves with the pressed buttons from `pointer_down`)
 - `pointer_up` (schema v2 only; optional `window` target; ends the `pointer_down` session)
 - `drag_pointer` (optional `button`, `steps`; schema v2 only: optional `window` target)
-- `wheel` (optional `delta_x`, `delta_y`; default `0`)
+- `wheel` (optional `delta_x`, `delta_y`; default `0`; schema v2 only: optional `window` target)
 - `press_key` (`key`: `escape`, `enter`, `tab`, `space`, `arrow_up/down/left/right`, `home`, `end`, `page_up/down`,
   `f1-f12`, `alt`/`alt_left`/`alt_right`, `a-z`, `0-9`,
   `comma`/`,`, `period`/`dot`/`.`, `slash`/`/`, `semicolon`/`;`, `quote`/`apostrophe`/`'`,
@@ -786,13 +786,17 @@ Schema v2 scripts may include a top-level `meta` object. Supported fields:
 
 Supported intent steps (v2):
 
-- `ensure_visible` (wait until visible/within window bounds)
-- `scroll_into_view` (wheel a container until a target becomes visible)
-- `type_text_into` (wait + click + type)
-- `menu_select` (wait + open menu + click item)
-- `menu_select_path` (wait + open nested menus + click final item)
+- `click_stable` (wait for target bounds to settle, then click; optional `window` target)
+- `click_selectable_text_span_stable` (stable click a tagged span inside a selectable text node; optional `window` target)
+- `wait_bounds_stable` (wait until a target's bounds are stable across frames; optional `window` target)
+- `ensure_visible` (wait until visible/within window bounds; optional `window` target)
+- `move_pointer_sweep` (move pointer across frames while staying relative to a target; optional `window` target)
+- `scroll_into_view` (wheel a container until a target becomes visible; optional `window` target)
+- `type_text_into` (wait + click + type; optional `window` target)
+- `menu_select` (wait + open menu + click item; optional `window` target)
+- `menu_select_path` (wait + open nested menus + click final item; optional `window` target)
 - `drag_to` (drag between two semantics targets; optional `window` target)
-- `set_slider_value` (drag a slider to a desired value; requires a parseable semantics `value`)
+- `set_slider_value` (drag a slider to a desired value; optional `window` target; requires a parseable semantics `value`)
 - `set_window_inner_size` (emit `WindowRequest::SetInnerSize`)
 - `set_window_outer_position` (emit `WindowRequest::SetOuterPosition`)
 - `raise_window` (emit `WindowRequest::Raise`)
