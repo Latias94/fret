@@ -1,9 +1,17 @@
 # fret
 
+> [!WARNING]
+> **Experimental — under heavy development.**
+>
+> This project is an experiment in AI-driven software development. The vast majority of the code, tests, and documentation were written by AI (Codex). Humans direct architecture, priorities, and design decisions, but have not reviewed most of the code line-by-line. Treat this accordingly — there will be bugs, rough edges, and things that don't work. Use at your own risk.
+
 Desktop-first, batteries-included entry points for building UI apps with Fret.
 
 This is an **ecosystem-level** crate. It intentionally provides a small, ergonomic surface for
 applications while keeping the framework/kernel crates (`crates/*`) policy-light.
+
+For repository overview / architecture docs, see the monorepo README:
+https://github.com/Latias94/fret
 
 ## Quick start (in this repo)
 
