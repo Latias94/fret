@@ -74,6 +74,7 @@ fn item_radius(theme: &Theme) -> Px {
 
 fn item_gap(theme: &Theme, size: ItemSize) -> Px {
     match size {
+        // shadcn/ui v4 (new-york-v4 goldens): default item uses `gap-4`.
         ItemSize::Default => MetricRef::space(Space::N4).resolve(theme),
         ItemSize::Sm => MetricRef::space(Space::N2p5).resolve(theme),
     }
@@ -684,7 +685,8 @@ impl Item {
             render: None,
             children,
             chrome: ChromeRefinement::default(),
-            layout: LayoutRefinement::default(),
+            // shadcn/ui v4: Item root uses `w-full` by default.
+            layout: LayoutRefinement::default().w_full(),
         }
     }
 
@@ -814,6 +816,9 @@ impl Item {
             None => (None, PressableKeyActivation::EnterAndSpace, None),
         };
         let padding = match size {
+            // shadcn/ui v4 (new-york-v4 goldens):
+            // - default: `p-4`
+            // - sm: `px-4 py-3`
             ItemSize::Default => ChromeRefinement::default().px(Space::N4).py(Space::N4),
             ItemSize::Sm => ChromeRefinement::default().px(Space::N4).py(Space::N3),
         };

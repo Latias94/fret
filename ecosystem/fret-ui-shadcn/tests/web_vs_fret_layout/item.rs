@@ -335,6 +335,67 @@ fn web_vs_fret_layout_item_demo_item_rects_match_web() {
 }
 
 #[test]
+fn item_root_is_w_full_like_web_even_when_parent_does_not_stretch_children() {
+    let web = read_web_golden("item-demo");
+    let theme = web_theme(&web);
+
+    let web_items = web_collect_item_rows(&theme.root);
+    assert!(
+        !web_items.is_empty(),
+        "expected at least one item row in item-demo web golden"
+    );
+    let expected_w = web_items[0].rect.w;
+    assert!(expected_w > 0.0, "expected item width > 0");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    const ITEM_TEST_ID: &str = "Golden:item-demo:w-full";
+    let snap = run_fret_root(bounds, |cx| {
+        let outline = fret_ui_shadcn::ItemVariant::Outline;
+
+        let item = fret_ui_shadcn::Item::new([
+            fret_ui_shadcn::ItemContent::new([
+                fret_ui_shadcn::ItemTitle::new("Basic Item").into_element(cx),
+                fret_ui_shadcn::ItemDescription::new("A simple item with title and description.")
+                    .into_element(cx),
+            ])
+            .into_element(cx),
+            fret_ui_shadcn::ItemActions::new([fret_ui_shadcn::Button::new("Action")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .size(fret_ui_shadcn::ButtonSize::Sm)
+                .into_element(cx)])
+            .into_element(cx),
+        ])
+        .variant(outline)
+        .into_element(cx)
+        .test_id(ITEM_TEST_ID);
+
+        vec![cx.column(
+            ColumnProps {
+                layout: LayoutStyle {
+                    size: SizeStyle {
+                        width: Length::Px(Px(expected_w)),
+                        height: Length::Auto,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                // Ensure `w-full` is required for the child to fill the available width.
+                align: CrossAlign::Start,
+                ..Default::default()
+            },
+            move |_cx| vec![item],
+        )]
+    });
+
+    let fret_item = find_by_test_id(&snap, ITEM_TEST_ID);
+    assert_close_px("item w-full", fret_item.bounds.size.width, expected_w, 1.0);
+}
+
+#[test]
 fn item_description_clamps_to_two_lines_by_default() {
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
