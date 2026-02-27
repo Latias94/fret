@@ -56,6 +56,7 @@ mod perf_hint_gate;
 mod perf_seed_policy;
 mod post_run_checks;
 mod run_artifacts;
+mod script_registry;
 mod script_tooling;
 mod shrink;
 mod stats;

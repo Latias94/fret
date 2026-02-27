@@ -92,6 +92,16 @@ On native filesystem dumps, the runtime also writes bounded sidecars next to `bu
 
 These sidecars are intended to speed up CLI queries and AI triage without opening or grepping a full `bundle.json`.
 
+Footgun / recommendation:
+
+- Avoid running `rg`/`grep` directly on `bundle.json` dumps (they can be huge and can easily explode your terminal output).
+- Prefer bounded tooling commands that use sidecars and/or schema2 views:
+  - `fretboard diag meta <bundle_dir|bundle.json|bundle.schema2.json> --json`
+  - `fretboard diag query test-id <bundle_dir|bundle.json|bundle.schema2.json> <pattern> --top 50`
+  - `fretboard diag slice <bundle_dir|bundle.json|bundle.schema2.json> --test-id <test_id>`
+  - `fretboard diag ai-packet <bundle_dir|bundle.json|bundle.schema2.json> --packet-out <dir>`
+- When searching the repository (not bundle artifacts), prefer `tools/rg-safe.ps1` (it excludes `target/fret-diag/**` and `.fret/diag/**` by default).
+
 To disable sidecar writing (native-only):
 
 - `FRET_DIAG_BUNDLE_WRITE_INDEX=0`
@@ -1030,7 +1040,7 @@ Note:
 - The script library is modularized via a taxonomy plus a minimal, generated registry for “promoted” scripts
   (`tools/diag-scripts/index.json`, scope: suite-reachable + `_prelude`; regenerate via
   `python tools/check_diag_scripts_registry.py --write`).
-  Prefer directory- and glob-based inputs (`--script-dir`, `--glob`) for ad-hoc runs, and avoid assuming scripts live
+  `fretboard diag run` accepts either an explicit path or a promoted `script_id` from this registry. Prefer directory- and glob-based inputs (`--script-dir`, `--glob`) for ad-hoc runs, and avoid assuming scripts live
   only at the top-level. See: `docs/workstreams/diag-v2-hardening-and-switches-v1/README.md`.
 - Built-in suites are defined as curated directory inputs under `tools/diag-scripts/suites/<suite-name>/`.
   Each entry is a small `script_redirect` JSON stub that points at the canonical script path; tooling resolves

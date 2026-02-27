@@ -42,6 +42,7 @@ Today:
 
 - suites are directory-driven (curated stubs + deterministic `**/*.json` expansion),
 - ad-hoc runs should prefer `--script-dir` / `--glob` inputs.
+- `diag run` accepts either an explicit script path or a promoted `script_id` (resolved via `tools/diag-scripts/index.json`).
 
 Long-term:
 

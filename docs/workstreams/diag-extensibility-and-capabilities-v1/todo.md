@@ -53,6 +53,8 @@ Doc: `docs/workstreams/diag-extensibility-and-capabilities-v1/capabilities.md`
 
 - [ ] Gesture steps are explicit and capability-gated:
   - [x] add a `tap` step (touch-first) and gate it behind `diag.gesture_tap`,
+    - [x] add a small smoke script:
+      - [x] `tools/diag-scripts/ui-gallery/diag/ui-gallery-gesture-tap-smoke.json`
   - [x] define a `pinch` step (touch-first) and gate it behind `diag.gesture_pinch`,
     - [x] add a small smoke script:
       - [x] `tools/diag-scripts/ui-gallery/diag/ui-gallery-gesture-pinch-smoke.json`
