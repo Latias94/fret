@@ -43,3 +43,19 @@ desktop-first now, wasm/WebGPU later, and a clean split between UI contracts and
 
 - Validate crate layering and forbid backend leakage: `python3 tools/check_layering.py`
 - Validate ADR ID uniqueness: `python3 tools/check_adr_numbers.py`
+- Validate `fret-launch-core` portability (platform-SDK-free direct deps): `python3 tools/check_launch_core_portability.py`
+- Validate minimal consumption profiles: `python3 tools/check_consumption_profiles.py`
+
+## Launcher Portability Contracts
+
+`crates/fret-launch-core` is a shared launcher surface intended to stay platform-SDK-free:
+
+- It must not take direct dependencies on OS/browser SDK crates (e.g. `objc*`, `windows*`, `web-sys`).
+- It must not depend on platform-specific workspace crates (e.g. `fret-platform-native`, `fret-platform-web`).
+
+The portability gate is enforced by `python3 tools/check_launch_core_portability.py` and runs in CI.
+
+Notes:
+
+- This check only inspects *direct* Cargo dependencies (including target-specific tables). It does not
+  attempt to constrain transitive dependencies of `winit`/`wgpu`.
