@@ -134,6 +134,49 @@ Compatibility must be explicit and removable:
 - isolate filesystem vs WS differences behind `transport/` and `artifact_store/`,
 - ensure failures always produce a local `script.result.json` with stable `reason_code` (tooling-side too).
 
+## Compatibility inventory (snapshot)
+
+This section is a “what still exists” checklist. It is intentionally explicit so we can remove compat paths without
+accidentally breaking day-to-day debugging.
+
+### Capabilities
+
+- **Legacy capability aliases (tooling-side):** tooling maps un-namespaced runner capabilities (e.g. `script_v2`) to
+  namespaced `diag.*` (see `crates/fret-diag/src/compat/mod.rs`).
+- **Legacy control-plane capabilities (DevTools WS):** WS session descriptors may include un-namespaced control-plane
+  caps (`inspect`, `pick`, `scripts`, `bundles`) alongside namespaced `devtools.*` (see
+  `ecosystem/fret-bootstrap/src/ui_diagnostics_ws_bridge.rs`).
+
+Exit plan:
+
+1) Stop advertising un-namespaced control-plane caps once downstream tooling no longer relies on them.
+2) Remove `compat::normalize_capability` mappings once all runners advertise only `diag.*`.
+
+### Script schema v1
+
+- **Tooling auto-upgrade:** tooling upgrades `schema_version=1` scripts to schema v2 on execution
+  (`crates/fret-diag/src/compat/script.rs`). This keeps old scripts runnable but makes “v2-only” harder to enforce.
+- **Runtime gating:** runtime can reject schema v1 scripts when `allow_script_schema_v1=false` (tooling writes this
+  explicitly for `--launch` runs via the config file).
+
+Exit plan (fearless):
+
+1) Ensure in-repo committed scripts are schema v2 only (except `script_redirect` stubs).
+2) Add a CI gate that fails if canonical scripts regress to schema v1.
+3) Keep manual upgrade available (`diag script normalize`) but stop auto-upgrading for tool-launched runs.
+
+### Bundle schema + artifact views
+
+- **Schema sniffing:** tooling sniffs bundle schema versions from a bounded JSON prefix (to avoid loading large JSON)
+  and records compat markers (see `crates/fret-diag/src/compat/bundle.rs`, `crates/fret-diag/src/triage_json.rs`).
+- **Legacy views:** per-run directories may include `bundle.json` and/or `bundle.schema2.json` as compatibility views,
+  with sidecars as accelerators (see `docs/workstreams/diag-v2-hardening-and-switches-v1/per-run-layout.md`).
+
+Exit plan:
+
+1) Prefer manifest + sidecars for all tooling flows.
+2) Stop materializing/writing `bundle.json` unless explicitly requested (`diag pack` / share flows should not require it).
+
 ## Non-goals
 
 - Breaking `crates/fret-diag-protocol` or changing ADR-owned meaning of fields.

@@ -159,11 +159,10 @@ Definition of done:
 
 Status (2026-02-27):
 
-- `pointer_kind: touch` / `pointer_kind: pen` are supported by `fret-bootstrap` and advertised as `diag.pointer_kind_touch` / `diag.pointer_kind_pen`.
-- `tap` is supported and advertised as `diag.gesture_tap`.
-- `long_press` is supported and advertised as `diag.gesture_long_press`.
-- `swipe` is supported and advertised as `diag.gesture_swipe`.
-- `pinch` is supported and advertised as `diag.gesture_pinch`.
+- `pointer_kind: touch` / `pointer_kind: pen` are supported by `fret-bootstrap` and advertised as
+  `diag.pointer_kind_touch` / `diag.pointer_kind_pen` for both filesystem discovery (capabilities file) and DevTools WS sessions.
+- `tap` / `long_press` / `swipe` / `pinch` are supported and advertised as `diag.gesture_tap` / `diag.gesture_long_press` / `diag.gesture_swipe` / `diag.gesture_pinch`
+  for both filesystem discovery and DevTools WS sessions.
 
 ### M11: CI guardrails for contract evolution
 

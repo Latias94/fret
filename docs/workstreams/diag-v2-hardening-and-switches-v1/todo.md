@@ -139,6 +139,8 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
   - [x] legacy capability aliases (`script_v2` → `diag.script_v2`, etc),
   - [x] v1 bundle schema reading,
   - [x] v1 script schema reading (if still supported).
+- [x] Ensure capabilities are advertised consistently across transports (filesystem + DevTools WS):
+  - [x] gesture capabilities include `diag.gesture_long_press` and `diag.gesture_swipe` when supported.
 - [x] Close multi-window gaps in schema v2 steps:
   - [x] add optional `window` targeting to selector-driven steps that currently lacked it (e.g. `click_stable`, `wheel`, pointer moves),
   - [x] update capability inference (keep using `diag.multi_window`) and ensure fail-fast gating.
