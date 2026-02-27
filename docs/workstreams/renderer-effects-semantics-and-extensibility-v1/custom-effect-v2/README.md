@@ -135,9 +135,11 @@ Pending / follow-ups:
   how to register a CustomV2 program, pass an `ImageId` input, and tune parameters.
   (Intentionally not shipping ecosystem recipes as part of this workstream.)
 - WebGPU uniformity: if your custom WGSL uses derivatives (`dpdx`/`dpdy`/`fwidth`), ensure they are not gated by
-  non-uniform control flow. Today, some host shaders still contain non-uniform early returns (bounds checks) before
-  calling `fret_custom_effect(...)`, which can make derivative-using effects fail Tint validation. Track:
-  `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-v2/todo.md`.
+  non-uniform control flow.
+  - Host shader note: CustomV2 host fragment shaders avoid non-uniform early returns before calling
+    `fret_custom_effect(...)`, so derivative-using effects can pass Tint validation as long as the user WGSL itself
+    remains uniform around derivative ops.
+  - Track: `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-v2/todo.md`.
 - WebGPU/wasm story: confirm which adapters report `custom_effect_v2_user_image`, and keep deterministic fallback
   paths (unsupported backend, incompatible input formats) visible in diagnostics.
 
