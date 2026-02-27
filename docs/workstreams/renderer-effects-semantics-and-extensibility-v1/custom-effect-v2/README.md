@@ -101,6 +101,7 @@ Done (evidence anchors):
 - Conformance: `crates/fret-render-wgpu/tests/effect_custom_v2_conformance.rs`.
 - Ecosystem helper: `ecosystem/fret-ui-kit/src/custom_effects.rs` (`CustomEffectProgramV2`).
 - Demo: `apps/fret-examples/src/custom_effect_v2_demo.rs` (run via `cargo run -p fret-demo -- custom_effect_v2_demo`).
+- Web demo (smoke): `apps/fret-examples/src/custom_effect_v2_web_demo.rs` (run via `apps/fret-demo-web` with `?demo=custom_effect_v2_web_demo`).
 - Liquid glass demo + scripted diagnostics: `apps/fret-examples/src/liquid_glass_demo.rs`,
   `tools/diag-scripts/liquid-glass-custom-v2-corners-screenshot.json`,
   `tools/diag-scripts/liquid-glass-lens-corners-screenshots.json`.

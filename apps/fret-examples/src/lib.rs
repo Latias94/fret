@@ -36,6 +36,8 @@ pub mod container_queries_docking_demo;
 pub mod custom_effect_v1_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod custom_effect_v2_demo;
+#[cfg(target_arch = "wasm32")]
+pub mod custom_effect_v2_web_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod datatable_demo;
 #[cfg(not(target_arch = "wasm32"))]
