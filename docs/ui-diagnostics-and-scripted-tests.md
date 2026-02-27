@@ -1040,7 +1040,9 @@ Note:
 - The script library is modularized via a taxonomy plus a minimal, generated registry for “promoted” scripts
   (`tools/diag-scripts/index.json`, scope: suite-reachable + `_prelude`; regenerate via
   `python tools/check_diag_scripts_registry.py --write`).
-  `fretboard diag run` accepts either an explicit path or a promoted `script_id` from this registry. Prefer directory- and glob-based inputs (`--script-dir`, `--glob`) for ad-hoc runs, and avoid assuming scripts live
+  `fretboard diag run` accepts either an explicit path or a promoted `script_id` from this registry.
+  For discoverability, use `fretboard diag list scripts` to print `script_id -> path` mappings.
+  Prefer directory- and glob-based inputs (`--script-dir`, `--glob`) for ad-hoc runs, and avoid assuming scripts live
   only at the top-level. See: `docs/workstreams/diag-v2-hardening-and-switches-v1/README.md`.
 - Built-in suites are defined as curated directory inputs under `tools/diag-scripts/suites/<suite-name>/`.
   Each entry is a small `script_redirect` JSON stub that points at the canonical script path; tooling resolves
