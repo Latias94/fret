@@ -84,7 +84,7 @@ pub use scroll::{ScrollHandle, ScrollStrategy, VirtualListScrollHandle};
 pub use svg_source::SvgSource;
 pub use text::{TextAreaStyle, TextInputStyle};
 pub use theme::{Theme, ThemeConfig, ThemeSnapshot};
-pub use theme_keys::{ThemeColorKey, ThemeMetricKey};
+pub use theme_keys::{ThemeColorKey, ThemeMetricKey, ThemeNamedColorKey};
 pub use tree::{
     PaintCachePolicy, UiDebugFrameStats, UiDebugHitTest,
     UiDebugHoverDeclarativeInvalidationHotspot, UiDebugLayerInfo, UiLayerId, UiTree,

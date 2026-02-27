@@ -302,7 +302,10 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
                 },
             );
 
-            shadcn::Card::new([body]).into_element(cx)
+            let card = shadcn::Card::new([body]).into_element(cx);
+            ui::container(cx, move |_cx| vec![card])
+                .p_1()
+                .into_element(cx)
         })
         .collect::<Vec<_>>();
 
@@ -321,37 +324,38 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
     let vertical_items = (1..=5)
         .map(|idx| {
             let theme = Theme::global(&*cx.app).clone();
+            let number = ui::text(cx, format!("{idx}"))
+                .text_size_px(Px(30.0))
+                .line_height_px(Px(36.0))
+                .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
+                .font_semibold()
+                .into_element(cx);
+
             let body = cx.flex(
                 FlexProps {
-                    layout: decl_style::layout_style(
-                        &theme,
-                        LayoutRefinement::default().w_full().h_full(),
-                    ),
-                    direction: fret_core::Axis::Vertical,
+                    layout: decl_style::layout_style(&theme, LayoutRefinement::default().w_full()),
+                    direction: fret_core::Axis::Horizontal,
                     justify: MainAlign::Center,
                     align: CrossAlign::Center,
                     padding: Edges::all(Px(24.0)).into(),
                     ..Default::default()
                 },
-                move |cx| {
-                    vec![
-                        ui::text(cx, format!("{idx}"))
-                            .text_base()
-                            .font_semibold()
-                            .into_element(cx),
-                    ]
-                },
+                move |_cx| vec![number],
             );
-            shadcn::Card::new([body]).into_element(cx)
+
+            let card = shadcn::Card::new([body]).into_element(cx);
+            ui::container(cx, move |_cx| vec![card])
+                .p_1()
+                .into_element(cx)
         })
         .collect::<Vec<_>>();
 
     let orientation_vertical = shadcn::Carousel::new(vertical_items)
         .orientation(shadcn::CarouselOrientation::Vertical)
-        .refine_viewport_layout(LayoutRefinement::default().h_px(Px(200.0)))
+        .refine_viewport_layout(LayoutRefinement::default().h_px(Px(196.0)))
+        .refine_track_layout(LayoutRefinement::default().h_px(Px(200.0)))
         .track_start_neg_margin(Space::N1)
         .item_padding_start(Space::N1)
-        .item_basis_main_px(Px(100.0))
         .refine_layout(
             LayoutRefinement::default()
                 .w_full()

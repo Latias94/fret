@@ -89,7 +89,6 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-anyhow = "1"
 fret = { path = "../../ecosystem/fret" }
 fret-selector = { path = "../../ecosystem/fret-selector", features = ["ui"] } # optional
 fret-query = { path = "../../ecosystem/fret-query", features = ["ui"] } # optional
@@ -98,12 +97,38 @@ fret-query = { path = "../../ecosystem/fret-query", features = ["ui"] } # option
 ## Minimal startup
 
 ```rust,ignore
-fn main() -> anyhow::Result<()> {
-    fret::mvu::app::<TodoProgram>("todo")?
-        .with_main_window("todo", (560.0, 520.0))
-        .run()?;
+fn main() -> fret::Result<()> {
+    fret::App::new("todo")
+        .window("todo", (560.0, 520.0))
+        .mvu::<TodoProgram>()?
+        .run()
+}
+```
 
-    Ok(())
+## Extending the entry (recommended seams)
+
+The builder chain is ecosystem-level and intentionally provides a few stable seams for extending
+apps without dropping down to `fret-bootstrap`:
+
+```rust,ignore
+use fret::prelude::*;
+
+fn install_app(app: &mut App) {
+    // Register app-owned globals, commands, services, etc.
+    // Example:
+    // app.set_global(MyService::default());
+}
+
+fn main() -> fret::Result<()> {
+    fret::App::new("todo")
+        .window("todo", (560.0, 520.0))
+        .install_app(install_app)
+        // Disable filesystem config loading for embedding/minimal builds:
+        .config_files(false)
+        // If you use images/SVG in UI, tune budgets:
+        .ui_assets_budgets(64 * 1024 * 1024, 4096, 16 * 1024 * 1024, 4096)
+        .mvu::<TodoProgram>()?
+        .run()
 }
 ```
 
@@ -349,8 +374,9 @@ See the runnable demo: `apps/fret-demo/src/bin/assets_demo.rs`.
 
 Recommended for apps:
 
-- `fret` enables Lucide by default. To change packs, configure `fret` features:
-  - enable `fret/icons-lucide` (default), or
-  - enable `fret/icons-radix`.
+- `fret` enables a default icon pack via `fret/icons` (Lucide).
+- To use another pack, add it as an explicit dependency and install it via the entry seams:
+  - `.install_app(fret_icons_radix::install_app)`, or
+  - `.register_icon_pack(fret_icons_radix::register_vendor_icons)`.
 
 If you need a custom pack, call `.register_icon_pack(...)` with your own `fn(&mut IconRegistry)` implementation.

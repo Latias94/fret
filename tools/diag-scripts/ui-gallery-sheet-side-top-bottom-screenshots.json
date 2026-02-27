@@ -96,10 +96,18 @@
       },
       "timeout_frames": 600
     },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "role_and_name", "role": "button", "name": "Close" }
+      },
+      "timeout_frames": 600
+    },
     { "type": "wait_frames", "n": 16 },
     { "type": "capture_bundle", "label": "ui-gallery-sheet-side-top-open" },
     { "type": "capture_screenshot", "label": "ui-gallery-sheet-side-top-open" },
-    { "type": "press_key", "key": "escape" },
+    { "type": "click_stable", "target": { "kind": "role_and_name", "role": "button", "name": "Close" } },
     {
       "type": "wait_until",
       "predicate": {
@@ -119,8 +127,25 @@
       },
       "timeout_frames": 600
     },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "role_and_name", "role": "button", "name": "Close" }
+      },
+      "timeout_frames": 600
+    },
     { "type": "wait_frames", "n": 16 },
     { "type": "capture_bundle", "label": "ui-gallery-sheet-side-bottom-open" },
-    { "type": "capture_screenshot", "label": "ui-gallery-sheet-side-bottom-open" }
+    { "type": "capture_screenshot", "label": "ui-gallery-sheet-side-bottom-open" },
+    { "type": "click_stable", "target": { "kind": "role_and_name", "role": "button", "name": "Close" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-sheet-side-bottom-content" }
+      },
+      "timeout_frames": 600
+    }
   ]
 }

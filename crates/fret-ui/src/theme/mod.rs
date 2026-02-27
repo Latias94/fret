@@ -10,7 +10,7 @@ use std::{
 
 use crate::UiHost;
 use crate::theme_registry::{ThemeTokenKind, canonicalize_token_key};
-use crate::{ThemeColorKey, ThemeMetricKey};
+use crate::{ThemeColorKey, ThemeMetricKey, ThemeNamedColorKey};
 
 const FALLBACK_COLOR: Color = Color {
     r: 1.0,
@@ -349,6 +349,25 @@ fn default_color_tokens(colors: ThemeColors) -> HashMap<String, Color> {
         "ring-offset-background".to_string(),
         colors.surface_background,
     );
+    // Named colors used by some shadcn recipes (e.g. `text-white`).
+    out.insert(
+        "white".to_string(),
+        Color {
+            r: 1.0,
+            g: 1.0,
+            b: 1.0,
+            a: 1.0,
+        },
+    );
+    out.insert(
+        "black".to_string(),
+        Color {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+            a: 1.0,
+        },
+    );
 
     out.insert("card".to_string(), colors.panel_background);
     out.insert("card-foreground".to_string(), colors.text_primary);
@@ -683,6 +702,11 @@ impl ThemeSnapshot {
         self.color_required(key)
     }
 
+    /// Resolves a named (non-semantic) color token used by upstream ecosystems (e.g. `text-white`).
+    pub fn named_color(&self, key: ThemeNamedColorKey) -> Color {
+        self.color_token(key.canonical_name())
+    }
+
     pub fn metric_by_key(&self, key: &str) -> Option<Px> {
         let key = canonicalize_token_key(ThemeTokenKind::Metric, key);
         self.metric_tokens.get(key).copied()
@@ -782,6 +806,11 @@ impl Theme {
     /// Non-panicking theme token access with diagnostics + fallback behavior.
     pub fn color_token(&self, key: &str) -> Color {
         self.color_required(key)
+    }
+
+    /// Resolves a named (non-semantic) color token used by upstream ecosystems (e.g. `text-white`).
+    pub fn named_color(&self, key: ThemeNamedColorKey) -> Color {
+        self.color_token(key.canonical_name())
     }
 
     pub fn metric_by_key(&self, key: &str) -> Option<Px> {
@@ -2155,7 +2184,7 @@ fn assert_no_legacy_theme_keys(_cfg: &ThemeConfig) {
 mod tests {
     use super::parse_color_to_linear;
     use super::{CubicBezier, Theme, ThemeConfig};
-    use crate::{ThemeColorKey, ThemeMetricKey};
+    use crate::{ThemeColorKey, ThemeMetricKey, ThemeNamedColorKey};
     use fret_core::{Corners, FontId, FontWeight, Px, TextSlant, TextStyle};
     use std::collections::HashMap;
 
@@ -2460,6 +2489,25 @@ mod tests {
         assert!((c.g - 1.0).abs() < 1e-6);
         assert!((c.b - 1.0).abs() < 1e-6);
         assert!((c.a - 0.1).abs() < 1e-6);
+    }
+
+    #[test]
+    fn named_colors_exist_on_default_snapshot() {
+        let host = crate::test_host::TestHost::default();
+        let theme = Theme::global(&host);
+        let snap = theme.snapshot();
+
+        let white = snap.named_color(ThemeNamedColorKey::White);
+        assert!((white.r - 1.0).abs() < 1e-6);
+        assert!((white.g - 1.0).abs() < 1e-6);
+        assert!((white.b - 1.0).abs() < 1e-6);
+        assert!((white.a - 1.0).abs() < 1e-6);
+
+        let black = snap.named_color(ThemeNamedColorKey::Black);
+        assert!((black.r - 0.0).abs() < 1e-6);
+        assert!((black.g - 0.0).abs() < 1e-6);
+        assert!((black.b - 0.0).abs() < 1e-6);
+        assert!((black.a - 1.0).abs() < 1e-6);
     }
 
     #[test]

@@ -128,3 +128,13 @@ Additional locked behavior:
 
 - Theme resolution is **window-aware** (DPI scale factor + density mode are inputs).
 - Theme changes produce a single “theme revision” increment that participates in layout/paint caching keys.
+
+## Addendum: Named color compatibility keys (2026-02-26)
+
+Some upstream ecosystems (notably Tailwind/shadcn) use named colors directly (e.g. `text-white`,
+`bg-black`). Fret's primary contract remains **semantic tokens** (typed keys + stable namespaced
+strings), but we also reserve a small set of **named color** keys for ecosystem alignment.
+
+- Reserved named colors (non-semantic): `white`, `black`
+- Widgets should prefer semantic tokens, but may use named colors when the upstream source of truth
+  is explicitly a named color (e.g. shadcn destructive uses `text-white`).

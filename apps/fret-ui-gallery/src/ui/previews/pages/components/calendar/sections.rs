@@ -2,113 +2,55 @@ use super::super::super::super::super::*;
 
 use super::models::CalendarHandles;
 use fret_ui::ThemeSnapshot;
+use fret_ui_headless::calendar_solar_hijri::SolarHijriMonth;
 
-pub(super) fn basic(
-    cx: &mut ElementContext<'_, App>,
-    theme: &ThemeSnapshot,
-    models: &CalendarHandles,
-) -> AnyElement {
-    let month = models.month.clone();
-    let selected = models.selected.clone();
+pub(super) fn demo(cx: &mut ElementContext<'_, App>, models: &CalendarHandles) -> AnyElement {
+    let month = models.caption_month.clone();
+    let selected = models.caption_selected.clone();
 
-    let body = stack::hstack(
-        cx,
-        stack::HStackProps::default().gap(Space::N6).items_start(),
-        |cx| {
-            let selected_str = cx
-                .get_model_copied(&selected, Invalidation::Layout)
-                .flatten()
-                .map(|d| d.to_string())
-                .unwrap_or_else(|| "<none>".to_string());
-
-            vec![
-                shadcn::Calendar::new(month.clone(), selected.clone())
-                    .test_id_prefix("ui-gallery.calendar.basic")
-                    .refine_style(ChromeRefinement::default().border_1().rounded(Radius::Lg))
-                    .into_element(cx),
-                stack::vstack(
-                    cx,
-                    stack::VStackProps::default().gap(Space::N1).items_start(),
-                    |cx| {
-                        vec![cx.text_props(TextProps {
-                            layout: Default::default(),
-                            text: Arc::from(format!("selected={}", selected_str)),
-                            style: None,
-                            color: Some(theme.color_token("muted-foreground")),
-                            wrap: TextWrap::None,
-                            overflow: TextOverflow::Clip,
-                            align: fret_core::TextAlign::Start,
-                            ink_overflow: fret_ui::element::TextInkOverflow::None,
-                        })]
-                    },
-                ),
-            ]
-        },
-    );
-    body
+    shadcn::Calendar::new(month, selected)
+        .test_id_prefix("ui-gallery.calendar.demo")
+        .caption_layout(shadcn::CalendarCaptionLayout::Dropdown)
+        .refine_style(
+            ChromeRefinement::default()
+                .border_1()
+                .rounded(Radius::Md)
+                .shadow_sm(),
+        )
+        .into_element(cx)
 }
 
-pub(super) fn range(
-    cx: &mut ElementContext<'_, App>,
-    theme: &ThemeSnapshot,
-    models: &CalendarHandles,
-) -> AnyElement {
+pub(super) fn basic(cx: &mut ElementContext<'_, App>, models: &CalendarHandles) -> AnyElement {
+    let month = models.caption_month.clone();
+    let selected = models.caption_selected.clone();
+
+    shadcn::Calendar::new(month, selected)
+        .test_id_prefix("ui-gallery.calendar.basic")
+        .refine_style(ChromeRefinement::default().border_1().rounded(Radius::Lg))
+        .into_element(cx)
+}
+
+pub(super) fn locale(cx: &mut ElementContext<'_, App>, models: &CalendarHandles) -> AnyElement {
+    let month = models.locale_month.clone();
+    let selected = models.locale_selected.clone();
+
+    shadcn::Calendar::new(month, selected)
+        .locale(shadcn::calendar::CalendarLocale::Es)
+        .week_start(time::Weekday::Monday)
+        .test_id_prefix("ui-gallery.calendar.locale")
+        .refine_style(ChromeRefinement::default().border_1().rounded(Radius::Lg))
+        .into_element(cx)
+}
+
+pub(super) fn range(cx: &mut ElementContext<'_, App>, models: &CalendarHandles) -> AnyElement {
     let range_month = models.range_month.clone();
     let range_selected = models.range_selected.clone();
 
-    let body = stack::hstack(
-        cx,
-        stack::HStackProps::default().gap(Space::N6).items_start(),
-        |cx| {
-            let range = cx
-                .get_model_copied(&range_selected, Invalidation::Layout)
-                .unwrap_or_default();
-            let from = range
-                .from
-                .map(|d| d.to_string())
-                .unwrap_or_else(|| "<none>".to_string());
-            let to = range
-                .to
-                .map(|d| d.to_string())
-                .unwrap_or_else(|| "<none>".to_string());
-
-            vec![
-                shadcn::CalendarRange::new(range_month.clone(), range_selected.clone())
-                    .number_of_months(2)
-                    .refine_style(ChromeRefinement::default().border_1().rounded(Radius::Lg))
-                    .into_element(cx),
-                stack::vstack(
-                    cx,
-                    stack::VStackProps::default().gap(Space::N1).items_start(),
-                    |cx| {
-                        vec![
-                            cx.text_props(TextProps {
-                                layout: Default::default(),
-                                text: Arc::from(format!("from={}", from)),
-                                style: None,
-                                color: Some(theme.color_token("muted-foreground")),
-                                wrap: TextWrap::None,
-                                overflow: TextOverflow::Clip,
-                                align: fret_core::TextAlign::Start,
-                                ink_overflow: fret_ui::element::TextInkOverflow::None,
-                            }),
-                            cx.text_props(TextProps {
-                                layout: Default::default(),
-                                text: Arc::from(format!("to={}", to)),
-                                style: None,
-                                color: Some(theme.color_token("muted-foreground")),
-                                wrap: TextWrap::None,
-                                overflow: TextOverflow::Clip,
-                                align: fret_core::TextAlign::Start,
-                                ink_overflow: fret_ui::element::TextInkOverflow::None,
-                            }),
-                        ]
-                    },
-                ),
-            ]
-        },
-    );
-    body
+    shadcn::CalendarRange::new(range_month, range_selected)
+        .number_of_months(2)
+        .test_id_prefix("ui-gallery.calendar.range")
+        .refine_style(ChromeRefinement::default().border_1().rounded(Radius::Lg))
+        .into_element(cx)
 }
 
 pub(super) fn responsive_mixed_semantics(
@@ -331,38 +273,28 @@ pub(super) fn date_and_time_picker(
 
 pub(super) fn booked_dates(
     cx: &mut ElementContext<'_, App>,
-    theme: &ThemeSnapshot,
     models: &CalendarHandles,
+    today: Date,
 ) -> AnyElement {
     let booked_month = models.booked_month.clone();
     let booked_selected = models.booked_selected.clone();
 
-    let body = stack::hstack(
-        cx,
-        stack::HStackProps::default().gap(Space::N6).items_start(),
-        |cx| {
-            vec![
-                shadcn::Calendar::new(booked_month.clone(), booked_selected.clone())
-                    .test_id_prefix("ui-gallery.calendar.booked")
-                    .disabled_by(|d| {
-                        matches!(d.weekday(), time::Weekday::Saturday | time::Weekday::Sunday)
-                    })
-                    .refine_style(ChromeRefinement::default().border_1().rounded(Radius::Lg))
-                    .into_element(cx),
-                cx.text_props(TextProps {
-                    layout: Default::default(),
-                    text: Arc::from("Disabled: weekends"),
-                    style: None,
-                    color: Some(theme.color_token("muted-foreground")),
-                    wrap: TextWrap::None,
-                    overflow: TextOverflow::Clip,
-                    align: fret_core::TextAlign::Start,
-                    ink_overflow: fret_ui::element::TextInkOverflow::None,
-                }),
-            ]
-        },
-    );
-    body
+    let booked_dates = {
+        let year = today.year();
+        let start = time::Date::from_calendar_date(year, time::Month::January, 12)
+            .expect("valid booked date");
+        Arc::<[Date]>::from(
+            (0..15)
+                .map(|i| start + time::Duration::days(i))
+                .collect::<Vec<_>>(),
+        )
+    };
+
+    shadcn::Calendar::new(booked_month, booked_selected)
+        .test_id_prefix("ui-gallery.calendar.booked")
+        .disabled(fret_ui_headless::calendar::DayMatcher::dates(booked_dates))
+        .refine_style(ChromeRefinement::default().border_1().rounded(Radius::Lg))
+        .into_element(cx)
 }
 
 pub(super) fn custom_cell_size(
@@ -375,6 +307,7 @@ pub(super) fn custom_cell_size(
     let body = shadcn::Calendar::new(custom_cell_month, custom_cell_selected)
         .test_id_prefix("ui-gallery.calendar.custom-cell")
         .cell_size(Px(44.0))
+        .caption_layout(shadcn::CalendarCaptionLayout::Dropdown)
         .refine_style(ChromeRefinement::default().border_1().rounded(Radius::Lg))
         .into_element(cx);
     body
@@ -412,4 +345,14 @@ pub(super) fn rtl(cx: &mut ElementContext<'_, App>, models: &CalendarHandles) ->
         },
     );
     body
+}
+
+pub(super) fn hijri(cx: &mut ElementContext<'_, App>, models: &CalendarHandles) -> AnyElement {
+    let month: Model<SolarHijriMonth> = models.hijri_month.clone();
+    let selected = models.hijri_selected.clone();
+
+    shadcn::CalendarHijri::new(month, selected)
+        .cell_size(Px(38.0))
+        .refine_style(ChromeRefinement::default().border_1().rounded(Radius::Lg))
+        .into_element(cx)
 }

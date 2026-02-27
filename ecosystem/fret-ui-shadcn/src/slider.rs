@@ -9,7 +9,7 @@ use fret_ui::element::{
     AnyElement, ColumnProps, ContainerProps, CrossAlign, LayoutStyle, Length, MainAlign,
     MarginEdge, MarginEdges, OpacityProps, Overflow, PointerRegionProps, PositionStyle, RowProps,
 };
-use fret_ui::{ElementContext, GlobalElementId, Theme, UiHost};
+use fret_ui::{ElementContext, GlobalElementId, Theme, ThemeNamedColorKey, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::direction as radix_direction;
@@ -399,9 +399,6 @@ pub fn slider<H: UiHost>(
             .color_by_key("primary")
             .or_else(|| theme.color_by_key("accent"))
             .unwrap_or(theme.colors.accent);
-        let thumb_bg = theme
-            .color_by_key("background")
-            .unwrap_or(theme.colors.surface_background);
         let thumb_border = theme
             .color_by_key("primary")
             .or_else(|| theme.color_by_key("accent"))
@@ -415,7 +412,9 @@ pub fn slider<H: UiHost>(
                 ColorRef::Color(alpha_mul(ring_color, 0.55)),
             );
         let default_range_background = WidgetStateProperty::new(ColorRef::Color(range_bg));
-        let default_thumb_background = WidgetStateProperty::new(ColorRef::Color(thumb_bg));
+        // Upstream shadcn slider thumb uses `bg-white` (even in dark mode).
+        let default_thumb_background =
+            WidgetStateProperty::new(ColorRef::Named(ThemeNamedColorKey::White));
         let default_thumb_border_color = WidgetStateProperty::new(ColorRef::Color(thumb_border));
         let default_thumb_ring_color = WidgetStateProperty::new(ColorRef::Color(ring_color));
 

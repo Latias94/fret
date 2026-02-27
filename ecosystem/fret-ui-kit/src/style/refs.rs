@@ -1,4 +1,5 @@
 use fret_core::{Color, Px};
+use fret_ui::ThemeNamedColorKey;
 
 use super::ThemeTokenRead;
 use super::{ColorFallback, MetricFallback, Radius, Space};
@@ -104,6 +105,7 @@ impl From<MetricRef> for SignedMetricRef {
 #[derive(Debug, Clone)]
 pub enum ColorRef {
     Color(Color),
+    Named(ThemeNamedColorKey),
     Token {
         key: &'static str,
         fallback: ColorFallback,
@@ -114,6 +116,7 @@ impl ColorRef {
     pub fn resolve<T: ThemeTokenRead + ?Sized>(&self, theme: &T) -> Color {
         match self {
             Self::Color(c) => *c,
+            Self::Named(key) => theme.named_color(*key),
             Self::Token { key, fallback } => theme
                 .color_by_key(key)
                 .unwrap_or_else(|| fallback.resolve(theme)),

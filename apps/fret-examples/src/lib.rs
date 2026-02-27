@@ -17,6 +17,8 @@ pub mod alpha_mode_demo;
 pub mod area_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod assets_demo;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod async_playground_demo;
 pub mod bars_demo;
 pub mod candlestick_demo;
 #[cfg(not(target_arch = "wasm32"))]
@@ -113,6 +115,8 @@ pub mod plot_demo;
 pub mod plot_image_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod plot_stress_demo;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod query_async_tokio_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod query_demo;
 #[cfg(not(target_arch = "wasm32"))]

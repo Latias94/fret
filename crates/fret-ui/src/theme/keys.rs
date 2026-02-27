@@ -99,6 +99,32 @@ impl ThemeColorKey {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ThemeNamedColorKey {
+    White,
+    Black,
+}
+
+impl ThemeNamedColorKey {
+    pub const ALL: &'static [ThemeNamedColorKey] =
+        &[ThemeNamedColorKey::White, ThemeNamedColorKey::Black];
+
+    pub const fn canonical_name(self) -> &'static str {
+        match self {
+            ThemeNamedColorKey::White => "white",
+            ThemeNamedColorKey::Black => "black",
+        }
+    }
+
+    pub fn from_canonical_name(name: &str) -> Option<Self> {
+        match name {
+            "white" => Some(Self::White),
+            "black" => Some(Self::Black),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ThemeMetricKey {
     Radius,
     FontSize,

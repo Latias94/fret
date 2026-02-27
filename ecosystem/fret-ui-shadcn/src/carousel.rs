@@ -606,6 +606,7 @@ impl Carousel {
                 FlexProps {
                     layout: track_layout,
                     direction: track_direction,
+                    align: CrossAlign::Stretch,
                     wrap: false,
                     ..Default::default()
                 },
@@ -670,33 +671,14 @@ impl Carousel {
                                 },
                             };
 
-                            let item = match track_direction {
-                                fret_core::Axis::Horizontal => {
-                                    let inner = cx.container(
-                                        fret_ui::element::ContainerProps {
-                                            padding: padding.into(),
-                                            ..Default::default()
-                                        },
-                                        move |_cx| vec![content],
-                                    );
-
-                                    cx.container(
-                                        fret_ui::element::ContainerProps {
-                                            layout: item_layout,
-                                            ..Default::default()
-                                        },
-                                        move |_cx| vec![inner],
-                                    )
-                                }
-                                fret_core::Axis::Vertical => cx.container(
-                                    fret_ui::element::ContainerProps {
-                                        layout: item_layout,
-                                        padding: padding.into(),
-                                        ..Default::default()
-                                    },
-                                    move |_cx| vec![content],
-                                ),
-                            };
+                            let item = cx.container(
+                                fret_ui::element::ContainerProps {
+                                    layout: item_layout,
+                                    padding: padding.into(),
+                                    ..Default::default()
+                                },
+                                move |_cx| vec![content],
+                            );
 
                             item.attach_semantics(
                                 SemanticsDecoration::default()

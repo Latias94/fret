@@ -3,6 +3,7 @@ use std::sync::Arc;
 use fret_core::{Color, Corners, Point, Px, SemanticsRole, Transform2D};
 use fret_icons::IconId;
 use fret_runtime::Effect;
+use fret_ui::ThemeNamedColorKey;
 use fret_ui::action::OnActivate;
 use fret_ui::element::{
     AnyElement, ElementKind, LayoutStyle, Length, PressableA11y, PressableKeyActivation,
@@ -177,9 +178,7 @@ fn fg_for(theme: &ThemeSnapshot, variant: BadgeVariant) -> Color {
         BadgeVariant::Default => theme.color_token("primary-foreground"),
         BadgeVariant::Secondary => theme.color_token("secondary-foreground"),
         // Upstream shadcn badge uses `text-white` for destructive.
-        BadgeVariant::Destructive => theme
-            .color_by_key("white")
-            .unwrap_or_else(|| theme.color_token("destructive-foreground")),
+        BadgeVariant::Destructive => theme.named_color(ThemeNamedColorKey::White),
         BadgeVariant::Outline => theme.color_token("foreground"),
         BadgeVariant::Ghost => theme.color_token("foreground"),
         BadgeVariant::Link => theme.color_token("primary"),
@@ -190,7 +189,11 @@ fn bg_for(theme: &ThemeSnapshot, variant: BadgeVariant) -> Option<Color> {
     match variant {
         BadgeVariant::Default => Some(theme.color_token("primary")),
         BadgeVariant::Secondary => Some(theme.color_token("secondary")),
-        BadgeVariant::Destructive => Some(theme.color_token("destructive")),
+        BadgeVariant::Destructive => Some(
+            theme
+                .color_by_key("component.badge.destructive.bg")
+                .unwrap_or_else(|| theme.color_token("destructive")),
+        ),
         BadgeVariant::Outline => None,
         BadgeVariant::Ghost => None,
         BadgeVariant::Link => None,

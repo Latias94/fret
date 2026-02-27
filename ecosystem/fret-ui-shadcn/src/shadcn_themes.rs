@@ -246,6 +246,20 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
     // Menu rows use `data-[variant=destructive]:focus:bg-destructive/10` (and `/20` on dark) in the
     // upstream shadcn v4 recipes.
     if let Some(destructive) = colors.get("destructive").cloned() {
+        // Button / Badge destructive background:
+        // - light: `bg-destructive`
+        // - dark: `dark:bg-destructive/60`
+        let destructive_bg = match scheme {
+            ShadcnColorScheme::Light => destructive.clone(),
+            ShadcnColorScheme::Dark => with_oklch_alpha(&destructive, 0.6)
+                .expect("shadcn new-york-v4 destructive token is oklch"),
+        };
+        colors.insert(
+            "component.button.destructive.bg".to_string(),
+            destructive_bg.clone(),
+        );
+        colors.insert("component.badge.destructive.bg".to_string(), destructive_bg);
+
         let alpha = match scheme {
             ShadcnColorScheme::Light => 0.1,
             ShadcnColorScheme::Dark => 0.2,
@@ -810,6 +824,53 @@ mod tests {
         for &base in ShadcnBaseColor::ALL {
             let cfg_light = shadcn_new_york_v4_config(base, ShadcnColorScheme::Light);
             let cfg_dark = shadcn_new_york_v4_config(base, ShadcnColorScheme::Dark);
+
+            let destructive_light = cfg_light
+                .colors
+                .get("destructive")
+                .cloned()
+                .expect("missing destructive");
+            let destructive_dark = cfg_dark
+                .colors
+                .get("destructive")
+                .cloned()
+                .expect("missing destructive");
+
+            assert_eq!(
+                cfg_light
+                    .colors
+                    .get("component.button.destructive.bg")
+                    .cloned(),
+                Some(destructive_light.clone()),
+                "expected destructive button bg to match destructive in light scheme"
+            );
+            assert_eq!(
+                cfg_light
+                    .colors
+                    .get("component.badge.destructive.bg")
+                    .cloned(),
+                Some(destructive_light),
+                "expected destructive badge bg to match destructive in light scheme"
+            );
+
+            let expected_destructive_dark_bg = with_oklch_alpha(&destructive_dark, 0.6)
+                .expect("shadcn new-york-v4 destructive token is oklch");
+            assert_eq!(
+                cfg_dark
+                    .colors
+                    .get("component.button.destructive.bg")
+                    .cloned(),
+                Some(expected_destructive_dark_bg.clone()),
+                "expected destructive button bg to match destructive/60 in dark scheme"
+            );
+            assert_eq!(
+                cfg_dark
+                    .colors
+                    .get("component.badge.destructive.bg")
+                    .cloned(),
+                Some(expected_destructive_dark_bg),
+                "expected destructive badge bg to match destructive/60 in dark scheme"
+            );
 
             assert_eq!(
                 cfg_light
