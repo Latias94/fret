@@ -3,7 +3,9 @@
 Milestones are structured to keep changes reviewable and reversible. Each milestone must ship a
 “3-pack”: Repro (smallest surface), Gate (tests/scripts), Evidence (anchors + upstream refs).
 
-## M0 — Gate set (fearless foundation)
+Current status (as of 2026-02-27): M0–M3 shipped locally with gates.
+
+## M0 — Gate set (fearless foundation) ✅
 
 **Goal:** Create enough regression protection that we can refactor without fear.
 
@@ -25,27 +27,21 @@ Milestones are structured to keep changes reviewable and reversible. Each milest
 - All gates green locally (`cargo nextest run -p fret-ui-shadcn web_vs_fret_layout_carousel` plus the new headless tests).
 - At least one diag script produces a packed bundle and is deterministic with fixed frame delta.
 
-## M1 — Engine scaffold (no default switch)
+## M1 — Recipe snap wiring ✅
 
-**Goal:** Introduce an engine-backed code path without changing default behavior.
+**Goal:** Drive prev/next/keys from a snap list (not `index * extent`) while keeping the recipe
+policy-only.
 
 **Deliverables**
 
-- New headless types (names illustrative):
-  - `CarouselSnapModel`
-  - `CarouselEngineState`
-  - `CarouselEngine` (update API)
-- `ecosystem/fret-ui-shadcn::Carousel` has:
-  - existing v0 path,
-  - new v1 engine-backed path behind an internal toggle.
-- UI gallery Carousel page uses v1 path (explicitly), leaving default untouched.
+- `snap_model_1d` wired into `ecosystem/fret-ui-shadcn::Carousel`.
+- Minimal options surface (`align`, `containScroll`, `slidesToScroll`) stays recipe-only.
 
 **Exit criteria**
 
-- UI gallery renders identically for existing demo sections.
-- Existing web-vs-fret tests still pass.
+- Screenshot + web-vs-fret layout parity gates pass for Demo/Sizes/Spacing/Vertical/Expandable.
 
-## M2 — Geometry-derived snaps (P0 core)
+## M2 — Geometry-derived snaps ✅
 
 **Goal:** Replace uniform extent snapping with geometry-derived snap list.
 
@@ -60,43 +56,30 @@ Milestones are structured to keep changes reviewable and reversible. Each milest
 - Variable slide size gates pass.
 - Orientation vertical gates still pass.
 
-## M3 — Align + containScroll(trimSnaps) parity (P0 completion)
+## M3 — Docs parity extras (API snapshot + autoplay) ✅
 
-**Goal:** Match Embla’s default edge behavior and alignment semantics.
-
-**Deliverables**
-
-- `align=start|center|end` integrated into snap computation.
-- `containScroll=trimSnaps` implemented and gated.
-
-**Exit criteria**
-
-- Headless unit tests cover align + containScroll edge cases.
-- At least one new geometry parity case is added for clamped edges.
-
-## M4 — slidesToScroll (P1)
-
-**Goal:** Support grouping behavior for snapping.
+**Goal:** Align with shadcn docs “API” and “Plugins” examples without exposing Embla's imperative API
+surface.
 
 **Deliverables**
 
-- `slidesToScroll` implemented in snap grouping.
-- Gates updated (unit + geometry).
+- Deterministic API snapshot surface for slide counters.
+- Recipe-level autoplay policy surface + UI gallery demo.
+- Diag gate that proves autoplay advances without interaction (`--check-pixels-changed`).
 
 **Exit criteria**
 
-- snaps and `slidesBySnap` match expected for representative cases.
+- `fretboard diag run ...ui-gallery-carousel-plugin-autoplay-pixels-changed.json --check-pixels-changed ui-gallery-carousel-plugin` passes.
 
-## M5 — Flip default + delete v0
+## M4 — Remaining drift + ergonomics (next)
 
-**Goal:** Make v1 the default and remove the old path.
+**Goal:** Close remaining deltas against shadcn docs/Embla expectations with minimal surfaces.
 
 **Deliverables**
 
-- Default `Carousel` uses engine-backed implementation.
-- v0 code path removed.
+- Decide/lock any missing option semantics (e.g. `loop`, `slidesToScroll` edge cases) in headless.
+- Fix any remaining UI gallery layout drift (e.g. vertical layout, text wrapping) with gates.
 
 **Exit criteria**
 
-- All gates remain green; no new public API knobs were introduced in mechanism layers.
-
+- Updated TODO entries are executable and have at least one new gate per drift class.

@@ -20,6 +20,7 @@ pub use controller::{
     handle_pointer_move_default_scope, handle_pointer_move_in_scope,
     handle_pointer_move_or_init_in_scope, handle_pointer_up, handle_pointer_up_default_scope,
     handle_pointer_up_in_scope, handle_sensor_move_or_init_in_scope,
+    pointer_is_tracking_any_sensor,
 };
 pub use registry::{
     droppable_rect_in_scope, register_draggable_rect, register_draggable_rect_default_scope,

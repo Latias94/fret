@@ -178,7 +178,7 @@ Per-recipe tracking (pilot follow-ups):
     - Animata expandable carousel (size interpolation; explicit choreography)
   - Evidence:
     - `apps/fret-ui-gallery/src/ui/pages/carousel.rs`
-    - `tools/diag-scripts/ui-gallery-carousel-expandable-fixed-frame-delta.json`
+    - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-expandable-fixed-frame-delta.json`
 
 ## P2 — Ecosystem adoption seed (layout.expand beyond UI gallery)
 

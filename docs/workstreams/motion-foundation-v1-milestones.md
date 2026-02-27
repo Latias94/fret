@@ -141,7 +141,7 @@ Evidence:
 - Layout-expand pilot (Animata: Expandable carousel) consumes semantic duration + easing:
   - `apps/fret-ui-gallery/src/ui/pages/carousel.rs`
 - Deterministic retarget/interrupt gate (fixed delta; click item 3 then item 4 mid-flight):
-  - `tools/diag-scripts/ui-gallery-carousel-expandable-fixed-frame-delta.json`
+  - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-expandable-fixed-frame-delta.json`
 - Layout-expand adoption seed outside UI gallery components (docking split fraction motion + retarget gate):
   - `ecosystem/fret-docking/src/dock/space.rs`
   - `apps/fret-examples/src/docking_demo.rs`
