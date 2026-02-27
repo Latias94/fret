@@ -175,6 +175,11 @@ impl Renderer {
             uniform_bind_group_switches: self.perf.uniform_bind_group_switches,
             texture_bind_group_switches: self.perf.texture_bind_group_switches,
             scissor_sets: self.perf.scissor_sets,
+            path_msaa_samples_requested: self.perf.path_msaa_samples_requested,
+            path_msaa_samples_effective: self.perf.path_msaa_samples_effective,
+            path_msaa_vulkan_safety_valve_degradations: self
+                .perf
+                .path_msaa_vulkan_safety_valve_degradations,
             uniform_bytes: self.perf.uniform_bytes,
             instance_bytes: self.perf.instance_bytes,
             vertex_bytes: self.perf.vertex_bytes,

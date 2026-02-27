@@ -420,6 +420,12 @@ impl Renderer {
             .perf
             .scissor_sets
             .saturating_add(frame_perf.scissor_sets);
+        self.perf.path_msaa_samples_requested = frame_perf.path_msaa_samples_requested;
+        self.perf.path_msaa_samples_effective = frame_perf.path_msaa_samples_effective;
+        self.perf.path_msaa_vulkan_safety_valve_degradations = self
+            .perf
+            .path_msaa_vulkan_safety_valve_degradations
+            .saturating_add(frame_perf.path_msaa_vulkan_safety_valve_degradations);
         self.perf.uniform_bytes = self
             .perf
             .uniform_bytes
@@ -585,6 +591,10 @@ impl Renderer {
             uniform_bind_group_switches: frame_perf.uniform_bind_group_switches,
             texture_bind_group_switches: frame_perf.texture_bind_group_switches,
             scissor_sets: frame_perf.scissor_sets,
+            path_msaa_samples_requested: frame_perf.path_msaa_samples_requested,
+            path_msaa_samples_effective: frame_perf.path_msaa_samples_effective,
+            path_msaa_vulkan_safety_valve_degradations: frame_perf
+                .path_msaa_vulkan_safety_valve_degradations,
             uniform_bytes: frame_perf.uniform_bytes,
             instance_bytes: frame_perf.instance_bytes,
             vertex_bytes: frame_perf.vertex_bytes,

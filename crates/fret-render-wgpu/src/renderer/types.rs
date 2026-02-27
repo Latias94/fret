@@ -438,6 +438,11 @@ pub struct RenderPerfSnapshot {
     pub texture_bind_group_switches: u64,
     pub scissor_sets: u64,
 
+    // Path MSAA observability (best-effort).
+    pub path_msaa_samples_requested: u32,
+    pub path_msaa_samples_effective: u32,
+    pub path_msaa_vulkan_safety_valve_degradations: u64,
+
     pub uniform_bytes: u64,
     pub instance_bytes: u64,
     pub vertex_bytes: u64,
@@ -578,6 +583,10 @@ pub(super) struct RenderPerfStats {
     pub(super) uniform_bind_group_switches: u64,
     pub(super) texture_bind_group_switches: u64,
     pub(super) scissor_sets: u64,
+
+    pub(super) path_msaa_samples_requested: u32,
+    pub(super) path_msaa_samples_effective: u32,
+    pub(super) path_msaa_vulkan_safety_valve_degradations: u64,
 
     pub(super) uniform_bytes: u64,
     pub(super) instance_bytes: u64,

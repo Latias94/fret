@@ -47,6 +47,20 @@ impl Renderer {
         if let Some(ensure_elapsed) = ensure_elapsed {
             frame_perf.ensure_pipelines += ensure_elapsed;
         }
+
+        if perf_enabled {
+            frame_perf.path_msaa_samples_requested = self.path_msaa_samples;
+            frame_perf.path_msaa_samples_effective = path_samples;
+            if self.adapter.get_info().backend == wgpu::Backend::Vulkan
+                && self.path_msaa_samples > 1
+                && path_samples == 1
+                && std::env::var_os("FRET_ALLOW_VULKAN_PATH_MSAA").is_none()
+            {
+                frame_perf.path_msaa_vulkan_safety_valve_degradations = frame_perf
+                    .path_msaa_vulkan_safety_valve_degradations
+                    .saturating_add(1);
+            }
+        }
         path_samples
     }
 }

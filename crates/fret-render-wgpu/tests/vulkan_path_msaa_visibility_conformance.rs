@@ -228,6 +228,13 @@ fn vulkan_path_msaa_safety_valve_avoids_invisible_output() {
         "expected Vulkan path MSAA pipeline to be disabled by default; got pipeline_switches_path_msaa={}",
         snap.pipeline_switches_path_msaa
     );
+    assert_eq!(snap.path_msaa_samples_requested, 4);
+    assert_eq!(snap.path_msaa_samples_effective, 1);
+    assert!(
+        snap.path_msaa_vulkan_safety_valve_degradations >= 1,
+        "expected Vulkan MSAA safety valve to be observed; got path_msaa_vulkan_safety_valve_degradations={}",
+        snap.path_msaa_vulkan_safety_valve_degradations
+    );
 
     let pixels = read_texture_rgba8(&ctx.device, &ctx.queue, &target, viewport_size);
     let sample = pixel_rgba(&pixels, viewport_size.0, u(128.0, 1.0), u(128.0, 1.0));
