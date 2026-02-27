@@ -108,4 +108,4 @@ or (b) only allow dragging from non-interactive blank areas (breaking upstream e
 - Layout parity: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/carousel.rs`
 - Headless snap contract: `ecosystem/fret-ui-headless/src/carousel.rs` tests (nextest)
 - Interaction: `ecosystem/fret-ui-shadcn/tests/carousel_pointer_passthrough.rs`
-- Diagnostics (native screenshots): `tools/diag-scripts/ui-gallery-carousel-*-screenshot.json`
+- Diagnostics (native screenshots): `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-*-screenshot.json`

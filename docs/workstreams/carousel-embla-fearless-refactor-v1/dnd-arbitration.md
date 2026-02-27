@@ -103,6 +103,6 @@ Implementation notes:
 
 Existing gates (ui-gallery):
 
-- Body swipe + buttons: `tools/diag-scripts/ui-gallery-carousel-demo-swipe-and-buttons.json`
-- Handle DnD arbitration: `tools/diag-scripts/ui-gallery-carousel-demo-dnd-handle-gate.json`
-- Long-press DnD arbitration: `tools/diag-scripts/ui-gallery-carousel-demo-dnd-long-press-gate.json`
+- Body swipe + buttons: `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-swipe-and-buttons.json`
+- Handle DnD arbitration: `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-dnd-handle-gate.json`
+- Long-press DnD arbitration: `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-dnd-long-press-gate.json`

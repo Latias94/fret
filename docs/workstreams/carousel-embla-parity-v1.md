@@ -66,7 +66,7 @@ GPU-first UI runtime.
 - Test: drag from inner pressable does not activate:
   - `ecosystem/fret-ui-shadcn/tests/carousel_pointer_passthrough.rs`
 - Diag script gate:
-  - `tools/diag-scripts/ui-gallery-carousel-demo-swipe-and-buttons.json`
+  - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-swipe-and-buttons.json`
 
 ### Mechanism prerequisites (Fret)
 
@@ -118,4 +118,3 @@ If we want closer Embla parity without polluting `fret-ui-shadcn` with physics/m
 
 - Move scroll-body, snap selection, and edge constraints to a headless engine in `ecosystem/fret-ui-kit` (or `fret-ui-headless` if it fits).
 - Keep `fret-ui-shadcn` as pure composition + styling, and treat the engine output as input (offset/index/events).
-

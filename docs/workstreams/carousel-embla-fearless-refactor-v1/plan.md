@@ -18,8 +18,8 @@ This plan summarizes what is already landed and proposes the next, highest-lever
   - Decision + notes: `docs/workstreams/carousel-embla-fearless-refactor-v1/dnd-arbitration.md`
   - Policy hook: `fret-ui-shadcn::Carousel` skips swiping while a DnD sensor tracks the pointer.
   - Gates:
-    - `tools/diag-scripts/ui-gallery-carousel-demo-dnd-handle-gate.json`
-    - `tools/diag-scripts/ui-gallery-carousel-demo-dnd-long-press-gate.json`
+    - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-dnd-handle-gate.json`
+    - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-dnd-long-press-gate.json`
 
 ## Next steps (recommended order)
 
@@ -29,7 +29,7 @@ Goal: turn the current alignment into stable, repeatable gates.
 
 - Add/refresh diag scripts so we can catch regressions without relying on manual UI runs:
   - `ui-gallery-carousel-*-screenshot.json` set should cover Demo/Sizes/Spacing/Vertical/Expandable.
-  - Interaction gate: `ui-gallery-carousel-demo-dnd-handle-gate.json` (Carousel vs DnD arbitration)
+  - Interaction gate: `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-dnd-handle-gate.json` (Carousel vs DnD arbitration)
 - Add an audit note with evidence anchors (if the repo expects it):
   - `docs/audits/carousel-shadcn-embla-parity.md` (anchors: recipe + headless + tests + scripts).
 

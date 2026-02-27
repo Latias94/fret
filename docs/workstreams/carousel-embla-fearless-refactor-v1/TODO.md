@@ -48,7 +48,7 @@ In-tree surfaces:
 
 - [x] CAR-110 Ensure UI gallery examples mirror upstream widths and spacing recipes.
   - Evidence: `apps/fret-ui-gallery/src/ui/pages/carousel.rs`
-  - Gate: `tools/diag-scripts/ui-gallery-carousel-*-screenshot.json`
+  - Gate: `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-*-screenshot.json`
 - [x] CAR-120 Keep pointer/gesture arbitration aligned with Embla expectations:
   - descendant click should work
   - drag should steal capture only after threshold
@@ -69,13 +69,13 @@ In-tree surfaces:
 ## P3 — Evidence + guardrails
 
 - [x] CAR-310 Add/refresh diagnostics scripts for reproducible regressions.
-  - Evidence: `tools/diag-scripts/ui-gallery-carousel-*.json`
-    - `tools/diag-scripts/ui-gallery-carousel-demo-screenshot.json`
-    - `tools/diag-scripts/ui-gallery-carousel-basic-screenshot.json`
-    - `tools/diag-scripts/ui-gallery-carousel-sizes-screenshot.json`
-    - `tools/diag-scripts/ui-gallery-carousel-spacing-screenshot.json`
-    - `tools/diag-scripts/ui-gallery-carousel-orientation-vertical-screenshot.json`
-    - `tools/diag-scripts/ui-gallery-carousel-expandable-screenshot.json`
+  - Evidence: `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-*.json`
+    - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-screenshot.json`
+    - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-basic-screenshot.json`
+    - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-sizes-screenshot.json`
+    - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-spacing-screenshot.json`
+    - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-orientation-vertical-screenshot.json`
+    - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-expandable-screenshot.json`
 - [x] CAR-320 Update `docs/audits/carousel-shadcn-embla-parity.md` with new evidence anchors.
   - Evidence: `docs/audits/carousel-shadcn-embla-parity.md`
 - [x] CAR-330 Run layering checks if any cross-crate refactors are required.
@@ -107,5 +107,5 @@ keeping their higher-level semantics separate (Carousel vs Drawer vs Slider).
     - `ecosystem/fret-ui-kit/src/dnd/controller.rs` (`pointer_is_tracking_any_sensor`)
     - `ecosystem/fret-ui-shadcn/src/carousel.rs` (skip swipe when DnD sensor tracks the pointer)
     - `apps/fret-ui-gallery/src/ui/pages/carousel.rs` (demo handle wiring)
-    - `tools/diag-scripts/ui-gallery-carousel-demo-dnd-handle-gate.json`
-    - `tools/diag-scripts/ui-gallery-carousel-demo-dnd-long-press-gate.json`
+    - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-dnd-handle-gate.json`
+    - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-dnd-long-press-gate.json`
