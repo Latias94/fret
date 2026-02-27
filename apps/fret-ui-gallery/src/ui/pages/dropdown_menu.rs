@@ -182,13 +182,10 @@ pub(super) fn preview_dropdown_menu(
         }
     };
 
-    let button_trigger = |cx: &mut ElementContext<'_, App>,
-                          open_model: Model<bool>,
-                          label: &'static str,
-                          test_id: &'static str| {
+    let button_trigger =
+        |cx: &mut ElementContext<'_, App>, label: &'static str, test_id: &'static str| {
         shadcn::Button::new(label)
             .variant(shadcn::ButtonVariant::Outline)
-            .toggle_model(open_model.clone())
             .test_id(test_id)
             .into_element(cx)
     };
@@ -204,7 +201,6 @@ pub(super) fn preview_dropdown_menu(
         |cx| {
             shadcn::Button::new("Open menu")
                 .variant(shadcn::ButtonVariant::Outline)
-                .toggle_model(open.clone())
                 .test_id("ui-gallery-dropdown-menu-demo-trigger")
                 .into_element(cx)
         },
@@ -255,7 +251,6 @@ pub(super) fn preview_dropdown_menu(
         |cx| {
             button_trigger(
                 cx,
-                basic_open.clone(),
                 "Basic",
                 "ui-gallery-dropdown-menu-basic-trigger",
             )
@@ -281,7 +276,6 @@ pub(super) fn preview_dropdown_menu(
         |cx| {
             button_trigger(
                 cx,
-                submenu_open.clone(),
                 "Submenu",
                 "ui-gallery-dropdown-menu-submenu-trigger",
             )
@@ -312,7 +306,6 @@ pub(super) fn preview_dropdown_menu(
         |cx| {
             button_trigger(
                 cx,
-                shortcuts_open.clone(),
                 "Shortcuts",
                 "ui-gallery-dropdown-menu-shortcuts-trigger",
             )
@@ -338,7 +331,6 @@ pub(super) fn preview_dropdown_menu(
         |cx| {
             button_trigger(
                 cx,
-                icons_open.clone(),
                 "Icons",
                 "ui-gallery-dropdown-menu-icons-trigger",
             )
@@ -366,7 +358,6 @@ pub(super) fn preview_dropdown_menu(
         |cx| {
             button_trigger(
                 cx,
-                checkboxes_open.clone(),
                 "Checkboxes",
                 "ui-gallery-dropdown-menu-checkboxes-trigger",
             )
@@ -390,7 +381,6 @@ pub(super) fn preview_dropdown_menu(
         |cx| {
             button_trigger(
                 cx,
-                checkboxes_icons_open.clone(),
                 "Checkboxes Icons",
                 "ui-gallery-dropdown-menu-checkboxes-icons-trigger",
             )
@@ -420,7 +410,6 @@ pub(super) fn preview_dropdown_menu(
         |cx| {
             button_trigger(
                 cx,
-                radio_open.clone(),
                 "Radio Group",
                 "ui-gallery-dropdown-menu-radio-trigger",
             )
@@ -440,7 +429,6 @@ pub(super) fn preview_dropdown_menu(
         |cx| {
             button_trigger(
                 cx,
-                radio_icons_open.clone(),
                 "Radio Icons",
                 "ui-gallery-dropdown-menu-radio-icons-trigger",
             )
@@ -473,7 +461,6 @@ pub(super) fn preview_dropdown_menu(
         |cx| {
             button_trigger(
                 cx,
-                destructive_open.clone(),
                 "Destructive",
                 "ui-gallery-dropdown-menu-destructive-trigger",
             )
@@ -521,7 +508,6 @@ pub(super) fn preview_dropdown_menu(
             |cx| {
                 button_trigger(
                     cx,
-                    complex_open.clone(),
                     "Complex",
                     "ui-gallery-dropdown-menu-complex-trigger",
                 )
@@ -562,7 +548,6 @@ pub(super) fn preview_dropdown_menu(
             |cx| {
                 button_trigger(
                     cx,
-                    rtl_open.clone(),
                     "RTL",
                     "ui-gallery-dropdown-menu-rtl-trigger",
                 )
