@@ -156,48 +156,48 @@ pub(crate) fn scripts_for_perf_suite_name(name: &str) -> Option<&'static [&'stat
             "tools/diag-scripts/docking-arbitration-demo-nary-tab-drag-hover-perf-large-layout-steady.json",
         ]),
         "ui-gallery" => Some(&[
-            "tools/diag-scripts/ui-gallery-overlay-torture.json",
-            "tools/diag-scripts/ui-gallery-dropdown-open-select.json",
-            "tools/diag-scripts/ui-gallery-context-menu-right-click.json",
-            "tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json",
-            "tools/diag-scripts/ui-gallery-menubar-keyboard-nav.json",
-            "tools/diag-scripts/ui-gallery-virtual-list-torture.json",
-            "tools/diag-scripts/ui-gallery-material3-tabs-switch-perf.json",
-            "tools/diag-scripts/ui-gallery-view-cache-toggle-perf.json",
-            "tools/diag-scripts/ui-gallery-window-resize-stress.json",
+            "tools/diag-scripts/ui-gallery/perf/ui-gallery-overlay-torture.json",
+            "tools/diag-scripts/ui-gallery/dropdown/ui-gallery-dropdown-open-select.json",
+            "tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-right-click.json",
+            "tools/diag-scripts/ui-gallery/overlay/ui-gallery-dialog-escape-focus-restore.json",
+            "tools/diag-scripts/ui-gallery/menubar/ui-gallery-menubar-keyboard-nav.json",
+            "tools/diag-scripts/ui-gallery/perf/ui-gallery-virtual-list-torture.json",
+            "tools/diag-scripts/ui-gallery/perf/ui-gallery-material3-tabs-switch-perf.json",
+            "tools/diag-scripts/ui-gallery/perf/ui-gallery-view-cache-toggle-perf.json",
+            "tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress.json",
         ]),
         "ui-gallery-steady" => Some(&[
-            "tools/diag-scripts/ui-gallery-overlay-torture-steady.json",
-            "tools/diag-scripts/ui-gallery-dropdown-open-select-steady.json",
-            "tools/diag-scripts/ui-gallery-context-menu-right-click-steady.json",
-            "tools/diag-scripts/ui-gallery-dialog-escape-focus-restore-steady.json",
-            "tools/diag-scripts/ui-gallery-hover-layout-torture-steady.json",
-            "tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json",
-            "tools/diag-scripts/ui-gallery-virtual-list-torture-steady.json",
-            "tools/diag-scripts/ui-gallery-material3-tabs-switch-perf-steady.json",
-            "tools/diag-scripts/ui-gallery-view-cache-toggle-perf-steady.json",
-            "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json",
+            "tools/diag-scripts/ui-gallery/perf/ui-gallery-overlay-torture-steady.json",
+            "tools/diag-scripts/ui-gallery/perf/ui-gallery-dropdown-open-select-steady.json",
+            "tools/diag-scripts/ui-gallery/perf/ui-gallery-context-menu-right-click-steady.json",
+            "tools/diag-scripts/ui-gallery/perf/ui-gallery-dialog-escape-focus-restore-steady.json",
+            "tools/diag-scripts/ui-gallery/perf/ui-gallery-hover-layout-torture-steady.json",
+            "tools/diag-scripts/ui-gallery/perf/ui-gallery-menubar-keyboard-nav-steady.json",
+            "tools/diag-scripts/ui-gallery/perf/ui-gallery-virtual-list-torture-steady.json",
+            "tools/diag-scripts/ui-gallery/perf/ui-gallery-material3-tabs-switch-perf-steady.json",
+            "tools/diag-scripts/ui-gallery/perf/ui-gallery-view-cache-toggle-perf-steady.json",
+            "tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress-steady.json",
         ]),
         "ui-resize-probes" => Some(&[
-            "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json",
-            "tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json",
+            "tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress-steady.json",
+            "tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-drag-jitter-steady.json",
         ]),
         "ui-code-editor-resize-probes" => Some(&[
-            "tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json",
+            "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-window-resize-drag-jitter-steady.json",
         ]),
         "ui-gallery-complex-steady" => Some(&[
-            "tools/diag-scripts/ui-gallery-chrome-torture-steady.json",
-            "tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json",
-            "tools/diag-scripts/ui-gallery-virtual-list-torture-steady.json",
-            "tools/diag-scripts/ui-gallery-overlay-torture-steady.json",
+            "tools/diag-scripts/ui-gallery/perf/ui-gallery-chrome-torture-steady.json",
+            "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-autoscroll-steady.json",
+            "tools/diag-scripts/ui-gallery/perf/ui-gallery-virtual-list-torture-steady.json",
+            "tools/diag-scripts/ui-gallery/perf/ui-gallery-overlay-torture-steady.json",
         ]),
         "ui-gallery-complex-typical" => Some(&[
-            "tools/diag-scripts/ui-gallery-chrome-torture-typical.json",
-            "tools/diag-scripts/ui-gallery-code-editor-torture-idle-typical.json",
-            "tools/diag-scripts/ui-gallery-virtual-list-torture-typical.json",
-            "tools/diag-scripts/ui-gallery-overlay-torture-typical.json",
+            "tools/diag-scripts/ui-gallery/perf/ui-gallery-chrome-torture-typical.json",
+            "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-idle-typical.json",
+            "tools/diag-scripts/ui-gallery/perf/ui-gallery-virtual-list-torture-typical.json",
+            "tools/diag-scripts/ui-gallery/perf/ui-gallery-overlay-torture-typical.json",
         ]),
-        "extras-marquee-steady" => Some(&["tools/diag-scripts/extras-marquee-steady.json"]),
+        "extras-marquee-steady" => Some(&["tools/diag-scripts/extras/extras-marquee-steady.json"]),
         "liquid-glass-backdrop-warp-steady" => {
             Some(&["tools/diag-scripts/liquid-glass-backdrop-warp-steady.json"])
         }
@@ -442,6 +442,8 @@ fn expand_scope_to_script_keys(
     scope: &str,
 ) -> Result<Vec<String>, String> {
     let all_keys: Vec<String> = scripts_by_key.keys().cloned().collect();
+    let scope_norm = scope.replace('\\', "/");
+    let scope = scope_norm.as_str();
 
     if scope == "*" || scope == "this-suite" || suite_name.is_some_and(|s| s == scope) {
         return Ok(all_keys);
@@ -481,7 +483,35 @@ fn expand_scope_to_script_keys(
     if scripts_by_key.contains_key(&key) {
         Ok(vec![key])
     } else {
-        Ok(Vec::new())
+        // Compatibility: allow rule scopes to reference a `script_redirect` stub path.
+        // This keeps old preset files working after script taxonomy moves.
+        let scope_path = if Path::new(scope).is_absolute() {
+            PathBuf::from(scope)
+        } else {
+            workspace_root.join(scope)
+        };
+        let bytes = std::fs::read(&scope_path).ok();
+        let redirected = bytes
+            .as_deref()
+            .and_then(|b| serde_json::from_slice::<Value>(b).ok())
+            .and_then(|v| {
+                let kind = v.get("kind").and_then(|v| v.as_str());
+                let to = v.get("to").and_then(|v| v.as_str());
+                if kind == Some("script_redirect") {
+                    to.map(|s| s.to_string())
+                } else {
+                    None
+                }
+            })
+            .map(|to| to.replace('\\', "/"))
+            .map(|to| normalize_repo_relative_path(workspace_root, &workspace_root.join(to)));
+        if let Some(key) = redirected
+            && scripts_by_key.contains_key(&key)
+        {
+            Ok(vec![key])
+        } else {
+            Ok(Vec::new())
+        }
     }
 }
 
@@ -492,11 +522,21 @@ mod tests {
     #[test]
     fn seed_policy_preset_and_cli_overrides_apply_in_order() {
         let workspace_root = std::env::temp_dir().join("fret-diag-seed-policy-test");
-        let script_path = workspace_root.join("tools/diag-scripts/extras-marquee-steady.json");
+        let script_path =
+            workspace_root.join("tools/diag-scripts/extras/extras-marquee-steady.json");
         let scripts = vec![script_path];
 
         let preset_path = workspace_root.join("preset.json");
-        std::fs::create_dir_all(workspace_root.join("tools/diag-scripts")).unwrap();
+        std::fs::create_dir_all(workspace_root.join("tools/diag-scripts/extras")).unwrap();
+        std::fs::write(
+            workspace_root.join("tools/diag-scripts/extras-marquee-steady.json"),
+            r#"{
+  "schema_version": 1,
+  "kind": "script_redirect",
+  "to": "tools/diag-scripts/extras/extras-marquee-steady.json"
+}"#,
+        )
+        .unwrap();
         std::fs::write(
             &preset_path,
             r#"{
@@ -521,7 +561,7 @@ mod tests {
         )
         .unwrap();
 
-        let script_key = "tools/diag-scripts/extras-marquee-steady.json";
+        let script_key = "tools/diag-scripts/extras/extras-marquee-steady.json";
         assert_eq!(
             policy.seed_for(script_key, PerfSeedMetric::TopTotalTimeUs),
             PerfBaselineSeed::P90
@@ -553,9 +593,9 @@ mod tests {
     #[test]
     fn built_in_defaults_cover_ui_gallery_resize_stress() {
         let workspace_root = std::env::temp_dir().join("fret-diag-seed-policy-test-defaults");
-        let scripts = vec![
-            workspace_root.join("tools/diag-scripts/ui-gallery-window-resize-stress-steady.json"),
-        ];
+        let scripts = vec![workspace_root.join(
+            "tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress-steady.json",
+        )];
         let policy = resolve_perf_baseline_seed_policy(
             &workspace_root,
             Some("ui-gallery-steady"),
@@ -564,7 +604,7 @@ mod tests {
             &[],
         )
         .unwrap();
-        let key = "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json";
+        let key = "tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress-steady.json";
         assert_eq!(
             policy.seed_for(key, PerfSeedMetric::TopTotalTimeUs),
             PerfBaselineSeed::P95
