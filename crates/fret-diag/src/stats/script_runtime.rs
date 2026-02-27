@@ -51,7 +51,7 @@ pub(crate) fn run_script_and_wait(
 
     let resolved = crate::script_tooling::read_script_json_resolving_redirects(src)?;
     let (mut value, upgraded) =
-        crate::script_tooling::upgrade_script_json_value_to_v2_if_needed(resolved.value)?;
+        crate::compat::script::upgrade_script_json_value_to_v2_if_needed(resolved.value)?;
     crate::script_tooling::canonicalize_json_value(&mut value);
     if upgraded {
         eprintln!(

@@ -1,3 +1,5 @@
+pub(crate) mod script;
+
 pub(crate) fn normalize_capability(raw: &str) -> Option<String> {
     let raw = raw.trim();
     if raw.is_empty() {

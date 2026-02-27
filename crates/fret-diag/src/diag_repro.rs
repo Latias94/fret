@@ -369,7 +369,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
             }
         };
         let (mut script_json, upgraded) =
-            match crate::script_tooling::upgrade_script_json_value_to_v2_if_needed(script_json) {
+            match crate::compat::script::upgrade_script_json_value_to_v2_if_needed(script_json) {
                 Ok(v) => v,
                 Err(err) => {
                     overall_reason_code = Some("tooling.script.upgrade_failed".to_string());

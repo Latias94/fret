@@ -110,7 +110,7 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
 - [x] Ensure filesystem transport produces a per-run manifest for `diag run/suite/repro/perf`.
 - [x] Provide an opt-in manual `diag poke --wait --record-run` workflow that writes a tooling-owned per-run manifest directory for a dump.
 - [x] Ensure DevTools WS transport always materializes a per-run manifest alongside `script.result.json`.
-- [ ] Add an FS dump request surface to carry dump metadata (label/max snapshots/request id), matching WS:
+- [x] Add an FS dump request surface to carry dump metadata (label/max snapshots/request id), matching WS:
   - [x] tooling writes `dump.request.json` and touches a trigger (`crates/fret-diag/src/transport/fs.rs`),
   - [x] runtime consumes `dump.request.json` for trigger-driven dumps (`ecosystem/fret-bootstrap/src/ui_diagnostics/fs_triggers.rs`),
   - [x] runtime records dump metadata in `bundle.dumped` event logs (beyond the directory name).
@@ -126,7 +126,7 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
 - [ ] Create `compat/` modules in tooling for:
   - [x] legacy capability aliases (`script_v2` → `diag.script_v2`, etc),
   - [ ] v1 bundle schema reading,
-  - [ ] v1 script schema reading (if still supported).
+  - [x] v1 script schema reading (if still supported).
 - [ ] Close multi-window gaps in schema v2 steps:
   - [ ] add optional `window` targeting to selector-driven steps that currently lack it (e.g. `click_stable`, `wheel`, pointer moves),
   - [ ] update capability inference (keep using `diag.multi_window`) and ensure fail-fast gating.

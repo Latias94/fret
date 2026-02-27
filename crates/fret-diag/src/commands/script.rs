@@ -1,9 +1,10 @@
 use std::path::{Path, PathBuf};
 
 use crate::compare::{maybe_launch_demo, stop_launched_demo};
+use crate::compat::script::upgrade_script_json_value_to_v2_if_needed;
 use crate::script_tooling::{
     NormalizedScript, ScriptLintReport, ScriptSchemaReport, lint_scripts,
-    normalize_script_from_path, upgrade_script_json_value_to_v2_if_needed, validate_scripts,
+    normalize_script_from_path, validate_scripts,
 };
 use crate::shrink;
 use crate::stats::{ScriptResultSummary, run_script_and_wait};
@@ -171,12 +172,8 @@ pub(crate) fn cmd_script(
             let mut any_needs_upgrade = false;
             for src in scripts {
                 let resolved = crate::script_tooling::read_script_json_resolving_redirects(&src)?;
-                let schema_version = resolved
-                    .value
-                    .get("schema_version")
-                    .and_then(|v| v.as_u64())
-                    .unwrap_or(0)
-                    .min(u32::MAX as u64) as u32;
+                let schema_version =
+                    crate::compat::script::script_schema_version_from_value(&resolved.value);
 
                 let needs_upgrade = schema_version == 1;
                 any_needs_upgrade |= needs_upgrade;
@@ -396,11 +393,8 @@ pub(crate) fn cmd_script(
                 let bytes = std::fs::read(path).map_err(|e| e.to_string())?;
                 let value: serde_json::Value =
                     serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
-                let schema_version = value
-                    .get("schema_version")
-                    .and_then(|v| v.as_u64())
-                    .unwrap_or(0)
-                    .min(u32::MAX as u64) as u32;
+                let schema_version =
+                    crate::compat::script::script_schema_version_from_value(&value);
                 match schema_version {
                     1 => Ok(ActionScript::V1(
                         serde_json::from_value(value).map_err(|e| e.to_string())?,

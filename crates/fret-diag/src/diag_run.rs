@@ -337,7 +337,7 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
             crate::script_tooling::resolve_script_json_redirects_from_value(&src, script_value)
                 .map_err(|e| e.to_string())?;
         let (mut script_json, upgraded) =
-            crate::script_tooling::upgrade_script_json_value_to_v2_if_needed(resolved_script.value)
+            crate::compat::script::upgrade_script_json_value_to_v2_if_needed(resolved_script.value)
                 .inspect_err(|err| {
                     write_tooling_failure_script_result_if_missing(
                         &resolved_script_result_path,
@@ -699,7 +699,7 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
             })?
             .value;
     let (mut script_json, upgraded) =
-        crate::script_tooling::upgrade_script_json_value_to_v2_if_needed(script_json).inspect_err(
+        crate::compat::script::upgrade_script_json_value_to_v2_if_needed(script_json).inspect_err(
             |err| {
                 write_tooling_failure_script_result_if_missing(
                     &resolved_script_result_path,
