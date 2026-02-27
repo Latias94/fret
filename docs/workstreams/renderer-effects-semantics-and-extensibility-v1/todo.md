@@ -120,6 +120,13 @@ This TODO is ordered by implementation priority (P0 first), and is designed to b
   - [x] Implement and wire: `apps/fret-examples/src/postprocess_theme_demo.rs` (via `apps/fret-demo`).
   - [ ] Add a `fretboard diag` script that captures a small, shareable baseline bundle (screenshots + perf snapshot).
 
+- [x] Keep stitched effect shaders WebGPU/Tint-valid (uniformity + bindings):
+  - Ensure masked variants evaluate clip coverage before any non-uniform early returns so SDF AA derivatives remain
+    Tint-valid on WebGPU.
+  - Evidence: `crates/fret-render-wgpu/src/renderer/shaders.rs`,
+    `crates/fret-render-wgpu/src/renderer/pipelines/wgsl/*_masked_part_b.wgsl`,
+    `crates/fret-render-wgpu/src/renderer/tests.rs` (`shaders_validate_for_webgpu`).
+
 ## Suggested regression gates
 
 - Unit tests:

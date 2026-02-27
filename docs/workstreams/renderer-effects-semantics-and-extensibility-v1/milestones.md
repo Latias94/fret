@@ -89,6 +89,7 @@ Exit criteria:
 - [x] A versioned ABI exists with deterministic degradation rules and capability gating (wgpu backend).
 - [x] Conformance tests cover the extra input and scissor/mask semantics.
 - [x] At least one demo/harness uses CustomV2 with a stable `fretboard diag` script gate.
+- [x] WebGPU/Tint validation passes for stitched CustomV1/V2 modules and masked variants (regression gate).
 - [ ] Optional follow-up: extract a “recipe” crate into ecosystem once the authoring patterns stabilize.
 - Evidence:
   - `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-v2/README.md`

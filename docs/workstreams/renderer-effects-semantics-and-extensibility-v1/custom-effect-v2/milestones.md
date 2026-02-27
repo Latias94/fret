@@ -42,6 +42,8 @@ Exit criteria:
   - scissor/mask correctness,
   - degradation under budgets.
   - Evidence: `crates/fret-render-wgpu/tests/effect_custom_v2_conformance.rs`.
+- [x] WebGPU/Tint validation passes for stitched CustomV2 modules and masked variants.
+  - Evidence: `crates/fret-render-wgpu/src/renderer/tests.rs` (`shaders_validate_for_webgpu`).
 
 ## M3 — Example demos (apps)
 

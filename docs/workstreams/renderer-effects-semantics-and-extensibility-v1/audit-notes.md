@@ -55,6 +55,13 @@ for extending the renderer’s effect semantics without turning the backend into
 - **Not related, but worth remembering**:
   - WebGPU `ExternalTexture` import is currently reported as unsupported on wasm32 in
     `crates/fret-render-wgpu/src/capabilities.rs` (wgpu web backend limitation as of wgpu 28).
+- **Uniformity restrictions matter for “high ceiling” effects**:
+  - On WebGPU/Tint, derivative builtins (`dpdx`/`dpdy`/`fwidth`) must be called from *uniform control flow*.
+  - Renderer fix: masked effect shaders compute clip coverage (`clip_alpha(...)`) before any non-uniform early returns,
+    and `shaders_validate_for_webgpu` acts as a regression gate.
+  - Remaining hazard: CustomV2 user WGSL that uses derivatives may still fail if the host shader performs non-uniform
+    early returns before calling `fret_custom_effect(...)`. Track as a follow-up in
+    `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-v2/todo.md`.
 
 ## Landable next steps (recommended)
 

@@ -42,6 +42,16 @@ Constraints:
   - Evidence: `crates/fret-render-wgpu/tests/effect_custom_v2_conformance.rs`.
 - [x] Extend WebGPU/WGSL guardrails to cover stitched CustomV1/V2 modules (not just built-in shaders).
   - Evidence: `crates/fret-render-wgpu/src/renderer/tests.rs`.
+- [x] Make masked effect shaders WebGPU/Tint-uniformity-safe for clip SDF derivatives:
+  - Root cause: `dpdx`/`dpdy`/`fwidth` must be called from uniform control flow on WebGPU (Tint validation).
+  - Fix: compute `clip_alpha(...)` before any non-uniform early returns / bounds checks in masked fragment shaders.
+  - Evidence: `crates/fret-render-wgpu/src/renderer/shaders.rs`,
+    `crates/fret-render-wgpu/src/renderer/pipelines/wgsl/*_masked_part_b.wgsl`,
+    `crates/fret-render-wgpu/src/renderer/tests.rs` (`shaders_validate_for_webgpu`).
+- [ ] Allow CustomV2 user WGSL to use derivatives on WebGPU:
+  - Remove non-uniform early returns prior to calling `fret_custom_effect(...)` (replace bounds checks with clamped
+    sampling + a final `select(...)`).
+  - Add a small “derivatives smoke” custom effect that compiles under Tint (browser WebGPU).
 
 ## P3 — Ecosystem authoring ergonomics
 
