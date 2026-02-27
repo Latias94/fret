@@ -1,15 +1,15 @@
-use winit::dpi::{LogicalSize, Position};
+use super::{WindowLogicalSize, WindowPosition};
 
 #[derive(Debug, Clone)]
 pub struct WindowCreateSpec {
     pub title: String,
-    pub size: LogicalSize<f64>,
-    pub position: Option<Position>,
+    pub size: WindowLogicalSize,
+    pub position: Option<WindowPosition>,
     pub visible: bool,
 }
 
 impl WindowCreateSpec {
-    pub fn new(title: impl Into<String>, size: LogicalSize<f64>) -> Self {
+    pub fn new(title: impl Into<String>, size: WindowLogicalSize) -> Self {
         Self {
             title: title.into(),
             size,
@@ -18,7 +18,7 @@ impl WindowCreateSpec {
         }
     }
 
-    pub fn with_position(mut self, position: Position) -> Self {
+    pub fn with_position(mut self, position: WindowPosition) -> Self {
         self.position = Some(position);
         self
     }

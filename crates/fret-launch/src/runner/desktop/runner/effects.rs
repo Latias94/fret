@@ -21,7 +21,9 @@ use tracing::error;
 use winit::event_loop::ActiveEventLoop;
 use winit::window::WindowLevel;
 
-use super::{WinitCommandContext, WinitGlobalContext, WinitRunner, WinitWindowContext};
+use super::{
+    WindowPosition, WinitCommandContext, WinitGlobalContext, WinitRunner, WinitWindowContext,
+};
 
 impl<D: super::WinitAppDriver> WinitRunner<D> {
     pub(super) fn system_font_rescan_async_enabled() -> bool {
@@ -1537,6 +1539,20 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                                             anchor.position,
                                         )
                                 {
+                                    let pos = match pos {
+                                        WindowPosition::Logical(p) => {
+                                            winit::dpi::Position::Logical(
+                                                winit::dpi::LogicalPosition::new(
+                                                    p.x as f64, p.y as f64,
+                                                ),
+                                            )
+                                        }
+                                        WindowPosition::Physical(p) => {
+                                            winit::dpi::Position::Physical(
+                                                winit::dpi::PhysicalPosition::new(p.x, p.y),
+                                            )
+                                        }
+                                    };
                                     state.window.set_outer_position(pos);
                                 }
 

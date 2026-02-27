@@ -29,9 +29,10 @@ pub use runner::{
     NativeExternalTextureFrame, OwnedWgpuTextureFrame, RenderTargetUpdate,
     SharedAllocationExportError, ViewportOverlay3dHooks, ViewportOverlay3dHooksService,
     ViewportOverlay3dImmediateService, ViewportRenderTarget, ViewportRenderTargetWithDepth,
-    WgpuInit, WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext,
-    WinitGlobalContext, WinitHotReloadContext, WinitRenderContext, WinitRunner, WinitRunnerConfig,
-    WinitWindowContext, install_viewport_overlay_3d_immediate, record_viewport_overlay_3d, run_app,
+    WgpuInit, WindowCreateSpec, WindowLogicalSize, WindowPhysicalPosition, WindowPosition,
+    WinitAppDriver, WinitCommandContext, WinitEventContext, WinitGlobalContext,
+    WinitHotReloadContext, WinitRenderContext, WinitRunner, WinitRunnerConfig, WinitWindowContext,
+    install_viewport_overlay_3d_immediate, record_viewport_overlay_3d, run_app,
     run_app_with_event_loop, upload_viewport_overlay_3d_immediate,
 };
 

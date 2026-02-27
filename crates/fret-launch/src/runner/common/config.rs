@@ -1,18 +1,19 @@
-use std::{sync::Arc, time::Duration};
+use std::time::Duration;
+
+#[cfg(not(target_arch = "wasm32"))]
+use std::sync::Arc;
 
 use fret_render::{ClearColor, WgpuContext};
-use winit::dpi::{LogicalSize, Position};
-use winit::window::Window;
 
 use crate::RunnerError;
 
 pub struct WinitRunnerConfig {
     pub main_window_title: String,
-    pub main_window_size: LogicalSize<f64>,
-    pub main_window_position: Option<Position>,
+    pub main_window_size: super::WindowLogicalSize,
+    pub main_window_position: Option<super::WindowPosition>,
     pub default_window_title: String,
-    pub default_window_size: LogicalSize<f64>,
-    pub default_window_position: Option<Position>,
+    pub default_window_size: super::WindowLogicalSize,
+    pub default_window_position: Option<super::WindowPosition>,
     /// Physical pixel offset applied when positioning a new window from an anchor point.
     pub new_window_anchor_offset: (f64, f64),
     /// When the main window requests close, exit the event loop.
@@ -81,6 +82,7 @@ pub enum WgpuInit {
     /// Use a host-provided GPU context. The runner will create surfaces via `context.instance`
     /// and assumes the adapter/device are compatible with those surfaces.
     Provided(WgpuContext),
+    #[cfg(not(target_arch = "wasm32"))]
     /// Create the GPU context via a host callback given the main window.
     ///
     /// Note: on wasm32 the launcher initializes WGPU asynchronously and does not currently support
@@ -88,17 +90,20 @@ pub enum WgpuInit {
     Factory(Box<WgpuFactoryFn>),
 }
 
-type WgpuFactoryFn = dyn FnOnce(Arc<dyn Window>) -> Result<(WgpuContext, wgpu::Surface<'static>), RunnerError>
+#[cfg(not(target_arch = "wasm32"))]
+type WgpuFactoryFn = dyn FnOnce(
+        Arc<dyn winit::window::Window>,
+    ) -> Result<(WgpuContext, wgpu::Surface<'static>), RunnerError>
     + 'static;
 
 impl Default for WinitRunnerConfig {
     fn default() -> Self {
         Self {
             main_window_title: "fret".to_string(),
-            main_window_size: LogicalSize::new(1280.0, 720.0),
+            main_window_size: super::WindowLogicalSize::new(1280.0, 720.0),
             main_window_position: None,
             default_window_title: "fret".to_string(),
-            default_window_size: LogicalSize::new(640.0, 480.0),
+            default_window_size: super::WindowLogicalSize::new(640.0, 480.0),
             default_window_position: None,
             new_window_anchor_offset: (-40.0, -20.0),
             exit_on_main_window_close: true,

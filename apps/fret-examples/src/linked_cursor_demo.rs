@@ -274,7 +274,7 @@ pub fn build_app() -> App {
 pub fn build_runner_config() -> WinitRunnerConfig {
     WinitRunnerConfig {
         main_window_title: "fret-demo linked_cursor_demo (linked view/query/cursor)".to_string(),
-        main_window_size: winit::dpi::LogicalSize::new(960.0, 760.0),
+        main_window_size: fret_launch::WindowLogicalSize::new(960.0, 760.0),
         ..Default::default()
     }
 }

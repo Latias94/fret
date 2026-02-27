@@ -75,6 +75,8 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
   driven).
 - Pass: Default sizing matches the upstream `w-full max-w-[calc(100%-2rem)] sm:max-w-lg` intent via
   a padded center layout + `DialogContent` max-width.
+- Pass: `DialogHeader` matches upstream `gap-2` and `text-center sm:text-left` outcomes without
+  adding extra padding that would double-count the `DialogContent` `gap-4` grid spacing.
 
 ## Validation
 

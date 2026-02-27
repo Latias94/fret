@@ -799,7 +799,7 @@ impl TabsRoot {
             layout: LayoutRefinement::default(),
             force_mount_content: false,
             list_full_width: false,
-            content_fill_remaining: false,
+            content_fill_remaining: true,
             shared_indicator_motion: false,
             content_presence_motion: false,
             test_id: None,
@@ -826,7 +826,7 @@ impl TabsRoot {
             layout: LayoutRefinement::default(),
             force_mount_content: false,
             list_full_width: false,
-            content_fill_remaining: false,
+            content_fill_remaining: true,
             shared_indicator_motion: false,
             content_presence_motion: false,
             test_id: None,
@@ -1197,7 +1197,7 @@ impl Tabs {
             layout: LayoutRefinement::default(),
             force_mount_content: false,
             list_full_width: false,
-            content_fill_remaining: false,
+            content_fill_remaining: true,
             shared_indicator_motion: false,
             content_presence_motion: false,
             test_id: None,
@@ -1223,7 +1223,7 @@ impl Tabs {
             layout: LayoutRefinement::default(),
             force_mount_content: false,
             list_full_width: false,
-            content_fill_remaining: false,
+            content_fill_remaining: true,
             shared_indicator_motion: false,
             content_presence_motion: false,
             test_id: None,
@@ -1453,7 +1453,14 @@ impl Tabs {
             // parent, causing horizontal overflow in app shells like the UI gallery.
             let mut refinement = LayoutRefinement::default().w_full().min_w_0();
             if content_fill_remaining {
-                refinement = refinement.flex_1();
+                // shadcn/ui uses `flex-1` on `TabsContent`. In practice that intent is "fill the
+                // remaining main-axis space when the parent is a definite-size flex container".
+                //
+                // Note: Avoid Tailwind's `flex: 1 1 0%` (`basis=0`) here. Taffy currently
+                // shrink-wraps some auto-sized flex containers around the sum of flex bases, which
+                // can collapse panels in unconstrained compositions. `flex: 1 1 auto` keeps
+                // intrinsic sizing stable while still allowing fill in the common case.
+                refinement = refinement.flex_grow(1.0).flex_shrink(1.0);
             }
             decl_style::layout_style(&theme, refinement)
         };
@@ -2185,6 +2192,54 @@ mod tests {
     use fret_ui::element::ColumnProps;
     use fret_ui::elements::{ElementRuntime, GlobalElementId, node_for_element};
     use fret_ui::tree::UiTree;
+
+    #[test]
+    fn tabs_content_defaults_to_flex_grow_fill_like_shadcn() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        crate::shadcn_themes::apply_shadcn_new_york_v4(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Slate,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let model = app.models_mut().insert(Some(Arc::from("alpha")));
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(240.0)),
+        );
+
+        let el = fret_ui::elements::with_element_cx(&mut app, window, bounds, "tabs-fill", |cx| {
+            Tabs::new(model.clone())
+                .items([
+                    TabsItem::new("alpha", "Alpha", [cx.text("Panel")]),
+                    TabsItem::new("beta", "Beta", [cx.text("Panel")]),
+                ])
+                .into_element(cx)
+        });
+
+        fn find_tab_panel_semantics<'a>(
+            el: &'a AnyElement,
+        ) -> Option<&'a fret_ui::element::SemanticsProps> {
+            match &el.kind {
+                fret_ui::element::ElementKind::Semantics(props)
+                    if props.role == SemanticsRole::TabPanel =>
+                {
+                    return Some(props);
+                }
+                _ => {}
+            }
+            el.children
+                .iter()
+                .find_map(|child| find_tab_panel_semantics(child))
+        }
+
+        let panel = find_tab_panel_semantics(&el).expect("expected TabsContent tabpanel semantics");
+        assert_eq!(panel.layout.flex.grow, 1.0);
+        assert_eq!(panel.layout.flex.shrink, 1.0);
+        assert_eq!(panel.layout.size.width, Length::Fill);
+        assert_eq!(panel.layout.size.min_width, Some(Length::Px(Px(0.0))));
+    }
 
     #[test]
     fn tabs_selected_trigger_is_vertically_centered_in_tab_list() {

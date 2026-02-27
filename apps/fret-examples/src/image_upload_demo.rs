@@ -190,7 +190,7 @@ pub fn run() -> anyhow::Result<()> {
     fret::run_native_demo(
         WinitRunnerConfig {
             main_window_title: "image_upload_demo".to_string(),
-            main_window_size: winit::dpi::LogicalSize::new(520.0, 380.0),
+            main_window_size: fret_launch::WindowLogicalSize::new(520.0, 380.0),
             ..Default::default()
         },
         App::new(),

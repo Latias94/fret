@@ -1,11 +1,13 @@
 use std::sync::Arc;
 
-use fret_core::{Color, Corners, Edges, Point, Px, SemanticsRole, TextOverflow, TextWrap};
+use fret_core::{
+    Color, Corners, Edges, Point, Px, SemanticsRole, TextAlign, TextOverflow, TextWrap,
+};
 use fret_icons::ids;
 use fret_runtime::{Model, ModelId};
 use fret_ui::action::{OnCloseAutoFocus, OnDismissRequest, OnOpenAutoFocus};
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
+    AnyElement, ContainerProps, CrossAlign, ElementKind, FlexProps, LayoutStyle, Length, MainAlign,
     OpacityProps, PressableA11y, PressableProps, RingPlacement, RingStyle, SemanticFlexProps,
     SemanticsDecoration, SizeStyle,
 };
@@ -749,13 +751,75 @@ impl DialogHeader {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        use fret_ui_kit::declarative::ViewportQueryHysteresis;
+
+        // Upstream shadcn uses Tailwind `sm:` to switch `text-center` -> `text-left`.
+        //
+        // In normal runtime frames this should be driven by the committed viewport snapshot
+        // (ADR 0232). For unit tests that construct elements without a committed viewport
+        // environment, fall back to the root bounds passed to `ElementContext`.
+        let sm_breakpoint = {
+            let threshold = fret_ui_kit::declarative::viewport_tailwind::SM;
+            let viewport_width = cx.environment_viewport_width(Invalidation::Layout);
+            if viewport_width.0 <= 0.0 {
+                cx.bounds.size.width.0 >= threshold.0
+            } else {
+                fret_ui_kit::declarative::viewport_width_at_least(
+                    cx,
+                    Invalidation::Layout,
+                    threshold,
+                    ViewportQueryHysteresis::default(),
+                )
+            }
+        };
+
+        fn apply_header_text_alignment(mut element: AnyElement, align: TextAlign) -> AnyElement {
+            let apply_text = |layout: &mut LayoutStyle, text_align: &mut TextAlign| {
+                if matches!(layout.size.width, Length::Auto) {
+                    layout.size.width = Length::Fill;
+                }
+                if layout.size.min_width.is_none() {
+                    layout.size.min_width = Some(Length::Px(Px(0.0)));
+                }
+                *text_align = align;
+            };
+
+            match &mut element.kind {
+                ElementKind::Text(props) => apply_text(&mut props.layout, &mut props.align),
+                ElementKind::StyledText(props) => apply_text(&mut props.layout, &mut props.align),
+                ElementKind::SelectableText(props) => {
+                    apply_text(&mut props.layout, &mut props.align)
+                }
+                _ => {}
+            }
+
+            element.children = element
+                .children
+                .into_iter()
+                .map(|child| apply_header_text_alignment(child, align))
+                .collect();
+            element
+        }
+
+        let align = if sm_breakpoint {
+            TextAlign::Start
+        } else {
+            TextAlign::Center
+        };
+
         let props = decl_style::container_props(
             Theme::global(&*cx.app),
-            ChromeRefinement::default().pb(Space::N4),
-            LayoutRefinement::default(),
+            ChromeRefinement::default(),
+            LayoutRefinement::default().w_full().min_w_0(),
         );
-        let children = self.children;
-        shadcn_layout::container_vstack_gap(cx, props, Space::N1p5, children)
+
+        let children = self
+            .children
+            .into_iter()
+            .map(|child| apply_header_text_alignment(child, align))
+            .collect();
+
+        shadcn_layout::container_vstack_gap(cx, props, Space::N2, children)
     }
 }
 
@@ -786,7 +850,7 @@ impl DialogFooter {
 
         let props = decl_style::container_props(
             Theme::global(&*cx.app),
-            ChromeRefinement::default().pt(Space::N4),
+            ChromeRefinement::default(),
             LayoutRefinement::default().w_full(),
         );
 
@@ -849,7 +913,6 @@ impl DialogTitle {
             .text_size_px(px)
             .line_height_px(line_height)
             .font_semibold()
-            .letter_spacing_em(-0.02)
             .text_color(ColorRef::Color(fg))
             .wrap(TextWrap::Word)
             .overflow(TextOverflow::Clip)
@@ -1002,6 +1065,112 @@ mod tests {
 
         assert_eq!(changed, Some(true));
         assert_eq!(completed, Some(true));
+    }
+
+    fn find_text<'a>(el: &'a AnyElement, needle: &str) -> Option<&'a fret_ui::element::TextProps> {
+        match &el.kind {
+            fret_ui::element::ElementKind::Text(props) if props.text.as_ref() == needle => {
+                return Some(props);
+            }
+            _ => {}
+        }
+        for child in &el.children {
+            if let Some(found) = find_text(child, needle) {
+                return Some(found);
+            }
+        }
+        None
+    }
+
+    #[test]
+    fn dialog_header_defaults_to_w_full_without_padding() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(360.0), Px(200.0)),
+        );
+
+        let el = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            DialogHeader::new([
+                DialogTitle::new("Title").into_element(cx),
+                DialogDescription::new("Description").into_element(cx),
+            ])
+            .into_element(cx)
+        });
+
+        let ElementKind::Container(props) = &el.kind else {
+            panic!(
+                "expected DialogHeader root to be a Container, got {:?}",
+                el.kind
+            );
+        };
+        assert_eq!(props.layout.size.width, Length::Fill);
+        assert_eq!(
+            props.padding.top,
+            fret_ui::element::SpacingLength::Px(Px(0.0))
+        );
+        assert_eq!(
+            props.padding.right,
+            fret_ui::element::SpacingLength::Px(Px(0.0))
+        );
+        assert_eq!(
+            props.padding.bottom,
+            fret_ui::element::SpacingLength::Px(Px(0.0))
+        );
+        assert_eq!(
+            props.padding.left,
+            fret_ui::element::SpacingLength::Px(Px(0.0))
+        );
+    }
+
+    #[test]
+    fn dialog_header_centers_text_below_sm_breakpoint() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(360.0), Px(200.0)),
+        );
+
+        let el = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            DialogHeader::new([
+                DialogTitle::new("Title").into_element(cx),
+                DialogDescription::new("Description").into_element(cx),
+            ])
+            .into_element(cx)
+        });
+
+        for label in ["Title", "Description"] {
+            let text = find_text(&el, label).expect("expected dialog header text node");
+            assert_eq!(text.align, TextAlign::Center);
+            assert_eq!(text.layout.size.width, Length::Fill);
+            assert_eq!(text.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        }
+    }
+
+    #[test]
+    fn dialog_header_left_aligns_text_at_sm_breakpoint() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(200.0)),
+        );
+
+        let el = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            DialogHeader::new([
+                DialogTitle::new("Title").into_element(cx),
+                DialogDescription::new("Description").into_element(cx),
+            ])
+            .into_element(cx)
+        });
+
+        for label in ["Title", "Description"] {
+            let text = find_text(&el, label).expect("expected dialog header text node");
+            assert_eq!(text.align, TextAlign::Start);
+            assert_eq!(text.layout.size.width, Length::Fill);
+        }
     }
 
     fn render_dialog_frame_with_footer(

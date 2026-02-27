@@ -20,6 +20,9 @@ jobs:
         with:
           toolchain: 1.92.0
 
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+
       - name: Check ADR numbering
         run: python3 tools/check_adr_numbers.py
 
@@ -40,6 +43,9 @@ jobs:
 
       - name: Check generated icon artifacts
         run: python3 tools/check_icons_generation.py --pack all
+
+      - name: Check consumption profiles (portable)
+        run: python3 tools/check_consumption_profiles.py
 
   cargo-deny-licenses:
     name: cargo-deny (licenses/sources/advisories)

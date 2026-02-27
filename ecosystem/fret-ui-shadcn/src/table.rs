@@ -74,6 +74,34 @@ fn apply_table_cell_text_defaults(mut child: AnyElement) -> AnyElement {
     child
 }
 
+fn apply_table_inherited_text_style(mut child: AnyElement, style: &TextStyle) -> AnyElement {
+    match &mut child.kind {
+        ElementKind::Text(props) => {
+            if props.style.is_none() {
+                props.style = Some(style.clone());
+            }
+        }
+        ElementKind::StyledText(props) => {
+            if props.style.is_none() {
+                props.style = Some(style.clone());
+            }
+        }
+        ElementKind::SelectableText(props) => {
+            if props.style.is_none() {
+                props.style = Some(style.clone());
+            }
+        }
+        _ => {}
+    }
+
+    child.children = child
+        .children
+        .into_iter()
+        .map(|child| apply_table_inherited_text_style(child, style))
+        .collect();
+    child
+}
+
 fn apply_table_footer_inherited_style(mut child: AnyElement, style: &TextStyle) -> AnyElement {
     match &mut child.kind {
         ElementKind::Text(props) => {
@@ -148,13 +176,18 @@ impl Table {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app);
+        let text_style = table_text_style(theme);
 
         // shadcn: `w-full caption-bottom text-sm`.
         let table_layout = LayoutRefinement::default().w_full().merge(self.layout);
         let mut props = decl_style::container_props(theme, self.chrome, table_layout);
         props.layout.overflow = Overflow::Visible;
 
-        let children = self.children;
+        let children: Vec<AnyElement> = self
+            .children
+            .into_iter()
+            .map(|child| apply_table_inherited_text_style(child, &text_style))
+            .collect();
         let table = shadcn_layout::container_vstack(
             cx,
             props,
@@ -713,7 +746,7 @@ mod tests {
 
     use fret_app::App;
     use fret_core::{AppWindowId, Color, Point, Px, Rect, Size};
-    use fret_ui::element::{ContainerProps, Length, Overflow};
+    use fret_ui::element::{ContainerProps, Length, Overflow, TextProps};
 
     fn find_container_with_background(el: &AnyElement, bg: Color) -> Option<&ContainerProps> {
         match &el.kind {
@@ -839,6 +872,53 @@ mod tests {
                 Px(0.0),
                 "expected TableBody to clear the last row border-bottom (shadcn: [&_tr:last-child]:border-0)"
             );
+        });
+    }
+
+    #[test]
+    fn table_applies_text_sm_defaults_to_unstyled_text_cells() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        fn find_text<'a>(el: &'a AnyElement, needle: &str) -> Option<&'a TextProps> {
+            match &el.kind {
+                ElementKind::Text(props) if props.text.as_ref() == needle => {
+                    return Some(props);
+                }
+                _ => {}
+            }
+            for child in &el.children {
+                if let Some(found) = find_text(child, needle) {
+                    return Some(found);
+                }
+            }
+            None
+        }
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let theme = Theme::global(&*cx.app);
+            let expected = table_text_style(theme);
+
+            let table = Table::new([TableBody::new([TableRow::new(
+                1,
+                [TableCell::new(cx.text("cell")).into_element(cx)],
+            )
+            .into_element(cx)])
+            .into_element(cx)])
+            .into_element(cx);
+
+            let text = find_text(&table, "cell").expect("expected table cell text node");
+            let actual = text
+                .style
+                .as_ref()
+                .expect("expected inherited table text style");
+            assert_eq!(actual.size, expected.size);
+            assert_eq!(actual.line_height, expected.line_height);
+            assert_eq!(actual.weight, expected.weight);
         });
     }
 

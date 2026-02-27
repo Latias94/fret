@@ -488,7 +488,7 @@ pub fn run() -> anyhow::Result<()> {
 
     let config = WinitRunnerConfig {
         main_window_title: "fret-demo virtual_list_stress_demo".to_string(),
-        main_window_size: winit::dpi::LogicalSize::new(980.0, 720.0),
+        main_window_size: fret_launch::WindowLogicalSize::new(980.0, 720.0),
         ..Default::default()
     };
 

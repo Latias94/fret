@@ -3,12 +3,12 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 use tracing::{debug, info, warn};
-use winit::dpi::{LogicalSize, PhysicalPosition, PhysicalSize, Position};
+use winit::dpi::{LogicalSize, PhysicalPosition, PhysicalSize};
 
 use fret_app::App;
 use fret_core::AppWindowId;
 
-use super::WindowCreateSpec;
+use super::{WindowCreateSpec, WindowLogicalSize, WindowPhysicalPosition, WindowPosition};
 
 use crate::dev_state::{DevStateHooks, DevStateService, DevStateWindowKeyRegistry};
 
@@ -349,9 +349,11 @@ impl DevStateController {
         }
 
         if let Some(geom) = self.windows_state.get(key).copied() {
-            spec.size = geom.logical_size;
+            spec.size = WindowLogicalSize::new(geom.logical_size.width, geom.logical_size.height);
             if let Some(pos) = geom.position {
-                spec.position = Some(Position::Physical(pos));
+                spec.position = Some(WindowPosition::Physical(WindowPhysicalPosition::new(
+                    pos.x, pos.y,
+                )));
             }
         }
     }
@@ -365,7 +367,7 @@ impl DevStateController {
         if !self.enabled {
             return;
         }
-        let Some(Position::Physical(pos)) = spec.position else {
+        let Some(WindowPosition::Physical(pos)) = spec.position else {
             return;
         };
 
@@ -377,7 +379,7 @@ impl DevStateController {
             return;
         }
 
-        if window_pos_is_visible(pos, &monitors) {
+        if window_pos_is_visible(PhysicalPosition::new(pos.x, pos.y), &monitors) {
             return;
         }
 
