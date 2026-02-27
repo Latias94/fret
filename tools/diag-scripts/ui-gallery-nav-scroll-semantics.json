@@ -1,44 +1,5 @@
 {
-  "schema_version": 2,
-  "steps": [
-    {
-      "type": "wait_until",
-      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-nav-scroll" } },
-      "timeout_frames": 600
-    },
-    {
-      "type": "wait_until",
-      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-nav-ai-chat-demo" } },
-      "timeout_frames": 600
-    },
-    {
-      "type": "scroll_into_view",
-      "container": { "kind": "test_id", "id": "ui-gallery-nav-scroll" },
-      "target": { "kind": "test_id", "id": "ui-gallery-nav-ai-chat-demo" },
-      "delta_x": 0.0,
-      "delta_y": -120.0,
-      "require_fully_within_window": true,
-      "padding_px": 2.0,
-      "timeout_frames": 600
-    },
-    {
-      "type": "assert",
-      "predicate": {
-        "kind": "semantics_scroll_is_finite",
-        "target": { "kind": "test_id", "id": "ui-gallery-nav-scroll" },
-        "field": "y_max"
-      }
-    },
-    {
-      "type": "assert",
-      "predicate": {
-        "kind": "semantics_scroll_not_approx_eq",
-        "target": { "kind": "test_id", "id": "ui-gallery-nav-scroll" },
-        "field": "y",
-        "value": 0.0,
-        "eps": 0.01
-      }
-    },
-    { "type": "capture_bundle", "label": "nav-scroll-semantics" }
-  ]
+  "schema_version": 1,
+  "kind": "script_redirect",
+  "to": "tools/diag-scripts/ui-gallery/navigation/ui-gallery-nav-scroll-semantics.json"
 }

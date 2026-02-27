@@ -1,48 +1,5 @@
 {
-  "schema_version": 2,
-  "meta": {
-    "name": "docking-arbitration: tear-off creates a second OS window (basic)",
-    "tags": ["docking", "tearoff", "multiwindow"],
-    "required_capabilities": ["diag.script_v2"],
-    "target_hints": ["fret-demo docking_arbitration_demo (native)"]
-  },
-  "steps": [
-    {
-      "type": "wait_until",
-      "window": { "kind": "first_seen" },
-      "predicate": {
-        "kind": "exists",
-        "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-left" }
-      },
-      "timeout_frames": 240
-    },
-    {
-      "type": "drag_pointer",
-      "window": { "kind": "first_seen" },
-      "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-left" },
-      "delta_x": -1400.0,
-      "delta_y": 0.0,
-      "steps": 60
-    },
-    {
-      "type": "wait_until",
-      "predicate": { "kind": "known_window_count_ge", "n": 2 },
-      "timeout_frames": 240
-    },
-    {
-      "type": "wait_until",
-      "window": { "kind": "last_seen_other" },
-      "predicate": { "kind": "dock_graph_signature_contains", "needle": "demo.viewport.left" },
-      "timeout_frames": 240
-    },
-    {
-      "type": "assert",
-      "window": { "kind": "last_seen_other" },
-      "predicate": { "kind": "dock_drag_active_is", "active": false }
-    },
-    {
-      "type": "capture_bundle",
-      "label": "docking-arbitration-tearoff-multiwindow-basic"
-    }
-  ]
+  "schema_version": 1,
+  "kind": "script_redirect",
+  "to": "tools/diag-scripts/docking/arbitration/docking-arbitration-tearoff-multiwindow-basic.json"
 }

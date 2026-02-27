@@ -3,6 +3,94 @@ use std::path::Path;
 
 use super::{AiPacketBudgetConfig, AiPacketBudgetReport};
 
+fn compat_summary_for_packet_dir(dir: &Path) -> serde_json::Value {
+    use serde_json::json;
+
+    let mut markers: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+    let mut script_compat_event_kinds: std::collections::BTreeSet<String> =
+        std::collections::BTreeSet::new();
+    let mut script_compat_events_total: u64 = 0;
+
+    // Prefer `doctor.json` (always present; survives budget dropping) for bundle schema and raw capabilities.
+    let doctor_path = dir.join("doctor.json");
+    let doctor = std::fs::read(&doctor_path)
+        .ok()
+        .and_then(|b| serde_json::from_slice::<serde_json::Value>(&b).ok());
+
+    let mut bundle_schema_version: Option<u64> = doctor
+        .as_ref()
+        .and_then(|v| v.get("bundle_schema_version"))
+        .and_then(|v| v.as_u64());
+
+    let mut legacy_capabilities_present = false;
+    if let Some(doctor) = doctor.as_ref()
+        && doctor.get("kind").and_then(|v| v.as_str()) != Some("diag.ai_packet_note")
+    {
+        legacy_capabilities_present = doctor
+            .get("capabilities")
+            .and_then(|v| v.get("capabilities"))
+            .and_then(|v| v.as_array())
+            .is_some_and(|caps| {
+                caps.iter()
+                    .any(|c| c.as_str().is_some_and(|s| !s.contains('.')))
+            });
+    }
+
+    // Fallback: sniff bundle schema version if we have a bundle artifact in the packet dir.
+    if bundle_schema_version.is_none() {
+        for name in ["bundle.schema2.json", "bundle.json"] {
+            let p = dir.join(name);
+            if p.is_file() {
+                bundle_schema_version = crate::compat::bundle::sniff_bundle_schema_version(&p)
+                    .ok()
+                    .flatten();
+                if bundle_schema_version.is_some() {
+                    break;
+                }
+            }
+        }
+    }
+
+    if bundle_schema_version == Some(1) {
+        markers.insert("compat.bundle_schema_v1".to_string());
+    }
+    if legacy_capabilities_present {
+        markers.insert("compat.legacy_capabilities_present".to_string());
+    }
+
+    let script_result_path = dir.join("script.result.json");
+    if script_result_path.is_file() {
+        if let Ok(bytes) = std::fs::read(&script_result_path) {
+            if let Ok(res) = serde_json::from_slice::<fret_diag_protocol::UiScriptResultV1>(&bytes)
+            {
+                if let Some(evidence) = res.evidence {
+                    for ev in evidence.event_log {
+                        if ev.kind.starts_with("compat.") {
+                            script_compat_events_total =
+                                script_compat_events_total.saturating_add(1);
+                            if script_compat_event_kinds.len() < 20 {
+                                script_compat_event_kinds.insert(ev.kind);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    for k in &script_compat_event_kinds {
+        markers.insert(k.clone());
+    }
+
+    json!({
+        "schema_version": 1,
+        "bundle_schema_version": bundle_schema_version,
+        "legacy_capabilities_present": legacy_capabilities_present,
+        "script_compat_event_kinds": script_compat_event_kinds.into_iter().collect::<Vec<_>>(),
+        "script_compat_events_total": script_compat_events_total,
+        "markers": markers.into_iter().collect::<Vec<_>>(),
+    })
+}
+
 pub(super) fn write_packet_budget_report(
     dir: &Path,
     report: &AiPacketBudgetReport,
@@ -82,6 +170,10 @@ pub(super) fn write_packet_budget_report(
                 }),
             );
         }
+    }
+
+    if let Some(obj) = payload.as_object_mut() {
+        obj.insert("compat".to_string(), compat_summary_for_packet_dir(dir));
     }
 
     let bytes = serde_json::to_vec_pretty(&payload).unwrap_or_else(|_| b"{}".to_vec());

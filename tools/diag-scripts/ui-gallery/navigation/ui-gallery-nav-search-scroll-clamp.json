@@ -1,0 +1,114 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-nav-search-scroll-clamp",
+    "required_capabilities": ["diag.script_v2"],
+    "tags": ["ui_gallery", "nav", "search", "scroll"]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-scroll" }
+      },
+      "timeout_frames": 600
+    },
+
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 20 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-ai-chat-demo" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-nav-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-ai-chat-demo" },
+      "delta_x": 0.0,
+      "delta_y": -120.0,
+      "require_fully_within_window": true,
+      "padding_px": 2.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_scroll_not_approx_eq",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-scroll" },
+        "field": "y",
+        "value": 0.0,
+        "eps": 0.01
+      }
+    },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "accordion" },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-accordion" }
+      },
+      "timeout_frames": 600
+    },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_scroll_approx_eq",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-scroll" },
+        "field": "y_max",
+        "value": 0.0,
+        "eps": 0.01
+      },
+      "timeout_frames": 300
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_scroll_approx_eq",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-scroll" },
+        "field": "y",
+        "value": 0.0,
+        "eps": 0.01
+      }
+    },
+
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-nav-scroll" }, "delta_y": 240.0 },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_scroll_approx_eq",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-scroll" },
+        "field": "y",
+        "value": 0.0,
+        "eps": 0.01
+      }
+    },
+
+    { "type": "capture_bundle", "label": "ui-gallery-nav-search-scroll-clamp" }
+  ]
+}
+

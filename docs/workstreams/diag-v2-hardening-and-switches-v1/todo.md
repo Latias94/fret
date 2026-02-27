@@ -11,42 +11,102 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
 
 ## P0: Switches consolidation (config layering)
 
-- [ ] Document config resolution order (CLI vs env vs config file vs defaults) and link it from `docs/ui-diagnostics-and-scripted-tests.md`.
-- [ ] Audit `tools/diag-configs/diag.config.example.json` for drift; ensure every field is either:
+- [x] Document config resolution order (CLI vs env vs config file vs defaults) and link it from `docs/ui-diagnostics-and-scripted-tests.md`.
+- [x] Audit `tools/diag-configs/diag.config.example.json` for drift; ensure every field is either:
   - implemented, or
   - explicitly documented as “planned / ignored by runtime”.
-- [ ] Make tooling push schema v2 scripts by default (normalize/upgrade on write) and warn when schema v1 scripts are observed.
-- [ ] Add a runtime compat switch for schema v1 scripts:
-  - [ ] enable/disable v1 script parsing explicitly (default: enabled for manual, disabled for tool-launched runs),
-  - [ ] record legacy usage in `script.result.json` evidence (so triage can detect compat paths).
-- [ ] Define and document a minimal env var set (the rest become deprecated aliases):
-  - [ ] `FRET_DIAG`
-  - [ ] `FRET_DIAG_CONFIG_PATH`
-  - [ ] `FRET_DIAG_GPU_SCREENSHOTS`
-  - [ ] `FRET_DIAG_REDACT_TEXT`
-  - [ ] `FRET_DIAG_FIXED_FRAME_DELTA_MS`
-- [ ] Define “reserved env vars” policy for `--launch` (tooling-owned) and enforce it uniformly.
-- [ ] Add a `diag config doctor` (tooling-side) that prints an effective merged config + highlights deprecated keys/envs.
+- [x] Make tooling push schema v2 scripts by default (normalize/upgrade on write) and warn when schema v1 scripts are observed.
+- [x] Add a runtime compat switch for schema v1 scripts:
+  - [x] enable/disable v1 script parsing explicitly (default: enabled for manual, disabled for tool-launched runs),
+  - [x] record legacy usage in `script.result.json` evidence (so triage can detect compat paths).
+- [x] Ensure `diag config doctor` validates the example config (no unknown keys).
+- [x] Define and document a minimal env var set (the rest become deprecated aliases):
+  - [x] `FRET_DIAG`
+  - [x] `FRET_DIAG_CONFIG_PATH`
+  - [x] `FRET_DIAG_GPU_SCREENSHOTS`
+  - [x] `FRET_DIAG_REDACT_TEXT`
+  - [x] `FRET_DIAG_FIXED_FRAME_DELTA_MS`
+  - [x] Document deprecated aliases + removal plan (P2/P3): `docs/workstreams/diag-v2-hardening-and-switches-v1/deprecations.md`.
+- [x] Define “reserved env vars” policy for `--launch` (tooling-owned) and enforce it uniformly.
+- [x] Add a `diag config doctor` (tooling-side) that prints an effective merged config + highlights deprecated keys/envs.
 
 ## P0.5: Script library modularization (UX scalability)
 
-- [ ] Define a folder taxonomy for `tools/diag-scripts/` (by product area + suite intent).
-- [ ] Decide whether suites should be:
+- [x] Define a folder taxonomy for `tools/diag-scripts/` (by product area + suite intent). See: `docs/workstreams/diag-v2-hardening-and-switches-v1/script-library.md`.
+- [x] Decide whether suites should be:
   - [ ] registry-driven (preferred), or
-  - [ ] glob-driven (acceptable for small sets, but brittle long-term).
-- [ ] As an intermediate step, switch built-in suites from hard-coded file lists to directory inputs (deterministic `**/*.json` expansion).
-- [ ] Add a script registry file (draft):
-  - [ ] file: `tools/diag-scripts/index.json` (or `index.toml`)
-  - [ ] fields: `id`, `path`, `tags`, `target_hints`, `required_capabilities`, `suite_memberships`
-- [ ] Prefer `--suite-prelude` for shared resets (`tools/diag-scripts/_prelude/*`) and document the convention.
-- [ ] Document a migration runbook (dry-run plan → apply moves → validate suites) and link it from `docs/ui-diagnostics-and-scripted-tests.md`.
-- [ ] Decide path-move compatibility strategy:
+  - [x] glob-driven (acceptable for small sets, but brittle long-term). (v1 decision: curated suite directories + redirect stubs)
+- [x] As an intermediate step, switch built-in suites from hard-coded file lists to directory inputs (deterministic `**/*.json` expansion).
+- [x] Ensure capability inference resolves `script_redirect` stubs (screenshots / required caps / env defaults).
+- [x] Add a script registry file (v1, generated; scope: suites + `_prelude`):
+  - [x] file: `tools/diag-scripts/index.json`
+  - [x] generator/check: `python tools/check_diag_scripts_registry.py [--write]` (stdlib-only; suitable for CI)
+  - [x] fields: `id`, `path`, `tags`, `target_hints`, `required_capabilities`, `suite_memberships`
+  - [x] CI guardrail: `.github/workflows/consistency-checks.yml`
+- [x] Allow `diag run` to accept a promoted `script_id` from `tools/diag-scripts/index.json` (in addition to explicit paths),
+  and print suggestions when the id is unknown.
+- [x] Prefer `--suite-prelude` for shared resets (`tools/diag-scripts/_prelude/*`) and document the convention.
+- [x] Document a migration runbook (dry-run plan → apply moves → validate suites) and link it from `docs/ui-diagnostics-and-scripted-tests.md`.
+- [x] Decide path-move compatibility strategy:
   - [ ] registry-first (no moves) to decouple suites from filenames,
-  - [ ] then move to folders with either redirects (preferred) or “big bang” rewrites.
-- [ ] If using redirects, implement tooling redirect resolution:
-  - [ ] add `script_redirect` stub support with loop detection,
-  - [ ] ensure redirects never reach the runtime (tooling resolves before push).
-- [ ] Write a migration script to move scripts into subfolders and update references:
+  - [x] then move to folders with either redirects (preferred) or “big bang” rewrites.
+- [x] If using redirects, implement tooling redirect resolution:
+  - [x] add `script_redirect` stub support with loop detection,
+  - [x] ensure redirects never reach the runtime (tooling resolves before push).
+- [x] Add a migration helper script (plan + apply moves + optional redirects/rewrite).
+- [x] Add a guardrail so the taxonomy stays stable:
+  - [x] `tools/diag-scripts/migrate-script-library.py --check-root` detects “root scripts” (supports optional filters like `--include-prefix ui-gallery-`).
+  - [ ] (optional) promote the check into `fretboard diag doctor` once the taxonomy settles for non-ui-gallery areas.
+  - [ ] document the expected target folders for common categories (ui-gallery, docking, tooling).
+- [ ] Execute incremental taxonomy migrations (small batches + redirects + closure checks):
+  - [x] `ui-gallery/select` (17 scripts)
+  - [x] `ui-gallery/combobox` (22 scripts)
+  - [x] `ui-gallery/text-ime` (2 scripts)
+  - [x] `ui-gallery/text-wrap` (5 scripts)
+  - [x] `ui-gallery/text` (5 scripts)
+  - [x] `ui-gallery/shadcn-conformance` (7 scripts)
+  - [x] `ui-gallery/overlay` (40 scripts; batch-migrated)
+  - [x] `ui-gallery/code-editor` (42 scripts; batch-migrated)
+  - [x] `ui-gallery/markdown-editor` (24 scripts)
+  - [x] `ui-gallery/layout` (4 scripts)
+  - [x] `ui-gallery/perf` (70 scripts; batch-migrated)
+  - [x] `ui-gallery/date-picker` (5 scripts)
+  - [x] `ui-gallery/material3` (37 scripts)
+  - [x] `ui-gallery/ai` (67 scripts; batch-migrated)
+  - [x] `ui-gallery/menubar` (18 scripts)
+  - [x] `ui-gallery/command` (14 scripts)
+  - [x] `ui-gallery/data-table` (16 scripts)
+  - [x] `ui-gallery/context-menu` (9 scripts)
+  - [x] `ui-gallery/dropdown-menu` (5 scripts)
+  - [x] `ui-gallery/button` (11 scripts)
+  - [x] `ui-gallery/checkbox` (9 scripts)
+  - [x] `ui-gallery/sidebar` (8 scripts)
+  - [x] `ui-gallery/drawer` (6 scripts)
+  - [x] `ui-gallery/sonner` (7 scripts)
+  - [x] `ui-gallery/table` (9 scripts)
+  - [x] `ui-gallery/code-view` (4 scripts)
+  - [x] `ui-gallery/control-chrome` (4 scripts)
+  - [x] `ui-gallery/collapsible` (7 scripts)
+  - [x] `ui-gallery/dropdown` (6 scripts)
+  - [x] `ui-gallery/navigation` (10 scripts)
+  - [x] `ui-gallery/carousel` (5 scripts)
+  - [x] `ui-gallery/toggle` (5 scripts)
+  - [x] `ui-gallery/theme` (4 scripts)
+  - [x] `ui-gallery/typography` (4 scripts)
+  - [x] `ui-gallery/virtual-list` (5 scripts)
+  - [x] `ui-gallery/input` (4 scripts)
+  - [x] `ui-gallery/pagination` (1 script; post-merge batch)
+  - [x] `ui-gallery/scroll-area` (1 script; post-merge batch)
+  - [x] `ui-gallery/misc` (redirect-only; 0 canonical scripts)
+  - [ ] Replace misc redirects with direct suite references (optional; reduce redirect chain depth)
+  - [x] `docking/arbitration` (33 scripts)
+  - [x] `tooling/external-texture-imports` (9 scripts)
+  - [x] `tooling/todo` (4 scripts)
+  - [x] `_prelude/*` (2 scripts)
+- [x] Update references after path moves (chosen approach):
+  - [x] replace hard-coded lists with registry/directory inputs, or
+  - [ ] scripted rewrite of code/docs references (large diff; less preferred).
+- [ ] (If needed) write a migration script to move scripts into subfolders and update references:
   - [ ] updates `crates/fret-diag/src/diag_suite_scripts.rs` (or replaces it with a registry reader),
   - [ ] updates any other hard-coded references under `crates/fret-diag/src` (search for `tools/diag-scripts/`),
   - [ ] updates any docs that reference old paths,
@@ -54,33 +114,38 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
 
 ## P1: Manifest-first artifacts (transport-neutral)
 
-- [ ] Write a single “canonical per-run layout” doc (point to `docs/workstreams/diag-simplification-v1.md` and reconcile terminology).
-- [ ] Ensure filesystem transport always produces a per-run manifest (even in manual `poke` workflows).
-- [ ] Ensure DevTools WS transport always materializes a per-run manifest alongside `script.result.json`.
-- [ ] Add an FS dump request surface to carry dump metadata (label/max snapshots/request id), matching WS:
-  - [ ] tooling writes `dump.request.json` (or equivalent) and touches a trigger,
-  - [ ] runtime consumes it and includes metadata in `bundle.dumped` event logs.
-- [ ] Make `diag pack --ai-only` succeed from manifest + sidecars without `bundle.json`.
-- [ ] Add `diag artifact lint` that validates:
-  - [ ] manifest schema,
-  - [ ] chunk list hashes (when present),
-  - [ ] sidecar schema versions,
-  - [ ] consistent run id + timestamps.
+- [x] Write a single “canonical per-run layout” doc (point to `docs/workstreams/diag-simplification-v1.md` and reconcile terminology). See: `docs/workstreams/diag-v2-hardening-and-switches-v1/per-run-layout.md`.
+- [x] Ensure filesystem transport produces a per-run manifest for `diag run/suite/repro/perf`.
+- [x] Provide an opt-in manual `diag poke --wait --record-run` workflow that writes a tooling-owned per-run manifest directory for a dump.
+- [x] Ensure DevTools WS transport always materializes a per-run manifest alongside `script.result.json`.
+- [x] Add an FS dump request surface to carry dump metadata (label/max snapshots/request id), matching WS:
+  - [x] tooling writes `dump.request.json` and touches a trigger (`crates/fret-diag/src/transport/fs.rs`),
+  - [x] runtime consumes `dump.request.json` for trigger-driven dumps (`ecosystem/fret-bootstrap/src/ui_diagnostics/fs_triggers.rs`),
+  - [x] runtime records dump metadata in `bundle.dumped` event logs (beyond the directory name).
+- [x] Make `diag pack --ai-only` succeed from manifest + sidecars without `bundle.json` (including extracted share zips where sidecars live under `_root/`).
+- [x] Add `diag artifact lint` that validates:
+  - [x] manifest schema,
+  - [x] chunk list hashes (when present),
+  - [x] sidecar schema versions,
+  - [x] consistent run id + timestamps.
 
 ## P2: Box compatibility logic
 
 - [ ] Create `compat/` modules in tooling for:
-  - [ ] legacy capability aliases (`script_v2` → `diag.script_v2`, etc),
-  - [ ] v1 bundle schema reading,
-  - [ ] v1 script schema reading (if still supported).
-- [ ] Close multi-window gaps in schema v2 steps:
-  - [ ] add optional `window` targeting to selector-driven steps that currently lack it (e.g. `click_stable`, `wheel`, pointer moves),
-  - [ ] update capability inference (keep using `diag.multi_window`) and ensure fail-fast gating.
-- [ ] Extend `FilesystemCapabilitiesV1` with optional identity fields (additive):
-  - [ ] `runner_kind`, `runner_version`,
-  - [ ] optional `protocol_versions`/`schemas` hints for tooling.
-- [ ] Create `transport/` seam contract and ensure all FS vs WS differences are isolated there.
-- [ ] Add a “legacy usage” marker into `triage.json` / `ai.packet.json` when compat fallbacks were used.
+  - [x] legacy capability aliases (`script_v2` → `diag.script_v2`, etc),
+  - [x] v1 bundle schema reading,
+  - [x] v1 script schema reading (if still supported).
+- [x] Close multi-window gaps in schema v2 steps:
+  - [x] add optional `window` targeting to selector-driven steps that currently lacked it (e.g. `click_stable`, `wheel`, pointer moves),
+  - [x] update capability inference (keep using `diag.multi_window`) and ensure fail-fast gating.
+  - [ ] (optional) consider adding `window` to `capture_screenshot` for “no-opinion” per-window evidence collection.
+- [x] Extend `FilesystemCapabilitiesV1` with optional identity fields (additive):
+  - [x] `runner_kind`, `runner_version`,
+  - [x] optional `protocol_versions`/`schemas` hints for tooling.
+- [x] Create `transport/` seam contract and ensure all FS vs WS differences are isolated there.
+  - Evidence: `crates/fret-diag/src/transport/seam.rs`, `crates/fret-diag/src/lib.rs`
+- [x] Add a “legacy usage” marker into `triage.json` / `ai.packet.json` when compat fallbacks were used.
+  - Evidence: `crates/fret-diag/src/triage_json.rs`, `crates/fret-diag/src/commands/ai_packet/budget.rs`
 
 ## P3: Deprecations + debt removal
 

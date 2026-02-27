@@ -63,6 +63,7 @@ impl PendingCancelCrossWindowDrag {
 #[derive(Debug, Clone)]
 pub(super) struct PendingScript {
     pub(super) steps: Vec<UiActionStepV2>,
+    pub(super) legacy_schema_v1: bool,
 }
 
 impl PendingScript {
@@ -91,6 +92,7 @@ impl PendingScript {
         }
         Some(Self {
             steps: script.steps.into_iter().map(UiActionStepV2::from).collect(),
+            legacy_schema_v1: true,
         })
     }
 
@@ -100,6 +102,7 @@ impl PendingScript {
         }
         Some(Self {
             steps: script.steps,
+            legacy_schema_v1: false,
         })
     }
 }
@@ -126,6 +129,7 @@ pub(super) enum V2StepState {
 pub(super) struct V2PointerSessionState {
     pub(super) window: AppWindowId,
     pub(super) button: UiMouseButtonV1,
+    pub(super) pointer_type: fret_core::PointerType,
     pub(super) modifiers: Modifiers,
     pub(super) position: Point,
 }

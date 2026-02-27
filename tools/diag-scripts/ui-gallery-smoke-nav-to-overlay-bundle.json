@@ -1,20 +1,5 @@
 {
   "schema_version": 1,
-  "steps": [
-    { "type": "wait_frames", "n": 5 },
-    {
-      "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-nav-overlay" }
-    },
-    {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-page-overlay" }
-      },
-      "timeout_frames": 120
-    },
-    { "type": "capture_bundle", "label": "ui-gallery-smoke-nav-to-overlay" }
-  ]
+  "kind": "script_redirect",
+  "to": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-smoke-nav-to-overlay-bundle.json"
 }
-

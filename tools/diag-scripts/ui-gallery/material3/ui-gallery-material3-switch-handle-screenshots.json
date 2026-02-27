@@ -1,0 +1,86 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-material3-switch-handle-screenshots",
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "tags": ["ui_gallery", "material3", "switch", "handle", "screenshots"]
+  },
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "switch" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "ensure_visible",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-material3-switch" },
+      "within_window": true,
+      "padding_px": 8.0,
+      "timeout_frames": 600
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-material3-switch" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-material3-switch" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 20 },
+
+    { "type": "capture_bundle", "label": "m3-switch-00-idle" },
+    { "type": "capture_screenshot", "label": "m3-switch-00-idle" },
+
+    { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-gallery-material3-switch" } },
+    { "type": "wait_frames", "n": 6 },
+    { "type": "capture_bundle", "label": "m3-switch-10-hover" },
+    { "type": "capture_screenshot", "label": "m3-switch-10-hover" },
+
+    { "type": "pointer_down", "target": { "kind": "test_id", "id": "ui-gallery-material3-switch" } },
+    { "type": "wait_frames", "n": 6 },
+    { "type": "capture_bundle", "label": "m3-switch-20-pressed" },
+    { "type": "capture_screenshot", "label": "m3-switch-20-pressed" },
+    {
+      "type": "move_pointer",
+      "target": { "kind": "test_id", "id": "ui-gallery-material3-switch-disabled" }
+    },
+    { "type": "pointer_up" },
+    { "type": "wait_frames", "n": 6 },
+    { "type": "capture_bundle", "label": "m3-switch-21-released" },
+    { "type": "capture_screenshot", "label": "m3-switch-21-released" },
+
+    { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-gallery-material3-switch-icons-both" } },
+    { "type": "wait_frames", "n": 6 },
+    { "type": "capture_bundle", "label": "m3-switch-icons-both-00-idle" },
+    { "type": "capture_screenshot", "label": "m3-switch-icons-both-00-idle" },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-material3-switch-icons-both" } },
+    { "type": "wait_frames", "n": 6 },
+    { "type": "capture_bundle", "label": "m3-switch-icons-both-10-selected" },
+    { "type": "capture_screenshot", "label": "m3-switch-icons-both-10-selected" },
+
+    { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-gallery-material3-switch-icons-selected-only" } },
+    { "type": "wait_frames", "n": 6 },
+    { "type": "capture_bundle", "label": "m3-switch-icons-selected-only-00-idle" },
+    { "type": "capture_screenshot", "label": "m3-switch-icons-selected-only-00-idle" },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-material3-switch-icons-selected-only" } },
+    { "type": "wait_frames", "n": 6 },
+    { "type": "capture_bundle", "label": "m3-switch-icons-selected-only-10-selected" },
+    { "type": "capture_screenshot", "label": "m3-switch-icons-selected-only-10-selected" },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-material3-switch-disabled" } },
+    { "type": "wait_frames", "n": 6 },
+    { "type": "capture_bundle", "label": "m3-switch-30-disabled-click-noop" },
+    { "type": "capture_screenshot", "label": "m3-switch-30-disabled-click-noop" },
+
+    { "type": "capture_bundle", "label": "ui-gallery-material3-switch-handle-screenshots" }
+  ]
+}

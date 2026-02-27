@@ -1,0 +1,69 @@
+{
+  "schema_version": 2,
+  "steps": [
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui.float_window.title_bar:a" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui.float_window.title_bar:b" }
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui-float-demo.a.activate" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui-float-demo.a.overlap" }
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_overlapping",
+        "a": { "kind": "test_id", "id": "imui.float_window.window:b" },
+        "b": { "kind": "test_id", "id": "imui-float-demo.a.overlap" },
+        "eps_px": 1.0
+      }
+    },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "imui-float-demo.a.activate" } },
+    { "type": "wait_frames", "n": 2 },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "imui-float-demo.a.overlap" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui-float-demo.a.overlap.clicked" }
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "capture_bundle",
+      "label": "imui-float-window-activate-on-content-bring-to-front"
+    }
+  ]
+}

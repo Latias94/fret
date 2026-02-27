@@ -1,0 +1,92 @@
+{
+  "meta": {
+    "required_capabilities": ["diag.script_v2"]
+  },
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-search" },
+      "button": "left",
+      "stable_frames": 10,
+      "max_move_px": 0.5,
+      "timeout_frames": 600
+    },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "tooltip" },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-tooltip" },
+        "padding_px": 8.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-tooltip" },
+      "button": "left",
+      "stable_frames": 10,
+      "max_move_px": 0.5,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-tooltip" }
+      },
+      "timeout_frames": 600
+    },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-tooltip-keyboard-trigger"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_bounds_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-tooltip-keyboard-trigger" },
+      "stable_frames": 20,
+      "max_move_px": 0.5,
+      "timeout_frames": 600
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_center_approx_equal",
+        "a": { "kind": "test_id", "id": "ui-gallery-tooltip-keyboard-trigger" },
+        "b": { "kind": "test_id", "id": "ui-gallery-tooltip-keyboard-icon" },
+        "eps_px": 0.75
+      }
+    },
+
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-tooltip-keyboard-icon-centered"
+    }
+  ]
+}
+

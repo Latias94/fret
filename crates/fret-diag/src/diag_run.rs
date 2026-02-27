@@ -1,5 +1,79 @@
 use super::*;
 
+fn resolve_run_script_source(workspace_root: &Path, raw: &str) -> Result<PathBuf, String> {
+    let raw = raw.trim();
+    if raw.is_empty() {
+        return Err("missing script path or script id".to_string());
+    }
+
+    let candidate = resolve_path(workspace_root, PathBuf::from(raw));
+    if candidate.is_file() {
+        return Ok(candidate);
+    }
+
+    // A common footgun is putting flags before the required script input.
+    if raw.starts_with('-') {
+        return Err(format!(
+            "missing script path or script id (first argument must be a script; got `{raw}`)\n\
+hint: try `fretboard diag run <script.json|script_id> ...`"
+        ));
+    }
+
+    // If the user passed an explicit path (contains a separator) but it doesn't exist, treat it
+    // as a path typo rather than an id.
+    if raw.contains('/') || raw.contains('\\') {
+        return Err(format!(
+            "script file not found: {}\n\
+hint: if you meant a promoted script id, pass the id without any path separators (see tools/diag-scripts/index.json)",
+            candidate.display()
+        ));
+    }
+
+    let registry_path = crate::script_registry::promoted_registry_default_path(workspace_root);
+    if !registry_path.is_file() {
+        return Err(format!(
+            "script file not found: {}\n\
+and promoted scripts registry is missing: {}\n\
+hint: pass an explicit path, or ensure `tools/diag-scripts/index.json` exists (run `python tools/check_diag_scripts_registry.py --write`)",
+            candidate.display(),
+            registry_path.display()
+        ));
+    }
+
+    let registry = crate::script_registry::PromotedScriptRegistry::load_from_path(&registry_path)?;
+    let query = crate::script_registry::normalize_script_id_query(raw);
+
+    if let Some(entry) = registry.resolve_id(&query) {
+        let resolved = resolve_path(workspace_root, PathBuf::from(&entry.path));
+        if resolved.is_file() {
+            return Ok(resolved);
+        }
+        return Err(format!(
+            "promoted script id resolved to a missing path: {query}\n\
+path: {}\n\
+hint: regenerate tools/diag-scripts/index.json (python tools/check_diag_scripts_registry.py --write)",
+            resolved.display()
+        ));
+    }
+
+    let suggestions = registry.suggest_ids(&query, 5);
+    if suggestions.is_empty() {
+        return Err(format!(
+            "unknown script id (and no file exists at workspace root): {query}\n\
+hint: use an explicit path like `tools/diag-scripts/.../script.json`"
+        ));
+    }
+
+    let mut msg = format!(
+        "unknown script id (and no file exists at workspace root): {query}\n\
+hint: try one of these promoted ids:"
+    );
+    for s in suggestions {
+        msg.push_str(&format!("\n- {s}"));
+    }
+    Err(msg)
+}
+
 #[derive(Debug, Clone)]
 pub(crate) struct RunChecks {
     pub check_chart_sampling_window_shifts_min: Option<u64>,
@@ -278,7 +352,10 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
 
     let (bundle_doctor_mode, rest) = parse_bundle_doctor_mode_from_rest(&rest)?;
     let Some(src) = rest.first().cloned() else {
-        return Err("missing script path (try: fretboard diag run ./script.json)".to_string());
+        return Err(
+            "missing script path or script id (try: fretboard diag run <script.json|script_id>)"
+                .to_string(),
+        );
     };
     if rest.len() != 1 {
         return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
@@ -312,7 +389,7 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         pack_defaults = (true, true, true);
     }
 
-    let src = resolve_path(&workspace_root, PathBuf::from(src));
+    let src = resolve_run_script_source(&workspace_root, &src)?;
     let use_devtools_ws =
         devtools_ws_url.is_some() || devtools_token.is_some() || devtools_session_id.is_some();
     if use_devtools_ws {
@@ -330,8 +407,30 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         })?;
 
         std::fs::create_dir_all(&resolved_out_dir).map_err(|e| e.to_string())?;
-        let script_json = serde_json::from_slice(&std::fs::read(&src).map_err(|e| e.to_string())?)
-            .map_err(|e| e.to_string())?;
+        let script_value: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&src).map_err(|e| e.to_string())?)
+                .map_err(|e| e.to_string())?;
+        let resolved_script =
+            crate::script_tooling::resolve_script_json_redirects_from_value(&src, script_value)
+                .map_err(|e| e.to_string())?;
+        let (mut script_json, upgraded) =
+            crate::compat::script::upgrade_script_json_value_to_v2_if_needed(resolved_script.value)
+                .inspect_err(|err| {
+                    write_tooling_failure_script_result_if_missing(
+                        &resolved_script_result_path,
+                        "tooling.script.upgrade_failed",
+                        err,
+                        "tooling_error",
+                        Some("upgrade_script_json_value_to_v2_if_needed".to_string()),
+                    );
+                })?;
+        crate::script_tooling::canonicalize_json_value(&mut script_json);
+        if upgraded {
+            eprintln!(
+                "warning: script schema_version=1 detected; tooling upgraded to schema_version=2 for execution (source={})",
+                src.display()
+            );
+        }
 
         let wants_post_run_checks = check_stale_paint_test_id.is_some()
             || check_stale_scene_test_id.is_some()
@@ -419,7 +518,7 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
             || check_retained_vlist_keep_alive_reuse_min.is_some()
             || check_retained_vlist_keep_alive_budget.is_some();
 
-        let _ = write_script(&src, &resolved_script_path);
+        let _ = write_json_value(&resolved_script_path, &script_json);
 
         let connected = connect_devtools_ws_tooling(
             ws_url.as_str(),
@@ -607,9 +706,9 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         &launch,
         &run_launch_env,
         &workspace_root,
-        &resolved_out_dir,
         &resolved_ready_path,
         &resolved_exit_path,
+        &fs_transport_cfg,
         pack_defaults.2 || check_pixels_changed_test_id.is_some() || script_wants_screenshots,
         timeout_ms,
         poll_ms,
@@ -641,7 +740,7 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
             Some("connect_filesystem_tooling".to_string()),
         );
     })?;
-    let script_json: serde_json::Value =
+    let script_value: serde_json::Value =
         serde_json::from_slice(&std::fs::read(&src).map_err(|e| {
             let err = e.to_string();
             write_tooling_failure_script_result_if_missing(
@@ -664,6 +763,37 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
             );
             err
         })?;
+    let script_json =
+        crate::script_tooling::resolve_script_json_redirects_from_value(&src, script_value)
+            .inspect_err(|err| {
+                write_tooling_failure_script_result_if_missing(
+                    &resolved_script_result_path,
+                    "tooling.script.redirect_failed",
+                    err,
+                    "tooling_error",
+                    Some("resolve_script_json_redirects".to_string()),
+                );
+            })?
+            .value;
+    let (mut script_json, upgraded) =
+        crate::compat::script::upgrade_script_json_value_to_v2_if_needed(script_json).inspect_err(
+            |err| {
+                write_tooling_failure_script_result_if_missing(
+                    &resolved_script_result_path,
+                    "tooling.script.upgrade_failed",
+                    err,
+                    "tooling_error",
+                    Some("upgrade_script_json_value_to_v2_if_needed".to_string()),
+                );
+            },
+        )?;
+    crate::script_tooling::canonicalize_json_value(&mut script_json);
+    if upgraded {
+        eprintln!(
+            "warning: script schema_version=1 detected; tooling upgraded to schema_version=2 for execution (source={})",
+            src.display()
+        );
+    }
     let (script_result, _bundle_path) = run_script_over_transport(
         &resolved_out_dir,
         &connected,

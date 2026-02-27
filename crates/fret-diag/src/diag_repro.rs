@@ -190,7 +190,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
         pack_include_screenshots,
     );
 
-    let (scripts, suite_name) = scripts::resolve_repro_scripts(&rest, &workspace_root);
+    let (scripts, suite_name) = scripts::resolve_repro_scripts(&rest, &workspace_root)?;
 
     let summary_path = resolved_out_dir.join("repro.summary.json");
 
@@ -212,9 +212,9 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
         &prepared_launch.launch,
         &prepared_launch.launch_env,
         &workspace_root,
-        &resolved_out_dir,
         &resolved_ready_path,
         &resolved_exit_path,
+        &fs_transport_cfg,
         pack_defaults.2
             || check_pixels_changed_test_id.is_some()
             || scripts.iter().any(|p| script_requests_screenshots(p)),
@@ -334,7 +334,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
                 break;
             }
         };
-        let script_json: serde_json::Value = match serde_json::from_slice(&script_json_bytes) {
+        let script_value: serde_json::Value = match serde_json::from_slice(&script_json_bytes) {
             Ok(v) => v,
             Err(e) => {
                 let err = e.to_string();
@@ -350,6 +350,47 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
                 break;
             }
         };
+        let script_json = match crate::script_tooling::resolve_script_json_redirects_from_value(
+            &src,
+            script_value,
+        ) {
+            Ok(v) => v.value,
+            Err(err) => {
+                overall_reason_code = Some("tooling.script.redirect_failed".to_string());
+                write_tooling_failure_script_result(
+                    &resolved_script_result_path,
+                    "tooling.script.redirect_failed",
+                    &err,
+                    "tooling_error",
+                    Some(src.display().to_string()),
+                );
+                overall_error = Some(err);
+                break;
+            }
+        };
+        let (mut script_json, upgraded) =
+            match crate::compat::script::upgrade_script_json_value_to_v2_if_needed(script_json) {
+                Ok(v) => v,
+                Err(err) => {
+                    overall_reason_code = Some("tooling.script.upgrade_failed".to_string());
+                    write_tooling_failure_script_result(
+                        &resolved_script_result_path,
+                        "tooling.script.upgrade_failed",
+                        &err,
+                        "tooling_error",
+                        Some(src.display().to_string()),
+                    );
+                    overall_error = Some(err);
+                    break;
+                }
+            };
+        crate::script_tooling::canonicalize_json_value(&mut script_json);
+        if upgraded {
+            eprintln!(
+                "warning: script schema_version=1 detected; tooling upgraded to schema_version=2 for execution (source={})",
+                src.display()
+            );
+        }
 
         let (raw_result, _bundle_path) = match run_script_over_transport(
             &resolved_out_dir,

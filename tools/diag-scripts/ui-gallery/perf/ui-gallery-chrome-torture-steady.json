@@ -1,0 +1,67 @@
+{
+  "schema_version": 2,
+  "steps": [
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-scroll" }
+      },
+      "timeout_frames": 240
+    },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "chrome_torture" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-chrome-torture" },
+        "padding_px": 8.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-chrome-torture" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-chrome-torture" }
+      },
+      "timeout_frames": 240
+    },
+
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 30 },
+    { "type": "reset_diagnostics" },
+
+    { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-gallery-chrome-btn-1" } },
+    { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-gallery-chrome-btn-2" } },
+    { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-gallery-chrome-btn-3" } },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-chrome-btn-1" } },
+    { "type": "press_key", "key": "tab" },
+    { "type": "press_key", "key": "tab" },
+    { "type": "press_key", "key": "tab" },
+
+    { "type": "wait_frames", "n": 30 },
+    { "type": "capture_bundle", "label": "ui-gallery-chrome-torture-steady" },
+
+    { "type": "wait_frames", "n": 2 }
+  ]
+}

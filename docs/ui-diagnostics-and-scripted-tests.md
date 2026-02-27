@@ -92,6 +92,16 @@ On native filesystem dumps, the runtime also writes bounded sidecars next to `bu
 
 These sidecars are intended to speed up CLI queries and AI triage without opening or grepping a full `bundle.json`.
 
+Footgun / recommendation:
+
+- Avoid running `rg`/`grep` directly on `bundle.json` dumps (they can be huge and can easily explode your terminal output).
+- Prefer bounded tooling commands that use sidecars and/or schema2 views:
+  - `fretboard diag meta <bundle_dir|bundle.json|bundle.schema2.json> --json`
+  - `fretboard diag query test-id <bundle_dir|bundle.json|bundle.schema2.json> <pattern> --top 50`
+  - `fretboard diag slice <bundle_dir|bundle.json|bundle.schema2.json> --test-id <test_id>`
+  - `fretboard diag ai-packet <bundle_dir|bundle.json|bundle.schema2.json> --packet-out <dir>`
+- When searching the repository (not bundle artifacts), prefer `tools/rg-safe.ps1` (it excludes `target/fret-diag/**` and `.fret/diag/**` by default).
+
 To disable sidecar writing (native-only):
 
 - `FRET_DIAG_BUNDLE_WRITE_INDEX=0`
@@ -185,6 +195,7 @@ Workflow tip:
 - You can also open a `.zip` that contains `bundle.json` or `bundle.schema2.json` anywhere inside it (handy for sharing a full repro directory).
 - To generate a shareable `.zip` for the latest bundle: `cargo run -p fretboard -- diag pack`
 - To include nearby artifacts (`script.json`, `script.result.json`, `pick.result.json`), `triage.json`, and screenshots (when present): `cargo run -p fretboard -- diag pack --include-all`
+- To validate a per-run artifact directory (manifest + chunks + sidecars + run_id/timestamps): `cargo run -p fretboard -- diag artifact lint <run_dir|out_dir>`
 - Prefer viewer-friendly zips when schema2 exists (keeps artifacts smaller than raw `bundle.json`):
   - `cargo run -p fretboard -- diag pack --include-all --pack-schema2-only --warmup-frames <n>`
   - If needed: `cargo run -p fretboard -- diag doctor --fix-schema2 <bundle_dir> --warmup-frames <n>`
@@ -265,11 +276,14 @@ Notes:
 
    - `FRET_DIAG_REDACT_TEXT=0`
 
-3. Write a `script.json` file (schema v1):
+3. Write a `script.json` file (schema v2; schema v1 is deprecated but still accepted):
 
 ```json
 {
-  "schema_version": 1,
+  "schema_version": 2,
+  "meta": {
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"]
+  },
   "steps": [
     { "type": "click", "target": { "kind": "role_and_name", "role": "button", "name": "Open" } },
     { "type": "wait_until", "predicate": { "kind": "exists", "target": { "kind": "role_and_name", "role": "dialog", "name": "Settings" } }, "timeout_frames": 60 },
@@ -305,6 +319,9 @@ Script tooling (no app required):
 - Normalize formatting (stable diffs):
   - `cargo run -p fretboard -- diag script normalize .\\script.json --write`
   - `cargo run -p fretboard -- diag script normalize .\\script.json --check`
+- Upgrade legacy schema v1 → v2 (schema-only; does not rewrite v2 scripts):
+  - `cargo run -p fretboard -- diag script upgrade .\\script.json --write`
+  - `cargo run -p fretboard -- diag script upgrade .\\script.json --check`
 - PowerShell note: `diag script validate|lint` accept globs and directories (the CLI expands them):
   - `cargo run -p fretboard -- diag script lint tools/diag-scripts/ui-gallery-select-*.json`
   - `cargo run -p fretboard -- diag script validate tools/diag-scripts`
@@ -569,10 +586,46 @@ Core:
 - `FRET_DIAG_CONFIG_PATH=...`: optional JSON config file (schema v1) for diagnostics runtime settings and paths.
   - Tooling writes `<dir>/diag.config.json` by default when launching via `fretboard diag run/suite/repro --launch`.
   - When an env var is set, it overrides the config file (compat-first manual escape hatch).
+  - In `--launch` mode, tooling-owned env vars and paths are reserved; `--env` cannot override them (use `--dir` / `--*-path` flags instead).
   - Example file to copy/modify: `tools/diag-configs/diag.config.example.json`.
+  - Drift audit notes for the example file: `tools/diag-configs/README.md`.
+  - Schema v1 script compatibility:
+    - Config file key: `allow_script_schema_v1` (default: `true`).
+    - Tool-launched runs write `allow_script_schema_v1=false` so the runtime stays v2-only.
+  - Tip: print the effective merged config (and highlight unknown keys/envs):
+    - `cargo run -p fretboard -- diag config doctor --mode launch --dir .fret/diag`
+    - `cargo run -p fretboard -- diag config doctor --mode manual --report-json` (manual apps)
+
+Canonical env vars (recommended):
+
+- `FRET_DIAG_CONFIG_PATH` (preferred)
+- `FRET_DIAG`
+- `FRET_DIAG_GPU_SCREENSHOTS`
+- `FRET_DIAG_REDACT_TEXT`
+- `FRET_DIAG_FIXED_FRAME_DELTA_MS`
+
+Deprecated aliases + removal plan:
+
+- `docs/workstreams/diag-v2-hardening-and-switches-v1/deprecations.md`.
+
+Config resolution order (runtime):
+
+1. Tooling may set reserved env vars in `--launch` mode (including `FRET_DIAG_DIR` and `FRET_DIAG_*_PATH`), overriding any values from the parent shell.
+2. If `FRET_DIAG_CONFIG_PATH` points to a readable config file, the runtime loads `UiDiagnosticsConfigFileV1` from it.
+3. For most fields, non-empty env vars override config file values (manual escape hatch).
+4. Any missing fields fall back to runtime defaults (for example `out_dir=target/fret-diag`, `max_events=2000`, `max_snapshots=300`).
+
 - `FRET_DIAG_TRIGGER_PATH=...`: dump trigger file (default `<dir>/trigger.touch`).
   - The trigger uses a **stamp** (monotonic integer) rather than mtime. Write a new integer value
     (e.g. unix ms) to trigger a dump; `fretboard diag poke` does this for you.
+  - Tooling convenience:
+    - `fretboard diag poke --wait` waits for `latest.txt` to update and prints the dump directory.
+    - `fretboard diag poke --wait --record-run` writes a tooling-owned per-run manifest directory and chunked bundle copy under `<dir>/<run_id>/`.
+  - Optional (filesystem transport): write `<dir>/dump.request.json` (schema v1) before touching the trigger to
+    provide dump metadata:
+    - `label` (string): appended to the export directory name (`<timestamp>-<label>`),
+    - `max_snapshots` (u32): overrides the dump snapshot cap (clamped by runtime config),
+    - `request_id` (u64): best-effort correlation id (tooling-owned).
 - `FRET_DIAG_MAX_EVENTS=...`: ring size for events.
 - `FRET_DIAG_MAX_SNAPSHOTS=...`: ring size for snapshots.
 
@@ -654,13 +707,15 @@ Supported selectors (v1 MVP):
 
 ## Supported scripted steps (v1 MVP)
 
-- `click` (optional `button`: `left`/`right`/`middle`; default `left`; schema v2 only: optional `window` target)
-- `move_pointer`
+- `click` (optional `button`: `left`/`right`/`middle`; default `left`; optional `pointer_kind`; schema v2 only: optional `window` target)
+- `tap` (schema v2 only; touch-first gesture; optional `pointer_kind`; default `touch`; optional `window` target; capability-gated behind `diag.gesture_tap`)
+- `pinch` (schema v2 only; touch-first gesture; `delta` zoom amount (positive=in, negative=out); optional `steps` (default 8); optional `pointer_kind`; default `touch`; optional `window` target; capability-gated behind `diag.gesture_pinch`)
+- `move_pointer` (schema v2 only: optional `window` target)
 - `pointer_down` (schema v2 only; optional `window` target; starts a cross-step pointer session for "drag + key" flows)
 - `pointer_move` (schema v2 only; optional `window` target; moves with the pressed buttons from `pointer_down`)
 - `pointer_up` (schema v2 only; optional `window` target; ends the `pointer_down` session)
 - `drag_pointer` (optional `button`, `steps`; schema v2 only: optional `window` target)
-- `wheel` (optional `delta_x`, `delta_y`; default `0`)
+- `wheel` (optional `delta_x`, `delta_y`; default `0`; schema v2 only: optional `window` target)
 - `press_key` (`key`: `escape`, `enter`, `tab`, `space`, `arrow_up/down/left/right`, `home`, `end`, `page_up/down`,
   `f1-f12`, `alt`/`alt_left`/`alt_right`, `a-z`, `0-9`,
   `comma`/`,`, `period`/`dot`/`.`, `slash`/`/`, `semicolon`/`;`, `quote`/`apostrophe`/`'`,
@@ -685,6 +740,16 @@ Supported selectors (v1 MVP):
 - `set_cursor_screen_pos` (schema v2 only; runner-level cursor screen-position override, physical pixels; intended for cross-window routing in scripted runs)
 - `set_cursor_in_window` (schema v2 only; runner-level cursor override using window-client physical pixels; intended for cross-window routing without hardcoding DPI)
 - `drag_pointer_until` (schema v2 only; optional `window` target; drag across frames until a predicate passes or timeout; intended for cross-window routing)
+
+Pointer kind note (as of 2026-02-27):
+
+- Pointer-driven steps support an optional `pointer_kind` field: `mouse` (default), `touch`, or `pen`.
+- `pointer_kind` is omitted from JSON when unset; existing scripts remain mouse-based.
+- Requesting `pointer_kind: touch` requires the runner to advertise `diag.pointer_kind_touch`.
+  Requesting `pointer_kind: pen` requires `diag.pointer_kind_pen`.
+  Tooling fails fast and writes `check.capabilities.json` evidence when the capability is missing.
+- For cross-step pointer sessions (`pointer_down`/`pointer_move`/`pointer_up`), `pointer_down.pointer_kind` sets the
+  session kind; `pointer_move`/`pointer_up` must either omit `pointer_kind` or match the session kind.
 
 Additional predicate kinds are occasionally added to unblock new regression gates (for example menu a11y checks).
 When authoring scripts, prefer stable `test_id` selectors and stick to predicates documented here; see
@@ -743,13 +808,17 @@ Schema v2 scripts may include a top-level `meta` object. Supported fields:
 
 Supported intent steps (v2):
 
-- `ensure_visible` (wait until visible/within window bounds)
-- `scroll_into_view` (wheel a container until a target becomes visible)
-- `type_text_into` (wait + click + type)
-- `menu_select` (wait + open menu + click item)
-- `menu_select_path` (wait + open nested menus + click final item)
+- `click_stable` (wait for target bounds to settle, then click; optional `window` target)
+- `click_selectable_text_span_stable` (stable click a tagged span inside a selectable text node; optional `window` target)
+- `wait_bounds_stable` (wait until a target's bounds are stable across frames; optional `window` target)
+- `ensure_visible` (wait until visible/within window bounds; optional `window` target)
+- `move_pointer_sweep` (move pointer across frames while staying relative to a target; optional `window` target)
+- `scroll_into_view` (wheel a container until a target becomes visible; optional `window` target)
+- `type_text_into` (wait + click + type; optional `window` target)
+- `menu_select` (wait + open menu + click item; optional `window` target)
+- `menu_select_path` (wait + open nested menus + click final item; optional `window` target)
 - `drag_to` (drag between two semantics targets; optional `window` target)
-- `set_slider_value` (drag a slider to a desired value; requires a parseable semantics `value`)
+- `set_slider_value` (drag a slider to a desired value; optional `window` target; requires a parseable semantics `value`)
 - `set_window_inner_size` (emit `WindowRequest::SetInnerSize`)
 - `set_window_outer_position` (emit `WindowRequest::SetOuterPosition`)
 - `raise_window` (emit `WindowRequest::Raise`)
@@ -968,10 +1037,20 @@ For the UI gallery, run:
 
 Note:
 
-- The script library is expected to be modularized into subfolders over time (taxonomy + optional registry).
-  Prefer directory- and glob-based inputs (`--script-dir`, `--glob`) for ad-hoc runs, and avoid assuming scripts live
+- The script library is modularized via a taxonomy plus a minimal, generated registry for “promoted” scripts
+  (`tools/diag-scripts/index.json`, scope: suite-reachable + `_prelude`; regenerate via
+  `python tools/check_diag_scripts_registry.py --write`).
+  `fretboard diag run` accepts either an explicit path or a promoted `script_id` from this registry. Prefer directory- and glob-based inputs (`--script-dir`, `--glob`) for ad-hoc runs, and avoid assuming scripts live
   only at the top-level. See: `docs/workstreams/diag-v2-hardening-and-switches-v1/README.md`.
+- Built-in suites are defined as curated directory inputs under `tools/diag-scripts/suites/<suite-name>/`.
+  Each entry is a small `script_redirect` JSON stub that points at the canonical script path; tooling resolves
+  redirects before pushing scripts to the runtime (so redirects never reach the runtime).
+- Use `--suite-prelude <script.json>` to run shared reset/normalization scripts from `tools/diag-scripts/_prelude/*`.
+  When the suite reuses a single process, preludes run once before the first script by default; use
+  `--suite-prelude-each-run` to run preludes before every script.
 - Migration helper (dry-run by default): `python tools/diag-scripts/migrate-script-library.py`.
+- During migration, legacy script paths may be left behind as small `script_redirect` JSON stubs. Tooling resolves these
+  stubs before pushing scripts to the runtime, so redirects never become part of the runtime contract surface.
 
 For component-focused conformance scripts (built-in suites), run:
 

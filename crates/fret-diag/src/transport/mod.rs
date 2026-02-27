@@ -6,6 +6,7 @@ use fret_diag_protocol::{
 };
 
 mod fs;
+mod seam;
 mod ws;
 
 pub use fs::FsDiagTransportConfig;
@@ -13,6 +14,8 @@ pub use ws::WsDiagTransportConfig;
 
 pub use fret_diag_ws::client::ClientKindV1;
 pub use fret_diag_ws::client::DevtoolsWsClientConfig;
+
+pub(crate) use seam::ToolingTransportSeamV1;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DiagTransportKind {
@@ -55,6 +58,10 @@ impl ToolingDiagClient {
 
     pub fn kind(&self) -> DiagTransportKind {
         self.transport.kind()
+    }
+
+    pub(crate) fn seam_v1(&self) -> ToolingTransportSeamV1 {
+        ToolingTransportSeamV1::new(self.kind())
     }
 
     pub fn send(&self, msg: DiagTransportMessageV1) {

@@ -1,0 +1,20 @@
+{
+  "schema_version": 2,
+  "steps": [
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 20 },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 4 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "barrier_roots",
+        "barrier_root": "none",
+        "focus_barrier_root": "none"
+      },
+      "timeout_frames": 600
+    },
+    { "type": "reset_diagnostics" },
+    { "type": "wait_frames", "n": 1 }
+  ]
+}

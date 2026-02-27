@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "steps": [
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-overlay-reset" }
+    },
+    { "type": "wait_frames", "n": 5 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-portal-geometry-trigger" }
+      },
+      "timeout_frames": 120
+    },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-portal-geometry-trigger" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-portal-geometry-popover-content"
+        }
+      },
+      "timeout_frames": 120
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "padding_px": 4.0,
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-portal-geometry-popover-content"
+        }
+      }
+    },
+    {
+      "type": "wheel",
+      "target": { "kind": "test_id", "id": "ui-gallery-portal-geometry-scroll-area" },
+      "delta_y": 240.0
+    },
+    { "type": "wait_frames", "n": 5 },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-portal-geometry-popover-content"
+        }
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "padding_px": 4.0,
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-portal-geometry-popover-content"
+        }
+      }
+    },
+    { "type": "capture_bundle", "label": "ui-gallery-portal-geometry-scroll-clamp" }
+  ]
+}

@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use fret_diag_protocol::{UiScriptResultV1, UiScriptStageV1};
+use fret_diag_protocol::{FilesystemCapabilitiesV1, UiScriptResultV1, UiScriptStageV1};
 use serde_json::{Value, json};
 
 use super::args::resolve_latest_bundle_dir_path;
@@ -686,6 +686,24 @@ fn resolve_manifest_path(bundle_dir: &Path) -> Option<PathBuf> {
     None
 }
 
+fn resolve_capabilities_path(bundle_dir: &Path) -> Option<PathBuf> {
+    let direct = bundle_dir.join("capabilities.json");
+    if direct.is_file() {
+        return Some(direct);
+    }
+    let root = bundle_dir.join("_root").join("capabilities.json");
+    if root.is_file() {
+        return Some(root);
+    }
+    if let Some(parent) = bundle_dir.parent() {
+        let from_parent = parent.join("capabilities.json");
+        if from_parent.is_file() {
+            return Some(from_parent);
+        }
+    }
+    None
+}
+
 fn read_json_value_result(path: &Path) -> Result<Value, String> {
     let bytes = std::fs::read(path).map_err(|e| e.to_string())?;
     serde_json::from_slice(&bytes).map_err(|e| e.to_string())
@@ -693,61 +711,6 @@ fn read_json_value_result(path: &Path) -> Result<Value, String> {
 
 fn file_bytes(path: &Path) -> Option<u64> {
     std::fs::metadata(path).ok().map(|m| m.len())
-}
-
-fn sniff_schema_version_from_json_prefix(bytes: &[u8]) -> Option<u64> {
-    fn find_subslice(haystack: &[u8], needle: &[u8]) -> Option<usize> {
-        haystack
-            .windows(needle.len())
-            .position(|window| window == needle)
-    }
-
-    fn parse_number_after_key(bytes: &[u8], key_offset: usize, key_len: usize) -> Option<u64> {
-        let mut i = key_offset.saturating_add(key_len);
-        while i < bytes.len() && bytes[i].is_ascii_whitespace() {
-            i = i.saturating_add(1);
-        }
-        if bytes.get(i).copied() != Some(b':') {
-            return None;
-        }
-        i = i.saturating_add(1);
-        while i < bytes.len() && bytes[i].is_ascii_whitespace() {
-            i = i.saturating_add(1);
-        }
-
-        let start = i;
-        while i < bytes.len() && bytes[i].is_ascii_digit() {
-            i = i.saturating_add(1);
-        }
-        if start == i {
-            return None;
-        }
-        std::str::from_utf8(&bytes[start..i])
-            .ok()?
-            .parse::<u64>()
-            .ok()
-    }
-
-    for key in [&br#""schema_version""#[..], &br#""schemaVersion""#[..]] {
-        let Some(off) = find_subslice(bytes, key) else {
-            continue;
-        };
-        if let Some(v) = parse_number_after_key(bytes, off, key.len()) {
-            return Some(v);
-        }
-    }
-
-    None
-}
-
-fn sniff_bundle_schema_version(bundle_json_path: &Path) -> Result<Option<u64>, String> {
-    // Only read a prefix: schema_version is expected near the top-level object.
-    const MAX_PREFIX_BYTES: usize = 64 * 1024;
-    let mut bytes = std::fs::read(bundle_json_path).map_err(|e| e.to_string())?;
-    if bytes.len() > MAX_PREFIX_BYTES {
-        bytes.truncate(MAX_PREFIX_BYTES);
-    }
-    Ok(sniff_schema_version_from_json_prefix(&bytes))
 }
 
 fn manifest_bundle_json_chunks_summary(manifest_dir: &Path, manifest: &Value) -> Option<Value> {
@@ -816,7 +779,7 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
         == Some("bundle.json");
     let (bundle_schema_version, bundle_schema_error) =
         if let Some(path) = bundle_artifact.as_deref() {
-            match sniff_bundle_schema_version(path) {
+            match crate::compat::bundle::sniff_bundle_schema_version(path) {
                 Ok(v) => (v, None),
                 Err(e) => (None, Some(e)),
             }
@@ -843,6 +806,22 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
                 "reason": r.reason,
                 "last_bundle_dir": r.last_bundle_dir,
                 "bundle_json_bytes": r.last_bundle_artifact.and_then(|a| a.bundle_json_bytes),
+            })
+        });
+
+    let capabilities_path = resolve_capabilities_path(bundle_dir);
+    let capabilities = capabilities_path
+        .as_deref()
+        .and_then(|path| std::fs::read(path).ok())
+        .and_then(|bytes| serde_json::from_slice::<FilesystemCapabilitiesV1>(&bytes).ok())
+        .map(|c| {
+            json!({
+                "schema_version": c.schema_version,
+                "runner_kind": c.runner_kind,
+                "runner_version": c.runner_version,
+                "hints": c.hints,
+                "capabilities_total": c.capabilities.len(),
+                "capabilities": c.capabilities,
             })
         });
 
@@ -1022,6 +1001,8 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
         "warmup_frames": warmup_frames,
         "script_result_path": script_result_path.as_ref().map(|p| p.display().to_string()),
         "script_result": script_result,
+        "capabilities_path": capabilities_path.as_ref().map(|p| p.display().to_string()),
+        "capabilities": capabilities,
         "manifest_path": manifest_path.as_ref().map(|p| p.display().to_string()),
         "manifest_chunks": manifest_chunks,
         "manifest_schema_version": manifest_schema_version,

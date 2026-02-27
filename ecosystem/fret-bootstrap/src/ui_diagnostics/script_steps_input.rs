@@ -194,6 +194,8 @@ pub(super) fn handle_type_text_into_step(
     failure_reason: &mut Option<String>,
 ) -> bool {
     let UiActionStepV2::TypeTextInto {
+        window: _,
+        pointer_kind,
         target,
         text,
         clear_before_type,
@@ -203,6 +205,7 @@ pub(super) fn handle_type_text_into_step(
         return false;
     };
 
+    let pointer_type = pointer_type_from_kind(pointer_kind);
     active.wait_until = None;
     active.screenshot_wait = None;
 
@@ -311,7 +314,7 @@ pub(super) fn handle_type_text_into_step(
                 active.last_injected_step = Some(step_index.min(u32::MAX as usize) as u32);
                 output
                     .events
-                    .extend(click_events(pos, UiMouseButtonV1::Left, 1));
+                    .extend(click_events(pos, UiMouseButtonV1::Left, 1, pointer_type));
                 state.phase = 2;
                 active.v2_step_state = Some(V2StepState::TypeTextInto(state));
                 output.request_redraw = true;

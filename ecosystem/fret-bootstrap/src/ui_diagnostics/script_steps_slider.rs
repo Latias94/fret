@@ -16,6 +16,8 @@ pub(super) fn handle_set_slider_value_step(
     failure_reason: &mut Option<String>,
 ) -> bool {
     let UiActionStepV2::SetSliderValue {
+        window: _,
+        pointer_kind,
         target,
         value,
         min,
@@ -28,6 +30,7 @@ pub(super) fn handle_set_slider_value_step(
         return false;
     };
 
+    let pointer_type = pointer_type_from_kind(pointer_kind);
     active.wait_until = None;
     active.screenshot_wait = None;
 
@@ -115,6 +118,7 @@ pub(super) fn handle_set_slider_value_step(
                         end,
                         UiMouseButtonV1::Left,
                         drag_steps.max(1),
+                        pointer_type,
                     ));
                     state.phase = 1;
                     state.last_drag_x = Some(x);
@@ -189,6 +193,7 @@ pub(super) fn handle_set_slider_value_step(
                                 end,
                                 UiMouseButtonV1::Left,
                                 drag_steps.max(1),
+                                pointer_type,
                             ));
                             state.last_drag_x = Some(end_x);
                             state.remaining_frames = state.remaining_frames.saturating_sub(1);

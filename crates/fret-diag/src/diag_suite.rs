@@ -41,9 +41,9 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
         pack_after_run,
         rest,
         suite_script_inputs,
-        suite_prewarm_scripts: _suite_prewarm_scripts,
-        suite_prelude_scripts: _suite_prelude_scripts,
-        suite_prelude_each_run: _suite_prelude_each_run,
+        suite_prewarm_scripts,
+        suite_prelude_scripts,
+        suite_prelude_each_run,
         workspace_root,
         resolved_out_dir,
         resolved_ready_path,
@@ -283,21 +283,13 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
         // post-run gate. Enable screenshots so those checks can resolve semantics
         // bounds against captured PNGs.
         push_env_if_missing(&mut launch_env, "FRET_DIAG_GPU_SCREENSHOTS", "1");
-        (
-            diag_suite_scripts::ui_gallery_suite_scripts()
-                .into_iter()
-                .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-                .collect(),
-            Some(BuiltinSuite::UiGallery),
-        )
+        let inputs = diag_suite_scripts::ui_gallery_suite_scripts();
+        let scripts = expand_script_inputs(&workspace_root, &inputs)?;
+        (scripts, Some(BuiltinSuite::UiGallery))
     } else if is_ui_gallery_overlay_steady_suite {
-        (
-            diag_suite_scripts::ui_gallery_overlay_steady_suite_scripts()
-                .into_iter()
-                .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-                .collect(),
-            Some(BuiltinSuite::UiGallery),
-        )
+        let inputs = diag_suite_scripts::ui_gallery_overlay_steady_suite_scripts();
+        let scripts = expand_script_inputs(&workspace_root, &inputs)?;
+        (scripts, Some(BuiltinSuite::UiGallery))
     } else if is_ui_gallery_motion_pilot_suite {
         // The motion pilot suite relies on stable semantics surfaces; keep diagnostics
         // redaction disabled so any role-and-name selectors remain usable in scripts.
@@ -374,65 +366,41 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
         // The code-editor-focused UI Gallery suite also includes the pixels-changed
         // gate (soft-wrap editing baseline), so screenshots must be enabled.
         push_env_if_missing(&mut launch_env, "FRET_DIAG_GPU_SCREENSHOTS", "1");
-        (
-            diag_suite_scripts::ui_gallery_code_editor_suite_scripts()
-                .into_iter()
-                .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-                .collect(),
-            Some(BuiltinSuite::UiGalleryCodeEditor),
-        )
+        let inputs = diag_suite_scripts::ui_gallery_code_editor_suite_scripts();
+        let scripts = expand_script_inputs(&workspace_root, &inputs)?;
+        (scripts, Some(BuiltinSuite::UiGalleryCodeEditor))
     } else if is_ui_gallery_date_picker_suite {
         // Keep date picker scripts deterministic (date + page seed) so keyboard navigation and
         // disabled-day skipping are repeatable.
         push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_START_PAGE", "date_picker");
         push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_DIAG_CALENDAR_ROVING", "1");
         push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_FIXED_TODAY", "2024-02-01");
-        (
-            diag_suite_scripts::ui_gallery_date_picker_suite_scripts()
-                .into_iter()
-                .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-                .collect(),
-            Some(BuiltinSuite::UiGallery),
-        )
+        let inputs = diag_suite_scripts::ui_gallery_date_picker_suite_scripts();
+        let scripts = expand_script_inputs(&workspace_root, &inputs)?;
+        (scripts, Some(BuiltinSuite::UiGallery))
     } else if is_ui_gallery_text_ime_suite {
-        (
-            diag_suite_scripts::ui_gallery_text_ime_suite_scripts()
-                .into_iter()
-                .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-                .collect(),
-            Some(BuiltinSuite::UiGallery),
-        )
+        let inputs = diag_suite_scripts::ui_gallery_text_ime_suite_scripts();
+        let scripts = expand_script_inputs(&workspace_root, &inputs)?;
+        (scripts, Some(BuiltinSuite::UiGallery))
     } else if is_ui_gallery_text_wrap_suite {
         // Text wrap/baseline gates rely on screenshots and should run with deterministic
         // bundled fonts on desktop.
         push_env_if_missing(&mut launch_env, "FRET_DIAG_GPU_SCREENSHOTS", "1");
         push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_BOOTSTRAP_FONTS", "1");
 
-        (
-            diag_suite_scripts::ui_gallery_text_wrap_suite_scripts()
-                .into_iter()
-                .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-                .collect(),
-            Some(BuiltinSuite::UiGallery),
-        )
+        let inputs = diag_suite_scripts::ui_gallery_text_wrap_suite_scripts();
+        let scripts = expand_script_inputs(&workspace_root, &inputs)?;
+        (scripts, Some(BuiltinSuite::UiGallery))
     } else if is_ui_gallery_select_suite {
         // Keep this suite redaction-friendly: scripts should prefer `test_id` selectors
         // so we can share bundles by default without leaking labels/values.
-        (
-            diag_suite_scripts::ui_gallery_select_suite_scripts()
-                .into_iter()
-                .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-                .collect(),
-            Some(BuiltinSuite::UiGallery),
-        )
+        let inputs = diag_suite_scripts::ui_gallery_select_suite_scripts();
+        let scripts = expand_script_inputs(&workspace_root, &inputs)?;
+        (scripts, Some(BuiltinSuite::UiGallery))
     } else if is_ui_gallery_combobox_suite {
-        (
-            diag_suite_scripts::ui_gallery_combobox_suite_scripts()
-                .into_iter()
-                .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-                .collect(),
-            Some(BuiltinSuite::UiGallery),
-        )
+        let inputs = diag_suite_scripts::ui_gallery_combobox_suite_scripts();
+        let scripts = expand_script_inputs(&workspace_root, &inputs)?;
+        (scripts, Some(BuiltinSuite::UiGallery))
     } else if is_ui_gallery_shadcn_conformance_suite {
         // Conformance scripts rely on stable role-and-name semantics selectors and use
         // screenshot evidence for overlap regressions.
@@ -440,27 +408,19 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
         push_env_if_missing(&mut launch_env, "FRET_DIAG_GPU_SCREENSHOTS", "1");
         // Ensure bundled fonts are loaded on desktop so font metrics are deterministic.
         push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_BOOTSTRAP_FONTS", "1");
-
-        let mut scripts: Vec<PathBuf> =
-            diag_suite_scripts::ui_gallery_shadcn_conformance_suite_scripts()
-                .into_iter()
-                .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-                .collect();
-        scripts.extend(
-            diag_suite_scripts::ui_gallery_select_suite_scripts()
-                .into_iter()
-                .map(|p| resolve_path(&workspace_root, PathBuf::from(p))),
-        );
-
+        let mut scripts = expand_script_inputs(
+            &workspace_root,
+            &diag_suite_scripts::ui_gallery_shadcn_conformance_suite_scripts(),
+        )?;
+        scripts.extend(expand_script_inputs(
+            &workspace_root,
+            &diag_suite_scripts::ui_gallery_select_suite_scripts(),
+        )?);
         (scripts, Some(BuiltinSuite::UiGallery))
     } else if is_ui_gallery_layout_suite {
-        (
-            diag_suite_scripts::ui_gallery_layout_suite_scripts()
-                .into_iter()
-                .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-                .collect(),
-            Some(BuiltinSuite::UiGalleryLayout),
-        )
+        let inputs = diag_suite_scripts::ui_gallery_layout_suite_scripts();
+        let scripts = expand_script_inputs(&workspace_root, &inputs)?;
+        (scripts, Some(BuiltinSuite::UiGalleryLayout))
     } else if is_ui_gallery_virt_retained_suite || is_ui_gallery_virt_retained_measured_suite {
         (
             vec![resolve_path(
@@ -1014,13 +974,9 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
             Some(BuiltinSuite::DockingMotionPilot),
         )
     } else if is_docking_arbitration_suite {
-        (
-            diag_suite_scripts::docking_arbitration_suite_scripts()
-                .into_iter()
-                .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-                .collect(),
-            Some(BuiltinSuite::DockingArbitration),
-        )
+        let inputs = diag_suite_scripts::docking_arbitration_suite_scripts();
+        let scripts = expand_script_inputs(&workspace_root, &inputs)?;
+        (scripts, Some(BuiltinSuite::DockingArbitration))
     } else {
         (
             suite_args
@@ -1110,9 +1066,18 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
         resolve_path(&workspace_root, raw)
     };
 
+    let resolved_script_result_trigger_path = {
+        let raw = std::env::var_os("FRET_DIAG_SCRIPT_RESULT_TRIGGER_PATH")
+            .filter(|v| !v.is_empty())
+            .map(PathBuf::from)
+            .unwrap_or_else(|| resolved_out_dir.join("script.result.touch"));
+        resolve_path(&workspace_root, raw)
+    };
+
     let mut fs_transport_cfg =
         crate::transport::FsDiagTransportConfig::from_out_dir(resolved_out_dir.clone());
     fs_transport_cfg.script_result_path = resolved_script_result_path.clone();
+    fs_transport_cfg.script_result_trigger_path = resolved_script_result_trigger_path.clone();
 
     let trace_chrome = false;
 
@@ -1125,6 +1090,16 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
         std::collections::BTreeMap::new();
     let mut suite_rows: Vec<serde_json::Value> = Vec::new();
     let mut suite_evidence_agg = suite_summary::SuiteEvidenceAggregate::default();
+
+    let capabilities_check_path = resolved_out_dir.join("check.capabilities.json");
+    let resolved_suite_prewarm_scripts: Vec<PathBuf> = suite_prewarm_scripts
+        .into_iter()
+        .map(|p| resolve_path(&workspace_root, p))
+        .collect();
+    let resolved_suite_prelude_scripts: Vec<PathBuf> = suite_prelude_scripts
+        .into_iter()
+        .map(|p| resolve_path(&workspace_root, p))
+        .collect();
 
     let connected_ws: Option<ConnectedToolingTransport> = if use_devtools_ws {
         if launch.is_some() || reuse_launch {
@@ -1193,9 +1168,9 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
             &launch,
             &suite_launch_env,
             &workspace_root,
-            &resolved_out_dir,
             &resolved_ready_path,
             &resolved_exit_path,
+            &fs_transport_cfg,
             suite_wants_screenshots,
             timeout_ms,
             poll_ms,
@@ -1296,9 +1271,9 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
                 &launch,
                 &suite_launch_env,
                 &workspace_root,
-                &resolved_out_dir,
                 &resolved_ready_path,
                 &resolved_exit_path,
+                &fs_transport_cfg,
                 suite_wants_screenshots,
                 timeout_ms,
                 poll_ms,
@@ -1344,6 +1319,7 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
             };
         }
         let result: Result<crate::stats::ScriptResultSummary, String> = (|| {
+            let child_running = child.is_some();
             let connected_fs_iter: ConnectedToolingTransport;
             let connected: &ConnectedToolingTransport = if use_devtools_ws {
                 connected_ws.as_ref().ok_or_else(|| {
@@ -1357,7 +1333,7 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
                 connected_fs_iter = connect_filesystem_tooling(
                     &fs_transport_cfg,
                     &resolved_ready_path,
-                    child.is_some(),
+                    child_running,
                     timeout_ms,
                     poll_ms,
                 )
@@ -1373,7 +1349,57 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
                 &connected_fs_iter
             };
 
-            let script_json: serde_json::Value =
+            let connected_fs_for_aux = if use_devtools_ws {
+                None
+            } else {
+                Some(connected)
+            };
+            if !resolved_suite_prewarm_scripts.is_empty() && (!reuse_process || idx == 0) {
+                for prewarm in &resolved_suite_prewarm_scripts {
+                    crate::diag_perf::run_suite_aux_script_must_pass(
+                        prewarm,
+                        &mut child,
+                        use_devtools_ws,
+                        connected_ws.as_ref(),
+                        connected_fs_for_aux,
+                        &workspace_root,
+                        &resolved_out_dir,
+                        &resolved_exit_path,
+                        !keep_open,
+                        reuse_process,
+                        &resolved_script_result_path,
+                        &resolved_script_result_trigger_path,
+                        &capabilities_check_path,
+                        timeout_ms,
+                        poll_ms,
+                    )?;
+                }
+            }
+            if !resolved_suite_prelude_scripts.is_empty()
+                && (!reuse_process || suite_prelude_each_run || idx == 0)
+            {
+                for prelude in &resolved_suite_prelude_scripts {
+                    crate::diag_perf::run_suite_aux_script_must_pass(
+                        prelude,
+                        &mut child,
+                        use_devtools_ws,
+                        connected_ws.as_ref(),
+                        connected_fs_for_aux,
+                        &workspace_root,
+                        &resolved_out_dir,
+                        &resolved_exit_path,
+                        !keep_open,
+                        reuse_process,
+                        &resolved_script_result_path,
+                        &resolved_script_result_trigger_path,
+                        &capabilities_check_path,
+                        timeout_ms,
+                        poll_ms,
+                    )?;
+                }
+            }
+
+            let script_value: serde_json::Value =
                 serde_json::from_slice(&std::fs::read(&src).map_err(|e| {
                     let err = e.to_string();
                     write_tooling_failure_script_result(
@@ -1396,6 +1422,36 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
                     );
                     err
                 })?;
+            let script_json =
+                crate::script_tooling::resolve_script_json_redirects_from_value(&src, script_value)
+                    .inspect_err(|err| {
+                        write_tooling_failure_script_result(
+                            &resolved_script_result_path,
+                            "tooling.script.redirect_failed",
+                            err,
+                            "tooling_error",
+                            Some(script_key.clone()),
+                        );
+                    })?
+                    .value;
+            let (mut script_json, upgraded) =
+                crate::compat::script::upgrade_script_json_value_to_v2_if_needed(script_json)
+                    .inspect_err(|err| {
+                        write_tooling_failure_script_result(
+                            &resolved_script_result_path,
+                            "tooling.script.upgrade_failed",
+                            err,
+                            "tooling_error",
+                            Some(script_key.clone()),
+                        );
+                    })?;
+            crate::script_tooling::canonicalize_json_value(&mut script_json);
+            if upgraded {
+                eprintln!(
+                    "warning: script schema_version=1 detected; tooling upgraded to schema_version=2 for execution (source={})",
+                    src.display()
+                );
+            }
 
             // Always dump a bounded bundle for suite runs so lint and post-run checks can
             // operate on a local artifact (parity across transports).
@@ -1437,7 +1493,7 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
                 timeout_ms,
                 poll_ms,
                 &resolved_script_result_path,
-                &resolved_out_dir.join("check.capabilities.json"),
+                &capabilities_check_path,
             )
             .inspect_err(|err| {
                 write_tooling_failure_script_result_if_missing(

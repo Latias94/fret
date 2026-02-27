@@ -1,21 +1,5 @@
 {
   "schema_version": 1,
-  "steps": [
-    { "type": "click", "target": { "kind": "test_id", "id": "todo-input" } },
-    { "type": "type_text", "text": "自动化任务" },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "press_key", "key": "enter" },
-    {
-      "type": "wait_until",
-      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "todo-item-3-done" } },
-      "timeout_frames": 60
-    },
-    { "type": "capture_bundle", "label": "todo-after-add" },
-    { "type": "click", "target": { "kind": "test_id", "id": "todo-item-3-done" } },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "capture_bundle", "label": "todo-after-toggle-done" },
-    { "type": "click", "target": { "kind": "test_id", "id": "todo-item-3-remove" } },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "capture_bundle", "label": "todo-after-remove" }
-  ]
+  "kind": "script_redirect",
+  "to": "tools/diag-scripts/tooling/todo/todo-baseline.json"
 }

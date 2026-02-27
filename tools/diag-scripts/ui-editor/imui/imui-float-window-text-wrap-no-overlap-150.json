@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "steps": [
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui.float_window.window:b" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "capture_bundle",
+      "label": "imui-float-window-text-wrap-no-overlap-150"
+    }
+  ]
+}

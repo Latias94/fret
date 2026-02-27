@@ -1,7 +1,58 @@
 use fret_diag_protocol::{DiagTransportMessageV1, UiActionScriptV1, UiActionScriptV2};
+use std::collections::BTreeSet;
+use std::path::{Path, PathBuf};
+
+fn repo_root_dir() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../..")
+        .to_path_buf()
+}
+
+fn resolve_script_redirects_inline_or_repo(json: &str) -> String {
+    const MAX_REDIRECT_DEPTH: usize = 8;
+
+    let mut current = json.to_string();
+    let mut visited: BTreeSet<String> = BTreeSet::new();
+
+    for _ in 0..=MAX_REDIRECT_DEPTH {
+        let Ok(value) = serde_json::from_str::<serde_json::Value>(&current) else {
+            return current;
+        };
+
+        let is_redirect = value
+            .get("kind")
+            .and_then(|v| v.as_str())
+            .is_some_and(|s| s == "script_redirect");
+        if !is_redirect {
+            return current;
+        }
+
+        let schema_version = value
+            .get("schema_version")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+        if schema_version != 1 {
+            return current;
+        }
+
+        let Some(to) = value.get("to").and_then(|v| v.as_str()) else {
+            return current;
+        };
+
+        if !visited.insert(to.to_string()) {
+            return current;
+        }
+
+        let path = repo_root_dir().join(PathBuf::from(to));
+        current = std::fs::read_to_string(&path).unwrap_or(current);
+    }
+
+    current
+}
 
 fn assert_script_v1_roundtrip(json: &str) {
-    let script_1: UiActionScriptV1 = serde_json::from_str(json).expect("script v1 must parse");
+    let json = resolve_script_redirects_inline_or_repo(json);
+    let script_1: UiActionScriptV1 = serde_json::from_str(&json).expect("script v1 must parse");
     assert_eq!(script_1.schema_version, 1);
 
     let value_1 = serde_json::to_value(&script_1).expect("script v1 must serialize");
@@ -13,7 +64,8 @@ fn assert_script_v1_roundtrip(json: &str) {
 }
 
 fn assert_script_v2_roundtrip(json: &str) {
-    let script_1: UiActionScriptV2 = serde_json::from_str(json).expect("script v2 must parse");
+    let json = resolve_script_redirects_inline_or_repo(json);
+    let script_1: UiActionScriptV2 = serde_json::from_str(&json).expect("script v2 must parse");
     assert_eq!(script_1.schema_version, 2);
 
     let value_1 = serde_json::to_value(&script_1).expect("script v2 must serialize");

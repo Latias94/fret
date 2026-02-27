@@ -122,10 +122,6 @@ fn apply_semantics_mode_inline(
     }
 }
 
-fn schema_version(v: &serde_json::Value) -> Option<u64> {
-    v.get("schema_version").and_then(|v| v.as_u64())
-}
-
 fn convert_bundle_value_to_schema2_in_place(
     bundle: &mut serde_json::Value,
     input_schema_version: u64,
@@ -217,7 +213,8 @@ pub(crate) fn write_bundle_schema2_json_from_path(
         serde_json::from_reader(reader).map_err(|e| e.to_string())?;
     let parse_ms = t_parse.elapsed().as_millis() as u64;
 
-    let input_schema_version = schema_version(&bundle).unwrap_or(0);
+    let input_schema_version =
+        crate::compat::bundle::bundle_schema_version_from_value(&bundle) as u64;
 
     let t_convert = Instant::now();
     convert_bundle_value_to_schema2_in_place(&mut bundle, input_schema_version, opts.mode)?;

@@ -1,29 +1,5 @@
 {
-  "schema_version": 2,
-  "steps": [
-    { "type": "reset_diagnostics" },
-    { "type": "set_window_inner_size", "width_px": 1120.0, "height_px": 720.0 },
-    {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "exists",
-        "target": { "kind": "test_id", "id": "embedded-viewport-demo.root" }
-      },
-      "timeout_frames": 240
-    },
-    {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "exists",
-        "target": { "kind": "test_id", "id": "embedded-viewport-demo.surface" }
-      },
-      "timeout_frames": 240
-    },
-
-    { "type": "wait_frames", "n": 6 },
-    { "type": "click", "target": { "kind": "test_id", "id": "embedded-viewport-demo.surface" } },
-    { "type": "wait_frames", "n": 12 },
-
-    { "type": "capture_bundle", "label": "embedded-viewport-demo-input-forwarding" }
-  ]
+  "schema_version": 1,
+  "kind": "script_redirect",
+  "to": "tools/diag-scripts/viewport/embedded-demo/embedded-viewport-demo-input-forwarding.json"
 }

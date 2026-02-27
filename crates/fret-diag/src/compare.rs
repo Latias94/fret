@@ -573,9 +573,9 @@ pub(crate) fn maybe_launch_demo(
     launch: &Option<Vec<String>>,
     launch_env: &[(String, String)],
     workspace_root: &Path,
-    out_dir: &Path,
     ready_path: &Path,
     exit_path: &Path,
+    fs_transport_cfg: &crate::transport::FsDiagTransportConfig,
     wants_screenshots: bool,
     timeout_ms: u64,
     poll_ms: u64,
@@ -593,26 +593,148 @@ pub(crate) fn maybe_launch_demo(
         .first()
         .ok_or_else(|| "missing launch command".to_string())?;
 
+    let out_dir = &fs_transport_cfg.out_dir;
+
     let mut cmd = Command::new(exe);
     cmd.args(launch.iter().skip(1));
     cmd.current_dir(workspace_root);
     cmd.env("FRET_DIAG", "1");
     cmd.env("FRET_DIAG_DIR", out_dir);
+    cmd.env("FRET_DIAG_TRIGGER_PATH", &fs_transport_cfg.trigger_path);
     cmd.env("FRET_DIAG_READY_PATH", ready_path);
     cmd.env("FRET_DIAG_EXIT_PATH", exit_path);
+    cmd.env("FRET_DIAG_SCRIPT_PATH", &fs_transport_cfg.script_path);
+    cmd.env(
+        "FRET_DIAG_SCRIPT_TRIGGER_PATH",
+        &fs_transport_cfg.script_trigger_path,
+    );
+    cmd.env(
+        "FRET_DIAG_SCRIPT_RESULT_PATH",
+        &fs_transport_cfg.script_result_path,
+    );
+    cmd.env(
+        "FRET_DIAG_SCRIPT_RESULT_TRIGGER_PATH",
+        &fs_transport_cfg.script_result_trigger_path,
+    );
+    cmd.env(
+        "FRET_DIAG_PICK_TRIGGER_PATH",
+        &fs_transport_cfg.pick_trigger_path,
+    );
+    cmd.env(
+        "FRET_DIAG_PICK_RESULT_PATH",
+        &fs_transport_cfg.pick_result_path,
+    );
+    cmd.env(
+        "FRET_DIAG_PICK_RESULT_TRIGGER_PATH",
+        &fs_transport_cfg.pick_result_trigger_path,
+    );
+    cmd.env("FRET_DIAG_INSPECT_PATH", &fs_transport_cfg.inspect_path);
+    cmd.env(
+        "FRET_DIAG_INSPECT_TRIGGER_PATH",
+        &fs_transport_cfg.inspect_trigger_path,
+    );
+    cmd.env(
+        "FRET_DIAG_SCREENSHOT_REQUEST_PATH",
+        &fs_transport_cfg.screenshots_request_path,
+    );
+    cmd.env(
+        "FRET_DIAG_SCREENSHOT_TRIGGER_PATH",
+        &fs_transport_cfg.screenshots_trigger_path,
+    );
+    cmd.env(
+        "FRET_DIAG_SCREENSHOT_RESULT_PATH",
+        &fs_transport_cfg.screenshots_result_path,
+    );
+    cmd.env(
+        "FRET_DIAG_SCREENSHOT_RESULT_TRIGGER_PATH",
+        &fs_transport_cfg.screenshots_result_trigger_path,
+    );
 
     // Config file is the compat-first consolidation path for diagnostics runtime config.
     // Best-effort: if the file can't be written, fall back to env-only behavior.
     let config_path = out_dir.join("diag.config.json");
+    cmd.env("FRET_DIAG_CONFIG_PATH", &config_path);
     let mut cfg = UiDiagnosticsConfigFileV1 {
         schema_version: 1,
         enabled: Some(true),
         out_dir: Some(out_dir.to_string_lossy().to_string()),
         paths: Some(UiDiagnosticsConfigPathsV1 {
+            trigger_path: Some(fs_transport_cfg.trigger_path.to_string_lossy().to_string()),
             ready_path: Some(ready_path.to_string_lossy().to_string()),
             exit_path: Some(exit_path.to_string_lossy().to_string()),
+            screenshot_request_path: Some(
+                fs_transport_cfg
+                    .screenshots_request_path
+                    .to_string_lossy()
+                    .to_string(),
+            ),
+            screenshot_trigger_path: Some(
+                fs_transport_cfg
+                    .screenshots_trigger_path
+                    .to_string_lossy()
+                    .to_string(),
+            ),
+            screenshot_result_path: Some(
+                fs_transport_cfg
+                    .screenshots_result_path
+                    .to_string_lossy()
+                    .to_string(),
+            ),
+            screenshot_result_trigger_path: Some(
+                fs_transport_cfg
+                    .screenshots_result_trigger_path
+                    .to_string_lossy()
+                    .to_string(),
+            ),
+            script_path: Some(fs_transport_cfg.script_path.to_string_lossy().to_string()),
+            script_trigger_path: Some(
+                fs_transport_cfg
+                    .script_trigger_path
+                    .to_string_lossy()
+                    .to_string(),
+            ),
+            script_result_path: Some(
+                fs_transport_cfg
+                    .script_result_path
+                    .to_string_lossy()
+                    .to_string(),
+            ),
+            script_result_trigger_path: Some(
+                fs_transport_cfg
+                    .script_result_trigger_path
+                    .to_string_lossy()
+                    .to_string(),
+            ),
+            pick_trigger_path: Some(
+                fs_transport_cfg
+                    .pick_trigger_path
+                    .to_string_lossy()
+                    .to_string(),
+            ),
+            pick_result_path: Some(
+                fs_transport_cfg
+                    .pick_result_path
+                    .to_string_lossy()
+                    .to_string(),
+            ),
+            pick_result_trigger_path: Some(
+                fs_transport_cfg
+                    .pick_result_trigger_path
+                    .to_string_lossy()
+                    .to_string(),
+            ),
+            inspect_path: Some(fs_transport_cfg.inspect_path.to_string_lossy().to_string()),
+            inspect_trigger_path: Some(
+                fs_transport_cfg
+                    .inspect_trigger_path
+                    .to_string_lossy()
+                    .to_string(),
+            ),
             ..Default::default()
         }),
+        // Tooling upgrades scripts to schema v2 on execution; keep the runtime v2-only in
+        // tool-launched runs so compat paths stay removable.
+        allow_script_schema_v1: Some(false),
         screenshots_enabled: Some(wants_screenshots),
         // Keep script-driven bundle dumps reasonably small by default.
         //
@@ -642,9 +764,7 @@ pub(crate) fn maybe_launch_demo(
     }
     if let Ok(bytes) = serde_json::to_vec_pretty(&cfg) {
         let _ = std::fs::create_dir_all(out_dir);
-        if std::fs::write(&config_path, bytes).is_ok() {
-            cmd.env("FRET_DIAG_CONFIG_PATH", &config_path);
-        }
+        let _ = std::fs::write(&config_path, bytes);
     }
 
     if wants_screenshots {
@@ -654,9 +774,23 @@ pub(crate) fn maybe_launch_demo(
         match key.as_str() {
             "FRET_DIAG"
             | "FRET_DIAG_DIR"
+            | "FRET_DIAG_TRIGGER_PATH"
             | "FRET_DIAG_READY_PATH"
             | "FRET_DIAG_EXIT_PATH"
-            | "FRET_DIAG_CONFIG_PATH" => {
+            | "FRET_DIAG_CONFIG_PATH"
+            | "FRET_DIAG_SCRIPT_PATH"
+            | "FRET_DIAG_SCRIPT_TRIGGER_PATH"
+            | "FRET_DIAG_SCRIPT_RESULT_PATH"
+            | "FRET_DIAG_SCRIPT_RESULT_TRIGGER_PATH"
+            | "FRET_DIAG_PICK_TRIGGER_PATH"
+            | "FRET_DIAG_PICK_RESULT_PATH"
+            | "FRET_DIAG_PICK_RESULT_TRIGGER_PATH"
+            | "FRET_DIAG_INSPECT_PATH"
+            | "FRET_DIAG_INSPECT_TRIGGER_PATH"
+            | "FRET_DIAG_SCREENSHOT_REQUEST_PATH"
+            | "FRET_DIAG_SCREENSHOT_TRIGGER_PATH"
+            | "FRET_DIAG_SCREENSHOT_RESULT_PATH"
+            | "FRET_DIAG_SCREENSHOT_RESULT_TRIGGER_PATH" => {
                 return Err(format!("--env cannot override reserved var: {key}"));
             }
             _ => cmd.env(key, value),

@@ -6,9 +6,20 @@ use fret_diag_protocol::{
 };
 
 use super::{
-    PendingScript, UiDiagnosticsService, display_path, push_script_event_log, read_touch_stamp,
-    sanitize_label, unix_ms_now,
+    PendingScript, UiDiagnosticsService, display_path, format_bundle_dump_note,
+    push_script_event_log, read_touch_stamp, sanitize_label, unix_ms_now,
 };
+
+#[derive(Debug, Clone, serde::Deserialize)]
+struct DumpRequestV1 {
+    schema_version: u32,
+    #[serde(default)]
+    label: Option<String>,
+    #[serde(default)]
+    max_snapshots: Option<u32>,
+    #[serde(default)]
+    request_id: Option<u64>,
+}
 
 #[derive(Debug, Clone)]
 pub(super) struct PendingForceDumpRequest {
@@ -84,7 +95,11 @@ impl UiDiagnosticsService {
                             unix_ms: unix_ms_now(),
                             kind: "bundle_dumped".to_string(),
                             step_index: pending.script_step_index,
-                            note: Some(pending.label.clone()),
+                            note: Some(format_bundle_dump_note(
+                                &pending.label,
+                                pending.dump_max_snapshots,
+                                pending.request_id,
+                            )),
                             bundle_dir: Some(bundle_dir.clone()),
                             window: None,
                             tick_id: None,
@@ -123,7 +138,33 @@ impl UiDiagnosticsService {
         }
         self.last_trigger_stamp = Some(stamp);
 
-        self.dump_bundle(None)
+        let request_path = self.cfg.out_dir.join("dump.request.json");
+        let mut label: Option<String> = None;
+        let mut max_snapshots: Option<usize> = None;
+        let mut request_id: Option<u64> = None;
+        if let Ok(bytes) = std::fs::read(&request_path) {
+            let parsed = serde_json::from_slice::<DumpRequestV1>(&bytes).ok();
+            // Best-effort: consume the request once per trigger so stale metadata doesn't leak
+            // into subsequent dumps.
+            let _ = std::fs::remove_file(&request_path);
+            if let Some(parsed) = parsed
+                && parsed.schema_version == 1
+            {
+                label = parsed
+                    .label
+                    .as_deref()
+                    .map(|s| sanitize_label(s))
+                    .filter(|s| !s.is_empty());
+                max_snapshots = parsed.max_snapshots.map(|v| v as usize);
+                request_id = parsed.request_id;
+            }
+        }
+
+        if label.is_some() || max_snapshots.is_some() || request_id.is_some() {
+            self.dump_bundle_with_options(label.as_deref(), max_snapshots, request_id)
+        } else {
+            self.dump_bundle(None)
+        }
     }
 
     pub fn poll_exit_trigger(&mut self) -> bool {
@@ -250,6 +291,10 @@ impl UiDiagnosticsService {
         if self.cfg.screenshots_enabled {
             caps.push("diag.screenshot_png".to_string());
         }
+        caps.push("diag.pointer_kind_touch".to_string());
+        caps.push("diag.pointer_kind_pen".to_string());
+        caps.push("diag.gesture_tap".to_string());
+        caps.push("diag.gesture_pinch".to_string());
         caps.push("diag.inject_ime".to_string());
         if !cfg!(target_arch = "wasm32") {
             caps.push("diag.multi_window".to_string());
@@ -286,6 +331,12 @@ impl UiDiagnosticsService {
         let payload = FilesystemCapabilitiesV1 {
             schema_version: 1,
             capabilities: caps,
+            runner_kind: Some("fret-bootstrap".to_string()),
+            runner_version: Some(env!("CARGO_PKG_VERSION").to_string()),
+            hints: Some(fret_diag_protocol::FilesystemCapabilitiesHintsV1 {
+                allow_script_schema_v1: Some(self.cfg.allow_script_schema_v1),
+                write_bundle_schema2: Some(self.cfg.write_bundle_schema2),
+            }),
         };
         if let Ok(mut text) = serde_json::to_string_pretty(&payload) {
             text.push('\n');
@@ -381,6 +432,29 @@ impl UiDiagnosticsService {
 
         let script = match schema_version {
             1 => {
+                if !self.cfg.allow_script_schema_v1 {
+                    self.pending_script_run_id = None;
+                    self.write_script_result(UiScriptResultV1 {
+                        schema_version: 1,
+                        run_id,
+                        updated_unix_ms: unix_ms_now(),
+                        window: None,
+                        stage: UiScriptStageV1::Failed,
+                        step_index: None,
+                        reason_code: Some("script.schema_v1_disabled".to_string()),
+                        reason: Some(
+                            "script schema_version=1 is disabled; upgrade to schema_version=2"
+                                .to_string(),
+                        ),
+                        evidence: None,
+                        last_bundle_dir: self
+                            .last_dump_dir
+                            .as_ref()
+                            .map(|p| display_path(&self.cfg.out_dir, p)),
+                        last_bundle_artifact: self.last_dump_artifact_stats.clone(),
+                    });
+                    return;
+                }
                 let Ok(script) = serde_json::from_slice::<UiActionScriptV1>(&bytes) else {
                     self.pending_script_run_id = None;
                     self.write_script_result(UiScriptResultV1 {

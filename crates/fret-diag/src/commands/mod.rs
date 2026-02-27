@@ -1,8 +1,10 @@
 pub(crate) mod agent;
 pub(crate) mod ai_packet;
 mod args;
+pub(crate) mod artifact;
 pub(crate) mod artifacts;
 pub(crate) mod bundle_v2;
+pub(crate) mod config;
 pub(crate) mod doctor;
 pub(crate) mod hotspots;
 pub(crate) mod index;

@@ -32,6 +32,12 @@ jobs:
       - name: Check stringly command parsing
         run: python3 tools/check_stringly_command_parsing.py
 
+      - name: Check diag script taxonomy drift
+        run: python3 tools/diag-scripts/migrate-script-library.py --check-root
+
+      - name: Check diag script registry
+        run: python3 tools/check_diag_scripts_registry.py
+
       - name: Check generated icon artifacts
         run: python3 tools/check_icons_generation.py --pack all
 

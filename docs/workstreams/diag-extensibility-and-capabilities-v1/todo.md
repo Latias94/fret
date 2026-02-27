@@ -39,6 +39,26 @@ Doc: `docs/workstreams/diag-extensibility-and-capabilities-v1/capabilities.md`
   - [x] fail fast when required capabilities are missing,
   - [x] emit evidence file `check.capabilities.json` (machine-readable),
   - [x] `diag repro` includes gating failures in `repro.summary.json`.
+- [ ] Pointer kind injection (touch/pen) is explicit and capability-gated:
+  - [x] document status: pointer-driven steps support optional `pointer_kind` (`mouse` default; capability-gated `touch`),
+  - [x] decide protocol shape (optional `pointer_kind` on pointer-driven steps; default: `mouse`),
+  - [x] implement runner support for `pointer_kind=touch` (and advertise `diag.pointer_kind_touch` when available),
+  - [x] tooling infers required capability when a script requests `pointer_kind=touch`,
+  - [x] add at least one small script/demo that exercises touch kind (and fails fast when unsupported):
+    - [x] `tools/diag-scripts/ui-gallery/diag/ui-gallery-pointer-kind-touch-click-smoke.json`
+  - [x] add `pointer_kind=pen` support (and advertise `diag.pointer_kind_pen` when available),
+  - [x] tooling infers required capability when a script requests `pointer_kind=pen`,
+  - [x] add at least one small script/demo that exercises pen kind (and fails fast when unsupported):
+    - [x] `tools/diag-scripts/ui-gallery/diag/ui-gallery-pointer-kind-pen-click-smoke.json`
+
+- [ ] Gesture steps are explicit and capability-gated:
+  - [x] add a `tap` step (touch-first) and gate it behind `diag.gesture_tap`,
+    - [x] add a small smoke script:
+      - [x] `tools/diag-scripts/ui-gallery/diag/ui-gallery-gesture-tap-smoke.json`
+  - [x] define a `pinch` step (touch-first) and gate it behind `diag.gesture_pinch`,
+    - [x] add a small smoke script:
+      - [x] `tools/diag-scripts/ui-gallery/diag/ui-gallery-gesture-pinch-smoke.json`
+  - [ ] define the next gesture step (`swipe` or `long_press`) and gate it behind an explicit capability.
 
 ## Evidence & trace (debuggability surfaces)
 
@@ -84,6 +104,9 @@ Doc: `docs/workstreams/diag-extensibility-and-capabilities-v1/script-tooling.md`
   - [x] add a `fret-diag-scriptgen check-suite ui-gallery-combobox` closure for the Combobox suite,
   - [ ] ensure generated scripts match checked-in scripts (when applicable),
   - [ ] prefer `.fret/diag/scripts` for local generation (avoid accidental churn in `tools/diag-scripts/`).
+- [ ] Script path modularization:
+  - [ ] define a v2 layout that keeps `tools/diag-scripts/` shallow (suites under subfolders, shared fragments under `_shared/`),
+  - [ ] add a migration utility that moves scripts and updates any registries/refs in a single deterministic step.
 - [x] Add `diag script shrink` (delta debugging) to minimize flaky/large repros:
   - [x] emit `target/fret-diag/shrink/script.min.json` + `target/fret-diag/shrink/shrink.summary.json` (or `--shrink-out`).
 - [x] Add a suite-level summary artifact for `diag suite`:
@@ -157,6 +180,8 @@ Doc: `docs/workstreams/diag-extensibility-and-capabilities-v1/component-conforma
   - [ ] one fallback demo using anchored normalized coordinates (capability-gated).
 - [ ] Mobile alignment (future):
   - [ ] define touch pointer kind surface and basic gestures in protocol (capability-gated).
+    - Status (2026-02-27): schema v2 exposes `pointer_kind` (mouse/touch/pen) and gesture steps (`tap`, `pinch`).
+      Next: add `swipe`/`long_press` and decide whether to represent multi-touch identity explicitly.
 
 ## CI tasks (guardrails)
 

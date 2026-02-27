@@ -41,6 +41,8 @@ Optional (future-proofing, gate first):
 
 - `diag.pointer_injection`: coordinate-based pointer injection supported (see canvas fallback rules).
 - `diag.pointer_kind_touch`: touch pointer injection supported.
+- `diag.pointer_kind_pen`: pen pointer injection supported.
+- `diag.gesture_tap`: tap gesture step supported.
 - `diag.gesture_pinch`: pinch/zoom gesture steps supported.
 - `diag.text_ime_trace`: IME/composition evidence available in bundles/triage (not a step).
 - `diag.text_input_snapshot`: focused text input snapshot evidence available (selection/composition/cursor area).
@@ -105,6 +107,34 @@ Then:
   - execution MUST fail fast (tooling-side),
   - tooling MUST emit a structured evidence file for CI/AI.
 
+## Pointer kinds (mouse vs touch vs pen)
+
+Status (2026-02-27):
+
+- Pointer-driven Script v2 steps accept an optional `pointer_kind` field: `mouse` (default) or `touch`.
+- Tooling infers `diag.pointer_kind_touch` when any step requests `pointer_kind=touch`.
+- The default path is unchanged: scripts that omit `pointer_kind` remain mouse-based and do not require any new
+  capabilities.
+- Cross-step pointer sessions: `pointer_down.pointer_kind` sets the session kind; `pointer_move`/`pointer_up` must either
+  omit `pointer_kind` or match the session kind.
+
+Runner note:
+
+- `fret-bootstrap` maps `pointer_kind` to `fret_core::PointerType` for injected events and advertises
+  `diag.pointer_kind_touch` via both `capabilities.json` and the DevTools WS hello.
+
+Future direction:
+
+- `pointer_kind=pen` ⇒ require `diag.pointer_kind_pen`.
+
+Non-goal (v1): multi-touch / pressure / tilt / contact geometry. These likely require a separate capability namespace and
+more explicit gesture-level steps (`tap`, `long_press`, `swipe`, `pinch`) rather than overloading mouse-style steps.
+
+Open questions (tracked for M10):
+
+- Should touch be expressed as high-level gestures (`tap`, `swipe`, `pinch`) rather than mouse-analog actions?
+- Do we need multi-pointer IDs for multi-touch tests, or is single-pointer touch injection enough for early coverage?
+
 ### Evidence file for gating failures
 
 Recommended output: `check.capabilities.json`:
@@ -129,5 +159,7 @@ Tooling can infer required capabilities from the presence of step variants:
 - `capture_screenshot` ⇒ `diag.screenshot_png`
 - steps that explicitly target non-default windows ⇒ `diag.multi_window`
 - coordinate-based steps (if added) ⇒ `diag.pointer_injection`
+- `tap` ⇒ `diag.gesture_tap`
+- `pinch` ⇒ `diag.gesture_pinch`
 
 Note: inference is “best effort”; `meta.required_capabilities` remains the explicit escape hatch.

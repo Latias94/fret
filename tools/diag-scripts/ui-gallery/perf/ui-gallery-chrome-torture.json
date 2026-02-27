@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "steps": [
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-chrome-torture" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-chrome-torture" }
+      },
+      "timeout_frames": 60
+    },
+    { "type": "press_key", "key": "enter" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-chrome-torture-root" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "move_pointer",
+      "target": { "kind": "test_id", "id": "ui-gallery-chrome-btn-1" }
+    },
+    {
+      "type": "move_pointer",
+      "target": { "kind": "test_id", "id": "ui-gallery-chrome-btn-2" }
+    },
+    {
+      "type": "move_pointer",
+      "target": { "kind": "test_id", "id": "ui-gallery-chrome-btn-3" }
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-chrome-btn-1" }
+    },
+    { "type": "press_key", "key": "tab" },
+    { "type": "press_key", "key": "tab" },
+    { "type": "press_key", "key": "tab" },
+    { "type": "capture_bundle", "label": "ui-gallery-chrome-torture" }
+  ]
+}

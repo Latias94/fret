@@ -1,0 +1,204 @@
+{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "ai chat" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-ai-chat-demo" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-ai-chat-demo" } },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-ai-chat-prompt-add-attachments" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
+      "target": { "kind": "test_id", "id": "ui-gallery-ai-chat-prompt-add-attachments" },
+      "delta_y": -600.0,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 1800
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-ai-chat-prompt-add-attachments" }
+    },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
+      "target": { "kind": "test_id", "id": "ui-gallery-ai-chat-prompt-textarea" },
+      "delta_y": -240.0,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 1800
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-ai-chat-prompt-attachments-item-att-0"
+        }
+    },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-ai-chat-prompt-textarea" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-ai-chat-prompt-textarea" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "type_text", "text": "x" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-ai-chat-prompt-root-prompt-nonempty"
+        }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-ai-chat-prompt-textarea" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-ai-chat-prompt-textarea" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "press_key", "key": "backspace" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-ai-chat-prompt-root-prompt-empty"
+        }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-ai-chat-prompt-textarea" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-ai-chat-prompt-textarea" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "press_key", "key": "backspace" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-ai-chat-prompt-attachments-item-att-0"
+        }
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
+      "target": { "kind": "test_id", "id": "ui-gallery-ai-chat-prompt-add-attachments" },
+      "delta_y": -600.0,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 1800
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-ai-chat-prompt-add-attachments" }
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
+      "target": { "kind": "test_id", "id": "ui-gallery-ai-chat-prompt-textarea" },
+      "delta_y": -240.0,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 1800
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-ai-chat-prompt-textarea" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-ai-chat-prompt-textarea" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-ai-chat-prompt-attachments-item-att-1"
+        }
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-ai-chat-prompt-textarea" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "press_key", "key": "enter" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-ai-chat-prompt-stop" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-ai-chat-prompt-attachments" }
+      },
+      "timeout_frames": 240
+    },
+
+    { "type": "wait_frames", "n": 10 },
+    { "type": "capture_bundle", "label": "ui-gallery-ai-chat-demo-prompt-attachments-backspace-enter" }
+  ]
+}

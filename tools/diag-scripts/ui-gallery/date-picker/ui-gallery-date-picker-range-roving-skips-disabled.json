@@ -1,0 +1,63 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "UI Gallery: DateRangePicker roving skips disabled days",
+    "tags": ["ui-gallery", "date-picker", "calendar", "roving"],
+    "required_capabilities": ["diag.script_v2"]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "timeout_frames": 1800,
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-date-picker-range" }
+      }
+    },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-date-picker-range" }
+    },
+    {
+      "type": "wait_until",
+      "timeout_frames": 1800,
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "2024-02-13" }
+      }
+    },
+    {
+      "type": "wait_bounds_stable",
+      "target": { "kind": "test_id", "id": "2024-02-13" },
+      "stable_frames": 4,
+      "max_move_px": 0.75,
+      "timeout_frames": 600
+    },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "2024-02-13" }
+    },
+    {
+      "type": "wait_until",
+      "timeout_frames": 600,
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "2024-02-13" }
+      }
+    },
+    { "type": "press_key", "key": "arrow_right" },
+    {
+      "type": "wait_until",
+      "timeout_frames": 600,
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "2024-02-16" }
+      }
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-date-picker-range-roving-skips-disabled"
+    }
+  ]
+}

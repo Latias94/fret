@@ -1,0 +1,112 @@
+{
+  "schema_version": 1,
+  "steps": [
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui.float_window.title_bar:a" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui-float-demo.select" }
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "drag_pointer",
+      "target": { "kind": "test_id", "id": "imui.float_window.title_bar:a" },
+      "delta_x": 420.0,
+      "delta_y": 150.0,
+      "steps": 14
+    },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "imui-float-demo.select" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui-float-demo.select.option.1" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "imui-float-demo.select.option.1" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "imui-float-demo.select.option.1" }
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "imui-float-demo.select" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui-float-demo.select.option.0" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "press_key", "key": "escape" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "imui-float-demo.select.option.0" }
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "click",
+      "button": "right",
+      "target": {
+        "kind": "role_and_name",
+        "role": "button",
+        "name": "Context menu (right click)"
+      }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui-float-demo.ctx.close" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "imui-float-demo.ctx.close" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "imui-float-demo.ctx.close" }
+      },
+      "timeout_frames": 240
+    },
+
+    { "type": "capture_bundle", "label": "imui-float-window-select-popup-coexistence" }
+  ]
+}

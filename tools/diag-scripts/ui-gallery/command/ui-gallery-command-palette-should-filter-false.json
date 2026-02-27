@@ -1,0 +1,209 @@
+{
+  "meta": {
+    "name": "ui-gallery command palette: shouldFilter=false shows all items",
+    "required_capabilities": [
+      "diag.script_v2"
+    ]
+  },
+  "schema_version": 2,
+  "steps": [
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "ui-gallery-nav-search",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "height_px": 1200.0,
+      "type": "set_window_inner_size",
+      "width_px": 1280.0
+    },
+    {
+      "n": 20,
+      "type": "wait_frames"
+    },
+    {
+      "target": {
+        "id": "ui-gallery-nav-search",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "key": "a",
+      "modifiers": {
+        "ctrl": true
+      },
+      "type": "press_key"
+    },
+    {
+      "key": "backspace",
+      "type": "press_key"
+    },
+    {
+      "text": "command",
+      "type": "type_text"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "ui-gallery-nav-command",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "target": {
+        "id": "ui-gallery-nav-command",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "ui-gallery-page-command",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "ui-gallery-content-scroll",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "ui-gallery-command-demo-filter-input",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "container": {
+        "id": "ui-gallery-content-scroll",
+        "kind": "test_id"
+      },
+      "delta_x": 0.0,
+      "delta_y": -720.0,
+      "padding_px": 4.0,
+      "require_fully_within_window": true,
+      "target": {
+        "id": "ui-gallery-command-demo-filter-input",
+        "kind": "test_id"
+      },
+      "timeout_frames": 600,
+      "type": "scroll_into_view"
+    },
+    {
+      "padding_px": 4.0,
+      "target": {
+        "id": "ui-gallery-command-demo-filter-input",
+        "kind": "test_id"
+      },
+      "timeout_frames": 600,
+      "type": "ensure_visible",
+      "within_window": true
+    },
+    {
+      "target": {
+        "id": "ui-gallery-command-demo-filter-input",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "predicate": {
+        "kind": "focus_is",
+        "target": {
+          "id": "ui-gallery-command-demo-filter-input",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "target": {
+        "id": "ui-gallery-command-demo-disable-filtering",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "predicate": {
+        "checked": true,
+        "kind": "checked_is",
+        "target": {
+          "id": "ui-gallery-command-demo-disable-filtering",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "key": "a",
+      "modifiers": {
+        "ctrl": true
+      },
+      "type": "press_key"
+    },
+    {
+      "key": "backspace",
+      "type": "press_key"
+    },
+    {
+      "text": "zzzz",
+      "type": "type_text"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "predicate": {
+        "container": {
+          "id": "ui-gallery-command-demo-filter-input",
+          "kind": "test_id"
+        },
+        "item": {
+          "id": "ui-gallery-command-demo-filter-item-calendar",
+          "kind": "test_id"
+        },
+        "kind": "active_item_is"
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "label": "ui-gallery-command-palette-should-filter-false",
+      "type": "capture_bundle"
+    }
+  ]
+}

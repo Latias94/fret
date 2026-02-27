@@ -1,0 +1,54 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "UI gallery: gesture tap smoke",
+    "tags": ["ui-gallery", "diag", "gesture", "tap"],
+    "required_capabilities": ["diag.script_v2", "diag.gesture_tap"],
+    "target_hints": [
+      "Exercises the intent-level tap step (touch-first).",
+      "Fails fast when the runner does not advertise diag.gesture_tap."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+      "timeout_frames": 600
+    },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 10 },
+
+    {
+      "type": "tap",
+      "target": { "kind": "role_and_name", "role": "text_field", "name": "Search components" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "role_and_name", "role": "text_field", "name": "Search components" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "button" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-nav-button" } },
+      "timeout_frames": 600
+    },
+    { "type": "tap", "target": { "kind": "test_id", "id": "ui-gallery-nav-button" } },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-page-button" } },
+      "timeout_frames": 600
+    },
+
+    { "type": "capture_bundle", "label": "ui-gallery-gesture-tap-smoke" }
+  ]
+}

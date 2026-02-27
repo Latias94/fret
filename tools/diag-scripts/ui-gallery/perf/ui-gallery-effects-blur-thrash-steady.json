@@ -1,0 +1,28 @@
+{
+  "schema_version": 2,
+  "steps": [
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+
+    { "type": "set_window_inner_size", "width_px": 1920.0, "height_px": 1080.0 },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-effects-blur-root" }
+      },
+      "timeout_frames": 240
+    },
+
+    { "type": "reset_diagnostics" },
+    { "type": "wait_frames", "n": 240 },
+
+    { "type": "capture_bundle", "label": "ui-gallery-effects-blur-thrash-steady" },
+
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 }
+  ]
+}
+

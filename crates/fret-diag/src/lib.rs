@@ -21,11 +21,13 @@ use fret_diag_protocol::{
 };
 
 pub mod api;
+mod artifact_lint;
 pub mod artifacts;
 mod bundle_index;
 mod cli;
 mod commands;
 mod compare;
+mod compat;
 pub mod devtools;
 mod diag_compare;
 mod diag_matrix;
@@ -54,6 +56,7 @@ mod perf_hint_gate;
 mod perf_seed_policy;
 mod post_run_checks;
 mod run_artifacts;
+mod script_registry;
 mod script_tooling;
 mod shrink;
 mod stats;
@@ -119,7 +122,7 @@ use tooling_failures::{
     mark_existing_script_result_tooling_failure, push_tooling_event_log_entry,
     write_tooling_failure_script_result, write_tooling_failure_script_result_if_missing,
 };
-use util::{now_unix_ms, read_json_value, touch, write_json_value, write_script};
+use util::{now_unix_ms, read_json_value, touch, write_json_value};
 
 pub(crate) use math::{percentile_nearest_rank_sorted, summarize_times_us};
 
@@ -326,6 +329,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut pack_ai_only: bool = false;
     let mut triage_out: Option<PathBuf> = None;
     let mut lint_out: Option<PathBuf> = None;
+    let mut artifact_lint_out: Option<PathBuf> = None;
     let mut meta_out: Option<PathBuf> = None;
     let mut meta_report: bool = false;
     let mut index_out: Option<PathBuf> = None;
@@ -818,6 +822,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 pick_apply_out = Some(p.clone());
                 triage_out = Some(p.clone());
                 lint_out = Some(p.clone());
+                artifact_lint_out = Some(p.clone());
                 meta_out = Some(p.clone());
                 index_out = Some(p.clone());
                 hotspots_out = Some(p.clone());
@@ -2437,6 +2442,16 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     };
 
     match sub.as_str() {
+        "artifact" | "artifacts" => commands::artifact::cmd_artifact(
+            &rest,
+            pack_after_run,
+            &workspace_root,
+            &resolved_out_dir,
+            &resolved_script_result_path,
+            artifact_lint_out.clone(),
+            warmup_frames,
+            stats_json,
+        ),
         "run" => {
             diag_run::cmd_run(diag_run::RunCmdContext {
                 pack_after_run,
@@ -2808,6 +2823,14 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             &resolved_inspect_trigger_path,
             inspect_consume_clicks,
         ),
+        "config" => commands::config::cmd_config(commands::config::ConfigCmdContext {
+            rest: rest.clone(),
+            workspace_root: workspace_root.clone(),
+            resolved_out_dir: resolved_out_dir.clone(),
+            resolved_ready_path: resolved_ready_path.clone(),
+            resolved_exit_path: resolved_exit_path.clone(),
+            fs_transport_cfg: fs_transport_cfg.clone(),
+        }),
         "pick-arm" => commands::pick::cmd_pick_arm(&rest, &resolved_pick_trigger_path),
         "pick" => commands::pick::cmd_pick(
             &rest,
@@ -2859,33 +2882,24 @@ fn parse_bool(s: &str) -> Result<bool, ()> {
 }
 
 pub(crate) fn script_requests_screenshots(script: &Path) -> bool {
-    let Ok(bytes) = std::fs::read(script) else {
+    let Ok(resolved) = crate::script_tooling::read_script_json_resolving_redirects(script) else {
         return false;
     };
-    let Ok(value) = serde_json::from_slice::<serde_json::Value>(&bytes) else {
-        return false;
-    };
-    script_requests_screenshots_value(&value)
+    script_requests_screenshots_value(&resolved.value)
 }
 
 fn script_required_capabilities(script: &Path) -> Vec<String> {
-    let Ok(bytes) = std::fs::read(script) else {
+    let Ok(resolved) = crate::script_tooling::read_script_json_resolving_redirects(script) else {
         return Vec::new();
     };
-    let Ok(value) = serde_json::from_slice::<serde_json::Value>(&bytes) else {
-        return Vec::new();
-    };
-    script_required_capabilities_value(&value)
+    script_required_capabilities_value(&resolved.value)
 }
 
 fn script_env_defaults(script: &Path) -> Vec<(String, String)> {
-    let Ok(bytes) = std::fs::read(script) else {
+    let Ok(resolved) = crate::script_tooling::read_script_json_resolving_redirects(script) else {
         return Vec::new();
     };
-    let Ok(value) = serde_json::from_slice::<serde_json::Value>(&bytes) else {
-        return Vec::new();
-    };
-    script_env_defaults_value(&value)
+    script_env_defaults_value(&resolved.value)
 }
 
 fn script_requests_screenshots_value(value: &serde_json::Value) -> bool {
@@ -2916,6 +2930,28 @@ fn script_required_capabilities_value(value: &serde_json::Value) -> Vec<String> 
         required.push("diag.screenshot_png".to_string());
     }
 
+    if schema_version >= 2 {
+        fn window_target_requires_multi_window(window: &serde_json::Value) -> bool {
+            let Some(kind) = window.get("kind").and_then(|v| v.as_str()) else {
+                return false;
+            };
+            matches!(kind, "first_seen_other" | "last_seen_other" | "window_ffi")
+        }
+
+        if value
+            .get("steps")
+            .and_then(|v| v.as_array())
+            .is_some_and(|steps| {
+                steps.iter().any(|s| {
+                    s.get("window")
+                        .is_some_and(|w| window_target_requires_multi_window(w))
+                })
+            })
+        {
+            required.push("diag.multi_window".to_string());
+        }
+    }
+
     if let Some(meta_required) = value
         .get("meta")
         .and_then(|m| m.get("required_capabilities"))
@@ -2932,7 +2968,7 @@ fn script_required_capabilities_value(value: &serde_json::Value) -> Vec<String> 
 
     let mut normalized: Vec<String> = required
         .into_iter()
-        .filter_map(|c| normalize_capability_string(&c))
+        .filter_map(|c| compat::normalize_capability(&c))
         .collect();
     normalized.sort();
     normalized.dedup();
@@ -3016,32 +3052,11 @@ fn read_filesystem_capabilities(out_dir: &Path) -> Vec<String> {
     let mut caps: Vec<String> = parsed
         .capabilities
         .into_iter()
-        .filter_map(|c| normalize_capability_string(&c))
+        .filter_map(|c| compat::normalize_capability(&c))
         .collect();
     caps.sort();
     caps.dedup();
     caps
-}
-
-fn normalize_capability_string(raw: &str) -> Option<String> {
-    let raw = raw.trim();
-    if raw.is_empty() {
-        return None;
-    }
-
-    if raw.contains('.') {
-        return Some(raw.to_string());
-    }
-
-    let mapped = match raw {
-        "script_v2" => "diag.script_v2",
-        "screenshot_png" => "diag.screenshot_png",
-        "multi_window" => "diag.multi_window",
-        "pointer_kind_touch" => "diag.pointer_kind_touch",
-        "gesture_pinch" => "diag.gesture_pinch",
-        _ => raw,
-    };
-    Some(mapped.to_string())
 }
 
 fn capabilities_check_v1(
@@ -3177,6 +3192,9 @@ mod capability_tests {
         let caps = fret_diag_protocol::FilesystemCapabilitiesV1 {
             schema_version: 1,
             capabilities: vec!["diag.script_v2".to_string()],
+            runner_kind: None,
+            runner_version: None,
+            hints: None,
         };
         std::fs::write(
             out_dir.join("capabilities.json"),
@@ -3239,6 +3257,9 @@ mod capability_tests {
         let caps = fret_diag_protocol::FilesystemCapabilitiesV1 {
             schema_version: 1,
             capabilities: vec!["diag.script_v2".to_string()],
+            runner_kind: None,
+            runner_version: None,
+            hints: None,
         };
         std::fs::write(
             out_dir.join("capabilities.json"),
@@ -3403,120 +3424,7 @@ fn devtools_sanitize_export_dir_name(raw: &str) -> String {
         .to_string()
 }
 
-fn wait_for_devtools_message<T>(
-    devtools: &DevtoolsOps,
-    timeout_ms: u64,
-    poll_ms: u64,
-    mut decode: impl FnMut(fret_diag_protocol::DiagTransportMessageV1) -> Option<T>,
-) -> Result<T, String> {
-    let deadline = Instant::now() + Duration::from_millis(timeout_ms.max(1));
-    loop {
-        while let Some(msg) = devtools.try_recv() {
-            if let Some(v) = decode(msg) {
-                return Ok(v);
-            }
-        }
-        if Instant::now() >= deadline {
-            return Err("timed out waiting for DevTools WS message".to_string());
-        }
-        std::thread::sleep(Duration::from_millis(poll_ms.max(1)));
-    }
-}
-
-fn wait_for_devtools_bundle_dumped(
-    devtools: &DevtoolsOps,
-    selected_session_id: &str,
-    expected_request_id: Option<u64>,
-    timeout_ms: u64,
-    poll_ms: u64,
-) -> Result<DevtoolsBundleDumpedV1, String> {
-    let deadline = Instant::now() + Duration::from_millis(timeout_ms.max(1));
-
-    let mut chunk_exported_unix_ms: Option<u64> = None;
-    let mut chunk_out_dir: Option<String> = None;
-    let mut chunk_dir: Option<String> = None;
-    let mut chunks: Vec<Option<String>> = Vec::new();
-
-    loop {
-        while let Some(msg) = devtools.try_recv() {
-            if msg.r#type != "bundle.dumped"
-                || msg.session_id.as_deref() != Some(selected_session_id)
-            {
-                continue;
-            }
-            if let Some(expected) = expected_request_id
-                && msg.request_id != Some(expected)
-            {
-                continue;
-            }
-            let Ok(dumped) = serde_json::from_value::<DevtoolsBundleDumpedV1>(msg.payload) else {
-                continue;
-            };
-
-            if dumped.bundle.is_some() {
-                return Ok(dumped);
-            }
-
-            if let (Some(chunk), Some(chunk_index), Some(chunk_count_value)) = (
-                dumped.bundle_json_chunk.clone(),
-                dumped.bundle_json_chunk_index,
-                dumped.bundle_json_chunk_count,
-            ) {
-                if chunk_exported_unix_ms.is_none() {
-                    chunk_exported_unix_ms = Some(dumped.exported_unix_ms);
-                    chunk_out_dir = Some(dumped.out_dir.clone());
-                    chunk_dir = Some(dumped.dir.clone());
-                    chunks = vec![None; chunk_count_value.max(1) as usize];
-                }
-
-                if chunk_exported_unix_ms != Some(dumped.exported_unix_ms)
-                    || chunk_dir.as_deref() != Some(dumped.dir.as_str())
-                {
-                    // A new dump started (or messages interleaved); reset to the latest seen.
-                    chunk_exported_unix_ms = Some(dumped.exported_unix_ms);
-                    chunk_out_dir = Some(dumped.out_dir.clone());
-                    chunk_dir = Some(dumped.dir.clone());
-                    chunks = vec![None; chunk_count_value.max(1) as usize];
-                }
-
-                if let Some(slot) = chunks.get_mut(chunk_index as usize) {
-                    *slot = Some(chunk);
-                }
-
-                if chunks.iter().all(|c| c.is_some()) {
-                    let mut json = String::new();
-                    for part in chunks.iter().flatten() {
-                        json.push_str(part);
-                    }
-                    let bundle = serde_json::from_str::<serde_json::Value>(&json).map_err(|e| {
-                        format!("bundle.dumped chunked JSON was not valid JSON: {e}")
-                    })?;
-                    return Ok(DevtoolsBundleDumpedV1 {
-                        schema_version: dumped.schema_version,
-                        exported_unix_ms: chunk_exported_unix_ms.unwrap_or(dumped.exported_unix_ms),
-                        out_dir: chunk_out_dir.clone().unwrap_or(dumped.out_dir),
-                        dir: chunk_dir.clone().unwrap_or(dumped.dir),
-                        bundle: Some(bundle),
-                        bundle_json_chunk: None,
-                        bundle_json_chunk_index: None,
-                        bundle_json_chunk_count: None,
-                    });
-                }
-
-                continue;
-            }
-
-            // Non-embedded bundle (native filesystem case): allow materialization to fall back to
-            // reading the runtime's bundle artifact.
-            return Ok(dumped);
-        }
-
-        if Instant::now() >= deadline {
-            return Err("timed out waiting for DevTools WS bundle.dumped".to_string());
-        }
-        std::thread::sleep(Duration::from_millis(poll_ms.max(1)));
-    }
-}
+// DevTools message waiting helpers live in `crates/fret-diag/src/devtools.rs`.
 
 fn materialize_devtools_bundle_dumped(
     out_dir: &Path,
@@ -3745,7 +3653,7 @@ fn connect_devtools_ws_tooling(
     let client = ToolingDiagClient::connect_ws(WsDiagTransportConfig::native(cfg))?;
     let devtools = DevtoolsOps::new(client);
 
-    let sessions = wait_for_devtools_message(&devtools, timeout_ms, poll_ms, |msg| {
+    let sessions = crate::devtools::wait_for_message(&devtools, timeout_ms, poll_ms, |msg| {
         if msg.r#type != "session.list" {
             return None;
         }
@@ -3762,7 +3670,7 @@ fn connect_devtools_ws_tooling(
         .map(|s| s.capabilities.clone())
         .unwrap_or_default()
         .into_iter()
-        .filter_map(|c| normalize_capability_string(&c))
+        .filter_map(|c| compat::normalize_capability(&c))
         .collect();
     available_caps.sort();
     available_caps.dedup();
@@ -3797,7 +3705,7 @@ fn connect_filesystem_tooling(
     let client = ToolingDiagClient::connect_fs(cfg.clone())?;
     let devtools = DevtoolsOps::new(client);
 
-    let sessions = wait_for_devtools_message(&devtools, timeout_ms, poll_ms, |msg| {
+    let sessions = crate::devtools::wait_for_message(&devtools, timeout_ms, poll_ms, |msg| {
         if msg.r#type != "session.list" {
             return None;
         }
@@ -3814,7 +3722,7 @@ fn connect_filesystem_tooling(
         .map(|s| s.capabilities.clone())
         .unwrap_or_default()
         .into_iter()
-        .filter_map(|c| normalize_capability_string(&c))
+        .filter_map(|c| compat::normalize_capability(&c))
         .collect();
     available_caps.sort();
     available_caps.dedup();
@@ -3847,11 +3755,6 @@ fn run_script_over_transport(
             .unwrap_or(0)
     }
 
-    fn start_grace_ms(timeout_ms: u64, poll_ms: u64) -> u64 {
-        let baseline_race_ms = poll_ms.saturating_mul(4).clamp(250, 5_000);
-        baseline_race_ms.min(timeout_ms.saturating_div(2).max(250))
-    }
-
     let required_caps = script_required_capabilities_value(&script_json);
     if !required_caps.is_empty() {
         gate_required_capabilities_with_script_result(
@@ -3868,9 +3771,8 @@ fn run_script_over_transport(
     let mut last_seen_stage: Option<&'static str> = None;
     let mut last_seen_step_index: Option<u32> = None;
 
-    let mut next_retouch_at =
-        Instant::now() + Duration::from_millis(start_grace_ms(timeout_ms, poll_ms));
-    let mut retouch_interval_ms: u64 = 2_000;
+    let seam = connected.devtools.client().seam_v1();
+    let mut script_retoucher = seam.new_script_run_retoucher(timeout_ms, poll_ms);
     let deadline = Instant::now() + Duration::from_millis(timeout_ms);
 
     let script_json_value = script_json;
@@ -3935,12 +3837,7 @@ fn run_script_over_transport(
         }
 
         if Instant::now() >= deadline {
-            let ws_hint = match connected.devtools.client().kind() {
-                crate::transport::DiagTransportKind::WebSocket => Some(
-                    "devtools_ws_hint=keep the app actively rendering (web: tab must be visible; background tabs may throttle rAF) and ensure the page URL includes fret_devtools_ws + fret_devtools_token",
-                ),
-                _ => None,
-            };
+            let ws_hint = seam.timeout_hint_for_waiting_script_result();
             let note = format!(
                 "source={} prev_run_id={} target_run_id={:?} last_seen_stage={} last_seen_step_index={:?} {}",
                 connected.source,
@@ -3963,101 +3860,56 @@ fn run_script_over_transport(
             );
         }
 
-        if connected.devtools.client().kind() == crate::transport::DiagTransportKind::FileSystem
-            && target_run_id.is_none()
-            && Instant::now() >= next_retouch_at
-        {
-            // Give the app a chance to observe the initial trigger file stamp baseline before
-            // consuming a stamp as "the trigger". Retrying by re-sending the same script payload
-            // mitigates the baseline race without requiring in-app changes.
-            connected
-                .devtools
-                .script_run_value(None, script_json_value.clone());
-            retouch_interval_ms = (retouch_interval_ms.saturating_mul(2)).min(10_000);
-            next_retouch_at = Instant::now() + Duration::from_millis(retouch_interval_ms);
+        if let Some(retoucher) = script_retoucher.as_mut() {
+            retoucher.maybe_retouch_at(
+                &connected.devtools,
+                None,
+                &script_json_value,
+                target_run_id.is_some(),
+                Instant::now(),
+            );
         }
 
         std::thread::sleep(Duration::from_millis(poll_ms.max(1)));
     };
 
     let bundle_path = if dump_bundle {
-        let expected_request_id = if connected.devtools.client().kind()
-            == crate::transport::DiagTransportKind::WebSocket
-        {
-            if let Some(max) = dump_max_snapshots {
-                Some(
-                    connected
-                        .devtools
-                        .bundle_dump_with_max_snapshots(None, bundle_label, max),
-                )
-            } else {
-                Some(connected.devtools.bundle_dump(None, bundle_label))
-            }
-        } else {
-            if let Some(max) = dump_max_snapshots {
-                connected
-                    .devtools
-                    .bundle_dump_with_max_snapshots(None, bundle_label, max);
-            } else {
-                connected.devtools.bundle_dump(None, bundle_label);
-            }
-            None
-        };
-        let dumped = (|| {
-            // Filesystem transport can miss the first `trigger.touch` edge if the app has not yet
-            // established its baseline stamp (similar to the `script.touch` baseline race).
-            //
-            // Mitigate by doing a short initial wait and re-touching once before consuming the
-            // full timeout budget.
-            if connected.devtools.client().kind() == crate::transport::DiagTransportKind::FileSystem
-                && expected_request_id.is_none()
-            {
-                let short_ms = timeout_ms.min(2_000);
-                match wait_for_devtools_bundle_dumped(
-                    &connected.devtools,
-                    &connected.selected_session_id,
-                    None,
-                    short_ms,
-                    poll_ms,
-                ) {
-                    Ok(v) => return Ok(v),
-                    Err(err) if err.contains("timed out waiting") => {
-                        // Re-touch and fall through to the full wait below.
-                        connected.devtools.bundle_dump(None, bundle_label);
-                    }
-                    Err(err) => return Err(err),
-                }
-            }
-
-            wait_for_devtools_bundle_dumped(
+        let expected_request_id = seam.bundle_dump_request_id(
+            &connected.devtools,
+            None,
+            bundle_label,
+            dump_max_snapshots,
+        );
+        let dumped = seam
+            .wait_for_bundle_dumped_with_baseline_mitigation(
                 &connected.devtools,
                 &connected.selected_session_id,
                 expected_request_id,
+                bundle_label,
                 timeout_ms,
                 poll_ms,
             )
-        })()
-        .inspect_err(|err| {
-            let reason_code = if err.contains("timed out waiting") {
-                "timeout.tooling.bundle_dump"
-            } else {
-                "tooling.bundle_dump.failed"
-            };
-            push_tooling_event_log_entry(
-                &mut result,
-                "tooling_bundle_dump_failed",
-                Some(err.clone()),
-            );
-            if matches!(result.stage, UiScriptStageV1::Passed) {
-                result.stage = UiScriptStageV1::Failed;
-                result.reason_code = Some(reason_code.to_string());
-                result.reason = Some(err.clone());
-            }
-            let _ = write_json_value(
-                script_result_path,
-                &serde_json::to_value(&result).unwrap_or_else(|_| serde_json::json!({})),
-            );
-        })?;
+            .inspect_err(|err| {
+                let reason_code = if err.contains("timed out waiting") {
+                    "timeout.tooling.bundle_dump"
+                } else {
+                    "tooling.bundle_dump.failed"
+                };
+                push_tooling_event_log_entry(
+                    &mut result,
+                    "tooling_bundle_dump_failed",
+                    Some(err.clone()),
+                );
+                if matches!(result.stage, UiScriptStageV1::Passed) {
+                    result.stage = UiScriptStageV1::Failed;
+                    result.reason_code = Some(reason_code.to_string());
+                    result.reason = Some(err.clone());
+                }
+                let _ = write_json_value(
+                    script_result_path,
+                    &serde_json::to_value(&result).unwrap_or_else(|_| serde_json::json!({})),
+                );
+            })?;
 
         let bundle_path = match materialize_devtools_bundle_dumped(out_dir, &dumped) {
             Ok(v) => v,
@@ -4118,32 +3970,15 @@ fn dump_bundle_over_transport(
     timeout_ms: u64,
     poll_ms: u64,
 ) -> Result<PathBuf, String> {
+    let seam = connected.devtools.client().seam_v1();
     let expected_request_id =
-        if connected.devtools.client().kind() == crate::transport::DiagTransportKind::WebSocket {
-            if let Some(max) = dump_max_snapshots {
-                Some(
-                    connected
-                        .devtools
-                        .bundle_dump_with_max_snapshots(None, bundle_label, max),
-                )
-            } else {
-                Some(connected.devtools.bundle_dump(None, bundle_label))
-            }
-        } else {
-            if let Some(max) = dump_max_snapshots {
-                connected
-                    .devtools
-                    .bundle_dump_with_max_snapshots(None, bundle_label, max);
-            } else {
-                connected.devtools.bundle_dump(None, bundle_label);
-            }
-            None
-        };
+        seam.bundle_dump_request_id(&connected.devtools, None, bundle_label, dump_max_snapshots);
 
-    let dumped = wait_for_devtools_bundle_dumped(
+    let dumped = seam.wait_for_bundle_dumped_with_baseline_mitigation(
         &connected.devtools,
         &connected.selected_session_id,
         expected_request_id,
+        bundle_label,
         timeout_ms,
         poll_ms,
     )?;
@@ -4174,13 +4009,19 @@ fn run_script_suite_collect_bundles(
     std::fs::create_dir_all(&paths.out_dir).map_err(|e| e.to_string())?;
 
     let launch = Some(launch.to_vec());
+    let mut launch_fs_transport_cfg =
+        crate::transport::FsDiagTransportConfig::from_out_dir(paths.out_dir.clone());
+    launch_fs_transport_cfg.script_path = paths.script_path.clone();
+    launch_fs_transport_cfg.script_trigger_path = paths.script_trigger_path.clone();
+    launch_fs_transport_cfg.script_result_path = paths.script_result_path.clone();
+    launch_fs_transport_cfg.script_result_trigger_path = paths.script_result_trigger_path.clone();
     let mut child = maybe_launch_demo(
         &launch,
         launch_env,
         workspace_root,
-        &paths.out_dir,
         &paths.ready_path,
         &paths.exit_path,
+        &launch_fs_transport_cfg,
         scripts.iter().any(|src| script_requests_screenshots(src)),
         timeout_ms,
         poll_ms,

@@ -1,0 +1,182 @@
+{
+  "schema_version": 1,
+  "steps": [
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-command-palette" }
+    },
+    { "type": "wait_frames", "n": 3 },
+    { "type": "type_text", "text": "Settings" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "press_key", "key": "enter" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-settings-in-window-menubar" }
+      },
+      "timeout_frames": 120
+    },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-settings-in-window-menubar" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-settings-in-window-menubar-on" }
+      },
+      "timeout_frames": 120
+    },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-settings-in-window-menubar-on" }
+    },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-settings-apply" }
+    },
+    { "type": "wait_frames", "n": 10 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "menubar-trigger-file" }
+      },
+      "timeout_frames": 240
+    },
+
+    { "type": "press_key", "key": "f10" },
+    { "type": "wait_frames", "n": 3 },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "menubar-trigger-file" }
+      }
+    },
+
+    { "type": "press_key", "key": "arrow_right" },
+    { "type": "wait_frames", "n": 1 },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "menubar-trigger-edit" }
+      }
+    },
+
+    { "type": "press_key", "key": "arrow_right" },
+    { "type": "wait_frames", "n": 1 },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "menubar-trigger-view" }
+      }
+    },
+
+    { "type": "press_key", "key": "arrow_right" },
+    { "type": "wait_frames", "n": 1 },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "menubar-trigger-window" }
+      }
+    },
+
+    { "type": "press_key", "key": "arrow_down" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "menubar-item-menu-window-submenu-split" }
+      },
+      "timeout_frames": 120
+    },
+
+    { "type": "press_key", "key": "arrow_down" },
+    { "type": "press_key", "key": "arrow_down" },
+    { "type": "press_key", "key": "arrow_down" },
+    { "type": "press_key", "key": "arrow_down" },
+    { "type": "press_key", "key": "arrow_down" },
+    { "type": "press_key", "key": "arrow_down" },
+    { "type": "press_key", "key": "arrow_down" },
+    { "type": "press_key", "key": "arrow_down" },
+    { "type": "press_key", "key": "arrow_down" },
+    { "type": "press_key", "key": "arrow_down" },
+
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "menubar-item-menu-window-submenu-split" }
+      }
+    },
+
+    { "type": "press_key", "key": "arrow_right" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "menubar-item-workspace-pane-split-right"
+        }
+      },
+      "timeout_frames": 120
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "focus_is",
+        "target": {
+          "kind": "test_id",
+          "id": "menubar-item-workspace-pane-split-right"
+        }
+      }
+    },
+
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "menubar-item-menu-window-submenu-split" }
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "not_exists",
+        "target": {
+          "kind": "test_id",
+          "id": "menubar-item-workspace-pane-split-right"
+        }
+      }
+    },
+
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "menubar-trigger-window" }
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "menubar-item-menu-window-submenu-split" }
+      }
+    },
+
+    { "type": "capture_bundle", "label": "ui-gallery-menubar-keyboard-navigation" }
+  ]
+}
+

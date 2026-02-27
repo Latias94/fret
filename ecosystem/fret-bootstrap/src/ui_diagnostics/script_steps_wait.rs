@@ -14,6 +14,7 @@ pub(super) fn handle_wait_bounds_stable_step(
     failure_reason: &mut Option<String>,
 ) -> bool {
     let UiActionStepV2::WaitBoundsStable {
+        window: _,
         target,
         stable_frames,
         max_move_px,

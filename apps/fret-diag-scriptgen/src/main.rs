@@ -1,3 +1,4 @@
+use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
@@ -97,18 +98,18 @@ fn run() -> Result<(), String> {
 
             let script = template_v2(&name)?;
             let expected = serde_json::to_value(&script).map_err(|e| e.to_string())?;
-            let actual_text = fs::read_to_string(&path).map_err(|e| e.to_string())?;
-            let actual_script: UiActionScriptV2 =
-                serde_json::from_str(&actual_text).map_err(|e| {
-                    format!(
-                        "failed to parse script json at {path}: {e}",
-                        path = Path::new(&path).display()
-                    )
-                })?;
+
+            let workspace_root = workspace_root()?;
+            let (actual_script, resolved_path, redirect_chain) =
+                read_script_v2_resolving_redirects(&workspace_root.join(&path), &workspace_root)?;
             let actual = serde_json::to_value(&actual_script).map_err(|e| e.to_string())?;
 
             if expected != actual {
-                return Err("json differs (compare with: print)".to_string());
+                return Err(format!(
+                    "json differs (compare with: print) (resolved={}; redirects={})",
+                    resolved_path.display(),
+                    redirect_chain.len()
+                ));
             }
             Ok(())
         }
@@ -690,6 +691,8 @@ fn ui_gallery_combobox_flip_tight_window_v2() -> UiActionScriptV2 {
             height_px: 240.0,
         })
         .push(UiActionStepV2::ScrollIntoView {
+            window: None,
+            pointer_kind: None,
             container: test_id("ui-gallery-page-combobox"),
             target: rtl_trigger.clone(),
             delta_x: 0.0,
@@ -806,6 +809,8 @@ fn ui_gallery_combobox_long_list_scroll_select_last_v2() -> UiActionScriptV2 {
 
     let script = ui_gallery_nav_to_combobox_page()
         .push(UiActionStepV2::ScrollIntoView {
+            window: None,
+            pointer_kind: None,
             container: test_id("ui-gallery-page-combobox"),
             target: trigger.clone(),
             delta_x: 0.0,
@@ -830,6 +835,8 @@ fn ui_gallery_combobox_long_list_scroll_select_last_v2() -> UiActionScriptV2 {
         )
         .push(wait_bounds_within_window_step(listbox.clone(), 240))
         .push(UiActionStepV2::ScrollIntoView {
+            window: None,
+            pointer_kind: None,
             container: listbox.clone(),
             target: last_item.clone(),
             delta_x: 0.0,
@@ -845,6 +852,8 @@ fn ui_gallery_combobox_long_list_scroll_select_last_v2() -> UiActionScriptV2 {
         .click_stable(trigger.clone())
         .wait_exists(listbox.clone(), 240)
         .push(UiActionStepV2::ScrollIntoView {
+            window: None,
+            pointer_kind: None,
             container: listbox.clone(),
             target: last_item.clone(),
             delta_x: 0.0,
@@ -1348,21 +1357,29 @@ fn ui_gallery_select_wheel_scroll_v2() -> UiActionScriptV2 {
             240,
         ))
         .push(UiActionStepV2::MovePointer {
+            window: None,
+            pointer_kind: None,
             target: test_id("ui-gallery-select-item-apple"),
         })
         .push(UiActionStepV2::Wheel {
+            window: None,
+            pointer_kind: None,
             target: test_id("ui-gallery-select-item-apple"),
             delta_x: 0.0,
             delta_y: -120.0,
         })
         .wait_frames(5)
         .push(UiActionStepV2::Wheel {
+            window: None,
+            pointer_kind: None,
             target: test_id("ui-gallery-select-item-apple"),
             delta_x: 0.0,
             delta_y: -240.0,
         })
         .wait_frames(5)
         .push(UiActionStepV2::Wheel {
+            window: None,
+            pointer_kind: None,
             target: test_id("ui-gallery-select-item-apple"),
             delta_x: 0.0,
             delta_y: 120.0,
@@ -1394,10 +1411,14 @@ fn ui_gallery_select_wheel_up_from_bottom_v2() -> UiActionScriptV2 {
         .wait_frames(10)
         .wait_exists(test_id("ui-gallery-select-item-item-40"), 120)
         .push(UiActionStepV2::MovePointer {
+            window: None,
+            pointer_kind: None,
             target: test_id("ui-gallery-select-item-item-40"),
         })
         .wait_frames(5)
         .push(UiActionStepV2::Wheel {
+            window: None,
+            pointer_kind: None,
             target: test_id("ui-gallery-select-item-item-40"),
             delta_x: 0.0,
             delta_y: 2400.0,
@@ -1507,18 +1528,18 @@ fn check_suite(suite: &str, workspace_root: &Path) -> Result<(String, u64), Stri
         let expected = serde_json::to_value(&script).map_err(|e| e.to_string())?;
 
         let abs = workspace_root.join(rel_path);
-        let actual_text = fs::read_to_string(&abs).map_err(|e| e.to_string())?;
-        let actual_script: UiActionScriptV2 = serde_json::from_str(&actual_text).map_err(|e| {
-            format!(
-                "failed to parse script json at {path}: {e}",
-                path = abs.display()
-            )
-        })?;
+        let (actual_script, resolved_path, redirect_chain) =
+            read_script_v2_resolving_redirects(&abs, workspace_root)?;
         let actual = serde_json::to_value(&actual_script).map_err(|e| e.to_string())?;
 
         if expected != actual {
             errors += 1;
-            eprintln!("MISMATCH template={template} path={}", abs.display());
+            eprintln!(
+                "MISMATCH template={template} path={} resolved={} redirects={}",
+                abs.display(),
+                resolved_path.display(),
+                redirect_chain.len()
+            );
         }
     }
 
@@ -1528,6 +1549,87 @@ fn check_suite(suite: &str, workspace_root: &Path) -> Result<(String, u64), Stri
         format!("failed ({errors} mismatches; {checked} checked)")
     };
     Ok((status, errors))
+}
+
+fn read_script_v2_resolving_redirects(
+    path: &Path,
+    workspace_root: &Path,
+) -> Result<(UiActionScriptV2, PathBuf, Vec<PathBuf>), String> {
+    const MAX_REDIRECT_DEPTH: usize = 8;
+
+    fn resolve_to_path(workspace_root: &Path, from: &Path, to: &str) -> PathBuf {
+        let to_path = PathBuf::from(to);
+        if to_path.is_absolute() {
+            return to_path;
+        }
+
+        let looks_repo_relative = to.starts_with("tools/")
+            || to.starts_with("crates/")
+            || to.starts_with("apps/")
+            || to.starts_with("docs/")
+            || to.starts_with(".fret/");
+        if looks_repo_relative {
+            return workspace_root.join(to_path);
+        }
+
+        from.parent()
+            .unwrap_or_else(|| Path::new("."))
+            .join(to_path)
+    }
+
+    let mut read_path = path.to_path_buf();
+    let mut redirect_chain: Vec<PathBuf> = Vec::new();
+    let mut visited: BTreeSet<PathBuf> = BTreeSet::new();
+
+    for _ in 0..=MAX_REDIRECT_DEPTH {
+        let canon = std::fs::canonicalize(&read_path).unwrap_or_else(|_| read_path.clone());
+        if !visited.insert(canon.clone()) {
+            return Err(format!(
+                "script redirect loop detected (revisiting): {}",
+                canon.display()
+            ));
+        }
+
+        let bytes = std::fs::read(&read_path).map_err(|e| e.to_string())?;
+        let value: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+
+        let is_redirect = value
+            .get("kind")
+            .and_then(|v| v.as_str())
+            .is_some_and(|s| s == "script_redirect");
+        if is_redirect {
+            let schema_version = value
+                .get("schema_version")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            if schema_version != 1 {
+                return Err(format!(
+                    "invalid script_redirect schema_version (expected 1): {schema_version}"
+                ));
+            }
+
+            let to = value
+                .get("to")
+                .and_then(|v| v.as_str())
+                .ok_or_else(|| "invalid script_redirect (missing string field: to)".to_string())?;
+
+            redirect_chain.push(read_path.clone());
+            read_path = resolve_to_path(workspace_root, &read_path, to);
+            continue;
+        }
+
+        let script: UiActionScriptV2 = serde_json::from_value(value).map_err(|e| {
+            format!(
+                "failed to parse script json as schema v2 at {path}: {e}",
+                path = read_path.display()
+            )
+        })?;
+        return Ok((script, read_path, redirect_chain));
+    }
+
+    Err(format!(
+        "script redirect depth exceeded (max_depth={MAX_REDIRECT_DEPTH})"
+    ))
 }
 
 fn to_pretty_json(script: &UiActionScriptV2) -> Result<String, String> {

@@ -7,7 +7,7 @@
 
 use crate::{
     UiActionScriptV2, UiActionStepV2, UiImeEventV1, UiIncomingOpenInjectItemV1, UiKeyModifiersV1,
-    UiMouseButtonV1, UiOverlayPlacementTraceQueryV1, UiPredicateV1, UiSelectorV1,
+    UiMouseButtonV1, UiOverlayPlacementTraceQueryV1, UiPointerKindV1, UiPredicateV1, UiSelectorV1,
     UiShortcutRoutingTraceQueryV1,
 };
 
@@ -101,6 +101,7 @@ impl ScriptV2Builder {
     pub fn click(self, target: UiSelectorV1) -> Self {
         self.push(UiActionStepV2::Click {
             window: None,
+            pointer_kind: None,
             target,
             button: UiMouseButtonV1::Left,
             click_count: 1,
@@ -108,9 +109,61 @@ impl ScriptV2Builder {
         })
     }
 
+    pub fn click_touch(self, target: UiSelectorV1) -> Self {
+        self.push(UiActionStepV2::Click {
+            window: None,
+            pointer_kind: Some(UiPointerKindV1::Touch),
+            target,
+            button: UiMouseButtonV1::Left,
+            click_count: 1,
+            modifiers: None,
+        })
+    }
+
+    pub fn click_pen(self, target: UiSelectorV1) -> Self {
+        self.push(UiActionStepV2::Click {
+            window: None,
+            pointer_kind: Some(UiPointerKindV1::Pen),
+            target,
+            button: UiMouseButtonV1::Left,
+            click_count: 1,
+            modifiers: None,
+        })
+    }
+
+    pub fn tap(self, target: UiSelectorV1) -> Self {
+        self.push(UiActionStepV2::Tap {
+            window: None,
+            pointer_kind: None,
+            target,
+            modifiers: None,
+        })
+    }
+
+    pub fn tap_pen(self, target: UiSelectorV1) -> Self {
+        self.push(UiActionStepV2::Tap {
+            window: None,
+            pointer_kind: Some(UiPointerKindV1::Pen),
+            target,
+            modifiers: None,
+        })
+    }
+
+    pub fn pinch(self, target: UiSelectorV1, delta: f32) -> Self {
+        self.push(UiActionStepV2::Pinch {
+            window: None,
+            pointer_kind: None,
+            target,
+            delta,
+            steps: 8,
+            modifiers: None,
+        })
+    }
+
     pub fn click_with_modifiers(self, target: UiSelectorV1, modifiers: UiKeyModifiersV1) -> Self {
         self.push(UiActionStepV2::Click {
             window: None,
+            pointer_kind: None,
             target,
             button: UiMouseButtonV1::Left,
             click_count: 1,
@@ -121,6 +174,27 @@ impl ScriptV2Builder {
     pub fn pointer_down(self, target: UiSelectorV1) -> Self {
         self.push(UiActionStepV2::PointerDown {
             window: None,
+            pointer_kind: None,
+            target,
+            button: UiMouseButtonV1::Left,
+            modifiers: None,
+        })
+    }
+
+    pub fn pointer_down_touch(self, target: UiSelectorV1) -> Self {
+        self.push(UiActionStepV2::PointerDown {
+            window: None,
+            pointer_kind: Some(UiPointerKindV1::Touch),
+            target,
+            button: UiMouseButtonV1::Left,
+            modifiers: None,
+        })
+    }
+
+    pub fn pointer_down_pen(self, target: UiSelectorV1) -> Self {
+        self.push(UiActionStepV2::PointerDown {
+            window: None,
+            pointer_kind: Some(UiPointerKindV1::Pen),
             target,
             button: UiMouseButtonV1::Left,
             modifiers: None,
@@ -134,6 +208,7 @@ impl ScriptV2Builder {
     ) -> Self {
         self.push(UiActionStepV2::PointerDown {
             window: None,
+            pointer_kind: None,
             target,
             button: UiMouseButtonV1::Left,
             modifiers: Some(modifiers),
@@ -143,6 +218,7 @@ impl ScriptV2Builder {
     pub fn pointer_move(self, delta_x: f32, delta_y: f32) -> Self {
         self.push(UiActionStepV2::PointerMove {
             window: None,
+            pointer_kind: None,
             delta_x,
             delta_y,
             steps: 8,
@@ -152,12 +228,29 @@ impl ScriptV2Builder {
     pub fn pointer_up(self) -> Self {
         self.push(UiActionStepV2::PointerUp {
             window: None,
+            pointer_kind: None,
             button: None,
         })
     }
 
     pub fn click_stable(self, target: UiSelectorV1) -> Self {
         self.push(UiActionStepV2::ClickStable {
+            window: None,
+            pointer_kind: None,
+            target,
+            button: UiMouseButtonV1::Left,
+            click_count: 1,
+            modifiers: None,
+            stable_frames: 2,
+            max_move_px: 1.0,
+            timeout_frames: 180,
+        })
+    }
+
+    pub fn click_stable_touch(self, target: UiSelectorV1) -> Self {
+        self.push(UiActionStepV2::ClickStable {
+            window: None,
+            pointer_kind: Some(UiPointerKindV1::Touch),
             target,
             button: UiMouseButtonV1::Left,
             click_count: 1,
@@ -174,6 +267,8 @@ impl ScriptV2Builder {
         tag: impl Into<String>,
     ) -> Self {
         self.push(UiActionStepV2::ClickSelectableTextSpanStable {
+            window: None,
+            pointer_kind: None,
             target,
             tag: tag.into(),
             button: UiMouseButtonV1::Left,
@@ -191,6 +286,8 @@ impl ScriptV2Builder {
         modifiers: UiKeyModifiersV1,
     ) -> Self {
         self.push(UiActionStepV2::ClickStable {
+            window: None,
+            pointer_kind: None,
             target,
             button: UiMouseButtonV1::Left,
             click_count: 1,
@@ -203,6 +300,7 @@ impl ScriptV2Builder {
 
     pub fn wait_bounds_stable(self, target: UiSelectorV1) -> Self {
         self.push(UiActionStepV2::WaitBoundsStable {
+            window: None,
             target,
             stable_frames: 2,
             max_move_px: 1.0,
@@ -267,6 +365,19 @@ impl ScriptV2Builder {
 
     pub fn type_text_into(self, target: UiSelectorV1, text: impl Into<String>) -> Self {
         self.push(UiActionStepV2::TypeTextInto {
+            window: None,
+            pointer_kind: None,
+            target,
+            text: text.into(),
+            clear_before_type: false,
+            timeout_frames: 180,
+        })
+    }
+
+    pub fn type_text_into_touch(self, target: UiSelectorV1, text: impl Into<String>) -> Self {
+        self.push(UiActionStepV2::TypeTextInto {
+            window: None,
+            pointer_kind: Some(UiPointerKindV1::Touch),
             target,
             text: text.into(),
             clear_before_type: false,

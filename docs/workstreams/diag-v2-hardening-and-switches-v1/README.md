@@ -22,6 +22,8 @@ Related / prerequisites:
 - AI packet + indexing: `docs/workstreams/diag-ai-agent-debugging-v1.md`
 - Bundle schema v2 tracker: `docs/workstreams/diag-bundle-schema-v2.md`
 - Contracts: `docs/adr/0159-ui-diagnostics-snapshot-and-scripted-interaction-tests.md`, `docs/adr/0189-ui-diagnostics-extensibility-and-capabilities-v1.md`
+- Script library modularization (taxonomy + suites): `docs/workstreams/diag-v2-hardening-and-switches-v1/script-library.md`
+- Canonical per-run artifact layout: `docs/workstreams/diag-v2-hardening-and-switches-v1/per-run-layout.md`
 
 ## Problem statement
 
@@ -53,27 +55,36 @@ required, inconsistent semantics, or transport divergence). Each item includes e
 2) Window targeting is inconsistent across v2 steps
 
 - Why it matters: multi-window is a core Fret goal; scripts should not silently lose correctness when crossing windows.
-  Today only some steps carry an optional `window` target (e.g. `click` does; `click_stable` does not).
+- Status (2026-02-27): **mostly closed for selector-driven steps**. The script schema now supports optional `window`
+  targeting across the common selector-driven steps (including “stable” click/scroll flows), and tooling can infer
+  `diag.multi_window` when the target is an “other window”.
 - Evidence:
-  - `UiActionStepV2::Click` has `window`, but `ClickStable` does not: `crates/fret-diag-protocol/src/lib.rs`
-  - runtime `handle_click_step` supports window handoff; `handle_click_stable_step` is window-local only:
-    `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_pointer.rs`
+  - Step schema now carries `window` for stable click + scroll + pointer steps:
+    `crates/fret-diag-protocol/src/lib.rs`
+  - Tooling infers `diag.multi_window` when `window` targets require it:
+    `crates/fret-diag/src/script_tooling.rs`, `crates/fret-diag/src/lib.rs`
+  - Runtime routes the `window` target consistently for selector-driven steps:
+    `ecosystem/fret-bootstrap/src/ui_diagnostics/service.rs`
 
 3) Filesystem vs DevTools WS divergence: dump request metadata (labels) is lost in FS mode
 
 - Why it matters: transport divergence forces tooling to special-case behavior. For dumps, WS supports labels and request
   correlation; filesystem dump is currently just a `touch`, dropping metadata.
+- Status (2026-02-27): **closed**. Filesystem transport now supports a structured `dump.request.json` carrying dump
+  metadata; runtime consumes it for trigger-driven dumps.
 - Evidence:
-  - tooling maps `bundle.dump` to a touch and notes “does not currently support labels”:
-    `crates/fret-diag/src/transport/fs.rs`
+  - tooling writes `dump.request.json` + trigger touch: `crates/fret-diag/src/transport/fs.rs`
+  - runtime consumes the request: `ecosystem/fret-bootstrap/src/ui_diagnostics/fs_triggers.rs`
 
 4) Capabilities schema is minimal; runner identity is not surfaced
 
 - Why it matters: capabilities are a key contract surface; we benefit from optional `runner_kind` / `runner_version` /
   `protocol_versions` fields for auditability and easier triage.
+- Status (2026-02-27): **closed** (additive). `FilesystemCapabilitiesV1` now carries optional identity hints, and the
+  runtime emits them when available.
 - Evidence:
-  - `FilesystemCapabilitiesV1` only contains `capabilities`: `crates/fret-diag-protocol/src/lib.rs`
-  - runtime writes `capabilities.json`: `ecosystem/fret-bootstrap/src/ui_diagnostics/fs_triggers.rs`
+  - protocol schema: `crates/fret-diag-protocol/src/lib.rs`
+  - runtime emission: `ecosystem/fret-bootstrap/src/ui_diagnostics/fs_triggers.rs`
 
 5) Artifact v2 (manifest + chunks) is not yet the single source of truth
 
@@ -87,9 +98,14 @@ required, inconsistent semantics, or transport divergence). Each item includes e
 6) Script library layout is flat; discoverability and ownership do not scale
 
 - Why it matters: as scripts accumulate, a single `tools/diag-scripts/` folder becomes hard to navigate, review, and
-  refactor. It also makes suite definitions brittle when they rely on filenames rather than a stable registry.
+- Status (2026-02-27): **mostly closed for “flat root”**. Canonical scripts are moved into a taxonomy with redirect
+  stubs, and CI checks prevent new canonical scripts from landing back in `tools/diag-scripts/*.json`.
+  A minimal, generated registry exists at `tools/diag-scripts/index.json` (scope: scripts reachable from in-tree suites
+  + `_prelude`) and is validated in CI.
 - Evidence:
-  - suite lists hard-code many script paths: `crates/fret-diag/src/diag_suite_scripts.rs`
+  - built-in suites are curated directory inputs via redirect stubs: `tools/diag-scripts/suites/` and
+    `crates/fret-diag/src/diag_suite_scripts.rs`
+  - some suites/helpers still hard-code individual script paths: `crates/fret-diag/src/diag_suite.rs`
 
 ## Goals
 
@@ -217,8 +233,8 @@ Goal: allow scripts to grow without turning `tools/diag-scripts/` into an unmain
 
 Today, script paths appear in many places beyond the folder itself:
 
-- Tooling hard-codes script paths for built-in suites and perf helpers:
-  - `crates/fret-diag/src/diag_suite_scripts.rs`
+- Tooling hard-codes script paths for some suites and perf helpers:
+  - built-in suites are directory inputs (membership lives in `tools/diag-scripts/suites/`): `crates/fret-diag/src/diag_suite_scripts.rs`
   - `crates/fret-diag/src/diag_suite.rs`
   - `crates/fret-diag/src/diag_perf.rs`
 - Docs and ADR evidence anchors reference script paths (many files under `docs/`).
@@ -261,16 +277,26 @@ Notes:
 - `diag suite` already supports directory inputs and expands `**/*.json` with deterministic ordering (sorted set),
   which makes folder-based suites a viable intermediate step before a full registry.
 
-#### Registry shape (draft)
+#### Registry shape (v1, generated)
 
-If we add `tools/diag-scripts/index.json`, keep it minimal and additive:
+`tools/diag-scripts/index.json` is generated (do not edit by hand) via:
+
+- `python tools/check_diag_scripts_registry.py --write`
+
+Design constraints (v1):
+
+- Scope is intentionally small: scripts reachable from in-tree suites plus `_prelude/*` (not the entire library).
+- IDs are path-independent by default (derived from file stem). If needed, a script may provide `meta.id` to override the
+  default and avoid collisions while still allowing fearless path moves.
+
+Fields:
 
 - `schema_version`
 - `scripts[]`:
-  - `id` (stable, dotted): e.g. `ui_gallery.dialog.escape_focus_restore`
+  - `id` (stable, path-independent): `meta.id` or file stem
   - `path` (repo-relative)
   - `tags[]` (small): e.g. `smoke`, `overlay`, `ime`, `perf`
-  - `suites[]` (optional): e.g. `ui-gallery`, `ui-gallery-text-ime`
+  - `suite_memberships[]` (optional): e.g. `ui-gallery`, `ui-gallery-text-ime`, `_prelude`
   - `required_capabilities[]` (optional; mirrors `meta.required_capabilities`)
   - `target_hints[]` (optional; mirrors script meta)
 
@@ -316,7 +342,8 @@ Rules:
 
 - Redirect resolution MUST be loop-safe (depth cap + visited set).
 - Tooling SHOULD normalize the final resolved script JSON before pushing/writing.
-- `diag script normalize --check` should fail on redirect stubs (so stubs are not accidentally treated as “real scripts”).
+- Script tooling (`diag script validate|lint|normalize`) SHOULD resolve redirect stubs before operating, and `--write` SHOULD
+  update the resolved target script (not the stub).
 
 Option B: “big bang” path updates
 

@@ -100,6 +100,11 @@ pub struct UiDiagnosticsConfig {
     pub trigger_path: PathBuf,
     pub ready_path: PathBuf,
     pub exit_path: PathBuf,
+    /// Whether the diagnostics runtime should accept script schema v1 inputs.
+    ///
+    /// Tooling upgrades scripts to schema v2 on execution; tool-launched runs typically disable
+    /// schema v1 parsing to keep the runtime on the v2-only path.
+    pub allow_script_schema_v1: bool,
     /// When enabled, keep requesting redraws even when no script is running.
     ///
     /// This is intended for scripted diagnostics runs where the external driver triggers scripts
@@ -268,6 +273,11 @@ impl Default for UiDiagnosticsConfig {
                     .and_then(|s| resolve_config_path(&out_dir, s))
             })
             .unwrap_or_else(|| out_dir.join("exit.touch"));
+
+        let allow_script_schema_v1 = config_file
+            .as_ref()
+            .and_then(|c| c.allow_script_schema_v1)
+            .unwrap_or(true);
 
         let script_keepalive = enabled
             && env_flag_override("FRET_DIAG_SCRIPT_KEEPALIVE")
@@ -539,6 +549,7 @@ impl Default for UiDiagnosticsConfig {
             trigger_path,
             ready_path,
             exit_path,
+            allow_script_schema_v1,
             script_keepalive,
             max_events,
             max_snapshots,
