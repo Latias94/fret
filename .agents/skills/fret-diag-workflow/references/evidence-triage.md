@@ -32,3 +32,34 @@ Start here (portable artifacts):
   - Inspect `hit_test_trace` → start with `routing_explain`, then check capture/occlusion owners.
 - Focus / typing stalls
   - Inspect `focus_trace` + `text_input_snapshot` + `shortcut_routing_trace`.
+
+## Fallback when you only have bundle.json (avoid rg/grep explosions)
+
+Prefer bounded tooling (`diag meta/query/slice/ai-packet`) when available. If you cannot run `fretboard` but you do
+have a local `bundle.json`, this is a bounded “find a needle” fallback (prints up to 50 matches):
+
+```powershell
+@'
+import json,sys
+from collections import deque
+p, needle = sys.argv[1], sys.argv[2]
+data = json.load(open(p, encoding="utf-8"))
+out = []
+st = deque([("", data)])
+while st and len(out) < 50:
+    path, v = st.pop()
+    if isinstance(v, dict):
+        for k, vv in v.items():
+            st.append(((path + "." + k) if path else k, vv))
+    elif isinstance(v, list):
+        for i, vv in enumerate(v):
+            st.append((f"{path}[{i}]", vv))
+    else:
+        s = str(v)
+        if needle in s:
+            out.append((path, s[:160]))
+for a, b in out:
+    print(f"{a} => {b}")
+print("matches", len(out))
+'@ | python - <bundle.json> <needle>
+```

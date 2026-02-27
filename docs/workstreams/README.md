@@ -23,6 +23,9 @@ Active workstreams:
 - `docs/workstreams/app-iteration-fast-restart-v1.md`
 - `docs/workstreams/app-iteration-fast-restart-v1-todo.md`
 - `docs/workstreams/app-iteration-fast-restart-v1-milestones.md`
+- `docs/workstreams/fret-node-style-skinning-v1/m0-style-contracts-and-gates.md`
+- `docs/workstreams/fret-node-style-skinning-v1/m1-per-node-chrome-hints.md`
+- `docs/workstreams/fret-node-style-skinning-v1/m2-theme-presets-dify-blueprint-shadergraph.md`
 - `docs/workstreams/renderer-vnext-fearless-refactor-v1.md`
 - `docs/workstreams/renderer-vnext-fearless-refactor-v1-refactor-design.md`
 - `docs/workstreams/renderer-vnext-fearless-refactor-v1-todo.md`

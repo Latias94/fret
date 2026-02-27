@@ -677,7 +677,8 @@ impl Button {
                 || command
                     .as_ref()
                     .is_some_and(|cmd| !cx.command_is_enabled(cmd));
-            let focusable = self.focusable;
+            // Upstream: disabled `<button disabled>` is not focusable.
+            let focusable = self.focusable && !disabled;
             let user_chrome = self.chrome;
             let user_bg_override = user_chrome.background.is_some();
             let user_border_override = user_chrome.border_color.is_some();
@@ -1064,6 +1065,49 @@ mod tests {
             Some(SceneOp::PushOpacity { opacity }) if (*opacity - 0.5).abs() < 1e-6
         ));
         assert!(matches!(scene.ops().last(), Some(SceneOp::PopOpacity)));
+    }
+
+    #[test]
+    fn disabled_button_is_not_focusable() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(200.0), Px(80.0)),
+        );
+
+        elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            "disabled-button-focusable",
+            |cx| {
+                let el = Button::new("Hello").disabled(true).into_element(cx);
+                let ElementKind::Opacity(root) = &el.kind else {
+                    panic!(
+                        "expected disabled Button to be wrapped in Opacity, got {:?}",
+                        el.kind
+                    );
+                };
+                assert!(
+                    (root.opacity - 0.5).abs() < 1e-6,
+                    "expected disabled Button to apply opacity 0.5"
+                );
+
+                let child = el.children.first().expect("opacity child");
+                let ElementKind::Pressable(pressable) = &child.kind else {
+                    panic!(
+                        "expected Opacity child to be a Pressable, got {:?}",
+                        child.kind
+                    );
+                };
+                assert!(
+                    !pressable.focusable,
+                    "expected disabled Button to be non-focusable"
+                );
+            },
+        );
     }
 
     #[test]

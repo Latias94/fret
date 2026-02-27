@@ -56,6 +56,10 @@ impl PromotedScriptRegistry {
         Ok(Self { entries })
     }
 
+    pub(crate) fn entries(&self) -> &[PromotedScriptRegistryEntry] {
+        &self.entries
+    }
+
     pub(crate) fn resolve_id(&self, id: &str) -> Option<&PromotedScriptRegistryEntry> {
         self.entries.iter().find(|e| e.id == id)
     }

@@ -7,8 +7,12 @@ use std::sync::Arc;
 use fret_core::{Px, SemanticsRole, TextOverflow, TextWrap};
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, UiFocusActionHost};
-use fret_ui::element::{AnyElement, LayoutStyle, SemanticsDecoration, SemanticsProps, TextProps};
+use fret_ui::element::{
+    AnyElement, LayoutStyle, PressableProps, SemanticsDecoration, SemanticsProps, TextProps,
+};
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
+use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
+use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::stack;
@@ -18,8 +22,8 @@ use fret_ui_kit::{
     ChromeRefinement, ColorRef, Items, Justify, LayoutRefinement, Radius, Size, Space,
 };
 use fret_ui_shadcn::{
-    Button, ButtonSize, ButtonVariant, Collapsible, CollapsibleContent, CollapsibleTrigger, Input,
-    OnInputSubmit, Tooltip, TooltipContent, TooltipTrigger,
+    Button, ButtonSize, ButtonVariant, Collapsible, CollapsibleContent, Input, OnInputSubmit,
+    Tooltip, TooltipContent, TooltipTrigger,
 };
 
 #[cfg(feature = "webview")]
@@ -1109,27 +1113,54 @@ impl WebPreviewConsole {
             move |_cx| vec![label, chevron],
         );
 
-        let button = Button::new("Console")
-            .children([row])
-            .variant(ButtonVariant::Ghost)
-            .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
-            .refine_style(ChromeRefinement::default().p(Space::N4))
-            .into_element(cx);
+        let trigger_test_id = self.test_id_trigger.clone();
+        let console_open = controller.console_open.clone();
+        let console_open_for_toggle = console_open.clone();
+        let theme_for_toggle = theme.clone();
+        let open_now_for_toggle = open_now;
+        let toggle_button = control_chrome_pressable_with_id_props(cx, move |cx, st, _id| {
+            cx.pressable_toggle_bool(&console_open_for_toggle);
 
-        let trigger = {
-            let trigger = CollapsibleTrigger::new(controller.console_open.clone(), vec![button])
-                .a11y_label("Toggle console")
-                .into_element(cx, open_now);
-            if let Some(test_id) = self.test_id_trigger {
-                trigger.attach_semantics(
-                    SemanticsDecoration::default()
-                        .role(SemanticsRole::Button)
-                        .test_id(test_id),
-                )
+            let mut pressable = PressableProps::default();
+            pressable.enabled = true;
+            pressable.focusable = true;
+            pressable.a11y.role = Some(SemanticsRole::Button);
+            pressable.a11y.label = Some(Arc::<str>::from("Toggle console"));
+            pressable.a11y.expanded = Some(open_now_for_toggle);
+            pressable.a11y.test_id = trigger_test_id.clone();
+
+            let base = theme_for_toggle.color_token("accent");
+            let hover_bg = fret_core::Color {
+                r: base.r,
+                g: base.g,
+                b: base.b,
+                a: (base.a * 0.18).clamp(0.0, 1.0),
+            };
+            let pressed_bg = fret_core::Color {
+                r: base.r,
+                g: base.g,
+                b: base.b,
+                a: (base.a * 0.28).clamp(0.0, 1.0),
+            };
+
+            let bg = if st.pressed {
+                Some(pressed_bg)
+            } else if st.hovered {
+                Some(hover_bg)
             } else {
-                trigger
-            }
-        };
+                None
+            };
+
+            let chrome = ChromeRefinement::default().p(Space::N4).rounded(Radius::Md);
+            let mut chrome_props = decl_style::container_props(
+                &theme_for_toggle,
+                chrome,
+                LayoutRefinement::default().flex_1(),
+            );
+            chrome_props.background = bg;
+
+            (pressable, chrome_props, move |_cx| vec![row])
+        });
 
         #[cfg(feature = "webview")]
         let clear_button = if self.backend_logs {
@@ -1169,7 +1200,7 @@ impl WebPreviewConsole {
                 .items_center()
                 .gap(Space::N1),
             move |_cx| {
-                let mut items = vec![trigger];
+                let mut items = vec![toggle_button];
                 if let Some(clear_button) = clear_button {
                     items.push(clear_button);
                 }
@@ -1229,14 +1260,21 @@ impl WebPreviewConsole {
             } else {
                 for log in logs.iter() {
                     let fg = match log.level {
-                        WebPreviewConsoleLogLevel::Error => theme.color_token("destructive"),
-                        WebPreviewConsoleLogLevel::Warn => fret_core::Color {
-                            r: 0.792,
-                            g: 0.541,
-                            b: 0.016,
-                            a: 1.0,
-                        },
-                        WebPreviewConsoleLogLevel::Log => theme.color_token("foreground"),
+                        WebPreviewConsoleLogLevel::Error => theme
+                            .color_by_key("component.web_preview.console.error_fg")
+                            .unwrap_or_else(|| theme.color_token("destructive")),
+                        WebPreviewConsoleLogLevel::Warn => theme
+                            .color_by_key("component.web_preview.console.warn_fg")
+                            .unwrap_or(fret_core::Color {
+                                // Tailwind: yellow-600 (#ca8a04).
+                                r: 0.792,
+                                g: 0.541,
+                                b: 0.016,
+                                a: 1.0,
+                            }),
+                        WebPreviewConsoleLogLevel::Log => theme
+                            .color_by_key("component.web_preview.console.log_fg")
+                            .unwrap_or_else(|| theme.color_token("foreground")),
                     };
 
                     let ts = cx.text_props(TextProps {
@@ -1326,7 +1364,7 @@ impl WebPreviewConsole {
             content
         };
 
-        let root = Collapsible::new(controller.console_open)
+        let root = Collapsible::new(console_open)
             .refine_layout(self.layout)
             .refine_style(
                 ChromeRefinement::default()

@@ -321,8 +321,15 @@ fn badge_with_patch<H: UiHost>(
     let a11y_label = label.clone();
     let label_for_content = label.clone();
 
-    let pressable_layout =
-        decl_style::layout_style(&theme, LayoutRefinement::default().merge(layout_override));
+    // Upstream shadcn badge:
+    // - uses `inline-flex ... shrink-0 w-fit whitespace-nowrap overflow-hidden`
+    // - relies on `shrink-0` so badges don't collapse inside constrained flex rows.
+    let pressable_layout = decl_style::layout_style(
+        &theme,
+        LayoutRefinement::default()
+            .flex_shrink_0()
+            .merge(layout_override),
+    );
 
     let mut chrome = ChromeRefinement::default()
         .px(Space::N2)
@@ -348,6 +355,7 @@ fn badge_with_patch<H: UiHost>(
 
     let mut chrome_props = decl_style::container_props(&theme, chrome, LayoutRefinement::default());
     chrome_props.layout.size = pressable_layout.size;
+    chrome_props.layout.overflow = fret_ui::element::Overflow::Clip;
 
     let text_px = theme
         .metric_by_key("component.badge.text_px")
@@ -364,7 +372,7 @@ fn badge_with_patch<H: UiHost>(
                 .text_size_px(text_px)
                 .fixed_line_box_px(line_height)
                 .line_box_in_bounds()
-                .font_semibold()
+                .font_medium()
                 .nowrap()
                 .text_color(ColorRef::Color(fg))
                 .into_element(cx);
@@ -467,6 +475,7 @@ fn badge_with_patch<H: UiHost>(
 
     let mut root_props = chrome_props;
     root_props.layout = pressable_layout;
+    root_props.layout.overflow = fret_ui::element::Overflow::Clip;
     let mut out = cx.container(root_props, content_children);
     if let Some(test_id) = test_id {
         out = out.test_id(test_id);
@@ -479,7 +488,7 @@ mod tests {
     use super::*;
 
     use fret_app::App;
-    use fret_core::{AppWindowId, Point, Rect, Size};
+    use fret_core::{AppWindowId, FontWeight, Point, Rect, Size};
 
     fn bounds() -> Rect {
         Rect::new(
@@ -530,6 +539,50 @@ mod tests {
             assert!(
                 icons.len() >= 2 && icons.iter().all(|c| *c == expected_fg),
                 "expected badge icon(s) to resolve to variant fg"
+            );
+        });
+    }
+
+    fn find_text<'a>(el: &'a AnyElement, needle: &str) -> Option<&'a fret_ui::element::TextProps> {
+        match &el.kind {
+            ElementKind::Text(props) if props.text.as_ref() == needle => return Some(props),
+            _ => {}
+        }
+        for child in &el.children {
+            if let Some(found) = find_text(child, needle) {
+                return Some(found);
+            }
+        }
+        None
+    }
+
+    #[test]
+    fn badge_defaults_to_font_medium_and_shrink_0() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+            let el = Badge::new("Draft").into_element(cx);
+            let ElementKind::Container(root) = &el.kind else {
+                panic!("expected Badge root to be a Container, got {:?}", el.kind);
+            };
+
+            assert_eq!(
+                root.layout.flex.shrink, 0.0,
+                "expected shadcn Badge to default to shrink-0"
+            );
+            assert_eq!(
+                root.layout.overflow,
+                fret_ui::element::Overflow::Clip,
+                "expected shadcn Badge to default to overflow-hidden (clip)"
+            );
+
+            let label = find_text(&el, "Draft").expect("badge label text element");
+            let style = label.style.as_ref().expect("badge label has a text style");
+            assert_eq!(
+                style.weight,
+                FontWeight::MEDIUM,
+                "expected shadcn Badge label to use font-medium"
             );
         });
     }

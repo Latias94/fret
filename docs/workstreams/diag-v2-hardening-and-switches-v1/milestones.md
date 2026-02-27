@@ -23,6 +23,9 @@ Exit criteria:
 - Tooling produces schema v2 scripts by default (runtime v1 parsing is not required for the common case).
 - Built-in scripted suites are not defined by Rust-side hard-coded file lists (directory inputs + redirect stubs are acceptable as an intermediate step).
 - A script library taxonomy decision is recorded (folder layout + suite definition strategy).
+- Basic script discoverability exists (avoid “grep the repo”):
+  - `diag run` accepts promoted `script_id` (registry-backed),
+  - `diag list scripts` prints `script_id -> path` from the promoted registry.
 
 Evidence anchors:
 
