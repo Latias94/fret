@@ -438,6 +438,7 @@ fn infer_required_capabilities_v2(script: &UiActionScriptV2) -> Vec<String> {
         match step {
             UiActionStepV2::Click { pointer_kind, .. }
             | UiActionStepV2::Tap { pointer_kind, .. }
+            | UiActionStepV2::LongPress { pointer_kind, .. }
             | UiActionStepV2::Pinch { pointer_kind, .. }
             | UiActionStepV2::MovePointer { pointer_kind, .. }
             | UiActionStepV2::PointerDown { pointer_kind, .. }
@@ -482,6 +483,9 @@ fn infer_required_capabilities_v2(script: &UiActionScriptV2) -> Vec<String> {
         }
         if matches!(step, UiActionStepV2::Tap { .. }) {
             push_cap(&mut caps, "diag.gesture_tap");
+        }
+        if matches!(step, UiActionStepV2::LongPress { .. }) {
+            push_cap(&mut caps, "diag.gesture_long_press");
         }
         if matches!(step, UiActionStepV2::Pinch { .. }) {
             push_cap(&mut caps, "diag.gesture_pinch");
@@ -676,5 +680,24 @@ mod tests {
         };
         let inferred = infer_required_capabilities_v2(&script);
         assert!(inferred.iter().any(|c| c == "diag.gesture_pinch"));
+    }
+
+    #[test]
+    fn lint_infers_gesture_long_press_capability() {
+        let script = UiActionScriptV2 {
+            schema_version: 2,
+            meta: None,
+            steps: vec![UiActionStepV2::LongPress {
+                window: None,
+                pointer_kind: None,
+                target: UiSelectorV1::TestId {
+                    id: "press-target".to_string(),
+                },
+                duration_ms: 125,
+                modifiers: None,
+            }],
+        };
+        let inferred = infer_required_capabilities_v2(&script);
+        assert!(inferred.iter().any(|c| c == "diag.gesture_long_press"));
     }
 }

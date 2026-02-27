@@ -416,6 +416,25 @@ pub enum UiActionStepV2 {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         modifiers: Option<UiKeyModifiersV1>,
     },
+    /// A high-level “long press” gesture (touch-first) resolved via semantics selectors.
+    ///
+    /// Runtime injection emits a `pointer_down`, holds until `duration_ms` elapses, then emits
+    /// `pointer_up` with `is_click=false`.
+    LongPress {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
+        /// Optional override; when omitted, defaults to `touch`.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pointer_kind: Option<UiPointerKindV1>,
+        target: UiSelectorV1,
+        #[serde(
+            default = "default_long_press_duration_ms",
+            skip_serializing_if = "is_default_long_press_duration_ms"
+        )]
+        duration_ms: u64,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        modifiers: Option<UiKeyModifiersV1>,
+    },
     /// A pinch/zoom gesture emitted at the target's center.
     ///
     /// `delta` is positive for zoom in and negative for zoom out (matches `PointerEvent::PinchGesture`).
@@ -969,6 +988,14 @@ fn default_click_count() -> u8 {
 
 fn is_default_click_count(v: &u8) -> bool {
     *v == 1
+}
+
+fn default_long_press_duration_ms() -> u64 {
+    500
+}
+
+fn is_default_long_press_duration_ms(v: &u64) -> bool {
+    *v == 500
 }
 
 fn default_click_stable_frames() -> u32 {
@@ -2614,6 +2641,43 @@ mod tests {
             parsed,
             UiActionStepV2::Tap {
                 pointer_kind: Some(UiPointerKindV1::Pen),
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn long_press_step_round_trips_and_omits_defaults() {
+        let step = UiActionStepV2::LongPress {
+            window: None,
+            pointer_kind: None,
+            target: UiSelectorV1::TestId {
+                id: "a".to_string(),
+            },
+            duration_ms: default_long_press_duration_ms(),
+            modifiers: None,
+        };
+        let value = serde_json::to_value(step.clone()).unwrap();
+        assert_eq!(
+            value,
+            serde_json::json!({
+              "type": "long_press",
+              "target": {"kind":"test_id","id":"a"}
+            })
+        );
+
+        let parsed: UiActionStepV2 = serde_json::from_value(serde_json::json!({
+          "type": "long_press",
+          "pointer_kind": "pen",
+          "target": {"kind":"test_id","id":"a"},
+          "duration_ms": 125
+        }))
+        .unwrap();
+        assert!(matches!(
+            parsed,
+            UiActionStepV2::LongPress {
+                pointer_kind: Some(UiPointerKindV1::Pen),
+                duration_ms: 125,
                 ..
             }
         ));
