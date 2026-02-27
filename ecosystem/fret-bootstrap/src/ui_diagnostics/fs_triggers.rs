@@ -327,6 +327,12 @@ impl UiDiagnosticsService {
         let payload = FilesystemCapabilitiesV1 {
             schema_version: 1,
             capabilities: caps,
+            runner_kind: Some("fret-bootstrap".to_string()),
+            runner_version: Some(env!("CARGO_PKG_VERSION").to_string()),
+            hints: Some(fret_diag_protocol::FilesystemCapabilitiesHintsV1 {
+                allow_script_schema_v1: Some(self.cfg.allow_script_schema_v1),
+                write_bundle_schema2: Some(self.cfg.write_bundle_schema2),
+            }),
         };
         if let Ok(mut text) = serde_json::to_string_pretty(&payload) {
             text.push('\n');

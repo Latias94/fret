@@ -314,6 +314,9 @@ fn run_script_over_transport_streams_incremental_script_result_updates() {
     let caps = fret_diag_protocol::FilesystemCapabilitiesV1 {
         schema_version: 1,
         capabilities: vec!["script_v2".to_string()],
+        runner_kind: None,
+        runner_version: None,
+        hints: None,
     };
     crate::util::write_json_value(
         &root.join("capabilities.json"),
@@ -551,6 +554,9 @@ fn run_script_over_transport_timeout_writes_failed_tool_script_result() {
     let caps = fret_diag_protocol::FilesystemCapabilitiesV1 {
         schema_version: 1,
         capabilities: vec!["script_v2".to_string()],
+        runner_kind: None,
+        runner_version: None,
+        hints: None,
     };
     crate::util::write_json_value(
         &root.join("capabilities.json"),
@@ -675,6 +681,9 @@ fn run_script_over_transport_retouches_in_filesystem_mode_to_avoid_baseline_race
     let caps = fret_diag_protocol::FilesystemCapabilitiesV1 {
         schema_version: 1,
         capabilities: vec!["script_v2".to_string()],
+        runner_kind: None,
+        runner_version: None,
+        hints: None,
     };
     crate::util::write_json_value(
         &root.join("capabilities.json"),
@@ -806,6 +815,9 @@ fn dump_bundle_over_transport_materializes_filesystem_latest_pointer() {
     let caps = fret_diag_protocol::FilesystemCapabilitiesV1 {
         schema_version: 1,
         capabilities: vec!["script_v2".to_string()],
+        runner_kind: None,
+        runner_version: None,
+        hints: None,
     };
     crate::util::write_json_value(
         &root.join("capabilities.json"),
@@ -858,6 +870,9 @@ fn run_script_over_transport_dump_bundle_writes_run_id_bundle_json() {
     let caps = fret_diag_protocol::FilesystemCapabilitiesV1 {
         schema_version: 1,
         capabilities: vec!["script_v2".to_string()],
+        runner_kind: None,
+        runner_version: None,
+        hints: None,
     };
     crate::util::write_json_value(
         &root.join("capabilities.json"),
@@ -972,6 +987,9 @@ fn run_script_over_transport_dump_bundle_with_trace_writes_run_id_trace_chrome_j
     let caps = fret_diag_protocol::FilesystemCapabilitiesV1 {
         schema_version: 1,
         capabilities: vec!["script_v2".to_string()],
+        runner_kind: None,
+        runner_version: None,
+        hints: None,
     };
     crate::util::write_json_value(
         &root.join("capabilities.json"),

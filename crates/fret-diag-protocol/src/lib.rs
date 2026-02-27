@@ -193,10 +193,26 @@ pub struct UiActionScriptV2 {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FilesystemCapabilitiesHintsV1 {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub allow_script_schema_v1: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub write_bundle_schema2: Option<bool>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FilesystemCapabilitiesV1 {
     pub schema_version: u32,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub capabilities: Vec<String>,
+    /// Optional runner identity for auditability (additive; tooling must treat as hints).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub runner_kind: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub runner_version: Option<String>,
+    /// Optional schema/config hints for tooling and triage (additive).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hints: Option<FilesystemCapabilitiesHintsV1>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]

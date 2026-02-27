@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use fret_diag_protocol::{UiScriptResultV1, UiScriptStageV1};
+use fret_diag_protocol::{FilesystemCapabilitiesV1, UiScriptResultV1, UiScriptStageV1};
 use serde_json::{Value, json};
 
 use super::args::resolve_latest_bundle_dir_path;
@@ -686,6 +686,24 @@ fn resolve_manifest_path(bundle_dir: &Path) -> Option<PathBuf> {
     None
 }
 
+fn resolve_capabilities_path(bundle_dir: &Path) -> Option<PathBuf> {
+    let direct = bundle_dir.join("capabilities.json");
+    if direct.is_file() {
+        return Some(direct);
+    }
+    let root = bundle_dir.join("_root").join("capabilities.json");
+    if root.is_file() {
+        return Some(root);
+    }
+    if let Some(parent) = bundle_dir.parent() {
+        let from_parent = parent.join("capabilities.json");
+        if from_parent.is_file() {
+            return Some(from_parent);
+        }
+    }
+    None
+}
+
 fn read_json_value_result(path: &Path) -> Result<Value, String> {
     let bytes = std::fs::read(path).map_err(|e| e.to_string())?;
     serde_json::from_slice(&bytes).map_err(|e| e.to_string())
@@ -788,6 +806,22 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
                 "reason": r.reason,
                 "last_bundle_dir": r.last_bundle_dir,
                 "bundle_json_bytes": r.last_bundle_artifact.and_then(|a| a.bundle_json_bytes),
+            })
+        });
+
+    let capabilities_path = resolve_capabilities_path(bundle_dir);
+    let capabilities = capabilities_path
+        .as_deref()
+        .and_then(|path| std::fs::read(path).ok())
+        .and_then(|bytes| serde_json::from_slice::<FilesystemCapabilitiesV1>(&bytes).ok())
+        .map(|c| {
+            json!({
+                "schema_version": c.schema_version,
+                "runner_kind": c.runner_kind,
+                "runner_version": c.runner_version,
+                "hints": c.hints,
+                "capabilities_total": c.capabilities.len(),
+                "capabilities": c.capabilities,
             })
         });
 
@@ -967,6 +1001,8 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
         "warmup_frames": warmup_frames,
         "script_result_path": script_result_path.as_ref().map(|p| p.display().to_string()),
         "script_result": script_result,
+        "capabilities_path": capabilities_path.as_ref().map(|p| p.display().to_string()),
+        "capabilities": capabilities,
         "manifest_path": manifest_path.as_ref().map(|p| p.display().to_string()),
         "manifest_chunks": manifest_chunks,
         "manifest_schema_version": manifest_schema_version,

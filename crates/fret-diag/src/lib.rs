@@ -3169,6 +3169,9 @@ mod capability_tests {
         let caps = fret_diag_protocol::FilesystemCapabilitiesV1 {
             schema_version: 1,
             capabilities: vec!["diag.script_v2".to_string()],
+            runner_kind: None,
+            runner_version: None,
+            hints: None,
         };
         std::fs::write(
             out_dir.join("capabilities.json"),
@@ -3231,6 +3234,9 @@ mod capability_tests {
         let caps = fret_diag_protocol::FilesystemCapabilitiesV1 {
             schema_version: 1,
             capabilities: vec!["diag.script_v2".to_string()],
+            runner_kind: None,
+            runner_version: None,
+            hints: None,
         };
         std::fs::write(
             out_dir.join("capabilities.json"),

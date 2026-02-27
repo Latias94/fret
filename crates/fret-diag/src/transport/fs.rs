@@ -388,6 +388,9 @@ mod tests {
                 "foo.bar".to_string(),
                 "diag.screenshot_png".to_string(),
             ],
+            runner_kind: None,
+            runner_version: None,
+            hints: None,
         };
         write_json_value(
             &dir.join("capabilities.json"),

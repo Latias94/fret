@@ -130,9 +130,9 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
 - [ ] Close multi-window gaps in schema v2 steps:
   - [ ] add optional `window` targeting to selector-driven steps that currently lack it (e.g. `click_stable`, `wheel`, pointer moves),
   - [ ] update capability inference (keep using `diag.multi_window`) and ensure fail-fast gating.
-- [ ] Extend `FilesystemCapabilitiesV1` with optional identity fields (additive):
-  - [ ] `runner_kind`, `runner_version`,
-  - [ ] optional `protocol_versions`/`schemas` hints for tooling.
+- [x] Extend `FilesystemCapabilitiesV1` with optional identity fields (additive):
+  - [x] `runner_kind`, `runner_version`,
+  - [x] optional `protocol_versions`/`schemas` hints for tooling.
 - [ ] Create `transport/` seam contract and ensure all FS vs WS differences are isolated there.
 - [ ] Add a “legacy usage” marker into `triage.json` / `ai.packet.json` when compat fallbacks were used.
 
