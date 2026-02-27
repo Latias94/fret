@@ -73,13 +73,13 @@
       "timeout_frames": 240
     },
 
-    { "type": "pointer_down", "target": { "kind": "test_id", "id": "ui-gallery-carousel-demo-dnd-handle" } },
-    { "type": "pointer_move", "delta_x": -20.0, "delta_y": 0.0, "steps": 12 },
+    { "type": "pointer_down", "pointer_kind": "mouse", "target": { "kind": "test_id", "id": "ui-gallery-carousel-demo-dnd-handle" } },
+    { "type": "pointer_move", "pointer_kind": "mouse", "delta_x": -20.0, "delta_y": 0.0, "steps": 12 },
     {
       "type": "assert",
       "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-carousel-demo-dnd-active" } }
     },
-    { "type": "pointer_up" },
+    { "type": "pointer_up", "pointer_kind": "mouse" },
     { "type": "wait_frames", "n": 6 },
     {
       "type": "assert",
