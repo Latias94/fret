@@ -146,25 +146,15 @@ pub(super) fn preview_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
     let loading = {
         doc_layout::wrap_controls_row_snapshot(cx, &theme, Space::N2, |cx| {
             vec![
-                shadcn::Button::new("Generating")
+                // Upstream: `registry/new-york-v4/examples/button-loading.tsx`.
+                shadcn::Button::new("Submit")
                     .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
                     .disabled(true)
-                    .test_id("ui-gallery-button-loading-outline")
+                    .test_id("ui-gallery-button-loading-submit")
                     .children([
                         shadcn::Spinner::new().into_element(cx),
-                        ui::text(cx, "Generating")
-                            .font_medium()
-                            .nowrap()
-                            .into_element(cx),
-                    ])
-                    .into_element(cx),
-                shadcn::Button::new("Deleting")
-                    .variant(shadcn::ButtonVariant::Destructive)
-                    .disabled(true)
-                    .test_id("ui-gallery-button-loading-destructive")
-                    .children([
-                        shadcn::Spinner::new().into_element(cx),
-                        ui::text(cx, "Deleting")
+                        ui::text(cx, "Submit")
                             .font_medium()
                             .nowrap()
                             .into_element(cx),
@@ -185,27 +175,6 @@ pub(super) fn preview_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
             ]
         })
         .test_id("ui-gallery-button-rounded-row")
-    };
-
-    let spinner = {
-        doc_layout::wrap_controls_row_snapshot(cx, &theme, Space::N2, |cx| {
-            vec![
-                shadcn::Button::new("Submit")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .size(shadcn::ButtonSize::Sm)
-                    .disabled(true)
-                    .children([
-                        shadcn::Spinner::new().into_element(cx),
-                        ui::text(cx, "Submit")
-                            .font_medium()
-                            .nowrap()
-                            .into_element(cx),
-                    ])
-                    .test_id("ui-gallery-button-spinner")
-                    .into_element(cx),
-            ]
-        })
-        .test_id("ui-gallery-button-spinner-row")
     };
 
     let button_group = {
@@ -343,27 +312,13 @@ pub(super) fn preview_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
                 .description("Spinner + label for in-flight actions.")
                 .code(
                     "rust",
-                    r#"shadcn::Button::new("Generating")
+                    r#"shadcn::Button::new("Submit")
     .variant(shadcn::ButtonVariant::Outline)
+    .size(shadcn::ButtonSize::Sm)
     .disabled(true)
     .children([
         shadcn::Spinner::new().into_element(cx),
-        ui::text(cx, "Generating")
-            .font_medium()
-            .nowrap()
-            .into_element(cx),
-    ])
-    .into_element(cx);
-
-shadcn::Button::new("Deleting")
-    .variant(shadcn::ButtonVariant::Destructive)
-    .disabled(true)
-    .children([
-        shadcn::Spinner::new().into_element(cx),
-        ui::text(cx, "Deleting")
-            .font_medium()
-            .nowrap()
-            .into_element(cx),
+        ui::text(cx, "Submit").into_element(cx),
     ])
     .into_element(cx);"#,
                 ),
@@ -373,20 +328,6 @@ shadcn::Button::new("Deleting")
                     "rust",
                     r#"shadcn::Button::new("Rounded")
     .refine_style(ChromeRefinement::default().rounded(Radius::Full))
-    .into_element(cx);"#,
-                ),
-            DocSection::new("Spinner", spinner)
-                .description("Render a spinner inside the button for loading state.")
-                .code(
-                    "rust",
-                    r#"shadcn::Button::new("Submit")
-    .variant(shadcn::ButtonVariant::Outline)
-    .size(shadcn::ButtonSize::Sm)
-    .disabled(true)
-    .children([
-        shadcn::Spinner::new().into_element(cx),
-        ui::text(cx, "Submit").into_element(cx),
-    ])
     .into_element(cx);"#,
                 ),
             DocSection::new("Button Group", button_group)
