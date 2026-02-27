@@ -61,6 +61,9 @@ Notes:
 - The input is referenced by `ImageId`, reusing the existing portable image registry contract.
 - The renderer clamps addressing (baseline: clamp-to-edge).
 - Mips/anisotropy remain out of scope; sampling is LOD 0 only.
+- The input texture must be compatible with `texture_2d<f32>` + a filtering sampler
+  (`TextureSampleType::Float { filterable: true }`). Incompatible formats deterministically fall
+  back to a renderer-owned 1x1 transparent texture.
 - Color space follows `ImageDescriptor.color_space`:
   - sRGB images decode to linear in shader sampling,
   - data textures (LUT/noise/normal maps) should be uploaded as `ImageColorSpace::Linear`.
@@ -110,4 +113,3 @@ Pending / follow-ups:
 - Decision ADR: `docs/adr/0300-custom-effect-v2-user-image-input.md`
 - CustomV1 semantics: `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-v1-semantics.md`
 - ADR 0299 (CustomV1 MVP): `docs/adr/0299-custom-effect-abi-wgpu-only-mvp.md`
-
