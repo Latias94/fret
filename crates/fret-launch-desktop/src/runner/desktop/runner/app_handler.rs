@@ -1130,39 +1130,37 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     let mut delivered = false;
                     if let Some((dock_pointer_id, dock_source_window)) = dock_drag_capture
                         && dock_source_window != app_window
-                    {
-                        if let Event::Pointer(fret_core::PointerEvent::Move {
+                        && let Event::Pointer(fret_core::PointerEvent::Move {
                             pointer_id,
                             position: _,
                             buttons,
                             modifiers,
                             pointer_type,
                         }) = &evt
-                            && *pointer_id == dock_pointer_id
-                        {
-                            let pos = self
-                                .cursor_screen_pos
-                                .and_then(|screen| {
-                                    self.local_pos_for_window(dock_source_window, screen)
-                                })
-                                .or_else(|| {
-                                    self.windows
-                                        .get(dock_source_window)
-                                        .map(|w| w.platform.input.cursor_pos)
-                                })
-                                .unwrap_or(pos);
-                            self.deliver_window_event_now(
-                                dock_source_window,
-                                &Event::Pointer(fret_core::PointerEvent::Move {
-                                    pointer_id: *pointer_id,
-                                    position: pos,
-                                    buttons: *buttons,
-                                    modifiers: *modifiers,
-                                    pointer_type: *pointer_type,
-                                }),
-                            );
-                            delivered = true;
-                        }
+                        && *pointer_id == dock_pointer_id
+                    {
+                        let pos = self
+                            .cursor_screen_pos
+                            .and_then(|screen| {
+                                self.local_pos_for_window(dock_source_window, screen)
+                            })
+                            .or_else(|| {
+                                self.windows
+                                    .get(dock_source_window)
+                                    .map(|w| w.platform.input.cursor_pos)
+                            })
+                            .unwrap_or(pos);
+                        self.deliver_window_event_now(
+                            dock_source_window,
+                            &Event::Pointer(fret_core::PointerEvent::Move {
+                                pointer_id: *pointer_id,
+                                position: pos,
+                                buttons: *buttons,
+                                modifiers: *modifiers,
+                                pointer_type: *pointer_type,
+                            }),
+                        );
+                        delivered = true;
                     }
                     if !delivered {
                         self.deliver_window_event_now(app_window, &evt);

@@ -197,12 +197,17 @@ impl NativeExternalTextureFrame for AvfVideoNativeExternalFrame {
 
         let texture = guard.texture.as_ref().expect("texture allocated");
         let view = AvfVideoNativeExternalState::view_srgb(texture);
-        let mut metadata = RenderTargetMetadata::default();
-        metadata.requested_ingest_strategy = RenderTargetIngestStrategy::ExternalZeroCopy;
-        metadata.ingest_strategy = RenderTargetIngestStrategy::CpuUpload;
-        metadata.orientation = guard.orientation;
-        metadata.color_encoding.matrix = RenderTargetMatrixCoefficients::Rgb;
-        metadata.frame_timestamp_ns = frame.timestamp_ns;
+        let metadata = RenderTargetMetadata {
+            requested_ingest_strategy: RenderTargetIngestStrategy::ExternalZeroCopy,
+            ingest_strategy: RenderTargetIngestStrategy::CpuUpload,
+            orientation: guard.orientation,
+            color_encoding: fret_render::RenderTargetColorEncoding {
+                matrix: RenderTargetMatrixCoefficients::Rgb,
+                ..Default::default()
+            },
+            frame_timestamp_ns: frame.timestamp_ns,
+            ..Default::default()
+        };
 
         Ok(NativeExternalImportedFrame {
             view,

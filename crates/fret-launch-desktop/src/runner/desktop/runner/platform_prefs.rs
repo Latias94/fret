@@ -355,9 +355,7 @@ fn read_desktop_prefers_reduced_motion() -> Option<bool> {
     use objc::{msg_send, sel, sel_impl};
 
     unsafe {
-        let Some(class) = Class::get("NSWorkspace") else {
-            return None;
-        };
+        let class = Class::get("NSWorkspace")?;
         let workspace: *mut Object = msg_send![class, sharedWorkspace];
         if workspace.is_null() {
             return None;
@@ -480,9 +478,7 @@ fn read_desktop_prefers_reduced_transparency() -> Option<bool> {
     use objc::{msg_send, sel, sel_impl};
 
     unsafe {
-        let Some(class) = Class::get("NSWorkspace") else {
-            return None;
-        };
+        let class = Class::get("NSWorkspace")?;
         let workspace: *mut Object = msg_send![class, sharedWorkspace];
         if workspace.is_null() {
             return None;
@@ -507,17 +503,13 @@ fn read_desktop_accent_color() -> Option<fret_core::Color> {
     use std::os::raw::c_char;
 
     unsafe {
-        let Some(class) = Class::get("NSUserDefaults") else {
-            return None;
-        };
+        let class = Class::get("NSUserDefaults")?;
         let defaults: *mut Object = msg_send![class, standardUserDefaults];
         if defaults.is_null() {
             return None;
         }
 
-        let Some(ns_string_class) = Class::get("NSString") else {
-            return None;
-        };
+        let ns_string_class = Class::get("NSString")?;
         let key_cstr = CString::new("AppleHighlightColor").ok()?;
         let key: *mut Object = msg_send![ns_string_class, alloc];
         let key: *mut Object = msg_send![key, initWithUTF8String: key_cstr.as_ptr()];
@@ -642,9 +634,7 @@ fn read_desktop_contrast_preference() -> Option<ContrastPreference> {
     use objc::{msg_send, sel, sel_impl};
 
     unsafe {
-        let Some(class) = Class::get("NSWorkspace") else {
-            return None;
-        };
+        let class = Class::get("NSWorkspace")?;
         let workspace: *mut Object = msg_send![class, sharedWorkspace];
         if workspace.is_null() {
             return None;

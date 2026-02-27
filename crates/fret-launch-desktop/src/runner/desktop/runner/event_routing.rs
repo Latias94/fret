@@ -21,7 +21,6 @@ fn diag_dock_drag_trace(args: fmt::Arguments<'_>) {
         let path = out_dir.join("dock_drag_runtime_trace.log");
         let file = std::fs::OpenOptions::new()
             .create(true)
-            .write(true)
             .append(true)
             .open(path)
             .expect("open dock_drag_runtime_trace.log");
@@ -574,13 +573,12 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 window_under_cursor_source = hit.source;
                 out = hit.window;
             }
-            if out.is_none() {
-                if let Some(w) = self.internal_drag_hover_window {
-                    out = Some(w);
-                    if window_under_cursor_source == fret_runtime::WindowUnderCursorSource::Unknown
-                    {
-                        window_under_cursor_source = fret_runtime::WindowUnderCursorSource::Latched;
-                    }
+            if out.is_none()
+                && let Some(w) = self.internal_drag_hover_window
+            {
+                out = Some(w);
+                if window_under_cursor_source == fret_runtime::WindowUnderCursorSource::Unknown {
+                    window_under_cursor_source = fret_runtime::WindowUnderCursorSource::Latched;
                 }
             }
             out
@@ -591,13 +589,12 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 window_under_cursor_source = hit.source;
                 out = hit.window;
             }
-            if out.is_none() {
-                if let Some(w) = self.internal_drag_hover_window {
-                    out = Some(w);
-                    if window_under_cursor_source == fret_runtime::WindowUnderCursorSource::Unknown
-                    {
-                        window_under_cursor_source = fret_runtime::WindowUnderCursorSource::Latched;
-                    }
+            if out.is_none()
+                && let Some(w) = self.internal_drag_hover_window
+            {
+                out = Some(w);
+                if window_under_cursor_source == fret_runtime::WindowUnderCursorSource::Unknown {
+                    window_under_cursor_source = fret_runtime::WindowUnderCursorSource::Latched;
                 }
             }
             out

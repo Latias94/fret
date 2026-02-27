@@ -1,5 +1,3 @@
-#![cfg(target_os = "macos")]
-
 use std::{
     cell::RefCell,
     collections::HashMap,
@@ -185,7 +183,7 @@ pub(crate) fn set_app_menu_bar(app: &fret_app::App, menu_bar: &MenuBar) {
     let Some(mtm) = MainThreadMarker::new() else {
         return;
     };
-    let delegate_class: &'static AnyClass = *MENU_DELEGATE_CLASS.get_or_init(menu_delegate_class);
+    let delegate_class: &'static AnyClass = MENU_DELEGATE_CLASS.get_or_init(menu_delegate_class);
 
     let normalized_menu_bar = menu_bar.clone().normalized();
 
@@ -227,8 +225,7 @@ pub(crate) fn set_app_menu_bar(app: &fret_app::App, menu_bar: &MenuBar) {
             let delegate: Retained<AnyObject> = unsafe { msg_send![delegate_class, new] };
             state.delegate = Some(delegate);
         }
-        let delegate_ptr: Option<*const AnyObject> =
-            state.delegate.as_ref().map(|d| Retained::as_ptr(d));
+        let delegate_ptr: Option<*const AnyObject> = state.delegate.as_ref().map(Retained::as_ptr);
 
         let appkit_app = NSApplication::sharedApplication(mtm);
         let main_menu = NSMenu::new(mtm);
@@ -325,8 +322,7 @@ fn append_menu_item(
     commands: &fret_runtime::CommandRegistry,
     base_ctx: &InputContext,
 ) {
-    let delegate_ptr: Option<*const AnyObject> =
-        state.delegate.as_ref().map(|d| Retained::as_ptr(d));
+    let delegate_ptr: Option<*const AnyObject> = state.delegate.as_ref().map(Retained::as_ptr);
 
     match item {
         MenuItem::Separator => {
@@ -583,18 +579,14 @@ fn ns_window_id(window: &dyn Window) -> Option<*mut AnyObject> {
 }
 
 fn key_window_ptr() -> Option<isize> {
-    let Some(mtm) = MainThreadMarker::new() else {
-        return None;
-    };
+    let mtm = MainThreadMarker::new()?;
     let app = NSApplication::sharedApplication(mtm);
     let key_window: *mut AnyObject = unsafe { msg_send![&app, keyWindow] };
     (!key_window.is_null()).then_some(key_window as isize)
 }
 
 fn main_window_ptr() -> Option<isize> {
-    let Some(mtm) = MainThreadMarker::new() else {
-        return None;
-    };
+    let mtm = MainThreadMarker::new()?;
     let app = NSApplication::sharedApplication(mtm);
     let main_window: *mut AnyObject = unsafe { msg_send![&app, mainWindow] };
     (!main_window.is_null()).then_some(main_window as isize)
