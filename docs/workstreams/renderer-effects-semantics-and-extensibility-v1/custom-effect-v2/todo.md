@@ -25,9 +25,9 @@ Constraints:
   - Evidence: `crates/fret-core/src/effects.rs`, `crates/fret-core/src/scene/mod.rs`.
 - [x] Extend renderer capabilities to report supported custom effect shapes.
   - Evidence: `crates/fret-render-wgpu/src/capabilities.rs` (`RendererCapabilities.custom_effect_v2_user_image`).
-- [ ] Add plan reporting fields (shape + pass count + scratch usage summary).
-  - Note: current plan reporting covers effect pass counts and degradation; it does not yet emit a per-effect ABI shape
-    summary for custom effects.
+- [x] Add plan reporting fields (shape + pass count + scratch usage summary).
+  - Evidence: `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` (renderplan JSON dump includes
+    per-effect ABI summaries + per-target size usage).
 
 ## P2 — Implementation and conformance
 

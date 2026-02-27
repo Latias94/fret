@@ -8,6 +8,9 @@ use super::{EffectMarker, EffectMarkerKind, ScissorRect};
 #[cfg(not(target_arch = "wasm32"))]
 use std::path::PathBuf;
 
+#[cfg(not(target_arch = "wasm32"))]
+use std::collections::HashMap;
+
 #[derive(Debug, serde::Serialize)]
 struct JsonDumpScissorRect {
     x: u32,
@@ -696,7 +699,8 @@ struct JsonDumpCounts {
     dither: usize,
     noise: usize,
     drop_shadow: usize,
-    custom_effect: usize,
+    custom_effect_v1: usize,
+    custom_effect_v2: usize,
     clip_mask: usize,
     release_target: usize,
 }
@@ -718,7 +722,8 @@ fn pass_counts(plan: &RenderPlan) -> JsonDumpCounts {
         dither: 0,
         noise: 0,
         drop_shadow: 0,
-        custom_effect: 0,
+        custom_effect_v1: 0,
+        custom_effect_v2: 0,
         clip_mask: 0,
         release_target: 0,
     };
@@ -739,14 +744,363 @@ fn pass_counts(plan: &RenderPlan) -> JsonDumpCounts {
             RenderPlanPass::Dither(_) => c.dither += 1,
             RenderPlanPass::Noise(_) => c.noise += 1,
             RenderPlanPass::DropShadow(_) => c.drop_shadow += 1,
-            RenderPlanPass::CustomEffect(_) => c.custom_effect += 1,
-            RenderPlanPass::CustomEffectV2(_) => c.custom_effect += 1,
+            RenderPlanPass::CustomEffect(_) => c.custom_effect_v1 += 1,
+            RenderPlanPass::CustomEffectV2(_) => c.custom_effect_v2 += 1,
             RenderPlanPass::ClipMask(_) => c.clip_mask += 1,
             RenderPlanPass::ReleaseTarget(_) => c.release_target += 1,
         }
     }
 
     c
+}
+
+#[derive(Debug, serde::Serialize)]
+struct JsonDumpCustomEffectSummary {
+    effect: String,
+    abi: &'static str,
+    pass_count: usize,
+    input_image_some: usize,
+    input_image_none: usize,
+}
+
+#[derive(Debug, serde::Serialize)]
+struct JsonDumpTargetUsage {
+    target: &'static str,
+    max_size: [u32; 2],
+    src_uses: usize,
+    dst_uses: usize,
+    mask_uses: usize,
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn summarize_custom_effects(passes: &[RenderPlanPass]) -> Vec<JsonDumpCustomEffectSummary> {
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+    enum Abi {
+        V1,
+        V2,
+    }
+
+    #[derive(Debug, Default, Clone, Copy)]
+    struct Acc {
+        pass_count: usize,
+        input_image_some: usize,
+        input_image_none: usize,
+    }
+
+    let mut by_effect: HashMap<(fret_core::EffectId, Abi), Acc> = HashMap::new();
+    for p in passes {
+        match p {
+            RenderPlanPass::CustomEffect(p) => {
+                let acc = by_effect.entry((p.effect, Abi::V1)).or_default();
+                acc.pass_count += 1;
+            }
+            RenderPlanPass::CustomEffectV2(p) => {
+                let acc = by_effect.entry((p.effect, Abi::V2)).or_default();
+                acc.pass_count += 1;
+                if p.input_image.is_some() {
+                    acc.input_image_some += 1;
+                } else {
+                    acc.input_image_none += 1;
+                }
+            }
+            _ => {}
+        }
+    }
+
+    let mut out: Vec<_> = by_effect
+        .into_iter()
+        .map(|((effect, abi), acc)| JsonDumpCustomEffectSummary {
+            effect: format!("{effect:?}"),
+            abi: match abi {
+                Abi::V1 => "custom_v1.params_only",
+                Abi::V2 => "custom_v2.user_image",
+            },
+            pass_count: acc.pass_count,
+            input_image_some: acc.input_image_some,
+            input_image_none: acc.input_image_none,
+        })
+        .collect();
+
+    out.sort_by(|a, b| (a.abi, &a.effect).cmp(&(b.abi, &b.effect)));
+    out
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn plan_target_index(t: PlanTarget) -> usize {
+    match t {
+        PlanTarget::Output => 0,
+        PlanTarget::Intermediate0 => 1,
+        PlanTarget::Intermediate1 => 2,
+        PlanTarget::Intermediate2 => 3,
+        PlanTarget::Intermediate3 => 4,
+        PlanTarget::Mask0 => 5,
+        PlanTarget::Mask1 => 6,
+        PlanTarget::Mask2 => 7,
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn bump_usage(
+    usage: &mut [Option<JsonDumpTargetUsage>; 8],
+    target: PlanTarget,
+    kind: &str,
+    size: (u32, u32),
+) {
+    let slot = &mut usage[plan_target_index(target)];
+    let entry = slot.get_or_insert_with(|| JsonDumpTargetUsage {
+        target: plan_target_name(target),
+        max_size: [0, 0],
+        src_uses: 0,
+        dst_uses: 0,
+        mask_uses: 0,
+    });
+
+    entry.max_size[0] = entry.max_size[0].max(size.0.max(1));
+    entry.max_size[1] = entry.max_size[1].max(size.1.max(1));
+    match kind {
+        "src" => entry.src_uses += 1,
+        "dst" => entry.dst_uses += 1,
+        "mask" => entry.mask_uses += 1,
+        _ => {}
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn summarize_target_usage(passes: &[RenderPlanPass]) -> Vec<JsonDumpTargetUsage> {
+    let mut usage: [Option<JsonDumpTargetUsage>; 8] = std::array::from_fn(|_| None);
+
+    for p in passes {
+        match p {
+            RenderPlanPass::SceneDrawRange(pass) => {
+                bump_usage(&mut usage, pass.target, "dst", pass.target_size);
+            }
+            RenderPlanPass::PathMsaaBatch(pass) => {
+                bump_usage(&mut usage, pass.target, "dst", pass.target_size);
+            }
+            RenderPlanPass::PathClipMask(pass) => {
+                bump_usage(&mut usage, pass.dst, "dst", pass.dst_size);
+            }
+            RenderPlanPass::FullscreenBlit(pass) => {
+                bump_usage(&mut usage, pass.src, "src", pass.src_size);
+                bump_usage(&mut usage, pass.dst, "dst", pass.dst_size);
+            }
+            RenderPlanPass::CompositePremul(pass) => {
+                bump_usage(&mut usage, pass.src, "src", pass.src_size);
+                bump_usage(&mut usage, pass.dst, "dst", pass.dst_size);
+                if let Some(mask) = pass.mask {
+                    bump_usage(&mut usage, mask.target, "mask", mask.size);
+                }
+            }
+            RenderPlanPass::ScaleNearest(pass) => {
+                bump_usage(&mut usage, pass.src, "src", pass.src_size);
+                bump_usage(&mut usage, pass.dst, "dst", pass.dst_size);
+                if let Some(mask) = pass.mask {
+                    bump_usage(&mut usage, mask.target, "mask", mask.size);
+                }
+            }
+            RenderPlanPass::Blur(pass) => {
+                bump_usage(&mut usage, pass.src, "src", pass.src_size);
+                bump_usage(&mut usage, pass.dst, "dst", pass.dst_size);
+                if let Some(mask) = pass.mask {
+                    bump_usage(&mut usage, mask.target, "mask", mask.size);
+                }
+            }
+            RenderPlanPass::BackdropWarp(pass) => {
+                bump_usage(&mut usage, pass.src, "src", pass.src_size);
+                bump_usage(&mut usage, pass.dst, "dst", pass.dst_size);
+                if let Some(mask) = pass.mask {
+                    bump_usage(&mut usage, mask.target, "mask", mask.size);
+                }
+            }
+            RenderPlanPass::ColorAdjust(pass) => {
+                bump_usage(&mut usage, pass.src, "src", pass.src_size);
+                bump_usage(&mut usage, pass.dst, "dst", pass.dst_size);
+                if let Some(mask) = pass.mask {
+                    bump_usage(&mut usage, mask.target, "mask", mask.size);
+                }
+            }
+            RenderPlanPass::ColorMatrix(pass) => {
+                bump_usage(&mut usage, pass.src, "src", pass.src_size);
+                bump_usage(&mut usage, pass.dst, "dst", pass.dst_size);
+                if let Some(mask) = pass.mask {
+                    bump_usage(&mut usage, mask.target, "mask", mask.size);
+                }
+            }
+            RenderPlanPass::AlphaThreshold(pass) => {
+                bump_usage(&mut usage, pass.src, "src", pass.src_size);
+                bump_usage(&mut usage, pass.dst, "dst", pass.dst_size);
+                if let Some(mask) = pass.mask {
+                    bump_usage(&mut usage, mask.target, "mask", mask.size);
+                }
+            }
+            RenderPlanPass::Dither(pass) => {
+                bump_usage(&mut usage, pass.src, "src", pass.src_size);
+                bump_usage(&mut usage, pass.dst, "dst", pass.dst_size);
+                if let Some(mask) = pass.mask {
+                    bump_usage(&mut usage, mask.target, "mask", mask.size);
+                }
+            }
+            RenderPlanPass::Noise(pass) => {
+                bump_usage(&mut usage, pass.src, "src", pass.src_size);
+                bump_usage(&mut usage, pass.dst, "dst", pass.dst_size);
+                if let Some(mask) = pass.mask {
+                    bump_usage(&mut usage, mask.target, "mask", mask.size);
+                }
+            }
+            RenderPlanPass::DropShadow(pass) => {
+                bump_usage(&mut usage, pass.src, "src", pass.src_size);
+                bump_usage(&mut usage, pass.dst, "dst", pass.dst_size);
+                if let Some(mask) = pass.mask {
+                    bump_usage(&mut usage, mask.target, "mask", mask.size);
+                }
+            }
+            RenderPlanPass::CustomEffect(pass) => {
+                bump_usage(&mut usage, pass.src, "src", pass.src_size);
+                bump_usage(&mut usage, pass.dst, "dst", pass.dst_size);
+                if let Some(mask) = pass.mask {
+                    bump_usage(&mut usage, mask.target, "mask", mask.size);
+                }
+            }
+            RenderPlanPass::CustomEffectV2(pass) => {
+                bump_usage(&mut usage, pass.src, "src", pass.src_size);
+                bump_usage(&mut usage, pass.dst, "dst", pass.dst_size);
+                if let Some(mask) = pass.mask {
+                    bump_usage(&mut usage, mask.target, "mask", mask.size);
+                }
+            }
+            RenderPlanPass::ClipMask(pass) => {
+                bump_usage(&mut usage, pass.dst, "dst", pass.dst_size);
+            }
+            RenderPlanPass::ReleaseTarget(_) => {}
+        }
+    }
+
+    let mut out: Vec<_> = usage.into_iter().flatten().collect();
+    out.sort_by(|a, b| a.target.cmp(b.target));
+    out
+}
+
+#[cfg(all(test, not(target_arch = "wasm32")))]
+mod tests {
+    use super::*;
+    use crate::renderer::render_plan::{CustomEffectPass, CustomEffectV2Pass, RenderPlanPass};
+    use slotmap::SlotMap;
+
+    #[test]
+    fn custom_effect_summaries_include_abi_and_input_counts() {
+        let mut effects: SlotMap<fret_core::EffectId, ()> = SlotMap::with_key();
+        let effect_v1 = effects.insert(());
+        let effect_v2 = effects.insert(());
+
+        let mut images: SlotMap<fret_core::ImageId, ()> = SlotMap::with_key();
+        let image = images.insert(());
+
+        let passes = vec![
+            RenderPlanPass::CustomEffect(CustomEffectPass {
+                src: PlanTarget::Output,
+                dst: PlanTarget::Intermediate0,
+                src_size: (10, 11),
+                dst_size: (12, 13),
+                dst_scissor: None,
+                mask_uniform_index: None,
+                mask: None,
+                effect: effect_v1,
+                params: fret_core::EffectParamsV1::default(),
+                load: wgpu::LoadOp::Load,
+            }),
+            RenderPlanPass::CustomEffectV2(CustomEffectV2Pass {
+                src: PlanTarget::Intermediate0,
+                dst: PlanTarget::Intermediate1,
+                src_size: (12, 13),
+                dst_size: (20, 21),
+                dst_scissor: None,
+                mask_uniform_index: None,
+                mask: None,
+                effect: effect_v2,
+                params: fret_core::EffectParamsV1::default(),
+                input_image: Some(image),
+                input_uv: fret_core::scene::UvRect::FULL,
+                input_sampling: fret_core::scene::ImageSamplingHint::Linear,
+                load: wgpu::LoadOp::Load,
+            }),
+            RenderPlanPass::CustomEffectV2(CustomEffectV2Pass {
+                src: PlanTarget::Intermediate1,
+                dst: PlanTarget::Output,
+                src_size: (20, 21),
+                dst_size: (30, 31),
+                dst_scissor: None,
+                mask_uniform_index: None,
+                mask: None,
+                effect: effect_v2,
+                params: fret_core::EffectParamsV1::default(),
+                input_image: None,
+                input_uv: fret_core::scene::UvRect::FULL,
+                input_sampling: fret_core::scene::ImageSamplingHint::Nearest,
+                load: wgpu::LoadOp::Load,
+            }),
+        ];
+
+        let summary = summarize_custom_effects(&passes);
+        assert_eq!(summary.len(), 2);
+
+        let v1 = summary
+            .iter()
+            .find(|s| s.abi == "custom_v1.params_only")
+            .expect("v1 summary");
+        assert_eq!(v1.pass_count, 1);
+        assert_eq!(v1.input_image_some, 0);
+        assert_eq!(v1.input_image_none, 0);
+
+        let v2 = summary
+            .iter()
+            .find(|s| s.abi == "custom_v2.user_image")
+            .expect("v2 summary");
+        assert_eq!(v2.pass_count, 2);
+        assert_eq!(v2.input_image_some, 1);
+        assert_eq!(v2.input_image_none, 1);
+    }
+
+    #[test]
+    fn target_usage_tracks_max_size() {
+        let mut effects: SlotMap<fret_core::EffectId, ()> = SlotMap::with_key();
+        let effect = effects.insert(());
+
+        let passes = vec![
+            RenderPlanPass::CustomEffect(CustomEffectPass {
+                src: PlanTarget::Output,
+                dst: PlanTarget::Intermediate0,
+                src_size: (100, 100),
+                dst_size: (10, 11),
+                dst_scissor: None,
+                mask_uniform_index: None,
+                mask: None,
+                effect,
+                params: fret_core::EffectParamsV1::default(),
+                load: wgpu::LoadOp::Load,
+            }),
+            RenderPlanPass::CustomEffect(CustomEffectPass {
+                src: PlanTarget::Intermediate0,
+                dst: PlanTarget::Intermediate0,
+                src_size: (20, 21),
+                dst_size: (22, 23),
+                dst_scissor: None,
+                mask_uniform_index: None,
+                mask: None,
+                effect,
+                params: fret_core::EffectParamsV1::default(),
+                load: wgpu::LoadOp::Load,
+            }),
+        ];
+
+        let usage = summarize_target_usage(&passes);
+        let i0 = usage
+            .iter()
+            .find(|u| u.target == "Intermediate0")
+            .expect("Intermediate0 usage");
+        assert_eq!(i0.max_size, [22, 23]);
+        assert!(i0.src_uses >= 1);
+        assert!(i0.dst_uses >= 1);
+    }
 }
 
 #[derive(Debug, serde::Serialize)]
@@ -760,6 +1114,8 @@ struct RenderPlanJsonDump<'a> {
     segments: &'a [JsonDumpSegment],
     effect_markers: &'a [JsonDumpEffectMarker],
     pass_counts: JsonDumpCounts,
+    custom_effects: &'a [JsonDumpCustomEffectSummary],
+    target_usage: &'a [JsonDumpTargetUsage],
     estimated_peak_intermediate_bytes: u64,
     degradations: &'a [JsonDumpDegradation],
     passes: &'a [JsonDumpPass],
@@ -777,6 +1133,8 @@ pub(super) struct RenderPlanJsonDumpScratch {
     segment_pass_counts: Vec<JsonDumpSegmentPassCounts>,
     segments: Vec<JsonDumpSegment>,
     effect_markers: Vec<JsonDumpEffectMarker>,
+    custom_effects: Vec<JsonDumpCustomEffectSummary>,
+    target_usage: Vec<JsonDumpTargetUsage>,
     degradations: Vec<JsonDumpDegradation>,
     passes: Vec<JsonDumpPass>,
     bytes: Vec<u8>,
@@ -929,11 +1287,14 @@ pub(super) fn maybe_dump_render_plan_json(
         dump_scratch.passes.push(encode_pass(p));
     }
 
+    dump_scratch.custom_effects = summarize_custom_effects(&plan.passes);
+    dump_scratch.target_usage = summarize_target_usage(&plan.passes);
+
     let dir = dump_dir_from_env();
     let _ = std::fs::create_dir_all(&dir);
 
     let dump = RenderPlanJsonDump {
-        schema_version: 5,
+        schema_version: 6,
         frame_index,
         viewport_size: [viewport_size.0, viewport_size.1],
         format: format!("{format:?}"),
@@ -942,6 +1303,8 @@ pub(super) fn maybe_dump_render_plan_json(
         segments: &dump_scratch.segments,
         effect_markers: &dump_scratch.effect_markers,
         pass_counts: pass_counts(plan),
+        custom_effects: &dump_scratch.custom_effects,
+        target_usage: &dump_scratch.target_usage,
         estimated_peak_intermediate_bytes: plan.compile_stats.estimated_peak_intermediate_bytes,
         degradations: &dump_scratch.degradations,
         passes: &dump_scratch.passes,
