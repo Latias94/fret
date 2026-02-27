@@ -20,6 +20,7 @@ pub(super) fn handle_click_step(
 ) -> bool {
     let UiActionStepV2::Click {
         window: target_window,
+        pointer_kind,
         target,
         button,
         click_count,
@@ -168,11 +169,13 @@ pub(super) fn handle_click_step(
             "click",
         );
         let modifiers = core_modifiers_from_ui(modifiers);
+        let pointer_type = pointer_type_from_kind(pointer_kind);
         output.events.extend(click_events_with_modifiers(
             pos,
             button,
             click_count,
             modifiers,
+            pointer_type,
         ));
 
         active.wait_until = None;
@@ -204,6 +207,7 @@ pub(super) fn handle_click_stable_step(
 ) -> bool {
     let UiActionStepV2::ClickStable {
         window: _,
+        pointer_kind,
         target,
         button,
         click_count,
@@ -217,6 +221,7 @@ pub(super) fn handle_click_stable_step(
     };
 
     let click_modifiers = core_modifiers_from_ui(modifiers);
+    let pointer_type = pointer_type_from_kind(pointer_kind);
     active.wait_until = None;
     active.screenshot_wait = None;
 
@@ -348,6 +353,7 @@ pub(super) fn handle_click_stable_step(
                                 button,
                                 click_count,
                                 click_modifiers,
+                                pointer_type,
                             ));
                             active.wait_until = None;
                             active.screenshot_wait = None;
@@ -365,6 +371,7 @@ pub(super) fn handle_click_stable_step(
                             button,
                             click_count,
                             click_modifiers,
+                            pointer_type,
                         ));
                         active.wait_until = None;
                         active.screenshot_wait = None;
@@ -421,6 +428,7 @@ pub(super) fn handle_click_selectable_text_span_stable_step(
 ) -> bool {
     let UiActionStepV2::ClickSelectableTextSpanStable {
         window: _,
+        pointer_kind,
         target,
         tag,
         button,
@@ -435,6 +443,7 @@ pub(super) fn handle_click_selectable_text_span_stable_step(
     };
 
     let click_modifiers = core_modifiers_from_ui(modifiers);
+    let pointer_type = pointer_type_from_kind(pointer_kind);
     active.wait_until = None;
     active.screenshot_wait = None;
 
@@ -618,6 +627,7 @@ pub(super) fn handle_click_selectable_text_span_stable_step(
                                     button,
                                     click_count,
                                     click_modifiers,
+                                    pointer_type,
                                 ));
                                 active.next_step = active.next_step.saturating_add(1);
                                 active.v2_step_state = None;
@@ -634,6 +644,7 @@ pub(super) fn handle_click_selectable_text_span_stable_step(
                                 button,
                                 click_count,
                                 click_modifiers,
+                                pointer_type,
                             ));
                             active.next_step = active.next_step.saturating_add(1);
                             active.v2_step_state = None;
@@ -691,6 +702,7 @@ pub(super) fn handle_wheel_step(
 ) -> bool {
     let UiActionStepV2::Wheel {
         window: _,
+        pointer_kind,
         target,
         delta_x,
         delta_y,
@@ -803,7 +815,10 @@ pub(super) fn handle_wheel_step(
             svc.cfg.max_debug_string_bytes,
         );
     }
-    output.events.push(wheel_event(pos, delta_x, delta_y));
+    let pointer_type = pointer_type_from_kind(pointer_kind);
+    output
+        .events
+        .push(wheel_event(pos, delta_x, delta_y, pointer_type));
 
     active.wait_until = None;
     active.screenshot_wait = None;
@@ -830,10 +845,16 @@ pub(super) fn handle_move_pointer_step(
     output: &mut UiScriptFrameOutput,
     force_dump_label: &mut Option<String>,
 ) -> bool {
-    let UiActionStepV2::MovePointer { window: _, target } = step else {
+    let UiActionStepV2::MovePointer {
+        window: _,
+        pointer_kind,
+        target,
+    } = step
+    else {
         return false;
     };
 
+    let pointer_type = pointer_type_from_kind(pointer_kind);
     let Some(snapshot) = semantics_snapshot else {
         output.request_redraw = true;
         let label = format!("script-step-{step_index:04}-move_pointer-no-semantics");
@@ -937,7 +958,7 @@ pub(super) fn handle_move_pointer_step(
             svc.cfg.max_debug_string_bytes,
         );
     }
-    output.events.push(move_pointer_event(pos));
+    output.events.push(move_pointer_event(pos, pointer_type));
 
     active.wait_until = None;
     active.screenshot_wait = None;

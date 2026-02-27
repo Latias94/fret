@@ -731,11 +731,12 @@ Supported selectors (v1 MVP):
 
 Pointer kind note (as of 2026-02-27):
 
-- Scripted pointer steps currently inject `PointerType::Mouse` only (no script field to request touch/pen).
-- Bundles still record the observed `primary_pointer_type`/`pointer_type` for evidence, but this is not a controllable
-  injection parameter yet.
-- Future work is tracked under `diag.pointer_kind_touch` (capability-gated touch injection) in
-  `docs/workstreams/diag-extensibility-and-capabilities-v1/capabilities.md`.
+- Pointer-driven steps support an optional `pointer_kind` field: `mouse` (default) or `touch`.
+- `pointer_kind` is omitted from JSON when unset; existing scripts remain mouse-based.
+- Requesting `pointer_kind: touch` requires the runner to advertise `diag.pointer_kind_touch`.
+  Tooling fails fast and writes `check.capabilities.json` evidence when the capability is missing.
+- For cross-step pointer sessions (`pointer_down`/`pointer_move`/`pointer_up`), `pointer_down.pointer_kind` sets the
+  session kind; `pointer_move`/`pointer_up` must either omit `pointer_kind` or match the session kind.
 
 Additional predicate kinds are occasionally added to unblock new regression gates (for example menu a11y checks).
 When authoring scripts, prefer stable `test_id` selectors and stick to predicates documented here; see

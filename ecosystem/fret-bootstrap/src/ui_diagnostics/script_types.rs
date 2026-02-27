@@ -129,6 +129,7 @@ pub(super) enum V2StepState {
 pub(super) struct V2PointerSessionState {
     pub(super) window: AppWindowId,
     pub(super) button: UiMouseButtonV1,
+    pub(super) pointer_type: fret_core::PointerType,
     pub(super) modifiers: Modifiers,
     pub(super) position: Point,
 }

@@ -291,6 +291,7 @@ impl UiDiagnosticsService {
         if self.cfg.screenshots_enabled {
             caps.push("diag.screenshot_png".to_string());
         }
+        caps.push("diag.pointer_kind_touch".to_string());
         caps.push("diag.inject_ime".to_string());
         if !cfg!(target_arch = "wasm32") {
             caps.push("diag.multi_window".to_string());

@@ -109,26 +109,27 @@ Then:
 
 Status (2026-02-27):
 
-- Scripted pointer steps (click/move/drag/wheel/pointer session) currently inject `PointerType::Mouse` only.
-- There is no script-level field to request touch/pen injection yet.
-- Bundles still record pointer type for evidence (e.g. `primary_pointer_type`), but this is observational only.
+- Pointer-driven Script v2 steps accept an optional `pointer_kind` field: `mouse` (default) or `touch`.
+- Tooling infers `diag.pointer_kind_touch` when any step requests `pointer_kind=touch`.
+- The default path is unchanged: scripts that omit `pointer_kind` remain mouse-based and do not require any new
+  capabilities.
+- Cross-step pointer sessions: `pointer_down.pointer_kind` sets the session kind; `pointer_move`/`pointer_up` must either
+  omit `pointer_kind` or match the session kind.
 
-Planned direction:
+Runner note:
 
-- Extend pointer-driven steps with an optional `pointer_kind` (or `pointer_type`) field (default: `mouse`) so that suites
-  can exercise touch-specific behaviors deterministically (where supported).
-- Gate non-mouse injection behind explicit runner capabilities:
-  - `pointer_kind=touch` ⇒ require `diag.pointer_kind_touch`
-  - (future) `pointer_kind=pen` ⇒ require `diag.pointer_kind_pen` (or reuse a generic `diag.pointer_kind_pen`)
-- Keep the default path unchanged: existing scripts remain mouse-based and do not require any new capabilities.
+- `fret-bootstrap` maps `pointer_kind` to `fret_core::PointerType` for injected events and advertises
+  `diag.pointer_kind_touch` via both `capabilities.json` and the DevTools WS hello.
+
+Future direction:
+
+- (future) `pointer_kind=pen` ⇒ require `diag.pointer_kind_pen` (or a generic `diag.pointer_kind_pen`).
 
 Non-goal (v1): multi-touch / pressure / tilt / contact geometry. These likely require a separate capability namespace and
 more explicit gesture-level steps (`tap`, `long_press`, `swipe`, `pinch`) rather than overloading mouse-style steps.
 
 Open questions (tracked for M10):
 
-- Do we want `pointer_kind` on existing pointer-driven steps, or a separate `set_pointer_kind` step that affects a
-  pointer session?
 - Should touch be expressed as high-level gestures (`tap`, `swipe`, `pinch`) rather than mouse-analog actions?
 - Do we need multi-pointer IDs for multi-touch tests, or is single-pointer touch injection enough for early coverage?
 

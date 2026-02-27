@@ -40,10 +40,10 @@ Doc: `docs/workstreams/diag-extensibility-and-capabilities-v1/capabilities.md`
   - [x] emit evidence file `check.capabilities.json` (machine-readable),
   - [x] `diag repro` includes gating failures in `repro.summary.json`.
 - [ ] Pointer kind injection (touch/pen) is explicit and capability-gated:
-  - [x] document current status: scripts inject mouse only (evidence still records pointer type),
-  - [ ] decide protocol shape (preferred: optional `pointer_kind` on pointer-driven steps; default: `mouse`),
-  - [ ] implement runner support for `pointer_kind=touch` (and advertise `diag.pointer_kind_touch` when available),
-  - [ ] tooling infers required capability when a script requests `pointer_kind=touch`,
+  - [x] document status: pointer-driven steps support optional `pointer_kind` (`mouse` default; capability-gated `touch`),
+  - [x] decide protocol shape (optional `pointer_kind` on pointer-driven steps; default: `mouse`),
+  - [x] implement runner support for `pointer_kind=touch` (and advertise `diag.pointer_kind_touch` when available),
+  - [x] tooling infers required capability when a script requests `pointer_kind=touch`,
   - [ ] add at least one small script/demo that exercises touch kind (and fails fast when unsupported).
 
 ## Evidence & trace (debuggability surfaces)
@@ -90,6 +90,9 @@ Doc: `docs/workstreams/diag-extensibility-and-capabilities-v1/script-tooling.md`
   - [x] add a `fret-diag-scriptgen check-suite ui-gallery-combobox` closure for the Combobox suite,
   - [ ] ensure generated scripts match checked-in scripts (when applicable),
   - [ ] prefer `.fret/diag/scripts` for local generation (avoid accidental churn in `tools/diag-scripts/`).
+- [ ] Script path modularization:
+  - [ ] define a v2 layout that keeps `tools/diag-scripts/` shallow (suites under subfolders, shared fragments under `_shared/`),
+  - [ ] add a migration utility that moves scripts and updates any registries/refs in a single deterministic step.
 - [x] Add `diag script shrink` (delta debugging) to minimize flaky/large repros:
   - [x] emit `target/fret-diag/shrink/script.min.json` + `target/fret-diag/shrink/shrink.summary.json` (or `--shrink-out`).
 - [x] Add a suite-level summary artifact for `diag suite`:

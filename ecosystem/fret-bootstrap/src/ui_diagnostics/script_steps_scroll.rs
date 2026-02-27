@@ -50,6 +50,7 @@ pub(super) fn handle_scroll_into_view_step(
 ) -> bool {
     let UiActionStepV2::ScrollIntoView {
         window: _,
+        pointer_kind,
         container,
         target,
         delta_x,
@@ -64,6 +65,7 @@ pub(super) fn handle_scroll_into_view_step(
         return false;
     };
 
+    let pointer_type = pointer_type_from_kind(pointer_kind);
     active.wait_until = None;
     active.screenshot_wait = None;
 
@@ -343,10 +345,10 @@ pub(super) fn handle_scroll_into_view_step(
                 );
             }
 
-            output.events.push(move_pointer_event(pos));
+            output.events.push(move_pointer_event(pos, pointer_type));
             output
                 .events
-                .push(wheel_event(pos, effective_dx, effective_dy));
+                .push(wheel_event(pos, effective_dx, effective_dy, pointer_type));
         }
 
         state.remaining_frames = state.remaining_frames.saturating_sub(1);

@@ -389,6 +389,8 @@ pub enum UiActionStepV2 {
     Click {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         window: Option<UiWindowTargetV1>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pointer_kind: Option<UiPointerKindV1>,
         target: UiSelectorV1,
         #[serde(default)]
         button: UiMouseButtonV1,
@@ -404,6 +406,8 @@ pub enum UiActionStepV2 {
     MovePointer {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         window: Option<UiWindowTargetV1>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pointer_kind: Option<UiPointerKindV1>,
         target: UiSelectorV1,
     },
     /// Move the pointer to a target and issue a pointer down, keeping the session active across
@@ -413,6 +417,8 @@ pub enum UiActionStepV2 {
     PointerDown {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         window: Option<UiWindowTargetV1>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pointer_kind: Option<UiPointerKindV1>,
         target: UiSelectorV1,
         #[serde(default)]
         button: UiMouseButtonV1,
@@ -422,6 +428,8 @@ pub enum UiActionStepV2 {
     DragPointer {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         window: Option<UiWindowTargetV1>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pointer_kind: Option<UiPointerKindV1>,
         target: UiSelectorV1,
         #[serde(default)]
         button: UiMouseButtonV1,
@@ -438,6 +446,8 @@ pub enum UiActionStepV2 {
     PointerMove {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         window: Option<UiWindowTargetV1>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pointer_kind: Option<UiPointerKindV1>,
         delta_x: f32,
         delta_y: f32,
         #[serde(default = "default_drag_steps")]
@@ -451,11 +461,15 @@ pub enum UiActionStepV2 {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         window: Option<UiWindowTargetV1>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        pointer_kind: Option<UiPointerKindV1>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
         button: Option<UiMouseButtonV1>,
     },
     MovePointerSweep {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         window: Option<UiWindowTargetV1>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pointer_kind: Option<UiPointerKindV1>,
         target: UiSelectorV1,
         delta_x: f32,
         delta_y: f32,
@@ -467,6 +481,8 @@ pub enum UiActionStepV2 {
     Wheel {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         window: Option<UiWindowTargetV1>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pointer_kind: Option<UiPointerKindV1>,
         target: UiSelectorV1,
         #[serde(default)]
         delta_x: f32,
@@ -548,6 +564,8 @@ pub enum UiActionStepV2 {
     ClickStable {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         window: Option<UiWindowTargetV1>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pointer_kind: Option<UiPointerKindV1>,
         target: UiSelectorV1,
         #[serde(default)]
         button: UiMouseButtonV1,
@@ -574,6 +592,8 @@ pub enum UiActionStepV2 {
     ClickSelectableTextSpanStable {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         window: Option<UiWindowTargetV1>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pointer_kind: Option<UiPointerKindV1>,
         target: UiSelectorV1,
         tag: String,
         #[serde(default)]
@@ -622,6 +642,8 @@ pub enum UiActionStepV2 {
     ScrollIntoView {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         window: Option<UiWindowTargetV1>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pointer_kind: Option<UiPointerKindV1>,
         container: UiSelectorV1,
         target: UiSelectorV1,
         #[serde(default)]
@@ -642,6 +664,8 @@ pub enum UiActionStepV2 {
     TypeTextInto {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         window: Option<UiWindowTargetV1>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pointer_kind: Option<UiPointerKindV1>,
         target: UiSelectorV1,
         text: String,
         #[serde(default)]
@@ -652,6 +676,8 @@ pub enum UiActionStepV2 {
     MenuSelect {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         window: Option<UiWindowTargetV1>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pointer_kind: Option<UiPointerKindV1>,
         menu: UiSelectorV1,
         item: UiSelectorV1,
         #[serde(default = "default_action_timeout_frames")]
@@ -660,6 +686,8 @@ pub enum UiActionStepV2 {
     MenuSelectPath {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         window: Option<UiWindowTargetV1>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pointer_kind: Option<UiPointerKindV1>,
         path: Vec<UiSelectorV1>,
         #[serde(default = "default_action_timeout_frames")]
         timeout_frames: u32,
@@ -667,6 +695,8 @@ pub enum UiActionStepV2 {
     DragTo {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         window: Option<UiWindowTargetV1>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pointer_kind: Option<UiPointerKindV1>,
         from: UiSelectorV1,
         to: UiSelectorV1,
         #[serde(default)]
@@ -679,6 +709,8 @@ pub enum UiActionStepV2 {
     SetSliderValue {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         window: Option<UiWindowTargetV1>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pointer_kind: Option<UiPointerKindV1>,
         target: UiSelectorV1,
         value: f32,
         #[serde(default = "default_slider_min")]
@@ -789,6 +821,8 @@ pub enum UiActionStepV2 {
     DragPointerUntil {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         window: Option<UiWindowTargetV1>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pointer_kind: Option<UiPointerKindV1>,
         target: UiSelectorV1,
         #[serde(default)]
         button: UiMouseButtonV1,
@@ -811,13 +845,18 @@ impl From<UiActionStepV1> for UiActionStepV2 {
                 click_count,
             } => Self::Click {
                 window: None,
+                pointer_kind: None,
                 target,
                 button,
                 click_count,
                 modifiers: None,
             },
             UiActionStepV1::ResetDiagnostics => Self::ResetDiagnostics,
-            UiActionStepV1::MovePointer { window, target } => Self::MovePointer { window, target },
+            UiActionStepV1::MovePointer { window, target } => Self::MovePointer {
+                window,
+                pointer_kind: None,
+                target,
+            },
             UiActionStepV1::DragPointer {
                 target,
                 button,
@@ -826,6 +865,7 @@ impl From<UiActionStepV1> for UiActionStepV2 {
                 steps,
             } => Self::DragPointer {
                 window: None,
+                pointer_kind: None,
                 target,
                 button,
                 delta_x,
@@ -838,6 +878,7 @@ impl From<UiActionStepV1> for UiActionStepV2 {
                 delta_y,
             } => Self::Wheel {
                 window: None,
+                pointer_kind: None,
                 target,
                 delta_x,
                 delta_y,
@@ -959,6 +1000,14 @@ impl UiMouseButtonV1 {
             | fret_core::MouseButton::Other(_) => Self::Left,
         }
     }
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiPointerKindV1 {
+    #[default]
+    Mouse,
+    Touch,
 }
 
 #[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]
@@ -2463,5 +2512,44 @@ mod tests {
         let parsed: DiagScreenshotResultFileV1 = serde_json::from_value(value).unwrap();
         assert_eq!(parsed.schema_version, 1);
         assert_eq!(DiagScreenshotResultFileV1::default().schema_version, 1);
+    }
+
+    #[test]
+    fn click_step_pointer_kind_round_trips_and_omits_none() {
+        let step = UiActionStepV2::Click {
+            window: None,
+            pointer_kind: None,
+            target: UiSelectorV1::TestId {
+                id: "a".to_string(),
+            },
+            button: UiMouseButtonV1::Left,
+            click_count: 1,
+            modifiers: None,
+        };
+        let value = serde_json::to_value(step.clone()).unwrap();
+        assert_eq!(
+            value,
+            serde_json::json!({
+              "type": "click",
+              "target": {"kind":"test_id","id":"a"},
+              "button": "left"
+            })
+        );
+
+        let parsed: UiActionStepV2 = serde_json::from_value(serde_json::json!({
+          "type": "click",
+          "pointer_kind": "touch",
+          "target": {"kind":"test_id","id":"a"},
+          "button": "left",
+          "click_count": 1
+        }))
+        .unwrap();
+        assert!(matches!(
+            parsed,
+            UiActionStepV2::Click {
+                pointer_kind: Some(UiPointerKindV1::Touch),
+                ..
+            }
+        ));
     }
 }

@@ -147,19 +147,15 @@ Definition of done:
 
 ### M10: Touch/gesture (future mobile alignment)
 
-- [ ] Define pointer-kind support and minimal gesture steps (tap/long-press/swipe/pinch).
-- [ ] Ensure all gesture steps are optional and capability-gated.
+- [x] Extend pointer-driven steps with optional `pointer_kind` (default: `mouse`; supported: `touch`).
+- [x] Tooling infers and gates `diag.pointer_kind_touch` (fail fast with `check.capabilities.json` evidence).
+- [ ] Add at least one small script that demonstrates touch injection (or a deterministic “unsupported” failure) without
+  relying on screenshots.
+- [ ] Define minimal gesture steps (tap/long-press/swipe/pinch) and gate them behind explicit capabilities.
 
 Status (2026-02-27):
 
-- Scripted pointer steps inject mouse input only; touch/pen injection is not exposed in the script schema yet.
-
-Definition of done (proposed):
-
-- The script schema can request a non-mouse pointer kind (at least `touch`) for pointer-driven steps, defaulting to mouse.
-- Tooling gates touch injection behind `diag.pointer_kind_touch` (fail fast with `check.capabilities.json` evidence).
-- At least one small script demonstrates touch injection (or a deterministic “unsupported” failure) without relying on
-  screenshots.
+- `pointer_kind: touch` is supported by `fret-bootstrap` and advertised as `diag.pointer_kind_touch`.
 
 ### M11: CI guardrails for contract evolution
 

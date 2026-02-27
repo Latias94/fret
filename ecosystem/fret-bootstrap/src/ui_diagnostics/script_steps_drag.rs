@@ -20,6 +20,7 @@ pub(super) fn handle_drag_pointer_step(
 ) -> bool {
     let UiActionStepV2::DragPointer {
         window: target_window,
+        pointer_kind,
         target,
         button,
         delta_x,
@@ -30,6 +31,7 @@ pub(super) fn handle_drag_pointer_step(
         return false;
     };
 
+    let pointer_type = pointer_type_from_kind(pointer_kind);
     active.wait_until = None;
     active.screenshot_wait = None;
     output.request_redraw = true;
@@ -197,7 +199,7 @@ pub(super) fn handle_drag_pointer_step(
         let mut burst_frames: u32 = 0;
         let burst_limit = state.steps.saturating_add(2).min(512);
         while !done && burst_frames < burst_limit {
-            done = push_drag_playback_frame(&mut state, &mut output.events);
+            done = push_drag_playback_frame(&mut state, &mut output.events, pointer_type);
             burst_frames = burst_frames.saturating_add(1);
         }
         let _ = write_cursor_override_window_client_logical(
@@ -259,6 +261,7 @@ pub(super) fn handle_drag_pointer_until_step(
 ) -> bool {
     let UiActionStepV2::DragPointerUntil {
         window: target_window,
+        pointer_kind,
         target,
         button,
         delta_x,
@@ -271,6 +274,7 @@ pub(super) fn handle_drag_pointer_until_step(
         return false;
     };
 
+    let pointer_type = pointer_type_from_kind(pointer_kind);
     active.wait_until = None;
     active.screenshot_wait = None;
     output.request_redraw = true;
@@ -439,6 +443,7 @@ pub(super) fn handle_drag_pointer_until_step(
                         output.events.extend(pointer_up_with_internal_drop_events(
                             state.playback.button,
                             release_pos,
+                            pointer_type,
                         ));
                         let _ = write_mouse_buttons_override_all_windows_v1(
                             &svc.cfg.out_dir,
@@ -530,11 +535,16 @@ pub(super) fn handle_drag_pointer_until_step(
                     // pointer-up until the predicate is satisfied; `drag_pointer_until` is
                     // allowed to "hold" the drag at the end position across frames.
                     if !reached_end {
-                        let _ = push_drag_playback_frame(&mut state.playback, &mut output.events);
+                        let _ = push_drag_playback_frame(
+                            &mut state.playback,
+                            &mut output.events,
+                            pointer_type,
+                        );
                     } else {
                         output.events.extend(pointer_move_with_internal_over_events(
                             state.playback.button,
                             state.playback.end,
+                            pointer_type,
                         ));
                     }
 
@@ -585,6 +595,7 @@ pub(super) fn handle_drag_to_step(
 ) -> Option<DragToStepReturn> {
     let UiActionStepV2::DragTo {
         window: target_window,
+        pointer_kind,
         from,
         to,
         button,
@@ -595,6 +606,7 @@ pub(super) fn handle_drag_to_step(
         return None;
     };
 
+    let pointer_type = pointer_type_from_kind(pointer_kind);
     active.wait_until = None;
     active.screenshot_wait = None;
 
@@ -775,7 +787,7 @@ pub(super) fn handle_drag_to_step(
             }
         };
 
-        let done = push_drag_playback_frame(&mut playback, &mut output.events);
+        let done = push_drag_playback_frame(&mut playback, &mut output.events, pointer_type);
         let _ = write_cursor_override_window_client_logical(
             &svc.cfg.out_dir,
             playback.window,

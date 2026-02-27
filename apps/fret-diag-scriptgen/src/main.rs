@@ -691,6 +691,8 @@ fn ui_gallery_combobox_flip_tight_window_v2() -> UiActionScriptV2 {
             height_px: 240.0,
         })
         .push(UiActionStepV2::ScrollIntoView {
+            window: None,
+            pointer_kind: None,
             container: test_id("ui-gallery-page-combobox"),
             target: rtl_trigger.clone(),
             delta_x: 0.0,
@@ -807,6 +809,8 @@ fn ui_gallery_combobox_long_list_scroll_select_last_v2() -> UiActionScriptV2 {
 
     let script = ui_gallery_nav_to_combobox_page()
         .push(UiActionStepV2::ScrollIntoView {
+            window: None,
+            pointer_kind: None,
             container: test_id("ui-gallery-page-combobox"),
             target: trigger.clone(),
             delta_x: 0.0,
@@ -831,6 +835,8 @@ fn ui_gallery_combobox_long_list_scroll_select_last_v2() -> UiActionScriptV2 {
         )
         .push(wait_bounds_within_window_step(listbox.clone(), 240))
         .push(UiActionStepV2::ScrollIntoView {
+            window: None,
+            pointer_kind: None,
             container: listbox.clone(),
             target: last_item.clone(),
             delta_x: 0.0,
@@ -846,6 +852,8 @@ fn ui_gallery_combobox_long_list_scroll_select_last_v2() -> UiActionScriptV2 {
         .click_stable(trigger.clone())
         .wait_exists(listbox.clone(), 240)
         .push(UiActionStepV2::ScrollIntoView {
+            window: None,
+            pointer_kind: None,
             container: listbox.clone(),
             target: last_item.clone(),
             delta_x: 0.0,
@@ -1349,21 +1357,29 @@ fn ui_gallery_select_wheel_scroll_v2() -> UiActionScriptV2 {
             240,
         ))
         .push(UiActionStepV2::MovePointer {
+            window: None,
+            pointer_kind: None,
             target: test_id("ui-gallery-select-item-apple"),
         })
         .push(UiActionStepV2::Wheel {
+            window: None,
+            pointer_kind: None,
             target: test_id("ui-gallery-select-item-apple"),
             delta_x: 0.0,
             delta_y: -120.0,
         })
         .wait_frames(5)
         .push(UiActionStepV2::Wheel {
+            window: None,
+            pointer_kind: None,
             target: test_id("ui-gallery-select-item-apple"),
             delta_x: 0.0,
             delta_y: -240.0,
         })
         .wait_frames(5)
         .push(UiActionStepV2::Wheel {
+            window: None,
+            pointer_kind: None,
             target: test_id("ui-gallery-select-item-apple"),
             delta_x: 0.0,
             delta_y: 120.0,
@@ -1395,10 +1411,14 @@ fn ui_gallery_select_wheel_up_from_bottom_v2() -> UiActionScriptV2 {
         .wait_frames(10)
         .wait_exists(test_id("ui-gallery-select-item-item-40"), 120)
         .push(UiActionStepV2::MovePointer {
+            window: None,
+            pointer_kind: None,
             target: test_id("ui-gallery-select-item-item-40"),
         })
         .wait_frames(5)
         .push(UiActionStepV2::Wheel {
+            window: None,
+            pointer_kind: None,
             target: test_id("ui-gallery-select-item-item-40"),
             delta_x: 0.0,
             delta_y: 2400.0,

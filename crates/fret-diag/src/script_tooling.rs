@@ -1,5 +1,6 @@
 use fret_diag_protocol::{
-    UiActionScriptV1, UiActionScriptV2, UiActionStepV1, UiActionStepV2, UiWindowTargetV1,
+    UiActionScriptV1, UiActionScriptV2, UiActionStepV1, UiActionStepV2, UiPointerKindV1,
+    UiWindowTargetV1,
 };
 use serde_json::Value;
 use std::collections::BTreeSet;
@@ -431,6 +432,28 @@ fn infer_required_capabilities_v2(script: &UiActionScriptV2) -> Vec<String> {
             _ => None,
         }
     }
+    fn step_pointer_kind(step: &UiActionStepV2) -> Option<UiPointerKindV1> {
+        match step {
+            UiActionStepV2::Click { pointer_kind, .. }
+            | UiActionStepV2::MovePointer { pointer_kind, .. }
+            | UiActionStepV2::PointerDown { pointer_kind, .. }
+            | UiActionStepV2::DragPointer { pointer_kind, .. }
+            | UiActionStepV2::PointerMove { pointer_kind, .. }
+            | UiActionStepV2::PointerUp { pointer_kind, .. }
+            | UiActionStepV2::MovePointerSweep { pointer_kind, .. }
+            | UiActionStepV2::Wheel { pointer_kind, .. }
+            | UiActionStepV2::ClickStable { pointer_kind, .. }
+            | UiActionStepV2::ClickSelectableTextSpanStable { pointer_kind, .. }
+            | UiActionStepV2::ScrollIntoView { pointer_kind, .. }
+            | UiActionStepV2::TypeTextInto { pointer_kind, .. }
+            | UiActionStepV2::MenuSelect { pointer_kind, .. }
+            | UiActionStepV2::MenuSelectPath { pointer_kind, .. }
+            | UiActionStepV2::DragTo { pointer_kind, .. }
+            | UiActionStepV2::SetSliderValue { pointer_kind, .. }
+            | UiActionStepV2::DragPointerUntil { pointer_kind, .. } => *pointer_kind,
+            _ => None,
+        }
+    }
     push_cap(&mut caps, "diag.script_v2");
     for step in &script.steps {
         if let Some(window) = step_window_target(step)
@@ -452,6 +475,9 @@ fn infer_required_capabilities_v2(script: &UiActionScriptV2) -> Vec<String> {
         }
         if matches!(step, UiActionStepV2::SetMouseButtons { .. }) {
             push_cap(&mut caps, "diag.mouse_buttons_override");
+        }
+        if matches!(step_pointer_kind(step), Some(UiPointerKindV1::Touch)) {
+            push_cap(&mut caps, "diag.pointer_kind_touch");
         }
     }
     caps
@@ -530,6 +556,7 @@ pub(crate) fn canonicalize_json_value(value: &mut Value) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fret_diag_protocol::{UiMouseButtonV1, UiSelectorV1};
 
     #[test]
     fn canonicalize_sorts_keys_recursively() {
@@ -558,5 +585,25 @@ mod tests {
         let inferred = infer_required_capabilities_v2(&script);
         assert!(inferred.iter().any(|c| c == "diag.script_v2"));
         assert!(inferred.iter().any(|c| c == "diag.screenshot_png"));
+    }
+
+    #[test]
+    fn lint_infers_pointer_kind_touch_capability() {
+        let script = UiActionScriptV2 {
+            schema_version: 2,
+            meta: None,
+            steps: vec![UiActionStepV2::Click {
+                window: None,
+                pointer_kind: Some(UiPointerKindV1::Touch),
+                target: UiSelectorV1::TestId {
+                    id: "touch-target".to_string(),
+                },
+                button: UiMouseButtonV1::Left,
+                click_count: 1,
+                modifiers: None,
+            }],
+        };
+        let inferred = infer_required_capabilities_v2(&script);
+        assert!(inferred.iter().any(|c| c == "diag.pointer_kind_touch"));
     }
 }

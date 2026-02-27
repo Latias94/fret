@@ -45,6 +45,7 @@ impl UiDiagnosticsWsBridge {
             "devtools.bundles".to_string(),
             // Runner/diagnostics capabilities (used for fail-fast gating).
             "diag.script_v2".to_string(),
+            "diag.pointer_kind_touch".to_string(),
             "diag.text_ime_trace".to_string(),
             "diag.text_input_snapshot".to_string(),
             "diag.shortcut_routing_trace".to_string(),
