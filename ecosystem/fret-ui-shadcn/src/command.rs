@@ -374,6 +374,7 @@ fn cmdk_highlighted_label<H: UiHost>(
     label: Arc<str>,
     query: &str,
     fg: Color,
+    nonmatch_fg: Color,
     text_style: TextStyle,
 ) -> AnyElement {
     let text_px = text_style.size;
@@ -402,8 +403,6 @@ fn cmdk_highlighted_label<H: UiHost>(
             .into_element(cx);
     }
 
-    let muted_fg = Theme::global(&*cx.app).color_token("muted-foreground");
-
     let ranges = cmdk_score::command_match_ranges(label.as_ref(), query);
     if ranges.is_empty() {
         return apply_text_style(ui::text(cx, label))
@@ -427,7 +426,7 @@ fn cmdk_highlighted_label<H: UiHost>(
                 .into();
             pieces.push(
                 apply_text_style(ui::text(cx, text))
-                    .text_color(ColorRef::Color(muted_fg))
+                    .text_color(ColorRef::Color(nonmatch_fg))
                     .into_element(cx),
             );
         }
@@ -454,7 +453,7 @@ fn cmdk_highlighted_label<H: UiHost>(
             .into();
         pieces.push(
             apply_text_style(ui::text(cx, text))
-                .text_color(ColorRef::Color(muted_fg))
+                .text_color(ColorRef::Color(nonmatch_fg))
                 .into_element(cx),
         );
     }
@@ -1507,8 +1506,11 @@ impl CommandList {
                 radius,
                 ring,
                 bg_hover,
+                fg_selected,
                 fg,
                 fg_disabled,
+                icon_fg,
+                icon_fg_disabled,
                 text_style,
                 item_layout,
             ) = {
@@ -1521,8 +1523,11 @@ impl CommandList {
                 let radius = MetricRef::radius(Radius::Sm).resolve(&theme);
                 let ring = decl_style::focus_ring(&theme, radius);
                 let bg_hover = item_bg_hover(&theme);
+                let fg_selected = theme.color_token("accent-foreground");
                 let fg = theme.color_token("foreground");
                 let fg_disabled = alpha_mul(fg, 0.5);
+                let icon_fg = theme.color_token("muted-foreground");
+                let icon_fg_disabled = alpha_mul(icon_fg, 0.5);
                 let text_style = item_text_style(&theme);
                 let item_layout = decl_style::layout_style(
                     &theme,
@@ -1535,8 +1540,11 @@ impl CommandList {
                     radius,
                     ring,
                     bg_hover,
+                    fg_selected,
                     fg,
                     fg_disabled,
+                    icon_fg,
+                    icon_fg_disabled,
                     text_style,
                     item_layout,
                 )
@@ -1729,8 +1737,10 @@ impl CommandList {
                                             }
                                             let hovered = st.hovered && !st.pressed;
                                             let pressed = st.pressed;
+                                            let focused = st.focused;
+                                            let selected = focused || hovered || pressed;
 
-                                            let bg = (hovered || pressed).then_some(bg_hover);
+                                            let bg = selected.then_some(bg_hover);
                                             let props = ContainerProps {
                                                 layout: {
                                                     let mut layout = LayoutStyle::default();
@@ -1753,11 +1763,23 @@ impl CommandList {
                                             };
 
                                             let child = cx.container(props, move |cx| {
-                                                let effective_fg =
-                                                    if enabled { fg } else { fg_disabled };
+                                                let text_fg = if enabled {
+                                                    if selected { fg_selected } else { fg }
+                                                } else {
+                                                    fg_disabled
+                                                };
+                                                let nonmatch_text_fg = if !enabled {
+                                                    icon_fg_disabled
+                                                } else if selected {
+                                                    text_fg
+                                                } else {
+                                                    icon_fg
+                                                };
+                                                let effective_icon_fg =
+                                                    if enabled { icon_fg } else { icon_fg_disabled };
                                                 current_color::scope_children(
                                                     cx,
-                                                    ColorRef::Color(effective_fg),
+                                                    ColorRef::Color(text_fg),
                                                     |cx| {
                                                         vec![cx.row(
                                                             RowProps {
@@ -1779,8 +1801,13 @@ impl CommandList {
                                                                     if let Some(icon) =
                                                                         leading_icon.clone()
                                                                     {
-                                                                        out.push(decl_icon::icon(
-                                                                            cx, icon,
+                                                                        out.push(decl_icon::icon_with(
+                                                                            cx,
+                                                                            icon,
+                                                                            None,
+                                                                            Some(ColorRef::Color(
+                                                                                effective_icon_fg,
+                                                                            )),
                                                                         ));
                                                                     }
                                                                     out.push(
@@ -1788,7 +1815,8 @@ impl CommandList {
                                                                             cx,
                                                                             label.clone(),
                                                                             query_for_row.as_ref(),
-                                                                            effective_fg,
+                                                                            text_fg,
+                                                                            nonmatch_text_fg,
                                                                             text_style.clone(),
                                                                         ),
                                                                     );
@@ -2691,8 +2719,11 @@ impl CommandPalette {
 
             let bg_hover = item_bg_hover(&theme);
             let bg_selected = bg_hover;
+            let fg_selected = theme.color_token("accent-foreground");
             let fg = theme.color_token("foreground");
             let fg_disabled = alpha_mul(fg, 0.5);
+            let muted_fg = theme.color_token("muted-foreground");
+            let muted_fg_disabled = alpha_mul(muted_fg, 0.5);
             let text_style = item_text_style(&theme);
             let item_layout = decl_style::layout_style(
                 &theme,
@@ -2958,10 +2989,23 @@ impl CommandPalette {
                                     };
 
                                     let child = cx.container(props, move |cx| {
-                                        let effective_fg = if enabled { fg } else { fg_disabled };
+                                        let text_fg = if enabled {
+                                            if active_row { fg_selected } else { fg }
+                                        } else {
+                                            fg_disabled
+                                        };
+                                        let nonmatch_text_fg = if !enabled {
+                                            muted_fg_disabled
+                                        } else if active_row {
+                                            text_fg
+                                        } else {
+                                            muted_fg
+                                        };
+                                        let icon_fg =
+                                            if enabled { muted_fg } else { muted_fg_disabled };
                                         current_color::scope_children(
                                             cx,
-                                            ColorRef::Color(effective_fg),
+                                            ColorRef::Color(text_fg),
                                             |cx| {
                                                 vec![cx.row(
                                                     RowProps {
@@ -3016,7 +3060,9 @@ impl CommandPalette {
                                                                         cx,
                                                                         ids::ui::CHECK,
                                                                         Some(Px(16.0)),
-                                                                        None,
+                                                                        Some(ColorRef::Color(
+                                                                            icon_fg,
+                                                                        )),
                                                                     );
                                                                     let icon = cx.opacity(
                                                                         if checked {
@@ -3032,8 +3078,13 @@ impl CommandPalette {
                                                                 if let Some(icon) =
                                                                     leading_icon.clone()
                                                                 {
-                                                                    out.push(decl_icon::icon(
-                                                                        cx, icon,
+                                                                    out.push(decl_icon::icon_with(
+                                                                        cx,
+                                                                        icon,
+                                                                        None,
+                                                                        Some(ColorRef::Color(
+                                                                            icon_fg,
+                                                                        )),
                                                                     ));
                                                                 }
 
@@ -3041,7 +3092,8 @@ impl CommandPalette {
                                                                     cx,
                                                                     label.clone(),
                                                                     query_for_row.as_ref(),
-                                                                    effective_fg,
+                                                                    text_fg,
+                                                                    nonmatch_text_fg,
                                                                     text_style.clone(),
                                                                 ));
 
