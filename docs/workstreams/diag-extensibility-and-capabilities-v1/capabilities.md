@@ -125,6 +125,13 @@ Planned direction:
 Non-goal (v1): multi-touch / pressure / tilt / contact geometry. These likely require a separate capability namespace and
 more explicit gesture-level steps (`tap`, `long_press`, `swipe`, `pinch`) rather than overloading mouse-style steps.
 
+Open questions (tracked for M10):
+
+- Do we want `pointer_kind` on existing pointer-driven steps, or a separate `set_pointer_kind` step that affects a
+  pointer session?
+- Should touch be expressed as high-level gestures (`tap`, `swipe`, `pinch`) rather than mouse-analog actions?
+- Do we need multi-pointer IDs for multi-touch tests, or is single-pointer touch injection enough for early coverage?
+
 ### Evidence file for gating failures
 
 Recommended output: `check.capabilities.json`:
