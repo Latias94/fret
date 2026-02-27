@@ -449,6 +449,7 @@ impl Carousel {
             let runtime_for_move = runtime_model.clone();
             let offset_for_move = offset_model.clone();
             let max_offset_for_move = max_offset_model.clone();
+            let dnd_service_for_move = fret_ui_kit::dnd::dnd_service_model(cx);
             let on_move: fret_ui::action::OnPointerMove = Arc::new(move |host, _cx, mv| {
                 let runtime = host
                     .models_mut()
@@ -456,6 +457,18 @@ impl Carousel {
                     .ok()
                     .unwrap_or_default();
                 if !runtime.drag.armed && !runtime.drag.dragging {
+                    return false;
+                }
+
+                if fret_ui_kit::dnd::pointer_is_tracking_any_sensor(
+                    host.models_mut(),
+                    &dnd_service_for_move,
+                    _cx.window,
+                    mv.pointer_id,
+                ) {
+                    let _ = host.models_mut().update(&runtime_for_move, |st| {
+                        st.drag = headless_carousel::CarouselDragState::default();
+                    });
                     return false;
                 }
 
