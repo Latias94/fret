@@ -104,6 +104,7 @@ if left unspecified.
     and add one targeted conformance test that compares rrect vs path outcomes for a “rect-like path” shape.
   - Evidence (current implementations): `crates/fret-render-wgpu/src/renderer/shaders.rs` (rrect),
     `crates/fret-render-wgpu/src/renderer/path.rs` (path dashes).
+  - Evidence (conformance): `crates/fret-render-wgpu/tests/dash_semantics_rrect_vs_path_conformance.rs`.
 
 - [ ] Path MSAA correctness on Vulkan:
   - There is a known correctness risk for the MSAA path pipeline on Vulkan (currently gated by
