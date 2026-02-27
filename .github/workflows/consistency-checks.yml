@@ -47,6 +47,9 @@ jobs:
       - name: Check consumption profiles (portable)
         run: python3 tools/check_consumption_profiles.py
 
+      - name: Check fret-launch-core portability (no platform SDK deps)
+        run: python3 tools/check_launch_core_portability.py
+
   cargo-deny-licenses:
     name: cargo-deny (licenses/sources/advisories)
     runs-on: ubuntu-latest
