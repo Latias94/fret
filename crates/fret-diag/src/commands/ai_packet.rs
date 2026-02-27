@@ -433,26 +433,32 @@ pub(crate) fn generate_ai_packet_dir_sidecars_only(
     }
     std::fs::create_dir_all(packet_dir).map_err(|e| e.to_string())?;
 
-    let meta_path = bundle_dir.join("bundle.meta.json");
-    let test_ids_index_path = bundle_dir.join("test_ids.index.json");
-    let bundle_index_path = bundle_dir.join("bundle.index.json");
-    let frames_index_path = bundle_dir.join("frames.index.json");
-
-    let required = [
-        (&meta_path, "bundle.meta.json"),
-        (&test_ids_index_path, "test_ids.index.json"),
-        (&bundle_index_path, "bundle.index.json"),
-        (&frames_index_path, "frames.index.json"),
-    ];
-    for (p, name) in required {
-        if !p.is_file() {
-            return Err(format!(
-                "ai-packet --sidecars-only requires {name} under the bundle dir (missing: {})",
-                p.display()
-            ));
+    let root_dir = bundle_dir.join("_root");
+    let find_required = |name: &str| -> Result<PathBuf, String> {
+        let direct = bundle_dir.join(name);
+        if direct.is_file() {
+            return Ok(direct);
         }
-        fs::copy_file_named(p, packet_dir, name)?;
-    }
+        let under_root = root_dir.join(name);
+        if under_root.is_file() {
+            return Ok(under_root);
+        }
+        Err(format!(
+            "ai-packet --sidecars-only requires {name} under the bundle dir (missing: {} and {})",
+            direct.display(),
+            under_root.display()
+        ))
+    };
+
+    let meta_path = find_required("bundle.meta.json")?;
+    let test_ids_index_path = find_required("test_ids.index.json")?;
+    let bundle_index_path = find_required("bundle.index.json")?;
+    let frames_index_path = find_required("frames.index.json")?;
+
+    fs::copy_file_named(&meta_path, packet_dir, "bundle.meta.json")?;
+    fs::copy_file_named(&test_ids_index_path, packet_dir, "test_ids.index.json")?;
+    fs::copy_file_named(&bundle_index_path, packet_dir, "bundle.index.json")?;
+    fs::copy_file_named(&frames_index_path, packet_dir, "frames.index.json")?;
 
     let bundle_path_for_schema2 = bundle_path
         .map(|p| p.to_path_buf())
@@ -666,5 +672,94 @@ mod tests {
         assert!(packet_dir.join("hotspots.lite.json").is_file());
         assert!(packet_dir.join("doctor.json").is_file());
         assert!(packet_dir.join("triage.error.json").is_file());
+    }
+
+    #[test]
+    fn ai_packet_sidecars_only_accepts_sidecars_under_root_dir() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-ai-packet-sidecars-only-root-{}",
+            crate::util::now_unix_ms()
+        ));
+        let bundle_dir = root.join("bundle");
+        let bundle_root = bundle_dir.join("_root");
+        let packet_dir = root.join("packet");
+        std::fs::create_dir_all(&bundle_root).expect("create bundle/_root dir");
+
+        std::fs::write(
+            bundle_root.join("bundle.meta.json"),
+            serde_json::to_vec(&serde_json::json!({
+                "kind": "bundle_meta",
+                "schema_version": 1,
+                "warmup_frames": 0,
+                "bundle": "bundle.json",
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        std::fs::write(
+            bundle_root.join("test_ids.index.json"),
+            b"{\"kind\":\"test_ids_index\",\"schema_version\":1}",
+        )
+        .unwrap();
+        std::fs::write(
+            bundle_root.join("bundle.index.json"),
+            serde_json::to_vec(&serde_json::json!({
+                "kind": "bundle_index",
+                "schema_version": 1,
+                "warmup_frames": 0,
+                "bundle": "bundle.json",
+                "script": { "steps": [] },
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        std::fs::write(
+            bundle_root.join("frames.index.json"),
+            serde_json::to_vec(&serde_json::json!({
+                "kind": "frames_index",
+                "schema_version": 1,
+                "bundle": "bundle.json",
+                "generated_unix_ms": 0,
+                "warmup_frames": 0,
+                "has_semantics_table": true,
+                "columns": ["frame_id", "window_snapshot_seq", "timestamp_unix_ms", "total_time_us", "layout_time_us", "paint_time_us", "semantics_fingerprint", "semantics_source_tag"],
+                "windows_total": 1,
+                "snapshots_total": 1,
+                "frames_total": 1,
+                "windows": [{
+                    "window": 1,
+                    "snapshots_total": 1,
+                    "frames_total": 1,
+                    "first_frame_id": 1,
+                    "last_frame_id": 1,
+                    "first_timestamp_unix_ms": 0,
+                    "last_timestamp_unix_ms": 0,
+                    "warmup_fallback": false,
+                    "clipped": null,
+                    "rows": [[1, 1, 0, 1000, 200, 300, 7, 2]]
+                }]
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+
+        generate_ai_packet_dir_sidecars_only(
+            None,
+            &bundle_dir,
+            &packet_dir,
+            true,
+            10,
+            None,
+            0,
+            None,
+        )
+        .expect("sidecars-only packet");
+
+        assert!(packet_dir.join("bundle.meta.json").is_file());
+        assert!(packet_dir.join("test_ids.index.json").is_file());
+        assert!(packet_dir.join("bundle.index.json").is_file());
+        assert!(packet_dir.join("frames.index.json").is_file());
+
+        let _ = std::fs::remove_dir_all(&root);
     }
 }

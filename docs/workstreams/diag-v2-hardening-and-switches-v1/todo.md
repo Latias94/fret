@@ -114,7 +114,7 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
   - [x] tooling writes `dump.request.json` and touches a trigger (`crates/fret-diag/src/transport/fs.rs`),
   - [x] runtime consumes `dump.request.json` for trigger-driven dumps (`ecosystem/fret-bootstrap/src/ui_diagnostics/fs_triggers.rs`),
   - [x] runtime records dump metadata in `bundle.dumped` event logs (beyond the directory name).
-- [ ] Make `diag pack --ai-only` succeed from manifest + sidecars without `bundle.json`.
+- [x] Make `diag pack --ai-only` succeed from manifest + sidecars without `bundle.json` (including extracted share zips where sidecars live under `_root/`).
 - [x] Add `diag artifact lint` that validates:
   - [x] manifest schema,
   - [x] chunk list hashes (when present),
