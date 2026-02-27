@@ -1,5 +1,6 @@
 use crate::ui::canvas::widget::paint_render_data::RenderData;
 use crate::ui::canvas::widget::*;
+use fret_core::scene::DashPatternV1;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(in super::super) fn paint_edges<H: UiHost>(
@@ -19,6 +20,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             color: Color,
             width: f32,
             route: EdgeRouteKind,
+            dash: Option<DashPatternV1>,
             start_marker: Option<crate::ui::presenter::EdgeMarker>,
             end_marker: Option<crate::ui::presenter::EdgeMarker>,
         }
@@ -107,6 +109,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 color: edge.color,
                 width,
                 route,
+                dash: edge.hint.dash,
                 start_marker: edge.hint.start_marker.clone(),
                 end_marker: edge.hint.end_marker.clone(),
             };
@@ -150,6 +153,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     edge.to,
                     edge.color,
                     edge.width,
+                    edge.dash,
                     edge.start_marker.as_ref(),
                     edge.end_marker.as_ref(),
                     &mut wire_budget,
@@ -167,6 +171,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     edge.to,
                     edge.color,
                     edge.width,
+                    edge.dash,
                     edge.start_marker.as_ref(),
                     edge.end_marker.as_ref(),
                     &mut wire_budget,
@@ -370,6 +375,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     zoom,
                     cx.scale_factor,
                     self.style.wire_width,
+                    None,
                 ) {
                     cx.scene.push(SceneOp::Path {
                         order: DrawOrder(2),

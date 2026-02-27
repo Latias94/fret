@@ -68,7 +68,8 @@ use crate::ui::style::{NodeGraphBackgroundStyle, NodeGraphColorMode, NodeGraphSt
 use crate::ui::{
     FallbackMeasuredNodeGraphPresenter, GroupRenameOverlay, MeasuredGeometryStore,
     NodeGraphCanvasTransform, NodeGraphEdgeTypes, NodeGraphEditQueue, NodeGraphFitViewOptions,
-    NodeGraphInternalsSnapshot, NodeGraphInternalsStore, NodeGraphOverlayState, NodeGraphViewQueue,
+    NodeGraphInternalsSnapshot, NodeGraphInternalsStore, NodeGraphOverlayState, NodeGraphSkinRef,
+    NodeGraphViewQueue,
 };
 
 use super::middleware::{
@@ -240,6 +241,8 @@ pub struct NodeGraphCanvasWith<M> {
     color_mode: Option<NodeGraphColorMode>,
     color_mode_last: Option<NodeGraphColorMode>,
     color_mode_theme_rev: Option<u64>,
+    skin: Option<NodeGraphSkinRef>,
+    skin_last_rev: Option<u64>,
     close_command: Option<CommandId>,
 
     auto_measured: Arc<MeasuredGeometryStore>,
@@ -460,6 +463,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             color_mode: None,
             color_mode_last: None,
             color_mode_theme_rev: None,
+            skin: None,
+            skin_last_rev: None,
             close_command: None,
             auto_measured,
             auto_measured_key: None,
@@ -504,6 +509,13 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         self
     }
 
+    /// Attaches a UI-only skin resolver for per-node/per-edge chrome overrides.
+    pub fn with_skin(mut self, skin: NodeGraphSkinRef) -> Self {
+        self.skin = Some(skin);
+        self.skin_last_rev = None;
+        self
+    }
+
     /// Attaches a B-layer `edgeTypes` registry to override edge render hints.
     pub fn with_edge_types(mut self, edge_types: NodeGraphEdgeTypes) -> Self {
         self.edge_types = Some(edge_types);
@@ -537,6 +549,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             color_mode: self.color_mode,
             color_mode_last: self.color_mode_last,
             color_mode_theme_rev: self.color_mode_theme_rev,
+            skin: self.skin,
+            skin_last_rev: self.skin_last_rev,
             close_command: self.close_command,
             auto_measured: self.auto_measured,
             auto_measured_key: self.auto_measured_key,
@@ -667,6 +681,27 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             self.paint_cache.clear(services);
         }
 
+        self.grid_scene_cache.clear();
+        self.groups_scene_cache.clear();
+        self.nodes_scene_cache.clear();
+        self.edges_scene_cache.clear();
+        self.edge_labels_scene_cache.clear();
+        self.edges_build_states.clear();
+        self.edge_labels_build_states.clear();
+        self.edge_labels_build_state = None;
+    }
+
+    fn sync_skin(&mut self, _services: Option<&mut dyn fret_core::UiServices>) {
+        let Some(skin) = self.skin.as_ref() else {
+            self.skin_last_rev = None;
+            return;
+        };
+
+        let rev = skin.revision();
+        if self.skin_last_rev == Some(rev) {
+            return;
+        }
+        self.skin_last_rev = Some(rev);
         self.grid_scene_cache.clear();
         self.groups_scene_cache.clear();
         self.nodes_scene_cache.clear();

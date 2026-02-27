@@ -14,6 +14,7 @@ use fret_canvas::budget::WorkBudget;
 use fret_canvas::cache::CacheStats;
 use fret_canvas::cache::PathCache;
 use fret_canvas::text::TextCache;
+use fret_core::scene::DashPatternV1;
 use fret_core::{
     FillStyle, PathCommand, PathConstraints, PathId, PathStyle, Point, Px, SceneOp, StrokeCapV1,
     StrokeJoinV1, StrokeStyleV2, TextBlobId, TextConstraints, TextMetrics, TextOverflow, TextStyle,
@@ -34,6 +35,9 @@ struct WirePathKey {
     zoom: i64,
     scale: i64,
     stroke_width: i64,
+    dash: i64,
+    gap: i64,
+    phase: i64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -193,6 +197,7 @@ impl CanvasPaintCache {
         zoom: f32,
         scale_factor: f32,
         width_px: f32,
+        dash: Option<DashPatternV1>,
     ) -> Option<PathId> {
         let zoom = if zoom.is_finite() && zoom > 0.0 {
             zoom
@@ -212,6 +217,8 @@ impl CanvasPaintCache {
             return None;
         }
 
+        let dash = dash.and_then(|p| scale_dash_pattern_screen_px_to_canvas_units(p, zoom));
+
         let q = |v: f32, step: f32| -> i64 {
             if !v.is_finite() {
                 return 0;
@@ -228,6 +235,9 @@ impl CanvasPaintCache {
             zoom: q(zoom, 0.0001),
             scale: q(scale_factor * zoom, 0.0001),
             stroke_width: q(stroke_width, 0.0001),
+            dash: dash.map(|p| q(p.dash.0, 0.01)).unwrap_or(0),
+            gap: dash.map(|p| q(p.gap.0, 0.01)).unwrap_or(0),
+            phase: dash.map(|p| q(p.phase.0, 0.01)).unwrap_or(0),
         };
 
         let cache_key = stable_path_key(1, &key);
@@ -257,7 +267,7 @@ impl CanvasPaintCache {
                         join: StrokeJoinV1::Round,
                         cap: StrokeCapV1::Round,
                         miter_limit: 4.0,
-                        dash: None,
+                        dash,
                     }),
                     PathConstraints {
                         scale_factor: scale_factor * zoom,
@@ -276,7 +286,7 @@ impl CanvasPaintCache {
                         join: StrokeJoinV1::Round,
                         cap: StrokeCapV1::Round,
                         miter_limit: 4.0,
-                        dash: None,
+                        dash,
                     }),
                     PathConstraints {
                         scale_factor: scale_factor * zoom,
@@ -305,7 +315,7 @@ impl CanvasPaintCache {
                         join: StrokeJoinV1::Round,
                         cap: StrokeCapV1::Round,
                         miter_limit: 4.0,
-                        dash: None,
+                        dash,
                     }),
                     PathConstraints {
                         scale_factor: scale_factor * zoom,
@@ -324,6 +334,7 @@ impl CanvasPaintCache {
         zoom: f32,
         scale_factor: f32,
         width_px: f32,
+        dash: Option<DashPatternV1>,
     ) -> Option<PathId> {
         if commands.is_empty() {
             return None;
@@ -340,6 +351,8 @@ impl CanvasPaintCache {
             return None;
         }
 
+        let dash = dash.and_then(|p| scale_dash_pattern_screen_px_to_canvas_units(p, zoom));
+
         let cache_key = stable_path_key(3, &cache_key);
         let (id, _metrics) = self.paths.prepare(
             services,
@@ -350,7 +363,7 @@ impl CanvasPaintCache {
                 join: StrokeJoinV1::Round,
                 cap: StrokeCapV1::Round,
                 miter_limit: 4.0,
-                dash: None,
+                dash,
             }),
             PathConstraints {
                 scale_factor: scale_factor * zoom,
@@ -796,4 +809,19 @@ fn stable_path_key<T: Hash>(tag: u8, key: &T) -> u64 {
     tag.hash(&mut hasher);
     key.hash(&mut hasher);
     hasher.finish()
+}
+
+fn scale_dash_pattern_screen_px_to_canvas_units(
+    pattern: DashPatternV1,
+    zoom: f32,
+) -> Option<DashPatternV1> {
+    let z = zoom.max(1.0e-6);
+    let dash = pattern.dash.0 / z;
+    let gap = pattern.gap.0 / z;
+    let phase = pattern.phase.0 / z;
+    let period = dash + gap;
+    if !dash.is_finite() || !gap.is_finite() || !phase.is_finite() || dash <= 0.0 || period <= 0.0 {
+        return None;
+    }
+    Some(DashPatternV1::new(Px(dash), Px(gap), Px(phase)))
 }

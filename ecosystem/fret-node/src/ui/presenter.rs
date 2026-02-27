@@ -22,6 +22,7 @@ use fret_runtime::CommandId;
 
 use super::canvas::NodeResizeHandle;
 use super::style::NodeGraphStyle;
+use fret_core::scene::DashPatternV1;
 use fret_core::{Point, Rect};
 
 /// Context menu actions surfaced by the canvas widget.
@@ -214,12 +215,28 @@ pub struct EdgeRenderHint {
     pub start_marker: Option<EdgeMarker>,
     /// Optional marker rendered at the edge end.
     pub end_marker: Option<EdgeMarker>,
+    /// Optional dash pattern (dash/gap/phase in logical px).
+    pub dash: Option<DashPatternV1>,
 }
 
 impl EdgeRenderHint {
     pub fn normalized(mut self) -> Self {
         if !self.width_mul.is_finite() || self.width_mul <= 0.0 {
             self.width_mul = 1.0;
+        }
+        if let Some(p) = self.dash {
+            let dash = p.dash.0;
+            let gap = p.gap.0;
+            let phase = p.phase.0;
+            let period = dash + gap;
+            if !dash.is_finite()
+                || !gap.is_finite()
+                || !phase.is_finite()
+                || dash <= 0.0
+                || period <= 0.0
+            {
+                self.dash = None;
+            }
         }
         if let Some(m) = self.start_marker.as_mut() {
             if !m.size.is_finite() || m.size <= 0.0 {

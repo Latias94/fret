@@ -88,6 +88,8 @@ mod prelude;
 mod render_culling_metrics_conformance;
 mod selection_mode_conformance;
 mod set_viewport_conformance;
+mod skin_cache_key_includes_dash_conformance;
+mod skin_paint_only_does_not_rebuild_geometry_conformance;
 mod spatial_index_equivalence_conformance;
 mod threshold_zoom_conformance;
 mod translate_extent_conformance;

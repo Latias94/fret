@@ -16,6 +16,7 @@ pub mod panel;
 pub mod portal;
 pub mod presenter;
 pub mod registry;
+pub mod skin;
 pub mod style;
 pub mod view_queue;
 pub mod viewport_helper;
@@ -59,6 +60,9 @@ pub use presenter::{
     NodeResizeConstraintsPx, NodeResizeHandleSet, RegistryNodeGraphPresenter,
 };
 pub use registry::{NodeGraphNodeRenderer, NodeGraphNodeTypes};
+pub use skin::{
+    EdgeChromeHint, NodeChromeHint, NodeGraphSkin, NodeGraphSkinRef, NoopNodeGraphSkin,
+};
 pub use style::{NodeGraphColorMode, NodeGraphStyle};
 pub use view_queue::{
     NodeGraphFitViewOptions, NodeGraphSetViewportOptions, NodeGraphViewQueue, NodeGraphViewRequest,

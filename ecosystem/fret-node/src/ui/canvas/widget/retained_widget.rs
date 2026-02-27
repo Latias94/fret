@@ -15,6 +15,7 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
     fn command(&mut self, cx: &mut CommandCx<'_, H>, command: &CommandId) -> bool {
         let theme = cx.theme().snapshot();
         self.sync_style_from_color_mode(theme, Some(cx.services));
+        self.sync_skin(Some(cx.services));
         let snapshot = self.sync_view_state(cx.app);
         if cx.input_ctx.focus_is_text_input
             && (command.as_str().starts_with("node_graph.")
@@ -127,6 +128,7 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
     fn semantics(&mut self, cx: &mut SemanticsCx<'_, H>) {
         let theme = Theme::global(&*cx.app).snapshot();
         self.sync_style_from_color_mode(theme, None);
+        self.sync_skin(None);
         self.interaction.last_bounds = Some(cx.bounds);
         let snapshot = self.sync_view_state(cx.app);
 
@@ -212,6 +214,7 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
         let theme = cx.theme().snapshot();
         self.sync_style_from_color_mode(theme, Some(cx.services));
+        self.sync_skin(Some(cx.services));
         cx.observe_model(&self.graph, Invalidation::Layout);
         cx.observe_model(&self.view_state, Invalidation::Layout);
         if let Some(queue) = self.edit_queue.as_ref() {
@@ -308,6 +311,7 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
         let theme = cx.theme().snapshot();
         self.sync_style_from_color_mode(theme, Some(cx.services));
+        self.sync_skin(Some(cx.services));
         let snapshot = self.sync_view_state(cx.app);
         self.interaction.last_bounds = Some(cx.bounds);
 
@@ -335,6 +339,7 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
     fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
         let theme = cx.theme().snapshot();
         self.sync_style_from_color_mode(theme, Some(cx.services));
+        self.sync_skin(Some(cx.services));
         self.paint_root(cx);
     }
 }
