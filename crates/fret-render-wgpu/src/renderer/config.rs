@@ -1,6 +1,7 @@
 use super::*;
 use crate::text::{TextFontFamilyConfig, TextQualitySettings};
 use crate::{SystemFontRescanResult, SystemFontRescanSeed};
+use std::sync::OnceLock;
 
 impl Renderer {
     pub fn begin_text_diagnostics_frame(&mut self) {
@@ -516,6 +517,18 @@ impl Renderer {
             && std::env::var_os("FRET_ALLOW_VULKAN_PATH_MSAA").is_none()
             && !self.vulkan_path_msaa_is_allowlisted()
         {
+            static WARNED: OnceLock<()> = OnceLock::new();
+            if WARNED.set(()).is_ok() {
+                let info = self.adapter.get_info();
+                tracing::warn!(
+                    backend = ?info.backend,
+                    vendor = info.vendor,
+                    device = info.device,
+                    driver = info.driver,
+                    driver_info = info.driver_info,
+                    "Vulkan path MSAA is disabled by default on this adapter (safety valve). Set FRET_ALLOW_VULKAN_PATH_MSAA=1 to opt in."
+                );
+            }
             return 1;
         }
 
