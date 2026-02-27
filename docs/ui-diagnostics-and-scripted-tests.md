@@ -699,6 +699,7 @@ Supported selectors (v1 MVP):
 
 - `click` (optional `button`: `left`/`right`/`middle`; default `left`; optional `pointer_kind`; schema v2 only: optional `window` target)
 - `tap` (schema v2 only; touch-first gesture; optional `pointer_kind`; default `touch`; optional `window` target; capability-gated behind `diag.gesture_tap`)
+- `pinch` (schema v2 only; touch-first gesture; `delta` zoom amount (positive=in, negative=out); optional `steps` (default 8); optional `pointer_kind`; default `touch`; optional `window` target; capability-gated behind `diag.gesture_pinch`)
 - `move_pointer` (schema v2 only: optional `window` target)
 - `pointer_down` (schema v2 only; optional `window` target; starts a cross-step pointer session for "drag + key" flows)
 - `pointer_move` (schema v2 only; optional `window` target; moves with the pressed buttons from `pointer_down`)
@@ -732,8 +733,7 @@ Supported selectors (v1 MVP):
 
 Pointer kind note (as of 2026-02-27):
 
-- Pointer-driven steps support an optional `pointer_kind` field: `mouse` (default) or `touch`.
-- `pointer_kind: pen` is also supported, capability-gated behind `diag.pointer_kind_pen`.
+- Pointer-driven steps support an optional `pointer_kind` field: `mouse` (default), `touch`, or `pen`.
 - `pointer_kind` is omitted from JSON when unset; existing scripts remain mouse-based.
 - Requesting `pointer_kind: touch` requires the runner to advertise `diag.pointer_kind_touch`.
   Requesting `pointer_kind: pen` requires `diag.pointer_kind_pen`.

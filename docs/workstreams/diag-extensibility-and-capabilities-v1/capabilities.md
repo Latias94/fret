@@ -160,5 +160,6 @@ Tooling can infer required capabilities from the presence of step variants:
 - steps that explicitly target non-default windows ⇒ `diag.multi_window`
 - coordinate-based steps (if added) ⇒ `diag.pointer_injection`
 - `tap` ⇒ `diag.gesture_tap`
+- `pinch` ⇒ `diag.gesture_pinch`
 
 Note: inference is “best effort”; `meta.required_capabilities` remains the explicit escape hatch.

@@ -149,6 +149,17 @@ impl ScriptV2Builder {
         })
     }
 
+    pub fn pinch(self, target: UiSelectorV1, delta: f32) -> Self {
+        self.push(UiActionStepV2::Pinch {
+            window: None,
+            pointer_kind: None,
+            target,
+            delta,
+            steps: 8,
+            modifiers: None,
+        })
+    }
+
     pub fn click_with_modifiers(self, target: UiSelectorV1, modifiers: UiKeyModifiersV1) -> Self {
         self.push(UiActionStepV2::Click {
             window: None,

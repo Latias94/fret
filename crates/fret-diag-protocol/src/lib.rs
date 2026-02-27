@@ -416,6 +416,23 @@ pub enum UiActionStepV2 {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         modifiers: Option<UiKeyModifiersV1>,
     },
+    /// A pinch/zoom gesture emitted at the target's center.
+    ///
+    /// `delta` is positive for zoom in and negative for zoom out (matches `PointerEvent::PinchGesture`).
+    Pinch {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
+        /// Optional override; when omitted, defaults to `touch`.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pointer_kind: Option<UiPointerKindV1>,
+        target: UiSelectorV1,
+        /// Total delta across all steps.
+        delta: f32,
+        #[serde(default = "default_drag_steps")]
+        steps: u32,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        modifiers: Option<UiKeyModifiersV1>,
+    },
     ResetDiagnostics,
     MovePointer {
         #[serde(default, skip_serializing_if = "Option::is_none")]

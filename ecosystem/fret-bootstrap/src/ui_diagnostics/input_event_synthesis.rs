@@ -32,6 +32,18 @@ fn wheel_event(position: Point, delta_x: f32, delta_y: f32, pointer_type: Pointe
     })
 }
 
+fn pinch_event(position: Point, delta: f32, modifiers: Modifiers, pointer_type: PointerType) -> Event {
+    let pointer_id = PointerId(0);
+
+    Event::Pointer(PointerEvent::PinchGesture {
+        pointer_id,
+        position,
+        delta,
+        modifiers,
+        pointer_type,
+    })
+}
+
 fn click_events(
     position: Point,
     button: UiMouseButtonV1,
