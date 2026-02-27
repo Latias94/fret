@@ -155,7 +155,7 @@ if left unspecified.
   - Evidence: `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs`,
     `crates/fret-render-wgpu/tests/effect_custom_v1_conformance.rs`.
 
-- [ ] Add a “theme-like postprocess” demo to validate the CustomV1 ceiling (policy-only, no core changes):
+- [x] Add a “theme-like postprocess” demo to validate the CustomV1 ceiling (policy-only, no core changes):
   - [x] Implement and wire: `apps/fret-examples/src/postprocess_theme_demo.rs` (via `apps/fret-demo`).
   - [x] Add a `fretboard diag` script that captures a small, shareable baseline bundle (screenshots + perf snapshot):
     - Evidence: `tools/diag-scripts/postprocess-theme-baseline.json`.
