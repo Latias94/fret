@@ -14,6 +14,7 @@ enum Demo {
     SimpleTodo,
     CustomEffectV2WebDemo,
     CustomEffectV2LutWebDemo,
+    CustomEffectV2IdentityWebDemo,
     ExternalTextureImportsWebDemo,
     EmojiConformanceDemo,
     CjkConformanceDemo,
@@ -50,6 +51,9 @@ fn demo_from_id(id: &str) -> Option<Demo> {
         }
         "custom_effect_v2_lut_web_demo" | "custom-effect-v2-lut-web-demo" => {
             Some(Demo::CustomEffectV2LutWebDemo)
+        }
+        "custom_effect_v2_identity_web_demo" | "custom-effect-v2-identity-web-demo" => {
+            Some(Demo::CustomEffectV2IdentityWebDemo)
         }
         "external_texture_imports_web_demo" => Some(Demo::ExternalTextureImportsWebDemo),
         "emoji_conformance_demo" => Some(Demo::EmojiConformanceDemo),
@@ -104,6 +108,7 @@ fn select_demo() -> Demo {
         "simple_todo",
         "custom_effect_v2_web_demo",
         "custom_effect_v2_lut_web_demo",
+        "custom_effect_v2_identity_web_demo",
         "chart_demo",
         "chart_multi_axis_demo",
         "horizontal_bars_demo",
@@ -180,6 +185,15 @@ pub fn start() -> Result<(), JsValue> {
             let mut config = fret_examples::custom_effect_v2_lut_web_demo::build_runner_config();
             config.main_window_title = "fret-demo custom_effect_v2_lut_web_demo (web)".to_string();
             let driver = fret_examples::custom_effect_v2_lut_web_demo::build_driver();
+            fret_launch::run_app_with_handle(config, app, driver)
+        }
+        Demo::CustomEffectV2IdentityWebDemo => {
+            let app = fret_examples::custom_effect_v2_identity_web_demo::build_app();
+            let mut config =
+                fret_examples::custom_effect_v2_identity_web_demo::build_runner_config();
+            config.main_window_title =
+                "fret-demo custom_effect_v2_identity_web_demo (web)".to_string();
+            let driver = fret_examples::custom_effect_v2_identity_web_demo::build_driver();
             fret_launch::run_app_with_handle(config, app, driver)
         }
         Demo::ExternalTextureImportsWebDemo => {

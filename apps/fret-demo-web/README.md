@@ -47,6 +47,7 @@ hash or query string:
 - `?demo=external_texture_imports_web_demo` (or `#external_texture_imports_web_demo`) — external image source → render target (web copy path)
 - `?demo=custom_effect_v2_web_demo` (or `#custom_effect_v2_web_demo`) — CustomV2 end-to-end WebGPU smoke (register + user image input)
 - `?demo=custom_effect_v2_lut_web_demo` (or `#custom_effect_v2_lut_web_demo`) — CustomV2 LUT authoring template (input image used as LUT)
+- `?demo=custom_effect_v2_identity_web_demo` (or `#custom_effect_v2_identity_web_demo`) — CustomV2 minimal starter template (mix + input debug)
 
 ## Optional bundled fonts (WASM)
 
