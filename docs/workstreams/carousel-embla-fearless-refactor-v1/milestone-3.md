@@ -16,6 +16,7 @@ diagnostics/scripts to catch regressions.
   - code samples are complete and copyable
 - Diagnostics gates (existing scripts may be updated):
   - `tools/diag-scripts/ui-gallery-carousel-demo-screenshot.json`
+  - `tools/diag-scripts/ui-gallery-carousel-demo-dnd-handle-gate.json`
   - `tools/diag-scripts/ui-gallery-carousel-basic-screenshot.json`
   - `tools/diag-scripts/ui-gallery-carousel-spacing-screenshot.json` (if missing, add)
   - `tools/diag-scripts/ui-gallery-carousel-orientation-vertical-screenshot.json`
@@ -34,4 +35,3 @@ diagnostics/scripts to catch regressions.
 
 - UI gallery is not a stable contract surface, but its test IDs are used by diag scripts. Keep
   `ui-gallery-carousel-*` IDs stable when possible.
-

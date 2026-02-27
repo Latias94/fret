@@ -1,6 +1,6 @@
 # Carousel (Embla) Fearless Refactor v1 — Plan
 
-Status: Draft (living document)
+Status: Updated (living document)
 
 This plan summarizes what is already landed and proposes the next, highest-leverage steps.
 
@@ -14,6 +14,10 @@ This plan summarizes what is already landed and proposes the next, highest-lever
 - M3: UI gallery parity with shadcn docs + deterministic geometry harness
   - `apps/fret-ui-gallery/src/ui/pages/carousel.rs`
   - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/carousel.rs`
+- P4: Carousel × DnD pointer arbitration (mouse handle path)
+  - Decision + notes: `docs/workstreams/carousel-embla-fearless-refactor-v1/dnd-arbitration.md`
+  - Policy hook: `fret-ui-shadcn::Carousel` skips swiping while a DnD sensor tracks the pointer.
+  - Gate: `tools/diag-scripts/ui-gallery-carousel-demo-dnd-handle-gate.json`
 
 ## Next steps (recommended order)
 
@@ -23,6 +27,7 @@ Goal: turn the current alignment into stable, repeatable gates.
 
 - Add/refresh diag scripts so we can catch regressions without relying on manual UI runs:
   - `ui-gallery-carousel-*-screenshot.json` set should cover Demo/Sizes/Spacing/Vertical/Expandable.
+  - Interaction gate: `ui-gallery-carousel-demo-dnd-handle-gate.json` (Carousel vs DnD arbitration)
 - Add an audit note with evidence anchors (if the repo expects it):
   - `docs/audits/carousel-shadcn-embla-parity.md` (anchors: recipe + headless + tests + scripts).
 
@@ -51,7 +56,7 @@ Exit criteria:
 
 ### 3) Carousel vs DnD gesture arbitration (P4, later)
 
-Goal: define who owns pointer capture when a draggable item lives inside a scroll-snap container.
+Goal: extend the current mouse-handle policy to touch-friendly recipes (long-press).
 
 Constraints:
 
@@ -71,4 +76,3 @@ Exit criteria:
 
 - A documented policy choice and at least one regression gate proving no accidental capture
   starvation (e.g. carousel swipe still works; dnd drag still starts when intended).
-

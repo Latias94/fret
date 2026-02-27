@@ -99,7 +99,12 @@ keeping their higher-level semantics separate (Carousel vs Drawer vs Slider).
   - Evidence:
     - `ecosystem/fret-ui-headless/src/snap_points.rs`
     - `ecosystem/fret-ui-shadcn/src/drawer.rs` (nearest snap selection)
-- [ ] CAR-430 Decide how Carousel drag and `fret-dnd` sensors should arbitrate pointer capture.
+- [x] CAR-430 Decide how Carousel drag and `fret-dnd` sensors should arbitrate pointer capture.
   - scope: policy only (likely `fret-ui-kit::dnd` sensor config + recipe opt-outs)
   - references: ADR 0149/0150/0151/0157
-  - Draft decision: `docs/workstreams/carousel-embla-fearless-refactor-v1/dnd-arbitration.md`
+  - Evidence:
+    - `docs/workstreams/carousel-embla-fearless-refactor-v1/dnd-arbitration.md`
+    - `ecosystem/fret-ui-kit/src/dnd/controller.rs` (`pointer_is_tracking_any_sensor`)
+    - `ecosystem/fret-ui-shadcn/src/carousel.rs` (skip swipe when DnD sensor tracks the pointer)
+    - `apps/fret-ui-gallery/src/ui/pages/carousel.rs` (demo handle wiring)
+    - `tools/diag-scripts/ui-gallery-carousel-demo-dnd-handle-gate.json`

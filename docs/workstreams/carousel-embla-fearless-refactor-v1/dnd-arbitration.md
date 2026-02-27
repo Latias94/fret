@@ -1,6 +1,6 @@
 # Carousel × DnD Gesture Arbitration (CAR-430)
 
-Status: Draft (decision + implementation notes)
+Status: Implemented (mouse handle path). Touch long-press policy remains TODO.
 
 Goal: define how a scroll-snap container (Carousel) should coexist with `fret-dnd` pointer sensors
 without breaking either "swipe to scroll" or "drag to reorder/tear-out".
@@ -77,9 +77,19 @@ These are not hard contracts; they are defaults for recipes that need both behav
 - Recipes that combine Carousel + DnD should:
   - route pointer events from the **handle** (mouse) or **long-press** region (touch) to
     `fret-ui-kit::dnd` sensor handlers with the chosen `ActivationConstraint`.
-  - keep Carousel pointer region unchanged.
-- When DnD becomes active, it should steal capture and cancel any pending descendant pressable /
-  Carousel drag state (mechanism already supports cancel on capture switch).
+  - ensure Carousel does not steal capture while the pointer is being tracked by a DnD sensor.
+
+Rationale: Carousel pointer hooks run in capture phase (root → target). If Carousel evaluates the
+gesture first, it may steal capture before the handle sees enough motion to activate DnD. The
+lowest-friction ecosystem-only mitigation is to let Carousel consult the DnD controller state for
+the current pointer and opt out of swiping while a sensor is tracking it.
+
+Implementation notes:
+
+- `fret-ui-kit::dnd::pointer_is_tracking_any_sensor(...)` checks whether the current pointer is
+  being tracked by any DnD sensor for the window.
+- `fret-ui-shadcn::Carousel` uses that check inside its move handler to avoid stealing capture /
+  updating the offset while a DnD sensor tracks the pointer.
 
 ## Regression gates (recommended)
 
@@ -87,7 +97,8 @@ These are not hard contracts; they are defaults for recipes that need both behav
   Carousel item:
   - swipe on item body scrolls the Carousel
   - drag on handle starts DnD (no Carousel movement)
-- Add a diag script that performs:
-  - drag-from-body (assert Carousel offset changed)
-  - drag-from-handle (assert DnD session active, Carousel offset unchanged)
 
+Existing gates (ui-gallery):
+
+- Body swipe + buttons: `tools/diag-scripts/ui-gallery-carousel-demo-swipe-and-buttons.json`
+- Handle DnD arbitration: `tools/diag-scripts/ui-gallery-carousel-demo-dnd-handle-gate.json`
