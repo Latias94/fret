@@ -51,6 +51,10 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
             .into_element(cx)
     };
 
+    // Match shadcn/ui v4 docs example widths:
+    // - `max-w-xs` for demo + orientation.
+    // - `max-w-sm` for sizing/spacing examples.
+    let max_w_xs = Px(320.0);
     let max_w_sm = Px(384.0);
 
     // Demo: include a descendant pressable so diag scripts can gate pointer propagation
@@ -153,10 +157,12 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
         .map(|idx| demo_slide(cx, idx, demo_visual))
         .collect::<Vec<_>>();
     let demo = shadcn::Carousel::new(demo_items)
+        // Web goldens: track width accounts for the negative start margin (`-ml-4`).
+        .refine_track_layout(LayoutRefinement::default().w_px(Px(336.0)))
         .refine_layout(
             LayoutRefinement::default()
                 .w_full()
-                .max_w(max_w_sm)
+                .max_w(max_w_xs)
                 .mx_auto(),
         )
         .test_id("ui-gallery-carousel-demo")
@@ -170,10 +176,11 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
         .map(|idx| slide(cx, idx, basic_visual))
         .collect::<Vec<_>>();
     let basic = shadcn::Carousel::new(basic_items)
+        .refine_track_layout(LayoutRefinement::default().w_px(Px(336.0)))
         .refine_layout(
             LayoutRefinement::default()
                 .w_full()
-                .max_w(max_w_sm)
+                .max_w(max_w_xs)
                 .mx_auto(),
         )
         .test_id("ui-gallery-carousel-basic")
@@ -186,15 +193,17 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
     let align_start_items = (1..=5)
         .map(|idx| slide(cx, idx, align_start_visual))
         .collect::<Vec<_>>();
-    let align_start = shadcn::Carousel::new(align_start_items)
-        .item_basis_main_px(Px(192.0))
+    let sizes = shadcn::Carousel::new(align_start_items)
+        // Approximate the `lg:basis-1/3` docs example deterministically (see web-vs-fret harness).
+        .item_basis_main_px(Px(133.328))
+        .refine_track_layout(LayoutRefinement::default().w_px(Px(400.0)))
         .refine_layout(
             LayoutRefinement::default()
                 .w_full()
                 .max_w(max_w_sm)
                 .mx_auto(),
         )
-        .test_id("ui-gallery-carousel-align-start")
+        .test_id("ui-gallery-carousel-sizes")
         .into_element(cx);
 
     let spacing_visual = SlideVisual {
@@ -205,7 +214,8 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
         .map(|idx| slide(cx, idx, spacing_visual))
         .collect::<Vec<_>>();
     let spacing = shadcn::Carousel::new(spacing_items)
-        .item_basis_main_px(Px(192.0))
+        .item_basis_main_px(Px(129.328))
+        .refine_track_layout(LayoutRefinement::default().w_px(Px(388.0)))
         .track_start_neg_margin(Space::N1)
         .item_padding_start(Space::N1)
         .refine_layout(
@@ -220,7 +230,7 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
     let notes_stack = doc_layout::notes(
         cx,
         [
-            "Preview follows shadcn Carousel demo: Basic, Align Start, and Spacing.",
+            "Preview follows shadcn Carousel demo: Basic, Sizes, and Spacing.",
             "The upstream demo uses responsive item widths (`md:basis-1/2` / `lg:basis-1/3`). Fret uses a fixed `item_basis_main_px` to keep geometry deterministic in native builds.",
             "Spacing parity depends on pairing `track_start_neg_margin` with `item_padding_start`.",
         ],
@@ -286,6 +296,7 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
                         ui::text(cx, format!("Item {idx}"))
                             .text_base()
                             .font_semibold()
+                            .nowrap()
                             .into_element(cx),
                         shadcn::Button::new(if expanded { "Collapse" } else { "Expand" })
                             .variant(shadcn::ButtonVariant::Outline)
@@ -310,10 +321,11 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
         .collect::<Vec<_>>();
 
     let expandable = shadcn::Carousel::new(expandable_items)
+        .refine_track_layout(LayoutRefinement::default().w_px(Px(336.0)))
         .refine_layout(
             LayoutRefinement::default()
                 .w_full()
-                .max_w(max_w_sm)
+                .max_w(max_w_xs)
                 .mx_auto(),
         )
         .test_id("ui-gallery-carousel-expandable")
@@ -359,7 +371,7 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
         .refine_layout(
             LayoutRefinement::default()
                 .w_full()
-                .max_w(max_w_sm)
+                .max_w(max_w_xs)
                 .mx_auto(),
         )
         .test_id("ui-gallery-carousel-orientation-vertical")
@@ -382,19 +394,21 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
                     r#"let items = (1..=5).map(|idx| slide(cx, idx)).collect::<Vec<_>>();
 
 shadcn::Carousel::new(items)
-    .refine_layout(LayoutRefinement::default().w_full().max_w(Px(384.0)).mx_auto())
+    .refine_track_layout(LayoutRefinement::default().w_px(Px(336.0)))
+    .refine_layout(LayoutRefinement::default().w_full().max_w(Px(320.0)).mx_auto())
     .into_element(cx);"#,
                 ),
-            DocSection::new("Align Start", align_start)
-                .description("Fixed basis (basis-1/2) to mirror the docs layout deterministically.")
+            DocSection::new("Sizes", sizes)
+                .description("Three active items (`basis-1/3`) to mirror the docs layout.")
                 .max_w(Px(760.0))
-                .test_id_prefix("ui-gallery-carousel-align-start")
+                .test_id_prefix("ui-gallery-carousel-sizes")
                 .code(
                     "rust",
                     r#"// Upstream: responsive widths (`md:basis-1/2` / `lg:basis-1/3`).
 // Here: fixed basis for deterministic native layout.
 shadcn::Carousel::new(items)
-    .item_basis_main_px(Px(192.0))
+    .item_basis_main_px(Px(133.328)) // approx `basis-1/3` in docs/web goldens
+    .refine_track_layout(LayoutRefinement::default().w_px(Px(400.0)))
     .refine_layout(LayoutRefinement::default().w_full().max_w(Px(384.0)).mx_auto())
     .into_element(cx);"#,
                 ),
@@ -407,7 +421,8 @@ shadcn::Carousel::new(items)
                 .code(
                     "rust",
                     r#"shadcn::Carousel::new(items)
-    .item_basis_main_px(Px(192.0))
+    .item_basis_main_px(Px(129.328))
+    .refine_track_layout(LayoutRefinement::default().w_px(Px(388.0)))
     .track_start_neg_margin(Space::N1)
     .item_padding_start(Space::N1)
     .refine_layout(LayoutRefinement::default().w_full().max_w(Px(384.0)).mx_auto())
