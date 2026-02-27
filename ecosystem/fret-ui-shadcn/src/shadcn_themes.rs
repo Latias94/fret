@@ -322,6 +322,22 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
         }
     }
 
+    // shadcn new-york-v4 `Switch` unchecked track background:
+    // - light: `data-[state=unchecked]:bg-input`
+    // - dark: `dark:data-[state=unchecked]:bg-input/80`
+    if !colors.contains_key("component.switch.track.bg_off") {
+        let v = match scheme {
+            ShadcnColorScheme::Light => colors.get("input").cloned(),
+            ShadcnColorScheme::Dark => colors
+                .get("input")
+                .and_then(|input| with_oklch_alpha(input, 0.8))
+                .or_else(|| colors.get("input").cloned()),
+        };
+        if let Some(v) = v {
+            colors.insert("component.switch.track.bg_off".to_string(), v);
+        }
+    }
+
     // shadcn new-york-v4 `RadioGroup` choice-card checked background:
     // - light: `bg-primary/5`
     // - dark: `bg-primary/10`
@@ -1109,6 +1125,26 @@ mod tests {
                         .expect("shadcn new-york-v4 input token is oklch"),
                 ),
                 "expected tabs active bg to match input/30 in dark scheme"
+            );
+
+            assert_eq!(
+                cfg_light
+                    .colors
+                    .get("component.switch.track.bg_off")
+                    .cloned(),
+                cfg_light.colors.get("input").cloned(),
+                "expected switch off bg to match input in light scheme"
+            );
+            assert_eq!(
+                cfg_dark
+                    .colors
+                    .get("component.switch.track.bg_off")
+                    .cloned(),
+                Some(
+                    with_oklch_alpha(&input_dark, 0.8)
+                        .expect("shadcn new-york-v4 input token is oklch"),
+                ),
+                "expected switch off bg to match input/80 in dark scheme"
             );
 
             let primary_light = cfg_light

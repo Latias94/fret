@@ -91,9 +91,13 @@ fn switch_bg_on(theme: &Theme) -> Color {
 
 fn switch_bg_off(theme: &Theme) -> Color {
     theme
-        .color_by_key("input")
-        .or_else(|| theme.color_by_key("muted"))
-        .unwrap_or_else(|| theme.color_token("input"))
+        .color_by_key("component.switch.track.bg_off")
+        .unwrap_or_else(|| {
+            theme
+                .color_by_key("input")
+                .or_else(|| theme.color_by_key("muted"))
+                .unwrap_or_else(|| theme.color_token("input"))
+        })
 }
 
 fn switch_thumb_bg(theme: &Theme) -> Color {
