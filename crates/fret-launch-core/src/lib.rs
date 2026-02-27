@@ -9,4 +9,15 @@
 pub mod common;
 mod error;
 
+pub mod imported_viewport_target;
+pub mod native_external_import;
+#[doc(hidden)]
+pub mod streaming_upload;
+pub mod viewport_overlay_immediate_3d;
+pub mod viewport_target;
+#[doc(hidden)]
+pub mod yuv;
+#[doc(hidden)]
+pub mod yuv_gpu;
+
 pub use error::RunnerError;

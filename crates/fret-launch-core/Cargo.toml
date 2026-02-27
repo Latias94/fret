@@ -20,6 +20,7 @@ fret-app = { version = "0.1.0", path = "../fret-app" }
 fret-core = { version = "0.1.0", path = "../fret-core" }
 fret-runtime = { version = "0.1.0", path = "../fret-runtime" }
 fret-render = { version = "0.1.0", path = "../fret-render" }
+bytemuck.workspace = true
 thiserror.workspace = true
 wgpu.workspace = true
 winit.workspace = true

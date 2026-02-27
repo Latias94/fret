@@ -8,7 +8,7 @@ use fret_render::viewport_overlay::{
     Overlay3dUniforms, ViewportOverlay3dContext,
 };
 
-use super::{ViewportOverlay3dHooks, ViewportOverlay3dHooksService};
+use crate::common::{ViewportOverlay3dHooks, ViewportOverlay3dHooksService};
 
 #[derive(Debug, Clone)]
 struct ViewportOverlay3dImmediateEntry {

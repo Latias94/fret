@@ -7,7 +7,8 @@ fn align_up(value: u32, align: u32) -> u32 {
     value.div_ceil(align).saturating_mul(align)
 }
 
-pub(crate) struct Nv12Planes {
+#[doc(hidden)]
+pub struct Nv12Planes {
     pub size: (u32, u32),
     pub chroma_size: (u32, u32),
     pub y: wgpu::Texture,
@@ -17,7 +18,7 @@ pub(crate) struct Nv12Planes {
 }
 
 impl Nv12Planes {
-    pub(crate) fn new(device: &wgpu::Device, size: (u32, u32)) -> Self {
+    pub fn new(device: &wgpu::Device, size: (u32, u32)) -> Self {
         let (width, height) = size;
         let chroma_size = (width.div_ceil(2), height.div_ceil(2));
 
@@ -94,7 +95,8 @@ fn repack_rect_u8(
     Ok((out, dst_bytes_per_row))
 }
 
-pub(crate) fn write_nv12_rect(
+#[doc(hidden)]
+pub fn write_nv12_rect(
     queue: &wgpu::Queue,
     planes: &Nv12Planes,
     rect: RectPx,
@@ -301,14 +303,15 @@ fn matrix_u32(matrix: YuvMatrix) -> u32 {
     }
 }
 
-pub(crate) struct Nv12GpuConverter {
+#[doc(hidden)]
+pub struct Nv12GpuConverter {
     pipeline: wgpu::RenderPipeline,
     bind_group_layout: wgpu::BindGroupLayout,
     params_buffer: wgpu::Buffer,
 }
 
 impl Nv12GpuConverter {
-    pub(crate) fn new(device: &wgpu::Device) -> Self {
+    pub fn new(device: &wgpu::Device) -> Self {
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("fret nv12 convert"),
             source: wgpu::ShaderSource::Wgsl(include_str!("yuv_nv12_convert.wgsl").into()),
@@ -406,7 +409,7 @@ impl Nv12GpuConverter {
         }
     }
 
-    pub(crate) fn convert_rect_into(&self, args: Nv12ConvertRectIntoArgs<'_>) {
+    pub fn convert_rect_into(&self, args: Nv12ConvertRectIntoArgs<'_>) {
         let Nv12ConvertRectIntoArgs {
             device,
             queue,
@@ -478,13 +481,14 @@ impl Nv12GpuConverter {
     }
 }
 
-pub(crate) struct Nv12ConvertRectIntoArgs<'a> {
-    pub(crate) device: &'a wgpu::Device,
-    pub(crate) queue: &'a wgpu::Queue,
-    pub(crate) dst_view: &'a wgpu::TextureView,
-    pub(crate) rect: RectPx,
-    pub(crate) y_view: &'a wgpu::TextureView,
-    pub(crate) uv_view: &'a wgpu::TextureView,
-    pub(crate) range: ColorRange,
-    pub(crate) matrix: YuvMatrix,
+#[doc(hidden)]
+pub struct Nv12ConvertRectIntoArgs<'a> {
+    pub device: &'a wgpu::Device,
+    pub queue: &'a wgpu::Queue,
+    pub dst_view: &'a wgpu::TextureView,
+    pub rect: RectPx,
+    pub y_view: &'a wgpu::TextureView,
+    pub uv_view: &'a wgpu::TextureView,
+    pub range: ColorRange,
+    pub matrix: YuvMatrix,
 }
