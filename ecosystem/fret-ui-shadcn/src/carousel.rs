@@ -13,23 +13,12 @@ use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::transition as decl_transition;
 use fret_ui_kit::headless::carousel as headless_carousel;
 use fret_ui_kit::headless::snap_points as headless_snap_points;
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement, LengthRefinement, MetricRef, Radius, Space};
 
 use crate::{Button, ButtonSize, ButtonVariant};
-
-fn settle_ticks_for_duration(duration: Duration) -> u64 {
-    let ms = duration.as_millis() as f32;
-    if !ms.is_finite() || ms <= 0.0 {
-        return 1;
-    }
-
-    // Embla's `duration` is in milliseconds. Map it to a fixed frame budget so native
-    // deterministic tests remain stable.
-    let frames = (ms / (1000.0 / 60.0)).ceil();
-    (frames.clamp(1.0, 120.0)) as u64
-}
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct CarouselApiSnapshot {
@@ -256,7 +245,7 @@ struct CarouselRuntime {
     settling: bool,
     settle_from: Px,
     settle_to: Px,
-    settle_tick: u64,
+    settle_generation: u64,
     autoplay_token: Option<TimerToken>,
     autoplay_paused: bool,
     autoplay_hovered: bool,
@@ -455,7 +444,6 @@ impl Carousel {
             let autoplay_cfg = self.autoplay;
             let autoplay_stop_on_interaction =
                 autoplay_cfg.is_some_and(|cfg| cfg.stop_on_interaction);
-            let settle_ticks = settle_ticks_for_duration(options.duration);
             let root_test_id = self.test_id.unwrap_or_else(|| Arc::from("carousel"));
 
             let (
@@ -515,20 +503,28 @@ impl Carousel {
             let mut offset_now = cx.watch_model(&offset_model).copied().unwrap_or(Px(0.0));
             let runtime_snapshot = cx.watch_model(&runtime_model).copied().unwrap_or_default();
             if runtime_snapshot.settling {
-                let tick = runtime_snapshot.settle_tick.saturating_add(1);
-                let t = (tick as f32 / settle_ticks.max(1) as f32).min(1.0);
-                let eased = crate::overlay_motion::shadcn_ease(t);
+                let duration = options.duration;
+                let settle_generation = runtime_snapshot.settle_generation;
+                let motion = cx.keyed(("carousel-settle", settle_generation), |cx| {
+                    decl_transition::drive_transition_with_durations_and_easing_duration_with_mount_behavior(
+                        cx,
+                        true,
+                        duration,
+                        duration,
+                        crate::overlay_motion::shadcn_ease,
+                        true,
+                    )
+                });
                 let next = Px(runtime_snapshot.settle_from.0
-                    + (runtime_snapshot.settle_to.0 - runtime_snapshot.settle_from.0) * eased);
+                    + (runtime_snapshot.settle_to.0 - runtime_snapshot.settle_from.0)
+                        * motion.progress);
                 offset_now = next;
                 let _ = cx.app.models_mut().update(&offset_model, |v| *v = next);
                 let _ = cx.app.models_mut().update(&runtime_model, |st| {
-                    st.settle_tick = tick;
-                    if t >= 1.0 {
+                    if !motion.animating {
                         st.settling = false;
                     }
                 });
-                cx.request_frame();
             }
 
             let axis_offset = offset_now;
@@ -580,7 +576,6 @@ impl Carousel {
                         start_offset,
                     );
                     st.settling = false;
-                    st.settle_tick = 0;
                 });
                 false
             });
@@ -765,7 +760,7 @@ impl Carousel {
                     st.settling = true;
                     st.settle_from = offset;
                     st.settle_to = release.target_offset;
-                    st.settle_tick = 0;
+                    st.settle_generation = st.settle_generation.saturating_add(1);
                 });
                 host.request_redraw(cx.window);
                 true
@@ -786,7 +781,6 @@ impl Carousel {
                 let _ = host.models_mut().update(&runtime_for_cancel, |st| {
                     st.drag = headless_carousel::CarouselDragState::default();
                     st.settling = false;
-                    st.settle_tick = 0;
                 });
                 host.request_redraw(cx.window);
                 true
@@ -854,7 +848,7 @@ impl Carousel {
                         st.settling = true;
                         st.settle_from = cur;
                         st.settle_to = target;
-                        st.settle_tick = 0;
+                        st.settle_generation = st.settle_generation.saturating_add(1);
                     });
                     host.request_redraw(cx.window);
                 },
@@ -922,7 +916,7 @@ impl Carousel {
                         st.settling = true;
                         st.settle_from = cur;
                         st.settle_to = target;
-                        st.settle_tick = 0;
+                        st.settle_generation = st.settle_generation.saturating_add(1);
                     });
                     host.request_redraw(cx.window);
                 },
@@ -1003,7 +997,7 @@ impl Carousel {
                         st.settling = true;
                         st.settle_from = cur;
                         st.settle_to = target;
-                        st.settle_tick = 0;
+                        st.settle_generation = st.settle_generation.saturating_add(1);
                     });
                     host.request_redraw(cx.window);
                     true
@@ -1595,7 +1589,7 @@ impl Carousel {
                             st.settling = true;
                             st.settle_from = cur;
                             st.settle_to = target;
-                            st.settle_tick = 0;
+                            st.settle_generation = st.settle_generation.saturating_add(1);
                         });
                         host.request_redraw(action_cx.window);
 
