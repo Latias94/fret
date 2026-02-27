@@ -8,8 +8,8 @@ scope: ecosystem/fret-node (UI), crates/fret-ui (ThemeSnapshot integration)
 # M0: Contracts + fearless refactor gates
 
 This milestone locks the **styling contract** for `ecosystem/fret-node` so we can refactor the
-canvas renderer freely while preserving user-facing outcomes (Dify-like workflows, Unreal
-Blueprint, Unity ShaderGraph aesthetics).
+canvas renderer freely while preserving user-facing outcomes (clean workflow editors, schematic
+editors, and shader/material graph aesthetics).
 
 The key principle is unchanged:
 
@@ -22,7 +22,8 @@ The key principle is unchanged:
   - per-node chrome overrides (header palette, border/focus, rounding, handle visuals),
   - per-port chrome overrides (shape/color/size, emphasis states),
   - per-edge stroke overrides (width, color, route, markers, **dash patterns**),
-  - multiple named skins/presets (Dify / Blueprint / ShaderGraph) built on top of `ThemeSnapshot`.
+  - multiple named skins/presets (e.g. `WorkflowClean`, `SchematicContrast`, `GraphDark`) built on
+    top of `ThemeSnapshot`.
 - Define cache/invalidation rules to avoid perf cliffs and geometry drift.
 - Add conformance tests that make styling changes safe to refactor.
 

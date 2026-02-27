@@ -10,9 +10,9 @@ scope: ecosystem/fret-node (UI canvas + portal + edgeTypes)
 This milestone implements the v1 “skin layer” so `NodeGraphCanvas` can render editor-grade
 visual styles comparable to:
 
-- Dify-like workflow editors (clean, shadcn-aligned),
-- Unreal Blueprint (strong category colors, high-contrast chrome),
-- Unity ShaderGraph (dark, subtle grids, distinct port types).
+- clean workflow editors (shadcn-aligned),
+- schematic editors (strong category colors, high-contrast chrome),
+- shader/material graph editors (dark, subtle grids, distinct port types).
 
 ## Deliverables
 

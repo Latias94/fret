@@ -20,7 +20,7 @@ scope: ecosystem/fret-node
 
 ## M2 (theme integration + presets)
 
-- [ ] Add kit-level presets: `Dify`, `Blueprint`, `ShaderGraph` (pure function of `ThemeSnapshot`).
+- [ ] Add kit-level presets: `WorkflowClean`, `SchematicContrast`, `GraphDark` (pure function of `ThemeSnapshot`).
 - [ ] Demo toggle to switch presets at runtime (paint-only invalidation).
 - [ ] Add one scripted/diag gate for “preset switch is paint-only” (optional but recommended).
 

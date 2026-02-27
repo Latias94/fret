@@ -1,11 +1,11 @@
 ---
-title: "fret-node styling/skin layer v1 — M2: Theme integration + presets (Dify / Blueprint / ShaderGraph)"
+title: "fret-node styling/skin layer v1 — M2: Theme integration + preset families"
 status: active
 date: 2026-02-27
 scope: ecosystem/fret-node (kit presets), ecosystem/fret-ui-kit / shadcn tokens
 ---
 
-# M2: Theme integration + presets (Dify / Blueprint / ShaderGraph)
+# M2: Theme integration + preset families
 
 This milestone turns the M1 mechanics into “product-level” outcomes: named presets and a clear,
 theme-first authoring workflow.
@@ -14,17 +14,16 @@ theme-first authoring workflow.
 
 - Provide a “best default” that matches the host `ThemeSnapshot` (shadcn-aligned).
 - Provide three opinionated presets that approximate common editor aesthetics:
-  - **Dify-like**: clean, minimal chrome, shadcn palette, subtle grid, modern spacing.
-  - **Blueprint-like**: strong category colors, thicker node headers, distinct exec pins, high
-    contrast selection.
-  - **ShaderGraph-like**: dark palette, subdued background, precise pin colors, strong wire
+  - **WorkflowClean**: clean, minimal chrome, shadcn palette, subtle grid, modern spacing.
+  - **SchematicContrast**: strong category colors, higher-contrast chrome, clear selection/focus.
+  - **GraphDark**: dark palette, subdued background, distinct pin/wire colors, strong wire
     readability under zoom.
 
 ## Public API shape (kit-level)
 
 Add kit-only helpers (headless-safe, but UI-only code behind `fret-ui`):
 
-- `NodeGraphSkinPreset::{Dify, Blueprint, ShaderGraph}`
+- `NodeGraphSkinPreset::{WorkflowClean, SchematicContrast, GraphDark}`
 - `NodeGraphSkin::from_theme(theme_snapshot, preset)`
 - (Optional) `NodeGraphStyle::from_theme(...).with_xyflow_default_node_style()` as a compatibility
   knob, but do not make XyFlow defaults the primary path.
@@ -58,4 +57,3 @@ Add a diag/script gate (optional but recommended):
 
 - “switch preset does not rebuild derived geometry” (paint-only path)
 - “preset switch updates overlays correctly” (minimap/controls stay anchored)
-

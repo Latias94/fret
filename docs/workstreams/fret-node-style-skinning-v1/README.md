@@ -16,9 +16,9 @@ while staying aligned with Fret’s layering:
 
 Primary target aesthetics:
 
-- Dify-like (clean, shadcn-aligned).
-- Unreal Blueprint-like (category headers, high-contrast chrome).
-- Unity ShaderGraph-like (dark, subtle grids, strong wire readability).
+- WorkflowClean (clean, shadcn-aligned).
+- SchematicContrast (category headers, high-contrast chrome).
+- GraphDark (dark, subtle grids, strong wire readability).
 
 Canonical tracking docs:
 
@@ -29,7 +29,7 @@ Milestone design notes (implementation-oriented):
 
 - `docs/workstreams/fret-node-style-skinning-v1/m0-style-contracts-and-gates.md`
 - `docs/workstreams/fret-node-style-skinning-v1/m1-per-node-chrome-hints.md`
-- `docs/workstreams/fret-node-style-skinning-v1/m2-theme-presets-dify-blueprint-shadergraph.md`
+- `docs/workstreams/fret-node-style-skinning-v1/m2-theme-presets.md`
 
 ## Current state (evidence anchors)
 

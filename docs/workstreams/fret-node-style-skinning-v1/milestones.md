@@ -43,10 +43,11 @@ Evidence anchors:
 
 Acceptance:
 
-- Presets exist: `Dify`, `Blueprint`, `ShaderGraph`.
+- Preset families exist: `WorkflowClean`, `SchematicContrast`, `GraphDark`.
 - Presets are derived from `ThemeSnapshot` (no hard-coded palette unless explicitly opting out).
 - Switching presets is paint-only and does not rebuild derived geometry.
 
 Primary design note:
 
 - `docs/workstreams/fret-node-style-skinning-v1/m2-theme-presets-dify-blueprint-shadergraph.md`
+- `docs/workstreams/fret-node-style-skinning-v1/m2-theme-presets.md`
