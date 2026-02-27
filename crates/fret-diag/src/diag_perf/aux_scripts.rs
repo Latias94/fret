@@ -3,6 +3,7 @@ use super::*;
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn run_suite_aux_script_must_pass(
     src: &PathBuf,
+    tool_launched: bool,
     child: &mut Option<LaunchedDemo>,
     use_devtools_ws: bool,
     connected_ws: Option<&ConnectedToolingTransport>,
@@ -71,6 +72,21 @@ pub(crate) fn run_suite_aux_script_must_pass(
                 );
             })?
             .value;
+    let schema_version = crate::compat::script::script_schema_version_from_value(&script_json);
+    if schema_version == 1 && tool_launched {
+        let msg = format!(
+            "script schema_version=1 is disabled for tool-launched runs (--launch/--reuse-launch); upgrade to schema_version=2 (tip: fretboard diag script upgrade --write {})",
+            src.display()
+        );
+        write_tooling_failure_script_result(
+            resolved_script_result_path,
+            "script.schema_v1_disabled",
+            &msg,
+            "tooling_error",
+            Some(script_key.clone()),
+        );
+        return Err(msg);
+    }
     let (mut script_json, upgraded) =
         crate::compat::script::upgrade_script_json_value_to_v2_if_needed(script_json).inspect_err(
             |err| {

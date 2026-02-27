@@ -380,6 +380,7 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
      -> Result<(), String> {
         aux_scripts::run_suite_aux_script_must_pass(
             src,
+            launch.is_some() || reuse_launch,
             child,
             use_devtools_ws,
             connected_ws.as_ref(),
@@ -555,6 +556,7 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
             let bundle_path = run_script::run_perf_script_and_resolve_bundle_artifact_path(
                 &src,
                 script_key.as_str(),
+                launch.is_some() || reuse_launch,
                 &mut child,
                 use_devtools_ws,
                 connected_ws.as_ref(),
@@ -1057,6 +1059,7 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
             let bundle_path = run_script::run_perf_script_and_resolve_bundle_artifact_path(
                 &src,
                 script_key.as_str(),
+                launch.is_some() || reuse_launch,
                 &mut child,
                 use_devtools_ws,
                 connected_ws.as_ref(),

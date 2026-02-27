@@ -154,8 +154,10 @@ Exit plan:
 
 ### Script schema v1
 
-- **Tooling auto-upgrade:** tooling upgrades `schema_version=1` scripts to schema v2 on execution
-  (`crates/fret-diag/src/compat/script.rs`). This keeps old scripts runnable but makes “v2-only” harder to enforce.
+- **Tooling auto-upgrade (manual-only):** tooling can upgrade `schema_version=1` scripts to schema v2 on execution
+  (`crates/fret-diag/src/compat/script.rs`). This keeps old scripts runnable when iterating manually.
+- **Tool-launched runs are v2-only:** when using `--launch` / `--reuse-launch`, tooling rejects schema v1 scripts
+  (requires an explicit `diag script upgrade --write` migration).
 - **Runtime gating:** runtime can reject schema v1 scripts when `allow_script_schema_v1=false` (tooling writes this
   explicitly for `--launch` runs via the config file).
 

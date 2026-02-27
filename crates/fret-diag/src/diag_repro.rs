@@ -197,6 +197,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
     let required_caps = scripts::compute_required_caps(&scripts);
 
     let mut overall_reason_code: Option<String> = None;
+    let tool_launched = launch.is_some();
 
     let prepared_launch = launch::prepare_repro_launch(
         &resolved_out_dir,
@@ -368,6 +369,23 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
                 break;
             }
         };
+        let schema_version = crate::compat::script::script_schema_version_from_value(&script_json);
+        if schema_version == 1 && tool_launched {
+            let msg = format!(
+                "script schema_version=1 is disabled for tool-launched runs (--launch); upgrade to schema_version=2 (tip: fretboard diag script upgrade --write {})",
+                src.display()
+            );
+            overall_reason_code = Some("script.schema_v1_disabled".to_string());
+            write_tooling_failure_script_result(
+                &resolved_script_result_path,
+                "script.schema_v1_disabled",
+                &msg,
+                "tooling_error",
+                Some(src.display().to_string()),
+            );
+            overall_error = Some(msg);
+            break;
+        }
         let (mut script_json, upgraded) =
             match crate::compat::script::upgrade_script_json_value_to_v2_if_needed(script_json) {
                 Ok(v) => v,

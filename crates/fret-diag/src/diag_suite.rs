@@ -1161,6 +1161,7 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
     };
 
     let reuse_process = use_devtools_ws || launch.is_none() || reuse_launch;
+    let tool_launched = launch.is_some() || reuse_launch;
     let mut child = if use_devtools_ws {
         None
     } else if reuse_process {
@@ -1358,6 +1359,7 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
                 for prewarm in &resolved_suite_prewarm_scripts {
                     crate::diag_perf::run_suite_aux_script_must_pass(
                         prewarm,
+                        tool_launched,
                         &mut child,
                         use_devtools_ws,
                         connected_ws.as_ref(),
@@ -1381,6 +1383,7 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
                 for prelude in &resolved_suite_prelude_scripts {
                     crate::diag_perf::run_suite_aux_script_must_pass(
                         prelude,
+                        tool_launched,
                         &mut child,
                         use_devtools_ws,
                         connected_ws.as_ref(),
@@ -1434,6 +1437,22 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
                         );
                     })?
                     .value;
+            let schema_version =
+                crate::compat::script::script_schema_version_from_value(&script_json);
+            if schema_version == 1 && tool_launched {
+                let msg = format!(
+                    "script schema_version=1 is disabled for tool-launched runs (--launch/--reuse-launch); upgrade to schema_version=2 (tip: fretboard diag script upgrade --write {})",
+                    src.display()
+                );
+                write_tooling_failure_script_result(
+                    &resolved_script_result_path,
+                    "script.schema_v1_disabled",
+                    &msg,
+                    "tooling_error",
+                    Some(script_key.clone()),
+                );
+                return Err(msg);
+            }
             let (mut script_json, upgraded) =
                 crate::compat::script::upgrade_script_json_value_to_v2_if_needed(script_json)
                     .inspect_err(|err| {

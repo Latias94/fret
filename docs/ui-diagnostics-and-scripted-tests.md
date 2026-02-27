@@ -322,6 +322,7 @@ Script tooling (no app required):
 - Upgrade legacy schema v1 → v2 (schema-only; does not rewrite v2 scripts):
   - `cargo run -p fretboard -- diag script upgrade .\\script.json --write`
   - `cargo run -p fretboard -- diag script upgrade .\\script.json --check`
+  - Note: tool-launched runs (`--launch` / `--reuse-launch`) reject `schema_version=1` scripts by default; upgrade first.
 - PowerShell note: `diag script validate|lint` accept globs and directories (the CLI expands them):
   - `cargo run -p fretboard -- diag script lint tools/diag-scripts/ui-gallery-select-*.json`
   - `cargo run -p fretboard -- diag script validate tools/diag-scripts`

@@ -15,7 +15,8 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
 - [x] Audit `tools/diag-configs/diag.config.example.json` for drift; ensure every field is either:
   - implemented, or
   - explicitly documented as “planned / ignored by runtime”.
-- [x] Make tooling push schema v2 scripts by default (normalize/upgrade on write) and warn when schema v1 scripts are observed.
+- [x] Make tooling push schema v2 scripts by default (normalize on write) and warn when schema v1 scripts are observed.
+- [x] Tool-launched runs (`--launch` / `--reuse-launch`) reject schema v1 scripts (require an explicit `diag script upgrade --write` migration).
 - [x] Add a runtime compat switch for schema v1 scripts:
   - [x] enable/disable v1 script parsing explicitly (default: enabled for manual, disabled for tool-launched runs),
   - [x] record legacy usage in `script.result.json` evidence (so triage can detect compat paths).
