@@ -104,14 +104,9 @@ impl MessageParts {
             }
         }
 
-        let fg = match self.role {
-            MessageRole::User => theme
-                .color_by_key(role_fg_key(self.role))
-                .unwrap_or_else(|| theme.color_token("secondary-foreground")),
-            _ => theme
-                .color_by_key(role_fg_key(self.role))
-                .unwrap_or_else(|| theme.color_token("foreground")),
-        };
+        let fg = theme
+            .color_by_key(role_fg_key(self.role))
+            .unwrap_or_else(|| theme.color_token("foreground"));
 
         let on_link_activate = self.on_link_activate;
         let test_id_prefix = self.test_id_prefix;

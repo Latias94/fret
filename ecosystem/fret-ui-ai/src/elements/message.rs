@@ -160,7 +160,11 @@ impl MessageContent {
 
         let bubble_fg = if self.from == MessageRole::User {
             // Upstream (ai-elements) uses `text-foreground` for user bubbles.
-            Some(theme.color_token("foreground"))
+            Some(
+                theme
+                    .color_by_key("fret.ai.message.user.fg")
+                    .unwrap_or_else(|| theme.color_token("foreground")),
+            )
         } else {
             None
         };
