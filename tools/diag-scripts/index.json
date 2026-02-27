@@ -986,6 +986,28 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-gesture-pinch-smoke",
+      "path": "tools/diag-scripts/ui-gallery/diag/ui-gallery-gesture-pinch-smoke.json",
+      "required_capabilities": [
+        "diag.gesture_pinch",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery"
+      ],
+      "tags": [
+        "diag",
+        "gesture",
+        "pinch",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Exercises the intent-level pinch step (touch-first).",
+        "Waits for a pinch_gesture event in the diagnostics ring as proof of delivery.",
+        "Fails fast when the runner does not advertise diag.gesture_pinch."
+      ]
+    },
+    {
       "id": "ui-gallery-gesture-tap-smoke",
       "path": "tools/diag-scripts/ui-gallery/diag/ui-gallery-gesture-tap-smoke.json",
       "required_capabilities": [
