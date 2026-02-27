@@ -29,13 +29,20 @@ In-tree surfaces:
 
 ## P0 — Lock contracts (hard-to-change behavior)
 
-- [ ] CAR-010 Document the headless snap model contract (inputs, outputs, invariants).
-  - Evidence target: add a short section to this workstream + code doc comments.
-- [ ] CAR-020 Add unit tests for the snap model:
+- [x] CAR-010 Document the headless snap model contract (inputs, outputs, invariants).
+  - Evidence:
+    - `docs/workstreams/carousel-embla-fearless-refactor-v1/snap-model-contract.md`
+    - `ecosystem/fret-ui-headless/src/carousel.rs` (`snap_model_1d` rustdoc)
+- [x] CAR-020 Add unit tests for the snap model:
   - `slidesToScroll`: `auto` + `n`
   - `containScroll`: `false` / `keepSnaps` / `trimSnaps`
   - `align`: `start` / `center` / `end`
   - `contentSize <= viewSize + pixelTolerance` short-circuit
+  - Evidence: `ecosystem/fret-ui-headless/src/carousel.rs` tests:
+    - `snap_model_short_circuits_when_content_fits_view_with_tolerance`
+    - `snap_model_fixed_slides_to_scroll_groups_slides_by_n`
+    - `snap_model_auto_slides_to_scroll_groups_by_view_size`
+    - `snap_model_contain_scroll_{none,keep_snaps,trim_snaps}_...`
 
 ## P1 — Parity (docs-aligned outcomes)
 

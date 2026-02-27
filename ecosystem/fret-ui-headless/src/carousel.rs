@@ -456,6 +456,42 @@ fn array_from_range(end: usize, start: usize) -> Vec<usize> {
     (start..=end).collect()
 }
 
+/// Headless, deterministic snap model inspired by Embla's `ScrollSnaps`, `SlidesToScroll`,
+/// and `ScrollContain`, expressed using Fret's preferred positive-offset convention.
+///
+/// Coordinate / sign conventions:
+///
+/// - All `Px` values are in the carousel's **main axis** (X for horizontal, Y for vertical).
+/// - `slides[i].start` is measured from the viewport's start edge at rest.
+/// - `snaps_px[k]` is the **positive** offset you apply when rendering, e.g.:
+///   `transform: translate(-snaps_px[k])`.
+/// - `0` means "unshifted track" (content starts at the viewport start edge).
+///
+/// Inputs:
+///
+/// - `start_gap` / `end_gap` represent extra blank space before/after slides (e.g. margins).
+/// - `slides_to_scroll` controls snap grouping:
+///   - `Fixed(n)`: group slides in fixed-size chunks.
+///   - `Auto`: group as many slides as fit into `view_size` (with tolerance).
+/// - `align` computes the within-viewport alignment for each group (start/center/end/custom).
+/// - `contain_scroll`:
+///   - `None`: do not clamp/contain snaps (may return snap values outside `[0, max_offset_px]`).
+///   - `KeepSnaps`: clamp snaps, but preserve the original snap count (duplicates allowed).
+///   - `TrimSnaps`: clamp snaps, then trim duplicates at the ends and expand edge slide groups so
+///     every slide maps to a valid snap.
+/// - `pixel_tolerance_px`:
+///   - short-circuits to a single snap when `content_size <= view_size + tolerance`.
+///   - participates in auto-grouping boundaries and containment "near edge" snapping.
+///
+/// Outputs / invariants:
+///
+/// - `snaps_px` is never empty. (Empty inputs return `[0]`.)
+/// - `max_offset_px` is `max(content_size - view_size, 0)`.
+/// - When containment is enabled (`contain_scroll != None` and `!loop_enabled`):
+///   - `snaps_px[0] == 0`, and the last snap is `max_offset_px`.
+///   - Middle snaps are clamped and rounded to 3 decimals (Embla-style determinism).
+/// - `slides_by_snap.len() == snaps_px.len()` (after containment trimming/adjustments).
+/// - For every slide index `i`, `snap_by_slide[i]` is a valid index into `snaps_px`.
 pub fn snap_model_1d(
     view_size: Px,
     slides: &[CarouselSlide1D],
@@ -865,6 +901,211 @@ mod tests {
 
     fn align_10pct(view_size: Px, _snap_size: Px, _index: usize) -> Px {
         Px(view_size.0 * 0.1)
+    }
+
+    #[test]
+    fn snap_model_short_circuits_when_content_fits_view_with_tolerance() {
+        let view = Px(100.0);
+        let slides = vec![
+            CarouselSlide1D {
+                start: Px(0.0),
+                size: Px(50.0),
+            },
+            CarouselSlide1D {
+                start: Px(50.0),
+                size: Px(50.0),
+            },
+        ];
+
+        // Exact fit.
+        let model = snap_model_1d(
+            view,
+            &slides,
+            Px(0.0),
+            Px(0.0),
+            CarouselSlidesToScrollOption::Fixed(1),
+            false,
+            CarouselSnapAlign::Start,
+            CarouselContainScrollOption::TrimSnaps,
+            0.0,
+        );
+        assert_eq!(model.snaps_px, vec![Px(0.0)]);
+        assert_eq!(model.slides_by_snap, vec![vec![0, 1]]);
+        assert_eq!(model.snap_by_slide, vec![0, 0]);
+        assert_eq!(model.max_offset_px, Px(0.0));
+
+        // Slightly exceeds view, but within tolerance.
+        let model = snap_model_1d(
+            view,
+            &slides,
+            Px(0.0),
+            Px(0.5),
+            CarouselSlidesToScrollOption::Fixed(1),
+            false,
+            CarouselSnapAlign::Start,
+            CarouselContainScrollOption::TrimSnaps,
+            1.0,
+        );
+        assert_eq!(model.snaps_px, vec![Px(0.0)]);
+        assert_eq!(model.slides_by_snap, vec![vec![0, 1]]);
+        assert_eq!(model.snap_by_slide, vec![0, 0]);
+        assert_eq!(model.max_offset_px, Px(0.5));
+    }
+
+    #[test]
+    fn snap_model_fixed_slides_to_scroll_groups_slides_by_n() {
+        let view = Px(150.0);
+        let slides = (0..5)
+            .map(|i| CarouselSlide1D {
+                start: Px((i as f32) * 100.0),
+                size: Px(100.0),
+            })
+            .collect::<Vec<_>>();
+
+        let model = snap_model_1d(
+            view,
+            &slides,
+            Px(0.0),
+            Px(0.0),
+            CarouselSlidesToScrollOption::Fixed(2),
+            false,
+            CarouselSnapAlign::Start,
+            CarouselContainScrollOption::None,
+            0.0,
+        );
+
+        assert_eq!(model.snaps_px, vec![Px(0.0), Px(200.0), Px(400.0)]);
+        assert_eq!(model.slides_by_snap, vec![vec![0, 1], vec![2, 3], vec![4]]);
+        assert_eq!(model.snap_by_slide, vec![0, 0, 1, 1, 2]);
+        assert_eq!(model.max_offset_px, Px(350.0));
+    }
+
+    #[test]
+    fn snap_model_auto_slides_to_scroll_groups_by_view_size() {
+        // Three slides of 40px each => first two fit in a 100px view, third becomes its own group.
+        let view = Px(100.0);
+        let slides = (0..3)
+            .map(|i| CarouselSlide1D {
+                start: Px((i as f32) * 40.0),
+                size: Px(40.0),
+            })
+            .collect::<Vec<_>>();
+
+        let model = snap_model_1d(
+            view,
+            &slides,
+            Px(0.0),
+            Px(0.0),
+            CarouselSlidesToScrollOption::Auto,
+            false,
+            CarouselSnapAlign::Start,
+            CarouselContainScrollOption::None,
+            0.0,
+        );
+
+        assert_eq!(model.snaps_px, vec![Px(0.0), Px(80.0)]);
+        assert_eq!(model.slides_by_snap, vec![vec![0, 1], vec![2]]);
+        assert_eq!(model.snap_by_slide, vec![0, 0, 1]);
+        assert_eq!(model.max_offset_px, Px(20.0));
+    }
+
+    fn fixture_keep_trim_none_1() -> (Px, Vec<CarouselSlide1D>) {
+        let view = Px(250.0);
+        let slides = vec![
+            CarouselSlide1D {
+                start: Px(0.0),
+                size: Px(100.0),
+            },
+            CarouselSlide1D {
+                start: Px(100.0),
+                size: Px(100.0),
+            },
+            CarouselSlide1D {
+                start: Px(200.0),
+                size: Px(100.0),
+            },
+            CarouselSlide1D {
+                start: Px(300.0),
+                size: Px(100.0),
+            },
+        ];
+        (view, slides)
+    }
+
+    #[test]
+    fn snap_model_contain_scroll_keep_snaps_preserves_count_and_duplicates() {
+        let (view, slides) = fixture_keep_trim_none_1();
+        let model = snap_model_1d(
+            view,
+            &slides,
+            Px(0.0),
+            Px(0.0),
+            CarouselSlidesToScrollOption::Fixed(1),
+            false,
+            CarouselSnapAlign::Start,
+            CarouselContainScrollOption::KeepSnaps,
+            0.0,
+        );
+
+        // max_offset = 400 - 250 = 150. Slides at 200/300 clamp to 150, keeping duplicates.
+        assert_eq!(
+            model.snaps_px,
+            vec![Px(0.0), Px(100.0), Px(150.0), Px(150.0)]
+        );
+        assert_eq!(
+            model.slides_by_snap,
+            vec![vec![0], vec![1], vec![2], vec![3]]
+        );
+        assert_eq!(model.snap_by_slide, vec![0, 1, 2, 3]);
+        assert_eq!(model.max_offset_px, Px(150.0));
+    }
+
+    #[test]
+    fn snap_model_contain_scroll_trim_snaps_trims_and_expands_edge_groups() {
+        let (view, slides) = fixture_keep_trim_none_1();
+        let model = snap_model_1d(
+            view,
+            &slides,
+            Px(0.0),
+            Px(0.0),
+            CarouselSlidesToScrollOption::Fixed(1),
+            false,
+            CarouselSnapAlign::Start,
+            CarouselContainScrollOption::TrimSnaps,
+            0.0,
+        );
+
+        assert_eq!(model.snaps_px, vec![Px(0.0), Px(100.0), Px(150.0)]);
+        assert_eq!(model.slides_by_snap, vec![vec![0], vec![1], vec![2, 3]]);
+        assert_eq!(model.snap_by_slide, vec![0, 1, 2, 2]);
+        assert_eq!(model.max_offset_px, Px(150.0));
+    }
+
+    #[test]
+    fn snap_model_contain_scroll_none_does_not_clamp_snaps() {
+        let (view, slides) = fixture_keep_trim_none_1();
+        let model = snap_model_1d(
+            view,
+            &slides,
+            Px(0.0),
+            Px(0.0),
+            CarouselSlidesToScrollOption::Fixed(1),
+            false,
+            CarouselSnapAlign::Start,
+            CarouselContainScrollOption::None,
+            0.0,
+        );
+
+        assert_eq!(
+            model.snaps_px,
+            vec![Px(0.0), Px(100.0), Px(200.0), Px(300.0)]
+        );
+        assert_eq!(
+            model.slides_by_snap,
+            vec![vec![0], vec![1], vec![2], vec![3]]
+        );
+        assert_eq!(model.snap_by_slide, vec![0, 1, 2, 3]);
+        assert_eq!(model.max_offset_px, Px(150.0));
     }
 
     #[test]
