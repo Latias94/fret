@@ -78,6 +78,8 @@ Exit criteria:
 - `triage.json` and/or `ai.packet.json` record when compat fallbacks were used.
   - Status (2026-02-27): triage and AI packets include a bounded `compat.markers` list derived from bundle schema/version
     sniffing, legacy capabilities detection, and `script.result.json` `compat.*` event log entries.
+- Transport differences (filesystem vs DevTools WS) are isolated behind an explicit tooling seam contract.
+  - Status (2026-02-27): `crates/fret-diag/src/transport/seam.rs` consolidates request-id correlation and baseline-race mitigations.
 - Multi-window targeting semantics are consistent across selector-driven v2 steps (no silent “window-local only” gaps).
   - Status (2026-02-27): selector-driven v2 steps now support optional `window` targeting and tooling infers
     `diag.multi_window` when targeting “other windows”.

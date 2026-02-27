@@ -138,7 +138,8 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
 - [x] Extend `FilesystemCapabilitiesV1` with optional identity fields (additive):
   - [x] `runner_kind`, `runner_version`,
   - [x] optional `protocol_versions`/`schemas` hints for tooling.
-- [ ] Create `transport/` seam contract and ensure all FS vs WS differences are isolated there.
+- [x] Create `transport/` seam contract and ensure all FS vs WS differences are isolated there.
+  - Evidence: `crates/fret-diag/src/transport/seam.rs`, `crates/fret-diag/src/lib.rs`
 - [x] Add a “legacy usage” marker into `triage.json` / `ai.packet.json` when compat fallbacks were used.
   - Evidence: `crates/fret-diag/src/triage_json.rs`, `crates/fret-diag/src/commands/ai_packet/budget.rs`
 
