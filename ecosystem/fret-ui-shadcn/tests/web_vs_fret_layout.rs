@@ -51,6 +51,9 @@ pub(crate) use harness::*;
 mod insets;
 pub(crate) use insets::*;
 
+#[path = "web_vs_fret_layout/alert.rs"]
+mod alert;
+
 #[path = "web_vs_fret_layout/accordion.rs"]
 mod accordion;
 #[path = "web_vs_fret_layout/avatar.rs"]
