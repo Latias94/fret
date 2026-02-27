@@ -55,7 +55,8 @@ jobs:
 
       - name: Clippy (core crates)
         run: >-
-          cargo clippy -p fret -p fret-a11y-accesskit -p fret-app -p fret-core -p fret-fonts -p fret-launch
+          cargo clippy -p fret -p fret-a11y-accesskit -p fret-app -p fret-core -p fret-fonts
+          -p fret-launch -p fret-launch-core -p fret-launch-desktop -p fret-launch-web
           -p fret-platform -p fret-platform-native -p fret-platform-web -p fret-render -p fret-runner-web
           -p fret-runner-winit -p fret-runtime -p fret-ui -p fret-ui-app --all-targets -- -D warnings
 
