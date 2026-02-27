@@ -39,6 +39,12 @@ Doc: `docs/workstreams/diag-extensibility-and-capabilities-v1/capabilities.md`
   - [x] fail fast when required capabilities are missing,
   - [x] emit evidence file `check.capabilities.json` (machine-readable),
   - [x] `diag repro` includes gating failures in `repro.summary.json`.
+- [ ] Pointer kind injection (touch/pen) is explicit and capability-gated:
+  - [x] document current status: scripts inject mouse only (evidence still records pointer type),
+  - [ ] decide protocol shape (preferred: optional `pointer_kind` on pointer-driven steps; default: `mouse`),
+  - [ ] implement runner support for `pointer_kind=touch` (and advertise `diag.pointer_kind_touch` when available),
+  - [ ] tooling infers required capability when a script requests `pointer_kind=touch`,
+  - [ ] add at least one small script/demo that exercises touch kind (and fails fast when unsupported).
 
 ## Evidence & trace (debuggability surfaces)
 
@@ -157,6 +163,7 @@ Doc: `docs/workstreams/diag-extensibility-and-capabilities-v1/component-conforma
   - [ ] one fallback demo using anchored normalized coordinates (capability-gated).
 - [ ] Mobile alignment (future):
   - [ ] define touch pointer kind surface and basic gestures in protocol (capability-gated).
+    - Status (2026-02-27): touch/pen injection is not exposed in the script schema yet (mouse-only injection).
 
 ## CI tasks (guardrails)
 

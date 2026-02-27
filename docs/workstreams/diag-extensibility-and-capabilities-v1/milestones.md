@@ -150,6 +150,17 @@ Definition of done:
 - [ ] Define pointer-kind support and minimal gesture steps (tap/long-press/swipe/pinch).
 - [ ] Ensure all gesture steps are optional and capability-gated.
 
+Status (2026-02-27):
+
+- Scripted pointer steps inject mouse input only; touch/pen injection is not exposed in the script schema yet.
+
+Definition of done (proposed):
+
+- The script schema can request a non-mouse pointer kind (at least `touch`) for pointer-driven steps, defaulting to mouse.
+- Tooling gates touch injection behind `diag.pointer_kind_touch` (fail fast with `check.capabilities.json` evidence).
+- At least one small script demonstrates touch injection (or a deterministic “unsupported” failure) without relying on
+  screenshots.
+
 ### M11: CI guardrails for contract evolution
 
 - [ ] Add CI checks for:

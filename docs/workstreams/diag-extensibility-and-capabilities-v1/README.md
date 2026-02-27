@@ -90,6 +90,12 @@ The script runner/tooling must make “what is supported” explicit. Examples:
 - `diag.multi_window` (window targeting and cross-window assertions)
 - `diag.pointer_kind_touch` / `diag.gesture_pinch` (future mobile-style input)
 
+Pointer kind status (2026-02-27):
+
+- Scripted pointer steps currently inject mouse input only; touch/pen injection is not exposed in the script schema yet.
+- The `diag.pointer_kind_touch` capability is reserved for future touch injection and is not expected to be advertised by
+  current runners.
+
 Tooling should:
 
 - refuse to execute scripts that require missing capabilities,

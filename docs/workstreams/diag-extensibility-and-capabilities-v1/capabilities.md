@@ -105,6 +105,26 @@ Then:
   - execution MUST fail fast (tooling-side),
   - tooling MUST emit a structured evidence file for CI/AI.
 
+## Pointer kinds (mouse vs touch vs pen)
+
+Status (2026-02-27):
+
+- Scripted pointer steps (click/move/drag/wheel/pointer session) currently inject `PointerType::Mouse` only.
+- There is no script-level field to request touch/pen injection yet.
+- Bundles still record pointer type for evidence (e.g. `primary_pointer_type`), but this is observational only.
+
+Planned direction:
+
+- Extend pointer-driven steps with an optional `pointer_kind` (or `pointer_type`) field (default: `mouse`) so that suites
+  can exercise touch-specific behaviors deterministically (where supported).
+- Gate non-mouse injection behind explicit runner capabilities:
+  - `pointer_kind=touch` ⇒ require `diag.pointer_kind_touch`
+  - (future) `pointer_kind=pen` ⇒ require `diag.pointer_kind_pen` (or reuse a generic `diag.pointer_kind_pen`)
+- Keep the default path unchanged: existing scripts remain mouse-based and do not require any new capabilities.
+
+Non-goal (v1): multi-touch / pressure / tilt / contact geometry. These likely require a separate capability namespace and
+more explicit gesture-level steps (`tap`, `long_press`, `swipe`, `pinch`) rather than overloading mouse-style steps.
+
 ### Evidence file for gating failures
 
 Recommended output: `check.capabilities.json`:

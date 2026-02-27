@@ -729,6 +729,14 @@ Supported selectors (v1 MVP):
 - `set_cursor_in_window` (schema v2 only; runner-level cursor override using window-client physical pixels; intended for cross-window routing without hardcoding DPI)
 - `drag_pointer_until` (schema v2 only; optional `window` target; drag across frames until a predicate passes or timeout; intended for cross-window routing)
 
+Pointer kind note (as of 2026-02-27):
+
+- Scripted pointer steps currently inject `PointerType::Mouse` only (no script field to request touch/pen).
+- Bundles still record the observed `primary_pointer_type`/`pointer_type` for evidence, but this is not a controllable
+  injection parameter yet.
+- Future work is tracked under `diag.pointer_kind_touch` (capability-gated touch injection) in
+  `docs/workstreams/diag-extensibility-and-capabilities-v1/capabilities.md`.
+
 Additional predicate kinds are occasionally added to unblock new regression gates (for example menu a11y checks).
 When authoring scripts, prefer stable `test_id` selectors and stick to predicates documented here; see
 `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` for the authoritative list.
