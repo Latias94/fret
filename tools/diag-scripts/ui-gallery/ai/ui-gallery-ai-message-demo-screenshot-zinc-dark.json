@@ -7,7 +7,7 @@
     "target_hints": [
       "Sets theme preset to zinc/dark.",
       "Navigates to the AI Elements Message demo page.",
-      "Captures a screenshot to gate bubble on-color contrast (secondary + secondary-foreground)."
+      "Captures a screenshot to gate bubble on-color contrast (secondary + foreground)."
     ]
   },
   "steps": [
@@ -26,7 +26,7 @@
       "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-theme-preset-item-zinc-dark" } },
       "timeout_frames": 240
     },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-theme-preset-item-zinc-dark" } },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-theme-preset-item-zinc-dark" } },
     { "type": "wait_frames", "n": 3 },
     { "type": "press_key", "key": "escape" },
     { "type": "wait_frames", "n": 2 },
@@ -80,4 +80,3 @@
     { "type": "capture_bundle", "label": "ui-gallery-ai-message-demo-zinc-dark" }
   ]
 }
-
