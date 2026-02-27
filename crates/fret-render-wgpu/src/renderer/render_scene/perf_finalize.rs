@@ -464,6 +464,10 @@ impl Renderer {
             .perf
             .material_degraded_due_to_budget
             .saturating_add(frame_perf.material_degraded_due_to_budget);
+        self.perf.path_material_paints_degraded_to_solid_base = self
+            .perf
+            .path_material_paints_degraded_to_solid_base
+            .saturating_add(frame_perf.path_material_paints_degraded_to_solid_base);
 
         self.last_frame_perf = Some(RenderPerfSnapshot {
             frames: frame_perf.frames,
@@ -593,6 +597,8 @@ impl Renderer {
             material_distinct: frame_perf.material_distinct,
             material_unknown_ids: frame_perf.material_unknown_ids,
             material_degraded_due_to_budget: frame_perf.material_degraded_due_to_budget,
+            path_material_paints_degraded_to_solid_base: frame_perf
+                .path_material_paints_degraded_to_solid_base,
             clip_path_mask_cache_bytes_live: frame_perf.clip_path_mask_cache_bytes_live,
             clip_path_mask_cache_entries_live: frame_perf.clip_path_mask_cache_entries_live,
             clip_path_mask_cache_hits: frame_perf.clip_path_mask_cache_hits,

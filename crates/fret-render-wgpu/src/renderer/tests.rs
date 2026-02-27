@@ -15,8 +15,12 @@ use super::shaders::{
     drop_shadow_masked_shader_source, quad_shader_source, upscale_nearest_masked_shader_source,
 };
 use super::{clamp_corner_radii_for_rect, svg_draw_rect_px};
+use fret_core::PathService as _;
 use fret_core::geometry::{Point, Px, Transform2D};
-use fret_core::{DrawOrder, Rect, Scene, SceneOp, Size, ViewportFit};
+use fret_core::{
+    DrawOrder, FillStyle, PathCommand, PathConstraints, PathStyle, Rect, Scene, SceneOp, Size,
+    ViewportFit,
+};
 
 fn assert_approx_eq(a: f32, b: f32) {
     assert!(
@@ -684,4 +688,71 @@ fn scene_encoding_cache_is_busted_by_text_quality_changes() {
         renderer.perf.scene_encoding_cache_last_miss_reasons & (1 << 9),
         0
     );
+}
+
+#[test]
+fn perf_snapshot_counts_path_material_paint_degradation() {
+    let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+    let mut renderer = super::Renderer::new(&ctx.adapter, &ctx.device);
+    renderer.set_perf_enabled(true);
+
+    let format = wgpu::TextureFormat::Bgra8UnormSrgb;
+    let viewport_size = (64, 64);
+    let target = ctx.device.create_texture(&wgpu::TextureDescriptor {
+        label: Some("path material paint perf test target"),
+        size: wgpu::Extent3d {
+            width: viewport_size.0,
+            height: viewport_size.1,
+            depth_or_array_layers: 1,
+        },
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D2,
+        format,
+        usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+        view_formats: &[],
+    });
+    let target_view = target.create_view(&Default::default());
+
+    let cmds = [
+        PathCommand::MoveTo(Point::new(Px(10.0), Px(10.0))),
+        PathCommand::LineTo(Point::new(Px(50.0), Px(10.0))),
+        PathCommand::LineTo(Point::new(Px(50.0), Px(50.0))),
+        PathCommand::LineTo(Point::new(Px(10.0), Px(50.0))),
+        PathCommand::Close,
+    ];
+    let constraints = PathConstraints { scale_factor: 1.0 };
+    let (path, _metrics) =
+        renderer.prepare(&cmds, PathStyle::Fill(FillStyle::default()), constraints);
+
+    let mut scene = Scene::default();
+    scene.push(SceneOp::Path {
+        order: DrawOrder(0),
+        origin: Point::new(Px(0.0), Px(0.0)),
+        path,
+        paint: fret_core::scene::Paint::Material {
+            id: fret_core::MaterialId::default(),
+            params: fret_core::scene::MaterialParams {
+                vec4s: [[1.0, 0.0, 0.0, 1.0], [0.0; 4], [0.0; 4], [0.0; 4]],
+            },
+        },
+    });
+
+    let _ = renderer.render_scene(
+        &ctx.device,
+        &ctx.queue,
+        super::RenderSceneParams {
+            format,
+            target_view: &target_view,
+            scene: &scene,
+            clear: super::ClearColor::default(),
+            scale_factor: 1.0,
+            viewport_size,
+        },
+    );
+
+    let snap = renderer
+        .take_last_frame_perf_snapshot()
+        .expect("perf snapshot");
+    assert_eq!(snap.path_material_paints_degraded_to_solid_base, 1);
 }

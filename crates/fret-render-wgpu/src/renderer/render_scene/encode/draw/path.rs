@@ -57,6 +57,12 @@ pub(in super::super) fn encode_path(
     }
     let t_px = state.current_transform_px();
 
+    if matches!(paint, fret_core::scene::Paint::Material { .. }) {
+        *state.path_material_paints_degraded_to_solid_base = state
+            .path_material_paints_degraded_to_solid_base
+            .saturating_add(1);
+    }
+
     let paint_gpu = paint_to_gpu(
         renderer,
         state,

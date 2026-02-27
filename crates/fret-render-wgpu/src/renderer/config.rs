@@ -188,6 +188,9 @@ impl Renderer {
             material_distinct: self.perf.material_distinct,
             material_unknown_ids: self.perf.material_unknown_ids,
             material_degraded_due_to_budget: self.perf.material_degraded_due_to_budget,
+            path_material_paints_degraded_to_solid_base: self
+                .perf
+                .path_material_paints_degraded_to_solid_base,
         };
 
         self.perf = RenderPerfStats::default();

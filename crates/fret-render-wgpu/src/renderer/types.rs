@@ -456,6 +456,13 @@ pub struct RenderPerfSnapshot {
     pub material_distinct: u64,
     pub material_unknown_ids: u64,
     pub material_degraded_due_to_budget: u64,
+
+    // Path paint degradations (best-effort).
+    //
+    // Today the path pipeline does not support `Paint::Material` and deterministically degrades
+    // it to the base solid color. This counter makes that limitation visible in perf/diag
+    // snapshots without requiring plan dumps.
+    pub path_material_paints_degraded_to_solid_base: u64,
 }
 
 #[derive(Debug, Default)]
@@ -585,6 +592,8 @@ pub(super) struct RenderPerfStats {
     pub(super) material_distinct: u64,
     pub(super) material_unknown_ids: u64,
     pub(super) material_degraded_due_to_budget: u64,
+
+    pub(super) path_material_paints_degraded_to_solid_base: u64,
 }
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -904,6 +913,8 @@ pub(super) struct SceneEncoding {
     pub(super) material_distinct: u64,
     pub(super) material_unknown_ids: u64,
     pub(super) material_degraded_due_to_budget: u64,
+
+    pub(super) path_material_paints_degraded_to_solid_base: u64,
 }
 
 impl SceneEncoding {
@@ -933,6 +944,7 @@ impl SceneEncoding {
         self.material_distinct = 0;
         self.material_unknown_ids = 0;
         self.material_degraded_due_to_budget = 0;
+        self.path_material_paints_degraded_to_solid_base = 0;
     }
 }
 

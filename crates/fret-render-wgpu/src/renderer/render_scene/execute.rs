@@ -123,6 +123,9 @@ impl Renderer {
             frame_perf.material_degraded_due_to_budget = frame_perf
                 .material_degraded_due_to_budget
                 .saturating_add(encoding.material_degraded_due_to_budget);
+            frame_perf.path_material_paints_degraded_to_solid_base = frame_perf
+                .path_material_paints_degraded_to_solid_base
+                .saturating_add(encoding.path_material_paints_degraded_to_solid_base);
         }
 
         let postprocess = self.pick_debug_postprocess(viewport_size, format);
