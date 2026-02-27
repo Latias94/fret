@@ -22,7 +22,6 @@ use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::collection_semantics::CollectionSemanticsExt as _;
-use fret_ui_kit::declarative::current_color;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
@@ -978,6 +977,7 @@ impl ContextMenuRenderEnv {
         let pad_y = self.pad_y;
         let radius_sm = self.radius_sm;
         let text_disabled = self.text_disabled;
+        let label_fg = self.label_fg;
         let fg = self.fg;
         let accent = self.accent;
         let accent_fg = self.accent_fg;
@@ -1040,6 +1040,12 @@ impl ContextMenuRenderEnv {
                     }
                 }
 
+                let icon_fg = if variant == ContextMenuItemVariant::Destructive {
+                    destructive_fg
+                } else {
+                    label_fg
+                };
+
                 let children = menu_row_children(
                     cx,
                     label.clone(),
@@ -1052,6 +1058,7 @@ impl ContextMenuRenderEnv {
                     disabled,
                     row_bg,
                     row_fg,
+                    icon_fg,
                     text_style.clone(),
                     font_size,
                     font_line_height,
@@ -1174,6 +1181,7 @@ impl ContextMenuRenderEnv {
                     Some(checked_now),
                     disabled,
                     row_bg,
+                    row_fg,
                     row_fg,
                     text_style.clone(),
                     font_size,
@@ -1303,6 +1311,7 @@ impl ContextMenuRenderEnv {
                     Some(is_selected),
                     disabled,
                     row_bg,
+                    row_fg,
                     row_fg,
                     text_style.clone(),
                     font_size,
@@ -1531,6 +1540,7 @@ impl ContextMenuContentRenderEnv {
         let pad_y = self.pad_y;
         let radius_sm = self.radius_sm;
         let text_disabled = self.text_disabled;
+        let label_fg = self.label_fg;
         let fg = self.fg;
         let accent = self.accent;
         let accent_fg = self.accent_fg;
@@ -1628,6 +1638,11 @@ impl ContextMenuContentRenderEnv {
                         row_fg = accent_fg;
                     }
                 }
+                let icon_fg = if variant == ContextMenuItemVariant::Destructive {
+                    destructive_fg
+                } else {
+                    label_fg
+                };
 
                 let trailing = if has_submenu {
                     trailing
@@ -1652,6 +1667,7 @@ impl ContextMenuContentRenderEnv {
                     disabled,
                     row_bg,
                     row_fg,
+                    icon_fg,
                     text_style.clone(),
                     font_size,
                     font_line_height,
@@ -1768,6 +1784,7 @@ impl ContextMenuContentRenderEnv {
                         Some(checked_now),
                         disabled,
                         row_bg,
+                        row_fg,
                         row_fg,
                         text_style.clone(),
                         font_size,
@@ -1891,6 +1908,7 @@ impl ContextMenuContentRenderEnv {
                         disabled,
                         row_bg,
                         row_fg,
+                        row_fg,
                         text_style.clone(),
                         font_size,
                         font_line_height,
@@ -1919,6 +1937,7 @@ fn menu_row_children<H: UiHost>(
     disabled: bool,
     row_bg: fret_core::Color,
     row_fg: fret_core::Color,
+    row_icon_fg: fret_core::Color,
     text_style: TextStyle,
     _font_size: Px,
     _font_line_height: Px,
@@ -1957,7 +1976,12 @@ fn menu_row_children<H: UiHost>(
             ..Default::default()
         },
         move |cx| {
-            let effective_fg = if disabled { text_disabled } else { row_fg };
+            let text_fg = if disabled { text_disabled } else { row_fg };
+            let icon_fg = if disabled {
+                alpha_mul(row_icon_fg, 0.5)
+            } else {
+                row_icon_fg
+            };
             let mut leading = leading;
             let leading_icon = leading_icon.clone();
             let mut trailing = trailing;
@@ -1975,105 +1999,106 @@ fn menu_row_children<H: UiHost>(
                     + usize::from(submenu),
             );
 
-            current_color::scope_children(cx, ColorRef::Color(effective_fg), |cx| {
-                if let Some(is_on) = indicator_on {
-                    let indicator_fg = effective_fg;
-                    row.push(cx.flex(
-                        FlexProps {
-                            layout: {
-                                let mut layout = LayoutStyle::default();
-                                layout.size.width = Length::Px(Px(16.0));
-                                layout.size.height = Length::Px(Px(16.0));
-                                layout.flex.shrink = 0.0;
-                                layout
-                            },
-                            direction: fret_core::Axis::Horizontal,
-                            gap: Px(0.0).into(),
-                            padding: Edges::all(Px(0.0)).into(),
-                            justify: MainAlign::Center,
-                            align: CrossAlign::Center,
-                            wrap: false,
-                        },
-                        move |cx| {
-                            if !is_on {
-                                return Vec::new();
-                            }
-
-                            vec![decl_icon::icon_with(
-                                cx,
-                                ids::ui::CHECK,
-                                Some(Px(16.0)),
-                                Some(ColorRef::Color(indicator_fg)),
-                            )]
-                        },
-                    ));
-                }
-
-                if let Some(l) = leading.take() {
-                    row.push(menu_icon_slot(cx, l));
-                } else if let Some(icon) = leading_icon.clone() {
-                    let icon_el = decl_icon::icon_with(cx, icon, Some(Px(16.0)), None);
-                    row.push(menu_icon_slot(cx, icon_el));
-                } else if reserve_leading_slot {
-                    row.push(menu_icon_slot_empty(cx));
-                }
-
-                let style = text_style.clone();
-                let mut text = ui::text(cx, label.clone())
-                    .layout(LayoutRefinement::default().min_w_0().flex_1())
-                    .text_size_px(style.size)
-                    .font_weight(style.weight)
-                    .nowrap();
-
-                if let Some(line_height) = style.line_height {
-                    text = text.fixed_line_box_px(line_height).line_box_in_bounds();
-                }
-
-                if let Some(letter_spacing_em) = style.letter_spacing_em {
-                    text = text.letter_spacing_em(letter_spacing_em);
-                }
-
-                let mut label_element = text.into_element(cx);
-                if let Some(test_id) = label_test_id.clone() {
-                    label_element = label_element.test_id(test_id);
-                }
-                row.push(label_element);
-
-                if has_trailing || submenu {
-                    row.push(cx.spacer(SpacerProps::default()));
-                }
-                if let Some(mut trailing_element) = trailing.take() {
-                    if let Some(test_id) = trailing_test_id.clone() {
-                        trailing_element = trailing_element.test_id(test_id);
-                    }
-                    row.push(trailing_element);
-                }
-
-                if submenu {
-                    let mut chevron = submenu_chevron_icon(cx, direction, effective_fg);
-                    if let Some(test_id) = submenu_chevron_test_id.clone() {
-                        chevron = chevron.test_id(test_id);
-                    }
-                    row.push(chevron);
-                }
-
-                vec![cx.flex(
+            if let Some(is_on) = indicator_on {
+                let indicator_fg = text_fg;
+                row.push(cx.flex(
                     FlexProps {
                         layout: {
                             let mut layout = LayoutStyle::default();
-                            layout.size.width = Length::Fill;
+                            layout.size.width = Length::Px(Px(16.0));
+                            layout.size.height = Length::Px(Px(16.0));
+                            layout.flex.shrink = 0.0;
                             layout
                         },
                         direction: fret_core::Axis::Horizontal,
-                        gap: Px(8.0).into(),
+                        gap: Px(0.0).into(),
                         padding: Edges::all(Px(0.0)).into(),
-                        justify: MainAlign::Start,
+                        justify: MainAlign::Center,
                         align: CrossAlign::Center,
                         wrap: false,
                     },
-                    move |_cx| row,
-                )]
-            })
+                    move |cx| {
+                        if !is_on {
+                            return Vec::new();
+                        }
+
+                        vec![decl_icon::icon_with(
+                            cx,
+                            ids::ui::CHECK,
+                            Some(Px(16.0)),
+                            Some(ColorRef::Color(indicator_fg)),
+                        )]
+                    },
+                ));
+            }
+
+            if let Some(l) = leading.take() {
+                let scoped = cx.foreground_scope(icon_fg, move |_cx| vec![l]);
+                row.push(menu_icon_slot(cx, scoped));
+            } else if let Some(icon) = leading_icon.clone() {
+                let icon_el = decl_icon::icon_with(cx, icon, Some(Px(16.0)), None);
+                let scoped = cx.foreground_scope(icon_fg, move |_cx| vec![icon_el]);
+                row.push(menu_icon_slot(cx, scoped));
+            } else if reserve_leading_slot {
+                row.push(menu_icon_slot_empty(cx));
+            }
+
+            let style = text_style.clone();
+            let mut text = ui::text(cx, label.clone())
+                .layout(LayoutRefinement::default().min_w_0().flex_1())
+                .text_size_px(style.size)
+                .font_weight(style.weight)
+                .text_color(ColorRef::Color(text_fg))
+                .nowrap();
+
+            if let Some(line_height) = style.line_height {
+                text = text.fixed_line_box_px(line_height).line_box_in_bounds();
+            }
+
+            if let Some(letter_spacing_em) = style.letter_spacing_em {
+                text = text.letter_spacing_em(letter_spacing_em);
+            }
+
+            let mut label_element = text.into_element(cx);
+            if let Some(test_id) = label_test_id.clone() {
+                label_element = label_element.test_id(test_id);
+            }
+            row.push(label_element);
+
+            if has_trailing || submenu {
+                row.push(cx.spacer(SpacerProps::default()));
+            }
+            if let Some(mut trailing_element) = trailing.take() {
+                if let Some(test_id) = trailing_test_id.clone() {
+                    trailing_element = trailing_element.test_id(test_id);
+                }
+                row.push(trailing_element);
+            }
+
+            if submenu {
+                let mut chevron = submenu_chevron_icon(cx, direction, icon_fg);
+                if let Some(test_id) = submenu_chevron_test_id.clone() {
+                    chevron = chevron.test_id(test_id);
+                }
+                row.push(chevron);
+            }
+
+            vec![cx.flex(
+                FlexProps {
+                    layout: {
+                        let mut layout = LayoutStyle::default();
+                        layout.size.width = Length::Fill;
+                        layout
+                    },
+                    direction: fret_core::Axis::Horizontal,
+                    gap: Px(8.0).into(),
+                    padding: Edges::all(Px(0.0)).into(),
+                    justify: MainAlign::Start,
+                    align: CrossAlign::Center,
+                    wrap: false,
+                },
+                move |_cx| row,
+            )]
         },
     );
 
@@ -3559,6 +3584,14 @@ impl ContextMenu {
                                                                         }
                                                                     }
 
+                                                                    let icon_fg = if variant
+                                                                        == ContextMenuItemVariant::Destructive
+                                                                    {
+                                                                        destructive_fg
+                                                                    } else {
+                                                                        label_fg
+                                                                    };
+
                                                                     let mut trailing = trailing;
                                                                     if !has_submenu && trailing.is_none() {
                                                                         trailing = command.as_ref().and_then(|cmd| {
@@ -3586,6 +3619,7 @@ impl ContextMenu {
                                                                         disabled,
                                                                         row_bg,
                                                                         row_fg,
+                                                                        icon_fg,
                                                                         text_style.clone(),
                                                                         font_size,
                                                                         font_line_height,
@@ -3691,6 +3725,7 @@ impl ContextMenu {
                                                                         Some(checked_now),
                                                                         disabled,
                                                                         row_bg,
+                                                                        row_fg,
                                                                         row_fg,
                                                                         text_style.clone(),
                                                                         font_size,
@@ -3825,6 +3860,7 @@ impl ContextMenu {
                                                                         Some(is_selected),
                                                                         disabled,
                                                                         row_bg,
+                                                                        row_fg,
                                                                         row_fg,
                                                                         text_style.clone(),
                                                                         font_size,
