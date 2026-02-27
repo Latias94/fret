@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-use crate::runner::EngineFrameKeepalive;
+use crate::common::EngineFrameKeepalive;
 use fret_render::RenderTargetIngestStrategy;
 
 /// Error returned by a native external texture import attempt (ADR 0234 D1/D3).
@@ -67,9 +67,11 @@ impl NativeExternalTextureFrame for OwnedWgpuTextureFrame {
             .texture
             .create_view(&wgpu::TextureViewDescriptor::default());
 
-        let mut metadata = fret_render::RenderTargetMetadata::default();
-        metadata.requested_ingest_strategy = self.ingest_strategy;
-        metadata.ingest_strategy = self.ingest_strategy;
+        let metadata = fret_render::RenderTargetMetadata {
+            requested_ingest_strategy: self.ingest_strategy,
+            ingest_strategy: self.ingest_strategy,
+            ..Default::default()
+        };
 
         Ok(NativeExternalImportedFrame {
             view,

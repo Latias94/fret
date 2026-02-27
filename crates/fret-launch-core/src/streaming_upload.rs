@@ -3,10 +3,11 @@ use std::collections::{HashMap, VecDeque};
 use fret_core::{AppWindowId, FrameId, ImageId, ImageUpdateDropReason, ImageUpdateToken, RectPx};
 use fret_runtime::Effect;
 
-use super::yuv;
+use crate::yuv;
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-pub(crate) struct StreamingUploadStats {
+#[doc(hidden)]
+pub struct StreamingUploadStats {
     pub update_effects_seen: u32,
     pub update_effects_enqueued: u32,
     pub update_effects_replaced: u32,
@@ -29,7 +30,8 @@ pub(crate) struct StreamingUploadStats {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) struct StreamingUploadAck {
+#[doc(hidden)]
+pub struct StreamingUploadAck {
     pub window_hint: Option<AppWindowId>,
     pub token: ImageUpdateToken,
     pub image: ImageId,
@@ -37,7 +39,8 @@ pub(crate) struct StreamingUploadAck {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum StreamingUploadAckKind {
+#[doc(hidden)]
+pub enum StreamingUploadAckKind {
     Dropped(ImageUpdateDropReason),
 }
 
@@ -92,7 +95,8 @@ fn round_up(value: u32, align: u32) -> u32 {
     value.div_ceil(align).saturating_mul(align)
 }
 
-pub(crate) fn estimate_rgba8_upload_bytes_for_rect(rect: RectPx, bytes_per_row: u32) -> u64 {
+#[doc(hidden)]
+pub fn estimate_rgba8_upload_bytes_for_rect(rect: RectPx, bytes_per_row: u32) -> u64 {
     if rect.is_empty() {
         return 0;
     }
@@ -228,7 +232,8 @@ fn streaming_update_token_and_image(effect: &Effect) -> Option<(ImageUpdateToken
     }
 }
 
-pub(crate) struct StreamingUploadQueue {
+#[doc(hidden)]
+pub struct StreamingUploadQueue {
     next_seq: u64,
     frame_id: FrameId,
     used_upload_bytes_this_frame: HashMap<Option<AppWindowId>, u64>,
@@ -254,11 +259,12 @@ impl Default for StreamingUploadQueue {
 }
 
 impl StreamingUploadQueue {
-    pub(crate) fn has_pending(&self) -> bool {
+    pub fn has_pending(&self) -> bool {
         !self.pending.is_empty()
     }
 
-    pub(crate) fn pending_redraw_hint(&self) -> Option<Vec<AppWindowId>> {
+    #[doc(hidden)]
+    pub fn pending_redraw_hint(&self) -> Option<Vec<AppWindowId>> {
         if self.pending.is_empty() {
             return None;
         }
@@ -569,7 +575,7 @@ impl StreamingUploadQueue {
         out
     }
 
-    pub(crate) fn process_effects(
+    pub fn process_effects(
         &mut self,
         frame_id: FrameId,
         effects: Vec<Effect>,

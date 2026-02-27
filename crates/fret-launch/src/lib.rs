@@ -26,18 +26,20 @@ pub use runner::{
     EngineFrameKeepalive, EngineFrameUpdate, FnDriver, FnDriverHooks,
     ImportedViewportFallbackUpdate, ImportedViewportFallbacks, ImportedViewportRenderTarget,
     NativeExternalImportError, NativeExternalImportOutcome, NativeExternalImportedFrame,
-    NativeExternalTextureFrame, OwnedWgpuTextureFrame, RenderTargetUpdate,
-    SharedAllocationExportError, ViewportOverlay3dHooks, ViewportOverlay3dHooksService,
-    ViewportOverlay3dImmediateService, ViewportRenderTarget, ViewportRenderTargetWithDepth,
-    WgpuInit, WindowCreateSpec, WindowLogicalSize, WindowPhysicalPosition, WindowPosition,
-    WinitAppDriver, WinitCommandContext, WinitEventContext, WinitGlobalContext,
-    WinitHotReloadContext, WinitRenderContext, WinitRunner, WinitRunnerConfig, WinitWindowContext,
-    install_viewport_overlay_3d_immediate, record_viewport_overlay_3d, run_app,
+    NativeExternalTextureFrame, OwnedWgpuTextureFrame, RenderTargetUpdate, ViewportOverlay3dHooks,
+    ViewportOverlay3dHooksService, ViewportOverlay3dImmediateService, ViewportRenderTarget,
+    ViewportRenderTargetWithDepth, WgpuInit, WindowCreateSpec, WindowLogicalSize,
+    WindowPhysicalPosition, WindowPosition, WinitAppDriver, WinitCommandContext, WinitEventContext,
+    WinitGlobalContext, WinitHotReloadContext, WinitRenderContext, WinitRunner, WinitRunnerConfig,
+    WinitWindowContext, install_viewport_overlay_3d_immediate, record_viewport_overlay_3d, run_app,
     run_app_with_event_loop, upload_viewport_overlay_3d_immediate,
 };
 
 #[cfg(not(target_arch = "wasm32"))]
 pub use runner::{RunnerUserEvent, WinitAppBuilder};
+
+#[cfg(not(target_arch = "wasm32"))]
+pub use runner::SharedAllocationExportError;
 
 #[cfg(target_arch = "wasm32")]
 pub use runner::{WebRunnerHandle, run_app_with_event_loop_and_handle, run_app_with_handle};

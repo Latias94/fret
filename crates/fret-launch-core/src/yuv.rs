@@ -39,7 +39,8 @@ fn chroma_dims_420(width: u32, height: u32) -> (u32, u32) {
     (width.div_ceil(2), height.div_ceil(2))
 }
 
-pub(crate) fn normalize_update_rect_420(
+#[doc(hidden)]
+pub fn normalize_update_rect_420(
     width: u32,
     height: u32,
     update_rect_px: Option<RectPx>,
@@ -102,9 +103,8 @@ fn yuv_to_rgb(y: u8, u: u8, v: u8, range: ColorRange, matrix: YuvMatrix) -> (u8,
     )
 }
 
-pub(crate) fn nv12_to_rgba8_rect(
-    input: Nv12ToRgba8RectInput<'_>,
-) -> Result<(RectPx, Vec<u8>), String> {
+#[doc(hidden)]
+pub fn nv12_to_rgba8_rect(input: Nv12ToRgba8RectInput<'_>) -> Result<(RectPx, Vec<u8>), String> {
     let Nv12ToRgba8RectInput {
         width,
         height,
@@ -166,21 +166,21 @@ pub(crate) fn nv12_to_rgba8_rect(
     Ok((rect, out))
 }
 
-pub(crate) struct Nv12ToRgba8RectInput<'a> {
-    pub(crate) width: u32,
-    pub(crate) height: u32,
-    pub(crate) update_rect_px: Option<RectPx>,
-    pub(crate) y_bytes_per_row: u32,
-    pub(crate) y_plane: &'a [u8],
-    pub(crate) uv_bytes_per_row: u32,
-    pub(crate) uv_plane: &'a [u8],
-    pub(crate) range: ColorRange,
-    pub(crate) matrix: YuvMatrix,
+#[doc(hidden)]
+pub struct Nv12ToRgba8RectInput<'a> {
+    pub width: u32,
+    pub height: u32,
+    pub update_rect_px: Option<RectPx>,
+    pub y_bytes_per_row: u32,
+    pub y_plane: &'a [u8],
+    pub uv_bytes_per_row: u32,
+    pub uv_plane: &'a [u8],
+    pub range: ColorRange,
+    pub matrix: YuvMatrix,
 }
 
-pub(crate) fn i420_to_rgba8_rect(
-    input: I420ToRgba8RectInput<'_>,
-) -> Result<(RectPx, Vec<u8>), String> {
+#[doc(hidden)]
+pub fn i420_to_rgba8_rect(input: I420ToRgba8RectInput<'_>) -> Result<(RectPx, Vec<u8>), String> {
     let I420ToRgba8RectInput {
         width,
         height,
@@ -243,18 +243,19 @@ pub(crate) fn i420_to_rgba8_rect(
     Ok((rect, out))
 }
 
-pub(crate) struct I420ToRgba8RectInput<'a> {
-    pub(crate) width: u32,
-    pub(crate) height: u32,
-    pub(crate) update_rect_px: Option<RectPx>,
-    pub(crate) y_bytes_per_row: u32,
-    pub(crate) y_plane: &'a [u8],
-    pub(crate) u_bytes_per_row: u32,
-    pub(crate) u_plane: &'a [u8],
-    pub(crate) v_bytes_per_row: u32,
-    pub(crate) v_plane: &'a [u8],
-    pub(crate) range: ColorRange,
-    pub(crate) matrix: YuvMatrix,
+#[doc(hidden)]
+pub struct I420ToRgba8RectInput<'a> {
+    pub width: u32,
+    pub height: u32,
+    pub update_rect_px: Option<RectPx>,
+    pub y_bytes_per_row: u32,
+    pub y_plane: &'a [u8],
+    pub u_bytes_per_row: u32,
+    pub u_plane: &'a [u8],
+    pub v_bytes_per_row: u32,
+    pub v_plane: &'a [u8],
+    pub range: ColorRange,
+    pub matrix: YuvMatrix,
 }
 
 #[cfg(test)]

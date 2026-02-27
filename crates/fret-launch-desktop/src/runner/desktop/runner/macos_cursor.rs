@@ -167,9 +167,7 @@ impl MacCursorScreenKey {
 
 #[cfg(target_os = "macos")]
 fn macos_screen_key_for_point(point: NSPoint) -> Option<MacCursorScreenKey> {
-    let Some(mtm) = MainThreadMarker::new() else {
-        return None;
-    };
+    let mtm = MainThreadMarker::new()?;
 
     let screens = NSScreen::screens(mtm);
     for screen in screens.to_vec() {
@@ -341,10 +339,7 @@ impl MacCursorTransformTable {
             // map `NSEvent::mouseLocation` during cross-window drags without integrating deltas.
             MacCursorScreenKey::unknown(scale_factor)
         });
-        let transform = self
-            .by_screen
-            .entry(key)
-            .or_insert_with(MacCursorTransform::default);
+        let transform = self.by_screen.entry(key).or_default();
         transform.update_from_sample(winit_screen_pos, cocoa_pos, scale_factor);
         self.last_used = Some(key);
     }

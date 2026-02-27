@@ -4,8 +4,8 @@ use fret_render::{
     RenderTargetMetadata, Renderer,
 };
 
-use super::EngineFrameUpdate;
-use super::{EngineFrameKeepalive, NativeExternalImportError, NativeExternalTextureFrame};
+use crate::common::{EngineFrameKeepalive, EngineFrameUpdate};
+use crate::native_external_import::{NativeExternalImportError, NativeExternalTextureFrame};
 
 #[derive(Debug)]
 pub enum NativeExternalImportOutcome {
@@ -440,6 +440,7 @@ impl ImportedViewportRenderTarget {
     ///
     /// `fallback_available` declares which effective strategies the caller can provide a fallback
     /// update for, and `fallback_for` must be able to produce an update for the selected strategy.
+    #[allow(clippy::too_many_arguments)]
     pub fn push_native_external_import_update_with_deterministic_fallback(
         &mut self,
         renderer: &mut Renderer,
@@ -527,6 +528,7 @@ impl ImportedViewportRenderTarget {
     /// than requiring a separate `fallback_available` slice and a mapping closure.
     ///
     /// Callers MUST provide at least one fallback payload.
+    #[allow(clippy::too_many_arguments)]
     pub fn push_native_external_import_update_with_fallbacks(
         &mut self,
         renderer: &mut Renderer,
