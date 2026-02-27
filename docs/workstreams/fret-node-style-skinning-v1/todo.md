@@ -22,7 +22,8 @@ scope: ecosystem/fret-node
 
 - [x] Add built-in preset families: `WorkflowClean`, `SchematicContrast`, `GraphDark` (paint-only JSON, hard-coded palette).
 - [x] Demo toggle to switch presets at runtime (paint-only invalidation).
-- [ ] Add kit-level presets derived from `ThemeSnapshot` (pure function + documented token mapping).
+- [x] Add in-tree presets derived from `ThemeSnapshot` (`NodeGraphPresetSkinV1::new_from_snapshot`).
+- [ ] Extract kit-level presets derived from `ThemeSnapshot` (pure function + documented token mapping).
 - [ ] Add one scripted/diag gate for “preset switch is paint-only” (optional but recommended).
 
 ## Follow-ups (likely)
