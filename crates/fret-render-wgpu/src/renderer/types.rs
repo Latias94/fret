@@ -462,11 +462,11 @@ pub struct RenderPerfSnapshot {
     pub material_unknown_ids: u64,
     pub material_degraded_due_to_budget: u64,
 
-    // Path paint degradations (best-effort).
+    // Path material paint degradations (best-effort).
     //
-    // Today the path pipeline does not support `Paint::Material` and deterministically degrades
-    // it to the base solid color. This counter makes that limitation visible in perf/diag
-    // snapshots without requiring plan dumps.
+    // The wgpu path pipeline supports `Paint::Material`, but encoding may still deterministically
+    // degrade a requested material paint (typically to the base solid color) if it cannot be
+    // represented (unknown id, per-frame material budgets, or future capability gates).
     pub path_material_paints_degraded_to_solid_base: u64,
 }
 

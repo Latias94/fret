@@ -2,7 +2,7 @@ use super::super::state::{
     EncodeState, apply_transform_px, bounds_of_quad_points, transform_quad_points_px,
 };
 use super::super::*;
-use super::paint::{PaintMaterialPolicy, paint_to_gpu};
+use super::paint::{PaintMaterialPolicy, paint_is_visible, paint_to_gpu};
 use std::sync::OnceLock;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -27,6 +27,9 @@ pub(in super::super) fn encode_path(
 
     let group_opacity = state.current_opacity();
     if group_opacity <= 0.0 {
+        return;
+    }
+    if !paint_is_visible(paint, group_opacity) {
         return;
     }
     let Some(prepared) = renderer.paths.get(path) else {
@@ -57,33 +60,28 @@ pub(in super::super) fn encode_path(
     }
     let t_px = state.current_transform_px();
 
-    if matches!(paint, fret_core::scene::Paint::Material { .. }) {
-        *state.path_material_paints_degraded_to_solid_base = state
-            .path_material_paints_degraded_to_solid_base
-            .saturating_add(1);
-    }
-
+    let material_requested = matches!(paint, fret_core::scene::Paint::Material { .. });
     let paint_gpu = paint_to_gpu(
         renderer,
         state,
         paint,
         group_opacity,
         state.scale_factor,
-        PaintMaterialPolicy::DegradeToSolidBase,
+        PaintMaterialPolicy::Allow,
     );
-    // Visibility early-out: for solid, alpha is encoded in params0.w (premul). For gradients,
-    // scan stop alphas cheaply.
-    let visible = if paint_gpu.kind == 0 {
-        paint_gpu.params0[3] > 0.0
-    } else {
-        let mut any = false;
-        for c in paint_gpu.stop_colors {
-            if c[3] > 0.0 {
-                any = true;
-                break;
-            }
-        }
-        any
+
+    if material_requested && paint_gpu.kind != 3 {
+        *state.path_material_paints_degraded_to_solid_base = state
+            .path_material_paints_degraded_to_solid_base
+            .saturating_add(1);
+    }
+
+    // Visibility early-out (after encoding): for solid, alpha is params0.w (premul). For gradients,
+    // scan stop alphas cheaply. For materials, alpha may be carried by both base + fg paints.
+    let visible = match paint_gpu.kind {
+        0 => paint_gpu.params0[3] > 0.0,
+        3 => paint_gpu.params0[3] > 0.0 || paint_gpu.params1[3] > 0.0,
+        _ => paint_gpu.stop_colors.iter().any(|c| c[3] > 0.0),
     };
     if !visible {
         return;

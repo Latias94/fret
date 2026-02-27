@@ -88,17 +88,17 @@ These are common “editor-grade UI” needs that often become a long-tail sourc
 if left unspecified.
 
 - [x] Document the current path paint limitation and make it diagnosable:
-  - Today `SceneOp::Path` encoding degrades sampled materials to a solid base color.
-  - Add a plan/perf reporting counter so it’s visible when this happens (similar to effect degradations).
+  - Historically `SceneOp::Path` encoding degraded `Paint::Material` to a solid base color.
+  - Keep a perf counter so any remaining deterministic degradations are visible (unknown id, budgets, etc.).
   - Evidence (current behavior): `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/path.rs`.
   - Evidence (perf counter): `crates/fret-render-wgpu/src/renderer/types.rs`,
     `crates/fret-render-wgpu/src/renderer/render_scene/encode/state.rs`,
     `crates/fret-render-wgpu/src/renderer/render_scene/perf_finalize.rs`.
 
-- [ ] Decide whether material/texture paints are supported for `SceneOp::Path` (wgpu backend):
-  - If supported: extend the path pipeline bind group(s) to include the material catalog sampler/texture,
-    and allow `PaintMaterialPolicy::Allow` for paths.
-  - If not supported (for now): expose an explicit capability flag and keep deterministic degradation.
+- [x] Support material/texture paints for `SceneOp::Path` (wgpu backend):
+  - Allow `PaintMaterialPolicy::Allow` for paths and implement material evaluation in the path shader.
+  - Evidence: `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/path.rs`,
+    `crates/fret-render-wgpu/src/renderer/shaders.rs` (`PATH_SHADER`).
 
 - [ ] Dash semantics consistency:
   - `StrokeRRect` dashes are evaluated in the quad shader using an rrect-perimeter parameterization,
