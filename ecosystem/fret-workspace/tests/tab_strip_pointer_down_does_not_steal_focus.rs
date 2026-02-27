@@ -3,7 +3,6 @@ use fret_core::{
     AppWindowId, Event, FrameId, Modifiers, MouseButton, Point, PointerEvent, PointerId,
     PointerType, Px, Rect, SemanticsRole, Size as CoreSize,
 };
-use fret_core::{MaterialDescriptor, MaterialId, MaterialRegistrationError, MaterialService};
 use fret_core::{PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle, SvgId};
 use fret_core::{SvgService, TextBlobId, TextConstraints, TextMetrics, TextService};
 use fret_runtime::CommandId;
@@ -180,7 +179,7 @@ fn center(bounds: &Rect) -> Point {
 }
 
 #[test]
-fn tab_strip_right_and_middle_mouse_down_do_not_steal_focus() {
+fn tab_strip_mouse_down_does_not_steal_focus() {
     let window = AppWindowId::default();
     let mut app = App::new();
     let mut ui: UiTree<App> = UiTree::new();
@@ -230,6 +229,15 @@ fn tab_strip_right_and_middle_mouse_down_do_not_steal_focus() {
         &mut app,
         &mut services,
         MouseButton::Right,
+        center(&tab_node.bounds),
+    );
+    assert_eq!(ui.focus(), Some(focus_target_node));
+
+    dispatch_pointer_down(
+        &mut ui,
+        &mut app,
+        &mut services,
+        MouseButton::Left,
         center(&tab_node.bounds),
     );
     assert_eq!(ui.focus(), Some(focus_target_node));

@@ -7,18 +7,19 @@ use fret_core::{
 };
 use fret_runtime::{CommandId, Model, TickId};
 use fret_ui::action::{
-    OnActivate, OnPressablePointerDown, OnPressablePointerMove, OnPressablePointerUp,
+    OnActivate, OnPressablePointerDown, OnPressablePointerMove, OnPressablePointerUp, OnWheel,
     PressablePointerDownResult, PressablePointerUpResult,
 };
 use fret_ui::element::ElementKind;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
-    PressableA11y, PressableProps, ScrollAxis, ScrollProps, SemanticsProps, TextInkOverflow,
-    TextProps,
+    PointerRegionProps, PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps,
+    ScrollAxis, ScrollProps, SemanticsProps, TextInkOverflow, TextProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
+use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::dnd as ui_dnd;
 
 use crate::commands::{
@@ -475,6 +476,13 @@ impl WorkspaceTabStrip {
                 ..Default::default()
             },
             |cx| {
+                let roving_tab_commands: Arc<[CommandId]> = tabs
+                    .iter()
+                    .map(|tab| tab.command.clone())
+                    .collect::<Vec<_>>()
+                    .into();
+                let roving_disabled: Arc<[bool]> = vec![false; tabs.len()].into();
+
                 let (scroll_handle, last_active) = cx.with_state(
                     WorkspaceTabStripState::default,
                     |state| (state.scroll.clone(), state.last_active.clone()),
@@ -530,17 +538,44 @@ impl WorkspaceTabStrip {
                                 let id = cx.root_id();
                                 scroll_element.set(Some(id));
 
-                                let children = vec![cx.flex(
-                                    FlexProps {
-                                        layout: tab_strip_scroll_content_layout(),
-                                        direction: fret_core::Axis::Horizontal,
-                                        gap: Px(2.0).into(),
-                                        padding: Edges::all(Px(0.0)).into(),
-                                        justify: MainAlign::Start,
-                                        align: CrossAlign::Center,
-                                        wrap: false,
+                                let children = vec![cx.roving_flex(
+                                    RovingFlexProps {
+                                        flex: FlexProps {
+                                            layout: tab_strip_scroll_content_layout(),
+                                            direction: fret_core::Axis::Horizontal,
+                                            gap: Px(2.0).into(),
+                                            padding: Edges::all(Px(0.0)).into(),
+                                            justify: MainAlign::Start,
+                                            align: CrossAlign::Center,
+                                            wrap: false,
+                                        },
+                                        roving: RovingFocusProps {
+                                            enabled: true,
+                                            wrap: true,
+                                            disabled: roving_disabled.clone(),
+                                        },
                                     },
                                     |cx| {
+                                        cx.roving_nav_apg();
+                                        let pane_activate_cmd_for_roving = pane_activate_cmd.clone();
+                                        let tab_commands_for_roving = roving_tab_commands.clone();
+                                        cx.roving_on_active_change(Arc::new(
+                                            move |host, acx, idx| {
+                                                if let Some(cmd) =
+                                                    pane_activate_cmd_for_roving.clone()
+                                                {
+                                                    host.dispatch_command(Some(acx.window), cmd);
+                                                }
+                                                let Some(cmd) =
+                                                    tab_commands_for_roving.get(idx).cloned()
+                                                else {
+                                                    return;
+                                                };
+                                                host.dispatch_command(Some(acx.window), cmd);
+                                                host.request_redraw(acx.window);
+                                            },
+                                        ));
+
                                         let mut out: Vec<AnyElement> = Vec::new();
 
                                         for (index, tab) in tabs.iter().enumerate() {
@@ -567,6 +602,8 @@ impl WorkspaceTabStrip {
                                             let is_active = active
                                                 .as_deref()
                                                 .is_some_and(|a| tab_id.as_ref() == a);
+                                            let is_roving_focusable =
+                                                is_active || (active.is_none() && index == 0);
                                             let pos_in_set = (index as u32) + 1;
                                             let cross_drop_target = cross_drop_target.clone();
 
@@ -600,6 +637,7 @@ impl WorkspaceTabStrip {
                                                             set_size: Some(set_size),
                                                             ..Default::default()
                                                         },
+                                                        focusable: is_roving_focusable,
                                                         ..Default::default()
                                                     },
                                                     |cx, press_state, element_id| {
@@ -644,6 +682,9 @@ impl WorkspaceTabStrip {
                                                                 tab_close_command.clone();
                                                             let dnd = dnd.clone();
                                                             Arc::new(move |host, acx, down| {
+                                                                host.prevent_default(
+                                                                    fret_runtime::DefaultAction::FocusOnPointerDown,
+                                                                );
                                                                 match down.button {
                                                                     MouseButton::Middle => {
                                                                         if let Some(cmd) =
@@ -1325,6 +1366,7 @@ impl WorkspaceTabStrip {
                             let scroll_max_x = scroll_handle.max_offset().x;
                             let can_scroll_left = scroll_x.0 > 0.5;
                             let can_scroll_right = scroll_x.0 + 0.5 < scroll_max_x.0;
+                            let scroll_handle_for_wheel = scroll_handle.clone();
 
                             let scroll_button = |cx: &mut ElementContext<'_, H>,
                                                  enabled: bool,
@@ -1485,21 +1527,81 @@ impl WorkspaceTabStrip {
                                 }
                             }
 
-                            vec![cx.flex(
-                                FlexProps {
+                            vec![cx.pointer_region(
+                                PointerRegionProps {
                                     layout: fill_layout(),
-                                    direction: fret_core::Axis::Horizontal,
-                                    gap: Px(2.0).into(),
-                                    justify: MainAlign::Start,
-                                    align: CrossAlign::Center,
                                     ..Default::default()
                                 },
-                                |cx| {
-                                    vec![
-                                        scroll_button(cx, can_scroll_left, "<", "Scroll left", -1.0),
-                                        scroll,
-                                        scroll_button(cx, can_scroll_right, ">", "Scroll right", 1.0),
-                                    ]
+                                move |cx| {
+                                    let on_wheel: OnWheel = {
+                                        let scroll_handle = scroll_handle_for_wheel.clone();
+                                        Arc::new(move |host, acx, wheel| {
+                                            let max_x = scroll_handle.max_offset().x;
+                                            if max_x.0 <= 0.5 {
+                                                return false;
+                                            }
+
+                                            let dx = wheel.delta.x;
+                                            let dy = wheel.delta.y;
+                                            let delta_x = if wheel.modifiers.shift
+                                                && dx.0.abs() <= 0.01
+                                            {
+                                                dy
+                                            } else if dx.0.abs() > 0.01 {
+                                                dx
+                                            } else {
+                                                dy
+                                            };
+
+                                            if delta_x.0.abs() <= 0.01 {
+                                                return false;
+                                            }
+
+                                            let prev = scroll_handle.offset();
+                                            scroll_handle.set_offset(Point::new(
+                                                Px(prev.x.0 - delta_x.0),
+                                                prev.y,
+                                            ));
+                                            let next = scroll_handle.offset();
+                                            let consumed =
+                                                (prev.x.0 - next.x.0).abs() > 0.001;
+                                            if consumed {
+                                                host.request_redraw(acx.window);
+                                            }
+                                            consumed
+                                        })
+                                    };
+                                    cx.pointer_region_on_wheel(on_wheel);
+
+                                    vec![cx.flex(
+                                        FlexProps {
+                                            layout: fill_layout(),
+                                            direction: fret_core::Axis::Horizontal,
+                                            gap: Px(2.0).into(),
+                                            justify: MainAlign::Start,
+                                            align: CrossAlign::Center,
+                                            ..Default::default()
+                                        },
+                                        |cx| {
+                                            vec![
+                                                scroll_button(
+                                                    cx,
+                                                    can_scroll_left,
+                                                    "<",
+                                                    "Scroll left",
+                                                    -1.0,
+                                                ),
+                                                scroll,
+                                                scroll_button(
+                                                    cx,
+                                                    can_scroll_right,
+                                                    ">",
+                                                    "Scroll right",
+                                                    1.0,
+                                                ),
+                                            ]
+                                        },
+                                    )]
                                 },
                             )]
                         },
