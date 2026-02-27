@@ -56,13 +56,27 @@ struct CarouselState {
     offset: Option<Model<Px>>,
     runtime: Option<Model<CarouselRuntime>>,
     extent: Option<Model<Px>>,
+    snaps: Option<Model<Arc<[Px]>>>,
+    max_offset: Option<Model<Px>>,
 }
 
 fn carousel_models<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-) -> (Model<usize>, Model<Px>, Model<CarouselRuntime>, Model<Px>) {
+) -> (
+    Model<usize>,
+    Model<Px>,
+    Model<CarouselRuntime>,
+    Model<Px>,
+    Model<Arc<[Px]>>,
+    Model<Px>,
+) {
     let needs_init = cx.with_state(CarouselState::default, |st| {
-        st.index.is_none() || st.offset.is_none() || st.runtime.is_none() || st.extent.is_none()
+        st.index.is_none()
+            || st.offset.is_none()
+            || st.runtime.is_none()
+            || st.extent.is_none()
+            || st.snaps.is_none()
+            || st.max_offset.is_none()
     });
 
     if needs_init {
@@ -70,24 +84,32 @@ fn carousel_models<H: UiHost>(
         let offset = cx.app.models_mut().insert(Px(0.0));
         let runtime = cx.app.models_mut().insert(CarouselRuntime::default());
         let extent = cx.app.models_mut().insert(Px(0.0));
+        let snaps: Arc<[Px]> = Arc::from(Vec::<Px>::new());
+        let snaps = cx.app.models_mut().insert(snaps);
+        let max_offset = cx.app.models_mut().insert(Px(0.0));
         cx.with_state(CarouselState::default, |st| {
             st.index = Some(index.clone());
             st.offset = Some(offset.clone());
             st.runtime = Some(runtime.clone());
             st.extent = Some(extent.clone());
+            st.snaps = Some(snaps.clone());
+            st.max_offset = Some(max_offset.clone());
         });
-        return (index, offset, runtime, extent);
+        return (index, offset, runtime, extent, snaps, max_offset);
     }
 
-    let (index, offset, runtime, extent) = cx.with_state(CarouselState::default, |st| {
-        (
-            st.index.clone().expect("index"),
-            st.offset.clone().expect("offset"),
-            st.runtime.clone().expect("runtime"),
-            st.extent.clone().expect("extent"),
-        )
-    });
-    (index, offset, runtime, extent)
+    let (index, offset, runtime, extent, snaps, max_offset) =
+        cx.with_state(CarouselState::default, |st| {
+            (
+                st.index.clone().expect("index"),
+                st.offset.clone().expect("offset"),
+                st.runtime.clone().expect("runtime"),
+                st.extent.clone().expect("extent"),
+                st.snaps.clone().expect("snaps"),
+                st.max_offset.clone().expect("max_offset"),
+            )
+        });
+    (index, offset, runtime, extent, snaps, max_offset)
 }
 
 impl Default for Carousel {
@@ -195,7 +217,14 @@ impl Carousel {
             let orientation = self.orientation;
             let root_test_id = self.test_id.unwrap_or_else(|| Arc::from("carousel"));
 
-            let (index_model, offset_model, runtime_model, extent_model) = carousel_models(cx);
+            let (
+                index_model,
+                offset_model,
+                runtime_model,
+                extent_model,
+                snaps_model,
+                max_offset_model,
+            ) = carousel_models(cx);
 
             let root_layout = decl_style::layout_style(
                 &theme,
@@ -300,6 +329,7 @@ impl Carousel {
 
             let runtime_for_move = runtime_model.clone();
             let offset_for_move = offset_model.clone();
+            let max_offset_for_move = max_offset_model.clone();
             let on_move: fret_ui::action::OnPointerMove = Arc::new(move |host, _cx, mv| {
                 let runtime = host
                     .models_mut()
@@ -317,18 +347,35 @@ impl Carousel {
                     return false;
                 }
 
-                let bounds = host.bounds();
-                let extent = match item_basis {
-                    Some(px) => px,
-                    None => match track_direction {
-                        fret_core::Axis::Horizontal => bounds.size.width,
-                        fret_core::Axis::Vertical => bounds.size.height,
-                    },
+                let max_offset = host
+                    .models_mut()
+                    .read(&max_offset_for_move, |v| *v)
+                    .ok()
+                    .unwrap_or(Px(0.0));
+
+                let max_offset = if max_offset.0 > 0.0 {
+                    max_offset
+                } else {
+                    // Fall back to the legacy extent-based max offset when snap geometry has not
+                    // been measured yet (common in single-frame tests and before the first render
+                    // loop settles).
+                    let bounds = host.bounds();
+                    let extent = match item_basis {
+                        Some(px) => px,
+                        None => match track_direction {
+                            fret_core::Axis::Horizontal => bounds.size.width,
+                            fret_core::Axis::Vertical => bounds.size.height,
+                        },
+                    };
+                    Px((extent.0 * (items_len.saturating_sub(1) as f32)).max(0.0))
                 };
-                if extent.0 <= 0.0 {
-                    return true;
+
+                if max_offset.0 <= 0.0 {
+                    let _ = host.models_mut().update(&runtime_for_move, |st| {
+                        st.drag = headless_carousel::CarouselDragState::default();
+                    });
+                    return false;
                 }
-                let max_offset = Px((extent.0 * (items_len.saturating_sub(1) as f32)).max(0.0));
 
                 let mut steal_capture = false;
                 let mut consumed = false;
@@ -369,6 +416,7 @@ impl Carousel {
             let runtime_for_up = runtime_model.clone();
             let offset_for_up = offset_model.clone();
             let index_for_up = index_model.clone();
+            let snaps_for_up = snaps_model.clone();
             let on_up: fret_ui::action::OnPointerUp = Arc::new(move |host, cx, up| {
                 let runtime = host
                     .models_mut()
@@ -384,15 +432,6 @@ impl Carousel {
 
                 host.release_pointer_capture();
 
-                let bounds = host.bounds();
-                let extent = match item_basis {
-                    Some(px) => px,
-                    None => match track_direction {
-                        fret_core::Axis::Horizontal => bounds.size.width,
-                        fret_core::Axis::Vertical => bounds.size.height,
-                    },
-                };
-
                 let offset = host
                     .models_mut()
                     .read(&offset_for_up, |v| *v)
@@ -400,15 +439,39 @@ impl Carousel {
                     .unwrap_or(Px(0.0));
 
                 let mut drag = runtime.drag;
-                let release = headless_carousel::on_pointer_up(
-                    drag_config,
-                    &mut drag,
-                    track_direction,
-                    up.position,
-                    extent,
-                    items_len,
-                )
-                .expect("release output when dragging");
+                let snaps: Arc<[Px]> = host
+                    .models_mut()
+                    .read(&snaps_for_up, |v| v.clone())
+                    .ok()
+                    .unwrap_or_else(|| Arc::from(Vec::<Px>::new()));
+                let release = if snaps.len() > 1 {
+                    headless_carousel::on_pointer_up_with_snaps(
+                        drag_config,
+                        &mut drag,
+                        track_direction,
+                        up.position,
+                        &snaps,
+                    )
+                    .expect("release output when dragging")
+                } else {
+                    let bounds = host.bounds();
+                    let extent = match item_basis {
+                        Some(px) => px,
+                        None => match track_direction {
+                            fret_core::Axis::Horizontal => bounds.size.width,
+                            fret_core::Axis::Vertical => bounds.size.height,
+                        },
+                    };
+                    headless_carousel::on_pointer_up(
+                        drag_config,
+                        &mut drag,
+                        track_direction,
+                        up.position,
+                        extent,
+                        items_len,
+                    )
+                    .expect("release output when dragging")
+                };
 
                 let _ = host
                     .models_mut()
@@ -448,29 +511,25 @@ impl Carousel {
             let offset_for_prev = offset_model.clone();
             let runtime_for_prev = runtime_model.clone();
             let index_for_prev = index_model.clone();
-            let extent_for_prev = extent_model.clone();
+            let snaps_for_prev = snaps_model.clone();
             let on_prev: fret_ui::action::OnActivate = Arc::new(
                 move |host: &mut dyn UiActionHost, cx: ActionCx, _reason: ActivateReason| {
+                    let snaps: Arc<[Px]> = host
+                        .models_mut()
+                        .read(&snaps_for_prev, |v| v.clone())
+                        .ok()
+                        .unwrap_or_else(|| Arc::from(Vec::<Px>::new()));
                     let index: usize = host
                         .models_mut()
                         .read(&index_for_prev, |v| *v)
                         .ok()
                         .unwrap_or(0);
-                    if index == 0 {
-                        return;
-                    }
-
-                    let extent = host
-                        .models_mut()
-                        .read(&extent_for_prev, |v| *v)
-                        .ok()
-                        .unwrap_or(Px(0.0));
-                    if extent.0 <= 0.0 {
+                    if snaps.len() <= 1 || index == 0 {
                         return;
                     }
 
                     let target_index = index.saturating_sub(1);
-                    let target = Px((target_index as f32) * extent.0);
+                    let target = snaps[target_index];
                     let cur = host
                         .models_mut()
                         .read(&offset_for_prev, |v| *v)
@@ -493,29 +552,25 @@ impl Carousel {
             let offset_for_next = offset_model.clone();
             let runtime_for_next = runtime_model.clone();
             let index_for_next = index_model.clone();
-            let extent_for_next = extent_model.clone();
+            let snaps_for_next = snaps_model.clone();
             let on_next: fret_ui::action::OnActivate = Arc::new(
                 move |host: &mut dyn UiActionHost, cx: ActionCx, _reason: ActivateReason| {
+                    let snaps: Arc<[Px]> = host
+                        .models_mut()
+                        .read(&snaps_for_next, |v| v.clone())
+                        .ok()
+                        .unwrap_or_else(|| Arc::from(Vec::<Px>::new()));
                     let index: usize = host
                         .models_mut()
                         .read(&index_for_next, |v| *v)
                         .ok()
                         .unwrap_or(0);
-                    if index + 1 >= items_len {
+                    if snaps.len() <= 1 || index + 1 >= snaps.len() {
                         return;
                     }
 
-                    let extent = host
-                        .models_mut()
-                        .read(&extent_for_next, |v| *v)
-                        .ok()
-                        .unwrap_or(Px(0.0));
-                    if extent.0 <= 0.0 {
-                        return;
-                    }
-
-                    let target_index = (index + 1).min(items_len.saturating_sub(1));
-                    let target = Px((target_index as f32) * extent.0);
+                    let target_index = (index + 1).min(snaps.len().saturating_sub(1));
+                    let target = snaps[target_index];
                     let cur = host
                         .models_mut()
                         .read(&offset_for_next, |v| *v)
@@ -538,12 +593,17 @@ impl Carousel {
             let index_for_key = index_model.clone();
             let offset_for_key = offset_model.clone();
             let runtime_for_key = runtime_model.clone();
-            let extent_for_key = extent_model.clone();
+            let snaps_for_key = snaps_model.clone();
             let on_key_down: OnKeyDown = Arc::new(
                 move |host: &mut dyn fret_ui::action::UiFocusActionHost,
                       cx: ActionCx,
                       down: KeyDownCx| {
-                    if items_len <= 1 {
+                    let snaps: Arc<[Px]> = host
+                        .models_mut()
+                        .read(&snaps_for_key, |v| v.clone())
+                        .ok()
+                        .unwrap_or_else(|| Arc::from(Vec::<Px>::new()));
+                    if snaps.len() <= 1 {
                         return false;
                     }
 
@@ -560,14 +620,6 @@ impl Carousel {
                         .read(&index_for_key, |v| *v)
                         .ok()
                         .unwrap_or(0);
-                    let extent = host
-                        .models_mut()
-                        .read(&extent_for_key, |v| *v)
-                        .ok()
-                        .unwrap_or(Px(0.0));
-                    if extent.0 <= 0.0 {
-                        return true;
-                    }
 
                     let target_index = if down.key == prev_key {
                         if index == 0 {
@@ -575,13 +627,13 @@ impl Carousel {
                         }
                         index.saturating_sub(1)
                     } else {
-                        if index + 1 >= items_len {
+                        if index + 1 >= snaps.len() {
                             return true;
                         }
-                        (index + 1).min(items_len.saturating_sub(1))
+                        (index + 1).min(snaps.len().saturating_sub(1))
                     };
 
-                    let target = Px((target_index as f32) * extent.0);
+                    let target = snaps[target_index];
                     let cur = host
                         .models_mut()
                         .read(&offset_for_key, |v| *v)
@@ -602,6 +654,8 @@ impl Carousel {
                 },
             );
 
+            let mut first_item_id = None;
+            let first_item_id_ref = &mut first_item_id;
             let track = cx.flex(
                 FlexProps {
                     layout: track_layout,
@@ -680,6 +734,10 @@ impl Carousel {
                                 move |_cx| vec![content],
                             );
 
+                            if idx == 0 {
+                                *first_item_id_ref = Some(item.id);
+                            }
+
                             item.attach_semantics(
                                 SemanticsDecoration::default()
                                     .role(SemanticsRole::Group)
@@ -731,27 +789,99 @@ impl Carousel {
                 )
             });
 
-            let extent_now = match item_basis {
-                Some(px) => px,
-                None => cx
-                    .last_bounds_for_element(viewport_id)
-                    .map(|b| match orientation {
-                        CarouselOrientation::Horizontal => b.size.width,
-                        CarouselOrientation::Vertical => b.size.height,
-                    })
-                    .unwrap_or(Px(0.0)),
-            };
+            let viewport_bounds = cx.last_bounds_for_element(viewport_id);
+            let view_size_now = viewport_bounds
+                .map(|b| match orientation {
+                    CarouselOrientation::Horizontal => b.size.width,
+                    CarouselOrientation::Vertical => b.size.height,
+                })
+                .unwrap_or(Px(0.0));
             let _ = cx
                 .app
                 .models_mut()
-                .update(&extent_model, |v| *v = extent_now);
+                .update(&extent_model, |v| *v = view_size_now);
+
+            let mut snaps_now: Vec<Px> = vec![Px(0.0)];
+            let mut max_offset_now = Px(0.0);
+
+            if view_size_now.0 > 0.0 {
+                if let (Some(viewport_bounds), Some(first_item_id)) =
+                    (viewport_bounds, first_item_id)
+                    && let Some(first_bounds) = cx.last_bounds_for_element(first_item_id)
+                {
+                    let (first_start, item_main_size) = match orientation {
+                        CarouselOrientation::Horizontal => (
+                            Px(first_bounds.origin.x.0 - viewport_bounds.origin.x.0),
+                            first_bounds.size.width,
+                        ),
+                        CarouselOrientation::Vertical => (
+                            Px(first_bounds.origin.y.0 - viewport_bounds.origin.y.0),
+                            first_bounds.size.height,
+                        ),
+                    };
+
+                    if item_main_size.0 > 0.0 {
+                        let slides = (0..items_len)
+                            .map(|i| headless_carousel::CarouselSlide1D {
+                                start: Px(first_start.0 + (i as f32) * item_main_size.0),
+                                size: item_main_size,
+                            })
+                            .collect::<Vec<_>>();
+
+                        let model = headless_carousel::snap_model_1d(
+                            view_size_now,
+                            &slides,
+                            Px(0.0),
+                            Px(0.0),
+                            headless_carousel::CarouselSlidesToScrollOption::Fixed(1),
+                            false,
+                            headless_carousel::CarouselSnapAlign::Start,
+                            headless_carousel::CarouselContainScrollOption::TrimSnaps,
+                            2.0,
+                        );
+                        snaps_now = model.snaps_px;
+                        max_offset_now = model.max_offset_px;
+                    }
+                }
+            }
+
+            let snaps_arc: Arc<[Px]> = Arc::from(snaps_now.clone().into_boxed_slice());
+            let _ = cx
+                .app
+                .models_mut()
+                .update(&snaps_model, |v| *v = snaps_arc.clone());
+            let _ = cx
+                .app
+                .models_mut()
+                .update(&max_offset_model, |v| *v = max_offset_now);
+
+            // Clamp index/offset when snaps change (e.g. window resize).
+            let snaps_len = snaps_now.len();
+            let clamped_index = if snaps_len == 0 {
+                0
+            } else {
+                index_now.min(snaps_len.saturating_sub(1))
+            };
+            if clamped_index != index_now {
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&index_model, |v| *v = clamped_index);
+            }
+            let offset_clamped = Px(offset_now.0.clamp(0.0, max_offset_now.0.max(0.0)));
+            if offset_clamped != offset_now {
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&offset_model, |v| *v = offset_clamped);
+            }
 
             // Match upstream behavior: controls are disabled until the carousel has a measurable
             // viewport/item extent (Embla initializes canScrollPrev/Next to false until it
             // measures and emits `select`/`reInit`).
-            let extent_ready = extent_now.0 > 0.0;
-            let prev_disabled = !extent_ready || index_now == 0 || items_len <= 1;
-            let next_disabled = !extent_ready || index_now + 1 >= items_len || items_len <= 1;
+            let extent_ready = view_size_now.0 > 0.0 && snaps_len > 0;
+            let prev_disabled = !extent_ready || clamped_index == 0 || snaps_len <= 1;
+            let next_disabled = !extent_ready || clamped_index + 1 >= snaps_len || snaps_len <= 1;
 
             let prev_test_id = Arc::from(format!("{}-previous", root_test_id.as_ref()));
             let next_test_id = Arc::from(format!("{}-next", root_test_id.as_ref()));

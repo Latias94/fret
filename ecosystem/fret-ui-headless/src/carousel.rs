@@ -215,9 +215,79 @@ pub fn on_pointer_up(
     })
 }
 
+pub fn on_pointer_up_with_snaps(
+    config: CarouselDragConfig,
+    state: &mut CarouselDragState,
+    axis: Axis,
+    position: Point,
+    snaps: &[Px],
+) -> Option<CarouselDragReleaseOutput> {
+    if !state.dragging {
+        state.armed = false;
+        state.dragging = false;
+        return None;
+    }
+
+    if snaps.is_empty() {
+        *state = CarouselDragState::default();
+        return Some(CarouselDragReleaseOutput {
+            next_index: 0,
+            target_offset: Px(0.0),
+        });
+    }
+
+    let start_offset = state.start_offset;
+    let (start_index, start_snap) = snaps
+        .iter()
+        .copied()
+        .enumerate()
+        .min_by(|(_, a), (_, b)| {
+            (a.0 - start_offset.0)
+                .abs()
+                .total_cmp(&(b.0 - start_offset.0).abs())
+        })
+        .expect("non-empty snaps");
+
+    let delta = axis_delta(axis, state.start, position);
+    let mut next_index = start_index;
+
+    if snaps.len() > 1 {
+        let neighbor = if delta > 0.0 {
+            start_index.checked_sub(1)
+        } else if delta < 0.0 {
+            Some((start_index + 1).min(snaps.len().saturating_sub(1)))
+        } else {
+            None
+        };
+
+        if let Some(neighbor_index) = neighbor {
+            let neighbor_snap = snaps[neighbor_index];
+            let distance = (neighbor_snap.0 - start_snap.0).abs();
+            let threshold = distance * config.snap_threshold_fraction;
+            if distance > 0.0 && delta.abs() > threshold {
+                next_index = neighbor_index;
+            }
+        }
+    }
+
+    let target_offset = snaps[next_index];
+
+    *state = CarouselDragState::default();
+    Some(CarouselDragReleaseOutput {
+        next_index,
+        target_offset,
+    })
+}
+
 // -------------------------------------------------------------------------------------------------
 // Snap / contain-scroll helpers (Embla-aligned, headless, deterministic)
 // -------------------------------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CarouselSlidesToScrollOption {
+    Auto,
+    Fixed(usize),
+}
 
 #[derive(Debug, Clone, Copy)]
 pub enum CarouselSnapAlign {
@@ -240,6 +310,13 @@ impl CarouselSnapAlign {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CarouselContainScroll {
+    KeepSnaps,
+    TrimSnaps,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CarouselContainScrollOption {
+    None,
     KeepSnaps,
     TrimSnaps,
 }
@@ -282,6 +359,275 @@ fn clamp_px(v: Px, min: Px, max: Px) -> Px {
     Px(v.0.clamp(min.0, max.0))
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct CarouselSnapModel1D {
+    pub snaps_px: Vec<Px>,
+    pub slides_by_snap: Vec<Vec<usize>>,
+    pub snap_by_slide: Vec<usize>,
+    pub max_offset_px: Px,
+}
+
+fn group_by_number<T: Clone>(items: &[T], group_size: usize) -> Vec<Vec<T>> {
+    let group_size = group_size.max(1);
+    let mut groups = Vec::new();
+    let mut i = 0usize;
+    while i < items.len() {
+        groups.push(items[i..items.len().min(i + group_size)].to_vec());
+        i += group_size;
+    }
+    groups
+}
+
+fn group_slide_indexes_auto(
+    view_size: Px,
+    slides: &[CarouselSlide1D],
+    start_gap: Px,
+    end_gap: Px,
+    loop_enabled: bool,
+    pixel_tolerance_px: f32,
+) -> Vec<Vec<usize>> {
+    if slides.is_empty() {
+        return Vec::new();
+    }
+
+    let mut boundaries: Vec<usize> = Vec::new();
+    for (index, rect_b) in (0..slides.len()).enumerate() {
+        let rect_a = boundaries.last().copied().unwrap_or(0);
+        let is_first = rect_a == 0;
+        let is_last = rect_b + 1 == slides.len();
+
+        let a = slides[rect_a];
+        let b = slides[rect_b];
+        let gap_a = if !loop_enabled && is_first {
+            start_gap
+        } else {
+            Px(0.0)
+        };
+        let gap_b = if !loop_enabled && is_last {
+            end_gap
+        } else {
+            Px(0.0)
+        };
+
+        let chunk_size = Px((b.end().0 + gap_b.0) - (a.start.0 + gap_a.0)).0.abs();
+
+        if index != 0 && chunk_size > view_size.0 + pixel_tolerance_px {
+            boundaries.push(rect_b);
+        }
+        if is_last {
+            boundaries.push(slides.len());
+        }
+    }
+
+    let mut groups = Vec::new();
+    for (index, &end) in boundaries.iter().enumerate() {
+        let start = boundaries.get(index.wrapping_sub(1)).copied().unwrap_or(0);
+        let start = start.min(end);
+        groups.push((start..end).collect::<Vec<_>>());
+    }
+    groups
+}
+
+fn group_slide_indexes(
+    view_size: Px,
+    slides: &[CarouselSlide1D],
+    slides_to_scroll: CarouselSlidesToScrollOption,
+    start_gap: Px,
+    end_gap: Px,
+    loop_enabled: bool,
+    pixel_tolerance_px: f32,
+) -> Vec<Vec<usize>> {
+    match slides_to_scroll {
+        CarouselSlidesToScrollOption::Fixed(n) => {
+            group_by_number(&(0..slides.len()).collect::<Vec<_>>(), n)
+        }
+        CarouselSlidesToScrollOption::Auto => group_slide_indexes_auto(
+            view_size,
+            slides,
+            start_gap,
+            end_gap,
+            loop_enabled,
+            pixel_tolerance_px,
+        ),
+    }
+}
+
+fn array_from_range(end: usize, start: usize) -> Vec<usize> {
+    (start..=end).collect()
+}
+
+pub fn snap_model_1d(
+    view_size: Px,
+    slides: &[CarouselSlide1D],
+    start_gap: Px,
+    end_gap: Px,
+    slides_to_scroll: CarouselSlidesToScrollOption,
+    loop_enabled: bool,
+    align: CarouselSnapAlign,
+    contain_scroll: CarouselContainScrollOption,
+    pixel_tolerance_px: f32,
+) -> CarouselSnapModel1D {
+    let slide_count = slides.len();
+    if slide_count == 0 {
+        return CarouselSnapModel1D {
+            snaps_px: vec![Px(0.0)],
+            slides_by_snap: vec![Vec::new()],
+            snap_by_slide: Vec::new(),
+            max_offset_px: Px(0.0),
+        };
+    }
+
+    let content_size = slides
+        .iter()
+        .map(|s| s.end())
+        .fold(Px(0.0), |a, b| Px(a.0.max(b.0)));
+    let content_size = Px(content_size.0 + end_gap.0.max(0.0));
+    let max_offset_px = Px((content_size.0 - view_size.0).max(0.0));
+
+    if content_size.0 <= view_size.0 + pixel_tolerance_px {
+        let all = (0..slide_count).collect::<Vec<_>>();
+        return CarouselSnapModel1D {
+            snaps_px: vec![Px(0.0)],
+            slides_by_snap: vec![all.clone()],
+            snap_by_slide: vec![0; slide_count],
+            max_offset_px,
+        };
+    }
+
+    let contain_snaps =
+        !loop_enabled && !matches!(contain_scroll, CarouselContainScrollOption::None);
+
+    let slide_groups = group_slide_indexes(
+        view_size,
+        slides,
+        slides_to_scroll,
+        start_gap,
+        end_gap,
+        loop_enabled,
+        pixel_tolerance_px,
+    );
+
+    let mut group_sizes = Vec::with_capacity(slide_groups.len());
+    for group in &slide_groups {
+        if group.is_empty() {
+            group_sizes.push(Px(0.0));
+            continue;
+        }
+        let first = slides[group[0]];
+        let last = slides[*group.last().expect("group last")];
+        group_sizes.push(Px((last.end().0 - first.start.0).abs()));
+    }
+
+    let mut alignments = Vec::with_capacity(group_sizes.len());
+    for (i, size) in group_sizes.iter().copied().enumerate() {
+        alignments.push(align.measure(view_size, size, i));
+    }
+
+    let snaps_unaligned = slides.iter().map(|s| s.start).collect::<Vec<_>>();
+    let mut snaps_aligned = Vec::with_capacity(slide_groups.len());
+    for (group_index, group) in slide_groups.iter().enumerate() {
+        let first_slide_ix = group.first().copied().unwrap_or(0);
+        let snap = snaps_unaligned[first_slide_ix];
+        snaps_aligned.push(Px(snap.0 - alignments[group_index].0));
+    }
+
+    let (snaps_px, contain_limit_min, contain_limit_max) = if contain_snaps {
+        let mut snaps_bounded = Vec::with_capacity(snaps_aligned.len());
+        for (i, snap) in snaps_aligned.iter().copied().enumerate() {
+            let is_first = i == 0;
+            let is_last = i + 1 == snaps_aligned.len();
+            if is_first {
+                snaps_bounded.push(Px(0.0));
+                continue;
+            }
+            if is_last {
+                snaps_bounded.push(max_offset_px);
+                continue;
+            }
+
+            let mut clamped = clamp_px(snap, Px(0.0), max_offset_px);
+            if pixel_tolerance_px > 0.0 {
+                if (clamped.0 - 0.0).abs() <= 1.0 {
+                    clamped = Px(0.0);
+                } else if (clamped.0 - max_offset_px.0).abs() <= 1.0 {
+                    clamped = max_offset_px;
+                }
+            }
+            snaps_bounded.push(round_3(clamped));
+        }
+
+        let start_snap = snaps_bounded[0];
+        let end_snap = *snaps_bounded.last().expect("snaps_bounded non-empty");
+        let mut min_ix = 0usize;
+        for (i, snap) in snaps_bounded.iter().copied().enumerate() {
+            if snap == start_snap {
+                min_ix = i;
+            }
+        }
+        let mut max_ix = snaps_bounded.len();
+        for (i, snap) in snaps_bounded.iter().copied().enumerate() {
+            if snap == end_snap {
+                max_ix = i + 1;
+                break;
+            }
+        }
+
+        let snaps_contained = match contain_scroll {
+            CarouselContainScrollOption::KeepSnaps => snaps_bounded.clone(),
+            CarouselContainScrollOption::TrimSnaps => snaps_bounded[min_ix..max_ix].to_vec(),
+            CarouselContainScrollOption::None => snaps_bounded.clone(),
+        };
+        (snaps_contained, min_ix, max_ix)
+    } else {
+        (snaps_aligned, 0usize, slide_groups.len())
+    };
+
+    let mut slides_by_snap = if snaps_px.len() == 1 {
+        vec![(0..slide_count).collect::<Vec<_>>()]
+    } else if !contain_snaps || matches!(contain_scroll, CarouselContainScrollOption::KeepSnaps) {
+        slide_groups.clone()
+    } else {
+        let groups = slide_groups[contain_limit_min..contain_limit_max].to_vec();
+        groups
+            .iter()
+            .enumerate()
+            .map(|(index, group)| {
+                let is_first = index == 0;
+                let is_last = index + 1 == groups.len();
+                if is_first {
+                    let range_end = *group.last().expect("first group last");
+                    return array_from_range(range_end, 0);
+                }
+                if is_last {
+                    let range_end = slide_count - 1;
+                    return array_from_range(range_end, group[0]);
+                }
+                group.clone()
+            })
+            .collect::<Vec<_>>()
+    };
+
+    if slides_by_snap.is_empty() {
+        slides_by_snap.push((0..slide_count).collect::<Vec<_>>());
+    }
+
+    let mut snap_by_slide = vec![0usize; slide_count];
+    for (snap_index, group) in slides_by_snap.iter().enumerate() {
+        for &slide_index in group {
+            if slide_index < snap_by_slide.len() {
+                snap_by_slide[slide_index] = snap_index;
+            }
+        }
+    }
+
+    CarouselSnapModel1D {
+        snaps_px,
+        slides_by_snap,
+        snap_by_slide,
+        max_offset_px,
+    }
+}
+
 /// Compute contained scroll snaps (1D) using Embla's `ScrollSnaps` + `ScrollContain` semantics,
 /// expressed in Fret's preferred positive-offset convention:
 ///
@@ -304,74 +650,21 @@ pub fn contained_scroll_snaps_1d_with_end_gap(
     align: CarouselSnapAlign,
     config: CarouselContainScrollConfig,
 ) -> Vec<Px> {
-    if slides.is_empty() {
-        return vec![Px(0.0)];
-    }
-
-    let content_size = slides
-        .iter()
-        .map(|s| s.end())
-        .fold(Px(0.0), |a, b| Px(a.0.max(b.0)));
-    let content_size = Px(content_size.0 + end_gap.0.max(0.0));
-
-    // Embla: if contentSize <= viewSize + pixelTolerance => [0]
-    if content_size.0 <= view_size.0 + config.pixel_tolerance_px {
-        return vec![Px(0.0)];
-    }
-
-    let max_offset = Px((content_size.0 - view_size.0).max(0.0));
-
-    let mut snaps_aligned = Vec::with_capacity(slides.len());
-    for (i, slide) in slides.iter().copied().enumerate() {
-        let alignment = align.measure(view_size, slide.size, i);
-        snaps_aligned.push(Px(slide.start.0 - alignment.0));
-    }
-
-    let mut snaps_bounded = Vec::with_capacity(snaps_aligned.len());
-    for (i, snap) in snaps_aligned.iter().copied().enumerate() {
-        let is_first = i == 0;
-        let is_last = i + 1 == snaps_aligned.len();
-        if is_first {
-            snaps_bounded.push(Px(0.0));
-            continue;
-        }
-        if is_last {
-            snaps_bounded.push(max_offset);
-            continue;
-        }
-
-        let mut clamped = clamp_px(snap, Px(0.0), max_offset);
-        if config.pixel_tolerance_px > 0.0 {
-            if (clamped.0 - 0.0).abs() <= 1.0 {
-                clamped = Px(0.0);
-            } else if (clamped.0 - max_offset.0).abs() <= 1.0 {
-                clamped = max_offset;
-            }
-        }
-        snaps_bounded.push(round_3(clamped));
-    }
-
-    let start_snap = snaps_bounded[0];
-    let end_snap = *snaps_bounded.last().expect("snaps_bounded non-empty");
-
-    let mut min_ix = 0usize;
-    for (i, snap) in snaps_bounded.iter().copied().enumerate() {
-        if snap == start_snap {
-            min_ix = i;
-        }
-    }
-    let mut max_ix = snaps_bounded.len();
-    for (i, snap) in snaps_bounded.iter().copied().enumerate() {
-        if snap == end_snap {
-            max_ix = i + 1;
-            break;
-        }
-    }
-
-    match config.contain_scroll {
-        CarouselContainScroll::KeepSnaps => snaps_bounded,
-        CarouselContainScroll::TrimSnaps => snaps_bounded[min_ix..max_ix].to_vec(),
-    }
+    let model = snap_model_1d(
+        view_size,
+        slides,
+        Px(0.0),
+        end_gap,
+        CarouselSlidesToScrollOption::Fixed(1),
+        false,
+        align,
+        match config.contain_scroll {
+            CarouselContainScroll::KeepSnaps => CarouselContainScrollOption::KeepSnaps,
+            CarouselContainScroll::TrimSnaps => CarouselContainScrollOption::TrimSnaps,
+        },
+        config.pixel_tolerance_px,
+    );
+    model.snaps_px
 }
 
 #[cfg(test)]
@@ -460,6 +753,42 @@ mod tests {
         .expect("release");
         assert_eq!(release.next_index, 2usize);
         assert_eq!(release.target_offset, Px(200.0));
+    }
+
+    #[test]
+    fn release_snaps_by_fractional_threshold_with_snaps() {
+        let mut state = CarouselDragState::default();
+        on_pointer_down(&mut state, true, Point::new(Px(0.0), Px(0.0)), Px(100.0));
+
+        let _ = on_pointer_move(
+            CarouselDragConfig {
+                drag_threshold_px: 0.0,
+                ..Default::default()
+            },
+            &mut state,
+            Axis::Horizontal,
+            Point::new(Px(-40.0), Px(0.0)),
+            true,
+            CarouselDragInputKind::Mouse,
+            Px(200.0),
+        );
+
+        let snaps = [Px(0.0), Px(100.0), Px(180.0)];
+        let release = on_pointer_up_with_snaps(
+            CarouselDragConfig {
+                drag_threshold_px: 0.0,
+                snap_threshold_fraction: 0.3,
+                ..Default::default()
+            },
+            &mut state,
+            Axis::Horizontal,
+            Point::new(Px(-40.0), Px(0.0)),
+            &snaps,
+        )
+        .expect("release");
+
+        assert_eq!(release.next_index, 2usize);
+        assert_eq!(release.target_offset, Px(180.0));
     }
 
     #[test]
