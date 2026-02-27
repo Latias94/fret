@@ -1,144 +1,144 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "steps": [
     {
-      "type": "wait_until",
       "predicate": {
         "kind": "exists",
         "target": {
-          "kind": "test_id",
-          "id": "workspace-shell-file-tree-node-0"
+          "id": "workspace-shell-file-tree-node-0",
+          "kind": "test_id"
         }
       },
-      "timeout_frames": 240
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
     {
-      "type": "move_pointer",
       "target": {
-        "kind": "test_id",
-        "id": "workspace-shell-file-tree-node-0"
-      }
-    },
-    {
-      "type": "wheel",
-      "target": {
-        "kind": "test_id",
-        "id": "workspace-shell-file-tree-node-0"
+        "id": "workspace-shell-file-tree-node-0",
+        "kind": "test_id"
       },
+      "type": "move_pointer"
+    },
+    {
       "delta_x": 0.0,
-      "delta_y": -160.0
-    },
-    {
-      "type": "wait_frames",
-      "n": 5
-    },
-    {
-      "type": "wheel",
+      "delta_y": -160.0,
       "target": {
-        "kind": "test_id",
-        "id": "workspace-shell-file-tree-root"
+        "id": "workspace-shell-file-tree-node-0",
+        "kind": "test_id"
       },
+      "type": "wheel"
+    },
+    {
+      "n": 5,
+      "type": "wait_frames"
+    },
+    {
       "delta_x": 0.0,
-      "delta_y": -780.0
-    },
-    {
-      "type": "wait_frames",
-      "n": 4
-    },
-    {
-      "type": "wheel",
+      "delta_y": -780.0,
       "target": {
-        "kind": "test_id",
-        "id": "workspace-shell-file-tree-root"
+        "id": "workspace-shell-file-tree-root",
+        "kind": "test_id"
       },
+      "type": "wheel"
+    },
+    {
+      "n": 4,
+      "type": "wait_frames"
+    },
+    {
       "delta_x": 0.0,
-      "delta_y": -780.0
-    },
-    {
-      "type": "wait_frames",
-      "n": 4
-    },
-    {
-      "type": "wheel",
+      "delta_y": -780.0,
       "target": {
-        "kind": "test_id",
-        "id": "workspace-shell-file-tree-root"
+        "id": "workspace-shell-file-tree-root",
+        "kind": "test_id"
       },
+      "type": "wheel"
+    },
+    {
+      "n": 4,
+      "type": "wait_frames"
+    },
+    {
       "delta_x": 0.0,
-      "delta_y": -780.0
-    },
-    {
-      "type": "wait_frames",
-      "n": 4
-    },
-    {
-      "type": "wheel",
+      "delta_y": -780.0,
       "target": {
-        "kind": "test_id",
-        "id": "workspace-shell-file-tree-root"
+        "id": "workspace-shell-file-tree-root",
+        "kind": "test_id"
       },
+      "type": "wheel"
+    },
+    {
+      "n": 4,
+      "type": "wait_frames"
+    },
+    {
       "delta_x": 0.0,
-      "delta_y": 780.0
-    },
-    {
-      "type": "wait_frames",
-      "n": 4
-    },
-    {
-      "type": "wheel",
+      "delta_y": 780.0,
       "target": {
-        "kind": "test_id",
-        "id": "workspace-shell-file-tree-root"
+        "id": "workspace-shell-file-tree-root",
+        "kind": "test_id"
       },
+      "type": "wheel"
+    },
+    {
+      "n": 4,
+      "type": "wait_frames"
+    },
+    {
       "delta_x": 0.0,
-      "delta_y": 780.0
-    },
-    {
-      "type": "wait_frames",
-      "n": 4
-    },
-    {
-      "type": "wheel",
+      "delta_y": 780.0,
       "target": {
-        "kind": "test_id",
-        "id": "workspace-shell-file-tree-root"
+        "id": "workspace-shell-file-tree-root",
+        "kind": "test_id"
       },
+      "type": "wheel"
+    },
+    {
+      "n": 4,
+      "type": "wait_frames"
+    },
+    {
       "delta_x": 0.0,
-      "delta_y": -780.0
-    },
-    {
-      "type": "wait_frames",
-      "n": 4
-    },
-    {
-      "type": "wheel",
+      "delta_y": -780.0,
       "target": {
-        "kind": "test_id",
-        "id": "workspace-shell-file-tree-root"
+        "id": "workspace-shell-file-tree-root",
+        "kind": "test_id"
       },
+      "type": "wheel"
+    },
+    {
+      "n": 4,
+      "type": "wait_frames"
+    },
+    {
       "delta_x": 0.0,
-      "delta_y": 780.0
-    },
-    {
-      "type": "wait_frames",
-      "n": 6
-    },
-    {
-      "type": "wheel",
+      "delta_y": 780.0,
       "target": {
-        "kind": "test_id",
-        "id": "workspace-shell-file-tree-root"
+        "id": "workspace-shell-file-tree-root",
+        "kind": "test_id"
       },
+      "type": "wheel"
+    },
+    {
+      "n": 6,
+      "type": "wait_frames"
+    },
+    {
       "delta_x": 0.0,
-      "delta_y": 780.0
+      "delta_y": 780.0,
+      "target": {
+        "id": "workspace-shell-file-tree-root",
+        "kind": "test_id"
+      },
+      "type": "wheel"
     },
     {
-      "type": "wait_frames",
-      "n": 6
+      "n": 6,
+      "type": "wait_frames"
     },
     {
-      "type": "capture_bundle",
-      "label": "workspace-shell-demo-file-tree-bounce-keep-alive"
+      "label": "workspace-shell-demo-file-tree-bounce-keep-alive",
+      "type": "capture_bundle"
     }
   ]
 }

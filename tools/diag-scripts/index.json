@@ -4,6 +4,76 @@
   "scope": "suites+prelude",
   "scripts": [
     {
+      "id": "components-gallery-file-tree-toggle-and-scroll",
+      "path": "tools/diag-scripts/components-gallery/file-tree/components-gallery-file-tree-toggle-and-scroll.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "components-gallery-file-tree"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "components-gallery-file-tree-window-boundary-bounce",
+      "path": "tools/diag-scripts/components-gallery/file-tree/components-gallery-file-tree-window-boundary-bounce.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "components-gallery-file-tree"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "components-gallery-file-tree-window-boundary-scroll",
+      "path": "tools/diag-scripts/components-gallery/file-tree/components-gallery-file-tree-window-boundary-scroll.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "components-gallery-file-tree"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "components-gallery-table-sort-and-scroll",
+      "path": "tools/diag-scripts/components-gallery/table/components-gallery-table-sort-and-scroll.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "components-gallery-table"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "components-gallery-table-window-boundary-bounce",
+      "path": "tools/diag-scripts/components-gallery/table/components-gallery-table-window-boundary-bounce.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "components-gallery-table-keep-alive"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "components-gallery-table-window-boundary-scroll",
+      "path": "tools/diag-scripts/components-gallery/table/components-gallery-table-window-boundary-scroll.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "components-gallery-table"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "docking-demo-split-toggle-retarget-fixed-frame-delta",
+      "path": "tools/diag-scripts/docking/demo/docking-demo-split-toggle-retarget-fixed-frame-delta.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "docking-motion-pilot"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "tooling-suite-prelude-reset-diagnostics",
       "path": "tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json",
       "required_capabilities": [],
@@ -63,11 +133,31 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-accordion-faq-toggle-fixed-frame-delta",
+      "path": "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-faq-toggle-fixed-frame-delta.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-motion-pilot"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-accordion-returns-first-open-height",
       "path": "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-returns-first-open-height.json",
       "required_capabilities": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-ai-transcript-torture-scroll",
+      "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-ai-transcript-torture-scroll.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-ai-transcript-retained"
       ],
       "tags": [],
       "target_hints": []
@@ -98,6 +188,19 @@
       "required_capabilities": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-alert-tabs-shared-indicator-pixels-changed-fixed-frame-delta",
+      "path": "tools/diag-scripts/ui-gallery/alert/ui-gallery-alert-tabs-shared-indicator-pixels-changed-fixed-frame-delta.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-motion-pilot"
       ],
       "tags": [],
       "target_hints": []
@@ -195,6 +298,16 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-canvas-cull-torture-pan-zoom",
+      "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-canvas-cull-torture-pan-zoom.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-canvas-cull"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-card-description-no-early-wrap",
       "path": "tools/diag-scripts/ui-gallery/card/ui-gallery-card-description-no-early-wrap.json",
       "required_capabilities": [],
@@ -205,11 +318,31 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-carousel-expandable-fixed-frame-delta",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-expandable-fixed-frame-delta.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-motion-pilot"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-chart-accessibility-layer-keyboard",
       "path": "tools/diag-scripts/ui-gallery/chart/ui-gallery-chart-accessibility-layer-keyboard.json",
       "required_capabilities": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-chart-torture-pan-zoom",
+      "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-chart-torture-pan-zoom.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-chart-torture"
       ],
       "tags": [],
       "target_hints": []
@@ -820,11 +953,144 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-data-table-retained-column-actions-menu",
+      "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-column-actions-menu.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-data-table-retained",
+        "ui-gallery-data-table-retained-measured"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-data-table-retained-column-filter",
+      "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-column-filter.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-data-table-retained",
+        "ui-gallery-data-table-retained-measured"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-data-table-retained-column-pinning-sticky-scroll",
+      "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-column-pinning-sticky-scroll.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-data-table-retained",
+        "ui-gallery-data-table-retained-measured"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-data-table-retained-column-pinning-toggle",
+      "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-column-pinning-toggle.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-data-table-retained",
+        "ui-gallery-data-table-retained-measured"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-data-table-retained-faceted-filter",
+      "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-faceted-filter.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-data-table-retained",
+        "ui-gallery-data-table-retained-measured"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-data-table-retained-global-filter",
+      "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-global-filter.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-data-table-retained",
+        "ui-gallery-data-table-retained-measured"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-data-table-retained-multi-sort-shift-click",
+      "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-multi-sort-shift-click.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-data-table-retained",
+        "ui-gallery-data-table-retained-measured"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-data-table-retained-reset-filters",
+      "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-reset-filters.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-data-table-retained",
+        "ui-gallery-data-table-retained-measured"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-data-table-retained-sort-select-scroll",
+      "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-sort-select-scroll.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-data-table-retained",
+        "ui-gallery-data-table-retained-measured",
+        "ui-gallery-retained-measured"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-data-table-retained-visibility-toggle",
+      "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-visibility-toggle.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-data-table-retained",
+        "ui-gallery-data-table-retained-measured"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-data-table-smoke",
       "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-smoke.json",
       "required_capabilities": [],
       "suite_memberships": [
         "ui-gallery"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-data-table-window-boundary-bounce-keep-alive",
+      "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-window-boundary-bounce-keep-alive.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-data-table-retained-keep-alive"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-data-table-window-boundary-scroll-retained",
+      "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-window-boundary-scroll-retained.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-data-table-retained",
+        "ui-gallery-data-table-retained-measured",
+        "ui-gallery-retained-measured"
       ],
       "tags": [],
       "target_hints": []
@@ -935,6 +1201,26 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-drawer-snap-points-drag-retarget-settle-fixed-frame-delta",
+      "path": "tools/diag-scripts/ui-gallery/drawer/ui-gallery-drawer-snap-points-drag-retarget-settle-fixed-frame-delta.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-motion-pilot"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-drawer-snap-points-spring-midflight-retarget-fixed-frame-delta",
+      "path": "tools/diag-scripts/ui-gallery/drawer/ui-gallery-drawer-snap-points-spring-midflight-retarget-fixed-frame-delta.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-motion-pilot"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-dropdown-open-select",
       "path": "tools/diag-scripts/ui-gallery/dropdown/ui-gallery-dropdown-open-select.json",
       "required_capabilities": [],
@@ -983,6 +1269,26 @@
         "shadcn",
         "ui-gallery"
       ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-file-tree-torture-scroll",
+      "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-file-tree-torture-scroll.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-file-tree-torture"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-file-tree-torture-toggle",
+      "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-file-tree-torture-toggle.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-file-tree-torture-interactive"
+      ],
+      "tags": [],
       "target_hints": []
     },
     {
@@ -1134,6 +1440,27 @@
       ],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-inspector-torture-bounce-keep-alive",
+      "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-inspector-torture-bounce-keep-alive.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-inspector-torture-keep-alive"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-inspector-torture-scroll",
+      "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-inspector-torture-scroll.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-inspector-torture",
+        "ui-gallery-inspector-torture-keep-alive"
       ],
       "tags": [],
       "target_hints": []
@@ -1436,11 +1763,65 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-motion-presets-fluid-tabs-pixels-changed-fixed-frame-delta",
+      "path": "tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-motion-presets-fluid-tabs-pixels-changed-fixed-frame-delta.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-motion-pilot"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-node-graph-cull-torture-pan-zoom",
+      "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-node-graph-cull-torture-pan-zoom.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-node-graph-cull"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-node-graph-cull-window-no-shifts-small-pan",
+      "path": "tools/diag-scripts/ui-gallery/node-graph/ui-gallery-node-graph-cull-window-no-shifts-small-pan.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-node-graph-cull-window-no-shifts-small-pan"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-node-graph-cull-window-shifts",
+      "path": "tools/diag-scripts/ui-gallery/node-graph/ui-gallery-node-graph-cull-window-shifts.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-node-graph-cull-window-shifts"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-overlay-dialog-open-close-fixed-frame-delta",
+      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-overlay-dialog-open-close-fixed-frame-delta.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-motion-pilot"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-overlay-torture",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-overlay-torture.json",
       "required_capabilities": [],
       "suite_memberships": [
-        "ui-gallery"
+        "ui-gallery",
+        "ui-gallery-cache005"
       ],
       "tags": [],
       "target_hints": []
@@ -1765,11 +2146,131 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-sidebar-scroll-refresh",
+      "path": "tools/diag-scripts/ui-gallery/sidebar/ui-gallery-sidebar-scroll-refresh.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-cache005"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-sidebar-toggle-fixed-frame-delta",
+      "path": "tools/diag-scripts/ui-gallery/sidebar/ui-gallery-sidebar-toggle-fixed-frame-delta.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-motion-pilot"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-slider-set-value",
       "path": "tools/diag-scripts/ui-gallery/slider/ui-gallery-slider-set-value.json",
       "required_capabilities": [],
       "suite_memberships": [
         "ui-gallery"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-sonner-interrupt-fixed-frame-delta",
+      "path": "tools/diag-scripts/ui-gallery/sonner/ui-gallery-sonner-interrupt-fixed-frame-delta.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-motion-pilot"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-sonner-open-close-fixed-frame-delta",
+      "path": "tools/diag-scripts/ui-gallery/sonner/ui-gallery-sonner-open-close-fixed-frame-delta.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-motion-pilot"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-table-retained-keyboard-typeahead",
+      "path": "tools/diag-scripts/ui-gallery/table/ui-gallery-table-retained-keyboard-typeahead.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-retained-measured",
+        "ui-gallery-table-retained",
+        "ui-gallery-table-retained-measured"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-table-retained-multi-sort-shift-click",
+      "path": "tools/diag-scripts/ui-gallery/table/ui-gallery-table-retained-multi-sort-shift-click.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-table-retained",
+        "ui-gallery-table-retained-measured"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-table-retained-row-pinning-keep-pinned-false",
+      "path": "tools/diag-scripts/ui-gallery/table/ui-gallery-table-retained-row-pinning-keep-pinned-false.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-table-retained",
+        "ui-gallery-table-retained-measured"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-table-retained-row-pinning-keep-pinned-true",
+      "path": "tools/diag-scripts/ui-gallery/table/ui-gallery-table-retained-row-pinning-keep-pinned-true.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-table-retained",
+        "ui-gallery-table-retained-measured"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-table-retained-sort-desc",
+      "path": "tools/diag-scripts/ui-gallery/table/ui-gallery-table-retained-sort-desc.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-table-retained",
+        "ui-gallery-table-retained-measured"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-table-retained-sort-select-scroll",
+      "path": "tools/diag-scripts/ui-gallery/table/ui-gallery-table-retained-sort-select-scroll.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-retained-measured",
+        "ui-gallery-table-retained",
+        "ui-gallery-table-retained-measured"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-table-retained-window-boundary-scroll",
+      "path": "tools/diag-scripts/ui-gallery/table/ui-gallery-table-retained-window-boundary-scroll.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-retained-measured",
+        "ui-gallery-table-retained",
+        "ui-gallery-table-retained-measured"
       ],
       "tags": [],
       "target_hints": []
@@ -1934,6 +2435,30 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-tree-retained-toggle-and-scroll",
+      "path": "tools/diag-scripts/ui-gallery/tree/ui-gallery-tree-retained-toggle-and-scroll.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-retained-measured",
+        "ui-gallery-tree-retained",
+        "ui-gallery-tree-retained-measured"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-tree-window-boundary-scroll-retained",
+      "path": "tools/diag-scripts/ui-gallery/tree/ui-gallery-tree-window-boundary-scroll-retained.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-retained-measured",
+        "ui-gallery-tree-retained",
+        "ui-gallery-tree-retained-measured"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-typography-inline-code-tab-scroll-range",
       "path": "tools/diag-scripts/ui-gallery/typography/ui-gallery-typography-inline-code-tab-scroll-range.json",
       "required_capabilities": [
@@ -1954,6 +2479,16 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-ui-kit-list-window-boundary-scroll",
+      "path": "tools/diag-scripts/ui-gallery/ui-kit/ui-gallery-ui-kit-list-window-boundary-scroll.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-ui-kit-list-retained"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-view-cache-toggle-perf",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-view-cache-toggle-perf.json",
       "required_capabilities": [],
@@ -1964,11 +2499,64 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-virtual-list-small-scroll-no-window-shifts",
+      "path": "tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-small-scroll-no-window-shifts.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-vlist-no-window-shifts-small-scroll"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-virtual-list-torture",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-virtual-list-torture.json",
       "required_capabilities": [],
       "suite_memberships": [
         "ui-gallery"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-virtual-list-window-boundary-scroll",
+      "path": "tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-window-boundary-scroll.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-vlist-window-boundary",
+        "ui-gallery-vlist-window-boundary-retained"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-virtual-list-window-boundary-scroll-retained",
+      "path": "tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-window-boundary-scroll-retained.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-retained-measured",
+        "ui-gallery-virt-retained",
+        "ui-gallery-virt-retained-measured"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "workspace-shell-demo-file-tree-bounce-keep-alive",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-file-tree-bounce-keep-alive.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "workspace-shell-demo-file-tree-keep-alive"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "workspace-shell-demo-tab-drag-and-scroll",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-drag-and-scroll.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "workspace-shell-demo"
       ],
       "tags": [],
       "target_hints": []

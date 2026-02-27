@@ -277,6 +277,11 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
     let is_docking_arbitration_suite =
         suite_args.len() == 1 && suite_args[0] == "docking-arbitration";
 
+    let scripts_from_suite_dir = |suite: &str| -> Result<Vec<PathBuf>, String> {
+        let inputs = vec![format!("tools/diag-scripts/suites/{suite}")];
+        expand_script_inputs(&workspace_root, &inputs)
+    };
+
     let (mut scripts, builtin_suite): (Vec<PathBuf>, Option<BuiltinSuite>) = if is_ui_gallery_suite
     {
         // The UI Gallery suite includes scripts that run the `--check-pixels-changed`
@@ -297,71 +302,8 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
         // Some motion feel gates use the `--check-pixels-changed` post-run check, which
         // requires GPU screenshots.
         push_env_if_missing(&mut launch_env, "FRET_DIAG_GPU_SCREENSHOTS", "1");
-        (
-            vec![
-                resolve_path(
-                    &workspace_root,
-                    PathBuf::from(
-                        "tools/diag-scripts/ui-gallery-sidebar-toggle-fixed-frame-delta.json",
-                    ),
-                ),
-                resolve_path(
-                    &workspace_root,
-                    PathBuf::from(
-                        "tools/diag-scripts/ui-gallery-accordion-faq-toggle-fixed-frame-delta.json",
-                    ),
-                ),
-                resolve_path(
-                    &workspace_root,
-                    PathBuf::from(
-                        "tools/diag-scripts/ui-gallery-alert-tabs-shared-indicator-pixels-changed-fixed-frame-delta.json",
-                    ),
-                ),
-                resolve_path(
-                    &workspace_root,
-                    PathBuf::from(
-                        "tools/diag-scripts/ui-gallery-motion-presets-fluid-tabs-pixels-changed-fixed-frame-delta.json",
-                    ),
-                ),
-                resolve_path(
-                    &workspace_root,
-                    PathBuf::from(
-                        "tools/diag-scripts/ui-gallery-carousel-expandable-fixed-frame-delta.json",
-                    ),
-                ),
-                resolve_path(
-                    &workspace_root,
-                    PathBuf::from(
-                        "tools/diag-scripts/ui-gallery-drawer-snap-points-drag-retarget-settle-fixed-frame-delta.json",
-                    ),
-                ),
-                resolve_path(
-                    &workspace_root,
-                    PathBuf::from(
-                        "tools/diag-scripts/ui-gallery-drawer-snap-points-spring-midflight-retarget-fixed-frame-delta.json",
-                    ),
-                ),
-                resolve_path(
-                    &workspace_root,
-                    PathBuf::from(
-                        "tools/diag-scripts/ui-gallery-overlay-dialog-open-close-fixed-frame-delta.json",
-                    ),
-                ),
-                resolve_path(
-                    &workspace_root,
-                    PathBuf::from(
-                        "tools/diag-scripts/ui-gallery-sonner-open-close-fixed-frame-delta.json",
-                    ),
-                ),
-                resolve_path(
-                    &workspace_root,
-                    PathBuf::from(
-                        "tools/diag-scripts/ui-gallery-sonner-interrupt-fixed-frame-delta.json",
-                    ),
-                ),
-            ],
-            Some(BuiltinSuite::UiGallery),
-        )
+        let scripts = scripts_from_suite_dir("ui-gallery-motion-pilot")?;
+        (scripts, Some(BuiltinSuite::UiGallery))
     } else if is_ui_gallery_code_editor_suite {
         // The code-editor-focused UI Gallery suite also includes the pixels-changed
         // gate (soft-wrap editing baseline), so screenshots must be enabled.
@@ -422,217 +364,45 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
         let scripts = expand_script_inputs(&workspace_root, &inputs)?;
         (scripts, Some(BuiltinSuite::UiGalleryLayout))
     } else if is_ui_gallery_virt_retained_suite || is_ui_gallery_virt_retained_measured_suite {
-        (
-            vec![resolve_path(
-                &workspace_root,
-                PathBuf::from(
-                    "tools/diag-scripts/ui-gallery-virtual-list-window-boundary-scroll-retained.json",
-                ),
-            )],
-            Some(BuiltinSuite::UiGallery),
-        )
+        let suite = if is_ui_gallery_virt_retained_measured_suite {
+            "ui-gallery-virt-retained-measured"
+        } else {
+            "ui-gallery-virt-retained"
+        };
+        let scripts = scripts_from_suite_dir(suite)?;
+        (scripts, Some(BuiltinSuite::UiGallery))
     } else if is_ui_gallery_tree_retained_suite || is_ui_gallery_tree_retained_measured_suite {
-        (
-            vec![
-                resolve_path(
-                    &workspace_root,
-                    PathBuf::from(
-                        "tools/diag-scripts/ui-gallery-tree-window-boundary-scroll-retained.json",
-                    ),
-                ),
-                resolve_path(
-                    &workspace_root,
-                    PathBuf::from(
-                        "tools/diag-scripts/ui-gallery-tree-retained-toggle-and-scroll.json",
-                    ),
-                ),
-            ],
-            Some(BuiltinSuite::UiGallery),
-        )
+        let suite = if is_ui_gallery_tree_retained_measured_suite {
+            "ui-gallery-tree-retained-measured"
+        } else {
+            "ui-gallery-tree-retained"
+        };
+        let scripts = scripts_from_suite_dir(suite)?;
+        (scripts, Some(BuiltinSuite::UiGallery))
     } else if is_ui_gallery_data_table_retained_suite
         || is_ui_gallery_data_table_retained_measured_suite
     {
-        (
-            vec![
-                resolve_path(
-                    &workspace_root,
-                    PathBuf::from(
-                        "tools/diag-scripts/ui-gallery-data-table-window-boundary-scroll-retained.json",
-                    ),
-                ),
-                resolve_path(
-                    &workspace_root,
-                    PathBuf::from(
-                        "tools/diag-scripts/ui-gallery-data-table-retained-sort-select-scroll.json",
-                    ),
-                ),
-                resolve_path(
-                    &workspace_root,
-                    PathBuf::from(
-                        "tools/diag-scripts/ui-gallery-data-table-retained-multi-sort-shift-click.json",
-                    ),
-                ),
-                resolve_path(
-                    &workspace_root,
-                    PathBuf::from(
-                        "tools/diag-scripts/ui-gallery-data-table-retained-visibility-toggle.json",
-                    ),
-                ),
-                resolve_path(
-                    &workspace_root,
-                    PathBuf::from(
-                        "tools/diag-scripts/ui-gallery-data-table-retained-column-actions-menu.json",
-                    ),
-                ),
-                resolve_path(
-                    &workspace_root,
-                    PathBuf::from(
-                        "tools/diag-scripts/ui-gallery-data-table-retained-global-filter.json",
-                    ),
-                ),
-                resolve_path(
-                    &workspace_root,
-                    PathBuf::from(
-                        "tools/diag-scripts/ui-gallery-data-table-retained-column-filter.json",
-                    ),
-                ),
-                resolve_path(
-                    &workspace_root,
-                    PathBuf::from(
-                        "tools/diag-scripts/ui-gallery-data-table-retained-faceted-filter.json",
-                    ),
-                ),
-                resolve_path(
-                    &workspace_root,
-                    PathBuf::from(
-                        "tools/diag-scripts/ui-gallery-data-table-retained-reset-filters.json",
-                    ),
-                ),
-                resolve_path(
-                    &workspace_root,
-                    PathBuf::from(
-                        "tools/diag-scripts/ui-gallery-data-table-retained-column-pinning-sticky-scroll.json",
-                    ),
-                ),
-                resolve_path(
-                    &workspace_root,
-                    PathBuf::from(
-                        "tools/diag-scripts/ui-gallery-data-table-retained-column-pinning-toggle.json",
-                    ),
-                ),
-            ],
-            Some(BuiltinSuite::UiGallery),
-        )
+        let suite = if is_ui_gallery_data_table_retained_measured_suite {
+            "ui-gallery-data-table-retained-measured"
+        } else {
+            "ui-gallery-data-table-retained"
+        };
+        let scripts = scripts_from_suite_dir(suite)?;
+        (scripts, Some(BuiltinSuite::UiGallery))
     } else if is_ui_gallery_data_table_retained_keep_alive_suite {
-        (
-            vec![resolve_path(
-                &workspace_root,
-                PathBuf::from(
-                    "tools/diag-scripts/ui-gallery-data-table-window-boundary-bounce-keep-alive.json",
-                ),
-            )],
-            Some(BuiltinSuite::UiGallery),
-        )
+        let scripts = scripts_from_suite_dir("ui-gallery-data-table-retained-keep-alive")?;
+        (scripts, Some(BuiltinSuite::UiGallery))
     } else if is_ui_gallery_table_retained_suite || is_ui_gallery_table_retained_measured_suite {
-        (
-            vec![
-                resolve_path(
-                    &workspace_root,
-                    PathBuf::from(
-                        "tools/diag-scripts/ui-gallery-table-retained-window-boundary-scroll.json",
-                    ),
-                ),
-                resolve_path(
-                    &workspace_root,
-                    PathBuf::from(
-                        "tools/diag-scripts/ui-gallery-table-retained-sort-select-scroll.json",
-                    ),
-                ),
-                resolve_path(
-                    &workspace_root,
-                    PathBuf::from("tools/diag-scripts/ui-gallery-table-retained-sort-desc.json"),
-                ),
-                resolve_path(
-                    &workspace_root,
-                    PathBuf::from(
-                        "tools/diag-scripts/ui-gallery-table-retained-multi-sort-shift-click.json",
-                    ),
-                ),
-                resolve_path(
-                    &workspace_root,
-                    PathBuf::from(
-                        "tools/diag-scripts/ui-gallery-table-retained-row-pinning-keep-pinned-true.json",
-                    ),
-                ),
-                resolve_path(
-                    &workspace_root,
-                    PathBuf::from(
-                        "tools/diag-scripts/ui-gallery-table-retained-row-pinning-keep-pinned-false.json",
-                    ),
-                ),
-                resolve_path(
-                    &workspace_root,
-                    PathBuf::from(
-                        "tools/diag-scripts/ui-gallery-table-retained-keyboard-typeahead.json",
-                    ),
-                ),
-            ],
-            Some(BuiltinSuite::UiGallery),
-        )
+        let suite = if is_ui_gallery_table_retained_measured_suite {
+            "ui-gallery-table-retained-measured"
+        } else {
+            "ui-gallery-table-retained"
+        };
+        let scripts = scripts_from_suite_dir(suite)?;
+        (scripts, Some(BuiltinSuite::UiGallery))
     } else if is_ui_gallery_retained_measured_suite {
-        (
-            vec![
-                resolve_path(
-                    &workspace_root,
-                    PathBuf::from(
-                        "tools/diag-scripts/ui-gallery-virtual-list-window-boundary-scroll-retained.json",
-                    ),
-                ),
-                resolve_path(
-                    &workspace_root,
-                    PathBuf::from(
-                        "tools/diag-scripts/ui-gallery-tree-window-boundary-scroll-retained.json",
-                    ),
-                ),
-                resolve_path(
-                    &workspace_root,
-                    PathBuf::from(
-                        "tools/diag-scripts/ui-gallery-tree-retained-toggle-and-scroll.json",
-                    ),
-                ),
-                resolve_path(
-                    &workspace_root,
-                    PathBuf::from(
-                        "tools/diag-scripts/ui-gallery-data-table-window-boundary-scroll-retained.json",
-                    ),
-                ),
-                resolve_path(
-                    &workspace_root,
-                    PathBuf::from(
-                        "tools/diag-scripts/ui-gallery-data-table-retained-sort-select-scroll.json",
-                    ),
-                ),
-                resolve_path(
-                    &workspace_root,
-                    PathBuf::from(
-                        "tools/diag-scripts/ui-gallery-table-retained-window-boundary-scroll.json",
-                    ),
-                ),
-                resolve_path(
-                    &workspace_root,
-                    PathBuf::from(
-                        "tools/diag-scripts/ui-gallery-table-retained-sort-select-scroll.json",
-                    ),
-                ),
-                resolve_path(
-                    &workspace_root,
-                    PathBuf::from(
-                        "tools/diag-scripts/ui-gallery-table-retained-keyboard-typeahead.json",
-                    ),
-                ),
-            ],
-            Some(BuiltinSuite::UiGallery),
-        )
+        let scripts = scripts_from_suite_dir("ui-gallery-retained-measured")?;
+        (scripts, Some(BuiltinSuite::UiGallery))
     } else if is_ui_gallery_ai_transcript_retained_suite {
         push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE", "1");
         push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE_SHELL", "1");
@@ -641,77 +411,44 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
             "FRET_UI_GALLERY_AI_TRANSCRIPT_VARIABLE_HEIGHT",
             "1",
         );
-        (
-            vec![resolve_path(
-                &workspace_root,
-                PathBuf::from("tools/diag-scripts/ui-gallery-ai-transcript-torture-scroll.json"),
-            )],
-            Some(BuiltinSuite::UiGallery),
-        )
+        let scripts = scripts_from_suite_dir("ui-gallery-ai-transcript-retained")?;
+        (scripts, Some(BuiltinSuite::UiGallery))
     } else if is_ui_gallery_canvas_cull_suite {
         push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE", "1");
         push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE_SHELL", "1");
         // This harness uses `capture_screenshot` to enable the `--check-pixels-changed` gate.
         push_env_if_missing(&mut launch_env, "FRET_DIAG_GPU_SCREENSHOTS", "1");
-        (
-            vec![resolve_path(
-                &workspace_root,
-                PathBuf::from("tools/diag-scripts/ui-gallery-canvas-cull-torture-pan-zoom.json"),
-            )],
-            Some(BuiltinSuite::UiGallery),
-        )
+        let scripts = scripts_from_suite_dir("ui-gallery-canvas-cull")?;
+        (scripts, Some(BuiltinSuite::UiGallery))
     } else if is_ui_gallery_node_graph_cull_suite {
         push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE", "1");
         push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE_SHELL", "1");
         // This harness uses `capture_screenshot` to enable the `--check-pixels-changed` gate.
         push_env_if_missing(&mut launch_env, "FRET_DIAG_GPU_SCREENSHOTS", "1");
-        (
-            vec![resolve_path(
-                &workspace_root,
-                PathBuf::from(
-                    "tools/diag-scripts/ui-gallery-node-graph-cull-torture-pan-zoom.json",
-                ),
-            )],
-            Some(BuiltinSuite::UiGallery),
-        )
+        let scripts = scripts_from_suite_dir("ui-gallery-node-graph-cull")?;
+        (scripts, Some(BuiltinSuite::UiGallery))
     } else if is_ui_gallery_node_graph_cull_window_shifts_suite {
         push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE", "1");
         push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE_SHELL", "1");
         // This harness uses `capture_screenshot` to enable the `--check-pixels-changed` gate.
         push_env_if_missing(&mut launch_env, "FRET_DIAG_GPU_SCREENSHOTS", "1");
-        (
-            vec![resolve_path(
-                &workspace_root,
-                PathBuf::from("tools/diag-scripts/ui-gallery-node-graph-cull-window-shifts.json"),
-            )],
-            Some(BuiltinSuite::UiGallery),
-        )
+        let scripts = scripts_from_suite_dir("ui-gallery-node-graph-cull-window-shifts")?;
+        (scripts, Some(BuiltinSuite::UiGallery))
     } else if is_ui_gallery_node_graph_cull_window_no_shifts_small_pan_suite {
         push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE", "1");
         push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE_SHELL", "1");
         // This harness uses `capture_screenshot` to enable the `--check-pixels-changed` gate.
         push_env_if_missing(&mut launch_env, "FRET_DIAG_GPU_SCREENSHOTS", "1");
-        (
-            vec![resolve_path(
-                &workspace_root,
-                PathBuf::from(
-                    "tools/diag-scripts/ui-gallery-node-graph-cull-window-no-shifts-small-pan.json",
-                ),
-            )],
-            Some(BuiltinSuite::UiGallery),
-        )
+        let scripts =
+            scripts_from_suite_dir("ui-gallery-node-graph-cull-window-no-shifts-small-pan")?;
+        (scripts, Some(BuiltinSuite::UiGallery))
     } else if is_ui_gallery_chart_torture_suite {
         push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE", "1");
         push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE_SHELL", "1");
         // This harness uses `capture_screenshot` to enable the `--check-pixels-changed` gate.
         push_env_if_missing(&mut launch_env, "FRET_DIAG_GPU_SCREENSHOTS", "1");
-        (
-            vec![resolve_path(
-                &workspace_root,
-                PathBuf::from("tools/diag-scripts/ui-gallery-chart-torture-pan-zoom.json"),
-            )],
-            Some(BuiltinSuite::UiGallery),
-        )
+        let scripts = scripts_from_suite_dir("ui-gallery-chart-torture")?;
+        (scripts, Some(BuiltinSuite::UiGallery))
     } else if is_ui_gallery_vlist_window_boundary_suite {
         // The window-boundary harness is specifically intended to exercise the
         // view-cache + shell reuse seam under a stable (known-heights) VirtualList
@@ -726,15 +463,8 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
         // highest-risk, most common implementation track (ADR 0175 Track B). The
         // retained-host track (ADR 0177) has dedicated suites/scripts.
         push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VLIST_RETAINED", "0");
-        (
-            vec![resolve_path(
-                &workspace_root,
-                PathBuf::from(
-                    "tools/diag-scripts/ui-gallery-virtual-list-window-boundary-scroll.json",
-                ),
-            )],
-            Some(BuiltinSuite::UiGallery),
-        )
+        let scripts = scripts_from_suite_dir("ui-gallery-vlist-window-boundary")?;
+        (scripts, Some(BuiltinSuite::UiGallery))
     } else if is_ui_gallery_vlist_no_window_shifts_small_scroll_suite {
         // Guard rail harness: under view-cache + shell, small scroll deltas should
         // not force a non-retained VirtualList window shift (which currently implies
@@ -746,15 +476,8 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
         push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VLIST_MINIMAL", "1");
         push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS", "1");
         push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VLIST_RETAINED", "0");
-        (
-            vec![resolve_path(
-                &workspace_root,
-                PathBuf::from(
-                    "tools/diag-scripts/ui-gallery-virtual-list-small-scroll-no-window-shifts.json",
-                ),
-            )],
-            Some(BuiltinSuite::UiGallery),
-        )
+        let scripts = scripts_from_suite_dir("ui-gallery-vlist-no-window-shifts-small-scroll")?;
+        (scripts, Some(BuiltinSuite::UiGallery))
     } else if is_ui_gallery_vlist_window_boundary_retained_suite {
         // Retained-host counterpart of the window-boundary harness. This suite is used
         // to validate the ADR 0177 track (retained reconcile) with the same script and
@@ -768,79 +491,26 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
         // Enable keep-alive in the retained-host harness so boundary scroll back can
         // reuse detached row subtrees (reduces attach cost and stabilizes worst tick).
         push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VLIST_KEEP_ALIVE", "128");
-        (
-            vec![resolve_path(
-                &workspace_root,
-                PathBuf::from(
-                    "tools/diag-scripts/ui-gallery-virtual-list-window-boundary-scroll.json",
-                ),
-            )],
-            Some(BuiltinSuite::UiGallery),
-        )
+        let scripts = scripts_from_suite_dir("ui-gallery-vlist-window-boundary-retained")?;
+        (scripts, Some(BuiltinSuite::UiGallery))
     } else if is_ui_gallery_ui_kit_list_retained_suite {
-        (
-            vec![resolve_path(
-                &workspace_root,
-                PathBuf::from(
-                    "tools/diag-scripts/ui-gallery-ui-kit-list-window-boundary-scroll.json",
-                ),
-            )],
-            Some(BuiltinSuite::UiGallery),
-        )
+        let scripts = scripts_from_suite_dir("ui-gallery-ui-kit-list-retained")?;
+        (scripts, Some(BuiltinSuite::UiGallery))
     } else if is_ui_gallery_inspector_torture_suite {
-        (
-            vec![resolve_path(
-                &workspace_root,
-                PathBuf::from("tools/diag-scripts/ui-gallery-inspector-torture-scroll.json"),
-            )],
-            Some(BuiltinSuite::UiGallery),
-        )
+        let scripts = scripts_from_suite_dir("ui-gallery-inspector-torture")?;
+        (scripts, Some(BuiltinSuite::UiGallery))
     } else if is_ui_gallery_inspector_torture_keep_alive_suite {
-        (
-            vec![
-                resolve_path(
-                    &workspace_root,
-                    PathBuf::from("tools/diag-scripts/ui-gallery-inspector-torture-scroll.json"),
-                ),
-                resolve_path(
-                    &workspace_root,
-                    PathBuf::from(
-                        "tools/diag-scripts/ui-gallery-inspector-torture-bounce-keep-alive.json",
-                    ),
-                ),
-            ],
-            Some(BuiltinSuite::UiGallery),
-        )
+        let scripts = scripts_from_suite_dir("ui-gallery-inspector-torture-keep-alive")?;
+        (scripts, Some(BuiltinSuite::UiGallery))
     } else if is_ui_gallery_file_tree_torture_suite {
-        (
-            vec![resolve_path(
-                &workspace_root,
-                PathBuf::from("tools/diag-scripts/ui-gallery-file-tree-torture-scroll.json"),
-            )],
-            Some(BuiltinSuite::UiGallery),
-        )
+        let scripts = scripts_from_suite_dir("ui-gallery-file-tree-torture")?;
+        (scripts, Some(BuiltinSuite::UiGallery))
     } else if is_ui_gallery_file_tree_torture_interactive_suite {
-        (
-            vec![resolve_path(
-                &workspace_root,
-                PathBuf::from("tools/diag-scripts/ui-gallery-file-tree-torture-toggle.json"),
-            )],
-            Some(BuiltinSuite::UiGallery),
-        )
+        let scripts = scripts_from_suite_dir("ui-gallery-file-tree-torture-interactive")?;
+        (scripts, Some(BuiltinSuite::UiGallery))
     } else if is_ui_gallery_cache005_suite {
-        (
-            vec![
-                resolve_path(
-                    &workspace_root,
-                    PathBuf::from("tools/diag-scripts/ui-gallery-overlay-torture.json"),
-                ),
-                resolve_path(
-                    &workspace_root,
-                    PathBuf::from("tools/diag-scripts/ui-gallery-sidebar-scroll-refresh.json"),
-                ),
-            ],
-            Some(BuiltinSuite::UiGallery),
-        )
+        let scripts = scripts_from_suite_dir("ui-gallery-cache005")?;
+        (scripts, Some(BuiltinSuite::UiGallery))
     } else if is_components_gallery_file_tree_suite {
         // components_gallery's "file tree torture" surface is behind env gates; the
         // scripted harness assumes it is enabled and large enough to cross overscan
@@ -865,29 +535,8 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
             "FRET_COMPONENTS_GALLERY_FILE_TREE_KEEP_ALIVE",
             "256",
         );
-        (
-            vec![
-                resolve_path(
-                    &workspace_root,
-                    PathBuf::from(
-                        "tools/diag-scripts/components-gallery-file-tree-window-boundary-scroll.json",
-                    ),
-                ),
-                resolve_path(
-                    &workspace_root,
-                    PathBuf::from(
-                        "tools/diag-scripts/components-gallery-file-tree-toggle-and-scroll.json",
-                    ),
-                ),
-                resolve_path(
-                    &workspace_root,
-                    PathBuf::from(
-                        "tools/diag-scripts/components-gallery-file-tree-window-boundary-bounce.json",
-                    ),
-                ),
-            ],
-            None,
-        )
+        let scripts = scripts_from_suite_dir("components-gallery-file-tree")?;
+        (scripts, None)
     } else if is_components_gallery_table_suite {
         // components_gallery's "table torture" surface is behind an env gate; the
         // scripted harness assumes it is enabled.
@@ -902,23 +551,8 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
             "50000",
         );
         push_env_if_missing(&mut launch_env, "FRET_EXAMPLES_VIEW_CACHE", "1");
-        (
-            vec![
-                resolve_path(
-                    &workspace_root,
-                    PathBuf::from(
-                        "tools/diag-scripts/components-gallery-table-window-boundary-scroll.json",
-                    ),
-                ),
-                resolve_path(
-                    &workspace_root,
-                    PathBuf::from(
-                        "tools/diag-scripts/components-gallery-table-sort-and-scroll.json",
-                    ),
-                ),
-            ],
-            None,
-        )
+        let scripts = scripts_from_suite_dir("components-gallery-table")?;
+        (scripts, None)
     } else if is_components_gallery_table_keep_alive_suite {
         push_env_if_missing(
             &mut launch_env,
@@ -936,43 +570,17 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
             "FRET_COMPONENTS_GALLERY_TABLE_KEEP_ALIVE",
             "256",
         );
-        (
-            vec![resolve_path(
-                &workspace_root,
-                PathBuf::from(
-                    "tools/diag-scripts/components-gallery-table-window-boundary-bounce.json",
-                ),
-            )],
-            None,
-        )
+        let scripts = scripts_from_suite_dir("components-gallery-table-keep-alive")?;
+        (scripts, None)
     } else if is_workspace_shell_demo_suite {
-        (
-            vec![resolve_path(
-                &workspace_root,
-                PathBuf::from("tools/diag-scripts/workspace-shell-demo-tab-drag-and-scroll.json"),
-            )],
-            None,
-        )
+        let scripts = scripts_from_suite_dir("workspace-shell-demo")?;
+        (scripts, None)
     } else if is_workspace_shell_demo_file_tree_keep_alive_suite {
-        (
-            vec![resolve_path(
-                &workspace_root,
-                PathBuf::from(
-                    "tools/diag-scripts/workspace-shell-demo-file-tree-bounce-keep-alive.json",
-                ),
-            )],
-            None,
-        )
+        let scripts = scripts_from_suite_dir("workspace-shell-demo-file-tree-keep-alive")?;
+        (scripts, None)
     } else if is_docking_motion_pilot_suite {
-        (
-            vec![resolve_path(
-                &workspace_root,
-                PathBuf::from(
-                    "tools/diag-scripts/docking-demo-split-toggle-retarget-fixed-frame-delta.json",
-                ),
-            )],
-            Some(BuiltinSuite::DockingMotionPilot),
-        )
+        let scripts = scripts_from_suite_dir("docking-motion-pilot")?;
+        (scripts, Some(BuiltinSuite::DockingMotionPilot))
     } else if is_docking_arbitration_suite {
         let inputs = diag_suite_scripts::docking_arbitration_suite_scripts();
         let scripts = expand_script_inputs(&workspace_root, &inputs)?;
