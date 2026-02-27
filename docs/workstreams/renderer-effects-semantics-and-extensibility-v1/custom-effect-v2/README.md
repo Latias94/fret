@@ -119,15 +119,18 @@ Done (evidence anchors):
 - Ecosystem helper: `ecosystem/fret-ui-kit/src/custom_effects.rs` (`CustomEffectProgramV2`).
 - Demo: `apps/fret-examples/src/custom_effect_v2_demo.rs` (run via `cargo run -p fret-demo -- custom_effect_v2_demo`).
 - Web demo (inspector harness): `apps/fret-examples/src/custom_effect_v2_web_demo.rs` (run via
-  `apps/fret-demo-web` with `?demo=custom_effect_v2_web_demo`).
+  `apps/fret-demo-web` with `?demo=custom_effect_v2_web_demo`, or via `fretboard` with
+  `cargo run -p fretboard -- dev web --open --demo custom_effect_v2_web_demo`).
   - Purpose: a parameter validation harness for CustomV2 authoring (sampling, `UvRect`, blur radius/downsample,
     strength/tint, mode/quality, rounded clips).
   - Keys: `V` toggles the lens surface, `R` resets the controls.
 - Web demo (identity starter template): `apps/fret-examples/src/custom_effect_v2_identity_web_demo.rs` (run via
-  `apps/fret-demo-web` with `?demo=custom_effect_v2_identity_web_demo`).
+  `apps/fret-demo-web` with `?demo=custom_effect_v2_identity_web_demo`, or via `fretboard` with
+  `cargo run -p fretboard -- dev web --open --demo custom_effect_v2_identity_web_demo`).
   - Purpose: a minimal copy/paste template that wires up the v2 input image, sampling + `UvRect`, and params.
 - Web demo (LUT template): `apps/fret-examples/src/custom_effect_v2_lut_web_demo.rs` (run via
-  `apps/fret-demo-web` with `?demo=custom_effect_v2_lut_web_demo`).
+  `apps/fret-demo-web` with `?demo=custom_effect_v2_lut_web_demo`, or via `fretboard` with
+  `cargo run -p fretboard -- dev web --open --demo custom_effect_v2_lut_web_demo`).
   - Purpose: show a minimal LUT color grade effect where the v2 input image is a data texture
     (`ImageColorSpace::Linear`) encoded as a 3D LUT in 2D.
 - Liquid glass demo + scripted diagnostics: `apps/fret-examples/src/liquid_glass_demo.rs`,

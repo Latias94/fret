@@ -2,6 +2,16 @@
 
 WebAssembly demo for the `fret` UI runtime.
 
+## Run locally (recommended: via fretboard)
+
+From the workspace root:
+
+- `cargo run -p fretboard -- dev web --demo ui_gallery`
+- `cargo run -p fretboard -- dev web --open --demo custom_effect_v2_web_demo`
+
+This uses Trunk under the hood and prints an `Open: ...` URL once the dev server is listening (so it does not get
+buried in build warnings).
+
 ## Run locally (with Trunk)
 
 1. Install prerequisites:
