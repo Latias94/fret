@@ -98,8 +98,9 @@ required, inconsistent semantics, or transport divergence). Each item includes e
 6) Script library layout is flat; discoverability and ownership do not scale
 
 - Why it matters: as scripts accumulate, a single `tools/diag-scripts/` folder becomes hard to navigate, review, and
-- Status (2026-02-27): **in progress**. A taxonomy + redirect strategy exists, but we still need enforcement to prevent
-  new scripts from landing back in the root and to reduce suite brittleness long-term (registry).
+- Status (2026-02-27): **mostly closed for “flat root”**. Canonical scripts are moved into a taxonomy with redirect
+  stubs, and CI checks prevent new canonical scripts from landing back in `tools/diag-scripts/*.json`.
+  Long-term work remains to reduce suite brittleness via a registry.
 - Evidence:
   - built-in suites are curated directory inputs via redirect stubs: `tools/diag-scripts/suites/` and
     `crates/fret-diag/src/diag_suite_scripts.rs`

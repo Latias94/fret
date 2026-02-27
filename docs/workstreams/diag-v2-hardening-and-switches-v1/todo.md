@@ -51,7 +51,7 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
   - [x] ensure redirects never reach the runtime (tooling resolves before push).
 - [x] Add a migration helper script (plan + apply moves + optional redirects/rewrite).
 - [x] Add a guardrail so the taxonomy stays stable:
-  - [x] `tools/diag-scripts/migrate-script-library.py --check-root` detects “root scripts” with optional filters (for example `--include-prefix ui-gallery-`).
+  - [x] `tools/diag-scripts/migrate-script-library.py --check-root` detects “root scripts” (supports optional filters like `--include-prefix ui-gallery-`).
   - [ ] (optional) promote the check into `fretboard diag doctor` once the taxonomy settles for non-ui-gallery areas.
   - [ ] document the expected target folders for common categories (ui-gallery, docking, tooling).
 - [ ] Execute incremental taxonomy migrations (small batches + redirects + closure checks):
