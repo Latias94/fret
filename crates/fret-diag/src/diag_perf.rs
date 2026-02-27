@@ -150,60 +150,6 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
                 .iter()
                 .map(|p| resolve_path(&workspace_root, PathBuf::from(*p)))
                 .collect()
-        } else if name == "ui-gallery" {
-            suite_name = Some(name.to_string());
-            [
-                "tools/diag-scripts/ui-gallery-overlay-torture.json",
-                "tools/diag-scripts/ui-gallery-dropdown-open-select.json",
-                "tools/diag-scripts/ui-gallery-context-menu-right-click.json",
-                "tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json",
-                "tools/diag-scripts/ui-gallery-menubar-keyboard-nav.json",
-                "tools/diag-scripts/ui-gallery-virtual-list-torture.json",
-                "tools/diag-scripts/ui-gallery-material3-tabs-switch-perf.json",
-                "tools/diag-scripts/ui-gallery-view-cache-toggle-perf.json",
-                "tools/diag-scripts/ui-gallery-window-resize-stress.json",
-            ]
-            .into_iter()
-            .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-            .collect()
-        } else if name == "ui-gallery-steady" {
-            suite_name = Some(name.to_string());
-            [
-                "tools/diag-scripts/ui-gallery-overlay-torture-steady.json",
-                "tools/diag-scripts/ui-gallery-dropdown-open-select-steady.json",
-                "tools/diag-scripts/ui-gallery-context-menu-right-click-steady.json",
-                "tools/diag-scripts/ui-gallery-dialog-escape-focus-restore-steady.json",
-                "tools/diag-scripts/ui-gallery-hover-layout-torture-steady.json",
-                "tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json",
-                "tools/diag-scripts/ui-gallery-virtual-list-torture-steady.json",
-                "tools/diag-scripts/ui-gallery-material3-tabs-switch-perf-steady.json",
-                "tools/diag-scripts/ui-gallery-view-cache-toggle-perf-steady.json",
-                "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json",
-            ]
-            .into_iter()
-            .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-            .collect()
-        } else if name == "ui-resize-probes" {
-            suite_name = Some(name.to_string());
-            [
-                "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json",
-                "tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json",
-            ]
-            .into_iter()
-            .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-            .collect()
-        } else if name == "ui-code-editor-resize-probes" {
-            suite_name = Some(name.to_string());
-            ["tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json"]
-                .into_iter()
-                .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-                .collect()
-        } else if name == "extras-marquee-steady" {
-            suite_name = Some(name.to_string());
-            ["tools/diag-scripts/extras-marquee-steady.json"]
-                .into_iter()
-                .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-                .collect()
         } else {
             vec![resolve_path(&workspace_root, PathBuf::from(name))]
         }
