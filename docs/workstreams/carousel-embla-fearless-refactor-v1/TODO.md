@@ -102,3 +102,4 @@ keeping their higher-level semantics separate (Carousel vs Drawer vs Slider).
 - [ ] CAR-430 Decide how Carousel drag and `fret-dnd` sensors should arbitrate pointer capture.
   - scope: policy only (likely `fret-ui-kit::dnd` sensor config + recipe opt-outs)
   - references: ADR 0149/0150/0151/0157
+  - Draft decision: `docs/workstreams/carousel-embla-fearless-refactor-v1/dnd-arbitration.md`
