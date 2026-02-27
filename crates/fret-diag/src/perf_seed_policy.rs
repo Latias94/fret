@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 use serde_json::Value;
 
 use crate::compare::normalize_repo_relative_path;
+use crate::script_registry::{PromotedScriptRegistry, promoted_registry_default_path};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum PerfBaselineSeed {
@@ -149,60 +150,66 @@ struct SeedPresetFile {
     rules: Vec<(String, PerfSeedMetric, PerfBaselineSeed)>,
 }
 
-pub(crate) fn scripts_for_perf_suite_name(name: &str) -> Option<&'static [&'static str]> {
+fn perf_suite_membership_name(name: &str) -> Option<&'static str> {
     match name {
-        "docking-arbitration-steady" => Some(&[
-            "tools/diag-scripts/docking-arbitration-demo-nary-splitter-drag-perf-large-layout-steady.json",
-            "tools/diag-scripts/docking-arbitration-demo-nary-tab-drag-hover-perf-large-layout-steady.json",
-        ]),
-        "ui-gallery" => Some(&[
-            "tools/diag-scripts/ui-gallery/perf/ui-gallery-overlay-torture.json",
-            "tools/diag-scripts/ui-gallery/dropdown/ui-gallery-dropdown-open-select.json",
-            "tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-right-click.json",
-            "tools/diag-scripts/ui-gallery/overlay/ui-gallery-dialog-escape-focus-restore.json",
-            "tools/diag-scripts/ui-gallery/menubar/ui-gallery-menubar-keyboard-nav.json",
-            "tools/diag-scripts/ui-gallery/perf/ui-gallery-virtual-list-torture.json",
-            "tools/diag-scripts/ui-gallery/perf/ui-gallery-material3-tabs-switch-perf.json",
-            "tools/diag-scripts/ui-gallery/perf/ui-gallery-view-cache-toggle-perf.json",
-            "tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress.json",
-        ]),
-        "ui-gallery-steady" => Some(&[
-            "tools/diag-scripts/ui-gallery/perf/ui-gallery-overlay-torture-steady.json",
-            "tools/diag-scripts/ui-gallery/perf/ui-gallery-dropdown-open-select-steady.json",
-            "tools/diag-scripts/ui-gallery/perf/ui-gallery-context-menu-right-click-steady.json",
-            "tools/diag-scripts/ui-gallery/perf/ui-gallery-dialog-escape-focus-restore-steady.json",
-            "tools/diag-scripts/ui-gallery/perf/ui-gallery-hover-layout-torture-steady.json",
-            "tools/diag-scripts/ui-gallery/perf/ui-gallery-menubar-keyboard-nav-steady.json",
-            "tools/diag-scripts/ui-gallery/perf/ui-gallery-virtual-list-torture-steady.json",
-            "tools/diag-scripts/ui-gallery/perf/ui-gallery-material3-tabs-switch-perf-steady.json",
-            "tools/diag-scripts/ui-gallery/perf/ui-gallery-view-cache-toggle-perf-steady.json",
-            "tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress-steady.json",
-        ]),
-        "ui-resize-probes" => Some(&[
-            "tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress-steady.json",
-            "tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-drag-jitter-steady.json",
-        ]),
-        "ui-code-editor-resize-probes" => Some(&[
-            "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-window-resize-drag-jitter-steady.json",
-        ]),
-        "ui-gallery-complex-steady" => Some(&[
-            "tools/diag-scripts/ui-gallery/perf/ui-gallery-chrome-torture-steady.json",
-            "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-autoscroll-steady.json",
-            "tools/diag-scripts/ui-gallery/perf/ui-gallery-virtual-list-torture-steady.json",
-            "tools/diag-scripts/ui-gallery/perf/ui-gallery-overlay-torture-steady.json",
-        ]),
-        "ui-gallery-complex-typical" => Some(&[
-            "tools/diag-scripts/ui-gallery/perf/ui-gallery-chrome-torture-typical.json",
-            "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-torture-idle-typical.json",
-            "tools/diag-scripts/ui-gallery/perf/ui-gallery-virtual-list-torture-typical.json",
-            "tools/diag-scripts/ui-gallery/perf/ui-gallery-overlay-torture-typical.json",
-        ]),
-        "extras-marquee-steady" => Some(&["tools/diag-scripts/extras/extras-marquee-steady.json"]),
-        "liquid-glass-backdrop-warp-steady" => {
-            Some(&["tools/diag-scripts/liquid-glass-backdrop-warp-steady.json"])
+        "ui-gallery" | "perf-ui-gallery" => Some("perf-ui-gallery"),
+        "ui-gallery-steady" | "perf-ui-gallery-steady" => Some("perf-ui-gallery-steady"),
+        "ui-resize-probes" | "perf-ui-resize-probes" => Some("perf-ui-resize-probes"),
+        "ui-code-editor-resize-probes" | "perf-ui-code-editor-resize-probes" => {
+            Some("perf-ui-code-editor-resize-probes")
+        }
+        "ui-gallery-complex-steady" | "perf-ui-gallery-complex-steady" => {
+            Some("perf-ui-gallery-complex-steady")
+        }
+        "ui-gallery-complex-typical" | "perf-ui-gallery-complex-typical" => {
+            Some("perf-ui-gallery-complex-typical")
+        }
+        "docking-arbitration-steady" | "perf-docking-arbitration-steady" => {
+            Some("perf-docking-arbitration-steady")
+        }
+        "extras-marquee-steady" | "perf-extras-marquee-steady" => Some("perf-extras-marquee-steady"),
+        "liquid-glass-backdrop-warp-steady" | "perf-liquid-glass-backdrop-warp-steady" => {
+            Some("perf-liquid-glass-backdrop-warp-steady")
         }
         _ => None,
     }
+}
+
+fn is_known_perf_suite_name(name: &str) -> bool {
+    perf_suite_membership_name(name).is_some()
+}
+
+pub(crate) fn scripts_for_perf_suite_name(
+    workspace_root: &Path,
+    name: &str,
+) -> Result<Option<Vec<String>>, String> {
+    let Some(membership) = perf_suite_membership_name(name) else {
+        return Ok(None);
+    };
+
+    let registry_path = promoted_registry_default_path(workspace_root);
+    let registry = PromotedScriptRegistry::load_from_path(&registry_path)?;
+
+    let mut entries: Vec<(&str, &str)> = registry
+        .entries()
+        .iter()
+        .filter(|e| e.suite_memberships.iter().any(|s| s == membership))
+        .map(|e| (e.id.as_str(), e.path.as_str()))
+        .collect();
+    entries
+        .sort_by(|(a_id, a_path), (b_id, b_path)| a_id.cmp(b_id).then_with(|| a_path.cmp(b_path)));
+
+    let out: Vec<String> = entries
+        .into_iter()
+        .map(|(_id, path)| path.to_string())
+        .collect();
+    if out.is_empty() {
+        return Err(format!(
+            "perf suite resolved to no scripts in promoted registry: suite={name:?} membership={membership:?}\n\
+hint: ensure tools/diag-scripts/suites/{membership}/*.json exists and regenerate tools/diag-scripts/index.json via `python tools/check_diag_scripts_registry.py --write`"
+        ));
+    }
+    Ok(Some(out))
 }
 
 pub(crate) fn resolve_perf_baseline_seed_policy(
@@ -336,7 +343,7 @@ fn scope_is_suite_like(scope: &str, suite_name: Option<&str>) -> bool {
         || scope == "this-suite"
         || scope.starts_with("suite:")
         || suite_name.is_some_and(|s| s == scope)
-        || scripts_for_perf_suite_name(scope).is_some()
+        || is_known_perf_suite_name(scope)
 }
 
 fn read_seed_preset(workspace_root: &Path, path: &Path) -> Result<SeedPresetFile, String> {
@@ -431,7 +438,7 @@ fn parse_cli_seed_spec(
     let suite_like = scope == "*"
         || scope == "this-suite"
         || scope.starts_with("suite:")
-        || scripts_for_perf_suite_name(scope).is_some();
+        || is_known_perf_suite_name(scope);
     Ok((scope.to_string(), metric, seed, suite_like))
 }
 
@@ -450,7 +457,7 @@ fn expand_scope_to_script_keys(
     }
 
     if let Some(name) = scope.strip_prefix("suite:") {
-        let Some(paths) = scripts_for_perf_suite_name(name) else {
+        let Some(paths) = scripts_for_perf_suite_name(workspace_root, name)? else {
             return Err(format!("unknown perf suite in seed scope: {name:?}"));
         };
         let mut out: Vec<String> = Vec::new();
@@ -463,7 +470,7 @@ fn expand_scope_to_script_keys(
         return Ok(out);
     }
 
-    if let Some(paths) = scripts_for_perf_suite_name(scope) {
+    if let Some(paths) = scripts_for_perf_suite_name(workspace_root, scope)? {
         let mut out: Vec<String> = Vec::new();
         for p in paths {
             let key = normalize_repo_relative_path(workspace_root, &workspace_root.join(p));

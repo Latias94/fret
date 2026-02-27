@@ -6,6 +6,7 @@ use crate::util::read_json_value;
 pub(crate) struct PromotedScriptRegistryEntry {
     pub id: String,
     pub path: String,
+    pub suite_memberships: Vec<String>,
 }
 
 pub(crate) struct PromotedScriptRegistry {
@@ -50,7 +51,22 @@ impl PromotedScriptRegistry {
                     )
                 })?
                 .to_string();
-            entries.push(PromotedScriptRegistryEntry { id, path });
+            let suite_memberships: Vec<String> = script
+                .get("suite_memberships")
+                .and_then(|v| v.as_array())
+                .map(|arr| {
+                    arr.iter()
+                        .filter_map(|v| v.as_str())
+                        .filter(|s| !s.trim().is_empty())
+                        .map(|s| s.to_string())
+                        .collect()
+                })
+                .unwrap_or_default();
+            entries.push(PromotedScriptRegistryEntry {
+                id,
+                path,
+                suite_memberships,
+            });
         }
 
         Ok(Self { entries })

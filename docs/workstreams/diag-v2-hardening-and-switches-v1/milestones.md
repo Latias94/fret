@@ -22,11 +22,14 @@ Exit criteria:
 - A tooling command prints the effective config and highlights deprecated inputs.
 - Tooling produces schema v2 scripts by default (runtime v1 parsing is not required for the common case).
 - Built-in scripted suites are not defined by Rust-side hard-coded file lists (directory inputs + redirect stubs are acceptable as an intermediate step).
-- `diag perf <suite-name>` suite expansion is single-sourced (avoid drift between perf entrypoints and seed policy).
+- `diag perf <suite-name>` suite expansion is single-sourced (avoid drift between perf entrypoints and seed policy) and
+  is derived from promoted registry suite memberships (`tools/diag-scripts/index.json` + `suite_memberships`).
 - A script library taxonomy decision is recorded (folder layout + suite definition strategy).
 - Basic script discoverability exists (avoid “grep the repo”):
   - `diag run` accepts promoted `script_id` (registry-backed),
   - `diag list scripts` prints `script_id -> path` from the promoted registry.
+- Basic suite discoverability exists (avoid “find the right folder”):
+  - `diag list suites` prints known `suite_memberships` (registry-derived).
 - Script library drift is detectable via a bounded, read-only tooling command:
   - `diag doctor scripts` checks for root canonical scripts, broken redirects, and registry drift.
 
