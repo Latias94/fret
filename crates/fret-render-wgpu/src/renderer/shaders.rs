@@ -35,18 +35,19 @@ fn gradient_tile_mode_apply(t: f32, tile_mode: u32) -> f32 {
 }
 
 fn pick_corner_radius(center_to_point: vec2<f32>, radii: vec4<f32>) -> f32 {
-  if (center_to_point.x < 0.0) {
-    if (center_to_point.y < 0.0) { return radii.x; }
-    return radii.w;
-  }
-  if (center_to_point.y < 0.0) { return radii.y; }
-  return radii.z;
+  // IMPORTANT (WebGPU/wasm): Keep this function branchless so that callers can safely use
+  // derivative ops (dpdx/dpdy) later in the call chain from uniform control flow.
+  let left = center_to_point.x < 0.0;
+  let top = center_to_point.y < 0.0;
+
+  let r_top = select(radii.y, radii.x, left);
+  let r_bottom = select(radii.z, radii.w, left);
+  return select(r_bottom, r_top, top);
 }
 
 fn quad_sdf_impl(corner_center_to_point: vec2<f32>, corner_radius: f32) -> f32 {
-  if (corner_radius == 0.0) {
-    return max(corner_center_to_point.x, corner_center_to_point.y);
-  }
+  // Branchless variant of the standard rectangle / rounded-rectangle SDF:
+  // https://iquilezles.org/articles/distfunctions2d/
   let signed_distance_to_inset_quad =
     length(max(vec2<f32>(0.0), corner_center_to_point)) +
     min(0.0, max(corner_center_to_point.x, corner_center_to_point.y));

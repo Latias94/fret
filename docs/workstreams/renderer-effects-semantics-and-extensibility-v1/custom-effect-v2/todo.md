@@ -44,7 +44,8 @@ Constraints:
   - Evidence: `crates/fret-render-wgpu/src/renderer/tests.rs`.
 - [x] Make masked effect shaders WebGPU/Tint-uniformity-safe for clip SDF derivatives:
   - Root cause: `dpdx`/`dpdy`/`fwidth` must be called from uniform control flow on WebGPU (Tint validation).
-  - Fix: compute `clip_alpha(...)` before any non-uniform early returns / bounds checks in masked fragment shaders.
+  - Fix: keep the clip SDF call chain branchless (avoid `if`/`return` before `dpdx`/`dpdy`) so derivative-based AA
+    in `sdf_aa(...)` passes Tint uniformity validation on wasm/WebGPU.
   - Evidence: `crates/fret-render-wgpu/src/renderer/shaders.rs`,
     `crates/fret-render-wgpu/src/renderer/pipelines/wgsl/*_masked_part_b.wgsl`,
     `crates/fret-render-wgpu/src/renderer/tests.rs` (`shaders_validate_for_webgpu`).
