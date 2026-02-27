@@ -9,6 +9,9 @@ use super::shaders::{
     VIEWPORT_SHADER, alpha_threshold_masked_shader_source, backdrop_warp_masked_shader_source,
     blur_h_masked_shader_source, blur_v_masked_shader_source, clip_mask_shader_source,
     color_adjust_masked_shader_source, color_matrix_masked_shader_source,
+    custom_effect_mask_shader_source, custom_effect_masked_shader_source,
+    custom_effect_unmasked_shader_source, custom_effect_v2_mask_shader_source,
+    custom_effect_v2_masked_shader_source, custom_effect_v2_unmasked_shader_source,
     drop_shadow_masked_shader_source, quad_shader_source, upscale_nearest_masked_shader_source,
 };
 use super::{clamp_corner_radii_for_rect, svg_draw_rect_px};
@@ -30,6 +33,14 @@ fn assert_vertex(v: &super::types::ViewportVertex, pos: (f32, f32), uv: (f32, f3
     assert_approx_eq(v.uv[1], uv.1);
 }
 
+const CUSTOM_EFFECT_IDENTITY_WGSL: &str = r#"
+fn fret_custom_effect(tex: vec4<f32>, uv: vec2<f32>, pos_px: vec2<f32>, params: EffectParamsV1) -> vec4<f32> {
+  // Keep this shader intentionally simple: it exists to validate that the custom effect ABI
+  // can be stitched into a complete module and compiled under WebGPU/Tint constraints.
+  return tex;
+}
+"#;
+
 #[test]
 fn shaders_parse_as_wgsl() {
     let quad_src = quad_shader_source();
@@ -42,6 +53,16 @@ fn shaders_parse_as_wgsl() {
     let drop_shadow_masked_src = drop_shadow_masked_shader_source();
     let blur_h_masked_src = blur_h_masked_shader_source();
     let blur_v_masked_src = blur_v_masked_shader_source();
+    let custom_effect_unmasked_src =
+        custom_effect_unmasked_shader_source(CUSTOM_EFFECT_IDENTITY_WGSL);
+    let custom_effect_masked_src = custom_effect_masked_shader_source(CUSTOM_EFFECT_IDENTITY_WGSL);
+    let custom_effect_mask_src = custom_effect_mask_shader_source(CUSTOM_EFFECT_IDENTITY_WGSL);
+    let custom_effect_v2_unmasked_src =
+        custom_effect_v2_unmasked_shader_source(CUSTOM_EFFECT_IDENTITY_WGSL);
+    let custom_effect_v2_masked_src =
+        custom_effect_v2_masked_shader_source(CUSTOM_EFFECT_IDENTITY_WGSL);
+    let custom_effect_v2_mask_src =
+        custom_effect_v2_mask_shader_source(CUSTOM_EFFECT_IDENTITY_WGSL);
     for (name, src) in [
         ("viewport", VIEWPORT_SHADER),
         ("quad", quad_src.as_str()),
@@ -84,6 +105,15 @@ fn shaders_parse_as_wgsl() {
         ("text_color", TEXT_COLOR_SHADER),
         ("text_subpixel", TEXT_SUBPIXEL_SHADER),
         ("mask", MASK_SHADER),
+        ("custom_effect", custom_effect_unmasked_src.as_str()),
+        ("custom_effect_masked", custom_effect_masked_src.as_str()),
+        ("custom_effect_mask", custom_effect_mask_src.as_str()),
+        ("custom_effect_v2", custom_effect_v2_unmasked_src.as_str()),
+        (
+            "custom_effect_v2_masked",
+            custom_effect_v2_masked_src.as_str(),
+        ),
+        ("custom_effect_v2_mask", custom_effect_v2_mask_src.as_str()),
     ] {
         naga::front::wgsl::parse_str(src)
             .unwrap_or_else(|err| panic!("WGSL parse failed for {name} shader: {err}"));
@@ -104,6 +134,16 @@ fn shaders_validate_for_webgpu() {
     let drop_shadow_masked_src = drop_shadow_masked_shader_source();
     let blur_h_masked_src = blur_h_masked_shader_source();
     let blur_v_masked_src = blur_v_masked_shader_source();
+    let custom_effect_unmasked_src =
+        custom_effect_unmasked_shader_source(CUSTOM_EFFECT_IDENTITY_WGSL);
+    let custom_effect_masked_src = custom_effect_masked_shader_source(CUSTOM_EFFECT_IDENTITY_WGSL);
+    let custom_effect_mask_src = custom_effect_mask_shader_source(CUSTOM_EFFECT_IDENTITY_WGSL);
+    let custom_effect_v2_unmasked_src =
+        custom_effect_v2_unmasked_shader_source(CUSTOM_EFFECT_IDENTITY_WGSL);
+    let custom_effect_v2_masked_src =
+        custom_effect_v2_masked_shader_source(CUSTOM_EFFECT_IDENTITY_WGSL);
+    let custom_effect_v2_mask_src =
+        custom_effect_v2_mask_shader_source(CUSTOM_EFFECT_IDENTITY_WGSL);
     for (name, src) in [
         ("viewport", VIEWPORT_SHADER),
         ("quad", quad_src.as_str()),
@@ -146,6 +186,15 @@ fn shaders_validate_for_webgpu() {
         ("text_color", TEXT_COLOR_SHADER),
         ("text_subpixel", TEXT_SUBPIXEL_SHADER),
         ("mask", MASK_SHADER),
+        ("custom_effect", custom_effect_unmasked_src.as_str()),
+        ("custom_effect_masked", custom_effect_masked_src.as_str()),
+        ("custom_effect_mask", custom_effect_mask_src.as_str()),
+        ("custom_effect_v2", custom_effect_v2_unmasked_src.as_str()),
+        (
+            "custom_effect_v2_masked",
+            custom_effect_v2_masked_src.as_str(),
+        ),
+        ("custom_effect_v2_mask", custom_effect_v2_mask_src.as_str()),
     ] {
         let module = naga::front::wgsl::parse_str(src)
             .unwrap_or_else(|err| panic!("WGSL parse failed for {name} shader: {err}"));
@@ -191,6 +240,17 @@ mod webgpu_tint_guardrail {
         let drop_shadow_masked_src = drop_shadow_masked_shader_source();
         let blur_h_masked_src = blur_h_masked_shader_source();
         let blur_v_masked_src = blur_v_masked_shader_source();
+        let custom_effect_unmasked_src =
+            custom_effect_unmasked_shader_source(CUSTOM_EFFECT_IDENTITY_WGSL);
+        let custom_effect_masked_src =
+            custom_effect_masked_shader_source(CUSTOM_EFFECT_IDENTITY_WGSL);
+        let custom_effect_mask_src = custom_effect_mask_shader_source(CUSTOM_EFFECT_IDENTITY_WGSL);
+        let custom_effect_v2_unmasked_src =
+            custom_effect_v2_unmasked_shader_source(CUSTOM_EFFECT_IDENTITY_WGSL);
+        let custom_effect_v2_masked_src =
+            custom_effect_v2_masked_shader_source(CUSTOM_EFFECT_IDENTITY_WGSL);
+        let custom_effect_v2_mask_src =
+            custom_effect_v2_mask_shader_source(CUSTOM_EFFECT_IDENTITY_WGSL);
         for (name, src) in [
             ("viewport", VIEWPORT_SHADER),
             ("quad", quad_src.as_str()),
@@ -229,6 +289,15 @@ mod webgpu_tint_guardrail {
             ("text_color", TEXT_COLOR_SHADER),
             ("text_subpixel", TEXT_SUBPIXEL_SHADER),
             ("mask", MASK_SHADER),
+            ("custom_effect", custom_effect_unmasked_src.as_str()),
+            ("custom_effect_masked", custom_effect_masked_src.as_str()),
+            ("custom_effect_mask", custom_effect_mask_src.as_str()),
+            ("custom_effect_v2", custom_effect_v2_unmasked_src.as_str()),
+            (
+                "custom_effect_v2_masked",
+                custom_effect_v2_masked_src.as_str(),
+            ),
+            ("custom_effect_v2_mask", custom_effect_v2_mask_src.as_str()),
         ] {
             device.push_error_scope(wgpu::ErrorFilter::Validation);
             let _module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
