@@ -1,61 +1,63 @@
-# TODO — Carousel Embla fearless refactor (v1)
+# Carousel (Embla) Fearless Refactor v1 — TODO
 
-This TODO list is ordered for landability: add gates first, then swap internals.
+Status: Draft
 
-## 0) Pre-flight (no behavior changes)
+Goal: Align Fret's shadcn-style `Carousel` recipe with shadcn/ui v4 expectations while keeping the
+core UI runtime mechanism-only. This workstream focuses on headless snap/contain semantics and
+docs-aligned examples/diagnostics.
 
-- [ ] Confirm parity priorities and acceptance criteria in `carousel-embla-fearless-refactor-v1.md`.
-- [ ] Decide engine location:
-  - Preferred: `ecosystem/fret-ui-headless` (pure + reusable).
-  - Alternate: `ecosystem/fret-ui-kit` (if we need kit-level policy helpers).
+Non-goals (v1):
 
-## 1) Gates first (fearless foundation)
+- Full Embla API surface (`setApi`, plugins, event subscriptions).
+- Momentum physics / drag-free scrolling.
+- Virtualization or lazy mounting of slides.
 
-### 1.1 Headless unit tests
+Upstream references (local snapshots):
 
-- [ ] Add `snap_model` tests (variable slide sizes + gap).
-- [ ] Add `align=start|center|end` tests.
-- [ ] Add `containScroll=trimSnaps` tests (edge clamping).
-- [ ] Add `slidesToScroll` grouping tests (P1).
+- shadcn docs: `repo-ref/ui/apps/v4/content/docs/components/carousel.mdx`
+- shadcn component: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/carousel.tsx`
+- Embla core: `repo-ref/embla-carousel/packages/embla-carousel/src/components/*`
 
-### 1.2 Web-vs-Fret geometry tests
+In-tree surfaces:
 
-- [ ] Add a new web golden that uses non-uniform slide sizes (or extend an existing one).
-- [ ] Extend `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/carousel.rs` with:
-  - [ ] variable slide sizes case
-  - [ ] vertical constrained viewport case
+- Recipe: `ecosystem/fret-ui-shadcn/src/carousel.rs`
+- Headless helpers: `ecosystem/fret-ui-headless/src/carousel.rs`
+- UI gallery page: `apps/fret-ui-gallery/src/ui/pages/carousel.rs`
+- Web-vs-Fret layout harness: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/carousel.rs`
 
-### 1.3 Diag scripts (interaction)
+---
 
-- [ ] New script: “drag from inner button cancels activation”.
-- [ ] New script: “touch cross-axis scroll lock does not start drag”.
-- [ ] Ensure scripts use stable `test_id` and (when needed) fixed frame delta.
+## P0 — Lock contracts (hard-to-change behavior)
 
-## 2) Engine scaffolding (behind toggle)
+- [ ] CAR-010 Document the headless snap model contract (inputs, outputs, invariants).
+  - Evidence target: add a short section to this workstream + code doc comments.
+- [ ] CAR-020 Add unit tests for the snap model:
+  - `slidesToScroll`: `auto` + `n`
+  - `containScroll`: `false` / `keepSnaps` / `trimSnaps`
+  - `align`: `start` / `center` / `end`
+  - `contentSize <= viewSize + pixelTolerance` short-circuit
 
-- [ ] Introduce `CarouselSnapModel` (pure) + unit tests.
-- [ ] Introduce `CarouselEngine` state update API:
-  - Inputs: measured slide geometry, pointer deltas, options.
-  - Outputs: offset, selected snap, canPrev/canNext.
-- [ ] Wire engine into `ecosystem/fret-ui-shadcn::Carousel` behind a private “v1” path.
-- [ ] Switch UI gallery Carousel page to the v1 path (not default yet).
+## P1 — Parity (docs-aligned outcomes)
 
-## 3) Parity increments (P0 → P1)
+- [ ] CAR-110 Ensure UI gallery examples mirror upstream widths and spacing recipes.
+  - Gate: `tools/diag-scripts/ui-gallery-carousel-*-screenshot.json`
+- [ ] CAR-120 Keep pointer/gesture arbitration aligned with Embla expectations:
+  - descendant click should work
+  - drag should steal capture only after threshold
+  - Gate: `ecosystem/fret-ui-shadcn/tests/carousel_pointer_passthrough.rs`
 
-- [ ] Replace uniform `extent * index` snapping with geometry-derived snap list.
-- [ ] Implement `align` semantics in snap model.
-- [ ] Implement `containScroll=trimSnaps` clamping.
-- [ ] Implement `slidesToScroll` (P1) and add gates.
+## P2 — Integration (snap model used by the recipe)
 
-## 4) Rollout + cleanup
+- [ ] CAR-210 Wire `snap_model_1d` into `ecosystem/fret-ui-shadcn/src/carousel.rs`:
+  - prev/next uses snap list instead of `index * extent`
+  - `canScrollPrev/Next` matches Embla-style semantics (disabled until measurable)
+- [ ] CAR-220 Add a minimal recipe-level option surface that stays policy-only:
+  - `align` + `containScroll` + `slidesToScroll` (no Embla API exposure)
+  - keep defaults matching shadcn/ui v4
 
-- [ ] Flip default to engine-backed v1.
-- [ ] Remove v0 code path once all gates are green.
-- [ ] Add/refresh diag bundles for before/after comparisons (optional, but useful evidence).
+## P3 — Evidence + guardrails
 
-## 5) Post-v1 backlog (P2)
-
-- [ ] `loop` parity (slide looper).
-- [ ] `dragFree` + scroll-body physics parity.
-- [ ] API parity (`setApi`, event surfaces).
+- [ ] CAR-310 Add/refresh diagnostics scripts for reproducible regressions.
+- [ ] CAR-320 Update `docs/audits/carousel-shadcn-embla-parity.md` with new evidence anchors.
+- [ ] CAR-330 Run layering checks if any cross-crate refactors are required.
 
