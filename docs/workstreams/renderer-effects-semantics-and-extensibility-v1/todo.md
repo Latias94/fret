@@ -101,13 +101,15 @@ if left unspecified.
     `crates/fret-render-wgpu/src/renderer/shaders.rs` (`PATH_SHADER`),
     `crates/fret-render-wgpu/tests/path_material_paint_conformance.rs`.
 
-- [ ] Dash semantics consistency:
+- [x] Dash semantics consistency:
   - `StrokeRRect` dashes are evaluated in the quad shader using an rrect-perimeter parameterization,
     while `PathStyle::StrokeV2` uses CPU-side dash splitting before tessellation.
   - Write down the expected semantics for `DashPatternV1` (units, phase origin/direction, scale-factor behavior)
-    and add one targeted conformance test that compares rrect vs path outcomes for a “rect-like path” shape.
+    and keep a targeted conformance test that compares rrect vs path outcomes for a “rect-like path” shape.
   - Evidence (current implementations): `crates/fret-render-wgpu/src/renderer/shaders.rs` (rrect),
     `crates/fret-render-wgpu/src/renderer/path.rs` (path dashes).
+  - Evidence (semantics): `docs/adr/0271-stroke-rrect-and-dashed-borders-v1.md`,
+    `docs/adr/0277-path-stroke-style-v2.md`.
   - Evidence (conformance): `crates/fret-render-wgpu/tests/dash_semantics_rrect_vs_path_conformance.rs`.
 
 - [ ] Path MSAA correctness on Vulkan:

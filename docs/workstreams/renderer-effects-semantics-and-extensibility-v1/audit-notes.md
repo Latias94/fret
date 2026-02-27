@@ -128,12 +128,14 @@ P2 — Higher-end visuals without core bloat:
 - End-to-end HDR / wide-gamut correctness: requires a broader contract and platform integration.
   Keep hooks (`RenderTargetColorEncoding`) but defer full pipeline work.
 - Vector path “material paint” support:
-  - Today `SceneOp::Path` encoding degrades sampled/material paints to a solid base color (mechanism-level fallback).
-  - If editor-grade charts/graphs rely heavily on textured/material strokes/fills, we should either:
-    - support material paints on the path pipeline (capability-gated), or
-    - keep deterministic degradation but make it visible via counters.
-  - Anchor: `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/path.rs`.
+  - wgpu path rendering supports `Paint::Material` and keeps deterministic degradations observable via a perf counter
+    (unknown id, budget pressure, etc.).
+  - Anchors: `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/path.rs`,
+    `crates/fret-render-wgpu/src/renderer/shaders.rs` (`PATH_SHADER`),
+    `crates/fret-render-wgpu/tests/path_material_paint_conformance.rs`.
 - Dash semantics unification:
   - `StrokeRRect` dashes are shader-evaluated via rrect perimeter, while `PathStyle::StrokeV2` uses CPU dash splitting.
   - This is acceptable, but the shared `DashPatternV1` semantics (phase origin/direction) should be written down and
     tested to prevent subtle visual drift across primitives.
+  - Anchors: `docs/adr/0271-stroke-rrect-and-dashed-borders-v1.md`, `docs/adr/0277-path-stroke-style-v2.md`,
+    `crates/fret-render-wgpu/tests/dash_semantics_rrect_vs_path_conformance.rs`.

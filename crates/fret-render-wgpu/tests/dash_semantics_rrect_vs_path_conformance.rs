@@ -146,7 +146,7 @@ fn dash_pattern_phase_matches_between_stroke_rrect_and_path_stroke_v2_for_rects(
 
     let dash = 10.0_f32;
     let gap = 6.0_f32;
-    let phases = [0.0_f32, 8.0_f32];
+    let phases = [-8.0_f32, 0.0_f32, 8.0_f32];
     let stroke = Px(8.0);
 
     let rect_size = Size::new(Px(200.0), Px(100.0));
@@ -167,7 +167,7 @@ fn dash_pattern_phase_matches_between_stroke_rrect_and_path_stroke_v2_for_rects(
         order: DrawOrder(0),
         rect: Rect::new(
             Point::new(Px(0.0), Px(0.0)),
-            Size::new(Px(560.0), Px(340.0)),
+            Size::new(Px(560.0), Px(480.0)),
         ),
         background: Paint::TRANSPARENT,
         border: Edges::all(Px(0.0)),
@@ -224,13 +224,24 @@ fn dash_pattern_phase_matches_between_stroke_rrect_and_path_stroke_v2_for_rects(
     let sample_top_y_offset = stroke.0 * 0.25;
     let sample_right_x_offset = stroke.0 * 0.25;
     let sample_right_y_offset = 30.0_f32;
+    let sample_bottom_y_offset = stroke.0 * 0.25;
+    let sample_bottom_x_offset = 30.0_f32;
+    let sample_left_x_offset = stroke.0 * 0.25;
+    // Avoid sampling exactly on a dash boundary (AA region) for the default rect sizes below.
+    let sample_left_y_offset = 29.0_f32;
 
     let s_top_on = 5.0_f32;
     let s_top_off = 12.0_f32;
     let s_right = rect_size.width.0 + sample_right_y_offset;
+    let s_bottom =
+        rect_size.width.0 + rect_size.height.0 + (rect_size.width.0 - sample_bottom_x_offset);
+    let s_left = rect_size.width.0
+        + rect_size.height.0
+        + rect_size.width.0
+        + (rect_size.height.0 - sample_left_y_offset);
 
     for sf in [1.0_f32, 1.5_f32, 2.0_f32] {
-        let size = (u(560.0, sf), u(340.0, sf));
+        let size = (u(560.0, sf), u(480.0, sf));
         let pixels = render_and_readback(&ctx, &mut renderer, &scene, size, sf);
 
         for (row, phase) in phases.into_iter().enumerate() {
@@ -246,9 +257,19 @@ fn dash_pattern_phase_matches_between_stroke_rrect_and_path_stroke_v2_for_rects(
             let x_right_r = xr + rect_size.width.0 - sample_right_x_offset;
             let x_right_p = xp + rect_size.width.0 - sample_right_x_offset;
 
+            let y_bottom = y + rect_size.height.0 - sample_bottom_y_offset;
+            let x_bottom_r = xr + sample_bottom_x_offset;
+            let x_bottom_p = xp + sample_bottom_x_offset;
+
+            let x_left_r = xr + sample_left_x_offset;
+            let x_left_p = xp + sample_left_x_offset;
+            let y_left = y + sample_left_y_offset;
+
             let expected_top_on = dash_expected_on(s_top_on, dash, gap, phase);
             let expected_top_off = dash_expected_on(s_top_off, dash, gap, phase);
             let expected_right = dash_expected_on(s_right, dash, gap, phase);
+            let expected_bottom = dash_expected_on(s_bottom, dash, gap, phase);
+            let expected_left = dash_expected_on(s_left, dash, gap, phase);
 
             let a_top_on_r = pixel_rgba(&pixels, size.0, u(x_top_on_r, sf), u(y_top, sf))[3];
             let a_top_on_p = pixel_rgba(&pixels, size.0, u(x_top_on_p, sf), u(y_top, sf))[3];
@@ -258,6 +279,12 @@ fn dash_pattern_phase_matches_between_stroke_rrect_and_path_stroke_v2_for_rects(
 
             let a_right_r = pixel_rgba(&pixels, size.0, u(x_right_r, sf), u(y_right, sf))[3];
             let a_right_p = pixel_rgba(&pixels, size.0, u(x_right_p, sf), u(y_right, sf))[3];
+
+            let a_bottom_r = pixel_rgba(&pixels, size.0, u(x_bottom_r, sf), u(y_bottom, sf))[3];
+            let a_bottom_p = pixel_rgba(&pixels, size.0, u(x_bottom_p, sf), u(y_bottom, sf))[3];
+
+            let a_left_r = pixel_rgba(&pixels, size.0, u(x_left_r, sf), u(y_left, sf))[3];
+            let a_left_p = pixel_rgba(&pixels, size.0, u(x_left_p, sf), u(y_left, sf))[3];
 
             let on_hi = 180u8;
             let off_lo = 60u8;
@@ -279,6 +306,8 @@ fn dash_pattern_phase_matches_between_stroke_rrect_and_path_stroke_v2_for_rects(
             assert_onoff("top_on", expected_top_on, a_top_on_r, a_top_on_p);
             assert_onoff("top_off", expected_top_off, a_top_off_r, a_top_off_p);
             assert_onoff("right", expected_right, a_right_r, a_right_p);
+            assert_onoff("bottom", expected_bottom, a_bottom_r, a_bottom_p);
+            assert_onoff("left", expected_left, a_left_r, a_left_p);
         }
     }
 }
