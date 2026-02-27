@@ -38,6 +38,22 @@ Defaults if unclear:
 - Treat interaction semantics as Radix truth; treat composition/sizing/tokens as shadcn truth; add at least one gate.
 - When DOM-focused assumptions are involved, consult Base UI as an additional headless reference for part composition and accessibility patterns.
 
+## Tailwind → Fret layout constraints (quick sanity check)
+
+Most “my shadcn page port looks totally different” reports come from missing **constraints**, not tokens:
+the subtree collapses to content width/height, text wraps aggressively, and the result looks like a
+broken layout (e.g. “vertical text / narrow cards”).
+
+Common Tailwind classes and their Fret declarative equivalents:
+
+- `w-full` / `h-full` → `.ui().w_full()` / `.ui().h_full()`
+- `flex-1` (≈ `flex: 1 1 0%`) → `.ui().flex_1()` (often pair with `.ui().min_w_0()` in rows)
+- `items-stretch` → on flex containers: `ui::h_flex(...).items_stretch()` / `ui::v_flex(...).items_stretch()`
+- `min-w-0` → `.ui().min_w_0()` (critical for text-heavy children inside horizontal flex rows)
+- `truncate` / `overflow-hidden` → `.ui().truncate()` / `.ui().overflow_hidden()`
+
+Rule of thumb: treat “fill/grow/shrink/truncate” as **recipe policy** (shadcn layer), not as a layout-engine default.
+
 ## Smallest starting point (one command)
 
 - `cargo run -p fretboard -- dev native --bin components_gallery`
