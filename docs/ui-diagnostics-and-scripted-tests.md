@@ -1046,7 +1046,7 @@ Note:
   For discoverability, use `fretboard diag list scripts` to print `script_id -> path` mappings.
   To detect taxonomy/registry drift without grepping, use `fretboard diag doctor scripts` (read-only;
   suggests repair commands like `migrate-script-library.py --apply --write-redirects` and
-  `check_diag_scripts_registry.py --write`).
+  `check_diag_scripts_registry.py --write`). Use `--strict` to fail when promoted scripts drift back to schema v1.
   Prefer directory- and glob-based inputs (`--script-dir`, `--glob`) for ad-hoc runs, and avoid assuming scripts live
   only at the top-level. See: `docs/workstreams/diag-v2-hardening-and-switches-v1/README.md`.
 - Built-in suites are defined as curated directory inputs under `tools/diag-scripts/suites/<suite-name>/`.

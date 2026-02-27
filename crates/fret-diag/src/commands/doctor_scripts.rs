@@ -29,6 +29,7 @@ struct ScriptsDoctorCounts {
     registry_path_missing_total: u64,
     registry_path_outside_library_total: u64,
     registry_path_is_redirect_total: u64,
+    registry_schema_v1_total: u64,
 }
 
 #[derive(Debug, Default)]
@@ -47,6 +48,7 @@ struct ScriptsDoctorExamples {
     registry_path_missing: Vec<String>,
     registry_path_outside_library: Vec<String>,
     registry_path_is_redirect: Vec<String>,
+    registry_schema_v1: Vec<String>,
 }
 
 fn push_bounded(out: &mut Vec<String>, max_examples: usize, item: String) {
@@ -86,13 +88,14 @@ pub(crate) fn cmd_doctor_scripts(
     stats_json: bool,
 ) -> Result<(), String> {
     let mut max_examples: usize = 20;
+    let mut strict: bool = false;
 
     let mut i: usize = 0;
     while i < rest.len() {
         match rest[i].as_str() {
             "--help" | "-h" => {
                 println!(
-                    "Usage: fretboard diag doctor scripts [--max-examples N] [--json]\n\
+                    "Usage: fretboard diag doctor scripts [--max-examples N] [--strict] [--json]\n\
                      \n\
                      Checks the diag script library for common drift issues:\n\
                      - canonical scripts accidentally committed under tools/diag-scripts/*.json\n\
@@ -104,6 +107,10 @@ pub(crate) fn cmd_doctor_scripts(
                      - Use --json (top-level flag) for structured output."
                 );
                 return Ok(());
+            }
+            "--strict" => {
+                strict = true;
+                i += 1;
             }
             "--max-examples" | "--examples" | "--top" => {
                 let Some(raw) = rest.get(i + 1) else {
@@ -340,6 +347,7 @@ pub(crate) fn cmd_doctor_scripts(
             Ok(registry) => {
                 let mut seen_ids: BTreeSet<String> = BTreeSet::new();
                 let mut duplicates: BTreeSet<String> = BTreeSet::new();
+                let mut schema_v1_paths: BTreeSet<String> = BTreeSet::new();
 
                 for entry in registry.entries() {
                     counts.registry_entries_total = counts.registry_entries_total.saturating_add(1);
@@ -379,6 +387,21 @@ pub(crate) fn cmd_doctor_scripts(
                                 format!("{} -> {}", entry.id, entry.path),
                             );
                         }
+
+                        let schema_version = v
+                            .get("schema_version")
+                            .and_then(|v| v.as_u64())
+                            .unwrap_or(0);
+                        if schema_version == 1 {
+                            counts.registry_schema_v1_total =
+                                counts.registry_schema_v1_total.saturating_add(1);
+                            schema_v1_paths.insert(entry.path.clone());
+                            push_bounded(
+                                &mut examples.registry_schema_v1,
+                                max_examples,
+                                format!("{} -> {}", entry.id, entry.path),
+                            );
+                        }
                     }
                 }
 
@@ -389,6 +412,31 @@ pub(crate) fn cmd_doctor_scripts(
                     for id in duplicates {
                         push_bounded(&mut examples.registry_duplicate_ids, max_examples, id);
                     }
+                }
+
+                if !schema_v1_paths.is_empty() {
+                    warnings.push(format!(
+                        "some promoted scripts are still schema_version=1 (tooling can upgrade them, but v2-only is preferred): {}",
+                        schema_v1_paths.len()
+                    ));
+                    if strict {
+                        errors.push(format!(
+                            "strict: promoted scripts must be schema_version=2 (found schema v1): {}",
+                            schema_v1_paths.len()
+                        ));
+                    }
+
+                    let mut cmd =
+                        String::from("cargo run -p fretboard -- diag script upgrade --write");
+                    for p in &schema_v1_paths {
+                        cmd.push(' ');
+                        cmd.push_str(p);
+                    }
+                    repairs.push(json!({
+                        "code": "diag-scripts.promoted-upgrade-v2",
+                        "note": "Upgrade promoted scripts from schema v1 to schema v2 (writes in place).",
+                        "command": cmd,
+                    }));
                 }
             }
             Err(e) => {
@@ -499,6 +547,10 @@ pub(crate) fn cmd_doctor_scripts(
         "registry_path_is_redirect_total".to_string(),
         json!(counts.registry_path_is_redirect_total),
     );
+    counts_obj.insert(
+        "registry_schema_v1_total".to_string(),
+        json!(counts.registry_schema_v1_total),
+    );
 
     let ok = errors.is_empty();
 
@@ -524,6 +576,7 @@ pub(crate) fn cmd_doctor_scripts(
             "registry_path_missing": examples.registry_path_missing,
             "registry_path_outside_library": examples.registry_path_outside_library,
             "registry_path_is_redirect": examples.registry_path_is_redirect,
+            "registry_schema_v1": examples.registry_schema_v1,
         }
     });
 
