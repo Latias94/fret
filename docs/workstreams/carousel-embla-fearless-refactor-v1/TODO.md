@@ -84,6 +84,16 @@ In-tree surfaces:
     - `carousel-size` / `carousel-orientation`: use `opts={{ align: "start" }}`
   - Note: a deterministic API snapshot surface exists to support shadcn "API" examples without
     exposing Embla's imperative API (`CarouselApiSnapshot`).
+- [x] CAR-225 Align `duration` handling with Fret motion foundations:
+  - replace fixed-tick carousel settle with a duration-driven transition timeline
+  - refresh-rate scaling via the frame clock service (stable feel on 60/120/144Hz)
+  - respect reduced-motion preferences
+  - Evidence:
+    - `ecosystem/fret-ui-shadcn/src/carousel.rs` (settle driver keyed by generation)
+    - `ecosystem/fret-ui-kit/src/declarative/transition.rs` (`ticks_60hz_for_duration`, driver)
+  - Gate:
+    - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-api-screenshot.json`
+    - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-plugin-autoplay-pixels-changed.json`
 
 ## P3 — Evidence + guardrails
 

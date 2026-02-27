@@ -3,7 +3,7 @@
 Milestones are structured to keep changes reviewable and reversible. Each milestone must ship a
 “3-pack”: Repro (smallest surface), Gate (tests/scripts), Evidence (anchors + upstream refs).
 
-Current status (as of 2026-02-27): M0–M3 shipped locally with gates.
+Current status (as of 2026-02-27): M0–M3 shipped locally with gates. M4 is in progress.
 
 ## M0 — Gate set (fearless foundation) ✅
 
@@ -73,11 +73,15 @@ surface.
 
 ## M4 — Remaining drift + ergonomics (next)
 
-**Goal:** Close remaining deltas against shadcn docs/Embla expectations with minimal surfaces.
+**Goal:** Close remaining deltas against shadcn docs/Embla expectations with minimal surfaces, and
+align the remaining motion/timing behavior with Fret's motion foundations.
 
 **Deliverables**
 
 - Decide/lock any missing option semantics (e.g. `loop`, `slidesToScroll` edge cases) in headless.
+- Align `duration`-driven settle with motion foundations:
+  - use a duration-driven transition driver (not a carousel-specific fixed-tick loop)
+  - refresh-rate scaling and reduced-motion behavior are consistent with other shadcn recipes
 - Fix any remaining UI gallery layout drift (e.g. vertical layout, text wrapping) with gates.
 
 **Exit criteria**
