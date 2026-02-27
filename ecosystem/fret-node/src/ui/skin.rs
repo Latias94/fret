@@ -17,6 +17,15 @@ use super::style::NodeGraphStyle;
 ///
 /// v1 is intentionally minimal and paint-only. Layout-affecting knobs should be added only with
 /// explicit invalidation/caching contracts and conformance tests.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct NodeRingHint {
+    pub color: Color,
+    /// Ring stroke width in screen-space logical px.
+    pub width: f32,
+    /// Ring pad (expands rect outward) in screen-space logical px.
+    pub pad: f32,
+}
+
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct NodeChromeHint {
     pub background: Option<Color>,
@@ -26,6 +35,10 @@ pub struct NodeChromeHint {
     pub header_background: Option<Color>,
     /// Optional node title text color.
     pub title_text: Option<Color>,
+    /// Optional selected ring (paint-only overlay, drawn outside the node rect).
+    pub ring_selected: Option<NodeRingHint>,
+    /// Optional focused ring (paint-only overlay, drawn outside the node rect).
+    pub ring_focused: Option<NodeRingHint>,
 }
 
 /// Per-edge chrome overrides (UI-only).
@@ -92,6 +105,18 @@ pub trait NodeGraphSkin: Send + Sync {
         _selected: bool,
     ) -> NodeChromeHint {
         NodeChromeHint::default()
+    }
+
+    fn node_chrome_hint_with_state(
+        &self,
+        graph: &Graph,
+        node: NodeId,
+        style: &NodeGraphStyle,
+        selected: bool,
+        focused: bool,
+    ) -> NodeChromeHint {
+        let _ = focused;
+        self.node_chrome_hint(graph, node, style, selected)
     }
 
     fn port_chrome_hint(

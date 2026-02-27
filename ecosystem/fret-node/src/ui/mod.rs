@@ -61,8 +61,8 @@ pub use presenter::{
 };
 pub use registry::{NodeGraphNodeRenderer, NodeGraphNodeTypes};
 pub use skin::{
-    EdgeChromeHint, NodeChromeHint, NodeGraphSkin, NodeGraphSkinRef, NoopNodeGraphSkin,
-    PortChromeHint, PortShapeHint,
+    EdgeChromeHint, NodeChromeHint, NodeGraphSkin, NodeGraphSkinRef, NodeRingHint,
+    NoopNodeGraphSkin, PortChromeHint, PortShapeHint,
 };
 pub use style::{NodeGraphColorMode, NodeGraphStyle};
 pub use view_queue::{

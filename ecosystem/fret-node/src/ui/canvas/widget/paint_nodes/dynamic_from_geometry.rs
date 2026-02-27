@@ -1,6 +1,40 @@
 use crate::ui::canvas::geometry::node_size_default_px;
 use crate::ui::canvas::widget::*;
-use crate::ui::{NodeChromeHint, PortChromeHint};
+use crate::ui::{NodeChromeHint, NodeRingHint, PortChromeHint};
+
+fn paint_node_ring(
+    scene: &mut fret_core::Scene,
+    rect: Rect,
+    corner: Px,
+    ring: NodeRingHint,
+    zoom: f32,
+) {
+    let pad = ring.pad;
+    let w = ring.width;
+    if !pad.is_finite() || !w.is_finite() || w <= 0.0 || pad < 0.0 {
+        return;
+    }
+    let z = zoom.max(1.0e-6);
+    let pad = pad / z;
+    let ring_rect = Rect::new(
+        Point::new(Px(rect.origin.x.0 - pad), Px(rect.origin.y.0 - pad)),
+        Size::new(
+            Px(rect.size.width.0 + 2.0 * pad),
+            Px(rect.size.height.0 + 2.0 * pad),
+        ),
+    );
+    let ring_corner = Px((corner.0 + pad).max(0.0));
+    scene.push(SceneOp::Quad {
+        order: DrawOrder(3),
+        rect: ring_rect,
+        background: fret_core::Paint::TRANSPARENT,
+
+        border: Edges::all(Px(w / z)),
+        border_paint: fret_core::Paint::Solid(ring.color),
+
+        corner_radii: Corners::all(ring_corner),
+    });
+}
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(in super::super) fn paint_nodes_dynamic_from_geometry<H: UiHost>(
@@ -95,6 +129,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         }
 
         let skin = self.skin.clone();
+        let focused_node = self.interaction.focused_node;
         for node in snapshot.selected_nodes.iter().copied() {
             let Some(node_geom) = geom.nodes.get(&node) else {
                 continue;
@@ -104,13 +139,28 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             let hint: NodeChromeHint = if let Some(skin) = skin.as_ref() {
                 self.graph
                     .read_ref(cx.app, |g| {
-                        skin.node_chrome_hint(g, node, &self.style, true)
+                        skin.node_chrome_hint_with_state(
+                            g,
+                            node,
+                            &self.style,
+                            true,
+                            focused_node == Some(node),
+                        )
                     })
                     .ok()
                     .unwrap_or_default()
             } else {
                 NodeChromeHint::default()
             };
+
+            if let Some(ring) = hint.ring_selected {
+                paint_node_ring(cx.scene, rect, corner, ring, zoom);
+            }
+            if focused_node == Some(node)
+                && let Some(ring) = hint.ring_focused
+            {
+                paint_node_ring(cx.scene, rect, corner, ring, zoom);
+            }
 
             let background = hint.background.unwrap_or(self.style.node_background);
             let border_color = hint
@@ -194,6 +244,26 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         corner_radii: Corners::all(Px(2.0 / zoom)),
                     });
                 }
+            }
+        }
+
+        if let Some(node) = focused_node
+            && !snapshot.selected_nodes.iter().any(|n| *n == node)
+            && let Some(node_geom) = geom.nodes.get(&node)
+        {
+            let rect = node_geom.rect;
+            let hint: NodeChromeHint = if let Some(skin) = skin.as_ref() {
+                self.graph
+                    .read_ref(cx.app, |g| {
+                        skin.node_chrome_hint_with_state(g, node, &self.style, false, true)
+                    })
+                    .ok()
+                    .unwrap_or_default()
+            } else {
+                NodeChromeHint::default()
+            };
+            if let Some(ring) = hint.ring_focused {
+                paint_node_ring(cx.scene, rect, corner, ring, zoom);
             }
         }
 

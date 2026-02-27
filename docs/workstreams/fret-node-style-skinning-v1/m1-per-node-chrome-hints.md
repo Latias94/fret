@@ -112,3 +112,8 @@ Recommended focused command while iterating:
   - Dynamic overlays (hover/focus rings) use skin-resolved base fill:
     `ecosystem/fret-node/src/ui/canvas/widget/paint_nodes/dynamic_from_geometry.rs`
   - Conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/skin_port_chrome_hints_conformance.rs`
+
+- Node paint-only ring hints are implemented for keyboard focus (and optionally selection):
+  - `ecosystem/fret-node/src/ui/skin.rs` (`NodeRingHint`, `NodeChromeHint::{ring_selected,ring_focused}`)
+  - `ecosystem/fret-node/src/ui/canvas/widget/paint_nodes/dynamic_from_geometry.rs` (focused/selected overlay)
+  - Conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/skin_node_ring_hints_conformance.rs`
