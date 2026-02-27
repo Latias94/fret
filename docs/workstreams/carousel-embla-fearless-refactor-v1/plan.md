@@ -21,6 +21,9 @@ This plan summarizes what is already landed and proposes the next, highest-lever
   - Autoplay policy surface: `ecosystem/fret-ui-shadcn/src/carousel.rs` (`CarouselAutoplayConfig`)
   - UI gallery demo: `apps/fret-ui-gallery/src/ui/pages/carousel.rs` ("Plugin (Autoplay)")
   - Gate: `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-plugin-autoplay-pixels-changed.json`
+- M4 (partial): Motion alignment for `duration` (settle timeline driver)
+  - `ecosystem/fret-ui-shadcn/src/carousel.rs` (duration-driven settle; reduced-motion aware)
+  - `ecosystem/fret-ui-kit/src/declarative/transition.rs` (duration → 60Hz ticks + frame scaling)
 - P4: Carousel × DnD pointer arbitration (mouse handle path)
   - Decision + notes: `docs/workstreams/carousel-embla-fearless-refactor-v1/dnd-arbitration.md`
   - Policy hook: `fret-ui-shadcn::Carousel` skips swiping while a DnD sensor tracks the pointer.
@@ -30,7 +33,7 @@ This plan summarizes what is already landed and proposes the next, highest-lever
 
 ## Next steps (recommended order)
 
-### 1) Motion alignment: `duration` semantics (P2)
+### 1) Motion alignment: `duration` semantics (P2) ✅
 
 Goal: ensure carousel settle timing uses the same motion foundations as other shadcn/Radix-like
 surfaces (duration-based API, deterministic timeline, refresh-rate scaling, reduced-motion).
