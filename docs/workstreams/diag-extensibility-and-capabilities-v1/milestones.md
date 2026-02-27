@@ -152,13 +152,15 @@ Definition of done:
 - [x] Add at least one small script that demonstrates touch injection (or a deterministic “unsupported” failure) without
   relying on screenshots.
 - [x] Add a minimal `tap` gesture step, gated behind `diag.gesture_tap`, plus a smoke script.
+- [x] Add a minimal `long_press` gesture step, gated behind `diag.gesture_long_press`, plus a smoke script.
 - [x] Define a `pinch` gesture step, gated behind `diag.gesture_pinch`, plus a smoke script.
-- [ ] Define additional gesture steps beyond `tap`/`pinch` (long-press/swipe) and gate them behind explicit capabilities.
+- [ ] Define additional gesture steps beyond `tap`/`long_press`/`pinch` (`swipe`) and gate them behind explicit capabilities.
 
 Status (2026-02-27):
 
 - `pointer_kind: touch` / `pointer_kind: pen` are supported by `fret-bootstrap` and advertised as `diag.pointer_kind_touch` / `diag.pointer_kind_pen`.
 - `tap` is supported and advertised as `diag.gesture_tap`.
+- `long_press` is supported and advertised as `diag.gesture_long_press`.
 - `pinch` is supported and advertised as `diag.gesture_pinch`.
 
 ### M11: CI guardrails for contract evolution

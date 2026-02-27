@@ -55,10 +55,13 @@ Doc: `docs/workstreams/diag-extensibility-and-capabilities-v1/capabilities.md`
   - [x] add a `tap` step (touch-first) and gate it behind `diag.gesture_tap`,
     - [x] add a small smoke script:
       - [x] `tools/diag-scripts/ui-gallery/diag/ui-gallery-gesture-tap-smoke.json`
+  - [x] add a `long_press` step (touch-first) and gate it behind `diag.gesture_long_press`,
+    - [x] add a small smoke script:
+      - [x] `tools/diag-scripts/ui-gallery/diag/ui-gallery-gesture-long-press-smoke.json`
   - [x] define a `pinch` step (touch-first) and gate it behind `diag.gesture_pinch`,
     - [x] add a small smoke script:
       - [x] `tools/diag-scripts/ui-gallery/diag/ui-gallery-gesture-pinch-smoke.json`
-  - [ ] define the next gesture step (`swipe` or `long_press`) and gate it behind an explicit capability.
+  - [ ] define the next gesture step (`swipe`) and gate it behind an explicit capability.
 
 ## Evidence & trace (debuggability surfaces)
 
