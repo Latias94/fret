@@ -1,6 +1,7 @@
 use super::super::*;
 
 use std::sync::Arc;
+use std::time::Duration;
 
 use crate::ui::doc_layout::{self, DocSection};
 
@@ -782,6 +783,26 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
         move |_cx| vec![api_carousel, api_counter],
     );
 
+    // Plugin (autoplay): matches shadcn/ui `carousel-plugin` (Embla autoplay plugin outcome).
+    let plugin_visual = SlideVisual {
+        text_px: Px(36.0),
+        line_height_px: Px(44.0),
+    };
+    let plugin_items = (1..=5)
+        .map(|idx| slide(cx, idx, plugin_visual))
+        .collect::<Vec<_>>();
+    let plugin = shadcn::Carousel::new(plugin_items)
+        .autoplay(shadcn::CarouselAutoplayConfig::new(Duration::from_millis(2000)))
+        .refine_track_layout(LayoutRefinement::default().w_px(Px(336.0)))
+        .refine_layout(
+            LayoutRefinement::default()
+                .w_full()
+                .max_w(max_w_xs)
+                .mx_auto(),
+        )
+        .test_id("ui-gallery-carousel-plugin")
+        .into_element(cx);
+
     let notes_stack = doc_layout::notes(
         cx,
         [
@@ -1008,8 +1029,24 @@ let counter = ui::text(
         api_now.snap_count
     ),
 )
-.text_sm()
-.into_element(cx);"#,
+ .text_sm()
+ .into_element(cx);"#,
+                ),
+            DocSection::new("Plugin (Autoplay)", plugin)
+                .description("Autoplay: 2000ms delay; hover pauses; interaction stops.")
+                .max_w(Px(760.0))
+                .test_id_prefix("ui-gallery-carousel-plugin")
+                .code(
+                    "rust",
+                    r#"use std::time::Duration;
+
+let items = (1..=5).map(|idx| slide(cx, idx)).collect::<Vec<_>>();
+
+shadcn::Carousel::new(items)
+    .autoplay(shadcn::CarouselAutoplayConfig::new(Duration::from_millis(2000)))
+    .refine_track_layout(LayoutRefinement::default().w_px(Px(336.0)))
+    .refine_layout(LayoutRefinement::default().w_full().max_w(Px(320.0)).mx_auto())
+    .into_element(cx);"#,
                 ),
             DocSection::new("Expandable", expandable)
                 .description("Content-driven height changes (used by the motion pilot suite).")
