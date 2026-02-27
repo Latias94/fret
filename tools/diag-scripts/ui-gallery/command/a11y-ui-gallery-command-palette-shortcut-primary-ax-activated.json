@@ -1,0 +1,46 @@
+{
+  "meta": {
+    "name": "a11y-ui-gallery-command-palette-shortcut-primary-ax-activated",
+    "required_capabilities": ["diag.script_v2"]
+  },
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "runner_accessibility_activated" },
+      "timeout_frames": 1200
+    },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "press_shortcut", "shortcut": "primary+p" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "role_and_name", "role": "dialog", "name": "Command palette" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "role_and_name", "role": "dialog", "name": "Command palette" }
+      }
+    },
+    { "type": "assert", "predicate": { "kind": "runner_accessibility_activated" } },
+    { "type": "press_key", "key": "escape" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "role_and_name", "role": "dialog", "name": "Command palette" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-command-palette-shortcut-primary-ax-activated"
+    }
+  ]
+}

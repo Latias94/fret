@@ -79,18 +79,54 @@ def categorize_script(filename: str) -> tuple[str, str]:
     """
     n = filename
 
-    if n.startswith("tooling-suite-prelude-") or n.startswith("tooling-prelude-"):
+    if (
+        n.startswith("tooling-suite-prelude-")
+        or n.startswith("tooling-suite-prewarm-")
+        or n.startswith("tooling-prelude-")
+    ):
         return ("prelude", "_prelude")
+
+    if n.startswith("a11y-ui-gallery-command-dialog-") or n.startswith("a11y-ui-gallery-command-"):
+        return ("ui_gallery.command", "ui-gallery/command")
 
     if n.startswith("docking-arbitration-"):
         return ("docking.arbitration", "docking/arbitration")
     if n.startswith("docking-motion-pilot-"):
         return ("docking.motion_pilot", "docking/motion-pilot")
+    if n.startswith("docking-demo-"):
+        return ("docking.demo", "docking/demo")
+    if n.startswith("container-queries-docking-"):
+        return ("docking.container_queries", "docking/container-queries")
 
     if n.startswith("external-texture-imports-"):
         return ("tooling.external_texture_imports", "tooling/external-texture-imports")
+    if n.startswith("external-video-imports-"):
+        return ("tooling.external_video_imports", "tooling/external-video-imports")
     if n.startswith("todo-"):
         return ("tooling.todo", "tooling/todo")
+    if n.startswith("router-query-demo-"):
+        return ("router.query_demo", "router/query-demo")
+    if n.startswith("workspace-shell-demo-"):
+        return ("workspace.shell_demo", "workspace/shell-demo")
+    if n.startswith("embedded-viewport-demo-"):
+        return ("viewport.embedded_demo", "viewport/embedded-demo")
+
+    if n.startswith("components-gallery-file-tree-"):
+        return ("components_gallery.file_tree", "components-gallery/file-tree")
+    if n.startswith("components-gallery-table-"):
+        return ("components_gallery.table", "components-gallery/table")
+
+    if n.startswith("imui-"):
+        return ("ui_editor.imui", "ui-editor/imui")
+
+    if n.startswith("chart-"):
+        return ("charts", "charts")
+
+    if n.startswith("extras-"):
+        return ("extras", "extras")
+
+    if n.startswith("drop-shadow-") or n.startswith("liquid-glass-"):
+        return ("renderer.effects", "renderer/effects")
 
     if n.startswith("ui-gallery-"):
         if n.startswith("ui-gallery-layout-") or "layout-sweep" in n:

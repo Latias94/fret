@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "steps": [
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui.float_window.title_bar:a" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui-float-demo.a.activate" }
+      },
+      "timeout_frames": 600
+    },
+
+    { "type": "capture_bundle", "label": "imui-float-titlebar-before-drag" },
+    { "type": "capture_screenshot", "label": "imui-float-titlebar-before-drag" },
+
+    {
+      "type": "drag_pointer",
+      "target": { "kind": "test_id", "id": "imui.float_window.title_bar:a" },
+      "delta_x": 420.0,
+      "delta_y": 160.0,
+      "steps": 16
+    },
+    { "type": "wait_frames", "n": 2 },
+
+    { "type": "capture_bundle", "label": "imui-float-titlebar-after-drag" },
+    { "type": "capture_screenshot", "label": "imui-float-titlebar-after-drag" }
+  ]
+}

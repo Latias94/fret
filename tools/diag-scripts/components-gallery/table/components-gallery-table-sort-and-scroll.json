@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "components-gallery-table-root" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "components-gallery-table-header-cpu" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "move_pointer", "target": { "kind": "test_id", "id": "components-gallery-table-header-cpu" } },
+    { "type": "click", "target": { "kind": "test_id", "id": "components-gallery-table-header-cpu" } },
+    { "type": "wait_frames", "n": 3 },
+    { "type": "move_pointer", "target": { "kind": "test_id", "id": "components-gallery-table-root" } },
+    { "type": "wait_frames", "n": 10 },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "components-gallery-table-root" }, "delta_y": -240.0 },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "components-gallery-table-root" }, "delta_y": -240.0 },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "components-gallery-table-root" }, "delta_y": -240.0 },
+    { "type": "wait_frames", "n": 5 },
+    {
+      "type": "capture_bundle",
+      "label": "components-gallery-table-sort-and-scroll"
+    }
+  ]
+}
