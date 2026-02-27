@@ -736,20 +736,44 @@ fn combobox_with_patch<H: UiHost>(
         trigger_layout.size.height = Length::Auto;
         trigger_layout.size.min_height = Some(Length::Px(min_h));
 
-        let bg_base = chrome_patch
-            .background
-            .as_ref()
-            .map(|c| c.resolve(&theme))
-            .unwrap_or_else(|| {
-                theme
-                    .color_by_key("background")
-                    .unwrap_or_else(|| theme.color_token("background"))
-            });
-        let bg_hover = theme
-            .color_by_key("accent")
-            .or_else(|| theme.color_by_key("accent.background"))
-            .unwrap_or_else(|| theme.color_token("accent"));
-        let bg_pressed = theme.color_token("accent");
+        let (bg_base, bg_hover, bg_pressed) = match trigger_variant {
+            ComboboxTriggerVariant::Default => {
+                // Upstream shadcn combobox chips root uses:
+                // - light: `bg-transparent`
+                // - dark: `dark:bg-input/30`
+                let base = chrome_patch
+                    .background
+                    .as_ref()
+                    .map(|c| c.resolve(&theme))
+                    .unwrap_or_else(|| {
+                        theme
+                            .color_by_key("component.input.bg")
+                            .unwrap_or_else(|| {
+                                theme
+                                    .color_by_key("background")
+                                    .unwrap_or_else(|| theme.color_token("background"))
+                            })
+                    });
+                (base, base, base)
+            }
+            ComboboxTriggerVariant::Button => {
+                let base = chrome_patch
+                    .background
+                    .as_ref()
+                    .map(|c| c.resolve(&theme))
+                    .unwrap_or_else(|| {
+                        theme
+                            .color_by_key("background")
+                            .unwrap_or_else(|| theme.color_token("background"))
+                    });
+                let hover = theme
+                    .color_by_key("accent")
+                    .or_else(|| theme.color_by_key("accent.background"))
+                    .unwrap_or_else(|| theme.color_token("accent"));
+                let pressed = theme.color_token("accent");
+                (base, hover, pressed)
+            }
+        };
         let fg_base = chrome_patch
             .text_color
             .as_ref()
@@ -759,10 +783,13 @@ fn combobox_with_patch<H: UiHost>(
                     .color_by_key("foreground")
                     .unwrap_or_else(|| theme.color_token("foreground"))
             });
-        let fg_hover = theme
-            .color_by_key("accent-foreground")
-            .or_else(|| theme.color_by_key("accent.foreground"))
-            .unwrap_or(fg_base);
+        let fg_hover = match trigger_variant {
+            ComboboxTriggerVariant::Default => fg_base,
+            ComboboxTriggerVariant::Button => theme
+                .color_by_key("accent-foreground")
+                .or_else(|| theme.color_by_key("accent.foreground"))
+                .unwrap_or(fg_base),
+        };
         let muted_fg = theme
             .color_by_key("muted-foreground")
             .or_else(|| theme.color_by_key("muted_foreground"))
