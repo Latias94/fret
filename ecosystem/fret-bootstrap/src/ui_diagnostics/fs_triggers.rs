@@ -6,8 +6,8 @@ use fret_diag_protocol::{
 };
 
 use super::{
-    PendingScript, UiDiagnosticsService, display_path, push_script_event_log, read_touch_stamp,
-    sanitize_label, unix_ms_now,
+    PendingScript, UiDiagnosticsService, display_path, format_bundle_dump_note,
+    push_script_event_log, read_touch_stamp, sanitize_label, unix_ms_now,
 };
 
 #[derive(Debug, Clone, serde::Deserialize)]

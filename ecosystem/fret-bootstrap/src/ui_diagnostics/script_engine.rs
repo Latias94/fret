@@ -805,6 +805,7 @@ pub(super) fn finalize_drive_script_for_window(
                 }
             }
         } else if let Some(label) = force_dump_label {
+            let note = format_bundle_dump_note(&label, force_dump_max_snapshots, None);
             push_script_event_log(
                 &mut active,
                 &service.cfg,
@@ -812,11 +813,7 @@ pub(super) fn finalize_drive_script_for_window(
                     unix_ms: unix_ms_now(),
                     kind: "bundle_dump_requested".to_string(),
                     step_index: Some(step_index as u32),
-                    note: Some(format_bundle_dump_note(
-                        label,
-                        *force_dump_max_snapshots,
-                        None,
-                    )),
+                    note: Some(note),
                     bundle_dir: None,
                     window: Some(window.data().as_ffi()),
                     tick_id: Some(app.tick_id().0),
@@ -856,6 +853,7 @@ pub(super) fn finalize_drive_script_for_window(
         });
     } else {
         if let Some(label) = force_dump_label {
+            let note = format_bundle_dump_note(&label, force_dump_max_snapshots, None);
             push_script_event_log(
                 &mut active,
                 &service.cfg,
@@ -863,11 +861,7 @@ pub(super) fn finalize_drive_script_for_window(
                     unix_ms: unix_ms_now(),
                     kind: "bundle_dump_requested".to_string(),
                     step_index: Some(step_index as u32),
-                    note: Some(format_bundle_dump_note(
-                        label,
-                        *force_dump_max_snapshots,
-                        None,
-                    )),
+                    note: Some(note),
                     bundle_dir: None,
                     window: Some(window.data().as_ffi()),
                     tick_id: Some(app.tick_id().0),
