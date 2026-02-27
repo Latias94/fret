@@ -986,6 +986,27 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-gesture-long-press-smoke",
+      "path": "tools/diag-scripts/ui-gallery/diag/ui-gallery-gesture-long-press-smoke.json",
+      "required_capabilities": [
+        "diag.gesture_long_press",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery"
+      ],
+      "tags": [
+        "diag",
+        "gesture",
+        "long-press",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Exercises the intent-level long_press step (touch-first).",
+        "Fails fast when the runner does not advertise diag.gesture_long_press."
+      ]
+    },
+    {
       "id": "ui-gallery-gesture-pinch-smoke",
       "path": "tools/diag-scripts/ui-gallery/diag/ui-gallery-gesture-pinch-smoke.json",
       "required_capabilities": [
