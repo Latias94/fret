@@ -1,3 +1,4 @@
+pub(crate) mod bundle;
 pub(crate) mod script;
 
 pub(crate) fn normalize_capability(raw: &str) -> Option<String> {

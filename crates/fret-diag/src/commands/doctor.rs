@@ -695,61 +695,6 @@ fn file_bytes(path: &Path) -> Option<u64> {
     std::fs::metadata(path).ok().map(|m| m.len())
 }
 
-fn sniff_schema_version_from_json_prefix(bytes: &[u8]) -> Option<u64> {
-    fn find_subslice(haystack: &[u8], needle: &[u8]) -> Option<usize> {
-        haystack
-            .windows(needle.len())
-            .position(|window| window == needle)
-    }
-
-    fn parse_number_after_key(bytes: &[u8], key_offset: usize, key_len: usize) -> Option<u64> {
-        let mut i = key_offset.saturating_add(key_len);
-        while i < bytes.len() && bytes[i].is_ascii_whitespace() {
-            i = i.saturating_add(1);
-        }
-        if bytes.get(i).copied() != Some(b':') {
-            return None;
-        }
-        i = i.saturating_add(1);
-        while i < bytes.len() && bytes[i].is_ascii_whitespace() {
-            i = i.saturating_add(1);
-        }
-
-        let start = i;
-        while i < bytes.len() && bytes[i].is_ascii_digit() {
-            i = i.saturating_add(1);
-        }
-        if start == i {
-            return None;
-        }
-        std::str::from_utf8(&bytes[start..i])
-            .ok()?
-            .parse::<u64>()
-            .ok()
-    }
-
-    for key in [&br#""schema_version""#[..], &br#""schemaVersion""#[..]] {
-        let Some(off) = find_subslice(bytes, key) else {
-            continue;
-        };
-        if let Some(v) = parse_number_after_key(bytes, off, key.len()) {
-            return Some(v);
-        }
-    }
-
-    None
-}
-
-fn sniff_bundle_schema_version(bundle_json_path: &Path) -> Result<Option<u64>, String> {
-    // Only read a prefix: schema_version is expected near the top-level object.
-    const MAX_PREFIX_BYTES: usize = 64 * 1024;
-    let mut bytes = std::fs::read(bundle_json_path).map_err(|e| e.to_string())?;
-    if bytes.len() > MAX_PREFIX_BYTES {
-        bytes.truncate(MAX_PREFIX_BYTES);
-    }
-    Ok(sniff_schema_version_from_json_prefix(&bytes))
-}
-
 fn manifest_bundle_json_chunks_summary(manifest_dir: &Path, manifest: &Value) -> Option<Value> {
     let bundle_json = manifest.get("bundle_json")?;
     let chunks = bundle_json.get("chunks")?.as_array()?;
@@ -816,7 +761,7 @@ pub(crate) fn doctor_report_json(bundle_dir: &Path, warmup_frames: u64) -> Value
         == Some("bundle.json");
     let (bundle_schema_version, bundle_schema_error) =
         if let Some(path) = bundle_artifact.as_deref() {
-            match sniff_bundle_schema_version(path) {
+            match crate::compat::bundle::sniff_bundle_schema_version(path) {
                 Ok(v) => (v, None),
                 Err(e) => (None, Some(e)),
             }

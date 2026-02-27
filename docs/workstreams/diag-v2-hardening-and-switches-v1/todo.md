@@ -125,7 +125,7 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
 
 - [ ] Create `compat/` modules in tooling for:
   - [x] legacy capability aliases (`script_v2` → `diag.script_v2`, etc),
-  - [ ] v1 bundle schema reading,
+  - [x] v1 bundle schema reading,
   - [x] v1 script schema reading (if still supported).
 - [ ] Close multi-window gaps in schema v2 steps:
   - [ ] add optional `window` targeting to selector-driven steps that currently lack it (e.g. `click_stable`, `wheel`, pointer moves),
