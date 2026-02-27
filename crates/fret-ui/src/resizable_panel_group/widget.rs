@@ -12,6 +12,8 @@ use crate::resize_handle::ResizeHandle;
 use crate::widget::{EventCx, LayoutCx, PaintCx, SemanticsCx, Widget};
 use crate::{Invalidation, Theme, UiHost};
 
+type LayoutResult = (usize, bool, Vec<Rect>, Vec<Rect>, Vec<f32>, Vec<f32>, f32);
+
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
     c
@@ -101,7 +103,7 @@ impl BoundResizablePanelGroup {
         app: &H,
         bounds: Rect,
         children_len: usize,
-    ) -> (usize, bool, Vec<Rect>, Vec<Rect>, Vec<f32>, Vec<f32>, f32) {
+    ) -> LayoutResult {
         let raw = match app.models().try_get_cloned(&self.model) {
             Ok(Some(v)) => v,
             Ok(None) => {

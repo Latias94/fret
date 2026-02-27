@@ -12,7 +12,7 @@ fn parse_env_u64(name: &str) -> Option<u64> {
 #[cfg(not(target_arch = "wasm32"))]
 fn parse_env_probe_px(name: &str) -> Option<(f32, f32, f32, f32)> {
     let v = std::env::var(name).ok()?;
-    let mut it = v.split(|c| c == ',' || c == ' ').filter(|s| !s.is_empty());
+    let mut it = v.split([',', ' ']).filter(|s| !s.is_empty());
     let x = it.next()?.parse::<f32>().ok()?;
     let y = it.next()?.parse::<f32>().ok()?;
     let w = it.next()?.parse::<f32>().ok()?;

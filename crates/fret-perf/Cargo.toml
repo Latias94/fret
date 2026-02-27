@@ -11,6 +11,5 @@ documentation.workspace = true
 description = "Lightweight perf instrumentation helpers that unify per-frame stats and tracing spans."
 
 [dependencies]
-fret-core = { path = "../fret-core" }
+fret-core = { version = "0.1.0", path = "../fret-core" }
 tracing.workspace = true
-

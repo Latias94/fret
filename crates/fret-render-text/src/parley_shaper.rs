@@ -79,9 +79,7 @@ fn requested_line_height_logical_px_with_strut(style: &TextStyle) -> Option<f32>
         return Some(px);
     }
 
-    let Some(strut) = style.strut_style.as_ref() else {
-        return None;
-    };
+    let strut = style.strut_style.as_ref()?;
 
     if let Some(px) = strut.line_height {
         return Some(px.0.max(0.0));
@@ -642,10 +640,9 @@ impl ParleyShaper {
         let requested_line_height_px =
             requested_line_height_logical_px_with_strut(base_style).map(|v| (v * scale).max(0.0));
         let strut_forces_fixed = base_style.strut_style.as_ref().is_some_and(|s| s.force);
-        let fixed_line_box = (base_style.line_height_policy
-            == TextLineHeightPolicy::FixedFromStyle
-            || strut_forces_fixed)
-            && (requested_line_height_px.is_some() || strut_forces_fixed);
+        let fixed_line_box = strut_forces_fixed
+            || (base_style.line_height_policy == TextLineHeightPolicy::FixedFromStyle
+                && requested_line_height_px.is_some());
         let fixed_ascent_descent = if fixed_line_box {
             let style_for_metrics = style_for_strut_metrics(base_style);
             let style_for_metrics = style_for_metrics.as_ref().unwrap_or(base_style);
@@ -901,10 +898,9 @@ impl ParleyShaper {
         let requested_line_height_px =
             requested_line_height_logical_px_with_strut(base_style).map(|v| (v * scale).max(0.0));
         let strut_forces_fixed = base_style.strut_style.as_ref().is_some_and(|s| s.force);
-        let fixed_line_box = (base_style.line_height_policy
-            == TextLineHeightPolicy::FixedFromStyle
-            || strut_forces_fixed)
-            && (requested_line_height_px.is_some() || strut_forces_fixed);
+        let fixed_line_box = strut_forces_fixed
+            || (base_style.line_height_policy == TextLineHeightPolicy::FixedFromStyle
+                && requested_line_height_px.is_some());
         let fixed_ascent_descent = if fixed_line_box {
             let style_for_metrics = style_for_strut_metrics(base_style);
             let style_for_metrics = style_for_metrics.as_ref().unwrap_or(base_style);
@@ -1048,6 +1044,7 @@ impl ParleyShaper {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn shape_paragraph_with_wrap(
         &mut self,
         input: TextInputRef<'_>,
@@ -1134,10 +1131,9 @@ impl ParleyShaper {
         let requested_line_height_px =
             requested_line_height_logical_px_with_strut(base_style).map(|v| (v * scale).max(0.0));
         let strut_forces_fixed = base_style.strut_style.as_ref().is_some_and(|s| s.force);
-        let fixed_line_box = (base_style.line_height_policy
-            == TextLineHeightPolicy::FixedFromStyle
-            || strut_forces_fixed)
-            && (requested_line_height_px.is_some() || strut_forces_fixed);
+        let fixed_line_box = strut_forces_fixed
+            || (base_style.line_height_policy == TextLineHeightPolicy::FixedFromStyle
+                && requested_line_height_px.is_some());
         let fixed_ascent_descent = if fixed_line_box {
             let style_for_metrics = style_for_strut_metrics(base_style);
             let style_for_metrics = style_for_metrics.as_ref().unwrap_or(base_style);

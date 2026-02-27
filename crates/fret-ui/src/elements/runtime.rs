@@ -1194,7 +1194,7 @@ impl WindowElementState {
             return;
         }
 
-        let elements: Vec<GlobalElementId> = elements.iter().copied().collect();
+        let elements = elements.to_vec();
         for element in elements {
             self.touch_state_key((element, TypeId::of::<crate::action::PressableActionHooks>()));
             self.touch_state_key((

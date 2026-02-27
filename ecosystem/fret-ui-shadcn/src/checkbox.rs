@@ -285,8 +285,12 @@ impl Checkbox {
                 alpha_mul(ring_border, 0.5)
             };
 
-            let default_background = WidgetStateProperty::new(None)
-                .when(WidgetStates::SELECTED, Some(ColorRef::Color(bg_on)));
+            // Upstream shadcn checkbox uses `dark:bg-input/30` for the unchecked state.
+            let default_background = WidgetStateProperty::new(Some(ColorRef::Token {
+                key: "component.input.bg",
+                fallback: fret_ui_kit::ColorFallback::Color(Color::TRANSPARENT),
+            }))
+            .when(WidgetStates::SELECTED, Some(ColorRef::Color(bg_on)));
             let default_border_color_off = if aria_invalid {
                 theme.color_token("destructive")
             } else {

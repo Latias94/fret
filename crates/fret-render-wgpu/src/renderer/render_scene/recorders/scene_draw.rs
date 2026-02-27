@@ -175,7 +175,7 @@ impl Renderer {
             #[cfg(all(debug_assertions, not(target_arch = "wasm32")))]
             fn parse_scissor_rect_env(name: &str) -> Option<ScissorRect> {
                 let v = std::env::var(name).ok()?;
-                let mut it = v.split(|c| c == ',' || c == ' ').filter(|s| !s.is_empty());
+                let mut it = v.split([',', ' ']).filter(|s| !s.is_empty());
                 let x = it.next()?.parse::<u32>().ok()?;
                 let y = it.next()?.parse::<u32>().ok()?;
                 let w = it.next()?.parse::<u32>().ok()?;

@@ -8,10 +8,11 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 documentation.workspace = true
+description = "Interaction policy helpers for Fret ecosystem crates (gestures, state machines, adapters)."
 
 [dependencies]
-fret-core = { path = "../../crates/fret-core" }
-fret-runtime = { path = "../../crates/fret-runtime", optional = true }
+fret-core = { version = "0.1.0", path = "../../crates/fret-core" }
+fret-runtime = { version = "0.1.0", path = "../../crates/fret-runtime", optional = true }
 
 [features]
 default = []

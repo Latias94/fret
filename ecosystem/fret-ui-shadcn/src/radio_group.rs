@@ -515,10 +515,14 @@ impl RadioGroup {
                                                     .h_px(icon)
                                             },
                                         );
+                                        // Upstream shadcn radio-group uses `dark:bg-input/30` for the icon chrome.
+                                        let icon_bg = theme
+                                            .color_by_key("component.input.bg")
+                                            .unwrap_or(Color::TRANSPARENT);
                                         let icon_props = ContainerProps {
                                             layout: icon_layout,
                                             padding: Edges::all(Px(0.0)).into(),
-                                            background: None,
+                                            background: Some(icon_bg),
                                             shadow: Some(decl_style::shadow_xs(&theme, radius)),
                                             border: Edges::all(Px(1.0)),
                                             border_color: Some(border_color),

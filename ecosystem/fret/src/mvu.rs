@@ -359,11 +359,6 @@ pub(crate) fn mvu_bootstrap_builder_with_hooks<P: Program>(
 
     let builder = fret_bootstrap::BootstrapBuilder::new(App::new(), driver.into_fn_driver());
 
-    #[cfg(feature = "router")]
-    let builder = builder.install_app(|app| {
-        fret_router_ui::register_router_commands(app.commands_mut());
-    });
-
     builder
 }
 

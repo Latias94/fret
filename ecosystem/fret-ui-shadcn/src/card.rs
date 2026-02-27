@@ -145,7 +145,13 @@ impl Card {
             let props = {
                 let theme = Theme::global(&*cx.app);
                 let chrome = card_chrome(theme, size).merge(self.chrome);
-                decl_style::container_props(theme, chrome, self.layout)
+                // shadcn/ui Cards are authored as block-ish surfaces; in practice, most compositions
+                // expect the card to fill the available inline size unless explicitly constrained.
+                //
+                // We model that by defaulting to `w_full()` here (and still allowing explicit
+                // overrides via `refine_layout`).
+                let layout = LayoutRefinement::default().w_full().merge(self.layout);
+                decl_style::container_props(theme, chrome, layout)
             };
 
             // Cards behave like block containers in shadcn/ui examples: their sections are expected to
@@ -251,7 +257,9 @@ impl CardHeader {
             let left_col = stack::vstack(
                 cx,
                 stack::VStackProps::default()
-                    .gap(Space::N1p5)
+                    // shadcn/ui v4 CardHeader uses `gap-2` between title and description, even
+                    // when an action slot is present.
+                    .gap(Space::N2)
                     .layout(LayoutRefinement::default().flex_1().min_w_0()),
                 move |_cx| left,
             );
@@ -355,7 +363,7 @@ mod tests {
 
     use fret_app::App;
     use fret_core::{AppWindowId, Point, Rect, Size};
-    use fret_ui::element::{ContainerProps, Overflow, SemanticsProps};
+    use fret_ui::element::{ContainerProps, Length, Overflow, SemanticsProps};
     use fret_ui::elements::GlobalElementId;
     use fret_ui_kit::MetricRef;
 
@@ -419,6 +427,7 @@ mod tests {
             };
 
             assert_eq!(layout.overflow, Overflow::Visible);
+            assert_eq!(layout.size.width, Length::Fill);
             assert_eq!(padding.top, py.into());
             assert_eq!(padding.right, Px(0.0).into());
             assert_eq!(padding.bottom, py.into());
@@ -713,10 +722,13 @@ impl CardTitle {
                 .metric_by_key("component.card.title_px")
                 .or_else(|| theme.metric_by_key("font.size"))
                 .unwrap_or_else(|| theme.metric_token("font.size"));
+            // shadcn/ui v4 CardTitle uses `leading-none` by default.
+            //
+            // Treat this as an outcome contract: if the theme doesn't override a specific card
+            // title line-height, default to a tight line box that matches the font size.
             let line_height = theme
                 .metric_by_key("component.card.title_line_height")
-                .or_else(|| theme.metric_by_key("font.line_height"))
-                .unwrap_or_else(|| theme.metric_token("font.line_height"));
+                .unwrap_or(px);
             (fg, px, line_height)
         };
 

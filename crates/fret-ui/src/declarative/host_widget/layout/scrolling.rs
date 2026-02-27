@@ -884,10 +884,10 @@ impl ElementHostWidget {
                             // Under view-cache reconciliation, descendants can remain layout-invalidated
                             // for multiple frames. Keep deferring while invalidated, and only allow the
                             // expensive unbounded probe once the subtree stabilizes for a few frames.
-                            if at_scroll_extent_edge {
-                                state.kind = ScrollDeferredUnboundedProbeKind::None;
-                                state.stable_frames = 0;
-                            } else if !wants_unbounded_probe || !defer_probe_on_invalidation {
+                            if at_scroll_extent_edge
+                                || !wants_unbounded_probe
+                                || !defer_probe_on_invalidation
+                            {
                                 state.kind = ScrollDeferredUnboundedProbeKind::None;
                                 state.stable_frames = 0;
                             } else if children_layout_invalidated {

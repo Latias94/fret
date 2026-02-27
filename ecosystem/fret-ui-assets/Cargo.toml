@@ -8,6 +8,7 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 documentation.workspace = true
+description = "UI render asset loading/caching helpers for Fret (images, SVGs, and resource registries)."
 
 [features]
 default = []
@@ -21,14 +22,14 @@ image-decode = ["dep:image"]
 image-metadata = ["dep:fret-ui-kit"]
 
 [dependencies]
-fret-asset-cache = { path = "../fret-asset-cache" }
-fret-executor = { path = "../fret-executor" }
-fret-app = { path = "../../crates/fret-app", optional = true }
-fret-core = { path = "../../crates/fret-core" }
-fret-runtime = { path = "../../crates/fret-runtime" }
-fret-ui = { path = "../../crates/fret-ui", optional = true }
-fret-query = { path = "../fret-query", optional = true }
-fret-ui-kit = { path = "../fret-ui-kit", optional = true }
+fret-asset-cache = { version = "0.1.0", path = "../fret-asset-cache" }
+fret-executor = { version = "0.1.0", path = "../fret-executor" }
+fret-app = { version = "0.1.0", path = "../../crates/fret-app", optional = true }
+fret-core = { version = "0.1.0", path = "../../crates/fret-core" }
+fret-runtime = { version = "0.1.0", path = "../../crates/fret-runtime" }
+fret-ui = { version = "0.1.0", path = "../../crates/fret-ui", optional = true }
+fret-query = { version = "0.1.0", path = "../fret-query", optional = true }
+fret-ui-kit = { version = "0.1.0", path = "../fret-ui-kit", optional = true }
 image = { workspace = true, optional = true }
 tracing.workspace = true
 

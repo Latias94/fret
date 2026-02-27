@@ -278,6 +278,7 @@ fn wrap_with_newlines_measure_only(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn push_paragraph(
     shaper: &mut ParleyShaper,
     text: &str,
@@ -378,6 +379,7 @@ fn push_paragraph(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn push_paragraph_measure_only(
     shaper: &mut ParleyShaper,
     text: &str,

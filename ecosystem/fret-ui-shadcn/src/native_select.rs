@@ -20,7 +20,7 @@ use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
 use fret_ui_kit::typography;
 use fret_ui_kit::{
     ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, Radius, ShadowPreset,
-    Size as ComponentSize, Space, ui,
+    Size as ComponentSize, Space, WidgetState, WidgetStateProperty, WidgetStates, ui,
 };
 
 use crate::{
@@ -367,7 +367,7 @@ pub fn native_select<H: UiHost>(
         let test_id_prefix_for_trigger = test_id_prefix.clone();
         let test_id_prefix_for_content = test_id_prefix.clone();
 
-        let trigger = control_chrome_pressable_with_id_props(cx, move |cx, _st, trigger_id| {
+        let trigger = control_chrome_pressable_with_id_props(cx, move |cx, st, trigger_id| {
             *focus_restore_target_for_trigger
                 .lock()
                 .unwrap_or_else(|e| e.into_inner()) = Some(trigger_id);
@@ -375,6 +375,30 @@ pub fn native_select<H: UiHost>(
             if has_entries && !disabled {
                 cx.pressable_toggle_bool(&open_for_trigger);
             }
+
+            let mut states = WidgetStates::from_pressable(cx, st, !disabled);
+            states.set(WidgetState::Open, is_open);
+            let bg = WidgetStateProperty::new(ColorRef::Token {
+                key: "component.input.bg",
+                fallback: ColorFallback::Color(Color::TRANSPARENT),
+            })
+            .when(
+                WidgetStates::HOVERED,
+                ColorRef::Token {
+                    key: "component.input.bg_hover",
+                    fallback: ColorFallback::Color(Color::TRANSPARENT),
+                },
+            )
+            .when(
+                WidgetStates::ACTIVE,
+                ColorRef::Token {
+                    key: "component.input.bg_hover",
+                    fallback: ColorFallback::Color(Color::TRANSPARENT),
+                },
+            )
+            .resolve(states)
+            .clone()
+            .resolve(&theme_for_trigger);
 
             let pressable_props = PressableProps {
                 layout: pressable_layout,
@@ -438,7 +462,7 @@ pub fn native_select<H: UiHost>(
                                 bottom: py,
                             }
                             .into(),
-                            background: Some(resolved.background),
+                            background: Some(bg),
                             shadow: None,
                             border: Edges::all(resolved.border_width),
                             border_color: Some(border_color),

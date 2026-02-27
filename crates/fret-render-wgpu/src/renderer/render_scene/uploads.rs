@@ -43,7 +43,7 @@ impl Renderer {
             if perf_enabled {
                 frame_perf.instance_bytes = frame_perf
                     .instance_bytes
-                    .saturating_add((std::mem::size_of::<QuadInstance>() * instances.len()) as u64);
+                    .saturating_add(std::mem::size_of_val(instances) as u64);
             }
         }
 
@@ -53,7 +53,7 @@ impl Renderer {
             if perf_enabled {
                 frame_perf.instance_bytes = frame_perf
                     .instance_bytes
-                    .saturating_add((std::mem::size_of::<PaintGpu>() * path_paints.len()) as u64);
+                    .saturating_add(std::mem::size_of_val(path_paints) as u64);
             }
         }
 
@@ -63,7 +63,7 @@ impl Renderer {
             if perf_enabled {
                 frame_perf.instance_bytes = frame_perf
                     .instance_bytes
-                    .saturating_add((std::mem::size_of::<PaintGpu>() * text_paints.len()) as u64);
+                    .saturating_add(std::mem::size_of_val(text_paints) as u64);
             }
         }
 
@@ -75,9 +75,9 @@ impl Renderer {
                 bytemuck::cast_slice(viewport_vertices),
             );
             if perf_enabled {
-                frame_perf.vertex_bytes = frame_perf.vertex_bytes.saturating_add(
-                    (std::mem::size_of::<ViewportVertex>() * viewport_vertices.len()) as u64,
-                );
+                frame_perf.vertex_bytes = frame_perf
+                    .vertex_bytes
+                    .saturating_add(std::mem::size_of_val(viewport_vertices) as u64);
             }
         }
 
@@ -85,9 +85,9 @@ impl Renderer {
         if !text_vertices.is_empty() {
             queue.write_buffer(&text_vertex_buffer, 0, bytemuck::cast_slice(text_vertices));
             if perf_enabled {
-                frame_perf.vertex_bytes = frame_perf.vertex_bytes.saturating_add(
-                    (std::mem::size_of::<TextVertex>() * text_vertices.len()) as u64,
-                );
+                frame_perf.vertex_bytes = frame_perf
+                    .vertex_bytes
+                    .saturating_add(std::mem::size_of_val(text_vertices) as u64);
             }
         }
 
@@ -95,9 +95,9 @@ impl Renderer {
         if !path_vertices.is_empty() {
             queue.write_buffer(&path_vertex_buffer, 0, bytemuck::cast_slice(path_vertices));
             if perf_enabled {
-                frame_perf.vertex_bytes = frame_perf.vertex_bytes.saturating_add(
-                    (std::mem::size_of::<PathVertex>() * path_vertices.len()) as u64,
-                );
+                frame_perf.vertex_bytes = frame_perf
+                    .vertex_bytes
+                    .saturating_add(std::mem::size_of_val(path_vertices) as u64);
             }
         }
 

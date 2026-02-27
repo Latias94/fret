@@ -583,6 +583,63 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
         }
     }
 
+    // new-york-v4: select triggers (and native select) use `dark:hover:bg-input/50` while staying
+    // `bg-transparent` in light mode.
+    if !colors.contains_key("component.input.bg_hover") {
+        let v = match scheme {
+            ShadcnColorScheme::Light => Some("#00000000".to_string()),
+            ShadcnColorScheme::Dark => colors
+                .get("input")
+                .and_then(|input| with_oklch_alpha(input, 0.5)),
+        };
+        if let Some(v) = v {
+            colors.insert("component.input.bg_hover".to_string(), v);
+        }
+    }
+
+    // Button (outline) dark deltas in shadcn new-york-v4:
+    // - base: `bg-background border-border hover:bg-accent hover:text-accent-foreground`
+    // - dark: `dark:bg-input/30 dark:border-input dark:hover:bg-input/50`
+    if !colors.contains_key("component.button.outline.bg") {
+        let v = match scheme {
+            ShadcnColorScheme::Light => colors.get("background").cloned(),
+            ShadcnColorScheme::Dark => colors.get("component.input.bg").cloned().or_else(|| {
+                colors
+                    .get("input")
+                    .and_then(|input| with_oklch_alpha(input, 0.3))
+            }),
+        };
+        if let Some(v) = v {
+            colors.insert("component.button.outline.bg".to_string(), v);
+        }
+    }
+
+    if !colors.contains_key("component.button.outline.bg_hover") {
+        let v = match scheme {
+            ShadcnColorScheme::Light => colors.get("accent").cloned(),
+            ShadcnColorScheme::Dark => colors
+                .get("input")
+                .and_then(|input| with_oklch_alpha(input, 0.5))
+                .or_else(|| colors.get("accent").cloned()),
+        };
+        if let Some(v) = v {
+            colors.insert("component.button.outline.bg_hover".to_string(), v);
+        }
+    }
+
+    if !colors.contains_key("component.button.outline.border") {
+        let v = match scheme {
+            ShadcnColorScheme::Light => colors.get("border").cloned(),
+            ShadcnColorScheme::Dark => colors
+                .get("input")
+                .cloned()
+                .or_else(|| colors.get("border").cloned()),
+        };
+        if let Some(v) = v {
+            colors.insert("component.button.outline.border".to_string(), v);
+        }
+    }
+
     seed_syntax_colors(&mut colors);
 
     let mut cfg = ThemeConfig {
@@ -870,6 +927,85 @@ mod tests {
                     .cloned(),
                 Some(expected_destructive_dark_bg),
                 "expected destructive badge bg to match destructive/60 in dark scheme"
+            );
+
+            let outline_bg_light = cfg_light
+                .colors
+                .get("background")
+                .cloned()
+                .expect("missing background");
+            let outline_border_light = cfg_light
+                .colors
+                .get("border")
+                .cloned()
+                .expect("missing border");
+            let outline_bg_hover_light = cfg_light
+                .colors
+                .get("accent")
+                .cloned()
+                .expect("missing accent");
+            assert_eq!(
+                cfg_light.colors.get("component.button.outline.bg").cloned(),
+                Some(outline_bg_light),
+                "expected outline button bg to match background in light scheme"
+            );
+            assert_eq!(
+                cfg_light
+                    .colors
+                    .get("component.button.outline.border")
+                    .cloned(),
+                Some(outline_border_light),
+                "expected outline button border to match border in light scheme"
+            );
+            assert_eq!(
+                cfg_light
+                    .colors
+                    .get("component.button.outline.bg_hover")
+                    .cloned(),
+                Some(outline_bg_hover_light),
+                "expected outline button hover bg to match accent in light scheme"
+            );
+
+            let input_dark = cfg_dark
+                .colors
+                .get("input")
+                .cloned()
+                .expect("missing input");
+            let outline_bg_dark = cfg_dark
+                .colors
+                .get("component.input.bg")
+                .cloned()
+                .expect("missing component.input.bg");
+            let outline_bg_hover_dark = with_oklch_alpha(&input_dark, 0.5)
+                .expect("shadcn new-york-v4 input token is oklch");
+            assert_eq!(
+                cfg_dark.colors.get("component.button.outline.bg").cloned(),
+                Some(outline_bg_dark),
+                "expected outline button bg to match input/30 in dark scheme"
+            );
+            assert_eq!(
+                cfg_dark
+                    .colors
+                    .get("component.button.outline.border")
+                    .cloned(),
+                Some(input_dark.clone()),
+                "expected outline button border to match input in dark scheme"
+            );
+            assert_eq!(
+                cfg_dark
+                    .colors
+                    .get("component.button.outline.bg_hover")
+                    .cloned(),
+                Some(outline_bg_hover_dark),
+                "expected outline button hover bg to match input/50 in dark scheme"
+            );
+            assert_eq!(
+                cfg_dark.colors.get("component.input.bg_hover").cloned(),
+                Some(
+                    with_oklch_alpha(&input_dark, 0.5)
+                        .expect("shadcn new-york-v4 input token is oklch",)
+                ),
+                "expected input hover bg to match input/50 in dark scheme"
             );
 
             assert_eq!(

@@ -33,10 +33,6 @@ use fret_app::App as KernelApp;
 #[cfg(feature = "shadcn")]
 pub use fret_ui_shadcn as shadcn;
 
-/// Re-export workspace-shell building blocks (editor-grade chrome) as `workspace`.
-#[cfg(feature = "workspace-shell")]
-pub use fret_workspace as workspace;
-
 /// Re-export the `IconRegistry` type for app code that wants to install a custom icon pack.
 pub use fret_icons::IconRegistry;
 
@@ -44,11 +40,7 @@ pub use fret_icons::IconRegistry;
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 pub use fret_bootstrap::ui_app_driver::ViewElements;
 
-#[cfg(feature = "workspace-shell")]
-pub mod pending_shortcut_overlay;
 pub mod workspace_menu;
-#[cfg(feature = "workspace-shell")]
-pub mod workspace_shell;
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 mod app_entry;
@@ -184,21 +176,6 @@ pub mod prelude {
 
     #[cfg(feature = "shadcn")]
     pub use crate::shadcn;
-
-    #[cfg(feature = "workspace-shell")]
-    pub use crate::workspace;
-    #[cfg(feature = "workspace-shell")]
-    pub use crate::workspace::layout::{WorkspaceLayout, WorkspaceLayoutV1};
-    #[cfg(feature = "workspace-shell")]
-    pub use crate::workspace::menu::{WorkspaceMenuCommands, workspace_default_menu_bar};
-    #[cfg(feature = "workspace-shell")]
-    pub use crate::workspace::tabs::{TabCycleMode, WorkspaceTabs, WorkspaceTabsV1};
-    #[cfg(feature = "workspace-shell")]
-    pub use crate::workspace::{
-        WorkspaceFrame, WorkspaceStatusBar, WorkspaceTab, WorkspaceTabStrip, WorkspaceTopBar,
-    };
-    #[cfg(feature = "workspace-shell")]
-    pub use crate::workspace_shell::{workspace_shell_model, workspace_shell_model_default_menu};
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -440,6 +417,10 @@ impl<S: 'static> UiAppBuilder<S> {
         }
     }
 
+    /// Install custom GPU effects at the renderer boundary (ADR 0299).
+    ///
+    /// Note: the callback receives the **kernel** app type (`fret_app::App`, re-exported here as
+    /// `KernelApp`), not the `fret::App` builder-chain facade.
     pub fn install_custom_effects(
         self,
         install: fn(&mut KernelApp, &mut dyn fret_core::CustomEffectService),
@@ -579,11 +560,6 @@ pub(crate) fn ui_bootstrap_builder_with_hooks<S: 'static>(
         .on_global_changes_middleware(shadcn_sync_theme_from_environment_on_global_changes::<S>);
     let driver = configure(UiAppDriver::new(driver)).into_inner();
     let builder = fret_bootstrap::BootstrapBuilder::new(KernelApp::new(), driver.into_fn_driver());
-
-    #[cfg(feature = "router")]
-    let builder = builder.install_app(|app| {
-        fret_router_ui::register_router_commands(app.commands_mut());
-    });
 
     builder
 }

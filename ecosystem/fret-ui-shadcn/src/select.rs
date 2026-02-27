@@ -33,8 +33,8 @@ use fret_ui_kit::recipes::input::{
 };
 use fret_ui_kit::theme_tokens;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayPresence, OverrideSlot, Space,
-    WidgetState, WidgetStateProperty, WidgetStates, resolve_override_slot, ui,
+    ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, MetricRef, OverlayPresence,
+    OverrideSlot, Space, WidgetState, WidgetStateProperty, WidgetStates, resolve_override_slot, ui,
 };
 use std::cell::Cell;
 use std::sync::{Arc, Mutex};
@@ -1801,6 +1801,28 @@ fn select_impl<H: UiHost>(
             )
             .resolve(&theme);
 
+            let default_bg = WidgetStateProperty::new(ColorRef::Token {
+                key: "component.input.bg",
+                fallback: ColorFallback::Color(Color::TRANSPARENT),
+            })
+            .when(
+                WidgetStates::HOVERED,
+                ColorRef::Token {
+                    key: "component.input.bg_hover",
+                    fallback: ColorFallback::Color(Color::TRANSPARENT),
+                },
+            )
+            .when(
+                WidgetStates::ACTIVE,
+                ColorRef::Token {
+                    key: "component.input.bg_hover",
+                    fallback: ColorFallback::Color(Color::TRANSPARENT),
+                },
+            );
+
+            let mut resolved_for_trigger = resolved;
+            resolved_for_trigger.background = default_bg.resolve(states).clone().resolve(&theme);
+
             let mut props = PressableProps {
                 layout: trigger_layout,
                 enabled,
@@ -3496,7 +3518,7 @@ fn select_impl<H: UiHost>(
                     layout.size.width = chrome_width;
                     layout
                 },
-                resolved,
+                resolved_for_trigger,
                 border_color,
             );
             if let Some(corners) = trigger_corner_radii_override {

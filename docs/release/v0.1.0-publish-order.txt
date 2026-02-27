@@ -6,31 +6,45 @@
 04. fret-icons
 05. fret-render-core
 06. fret-a11y-accesskit
-07. fret-dnd
-08. fret-platform
-09. fret-ui-headless
-10. fret-viewport-tooling
-11. fret-runtime
-12. fret-render-wgpu
-13. fret-runner-winit
-14. fret-platform-native
-15. fret-app
-16. fret-executor
-17. fret-platform-web
-18. fret-ui
-19. fret-render
-20. fret-runner-web
-21. fret-canvas
-22. fret-query
-23. fret-selector
-24. fret-ui-app
-25. fret-launch
-26. fret-router
-27. fret-authoring
-28. fret
-29. fret-ui-kit
-30. fret-node
-31. fret-ui-shadcn
+07. fret-diag-protocol
+08. fret-dnd
+09. fret-perf
+10. fret-platform
+11. fret-render-text
+12. fret-ui-headless
+13. fret-viewport-tooling
+14. fret-i18n-fluent
+15. fret-runtime
+16. fret-runner-winit
+17. fret-diag-ws
+18. fret-platform-native
+19. fret-render-wgpu
+20. fret-app
+21. fret-executor
+22. fret-interaction
+23. fret-platform-web
+24. fret-text-nav
+25. fret-render
+26. fret-icons-lucide
+27. fret-icons-radix
+28. fret-runner-web
+29. fret-ui
+30. fret-launch
+31. fret-canvas
+32. fret-query
+33. fret-selector
+34. fret-ui-app
+35. fret-ui-literals
+36. fret-framework
+37. fret-asset-cache
+38. fret-router
+39. fret-authoring
+40. fret-ui-kit
+41. fret-node
+42. fret-ui-assets
+43. fret-ui-shadcn
+44. fret-bootstrap
+45. fret
 
 # Commands
 cargo publish -p fret-core
@@ -39,28 +53,42 @@ cargo publish -p fret-i18n
 cargo publish -p fret-icons
 cargo publish -p fret-render-core
 cargo publish -p fret-a11y-accesskit
+cargo publish -p fret-diag-protocol
 cargo publish -p fret-dnd
+cargo publish -p fret-perf
 cargo publish -p fret-platform
+cargo publish -p fret-render-text
 cargo publish -p fret-ui-headless
 cargo publish -p fret-viewport-tooling
+cargo publish -p fret-i18n-fluent
 cargo publish -p fret-runtime
-cargo publish -p fret-render-wgpu
 cargo publish -p fret-runner-winit
+cargo publish -p fret-diag-ws
 cargo publish -p fret-platform-native
+cargo publish -p fret-render-wgpu
 cargo publish -p fret-app
 cargo publish -p fret-executor
+cargo publish -p fret-interaction
 cargo publish -p fret-platform-web
-cargo publish -p fret-ui
+cargo publish -p fret-text-nav
 cargo publish -p fret-render
+cargo publish -p fret-icons-lucide
+cargo publish -p fret-icons-radix
 cargo publish -p fret-runner-web
+cargo publish -p fret-ui
+cargo publish -p fret-launch
 cargo publish -p fret-canvas
 cargo publish -p fret-query
 cargo publish -p fret-selector
 cargo publish -p fret-ui-app
-cargo publish -p fret-launch
+cargo publish -p fret-ui-literals
+cargo publish -p fret-framework
+cargo publish -p fret-asset-cache
 cargo publish -p fret-router
 cargo publish -p fret-authoring
-cargo publish -p fret
 cargo publish -p fret-ui-kit
 cargo publish -p fret-node
+cargo publish -p fret-ui-assets
 cargo publish -p fret-ui-shadcn
+cargo publish -p fret-bootstrap
+cargo publish -p fret

@@ -45,7 +45,7 @@ pub(crate) fn clamp_text_ink_overflow_padding_to_bounds(
         return (Px(0.0), Px(0.0));
     }
 
-    let scale = (extra / requested_total).min(1.0).max(0.0);
+    let scale = (extra / requested_total).clamp(0.0, 1.0);
     (Px(requested_top.0 * scale), Px(requested_bottom.0 * scale))
 }
 
