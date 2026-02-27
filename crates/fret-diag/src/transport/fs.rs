@@ -338,23 +338,7 @@ impl State {
 }
 
 fn normalize_capability_string(raw: &str) -> String {
-    let raw = raw.trim();
-    if raw.is_empty() {
-        return String::new();
-    }
-    if raw.contains('.') {
-        return raw.to_string();
-    }
-
-    let mapped = match raw {
-        "script_v2" => "diag.script_v2",
-        "screenshot_png" => "diag.screenshot_png",
-        "multi_window" => "diag.multi_window",
-        "pointer_kind_touch" => "diag.pointer_kind_touch",
-        "gesture_pinch" => "diag.gesture_pinch",
-        _ => raw,
-    };
-    mapped.to_string()
+    crate::compat::normalize_capability_lossy(raw)
 }
 
 fn stamp_is_newer(slot: &mut Option<u64>, stamp: Option<u64>) -> bool {

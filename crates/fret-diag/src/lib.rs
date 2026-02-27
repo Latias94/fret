@@ -27,6 +27,7 @@ mod bundle_index;
 mod cli;
 mod commands;
 mod compare;
+mod compat;
 pub mod devtools;
 mod diag_compare;
 mod diag_matrix;
@@ -2944,7 +2945,7 @@ fn script_required_capabilities_value(value: &serde_json::Value) -> Vec<String> 
 
     let mut normalized: Vec<String> = required
         .into_iter()
-        .filter_map(|c| normalize_capability_string(&c))
+        .filter_map(|c| compat::normalize_capability(&c))
         .collect();
     normalized.sort();
     normalized.dedup();
@@ -3028,32 +3029,11 @@ fn read_filesystem_capabilities(out_dir: &Path) -> Vec<String> {
     let mut caps: Vec<String> = parsed
         .capabilities
         .into_iter()
-        .filter_map(|c| normalize_capability_string(&c))
+        .filter_map(|c| compat::normalize_capability(&c))
         .collect();
     caps.sort();
     caps.dedup();
     caps
-}
-
-fn normalize_capability_string(raw: &str) -> Option<String> {
-    let raw = raw.trim();
-    if raw.is_empty() {
-        return None;
-    }
-
-    if raw.contains('.') {
-        return Some(raw.to_string());
-    }
-
-    let mapped = match raw {
-        "script_v2" => "diag.script_v2",
-        "screenshot_png" => "diag.screenshot_png",
-        "multi_window" => "diag.multi_window",
-        "pointer_kind_touch" => "diag.pointer_kind_touch",
-        "gesture_pinch" => "diag.gesture_pinch",
-        _ => raw,
-    };
-    Some(mapped.to_string())
 }
 
 fn capabilities_check_v1(
@@ -3774,7 +3754,7 @@ fn connect_devtools_ws_tooling(
         .map(|s| s.capabilities.clone())
         .unwrap_or_default()
         .into_iter()
-        .filter_map(|c| normalize_capability_string(&c))
+        .filter_map(|c| compat::normalize_capability(&c))
         .collect();
     available_caps.sort();
     available_caps.dedup();
@@ -3826,7 +3806,7 @@ fn connect_filesystem_tooling(
         .map(|s| s.capabilities.clone())
         .unwrap_or_default()
         .into_iter()
-        .filter_map(|c| normalize_capability_string(&c))
+        .filter_map(|c| compat::normalize_capability(&c))
         .collect();
     available_caps.sort();
     available_caps.dedup();

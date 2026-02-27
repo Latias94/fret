@@ -124,7 +124,7 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
 ## P2: Box compatibility logic
 
 - [ ] Create `compat/` modules in tooling for:
-  - [ ] legacy capability aliases (`script_v2` → `diag.script_v2`, etc),
+  - [x] legacy capability aliases (`script_v2` → `diag.script_v2`, etc),
   - [ ] v1 bundle schema reading,
   - [ ] v1 script schema reading (if still supported).
 - [ ] Close multi-window gaps in schema v2 steps:
