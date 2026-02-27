@@ -27,9 +27,12 @@ This audit compares Fret’s shadcn-aligned `Badge` against the upstream shadcn/
 
 - Pass: Padding matches `px-2 py-0.5` and the chrome is `rounded-full`.
 - Pass: Default height matches `line-height (16px) + 2*py (4px) + 2*border (2px) = 22px`.
+- Pass: Label uses `font-medium` (not semibold).
+- Pass: Defaults to `shrink-0` and `overflow-hidden` so the badge behaves like shadcn's `inline-flex` chip in constrained rows.
 - Note: Width is label/font dependent, so we gate height only.
 
 ## Validation
 
 - Web layout gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_layout`
   (`web_vs_fret_layout_badge_demo_heights`).
+- Unit tests: `cargo nextest run -p fret-ui-shadcn badge_defaults_to_font_medium_and_shrink_0`.
