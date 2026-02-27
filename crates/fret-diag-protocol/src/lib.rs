@@ -1008,6 +1008,7 @@ pub enum UiPointerKindV1 {
     #[default]
     Mouse,
     Touch,
+    Pen,
 }
 
 #[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]

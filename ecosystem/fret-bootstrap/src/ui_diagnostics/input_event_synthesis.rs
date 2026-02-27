@@ -2,6 +2,7 @@ fn pointer_type_from_kind(kind: Option<UiPointerKindV1>) -> PointerType {
     match kind.unwrap_or_default() {
         UiPointerKindV1::Mouse => PointerType::Mouse,
         UiPointerKindV1::Touch => PointerType::Touch,
+        UiPointerKindV1::Pen => PointerType::Pen,
     }
 }
 

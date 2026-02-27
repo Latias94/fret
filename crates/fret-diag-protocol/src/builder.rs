@@ -120,6 +120,17 @@ impl ScriptV2Builder {
         })
     }
 
+    pub fn click_pen(self, target: UiSelectorV1) -> Self {
+        self.push(UiActionStepV2::Click {
+            window: None,
+            pointer_kind: Some(UiPointerKindV1::Pen),
+            target,
+            button: UiMouseButtonV1::Left,
+            click_count: 1,
+            modifiers: None,
+        })
+    }
+
     pub fn click_with_modifiers(self, target: UiSelectorV1, modifiers: UiKeyModifiersV1) -> Self {
         self.push(UiActionStepV2::Click {
             window: None,
@@ -145,6 +156,16 @@ impl ScriptV2Builder {
         self.push(UiActionStepV2::PointerDown {
             window: None,
             pointer_kind: Some(UiPointerKindV1::Touch),
+            target,
+            button: UiMouseButtonV1::Left,
+            modifiers: None,
+        })
+    }
+
+    pub fn pointer_down_pen(self, target: UiSelectorV1) -> Self {
+        self.push(UiActionStepV2::PointerDown {
+            window: None,
+            pointer_kind: Some(UiPointerKindV1::Pen),
             target,
             button: UiMouseButtonV1::Left,
             modifiers: None,

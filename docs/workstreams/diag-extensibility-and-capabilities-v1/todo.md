@@ -46,6 +46,10 @@ Doc: `docs/workstreams/diag-extensibility-and-capabilities-v1/capabilities.md`
   - [x] tooling infers required capability when a script requests `pointer_kind=touch`,
   - [x] add at least one small script/demo that exercises touch kind (and fails fast when unsupported):
     - [x] `tools/diag-scripts/ui-gallery/diag/ui-gallery-pointer-kind-touch-click-smoke.json`
+  - [x] add `pointer_kind=pen` support (and advertise `diag.pointer_kind_pen` when available),
+  - [x] tooling infers required capability when a script requests `pointer_kind=pen`,
+  - [x] add at least one small script/demo that exercises pen kind (and fails fast when unsupported):
+    - [x] `tools/diag-scripts/ui-gallery/diag/ui-gallery-pointer-kind-pen-click-smoke.json`
 
 ## Evidence & trace (debuggability surfaces)
 

@@ -732,8 +732,10 @@ Supported selectors (v1 MVP):
 Pointer kind note (as of 2026-02-27):
 
 - Pointer-driven steps support an optional `pointer_kind` field: `mouse` (default) or `touch`.
+- `pointer_kind: pen` is also supported, capability-gated behind `diag.pointer_kind_pen`.
 - `pointer_kind` is omitted from JSON when unset; existing scripts remain mouse-based.
 - Requesting `pointer_kind: touch` requires the runner to advertise `diag.pointer_kind_touch`.
+  Requesting `pointer_kind: pen` requires `diag.pointer_kind_pen`.
   Tooling fails fast and writes `check.capabilities.json` evidence when the capability is missing.
 - For cross-step pointer sessions (`pointer_down`/`pointer_move`/`pointer_up`), `pointer_down.pointer_kind` sets the
   session kind; `pointer_move`/`pointer_up` must either omit `pointer_kind` or match the session kind.

@@ -289,6 +289,7 @@ impl UiDiagnosticsEnvFingerprintV1 {
             capabilities.push("diag.screenshot_png".to_string());
         }
         capabilities.push("diag.pointer_kind_touch".to_string());
+        capabilities.push("diag.pointer_kind_pen".to_string());
         capabilities.push("diag.inject_ime".to_string());
         capabilities.push("diag.text_ime_trace".to_string());
         capabilities.push("diag.text_input_snapshot".to_string());

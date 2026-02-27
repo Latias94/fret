@@ -123,7 +123,7 @@ Runner note:
 
 Future direction:
 
-- (future) `pointer_kind=pen` ⇒ require `diag.pointer_kind_pen` (or a generic `diag.pointer_kind_pen`).
+- `pointer_kind=pen` ⇒ require `diag.pointer_kind_pen`.
 
 Non-goal (v1): multi-touch / pressure / tilt / contact geometry. These likely require a separate capability namespace and
 more explicit gesture-level steps (`tap`, `long_press`, `swipe`, `pinch`) rather than overloading mouse-style steps.

@@ -479,6 +479,9 @@ fn infer_required_capabilities_v2(script: &UiActionScriptV2) -> Vec<String> {
         if matches!(step_pointer_kind(step), Some(UiPointerKindV1::Touch)) {
             push_cap(&mut caps, "diag.pointer_kind_touch");
         }
+        if matches!(step_pointer_kind(step), Some(UiPointerKindV1::Pen)) {
+            push_cap(&mut caps, "diag.pointer_kind_pen");
+        }
     }
     caps
 }
@@ -605,5 +608,25 @@ mod tests {
         };
         let inferred = infer_required_capabilities_v2(&script);
         assert!(inferred.iter().any(|c| c == "diag.pointer_kind_touch"));
+    }
+
+    #[test]
+    fn lint_infers_pointer_kind_pen_capability() {
+        let script = UiActionScriptV2 {
+            schema_version: 2,
+            meta: None,
+            steps: vec![UiActionStepV2::Click {
+                window: None,
+                pointer_kind: Some(UiPointerKindV1::Pen),
+                target: UiSelectorV1::TestId {
+                    id: "pen-target".to_string(),
+                },
+                button: UiMouseButtonV1::Left,
+                click_count: 1,
+                modifiers: None,
+            }],
+        };
+        let inferred = infer_required_capabilities_v2(&script);
+        assert!(inferred.iter().any(|c| c == "diag.pointer_kind_pen"));
     }
 }
