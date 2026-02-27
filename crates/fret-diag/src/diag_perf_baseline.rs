@@ -32,7 +32,7 @@ pub(crate) fn cmd_perf_baseline_from_bundles(
     }
     if rest.len() < 2 {
         return Err(
-            "missing script path and bundle artifact paths (try: fretboard diag perf-baseline-from-bundles tools/diag-scripts/ui-gallery-image-object-fit-perf-steady.json .fret/diag/exports/1234)".to_string(),
+            "missing script path and bundle artifact paths (try: fretboard diag perf-baseline-from-bundles tools/diag-scripts/ui-gallery/perf/ui-gallery-image-object-fit-perf-steady.json .fret/diag/exports/1234)".to_string(),
         );
     }
 
