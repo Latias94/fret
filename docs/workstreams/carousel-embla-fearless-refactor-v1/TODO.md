@@ -1,6 +1,6 @@
 # Carousel (Embla) Fearless Refactor v1 — TODO
 
-Status: Draft
+Status: In progress (tracked + gated)
 
 Goal: Align Fret's shadcn-style `Carousel` recipe with shadcn/ui v4 expectations while keeping the
 core UI runtime mechanism-only. This workstream focuses on headless snap/contain semantics and
@@ -9,8 +9,12 @@ docs-aligned examples/diagnostics.
 Non-goals (v1):
 
 - Full Embla API surface (`setApi`, plugins, event subscriptions).
+- Full Embla plugin surface (plugin registry, events, arbitrary plugin chaining).
 - Momentum physics / drag-free scrolling.
 - Virtualization or lazy mounting of slides.
+
+Note: v1 *does* include a small, deterministic "API snapshot" surface and a recipe-level autoplay
+policy surface to align with shadcn docs examples without importing Embla's imperative API.
 
 Upstream references (local snapshots):
 
@@ -49,6 +53,12 @@ In-tree surfaces:
 - [x] CAR-110 Ensure UI gallery examples mirror upstream widths and spacing recipes.
   - Evidence: `apps/fret-ui-gallery/src/ui/pages/carousel.rs`
   - Gate: `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-*-screenshot.json`
+- [x] CAR-130 Support shadcn docs "Plugins / autoplay" outcome without exposing Embla plugins.
+  - Evidence:
+    - `ecosystem/fret-ui-shadcn/src/carousel.rs` (`CarouselAutoplayConfig`, `Carousel::autoplay`)
+    - `apps/fret-ui-gallery/src/ui/pages/carousel.rs` ("Plugin (Autoplay)" section)
+  - Gate:
+    - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-plugin-autoplay-pixels-changed.json`
 - [x] CAR-120 Keep pointer/gesture arbitration aligned with Embla expectations:
   - descendant click should work
   - drag should steal capture only after threshold
@@ -59,12 +69,17 @@ In-tree surfaces:
 - [x] CAR-210 Wire `snap_model_1d` into `ecosystem/fret-ui-shadcn/src/carousel.rs`:
   - prev/next uses snap list instead of `index * extent`
   - `canScrollPrev/Next` matches Embla-style semantics (disabled until measurable)
+- [x] CAR-215 Feed the snap model with *measured slide geometry* (per-item bounds), not a uniform
+  extent approximation.
+  - Evidence: `ecosystem/fret-ui-shadcn/src/carousel.rs` (snap input derived from item bounds)
 - [x] CAR-220 Add a minimal recipe-level option surface that stays policy-only:
   - `align` + `containScroll` + `slidesToScroll` (no Embla API exposure)
   - Evidence: `ecosystem/fret-ui-shadcn/src/carousel.rs`, `ecosystem/fret-ui-shadcn/src/lib.rs`
   - Note: upstream examples mix defaults + overrides:
     - `carousel-demo` / `carousel-spacing`: use Embla defaults (no `opts`)
     - `carousel-size` / `carousel-orientation`: use `opts={{ align: "start" }}`
+  - Note: a deterministic API snapshot surface exists to support shadcn "API" examples without
+    exposing Embla's imperative API (`CarouselApiSnapshot`).
 
 ## P3 — Evidence + guardrails
 
@@ -77,6 +92,7 @@ In-tree surfaces:
     - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-spacing-screenshot.json`
     - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-orientation-vertical-screenshot.json`
     - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-expandable-screenshot.json`
+    - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-plugin-autoplay-pixels-changed.json`
 - [x] CAR-320 Update `docs/audits/carousel-shadcn-embla-parity.md` with new evidence anchors.
   - Evidence: `docs/audits/carousel-shadcn-embla-parity.md`
 - [x] CAR-330 Run layering checks if any cross-crate refactors are required.

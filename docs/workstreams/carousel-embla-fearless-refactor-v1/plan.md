@@ -11,9 +11,16 @@ This plan summarizes what is already landed and proposes the next, highest-lever
   - Workstream contract: `docs/workstreams/carousel-embla-fearless-refactor-v1/snap-model-contract.md`
 - M2: Recipe integration + minimal options surface (`align`, `containScroll`, `slidesToScroll`)
   - `ecosystem/fret-ui-shadcn/src/carousel.rs`
+- M2.5: Measured slide geometry drives snap inputs (per-item bounds, first-frame fallback)
+  - `ecosystem/fret-ui-shadcn/src/carousel.rs`
 - M3: UI gallery parity with shadcn docs + deterministic geometry harness
   - `apps/fret-ui-gallery/src/ui/pages/carousel.rs`
   - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/carousel.rs`
+- M3.5: Docs parity extras (shadcn “API” + “Plugins” examples)
+  - API snapshot surface: `ecosystem/fret-ui-shadcn/src/carousel.rs` (`CarouselApiSnapshot`)
+  - Autoplay policy surface: `ecosystem/fret-ui-shadcn/src/carousel.rs` (`CarouselAutoplayConfig`)
+  - UI gallery demo: `apps/fret-ui-gallery/src/ui/pages/carousel.rs` ("Plugin (Autoplay)")
+  - Gate: `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-plugin-autoplay-pixels-changed.json`
 - P4: Carousel × DnD pointer arbitration (mouse handle path)
   - Decision + notes: `docs/workstreams/carousel-embla-fearless-refactor-v1/dnd-arbitration.md`
   - Policy hook: `fret-ui-shadcn::Carousel` skips swiping while a DnD sensor tracks the pointer.
@@ -29,6 +36,8 @@ Goal: turn the current alignment into stable, repeatable gates.
 
 - Add/refresh diag scripts so we can catch regressions without relying on manual UI runs:
   - `ui-gallery-carousel-*-screenshot.json` set should cover Demo/Sizes/Spacing/Vertical/Expandable.
+  - Autoplay should have a deterministic gate:
+    - `ui-gallery-carousel-plugin-autoplay-pixels-changed.json` + `--check-pixels-changed ui-gallery-carousel-plugin`
   - Interaction gate: `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-dnd-handle-gate.json` (Carousel vs DnD arbitration)
 - Add an audit note with evidence anchors (if the repo expects it):
   - `docs/audits/carousel-shadcn-embla-parity.md` (anchors: recipe + headless + tests + scripts).
@@ -37,6 +46,15 @@ Exit criteria:
 
 - A minimal diag suite can be executed in one command and produces screenshots/bundles with stable
   `test_id` selectors.
+
+### 1.5) Close any remaining visual drift (UI gallery)
+
+Goal: resolve any remaining shadcn docs mismatches found in the Carousel page demos.
+
+- If text wraps unexpectedly (e.g. “Item 1” splitting), treat it as a constraints/text-wrap
+  contract issue and gate it with a screenshot script.
+- If vertical orientation layout drifts, prefer fixing recipe constraints over adding new
+  layout-engine defaults.
 
 ### 2) Shared snap utilities (P4, optional but likely valuable)
 
