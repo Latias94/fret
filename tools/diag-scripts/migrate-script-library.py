@@ -435,6 +435,14 @@ def main() -> None:
         help="Starting directory used to locate repo root (default: .).",
     )
     ap.add_argument(
+        "--check-root",
+        action="store_true",
+        help=(
+            "Fail if canonical scripts exist directly under tools/diag-scripts/*.json "
+            "(redirect stubs are ignored)."
+        ),
+    )
+    ap.add_argument(
         "--scan-dir",
         action="append",
         default=[],
@@ -490,6 +498,7 @@ def main() -> None:
     args = ap.parse_args()
 
     repo_root = find_repo_root(Path(args.cwd))
+
     scan_dirs = [Path(s) for s in args.scan_dir]
     if not scan_dirs:
         scan_dirs = [SCRIPTS_DIR]
@@ -506,6 +515,24 @@ def main() -> None:
         exclude_name_globs=tuple(args.exclude_name_glob),
         limit=args.limit,
     )
+
+    if args.check_root:
+        root_files = list(iter_scripts_in_dir(repo_root, SCRIPTS_DIR))
+        ops = build_move_plan(repo_root, root_files, filters)
+        if ops:
+            print(
+                "error: canonical scripts found in tools/diag-scripts root that match the current filters "
+                "(taxonomy drift):"
+            )
+            for op in ops:
+                print(f"- {op.src}")
+            print(
+                "hint: run this migrator with --apply (optionally --write-redirects) to move them into the taxonomy.\n"
+                "hint: use --include-prefix/--include-category to scope checks to a migrated area."
+            )
+            raise SystemExit(2)
+        print("ok: no matching canonical scripts found in tools/diag-scripts root.")
+        return
 
     ops = build_move_plan(repo_root, files, filters)
 

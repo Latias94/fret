@@ -78,6 +78,9 @@ Tip (maintenance):
 
 3) Validate closures:
 
+- Taxonomy drift check (for already-migrated areas):
+  - `python tools/diag-scripts/migrate-script-library.py --check-root --include-prefix ui-gallery-`
+
 - Suites still run (redirect chains are supported):
   - `cargo run -p fretboard -- diag suite ui-gallery-select --launch -- cargo run -p fret-ui-gallery --release`
 - Scriptgen closure still holds:
