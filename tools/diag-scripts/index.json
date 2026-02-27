@@ -1370,6 +1370,27 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-pointer-kind-pen-click-smoke",
+      "path": "tools/diag-scripts/ui-gallery/diag/ui-gallery-pointer-kind-pen-click-smoke.json",
+      "required_capabilities": [
+        "diag.pointer_kind_pen",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery"
+      ],
+      "tags": [
+        "diag",
+        "pen",
+        "pointer-kind",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Exercises pen pointer injection via pointer_kind=pen.",
+        "Fails fast when the runner does not advertise diag.pointer_kind_pen."
+      ]
+    },
+    {
       "id": "ui-gallery-pointer-kind-touch-click-smoke",
       "path": "tools/diag-scripts/ui-gallery/diag/ui-gallery-pointer-kind-touch-click-smoke.json",
       "required_capabilities": [
