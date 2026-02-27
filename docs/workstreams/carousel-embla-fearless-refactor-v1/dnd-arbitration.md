@@ -1,6 +1,6 @@
 # Carousel × DnD Gesture Arbitration (CAR-430)
 
-Status: Implemented (mouse handle path). Touch long-press policy remains TODO.
+Status: Implemented (mouse handle + long-press path).
 
 Goal: define how a scroll-snap container (Carousel) should coexist with `fret-dnd` pointer sensors
 without breaking either "swipe to scroll" or "drag to reorder/tear-out".
@@ -58,6 +58,10 @@ Rationale: the user intent signal is explicit and avoids ambiguous gesture compe
 Rationale: on touch, "drag to scroll" is the dominant gesture; long-press is the common DnD intent
 signal.
 
+Note: current diag scripts synthesize pointer events as mouse input. The "long-press" gate uses the
+same delay+distance activation constraint to exercise the touch-friendly policy deterministically,
+even though it is not a true touch pointer stream.
+
 3) Keyboard:
 
 - Out of scope for v1 (DnD keyboard sensors are explicitly non-goals in ADR 0157).
@@ -102,3 +106,4 @@ Existing gates (ui-gallery):
 
 - Body swipe + buttons: `tools/diag-scripts/ui-gallery-carousel-demo-swipe-and-buttons.json`
 - Handle DnD arbitration: `tools/diag-scripts/ui-gallery-carousel-demo-dnd-handle-gate.json`
+- Long-press DnD arbitration: `tools/diag-scripts/ui-gallery-carousel-demo-dnd-long-press-gate.json`

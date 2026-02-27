@@ -108,3 +108,4 @@ keeping their higher-level semantics separate (Carousel vs Drawer vs Slider).
     - `ecosystem/fret-ui-shadcn/src/carousel.rs` (skip swipe when DnD sensor tracks the pointer)
     - `apps/fret-ui-gallery/src/ui/pages/carousel.rs` (demo handle wiring)
     - `tools/diag-scripts/ui-gallery-carousel-demo-dnd-handle-gate.json`
+    - `tools/diag-scripts/ui-gallery-carousel-demo-dnd-long-press-gate.json`

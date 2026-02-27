@@ -13,6 +13,7 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
             demo_inner_clicked: Option<Model<bool>>,
             demo_dnd_pointer: Option<Model<Option<fret_core::PointerId>>>,
             demo_dnd_dragging: Option<Model<bool>>,
+            demo_dnd_long_press_pointer: Option<Model<Option<fret_core::PointerId>>>,
             expandable_selected: Option<Model<Option<usize>>>,
         }
 
@@ -126,6 +127,20 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
     let demo_dnd_frame_id = cx.frame_id;
     let demo_dnd_scope = fret_ui_kit::dnd::DndScopeId(cx.root_id().0);
     let demo_dnd_service = fret_ui_kit::dnd::dnd_service_model(cx);
+
+    let demo_dnd_long_press_pointer = cx.with_state(CarouselPageState::default, |st| {
+        st.demo_dnd_long_press_pointer.clone()
+    });
+    let demo_dnd_long_press_pointer = match demo_dnd_long_press_pointer {
+        Some(model) => model,
+        None => {
+            let model: Model<Option<fret_core::PointerId>> = cx.app.models_mut().insert(None);
+            cx.with_state(CarouselPageState::default, |st| {
+                st.demo_dnd_long_press_pointer = Some(model.clone());
+            });
+            model
+        }
+    };
 
     let demo_slide = |cx: &mut ElementContext<'_, App>, idx: usize, visual: SlideVisual| {
         let theme = Theme::global(&*cx.app).clone();
@@ -333,6 +348,215 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
                 .test_id("ui-gallery-carousel-demo-dnd-handle");
 
             children.push(handle);
+
+            // Touch-friendly long-press DnD region. We gate this via a delay+distance activation
+            // constraint and keep it visually simple so it is easy to target in diag scripts.
+            let long_press_frame_id = demo_dnd_frame_id;
+            let long_press_scope = demo_dnd_scope;
+
+            let on_long_press_down_pointer = demo_dnd_long_press_pointer.clone();
+            let on_long_press_down_dragging = demo_dnd_dragging.clone();
+            let on_long_press_down_service = demo_dnd_service.clone();
+            let on_long_press_down: fret_ui::action::OnPointerDown = Arc::new(
+                move |host: &mut dyn fret_ui::action::UiPointerActionHost,
+                      action_cx: fret_ui::action::ActionCx,
+                      down: fret_ui::action::PointerDownCx| {
+                    if down.button != fret_core::MouseButton::Left {
+                        return false;
+                    }
+
+                    host.capture_pointer();
+                    let _ = host.models_mut().update(&on_long_press_down_pointer, |v| {
+                        *v = Some(down.pointer_id);
+                    });
+                    let _ = host
+                        .models_mut()
+                        .update(&on_long_press_down_dragging, |v| *v = false);
+
+                    let _ = fret_ui_kit::dnd::handle_pointer_down_in_scope(
+                        host.models_mut(),
+                        &on_long_press_down_service,
+                        action_cx.window,
+                        long_press_frame_id,
+                        DEMO_DND_KIND,
+                        long_press_scope,
+                        down.pointer_id,
+                        down.position,
+                        down.tick_id,
+                        fret_ui_kit::dnd::ActivationConstraint::DelayAndDistance {
+                            ticks: 12,
+                            px: 6.0,
+                        },
+                        fret_ui_kit::dnd::CollisionStrategy::ClosestCenter,
+                        None,
+                    );
+
+                    host.request_redraw(action_cx.window);
+                    true
+                },
+            );
+
+            let on_long_press_move_pointer = demo_dnd_long_press_pointer.clone();
+            let on_long_press_move_dragging = demo_dnd_dragging.clone();
+            let on_long_press_move_service = demo_dnd_service.clone();
+            let on_long_press_move: fret_ui::action::OnPointerMove = Arc::new(
+                move |host: &mut dyn fret_ui::action::UiPointerActionHost,
+                      action_cx: fret_ui::action::ActionCx,
+                      mv: fret_ui::action::PointerMoveCx| {
+                    let tracked = host
+                        .models_mut()
+                        .read(&on_long_press_move_pointer, |v| *v)
+                        .ok()
+                        .flatten()
+                        .is_some_and(|id| id == mv.pointer_id);
+                    if !tracked {
+                        return false;
+                    }
+
+                    let update = fret_ui_kit::dnd::handle_pointer_move_in_scope(
+                        host.models_mut(),
+                        &on_long_press_move_service,
+                        action_cx.window,
+                        long_press_frame_id,
+                        DEMO_DND_KIND,
+                        long_press_scope,
+                        mv.pointer_id,
+                        mv.position,
+                        mv.tick_id,
+                        fret_ui_kit::dnd::ActivationConstraint::DelayAndDistance {
+                            ticks: 12,
+                            px: 6.0,
+                        },
+                        fret_ui_kit::dnd::CollisionStrategy::ClosestCenter,
+                        None,
+                    );
+
+                    if matches!(
+                        update.sensor,
+                        fret_ui_kit::dnd::SensorOutput::DragStart { .. }
+                            | fret_ui_kit::dnd::SensorOutput::DragMove { .. }
+                    ) {
+                        let _ =
+                            host.models_mut()
+                                .update(&on_long_press_move_dragging, |v| *v = true);
+                    }
+
+                    host.request_redraw(action_cx.window);
+                    true
+                },
+            );
+
+            let on_long_press_up_pointer = demo_dnd_long_press_pointer.clone();
+            let on_long_press_up_dragging = demo_dnd_dragging.clone();
+            let on_long_press_up_service = demo_dnd_service.clone();
+            let on_long_press_up: fret_ui::action::OnPointerUp = Arc::new(
+                move |host: &mut dyn fret_ui::action::UiPointerActionHost,
+                      action_cx: fret_ui::action::ActionCx,
+                      up: fret_ui::action::PointerUpCx| {
+                    let tracked = host
+                        .models_mut()
+                        .read(&on_long_press_up_pointer, |v| *v)
+                        .ok()
+                        .flatten()
+                        .is_some_and(|id| id == up.pointer_id);
+                    if !tracked {
+                        return false;
+                    }
+
+                    let _ = fret_ui_kit::dnd::handle_pointer_up_in_scope(
+                        host.models_mut(),
+                        &on_long_press_up_service,
+                        action_cx.window,
+                        long_press_frame_id,
+                        DEMO_DND_KIND,
+                        long_press_scope,
+                        up.pointer_id,
+                        up.position,
+                        up.tick_id,
+                        fret_ui_kit::dnd::ActivationConstraint::DelayAndDistance {
+                            ticks: 12,
+                            px: 6.0,
+                        },
+                        fret_ui_kit::dnd::CollisionStrategy::ClosestCenter,
+                        None,
+                    );
+
+                    host.release_pointer_capture();
+                    let _ =
+                        host.models_mut()
+                            .update(&on_long_press_up_pointer, |v| *v = None);
+                    let _ =
+                        host.models_mut()
+                            .update(&on_long_press_up_dragging, |v| *v = false);
+                    host.request_redraw(action_cx.window);
+                    true
+                },
+            );
+
+            let on_long_press_cancel_pointer = demo_dnd_long_press_pointer.clone();
+            let on_long_press_cancel_dragging = demo_dnd_dragging.clone();
+            let on_long_press_cancel_service = demo_dnd_service.clone();
+            let on_long_press_cancel: fret_ui::action::OnPointerCancel = Arc::new(
+                move |host: &mut dyn fret_ui::action::UiPointerActionHost,
+                      action_cx: fret_ui::action::ActionCx,
+                      cancel: fret_ui::action::PointerCancelCx| {
+                    let tracked = host
+                        .models_mut()
+                        .read(&on_long_press_cancel_pointer, |v| *v)
+                        .ok()
+                        .flatten()
+                        .is_some_and(|id| id == cancel.pointer_id);
+                    if !tracked {
+                        return false;
+                    }
+
+                    let position = cancel.position.unwrap_or_else(|| host.bounds().origin);
+                    let _ = fret_ui_kit::dnd::handle_pointer_cancel_in_scope(
+                        host.models_mut(),
+                        &on_long_press_cancel_service,
+                        action_cx.window,
+                        long_press_frame_id,
+                        DEMO_DND_KIND,
+                        long_press_scope,
+                        cancel.pointer_id,
+                        position,
+                        cancel.tick_id,
+                        fret_ui_kit::dnd::ActivationConstraint::DelayAndDistance {
+                            ticks: 12,
+                            px: 6.0,
+                        },
+                        fret_ui_kit::dnd::CollisionStrategy::ClosestCenter,
+                        None,
+                    );
+
+                    host.release_pointer_capture();
+                    let _ = host
+                        .models_mut()
+                        .update(&on_long_press_cancel_pointer, |v| *v = None);
+                    let _ =
+                        host.models_mut()
+                            .update(&on_long_press_cancel_dragging, |v| *v = false);
+                    host.request_redraw(action_cx.window);
+                    true
+                },
+            );
+
+            let mut long_press_props = fret_ui::element::PointerRegionProps::default();
+            long_press_props.layout = decl_style::layout_style(
+                &theme,
+                LayoutRefinement::default().w_px(Px(96.0)).h_px(Px(28.0)),
+            );
+
+            let long_press = cx
+                .pointer_region(long_press_props, move |cx| {
+                    cx.pointer_region_on_pointer_down(on_long_press_down);
+                    cx.pointer_region_on_pointer_move(on_long_press_move);
+                    cx.pointer_region_on_pointer_up(on_long_press_up);
+                    cx.pointer_region_on_pointer_cancel(on_long_press_cancel);
+                    vec![ui::text(cx, "Long press").text_sm().into_element(cx)]
+                })
+                .test_id("ui-gallery-carousel-demo-dnd-long-press");
+            children.push(long_press);
 
             children.push(
                 shadcn::Button::new("Inner button")

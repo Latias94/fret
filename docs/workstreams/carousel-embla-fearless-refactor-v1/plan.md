@@ -17,7 +17,9 @@ This plan summarizes what is already landed and proposes the next, highest-lever
 - P4: Carousel × DnD pointer arbitration (mouse handle path)
   - Decision + notes: `docs/workstreams/carousel-embla-fearless-refactor-v1/dnd-arbitration.md`
   - Policy hook: `fret-ui-shadcn::Carousel` skips swiping while a DnD sensor tracks the pointer.
-  - Gate: `tools/diag-scripts/ui-gallery-carousel-demo-dnd-handle-gate.json`
+  - Gates:
+    - `tools/diag-scripts/ui-gallery-carousel-demo-dnd-handle-gate.json`
+    - `tools/diag-scripts/ui-gallery-carousel-demo-dnd-long-press-gate.json`
 
 ## Next steps (recommended order)
 
