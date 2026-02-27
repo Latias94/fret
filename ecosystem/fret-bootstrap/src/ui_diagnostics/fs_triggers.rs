@@ -95,7 +95,11 @@ impl UiDiagnosticsService {
                             unix_ms: unix_ms_now(),
                             kind: "bundle_dumped".to_string(),
                             step_index: pending.script_step_index,
-                            note: Some(pending.label.clone()),
+                            note: Some(format_bundle_dump_note(
+                                &pending.label,
+                                pending.dump_max_snapshots,
+                                pending.request_id,
+                            )),
                             bundle_dir: Some(bundle_dir.clone()),
                             window: None,
                             tick_id: None,
