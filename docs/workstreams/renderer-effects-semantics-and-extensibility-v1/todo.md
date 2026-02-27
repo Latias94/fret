@@ -112,17 +112,14 @@ if left unspecified.
     `docs/adr/0277-path-stroke-style-v2.md`.
   - Evidence (conformance): `crates/fret-render-wgpu/tests/dash_semantics_rrect_vs_path_conformance.rs`.
 
-- [ ] Path MSAA correctness on Vulkan:
-  - There is a known correctness risk for the MSAA path pipeline on Vulkan (currently gated by
-    `FRET_ALLOW_VULKAN_PATH_MSAA`).
-  - [x] Add a small regression gate that locks the safety valve behavior (MSAA disabled by default on Vulkan for
-    non-allowlisted adapters; allowlisted vendors may opt in by default).
-    - Evidence: `crates/fret-render-wgpu/tests/vulkan_path_msaa_visibility_conformance.rs`.
-  - [ ] Either fix the forced MSAA path (so the safety valve can be removed) or keep it deterministically disabled
-    (potentially narrowed via allowlists/blacklists as evidence arrives):
-    - Evidence (safety valve): `crates/fret-render-wgpu/src/renderer/config.rs`.
-    - Evidence (pipeline): `crates/fret-render-wgpu/src/renderer/pipelines/path.rs` and
-      `crates/fret-render-wgpu/src/renderer/render_scene/recorders/path_msaa.rs`.
+- [x] Path MSAA correctness on Vulkan:
+  - Default behavior matches GPUI: enable path MSAA when the target format supports resolves.
+  - Escape hatch: set `FRET_DISABLE_VULKAN_PATH_MSAA=1` to force the non-MSAA path pipeline if a driver
+    misbehaves.
+  - Evidence (config): `crates/fret-render-wgpu/src/renderer/config.rs`.
+  - Evidence (MSAA pass semantics): `crates/fret-render-wgpu/src/renderer/render_scene/recorders/path_msaa.rs`.
+  - Evidence (default + opt-out visibility): `crates/fret-render-wgpu/tests/vulkan_path_msaa_visibility_conformance.rs`.
+  - Evidence (multi-pass composite smoke): `crates/fret-render-wgpu/tests/path_msaa_composite_vulkan.rs`.
 
 ## P2 — Extensibility (bounded custom effects)
 

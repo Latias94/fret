@@ -109,5 +109,6 @@ Exit criteria:
   - One targeted conformance test compares a rect-like dashed path with a dashed `StrokeRRect`.
   - Evidence: `crates/fret-render-wgpu/tests/*dash*` and `crates/fret-render-wgpu/tests/path_stroke_style_v2_conformance.rs`.
 
-- Path MSAA correctness on Vulkan is either fixed or deterministically gated:
-  - Evidence: `crates/fret-render-wgpu/src/renderer/config.rs` and a small conformance/diag gate.
+- Path MSAA correctness on Vulkan is fixed (enabled by default when supported), with an emergency opt-out:
+  - Escape hatch: `FRET_DISABLE_VULKAN_PATH_MSAA=1`.
+  - Evidence: `crates/fret-render-wgpu/src/renderer/config.rs` and `crates/fret-render-wgpu/tests/vulkan_path_msaa_visibility_conformance.rs`.

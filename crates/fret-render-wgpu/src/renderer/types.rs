@@ -441,6 +441,8 @@ pub struct RenderPerfSnapshot {
     // Path MSAA observability (best-effort).
     pub path_msaa_samples_requested: u32,
     pub path_msaa_samples_effective: u32,
+    // Counts frames where Vulkan path MSAA was requested but degraded to non-MSAA (e.g. opt-out
+    // via env var). This is intended for diagnostics and may evolve over time.
     pub path_msaa_vulkan_safety_valve_degradations: u64,
 
     pub uniform_bytes: u64,

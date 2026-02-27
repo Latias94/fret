@@ -5,6 +5,7 @@ use fret_core::{FillStyle, PathCommand, PathConstraints, PathStyle};
 use fret_render_wgpu::{ClearColor, RenderSceneParams, Renderer, WgpuContext};
 use std::ffi::OsString;
 use std::sync::mpsc;
+use std::sync::{Mutex, OnceLock};
 
 struct EnvVarGuard {
     key: &'static str,
@@ -111,8 +112,17 @@ fn u(v: f32, sf: f32) -> u32 {
     (v * sf).round() as u32
 }
 
+fn env_lock() -> std::sync::MutexGuard<'static, ()> {
+    static ENV_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+    ENV_LOCK
+        .get_or_init(|| Mutex::new(()))
+        .lock()
+        .expect("ENV_LOCK poisoned")
+}
+
 #[test]
-fn vulkan_path_msaa_safety_valve_avoids_invisible_output() {
+fn vulkan_path_msaa_pipeline_is_visible_by_default() {
+    let _lock = env_lock();
     let ctx = match pollster::block_on(WgpuContext::new()) {
         Ok(ctx) => ctx,
         Err(_err) => {
@@ -123,15 +133,10 @@ fn vulkan_path_msaa_safety_valve_avoids_invisible_output() {
     if ctx.adapter.get_info().backend != wgpu::Backend::Vulkan {
         return;
     }
-    let allowlisted = ctx.adapter.get_info().vendor == 0x10DE;
 
-    // This test asserts the current "safety valve" behavior: path MSAA is disabled on Vulkan by
-    // default for non-allowlisted adapters because it has been observed to produce invisible output
-    // on some drivers.
-    //
-    // If the opt-in env var is already set (e.g. developer testing), skip to avoid a false
+    // If the opt-out env var is set (e.g. debugging a driver issue), skip to avoid a false
     // failure.
-    if std::env::var_os("FRET_ALLOW_VULKAN_PATH_MSAA").is_some() {
+    if std::env::var_os("FRET_DISABLE_VULKAN_PATH_MSAA").is_some() {
         return;
     }
 
@@ -226,26 +231,12 @@ fn vulkan_path_msaa_safety_valve_avoids_invisible_output() {
         .take_last_frame_perf_snapshot()
         .expect("perf snapshot");
     assert_eq!(snap.path_msaa_samples_requested, 4);
-    if allowlisted {
-        assert!(
-            snap.pipeline_switches_path_msaa > 0,
-            "expected Vulkan path MSAA pipeline to be enabled by default on allowlisted adapters; got pipeline_switches_path_msaa=0"
-        );
-        assert_eq!(snap.path_msaa_samples_effective, 4);
-        assert_eq!(snap.path_msaa_vulkan_safety_valve_degradations, 0);
-    } else {
-        assert!(
-            snap.pipeline_switches_path_msaa == 0,
-            "expected Vulkan path MSAA pipeline to be disabled by default; got pipeline_switches_path_msaa={}",
-            snap.pipeline_switches_path_msaa
-        );
-        assert_eq!(snap.path_msaa_samples_effective, 1);
-        assert!(
-            snap.path_msaa_vulkan_safety_valve_degradations >= 1,
-            "expected Vulkan MSAA safety valve to be observed; got path_msaa_vulkan_safety_valve_degradations={}",
-            snap.path_msaa_vulkan_safety_valve_degradations
-        );
-    }
+    assert!(
+        snap.pipeline_switches_path_msaa > 0,
+        "expected Vulkan path MSAA pipeline to be enabled by default; got pipeline_switches_path_msaa=0"
+    );
+    assert_eq!(snap.path_msaa_samples_effective, 4);
+    assert_eq!(snap.path_msaa_vulkan_safety_valve_degradations, 0);
 
     let pixels = read_texture_rgba8(&ctx.device, &ctx.queue, &target, viewport_size);
     let sample = pixel_rgba(&pixels, viewport_size.0, u(128.0, 1.0), u(128.0, 1.0));
@@ -256,8 +247,8 @@ fn vulkan_path_msaa_safety_valve_avoids_invisible_output() {
 }
 
 #[test]
-#[ignore = "Known issue: forcing Vulkan path MSAA can produce invisible output on some drivers"]
-fn vulkan_path_msaa_pipeline_is_visible_when_forced() {
+fn vulkan_path_msaa_can_be_disabled_via_env() {
+    let _lock = env_lock();
     let ctx = match pollster::block_on(WgpuContext::new()) {
         Ok(ctx) => ctx,
         Err(_err) => {
@@ -285,7 +276,7 @@ fn vulkan_path_msaa_pipeline_is_visible_when_forced() {
         return;
     }
 
-    let _env = EnvVarGuard::set("FRET_ALLOW_VULKAN_PATH_MSAA", "1");
+    let _env = EnvVarGuard::set("FRET_DISABLE_VULKAN_PATH_MSAA", "1");
 
     let mut renderer = Renderer::new(&ctx.adapter, &ctx.device);
     renderer.set_perf_enabled(true);
@@ -362,8 +353,15 @@ fn vulkan_path_msaa_pipeline_is_visible_when_forced() {
         .take_last_frame_perf_snapshot()
         .expect("perf snapshot");
     assert!(
-        snap.pipeline_switches_path_msaa > 0,
-        "expected Vulkan path MSAA pipeline to be used; got pipeline_switches_path_msaa=0"
+        snap.pipeline_switches_path_msaa == 0,
+        "expected Vulkan path MSAA pipeline to be disabled via env; got pipeline_switches_path_msaa={}",
+        snap.pipeline_switches_path_msaa
+    );
+    assert_eq!(snap.path_msaa_samples_effective, 1);
+    assert!(
+        snap.path_msaa_vulkan_safety_valve_degradations >= 1,
+        "expected Vulkan MSAA opt-out to be observed; got path_msaa_vulkan_safety_valve_degradations={}",
+        snap.path_msaa_vulkan_safety_valve_degradations
     );
 
     let pixels = read_texture_rgba8(&ctx.device, &ctx.queue, &target, viewport_size);

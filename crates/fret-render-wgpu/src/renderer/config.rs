@@ -493,29 +493,17 @@ impl Renderer {
         self.text_system.font_stack_key()
     }
 
-    pub(super) fn vulkan_path_msaa_is_allowlisted(&self) -> bool {
-        const VENDOR_NVIDIA: u32 = 0x10DE;
-        let info = self.adapter.get_info();
-        info.backend == wgpu::Backend::Vulkan && info.vendor == VENDOR_NVIDIA
-    }
-
     pub(super) fn effective_path_msaa_samples(&self, format: wgpu::TextureFormat) -> u32 {
         let requested = self.path_msaa_samples.max(1);
         if requested == 1 {
             return 1;
         }
 
-        // Temporary safety valve: the MSAA path intermediate + composite pipeline has been observed
-        // to produce invisible output on some Vulkan drivers. Until the root cause is fixed, prefer
-        // the non-MSAA path pipeline on Vulkan to preserve correctness.
-        //
-        // Set `FRET_ALLOW_VULKAN_PATH_MSAA=1` to opt back into the MSAA path pipeline for testing.
-        //
-        // We allowlist NVIDIA Vulkan adapters by default (local testing stability); keep the env
-        // var as the escape hatch for other drivers/adapters.
+        // Vulkan path MSAA can be disabled via env var as an emergency escape hatch for driver
+        // issues. Prefer the opt-out knob over backend allow/deny lists to match GPUI's default
+        // behavior ("enable when supported; disable only when needed").
         if self.adapter.get_info().backend == wgpu::Backend::Vulkan
-            && std::env::var_os("FRET_ALLOW_VULKAN_PATH_MSAA").is_none()
-            && !self.vulkan_path_msaa_is_allowlisted()
+            && std::env::var_os("FRET_DISABLE_VULKAN_PATH_MSAA").is_some()
         {
             static WARNED: OnceLock<()> = OnceLock::new();
             if WARNED.set(()).is_ok() {
@@ -526,7 +514,7 @@ impl Renderer {
                     device = info.device,
                     driver = info.driver,
                     driver_info = info.driver_info,
-                    "Vulkan path MSAA is disabled by default on this adapter (safety valve). Set FRET_ALLOW_VULKAN_PATH_MSAA=1 to opt in."
+                    "Vulkan path MSAA is disabled via FRET_DISABLE_VULKAN_PATH_MSAA=1."
                 );
             }
             return 1;
