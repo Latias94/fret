@@ -60,10 +60,26 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             rect: viewport_rect,
         });
 
+        let canvas_hint = if self.skin.is_some() {
+            self.graph
+                .read_ref(cx.app, |g| {
+                    self.skin
+                        .as_ref()
+                        .map(|skin| skin.canvas_chrome_hint(g, &self.style))
+                        .unwrap_or_default()
+                })
+                .ok()
+                .unwrap_or_default()
+        } else {
+            crate::ui::CanvasChromeHint::default()
+        };
+
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(0),
             rect: viewport_rect,
-            background: fret_core::Paint::Solid(self.style.background),
+            background: fret_core::Paint::Solid(
+                canvas_hint.background.unwrap_or(self.style.background),
+            ),
 
             border: Edges::all(Px(0.0)),
             border_paint: fret_core::Paint::TRANSPARENT,

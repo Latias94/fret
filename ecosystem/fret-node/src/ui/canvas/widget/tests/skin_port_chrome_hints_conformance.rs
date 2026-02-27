@@ -133,6 +133,7 @@ fn skin_port_chrome_hints_apply_fill_stroke_and_inner_scale_paint_only() {
         Point::new(Px(cx - 0.5 * expected_w), Px(cy - 0.5 * expected_h)),
         Size::new(Px(expected_w), Px(expected_h)),
     );
+    let expected_outer_rect = port_bounds;
 
     let approx = |a: f32, b: f32| (a - b).abs() <= 1.0e-3;
 
@@ -153,19 +154,18 @@ fn skin_port_chrome_hints_apply_fill_stroke_and_inner_scale_paint_only() {
         if *order != DrawOrder(4) {
             continue;
         }
-        if !approx(rect.origin.x.0, expected_rect.origin.x.0)
-            || !approx(rect.origin.y.0, expected_rect.origin.y.0)
-        {
-            continue;
-        }
-        if !approx(rect.size.width.0, expected_rect.size.width.0)
-            || !approx(rect.size.height.0, expected_rect.size.height.0)
-        {
-            continue;
-        }
-
         match (background, border_paint) {
             (&fret_core::Paint::Solid(c), _) if *border == fret_core::Edges::all(Px(0.0)) => {
+                if !approx(rect.origin.x.0, expected_rect.origin.x.0)
+                    || !approx(rect.origin.y.0, expected_rect.origin.y.0)
+                {
+                    continue;
+                }
+                if !approx(rect.size.width.0, expected_rect.size.width.0)
+                    || !approx(rect.size.height.0, expected_rect.size.height.0)
+                {
+                    continue;
+                }
                 if approx(c.r, expected_fill.r)
                     && approx(c.g, expected_fill.g)
                     && approx(c.b, expected_fill.b)
@@ -177,6 +177,16 @@ fn skin_port_chrome_hints_apply_fill_stroke_and_inner_scale_paint_only() {
             (&fret_core::Paint::TRANSPARENT, &fret_core::Paint::Solid(c))
                 if *border == fret_core::Edges::all(Px(2.0)) =>
             {
+                if !approx(rect.origin.x.0, expected_outer_rect.origin.x.0)
+                    || !approx(rect.origin.y.0, expected_outer_rect.origin.y.0)
+                {
+                    continue;
+                }
+                if !approx(rect.size.width.0, expected_outer_rect.size.width.0)
+                    || !approx(rect.size.height.0, expected_outer_rect.size.height.0)
+                {
+                    continue;
+                }
                 if approx(c.r, expected_stroke.r)
                     && approx(c.g, expected_stroke.g)
                     && approx(c.b, expected_stroke.b)

@@ -15,6 +15,7 @@ pub mod overlays;
 pub mod panel;
 pub mod portal;
 pub mod presenter;
+pub mod presets;
 pub mod registry;
 pub mod skin;
 pub mod style;
@@ -59,10 +60,11 @@ pub use presenter::{
     InsertNodeCandidate, NodeGraphContextMenuAction, NodeGraphContextMenuItem, NodeGraphPresenter,
     NodeResizeConstraintsPx, NodeResizeHandleSet, RegistryNodeGraphPresenter,
 };
+pub use presets::{NodeGraphPresetFamily, NodeGraphPresetSkinV1};
 pub use registry::{NodeGraphNodeRenderer, NodeGraphNodeTypes};
 pub use skin::{
-    EdgeChromeHint, NodeChromeHint, NodeGraphSkin, NodeGraphSkinRef, NodeRingHint,
-    NoopNodeGraphSkin, PortChromeHint, PortShapeHint,
+    CanvasChromeHint, EdgeChromeHint, InteractionChromeHint, NodeChromeHint, NodeGraphSkin,
+    NodeGraphSkinRef, NodeRingHint, NoopNodeGraphSkin, PortChromeHint, PortShapeHint,
 };
 pub use style::{NodeGraphColorMode, NodeGraphStyle};
 pub use view_queue::{

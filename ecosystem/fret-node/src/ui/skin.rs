@@ -13,6 +13,28 @@ use crate::core::{EdgeId, Graph, NodeId, PortId};
 use super::presenter::EdgeRenderHint;
 use super::style::NodeGraphStyle;
 
+/// Canvas-level chrome overrides (UI-only).
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
+pub struct CanvasChromeHint {
+    pub background: Option<Color>,
+    pub grid_minor: Option<Color>,
+    pub grid_major: Option<Color>,
+    /// Grid stroke thickness in screen-space logical px.
+    pub grid_line_width_px: Option<f32>,
+}
+
+/// Interaction-level chrome overrides (UI-only).
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
+pub struct InteractionChromeHint {
+    pub hover: Option<Color>,
+    pub invalid: Option<Color>,
+    pub convertible: Option<Color>,
+    pub preview_wire: Option<Color>,
+    pub dash_preview: Option<DashPatternV1>,
+    pub dash_invalid: Option<DashPatternV1>,
+    pub dash_emphasis: Option<DashPatternV1>,
+}
+
 /// Per-node chrome overrides (UI-only).
 ///
 /// v1 is intentionally minimal and paint-only. Layout-affecting knobs should be added only with
@@ -105,6 +127,18 @@ pub trait NodeGraphSkin: Send + Sync {
         _selected: bool,
     ) -> NodeChromeHint {
         NodeChromeHint::default()
+    }
+
+    fn canvas_chrome_hint(&self, _graph: &Graph, _style: &NodeGraphStyle) -> CanvasChromeHint {
+        CanvasChromeHint::default()
+    }
+
+    fn interaction_chrome_hint(
+        &self,
+        _graph: &Graph,
+        _style: &NodeGraphStyle,
+    ) -> InteractionChromeHint {
+        InteractionChromeHint::default()
     }
 
     fn node_chrome_hint_with_state(

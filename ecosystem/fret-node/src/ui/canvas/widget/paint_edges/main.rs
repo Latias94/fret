@@ -317,6 +317,15 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             let focused_port_valid = self.interaction.focused_port_valid;
             let focused_port_convertible = self.interaction.focused_port_convertible;
 
+            let interaction_hint = if let Some(skin) = self.skin.as_ref() {
+                self.graph
+                    .read_ref(cx.app, |g| skin.interaction_chrome_hint(g, &self.style))
+                    .ok()
+                    .unwrap_or_default()
+            } else {
+                crate::ui::InteractionChromeHint::default()
+            };
+
             let focused_target =
                 focused_port.filter(|_| focused_port_valid || focused_port_convertible);
             let to = hovered_port
@@ -324,46 +333,44 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 .or(focused_target)
                 .and_then(|port| geom.port_center(port))
                 .unwrap_or(w.pos);
-            let color =
+            let invalid = interaction_hint.invalid.unwrap_or(Color {
+                r: 0.90,
+                g: 0.35,
+                b: 0.35,
+                a: 0.95,
+            });
+            let convertible = interaction_hint.convertible.unwrap_or(Color {
+                r: 0.95,
+                g: 0.75,
+                b: 0.20,
+                a: 0.95,
+            });
+            let preview = interaction_hint
+                .preview_wire
+                .unwrap_or(self.style.wire_color_preview);
+            let dash_invalid = interaction_hint.dash_invalid;
+            let dash_preview = interaction_hint.dash_preview;
+
+            let (color, dash) =
                 if hovered_port.is_some() && !hovered_port_valid && !hovered_port_convertible {
-                    Color {
-                        r: 0.90,
-                        g: 0.35,
-                        b: 0.35,
-                        a: 0.95,
-                    }
+                    (invalid, dash_invalid)
                 } else if hovered_port.is_some() && hovered_port_convertible && !hovered_port_valid
                 {
-                    Color {
-                        r: 0.95,
-                        g: 0.75,
-                        b: 0.20,
-                        a: 0.95,
-                    }
+                    (convertible, dash_preview)
                 } else if focused_port.is_some()
                     && !focused_port_valid
                     && !focused_port_convertible
                     && hovered_port.is_none()
                 {
-                    Color {
-                        r: 0.90,
-                        g: 0.35,
-                        b: 0.35,
-                        a: 0.95,
-                    }
+                    (invalid, dash_invalid)
                 } else if focused_port.is_some()
                     && focused_port_convertible
                     && !focused_port_valid
                     && hovered_port.is_none()
                 {
-                    Color {
-                        r: 0.95,
-                        g: 0.75,
-                        b: 0.20,
-                        a: 0.95,
-                    }
+                    (convertible, dash_preview)
                 } else {
-                    self.style.wire_color_preview
+                    (preview, dash_preview)
                 };
 
             let mut draw_preview = |from: Point| {
@@ -375,7 +382,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     zoom,
                     cx.scale_factor,
                     self.style.wire_width,
-                    None,
+                    dash,
                 ) {
                     cx.scene.push(SceneOp::Path {
                         order: DrawOrder(2),

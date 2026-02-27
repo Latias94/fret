@@ -129,6 +129,14 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         }
 
         let skin = self.skin.clone();
+        let interaction_hint = if let Some(skin) = skin.as_ref() {
+            self.graph
+                .read_ref(cx.app, |g| skin.interaction_chrome_hint(g, &self.style))
+                .ok()
+                .unwrap_or_default()
+        } else {
+            crate::ui::InteractionChromeHint::default()
+        };
         let focused_node = self.interaction.focused_node;
         for node in snapshot.selected_nodes.iter().copied() {
             let Some(node_geom) = geom.nodes.get(&node) else {
@@ -319,21 +327,21 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             && let Some((rect, color)) = resolve_port(port_id)
         {
             let border_color = if hovered_port_valid {
-                color
+                interaction_hint.hover.unwrap_or(color)
             } else if hovered_port_convertible {
-                Color {
+                interaction_hint.convertible.unwrap_or(Color {
                     r: 0.95,
                     g: 0.75,
                     b: 0.20,
                     a: 1.0,
-                }
+                })
             } else {
-                Color {
+                interaction_hint.invalid.unwrap_or(Color {
                     r: 0.90,
                     g: 0.35,
                     b: 0.35,
                     a: 1.0,
-                }
+                })
             };
             let pad = 2.0 / zoom;
             let hover_rect = Rect::new(
@@ -361,21 +369,21 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         {
             let border_color = if self.interaction.wire_drag.is_some() {
                 if focused_port_valid {
-                    color
+                    interaction_hint.hover.unwrap_or(color)
                 } else if focused_port_convertible {
-                    Color {
+                    interaction_hint.convertible.unwrap_or(Color {
                         r: 0.95,
                         g: 0.75,
                         b: 0.20,
                         a: 1.0,
-                    }
+                    })
                 } else {
-                    Color {
+                    interaction_hint.invalid.unwrap_or(Color {
                         r: 0.90,
                         g: 0.35,
                         b: 0.35,
                         a: 1.0,
-                    }
+                    })
                 }
             } else {
                 self.style.node_border_selected
