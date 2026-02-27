@@ -1,3 +1,4 @@
+use crate::ui::NodeChromeHint;
 use crate::ui::canvas::geometry::node_size_default_px;
 use crate::ui::canvas::widget::paint_render_data::RenderData;
 use crate::ui::canvas::widget::*;
@@ -40,6 +41,38 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         let corner = Px(self.style.node_corner_radius / zoom);
         let title_pad = self.style.node_padding / zoom;
         let title_h = self.style.node_header_height / zoom;
+
+        let node_hints: HashMap<GraphNodeId, NodeChromeHint> =
+            if let Some(skin) = self.skin.as_ref() {
+                self.graph
+                    .read_ref(cx.app, |g| {
+                        render
+                            .nodes
+                            .iter()
+                            .map(
+                                |(
+                                    node,
+                                    _rect,
+                                    is_selected,
+                                    _title,
+                                    _body,
+                                    _pin_rows,
+                                    _handles,
+                                    _hint,
+                                )| {
+                                    (
+                                        *node,
+                                        skin.node_chrome_hint(g, *node, &self.style, *is_selected),
+                                    )
+                                },
+                            )
+                            .collect()
+                    })
+                    .ok()
+                    .unwrap_or_default()
+            } else {
+                HashMap::new()
+            };
 
         if let Some(preview) = insert_node_drag_preview.as_ref() {
             let z = zoom.max(1.0e-6);
@@ -94,22 +127,50 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             }
         }
 
-        for (node, rect, is_selected, title, body, pin_rows, resize_handles) in &render.nodes {
+        for (node, rect, is_selected, title, body, pin_rows, resize_handles, _hint) in &render.nodes
+        {
             let rect = *rect;
+            let hint = node_hints.get(node).copied().unwrap_or_default();
+
+            let bg = hint.background.unwrap_or(self.style.node_background);
             let border_color = if *is_selected {
-                self.style.node_border_selected
+                hint.border_selected
+                    .or(hint.border)
+                    .unwrap_or(self.style.node_border_selected)
             } else {
-                self.style.node_border
+                hint.border.unwrap_or(self.style.node_border)
             };
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(3),
                 rect,
-                background: fret_core::Paint::Solid(self.style.node_background),
+                background: fret_core::Paint::Solid(bg),
 
                 border: Edges::all(Px(1.0 / zoom)),
                 border_paint: fret_core::Paint::Solid(border_color),
                 corner_radii: Corners::all(corner),
             });
+
+            if let Some(header_bg) = hint.header_background
+                && title_h.is_finite()
+                && title_h > 0.0
+            {
+                let h = title_h.min(rect.size.height.0);
+                let header_rect = Rect::new(rect.origin, Size::new(rect.size.width, Px(h)));
+                cx.scene.push(SceneOp::Quad {
+                    order: DrawOrder(3),
+                    rect: header_rect,
+                    background: fret_core::Paint::Solid(header_bg),
+
+                    border: Edges::all(Px(0.0)),
+                    border_paint: fret_core::Paint::TRANSPARENT,
+                    corner_radii: Corners {
+                        top_left: corner,
+                        top_right: corner,
+                        bottom_right: Px(0.0),
+                        bottom_left: Px(0.0),
+                    },
+                });
+            }
 
             let show_resize_handle = *is_selected
                 && (self
@@ -163,7 +224,10 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     order: DrawOrder(4),
                     origin: Point::new(text_x, text_y),
                     text: blob,
-                    paint: (self.style.context_menu_text).into(),
+                    paint: hint
+                        .title_text
+                        .unwrap_or(self.style.context_menu_text)
+                        .into(),
                     outline: None,
                     shadow: None,
                 });

@@ -1,4 +1,5 @@
 use super::*;
+use crate::ui::NodeChromeHint;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(in super::super) fn collect_render_data<H: UiHost>(
@@ -86,6 +87,11 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                                 continue;
                             };
                             let is_selected = selected.contains(&node);
+                            let hint = if let Some(skin) = this.skin.as_ref() {
+                                skin.node_chrome_hint(graph, node, &this.style, is_selected)
+                            } else {
+                                NodeChromeHint::default()
+                            };
                             let title = presenter.node_title(graph, node);
                             let (inputs, outputs) = node_ports(graph, node);
                             let pin_rows = inputs.len().max(outputs.len());
@@ -100,6 +106,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                                 body,
                                 pin_rows,
                                 resize_handles,
+                                hint,
                             ));
                             out.metrics.node_visible = out.metrics.node_visible.saturating_add(1);
 
@@ -133,6 +140,11 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                                 continue;
                             };
                             let is_selected = selected.contains(&node);
+                            let hint = if let Some(skin) = this.skin.as_ref() {
+                                skin.node_chrome_hint(graph, node, &this.style, is_selected)
+                            } else {
+                                NodeChromeHint::default()
+                            };
                             let title = presenter.node_title(graph, node);
                             let (inputs, outputs) = node_ports(graph, node);
                             let pin_rows = inputs.len().max(outputs.len());
@@ -147,6 +159,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                                 body,
                                 pin_rows,
                                 resize_handles,
+                                hint,
                             ));
                             out.metrics.node_visible = out.metrics.node_visible.saturating_add(1);
 

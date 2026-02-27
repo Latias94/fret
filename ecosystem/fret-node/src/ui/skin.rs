@@ -22,6 +22,10 @@ pub struct NodeChromeHint {
     pub background: Option<Color>,
     pub border: Option<Color>,
     pub border_selected: Option<Color>,
+    /// Optional node header background color (title strip).
+    pub header_background: Option<Color>,
+    /// Optional node title text color.
+    pub title_text: Option<Color>,
 }
 
 /// Per-edge chrome overrides (UI-only).

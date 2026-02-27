@@ -1,4 +1,5 @@
 use super::*;
+use crate::ui::NodeChromeHint;
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub(in crate::ui::canvas::widget) struct RenderMetrics {
@@ -26,6 +27,7 @@ pub(in super::super) struct RenderData {
         Option<Arc<str>>,
         usize,
         NodeResizeHandleSet,
+        NodeChromeHint,
     )>,
     pub(in super::super) pins: Vec<(PortId, Rect, Color)>,
     pub(in super::super) port_labels: HashMap<PortId, PortLabelRender>,

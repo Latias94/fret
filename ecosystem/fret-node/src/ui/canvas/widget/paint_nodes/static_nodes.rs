@@ -20,15 +20,59 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         let title_pad = self.style.node_padding / zoom;
         let title_h = self.style.node_header_height / zoom;
 
-        for (_node, rect, _is_selected, title, body, pin_rows, _resize_handles) in &render.nodes {
+        for (_node, rect, is_selected, title, body, pin_rows, _resize_handles, hint) in
+            &render.nodes
+        {
             let rect = *rect;
+            let background = hint.background.unwrap_or(self.style.node_background);
+            let border = if *is_selected {
+                hint.border_selected
+                    .or(hint.border)
+                    .unwrap_or(self.style.node_border_selected)
+            } else {
+                hint.border.unwrap_or(self.style.node_border)
+            };
+            let border_w = Px(1.0 / zoom);
+
             scene.push(SceneOp::Quad {
                 order: DrawOrder(3),
                 rect,
-                background: fret_core::Paint::Solid(self.style.node_background),
+                background: fret_core::Paint::Solid(background),
 
-                border: Edges::all(Px(1.0 / zoom)),
-                border_paint: fret_core::Paint::Solid(self.style.node_border),
+                border: Edges::all(Px(0.0)),
+                border_paint: fret_core::Paint::TRANSPARENT,
+
+                corner_radii: Corners::all(corner),
+            });
+
+            if let Some(color) = hint.header_background {
+                scene.push(SceneOp::Quad {
+                    order: DrawOrder(3),
+                    rect: Rect::new(
+                        rect.origin,
+                        Size::new(rect.size.width, Px(title_h.min(rect.size.height.0))),
+                    ),
+                    background: fret_core::Paint::Solid(color),
+
+                    border: Edges::all(Px(0.0)),
+                    border_paint: fret_core::Paint::TRANSPARENT,
+
+                    corner_radii: Corners {
+                        top_left: corner,
+                        top_right: corner,
+                        bottom_right: Px(0.0),
+                        bottom_left: Px(0.0),
+                    },
+                });
+            }
+
+            scene.push(SceneOp::Quad {
+                order: DrawOrder(3),
+                rect,
+                background: fret_core::Paint::TRANSPARENT,
+
+                border: Edges::all(border_w),
+                border_paint: fret_core::Paint::Solid(border),
 
                 corner_radii: Corners::all(corner),
             });
@@ -56,7 +100,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     order: DrawOrder(4),
                     origin: Point::new(text_x, text_y),
                     text: blob,
-                    paint: (self.style.context_menu_text).into(),
+                    paint: (hint.title_text.unwrap_or(self.style.context_menu_text)).into(),
                     outline: None,
                     shadow: None,
                 });
