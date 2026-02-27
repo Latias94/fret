@@ -105,7 +105,8 @@ required, inconsistent semantics, or transport divergence). Each item includes e
 - Evidence:
   - built-in suites are curated directory inputs via redirect stubs: `tools/diag-scripts/suites/` and
     `crates/fret-diag/src/diag_suite_scripts.rs`
-  - some suites/helpers still hard-code individual script paths: `crates/fret-diag/src/diag_suite.rs`
+  - `diag suite` no longer hard-codes script file lists; specialized harness suites are also directory-driven via
+    `tools/diag-scripts/suites/<suite-name>/`: `crates/fret-diag/src/diag_suite.rs`
 
 7) `diag perf <suite-name>` suite expansion drift risk (duplicate lists)
 
