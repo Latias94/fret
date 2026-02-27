@@ -100,6 +100,22 @@ Rules of thumb:
 shadcn/Radix sources assume DOM + CSS. In Fret, “matching upstream” often means translating CSS
 idioms into explicit scene operations and layout/paint contracts.
 
+**Tailwind layout constraints parity (don’t chase pixels yet)**
+
+shadcn UI “looks wrong” surprisingly often because a few layout constraints went missing during the
+port (classic symptoms: shrink-to-content containers, narrow columns, aggressive word wrapping).
+
+Before doing token work, verify the Tailwind → Fret constraint mapping is applied consistently:
+
+- `w-full` / `h-full`
+- `flex-1` (i.e. `flex: 1 1 0%`) + `min-w-0`
+- `items-stretch` vs `items-center` defaults
+- `overflow-x-auto` (often modeled as `ScrollArea(axis=X, type=Auto)`)
+
+Cheatsheet (canonical, kept in the app-builder skill for reuse):
+
+- `.agents/skills/fret-app-ui-builder/references/mind-models/mm-layout-and-sizing.md`
+
 Use this mini playbook to decide where to implement a visual parity fix and when it’s worth adding
 a new render primitive.
 
