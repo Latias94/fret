@@ -77,6 +77,8 @@ Exit criteria:
 - Compat fallbacks live in explicit `compat/` modules.
 - `triage.json` and/or `ai.packet.json` record when compat fallbacks were used.
 - Multi-window targeting semantics are consistent across selector-driven v2 steps (no silent “window-local only” gaps).
+  - Status (2026-02-27): selector-driven v2 steps now support optional `window` targeting and tooling infers
+    `diag.multi_window` when targeting “other windows”.
 
 Evidence anchors:
 

@@ -55,27 +55,36 @@ required, inconsistent semantics, or transport divergence). Each item includes e
 2) Window targeting is inconsistent across v2 steps
 
 - Why it matters: multi-window is a core Fret goal; scripts should not silently lose correctness when crossing windows.
-  Today only some steps carry an optional `window` target (e.g. `click` does; `click_stable` does not).
+- Status (2026-02-27): **mostly closed for selector-driven steps**. The script schema now supports optional `window`
+  targeting across the common selector-driven steps (including “stable” click/scroll flows), and tooling can infer
+  `diag.multi_window` when the target is an “other window”.
 - Evidence:
-  - `UiActionStepV2::Click` has `window`, but `ClickStable` does not: `crates/fret-diag-protocol/src/lib.rs`
-  - runtime `handle_click_step` supports window handoff; `handle_click_stable_step` is window-local only:
-    `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_pointer.rs`
+  - Step schema now carries `window` for stable click + scroll + pointer steps:
+    `crates/fret-diag-protocol/src/lib.rs`
+  - Tooling infers `diag.multi_window` when `window` targets require it:
+    `crates/fret-diag/src/script_tooling.rs`, `crates/fret-diag/src/lib.rs`
+  - Runtime routes the `window` target consistently for selector-driven steps:
+    `ecosystem/fret-bootstrap/src/ui_diagnostics/service.rs`
 
 3) Filesystem vs DevTools WS divergence: dump request metadata (labels) is lost in FS mode
 
 - Why it matters: transport divergence forces tooling to special-case behavior. For dumps, WS supports labels and request
   correlation; filesystem dump is currently just a `touch`, dropping metadata.
+- Status (2026-02-27): **closed**. Filesystem transport now supports a structured `dump.request.json` carrying dump
+  metadata; runtime consumes it for trigger-driven dumps.
 - Evidence:
-  - tooling maps `bundle.dump` to a touch and notes “does not currently support labels”:
-    `crates/fret-diag/src/transport/fs.rs`
+  - tooling writes `dump.request.json` + trigger touch: `crates/fret-diag/src/transport/fs.rs`
+  - runtime consumes the request: `ecosystem/fret-bootstrap/src/ui_diagnostics/fs_triggers.rs`
 
 4) Capabilities schema is minimal; runner identity is not surfaced
 
 - Why it matters: capabilities are a key contract surface; we benefit from optional `runner_kind` / `runner_version` /
   `protocol_versions` fields for auditability and easier triage.
+- Status (2026-02-27): **closed** (additive). `FilesystemCapabilitiesV1` now carries optional identity hints, and the
+  runtime emits them when available.
 - Evidence:
-  - `FilesystemCapabilitiesV1` only contains `capabilities`: `crates/fret-diag-protocol/src/lib.rs`
-  - runtime writes `capabilities.json`: `ecosystem/fret-bootstrap/src/ui_diagnostics/fs_triggers.rs`
+  - protocol schema: `crates/fret-diag-protocol/src/lib.rs`
+  - runtime emission: `ecosystem/fret-bootstrap/src/ui_diagnostics/fs_triggers.rs`
 
 5) Artifact v2 (manifest + chunks) is not yet the single source of truth
 
@@ -89,7 +98,8 @@ required, inconsistent semantics, or transport divergence). Each item includes e
 6) Script library layout is flat; discoverability and ownership do not scale
 
 - Why it matters: as scripts accumulate, a single `tools/diag-scripts/` folder becomes hard to navigate, review, and
-  refactor. It also makes suite definitions brittle when they rely on filenames rather than a stable registry.
+- Status (2026-02-27): **in progress**. A taxonomy + redirect strategy exists, but we still need enforcement to prevent
+  new scripts from landing back in the root and to reduce suite brittleness long-term (registry).
 - Evidence:
   - built-in suites are curated directory inputs via redirect stubs: `tools/diag-scripts/suites/` and
     `crates/fret-diag/src/diag_suite_scripts.rs`

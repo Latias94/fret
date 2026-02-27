@@ -50,6 +50,9 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
   - [x] add `script_redirect` stub support with loop detection,
   - [x] ensure redirects never reach the runtime (tooling resolves before push).
 - [x] Add a migration helper script (plan + apply moves + optional redirects/rewrite).
+- [ ] Add a guardrail so the taxonomy stays stable:
+  - [ ] `diag doctor` (or a dedicated lint command) warns when new scripts are added directly under `tools/diag-scripts/*.json`,
+  - [ ] document the expected target folders for common categories (ui-gallery, docking, tooling).
 - [ ] Execute incremental taxonomy migrations (small batches + redirects + closure checks):
   - [x] `ui-gallery/select` (17 scripts)
   - [x] `ui-gallery/combobox` (22 scripts)
@@ -127,9 +130,10 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
   - [x] legacy capability aliases (`script_v2` → `diag.script_v2`, etc),
   - [x] v1 bundle schema reading,
   - [x] v1 script schema reading (if still supported).
-- [ ] Close multi-window gaps in schema v2 steps:
-  - [ ] add optional `window` targeting to selector-driven steps that currently lack it (e.g. `click_stable`, `wheel`, pointer moves),
-  - [ ] update capability inference (keep using `diag.multi_window`) and ensure fail-fast gating.
+- [x] Close multi-window gaps in schema v2 steps:
+  - [x] add optional `window` targeting to selector-driven steps that currently lacked it (e.g. `click_stable`, `wheel`, pointer moves),
+  - [x] update capability inference (keep using `diag.multi_window`) and ensure fail-fast gating.
+  - [ ] (optional) consider adding `window` to `capture_screenshot` for “no-opinion” per-window evidence collection.
 - [x] Extend `FilesystemCapabilitiesV1` with optional identity fields (additive):
   - [x] `runner_kind`, `runner_version`,
   - [x] optional `protocol_versions`/`schemas` hints for tooling.
