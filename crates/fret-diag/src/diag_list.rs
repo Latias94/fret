@@ -111,8 +111,10 @@ hint: generate it via `python tools/check_diag_scripts_registry.py --write`",
             *counts.entry(s.as_str()).or_insert(0) += 1;
         }
     }
-    let mut suites: Vec<(String, usize)> =
-        counts.into_iter().map(|(k, v)| (k.to_string(), v)).collect();
+    let mut suites: Vec<(String, usize)> = counts
+        .into_iter()
+        .map(|(k, v)| (k.to_string(), v))
+        .collect();
 
     if let Some(needle) = opts.contains.as_deref() {
         let needle_lower = needle.to_ascii_lowercase();
