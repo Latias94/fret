@@ -111,7 +111,7 @@ For v1, percent-bearing spacing is treated as a *definite-only* contract:
 | Positioning regression tests (inset + margin) | `crates/fret-ui` | Landed | `crates/fret-ui/src/declarative/tests/layout/basics.rs` |
 | shadcn migration: carousel “basis-full” no longer needs px clamps | `fret-ui-shadcn` | Landed | `ecosystem/fret-ui-shadcn/src/carousel.rs` |
 | shadcn migration: sheet + drawer max-height clamps use fraction/fill | `fret-ui-shadcn` | Landed | `ecosystem/fret-ui-shadcn/src/sheet.rs` + `ecosystem/fret-ui-shadcn/src/drawer.rs` |
-| Evidence (UI): carousel screenshot gate | `tools/diag-scripts` | Landed | `tools/diag-scripts/ui-gallery-carousel-basic-screenshot.json` |
+| Evidence (UI): carousel screenshot gate | `tools/diag-scripts` | Landed | `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-basic-screenshot.json` |
 | Evidence (UI): sheet escape + focus-restore gate | `tools/diag-scripts` | Landed | `tools/diag-scripts/ui-gallery-sheet-escape-focus-restore.json` |
 | Evidence (UI): drawer docs smoke gate | `tools/diag-scripts` | Landed | `tools/diag-scripts/ui-gallery-drawer-docs-smoke.json` |
 
@@ -136,7 +136,7 @@ Follow-ups that are *out of scope* for this workstream should be tracked in thei
   - `cargo nextest run -p fret-ui -E "test(spacing_fraction_only_resolve_under_definite_available_space_in_measurement)"`
 - Targeted diag scripts (UI gallery):
   - Carousel basic screenshot gate:
-    - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-carousel-basic-screenshot.json --warmup-frames 5 --exit-after-run --launch -- cargo run -p fret-ui-gallery --release`
+    - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-basic-screenshot.json --warmup-frames 5 --exit-after-run --launch -- cargo run -p fret-ui-gallery --release`
   - Sheet escape + focus-restore gate:
     - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-sheet-escape-focus-restore.json --warmup-frames 5 --exit-after-run --launch -- cargo run -p fret-ui-gallery --release`
   - Drawer docs smoke gate:

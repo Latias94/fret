@@ -5,7 +5,7 @@ use fret_core::{AppWindowId, Point, PointerId, Rect};
 use fret_dnd::{PointerSensor, SensorEvent, compute_autoscroll, compute_dnd_over};
 use fret_runtime::{DragKindId, FrameId, ModelStore, TickId};
 
-use super::service::{DndServiceModel, update_dnd};
+use super::service::{DndServiceModel, read_dnd, update_dnd};
 use super::{
     ActivationConstraint, AutoScrollConfig, CollisionStrategy, DND_SCOPE_DEFAULT, DndScopeId,
     DndUpdate,
@@ -91,6 +91,23 @@ pub fn clear_pointer_default_scope(
     pointer_id: PointerId,
 ) {
     clear_pointer(models, svc, window, kind, pointer_id);
+}
+
+pub fn pointer_is_tracking_any_sensor(
+    models: &ModelStore,
+    svc: &DndServiceModel,
+    window: AppWindowId,
+    pointer_id: PointerId,
+) -> bool {
+    read_dnd(models, svc, |dnd| {
+        dnd.controller.windows.get(&window).is_some_and(|window| {
+            window
+                .sensors_by_key
+                .values()
+                .any(|sensor| sensor.is_tracking(pointer_id))
+        })
+    })
+    .unwrap_or(false)
 }
 
 #[allow(clippy::too_many_arguments)]
