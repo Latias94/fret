@@ -1029,6 +1029,28 @@
       ]
     },
     {
+      "id": "ui-gallery-gesture-swipe-smoke",
+      "path": "tools/diag-scripts/ui-gallery/diag/ui-gallery-gesture-swipe-smoke.json",
+      "required_capabilities": [
+        "diag.gesture_swipe",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery"
+      ],
+      "tags": [
+        "diag",
+        "gesture",
+        "swipe",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Exercises the intent-level swipe step (touch-first).",
+        "Waits for pointer.up in the diagnostics ring as proof of delivery.",
+        "Fails fast when the runner does not advertise diag.gesture_swipe."
+      ]
+    },
+    {
       "id": "ui-gallery-gesture-tap-smoke",
       "path": "tools/diag-scripts/ui-gallery/diag/ui-gallery-gesture-tap-smoke.json",
       "required_capabilities": [
