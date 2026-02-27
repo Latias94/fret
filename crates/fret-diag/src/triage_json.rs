@@ -1,6 +1,108 @@
-use std::path::Path;
+use std::collections::BTreeSet;
+use std::path::{Path, PathBuf};
 
 use crate::stats::{BundleStatsReport, BundleStatsSort};
+use fret_diag_protocol::{FilesystemCapabilitiesV1, UiScriptResultV1};
+
+fn candidate_sidecar_paths(bundle_dir: &Path, file_name: &str) -> [PathBuf; 2] {
+    [
+        bundle_dir.join(file_name),
+        bundle_dir.join("_root").join(file_name),
+    ]
+}
+
+fn compat_summary_for_bundle_path(bundle_path: &Path) -> serde_json::Value {
+    use serde_json::json;
+
+    let bundle_dir = bundle_path.parent();
+    let bundle_dir_has_schema2_sibling =
+        bundle_dir.is_some_and(|d| d.join("bundle.schema2.json").is_file());
+    let bundle_artifact_file_name = bundle_path
+        .file_name()
+        .and_then(|s| s.to_str())
+        .map(|s| s.to_string());
+
+    let bundle_schema_version = crate::compat::bundle::sniff_bundle_schema_version(bundle_path)
+        .ok()
+        .flatten();
+
+    let mut markers: BTreeSet<String> = BTreeSet::new();
+
+    if bundle_schema_version == Some(1) {
+        markers.insert("compat.bundle_schema_v1".to_string());
+    }
+
+    if bundle_artifact_file_name
+        .as_deref()
+        .is_some_and(|n| n.eq_ignore_ascii_case("bundle.json"))
+        && bundle_dir_has_schema2_sibling
+    {
+        markers.insert("compat.bundle_json_view_with_schema2_present".to_string());
+    }
+
+    let mut legacy_capabilities_present = false;
+    if let Some(bundle_dir) = bundle_dir {
+        for path in candidate_sidecar_paths(bundle_dir, "capabilities.json") {
+            if !path.is_file() {
+                continue;
+            }
+            let Ok(bytes) = std::fs::read(&path) else {
+                continue;
+            };
+            let Ok(caps) = serde_json::from_slice::<FilesystemCapabilitiesV1>(&bytes) else {
+                continue;
+            };
+            if caps.capabilities.iter().any(|c| !c.contains('.')) {
+                legacy_capabilities_present = true;
+                break;
+            }
+        }
+    }
+    if legacy_capabilities_present {
+        markers.insert("compat.legacy_capabilities_present".to_string());
+    }
+
+    let mut script_compat_event_kinds: BTreeSet<String> = BTreeSet::new();
+    let mut script_compat_events_total: u64 = 0;
+    if let Some(bundle_dir) = bundle_dir {
+        for path in candidate_sidecar_paths(bundle_dir, "script.result.json") {
+            if !path.is_file() {
+                continue;
+            }
+            let Ok(bytes) = std::fs::read(&path) else {
+                continue;
+            };
+            let Ok(res) = serde_json::from_slice::<UiScriptResultV1>(&bytes) else {
+                continue;
+            };
+            let Some(evidence) = res.evidence else {
+                continue;
+            };
+            for ev in evidence.event_log {
+                if ev.kind.starts_with("compat.") {
+                    script_compat_events_total = script_compat_events_total.saturating_add(1);
+                    if script_compat_event_kinds.len() < 20 {
+                        script_compat_event_kinds.insert(ev.kind);
+                    }
+                }
+            }
+        }
+    }
+    for k in &script_compat_event_kinds {
+        markers.insert(k.clone());
+    }
+
+    json!({
+        "schema_version": 1,
+        "bundle_schema_version": bundle_schema_version,
+        "bundle_artifact_file_name": bundle_artifact_file_name,
+        "bundle_dir_has_schema2_sibling": bundle_dir_has_schema2_sibling,
+        "legacy_capabilities_present": legacy_capabilities_present,
+        "script_compat_event_kinds": script_compat_event_kinds.into_iter().collect::<Vec<_>>(),
+        "script_compat_events_total": script_compat_events_total,
+        "markers": markers.into_iter().collect::<Vec<_>>(),
+    })
+}
 
 pub(crate) fn triage_json_from_stats(
     bundle_path: &Path,
@@ -420,6 +522,7 @@ pub(crate) fn triage_json_from_stats(
             "bundle_file_size_bytes": file_size_bytes,
             "trace_chrome_json_path": trace_chrome_path,
         },
+        "compat": compat_summary_for_bundle_path(bundle_path),
         "params": {
             "sort": sort.as_str(),
             "top": report.top.len(),
