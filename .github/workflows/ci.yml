@@ -86,6 +86,7 @@ jobs:
         run: >-
           cargo check
           -p fret-authoring -p fret-imui -p fret-ui-kit --features imui
+          -p fret-launch
           --target wasm32-unknown-unknown
 
   wasm_text_wrap:
