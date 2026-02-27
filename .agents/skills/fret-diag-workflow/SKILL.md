@@ -72,7 +72,7 @@ List promoted scripts (discoverability):
 4. Declare capabilities explicitly when the script is intentionally narrow:
    - Screenshots: `diag.screenshot_png`
    - Touch / pen injection: `diag.pointer_kind_touch`, `diag.pointer_kind_pen`
-   - Gestures: `diag.gesture_tap`, `diag.gesture_long_press`, `diag.gesture_pinch`
+   - Gestures: `diag.gesture_tap`, `diag.gesture_long_press`, `diag.gesture_swipe`, `diag.gesture_pinch`
 
 Tip: if the user says “it only happens with touch/pen”, use `pointer_kind` on pointer-driven steps (capability-gated).
 

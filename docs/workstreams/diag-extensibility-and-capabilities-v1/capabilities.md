@@ -44,6 +44,7 @@ Optional (future-proofing, gate first):
 - `diag.pointer_kind_pen`: pen pointer injection supported.
 - `diag.gesture_tap`: tap gesture step supported.
 - `diag.gesture_long_press`: long-press gesture step supported.
+- `diag.gesture_swipe`: swipe gesture step supported.
 - `diag.gesture_pinch`: pinch/zoom gesture steps supported.
 - `diag.text_ime_trace`: IME/composition evidence available in bundles/triage (not a step).
 - `diag.text_input_snapshot`: focused text input snapshot evidence available (selection/composition/cursor area).
@@ -162,6 +163,7 @@ Tooling can infer required capabilities from the presence of step variants:
 - coordinate-based steps (if added) ⇒ `diag.pointer_injection`
 - `tap` ⇒ `diag.gesture_tap`
 - `long_press` ⇒ `diag.gesture_long_press`
+- `swipe` ⇒ `diag.gesture_swipe`
 - `pinch` ⇒ `diag.gesture_pinch`
 
 Note: inference is “best effort”; `meta.required_capabilities` remains the explicit escape hatch.
