@@ -199,7 +199,7 @@ pub(crate) fn scripts_for_perf_suite_name(name: &str) -> Option<&'static [&'stat
         ]),
         "extras-marquee-steady" => Some(&["tools/diag-scripts/extras/extras-marquee-steady.json"]),
         "liquid-glass-backdrop-warp-steady" => {
-            Some(&["tools/diag-scripts/liquid-glass-backdrop-warp-steady.json"])
+            Some(&["tools/diag-scripts/renderer/effects/liquid-glass-backdrop-warp-steady.json"])
         }
         _ => None,
     }
