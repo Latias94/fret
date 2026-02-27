@@ -111,6 +111,16 @@ Add tests under `ecosystem/fret-node/src/ui/canvas/widget/tests/`:
 - `skin_per_node_header_palette_conformance.rs`
   - two nodes with different header palette hints must not share paint artifacts.
 
+Status (initial landing):
+
+- A minimal `NodeGraphSkin` surface exists: `ecosystem/fret-node/src/ui/skin.rs`
+- Edge dash is plumbed end-to-end for canvas wires via renderer-native `StrokeV2.dash`:
+  `ecosystem/fret-node/src/ui/presenter.rs` (`EdgeRenderHint.dash`) +
+  `ecosystem/fret-node/src/ui/canvas/paint.rs` (wire path cache key includes dash).
+- Conformance coverage exists for:
+  - dash affecting the wire path cache key,
+  - skin revision bumps not rebuilding geometry/spatial index.
+
 Recommended local gate:
 
 - `cargo nextest run -p fret-node skin dash style conformance`
@@ -121,4 +131,3 @@ Recommended local gate:
 - Style tokens: `ecosystem/fret-node/src/ui/style.rs`
 - Wire path builder (native dash entry point): `ecosystem/fret-node/src/ui/canvas/paint.rs`
 - Existing style conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/xyflow_style_conformance.rs`
-
