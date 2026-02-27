@@ -1823,6 +1823,10 @@ fn select_impl<H: UiHost>(
             let mut resolved_for_trigger = resolved;
             resolved_for_trigger.background = default_bg.resolve(states).clone().resolve(&theme);
 
+            // shadcn/ui v4 `SelectTrigger` uses `shadow-xs` by default.
+            let trigger_shadow_preset =
+                chrome.shadow.unwrap_or(fret_ui_kit::ShadowPreset::Xs);
+
             let mut props = PressableProps {
                 layout: trigger_layout,
                 enabled,
@@ -3537,6 +3541,19 @@ fn select_impl<H: UiHost>(
                 chrome.border.left = border;
             }
 
+            let shadow_radius = {
+                let c = chrome.corner_radii;
+                Px(c.top_left.0.max(c.top_right.0).max(c.bottom_right.0).max(c.bottom_left.0))
+            };
+            chrome.shadow = match trigger_shadow_preset {
+                fret_ui_kit::ShadowPreset::None => None,
+                fret_ui_kit::ShadowPreset::Xs => Some(decl_style::shadow_xs(&theme, shadow_radius)),
+                fret_ui_kit::ShadowPreset::Sm => Some(decl_style::shadow_sm(&theme, shadow_radius)),
+                fret_ui_kit::ShadowPreset::Md => Some(decl_style::shadow_md(&theme, shadow_radius)),
+                fret_ui_kit::ShadowPreset::Lg => Some(decl_style::shadow_lg(&theme, shadow_radius)),
+                fret_ui_kit::ShadowPreset::Xl => Some(decl_style::shadow_xl(&theme, shadow_radius)),
+            };
+
             let state_for_value_node = trigger_state.clone();
             let placeholder_for_value_node = placeholder.clone();
             let model_for_value_node = model.clone();
@@ -3550,7 +3567,7 @@ fn select_impl<H: UiHost>(
                             layout
                         },
                         direction: fret_core::Axis::Horizontal,
-                        gap: MetricRef::space(Space::N1p5).resolve(&theme).into(),
+                        gap: MetricRef::space(Space::N2).resolve(&theme).into(),
                         padding: Edges::all(Px(0.0)).into(),
                         justify: MainAlign::SpaceBetween,
                         align: CrossAlign::Center,
@@ -3659,11 +3676,87 @@ mod tests {
     use fret_core::{PathService, PathStyle, Point, Px, Rect, SemanticsRole, Size};
     use fret_core::{SvgId, SvgService, TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_runtime::{Effect, FrameId, TimerToken};
+    use fret_ui::element::{ElementKind, SpacingLength};
     use fret_ui::tree::UiTree;
 
     #[test]
     fn select_align_default_is_center() {
         assert_eq!(SelectAlign::default(), SelectAlign::Center);
+    }
+
+    #[test]
+    fn select_trigger_uses_shadow_xs_and_gap_2_like_shadcn() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        crate::shadcn_themes::apply_shadcn_new_york_v4(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Slate,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(360.0), Px(180.0)),
+        );
+
+        let value = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+
+        let el = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            "select-trigger-shadow-xs",
+            |cx| {
+                Select::new(value.clone(), open.clone())
+                    .trigger_test_id("select-trigger")
+                    .a11y_label("Select")
+                    .into_element(cx)
+            },
+        );
+
+        fn find_by_test_id<'a>(el: &'a AnyElement, id: &str) -> Option<&'a AnyElement> {
+            let matches = el
+                .semantics_decoration
+                .as_ref()
+                .and_then(|d| d.test_id.as_deref())
+                .is_some_and(|t| t == id);
+            if matches {
+                return Some(el);
+            }
+            for child in el.children.iter() {
+                if let Some(found) = find_by_test_id(child, id) {
+                    return Some(found);
+                }
+            }
+            None
+        }
+
+        let chrome_el =
+            find_by_test_id(&el, "select-trigger.chrome").expect("select trigger chrome");
+        let ElementKind::Container(chrome) = &chrome_el.kind else {
+            panic!("expected select trigger chrome to be a Container");
+        };
+        assert!(
+            chrome.shadow.is_some(),
+            "expected shadow-xs on select trigger"
+        );
+
+        let theme = Theme::global(&app).snapshot();
+        let expected_py = MetricRef::space(Space::N2).resolve(&theme);
+        assert_eq!(chrome.padding.top, SpacingLength::Px(expected_py));
+        assert_eq!(chrome.padding.bottom, SpacingLength::Px(expected_py));
+
+        fn find_first_flex<'a>(el: &'a AnyElement) -> Option<&'a FlexProps> {
+            match &el.kind {
+                ElementKind::Flex(props) => Some(props),
+                _ => el.children.iter().find_map(|c| find_first_flex(c)),
+            }
+        }
+
+        let flex = find_first_flex(chrome_el).expect("select trigger chrome flex");
+        let expected_gap = MetricRef::space(Space::N2).resolve(&theme);
+        assert_eq!(flex.gap, SpacingLength::Px(expected_gap));
     }
 
     #[test]

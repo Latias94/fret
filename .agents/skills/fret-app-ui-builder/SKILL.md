@@ -133,6 +133,8 @@ These are the most common places app authors get stuck. Keep the work **layered*
 ### Layout/overflow (avoid clipped focus rings)
 
 - Use token-driven layout/chrome via `UiBuilder` (declarative-only).
+- When porting from shadcn/Tailwind, align **layout constraints first** (e.g. `w-full`, `flex-1`, `items-stretch`, `min-w-0`) before chasing pixels/tokens:
+  - `references/mind-models/mm-layout-and-sizing.md`
 - Don’t clip focus rings by accident: keep the pressable/root overflow visible; clip only inside chrome.
 
 ### Interaction policy (press/dismiss/roving/typeahead/timers)

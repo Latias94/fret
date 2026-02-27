@@ -404,12 +404,24 @@ fn input_with_style_and_submit<H: UiHost>(
     props.text_style = text_style;
     props.layout.size = SizeStyle {
         width: Length::Fill,
-        height: Length::Px(resolved.min_height),
+        height: Length::Fill,
         min_width: Some(Length::Px(fret_core::Px(0.0))),
         ..Default::default()
     };
     props.layout.overflow = Overflow::Clip;
-    decl_style::apply_layout_refinement(theme, layout_override, &mut props.layout);
+
+    // shadcn/ui `Input` uses `shadow-xs`. The text input widget does not expose a shadow field in
+    // its chrome style, so we model the outcome by wrapping it in a shadow-only container.
+    let mut root_layout = decl_style::layout_style(
+        theme,
+        LayoutRefinement::default()
+            .w_full()
+            .min_w_0()
+            .h_px(resolved.min_height)
+            .merge(layout_override),
+    );
+    root_layout.overflow = fret_ui::element::Overflow::Visible;
+    let root_shadow = decl_style::shadow_xs(theme, resolved.radius);
 
     let model_for_hook = props.model.clone();
     let on_submit_hook = on_submit.clone();
@@ -441,6 +453,17 @@ fn input_with_style_and_submit<H: UiHost>(
         props
     });
 
+    let input = cx.container(
+        fret_ui::element::ContainerProps {
+            layout: root_layout,
+            background: None,
+            shadow: Some(root_shadow),
+            corner_radii: Corners::all(resolved.radius),
+            ..Default::default()
+        },
+        |_cx| vec![input],
+    );
+
     if disabled {
         cx.opacity(0.5, move |_cx| vec![input])
     } else {
@@ -451,6 +474,11 @@ fn input_with_style_and_submit<H: UiHost>(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Px, Rect, Size as CoreSize};
+    use fret_ui::element::{ElementKind, Length};
+    use fret_ui::elements;
 
     #[test]
     fn input_selection_color_uses_ring_50_in_shadcn_light_theme() {
@@ -481,5 +509,51 @@ mod tests {
         );
 
         assert_eq!(resolved.selection_color, expected);
+    }
+
+    #[test]
+    fn input_wraps_in_shadow_container_like_shadcn() {
+        let mut app = App::new();
+        crate::shadcn_themes::apply_shadcn_new_york_v4(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Slate,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(320.0), Px(120.0)),
+        );
+
+        let model = app.models_mut().insert(String::new());
+        let el =
+            elements::with_element_cx(&mut app, window, bounds, "input-shadow-wrapper", |cx| {
+                Input::new(model.clone())
+                    .a11y_label("Input")
+                    .into_element(cx)
+            });
+
+        let ElementKind::Container(root) = &el.kind else {
+            panic!(
+                "expected Input root to be a shadow container, got {:?}",
+                el.kind
+            );
+        };
+        assert!(
+            root.shadow.is_some(),
+            "expected Input to have shadow-xs wrapper"
+        );
+        assert_eq!(root.layout.size.width, Length::Fill);
+
+        let child = el.children.first().expect("shadow wrapper child");
+        let ElementKind::TextInput(props) = &child.kind else {
+            panic!(
+                "expected shadow wrapper child to be TextInput, got {:?}",
+                child.kind
+            );
+        };
+        assert_eq!(props.layout.size.width, Length::Fill);
+        assert_eq!(props.layout.size.height, Length::Fill);
     }
 }

@@ -2,6 +2,7 @@ use std::cell::Cell;
 use std::sync::Arc;
 use std::time::Duration;
 
+use fret_core::window::ColorScheme;
 use fret_core::{Color, Corners, DrawOrder, Edges, FontId, FontWeight, Px, TextStyle};
 use fret_icons::IconId;
 use fret_runtime::Model;
@@ -141,14 +142,32 @@ fn tabs_trigger_radius(theme: &ThemeSnapshot) -> Px {
 }
 
 fn tabs_trigger_bg_active(theme: &ThemeSnapshot) -> Color {
-    theme.color_token("background")
+    theme
+        .color_by_key("component.tabs.trigger.bg_active")
+        .unwrap_or_else(|| {
+            if theme.color_scheme == Some(ColorScheme::Dark) {
+                theme
+                    .color_by_key("component.input.bg")
+                    .unwrap_or_else(|| theme.color_token("background"))
+            } else {
+                theme.color_token("background")
+            }
+        })
 }
 
 fn tabs_trigger_border_active(theme: &ThemeSnapshot) -> Color {
     theme
-        .color_by_key("input")
-        .or_else(|| theme.color_by_key("border"))
-        .expect("missing theme token: input/border")
+        .color_by_key("component.tabs.trigger.border_active")
+        .unwrap_or_else(|| {
+            if theme.color_scheme == Some(ColorScheme::Dark) {
+                theme
+                    .color_by_key("input")
+                    .or_else(|| theme.color_by_key("border"))
+                    .unwrap_or_else(|| theme.color_token("border"))
+            } else {
+                Color::TRANSPARENT
+            }
+        })
 }
 
 fn tabs_trigger_border_width(theme: &ThemeSnapshot) -> Px {

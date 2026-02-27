@@ -294,6 +294,50 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
         colors.insert("component.tabs.trigger.fg_inactive".to_string(), fg);
     }
 
+    // shadcn new-york-v4 `TabsTrigger` active chrome:
+    // - light: `data-[state=active]:bg-background` (border stays transparent)
+    // - dark: `dark:data-[state=active]:bg-input/30 dark:data-[state=active]:border-input`
+    if !colors.contains_key("component.tabs.trigger.bg_active") {
+        let v = match scheme {
+            ShadcnColorScheme::Light => colors.get("background").cloned(),
+            ShadcnColorScheme::Dark => colors
+                .get("input")
+                .and_then(|input| with_oklch_alpha(input, 0.3))
+                .or_else(|| colors.get("background").cloned()),
+        };
+        if let Some(v) = v {
+            colors.insert("component.tabs.trigger.bg_active".to_string(), v);
+        }
+    }
+    if !colors.contains_key("component.tabs.trigger.border_active") {
+        let v = match scheme {
+            ShadcnColorScheme::Light => Some("#00000000".to_string()),
+            ShadcnColorScheme::Dark => colors
+                .get("input")
+                .cloned()
+                .or_else(|| colors.get("border").cloned()),
+        };
+        if let Some(v) = v {
+            colors.insert("component.tabs.trigger.border_active".to_string(), v);
+        }
+    }
+
+    // shadcn new-york-v4 `Switch` unchecked track background:
+    // - light: `data-[state=unchecked]:bg-input`
+    // - dark: `dark:data-[state=unchecked]:bg-input/80`
+    if !colors.contains_key("component.switch.track.bg_off") {
+        let v = match scheme {
+            ShadcnColorScheme::Light => colors.get("input").cloned(),
+            ShadcnColorScheme::Dark => colors
+                .get("input")
+                .and_then(|input| with_oklch_alpha(input, 0.8))
+                .or_else(|| colors.get("input").cloned()),
+        };
+        if let Some(v) = v {
+            colors.insert("component.switch.track.bg_off".to_string(), v);
+        }
+    }
+
     // shadcn new-york-v4 `RadioGroup` choice-card checked background:
     // - light: `bg-primary/5`
     // - dark: `bg-primary/10`
@@ -318,6 +362,15 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
         colors.insert("popover".to_string(), "oklch(0.269 0 0)".to_string());
         colors.insert("accent".to_string(), "oklch(0.371 0 0)".to_string());
         colors.insert("sidebar-ring".to_string(), "oklch(0.439 0 0)".to_string());
+    }
+
+    // shadcn new-york-v4 `NavigationMenuTrigger` open background:
+    // - `data-[state=open]:bg-accent/50`
+    if !colors.contains_key("component.navigation_menu.trigger.bg_open")
+        && let Some(accent) = colors.get("accent").cloned()
+    {
+        let v = with_oklch_alpha(&accent, 0.5).unwrap_or(accent);
+        colors.insert("component.navigation_menu.trigger.bg_open".to_string(), v);
     }
 
     let mut metrics: HashMap<String, f32> = HashMap::new();
@@ -1040,6 +1093,100 @@ mod tests {
                     .cloned(),
                 cfg_dark.colors.get("muted-foreground").cloned(),
                 "expected tabs inactive fg to match muted-foreground in dark scheme"
+            );
+
+            assert_eq!(
+                cfg_light
+                    .colors
+                    .get("component.tabs.trigger.bg_active")
+                    .cloned(),
+                cfg_light.colors.get("background").cloned(),
+                "expected tabs active bg to match background in light scheme"
+            );
+            assert_eq!(
+                cfg_light
+                    .colors
+                    .get("component.tabs.trigger.border_active")
+                    .cloned(),
+                Some("#00000000".to_string()),
+                "expected tabs active border to remain transparent in light scheme"
+            );
+            let input_dark = cfg_dark
+                .colors
+                .get("input")
+                .cloned()
+                .expect("missing input");
+            assert_eq!(
+                cfg_dark
+                    .colors
+                    .get("component.tabs.trigger.border_active")
+                    .cloned(),
+                Some(input_dark.clone()),
+                "expected tabs active border to match input in dark scheme"
+            );
+            assert_eq!(
+                cfg_dark
+                    .colors
+                    .get("component.tabs.trigger.bg_active")
+                    .cloned(),
+                Some(
+                    with_oklch_alpha(&input_dark, 0.3)
+                        .expect("shadcn new-york-v4 input token is oklch"),
+                ),
+                "expected tabs active bg to match input/30 in dark scheme"
+            );
+
+            assert_eq!(
+                cfg_light
+                    .colors
+                    .get("component.switch.track.bg_off")
+                    .cloned(),
+                cfg_light.colors.get("input").cloned(),
+                "expected switch off bg to match input in light scheme"
+            );
+            assert_eq!(
+                cfg_dark
+                    .colors
+                    .get("component.switch.track.bg_off")
+                    .cloned(),
+                Some(
+                    with_oklch_alpha(&input_dark, 0.8)
+                        .expect("shadcn new-york-v4 input token is oklch"),
+                ),
+                "expected switch off bg to match input/80 in dark scheme"
+            );
+
+            let accent_light = cfg_light
+                .colors
+                .get("accent")
+                .cloned()
+                .expect("missing accent");
+            let accent_dark = cfg_dark
+                .colors
+                .get("accent")
+                .cloned()
+                .expect("missing accent");
+            assert_eq!(
+                cfg_light
+                    .colors
+                    .get("component.navigation_menu.trigger.bg_open")
+                    .cloned(),
+                Some(
+                    with_oklch_alpha(&accent_light, 0.5)
+                        .expect("shadcn new-york-v4 accent token is oklch"),
+                ),
+                "expected nav-menu open bg to match accent/50 in light scheme"
+            );
+            assert_eq!(
+                cfg_dark
+                    .colors
+                    .get("component.navigation_menu.trigger.bg_open")
+                    .cloned(),
+                Some(
+                    with_oklch_alpha(&accent_dark, 0.5)
+                        .expect("shadcn new-york-v4 accent token is oklch"),
+                ),
+                "expected nav-menu open bg to match accent/50 in dark scheme"
             );
 
             let primary_light = cfg_light

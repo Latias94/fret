@@ -196,7 +196,8 @@ fn alert_with_patch<H: UiHost>(
             .border_color(ColorRef::Color(border))
             .text_color(ColorRef::Color(fg))
             .merge(chrome_override),
-        LayoutRefinement::default().merge(layout_override),
+        // shadcn/ui v4: Alert root uses `w-full` by default.
+        LayoutRefinement::default().w_full().merge(layout_override),
     );
 
     if let Some(from) = theme.color_by_key("foreground") {
