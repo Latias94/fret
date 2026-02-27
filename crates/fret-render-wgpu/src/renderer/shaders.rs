@@ -4,7 +4,11 @@ fn saturate(x: f32) -> f32 {
 }
 
 fn sdf_aa(sdf: f32) -> f32 {
-  return max(fwidth(sdf), 1e-4);
+  // `fwidth(sdf)` uses `abs(dpdx) + abs(dpdy)`, which makes diagonal edges (notably rounded
+  // corners) appear softer/thinner than axis-aligned edges. Using the isotropic gradient length
+  // keeps coverage more uniform across edge angles.
+  let g = vec2<f32>(dpdx(sdf), dpdy(sdf));
+  return max(length(g), 1e-4);
 }
 
 fn sdf_coverage_smooth(sdf: f32) -> f32 {
@@ -891,7 +895,7 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
     let alpha_inner = select(0.0, alpha_inner_raw, inner_valid);
 
     alpha_fill = alpha_inner;
-    border_cov = saturate(alpha_outer - alpha_inner);
+    border_cov = alpha_outer * (1.0 - alpha_inner);
   }
 
   let fill = paint_eval_fill(inst.fill_paint, input.local_pos) * alpha_fill;
