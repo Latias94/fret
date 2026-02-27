@@ -147,7 +147,9 @@ impl FormField {
         }
 
         if show_error && let Some(err) = error {
-            children.push(FormMessage::new(err).into_element(cx));
+            if !err.trim().is_empty() {
+                children.push(FormMessage::new(err).into_element(cx));
+            }
         }
 
         FormItem::new(children).into_element(cx)

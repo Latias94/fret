@@ -10,6 +10,7 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::control_registry::{ControlId, LabelEntry, control_registry_model};
 use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::field_state as field_state_prim;
+use fret_ui_kit::theme_tokens;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space, ui};
 
 fn muted_foreground(theme: &ThemeSnapshot) -> fret_core::Color {
@@ -984,10 +985,14 @@ impl FieldDescription {
             let fg = muted_foreground(&theme);
             let px = theme
                 .metric_by_key("component.field.description_px")
+                .or_else(|| theme.metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_PX))
                 .or_else(|| theme.metric_by_key("font.size"))
                 .unwrap_or_else(|| theme.metric_token("font.size"));
             let line_height = theme
                 .metric_by_key("component.field.description_line_height")
+                .or_else(|| {
+                    theme.metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT)
+                })
                 .or_else(|| theme.metric_by_key("font.line_height"))
                 .unwrap_or_else(|| theme.metric_token("font.line_height"));
             (fg, px, line_height)
@@ -1027,10 +1032,14 @@ impl FieldError {
             let fg = theme.color_token("destructive");
             let px = theme
                 .metric_by_key("component.field.error_px")
+                .or_else(|| theme.metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_PX))
                 .or_else(|| theme.metric_by_key("font.size"))
                 .unwrap_or_else(|| theme.metric_token("font.size"));
             let line_height = theme
                 .metric_by_key("component.field.error_line_height")
+                .or_else(|| {
+                    theme.metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT)
+                })
                 .or_else(|| theme.metric_by_key("font.line_height"))
                 .unwrap_or_else(|| theme.metric_token("font.line_height"));
             (fg, px, line_height)
@@ -1242,7 +1251,8 @@ impl Field {
         field_state_prim::with_field_state_provider(cx, field_state, |cx| {
             let (gap, wrapper, inner_layout, muted, desc_mt_neg) = {
                 let theme = Theme::global(&*cx.app).snapshot();
-                let gap = MetricRef::space(Space::N3).resolve(&theme);
+                // shadcn/ui v4 `FormItem`: `grid gap-2`.
+                let gap = MetricRef::space(Space::N2).resolve(&theme);
                 let wrapper = decl_style::container_props(
                     &theme,
                     self.chrome,
@@ -1422,6 +1432,48 @@ mod tests {
         assert_eq!(
             element.semantics_decoration.as_ref().and_then(|d| d.role),
             Some(SemanticsRole::List)
+        );
+    }
+
+    #[test]
+    fn field_vertical_defaults_to_gap_2() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(120.0), Px(120.0)),
+        );
+
+        let theme = Theme::global(&app).snapshot();
+        let expected = MetricRef::space(Space::N2).resolve(&theme);
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            Field::new([cx.text("Label"), cx.text("Control")])
+                .orientation(FieldOrientation::Vertical)
+                .into_element(cx)
+        });
+
+        fn find_first_column_gap(el: &AnyElement) -> Option<Px> {
+            if let ElementKind::Column(props) = &el.kind {
+                return match props.gap {
+                    fret_ui::element::SpacingLength::Px(px) => Some(px),
+                    _ => None,
+                };
+            }
+            for child in &el.children {
+                if let Some(found) = find_first_column_gap(child) {
+                    return Some(found);
+                }
+            }
+            None
+        }
+
+        let gap = find_first_column_gap(&element).expect("field should contain a Column");
+        assert!(
+            (gap.0 - expected.0).abs() <= 0.5,
+            "expected Field gap≈{}px, got {}px",
+            expected.0,
+            gap.0
         );
     }
 }
