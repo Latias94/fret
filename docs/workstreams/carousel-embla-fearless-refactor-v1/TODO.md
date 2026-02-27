@@ -78,7 +78,8 @@ In-tree surfaces:
     - `tools/diag-scripts/ui-gallery-carousel-expandable-screenshot.json`
 - [x] CAR-320 Update `docs/audits/carousel-shadcn-embla-parity.md` with new evidence anchors.
   - Evidence: `docs/audits/carousel-shadcn-embla-parity.md`
-- [ ] CAR-330 Run layering checks if any cross-crate refactors are required.
+- [x] CAR-330 Run layering checks if any cross-crate refactors are required.
+  - Evidence: `python3 tools/check_layering.py`
 
 ## P4 — Shared snap utilities (cross-component, policy-only)
 
