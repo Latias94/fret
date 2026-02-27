@@ -68,8 +68,16 @@ In-tree surfaces:
 
 ## P3 — Evidence + guardrails
 
-- [ ] CAR-310 Add/refresh diagnostics scripts for reproducible regressions.
-- [ ] CAR-320 Update `docs/audits/carousel-shadcn-embla-parity.md` with new evidence anchors.
+- [x] CAR-310 Add/refresh diagnostics scripts for reproducible regressions.
+  - Evidence: `tools/diag-scripts/ui-gallery-carousel-*.json`
+    - `tools/diag-scripts/ui-gallery-carousel-demo-screenshot.json`
+    - `tools/diag-scripts/ui-gallery-carousel-basic-screenshot.json`
+    - `tools/diag-scripts/ui-gallery-carousel-sizes-screenshot.json`
+    - `tools/diag-scripts/ui-gallery-carousel-spacing-screenshot.json`
+    - `tools/diag-scripts/ui-gallery-carousel-orientation-vertical-screenshot.json`
+    - `tools/diag-scripts/ui-gallery-carousel-expandable-screenshot.json`
+- [x] CAR-320 Update `docs/audits/carousel-shadcn-embla-parity.md` with new evidence anchors.
+  - Evidence: `docs/audits/carousel-shadcn-embla-parity.md`
 - [ ] CAR-330 Run layering checks if any cross-crate refactors are required.
 
 ## P4 — Shared snap utilities (cross-component, policy-only)

@@ -1,6 +1,5 @@
 # Carousel parity: shadcn/ui v4 vs Embla vs Fret
 
-
 ## Upstream references (non-normative)
 
 This document references optional local checkouts under `repo-ref/` for convenience.
@@ -15,7 +14,7 @@ that should be addressed at the correct layer (mechanism vs policy/recipes).
 
 ## Sources of truth (local snapshots)
 
-- shadcn/ui v4 docs: `repo-ref/ui/apps/v4/content/docs/components/radix/carousel.mdx`
+- shadcn/ui v4 docs: `repo-ref/ui/apps/v4/content/docs/components/carousel.mdx`
 - shadcn/ui v4 component: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/carousel.tsx`
 - shadcn/ui v4 examples:
   - `repo-ref/ui/apps/v4/registry/new-york-v4/examples/carousel-demo.tsx`
@@ -29,6 +28,8 @@ that should be addressed at the correct layer (mechanism vs policy/recipes).
 ## Fret implementation (in-tree)
 
 - Component: `ecosystem/fret-ui-shadcn/src/carousel.rs`
+- Headless snap model: `ecosystem/fret-ui-headless/src/carousel.rs` (`snap_model_1d`)
+- Snap contract (workstream): `docs/workstreams/carousel-embla-fearless-refactor-v1/snap-model-contract.md`
 - UI gallery page: `apps/fret-ui-gallery/src/ui/pages/carousel.rs`
 - Web-vs-Fret layout harness: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/carousel.rs`
 
@@ -36,6 +37,11 @@ that should be addressed at the correct layer (mechanism vs policy/recipes).
 
 - **Layout composition (docs)**: negative track start margin + per-item start padding matches the
   shadcn spacing recipe (`-ml-*` on content + `pl-*` on items).
+- **Snap semantics (Embla-aligned, headless)**: deterministic snap model with Embla-like vocabulary:
+  `align` (start/center/end), `containScroll` (none/keepSnaps/trimSnaps), `slidesToScroll`
+  (fixed/auto), and `pixelTolerance` edge handling.
+- **Recipe-level `opts` (policy-only)**: shadcn-style `CarouselOptions` maps the docs examples:
+  `carousel-size` / `carousel-orientation` use `align: start`, while other examples rely on defaults.
 - **Orientation**: vertical tracks stack items and rotate controls; keyboard mapping stays left/right
   even in vertical mode (matching shadcn/ui behavior).
 - **Input correctness**: carousel dragging no longer swallows pointer-down events intended for
@@ -48,14 +54,16 @@ that should be addressed at the correct layer (mechanism vs policy/recipes).
 ### API surface
 
 - Upstream supports `opts`, `plugins`, and `setApi` (Embla API instance). Fret currently exposes a
-  deterministic “snap + buttons + swipe” surface only.
+  deterministic “snap + buttons + swipe” surface only; `opts` is supported only for snap model
+  semantics (not for the full Embla options set).
 - No event hook surface (e.g. `select`, `reInit`) because there is no `setApi` equivalent yet.
 - No carousel-internal “selected index” contract exposed to callers (required for slide counters).
 
 ### Behavior/physics
 
 - Embla provides momentum, snapping physics, and options like `loop`, `align`, `containScroll`,
-  `dragFree`, etc. Fret currently uses a fixed-tick settle animation and a single snap-per-item model.
+  `dragFree`, etc. Fret currently uses a fixed-tick settle animation (no momentum) and a snap model
+  derived from measured slide geometry.
 
 ### Accessibility semantics
 
@@ -98,4 +106,6 @@ or (b) only allow dragging from non-interactive blank areas (breaking upstream e
 ## Regression gates
 
 - Layout parity: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/carousel.rs`
+- Headless snap contract: `ecosystem/fret-ui-headless/src/carousel.rs` tests (nextest)
 - Interaction: `ecosystem/fret-ui-shadcn/tests/carousel_pointer_passthrough.rs`
+- Diagnostics (native screenshots): `tools/diag-scripts/ui-gallery-carousel-*-screenshot.json`
