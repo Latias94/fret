@@ -66,9 +66,45 @@ that should be addressed at the correct layer (mechanism vs policy/recipes).
 
 ### Behavior/physics
 
-- Embla provides momentum, snapping physics, and options like `loop`, `align`, `containScroll`,
-  `dragFree`, etc. Fret currently uses a fixed-tick settle animation (no momentum) and a snap model
-  derived from measured slide geometry.
+- Embla provides momentum + snapping physics (velocity, friction, edge constraints) and a seamless
+  loop engine (scroll + slide loopers). Fret intentionally stays deterministic and mechanism-light:
+  it uses a fixed-tick settle animation (no momentum) and a snap model derived from measured slide
+  geometry.
+- Fret does implement a *subset* of Embla options at the recipe/headless level (best-effort parity,
+  not a 1:1 port): `align`, `containScroll`, `slidesToScroll`, `duration`, `skipSnaps`, `dragFree`,
+  and a non-seamless `loop` selection wrap.
+
+## Embla options parity matrix (best-effort, subset)
+
+Source of truth: `repo-ref/embla-carousel/packages/embla-carousel/src/components/Options.ts`.
+
+Legend:
+
+- **Aligned**: same observable outcome for our supported surfaces.
+- **Partial**: similar outcome, but missing physics / edge cases / engine behavior.
+- **Not implemented**: no corresponding surface yet (or intentionally out of scope for v1).
+
+| Embla option | Default | Fret surface | Status | Notes |
+| --- | --- | --- | --- | --- |
+| `align` | `"center"` | `CarouselOptions.align` + `snap_model_1d` | **Aligned** | Snap positions match Embla fixtures for LTR. |
+| `containScroll` | `"trimSnaps"` | `CarouselOptions.contain_scroll` + `snap_model_1d` | **Aligned** | `None/KeepSnaps/TrimSnaps` vocabulary. |
+| `slidesToScroll` | `1` | `CarouselOptions.slides_to_scroll` + `snap_model_1d` | **Aligned** | Supports fixed and auto grouping. |
+| `dragThreshold` | `10` | `CarouselDragConfig.drag_threshold_px` | **Aligned** | Threshold-arms then steals capture. |
+| `duration` (ms) | `25` | `CarouselOptions.duration` | **Partial** | Mapped to deterministic settle frames; Embla varies duration based on force. |
+| `skipSnaps` | `false` | `CarouselOptions.skip_snaps` | **Partial** | Implemented at release by choosing the closest snap (no momentum). |
+| `dragFree` | `false` | `CarouselOptions.drag_free` | **Partial** | Settles to projected offset; no inertia scroll body. |
+| `loop` | `false` | `CarouselOptions.loop_enabled` | **Partial** | Wraps prev/next/keys and release neighbor selection; **not** Embla's seamless loop engine. |
+| `axis` | `"x"` | `CarouselOrientation` | **Partial** | Horizontal/vertical supported; not a generic axis + direction model. |
+| `direction` | `"ltr"` | (none) | **Not implemented** | RTL parity not audited yet. |
+| `startSnap` | `0` | (none) | **Not implemented** | Could be exposed as recipe option / controlled index. |
+| `draggable` | `true` | (none) | **Not implemented** | We currently auto-disable drag when `items_len <= 1`. |
+| `resize` | `true` | (none) | **Not implemented** | Re-init semantics are implicit via layout passes; no explicit option. |
+| `slideChanges` | `true` | (none) | **Not implemented** | No DOM mutation observer equivalent (not applicable). |
+| `focus` | `true` | (none) | **Not implemented** | No SlideFocus parity contract yet. |
+| `breakpoints` | `{}` | (none) | **Not implemented** | Use Fret container/viewport queries instead. |
+| `inViewThreshold` | `0` | (none) | **Not implemented** | No SlidesInView parity surface yet. |
+| `inViewMargin` | `"0px"` | (none) | **Not implemented** | No SlidesInView parity surface yet. |
+| `ssr` | `[]` | (none) | **Not implemented** | Not applicable for our renderer. |
 
 ### Accessibility semantics
 
