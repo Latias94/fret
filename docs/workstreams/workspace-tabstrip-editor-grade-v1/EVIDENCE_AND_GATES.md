@@ -40,6 +40,8 @@ Add promoted scripts under `tools/diag-scripts/workspace/**`:
 3) Overflow (resize) (invariants-first)
    - shrink tab strip width until overflow occurs
    - open overflow menu, activate a hidden tab, assert it becomes active and scrolls into view
+   - promoted script:
+     - `workspace-shell-demo-tab-overflow-activate-hidden-smoke`
 
 4) Drag-to-split preview (bridge)
    - promoted scripts:

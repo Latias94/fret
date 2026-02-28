@@ -3349,6 +3349,29 @@
       ]
     },
     {
+      "id": "workspace-shell-demo-tab-overflow-activate-hidden-smoke",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-overflow-activate-hidden-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "workspace-shell-demo"
+      ],
+      "tags": [
+        "gate",
+        "overflow",
+        "smoke",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": [
+        "Shrinks the window to force tab strip overflow.",
+        "Opens the overflow menu.",
+        "Selects a known tab entry from the overflow list.",
+        "Asserts the tab becomes selected."
+      ]
+    },
+    {
       "id": "workspace-shell-demo-tab-reorder-first-to-end-smoke",
       "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-reorder-first-to-end-smoke.json",
       "required_capabilities": [

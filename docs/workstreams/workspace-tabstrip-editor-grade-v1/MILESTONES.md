@@ -18,6 +18,8 @@ Outcomes:
     - `workspace-shell-demo-tab-middle-click-close-smoke`
   - close button behavior (smoke):
     - `workspace-shell-demo-tab-close-button-closes-tab-smoke`
+  - overflow activation (smoke):
+    - `workspace-shell-demo-tab-overflow-activate-hidden-smoke`
 
 Acceptance:
 - `python3 tools/check_diag_scripts_registry.py` passes.
