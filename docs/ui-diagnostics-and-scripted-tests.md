@@ -56,6 +56,18 @@ Implementation pointers (where the code lives today):
 
 By default bundles go under `target/fret-diag/<timestamp>/` and `target/fret-diag/latest.txt` is updated.
 
+Concurrency note (important for automation / AI agents):
+
+- The filesystem transport uses shared control-plane files under the out dir (`script.json`, `script.touch`,
+  `script.result.json`, `trigger.touch`, `latest.txt`, etc). **Do not** point multiple concurrent runs (multiple
+  terminals, multiple agents, or multiple demos) at the same `FRET_DIAG_DIR`.
+- Recommendation: treat `--dir` as a session boundary and always pass a unique out dir per agent/task:
+  - `cargo run -p fretboard -- diag run <script> --dir target/fret-diag-agent-a --launch -- <cmd...>`
+  - `cargo run -p fretboard -- diag suite <suite> --dir target/fret-diag-issue-1234 --launch -- <cmd...>`
+- If you are using `--launch`, prefer `--session-auto` so tooling allocates an isolated session dir automatically:
+  - `cargo run -p fretboard -- diag run <script> --dir target/fret-diag-agent-a --session-auto --launch -- <cmd...>`
+  - `cargo run -p fretboard -- diag suite <suite> --dir target/fret-diag-agent-a --session-auto --launch -- <cmd...>`
+
 ## Bundle schema (v2) and semantics mode
 
 The runtime exports **schema v2** bundles (semantics tables + per-snapshot fingerprints).

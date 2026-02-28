@@ -8,7 +8,7 @@
 use crate::{
     UiActionScriptV2, UiActionStepV2, UiImeEventV1, UiIncomingOpenInjectItemV1, UiKeyModifiersV1,
     UiMouseButtonV1, UiOverlayPlacementTraceQueryV1, UiPointerKindV1, UiPredicateV1, UiSelectorV1,
-    UiShortcutRoutingTraceQueryV1,
+    UiShortcutRoutingTraceQueryV1, UiWindowTargetV1,
 };
 
 pub fn test_id(id: impl Into<String>) -> UiSelectorV1 {
@@ -96,6 +96,24 @@ impl ScriptV2Builder {
 
     pub fn reset_diagnostics(self) -> Self {
         self.push(UiActionStepV2::ResetDiagnostics)
+    }
+
+    pub fn set_base_ref(self, target: UiSelectorV1) -> Self {
+        self.push(UiActionStepV2::SetBaseRef {
+            window: None,
+            target,
+        })
+    }
+
+    pub fn set_base_ref_in_window(self, window: UiWindowTargetV1, target: UiSelectorV1) -> Self {
+        self.push(UiActionStepV2::SetBaseRef {
+            window: Some(window),
+            target,
+        })
+    }
+
+    pub fn clear_base_ref(self) -> Self {
+        self.push(UiActionStepV2::ClearBaseRef)
     }
 
     pub fn click(self, target: UiSelectorV1) -> Self {

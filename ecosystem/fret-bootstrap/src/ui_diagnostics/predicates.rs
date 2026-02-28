@@ -192,6 +192,7 @@ fn eval_predicate(
     snapshot: &fret_core::SemanticsSnapshot,
     window_bounds: Rect,
     window: AppWindowId,
+    scope_root: Option<u64>,
     input_ctx: Option<&fret_runtime::InputContext>,
     element_runtime: Option<&ElementRuntime>,
     text_input_snapshot: Option<&fret_runtime::WindowTextInputSnapshot>,
@@ -206,19 +207,22 @@ fn eval_predicate(
     system_font_rescan_idle: bool,
     pred: &UiPredicateV1,
 ) -> bool {
+    let select_node = |target: &UiSelectorV1| {
+        select_semantics_node_scoped(snapshot, window, element_runtime, target, scope_root)
+    };
+
     match pred {
         UiPredicateV1::Exists { target } => {
-            select_semantics_node(snapshot, window, element_runtime, target).is_some()
+            select_node(target).is_some()
         }
         UiPredicateV1::NotExists { target } => {
-            select_semantics_node(snapshot, window, element_runtime, target).is_none()
+            select_node(target).is_none()
         }
         UiPredicateV1::FocusIs { target } => {
             let Some(focus) = snapshot.focus else {
                 return false;
             };
-            let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
-            else {
+            let Some(node) = select_node(target) else {
                 return false;
             };
             node.id == focus
@@ -227,50 +231,43 @@ fn eval_predicate(
             let Some(want) = parse_semantics_role(role) else {
                 return false;
             };
-            let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
-            else {
+            let Some(node) = select_node(target) else {
                 return false;
             };
             node.role == want
         }
         UiPredicateV1::LabelContains { target, text } => {
-            let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
-            else {
+            let Some(node) = select_node(target) else {
                 return false;
             };
             node.label.as_deref().is_some_and(|label| label.contains(text))
         }
         UiPredicateV1::ValueContains { target, text } => {
-            let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
-            else {
+            let Some(node) = select_node(target) else {
                 return false;
             };
             node.value.as_deref().is_some_and(|value| value.contains(text))
         }
         UiPredicateV1::PosInSetIs { target, pos_in_set } => {
-            let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
-            else {
+            let Some(node) = select_node(target) else {
                 return false;
             };
             node.pos_in_set == Some(*pos_in_set)
         }
         UiPredicateV1::SetSizeIs { target, set_size } => {
-            let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
-            else {
+            let Some(node) = select_node(target) else {
                 return false;
             };
             node.set_size == Some(*set_size)
         }
         UiPredicateV1::CheckedIs { target, checked } => {
-            let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
-            else {
+            let Some(node) = select_node(target) else {
                 return false;
             };
             node.flags.checked == Some(*checked)
         }
         UiPredicateV1::SelectedIs { target, selected } => {
-            let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
-            else {
+            let Some(node) = select_node(target) else {
                 return false;
             };
             node.flags.selected == *selected
@@ -281,8 +278,7 @@ fn eval_predicate(
             value,
             eps,
         } => {
-            let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
-            else {
+            let Some(node) = select_node(target) else {
                 return false;
             };
             let got = match field {
@@ -300,8 +296,7 @@ fn eval_predicate(
             got.is_finite() && want.is_finite() && eps.is_finite() && (got - want).abs() <= eps
         }
         UiPredicateV1::SemanticsScrollIsFinite { target, field } => {
-            let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
-            else {
+            let Some(node) = select_node(target) else {
                 return false;
             };
             let got = match field {
@@ -320,8 +315,7 @@ fn eval_predicate(
             value,
             eps,
         } => {
-            let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
-            else {
+            let Some(node) = select_node(target) else {
                 return false;
             };
             let got = match field {
@@ -345,8 +339,7 @@ fn eval_predicate(
             value,
             eps,
         } => {
-            let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
-            else {
+            let Some(node) = select_node(target) else {
                 return false;
             };
             let got = match field {
@@ -365,8 +358,7 @@ fn eval_predicate(
             got.is_finite() && want.is_finite() && eps.is_finite() && (got - want).abs() > eps
         }
         UiPredicateV1::TextCompositionIs { target, composing } => {
-            let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
-            else {
+            let Some(node) = select_node(target) else {
                 return false;
             };
             node.text_composition.is_some() == *composing
@@ -427,15 +419,13 @@ fn eval_predicate(
             area.size.width.0.max(0.0) + eps >= min_w && area.size.height.0.max(0.0) + eps >= min_h
         }
         UiPredicateV1::CheckedIsNone { target } => {
-            let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
-            else {
+            let Some(node) = select_node(target) else {
                 return false;
             };
             node.flags.checked.is_none()
         }
         UiPredicateV1::ActiveItemIs { container, item } => {
-            let Some(item_node) = select_semantics_node(snapshot, window, element_runtime, item)
-            else {
+            let Some(item_node) = select_node(item) else {
                 return false;
             };
 
@@ -443,18 +433,14 @@ fn eval_predicate(
                 return true;
             }
 
-            let Some(container_node) =
-                select_semantics_node(snapshot, window, element_runtime, container)
-            else {
+            let Some(container_node) = select_node(container) else {
                 return false;
             };
 
             container_node.active_descendant == Some(item_node.id)
         }
         UiPredicateV1::ActiveItemIsNone { container } => {
-            let Some(container_node) =
-                select_semantics_node(snapshot, window, element_runtime, container)
-            else {
+            let Some(container_node) = select_node(container) else {
                 return false;
             };
 
@@ -525,8 +511,7 @@ fn eval_predicate(
         UiPredicateV1::SystemFontRescanIdle => system_font_rescan_idle,
         UiPredicateV1::RunnerAccessibilityActivated => false,
         UiPredicateV1::VisibleInWindow { target } => {
-            let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
-            else {
+            let Some(node) = select_node(target) else {
                 return false;
             };
             rects_intersect(node.bounds, window_bounds)
@@ -537,8 +522,7 @@ fn eval_predicate(
             padding_insets_px,
             eps_px,
         } => {
-            let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
-            else {
+            let Some(node) = select_node(target) else {
                 return false;
             };
             let bounds = node.bounds;
@@ -605,8 +589,7 @@ fn eval_predicate(
             min_h_px,
             eps_px,
         } => {
-            let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
-            else {
+            let Some(node) = select_node(target) else {
                 return false;
             };
 
@@ -625,8 +608,7 @@ fn eval_predicate(
             max_h_px,
             eps_px,
         } => {
-            let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
-            else {
+            let Some(node) = select_node(target) else {
                 return false;
             };
 
@@ -640,10 +622,10 @@ fn eval_predicate(
             w <= max_w + eps && h <= max_h + eps
         }
         UiPredicateV1::BoundsApproxEqual { a, b, eps_px } => {
-            let Some(a) = select_semantics_node(snapshot, window, element_runtime, a) else {
+            let Some(a) = select_node(a) else {
                 return false;
             };
-            let Some(b) = select_semantics_node(snapshot, window, element_runtime, b) else {
+            let Some(b) = select_node(b) else {
                 return false;
             };
 
@@ -665,10 +647,10 @@ fn eval_predicate(
                 && (ah - bh).abs() <= eps
         }
         UiPredicateV1::BoundsCenterApproxEqual { a, b, eps_px } => {
-            let Some(a) = select_semantics_node(snapshot, window, element_runtime, a) else {
+            let Some(a) = select_node(a) else {
                 return false;
             };
-            let Some(b) = select_semantics_node(snapshot, window, element_runtime, b) else {
+            let Some(b) = select_node(b) else {
                 return false;
             };
 
@@ -691,10 +673,10 @@ fn eval_predicate(
             (acx - bcx).abs() <= eps && (acy - bcy).abs() <= eps
         }
         UiPredicateV1::BoundsNonOverlapping { a, b, eps_px } => {
-            let Some(a) = select_semantics_node(snapshot, window, element_runtime, a) else {
+            let Some(a) = select_node(a) else {
                 return false;
             };
-            let Some(b) = select_semantics_node(snapshot, window, element_runtime, b) else {
+            let Some(b) = select_node(b) else {
                 return false;
             };
 
@@ -716,10 +698,10 @@ fn eval_predicate(
             !(overlap_w > eps && overlap_h > eps)
         }
         UiPredicateV1::BoundsOverlapping { a, b, eps_px } => {
-            let Some(a) = select_semantics_node(snapshot, window, element_runtime, a) else {
+            let Some(a) = select_node(a) else {
                 return false;
             };
-            let Some(b) = select_semantics_node(snapshot, window, element_runtime, b) else {
+            let Some(b) = select_node(b) else {
                 return false;
             };
 
@@ -741,10 +723,10 @@ fn eval_predicate(
             overlap_w > eps && overlap_h > eps
         }
         UiPredicateV1::BoundsOverlappingX { a, b, eps_px } => {
-            let Some(a) = select_semantics_node(snapshot, window, element_runtime, a) else {
+            let Some(a) = select_node(a) else {
                 return false;
             };
-            let Some(b) = select_semantics_node(snapshot, window, element_runtime, b) else {
+            let Some(b) = select_node(b) else {
                 return false;
             };
 
@@ -760,10 +742,10 @@ fn eval_predicate(
             overlap_w > eps
         }
         UiPredicateV1::BoundsOverlappingY { a, b, eps_px } => {
-            let Some(a) = select_semantics_node(snapshot, window, element_runtime, a) else {
+            let Some(a) = select_node(a) else {
                 return false;
             };
-            let Some(b) = select_semantics_node(snapshot, window, element_runtime, b) else {
+            let Some(b) = select_node(b) else {
                 return false;
             };
 

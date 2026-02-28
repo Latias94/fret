@@ -78,6 +78,7 @@ pub(super) fn handle_move_pointer_sweep_step(
                 window,
                 element_runtime,
                 &target,
+                active.scope_root_for_window(window),
                 step_index as u32,
                 svc.cfg.redact_text,
                 &mut active.selector_resolution_trace,
