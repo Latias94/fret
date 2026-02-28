@@ -37,13 +37,16 @@ pub(super) fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                 shadcn::empty::EmptyMedia::new([icon(cx, "lucide.folder-search")])
                     .variant(shadcn::empty::EmptyMediaVariant::Icon)
                     .into_element(cx),
-                shadcn::empty::EmptyTitle::new("No Projects Yet").into_element(cx),
+                shadcn::empty::EmptyTitle::new("No Projects Yet")
+                    .into_element(cx)
+                    .test_id("ui-gallery-empty-demo-title"),
                 shadcn::empty::EmptyDescription::new(
                     "You haven't created any projects yet. Get started by creating your first project.",
                 )
                 .into_element(cx),
             ])
-            .into_element(cx),
+            .into_element(cx)
+            .test_id("ui-gallery-empty-demo-header"),
             shadcn::empty::EmptyContent::new([
                 shadcn::Button::new("Create Project").into_element(cx),
                 shadcn::Button::new("Import Project")
@@ -70,13 +73,16 @@ pub(super) fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                 shadcn::empty::EmptyMedia::new([icon(cx, "lucide.cloud")])
                     .variant(shadcn::empty::EmptyMediaVariant::Icon)
                     .into_element(cx),
-                shadcn::empty::EmptyTitle::new("Cloud Storage Empty").into_element(cx),
+                shadcn::empty::EmptyTitle::new("Cloud Storage Empty")
+                    .into_element(cx)
+                    .test_id("ui-gallery-empty-outline-title"),
                 shadcn::empty::EmptyDescription::new(
                     "Upload files to cloud storage to access them from any device.",
                 )
                 .into_element(cx),
             ])
-            .into_element(cx),
+            .into_element(cx)
+            .test_id("ui-gallery-empty-outline-header"),
             shadcn::empty::EmptyContent::new([shadcn::Button::new("Upload Files")
                 .variant(shadcn::ButtonVariant::Outline)
                 .size(shadcn::ButtonSize::Sm)
