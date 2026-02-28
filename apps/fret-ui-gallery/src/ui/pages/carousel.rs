@@ -25,7 +25,7 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
         line_height_px: Px,
     }
 
-    let slide = |cx: &mut ElementContext<'_, App>, idx: usize, visual: SlideVisual| {
+    let slide_card = |cx: &mut ElementContext<'_, App>, idx: usize, visual: SlideVisual| {
         let theme = Theme::global(&*cx.app).clone();
 
         let number = ui::text(cx, format!("{idx}"))
@@ -50,10 +50,17 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
             move |_cx| vec![number],
         );
 
-        let card = shadcn::Card::new([content]).into_element(cx);
-        ui::container(cx, move |_cx| vec![card])
-            .p_1()
-            .into_element(cx)
+        shadcn::Card::new([content]).into_element(cx)
+    };
+
+    let slide = |cx: &mut ElementContext<'_, App>, idx: usize, visual: SlideVisual| {
+        let card = slide_card(cx, idx, visual);
+        ui::container(cx, move |_cx| vec![card]).p_1().into_element(cx)
+    };
+
+    // API demo matches upstream `carousel-api`: no `p-1` wrapper around the card.
+    let slide_unwrapped = |cx: &mut ElementContext<'_, App>, idx: usize, visual: SlideVisual| {
+        slide_card(cx, idx, visual)
     };
 
     // Match shadcn/ui v4 docs example widths:
@@ -154,7 +161,19 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
             .font_semibold()
             .into_element(cx);
 
-        let mut children: Vec<AnyElement> = vec![number];
+        let base = cx.flex(
+            FlexProps {
+                layout: decl_style::layout_style(&theme, LayoutRefinement::default().size_full()),
+                direction: fret_core::Axis::Horizontal,
+                justify: MainAlign::Center,
+                align: CrossAlign::Center,
+                padding: Edges::all(Px(24.0)).into(),
+                ..Default::default()
+            },
+            move |_cx| vec![number],
+        );
+
+        let mut layered: Vec<AnyElement> = vec![base];
 
         if idx == 1 {
             let frame_id = demo_dnd_frame_id;
@@ -336,7 +355,12 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
             let mut props = fret_ui::element::PointerRegionProps::default();
             props.layout = decl_style::layout_style(
                 &theme,
-                LayoutRefinement::default().w_px(Px(28.0)).h_px(Px(28.0)),
+                LayoutRefinement::default()
+                    .absolute()
+                    .top(Space::N2)
+                    .right(Space::N2)
+                    .w_px(Px(28.0))
+                    .h_px(Px(28.0)),
             );
 
             let handle = cx
@@ -345,11 +369,11 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
                     cx.pointer_region_on_pointer_move(on_move);
                     cx.pointer_region_on_pointer_up(on_up);
                     cx.pointer_region_on_pointer_cancel(on_cancel);
-                    vec![ui::text(cx, "⋮⋮").text_sm().into_element(cx)]
+                    Vec::new()
                 })
                 .test_id("ui-gallery-carousel-demo-dnd-handle");
 
-            children.push(handle);
+            layered.push(handle);
 
             // Touch-friendly long-press DnD region. We gate this via a delay+distance activation
             // constraint and keep it visually simple so it is easy to target in diag scripts.
@@ -546,7 +570,12 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
             let mut long_press_props = fret_ui::element::PointerRegionProps::default();
             long_press_props.layout = decl_style::layout_style(
                 &theme,
-                LayoutRefinement::default().w_px(Px(96.0)).h_px(Px(28.0)),
+                LayoutRefinement::default()
+                    .absolute()
+                    .bottom(Space::N2)
+                    .left(Space::N2)
+                    .w_px(Px(96.0))
+                    .h_px(Px(28.0)),
             );
 
             let long_press = cx
@@ -555,27 +584,39 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
                     cx.pointer_region_on_pointer_move(on_long_press_move);
                     cx.pointer_region_on_pointer_up(on_long_press_up);
                     cx.pointer_region_on_pointer_cancel(on_long_press_cancel);
-                    vec![ui::text(cx, "Long press").text_sm().into_element(cx)]
+                    Vec::new()
                 })
                 .test_id("ui-gallery-carousel-demo-dnd-long-press");
-            children.push(long_press);
+            layered.push(long_press);
 
-            children.push(
-                shadcn::Button::new("Inner button")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .size(shadcn::ButtonSize::Sm)
+            layered.push(
+                shadcn::Button::new("")
+                    .variant(shadcn::ButtonVariant::Ghost)
+                    .size(shadcn::ButtonSize::IconSm)
+                    .refine_layout(
+                        LayoutRefinement::default()
+                            .absolute()
+                            .bottom(Space::N2)
+                            .right(Space::N2),
+                    )
                     .on_activate(toggle_demo_inner_clicked.clone())
                     .test_id("ui-gallery-carousel-demo-inner-button")
                     .into_element(cx),
             );
 
             if demo_inner_clicked_now {
-                children.push(
-                    ui::container(cx, move |cx| {
-                        vec![ui::text(cx, "clicked").text_sm().into_element(cx)]
-                    })
-                    .into_element(cx)
-                    .attach_semantics(
+                let props = decl_style::container_props(
+                    &theme,
+                    ChromeRefinement::default(),
+                    LayoutRefinement::default()
+                        .absolute()
+                        .top(Space::N2)
+                        .left(Space::N2)
+                        .w_px(Px(1.0))
+                        .h_px(Px(1.0)),
+                );
+                layered.push(
+                    cx.container(props, |_cx| Vec::new()).attach_semantics(
                         SemanticsDecoration::default()
                             .role(fret_core::SemanticsRole::Group)
                             .test_id("ui-gallery-carousel-demo-inner-clicked"),
@@ -584,32 +625,29 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
             }
 
             if demo_dnd_dragging_now {
-                children.push(
-                    ui::container(cx, move |cx| {
-                        vec![ui::text(cx, "dnd").text_sm().into_element(cx)]
-                    })
-                    .into_element(cx)
-                    .test_id("ui-gallery-carousel-demo-dnd-active"),
+                let props = decl_style::container_props(
+                    &theme,
+                    ChromeRefinement::default(),
+                    LayoutRefinement::default()
+                        .absolute()
+                        .top(Space::N2)
+                        .left(Space::N6)
+                        .w_px(Px(1.0))
+                        .h_px(Px(1.0)),
+                );
+                layered.push(
+                    cx.container(props, |_cx| Vec::new())
+                        .test_id("ui-gallery-carousel-demo-dnd-active"),
                 );
             }
         }
 
-        let gap = decl_style::space(&theme, Space::N3);
-        let content = cx.flex(
-            FlexProps {
-                layout: decl_style::layout_style(
-                    &theme,
-                    LayoutRefinement::default().w_full().aspect_ratio(1.0),
-                ),
-                direction: fret_core::Axis::Vertical,
-                justify: MainAlign::Center,
-                align: CrossAlign::Center,
-                gap: gap.into(),
-                padding: Edges::all(Px(24.0)).into(),
-                ..Default::default()
-            },
-            move |_cx| children,
+        let props = decl_style::container_props(
+            &theme,
+            ChromeRefinement::default(),
+            LayoutRefinement::default().relative().w_full().aspect_ratio(1.0),
         );
+        let content = cx.container(props, move |_cx| layered);
 
         let card = shadcn::Card::new([content]).into_element(cx);
         ui::container(cx, move |_cx| vec![card])
@@ -619,7 +657,7 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
 
     let demo_visual = SlideVisual {
         text_px: Px(36.0),
-        line_height_px: Px(44.0),
+        line_height_px: Px(40.0),
     };
     let demo_items = (1..=5)
         .map(|idx| demo_slide(cx, idx, demo_visual))
@@ -638,7 +676,7 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
 
     let basic_visual = SlideVisual {
         text_px: Px(36.0),
-        line_height_px: Px(44.0),
+        line_height_px: Px(40.0),
     };
     let basic_items = (1..=5)
         .map(|idx| slide(cx, idx, basic_visual))
@@ -717,17 +755,16 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
 
     let api_visual = SlideVisual {
         text_px: Px(36.0),
-        line_height_px: Px(44.0),
+        line_height_px: Px(40.0),
     };
-    let api_items = (1..=5).map(|idx| slide(cx, idx, api_visual)).collect::<Vec<_>>();
+    let api_items = (1..=5)
+        .map(|idx| slide_unwrapped(cx, idx, api_visual))
+        .collect::<Vec<_>>();
     let api_carousel = shadcn::Carousel::new(api_items)
         .api_snapshot_model(api_snapshot.clone())
         .refine_track_layout(LayoutRefinement::default().w_px(Px(336.0)))
         .refine_layout(
-            LayoutRefinement::default()
-                .w_full()
-                .max_w(max_w_xs)
-                .mx_auto(),
+            LayoutRefinement::default().w_full().max_w(max_w_xs),
         )
         .test_id("ui-gallery-carousel-api")
         .into_element(cx);
@@ -770,14 +807,18 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
         ui::container(cx, move |_cx| vec![text]).py_2().into_element(cx)
     };
 
-    let api_gap = decl_style::space(&Theme::global(&*cx.app).snapshot(), Space::N2);
     let api = cx.flex(
         FlexProps {
-            layout: decl_style::layout_style(&Theme::global(&*cx.app).snapshot(), Default::default()),
+            layout: decl_style::layout_style(
+                &Theme::global(&*cx.app).snapshot(),
+                LayoutRefinement::default()
+                    .w_full()
+                    .max_w(max_w_xs)
+                    .mx_auto(),
+            ),
             direction: fret_core::Axis::Vertical,
             justify: MainAlign::Start,
             align: CrossAlign::Stretch,
-            gap: api_gap.into(),
             ..Default::default()
         },
         move |_cx| vec![api_carousel, api_counter],
@@ -786,7 +827,7 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
     // Plugin (autoplay): matches shadcn/ui `carousel-plugin` (Embla autoplay plugin outcome).
     let plugin_visual = SlideVisual {
         text_px: Px(36.0),
-        line_height_px: Px(44.0),
+        line_height_px: Px(40.0),
     };
     let plugin_items = (1..=5)
         .map(|idx| slide(cx, idx, plugin_visual))
@@ -1018,10 +1059,11 @@ shadcn::Carousel::new(items)
                     r#"let api = cx.app.models_mut().insert(shadcn::CarouselApiSnapshot::default());
 let api_now = cx.watch_model(&api).copied().unwrap_or_default();
 
-let carousel = shadcn::Carousel::new(items)
+// Upstream `carousel-api` does not wrap each card in `p-1`.
+let carousel = shadcn::Carousel::new(items_without_p1)
     .api_snapshot_model(api.clone())
     .refine_track_layout(LayoutRefinement::default().w_px(Px(336.0)))
-    .refine_layout(LayoutRefinement::default().w_full().max_w(Px(320.0)).mx_auto())
+    .refine_layout(LayoutRefinement::default().w_full().max_w(Px(320.0)))
     .into_element(cx);
 
 let counter = ui::text(
