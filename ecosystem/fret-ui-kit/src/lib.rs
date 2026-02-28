@@ -186,6 +186,7 @@ pub mod image_metadata;
 pub mod image_sampling;
 #[cfg(feature = "imui")]
 pub mod imui;
+pub mod node_graph;
 pub mod overlay;
 pub mod overlay_controller;
 pub mod primitives;
