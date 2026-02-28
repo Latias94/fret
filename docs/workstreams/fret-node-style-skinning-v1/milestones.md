@@ -55,6 +55,7 @@ Acceptance:
 - Preset families exist: `WorkflowClean`, `SchematicContrast`, `GraphDark`.
 - Preset switching is paint-only and does not rebuild derived geometry.
 - Presets are derived from `ThemeSnapshot` (no hard-coded palette unless explicitly opting out).
+- Wire highlight can be tuned via preset tokens (`paint_only_tokens.wire.highlight_*`).
 
 Primary design note:
 
@@ -76,7 +77,8 @@ Acceptance (v0):
 
 - Node shadow/glow can be expressed as a skin hint and implemented via renderer effects.
 - Selected wires and drag preview wires can render with a soft glow for editor-grade readability.
-- Selected wires and drag preview wires can render with an outline stroke for blueprint-style contrast.
+- Selected/hovered wires can render with an inner highlight stroke (paint-only) for blueprint-style contrast.
+- Wires can render with an outline stroke (including base outlines) for blueprint-style contrast, with deterministic WorkBudget degradation.
 
 Evidence anchors:
 
@@ -87,7 +89,11 @@ Evidence anchors:
   - `ecosystem/fret-node/src/ui/skin.rs`
   - `ecosystem/fret-node/src/ui/canvas/widget/paint_edges/main.rs`
   - `ecosystem/fret-node/src/ui/canvas/widget/tests/skin_wire_glow_hints_conformance.rs`
+- Wire highlight hint surface + conformance:
+  - `ecosystem/fret-node/src/ui/skin.rs`
+  - `ecosystem/fret-node/src/ui/canvas/widget/paint_edges/main.rs`
+  - `ecosystem/fret-node/src/ui/canvas/widget/tests/skin_wire_highlight_hints_conformance.rs`
 - Demo toggles (visual iteration):
-  - `apps/fret-examples/src/node_graph_demo.rs` (`primary+shift+g`)
+  - `apps/fret-examples/src/node_graph_demo.rs` (`primary+shift+g`, `primary+shift+h`)
 - Scripted gate captures both glow variants:
   - `tools/diag-scripts/extras/node-graph-demo-preset-families-paint-only.json`
