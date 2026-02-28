@@ -176,6 +176,9 @@ Ship a result that is reviewable and reusable:
   - `references/combobox-conformance.md`
   - `references/layout-sweep.md`
 
+Tip: when a run produces unexpectedly large artifacts, use `fretboard diag config doctor --mode launch` to spot
+high-risk env overrides before rerunning.
+
 Reason-code first triage:
 
 - `selector.not_found` ⇒ inspect `selector_resolution_trace` (wrong `test_id`, duplicated ids, hidden nodes)

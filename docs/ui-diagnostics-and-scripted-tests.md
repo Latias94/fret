@@ -605,6 +605,8 @@ Core:
   - Tip: print the effective merged config (and highlight unknown keys/envs):
     - `cargo run -p fretboard -- diag config doctor --mode launch --dir .fret/diag`
     - `cargo run -p fretboard -- diag config doctor --mode manual --report-json` (manual apps)
+  - The doctor also emits warnings for common “output explosion” risk factors (e.g. large snapshot caps, semantics on every
+    snapshot, pretty-printed `bundle.json`).
 
 Canonical env vars (recommended):
 

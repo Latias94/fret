@@ -1113,6 +1113,13 @@ Use `--mode manual` to report what the runtime would see from the current proces
     }
 
     let effective = compute_effective_runtime_config(&effective_env, config_file.as_ref());
+    push_output_risk_warnings(
+        mode,
+        &effective_env,
+        config_file.as_ref(),
+        &effective,
+        &mut warnings,
+    );
 
     if report_json {
         let report = config_doctor_report_json(
@@ -1225,6 +1232,148 @@ Use `--mode manual` to report what the runtime would see from the current proces
     print_sourced_bool("devtools_ws_enabled", &effective.devtools_ws_enabled);
 
     Ok(())
+}
+
+fn parse_env_u64(env: &BTreeMap<String, String>, key: &'static str) -> Option<u64> {
+    let raw = env.get(key)?.trim();
+    if raw.is_empty() {
+        return None;
+    }
+    raw.parse::<u64>().ok()
+}
+
+fn push_output_risk_warnings(
+    mode: DoctorMode,
+    effective_env: &BTreeMap<String, String>,
+    config_file: Option<&UiDiagnosticsConfigFileV1>,
+    effective: &EffectiveConfig,
+    warnings: &mut Vec<serde_json::Value>,
+) {
+    let launch_like = mode == DoctorMode::Launch;
+
+    if launch_like && config_file.is_none() {
+        warnings.push(serde_json::json!({
+            "severity": "warning",
+            "code": "diag.config.launch_missing_config_file",
+            "message": "launch-mode config file is missing/unreadable; runtime defaults may write large bundle.json artifacts",
+            "suggest": "ensure tooling can write <dir>/diag.config.json (or pass --config-path to config doctor)",
+        }));
+    }
+
+    if launch_like && effective.write_bundle_json.value {
+        warnings.push(serde_json::json!({
+            "severity": "warning",
+            "code": "diag.config.large_bundle_json_enabled",
+            "message": "write_bundle_json=true can produce very large bundle.json artifacts; prefer small-by-default settings for tool-launched runs",
+            "suggest": "set write_bundle_json=false and write_bundle_schema2=true in diag.config.json",
+            "source": effective.write_bundle_json.source.as_str(),
+        }));
+    }
+
+    if launch_like && !effective.write_bundle_schema2.value {
+        warnings.push(serde_json::json!({
+            "severity": "info",
+            "code": "diag.config.schema2_companion_disabled",
+            "message": "write_bundle_schema2=false disables the compact schema2 companion artifact; tooling prefers bundle.schema2.json when present",
+            "suggest": "set write_bundle_schema2=true in diag.config.json for launched runs",
+            "source": effective.write_bundle_schema2.source.as_str(),
+        }));
+    }
+
+    if launch_like
+        && effective.write_bundle_json.value
+        && effective_env
+            .get("FRET_DIAG_BUNDLE_JSON_FORMAT")
+            .is_some_and(|v| v.trim() == "pretty")
+    {
+        warnings.push(serde_json::json!({
+            "severity": "warning",
+            "code": "diag.config.bundle_json_pretty_print",
+            "message": "FRET_DIAG_BUNDLE_JSON_FORMAT=pretty can significantly increase bundle.json size",
+            "suggest": "use compact JSON (unset the env var) or disable bundle.json via write_bundle_json=false",
+        }));
+    }
+
+    if launch_like && effective.max_snapshots.value > 600 {
+        warnings.push(serde_json::json!({
+            "severity": "warning",
+            "code": "diag.config.max_snapshots_high",
+            "message": "max_snapshots is high; large rings increase memory use and can inflate bundle exports",
+            "max_snapshots": effective.max_snapshots.value,
+            "source": effective.max_snapshots.source.as_str(),
+            "suggest": "keep max_snapshots near the default unless you have a specific need",
+        }));
+    }
+
+    if launch_like && effective.script_dump_max_snapshots.value > 30 {
+        warnings.push(serde_json::json!({
+            "severity": "warning",
+            "code": "diag.config.script_dump_max_snapshots_high",
+            "message": "script_dump_max_snapshots is high; scripted dumps can easily produce very large bundles",
+            "script_dump_max_snapshots": effective.script_dump_max_snapshots.value,
+            "source": effective.script_dump_max_snapshots.source.as_str(),
+            "suggest": "for shareable repros, prefer <= 10 (tool-launched default)",
+        }));
+    }
+
+    if launch_like
+        && effective_env
+            .get("FRET_DIAG_BUNDLE_SEMANTICS_MODE")
+            .is_some_and(|v| v.trim() == "all")
+    {
+        warnings.push(serde_json::json!({
+            "severity": "warning",
+            "code": "diag.config.semantics_mode_all",
+            "message": "FRET_DIAG_BUNDLE_SEMANTICS_MODE=all exports semantics on every snapshot and can massively increase bundle size",
+            "suggest": "prefer mode=last for script-driven dumps unless you need per-frame semantics",
+        }));
+    }
+
+    let max_semantics_nodes = parse_env_u64(effective_env, "FRET_DIAG_MAX_SEMANTICS_NODES");
+    if launch_like && max_semantics_nodes.is_some_and(|v| v > 100_000) {
+        warnings.push(serde_json::json!({
+            "severity": "warning",
+            "code": "diag.config.max_semantics_nodes_high",
+            "message": "FRET_DIAG_MAX_SEMANTICS_NODES is high; semantics exports can dominate bundle size for large UIs",
+            "max_semantics_nodes": max_semantics_nodes,
+            "suggest": "consider a lower cap or enable FRET_DIAG_SEMANTICS_TEST_IDS_ONLY=1 for test_id-focused triage",
+        }));
+    }
+
+    let dump_max_semantics_nodes =
+        parse_env_u64(effective_env, "FRET_DIAG_BUNDLE_DUMP_MAX_SEMANTICS_NODES");
+    if launch_like && dump_max_semantics_nodes.is_some_and(|v| v > 100_000) {
+        warnings.push(serde_json::json!({
+            "severity": "warning",
+            "code": "diag.config.bundle_dump_max_semantics_nodes_high",
+            "message": "FRET_DIAG_BUNDLE_DUMP_MAX_SEMANTICS_NODES is high; bundle dumps can become huge for large UIs",
+            "max_semantics_nodes": dump_max_semantics_nodes,
+            "suggest": "prefer a smaller cap for shareable scripted repros",
+        }));
+    }
+
+    let max_debug_string_bytes = parse_env_u64(effective_env, "FRET_DIAG_MAX_DEBUG_STRING_BYTES");
+    if launch_like && max_debug_string_bytes.is_some_and(|v| v > 16 * 1024) {
+        warnings.push(serde_json::json!({
+            "severity": "info",
+            "code": "diag.config.max_debug_string_bytes_high",
+            "message": "FRET_DIAG_MAX_DEBUG_STRING_BYTES is high; large debug strings can inflate exports",
+            "max_debug_string_bytes": max_debug_string_bytes,
+            "suggest": "prefer 2048 (tool-launched default) for shareable artifacts",
+        }));
+    }
+
+    let max_gating_trace_entries =
+        parse_env_u64(effective_env, "FRET_DIAG_MAX_GATING_TRACE_ENTRIES");
+    if launch_like && max_gating_trace_entries.is_some_and(|v| v > 500) {
+        warnings.push(serde_json::json!({
+            "severity": "info",
+            "code": "diag.config.max_gating_trace_entries_high",
+            "message": "FRET_DIAG_MAX_GATING_TRACE_ENTRIES is high; large traces can inflate exports",
+            "max_gating_trace_entries": max_gating_trace_entries,
+            "suggest": "prefer 200 (default) unless you need deeper command gating traces",
+        }));
+    }
 }
 
 pub(crate) fn cmd_config(ctx: ConfigCmdContext) -> Result<(), String> {
