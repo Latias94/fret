@@ -135,6 +135,9 @@ For evidence-first triage (reason codes + bounded traces), see: `references/evid
   - Use a promoted `script_id` (recommended) or an explicit path under `tools/diag-scripts/`.
   - Run `diag list scripts` to confirm the id exists.
   - If scripts were recently moved, run `diag doctor scripts` to detect broken redirects / registry drift.
+- “tooling.launch.failed”
+  - Check the `--dir` path is writable; tool-launched runs require writing `<dir>/diag.config.json`.
+  - Inspect `<dir>/script.result.json` for a bounded, machine-readable `reason_code` and error note.
 - “timeout”
   - Replace sleeps with `wait_until`, `wait_bounds_stable`, and `click_stable`.
   - Add an intermediate `capture_bundle` close to the suspected failure point.

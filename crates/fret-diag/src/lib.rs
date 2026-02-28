@@ -4017,7 +4017,16 @@ fn run_script_suite_collect_bundles(
         timeout_ms,
         poll_ms,
         launch_high_priority,
-    )?;
+    )
+    .inspect_err(|err| {
+        write_tooling_failure_script_result_if_missing(
+            &paths.script_result_path,
+            "tooling.launch.failed",
+            err,
+            "tooling_error",
+            Some("maybe_launch_demo".to_string()),
+        );
+    })?;
 
     let mut required_caps: Vec<String> = Vec::new();
     for src in scripts {

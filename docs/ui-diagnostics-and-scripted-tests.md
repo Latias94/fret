@@ -1176,6 +1176,12 @@ Notes:
 
 ## Troubleshooting
 
+**Tooling `--launch` fails**
+
+- `fretboard diag ... --launch` writes a per-run `diag.config.json` into `--dir` and expects it to be writable.
+- On launch failures, tooling writes a best-effort `script.result.json` with `reason_code=tooling.launch.failed` so triage
+  stays bounded and machine-readable.
+
 **The app never dumps bundles**
 
 - confirm `FRET_DIAG=1`,

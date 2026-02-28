@@ -705,7 +705,16 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         timeout_ms,
         poll_ms,
         launch_high_priority,
-    )?;
+    )
+    .inspect_err(|err| {
+        write_tooling_failure_script_result_if_missing(
+            &resolved_script_result_path,
+            "tooling.launch.failed",
+            err,
+            "tooling_error",
+            Some("maybe_launch_demo".to_string()),
+        );
+    })?;
     let _stop_guard = if keep_open {
         None
     } else {
