@@ -87,6 +87,7 @@ const CMD_CYCLE_BACKGROUND_PATTERN: &str = "node_graph_demo.cycle_background_pat
 const CMD_CYCLE_PRESET_FAMILY: &str = "node_graph_demo.cycle_preset_family";
 const CMD_TOGGLE_WIRE_GLOW: &str = "node_graph_demo.toggle_wire_glow";
 const CMD_TOGGLE_WIRE_HIGHLIGHT: &str = "node_graph_demo.toggle_wire_highlight";
+const CMD_TOGGLE_EDGE_MARKERS: &str = "node_graph_demo.toggle_edge_markers";
 const CMD_RESET_GRAPH: &str = "node_graph_demo.reset_graph";
 const CMD_SPAWN_STRESS_1K: &str = "node_graph_demo.spawn_stress_1k";
 const CMD_SPAWN_STRESS_5K: &str = "node_graph_demo.spawn_stress_5k";
@@ -2106,6 +2107,18 @@ impl WinitAppDriver for NodeGraphDemoDriver {
             return;
         }
 
+        if command.as_str() == CMD_TOGGLE_EDGE_MARKERS {
+            let Some(skin) = app.global::<Arc<NodeGraphPresetSkinV1>>().cloned() else {
+                return;
+            };
+
+            let enabled = skin.toggle_edge_markers();
+            tracing::info!(enabled, "node graph demo edge markers toggled");
+
+            app.request_redraw(window);
+            return;
+        }
+
         if command.as_str() == CMD_TOGGLE_HELP_OVERLAY {
             let Some(toggles) = app.global::<Arc<NodeGraphDemoOverlayToggles>>().cloned() else {
                 return;
@@ -2730,6 +2743,21 @@ fn register_demo_commands(registry: &mut CommandRegistry) {
                 win_ctrl_shift(KeyCode::KeyH),
                 linux_ctrl_shift(KeyCode::KeyH),
                 web_ctrl_shift(KeyCode::KeyH),
+            ]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_TOGGLE_EDGE_MARKERS),
+        CommandMeta::new("Toggle NodeGraph Edge Markers")
+            .with_category("Demo")
+            .with_keywords(["edge", "marker", "arrow", "arrowhead", "endpoint"])
+            .with_scope(CommandScope::App)
+            .with_when(WhenExpr::parse("!focus.is_text_input").expect("valid when expr"))
+            .with_default_keybindings([
+                mac_cmd_shift(KeyCode::KeyJ),
+                win_ctrl_shift(KeyCode::KeyJ),
+                linux_ctrl_shift(KeyCode::KeyJ),
+                web_ctrl_shift(KeyCode::KeyJ),
             ]),
     );
 
