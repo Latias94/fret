@@ -56,7 +56,7 @@ Exit criteria:
 ## M4 — Hardening + drift prevention
 
 - [x] Add a lightweight lint/check (optional) that flags new uses of disallowed patterns (e.g. `color_token("white")`).
-- [ ] Document “how to add a new named color” decision gate and the evidence required.
+- [x] Document “how to add a new named color” decision gate and the evidence required.
 
 Exit criteria:
 
