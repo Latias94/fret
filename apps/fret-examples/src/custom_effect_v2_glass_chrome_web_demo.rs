@@ -169,6 +169,12 @@ impl CustomEffectV2GlassChromeWebDriver {
         }
     }
 
+    fn srgb_hex(hex: u32, a: f32) -> fret_core::Color {
+        let mut c = fret_core::Color::from_srgb_hex_rgb(hex);
+        c.a = a.clamp(0.0, 1.0);
+        c
+    }
+
     fn reset_controls(app: &mut App, controls: &DemoControls) {
         let _ = app.models_mut().update(&controls.enabled, |v| *v = true);
         let _ = app
@@ -739,12 +745,7 @@ impl CustomEffectV2GlassChromeWebDriver {
             let stage = cx.container(
                 ContainerProps {
                     layout: stage_layout,
-                    background: Some(fret_core::Color {
-                        r: 0.03,
-                        g: 0.04,
-                        b: 0.06,
-                        a: 1.0,
-                    }),
+                    background: Some(Self::srgb_hex(0x08_0a_0f, 1.0)),
                     ..Default::default()
                 },
                 move |cx| {
@@ -753,12 +754,7 @@ impl CustomEffectV2GlassChromeWebDriver {
 
                     items.push(Self::stage_tile(
                         cx,
-                        fret_core::Color {
-                            r: 0.10,
-                            g: 0.62,
-                            b: 1.0,
-                            a: 0.22,
-                        },
+                        Self::srgb_hex(0x1a_9e_ff, 0.22),
                         Px(48.0),
                         Px(40.0),
                         Px(220.0),
@@ -767,12 +763,7 @@ impl CustomEffectV2GlassChromeWebDriver {
                     ));
                     items.push(Self::stage_tile(
                         cx,
-                        fret_core::Color {
-                            r: 0.96,
-                            g: 0.62,
-                            b: 0.10,
-                            a: 0.18,
-                        },
+                        Self::srgb_hex(0xf5_9e_1a, 0.18),
                         Px(320.0),
                         Px(96.0),
                         Px(260.0),
@@ -781,12 +772,7 @@ impl CustomEffectV2GlassChromeWebDriver {
                     ));
                     items.push(Self::stage_tile(
                         cx,
-                        fret_core::Color {
-                            r: 0.13,
-                            g: 0.84,
-                            b: 0.35,
-                            a: 0.16,
-                        },
+                        Self::srgb_hex(0x21_d6_59, 0.16),
                         Px(140.0),
                         Px(248.0),
                         Px(280.0),
