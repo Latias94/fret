@@ -410,8 +410,9 @@ fn custom_effect_lens(
         vec4s: [
             // (refraction_height_px, refraction_amount_px, pyramid_level, frost_mix)
             [22.0 * sf, 34.0 * sf, 3.0, 0.75],
-            // (corner_radius_px, depth_effect, dispersion, reserved)
-            [radius.0 * sf, 0.18, 0.55, 0.0],
+            // (corner_radius_px, depth_effect, dispersion, dispersion_quality)
+            // - dispersion_quality: 0 = 3-tap, 1 = 7-tap Android-like.
+            [radius.0 * sf, 0.18, 0.55, 1.0],
             // (noise_alpha, reserved, reserved, reserved)
             [0.012, 0.0, 0.0, 0.0],
             // tint (rgb + alpha)
@@ -427,7 +428,8 @@ fn custom_effect_lens(
         EffectStep::CustomV3 {
             id: effect,
             params,
-            max_sample_offset_px: Px(40.0),
+            // Refraction + dispersion can reach beyond 40px at the rim; keep the bound generous.
+            max_sample_offset_px: Px(96.0),
             user0: None,
             user1: None,
             sources: CustomEffectSourcesV3 {
