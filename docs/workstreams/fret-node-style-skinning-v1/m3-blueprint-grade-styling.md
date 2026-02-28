@@ -71,6 +71,14 @@ This workstream now has a “v0 blueprint look” path using the existing render
 - Wire outline: selected edges and drag preview wires can render a thicker outline stroke behind
   the core stroke (paint-only, dual-path).
 
+This “dual-stroke” strategy is the intended **policy-level approximation** that keeps the door
+open for a future mechanism-level gradient/material wire surface:
+
+- Today: render multiple cached path strokes (outline + core, optionally glow) with deterministic
+  WorkBudget degradation (outline can be skipped under pressure without breaking interaction).
+- Future: upgrade the core stroke to a gradient/material descriptor in the renderer while keeping
+  the same skin vocabulary (so ecosystem policy does not depend on a specific backend).
+
 This is intentionally an approximation:
 
 - It does not yet implement true gradient strokes or multi-stop wire materials.
