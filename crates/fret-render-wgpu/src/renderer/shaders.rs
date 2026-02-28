@@ -712,11 +712,15 @@ fn material_eval(p: Paint, local_pos: vec2<f32>, sample_catalog: bool) -> vec4<f
   let noise_r0 = mat_rand01(noise_cell, seed);
   var noise_r = noise_r0;
   if (sample_catalog) {
-    let noise_xi = noise_cell.x & 63u;
-    let noise_yi = noise_cell.y & 63u;
-    let noise_uv = (vec2<f32>(f32(noise_xi) + 0.5, f32(noise_yi) + 0.5) / 64.0);
-    let noise_layer = i32(p.color_space);
-    noise_r = textureSample(material_catalog_texture, material_catalog_sampler, noise_uv, noise_layer).r;
+    let noise_xi = i32(noise_cell.x & 63u);
+    let noise_yi = i32(noise_cell.y & 63u);
+    let noise_layer = clamp(i32(p.color_space), 0, 1);
+    noise_r = textureLoad(
+      material_catalog_texture,
+      vec2<i32>(noise_xi, noise_yi),
+      noise_layer,
+      0
+    ).r;
   }
   let noise_intensity = clamp(p.params2.y, 0.0, 1.0);
   let noise_cov = noise_intensity * noise_r;
@@ -4720,11 +4724,15 @@ fn material_eval(p: Paint, local_pos: vec2<f32>, sample_catalog: bool) -> vec4<f
   let noise_r0 = mat_rand01(noise_cell, seed);
   var noise_r = noise_r0;
   if (sample_catalog) {
-    let noise_xi = noise_cell.x & 63u;
-    let noise_yi = noise_cell.y & 63u;
-    let noise_uv = (vec2<f32>(f32(noise_xi) + 0.5, f32(noise_yi) + 0.5) / 64.0);
-    let noise_layer = i32(p.color_space);
-    noise_r = textureSample(material_catalog_texture, material_catalog_sampler, noise_uv, noise_layer).r;
+    let noise_xi = i32(noise_cell.x & 63u);
+    let noise_yi = i32(noise_cell.y & 63u);
+    let noise_layer = clamp(i32(p.color_space), 0, 1);
+    noise_r = textureLoad(
+      material_catalog_texture,
+      vec2<i32>(noise_xi, noise_yi),
+      noise_layer,
+      0
+    ).r;
   }
   let noise_intensity = clamp(p.params2.y, 0.0, 1.0);
   let noise_cov = noise_intensity * noise_r;
