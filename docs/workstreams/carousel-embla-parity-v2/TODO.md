@@ -93,6 +93,7 @@ Non-goals (v2):
     - `ecosystem/fret-ui-shadcn/src/carousel.rs` (enables embla engine for loop + per-slide `RenderTransform`)
   - Gates:
     - `cargo test -p fret-ui-headless` (loop + slide looper unit tests)
+    - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-loop-continuity-touch-gate.json`
 
 ### Slides in view
 
