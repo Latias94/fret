@@ -67,7 +67,9 @@ Planned outcomes:
 
 - [ ] Named references / scopes (ImGui `SetRef(...)`-style ergonomics, but semantics-first).
   - [ ] Add a script-level `ref` concept (a named selector + optional `window` target).
-  - [ ] Add steps to set/clear a base ref so subsequent selector steps can use relative paths.
+  - [x] Add steps to set/clear a base ref so subsequent selector-driven steps can be scoped to a subtree:
+    - `set_base_ref` / `clear_base_ref` (schema v2)
+    - runtime scopes selector resolution while a base ref is active
   - [ ] Ensure the feature is capability-gated (tooling-side) and does not leak policy into `fret-ui`.
 - [ ] Multi-viewport docking evidence (make cross-window failures explainable, not just “timeout”):
   - [ ] Export a per-run `window_map.json` (window ids, viewport kind, parent/child relationships if known).

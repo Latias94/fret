@@ -125,6 +125,10 @@ Missing building blocks (planned):
 
 This layer is primarily about **reducing diff noise and flake surface**, not adding more steps.
 
+Status (2026-02-28):
+
+- Base reference scoping exists in schema v2 scripts via `set_base_ref` / `clear_base_ref`.
+
 ### Layer 5: Human GUI (DevTools) + agent integration
 
 We already have a DevTools direction (`apps/fret-devtools`, MCP variants), but it should be **built on top of the same

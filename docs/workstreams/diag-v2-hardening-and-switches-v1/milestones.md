@@ -141,3 +141,8 @@ Evidence anchors (expected):
 - Protocol: `crates/fret-diag-protocol/src/lib.rs`
 - Runtime script engine: `ecosystem/fret-bootstrap/src/ui_diagnostics/script_engine.rs`
 - Tooling: `crates/fret-diag/src/*`
+
+Status (2026-02-28):
+
+- Base ref steps (`set_base_ref` / `clear_base_ref`) exist and runtime scopes selector resolution while active.
+- Named ref map + relative selector syntax are still pending (v1 covers the most common “scope to panel” case).

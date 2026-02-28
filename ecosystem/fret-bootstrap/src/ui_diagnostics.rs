@@ -94,7 +94,7 @@ use selector::SemanticsIndex;
 pub(crate) use selector::semantics_role_label;
 use selector::{
     best_selector_for_node, format_inspect_path, parent_node_id, parse_semantics_role,
-    select_semantics_node, suggest_selectors, truncate_debug_value,
+    select_semantics_node, select_semantics_node_scoped, suggest_selectors, truncate_debug_value,
 };
 
 mod trace_helpers;

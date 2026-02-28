@@ -11,6 +11,7 @@ pub(super) struct ActiveScript {
     pub(super) run_id: u64,
     pub(super) anchor_window: AppWindowId,
     pub(super) next_step: usize,
+    pub(super) base_ref: Option<ScriptBaseRefState>,
     pub(super) event_log: Vec<UiScriptEventLogEntryV1>,
     pub(super) event_log_dropped: u64,
     pub(super) event_log_active_step: Option<u32>,
@@ -35,6 +36,20 @@ pub(super) struct ActiveScript {
     pub(super) overlay_placement_trace: Vec<UiOverlayPlacementTraceEntryV1>,
     pub(super) web_ime_trace: Vec<UiWebImeTraceEntryV1>,
     pub(super) ime_event_trace: Vec<UiImeEventTraceEntryV1>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(super) struct ScriptBaseRefState {
+    pub(super) window: AppWindowId,
+    pub(super) scope_root: u64,
+}
+
+impl ActiveScript {
+    pub(super) fn scope_root_for_window(&self, window: AppWindowId) -> Option<u64> {
+        self.base_ref
+            .filter(|r| r.window == window)
+            .map(|r| r.scope_root)
+    }
 }
 
 #[derive(Debug, Clone, Copy)]

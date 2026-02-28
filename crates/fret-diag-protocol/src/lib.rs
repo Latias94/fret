@@ -509,6 +509,20 @@ pub enum UiActionStepV2 {
         modifiers: Option<UiKeyModifiersV1>,
     },
     ResetDiagnostics,
+    /// Set a “base reference” for subsequent selector-driven steps.
+    ///
+    /// When a base reference is set, the runtime may scope later selector resolution to the
+    /// base node's subtree (window-local) until [`UiActionStepV2::ClearBaseRef`] is executed.
+    ///
+    /// This is an ergonomics feature (ImGui `SetRef(...)`-style outcome) intended to reduce
+    /// repetition and diff noise in long scripts.
+    SetBaseRef {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
+        target: UiSelectorV1,
+    },
+    /// Clear the active base reference, restoring global selector resolution.
+    ClearBaseRef,
     MovePointer {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         window: Option<UiWindowTargetV1>,
