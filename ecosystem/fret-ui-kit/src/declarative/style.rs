@@ -343,12 +343,9 @@ pub fn focus_ring(theme: &impl ThemeTokenRead, radius: Px) -> RingStyle {
 }
 
 fn shadow_color(theme: &impl ThemeTokenRead, fallback_alpha: f32) -> Color {
-    let base = theme.color_by_key("shadow").unwrap_or(Color {
-        r: 0.0,
-        g: 0.0,
-        b: 0.0,
-        a: 1.0,
-    });
+    let base = theme
+        .color_by_key("shadow")
+        .unwrap_or_else(|| Color::from_srgb_hex_rgb(0x00_00_00));
     Color {
         a: fallback_alpha.clamp(0.0, 1.0),
         ..base

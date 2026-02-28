@@ -3237,10 +3237,8 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
             };
 
             let dim = fret_core::Color {
-                r: 0.0,
-                g: 0.0,
-                b: 0.0,
                 a: 0.4,
+                ..fret_core::Color::from_srgb_hex_rgb(0x00_00_00)
             };
 
             let size = options.size;
