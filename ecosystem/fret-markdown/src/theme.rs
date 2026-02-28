@@ -37,13 +37,15 @@ impl MarkdownTheme {
     pub(super) fn resolve(theme: &Theme) -> Self {
         fn color(theme: &Theme, suffix: &str) -> Option<fret_core::Color> {
             theme
-                .color_by_key(&format!("fret.markdown.{suffix}"))
+                .color_by_key(&format!("component.markdown.{suffix}"))
+                .or_else(|| theme.color_by_key(&format!("fret.markdown.{suffix}")))
                 .or_else(|| theme.color_by_key(&format!("markdown.{suffix}")))
         }
 
         fn metric(theme: &Theme, suffix: &str) -> Option<Px> {
             theme
-                .metric_by_key(&format!("fret.markdown.{suffix}"))
+                .metric_by_key(&format!("component.markdown.{suffix}"))
+                .or_else(|| theme.metric_by_key(&format!("fret.markdown.{suffix}")))
                 .or_else(|| theme.metric_by_key(&format!("markdown.{suffix}")))
         }
 
