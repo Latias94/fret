@@ -388,10 +388,8 @@ pub(super) fn preview_card(
                     decl_style::container_props(
                         &theme,
                         ChromeRefinement::default().bg(ColorRef::Color(CoreColor {
-                            r: 0.0,
-                            g: 0.0,
-                            b: 0.0,
                             a: 0.35,
+                            ..CoreColor::from_srgb_hex_rgb(0x00_00_00)
                         })),
                         LayoutRefinement::default()
                             .absolute()
