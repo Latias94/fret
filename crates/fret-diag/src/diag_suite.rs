@@ -177,7 +177,8 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
     let (bundle_doctor_mode, rest) = parse_bundle_doctor_mode_from_rest(&rest)?;
     if rest.is_empty() && suite_script_inputs.is_empty() {
         return Err(
-            "missing suite name or script paths (try: fretboard diag suite ui-gallery | fretboard diag suite docking-arbitration)"
+            "missing suite name or script paths (try: fretboard diag suite ui-gallery | fretboard diag suite docking-arbitration)\n\
+hint: list suites via `fretboard diag list suites`"
                 .to_string(),
         );
     }
@@ -282,6 +283,16 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
         expand_script_inputs(&workspace_root, &inputs)
     };
 
+    let suite_dir_exists = |suite: &str| -> bool {
+        workspace_root
+            .join("tools")
+            .join("diag-scripts")
+            .join("suites")
+            .join(suite)
+            .is_dir()
+    };
+
+    let mut used_fallback_paths = false;
     let (mut scripts, builtin_suite): (Vec<PathBuf>, Option<BuiltinSuite>) = if is_ui_gallery_suite
     {
         // The UI Gallery suite includes scripts that run the `--check-pixels-changed`
@@ -585,7 +596,11 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
         let inputs = diag_suite_scripts::docking_arbitration_suite_scripts();
         let scripts = expand_script_inputs(&workspace_root, &inputs)?;
         (scripts, Some(BuiltinSuite::DockingArbitration))
+    } else if suite_args.len() == 1 && suite_dir_exists(&suite_args[0]) {
+        let scripts = scripts_from_suite_dir(&suite_args[0])?;
+        (scripts, None)
     } else {
+        used_fallback_paths = true;
         (
             suite_args
                 .into_iter()
@@ -603,6 +618,24 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
 
     if scripts.is_empty() {
         return Err("suite produced no scripts".to_string());
+    }
+
+    if used_fallback_paths
+        && suite_script_inputs.is_empty()
+        && rest.len() == 1
+        && scripts.len() == 1
+        && !scripts[0].exists()
+    {
+        let name = rest[0].as_str();
+        let looks_like_suite_name = !name.contains(['/', '\\', ':']) && !name.ends_with(".json");
+        if looks_like_suite_name {
+            return Err(format!(
+                "unknown suite or script path: {name:?}\n\
+hint: list suites via `fretboard diag list suites --contains {name}`\n\
+hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
+            ));
+        }
+        return Err(format!("script path does not exist: {}", scripts[0].display()));
     }
 
     let suite_wants_screenshots = pack_include_screenshots

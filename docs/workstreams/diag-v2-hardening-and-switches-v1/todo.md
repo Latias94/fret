@@ -44,6 +44,8 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
   - `perf_seed_policy::scripts_for_perf_suite_name` is now used by `diag perf` for suite name expansion.
 - [x] Move `diag suite` specialized harnesses off Rust-side hard-coded script lists:
   - scripts now live under `tools/diag-scripts/suites/<suite-name>/` and are expanded deterministically at runtime.
+- [x] Allow `diag suite <suite-name>` to run any `tools/diag-scripts/suites/<suite-name>/` directory even when the suite
+  name was not added to a Rust-side allowlist (suite-specific env defaults remain opt-in).
 - [x] Normalize `perf_seed_policy` suite script paths to canonical taxonomy (keep compatibility for redirect-stub scopes in preset files).
 - [x] Ensure capability inference resolves `script_redirect` stubs (screenshots / required caps / env defaults).
 - [x] Add a script registry file (v1, generated; scope: suites + `_prelude`):
@@ -57,6 +59,8 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
   - [x] `fretboard diag list scripts` (reads `tools/diag-scripts/index.json` and prints `id -> path`)
 - [x] Add a small discoverability helper to list known suites:
   - [x] `fretboard diag list suites` (reads `tools/diag-scripts/index.json` and prints `suite_memberships` counts)
+- [x] Improve “unknown suite / missing script path” errors to suggest bounded discovery helpers:
+  - `diag list suites`, `diag list scripts` (avoid grepping the repo or artifacts).
 - [x] Ensure promoted canonical scripts are schema v2 (keep `script_redirect` stubs as schema v1):
   - [x] `fretboard diag doctor scripts` reports and suggests upgrades for promoted schema v1 scripts.
   - [x] Upgrade the remaining promoted schema v1 scripts via `diag script upgrade --write`.
