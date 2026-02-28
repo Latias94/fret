@@ -162,6 +162,7 @@ fn runtime_known_env_vars() -> BTreeSet<&'static str> {
         "FRET_DIAG_REDACT_TEXT",
         "FRET_DIAG_MAX_DEBUG_STRING_BYTES",
         "FRET_DIAG_MAX_GATING_TRACE_ENTRIES",
+        "FRET_DIAG_ISOLATE_POINTER_INPUT",
         "FRET_DIAG_BUNDLE_SCREENSHOT",
         "FRET_DIAG_BUNDLE_JSON_FORMAT",
         "FRET_DIAG_BUNDLE_SEMANTICS_MODE",
@@ -214,6 +215,7 @@ fn runtime_known_config_keys() -> BTreeSet<&'static str> {
         "redact_text",
         "max_debug_string_bytes",
         "max_gating_trace_entries",
+        "isolate_external_pointer_input_while_script_running",
         "frame_clock_fixed_delta_ms",
         "devtools_embed_bundle",
     ])
@@ -838,10 +840,11 @@ fn config_doctor_report_json(
         });
 
     let launch_policy = if mode == DoctorMode::Launch {
-        let scrubbed_keys_legacy: Vec<String> = crate::launch_env_policy::TOOL_LAUNCH_SCRUB_ENV_PREFIXES
-            .iter()
-            .map(|p| format!("{p}*"))
-            .collect();
+        let scrubbed_keys_legacy: Vec<String> =
+            crate::launch_env_policy::TOOL_LAUNCH_SCRUB_ENV_PREFIXES
+                .iter()
+                .map(|p| format!("{p}*"))
+                .collect();
         serde_json::json!({
             "reserved_env_keys": crate::launch_env_policy::TOOL_LAUNCH_RESERVED_ENV_KEYS,
             "scrubbed_inherited_env_prefixes": crate::launch_env_policy::TOOL_LAUNCH_SCRUB_ENV_PREFIXES,

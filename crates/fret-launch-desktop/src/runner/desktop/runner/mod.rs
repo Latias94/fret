@@ -232,6 +232,7 @@ pub struct WinitRunner<D: WinitAppDriver> {
     diag_mouse_buttons_override: Option<diag_mouse_buttons_override::DiagMouseButtonsOverride>,
     diag_last_mouse_buttons_override_tick: Option<TickId>,
     diag_mouse_buttons_override_active: bool,
+    diag_isolate_pointer_input: bool,
     cursor_screen_pos: Option<PhysicalPosition<f64>>,
     #[cfg(target_os = "macos")]
     macos_cursor_transform: MacCursorTransformTable,

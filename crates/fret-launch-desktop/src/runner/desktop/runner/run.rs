@@ -116,6 +116,12 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 super::diag_mouse_buttons_override::DiagMouseButtonsOverride::from_env(),
             diag_last_mouse_buttons_override_tick: None,
             diag_mouse_buttons_override_active: false,
+            diag_isolate_pointer_input: std::env::var_os("FRET_DIAG_ISOLATE_POINTER_INPUT")
+                .is_some_and(|v| {
+                    let raw = v.to_string_lossy();
+                    let raw = raw.trim();
+                    !raw.is_empty() && raw != "0" && !raw.eq_ignore_ascii_case("false")
+                }),
             cursor_screen_pos: None,
             #[cfg(target_os = "macos")]
             macos_cursor_transform: MacCursorTransformTable::default(),

@@ -1349,6 +1349,13 @@ fn ui_app_handle_event<S>(
     }
 
     #[cfg(feature = "diagnostics")]
+    if app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
+        svc.should_ignore_external_pointer_event(event)
+    }) {
+        return;
+    }
+
+    #[cfg(feature = "diagnostics")]
     app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
         svc.record_event(app, window, event);
     });
@@ -2169,18 +2176,20 @@ fn ui_app_render<S>(
             app.push_effect(Effect::RequestAnimationFrame(window));
         }
 
-        for event in drive.events {
-            ui_app_handle_event(
-                driver,
-                WinitEventContext {
-                    app,
-                    services,
-                    window,
-                    state,
-                },
-                &event,
-            );
-        }
+        UiDiagnosticsService::with_script_injection_scope(|| {
+            for event in drive.events {
+                ui_app_handle_event(
+                    driver,
+                    WinitEventContext {
+                        app,
+                        services,
+                        window,
+                        state,
+                    },
+                    &event,
+                );
+            }
+        });
 
         app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
             let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();

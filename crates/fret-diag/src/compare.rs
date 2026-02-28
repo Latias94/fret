@@ -674,6 +674,9 @@ fn tool_launched_diag_config(
         script_dump_max_snapshots: Some(10),
         // Bound the length of exported debug strings (paths, etc).
         max_debug_string_bytes: Some(2048),
+        // Keep tool-launched scripted runs deterministic even if the user moves/clicks the real
+        // mouse while playback is active (especially for cross-window docking/tear-off).
+        isolate_external_pointer_input_while_script_running: Some(true),
         ..Default::default()
     };
 
@@ -840,6 +843,9 @@ pub(crate) fn maybe_launch_demo(
         "FRET_DIAG_SCREENSHOT_RESULT_TRIGGER_PATH",
         &fs_transport_cfg.screenshots_result_trigger_path,
     );
+    // Runner-visible knob: used to best-effort isolate OS cursor/device events during scripted
+    // docking drags. The diagnostics runtime also reads this as an env override.
+    cmd.env("FRET_DIAG_ISOLATE_POINTER_INPUT", "1");
 
     // Config file is the compat-first consolidation path for diagnostics runtime config.
     //

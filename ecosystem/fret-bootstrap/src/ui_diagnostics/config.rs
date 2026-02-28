@@ -139,6 +139,9 @@ pub struct UiDiagnosticsConfig {
     pub redact_text: bool,
     pub max_debug_string_bytes: usize,
     pub max_gating_trace_entries: usize,
+    /// When enabled, ignore external pointer input events (mouse/touch/pen) while a diagnostics
+    /// script is running.
+    pub isolate_external_pointer_input_while_script_running: bool,
     pub screenshot_on_dump: bool,
     /// Whether the diagnostics runtime should write the large raw bundle artifact (`bundle.json`)
     /// during dumps.
@@ -531,6 +534,14 @@ impl Default for UiDiagnosticsConfig {
             })
             .unwrap_or(200)
             .clamp(0, 2000);
+        let isolate_external_pointer_input_while_script_running =
+            env_flag_override("FRET_DIAG_ISOLATE_POINTER_INPUT")
+                .or_else(|| {
+                    config_file
+                        .as_ref()
+                        .and_then(|c| c.isolate_external_pointer_input_while_script_running)
+                })
+                .unwrap_or(false);
         let screenshot_on_dump = env_flag_override("FRET_DIAG_BUNDLE_SCREENSHOT")
             .or_else(|| config_file.as_ref().and_then(|c| c.screenshot_on_dump))
             .unwrap_or(false);
@@ -584,6 +595,7 @@ impl Default for UiDiagnosticsConfig {
             redact_text,
             max_debug_string_bytes,
             max_gating_trace_entries,
+            isolate_external_pointer_input_while_script_running,
             screenshot_on_dump,
             write_bundle_json,
             write_bundle_schema2,
