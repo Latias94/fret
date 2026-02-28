@@ -1,6 +1,5 @@
 use super::super::*;
 use crate::ui::doc_layout::{self, DocSection};
-use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 
 pub(super) fn preview_breadcrumb(
     cx: &mut ElementContext<'_, App>,
@@ -92,7 +91,6 @@ pub(super) fn preview_breadcrumb(
 
                     let components_dropdown = shadcn::breadcrumb::primitives::BreadcrumbItem::new()
                         .into_element(cx, |cx| {
-                            let open_for_trigger = dropdown_open.clone();
                             let menu = shadcn::DropdownMenu::new(dropdown_open.clone())
                                 .align(shadcn::DropdownMenuAlign::Start)
                                 .into_element(
@@ -111,7 +109,6 @@ pub(super) fn preview_breadcrumb(
                                         ));
 
                                         cx.pressable(props, move |cx, st| {
-                                            cx.pressable_toggle_bool(&open_for_trigger);
                                             let color = if st.hovered { fg } else { muted };
                                             let label = ui::text(cx, "Components")
                                                 .text_color(fret_ui_kit::ColorRef::Color(color))
@@ -225,7 +222,6 @@ pub(super) fn preview_breadcrumb(
                     };
                     let components_dropdown = shadcn::breadcrumb::primitives::BreadcrumbItem::new()
                         .into_element(cx, |cx| {
-                            let open_for_trigger = dropdown_rtl_open.clone();
                             let menu = shadcn::DropdownMenu::new(dropdown_rtl_open.clone())
                                 .align(shadcn::DropdownMenuAlign::End)
                                 .into_element(
@@ -244,7 +240,6 @@ pub(super) fn preview_breadcrumb(
                                         ));
 
                                         cx.pressable(props, move |cx, st| {
-                                            cx.pressable_toggle_bool(&open_for_trigger);
                                             let color = if st.hovered { fg } else { muted };
                                             let label = ui::text(cx, "Components")
                                                 .text_color(fret_ui_kit::ColorRef::Color(color))

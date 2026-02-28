@@ -307,7 +307,6 @@ pub(super) fn preview_chart(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                 ]
             },
         )
-        .test_id("ui-gallery-chart-demo-footer")
     };
 
     let chart_card = |cx: &mut ElementContext<'_, App>,
