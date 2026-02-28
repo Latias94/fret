@@ -3165,6 +3165,7 @@ impl ContextMenu {
                     let pad_x = MetricRef::space(Space::N2).resolve(&theme);
                     let pad_x_inset = MetricRef::space(Space::N8).resolve(&theme);
                     let pad_y = MetricRef::space(Space::N1p5).resolve(&theme);
+                    let panel_pad = MetricRef::space(Space::N1).resolve(&theme);
                     let font_size = theme.metric_token("font.size");
                     let font_line_height = theme.metric_token("font.line_height");
                     let mut text_style = typography::fixed_line_box_style(
@@ -3961,10 +3962,56 @@ impl ContextMenu {
                         .ok()
                         .flatten();
                     let desired = {
+                        fn count_rows_and_separators(entries: &[ContextMenuEntry]) -> (usize, usize) {
+                            let mut rows = 0usize;
+                            let mut separators = 0usize;
+                            for entry in entries {
+                                match entry {
+                                    ContextMenuEntry::Item(_)
+                                    | ContextMenuEntry::CheckboxItem(_)
+                                    | ContextMenuEntry::RadioItem(_)
+                                    | ContextMenuEntry::Label(_) => rows += 1,
+                                    ContextMenuEntry::Separator => {
+                                        rows += 1;
+                                        separators += 1;
+                                    }
+                                    ContextMenuEntry::RadioGroup(group) => rows += group.items.len(),
+                                    ContextMenuEntry::Group(group) => {
+                                        let (group_rows, group_seps) =
+                                            count_rows_and_separators(&group.entries);
+                                        rows += group_rows;
+                                        separators += group_seps;
+                                    }
+                                }
+                            }
+                            (rows, separators)
+                        }
+
                         let submenu_max_h = submenu_max_height_metric
                             .map(|h| Px(h.0.min(outer.size.height.0)))
                             .unwrap_or(outer.size.height);
-                        Size::new(submenu_min_width, submenu_max_h)
+
+                        // Align submenu collision decisions with Radix/shadcn-web: placement should
+                        // use the submenu's estimated content height (including separators and
+                        // panel padding), not the max-height cap.
+                        let row_height = Px(font_line_height.0 + pad_y.0 * 2.0);
+                        // new-york-v4: `Separator` uses `-mx-1 my-1 h-px` (1px rule + 4px margins).
+                        let separator_height = Px(1.0 + 4.0 * 2.0);
+
+                        let (rows, separators) = submenu_entries_for_panel_cell
+                            .borrow()
+                            .as_deref()
+                            .map(count_rows_and_separators)
+                            .unwrap_or((1, 0));
+                        let rows = rows.max(1);
+                        let separators = separators.min(rows);
+                        let items = rows.saturating_sub(separators);
+
+                        let content_h = Px(
+                            items as f32 * row_height.0 + separators as f32 * separator_height.0,
+                        );
+                        let total_h = Px((panel_pad.0 * 2.0 + content_h.0).min(submenu_max_h.0));
+                        Size::new(submenu_min_width, total_h)
                     };
                     let submenu_is_open = submenu_open_value.is_some();
                     let submenu_present = submenu_is_open;
