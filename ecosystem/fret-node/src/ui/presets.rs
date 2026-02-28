@@ -63,6 +63,7 @@ pub struct NodeGraphPresetSkinV1 {
     index: AtomicUsize,
     wire_glow_enabled: AtomicBool,
     wire_highlight_enabled: AtomicBool,
+    edge_markers_enabled: AtomicBool,
     presets: Arc<NodeGraphThemePresetsV1>,
     id_to_index: HashMap<String, usize>,
 }
@@ -80,6 +81,7 @@ impl NodeGraphPresetSkinV1 {
             index: AtomicUsize::new(index),
             wire_glow_enabled: AtomicBool::new(true),
             wire_highlight_enabled: AtomicBool::new(true),
+            edge_markers_enabled: AtomicBool::new(false),
             presets,
             id_to_index,
         })
@@ -97,6 +99,7 @@ impl NodeGraphPresetSkinV1 {
             index: AtomicUsize::new(index),
             wire_glow_enabled: AtomicBool::new(true),
             wire_highlight_enabled: AtomicBool::new(true),
+            edge_markers_enabled: AtomicBool::new(false),
             presets,
             id_to_index,
         })
@@ -156,6 +159,17 @@ impl NodeGraphPresetSkinV1 {
     pub fn toggle_wire_highlight(&self) -> bool {
         let next = !self.wire_highlight_enabled();
         self.wire_highlight_enabled.store(next, Ordering::Relaxed);
+        self.rev.fetch_add(1, Ordering::Relaxed);
+        next
+    }
+
+    pub fn edge_markers_enabled(&self) -> bool {
+        self.edge_markers_enabled.load(Ordering::Relaxed)
+    }
+
+    pub fn toggle_edge_markers(&self) -> bool {
+        let next = !self.edge_markers_enabled();
+        self.edge_markers_enabled.store(next, Ordering::Relaxed);
         self.rev.fetch_add(1, Ordering::Relaxed);
         next
     }
@@ -473,6 +487,11 @@ impl NodeGraphSkin for NodeGraphPresetSkinV1 {
             EdgeKind::Data => tokens.data_color.into(),
             EdgeKind::Exec => tokens.exec_color.into(),
         });
+        if self.edge_markers_enabled.load(Ordering::Relaxed) && kind == EdgeKind::Exec {
+            if out.end_marker.is_none() {
+                out.end_marker = Some(crate::ui::presenter::EdgeMarker::arrow(12.0));
+            }
+        }
         out
     }
 }
