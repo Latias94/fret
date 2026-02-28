@@ -55,3 +55,22 @@ Current status:
 - M2.1: drafted contract for scene-level sharing (ADR 0302: backdrop source groups).
 - M2.2: implemented group-level snapshot + shared `src_raw` (and group-bounded pyramid choice) for wgpu, with
   conformance coverage.
+- M2.3: added group-level degradation counters (requested/applied/degraded) and surfaced them in per-frame perf
+  snapshots.
+- M2.4: implemented deterministic work bounding via ROI scissor for pyramid generation, including a shared ROI when
+  a backdrop source group requests a pyramid.
+
+## P3 — Authoring demo (apps only)
+
+Outcome:
+
+- A minimal “liquid glass v3” authoring-oriented demo exists for component authors.
+- Demonstrates sampling:
+  - `src` (processed chain input),
+  - `src_raw` (crisp refraction),
+  - `src_pyramid` (multi-scale sampling from raw).
+- Demonstrates using a backdrop source group to share `src_raw`/pyramid across multiple glass surfaces.
+
+Current status:
+
+- Implemented `custom_effect_v3_web_demo` (WASM/WebGPU) and a minimal diag script for bundle/screenshot capture.

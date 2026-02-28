@@ -58,10 +58,13 @@ This TODO tracks the V3 work as landable steps. It intentionally starts with “
 
 ## P3 — Authoring demos (apps only)
 
-- [ ] Add a minimal “liquid glass v3” demo template that demonstrates:
+- [x] Add a minimal “liquid glass v3” demo template that demonstrates:
   - crisp edge refraction from `src_raw`,
   - frosted center from `src` (blurred),
   - optional level-based sampling from `src_pyramid` (when supported).
+  - Evidence:
+    - `apps/fret-examples/src/custom_effect_v3_web_demo.rs`
+    - `tools/diag-scripts/custom-effect-v3-backdrop-source-group-roi-baseline.json`
 
 ## Deferred — Group sharing / caching (M2)
 

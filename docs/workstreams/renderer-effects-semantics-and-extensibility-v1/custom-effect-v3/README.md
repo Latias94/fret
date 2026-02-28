@@ -25,6 +25,9 @@ with explicit budgeting and deterministic degradation.
 - M2.0 (same-frame pyramid reuse): implemented in `fret-render-wgpu` (frame-local, deterministic).
 - M2.1 (contract): drafted as ADR 0302 (backdrop source groups).
 - M2.2 (group snapshot + shared sources): implemented for wgpu, with conformance coverage.
+- M2.3 (diag): group-level perf counters (requested/applied/degraded) are included in per-frame perf snapshots.
+- M2.4 (bounds): pyramid generation work is deterministically ROI-scissored using bounds + radius (including group ROI).
+- P3 (authoring demo): `custom_effect_v3_web_demo` demonstrates `src_raw` + `src_pyramid` usage (and group sharing).
 
 ## Diagnostics vocabulary (wgpu)
 
@@ -51,6 +54,16 @@ Work bounding:
 - When a pyramid is requested, the wgpu backend may scissor pyramid generation work to a bounded ROI derived from
   `max_radius_px`. Inside a backdrop source group, the group bounds + group radius are used as the shared ROI so
   multiple surfaces can safely reuse the same pyramid scratch.
+- RenderPlan dumps include `pyramid_build_scissor` for CustomV3 passes to make the ROI visible during triage.
+
+## Demos + diag scripts (apps only)
+
+- Demo (web): `custom_effect_v3_web_demo` (two lenses inside one backdrop source group).
+  - Run: `cargo run -p fretboard -- dev web --open --demo custom_effect_v3_web_demo`
+- Diag script (schema v2): `tools/diag-scripts/custom-effect-v3-backdrop-source-group-roi-baseline.json`
+  - Native launcher is not applicable (this demo is WASM-only); run it over DevTools WS transport.
+  - Recommended workflow: follow the Web/WASM instructions in `docs/ui-diagnostics-and-scripted-tests.md` and the
+    `fret-diag-workflow` skill, then export a bundle that includes the render-plan dump and perf counters.
 
 ## Design anchor
 
