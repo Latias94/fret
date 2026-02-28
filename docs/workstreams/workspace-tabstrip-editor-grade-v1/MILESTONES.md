@@ -10,7 +10,7 @@ Outcomes:
 - Stable `test_id` anchors exist for scriptability (root + tabs + pinned boundary + overflow).
 - At least 2 promoted diagnostics scripts gate:
   - reorder within a single strip (invariants-first):
-    - `workspace-shell-demo-tab-reorder-first-to-end-smoke`
+    - `workspace-shell-demo-tab-reorder-first-to-end-smoke` (currently: first -> after second)
   - drag-to-split “drop preview” in workspace shell demo
     - initial: `workspace-shell-demo-tab-drag-to-split-right-drop-preview-screenshot`
     - follow-up: replace with an invariants-based gate once the drop preview snapshot surface is stable
