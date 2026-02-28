@@ -318,6 +318,11 @@ pub(crate) fn default_bundle_index_path(bundle_path: &Path) -> PathBuf {
     dir.join("bundle.index.json")
 }
 
+pub(crate) fn default_window_map_path(bundle_path: &Path) -> PathBuf {
+    let dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
+    dir.join("window.map.json")
+}
+
 pub(crate) fn default_test_ids_path(bundle_path: &Path) -> PathBuf {
     let dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
     dir.join("test_ids.json")
@@ -348,6 +353,30 @@ pub(crate) fn ensure_bundle_meta_json(
         }
     }
     let payload = build_bundle_meta_payload(bundle_path, warmup_frames)?;
+    write_pretty_json(&out, &payload)?;
+    Ok(out)
+}
+
+pub(crate) fn ensure_window_map_json(
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<PathBuf, String> {
+    let out = default_window_map_path(bundle_path);
+    let expected_bundle = bundle_path.display().to_string();
+    if out.is_file() {
+        if let Some(existing) = read_json_value(&out) {
+            let kind_ok = existing.get("kind").and_then(|v| v.as_str()) == Some("window_map");
+            let schema_ok = existing.get("schema_version").and_then(|v| v.as_u64()) == Some(1u64);
+            let warmup_ok =
+                existing.get("warmup_frames").and_then(|v| v.as_u64()) == Some(warmup_frames);
+            let bundle_ok =
+                existing.get("bundle").and_then(|v| v.as_str()) == Some(&expected_bundle);
+            if kind_ok && schema_ok && warmup_ok && bundle_ok {
+                return Ok(out);
+            }
+        }
+    }
+    let payload = build_window_map_payload(bundle_path, warmup_frames)?;
     write_pretty_json(&out, &payload)?;
     Ok(out)
 }
@@ -468,6 +497,12 @@ fn build_bundle_index_payload(bundle_path: &Path, warmup_frames: u64) -> Result<
     }
 
     Ok(payload)
+}
+
+fn build_window_map_payload(bundle_path: &Path, warmup_frames: u64) -> Result<Value, String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    build_window_map_payload_from_json(&bundle, &bundle_path.display().to_string(), warmup_frames)
 }
 
 fn build_bundle_meta_payload_from_json(
@@ -623,6 +658,123 @@ fn build_bundle_meta_payload_from_json(
         "semantics_table_unique_keys_total": semantics.table_unique_keys_total(),
         "unique_semantics_fingerprints_total": total_unique_semantics_fingerprints.len(),
         "windows": out_windows,
+    }))
+}
+
+fn build_window_map_payload_from_json(
+    bundle: &Value,
+    bundle_label: &str,
+    warmup_frames: u64,
+) -> Result<Value, String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "missing windows".to_string())?;
+
+    fn get_rect(v: &Value) -> Option<Value> {
+        let x = v.get("x_px").and_then(|v| v.as_f64());
+        let y = v.get("y_px").and_then(|v| v.as_f64());
+        let w = v.get("w_px").and_then(|v| v.as_f64());
+        let h = v.get("h_px").and_then(|v| v.as_f64());
+        match (x, y, w, h) {
+            (Some(x), Some(y), Some(w), Some(h)) => Some(json!({
+                "x_px": x,
+                "y_px": y,
+                "w_px": w,
+                "h_px": h,
+            })),
+            _ => None,
+        }
+    }
+
+    fn snapshot_seen(s: &Value) -> Value {
+        json!({
+            "tick_id": s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0),
+            "frame_id": s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0),
+            "timestamp_unix_ms": s.get("timestamp_unix_ms").and_then(|v| v.as_u64()).unwrap_or(0),
+            "window_snapshot_seq": s.get("window_snapshot_seq").and_then(|v| v.as_u64()).unwrap_or(0),
+        })
+    }
+
+    let mut windows_out: Vec<Value> = Vec::with_capacity(windows.len());
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let events_total = w
+            .get("events")
+            .and_then(|v| v.as_array())
+            .map(|v| v.len())
+            .unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map(|v| v.as_slice())
+            .unwrap_or(&[]);
+
+        let first = snaps.first();
+        let last = snaps.last();
+
+        let last_bounds = last.and_then(|s| s.get("window_bounds")).and_then(get_rect);
+        let last_scale_factor = last
+            .and_then(|s| s.get("scale_factor"))
+            .and_then(|v| v.as_f64());
+        let last_primary_pointer_type = last
+            .and_then(|s| s.get("primary_pointer_type"))
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+        let last_hover_detection = last
+            .and_then(|s| s.get("caps"))
+            .and_then(|v| v.get("ui_window_hover_detection"))
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+        let last_docking_interaction_present = last
+            .and_then(|s| s.get("debug"))
+            .and_then(|v| v.get("docking_interaction"))
+            .is_some();
+
+        windows_out.push(json!({
+            "window": window_id,
+            "snapshots_total": snaps.len(),
+            "events_total": events_total,
+            "first_seen": first.map(snapshot_seen),
+            "last_seen": last.map(|s| {
+                let mut out = snapshot_seen(s);
+                if let Some(obj) = out.as_object_mut() {
+                    obj.insert("window_bounds".to_string(), last_bounds.clone().unwrap_or(Value::Null));
+                    obj.insert(
+                        "scale_factor".to_string(),
+                        last_scale_factor
+                            .map(|v| json!(v))
+                            .unwrap_or(Value::Null),
+                    );
+                    obj.insert(
+                        "primary_pointer_type".to_string(),
+                        last_primary_pointer_type
+                            .clone()
+                            .map(|v| json!(v))
+                            .unwrap_or(Value::Null),
+                    );
+                    obj.insert(
+                        "ui_window_hover_detection".to_string(),
+                        last_hover_detection
+                            .clone()
+                            .map(|v| json!(v))
+                            .unwrap_or(Value::Null),
+                    );
+                    obj.insert("docking_interaction_present".to_string(), Value::Bool(last_docking_interaction_present));
+                }
+                out
+            }),
+        }));
+    }
+
+    Ok(json!({
+        "schema_version": 1,
+        "kind": "window_map",
+        "bundle": bundle_label,
+        "warmup_frames": warmup_frames,
+        "windows_total": windows.len(),
+        "windows": windows_out,
     }))
 }
 
@@ -1129,6 +1281,30 @@ mod tests {
         })
     }
 
+    fn sample_v2_bundle_with_window_map_fields() -> Value {
+        json!({
+            "schema_version": 2,
+            "windows": [{
+                "window": 1,
+                "events": [{ "kind": "noop" }],
+                "snapshots": [
+                    {
+                        "tick_id": 7,
+                        "frame_id": 42,
+                        "timestamp_unix_ms": 123,
+                        "window_snapshot_seq": 100,
+                        "window": 1,
+                        "scale_factor": 2.0,
+                        "window_bounds": { "x_px": 1.0, "y_px": 2.0, "w_px": 300.0, "h_px": 200.0 },
+                        "primary_pointer_type": "mouse",
+                        "caps": { "ui_window_hover_detection": "platform_win32" },
+                        "debug": { "docking_interaction": { "dock_drag": null } }
+                    }
+                ]
+            }]
+        })
+    }
+
     #[test]
     fn bundle_meta_counts_semantics_via_table() {
         let bundle = sample_v2_bundle();
@@ -1232,6 +1408,41 @@ mod tests {
         let any_hex = items[0]["test_id_bloom_hex"].as_str().expect("hex");
         let any = crate::test_id_bloom::TestIdBloomV1::from_hex(any_hex).expect("decode");
         assert!(any.might_contain("a"));
+    }
+
+    #[test]
+    fn window_map_records_last_bounds_and_hover_detection() {
+        let bundle = sample_v2_bundle_with_window_map_fields();
+        let map = build_window_map_payload_from_json(&bundle, "bundle.json", 0).unwrap();
+
+        assert_eq!(map["kind"].as_str(), Some("window_map"));
+        assert_eq!(map["schema_version"].as_u64(), Some(1));
+        assert_eq!(map["windows_total"].as_u64(), Some(1));
+
+        let windows = map["windows"].as_array().unwrap();
+        assert_eq!(windows.len(), 1);
+        assert_eq!(windows[0]["window"].as_u64(), Some(1));
+        assert_eq!(windows[0]["snapshots_total"].as_u64(), Some(1));
+        assert_eq!(windows[0]["events_total"].as_u64(), Some(1));
+
+        let last = windows[0]["last_seen"].as_object().unwrap();
+        assert_eq!(last.get("frame_id").and_then(|v| v.as_u64()), Some(42));
+        assert_eq!(
+            last.get("ui_window_hover_detection")
+                .and_then(|v| v.as_str()),
+            Some("platform_win32")
+        );
+        assert_eq!(
+            last.get("docking_interaction_present")
+                .and_then(|v| v.as_bool()),
+            Some(true)
+        );
+
+        let bounds = last.get("window_bounds").unwrap().as_object().unwrap();
+        assert_eq!(bounds.get("x_px").and_then(|v| v.as_f64()), Some(1.0));
+        assert_eq!(bounds.get("y_px").and_then(|v| v.as_f64()), Some(2.0));
+        assert_eq!(bounds.get("w_px").and_then(|v| v.as_f64()), Some(300.0));
+        assert_eq!(bounds.get("h_px").and_then(|v| v.as_f64()), Some(200.0));
     }
 
     #[test]

@@ -21,6 +21,7 @@ Use `fret-ui-review` when the goal is an architecture/UX audit rather than produ
 - Do **not** `cat` / `Get-Content` a raw `bundle.json` (same explosion risk; it is frequently megabytes-to-hundreds-of-MB).
 - Prefer bounded tooling queries:
   - `fretboard diag meta ...`
+  - `fretboard diag windows ...`
   - `fretboard diag query ...`
   - `fretboard diag slice ...`
 - When you need repository-wide search, use `tools/rg-safe.ps1` (excludes diag artifact directories and bundle artifacts).
