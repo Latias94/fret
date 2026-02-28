@@ -910,6 +910,7 @@ fn cmd_config_doctor(ctx: ConfigCmdContext, rest: &[String]) -> Result<(), Strin
     let mut report_json: bool = false;
     let mut config_path_override: Option<PathBuf> = None;
     let mut show_env_all: bool = false;
+    let mut print_launch_policy: bool = false;
 
     let mut i: usize = 0;
     while i < rest.len() {
@@ -933,6 +934,10 @@ fn cmd_config_doctor(ctx: ConfigCmdContext, rest: &[String]) -> Result<(), Strin
                 };
                 i += 1;
             }
+            "--print-launch-policy" => {
+                print_launch_policy = true;
+                i += 1;
+            }
             "--mode" => {
                 i += 1;
                 let Some(v) = rest.get(i).map(|s| s.as_str()) else {
@@ -954,7 +959,7 @@ fn cmd_config_doctor(ctx: ConfigCmdContext, rest: &[String]) -> Result<(), Strin
             }
             "--help" | "-h" => {
                 println!(
-                    "Usage: fretboard diag config doctor [--mode launch|manual] [--config-path <path>] [--show-env set|all] [--report-json]\n\n\
+                    "Usage: fretboard diag config doctor [--mode launch|manual] [--config-path <path>] [--show-env set|all] [--report-json] [--print-launch-policy]\n\n\
 Default mode is `launch`, which overlays the tooling-reserved env vars (FRET_DIAG*, ready/exit paths) as if you were using `--launch`.\n\
 Use `--mode manual` to report what the runtime would see from the current process env only.\n\
 \n\
@@ -1169,6 +1174,33 @@ Tip: pass global `diag --env KEY=VALUE` flags to simulate one-off overrides for 
         &effective,
         &mut warnings,
     );
+
+    if print_launch_policy {
+        if mode != DoctorMode::Launch {
+            return Err("--print-launch-policy requires --mode launch".to_string());
+        }
+        let mut override_keys: Vec<String> =
+            ctx.launch_env.iter().map(|(k, _)| k.clone()).collect();
+        override_keys.sort();
+        println!("diag config doctor: launch policy");
+        println!("explicit_env_override_keys:");
+        if override_keys.is_empty() {
+            println!("  (none)");
+        } else {
+            for k in &override_keys {
+                println!("  - {k}");
+            }
+        }
+        println!("scrubbed_inherited_env_keys:");
+        for k in crate::launch_env_policy::TOOL_LAUNCH_SCRUB_ENV_KEYS {
+            println!("  - {k}");
+        }
+        println!("reserved_env_keys:");
+        for k in crate::launch_env_policy::TOOL_LAUNCH_RESERVED_ENV_KEYS {
+            println!("  - {k}");
+        }
+        return Ok(());
+    }
 
     if report_json {
         let mut launch_env_override_keys: Vec<String> =

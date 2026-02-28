@@ -35,6 +35,7 @@ required for the common `fretboard diag ... --launch` flows.
   effective merged config via `diag config doctor --mode launch`.
   - Tip: you can pass the same `--env KEY=VALUE` overrides to `diag config doctor --mode launch` to simulate how they
     would apply for a launched run.
+  - Tip: for a quick human-readable key list, use `diag config doctor --mode launch --print-launch-policy`.
 
 See also: `docs/ui-diagnostics-and-scripted-tests.md` (“Tool-launched env policy”).
 

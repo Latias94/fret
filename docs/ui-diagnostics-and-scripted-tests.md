@@ -654,6 +654,8 @@ explosions:
   inherited keys were actually scrubbed for the current shell env.
   - To simulate one-off `--env` overrides for a tool-launched run, pass them to the doctor as well:
     `cargo run -p fretboard -- diag config doctor --mode launch --env FRET_DIAG_MAX_SNAPSHOTS=50`.
+  - For a quick human-readable list (no JSON), use:
+    `cargo run -p fretboard -- diag config doctor --mode launch --print-launch-policy`.
 
 - `FRET_DIAG_TRIGGER_PATH=...`: dump trigger file (default `<dir>/trigger.touch`).
   - The trigger uses a **stamp** (monotonic integer) rather than mtime. Write a new integer value
