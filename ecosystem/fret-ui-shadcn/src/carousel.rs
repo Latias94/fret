@@ -49,9 +49,9 @@ pub struct CarouselApi {
     index: Model<usize>,
     runtime: Model<CarouselRuntime>,
     extent: Model<Px>,
+    options: Model<CarouselOptions>,
     snaps: Model<Arc<[Px]>>,
     commands: Model<CarouselCommandQueue>,
-    loop_enabled: bool,
     slides_in_view_snapshot: Option<Model<CarouselSlidesInViewSnapshot>>,
 }
 
@@ -91,6 +91,10 @@ impl CarouselApi {
         let view_size = host.read(&self.extent, |_host, v| v.0).ok().unwrap_or(0.0);
         let snap_count_raw = host.read(&self.snaps, |_host, v| v.len()).ok().unwrap_or(0);
         let extent_ready = view_size > 0.0 && snap_count_raw > 0;
+        let loop_enabled = host
+            .read(&self.options, |_host, v| v.loop_enabled)
+            .ok()
+            .unwrap_or(false);
 
         let runtime = host
             .read(&self.runtime, |_host, v| *v)
@@ -99,10 +103,10 @@ impl CarouselApi {
 
         let snap_count = if extent_ready { snap_count_raw } else { 0 };
         let can_scroll_prev =
-            extent_ready && snap_count_raw > 1 && (self.loop_enabled || selected_index > 0);
+            extent_ready && snap_count_raw > 1 && (loop_enabled || selected_index > 0);
         let can_scroll_next = extent_ready
             && snap_count_raw > 1
-            && (self.loop_enabled || selected_index + 1 < snap_count_raw);
+            && (loop_enabled || selected_index + 1 < snap_count_raw);
 
         CarouselApiSnapshot {
             selected_index,
@@ -235,6 +239,75 @@ impl CarouselAlign {
 pub enum CarouselSlidesToScroll {
     Fixed(usize),
     Auto,
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+pub struct CarouselOptionsPatch {
+    pub align: Option<CarouselAlign>,
+    pub slides_to_scroll: Option<CarouselSlidesToScroll>,
+    pub contain_scroll: Option<CarouselContainScroll>,
+    pub direction: Option<LayoutDirection>,
+    pub draggable: Option<bool>,
+    pub loop_enabled: Option<bool>,
+    pub skip_snaps: Option<bool>,
+    pub drag_free: Option<bool>,
+    pub duration: Option<Duration>,
+    pub embla_engine: Option<bool>,
+    pub embla_duration: Option<f32>,
+    pub in_view_threshold: Option<f32>,
+    pub in_view_margin_px: Option<Px>,
+    pub watch_focus: Option<bool>,
+    pub pixel_tolerance_px: Option<f32>,
+}
+
+impl CarouselOptionsPatch {
+    fn apply(self, base: CarouselOptions) -> CarouselOptions {
+        CarouselOptions {
+            align: self.align.unwrap_or(base.align),
+            slides_to_scroll: self.slides_to_scroll.unwrap_or(base.slides_to_scroll),
+            contain_scroll: self.contain_scroll.unwrap_or(base.contain_scroll),
+            direction: self.direction.unwrap_or(base.direction),
+            start_snap: base.start_snap,
+            draggable: self.draggable.unwrap_or(base.draggable),
+            loop_enabled: self.loop_enabled.unwrap_or(base.loop_enabled),
+            skip_snaps: self.skip_snaps.unwrap_or(base.skip_snaps),
+            drag_free: self.drag_free.unwrap_or(base.drag_free),
+            duration: self.duration.unwrap_or(base.duration),
+            embla_engine: self.embla_engine.unwrap_or(base.embla_engine),
+            embla_duration: self.embla_duration.unwrap_or(base.embla_duration),
+            in_view_threshold: self.in_view_threshold.unwrap_or(base.in_view_threshold),
+            in_view_margin_px: self.in_view_margin_px.unwrap_or(base.in_view_margin_px),
+            watch_focus: self.watch_focus.unwrap_or(base.watch_focus),
+            pixel_tolerance_px: self.pixel_tolerance_px.unwrap_or(base.pixel_tolerance_px),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct CarouselBreakpoint {
+    pub min_width_px: Px,
+    pub patch: CarouselOptionsPatch,
+}
+
+fn resolve_breakpoint_options(
+    base: CarouselOptions,
+    view_width: Px,
+    breakpoints: &[CarouselBreakpoint],
+) -> CarouselOptions {
+    if view_width.0 <= 0.0 || breakpoints.is_empty() {
+        return base;
+    }
+
+    let mut best = None;
+    for bp in breakpoints {
+        if bp.min_width_px.0 <= view_width.0 {
+            best = Some(*bp);
+        }
+    }
+    match best {
+        Some(bp) => bp.patch.apply(base),
+        None => base,
+    }
 }
 
 impl Default for CarouselSlidesToScroll {
@@ -435,6 +508,7 @@ pub struct Carousel {
     track_start_neg_margin: Space,
     item_padding_start: Space,
     item_basis_main_px: Option<Px>,
+    breakpoints: Vec<CarouselBreakpoint>,
     options: CarouselOptions,
     drag_config: headless_carousel::CarouselDragConfig,
     api_snapshot: Option<Model<CarouselApiSnapshot>>,
@@ -497,6 +571,8 @@ struct CarouselState {
     offset: Option<Model<Px>>,
     runtime: Option<Model<CarouselRuntime>>,
     extent: Option<Model<Px>>,
+    viewport_width: Option<Model<Px>>,
+    options: Option<Model<CarouselOptions>>,
     snaps: Option<Model<Arc<[Px]>>>,
     slides: Option<Model<Arc<[headless_carousel::CarouselSlide1D]>>>,
     max_offset: Option<Model<Px>>,
@@ -520,12 +596,14 @@ enum CarouselCommand {
 
 fn carousel_models<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    start_snap: usize,
+    options_base: CarouselOptions,
 ) -> (
     Model<usize>,
     Model<Px>,
     Model<CarouselRuntime>,
     Model<Px>,
+    Model<Px>,
+    Model<CarouselOptions>,
     Model<Arc<[Px]>>,
     Model<Arc<[headless_carousel::CarouselSlide1D]>>,
     Model<Px>,
@@ -536,6 +614,8 @@ fn carousel_models<H: UiHost>(
             || st.offset.is_none()
             || st.runtime.is_none()
             || st.extent.is_none()
+            || st.viewport_width.is_none()
+            || st.options.is_none()
             || st.snaps.is_none()
             || st.slides.is_none()
             || st.max_offset.is_none()
@@ -543,14 +623,15 @@ fn carousel_models<H: UiHost>(
     });
 
     if needs_init {
-        let index = cx.app.models_mut().insert(start_snap);
+        let index = cx.app.models_mut().insert(options_base.start_snap);
         let offset = cx.app.models_mut().insert(Px(0.0));
         let runtime = cx.app.models_mut().insert(CarouselRuntime::default());
-        let _ = cx
-            .app
-            .models_mut()
-            .update(&runtime, |st| st.api_last_selected_index = start_snap);
+        let _ = cx.app.models_mut().update(&runtime, |st| {
+            st.api_last_selected_index = options_base.start_snap
+        });
         let extent = cx.app.models_mut().insert(Px(0.0));
+        let viewport_width = cx.app.models_mut().insert(Px(0.0));
+        let options = cx.app.models_mut().insert(options_base);
         let snaps: Arc<[Px]> = Arc::from(Vec::<Px>::new());
         let snaps = cx.app.models_mut().insert(snaps);
         let slides: Arc<[headless_carousel::CarouselSlide1D]> =
@@ -564,6 +645,8 @@ fn carousel_models<H: UiHost>(
             st.offset = Some(offset.clone());
             st.runtime = Some(runtime.clone());
             st.extent = Some(extent.clone());
+            st.viewport_width = Some(viewport_width.clone());
+            st.options = Some(options.clone());
             st.snaps = Some(snaps.clone());
             st.slides = Some(slides.clone());
             st.max_offset = Some(max_offset.clone());
@@ -574,6 +657,8 @@ fn carousel_models<H: UiHost>(
             offset,
             runtime,
             extent,
+            viewport_width,
+            options,
             snaps,
             slides,
             max_offset,
@@ -581,24 +666,38 @@ fn carousel_models<H: UiHost>(
         );
     }
 
-    let (index, offset, runtime, extent, snaps, slides, max_offset, embla_engine) =
-        cx.with_state(CarouselState::default, |st| {
-            (
-                st.index.clone().expect("index"),
-                st.offset.clone().expect("offset"),
-                st.runtime.clone().expect("runtime"),
-                st.extent.clone().expect("extent"),
-                st.snaps.clone().expect("snaps"),
-                st.slides.clone().expect("slides"),
-                st.max_offset.clone().expect("max_offset"),
-                st.embla_engine.clone().expect("embla_engine"),
-            )
-        });
+    let (
+        index,
+        offset,
+        runtime,
+        extent,
+        viewport_width,
+        options,
+        snaps,
+        slides,
+        max_offset,
+        embla_engine,
+    ) = cx.with_state(CarouselState::default, |st| {
+        (
+            st.index.clone().expect("index"),
+            st.offset.clone().expect("offset"),
+            st.runtime.clone().expect("runtime"),
+            st.extent.clone().expect("extent"),
+            st.viewport_width.clone().expect("viewport_width"),
+            st.options.clone().expect("options"),
+            st.snaps.clone().expect("snaps"),
+            st.slides.clone().expect("slides"),
+            st.max_offset.clone().expect("max_offset"),
+            st.embla_engine.clone().expect("embla_engine"),
+        )
+    });
     (
         index,
         offset,
         runtime,
         extent,
+        viewport_width,
+        options,
         snaps,
         slides,
         max_offset,
@@ -676,6 +775,7 @@ impl Carousel {
             track_start_neg_margin: Space::N4,
             item_padding_start: Space::N4,
             item_basis_main_px: None,
+            breakpoints: Vec::new(),
             options: CarouselOptions::default(),
             drag_config: headless_carousel::CarouselDragConfig::default(),
             api_snapshot: None,
@@ -794,6 +894,31 @@ impl Carousel {
         self
     }
 
+    /// Breakpoints for Embla-style options overrides, evaluated using the measured carousel viewport
+    /// width.
+    ///
+    /// This is intentionally "Rust-native": callers provide explicit width thresholds instead of
+    /// CSS media queries.
+    pub fn breakpoints(
+        mut self,
+        breakpoints: impl IntoIterator<Item = CarouselBreakpoint>,
+    ) -> Self {
+        self.breakpoints = breakpoints.into_iter().collect::<Vec<_>>();
+        self.breakpoints
+            .sort_by(|a, b| a.min_width_px.0.total_cmp(&b.min_width_px.0));
+        self
+    }
+
+    pub fn breakpoint(mut self, min_width_px: Px, patch: CarouselOptionsPatch) -> Self {
+        self.breakpoints.push(CarouselBreakpoint {
+            min_width_px,
+            patch,
+        });
+        self.breakpoints
+            .sort_by(|a, b| a.min_width_px.0.total_cmp(&b.min_width_px.0));
+        self
+    }
+
     pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
         self.test_id = Some(id.into());
         self
@@ -804,7 +929,8 @@ impl Carousel {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).snapshot();
             let orientation = self.orientation;
-            let options = self.options;
+            let options_base = self.options;
+            let breakpoints = self.breakpoints;
             let autoplay_cfg = self.autoplay;
             let autoplay_stop_on_interaction =
                 autoplay_cfg.is_some_and(|cfg| cfg.stop_on_interaction);
@@ -817,11 +943,28 @@ impl Carousel {
                 offset_model,
                 runtime_model,
                 extent_model,
+                viewport_width_model,
+                options_model,
                 snaps_model,
                 slides_model,
                 max_offset_model,
                 embla_engine_model,
-            ) = carousel_models(cx, options.start_snap);
+            ) = carousel_models(cx, options_base);
+
+            let options_prev = cx
+                .watch_model(&options_model)
+                .copied()
+                .unwrap_or(options_base);
+            let view_width_for_breakpoints = cx
+                .watch_model(&viewport_width_model)
+                .copied()
+                .unwrap_or(Px(0.0));
+            let options =
+                resolve_breakpoint_options(options_base, view_width_for_breakpoints, &breakpoints);
+            let _ = cx
+                .app
+                .models_mut()
+                .update(&options_model, |v| *v = options);
 
             let api_commands_model = api_handle_model
                 .as_ref()
@@ -833,9 +976,9 @@ impl Carousel {
                     index: index_model.clone(),
                     runtime: runtime_model.clone(),
                     extent: extent_model.clone(),
+                    options: options_model.clone(),
                     snaps: snaps_model.clone(),
                     commands: api_commands_model.clone(),
-                    loop_enabled: options.loop_enabled,
                     slides_in_view_snapshot: slides_in_view_snapshot_model.clone(),
                 };
                 let _ = cx.app.models_mut().update(api_handle_model, |v| {
@@ -2255,6 +2398,11 @@ impl Carousel {
             let view_size_prev = cx.watch_model(&extent_model).copied().unwrap_or(Px(0.0));
 
             let viewport_bounds = cx.last_bounds_for_element(viewport_id);
+            let viewport_width_now = viewport_bounds.map(|b| b.size.width).unwrap_or(Px(0.0));
+            let _ = cx
+                .app
+                .models_mut()
+                .update(&viewport_width_model, |v| *v = viewport_width_now);
             let view_size_now = viewport_bounds
                 .map(|b| match orientation {
                     CarouselOrientation::Horizontal => b.size.width,
@@ -2616,6 +2764,14 @@ impl Carousel {
             if (snaps_changed || max_offset_changed || view_size_changed) && view_size_now.0 > 0.0 {
                 did_reinit = true;
             }
+            let options_changed = options_prev.loop_enabled != options.loop_enabled
+                || options_prev.skip_snaps != options.skip_snaps
+                || options_prev.drag_free != options.drag_free
+                || options_prev.embla_engine != options.embla_engine
+                || (options_prev.embla_duration - options.embla_duration).abs() > eps;
+            if options_changed && view_size_now.0 > 0.0 {
+                did_reinit = true;
+            }
 
             if view_size_now.0 > 0.0 && !slide_content_ids.is_empty() {
                 let slide_content_ids_model = carousel_slide_content_ids_model(cx);
@@ -2654,6 +2810,13 @@ impl Carousel {
                     let Some(engine) = v.as_mut() else {
                         return;
                     };
+
+                    engine.set_options(
+                        options.loop_enabled,
+                        options.drag_free,
+                        options.skip_snaps,
+                        options.embla_duration,
+                    );
 
                     let _ev = engine.reinit(scroll_snaps, content_size, view_size);
                     engine.constrain_bounds(pointer_down);

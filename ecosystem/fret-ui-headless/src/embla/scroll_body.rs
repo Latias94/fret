@@ -125,6 +125,22 @@ impl ScrollBody {
         self
     }
 
+    pub fn set_base_duration(&mut self, base_duration: f32) {
+        let was_base = (self.scroll_duration - self.base_duration).abs() <= 0.0001;
+        self.base_duration = base_duration;
+        if was_base {
+            self.scroll_duration = base_duration;
+        }
+    }
+
+    pub fn set_base_friction(&mut self, base_friction: f32) {
+        let was_base = (self.scroll_friction - self.base_friction).abs() <= 0.0001;
+        self.base_friction = base_friction;
+        if was_base {
+            self.scroll_friction = base_friction;
+        }
+    }
+
     pub fn use_base_duration(&mut self) -> &mut Self {
         self.scroll_duration = self.base_duration;
         self

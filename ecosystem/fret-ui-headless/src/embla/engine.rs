@@ -86,6 +86,24 @@ impl Engine {
         }
     }
 
+    pub fn set_options(
+        &mut self,
+        loop_enabled: bool,
+        drag_free: bool,
+        skip_snaps: bool,
+        duration: f32,
+    ) {
+        self.config.loop_enabled = loop_enabled;
+        self.config.drag_free = drag_free;
+        self.config.skip_snaps = skip_snaps;
+
+        let duration = duration.max(0.0);
+        if (self.config.duration - duration).abs() > 0.0001 {
+            self.config.duration = duration;
+            self.scroll_body.set_base_duration(duration);
+        }
+    }
+
     pub fn reinit(
         &mut self,
         scroll_snaps: Vec<f32>,

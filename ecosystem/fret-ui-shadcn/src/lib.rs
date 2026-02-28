@@ -149,8 +149,9 @@ pub use card::{
 };
 pub use carousel::{
     Carousel, CarouselAlign, CarouselApi, CarouselApiSnapshot, CarouselAutoplayConfig,
-    CarouselContainScroll, CarouselEvent, CarouselEventCursor, CarouselOptions,
-    CarouselOrientation, CarouselSlidesInViewSnapshot, CarouselSlidesToScroll,
+    CarouselBreakpoint, CarouselContainScroll, CarouselEvent, CarouselEventCursor, CarouselOptions,
+    CarouselOptionsPatch, CarouselOrientation, CarouselSlidesInViewSnapshot,
+    CarouselSlidesToScroll,
 };
 pub use chart::{
     ChartLegendContent, ChartLegendItem, ChartLegendVerticalAlign, ChartTooltipContent,
