@@ -15,6 +15,7 @@ use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::declarative::transition as decl_transition;
 use fret_ui_kit::headless::carousel as headless_carousel;
+use fret_ui_kit::headless::embla as headless_embla;
 use fret_ui_kit::headless::snap_points as headless_snap_points;
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement, LengthRefinement, MetricRef, Radius, Space};
 
@@ -160,8 +161,17 @@ pub struct CarouselOptions {
     pub skip_snaps: bool,
     /// Drag-free release (settle to the projected offset instead of the nearest snap).
     pub drag_free: bool,
-    /// Settle animation duration (Embla `duration`, milliseconds).
+    /// Settle animation duration for the deterministic (non-physics) driver (v1 behavior).
     pub duration: Duration,
+    /// Enable the Embla-style headless engine (v2 parity MVP).
+    ///
+    /// Note: when disabled, Carousel uses the deterministic settle driver (v1 behavior).
+    pub embla_engine: bool,
+    /// Embla-style `duration` (integrator parameter, default `25`).
+    ///
+    /// This is *not* a wall-clock duration in milliseconds. See:
+    /// - `docs/workstreams/carousel-embla-parity-v2/contracts.md`
+    pub embla_duration: f32,
     pub pixel_tolerance_px: f32,
 }
 
@@ -179,6 +189,8 @@ impl Default for CarouselOptions {
             skip_snaps: false,
             drag_free: false,
             duration: Duration::from_millis(25),
+            embla_engine: false,
+            embla_duration: 25.0,
             pixel_tolerance_px: 2.0,
         }
     }
@@ -239,6 +251,16 @@ impl CarouselOptions {
         self
     }
 
+    pub fn embla_engine(mut self, embla_engine: bool) -> Self {
+        self.embla_engine = embla_engine;
+        self
+    }
+
+    pub fn embla_duration(mut self, duration: f32) -> Self {
+        self.embla_duration = duration;
+        self
+    }
+
     pub fn pixel_tolerance_px(mut self, pixel_tolerance_px: f32) -> Self {
         self.pixel_tolerance_px = pixel_tolerance_px;
         self
@@ -267,6 +289,7 @@ pub struct Carousel {
 struct CarouselRuntime {
     drag: headless_carousel::CarouselDragState,
     settling: bool,
+    embla_settling: bool,
     settle_from: Px,
     settle_to: Px,
     settle_generation: u64,
@@ -281,6 +304,7 @@ impl Default for CarouselRuntime {
         Self {
             drag: headless_carousel::CarouselDragState::default(),
             settling: false,
+            embla_settling: false,
             settle_from: Px(0.0),
             settle_to: Px(0.0),
             settle_generation: 0,
@@ -300,6 +324,7 @@ struct CarouselState {
     extent: Option<Model<Px>>,
     snaps: Option<Model<Arc<[Px]>>>,
     max_offset: Option<Model<Px>>,
+    embla_engine: Option<Model<Option<headless_embla::engine::Engine>>>,
 }
 
 fn carousel_models<H: UiHost>(
@@ -312,6 +337,7 @@ fn carousel_models<H: UiHost>(
     Model<Px>,
     Model<Arc<[Px]>>,
     Model<Px>,
+    Model<Option<headless_embla::engine::Engine>>,
 ) {
     let needs_init = cx.with_state(CarouselState::default, |st| {
         st.index.is_none()
@@ -320,6 +346,7 @@ fn carousel_models<H: UiHost>(
             || st.extent.is_none()
             || st.snaps.is_none()
             || st.max_offset.is_none()
+            || st.embla_engine.is_none()
     });
 
     if needs_init {
@@ -330,6 +357,8 @@ fn carousel_models<H: UiHost>(
         let snaps: Arc<[Px]> = Arc::from(Vec::<Px>::new());
         let snaps = cx.app.models_mut().insert(snaps);
         let max_offset = cx.app.models_mut().insert(Px(0.0));
+        let embla_engine: Option<headless_embla::engine::Engine> = None;
+        let embla_engine = cx.app.models_mut().insert(embla_engine);
         cx.with_state(CarouselState::default, |st| {
             st.index = Some(index.clone());
             st.offset = Some(offset.clone());
@@ -337,11 +366,20 @@ fn carousel_models<H: UiHost>(
             st.extent = Some(extent.clone());
             st.snaps = Some(snaps.clone());
             st.max_offset = Some(max_offset.clone());
+            st.embla_engine = Some(embla_engine.clone());
         });
-        return (index, offset, runtime, extent, snaps, max_offset);
+        return (
+            index,
+            offset,
+            runtime,
+            extent,
+            snaps,
+            max_offset,
+            embla_engine,
+        );
     }
 
-    let (index, offset, runtime, extent, snaps, max_offset) =
+    let (index, offset, runtime, extent, snaps, max_offset, embla_engine) =
         cx.with_state(CarouselState::default, |st| {
             (
                 st.index.clone().expect("index"),
@@ -350,9 +388,18 @@ fn carousel_models<H: UiHost>(
                 st.extent.clone().expect("extent"),
                 st.snaps.clone().expect("snaps"),
                 st.max_offset.clone().expect("max_offset"),
+                st.embla_engine.clone().expect("embla_engine"),
             )
         });
-    (index, offset, runtime, extent, snaps, max_offset)
+    (
+        index,
+        offset,
+        runtime,
+        extent,
+        snaps,
+        max_offset,
+        embla_engine,
+    )
 }
 
 impl Default for Carousel {
@@ -495,6 +542,7 @@ impl Carousel {
                 extent_model,
                 snaps_model,
                 max_offset_model,
+                embla_engine_model,
             ) = carousel_models(cx, options.start_snap);
 
             let root_layout = decl_style::layout_style(
@@ -545,6 +593,46 @@ impl Carousel {
             let index_now = cx.watch_model(&index_model).copied().unwrap_or(0);
             let mut offset_now = cx.watch_model(&offset_model).copied().unwrap_or(Px(0.0));
             let runtime_snapshot = cx.watch_model(&runtime_model).copied().unwrap_or_default();
+
+            let embla_engine_enabled = options.embla_engine
+                || std::env::var("FRET_DEBUG_CAROUSEL_EMBLA_ENGINE")
+                    .ok()
+                    .is_some_and(|v| v == "1" || v.eq_ignore_ascii_case("true"));
+
+            if runtime_snapshot.embla_settling {
+                let _frames = cx.begin_continuous_frames();
+
+                let max_offset = cx
+                    .watch_model(&max_offset_model)
+                    .copied()
+                    .unwrap_or(Px(0.0));
+                let mut next_offset = None;
+                let mut settled = false;
+
+                let _ = cx.app.models_mut().update(&embla_engine_model, |v| {
+                    let Some(engine) = v.as_mut() else {
+                        return;
+                    };
+
+                    engine.tick();
+                    settled = engine.scroll_body.settled();
+                    let loc = engine.scroll_body.location();
+                    let mapped = Px((-loc).clamp(0.0, max_offset.0.max(0.0)));
+                    next_offset = Some(mapped);
+                });
+
+                if let Some(next) = next_offset {
+                    offset_now = next;
+                    let _ = cx.app.models_mut().update(&offset_model, |v| *v = next);
+                }
+
+                let _ = cx.app.models_mut().update(&runtime_model, |st| {
+                    if settled {
+                        st.embla_settling = false;
+                    }
+                });
+            }
+
             if runtime_snapshot.settling {
                 let duration = options.duration;
                 let settle_generation = runtime_snapshot.settle_generation;
@@ -582,6 +670,7 @@ impl Carousel {
 
             let offset_for_down = offset_model.clone();
             let runtime_for_down = runtime_model.clone();
+            let embla_engine_for_down = embla_engine_model.clone();
             let autoplay_stop_for_down = autoplay_stop_on_interaction;
             let on_down: fret_ui::action::OnPointerDown = Arc::new(move |host, _cx, down| {
                 if down.button != MouseButton::Left {
@@ -619,6 +708,10 @@ impl Carousel {
                         start_offset,
                     );
                     st.settling = false;
+                    st.embla_settling = false;
+                });
+                let _ = host.models_mut().update(&embla_engine_for_down, |v| {
+                    *v = None;
                 });
                 false
             });
@@ -729,6 +822,9 @@ impl Carousel {
             let index_for_up = index_model.clone();
             let snaps_for_up = snaps_model.clone();
             let max_offset_for_up = max_offset_model.clone();
+            let embla_engine_for_up = embla_engine_model.clone();
+            let embla_engine_enabled_for_up = embla_engine_enabled;
+            let embla_duration_for_up = options.embla_duration;
             let skip_snaps_for_up = options.skip_snaps;
             let drag_free_for_up = options.drag_free;
             let loop_for_up = options.loop_enabled;
@@ -765,6 +861,106 @@ impl Carousel {
                     .read(&snaps_for_up, |v| v.clone())
                     .ok()
                     .unwrap_or_else(|| Arc::from(Vec::<Px>::new()));
+
+                let can_use_embla_engine = embla_engine_enabled_for_up
+                    && !loop_for_up
+                    && snaps.len() > 1
+                    && up.velocity_window.is_some();
+
+                if can_use_embla_engine {
+                    let bounds = host.bounds();
+                    let view_size = match track_direction {
+                        fret_core::Axis::Horizontal => bounds.size.width.0.max(0.0),
+                        fret_core::Axis::Vertical => bounds.size.height.0.max(0.0),
+                    };
+
+                    let content_size = if max_offset.0 > 0.0 {
+                        max_offset.0
+                    } else {
+                        let extent = match item_basis {
+                            Some(px) => px,
+                            None => match track_direction {
+                                fret_core::Axis::Horizontal => bounds.size.width,
+                                fret_core::Axis::Vertical => bounds.size.height,
+                            },
+                        };
+                        (extent.0 * (items_len.saturating_sub(1) as f32)).max(0.0)
+                    };
+
+                    let mut scroll_snaps = snaps.iter().map(|px| -px.0).collect::<Vec<_>>();
+                    if scroll_snaps.is_empty() {
+                        scroll_snaps.push(0.0);
+                    }
+
+                    let index: usize = host
+                        .models_mut()
+                        .read(&index_for_up, |v| *v)
+                        .ok()
+                        .unwrap_or(0);
+
+                    let mut engine = headless_embla::engine::Engine::new(
+                        scroll_snaps,
+                        content_size,
+                        headless_embla::engine::EngineConfig {
+                            loop_enabled: false,
+                            drag_free: drag_free_for_up,
+                            skip_snaps: skip_snaps_for_up,
+                            duration: embla_duration_for_up.max(0.0),
+                            base_friction: 0.68,
+                            view_size,
+                            start_snap: index,
+                        },
+                    );
+
+                    // Sync engine state to the current drag location (Embla updates target while
+                    // dragging; our v1 path directly updates the offset model).
+                    let engine_location = -offset.0;
+                    engine.scroll_body.set_location(engine_location);
+                    engine.scroll_body.set_target(engine_location);
+                    engine.scroll_target.set_target_vector(engine_location);
+
+                    let pointer_kind = match up.pointer_type {
+                        fret_core::PointerType::Touch => headless_embla::drag_release::PointerKind::Touch,
+                        _ => headless_embla::drag_release::PointerKind::Mouse,
+                    };
+                    let velocity = up
+                        .velocity_window
+                        .map(|v| match track_direction {
+                            fret_core::Axis::Horizontal => v.x.0,
+                            fret_core::Axis::Vertical => v.y.0,
+                        })
+                        .unwrap_or(0.0);
+                    // Embla uses px/ms (`event.timeStamp` is ms). Fret provides px/s.
+                    let velocity = velocity / 1000.0;
+
+                    let sign = if track_direction == fret_core::Axis::Horizontal
+                        && direction_for_up == LayoutDirection::Rtl
+                    {
+                        -1.0
+                    } else {
+                        1.0
+                    };
+                    let (_release, select) =
+                        engine.on_drag_release(pointer_kind, velocity, move |v| v * sign);
+
+                    let _ = host.models_mut().update(&embla_engine_for_up, |v| {
+                        *v = Some(engine);
+                    });
+
+                    if let Some(select) = select {
+                        let _ = host
+                            .models_mut()
+                            .update(&index_for_up, |v| *v = select.target_snap);
+                    }
+
+                    let _ = host.models_mut().update(&runtime_for_up, |st| {
+                        st.drag = headless_carousel::CarouselDragState::default();
+                        st.settling = false;
+                        st.embla_settling = true;
+                    });
+                    host.request_redraw(cx.window);
+                    return true;
+                }
                 let release = if snaps.len() > 1 {
                     headless_carousel::on_pointer_up_with_snaps_options(
                         drag_config,
@@ -806,6 +1002,7 @@ impl Carousel {
                 let _ = host.models_mut().update(&runtime_for_up, |st| {
                     st.drag = headless_carousel::CarouselDragState::default();
                     st.settling = true;
+                    st.embla_settling = false;
                     st.settle_from = offset;
                     st.settle_to = release.target_offset;
                     st.settle_generation = st.settle_generation.saturating_add(1);
@@ -815,6 +1012,7 @@ impl Carousel {
             });
 
             let runtime_for_cancel = runtime_model.clone();
+            let embla_engine_for_cancel = embla_engine_model.clone();
             let on_cancel: fret_ui::action::OnPointerCancel = Arc::new(move |host, cx, _cancel| {
                 let runtime = host
                     .models_mut()
@@ -829,6 +1027,10 @@ impl Carousel {
                 let _ = host.models_mut().update(&runtime_for_cancel, |st| {
                     st.drag = headless_carousel::CarouselDragState::default();
                     st.settling = false;
+                    st.embla_settling = false;
+                });
+                let _ = host.models_mut().update(&embla_engine_for_cancel, |v| {
+                    *v = None;
                 });
                 host.request_redraw(cx.window);
                 true
@@ -838,8 +1040,12 @@ impl Carousel {
             let runtime_for_prev = runtime_model.clone();
             let index_for_prev = index_model.clone();
             let snaps_for_prev = snaps_model.clone();
+            let embla_engine_for_prev = embla_engine_model.clone();
+            let max_offset_for_prev = max_offset_model.clone();
             let autoplay_stop_for_prev = autoplay_stop_on_interaction;
             let loop_for_prev = options.loop_enabled;
+            let embla_engine_enabled_for_prev = embla_engine_enabled;
+            let embla_duration_for_prev = options.embla_duration;
             let on_prev: fret_ui::action::OnActivate = Arc::new(
                 move |host: &mut dyn UiActionHost, cx: ActionCx, _reason: ActivateReason| {
                     if autoplay_stop_for_prev {
@@ -871,6 +1077,59 @@ impl Carousel {
                         return;
                     }
 
+                    if embla_engine_enabled_for_prev && !loop_for_prev {
+                        let max_offset = host
+                            .models_mut()
+                            .read(&max_offset_for_prev, |v| *v)
+                            .ok()
+                            .unwrap_or(Px(0.0));
+                        let content_size = max_offset.0.max(0.0);
+                        let mut scroll_snaps = snaps.iter().map(|px| -px.0).collect::<Vec<_>>();
+                        if scroll_snaps.is_empty() {
+                            scroll_snaps.push(0.0);
+                        }
+
+                        let mut engine = headless_embla::engine::Engine::new(
+                            scroll_snaps,
+                            content_size,
+                            headless_embla::engine::EngineConfig {
+                                loop_enabled: false,
+                                drag_free: false,
+                                skip_snaps: false,
+                                duration: embla_duration_for_prev.max(0.0),
+                                base_friction: 0.68,
+                                view_size: 0.0,
+                                start_snap: index,
+                            },
+                        );
+                        let cur = host
+                            .models_mut()
+                            .read(&offset_for_prev, |v| *v)
+                            .ok()
+                            .unwrap_or(Px(0.0));
+                        let loc = -cur.0;
+                        engine.scroll_body.set_location(loc);
+                        engine.scroll_body.set_target(loc);
+                        engine.scroll_target.set_target_vector(loc);
+                        let select = engine.scroll_to_prev();
+
+                        let _ = host.models_mut().update(&embla_engine_for_prev, |v| {
+                            *v = Some(engine);
+                        });
+                        if let Some(select) = select {
+                            let _ = host
+                                .models_mut()
+                                .update(&index_for_prev, |v| *v = select.target_snap);
+                        }
+                        let _ = host.models_mut().update(&runtime_for_prev, |st| {
+                            st.drag = headless_carousel::CarouselDragState::default();
+                            st.settling = false;
+                            st.embla_settling = true;
+                        });
+                        host.request_redraw(cx.window);
+                        return;
+                    }
+
                     let target_index = if loop_for_prev {
                         headless_snap_points::step_index_wrapped(snaps.len(), index, -1)
                     } else {
@@ -894,6 +1153,7 @@ impl Carousel {
                     let _ = host.models_mut().update(&runtime_for_prev, |st| {
                         st.drag = headless_carousel::CarouselDragState::default();
                         st.settling = true;
+                        st.embla_settling = false;
                         st.settle_from = cur;
                         st.settle_to = target;
                         st.settle_generation = st.settle_generation.saturating_add(1);
@@ -906,8 +1166,12 @@ impl Carousel {
             let runtime_for_next = runtime_model.clone();
             let index_for_next = index_model.clone();
             let snaps_for_next = snaps_model.clone();
+            let embla_engine_for_next = embla_engine_model.clone();
+            let max_offset_for_next = max_offset_model.clone();
             let autoplay_stop_for_next = autoplay_stop_on_interaction;
             let loop_for_next = options.loop_enabled;
+            let embla_engine_enabled_for_next = embla_engine_enabled;
+            let embla_duration_for_next = options.embla_duration;
             let on_next: fret_ui::action::OnActivate = Arc::new(
                 move |host: &mut dyn UiActionHost, cx: ActionCx, _reason: ActivateReason| {
                     if autoplay_stop_for_next {
@@ -939,6 +1203,59 @@ impl Carousel {
                         return;
                     }
 
+                    if embla_engine_enabled_for_next && !loop_for_next {
+                        let max_offset = host
+                            .models_mut()
+                            .read(&max_offset_for_next, |v| *v)
+                            .ok()
+                            .unwrap_or(Px(0.0));
+                        let content_size = max_offset.0.max(0.0);
+                        let mut scroll_snaps = snaps.iter().map(|px| -px.0).collect::<Vec<_>>();
+                        if scroll_snaps.is_empty() {
+                            scroll_snaps.push(0.0);
+                        }
+
+                        let mut engine = headless_embla::engine::Engine::new(
+                            scroll_snaps,
+                            content_size,
+                            headless_embla::engine::EngineConfig {
+                                loop_enabled: false,
+                                drag_free: false,
+                                skip_snaps: false,
+                                duration: embla_duration_for_next.max(0.0),
+                                base_friction: 0.68,
+                                view_size: 0.0,
+                                start_snap: index,
+                            },
+                        );
+                        let cur = host
+                            .models_mut()
+                            .read(&offset_for_next, |v| *v)
+                            .ok()
+                            .unwrap_or(Px(0.0));
+                        let loc = -cur.0;
+                        engine.scroll_body.set_location(loc);
+                        engine.scroll_body.set_target(loc);
+                        engine.scroll_target.set_target_vector(loc);
+                        let select = engine.scroll_to_next();
+
+                        let _ = host.models_mut().update(&embla_engine_for_next, |v| {
+                            *v = Some(engine);
+                        });
+                        if let Some(select) = select {
+                            let _ = host
+                                .models_mut()
+                                .update(&index_for_next, |v| *v = select.target_snap);
+                        }
+                        let _ = host.models_mut().update(&runtime_for_next, |st| {
+                            st.drag = headless_carousel::CarouselDragState::default();
+                            st.settling = false;
+                            st.embla_settling = true;
+                        });
+                        host.request_redraw(cx.window);
+                        return;
+                    }
+
                     let target_index = if loop_for_next {
                         headless_snap_points::step_index_wrapped(snaps.len(), index, 1)
                     } else {
@@ -962,6 +1279,7 @@ impl Carousel {
                     let _ = host.models_mut().update(&runtime_for_next, |st| {
                         st.drag = headless_carousel::CarouselDragState::default();
                         st.settling = true;
+                        st.embla_settling = false;
                         st.settle_from = cur;
                         st.settle_to = target;
                         st.settle_generation = st.settle_generation.saturating_add(1);
