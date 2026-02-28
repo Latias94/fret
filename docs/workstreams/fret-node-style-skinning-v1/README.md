@@ -41,6 +41,7 @@ Milestone design notes (implementation-oriented):
 - Built-in preset families (paint-only JSON → `NodeGraphSkin`):
   - Data: `themes/node-graph-presets.v1.json`
   - Loader + skin impl: `ecosystem/fret-node/src/ui/presets.rs`
+  - Theme-derived preset mapping: `ecosystem/fret-ui-kit/src/node_graph/presets.rs`
   - Wire highlight tokens: `paint_only_tokens.wire.highlight_selected` / `highlight_hovered`
   - Edge marker tokens: `paint_only_tokens.wire.marker_exec_start` / `marker_exec_end`
   - Optional data marker tokens: `paint_only_tokens.wire.marker_data_start` / `marker_data_end`

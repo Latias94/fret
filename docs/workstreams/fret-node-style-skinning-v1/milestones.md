@@ -68,6 +68,8 @@ Evidence anchors (current implementation):
   - `themes/node-graph-presets.v1.json`
 - Built-in preset skin loader:
   - `ecosystem/fret-node/src/ui/presets.rs`
+- Theme-derived preset mapping (kit-level):
+  - `ecosystem/fret-ui-kit/src/node_graph/presets.rs`
 - Demo preset switching:
   - `apps/fret-examples/src/node_graph_demo.rs`
 

@@ -10,20 +10,18 @@ scope: ecosystem/fret-node (kit presets), ecosystem/fret-ui-kit / shadcn tokens
 This milestone turns the M1 mechanics into “product-level” outcomes: named presets and a clear,
 theme-first authoring workflow.
 
-Current implementation status (2026-02-27):
+Current implementation status (2026-02-28):
 
 - Built-in preset families are shipped as a paint-only JSON file and loaded via `NodeGraphSkin`:
   - `themes/node-graph-presets.v1.json`
   - `ecosystem/fret-node/src/ui/presets.rs` (`NodeGraphPresetSkinV1`)
 - Preset switching is runtime and paint-only (revision bumps to invalidate paint caches).
-- Theme-derived preset generation exists in-tree:
+- Theme-derived preset generation is provided by `fret-ui-kit` and consumed by `fret-node`:
   - `NodeGraphPresetSkinV1::new_from_snapshot(theme.snapshot(), family)`
+  - Mapping implementation: `ecosystem/fret-ui-kit/src/node_graph/presets.rs`
   - Uses the shadcn semantic palette keys (`background`, `border`, `ring`, `primary`, `destructive`,
     `chart-1..5`, etc.) provided by `ThemeSnapshot`.
-  - `GraphDark` is allowed to opt out (force a dark canvas) when `ThemeSnapshot.color_scheme` is
-    `Light` or unknown.
-- Kit extraction is still a follow-up (see “Next: theme integration”): move the preset authoring
-  API into a kit layer and keep `ecosystem/fret-node` focused on the editor UI wiring.
+  - `GraphDark` is allowed to opt out when `ThemeSnapshot.color_scheme` is `Light` or unknown.
 
 Recent additions (2026-02-28):
 
@@ -82,13 +80,15 @@ Do not “invent” hard-coded colors unless the preset explicitly opts out of t
 
 ## Next: theme integration
 
-After preset switching UX is validated, complete the “theme-derived presets” story by extracting
-the authoring model to a kit layer:
+Theme-derived preset authoring now lives in `fret-ui-kit` as a pure function:
 
-- Map `ThemeSnapshot` into a small “node-graph paint token bundle” (semantic, not raw colors).
+- `fret_ui_kit::node_graph::presets::theme_derived_presets(&ThemeSnapshot) -> NodeGraphThemePresetsV1`
+
+Follow-ups:
+
 - Keep the skin surface paint-only (do not let presets change geometry-affecting metrics in v1).
-- Provide a thin compatibility layer to keep the built-in JSON presets as an opt-in debug baseline
-  (useful for screenshots/regressions and for non-theme-aligned demos).
+- Optionally split “paint-only” vs “geometry-affecting” bundles if/when layout tokens are promoted.
+- Keep the built-in JSON presets as an opt-in debug baseline for screenshots/regressions.
 
 ## UX considerations (editor-grade)
 
