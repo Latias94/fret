@@ -869,7 +869,7 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
                 },
                 move |cx| {
                     let mut out = vec![
-                        ui::text(cx, format!("Item {idx}"))
+                        ui::text(cx, format!("Item\u{00A0}{idx}"))
                             .text_base()
                             .font_semibold()
                             .nowrap()
@@ -941,6 +941,9 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
     let orientation_vertical = shadcn::Carousel::new(vertical_items)
         .orientation(shadcn::CarouselOrientation::Vertical)
         .opts(shadcn::CarouselOptions::new().align(shadcn::CarouselAlign::Start))
+        // Match the shadcn/ui docs outcome on desktop widths (`md:basis-1/2`) in a deterministic
+        // way (we do not currently apply breakpoint-aware per-item sizing here).
+        .item_basis_main_px(Px(100.0))
         .refine_viewport_layout(LayoutRefinement::default().h_px(Px(196.0)))
         .refine_track_layout(LayoutRefinement::default().h_px(Px(200.0)))
         .track_start_neg_margin(Space::N1)
