@@ -44,6 +44,10 @@ Use `fret-ui-review` when the goal is an architecture/UX audit rather than produ
     - Example: `--dir target/fret-diag-issue-1234`
   - If you are using `--launch`, prefer `--session-auto` so tooling creates an isolated session root under the base dir:
     - Example: `--dir target/fret-diag-agent-a --session-auto --launch -- <cmd...>`
+    - Discover sessions (bounded): `fretboard diag list sessions --dir target/fret-diag-agent-a`
+    - Clean old sessions (dry-run by default): `fretboard diag sessions clean --dir target/fret-diag-agent-a --keep 50`
+  - Avoid relying on a global `latest.txt` outside a session; prefer per-run `manifest.json` + `script.result.json` and
+    session listing commands.
 - Before rerunning a suspiciously large or inconsistent run:
   - `fretboard diag config doctor --mode launch --print-launch-policy`
   - `fretboard diag config doctor --mode launch --report-json` (inspect `launch_policy` + warnings)

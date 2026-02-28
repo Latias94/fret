@@ -36,10 +36,18 @@ We keep `repo-ref/imgui_test_engine/` as a reference point for automation ergono
 - headless runs,
 - fast vs human-speed modes,
 - screenshot/video capture,
-- high-level action APIs (scoped references like `SetRef(...)`).
+- high-level action APIs (scoped references like `SetRef(...)`),
+- “test engine” harness discipline (deterministic execution, crisp failure reporting, replay-friendly artifacts).
 
 However, Fret is not immediate-mode ImGui. We should copy the **capability outcomes**, not the IO injection
 implementation details.
+
+Where ImGui injects inputs at the app layer, many UI test systems inject at the OS layer (moving the real cursor,
+spamming OS events). For Fret, the default should be:
+
+- **internal injection** (runner/app sees “synthetic input” without warping the real OS cursor),
+- **optional external input isolation** while a script is active (avoid human interference),
+- explicit “escape hatches” for interactive debugging sessions.
 
 ## Capability stack (6 layers)
 
@@ -99,6 +107,12 @@ Make playback deterministic without warping the OS:
 - capability-gate advanced runner features (cursor overrides, screenshots),
 - make “fast mode” explicit (see below).
 
+Multi-window / docking / multi-viewport specific notes:
+
+- deterministic routing requires stable window identity (not “whatever is focused now”),
+- scripts need first-class window targeting and cursor model overrides to drive hover routing,
+- evidence must explain “which window received the input and why” (otherwise failures look like random timeouts).
+
 ### Layer 4: Script authoring ergonomics (agent-native DSL)
 
 This is where ImGui’s `SetRef(...)` is instructive: long scripts need structure.
@@ -133,6 +147,7 @@ This is intentionally outcome-focused:
 - Fast mode semantics: we have cursor overrides + isolation, but no single “fast mode policy” contract.
 - Video/GIF capture: we have screenshots; time-series capture is missing.
 - Named references/scopes: we have selectors; scoping/naming is missing.
+- Multi-viewport evidence: multi-window failures are still hard to explain without a window map + routing logs.
 - App-level probes: we can test via UI semantics; a structured “app probe surface” is still immature.
 
 ## Development plan (fearless refactor)
@@ -172,3 +187,16 @@ We consider the stack “agent-ready” when:
 - a flaky UI bug can be converted into a deterministic script with stable selectors and bounded evidence,
 - the same script can be re-run in fast mode and (eventually) headless mode.
 
+## Practical guidance (AI agents + humans)
+
+If you are automating with multiple agents:
+
+- treat `--dir` as a base bucket (agent-owned),
+- use `--session-auto` for tool-launched runs so control-plane files never race,
+- do not rely on a global `latest.txt` outside a session (use `diag list sessions` and per-run manifests instead).
+
+If you are debugging docking/multi-viewport:
+
+- require window targeting in scripts (avoid “current focused window” ambiguity),
+- prefer internal cursor overrides over OS cursor warping,
+- capture a small number of screenshots at key moments; add time-series capture only when needed.

@@ -116,3 +116,28 @@ Exit criteria:
 - Tool-launched runs have a single explicit escape hatch to re-enable raw `bundle.json` writing:
   - `--launch-write-bundle-json` (requires `--launch`; not supported for `diag matrix`).
 - A migration checklist is complete for in-repo scripts and CI gates.
+
+## M5: Agent-native scripting and multi-viewport evidence (P1/P2)
+
+Outcome:
+
+- Scripts become easier for agents/humans to author and review (smaller diffs, less repetition), and multi-window docking
+  failures become explainable with bounded evidence rather than opaque timeouts.
+
+Exit criteria:
+
+- Named references / scopes exist (ImGui `SetRef(...)`-style ergonomics, semantics-first):
+  - scripts can set/clear a base ref,
+  - selector-driven steps can use relative selectors scoped to that base,
+  - failures report a stable `reason_code` when a ref is missing or resolves to multiple nodes.
+- Multi-viewport docking evidence exists (bounded, queryable):
+  - a per-run `window_map.json` is exported (window ids + viewport kind + optional parent/child relationship hints),
+  - routing decisions that matter for docking (hover/click target window selection) are recorded in a bounded log,
+  - tooling offers a bounded query (e.g. `diag meta windows`) to inspect this without opening large artifacts.
+- Fast mode is an explicit policy (config-driven) and has a small smoke suite proving it doesn’t introduce flake.
+
+Evidence anchors (expected):
+
+- Protocol: `crates/fret-diag-protocol/src/lib.rs`
+- Runtime script engine: `ecosystem/fret-bootstrap/src/ui_diagnostics/script_engine.rs`
+- Tooling: `crates/fret-diag/src/*`

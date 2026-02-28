@@ -49,7 +49,7 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
   - `docs/ui-diagnostics-and-scripted-tests.md`
   - `docs/workstreams/diag-v2-hardening-and-switches-v1/per-run-layout.md`
   - skill: `.agents/skills/fret-diag-workflow/SKILL.md`
-- [ ] Design and implement a session-root layout for tool-launched runs so agents can run in parallel without inventing
+- [x] Design and implement a session-root layout for tool-launched runs so agents can run in parallel without inventing
   directory naming conventions. Proposed design: `docs/workstreams/diag-v2-hardening-and-switches-v1/concurrency-and-sessions.md`.
   - [x] Add `--session-auto` / `--session <id>` for tool-launched commands (`--launch`) that makes the effective out dir
     `<base_dir>/sessions/<session_id>/`.
@@ -69,6 +69,10 @@ Planned outcomes:
   - [ ] Add a script-level `ref` concept (a named selector + optional `window` target).
   - [ ] Add steps to set/clear a base ref so subsequent selector steps can use relative paths.
   - [ ] Ensure the feature is capability-gated (tooling-side) and does not leak policy into `fret-ui`.
+- [ ] Multi-viewport docking evidence (make cross-window failures explainable, not just “timeout”):
+  - [ ] Export a per-run `window_map.json` (window ids, viewport kind, parent/child relationships if known).
+  - [ ] Record input routing decisions for dock/tear-out flows (why a hover/click went to a different window).
+  - [ ] Add a bounded `diag meta windows` query to avoid opening large artifacts.
 - [ ] Fast mode policy (determinism + speed):
   - [ ] Make “fast mode vs human-speed” explicit via config (stabilization defaults, animation handling).
   - [ ] Add a bounded “fast mode” smoke suite (runs faster than today without introducing flake).
