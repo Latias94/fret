@@ -428,12 +428,7 @@ fn badge_with_patch<H: UiHost>(
             let mut content = Vec::with_capacity(children.len() + 3);
 
             if let Some(icon) = leading_icon.clone() {
-                content.push(decl_icon::icon_with(
-                    cx,
-                    icon,
-                    Some(icon_px),
-                    Some(ColorRef::Color(fg)),
-                ));
+                content.push(decl_icon::icon_with(cx, icon, Some(icon_px), None));
             }
 
             let children = children
@@ -445,12 +440,7 @@ fn badge_with_patch<H: UiHost>(
             content.push(label);
 
             if let Some(icon) = trailing_icon.clone() {
-                content.push(decl_icon::icon_with(
-                    cx,
-                    icon,
-                    Some(icon_px),
-                    Some(ColorRef::Color(fg)),
-                ));
+                content.push(decl_icon::icon_with(cx, icon, Some(icon_px), None));
             }
 
             vec![stack::hstack(
@@ -531,6 +521,7 @@ mod tests {
 
     use fret_app::App;
     use fret_core::{AppWindowId, FontWeight, Point, Rect, Size};
+    use fret_ui::element::ForegroundScopeProps;
 
     fn bounds() -> Rect {
         Rect::new(
@@ -542,16 +533,33 @@ mod tests {
     fn collect_colors(
         el: &AnyElement,
         out_text: &mut Vec<(Arc<str>, Option<Color>)>,
-        out_svg: &mut Vec<Color>,
+        out_svg: &mut Vec<(Color, bool)>,
     ) {
         match &el.kind {
             ElementKind::Text(props) => out_text.push((props.text.clone(), props.color)),
-            ElementKind::SvgIcon(SvgIconProps { color, .. }) => out_svg.push(*color),
+            ElementKind::SvgIcon(SvgIconProps {
+                color,
+                inherit_color,
+                ..
+            }) => out_svg.push((*color, *inherit_color)),
             _ => {}
         }
         for child in &el.children {
             collect_colors(child, out_text, out_svg);
         }
+    }
+
+    fn find_foreground_scope(el: &AnyElement) -> Option<ForegroundScopeProps> {
+        match &el.kind {
+            ElementKind::ForegroundScope(props) => return Some(*props),
+            _ => {}
+        }
+        for child in &el.children {
+            if let Some(found) = find_foreground_scope(child) {
+                return Some(found);
+            }
+        }
+        None
     }
 
     #[test]
@@ -572,6 +580,13 @@ mod tests {
             let mut icons = Vec::new();
             collect_colors(&el, &mut texts, &mut icons);
 
+            let scope = find_foreground_scope(&el).expect("expected a ForegroundScope wrapper");
+            assert_eq!(
+                scope.foreground,
+                Some(expected_fg),
+                "expected badge currentColor scope to resolve to variant fg"
+            );
+
             assert!(
                 texts
                     .iter()
@@ -579,8 +594,8 @@ mod tests {
                 "expected badge label to resolve to variant fg"
             );
             assert!(
-                icons.len() >= 2 && icons.iter().all(|c| *c == expected_fg),
-                "expected badge icon(s) to resolve to variant fg"
+                icons.len() >= 2 && icons.iter().all(|(_, inherit)| *inherit),
+                "expected badge icon(s) to inherit currentColor via ForegroundScope"
             );
         });
     }
