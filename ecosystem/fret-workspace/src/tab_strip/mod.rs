@@ -1151,6 +1151,9 @@ impl WorkspaceTabStrip {
                                                                         let has_trailing_slot =
                                                                             tab_close_command.is_some()
                                                                                 || tab_dirty;
+                                                                        let tab_close_test_id = tab_test_id
+                                                                            .as_ref()
+                                                                            .map(|id| Arc::<str>::from(format!("{id}.close")));
 
                                                                         let mut children = vec![
                                                                             cx.text_props(TextProps {
@@ -1192,6 +1195,7 @@ impl WorkspaceTabStrip {
                                                                                             a11y: PressableA11y {
                                                                                                 role: Some(SemanticsRole::Button),
                                                                                                 label: Some(Arc::from("Close tab")),
+                                                                                                test_id: tab_close_test_id.clone(),
                                                                                                 ..Default::default()
                                                                                             },
                                                                                             ..Default::default()
