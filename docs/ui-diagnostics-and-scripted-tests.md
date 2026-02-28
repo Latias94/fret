@@ -593,6 +593,9 @@ Core:
     are intentionally config-only for tool-launched determinism (see `tools/diag-configs/README.md`).
   - In `--launch` mode, the config file is expected to be writable. Tooling treats a failure to write `diag.config.json`
     as a launch error (to avoid silently falling back to runtime defaults that may write a large `bundle.json`).
+  - In `--launch` mode, tooling scrubs inherited `FRET_DIAG_*` env vars from the parent shell before spawning the child
+    process, then re-applies explicit `--env KEY=VALUE` overrides. This reduces "works on my machine" drift and avoids
+    accidental output explosions caused by stale shell overrides.
   - In `--launch` mode, tooling-owned env vars and paths are reserved; `--env` cannot override them (use `--dir` / `--*-path` flags instead).
   - Example file to copy/modify: `tools/diag-configs/diag.config.example.json`.
   - Drift audit notes for the example file: `tools/diag-configs/README.md`.

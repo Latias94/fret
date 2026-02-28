@@ -153,6 +153,8 @@ For evidence-first triage (reason codes + bounded traces), see: `references/evid
 - “artifacts are unexpectedly huge”
   - Run `fretboard diag config doctor --mode launch` to spot output-explosion risks before rerunning.
   - Check whether you enabled `--launch-write-bundle-json` or `FRET_DIAG_BUNDLE_JSON_FORMAT=pretty`.
+  - Note: tool-launched runs scrub inherited `FRET_DIAG_*` env vars from the parent shell to avoid accidental overrides;
+    pass explicit `--env FRET_DIAG_...=...` if you truly need to override a runtime knob for one run.
 - “screenshot requested but capability missing”
   - Ensure the runner advertises `diag.screenshot_png` and enable screenshots (prefer config `screenshots_enabled=true`
     via `FRET_DIAG_CONFIG_PATH`; manual escape hatch: `FRET_DIAG_GPU_SCREENSHOTS=1`).

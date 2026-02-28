@@ -713,6 +713,56 @@ pub(crate) fn maybe_launch_demo(
         return Ok(None);
     };
 
+    // Tool-launched runs should be deterministic and small-by-default. The runtime's config
+    // resolution is "env overrides config", so inherited shell env vars can silently override the
+    // per-run `diag.config.json` that tooling writes. Scrub known diagnostics env keys from the
+    // inherited environment, then re-apply any explicit `--env KEY=VALUE` overrides below.
+    //
+    // This avoids "works on my machine" drift and reduces the chance of accidental output
+    // explosions (e.g. large snapshot caps or pretty-printed raw bundles) during tool-launched
+    // runs.
+    const TOOL_LAUNCH_SCRUB_ENV: &[&str] = &[
+        "FRET_DIAG",
+        "FRET_DIAG_DIR",
+        "FRET_DIAG_CONFIG_PATH",
+        "FRET_DIAG_TRIGGER_PATH",
+        "FRET_DIAG_READY_PATH",
+        "FRET_DIAG_EXIT_PATH",
+        "FRET_DIAG_MAX_EVENTS",
+        "FRET_DIAG_MAX_SNAPSHOTS",
+        "FRET_DIAG_SCRIPT_DUMP_MAX_SNAPSHOTS",
+        "FRET_DIAG_SEMANTICS",
+        "FRET_DIAG_MAX_SEMANTICS_NODES",
+        "FRET_DIAG_SEMANTICS_TEST_IDS_ONLY",
+        "FRET_DIAG_GPU_SCREENSHOTS",
+        "FRET_DIAG_BUNDLE_SCREENSHOT",
+        "FRET_DIAG_REDACT_TEXT",
+        "FRET_DIAG_MAX_DEBUG_STRING_BYTES",
+        "FRET_DIAG_MAX_GATING_TRACE_ENTRIES",
+        "FRET_DIAG_SCRIPT_KEEPALIVE",
+        "FRET_DIAG_SCRIPT_AUTO_DUMP",
+        "FRET_DIAG_PICK_AUTO_DUMP",
+        "FRET_DIAG_SCRIPT_PATH",
+        "FRET_DIAG_SCRIPT_TRIGGER_PATH",
+        "FRET_DIAG_SCRIPT_RESULT_PATH",
+        "FRET_DIAG_SCRIPT_RESULT_TRIGGER_PATH",
+        "FRET_DIAG_PICK_TRIGGER_PATH",
+        "FRET_DIAG_PICK_RESULT_PATH",
+        "FRET_DIAG_PICK_RESULT_TRIGGER_PATH",
+        "FRET_DIAG_INSPECT_PATH",
+        "FRET_DIAG_INSPECT_TRIGGER_PATH",
+        "FRET_DIAG_SCREENSHOT_REQUEST_PATH",
+        "FRET_DIAG_SCREENSHOT_TRIGGER_PATH",
+        "FRET_DIAG_SCREENSHOT_RESULT_PATH",
+        "FRET_DIAG_SCREENSHOT_RESULT_TRIGGER_PATH",
+        // Bundle export shaping (not currently expressible via config):
+        "FRET_DIAG_BUNDLE_JSON_FORMAT",
+        "FRET_DIAG_BUNDLE_WRITE_INDEX",
+        "FRET_DIAG_BUNDLE_SEMANTICS_MODE",
+        "FRET_DIAG_BUNDLE_DUMP_MAX_SEMANTICS_NODES",
+        "FRET_DIAG_BUNDLE_DUMP_SEMANTICS_TEST_IDS_ONLY",
+    ];
+
     let prev_ready_mtime = std::fs::metadata(ready_path)
         .and_then(|m| m.modified())
         .ok();
@@ -726,6 +776,9 @@ pub(crate) fn maybe_launch_demo(
     let mut cmd = Command::new(exe);
     cmd.args(launch.iter().skip(1));
     cmd.current_dir(workspace_root);
+    for key in TOOL_LAUNCH_SCRUB_ENV {
+        cmd.env_remove(key);
+    }
     cmd.env("FRET_DIAG", "1");
     cmd.env("FRET_DIAG_DIR", out_dir);
     cmd.env("FRET_DIAG_TRIGGER_PATH", &fs_transport_cfg.trigger_path);
