@@ -199,6 +199,41 @@ impl EffectDegradationCounters {
 }
 
 #[derive(Debug, Default, Clone, Copy)]
+pub struct CustomEffectV3SourceDegradationCounters {
+    pub raw_requested: u64,
+    pub raw_distinct: u64,
+    pub raw_aliased_to_src: u64,
+
+    pub pyramid_requested: u64,
+    pub pyramid_applied_levels_ge2: u64,
+    pub pyramid_degraded_to_one_budget_zero: u64,
+    pub pyramid_degraded_to_one_budget_insufficient: u64,
+}
+
+impl CustomEffectV3SourceDegradationCounters {
+    pub(crate) fn saturating_add_assign(&mut self, other: Self) {
+        self.raw_requested = self.raw_requested.saturating_add(other.raw_requested);
+        self.raw_distinct = self.raw_distinct.saturating_add(other.raw_distinct);
+        self.raw_aliased_to_src = self
+            .raw_aliased_to_src
+            .saturating_add(other.raw_aliased_to_src);
+
+        self.pyramid_requested = self
+            .pyramid_requested
+            .saturating_add(other.pyramid_requested);
+        self.pyramid_applied_levels_ge2 = self
+            .pyramid_applied_levels_ge2
+            .saturating_add(other.pyramid_applied_levels_ge2);
+        self.pyramid_degraded_to_one_budget_zero = self
+            .pyramid_degraded_to_one_budget_zero
+            .saturating_add(other.pyramid_degraded_to_one_budget_zero);
+        self.pyramid_degraded_to_one_budget_insufficient = self
+            .pyramid_degraded_to_one_budget_insufficient
+            .saturating_add(other.pyramid_degraded_to_one_budget_insufficient);
+    }
+}
+
+#[derive(Debug, Default, Clone, Copy)]
 pub struct EffectDegradationSnapshot {
     pub gaussian_blur: EffectDegradationCounters,
     pub drop_shadow: EffectDegradationCounters,
@@ -210,6 +245,7 @@ pub struct EffectDegradationSnapshot {
     pub dither: EffectDegradationCounters,
     pub noise: EffectDegradationCounters,
     pub custom_effect: EffectDegradationCounters,
+    pub custom_effect_v3_sources: CustomEffectV3SourceDegradationCounters,
 }
 
 impl EffectDegradationSnapshot {
@@ -228,6 +264,8 @@ impl EffectDegradationSnapshot {
         self.noise.saturating_add_assign(other.noise);
         self.custom_effect
             .saturating_add_assign(other.custom_effect);
+        self.custom_effect_v3_sources
+            .saturating_add_assign(other.custom_effect_v3_sources);
     }
 }
 

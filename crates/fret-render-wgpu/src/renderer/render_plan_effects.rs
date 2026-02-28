@@ -335,14 +335,25 @@ pub(super) fn apply_chain_in_place(
                             ctx.viewport_size,
                             ctx.format,
                             &mut work_budget_bytes,
+                            &mut effect_degradations.custom_effect_v3_sources,
                         );
+
+                        if sources.want_raw {
+                            let v3 = &mut effect_degradations.custom_effect_v3_sources;
+                            v3.raw_requested = v3.raw_requested.saturating_add(1);
+                            if src_raw == work {
+                                v3.raw_aliased_to_src = v3.raw_aliased_to_src.saturating_add(1);
+                            } else {
+                                v3.raw_distinct = v3.raw_distinct.saturating_add(1);
+                            }
+                        }
 
                         passes.push(RenderPlanPass::CustomEffectV3(CustomEffectV3Pass {
                             src: work,
                             src_raw,
                             src_pyramid,
                             pyramid_levels,
-                            raw_wanted: raw_needed,
+                            raw_wanted: sources.want_raw,
                             pyramid_wanted: sources.pyramid.is_some(),
                             dst: srcdst,
                             src_size: ctx.viewport_size,
@@ -1511,7 +1522,17 @@ pub(super) fn apply_chain_in_place(
                     ctx.viewport_size,
                     ctx.format,
                     &mut budget_bytes,
+                    &mut effect_degradations.custom_effect_v3_sources,
                 );
+                if sources.want_raw {
+                    let v3 = &mut effect_degradations.custom_effect_v3_sources;
+                    v3.raw_requested = v3.raw_requested.saturating_add(1);
+                    if chain_raw.unwrap_or(srcdst) == srcdst {
+                        v3.raw_aliased_to_src = v3.raw_aliased_to_src.saturating_add(1);
+                    } else {
+                        v3.raw_distinct = v3.raw_distinct.saturating_add(1);
+                    }
+                }
                 append_custom_effect_v3_in_place_single_scratch(
                     passes,
                     srcdst,
@@ -1614,10 +1635,13 @@ fn choose_custom_v3_pyramid_levels_and_charge(
     size: (u32, u32),
     format: wgpu::TextureFormat,
     budget_bytes: &mut u64,
+    v3: &mut super::CustomEffectV3SourceDegradationCounters,
 ) -> u32 {
     let Some(req) = sources.pyramid else {
         return 1;
     };
+
+    v3.pyramid_requested = v3.pyramid_requested.saturating_add(1);
 
     let max_for_size = max_mip_levels_for_size(size);
     let mut levels = (req.max_levels as u32).max(1).min(max_for_size).min(7);
@@ -1625,13 +1649,24 @@ fn choose_custom_v3_pyramid_levels_and_charge(
         return 1;
     }
 
+    let budget_before = *budget_bytes;
     while levels >= 2 {
         let required = estimate_mipped_texture_bytes(size, format, 1, levels);
         if required <= *budget_bytes {
             *budget_bytes = (*budget_bytes).saturating_sub(required);
+            v3.pyramid_applied_levels_ge2 = v3.pyramid_applied_levels_ge2.saturating_add(1);
             return levels;
         }
         levels = levels.saturating_sub(1);
+    }
+
+    if budget_before == 0 {
+        v3.pyramid_degraded_to_one_budget_zero =
+            v3.pyramid_degraded_to_one_budget_zero.saturating_add(1);
+    } else {
+        v3.pyramid_degraded_to_one_budget_insufficient = v3
+            .pyramid_degraded_to_one_budget_insufficient
+            .saturating_add(1);
     }
 
     1
@@ -2226,7 +2261,17 @@ fn apply_step_in_place_with_scratch_targets(
                 ctx.viewport_size,
                 ctx.format,
                 budget_bytes,
+                &mut effect_degradations.custom_effect_v3_sources,
             );
+            if sources.want_raw {
+                let v3 = &mut effect_degradations.custom_effect_v3_sources;
+                v3.raw_requested = v3.raw_requested.saturating_add(1);
+                if custom_v3_chain_raw.unwrap_or(srcdst) == srcdst {
+                    v3.raw_aliased_to_src = v3.raw_aliased_to_src.saturating_add(1);
+                } else {
+                    v3.raw_distinct = v3.raw_distinct.saturating_add(1);
+                }
+            }
             append_custom_effect_v3_in_place_single_scratch(
                 passes,
                 srcdst,
@@ -3639,7 +3684,7 @@ fn append_custom_effect_v3_in_place_single_scratch(
             src_raw,
             src_pyramid,
             pyramid_levels,
-            raw_wanted: raw_needed,
+            raw_wanted: sources.want_raw,
             pyramid_wanted: sources.pyramid.is_some(),
             dst: srcdst,
             src_size: size,
@@ -3672,7 +3717,7 @@ fn append_custom_effect_v3_in_place_single_scratch(
         src_raw,
         src_pyramid,
         pyramid_levels,
-        raw_wanted: raw_needed,
+        raw_wanted: sources.want_raw,
         pyramid_wanted: sources.pyramid.is_some(),
         dst: scratch,
         src_size: size,

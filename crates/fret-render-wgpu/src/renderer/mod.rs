@@ -60,7 +60,9 @@ use render_plan::*;
 use scene_encoding_cache::SceneEncodingCache;
 use types::*;
 pub use types::{BlurQualityCounters, BlurQualitySnapshot};
-pub use types::{EffectDegradationCounters, EffectDegradationSnapshot};
+pub use types::{
+    CustomEffectV3SourceDegradationCounters, EffectDegradationCounters, EffectDegradationSnapshot,
+};
 pub use types::{IntermediatePerfSnapshot, RenderPerfSnapshot, SvgPerfSnapshot};
 use uniform_resources::UniformResources;
 use util::*;
