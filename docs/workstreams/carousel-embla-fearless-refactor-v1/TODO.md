@@ -94,6 +94,11 @@ In-tree surfaces:
   - Gate:
     - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-api-screenshot.json`
     - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-plugin-autoplay-pixels-changed.json`
+- [x] CAR-226 Support Embla `startSnap` + `draggable` options at the recipe level (best-effort):
+  - `startSnap` selects the initial index once snaps are measurable
+  - `draggable=false` disables pointer swiping while keeping buttons/keys active
+  - Evidence: `ecosystem/fret-ui-shadcn/src/carousel.rs` (`CarouselOptions.start_snap`, `draggable`)
+  - Gate: `ecosystem/fret-ui-shadcn/tests/carousel_start_snap_draggable.rs`
 
 ## P3 — Evidence + guardrails
 
