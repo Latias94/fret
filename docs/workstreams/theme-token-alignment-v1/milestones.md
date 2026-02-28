@@ -11,9 +11,9 @@ Status legend:
 
 ## M0 — Lock rules + inventory seed
 
-- [ ] Confirm the token taxonomy (semantic vs named vs component-derived) is sufficient for shadcn v4 parity.
-- [ ] Publish a minimal audit playbook in `todo.md` (how to scan, how to decide, what gates to add).
-- [ ] Seed an initial tracker table covering at least:
+- [x] Confirm the token taxonomy (semantic vs named vs component-derived) is sufficient for shadcn v4 parity.
+- [x] Publish a minimal audit playbook in `todo.md` (how to scan, how to decide, what gates to add).
+- [x] Seed an initial tracker table covering at least:
   - shadcn core controls (Button, Badge, Input, Select, Checkbox, Radio, Switch, Slider)
   - overlay family (Dialog, Sheet/Drawer, Popover, DropdownMenu, ContextMenu, Tooltip, HoverCard)
   - data viz (Chart/Plot) and editor surfaces (CodeView/Markdown) as “audit targets”.
@@ -25,9 +25,9 @@ Exit criteria:
 
 ## M1 — Close high-signal shadcn v4 literal tokens
 
-- [ ] Ensure all upstream `text-white` / `bg-white` / `bg-black/*` parity points are expressed via `ThemeNamedColorKey`
+- [x] Ensure all upstream `text-white` / `bg-white` / `bg-black/*` parity points are expressed via `ThemeNamedColorKey`
       (or explicitly justified as semantic).
-- [ ] Ensure all upstream `dark:*` background deltas that affect contrast are encoded via component-derived tokens.
+- [x] Ensure all upstream `dark:*` background deltas that affect contrast are encoded via component-derived tokens.
 
 Exit criteria:
 
@@ -36,8 +36,8 @@ Exit criteria:
 
 ## M2 — Overlay family completeness (style + token rules)
 
-- [ ] Audit all overlay components for scrim/background/foreground rules where upstream uses literal colors or alpha.
-- [ ] Ensure overlay tokens are seeded consistently across presets.
+- [x] Audit all overlay components for scrim/background/foreground rules where upstream uses literal colors or alpha.
+- [x] Ensure overlay tokens are seeded consistently across presets.
 
 Exit criteria:
 
@@ -45,8 +45,8 @@ Exit criteria:
 
 ## M3 — Cross-ecosystem adoption (Material3 + charts/plot/editor)
 
-- [ ] Audit Material3 recipes for literal color assumptions (e.g. white/black surfaces) and replace with semantic or named rules.
-- [ ] Audit chart/plot/editor ecosystems for “literal white/black” usage that should be semantic (or named when upstream requires).
+- [~] Audit Material3 recipes for literal color assumptions (e.g. white/black surfaces) and replace with semantic or named rules.
+- [x] Audit chart/plot/editor ecosystems for “literal white/black” usage that should be semantic (or named when upstream requires).
 
 Exit criteria:
 
@@ -55,7 +55,7 @@ Exit criteria:
 
 ## M4 — Hardening + drift prevention
 
-- [ ] Add a lightweight lint/check (optional) that flags new uses of disallowed patterns (e.g. `color_token("white")`).
+- [x] Add a lightweight lint/check (optional) that flags new uses of disallowed patterns (e.g. `color_token("white")`).
 - [ ] Document “how to add a new named color” decision gate and the evidence required.
 
 Exit criteria:
