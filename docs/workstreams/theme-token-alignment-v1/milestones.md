@@ -62,3 +62,8 @@ Exit criteria:
 
 - Contributors can safely port new shadcn recipes without reintroducing semantic-vs-literal confusion.
 
+## Appendix — Recommended phase ordering (practical)
+
+For day-to-day execution sequencing, see:
+
+- `docs/workstreams/theme-token-alignment-v1/refactor-plan.md`
