@@ -18,6 +18,7 @@ pub mod checked_state;
 pub mod cmdk_score;
 pub mod cmdk_selection;
 pub mod easing;
+pub mod embla;
 pub mod form_state;
 pub mod form_validation;
 pub mod grid_viewport;

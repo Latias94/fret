@@ -60,9 +60,12 @@ that should be addressed at the correct layer (mechanism vs policy/recipes).
 - Upstream supports `opts`, `plugins`, and `setApi` (Embla API instance). Fret currently exposes a
   deterministic “snap + buttons + swipe” surface only; `opts` is supported only for snap model
   semantics (not for the full Embla options set).
-- No event hook surface (e.g. `select`, `reInit`) because there is no `setApi` equivalent yet.
-- No Embla-style imperative API surface. Fret does expose a small, deterministic snapshot surface
-  (`CarouselApiSnapshot`) that supports slide counters without introducing event subscriptions.
+- No callback subscription surface (e.g. Embla `api.on('select')` / `api.on('reInit')`) because there
+  is no `setApi`-style handle yet.
+- MVP event observability exists via monotonic generation counters published in
+  `CarouselApiSnapshot` (`select_generation` / `reinit_generation`).
+- No Embla-style imperative API surface. Fret exposes a small, deterministic snapshot surface
+  (`CarouselApiSnapshot`) for slide counters and basic state.
 
 ### Behavior/physics
 
@@ -95,9 +98,9 @@ Legend:
 | `dragFree` | `false` | `CarouselOptions.drag_free` | **Partial** | Settles to projected offset; no inertia scroll body. |
 | `loop` | `false` | `CarouselOptions.loop_enabled` | **Partial** | Wraps prev/next/keys and release neighbor selection; **not** Embla's seamless loop engine. |
 | `axis` | `"x"` | `CarouselOrientation` | **Partial** | Horizontal/vertical supported; not a generic axis + direction model. |
-| `direction` | `"ltr"` | (none) | **Not implemented** | RTL parity not audited yet. |
-| `startSnap` | `0` | (none) | **Not implemented** | Could be exposed as recipe option / controlled index. |
-| `draggable` | `true` | (none) | **Not implemented** | We currently auto-disable drag when `items_len <= 1`. |
+| `direction` | `"ltr"` | `CarouselOptions.direction` | **Partial** | Mirrors horizontal drag/key/control placement in RTL; does **not** reflow slide layout like CSS `direction` yet. |
+| `startSnap` | `0` | `CarouselOptions.start_snap` | **Partial** | Applied once snaps are measurable (recipe derives snaps from geometry). |
+| `draggable` | `true` | `CarouselOptions.draggable` | **Aligned** | Disables pointer dragging; buttons/keys remain active. |
 | `resize` | `true` | (none) | **Not implemented** | Re-init semantics are implicit via layout passes; no explicit option. |
 | `slideChanges` | `true` | (none) | **Not implemented** | No DOM mutation observer equivalent (not applicable). |
 | `focus` | `true` | (none) | **Not implemented** | No SlideFocus parity contract yet. |

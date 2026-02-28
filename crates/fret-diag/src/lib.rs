@@ -49,6 +49,7 @@ mod hotspots_lite;
 mod json_bundle;
 mod json_stream;
 mod latest;
+mod launch_env_policy;
 mod lint;
 mod math;
 mod pack_zip;
@@ -374,6 +375,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut reuse_launch: bool = false;
     let mut reuse_launch_per_script: bool = false;
     let mut launch_high_priority: bool = false;
+    let mut launch_write_bundle_json: bool = false;
     let mut keep_open: bool = false;
     let mut script_tool_write: bool = false;
     let mut script_tool_check: bool = false;
@@ -1997,6 +1999,10 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 launch_high_priority = true;
                 i += 1;
             }
+            "--launch-write-bundle-json" => {
+                launch_write_bundle_json = true;
+                i += 1;
+            }
             "--keep-open" => {
                 keep_open = true;
                 i += 1;
@@ -2038,8 +2044,15 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     };
     let rest: Vec<String> = positionals.into_iter().skip(1).collect();
 
+    if sub == "matrix" && launch_write_bundle_json {
+        return Err("--launch-write-bundle-json is not supported with `diag matrix`".to_string());
+    }
+
     if launch_high_priority && launch.is_none() {
         return Err("--launch-high-priority requires --launch".to_string());
+    }
+    if launch_write_bundle_json && launch.is_none() {
+        return Err("--launch-write-bundle-json requires --launch".to_string());
     }
 
     if fixed_frame_delta_ms.is_some() && launch.is_none() && devtools_ws_url.is_some() {
@@ -2260,23 +2273,9 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
         resolve_path(&workspace_root, raw)
     };
 
-    // If the tooling is launching the app and we intend to produce schema2-focused artifacts
-    // (`bundle.schema2.json`, `frames.index.json`, ai packets), default to enabling schema2
-    // emission at the runtime. This is opt-in at the runtime layer, but the tooling can safely
-    // enable it for launched runs.
-    let wants_runtime_schema2 = pack_schema2_only || pack_ai_only || ensure_ai_packet;
-    if launch.is_some()
-        && wants_runtime_schema2
-        && !launch_env
-            .iter()
-            .any(|(k, _)| k == "FRET_DIAG_BUNDLE_WRITE_SCHEMA2")
-        && std::env::var_os("FRET_DIAG_BUNDLE_WRITE_SCHEMA2").is_none()
-    {
-        launch_env.push((
-            "FRET_DIAG_BUNDLE_WRITE_SCHEMA2".to_string(),
-            "1".to_string(),
-        ));
-    }
+    // Note: schema2 emission and raw bundle writing are controlled via the diagnostics config file
+    // (`FRET_DIAG_CONFIG_PATH`) for tool-launched runs. Avoid adding more env-var switches here:
+    // the goal is a single config surface with minimal env overrides.
 
     let fs_transport_cfg = crate::transport::FsDiagTransportConfig {
         out_dir: resolved_out_dir.clone(),
@@ -2489,6 +2488,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 launch_env: launch_env.clone(),
                 reuse_launch,
                 launch_high_priority,
+                launch_write_bundle_json,
                 keep_open,
                 checks: run_checks.clone(),
             })
@@ -2511,6 +2511,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 launch: launch.clone(),
                 launch_env: launch_env.clone(),
                 launch_high_priority,
+                launch_write_bundle_json,
                 perf_repeat,
                 compare_eps_px,
                 compare_ignore_bounds,
@@ -2551,6 +2552,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 launch: launch.clone(),
                 launch_env: launch_env.clone(),
                 launch_high_priority,
+                launch_write_bundle_json,
                 with_tracy,
                 with_renderdoc,
                 renderdoc_after_frames,
@@ -2590,6 +2592,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 launch: launch.clone(),
                 launch_env: launch_env.clone(),
                 launch_high_priority,
+                launch_write_bundle_json,
                 keep_open,
                 checks: diag_suite::SuiteChecks {
                 check_chart_sampling_window_shifts_min: check_chart_sampling_window_shifts_min.clone(),
@@ -2722,6 +2725,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 launch: launch.clone(),
                 launch_env: launch_env.clone(),
                 launch_high_priority: launch_high_priority.clone(),
+                launch_write_bundle_json,
                 max_frame_p95_layout_us: max_frame_p95_layout_us.clone(),
                 max_frame_p95_solve_us: max_frame_p95_solve_us.clone(),
                 max_frame_p95_total_us: max_frame_p95_total_us.clone(),
@@ -2835,6 +2839,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             resolved_ready_path: resolved_ready_path.clone(),
             resolved_exit_path: resolved_exit_path.clone(),
             fs_transport_cfg: fs_transport_cfg.clone(),
+            launch_env: launch_env.clone(),
         }),
         "pick-arm" => commands::pick::cmd_pick_arm(&rest, &resolved_pick_trigger_path),
         "pick" => commands::pick::cmd_pick(
@@ -4028,10 +4033,20 @@ fn run_script_suite_collect_bundles(
         &paths.exit_path,
         &launch_fs_transport_cfg,
         scripts.iter().any(|src| script_requests_screenshots(src)),
+        false,
         timeout_ms,
         poll_ms,
         launch_high_priority,
-    )?;
+    )
+    .inspect_err(|err| {
+        write_tooling_failure_script_result_if_missing(
+            &paths.script_result_path,
+            "tooling.launch.failed",
+            err,
+            "tooling_error",
+            Some("maybe_launch_demo".to_string()),
+        );
+    })?;
 
     let mut required_caps: Vec<String> = Vec::new();
     for src in scripts {

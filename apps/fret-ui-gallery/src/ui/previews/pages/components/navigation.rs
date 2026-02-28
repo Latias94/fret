@@ -58,6 +58,12 @@ pub(in crate::ui) fn preview_pagination(cx: &mut ElementContext<'_, App>) -> Vec
     };
 
     let demo = {
+        let page_number = |cx: &mut ElementContext<'_, App>, label: &'static str| {
+            fret_ui_kit::ui::text(cx, label)
+                .tabular_nums()
+                .into_element(cx)
+        };
+
         let content = shadcn::PaginationContent::new([
             shadcn::PaginationItem::new(
                 shadcn::PaginationPrevious::new()
@@ -66,20 +72,20 @@ pub(in crate::ui) fn preview_pagination(cx: &mut ElementContext<'_, App>) -> Vec
             )
             .into_element(cx),
             shadcn::PaginationItem::new(
-                shadcn::PaginationLink::new([cx.text("1")])
+                shadcn::PaginationLink::new([page_number(cx, "1")])
                     .on_click(CMD_APP_OPEN)
                     .into_element(cx),
             )
             .into_element(cx),
             shadcn::PaginationItem::new(
-                shadcn::PaginationLink::new([cx.text("2")])
+                shadcn::PaginationLink::new([page_number(cx, "2")])
                     .on_click(CMD_APP_SAVE)
                     .active(true)
                     .into_element(cx),
             )
             .into_element(cx),
             shadcn::PaginationItem::new(
-                shadcn::PaginationLink::new([cx.text("3")])
+                shadcn::PaginationLink::new([page_number(cx, "3")])
                     .on_click(CMD_APP_SAVE)
                     .into_element(cx),
             )
@@ -101,34 +107,40 @@ pub(in crate::ui) fn preview_pagination(cx: &mut ElementContext<'_, App>) -> Vec
     };
 
     let simple = {
+        let page_number = |cx: &mut ElementContext<'_, App>, label: &'static str| {
+            fret_ui_kit::ui::text(cx, label)
+                .tabular_nums()
+                .into_element(cx)
+        };
+
         let content = shadcn::PaginationContent::new([
             shadcn::PaginationItem::new(
-                shadcn::PaginationLink::new([cx.text("1")])
+                shadcn::PaginationLink::new([page_number(cx, "1")])
                     .on_click(CMD_APP_OPEN)
                     .into_element(cx),
             )
             .into_element(cx),
             shadcn::PaginationItem::new(
-                shadcn::PaginationLink::new([cx.text("2")])
+                shadcn::PaginationLink::new([page_number(cx, "2")])
                     .on_click(CMD_APP_SAVE)
                     .active(true)
                     .into_element(cx),
             )
             .into_element(cx),
             shadcn::PaginationItem::new(
-                shadcn::PaginationLink::new([cx.text("3")])
+                shadcn::PaginationLink::new([page_number(cx, "3")])
                     .on_click(CMD_APP_SAVE)
                     .into_element(cx),
             )
             .into_element(cx),
             shadcn::PaginationItem::new(
-                shadcn::PaginationLink::new([cx.text("4")])
+                shadcn::PaginationLink::new([page_number(cx, "4")])
                     .on_click(CMD_APP_SAVE)
                     .into_element(cx),
             )
             .into_element(cx),
             shadcn::PaginationItem::new(
-                shadcn::PaginationLink::new([cx.text("5")])
+                shadcn::PaginationLink::new([page_number(cx, "5")])
                     .on_click(CMD_APP_SAVE)
                     .into_element(cx),
             )
@@ -144,12 +156,13 @@ pub(in crate::ui) fn preview_pagination(cx: &mut ElementContext<'_, App>) -> Vec
     let icons_only = {
         let rows_per_page = shadcn::Select::new(rows_per_page.clone(), rows_per_page_open.clone())
             .placeholder("25")
+            .trigger_test_id("ui-gallery-pagination-rows-per-page-trigger")
             .refine_layout(LayoutRefinement::default().w_px(Px(80.0)))
             .items([
-                shadcn::SelectItem::new("10", "10"),
-                shadcn::SelectItem::new("25", "25"),
-                shadcn::SelectItem::new("50", "50"),
-                shadcn::SelectItem::new("100", "100"),
+                shadcn::SelectItem::new("10", "10").label_tabular_nums(),
+                shadcn::SelectItem::new("25", "25").label_tabular_nums(),
+                shadcn::SelectItem::new("50", "50").label_tabular_nums(),
+                shadcn::SelectItem::new("100", "100").label_tabular_nums(),
             ])
             .into_element(cx);
 

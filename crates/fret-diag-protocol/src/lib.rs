@@ -323,6 +323,14 @@ pub struct UiDiagnosticsConfigFileV1 {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub max_gating_trace_entries: Option<u32>,
 
+    /// When enabled, ignore external pointer input events (mouse/touch/pen) while a diagnostics
+    /// script is running.
+    ///
+    /// This is intended to keep scripted runs deterministic when a user accidentally moves or
+    /// clicks the real mouse during playback (especially for cross-window docking/tear-off).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub isolate_external_pointer_input_while_script_running: Option<bool>,
+
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub frame_clock_fixed_delta_ms: Option<u64>,
 

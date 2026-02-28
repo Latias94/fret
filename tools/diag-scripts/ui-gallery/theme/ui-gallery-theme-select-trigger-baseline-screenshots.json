@@ -15,7 +15,8 @@
     ],
     "target_hints": [
       "Sets theme preset to zinc/light and zinc/dark.",
-      "Captures screenshots of the closed theme preset Select trigger for baseline alignment review."
+      "Captures screenshots of the closed theme preset Select trigger for baseline alignment review.",
+      "Tip: when using `--launch -- cargo run ...`, pass a larger `--timeout-ms` or launch a prebuilt `target/release/fret-ui-gallery.exe` to avoid compile-time timeouts."
     ]
   },
   "steps": [
@@ -54,6 +55,18 @@
 
     { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-theme-preset-trigger" } },
     {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "select-scroll-viewport" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-theme-select-menu-baseline-zinc-light-open"
+    },
+    {
       "type": "click_stable",
       "target": { "kind": "test_id", "id": "ui-gallery-theme-preset-item-zinc-dark" }
     },
@@ -70,6 +83,22 @@
       "type": "capture_screenshot",
       "label": "ui-gallery-theme-select-trigger-baseline-zinc-dark"
     },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-theme-preset-trigger" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "select-scroll-viewport" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-theme-select-menu-baseline-zinc-dark-open"
+    },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
 
     { "type": "capture_bundle", "label": "ui-gallery-theme-select-trigger-baseline" }
   ]

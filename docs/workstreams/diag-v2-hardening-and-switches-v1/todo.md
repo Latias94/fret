@@ -29,7 +29,15 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
   - [x] `FRET_DIAG_FIXED_FRAME_DELTA_MS`
   - [x] Document deprecated aliases + removal plan (P2/P3): `docs/workstreams/diag-v2-hardening-and-switches-v1/deprecations.md`.
 - [x] Define “reserved env vars” policy for `--launch` (tooling-owned) and enforce it uniformly.
+- [x] Scrub all inherited `FRET_DIAG_*` env vars in `--launch` mode (prefix-based) so parent-shell overrides cannot
+  silently drift tool-launched runs.
+- [x] Audit `--launch` entry points to ensure a single per-run config writer is used (`diag run/suite/repro/perf/repeat`
+  funnel through `maybe_launch_demo`).
 - [x] Add a `diag config doctor` (tooling-side) that prints an effective merged config + highlights deprecated keys/envs.
+- [x] Eliminate docking multi-window lint false negatives by ensuring focus repair runs before semantics refresh (and on
+  layout fast-path frames), so bundles never capture a focused node with empty bounds.
+- [x] Add an opt-in pointer input isolation knob for tool-launched scripted runs so accidental real mouse movement/clicks
+  do not perturb deterministic playback (especially for cross-window docking/tear-off).
 
 ## P0.5: Script library modularization (UX scalability)
 
@@ -76,7 +84,7 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
 - [x] Add a guardrail so the taxonomy stays stable:
   - [x] `tools/diag-scripts/migrate-script-library.py --check-root` detects “root scripts” (supports optional filters like `--include-prefix ui-gallery-`).
   - [x] Promote the check into tooling (`fretboard diag doctor scripts`) so drift is visible without relying on Python or ad-hoc greps.
-  - [ ] document the expected target folders for common categories (ui-gallery, docking, tooling).
+  - [x] document the expected target folders for common categories (ui-gallery, docking, tooling).
 - [ ] Execute incremental taxonomy migrations (small batches + redirects + closure checks):
   - [x] `ui-gallery/select` (17 scripts)
   - [x] `ui-gallery/combobox` (22 scripts)
@@ -175,9 +183,14 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
 - [ ] Turn off legacy writers by default:
   - [x] Add config switches (`write_bundle_json`, `write_bundle_schema2`) and wire them into the runtime dump writer.
   - [x] Tool-launched runs default to `write_bundle_json=false` and `write_bundle_schema2=true` (small-by-default artifacts).
-  - [ ] Decide whether manual defaults should also flip (and document the migration plan for downstream consumers).
-- [ ] Deprecate/remove flags that are now represented as config fields or capabilities.
-- [ ] Delete unused env var parsing paths once CI/scripts migrate (tracked by a migration checklist).
+    - Tooling treats failure to write `diag.config.json` as a `--launch` error (avoid silent fallback to defaults).
+  - [x] Provide a tool-launched escape hatch for deep debugging:
+    - `--launch-write-bundle-json` (requires `--launch`) makes tooling write a per-run config with `write_bundle_json=true`.
+    - Not supported for `diag matrix` (too many runs; high risk of output explosion).
+  - [x] Decide whether manual defaults should also flip (and document the migration plan for downstream consumers).
+    - Decision: do not flip manual defaults yet; keep manual runs compat-first unless `FRET_DIAG_CONFIG_PATH` is used.
+  - [ ] Deprecate/remove flags that are now represented as config fields or capabilities.
+  - [ ] Delete unused env var parsing paths once CI/scripts migrate (tracked by a migration checklist).
 
 ## Migration support (fearless refactor safety)
 

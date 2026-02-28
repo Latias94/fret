@@ -43,6 +43,7 @@ pub(crate) struct PerfCmdContext {
     pub launch: Option<Vec<String>>,
     pub launch_env: Vec<(String, String)>,
     pub launch_high_priority: bool,
+    pub launch_write_bundle_json: bool,
     pub max_frame_p95_layout_us: Option<u64>,
     pub max_frame_p95_solve_us: Option<u64>,
     pub max_frame_p95_total_us: Option<u64>,
@@ -99,6 +100,7 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
         launch,
         launch_env,
         launch_high_priority,
+        launch_write_bundle_json,
         max_frame_p95_layout_us,
         max_frame_p95_solve_us,
         max_frame_p95_total_us,
@@ -391,10 +393,20 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
             &resolved_exit_path,
             &launch_fs_transport_cfg,
             false,
+            launch_write_bundle_json,
             timeout_ms,
             poll_ms,
             launch_high_priority,
-        )?;
+        )
+        .inspect_err(|err| {
+            write_tooling_failure_script_result_if_missing(
+                &resolved_script_result_path,
+                "tooling.launch.failed",
+                err,
+                "tooling_error",
+                Some("maybe_launch_demo".to_string()),
+            );
+        })?;
         connected_fs = None;
     }
 
@@ -429,10 +441,20 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
                 &resolved_exit_path,
                 &launch_fs_transport_cfg,
                 false,
+                launch_write_bundle_json,
                 timeout_ms,
                 poll_ms,
                 launch_high_priority,
-            )?;
+            )
+            .inspect_err(|err| {
+                write_tooling_failure_script_result_if_missing(
+                    &resolved_script_result_path,
+                    "tooling.launch.failed",
+                    err,
+                    "tooling_error",
+                    Some("maybe_launch_demo".to_string()),
+                );
+            })?;
             connected_fs = None;
             if !perf_suite_prewarm_scripts.is_empty() {
                 ensure_perf_fs_transport_connected(
@@ -461,10 +483,20 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
                     &resolved_exit_path,
                     &launch_fs_transport_cfg,
                     false,
+                    launch_write_bundle_json,
                     timeout_ms,
                     poll_ms,
                     launch_high_priority,
-                )?;
+                )
+                .inspect_err(|err| {
+                    write_tooling_failure_script_result_if_missing(
+                        &resolved_script_result_path,
+                        "tooling.launch.failed",
+                        err,
+                        "tooling_error",
+                        Some("maybe_launch_demo".to_string()),
+                    );
+                })?;
                 connected_fs = None;
             }
 
@@ -962,10 +994,20 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
                     &resolved_exit_path,
                     &launch_fs_transport_cfg,
                     false,
+                    launch_write_bundle_json,
                     timeout_ms,
                     poll_ms,
                     launch_high_priority,
-                )?;
+                )
+                .inspect_err(|err| {
+                    write_tooling_failure_script_result_if_missing(
+                        &resolved_script_result_path,
+                        "tooling.launch.failed",
+                        err,
+                        "tooling_error",
+                        Some("maybe_launch_demo".to_string()),
+                    );
+                })?;
                 connected_fs = None;
             }
 

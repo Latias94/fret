@@ -113,6 +113,11 @@ pub fn icon_with<H: UiHost>(
     size: Option<Px>,
     color: Option<ColorRef>,
 ) -> fret_ui::element::AnyElement {
+    // Semantics:
+    // - `color=None` means "use currentColor when a ForegroundScope is present; otherwise fall
+    //   back to muted-foreground". This mirrors shadcn/Radix's common reliance on CSS
+    //   `currentColor` for icons.
+    // - `color=Some(_)` pins the icon to an explicit color and disables currentColor inheritance.
     cx.scope(|cx| {
         let svg: SvgSource = if let Some(svg) = cx
             .app

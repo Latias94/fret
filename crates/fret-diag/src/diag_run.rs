@@ -207,6 +207,7 @@ pub(crate) struct RunCmdContext {
     pub launch_env: Vec<(String, String)>,
     pub reuse_launch: bool,
     pub launch_high_priority: bool,
+    pub launch_write_bundle_json: bool,
     pub keep_open: bool,
     pub checks: RunChecks,
 }
@@ -244,6 +245,7 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         launch_env,
         reuse_launch,
         launch_high_priority,
+        launch_write_bundle_json,
         keep_open,
         checks,
     } = ctx;
@@ -702,10 +704,20 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         &resolved_exit_path,
         &fs_transport_cfg,
         pack_defaults.2 || check_pixels_changed_test_id.is_some() || script_wants_screenshots,
+        launch_write_bundle_json,
         timeout_ms,
         poll_ms,
         launch_high_priority,
-    )?;
+    )
+    .inspect_err(|err| {
+        write_tooling_failure_script_result_if_missing(
+            &resolved_script_result_path,
+            "tooling.launch.failed",
+            err,
+            "tooling_error",
+            Some("maybe_launch_demo".to_string()),
+        );
+    })?;
     let _stop_guard = if keep_open {
         None
     } else {

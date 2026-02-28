@@ -108,4 +108,6 @@ Outcome:
 Exit criteria:
 
 - Default scripted runs do not materialize `bundle.json` unless explicitly requested.
+- Tool-launched runs have a single explicit escape hatch to re-enable raw `bundle.json` writing:
+  - `--launch-write-bundle-json` (requires `--launch`; not supported for `diag matrix`).
 - A migration checklist is complete for in-repo scripts and CI gates.

@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
-use fret_core::{Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextStyle};
+use fret_core::{
+    Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextFontAxisSetting,
+    TextFontFeatureSetting, TextStyle,
+};
 use fret_icons::IconId;
 use fret_runtime::{CommandId, Effect};
 use fret_ui::action::{OnActivate, OnHoverChange};
@@ -338,6 +341,9 @@ pub struct Button {
     children: Vec<AnyElement>,
     leading_icon: Option<IconId>,
     trailing_icon: Option<IconId>,
+    label_font_override: Option<FontId>,
+    label_features_override: Vec<TextFontFeatureSetting>,
+    label_axes_override: Vec<TextFontAxisSetting>,
     leading_icon_size: Option<Px>,
     content_justify: Justify,
     text_weight_override: Option<FontWeight>,
@@ -404,6 +410,9 @@ impl Button {
             children: Vec::new(),
             leading_icon: None,
             trailing_icon: None,
+            label_font_override: None,
+            label_features_override: Vec::new(),
+            label_axes_override: Vec::new(),
             leading_icon_size: None,
             content_justify: Justify::Center,
             text_weight_override: None,
@@ -437,6 +446,36 @@ impl Button {
     pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
         self.children = children.into_iter().collect();
         self
+    }
+
+    pub fn label_font(mut self, font: FontId) -> Self {
+        self.label_font_override = Some(font);
+        self
+    }
+
+    pub fn label_font_monospace(self) -> Self {
+        self.label_font(FontId::monospace())
+    }
+
+    pub fn label_font_feature(mut self, tag: impl Into<String>, value: u32) -> Self {
+        self.label_features_override.push(TextFontFeatureSetting {
+            tag: tag.into().into(),
+            value,
+        });
+        self
+    }
+
+    pub fn label_font_axis(mut self, tag: impl Into<String>, value: f32) -> Self {
+        self.label_axes_override.push(TextFontAxisSetting {
+            tag: tag.into().into(),
+            value,
+        });
+        self
+    }
+
+    /// Enables OpenType tabular numbers (`font-variant-numeric: tabular-nums`) for the default label text.
+    pub fn label_tabular_nums(self) -> Self {
+        self.label_font_feature("tnum", 1)
     }
 
     /// Adds a leading icon rendered under the button's `currentColor` scope.
@@ -703,6 +742,9 @@ impl Button {
             let trailing_icon = self.trailing_icon;
             let leading_icon_size = self.leading_icon_size;
             let content_justify = self.content_justify;
+            let label_font_override = self.label_font_override;
+            let label_features_override = self.label_features_override;
+            let label_axes_override = self.label_axes_override;
 
             let pressable = control_chrome_pressable_with_id_props(cx, move |cx, st, _id| {
                 cx.pressable_dispatch_command_if_enabled_opt(command);
@@ -845,16 +887,24 @@ impl Button {
                             }
 
                             if !visible_label.is_empty() {
-                                content.push(
-                                    ui::text(cx, visible_label.clone())
-                                        .text_size_px(text_px)
-                                        .fixed_line_box_px(text_line_height)
-                                        .line_box_in_bounds()
-                                        .font_weight(text_weight)
-                                        .nowrap()
-                                        .text_color(fg.clone())
-                                        .into_element(cx),
-                                );
+                                let mut label = ui::text(cx, visible_label.clone())
+                                    .text_size_px(text_px)
+                                    .fixed_line_box_px(text_line_height)
+                                    .line_box_in_bounds()
+                                    .font_weight(text_weight)
+                                    .nowrap()
+                                    .text_color(fg.clone());
+                                if let Some(font) = label_font_override {
+                                    label = label.font(font);
+                                }
+                                for feature in &label_features_override {
+                                    label =
+                                        label.font_feature(feature.tag.to_string(), feature.value);
+                                }
+                                for axis in &label_axes_override {
+                                    label = label.font_axis(axis.tag.to_string(), axis.value);
+                                }
+                                content.push(label.into_element(cx));
                             }
 
                             if let Some(icon) = trailing_icon.clone() {
@@ -915,6 +965,34 @@ mod tests {
     use fret_ui::elements;
     use fret_ui::tree::UiTree;
     use std::collections::HashMap;
+
+    fn blend_over(fg: Color, bg: Color) -> Color {
+        let a = fg.a.clamp(0.0, 1.0);
+        Color {
+            r: fg.r * a + bg.r * (1.0 - a),
+            g: fg.g * a + bg.g * (1.0 - a),
+            b: fg.b * a + bg.b * (1.0 - a),
+            a: 1.0,
+        }
+    }
+
+    fn alpha_mul(mut c: Color, mul: f32) -> Color {
+        c.a *= mul;
+        c
+    }
+
+    fn relative_luminance(c: Color) -> f32 {
+        // The theme pipeline stores colors in linear space, so we can use the WCAG coefficients
+        // directly.
+        (0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b).clamp(0.0, 1.0)
+    }
+
+    fn contrast_ratio(a: Color, b: Color) -> f32 {
+        let l1 = relative_luminance(a);
+        let l2 = relative_luminance(b);
+        let (hi, lo) = if l1 >= l2 { (l1, l2) } else { (l2, l1) };
+        (hi + 0.05) / (lo + 0.05)
+    }
 
     struct FakeServices;
 
@@ -1713,6 +1791,66 @@ mod tests {
             actual_bg,
             expected_bg,
             0.02,
+        );
+    }
+
+    #[test]
+    fn destructive_button_text_contrast_is_reasonable_in_zinc_dark() {
+        let mut app = App::new();
+        crate::shadcn_themes::apply_shadcn_new_york_v4(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Zinc,
+            crate::shadcn_themes::ShadcnColorScheme::Dark,
+        );
+
+        let theme = Theme::global(&app);
+        let snap = theme.snapshot();
+
+        let (bg, _bg_hover, _bg_active, _border, fg) =
+            variant_colors(theme, ButtonVariant::Destructive);
+        let surface = snap.color_token("background");
+        let bg_composited = blend_over(bg, surface);
+
+        let ratio = contrast_ratio(fg, bg_composited);
+        assert!(
+            ratio >= 3.0,
+            "expected destructive button contrast >= 3.0, got {ratio:.2} (fg={:?} bg={:?} bg_composited={:?} surface={:?})",
+            fg,
+            bg,
+            bg_composited,
+            surface,
+        );
+    }
+
+    #[test]
+    fn disabled_destructive_button_text_contrast_is_reasonable_in_zinc_dark() {
+        let mut app = App::new();
+        crate::shadcn_themes::apply_shadcn_new_york_v4(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Zinc,
+            crate::shadcn_themes::ShadcnColorScheme::Dark,
+        );
+
+        let theme = Theme::global(&app);
+        let snap = theme.snapshot();
+
+        let (bg, _bg_hover, _bg_active, _border, fg) =
+            variant_colors(theme, ButtonVariant::Destructive);
+        let surface = snap.color_token("background");
+
+        // Disabled buttons are wrapped in an opacity node (`disabled:opacity-50` upstream).
+        // Model that as group alpha applied when compositing each pixel over the surface.
+        let disabled_opacity = 0.5;
+        let text_pixel = blend_over(alpha_mul(fg, disabled_opacity), surface);
+        let bg_pixel = blend_over(alpha_mul(bg, disabled_opacity), surface);
+
+        let ratio = contrast_ratio(text_pixel, bg_pixel);
+        assert!(
+            ratio >= 2.0,
+            "expected disabled destructive button contrast >= 2.0, got {ratio:.2} (text={:?} bg={:?} surface={:?})",
+            text_pixel,
+            bg_pixel,
+            surface,
         );
     }
 }
