@@ -54,6 +54,9 @@ Active workstreams:
 - `docs/workstreams/renderer-drop-shadow-effect-v1.md`
 - `docs/workstreams/renderer-drop-shadow-effect-v1-todo.md`
 - `docs/workstreams/renderer-drop-shadow-effect-v1-milestones.md`
+- `docs/workstreams/paint-eval-space-v1/README.md`
+- `docs/workstreams/paint-eval-space-v1/todo.md`
+- `docs/workstreams/paint-eval-space-v1/milestones.md`
 - `docs/workstreams/renderer-clip-mask-closure-v1.md`
 - `docs/workstreams/renderer-clip-mask-closure-v1-todo.md`
 - `docs/workstreams/renderer-clip-mask-closure-v1-milestones.md`
