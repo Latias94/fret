@@ -110,6 +110,21 @@ fn select_list_desired_height(
     Px(content_height.0.min(max_height.0).max(min_height.0))
 }
 
+fn select_list_desired_height_from_content_height(
+    min_row_height: Px,
+    content_height: Px,
+    max_height: Px,
+    outer_height: Px,
+) -> Px {
+    let outer_height = Px(outer_height.0.max(0.0));
+    let max_height = Px(max_height.0.max(0.0).min(outer_height.0));
+
+    let min_height = Px(min_row_height.0.max(0.0).min(max_height.0));
+    let content_height = Px(content_height.0.max(0.0));
+
+    Px(content_height.0.min(max_height.0).max(min_height.0))
+}
+
 fn select_content_desired_width_with_probe(
     outer: Rect,
     anchor: Rect,
@@ -737,6 +752,45 @@ impl From<SelectSeparator> for SelectEntry {
     fn from(value: SelectSeparator) -> Self {
         Self::Separator(value)
     }
+}
+
+fn select_label_estimated_height(theme: &ThemeSnapshot) -> Px {
+    let base_size = theme.metric_token(theme_tokens::metric::COMPONENT_TEXT_SM_PX);
+    let base_line_height = theme.metric_token(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT);
+    let label_text_px = Px((base_size.0 - 2.0).max(10.0));
+    let label_line_height = Px((base_line_height.0 - 4.0).max(label_text_px.0));
+
+    // new-york-v4 `SelectLabel`: `px-2 py-1.5 text-xs`
+    Px(label_line_height.0 + 6.0 * 2.0)
+}
+
+fn select_separator_estimated_height() -> Px {
+    // new-york-v4 `SelectSeparator`: `h-px my-1` (margins participate in flow height).
+    Px(1.0 + 4.0 * 2.0)
+}
+
+fn select_entries_estimated_height(
+    theme: &ThemeSnapshot,
+    entries: &[SelectEntry],
+    item_h: Px,
+) -> Px {
+    fn add_entries(theme: &ThemeSnapshot, entries: &[SelectEntry], item_h: Px, total: &mut f32) {
+        let label_h = select_label_estimated_height(theme);
+        let separator_h = select_separator_estimated_height();
+
+        for entry in entries {
+            match entry {
+                SelectEntry::Item(_) => *total += item_h.0.max(0.0),
+                SelectEntry::Label(_) => *total += label_h.0.max(0.0),
+                SelectEntry::Separator(_) => *total += separator_h.0.max(0.0),
+                SelectEntry::Group(group) => add_entries(theme, &group.entries, item_h, total),
+            }
+        }
+    }
+
+    let mut total = 0.0;
+    add_entries(theme, entries, item_h, &mut total);
+    Px(total.max(0.0))
 }
 
 /// Matches Radix Select `position`: item-aligned (default upstream) vs popper.
@@ -2185,14 +2239,33 @@ fn select_impl<H: UiHost>(
 
                     let max_content_h = Px((max_h.0 - chrome_extra_y.0).max(0.0));
                     let outer_content_h = Px((outer.size.height.0 - chrome_extra_y.0).max(0.0));
-                    let desired_content_h = select_list_desired_height(
+                    let estimated_entries_h =
+                        select_entries_estimated_height(&theme, entries, item_h);
+                    let desired_content_h = select_list_desired_height_from_content_height(
                         item_h,
-                        item_len,
+                        estimated_entries_h,
                         max_content_h,
                         outer_content_h,
                     );
                     let desired_h = Px(desired_content_h.0 + chrome_extra_y.0);
                     let desired = fret_core::Size::new(desired_w, desired_h);
+                    if std::env::var("FRET_DEBUG_SELECT_DESIRED_SIZE")
+                        .ok()
+                        .is_some_and(|v| v == "1")
+                    {
+                        eprintln!(
+                            "select desired size: position={:?} item_h={} item_len={} entries_h={} chrome_extra_y={} max_h={} available_h={} desired_h={} border_w={}",
+                            position,
+                            item_h.0,
+                            item_len,
+                            estimated_entries_h.0,
+                            chrome_extra_y.0,
+                            max_h.0,
+                            available_h.0,
+                            desired_h.0,
+                            border_width.0,
+                        );
+                    }
 
                     let item_aligned_inputs_snapshot = item_aligned_inputs;
                     let mut resolved = radix_select::select_resolve_content_placement_from_elements(
@@ -2673,9 +2746,14 @@ fn select_impl<H: UiHost>(
                                             cx,
                                             theme_for_overlay.clone(),
                                             item_h,
-                                            item_len > 0
-                                                && Px(item_h.0 * item_len as f32).0
-                                                    > desired_content_h.0 + 0.5,
+                                            {
+                                                let estimated = select_entries_estimated_height(
+                                                    &theme_for_overlay,
+                                                    entries,
+                                                    item_h,
+                                                );
+                                                estimated.0 > desired_content_h.0 + 0.5
+                                            },
                                             allow_hover_scroll_arrows,
                                             scroll_handle,
                                             initial_scroll_to_y,
@@ -3683,6 +3761,10 @@ fn select_impl<H: UiHost>(
                                                 .line_height_policy(
                                                     fret_core::TextLineHeightPolicy::FixedFromStyle,
                                                 );
+                                            // Match shadcn's `items-center` outcome for fixed-height triggers:
+                                            // place the baseline using a line-box model rather than centering the
+                                            // shaped metrics box (which can read bottom-heavy).
+                                            text = text.line_box_in_bounds();
                                         }
                                         if let Some(letter_spacing_em) = text_style.letter_spacing_em {
                                             text = text.letter_spacing_em(letter_spacing_em);

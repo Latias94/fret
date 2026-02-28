@@ -115,11 +115,14 @@ Tooling should become transport-agnostic; transport choice is a detail.
 
 Define a tooling-side invariant:
 
-> Every successful `capture_bundle` produces a local directory containing `bundle.json` and a stable index pointer.
+> Every successful `capture_bundle` produces a local directory containing a bundle artifact (`bundle.schema2.json`
+> preferred, with `bundle.json` as an optional large raw view) and a stable index pointer.
 
 How it works:
 
 - Filesystem mode: the app writes `bundle.json` directly (status quo).
+- Filesystem mode: the app writes a bundle artifact directory to disk (raw `bundle.json` may be disabled by config; compact
+  `bundle.schema2.json` is preferred for small-by-default runs).
 - WS mode:
   - `bundle.dumped` must embed `bundle` (or provide a stable content address).
   - tooling materializes the bundle payload into a local directory under the run output dir,

@@ -102,9 +102,11 @@ fn leading_distribution_top_factor(
     match dist {
         TextLeadingDistribution::Even => 0.5,
         TextLeadingDistribution::Proportional => {
-            let total = ascent_px.max(0.0) + descent_px.max(0.0);
+            let ascent_px = normalize_ascent(ascent_px);
+            let descent_px = normalize_descent(descent_px);
+            let total = ascent_px + descent_px;
             if total > 0.0 {
-                (ascent_px.max(0.0) / total).clamp(0.0, 1.0)
+                (ascent_px / total).clamp(0.0, 1.0)
             } else {
                 0.5
             }
@@ -119,7 +121,7 @@ fn baseline_for_fixed_line_box(
     dist: TextLeadingDistribution,
 ) -> f32 {
     let ascent_px = normalize_ascent(ascent_px);
-    let descent_px = descent_px.max(0.0);
+    let descent_px = normalize_descent(descent_px);
     let line_height_px = line_height_px.max(0.0);
     let extra_leading_px = (line_height_px - ascent_px - descent_px).max(0.0);
     let padding_top_px =
@@ -626,7 +628,7 @@ impl ParleyShaper {
 
         let line = self.shape_single_line_metrics(TextInputRef::plain("Hg", &metrics_style), scale);
         let ascent = normalize_ascent(line.ascent);
-        let descent = line.descent.max(0.0);
+        let descent = normalize_descent(line.descent);
         self.base_line_metrics_cache.insert(key, (ascent, descent));
         Some((ascent, descent))
     }
@@ -1103,6 +1105,11 @@ impl ParleyShaper {
         base.text_wrap_mode = text_wrap_mode;
         builder.push_style_span(base);
 
+        let base_mods = shaping_properties_for_base_style(base_style);
+        if let Some(props) = base_mods.as_ref() {
+            builder.push_style_modification_span(props.iter());
+        }
+
         if let Some(span_ranges) = resolve_span_ranges(text, spans) {
             for (range, span) in span_ranges {
                 let chunk = &text[range.clone()];
@@ -1122,6 +1129,9 @@ impl ParleyShaper {
             builder.push_text(text);
         }
 
+        if base_mods.is_some() {
+            builder.pop_style_span();
+        }
         builder.pop_style_span();
         let _built_text = builder.build_into(&mut self.layout);
         self.layout.break_all_lines(max_width_px);
@@ -1414,6 +1424,54 @@ fn shaping_properties_for_span(
     (!out.is_empty()).then_some(out)
 }
 
+fn shaping_properties_for_base_style(
+    style: &TextStyle,
+) -> Option<Vec<StyleProperty<'static, [u8; 4]>>> {
+    let mut out: Vec<StyleProperty<'static, [u8; 4]>> = Vec::new();
+
+    if !style.axes.is_empty() {
+        // `wght` overlaps with the `FontWeight` attribute path. Prefer expressing it as
+        // `FontWeight` so fontique synthesis participates consistently (and avoid duplicate
+        // tag resolution ambiguity in the underlying shaping stack).
+        let mut wght_axis_override: Option<f32> = None;
+        let axes_for_variations = style
+            .axes
+            .iter()
+            .filter_map(|a| {
+                if a.tag.trim().eq_ignore_ascii_case("wght") && a.value.is_finite() {
+                    wght_axis_override = Some(a.value);
+                    return None;
+                }
+                Some(a.clone())
+            })
+            .collect::<Vec<_>>();
+        if !axes_for_variations.is_empty() {
+            let variations = font_variations_for_axes(&axes_for_variations);
+            if !variations.is_empty() {
+                out.push(StyleProperty::FontVariations(FontSettings::List(
+                    Cow::Owned(variations),
+                )));
+            }
+        }
+
+        if let Some(wght) = wght_axis_override {
+            let wght = wght.clamp(1.0, 1000.0).round() as u16;
+            out.push(StyleProperty::FontWeight(ParleyFontWeight::new(wght as f32)));
+        }
+    }
+
+    if !style.features.is_empty() {
+        let features = font_features_for_settings(&style.features);
+        if !features.is_empty() {
+            out.push(StyleProperty::FontFeatures(FontSettings::List(Cow::Owned(
+                features,
+            ))));
+        }
+    }
+
+    (!out.is_empty()).then_some(out)
+}
+
 fn font_variations_for_axes(axes: &[fret_core::TextFontAxisSetting]) -> Vec<FontVariation> {
     use std::collections::BTreeMap;
 
@@ -1491,7 +1549,7 @@ pub fn run_system_font_rescan(seed: crate::SystemFontRescanSeed) -> crate::Syste
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fret_core::{FontId, FontWeight, Px, TextSpan, TextStyle};
+    use fret_core::{FontId, FontWeight, Px, TextFontFeatureSetting, TextSpan, TextStyle};
     use std::sync::{Mutex, OnceLock};
 
     fn env_lock() -> &'static Mutex<()> {
@@ -1541,6 +1599,34 @@ mod tests {
                 .iter()
                 .any(|p| matches!(p, StyleProperty::FontVariations(_))),
             "expected `wght` axis to be removed from FontVariations"
+        );
+    }
+
+    #[test]
+    fn base_style_maps_wght_axis_to_font_weight() {
+        let base = TextStyle {
+            font: FontId::family("Roboto Flex"),
+            size: Px(16.0),
+            weight: FontWeight(400),
+            axes: vec![fret_core::TextFontAxisSetting {
+                tag: "wght".into(),
+                value: 900.0,
+            }],
+            ..Default::default()
+        };
+
+        let props =
+            shaping_properties_for_base_style(&base).expect("expected base shaping properties");
+
+        assert!(
+            props.iter().any(|p| matches!(p, StyleProperty::FontWeight(_))),
+            "expected base `wght` axis to map to FontWeight"
+        );
+        assert!(
+            !props
+                .iter()
+                .any(|p| matches!(p, StyleProperty::FontVariations(_))),
+            "expected base `wght` axis to be removed from FontVariations"
         );
     }
 
@@ -1608,6 +1694,40 @@ mod tests {
             .collect();
         assert_eq!(calt.len(), 1);
         assert_eq!(calt[0].value, 0);
+    }
+
+    #[test]
+    fn base_text_style_font_features_are_emitted_for_plain_text_builder() {
+        fn tag_u32(tag: &[u8; 4]) -> u32 {
+            (tag[0] as u32) << 24 | (tag[1] as u32) << 16 | (tag[2] as u32) << 8 | tag[3] as u32
+        }
+
+        let style = TextStyle {
+            font: FontId::family("Inter"),
+            size: Px(16.0),
+            ..Default::default()
+        };
+
+        let mut tnum_style = style.clone();
+        tnum_style.features.push(TextFontFeatureSetting {
+            tag: "tnum".into(),
+            value: 1,
+        });
+
+        let props = shaping_properties_for_base_style(&tnum_style).expect("expected base props");
+
+        let mut features: Vec<FontFeature> = Vec::new();
+        for p in &props {
+            if let StyleProperty::FontFeatures(FontSettings::List(settings)) = p {
+                features.extend(settings.iter().copied());
+            }
+        }
+
+        let tnum_tag = tag_u32(b"tnum");
+        assert!(
+            features.iter().any(|f| f.tag == tnum_tag && f.value == 1),
+            "expected `tnum=1` to be emitted via base-style shaping properties"
+        );
     }
 
     #[test]
@@ -1916,6 +2036,35 @@ mod tests {
             "expected baseline to remain within the line box; baseline={} line_height={}",
             proportional.baseline,
             proportional.line_height
+        );
+    }
+
+    #[test]
+    fn fixed_line_box_baseline_normalizes_negative_descent() {
+        let ascent = 9.0_f32;
+        let descent = 3.0_f32;
+        let line_height = 16.0_f32;
+
+        let baseline_pos = baseline_for_fixed_line_box(
+            ascent,
+            descent,
+            line_height,
+            TextLeadingDistribution::Even,
+        );
+        let baseline_neg = baseline_for_fixed_line_box(
+            ascent,
+            -descent,
+            line_height,
+            TextLeadingDistribution::Even,
+        );
+
+        assert!(
+            (baseline_pos - baseline_neg).abs() < 0.0001,
+            "expected negative descent to be normalized; baseline_pos={baseline_pos} baseline_neg={baseline_neg}"
+        );
+        assert!(
+            baseline_pos > 0.0 && baseline_pos < line_height,
+            "expected baseline to remain within the line box; baseline={baseline_pos} line_height={line_height}"
         );
     }
 

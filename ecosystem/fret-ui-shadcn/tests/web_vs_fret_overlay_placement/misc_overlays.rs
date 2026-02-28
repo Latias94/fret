@@ -595,20 +595,16 @@ fn fret_hover_card_tracks_trigger_when_underlay_scrolls() {
                                 ..Default::default()
                             },
                             move |cx| {
-                                vec![
-                                    HoverCardContent::new(vec![cx.text("HoverCard")])
-                                        .into_element(cx),
-                                ]
+                                vec![HoverCardContent::new(vec![cx.text("HoverCard")])
+                                    .into_element(cx)]
                             },
                         );
 
-                        vec![
-                            HoverCard::new(trigger, content)
-                                .open_delay_frames(0)
-                                .close_delay_frames(0)
-                                .side(HoverCardSide::Bottom)
-                                .into_element(cx),
-                        ]
+                        vec![HoverCard::new(trigger, content)
+                            .open_delay_frames(0)
+                            .close_delay_frames(0)
+                            .side(HoverCardSide::Bottom)
+                            .into_element(cx)]
                     },
                 )]
             },

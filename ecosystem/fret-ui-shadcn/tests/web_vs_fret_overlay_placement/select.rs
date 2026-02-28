@@ -76,18 +76,15 @@ fn fret_select_tracks_trigger_when_underlay_scrolls() {
                                 ..Default::default()
                             },
                             move |cx| {
-                                vec![
-                                    fret_ui_shadcn::Select::new(value, open)
-                                        .a11y_label("Select")
-                                        .placeholder("Select an option")
-                                        .trigger_test_id(trigger_test_id)
-                                        .refine_layout(
-                                            fret_ui_kit::LayoutRefinement::default()
-                                                .w_px(Px(280.0)),
-                                        )
-                                        .items(items)
-                                        .into_element(cx),
-                                ]
+                                vec![fret_ui_shadcn::Select::new(value, open)
+                                    .a11y_label("Select")
+                                    .placeholder("Select an option")
+                                    .trigger_test_id(trigger_test_id)
+                                    .refine_layout(
+                                        fret_ui_kit::LayoutRefinement::default().w_px(Px(280.0)),
+                                    )
+                                    .items(items)
+                                    .into_element(cx)]
                             },
                         )]
                     },
@@ -323,17 +320,15 @@ fn fret_select_tracks_trigger_when_underlay_scrolls() {
 fn select_demo_entries() -> Vec<fret_ui_shadcn::SelectEntry> {
     use fret_ui_shadcn::{SelectGroup, SelectItem, SelectLabel};
 
-    vec![
-        SelectGroup::new(vec![
-            SelectLabel::new("Fruits").into(),
-            SelectItem::new("apple", "Apple").into(),
-            SelectItem::new("banana", "Banana").into(),
-            SelectItem::new("blueberry", "Blueberry").into(),
-            SelectItem::new("grapes", "Grapes").into(),
-            SelectItem::new("pineapple", "Pineapple").into(),
-        ])
-        .into(),
-    ]
+    vec![SelectGroup::new(vec![
+        SelectLabel::new("Fruits").into(),
+        SelectItem::new("apple", "Apple").into(),
+        SelectItem::new("banana", "Banana").into(),
+        SelectItem::new("blueberry", "Blueberry").into(),
+        SelectItem::new("grapes", "Grapes").into(),
+        SelectItem::new("pineapple", "Pineapple").into(),
+    ])
+    .into()]
 }
 
 fn select_scrollable_entries() -> Vec<fret_ui_shadcn::SelectEntry> {
