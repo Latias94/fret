@@ -105,3 +105,17 @@ Why:
 
 - dockview uses “header_space” as a first-class drop surface.
 - Enables “move to end” without requiring a specific tab as target.
+
+## D10: Kernel placement — new crate vs module + shared primitives
+
+**Decision:** keep the v1 kernel as a **module** inside `ecosystem/fret-workspace` (`tab_strip/kernel.rs`).
+
+Why:
+
+- The kernel currently encodes editor/workspace chrome policy (pinned boundary, preview semantics).
+- A new crate would be premature surface area and would likely churn as we learn.
+
+Reuse strategy:
+
+- When docking needs shared pieces, extract **generic geometry/math** into existing `ecosystem/fret-dnd`
+  (headless primitives), and keep workspace/docking policy wrappers in their own crates.
