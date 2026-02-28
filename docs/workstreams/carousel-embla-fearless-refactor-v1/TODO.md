@@ -1,6 +1,6 @@
 # Carousel (Embla) Fearless Refactor v1 — TODO
 
-Status: In progress (tracked + gated)
+Status: Complete (tracked + gated)
 
 Goal: Align Fret's shadcn-style `Carousel` recipe with shadcn/ui v4 expectations while keeping the
 core UI runtime mechanism-only. This workstream focuses on headless snap/contain semantics and

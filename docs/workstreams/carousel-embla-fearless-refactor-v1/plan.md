@@ -1,6 +1,6 @@
 # Carousel (Embla) Fearless Refactor v1 — Plan
 
-Status: Updated (living document)
+Status: Complete (remaining work moved to v2)
 
 This plan summarizes what is already landed and proposes the next, highest-leverage steps.
 
@@ -35,6 +35,10 @@ This plan summarizes what is already landed and proposes the next, highest-lever
     - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-dnd-long-press-gate.json`
 
 ## Next steps (recommended order)
+
+Further Embla parity work (API/events, loopers, slidesInView, breakpoints) is tracked under:
+
+- `docs/workstreams/carousel-embla-parity-v2/`
 
 ### 1) Close remaining UI gallery drift (P2)
 

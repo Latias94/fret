@@ -3,7 +3,8 @@
 Milestones are structured to keep changes reviewable and reversible. Each milestone must ship a
 “3-pack”: Repro (smallest surface), Gate (tests/scripts), Evidence (anchors + upstream refs).
 
-Current status (as of 2026-02-27): M0–M3 shipped locally with gates. M4 is in progress.
+Current status (as of 2026-02-28): M0–M4 shipped locally with gates. Further Embla parity work is tracked in
+`docs/workstreams/carousel-embla-parity-v2/`.
 
 ## M0 — Gate set (fearless foundation) ✅
 
