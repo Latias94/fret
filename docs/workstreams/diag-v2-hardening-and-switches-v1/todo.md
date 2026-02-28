@@ -29,6 +29,8 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
   - [x] `FRET_DIAG_FIXED_FRAME_DELTA_MS`
   - [x] Document deprecated aliases + removal plan (P2/P3): `docs/workstreams/diag-v2-hardening-and-switches-v1/deprecations.md`.
 - [x] Define “reserved env vars” policy for `--launch` (tooling-owned) and enforce it uniformly.
+- [x] Scrub all inherited `FRET_DIAG_*` env vars in `--launch` mode (prefix-based) so parent-shell overrides cannot
+  silently drift tool-launched runs.
 - [x] Add a `diag config doctor` (tooling-side) that prints an effective merged config + highlights deprecated keys/envs.
 
 ## P0.5: Script library modularization (UX scalability)

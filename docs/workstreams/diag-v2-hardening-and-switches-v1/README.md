@@ -159,7 +159,13 @@ Make configuration predictable:
 - Tooling writes per-run configs deterministically when it launches the app; “manual mode” remains possible.
   - Status (2026-02-28): `diag run/suite/repro/perf --launch` all funnel through a single helper that writes
     `<out_dir>/diag.config.json`, sets `FRET_DIAG_CONFIG_PATH` for the child, and treats config write failure as a hard
-    launch error (no silent fallback to large `bundle.json` defaults).
+    launch error (no silent fallback to large `bundle.json` defaults). Tool-launched runs also scrub inherited
+    `FRET_DIAG_*` env vars from the parent shell (pass explicit `diag --env KEY=VALUE` when you truly need a one-off
+    override).
+  - Smoke (2026-02-28): `ui-gallery-gesture-tap-smoke` passes under `--launch` and produces schema2-only bundle exports
+    by default (`bundle.schema2.json` present, raw `bundle.json` absent).
+  - Note (2026-02-28): `ui-gallery-table-smoke` currently times out at step 10 after the main merge; treat as script/app
+    drift (separate from `--launch` artifact sizing guarantees).
 
 ### G3: Box compatibility logic behind seams
 

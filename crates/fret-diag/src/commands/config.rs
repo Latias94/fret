@@ -840,7 +840,7 @@ fn config_doctor_report_json(
     let launch_policy = if mode == DoctorMode::Launch {
         serde_json::json!({
             "reserved_env_keys": crate::launch_env_policy::TOOL_LAUNCH_RESERVED_ENV_KEYS,
-            "scrubbed_inherited_env_keys": crate::launch_env_policy::TOOL_LAUNCH_SCRUB_ENV_KEYS,
+            "scrubbed_inherited_env_prefixes": crate::launch_env_policy::TOOL_LAUNCH_SCRUB_ENV_PREFIXES,
             "explicit_env_override_keys": launch_env_override_keys,
         })
     } else {
@@ -1191,13 +1191,13 @@ Tip: pass global `diag --env KEY=VALUE` flags to simulate one-off overrides for 
                 println!("  - {k}");
             }
         }
-        println!("scrubbed_inherited_env_keys:");
-        for k in crate::launch_env_policy::TOOL_LAUNCH_SCRUB_ENV_KEYS {
-            println!("  - {k}");
-        }
         println!("reserved_env_keys:");
         for k in crate::launch_env_policy::TOOL_LAUNCH_RESERVED_ENV_KEYS {
             println!("  - {k}");
+        }
+        println!("scrubbed_inherited_env_prefixes:");
+        for p in crate::launch_env_policy::TOOL_LAUNCH_SCRUB_ENV_PREFIXES {
+            println!("  - {p}*");
         }
         return Ok(());
     }
@@ -1233,8 +1233,8 @@ Tip: pass global `diag --env KEY=VALUE` flags to simulate one-off overrides for 
     );
     if mode == DoctorMode::Launch {
         println!(
-            "tool_launch_env_scrub_keys_total: {}",
-            crate::launch_env_policy::TOOL_LAUNCH_SCRUB_ENV_KEYS.len()
+            "tool_launch_env_scrub_prefixes_total: {}",
+            crate::launch_env_policy::TOOL_LAUNCH_SCRUB_ENV_PREFIXES.len()
         );
         println!(
             "tool_launch_env_reserved_keys_total: {}",
@@ -1260,7 +1260,7 @@ Tip: pass global `diag --env KEY=VALUE` flags to simulate one-off overrides for 
             );
         }
         println!(
-            "tool_launch_env_policy_note: use --report-json to see the full reserved/scrubbed key lists"
+            "tool_launch_env_policy_note: use --report-json to see the full reserved keys and scrub prefixes"
         );
     }
     println!("workspace_root: {}", ctx.workspace_root.display());

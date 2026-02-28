@@ -6,7 +6,7 @@ use std::time::{Duration, Instant};
 
 use fret_diag_protocol::{UiDiagnosticsConfigFileV1, UiDiagnosticsConfigPathsV1};
 
-use crate::launch_env_policy::{TOOL_LAUNCH_SCRUB_ENV_KEYS, tool_launch_env_key_is_reserved};
+use crate::launch_env_policy::{TOOL_LAUNCH_SCRUB_ENV_PREFIXES, tool_launch_env_key_is_reserved};
 
 use super::LaunchedDemo;
 use super::stats::BundleStatsSort;
@@ -723,7 +723,7 @@ pub(crate) fn maybe_launch_demo(
     // This avoids "works on my machine" drift and reduces the chance of accidental output
     // explosions (e.g. large snapshot caps or pretty-printed raw bundles) during tool-launched
     // runs.
-    let scrub_env_keys = TOOL_LAUNCH_SCRUB_ENV_KEYS;
+    let scrub_env_prefixes = TOOL_LAUNCH_SCRUB_ENV_PREFIXES;
 
     let prev_ready_mtime = std::fs::metadata(ready_path)
         .and_then(|m| m.modified())
@@ -739,22 +739,26 @@ pub(crate) fn maybe_launch_demo(
     cmd.args(launch.iter().skip(1));
     cmd.current_dir(workspace_root);
 
-    let mut scrubbed_inherited_nonreserved_keys: Vec<&str> = Vec::new();
-    for key in scrub_env_keys {
+    let mut inherited_keys_to_remove: Vec<String> = std::env::vars()
+        .map(|(k, _)| k)
+        .filter(|k| scrub_env_prefixes.iter().any(|p| k.starts_with(p)))
+        .collect();
+    inherited_keys_to_remove.sort();
+    inherited_keys_to_remove.dedup();
+
+    let mut scrubbed_inherited_nonreserved_keys: Vec<String> = Vec::new();
+    for key in &inherited_keys_to_remove {
         if !tool_launch_env_key_is_reserved(key) {
-            let present = std::env::var_os(key).is_some_and(|v| !v.is_empty());
-            if present {
-                scrubbed_inherited_nonreserved_keys.push(*key);
-            }
+            scrubbed_inherited_nonreserved_keys.push(key.clone());
         }
         cmd.env_remove(key);
     }
 
-    let mut explicit_override_fret_keys: Vec<&str> = Vec::new();
+    let mut explicit_override_fret_keys: Vec<String> = Vec::new();
     let mut explicit_override_other_keys_total: u64 = 0;
     for (key, _) in launch_env {
         if key.starts_with("FRET_") {
-            explicit_override_fret_keys.push(key);
+            explicit_override_fret_keys.push(key.clone());
         } else {
             explicit_override_other_keys_total =
                 explicit_override_other_keys_total.saturating_add(1);
@@ -767,8 +771,8 @@ pub(crate) fn maybe_launch_demo(
         || !explicit_override_fret_keys.is_empty()
         || explicit_override_other_keys_total > 0
     {
-        fn format_keys(keys: &[&str], max: usize) -> String {
-            let mut out: Vec<&str> = keys.iter().take(max).copied().collect();
+        fn format_keys(keys: &[String], max: usize) -> String {
+            let mut out: Vec<&str> = keys.iter().take(max).map(|s| s.as_str()).collect();
             if keys.len() > max {
                 out.push("...");
             }
