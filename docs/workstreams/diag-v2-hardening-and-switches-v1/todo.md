@@ -176,6 +176,9 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
   - [x] Add config switches (`write_bundle_json`, `write_bundle_schema2`) and wire them into the runtime dump writer.
   - [x] Tool-launched runs default to `write_bundle_json=false` and `write_bundle_schema2=true` (small-by-default artifacts).
     - Tooling treats failure to write `diag.config.json` as a `--launch` error (avoid silent fallback to defaults).
+  - [x] Provide a tool-launched escape hatch for deep debugging:
+    - `--launch-write-bundle-json` (requires `--launch`) makes tooling write a per-run config with `write_bundle_json=true`.
+    - Not supported for `diag matrix` (too many runs; high risk of output explosion).
   - [x] Decide whether manual defaults should also flip (and document the migration plan for downstream consumers).
     - Decision: do not flip manual defaults yet; keep manual runs compat-first unless `FRET_DIAG_CONFIG_PATH` is used.
   - [ ] Deprecate/remove flags that are now represented as config fields or capabilities.

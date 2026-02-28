@@ -604,6 +604,8 @@ Core:
     - Config file key: `write_bundle_schema2` (default: `false`; tooling typically writes `true` for launched runs).
     - Note: if no config file is used, manual dumps may still write raw `bundle.json` for compatibility. Prefer a config
       file for bounded, shareable artifacts.
+    - Tool-launched escape hatch: pass `--launch-write-bundle-json` (must appear before `--launch`) to make tooling
+      write a per-run config with `write_bundle_json=true` for that launched run.
   - Tip: print the effective merged config (and highlight unknown keys/envs):
     - `cargo run -p fretboard -- diag config doctor --mode launch --dir .fret/diag`
     - `cargo run -p fretboard -- diag config doctor --mode manual --report-json` (manual apps)

@@ -157,6 +157,9 @@ Make configuration predictable:
 - A **single canonical config file** is the primary interface (`FRET_DIAG_CONFIG_PATH`).
 - Env vars remain supported but are explicitly treated as overrides and are minimally scoped.
 - Tooling writes per-run configs deterministically when it launches the app; “manual mode” remains possible.
+  - Status (2026-02-28): `diag run/suite/repro/perf --launch` all funnel through a single helper that writes
+    `<out_dir>/diag.config.json`, sets `FRET_DIAG_CONFIG_PATH` for the child, and treats config write failure as a hard
+    launch error (no silent fallback to large `bundle.json` defaults).
 
 ### G3: Box compatibility logic behind seams
 
@@ -210,6 +213,7 @@ Exit plan:
 
 1) Prefer manifest + sidecars for all tooling flows.
 2) Stop materializing/writing `bundle.json` unless explicitly requested (`diag pack` / share flows should not require it).
+   - Tool-launched escape hatch: `--launch-write-bundle-json` (requires `--launch`; not supported for `diag matrix`).
 
 ## Non-goals
 

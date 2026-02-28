@@ -469,6 +469,7 @@ pub(crate) fn cmd_script(
                 exit_path,
                 &launch_fs_transport_cfg,
                 wants_screenshots,
+                false,
                 timeout_ms,
                 poll_ms,
                 false,

@@ -574,6 +574,7 @@ fn tool_launched_diag_config(
     ready_path: &Path,
     exit_path: &Path,
     wants_screenshots: bool,
+    launch_write_bundle_json: bool,
     launch_env: &[(String, String)],
 ) -> UiDiagnosticsConfigFileV1 {
     let mut cfg = UiDiagnosticsConfigFileV1 {
@@ -661,7 +662,7 @@ fn tool_launched_diag_config(
         // Keep default artifacts small-by-default for tool-launched runs:
         // - sidecars + manifest are sufficient for most triage flows
         // - compact schema2 view is useful for downstream tooling without the raw monolith
-        write_bundle_json: Some(false),
+        write_bundle_json: Some(launch_write_bundle_json),
         write_bundle_schema2: Some(true),
         // Keep script-driven bundle dumps reasonably small by default.
         //
@@ -703,6 +704,7 @@ pub(crate) fn maybe_launch_demo(
     exit_path: &Path,
     fs_transport_cfg: &crate::transport::FsDiagTransportConfig,
     wants_screenshots: bool,
+    launch_write_bundle_json: bool,
     timeout_ms: u64,
     poll_ms: u64,
     launch_high_priority: bool,
@@ -788,6 +790,7 @@ pub(crate) fn maybe_launch_demo(
         ready_path,
         exit_path,
         wants_screenshots,
+        launch_write_bundle_json,
         launch_env,
     );
     let bytes = serde_json::to_vec_pretty(&cfg)
@@ -966,6 +969,7 @@ mod tool_launch_config_tests {
             &ready_path,
             &exit_path,
             true,
+            false,
             &[("FRET_DIAG_REDACT_TEXT".to_string(), "0".to_string())],
         );
 
@@ -978,6 +982,27 @@ mod tool_launch_config_tests {
         assert_eq!(cfg.script_dump_max_snapshots, Some(10));
         assert_eq!(cfg.max_debug_string_bytes, Some(2048));
         assert_eq!(cfg.redact_text, Some(false));
+    }
+
+    #[test]
+    fn tool_launch_config_allows_raw_bundle_json_when_requested() {
+        let out_dir = PathBuf::from("target/fret-diag/test-launch-config-raw");
+        let fs_transport_cfg = FsDiagTransportConfig::from_out_dir(out_dir.clone());
+        let ready_path = PathBuf::from("target/fret-diag/test-launch-config-raw/ready.touch");
+        let exit_path = PathBuf::from("target/fret-diag/test-launch-config-raw/exit.touch");
+
+        let cfg = tool_launched_diag_config(
+            &out_dir,
+            &fs_transport_cfg,
+            &ready_path,
+            &exit_path,
+            false,
+            true,
+            &[],
+        );
+
+        assert_eq!(cfg.write_bundle_json, Some(true));
+        assert_eq!(cfg.write_bundle_schema2, Some(true));
     }
 }
 

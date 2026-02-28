@@ -31,6 +31,7 @@ pub(crate) struct SuiteCmdContext {
     pub launch: Option<Vec<String>>,
     pub launch_env: Vec<(String, String)>,
     pub launch_high_priority: bool,
+    pub launch_write_bundle_json: bool,
     pub keep_open: bool,
     pub checks: SuiteChecks,
 }
@@ -65,6 +66,7 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
         launch,
         mut launch_env,
         launch_high_priority,
+        launch_write_bundle_json,
         keep_open,
         checks,
     } = ctx;
@@ -817,6 +819,7 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
             &resolved_exit_path,
             &fs_transport_cfg,
             suite_wants_screenshots,
+            launch_write_bundle_json,
             timeout_ms,
             poll_ms,
             launch_high_priority,
@@ -920,6 +923,7 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
                 &resolved_exit_path,
                 &fs_transport_cfg,
                 suite_wants_screenshots,
+                launch_write_bundle_json,
                 timeout_ms,
                 poll_ms,
                 launch_high_priority,
