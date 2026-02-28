@@ -82,4 +82,4 @@ This TODO tracks the V3 work as landable steps. It intentionally starts with “
     - `crates/fret-render-wgpu/src/renderer/{types.rs,render_scene/encode/ops.rs,render_plan_compiler.rs,render_plan_effects.rs}`
     - Conformance: `crates/fret-render-wgpu/tests/effect_custom_v3_conformance.rs` (group snapshot vs post-blur src)
 - [x] M2.3 (diag): add group-level diagnostics counters (requested/applied/degraded) and include them in perf snapshots.
-- [ ] M2.4 (bounds): use group `bounds` and group pyramid request to restrict GPU work deterministically.
+- [x] M2.4 (bounds): use group `bounds` and group pyramid request to restrict GPU work deterministically.

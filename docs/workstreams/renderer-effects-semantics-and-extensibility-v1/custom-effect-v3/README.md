@@ -46,6 +46,12 @@ Backdrop source group counters:
 - `backdrop_source_groups.pyramid_requested`, `backdrop_source_groups.pyramid_applied_levels_ge2`
 - `backdrop_source_groups.pyramid_degraded_to_one_*`, `backdrop_source_groups.pyramid_skipped_raw_unavailable`
 
+Work bounding:
+
+- When a pyramid is requested, the wgpu backend may scissor pyramid generation work to a bounded ROI derived from
+  `max_radius_px`. Inside a backdrop source group, the group bounds + group radius are used as the shared ROI so
+  multiple surfaces can safely reuse the same pyramid scratch.
+
 ## Design anchor
 
 Normative contract:
