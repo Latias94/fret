@@ -916,6 +916,29 @@ mod tests {
     use fret_ui::tree::UiTree;
     use std::collections::HashMap;
 
+    fn blend_over(fg: Color, bg: Color) -> Color {
+        let a = fg.a.clamp(0.0, 1.0);
+        Color {
+            r: fg.r * a + bg.r * (1.0 - a),
+            g: fg.g * a + bg.g * (1.0 - a),
+            b: fg.b * a + bg.b * (1.0 - a),
+            a: 1.0,
+        }
+    }
+
+    fn relative_luminance(c: Color) -> f32 {
+        // The theme pipeline stores colors in linear space, so we can use the WCAG coefficients
+        // directly.
+        (0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b).clamp(0.0, 1.0)
+    }
+
+    fn contrast_ratio(a: Color, b: Color) -> f32 {
+        let l1 = relative_luminance(a);
+        let l2 = relative_luminance(b);
+        let (hi, lo) = if l1 >= l2 { (l1, l2) } else { (l2, l1) };
+        (hi + 0.05) / (lo + 0.05)
+    }
+
     struct FakeServices;
 
     impl TextService for FakeServices {
@@ -1713,6 +1736,34 @@ mod tests {
             actual_bg,
             expected_bg,
             0.02,
+        );
+    }
+
+    #[test]
+    fn destructive_button_text_contrast_is_reasonable_in_zinc_dark() {
+        let mut app = App::new();
+        crate::shadcn_themes::apply_shadcn_new_york_v4(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Zinc,
+            crate::shadcn_themes::ShadcnColorScheme::Dark,
+        );
+
+        let theme = Theme::global(&app);
+        let snap = theme.snapshot();
+
+        let (bg, _bg_hover, _bg_active, _border, fg) =
+            variant_colors(theme, ButtonVariant::Destructive);
+        let surface = snap.color_token("background");
+        let bg_composited = blend_over(bg, surface);
+
+        let ratio = contrast_ratio(fg, bg_composited);
+        assert!(
+            ratio >= 3.0,
+            "expected destructive button contrast >= 3.0, got {ratio:.2} (fg={:?} bg={:?} bg_composited={:?} surface={:?})",
+            fg,
+            bg,
+            bg_composited,
+            surface,
         );
     }
 }
