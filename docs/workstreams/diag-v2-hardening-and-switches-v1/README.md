@@ -164,8 +164,10 @@ Make configuration predictable:
     override).
   - Smoke (2026-02-28): `ui-gallery-gesture-tap-smoke` passes under `--launch` and produces schema2-only bundle exports
     by default (`bundle.schema2.json` present, raw `bundle.json` absent).
-  - Note (2026-02-28): `ui-gallery-table-smoke` currently times out at step 10 after the main merge; treat as script/app
-    drift (separate from `--launch` artifact sizing guarantees).
+  - Smoke (2026-02-28): `ui-gallery-table-smoke` passes again after relaxing a too-strict
+    `bounds_within_window` check to `visible_in_window` (some page roots can be taller than the window).
+  - Smoke (2026-02-28): `ui-gallery-empty-background-gradient-screenshot` passes under `--launch` and writes a PNG under
+    `target/fret-diag/screenshots/<bundle_dir>/` (tool-launched per-run config sets `screenshots_enabled=true` as needed).
 
 ### G3: Box compatibility logic behind seams
 
