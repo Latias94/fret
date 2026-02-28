@@ -144,6 +144,7 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
+        "diag-hardening-smoke-docking",
         "docking-arbitration"
       ],
       "tags": [
@@ -668,6 +669,29 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-button-group-size-screenshots-zinc-light-dark",
+      "path": "tools/diag-scripts/ui-gallery-button-group-size-screenshots-zinc-light-dark.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "button-group",
+        "screenshots",
+        "shadcn",
+        "size",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Sets theme preset to zinc/light then zinc/dark.",
+        "Navigates to the Button Group page.",
+        "Captures screenshots for the Size section (icon-only Add button should not be clipped)."
+      ]
+    },
+    {
       "id": "ui-gallery-button-link-render",
       "path": "tools/diag-scripts/ui-gallery/button/ui-gallery-button-link-render.json",
       "required_capabilities": [
@@ -716,13 +740,12 @@
       "target_hints": []
     },
     {
-      "id": "ui-gallery-carousel-demo-reinit-resize-gate",
-      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-reinit-resize-gate.json",
-      "required_capabilities": [
-        "diag.screenshot_png",
-        "diag.script_v2"
+      "id": "ui-gallery-card-meeting-notes-list-no-early-wrap",
+      "path": "tools/diag-scripts/ui-gallery/card/ui-gallery-card-meeting-notes-list-no-early-wrap.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
       ],
-      "suite_memberships": [],
       "tags": [],
       "target_hints": []
     },
@@ -1725,6 +1748,7 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
+        "diag-hardening-smoke",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
@@ -1829,6 +1853,7 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
+        "diag-hardening-smoke",
         "ui-gallery"
       ],
       "tags": [
@@ -2375,6 +2400,7 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
+        "diag-hardening-smoke",
         "ui-gallery"
       ],
       "tags": [
@@ -2542,19 +2568,6 @@
       "required_capabilities": [
         "diag.overlay_placement_trace",
         "diag.script_v2"
-      ],
-      "suite_memberships": [
-        "ui-gallery-select"
-      ],
-      "tags": [],
-      "target_hints": []
-    },
-    {
-      "id": "ui-gallery-theme-preset-select-open-screenshot-zinc-light",
-      "path": "tools/diag-scripts/ui-gallery/select/ui-gallery-theme-preset-select-open-screenshot-zinc-light.json",
-      "required_capabilities": [
-        "diag.script_v2",
-        "diag.screenshot_png"
       ],
       "suite_memberships": [
         "ui-gallery-select"
@@ -2803,6 +2816,7 @@
       "path": "tools/diag-scripts/ui-gallery/table/ui-gallery-table-smoke.json",
       "required_capabilities": [],
       "suite_memberships": [
+        "diag-hardening-smoke",
         "ui-gallery"
       ],
       "tags": [],
