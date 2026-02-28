@@ -170,6 +170,9 @@ Make configuration predictable:
     `bounds_within_window` check to `visible_in_window` (some page roots can be taller than the window).
   - Smoke (2026-02-28): `ui-gallery-empty-background-gradient-screenshot` passes under `--launch` and writes a PNG under
     `target/fret-diag/screenshots/<bundle_dir>/` (tool-launched per-run config sets `screenshots_enabled=true` as needed).
+  - Convenience (2026-02-28): a tiny smoke suite exists at `tools/diag-scripts/suites/diag-hardening-smoke/` for quick
+    post-merge verification:
+    - `cargo run -p fretboard -- diag suite diag-hardening-smoke --launch -- cargo run -p fret-ui-gallery --release`
 
 ### G3: Box compatibility logic behind seams
 

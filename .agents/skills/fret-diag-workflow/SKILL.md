@@ -81,6 +81,10 @@ Run a promoted script by `script_id` (no path required):
 
 - `cargo run -p fretboard -- diag run ui-gallery-command-palette-shortcut-primary --launch -- cargo run -p fret-ui-gallery --release`
 
+Quick post-merge smoke (small, bounded, launch-mode):
+
+- `cargo run -p fretboard -- diag suite diag-hardening-smoke --launch -- cargo run -p fret-ui-gallery --release`
+
 Copy/paste checklist (safe, small-by-default):
 
 1) `cargo run -p fretboard -- diag config doctor --mode launch --print-launch-policy`
