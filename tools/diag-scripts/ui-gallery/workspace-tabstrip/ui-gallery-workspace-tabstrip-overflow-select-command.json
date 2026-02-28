@@ -1,0 +1,60 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-workspace-tabstrip-overflow-select-command",
+    "tags": ["ui_gallery", "workspace_tabstrip", "overflow"]
+  },
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-workspace-tabstrip" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "set_window_inner_size", "width_px": 420.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 20 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-workspace-tabstrip.overflow_button" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-workspace-tabstrip.overflow_button" }
+    },
+    { "type": "wait_frames", "n": 10 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-workspace-tabstrip.overflow_entry.command"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-workspace-tabstrip.overflow_entry.command"
+      }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "selected_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-workspace-tab-command" },
+        "selected": true
+      },
+      "timeout_frames": 240
+    }
+  ]
+}
+

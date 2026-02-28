@@ -206,7 +206,7 @@ This table maps each ADR slug’s **primary legacy id** to its current canonical
 | 1136 | 0198 | 0198-delinea-datazoom-y-and-2d-semantics.md |
 | 1137 | 0199 | 0199-delinea-row-selection-and-filtering-contract.md |
 | 1138 | 0200 | 0200-delinea-datazoom-component-composition-and-span-policy.md |
-| 1139 | 0201 | 0201-delinea-time-axis-ticks-and-labels.md |
+| 1139 | 0300 | 0300-delinea-time-axis-ticks-and-labels.md |
 | 1140 | 0202 | 0202-delinea-dataset-storage-and-indices.md |
 | 1141 | 0203 | 0203-delinea-missing-values-and-segment-policy.md |
 | 1143 | 0204 | 0204-delinea-derived-dimensions-and-stack-transform.md |
@@ -256,7 +256,7 @@ This table maps each ADR slug’s **primary legacy id** to its current canonical
 | 1191 | 0248 | 0248-delinea-multi-grid-viewport-layout-contract.md |
 | 1192 | 0249 | 0249-delinea-link-events-for-axis-pointer-and-cursor.md |
 | 1193 | 0250 | 0250-delinea-link-events-for-domain-window.md |
-| 1194 | 0251 | 0251-fret-chart-link-mapping-policy-v1.md |
+| 1194 | 0301 | 0301-fret-chart-link-mapping-policy-v1.md |
 | 1195 | 0252 | 0252-delinea-transform-lineage-and-raw-index-identity-v1.md |
 | 1196 | 0253 | 0253-delinea-minimal-dataset-transform-node-set-v1.md |
 | 1197 | 0254 | 0254-delinea-dataset-transform-cache-keys-and-invalidation-v1.md |

@@ -898,14 +898,13 @@ impl Button {
                                     label = label.font(font);
                                 }
                                 for feature in &label_features_override {
-                                    label = label.font_feature(feature.tag.to_string(), feature.value);
+                                    label =
+                                        label.font_feature(feature.tag.to_string(), feature.value);
                                 }
                                 for axis in &label_axes_override {
                                     label = label.font_axis(axis.tag.to_string(), axis.value);
                                 }
-                                content.push(
-                                    label.into_element(cx),
-                                );
+                                content.push(label.into_element(cx));
                             }
 
                             if let Some(icon) = trailing_icon.clone() {
@@ -975,6 +974,11 @@ mod tests {
             b: fg.b * a + bg.b * (1.0 - a),
             a: 1.0,
         }
+    }
+
+    fn alpha_mul(mut c: Color, mul: f32) -> Color {
+        c.a *= mul;
+        c
     }
 
     fn relative_luminance(c: Color) -> f32 {
@@ -1814,6 +1818,38 @@ mod tests {
             fg,
             bg,
             bg_composited,
+            surface,
+        );
+    }
+
+    #[test]
+    fn disabled_destructive_button_text_contrast_is_reasonable_in_zinc_dark() {
+        let mut app = App::new();
+        crate::shadcn_themes::apply_shadcn_new_york_v4(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Zinc,
+            crate::shadcn_themes::ShadcnColorScheme::Dark,
+        );
+
+        let theme = Theme::global(&app);
+        let snap = theme.snapshot();
+
+        let (bg, _bg_hover, _bg_active, _border, fg) =
+            variant_colors(theme, ButtonVariant::Destructive);
+        let surface = snap.color_token("background");
+
+        // Disabled buttons are wrapped in an opacity node (`disabled:opacity-50` upstream).
+        // Model that as group alpha applied when compositing each pixel over the surface.
+        let disabled_opacity = 0.5;
+        let text_pixel = blend_over(alpha_mul(fg, disabled_opacity), surface);
+        let bg_pixel = blend_over(alpha_mul(bg, disabled_opacity), surface);
+
+        let ratio = contrast_ratio(text_pixel, bg_pixel);
+        assert!(
+            ratio >= 2.0,
+            "expected disabled destructive button contrast >= 2.0, got {ratio:.2} (text={:?} bg={:?} surface={:?})",
+            text_pixel,
+            bg_pixel,
             surface,
         );
     }

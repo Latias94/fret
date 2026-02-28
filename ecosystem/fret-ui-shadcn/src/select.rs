@@ -647,6 +647,8 @@ pub struct SelectItem {
     pub label: Arc<str>,
     pub test_id: Option<Arc<str>>,
     pub disabled: bool,
+    pub label_features_override: Vec<fret_core::TextFontFeatureSetting>,
+    pub label_axes_override: Vec<fret_core::TextFontAxisSetting>,
 }
 
 impl SelectItem {
@@ -656,6 +658,8 @@ impl SelectItem {
             label: label.into(),
             test_id: None,
             disabled: false,
+            label_features_override: Vec::new(),
+            label_axes_override: Vec::new(),
         }
     }
 
@@ -667,6 +671,29 @@ impl SelectItem {
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
         self
+    }
+
+    pub fn label_font_feature(mut self, tag: impl Into<String>, value: u32) -> Self {
+        self.label_features_override
+            .push(fret_core::TextFontFeatureSetting {
+                tag: tag.into().into(),
+                value,
+            });
+        self
+    }
+
+    pub fn label_font_axis(mut self, tag: impl Into<String>, value: f32) -> Self {
+        self.label_axes_override
+            .push(fret_core::TextFontAxisSetting {
+                tag: tag.into().into(),
+                value,
+            });
+        self
+    }
+
+    /// Enables OpenType tabular numbers (`font-variant-numeric: tabular-nums`) for this item's label.
+    pub fn label_tabular_nums(self) -> Self {
+        self.label_font_feature("tnum", 1)
     }
 }
 
@@ -1231,17 +1258,28 @@ fn select_impl<H: UiHost>(
 
     cx.scope(|cx| {
         let trigger_test_id = trigger_test_id.clone();
-        fn find_item_label(entries: &[SelectEntry], value: &str) -> Option<Arc<str>> {
+        fn find_item_label_overrides(
+            entries: &[SelectEntry],
+            value: &str,
+        ) -> Option<(
+            Arc<str>,
+            Vec<fret_core::TextFontFeatureSetting>,
+            Vec<fret_core::TextFontAxisSetting>,
+        )> {
             for entry in entries {
                 match entry {
                     SelectEntry::Item(it) => {
                         if it.value.as_ref() == value {
-                            return Some(it.label.clone());
+                            return Some((
+                                it.label.clone(),
+                                it.label_features_override.clone(),
+                                it.label_axes_override.clone(),
+                            ));
                         }
                     }
                     SelectEntry::Group(group) => {
-                        if let Some(label) = find_item_label(&group.entries, value) {
-                            return Some(label);
+                        if let Some(out) = find_item_label_overrides(&group.entries, value) {
+                            return Some(out);
                         }
                     }
                     SelectEntry::Label(_) | SelectEntry::Separator(_) => {}
@@ -2612,6 +2650,8 @@ fn select_impl<H: UiHost>(
                                         continue;
                                     };
                                     let label = item.label.clone();
+                                    let label_features_override = item.label_features_override.clone();
+                                    let label_axes_override = item.label_axes_override.clone();
                                     let style = text_style_for_overlay.clone();
                                     out.push(cx.container(
                                         ContainerProps {
@@ -2638,6 +2678,13 @@ fn select_impl<H: UiHost>(
                                             }
                                             if let Some(letter_spacing_em) = style.letter_spacing_em {
                                                 text = text.letter_spacing_em(letter_spacing_em);
+                                            }
+                                            for feature in &label_features_override {
+                                                text = text
+                                                    .font_feature(feature.tag.to_string(), feature.value);
+                                            }
+                                            for axis in &label_axes_override {
+                                                text = text.font_axis(axis.tag.to_string(), axis.value);
                                             }
                                             vec![text.into_element(cx)]
                                         },
@@ -3001,6 +3048,10 @@ fn select_impl<H: UiHost>(
 
                                                                                     let item_value = item.value.clone();
                                                                                     let item_label = item.label.clone();
+                                                                                    let label_features_override =
+                                                                                        item.label_features_override.clone();
+                                                                                    let label_axes_override =
+                                                                                        item.label_axes_override.clone();
                                                                                     cx.pressable_set_option_arc_str(
                                                                                         &model,
                                                                                         item_value.clone(),
@@ -3289,6 +3340,18 @@ fn select_impl<H: UiHost>(
                                                                                                     }
                                                                                                     if let Some(letter_spacing_em) = text_style.letter_spacing_em {
                                                                                                         text = text.letter_spacing_em(letter_spacing_em);
+                                                                                                    }
+                                                                                                    for feature in &label_features_override {
+                                                                                                        text = text.font_feature(
+                                                                                                            feature.tag.to_string(),
+                                                                                                            feature.value,
+                                                                                                        );
+                                                                                                    }
+                                                                                                    for axis in &label_axes_override {
+                                                                                                        text = text.font_axis(
+                                                                                                            axis.tag.to_string(),
+                                                                                                            axis.value,
+                                                                                                        );
                                                                                                     }
                                                                                                     vec![text.into_element(cx)]
                                                                                                 },
@@ -3743,10 +3806,19 @@ fn select_impl<H: UiHost>(
                                                 fret_ui::Invalidation::Paint,
                                             )
                                             .unwrap_or_default();
-                                        let label = selected
-                                            .as_ref()
-                                            .and_then(|v| find_item_label(entries, v.as_ref()))
-                                            .unwrap_or_else(|| placeholder_for_value_node.clone());
+                                        let (label, label_features_override, label_axes_override) =
+                                            selected
+                                                .as_ref()
+                                                .and_then(|v| {
+                                                    find_item_label_overrides(entries, v.as_ref())
+                                                })
+                                                .unwrap_or_else(|| {
+                                                    (
+                                                        placeholder_for_value_node.clone(),
+                                                        Vec::new(),
+                                                        Vec::new(),
+                                                    )
+                                                });
 
                                         let mut text = ui::text(cx, label)
                                             .text_size_px(text_style.size)
@@ -3770,6 +3842,13 @@ fn select_impl<H: UiHost>(
                                         }
                                         if let Some(letter_spacing_em) = text_style.letter_spacing_em {
                                             text = text.letter_spacing_em(letter_spacing_em);
+                                        }
+                                        for feature in &label_features_override {
+                                            text = text
+                                                .font_feature(feature.tag.to_string(), feature.value);
+                                        }
+                                        for axis in &label_axes_override {
+                                            text = text.font_axis(axis.tag.to_string(), axis.value);
                                         }
                                         if !auto_width_trigger {
                                             text = text.w_full();

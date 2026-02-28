@@ -255,7 +255,7 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
             // Our GPU pipeline blends in linear space, which can make `*/60` backgrounds appear
             // slightly brighter than upstream web screenshots. Nudge the derived token darker so
             // `text-white` remains legible and closer to shadcn docs.
-            ShadcnColorScheme::Dark => with_oklch_alpha(&destructive, 0.5)
+            ShadcnColorScheme::Dark => with_oklch_alpha(&destructive, 0.4)
                 .expect("shadcn new-york-v4 destructive token is oklch"),
         };
         colors.insert(
@@ -356,6 +356,36 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
             "component.radio_group.choice_card.checked_bg".to_string(),
             checked_bg,
         );
+
+        // Docking (in-tree) overlays use a small set of primary-derived alphas.
+        // Keep them tokenized so presets can tune contrast without touching docking internals.
+        //
+        // Note: these are seeded from `primary` so all shadcn base colors inherit the correct hue.
+        let mut seed_primary = |key: &str, alpha: f32| {
+            if colors.contains_key(key) {
+                return;
+            }
+            let v = with_oklch_alpha(&primary, alpha)
+                .expect("shadcn new-york-v4 primary token is oklch");
+            colors.insert(key.to_string(), v);
+        };
+
+        seed_primary("component.docking.drop_overlay.float.bg", 0.10);
+        seed_primary("component.docking.drop_overlay.float.border", 0.85);
+        seed_primary("component.docking.drop_overlay.empty.bg", 0.08);
+        seed_primary("component.docking.drop_overlay.empty.border", 0.75);
+        seed_primary("component.docking.drop_overlay.center.content.bg", 0.12);
+        seed_primary("component.docking.drop_overlay.center.content.border", 0.65);
+        seed_primary("component.docking.drop_overlay.center.tab_bar.bg", 0.14);
+        seed_primary("component.docking.drop_overlay.center.tab_bar.border", 0.45);
+        seed_primary("component.docking.drop_overlay.zone.bg", 0.16);
+        seed_primary("component.docking.drop_overlay.zone.border", 0.85);
+
+        seed_primary("component.docking.tab_insert.preview.bg", 0.22);
+        seed_primary("component.docking.tab_insert.preview.border", 0.85);
+        seed_primary("component.docking.tab_insert.marker.bg", 0.85);
+        seed_primary("component.docking.tab_insert.marker.border", 1.0);
+        seed_primary("component.docking.tab_insert.marker.cap.bg", 0.92);
     }
 
     // The upstream v4 registry theme JSONs do not fully match the values used by the upstream
@@ -1012,7 +1042,7 @@ mod tests {
                 "expected destructive badge bg to match destructive in light scheme"
             );
 
-            let expected_destructive_dark_bg = with_oklch_alpha(&destructive_dark, 0.5)
+            let expected_destructive_dark_bg = with_oklch_alpha(&destructive_dark, 0.4)
                 .expect("shadcn new-york-v4 destructive token is oklch");
             assert_eq!(
                 cfg_dark
@@ -1269,6 +1299,40 @@ mod tests {
                 Some(expected_dark),
                 "expected choice-card checked bg to match primary/10 in dark scheme"
             );
+
+            for &(key, alpha) in &[
+                ("component.docking.drop_overlay.float.bg", 0.10),
+                ("component.docking.drop_overlay.float.border", 0.85),
+                ("component.docking.drop_overlay.empty.bg", 0.08),
+                ("component.docking.drop_overlay.empty.border", 0.75),
+                ("component.docking.drop_overlay.center.content.bg", 0.12),
+                ("component.docking.drop_overlay.center.content.border", 0.65),
+                ("component.docking.drop_overlay.center.tab_bar.bg", 0.14),
+                ("component.docking.drop_overlay.center.tab_bar.border", 0.45),
+                ("component.docking.drop_overlay.zone.bg", 0.16),
+                ("component.docking.drop_overlay.zone.border", 0.85),
+                ("component.docking.tab_insert.preview.bg", 0.22),
+                ("component.docking.tab_insert.preview.border", 0.85),
+                ("component.docking.tab_insert.marker.bg", 0.85),
+                ("component.docking.tab_insert.marker.border", 1.0),
+                ("component.docking.tab_insert.marker.cap.bg", 0.92),
+            ] {
+                let expected_light = with_oklch_alpha(&primary_light, alpha)
+                    .expect("shadcn new-york-v4 primary token is oklch");
+                assert_eq!(
+                    cfg_light.colors.get(key).cloned(),
+                    Some(expected_light),
+                    "expected {key} to match primary-derived value in light scheme"
+                );
+
+                let expected_dark = with_oklch_alpha(&primary_dark, alpha)
+                    .expect("shadcn new-york-v4 primary token is oklch");
+                assert_eq!(
+                    cfg_dark.colors.get(key).cloned(),
+                    Some(expected_dark),
+                    "expected {key} to match primary-derived value in dark scheme"
+                );
+            }
         }
     }
 

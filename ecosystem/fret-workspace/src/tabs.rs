@@ -8,7 +8,8 @@ use crate::commands::{
     CMD_WORKSPACE_TAB_CLOSE_OTHERS, CMD_WORKSPACE_TAB_CLOSE_PREFIX, CMD_WORKSPACE_TAB_CLOSE_RIGHT,
     CMD_WORKSPACE_TAB_MOVE_AFTER_PREFIX, CMD_WORKSPACE_TAB_MOVE_BEFORE_PREFIX,
     CMD_WORKSPACE_TAB_MOVE_LEFT, CMD_WORKSPACE_TAB_MOVE_RIGHT, CMD_WORKSPACE_TAB_NEXT,
-    CMD_WORKSPACE_TAB_PREV,
+    CMD_WORKSPACE_TAB_PIN_PREFIX, CMD_WORKSPACE_TAB_PREV, CMD_WORKSPACE_TAB_TOGGLE_PIN,
+    CMD_WORKSPACE_TAB_UNPIN_PREFIX,
 };
 
 #[cfg(feature = "serde")]
@@ -40,6 +41,9 @@ pub struct WorkspaceTabs {
     active: Option<Arc<str>>,
     mru: Vec<Arc<str>>,
     dirty: HashSet<Arc<str>>,
+    pinned_tab_count: usize,
+    preview_tab_id: Option<Arc<str>>,
+    preview_enabled: bool,
     cycle_mode: TabCycleMode,
 }
 
@@ -50,6 +54,9 @@ impl Default for WorkspaceTabs {
             active: None,
             mru: Vec::new(),
             dirty: HashSet::new(),
+            pinned_tab_count: 0,
+            preview_tab_id: None,
+            preview_enabled: true,
             cycle_mode: TabCycleMode::default(),
         }
     }
@@ -81,6 +88,43 @@ impl WorkspaceTabs {
         self.cycle_mode
     }
 
+    pub fn pinned_count(&self) -> usize {
+        self.pinned_tab_count.min(self.tabs.len())
+    }
+
+    pub fn preview_tab_id(&self) -> Option<&Arc<str>> {
+        self.preview_tab_id.as_ref()
+    }
+
+    pub fn preview_enabled(&self) -> bool {
+        self.preview_enabled
+    }
+
+    pub fn set_preview_enabled(&mut self, enabled: bool) {
+        self.preview_enabled = enabled;
+        if !enabled {
+            self.preview_tab_id = None;
+        }
+    }
+
+    pub fn is_tab_preview(&self, id: &str) -> bool {
+        self.preview_tab_id
+            .as_deref()
+            .is_some_and(|t| t == id)
+    }
+
+    pub fn set_pinned_count(&mut self, count: usize) {
+        self.pinned_tab_count = count.min(self.tabs.len());
+    }
+
+    pub fn is_tab_pinned(&self, id: &str) -> bool {
+        let pinned_count = self.pinned_count();
+        self.tabs
+            .iter()
+            .take(pinned_count)
+            .any(|t| t.as_ref() == id)
+    }
+
     pub fn is_dirty(&self, id: &str) -> bool {
         self.dirty.iter().any(|t| t.as_ref() == id)
     }
@@ -97,7 +141,146 @@ impl WorkspaceTabs {
         if !self.tabs.iter().any(|t| t.as_ref() == id.as_ref()) {
             self.tabs.push(id.clone());
         }
+        if self.is_tab_preview(id.as_ref()) {
+            self.preview_tab_id = None;
+        }
         self.activate(id);
+    }
+
+    pub fn open_preview_and_activate(&mut self, id: Arc<str>) -> bool {
+        if !self.preview_enabled {
+            let before_active = self.active.clone();
+            self.open_and_activate(id);
+            return before_active != self.active;
+        }
+
+        // Never demote an already-open normal tab into preview.
+        if self.tabs.iter().any(|t| t.as_ref() == id.as_ref()) && !self.is_tab_preview(id.as_ref())
+        {
+            return self.activate(id);
+        }
+
+        // Replace the existing preview tab when possible.
+        if let Some(existing_preview) = self.preview_tab_id.clone()
+            && existing_preview.as_ref() != id.as_ref()
+        {
+            let existing_is_dirty = self.is_dirty(existing_preview.as_ref());
+            let existing_is_pinned = self.is_tab_pinned(existing_preview.as_ref());
+            if !existing_is_dirty && !existing_is_pinned {
+                if let Some(ix) = self
+                    .tabs
+                    .iter()
+                    .position(|t| t.as_ref() == existing_preview.as_ref())
+                {
+                    self.tabs.remove(ix);
+                    self.dirty.remove(&existing_preview);
+                    self.mru.retain(|t| t.as_ref() != existing_preview.as_ref());
+                    self.pinned_tab_count = self.pinned_tab_count.min(self.tabs.len());
+
+                    let insert_at = ix.min(self.tabs.len());
+                    self.tabs.insert(insert_at, id.clone());
+                    self.preview_tab_id = Some(id.clone());
+                    return self.activate(id);
+                }
+            }
+            // If the existing preview cannot be safely replaced, treat it as committed.
+            self.preview_tab_id = None;
+        }
+
+        if !self.tabs.iter().any(|t| t.as_ref() == id.as_ref()) {
+            let pinned_count = self.pinned_count();
+            let insert_at = self
+                .active
+                .as_ref()
+                .and_then(|active| {
+                    self.tabs
+                        .iter()
+                        .position(|t| t.as_ref() == active.as_ref())
+                        .map(|ix| {
+                            if ix < pinned_count {
+                                pinned_count
+                            } else {
+                                (ix + 1).min(self.tabs.len())
+                            }
+                        })
+                })
+                .unwrap_or(self.tabs.len())
+                .max(pinned_count)
+                .min(self.tabs.len());
+            self.tabs.insert(insert_at, id.clone());
+        }
+
+        self.preview_tab_id = Some(id.clone());
+        self.activate(id)
+    }
+
+    pub fn commit_preview(&mut self, id: &str) -> bool {
+        if !self.is_tab_preview(id) {
+            return false;
+        }
+        self.preview_tab_id = None;
+        true
+    }
+
+    pub fn pin_tab(&mut self, id: &str) -> bool {
+        let id = id.trim();
+        if id.is_empty() {
+            return false;
+        }
+        if self.is_tab_preview(id) {
+            self.preview_tab_id = None;
+        }
+        let pinned_count = self.pinned_count();
+        let Some(index) = self.tabs.iter().position(|t| t.as_ref() == id) else {
+            return false;
+        };
+        if index < pinned_count {
+            return false;
+        }
+
+        let item = self.tabs.remove(index);
+        let insert_at = pinned_count.min(self.tabs.len());
+        self.tabs.insert(insert_at, item);
+        self.pinned_tab_count = (pinned_count + 1).min(self.tabs.len());
+        true
+    }
+
+    pub fn unpin_tab(&mut self, id: &str) -> bool {
+        let id = id.trim();
+        if id.is_empty() {
+            return false;
+        }
+        if self.is_tab_preview(id) {
+            self.preview_tab_id = None;
+        }
+        let pinned_count = self.pinned_count();
+        let Some(index) = self.tabs.iter().position(|t| t.as_ref() == id) else {
+            return false;
+        };
+        if index >= pinned_count {
+            return false;
+        }
+
+        let item = self.tabs.remove(index);
+        let next_pinned_count = pinned_count.saturating_sub(1).min(self.tabs.len());
+        self.pinned_tab_count = next_pinned_count;
+        let insert_at = next_pinned_count.min(self.tabs.len());
+        self.tabs.insert(insert_at, item);
+        true
+    }
+
+    pub fn pin_active(&mut self) -> bool {
+        let Some(active) = self.active.clone() else {
+            return false;
+        };
+        self.pin_tab(active.as_ref())
+    }
+
+    pub fn unpin_active(&mut self) -> bool {
+        let Some(active) = self.active.clone() else {
+            return false;
+        };
+        self.unpin_tab(active.as_ref())
     }
 
     pub fn snapshot_v1(&self) -> WorkspaceTabsV1 {
@@ -106,6 +289,8 @@ impl WorkspaceTabs {
             active: self.active.clone(),
             mru: self.mru.clone(),
             dirty: self.dirty_in_tab_order(),
+            pinned_tab_count: self.pinned_count(),
+            preview: self.preview_tab_id.clone(),
             cycle_mode: self.cycle_mode,
         }
     }
@@ -119,6 +304,8 @@ impl WorkspaceTabs {
             }
         }
 
+        state.set_pinned_count(snapshot.pinned_tab_count);
+
         if let Some(active) = snapshot.active {
             let _ = state.activate(active);
         } else if let Some(first) = state.tabs.first().cloned() {
@@ -127,6 +314,12 @@ impl WorkspaceTabs {
 
         for id in snapshot.dirty {
             state.set_dirty(id, true);
+        }
+
+        if let Some(preview) = snapshot.preview {
+            if state.tabs.iter().any(|t| t.as_ref() == preview.as_ref()) {
+                state.preview_tab_id = Some(preview);
+            }
         }
 
         // Restore MRU order best-effort: filter to known tabs and ensure active is first.
@@ -168,6 +361,9 @@ impl WorkspaceTabs {
         if dirty && !self.tabs.iter().any(|t| t.as_ref() == id.as_ref()) {
             return;
         }
+        if dirty && self.is_tab_preview(id.as_ref()) {
+            self.preview_tab_id = None;
+        }
         if dirty {
             self.dirty.insert(id);
         } else {
@@ -181,6 +377,14 @@ impl WorkspaceTabs {
         };
 
         let removed = self.tabs.remove(index);
+        if self.is_tab_preview(removed.as_ref()) {
+            self.preview_tab_id = None;
+        }
+        let pinned_count = self.pinned_count();
+        if index < pinned_count {
+            self.pinned_tab_count = pinned_count.saturating_sub(1);
+        }
+        self.pinned_tab_count = self.pinned_tab_count.min(self.tabs.len());
         self.dirty.remove(&removed);
         self.mru.retain(|t| t.as_ref() != removed.as_ref());
 
@@ -209,12 +413,16 @@ impl WorkspaceTabs {
             return false;
         }
 
+        let active_was_preview = self.is_tab_preview(active.as_ref());
+        let active_was_pinned = self.is_tab_pinned(active.as_ref());
         let before = self.tabs.len();
         self.tabs.retain(|t| t.as_ref() == active.as_ref());
         self.dirty.retain(|t| t.as_ref() == active.as_ref());
         self.mru.retain(|t| t.as_ref() == active.as_ref());
         self.mru = vec![active.clone()];
         self.active = Some(active);
+        self.pinned_tab_count = if active_was_pinned { 1 } else { 0 };
+        self.preview_tab_id = if active_was_preview { self.active.clone() } else { None };
         self.tabs.len() != before
     }
 
@@ -232,6 +440,9 @@ impl WorkspaceTabs {
         let keep_from = index;
         let removed: Vec<Arc<str>> = self.tabs[..keep_from].to_vec();
         self.tabs = self.tabs[keep_from..].to_vec();
+        let pinned_count = self.pinned_count();
+        let removed_pinned = keep_from.min(pinned_count);
+        self.pinned_tab_count = pinned_count.saturating_sub(removed_pinned).min(self.tabs.len());
 
         for r in &removed {
             self.dirty.remove(r);
@@ -239,6 +450,11 @@ impl WorkspaceTabs {
         self.mru
             .retain(|t| !removed.iter().any(|r| r.as_ref() == t.as_ref()));
         self.active = Some(active.clone());
+        if let Some(preview) = self.preview_tab_id.clone()
+            && !self.tabs.iter().any(|t| t.as_ref() == preview.as_ref())
+        {
+            self.preview_tab_id = None;
+        }
         if self
             .mru
             .first()
@@ -267,6 +483,7 @@ impl WorkspaceTabs {
         let keep_to = index + 1;
         let removed: Vec<Arc<str>> = self.tabs[keep_to..].to_vec();
         self.tabs.truncate(keep_to);
+        self.pinned_tab_count = self.pinned_tab_count.min(self.tabs.len());
 
         for r in &removed {
             self.dirty.remove(r);
@@ -274,6 +491,11 @@ impl WorkspaceTabs {
         self.mru
             .retain(|t| !removed.iter().any(|r| r.as_ref() == t.as_ref()));
         self.active = Some(active.clone());
+        if let Some(preview) = self.preview_tab_id.clone()
+            && !self.tabs.iter().any(|t| t.as_ref() == preview.as_ref())
+        {
+            self.preview_tab_id = None;
+        }
         if self
             .mru
             .first()
@@ -364,6 +586,15 @@ impl WorkspaceTabs {
         match command.as_str() {
             CMD_WORKSPACE_TAB_NEXT => return self.next(),
             CMD_WORKSPACE_TAB_PREV => return self.prev(),
+            CMD_WORKSPACE_TAB_TOGGLE_PIN => {
+                let Some(active) = self.active.clone() else {
+                    return false;
+                };
+                if self.is_tab_pinned(active.as_ref()) {
+                    return self.unpin_tab(active.as_ref());
+                }
+                return self.pin_tab(active.as_ref());
+            }
             CMD_WORKSPACE_TAB_CLOSE => {
                 let Some(active) = self.active.clone() else {
                     return false;
@@ -422,6 +653,22 @@ impl WorkspaceTabs {
             return self.close(id);
         }
 
+        if let Some(id) = command.as_str().strip_prefix(CMD_WORKSPACE_TAB_PIN_PREFIX) {
+            let id = id.trim();
+            if id.is_empty() {
+                return false;
+            }
+            return self.pin_tab(id);
+        }
+
+        if let Some(id) = command.as_str().strip_prefix(CMD_WORKSPACE_TAB_UNPIN_PREFIX) {
+            let id = id.trim();
+            if id.is_empty() {
+                return false;
+            }
+            return self.unpin_tab(id);
+        }
+
         false
     }
 
@@ -450,6 +697,17 @@ impl WorkspaceTabs {
         };
 
         if !self.tabs.iter().any(|t| t.as_ref() == target_id) {
+            return false;
+        }
+
+        let pinned_count = self.pinned_count();
+        let active_is_pinned = active_index < pinned_count;
+        let target_is_pinned = self
+            .tabs
+            .iter()
+            .take(pinned_count)
+            .any(|t| t.as_ref() == target_id);
+        if active_is_pinned != target_is_pinned {
             return false;
         }
 
@@ -486,8 +744,15 @@ impl WorkspaceTabs {
             return false;
         };
 
+        let pinned_count = self.pinned_count();
+        let (min_index, max_index) = if index < pinned_count {
+            (0, pinned_count.saturating_sub(1))
+        } else {
+            (pinned_count.min(self.tabs.len().saturating_sub(1)), self.tabs.len() - 1)
+        };
         let new_index_i = index as isize + delta;
-        let new_index = new_index_i.clamp(0, (self.tabs.len() - 1) as isize) as usize;
+        let new_index = new_index_i
+            .clamp(min_index as isize, max_index as isize) as usize;
         if new_index == index {
             return false;
         }
@@ -514,6 +779,10 @@ pub struct WorkspaceTabsV1 {
     pub active: Option<Arc<str>>,
     pub mru: Vec<Arc<str>>,
     pub dirty: Vec<Arc<str>>,
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub pinned_tab_count: usize,
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub preview: Option<Arc<str>>,
     pub cycle_mode: TabCycleMode,
 }
 
@@ -656,16 +925,66 @@ mod tests {
         for id in tabs(&["a", "b", "c"]) {
             state.open_and_activate(id);
         }
+        assert!(state.open_preview_and_activate(Arc::<str>::from("p")));
         assert!(state.activate(Arc::<str>::from("a")));
         state.set_dirty(Arc::<str>::from("b"), true);
+        state.set_pinned_count(1);
 
         let snap = state.snapshot_v1();
         let restored = WorkspaceTabs::from_snapshot_v1(snap);
 
         assert_eq!(restored.active().unwrap().as_ref(), "a");
-        assert_eq!(restored.tabs().len(), 3);
+        assert_eq!(restored.tabs().len(), 4);
         assert!(restored.is_dirty("b"));
+        assert_eq!(restored.pinned_count(), 1);
+        assert_eq!(restored.preview_tab_id().unwrap().as_ref(), "p");
         assert_eq!(restored.mru().first().unwrap().as_ref(), "a");
+    }
+
+    #[test]
+    fn preview_open_replaces_existing_preview() {
+        let mut state = WorkspaceTabs::new().with_cycle_mode(TabCycleMode::InOrder);
+        state.open_and_activate(Arc::<str>::from("a"));
+        assert!(state.open_preview_and_activate(Arc::<str>::from("b")));
+        assert_eq!(state.preview_tab_id().unwrap().as_ref(), "b");
+        assert_eq!(
+            state.tabs().iter().map(|t| t.as_ref()).collect::<Vec<_>>(),
+            vec!["a", "b"]
+        );
+
+        assert!(state.open_preview_and_activate(Arc::<str>::from("c")));
+        assert_eq!(state.preview_tab_id().unwrap().as_ref(), "c");
+        assert_eq!(
+            state.tabs().iter().map(|t| t.as_ref()).collect::<Vec<_>>(),
+            vec!["a", "c"]
+        );
+    }
+
+    #[test]
+    fn preview_commit_prevents_replacement() {
+        let mut state = WorkspaceTabs::new().with_cycle_mode(TabCycleMode::InOrder);
+        assert!(state.open_preview_and_activate(Arc::<str>::from("a")));
+        assert!(state.commit_preview("a"));
+        assert!(state.open_preview_and_activate(Arc::<str>::from("b")));
+        assert_eq!(state.preview_tab_id().unwrap().as_ref(), "b");
+        assert_eq!(
+            state.tabs().iter().map(|t| t.as_ref()).collect::<Vec<_>>(),
+            vec!["a", "b"]
+        );
+    }
+
+    #[test]
+    fn dirty_commits_preview() {
+        let mut state = WorkspaceTabs::new().with_cycle_mode(TabCycleMode::InOrder);
+        assert!(state.open_preview_and_activate(Arc::<str>::from("a")));
+        assert!(state.is_tab_preview("a"));
+
+        state.set_dirty(Arc::<str>::from("a"), true);
+        assert!(!state.is_tab_preview("a"), "dirty preview should be committed");
+
+        assert!(state.open_preview_and_activate(Arc::<str>::from("b")));
+        assert_eq!(state.preview_tab_id().unwrap().as_ref(), "b");
+        assert!(state.tabs().iter().any(|t| t.as_ref() == "a"));
     }
 
     #[test]
@@ -719,5 +1038,96 @@ mod tests {
             state.tabs().iter().map(|t| t.as_ref()).collect::<Vec<_>>(),
             vec!["a", "b", "c", "d"]
         );
+    }
+
+    #[test]
+    fn pin_unpin_active_updates_pinned_count_and_order() {
+        let mut state = WorkspaceTabs::new().with_cycle_mode(TabCycleMode::Mru);
+        for id in tabs(&["a", "b", "c", "d"]) {
+            state.open_and_activate(id);
+        }
+        assert_eq!(state.active().unwrap().as_ref(), "d");
+        assert_eq!(state.pinned_count(), 0);
+
+        assert!(state.pin_active());
+        assert_eq!(state.pinned_count(), 1);
+        assert!(state.is_tab_pinned("d"));
+        assert_eq!(
+            state.tabs().iter().map(|t| t.as_ref()).collect::<Vec<_>>(),
+            vec!["d", "a", "b", "c"]
+        );
+
+        assert!(state.activate(Arc::<str>::from("b")));
+        assert!(state.pin_active());
+        assert_eq!(state.pinned_count(), 2);
+        assert!(state.is_tab_pinned("b"));
+        assert_eq!(
+            state.tabs().iter().map(|t| t.as_ref()).collect::<Vec<_>>(),
+            vec!["d", "b", "a", "c"]
+        );
+
+        assert!(state.unpin_active());
+        assert_eq!(state.pinned_count(), 1);
+        assert!(!state.is_tab_pinned("b"));
+        assert_eq!(
+            state.tabs().iter().map(|t| t.as_ref()).collect::<Vec<_>>(),
+            vec!["d", "b", "a", "c"]
+        );
+    }
+
+    #[test]
+    fn move_commands_do_not_cross_pinned_boundary() {
+        use crate::commands::tab_move_active_before_command;
+
+        let mut state = WorkspaceTabs::new().with_cycle_mode(TabCycleMode::Mru);
+        for id in tabs(&["a", "b", "c", "d"]) {
+            state.open_and_activate(id);
+        }
+        state.set_pinned_count(2);
+        assert!(state.is_tab_pinned("a"));
+        assert!(state.is_tab_pinned("b"));
+
+        assert!(state.activate(Arc::<str>::from("d")));
+        assert!(
+            !state.apply_command(&tab_move_active_before_command("a").unwrap()),
+            "expected cross-boundary move to be rejected"
+        );
+        assert!(state.apply_command(&tab_move_active_before_command("c").unwrap()));
+        assert_eq!(
+            state.tabs().iter().map(|t| t.as_ref()).collect::<Vec<_>>(),
+            vec!["a", "b", "d", "c"]
+        );
+
+        assert!(state.activate(Arc::<str>::from("b")));
+        assert!(
+            !state.apply_command(&CommandId::from(CMD_WORKSPACE_TAB_MOVE_RIGHT)),
+            "expected pinned move to not cross boundary"
+        );
+    }
+
+    #[test]
+    fn pin_unpin_prefix_commands_reorder_without_changing_active() {
+        use crate::commands::{tab_pin_command, tab_unpin_command};
+
+        let mut state = WorkspaceTabs::new().with_cycle_mode(TabCycleMode::Mru);
+        for id in tabs(&["a", "b", "c"]) {
+            state.open_and_activate(id);
+        }
+        assert_eq!(state.active().unwrap().as_ref(), "c");
+        assert_eq!(state.pinned_count(), 0);
+
+        let cmd = tab_pin_command("c").unwrap();
+        assert!(state.apply_command(&cmd));
+        assert_eq!(state.pinned_count(), 1);
+        assert_eq!(state.active().unwrap().as_ref(), "c");
+        assert_eq!(
+            state.tabs().iter().map(|t| t.as_ref()).collect::<Vec<_>>(),
+            vec!["c", "a", "b"]
+        );
+
+        let cmd = tab_unpin_command("c").unwrap();
+        assert!(state.apply_command(&cmd));
+        assert_eq!(state.pinned_count(), 0);
+        assert_eq!(state.active().unwrap().as_ref(), "c");
     }
 }

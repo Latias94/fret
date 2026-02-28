@@ -1,0 +1,63 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Workspace shell demo: drag tab to pane edge to split (right)",
+    "tags": ["workspace", "tabstrip", "drag_to_split", "gate"],
+    "required_capabilities": ["diag.script_v2"]
+  },
+  "steps": [
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 10 },
+
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-b-root" } },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "pointer_down",
+      "window": { "kind": "current" },
+      "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0" },
+      "button": "left"
+    },
+    { "type": "pointer_move", "window": { "kind": "current" }, "delta_x": 18.0, "delta_y": 0.0, "steps": 10 },
+    { "type": "wait_frames", "n": 2 },
+
+    { "type": "pointer_move", "window": { "kind": "current" }, "delta_x": 860.0, "delta_y": 180.0, "steps": 90 },
+    { "type": "pointer_move", "window": { "kind": "current" }, "delta_x": 80.0, "delta_y": 0.0, "steps": 20 },
+
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "workspace-pane-pane-b.drop_preview.right" } },
+      "timeout_frames": 240
+    },
+
+    { "type": "pointer_up", "window": { "kind": "current" } },
+    { "type": "wait_frames", "n": 10 },
+
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "workspace-shell-pane-window-1.pane.1-root" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "workspace-shell-pane-window-1.pane.1-tab-doc-a-0" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "not_exists", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0" } },
+      "timeout_frames": 240
+    },
+
+    { "type": "capture_bundle", "label": "workspace-shell-demo-tab-drag-to-split-right" }
+  ]
+}
+

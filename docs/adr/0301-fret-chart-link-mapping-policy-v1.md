@@ -1,4 +1,4 @@
-# ADR 0251: `fret-chart` Link Mapping Policy v1 (Axis Keyed)
+# ADR 0301: `fret-chart` Link Mapping Policy v1 (Axis Keyed)
 
 Status: Proposed (P0)
 
