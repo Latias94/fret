@@ -989,7 +989,7 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
         // Match the shadcn/ui docs outcome on desktop widths (`md:basis-1/2`) in a deterministic
         // way (we do not currently apply breakpoint-aware per-item sizing here).
         .item_basis_main_px(Px(100.0))
-        .refine_viewport_layout(LayoutRefinement::default().h_px(Px(196.0)))
+        .refine_viewport_layout(LayoutRefinement::default().h_px(Px(200.0)))
         .refine_track_layout(LayoutRefinement::default().h_px(Px(200.0)))
         .track_start_neg_margin(Space::N1)
         .item_padding_start(Space::N1)
