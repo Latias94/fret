@@ -9,27 +9,29 @@
 
 use std::sync::Arc;
 
-use fret_core::{Axis, Color, Corners, Edges, Px, SemanticsRole, TextOverflow, TextWrap};
+use fret_core::{Axis, Color, Corners, Edges, Px, SemanticsRole, SvgFit, TextOverflow, TextWrap};
+use fret_icons::IconId;
 use fret_ui::action::OnActivate;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, Length, MainAlign, Overflow,
-    PointerRegionProps, PressableA11y, PressableProps, TextProps,
+    PointerRegionProps, PressableA11y, PressableProps, SvgIconProps, TextProps,
 };
 use fret_ui::elements::ElementContext;
 use fret_ui::{Theme, UiHost};
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::typography::{self, TextIntent};
 use fret_ui_kit::{
-    ColorRef, OverrideSlot, WidgetStateProperty, WidgetStates, resolve_override_slot_opt_with,
-    resolve_override_slot_with,
+    resolve_override_slot_opt_with, resolve_override_slot_with, ColorRef, OverrideSlot,
+    WidgetStateProperty, WidgetStates,
 };
 
 use crate::foundation::focus_ring::material_focus_ring_for_component;
+use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
-    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
+    material_ink_layer_for_pressable, material_pressable_indication_config, RippleClip,
 };
-use crate::foundation::interaction::{PressableInteraction, pressable_interaction};
-use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
+use crate::foundation::interaction::{pressable_interaction, PressableInteraction};
+use crate::foundation::motion_scheme::{sys_spring_in_scope, MotionSchemeKey};
 use crate::foundation::token_resolver::MaterialTokenResolver;
 use crate::motion::{SpringAnimator, SpringSpec};
 use crate::tokens::button as button_tokens;
@@ -104,6 +106,8 @@ pub struct Button {
     label: Arc<str>,
     variant: ButtonVariant,
     size: ButtonSize,
+    leading_icon: Option<IconId>,
+    trailing_icon: Option<IconId>,
     on_activate: Option<OnActivate>,
     style: ButtonStyle,
     disabled: bool,
@@ -116,6 +120,14 @@ impl std::fmt::Debug for Button {
             .field("label", &self.label)
             .field("variant", &self.variant)
             .field("size", &self.size)
+            .field(
+                "leading_icon",
+                &self.leading_icon.as_ref().map(|i| i.as_str()),
+            )
+            .field(
+                "trailing_icon",
+                &self.trailing_icon.as_ref().map(|i| i.as_str()),
+            )
             .field("on_activate", &self.on_activate.is_some())
             .field("style", &self.style)
             .field("disabled", &self.disabled)
@@ -130,6 +142,8 @@ impl Button {
             label: label.into(),
             variant: ButtonVariant::default(),
             size: ButtonSize::default(),
+            leading_icon: None,
+            trailing_icon: None,
             on_activate: None,
             style: ButtonStyle::default(),
             disabled: false,
@@ -144,6 +158,16 @@ impl Button {
 
     pub fn size(mut self, size: ButtonSize) -> Self {
         self.size = size;
+        self
+    }
+
+    pub fn leading_icon(mut self, icon: IconId) -> Self {
+        self.leading_icon = Some(icon);
+        self
+    }
+
+    pub fn trailing_icon(mut self, icon: IconId) -> Self {
+        self.trailing_icon = Some(icon);
         self
     }
 
@@ -248,6 +272,7 @@ impl Button {
 
                 let (
                     label_color,
+                    icon_color,
                     container_bg,
                     state_layer_color,
                     state_layer_target,
@@ -262,6 +287,13 @@ impl Button {
                         states,
                         |color| color.resolve(theme),
                         || button_tokens::label_color(theme, self.variant, enabled),
+                    );
+                    let icon_color = button_tokens::icon_color(
+                        theme,
+                        self.variant,
+                        enabled,
+                        label_color,
+                        token_interaction,
                     );
                     let container_bg = button_tokens::container_background(
                         theme,
@@ -307,6 +339,7 @@ impl Button {
 
                     (
                         label_color,
+                        icon_color,
                         container_bg,
                         state_layer_color,
                         state_layer_target,
@@ -345,7 +378,33 @@ impl Button {
 
                         let label =
                             material_button_label(cx, label_style, &self.label, label_color);
-                        let content = material_button_content(cx, size_tokens, label);
+                        let has_icon = self.leading_icon.is_some() || self.trailing_icon.is_some();
+                        let gap = if has_icon {
+                            size_tokens.icon_label_space
+                        } else {
+                            Px(0.0)
+                        };
+
+                        let mut children = Vec::new();
+                        if let Some(icon) = self.leading_icon.as_ref() {
+                            children.push(material_button_icon(
+                                cx,
+                                icon,
+                                size_tokens.icon_size,
+                                icon_color,
+                            ));
+                        }
+                        children.push(label);
+                        if let Some(icon) = self.trailing_icon.as_ref() {
+                            children.push(material_button_icon(
+                                cx,
+                                icon,
+                                size_tokens.icon_size,
+                                icon_color,
+                            ));
+                        }
+
+                        let content = material_button_content(cx, size_tokens, gap, children);
                         vec![overlay, content]
                     })
                 });
@@ -387,10 +446,27 @@ fn material_button_label<H: UiHost>(
     cx.text_props(props)
 }
 
+fn material_button_icon<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    icon: &IconId,
+    size: Px,
+    color: Color,
+) -> AnyElement {
+    let svg = svg_source_for_icon(cx, icon);
+
+    let mut props = SvgIconProps::new(svg);
+    props.fit = SvgFit::Contain;
+    props.layout.size.width = Length::Px(size);
+    props.layout.size.height = Length::Px(size);
+    props.color = color;
+    cx.svg_icon_props(props)
+}
+
 fn material_button_content<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     size: ButtonSizeTokens,
-    child: AnyElement,
+    gap: Px,
+    children: Vec<AnyElement>,
 ) -> AnyElement {
     let mut layout = fret_ui::element::LayoutStyle::default();
     // The outer container has no padding so the ink layer (absolute) can cover the full button.
@@ -400,7 +476,7 @@ fn material_button_content<H: UiHost>(
         FlexProps {
             layout,
             direction: Axis::Horizontal,
-            gap: Px(0.0).into(),
+            gap: gap.into(),
             padding: Edges {
                 left: size.leading_space,
                 right: size.trailing_space,
@@ -412,7 +488,7 @@ fn material_button_content<H: UiHost>(
             align: CrossAlign::Center,
             wrap: false,
         },
-        move |_cx| vec![child],
+        move |_cx| children,
     )
 }
 
@@ -490,6 +566,8 @@ struct ButtonSizeTokens {
     container_height: Px,
     leading_space: Px,
     trailing_space: Px,
+    icon_size: Px,
+    icon_label_space: Px,
 }
 
 fn button_size_tokens(theme: &Theme, size: ButtonSize) -> ButtonSizeTokens {
@@ -504,6 +582,12 @@ fn button_size_tokens(theme: &Theme, size: ButtonSize) -> ButtonSizeTokens {
             trailing_space: theme
                 .metric_by_key("md.comp.button.small.trailing-space")
                 .unwrap_or(Px(16.0)),
+            icon_size: theme
+                .metric_by_key("md.comp.button.small.icon.size")
+                .unwrap_or(Px(20.0)),
+            icon_label_space: theme
+                .metric_by_key("md.comp.button.small.icon-label-space")
+                .unwrap_or(Px(8.0)),
         },
     }
 }

@@ -118,6 +118,40 @@ pub(crate) fn state_layer_color(
         .unwrap_or(label_fallback)
 }
 
+pub(crate) fn icon_color(
+    theme: &Theme,
+    variant: ButtonVariant,
+    enabled: bool,
+    label_fallback: Color,
+    interaction: Option<ButtonInteraction>,
+) -> Color {
+    if !enabled {
+        let base = theme
+            .color_by_key(disabled_icon_color_key(variant))
+            .or_else(|| theme.color_by_key("md.comp.button.disabled.icon.color"))
+            .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
+            .unwrap_or(label_fallback);
+        let opacity = disabled_icon_opacity(theme, variant);
+        let mut c = base;
+        c.a *= opacity;
+        return c;
+    }
+
+    if let Some(interaction) = interaction {
+        if let Some(c) = theme
+            .color_by_key(interaction_icon_color_key(variant, interaction))
+            .or_else(|| theme.color_by_key(interaction_icon_color_key_any(interaction)))
+        {
+            return c;
+        }
+    }
+
+    theme
+        .color_by_key(icon_color_key(variant))
+        .or_else(|| theme.color_by_key("md.comp.button.icon.color"))
+        .unwrap_or(label_fallback)
+}
+
 pub(crate) fn state_layer_opacity(
     theme: &Theme,
     variant: ButtonVariant,
@@ -142,6 +176,13 @@ pub(crate) fn pressed_state_layer_opacity(theme: &Theme, variant: ButtonVariant)
 fn disabled_label_opacity(theme: &Theme, variant: ButtonVariant) -> f32 {
     theme
         .number_by_key(disabled_label_opacity_key(variant))
+        .unwrap_or(0.38)
+}
+
+fn disabled_icon_opacity(theme: &Theme, variant: ButtonVariant) -> f32 {
+    theme
+        .number_by_key(disabled_icon_opacity_key(variant))
+        .or_else(|| theme.number_by_key("md.comp.button.disabled.icon.opacity"))
         .unwrap_or(0.38)
 }
 
@@ -185,6 +226,16 @@ fn disabled_label_color_key(variant: ButtonVariant) -> &'static str {
     }
 }
 
+fn disabled_icon_color_key(variant: ButtonVariant) -> &'static str {
+    match variant {
+        ButtonVariant::Filled => "md.comp.button.filled.disabled.icon.color",
+        ButtonVariant::Tonal => "md.comp.button.tonal.disabled.icon.color",
+        ButtonVariant::Elevated => "md.comp.button.elevated.disabled.icon.color",
+        ButtonVariant::Outlined => "md.comp.button.outlined.disabled.icon.color",
+        ButtonVariant::Text => "md.comp.button.text.disabled.icon.color",
+    }
+}
+
 fn disabled_label_opacity_key(variant: ButtonVariant) -> &'static str {
     match variant {
         ButtonVariant::Filled => "md.comp.button.filled.disabled.label-text.opacity",
@@ -195,6 +246,16 @@ fn disabled_label_opacity_key(variant: ButtonVariant) -> &'static str {
     }
 }
 
+fn disabled_icon_opacity_key(variant: ButtonVariant) -> &'static str {
+    match variant {
+        ButtonVariant::Filled => "md.comp.button.filled.disabled.icon.opacity",
+        ButtonVariant::Tonal => "md.comp.button.tonal.disabled.icon.opacity",
+        ButtonVariant::Elevated => "md.comp.button.elevated.disabled.icon.opacity",
+        ButtonVariant::Outlined => "md.comp.button.outlined.disabled.icon.opacity",
+        ButtonVariant::Text => "md.comp.button.text.disabled.icon.opacity",
+    }
+}
+
 fn disabled_container_opacity_key(variant: ButtonVariant) -> &'static str {
     match variant {
         ButtonVariant::Filled => "md.comp.button.filled.disabled.container.opacity",
@@ -202,6 +263,81 @@ fn disabled_container_opacity_key(variant: ButtonVariant) -> &'static str {
         ButtonVariant::Elevated => "md.comp.button.elevated.disabled.container.opacity",
         ButtonVariant::Outlined => "md.comp.button.outlined.disabled.container.opacity",
         ButtonVariant::Text => "md.comp.button.text.disabled.container.opacity",
+    }
+}
+
+fn icon_color_key(variant: ButtonVariant) -> &'static str {
+    match variant {
+        ButtonVariant::Filled => "md.comp.button.filled.icon.color",
+        ButtonVariant::Tonal => "md.comp.button.tonal.icon.color",
+        ButtonVariant::Elevated => "md.comp.button.elevated.icon.color",
+        ButtonVariant::Outlined => "md.comp.button.outlined.icon.color",
+        ButtonVariant::Text => "md.comp.button.text.icon.color",
+    }
+}
+
+fn interaction_icon_color_key(
+    variant: ButtonVariant,
+    interaction: ButtonInteraction,
+) -> &'static str {
+    match (variant, interaction) {
+        (ButtonVariant::Filled, ButtonInteraction::Hovered) => {
+            "md.comp.button.filled.hovered.icon.color"
+        }
+        (ButtonVariant::Filled, ButtonInteraction::Focused) => {
+            "md.comp.button.filled.focused.icon.color"
+        }
+        (ButtonVariant::Filled, ButtonInteraction::Pressed) => {
+            "md.comp.button.filled.pressed.icon.color"
+        }
+
+        (ButtonVariant::Tonal, ButtonInteraction::Hovered) => {
+            "md.comp.button.tonal.hovered.icon.color"
+        }
+        (ButtonVariant::Tonal, ButtonInteraction::Focused) => {
+            "md.comp.button.tonal.focused.icon.color"
+        }
+        (ButtonVariant::Tonal, ButtonInteraction::Pressed) => {
+            "md.comp.button.tonal.pressed.icon.color"
+        }
+
+        (ButtonVariant::Elevated, ButtonInteraction::Hovered) => {
+            "md.comp.button.elevated.hovered.icon.color"
+        }
+        (ButtonVariant::Elevated, ButtonInteraction::Focused) => {
+            "md.comp.button.elevated.focused.icon.color"
+        }
+        (ButtonVariant::Elevated, ButtonInteraction::Pressed) => {
+            "md.comp.button.elevated.pressed.icon.color"
+        }
+
+        (ButtonVariant::Outlined, ButtonInteraction::Hovered) => {
+            "md.comp.button.outlined.hovered.icon.color"
+        }
+        (ButtonVariant::Outlined, ButtonInteraction::Focused) => {
+            "md.comp.button.outlined.focused.icon.color"
+        }
+        (ButtonVariant::Outlined, ButtonInteraction::Pressed) => {
+            "md.comp.button.outlined.pressed.icon.color"
+        }
+
+        (ButtonVariant::Text, ButtonInteraction::Hovered) => {
+            "md.comp.button.text.hovered.icon.color"
+        }
+        (ButtonVariant::Text, ButtonInteraction::Focused) => {
+            "md.comp.button.text.focused.icon.color"
+        }
+        (ButtonVariant::Text, ButtonInteraction::Pressed) => {
+            "md.comp.button.text.pressed.icon.color"
+        }
+    }
+}
+
+fn interaction_icon_color_key_any(interaction: ButtonInteraction) -> &'static str {
+    match interaction {
+        ButtonInteraction::Hovered => "md.comp.button.hovered.icon.color",
+        ButtonInteraction::Focused => "md.comp.button.focused.icon.color",
+        ButtonInteraction::Pressed => "md.comp.button.pressed.icon.color",
     }
 }
 

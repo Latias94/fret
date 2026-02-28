@@ -22,12 +22,12 @@ use fret_ui_kit::overlay_controller;
 use fret_ui_kit::primitives::focus_scope as focus_scope_prim;
 use fret_ui_kit::typography::{self, TextIntent};
 use fret_ui_kit::{
-    ColorRef, OverlayController, OverlayPresence, OverrideSlot, WidgetStateProperty, WidgetStates,
-    merge_override_slot, resolve_override_slot_with,
+    merge_override_slot, resolve_override_slot_with, ColorRef, OverlayController, OverlayPresence,
+    OverrideSlot, WidgetStateProperty, WidgetStates,
 };
 
 use crate::foundation::indication::{
-    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
+    material_ink_layer_for_pressable, material_pressable_indication_config, RippleClip,
 };
 use crate::foundation::surface::material_surface_style;
 use crate::motion;
@@ -502,7 +502,7 @@ impl Dialog {
                         || dialog_tokens::scrim_color(theme),
                     );
                     let scrim_opacity = theme
-                        .number_by_key("md.comp.dialog.scrim.opacity")
+                        .number_by_key("md.sys.fret.material.dialog.scrim.opacity")
                         .unwrap_or(self.scrim_opacity)
                         .clamp(0.0, 1.0);
                     let scrim_alpha = (scrim_color.a

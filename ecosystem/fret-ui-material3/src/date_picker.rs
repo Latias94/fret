@@ -16,7 +16,7 @@ use fret_ui::element::{
     PressableA11y, PressableProps, TextProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
-use fret_ui_kit::headless::calendar::{CalendarMonth, month_grid};
+use fret_ui_kit::headless::calendar::{month_grid, CalendarMonth};
 use fret_ui_kit::overlay_controller;
 use fret_ui_kit::primitives::focus_scope as focus_scope_prim;
 use fret_ui_kit::typography::{self, TextIntent};
@@ -400,7 +400,7 @@ impl DatePickerDialog {
                     theme.color_token("md.sys.color.scrim")
                 };
                 let scrim_opacity = Theme::global(&*cx.app)
-                    .number_by_key("md.comp.date-picker.modal.scrim.opacity")
+                    .number_by_key("md.sys.fret.material.date-picker.modal.scrim.opacity")
                     .unwrap_or(self.scrim_opacity)
                     .clamp(0.0, 1.0);
                 let scrim_alpha = (scrim_base.a * scrim_opacity * transition.progress)
