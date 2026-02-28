@@ -72,6 +72,10 @@ Non-goals (v2):
   - Evidence:
     - `ecosystem/fret-ui-shadcn/src/carousel.rs` (`CarouselRuntime.prevent_click` + pointer capture on down)
     - Gate: `ecosystem/fret-ui-shadcn/tests/carousel_drag_free_prevent_click.rs`
+- [x] CAR2-122 SkipSnaps: lock Embla `skipSnaps` release shaping semantics.
+  - Evidence:
+    - `ecosystem/fret-ui-headless/src/embla/drag_release.rs` (`skipSnaps && indexChanged()` branch)
+    - Gate: `ecosystem/fret-ui-headless/src/embla/drag_release.rs` (`skip_snaps_halves_base_force_when_index_changed`)
 - [x] CAR2-125 Port core targeting helpers (snap selection + limits) needed by the engine.
   - Evidence:
     - `ecosystem/fret-ui-headless/src/embla/scroll_target.rs`
