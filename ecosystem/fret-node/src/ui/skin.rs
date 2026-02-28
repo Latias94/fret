@@ -48,6 +48,19 @@ pub struct NodeRingHint {
     pub pad: f32,
 }
 
+/// Optional node shadow/glow hint (paint-only).
+///
+/// These values are expressed in screen-space logical px and must be converted by the canvas paint
+/// path so they remain stable under zoom.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct NodeShadowHint {
+    pub offset_x_px: f32,
+    pub offset_y_px: f32,
+    pub blur_radius_px: f32,
+    pub downsample: u32,
+    pub color: Color,
+}
+
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct NodeChromeHint {
     pub background: Option<Color>,
@@ -61,6 +74,8 @@ pub struct NodeChromeHint {
     pub ring_selected: Option<NodeRingHint>,
     /// Optional focused ring (paint-only overlay, drawn outside the node rect).
     pub ring_focused: Option<NodeRingHint>,
+    /// Optional node shadow/glow (paint-only effect).
+    pub shadow: Option<NodeShadowHint>,
 }
 
 /// Per-edge chrome overrides (UI-only).

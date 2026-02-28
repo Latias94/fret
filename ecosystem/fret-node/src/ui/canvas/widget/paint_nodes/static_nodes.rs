@@ -1,6 +1,8 @@
-use crate::ui::PortShapeHint;
 use crate::ui::canvas::widget::paint_render_data::RenderData;
 use crate::ui::canvas::widget::*;
+use crate::ui::{NodeShadowHint, PortShapeHint};
+use fret_core::scene::DropShadowV1;
+use fret_core::{EffectChain, EffectMode, EffectQuality, EffectStep};
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(in super::super) fn paint_nodes_static(
@@ -11,6 +13,51 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         render: &RenderData,
         zoom: f32,
     ) {
+        fn shadow_to_drop_shadow_canvas_units(
+            rect: Rect,
+            zoom: f32,
+            shadow: NodeShadowHint,
+        ) -> Option<(Rect, DropShadowV1)> {
+            let z = if zoom.is_finite() && zoom > 0.0 {
+                zoom
+            } else {
+                1.0
+            };
+
+            if !shadow.offset_x_px.is_finite()
+                || !shadow.offset_y_px.is_finite()
+                || !shadow.blur_radius_px.is_finite()
+            {
+                return None;
+            }
+
+            let blur_canvas = (shadow.blur_radius_px / z).max(0.0);
+            let ox_canvas = shadow.offset_x_px / z;
+            let oy_canvas = shadow.offset_y_px / z;
+
+            let pad_x = blur_canvas + ox_canvas.abs();
+            let pad_y = blur_canvas + oy_canvas.abs();
+
+            let bounds = Rect::new(
+                Point::new(Px(rect.origin.x.0 - pad_x), Px(rect.origin.y.0 - pad_y)),
+                Size::new(
+                    Px(rect.size.width.0 + 2.0 * pad_x),
+                    Px(rect.size.height.0 + 2.0 * pad_y),
+                ),
+            );
+
+            Some((
+                bounds,
+                DropShadowV1 {
+                    offset_px: Point::new(Px(ox_canvas), Px(oy_canvas)),
+                    blur_radius_px: Px(blur_canvas),
+                    downsample: shadow.downsample,
+                    color: shadow.color,
+                }
+                .sanitize(),
+            ))
+        }
+
         let mut node_text_style = self.style.context_menu_text_style.clone();
         node_text_style.size = Px(node_text_style.size.0 / zoom);
         if let Some(lh) = node_text_style.line_height.as_mut() {
@@ -34,6 +81,19 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 hint.border.unwrap_or(self.style.node_border)
             };
             let border_w = Px(1.0 / zoom);
+
+            let shadow = hint.shadow;
+            if let Some(shadow) = shadow
+                && let Some((bounds, drop_shadow)) =
+                    shadow_to_drop_shadow_canvas_units(rect, zoom, shadow)
+            {
+                scene.push(SceneOp::PushEffect {
+                    bounds,
+                    mode: EffectMode::FilterContent,
+                    chain: EffectChain::from_steps(&[EffectStep::DropShadowV1(drop_shadow)]),
+                    quality: EffectQuality::Auto,
+                });
+            }
 
             scene.push(SceneOp::Quad {
                 order: DrawOrder(3),
@@ -77,6 +137,10 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 
                 corner_radii: Corners::all(corner),
             });
+
+            if shadow.is_some() {
+                scene.push(SceneOp::PopEffect);
+            }
 
             if !title.is_empty() {
                 let max_w = (rect.size.width.0 - 2.0 * title_pad).max(0.0);

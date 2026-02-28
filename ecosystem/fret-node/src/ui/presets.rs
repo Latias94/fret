@@ -19,7 +19,7 @@ use crate::core::{EdgeId, EdgeKind, Graph, NodeId, PortId, PortKind};
 use super::presenter::EdgeRenderHint;
 use super::skin::{
     CanvasChromeHint, InteractionChromeHint, NodeChromeHint, NodeGraphSkin, NodeRingHint,
-    PortChromeHint, PortShapeHint,
+    NodeShadowHint, PortChromeHint, PortShapeHint,
 };
 use super::style::NodeGraphStyle;
 
@@ -217,6 +217,48 @@ impl NodeGraphSkin for NodeGraphPresetSkinV1 {
         selected: bool,
     ) -> NodeChromeHint {
         let tokens = &self.preset().paint_only_tokens;
+        let preset_id = self.preset().id.as_str();
+        let shadow = selected.then(|| {
+            let mut black = Color {
+                r: 0.0,
+                g: 0.0,
+                b: 0.0,
+                a: 1.0,
+            };
+            match preset_id {
+                "schematic_contrast" => {
+                    black.a = 0.28;
+                    NodeShadowHint {
+                        offset_x_px: 0.0,
+                        offset_y_px: 1.0,
+                        blur_radius_px: 4.0,
+                        downsample: 1,
+                        color: black,
+                    }
+                }
+                "graph_dark" => {
+                    let mut glow: Color = tokens.node.border_selected.into();
+                    glow.a = (glow.a * 0.55).clamp(0.0, 1.0);
+                    NodeShadowHint {
+                        offset_x_px: 0.0,
+                        offset_y_px: 0.0,
+                        blur_radius_px: 10.0,
+                        downsample: 2,
+                        color: glow,
+                    }
+                }
+                _ => {
+                    black.a = 0.14;
+                    NodeShadowHint {
+                        offset_x_px: 0.0,
+                        offset_y_px: 1.5,
+                        blur_radius_px: 8.0,
+                        downsample: 2,
+                        color: black,
+                    }
+                }
+            }
+        });
         NodeChromeHint {
             background: Some(tokens.node.body_background.into()),
             border: Some(tokens.node.border.into()),
@@ -224,6 +266,7 @@ impl NodeGraphSkin for NodeGraphPresetSkinV1 {
             header_background: Some(self.node_header_color(graph, node)),
             title_text: Some(tokens.node.title_text.into()),
             ring_selected: selected.then_some(tokens.node.ring_selected.into_ring()),
+            shadow,
             ..NodeChromeHint::default()
         }
     }
@@ -245,6 +288,15 @@ impl NodeGraphSkin for NodeGraphPresetSkinV1 {
                     .ring_focused
                     .into_ring(),
             );
+            if hint.shadow.is_none() {
+                hint.shadow = Some(NodeShadowHint {
+                    offset_x_px: 0.0,
+                    offset_y_px: 0.0,
+                    blur_radius_px: 10.0,
+                    downsample: 2,
+                    color: self.preset().paint_only_tokens.node.border_selected.into(),
+                });
+            }
         }
         hint
     }
