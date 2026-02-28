@@ -42,6 +42,10 @@ Use `fret-ui-review` when the goal is an architecture/UX audit rather than produ
   - capture only a few bundles at key points (not after every step),
   - prefer sidecars + `bundle.schema2.json` over raw `bundle.json`,
   - avoid `FRET_DIAG_BUNDLE_JSON_FORMAT=pretty` unless you truly need it.
+  - ensure `script_auto_dump` is **off** for suites (auto-dumping after every injected step is useful during script
+    authoring, but it is an output-explosion footgun for smoke/perf runs).
+    - Tool-launched `--launch` runs write `script_auto_dump=false` by default.
+    - Escape hatch for authoring: `--env FRET_DIAG_SCRIPT_AUTO_DUMP=1` (or set `script_auto_dump=true` in config).
 - Use raw `bundle.json` only as an explicit escape hatch in tool-launched mode:
   - `--launch-write-bundle-json` (never for `diag matrix`).
 - When triaging: prefer `diag meta/query/slice` over searching JSON.

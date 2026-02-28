@@ -33,6 +33,9 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
   silently drift tool-launched runs.
 - [x] Audit `--launch` entry points to ensure a single per-run config writer is used (`diag run/suite/repro/perf/repeat`
   funnel through `maybe_launch_demo`).
+- [x] Tool-launched output safety defaults:
+  - [x] `script_auto_dump=false` (avoid "dump on every injected step" explosions)
+  - [x] `pick_auto_dump=false` (avoid "dump on every pick" explosions)
 - [x] Add a `diag config doctor` (tooling-side) that prints an effective merged config + highlights deprecated keys/envs.
 - [x] Eliminate docking multi-window lint false negatives by ensuring focus repair runs before semantics refresh (and on
   layout fast-path frames), so bundles never capture a focused node with empty bounds.
@@ -174,8 +177,14 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
   with an explicit escape hatch for interactive debugging.
 - [x] Clipboard determinism: add script steps to set/assert clipboard text (capability-gated), so paste flows can be tested
   without depending on ambient OS clipboard contents.
+  - Guidance: for smoke validation prefer “set clipboard → paste into an input → assert via semantics” over “get/assert
+    clipboard text”, because clipboard readbacks can depend on runner callbacks and are easier to flake under harnesses.
+  - [ ] (optional) Consider a sandboxed clipboard mode for tool-launched scripted runs to avoid mutating the OS clipboard
+    (reduce surprise during local repros; enables parallel runs).
 - [x] OS integration determinism: add a capability-gated script step to inject "incoming open" payloads (paths/tokens) to
   cover "open with..." flows deterministically.
+- [x] Harness integration: ensure `fret-ui-gallery` records diagnostics events for platform-delivered events (not just
+  script-injected ones) so `event_kind_seen` predicates can observe injected OS integration events.
 - [x] Extend `FilesystemCapabilitiesV1` with optional identity fields (additive):
   - [x] `runner_kind`, `runner_version`,
   - [x] optional `protocol_versions`/`schemas` hints for tooling.
