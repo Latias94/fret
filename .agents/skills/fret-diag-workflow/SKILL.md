@@ -35,6 +35,13 @@ Use `fret-ui-review` when the goal is an architecture/UX audit rather than produ
 ## Best practices (repeatable habits)
 
 - Prefer `--launch` for determinism; avoid relying on parent-shell `FRET_DIAG_*` for tool-launched runs.
+- Treat `--dir` (`FRET_DIAG_DIR`) as a **session boundary**:
+  - Do not share the same out dir between multiple concurrent runs (multiple terminals, multiple AI agents, or multiple
+    demos at once). The filesystem transport uses shared control-plane files (`*.touch`, `script.json`, `script.result.json`,
+    `latest.txt`), so concurrent runs in the same directory will race and produce misleading results.
+  - Recommendation: always pass an explicit, unique `--dir` per agent/task.
+    - Example: `--dir target/fret-diag-agent-a` and `--dir target/fret-diag-agent-b`
+    - Example: `--dir target/fret-diag-issue-1234`
 - Before rerunning a suspiciously large or inconsistent run:
   - `fretboard diag config doctor --mode launch --print-launch-policy`
   - `fretboard diag config doctor --mode launch --report-json` (inspect `launch_policy` + warnings)

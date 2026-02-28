@@ -42,6 +42,20 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
 - [x] Add an opt-in pointer input isolation knob for tool-launched scripted runs so accidental real mouse movement/clicks
   do not perturb deterministic playback (especially for cross-window docking/tear-off).
 
+## P0.6: Concurrency hygiene (multiple agents)
+
+- [x] Document that `--dir` / `FRET_DIAG_DIR` is a session boundary and must not be shared across concurrent runs
+  (multiple terminals, multiple AI agents). Evidence:
+  - `docs/ui-diagnostics-and-scripted-tests.md`
+  - `docs/workstreams/diag-v2-hardening-and-switches-v1/per-run-layout.md`
+  - skill: `.agents/skills/fret-diag-workflow/SKILL.md`
+- [ ] Design and implement a session-root layout for tool-launched runs so agents can run in parallel without inventing
+  directory naming conventions. Proposed design: `docs/workstreams/diag-v2-hardening-and-switches-v1/concurrency-and-sessions.md`.
+  - [ ] Add `--session-auto` / `--session <id>` for tool-launched commands (`--launch`) that makes the effective out dir
+    `<base_dir>/sessions/<session_id>/`.
+  - [ ] Add a small `session.json` metadata file in the session root (best-effort).
+  - [ ] Add a safe discovery command (bounded output): `diag list sessions --dir <base_dir>` (optional).
+
 ## P0.5: Script library modularization (UX scalability)
 
 - [x] Define a folder taxonomy for `tools/diag-scripts/` (by product area + suite intent). See: `docs/workstreams/diag-v2-hardening-and-switches-v1/script-library.md`.

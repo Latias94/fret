@@ -33,6 +33,13 @@ Related trackers:
 
 Important: **per-run dirs and bundle export dirs are not the same thing**.
 
+Concurrency note:
+
+- Treat `out_dir` as a **session boundary**. The filesystem transport uses shared control-plane files under `out_dir`
+  (`script.json`, `script.touch`, `script.result.json`, `trigger.touch`, `latest.txt`, etc).
+- Multiple concurrent runs must not share the same `out_dir` (multiple AI agents, multiple terminals, multiple demos),
+  otherwise trigger/result files and `latest.txt` will race.
+
 ## Canonical per-run directory
 
 Required:

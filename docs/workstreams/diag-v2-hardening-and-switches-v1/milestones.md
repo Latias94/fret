@@ -38,6 +38,7 @@ Evidence anchors:
 - Docs: `docs/ui-diagnostics-and-scripted-tests.md`
 - Example config: `tools/diag-configs/diag.config.example.json`
 - Suites: `tools/diag-scripts/suites/README.md`
+- Concurrency hygiene: `docs/workstreams/diag-v2-hardening-and-switches-v1/concurrency-and-sessions.md`
 
 ## M1: Manifest exists for every run (P1)
 
