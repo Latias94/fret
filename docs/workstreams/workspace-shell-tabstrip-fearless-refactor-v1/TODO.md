@@ -62,6 +62,8 @@ This file is an execution checklist for the design in `DESIGN.md`.
   - [ ] inputs: rects, pointer position, viewport size, state snapshot
   - [ ] outputs: intents (activate/reorder/move/split/scroll)
 - [x] Extract pinned-boundary-aware drop target computation into `tab_strip/kernel.rs`.
+- [x] Add “end of strip” header-space target (drop after last tab).
+- [x] Add edge auto-scroll during drag reorder.
 - [ ] Refactor `WorkspaceTabStrip` to call kernel helpers (no behavior duplication).
 - [ ] Apply the same kernel to docking tab bars.
 - [ ] Gates:

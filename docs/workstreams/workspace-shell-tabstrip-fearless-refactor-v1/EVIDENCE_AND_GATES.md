@@ -39,6 +39,8 @@ Add tests close to the kernel/module (or in `ecosystem/fret-workspace/tests/` if
   - dropping in empty space produces “insert at end” intent.
 - Pinned boundary:
   - pin/unpin updates `pinned_tab_count` and preserves active tab.
+- Edge auto-scroll:
+  - pointer near left/right edges produces deterministic scroll deltas.
 - Preview tab:
   - open previewable item replaces existing preview tab slot.
 - MRU:
