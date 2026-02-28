@@ -48,6 +48,11 @@ Use `fret-ui-review` when the goal is an architecture/UX audit rather than produ
     - Escape hatch for authoring: `--env FRET_DIAG_SCRIPT_AUTO_DUMP=1` (or set `script_auto_dump=true` in config).
 - Use raw `bundle.json` only as an explicit escape hatch in tool-launched mode:
   - `--launch-write-bundle-json` (never for `diag matrix`).
+- Understand "input isolation" vs "cursor overrides":
+  - Tool-launched runs default to ignoring external (non-script) pointer + keyboard events while a script is active to
+    avoid accidental human interference.
+  - Multi-window docking scripts may also use runner cursor overrides (`set_cursor_in_window_logical`) to drive
+    window-hover routing; this updates the runner's internal cursor model and does **not** warp the OS cursor.
 - When triaging: prefer `diag meta/query/slice` over searching JSON.
 - When a script is flaky: replace sleeps with stabilization (`click_stable`, `wait_until`, bounds-stable), and shrink.
 - Always leave behind the 3-pack: repro script + bounded evidence bundle + regression gate (suite/check/test).
@@ -216,6 +221,10 @@ For evidence-first triage (reason codes + bounded traces), see: `references/evid
     via `FRET_DIAG_CONFIG_PATH`; manual escape hatch: `FRET_DIAG_GPU_SCREENSHOTS=1`).
 - “selectors flaky”
   - Add/repair `test_id` in the component/recipe layer; run `diag lint` for duplicates/missing ids.
+- “event_kind_seen never triggers (timeout)”
+  - Likely cause: the app driver is not recording platform-delivered events into the diagnostics ring buffer.
+  - Fix: ensure the harness calls `UiDiagnosticsService::record_event(...)` (and runs ignore/intercept checks) from its
+    main event handler, not only for script-injected events.
 
 ## Performance gates (when the issue is a hitch)
 

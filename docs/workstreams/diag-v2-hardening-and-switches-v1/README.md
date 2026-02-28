@@ -170,6 +170,8 @@ Make configuration predictable:
       `isolate_external_pointer_input_while_script_running=true` into the per-run `diag.config.json`.
     - Override (escape hatch): pass `--env FRET_DIAG_ISOLATE_POINTER_INPUT=0` when you need interactive input during a
       script run.
+    - Note: multi-window docking scripts may use runner cursor overrides (e.g. `set_cursor_in_window_logical`) to drive
+      window-hover routing. This updates the runner's internal cursor model and does **not** warp the OS cursor.
   - Output safety (2026-02-28): tool-launched runs disable auto-dumping by default to avoid accidental output explosions.
     - Tooling writes `script_auto_dump=false` and `pick_auto_dump=false` into `diag.config.json` for `--launch` runs.
     - Escape hatch: pass `--env FRET_DIAG_SCRIPT_AUTO_DUMP=1` (or set `script_auto_dump=true` in config) when authoring
