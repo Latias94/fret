@@ -17,12 +17,17 @@ struct ScriptsDoctorCounts {
     redirects_missing_to_total: u64,
     redirects_target_missing_total: u64,
     redirects_target_outside_library_total: u64,
+    redirects_chain_depth_gt2_total: u64,
+    redirects_chain_depth_max: u64,
 
     suites_json_total: u64,
     suites_redirect_total: u64,
     suites_non_redirect_total: u64,
     suites_invalid_json_total: u64,
     suites_target_missing_total: u64,
+    suites_redirect_target_is_redirect_total: u64,
+    suites_redirect_chain_depth_gt2_total: u64,
+    suites_redirect_chain_depth_max: u64,
 
     registry_entries_total: u64,
     registry_duplicate_id_total: u64,
@@ -39,10 +44,12 @@ struct ScriptsDoctorExamples {
     root_redirect_missing_to: Vec<String>,
     root_redirect_target_missing: Vec<String>,
     root_redirect_target_outside_library: Vec<String>,
+    root_redirect_chain_depth_gt2: Vec<String>,
 
     suite_non_redirect: Vec<String>,
     suite_invalid_json: Vec<String>,
     suite_target_missing: Vec<String>,
+    suite_redirect_chain_depth_gt2: Vec<String>,
 
     registry_duplicate_ids: Vec<String>,
     registry_path_missing: Vec<String>,
@@ -63,6 +70,47 @@ fn is_script_redirect(v: &Value) -> bool {
 
 fn read_redirect_to(v: &Value) -> Option<String> {
     v.get("to").and_then(|v| v.as_str()).map(|s| s.to_string())
+}
+
+fn redirect_chain_depth(
+    workspace_root: &Path,
+    start_path: &Path,
+    max_depth: u64,
+) -> Result<u64, String> {
+    let mut depth: u64 = 0;
+    let mut cur = start_path.to_path_buf();
+    let mut seen: BTreeSet<PathBuf> = BTreeSet::new();
+
+    loop {
+        if !seen.insert(cur.clone()) {
+            return Err(format!(
+                "script redirect loop detected (revisiting): {}",
+                cur.display()
+            ));
+        }
+        let Some(v) = read_json_value(&cur) else {
+            return Err(format!(
+                "invalid JSON while resolving redirect chain: {}",
+                cur.display()
+            ));
+        };
+        if !is_script_redirect(&v) {
+            return Ok(depth);
+        }
+        let Some(to) = read_redirect_to(&v) else {
+            return Err(format!(
+                "invalid script_redirect (missing string field: to): {}",
+                cur.display()
+            ));
+        };
+        depth = depth.saturating_add(1);
+        if depth > max_depth {
+            return Err(format!(
+                "script redirect depth exceeded (max_depth={max_depth})"
+            ));
+        }
+        cur = resolve_path(workspace_root, PathBuf::from(to));
+    }
 }
 
 fn json_glob_recursive(dir: &Path, pattern_suffix: &str) -> Result<Vec<PathBuf>, String> {
@@ -147,6 +195,8 @@ pub(crate) fn cmd_doctor_scripts(
     let mut counts = ScriptsDoctorCounts::default();
     let mut examples = ScriptsDoctorExamples::default();
 
+    const MAX_REDIRECT_DEPTH: u64 = 8;
+
     // Check top-level `tools/diag-scripts/*.json` are redirect stubs (except index.json).
     let read_dir = std::fs::read_dir(&scripts_root).map_err(|e| e.to_string())?;
     for entry in read_dir {
@@ -213,6 +263,26 @@ pub(crate) fn cmd_doctor_scripts(
                     format!("{} -> {}", path.display(), to),
                 );
             }
+            match redirect_chain_depth(workspace_root, &path, MAX_REDIRECT_DEPTH) {
+                Ok(depth) => {
+                    counts.redirects_chain_depth_max = counts.redirects_chain_depth_max.max(depth);
+                    if depth > 2 {
+                        counts.redirects_chain_depth_gt2_total =
+                            counts.redirects_chain_depth_gt2_total.saturating_add(1);
+                        push_bounded(
+                            &mut examples.root_redirect_chain_depth_gt2,
+                            max_examples,
+                            path.display().to_string(),
+                        );
+                    }
+                }
+                Err(err) => {
+                    errors.push(format!(
+                        "failed to resolve redirect chain for {}: {err}",
+                        path.display()
+                    ));
+                }
+            }
         } else {
             counts.root_non_redirect_total = counts.root_non_redirect_total.saturating_add(1);
             push_bounded(
@@ -256,6 +326,12 @@ pub(crate) fn cmd_doctor_scripts(
         warnings.push(format!(
             "some script_redirect stubs point outside tools/diag-scripts/: {}",
             counts.redirects_target_outside_library_total
+        ));
+    }
+    if counts.redirects_chain_depth_gt2_total > 0 {
+        warnings.push(format!(
+            "some script_redirect chains are deeper than 2 (consider flattening to reduce drift risk): {}",
+            counts.redirects_chain_depth_gt2_total
         ));
     }
 
@@ -305,6 +381,37 @@ pub(crate) fn cmd_doctor_scripts(
                     max_examples,
                     format!("{} -> {}", path.display(), to),
                 );
+                continue;
+            }
+
+            if let Some(tv) = read_json_value(&target) {
+                if is_script_redirect(&tv) {
+                    counts.suites_redirect_target_is_redirect_total = counts
+                        .suites_redirect_target_is_redirect_total
+                        .saturating_add(1);
+                }
+            }
+            match redirect_chain_depth(workspace_root, &path, MAX_REDIRECT_DEPTH) {
+                Ok(depth) => {
+                    counts.suites_redirect_chain_depth_max =
+                        counts.suites_redirect_chain_depth_max.max(depth);
+                    if depth > 2 {
+                        counts.suites_redirect_chain_depth_gt2_total = counts
+                            .suites_redirect_chain_depth_gt2_total
+                            .saturating_add(1);
+                        push_bounded(
+                            &mut examples.suite_redirect_chain_depth_gt2,
+                            max_examples,
+                            path.display().to_string(),
+                        );
+                    }
+                }
+                Err(err) => {
+                    errors.push(format!(
+                        "failed to resolve suite redirect chain for {}: {err}",
+                        path.display()
+                    ));
+                }
             }
         }
     } else {
@@ -327,6 +434,12 @@ pub(crate) fn cmd_doctor_scripts(
         errors.push(format!(
             "tools/diag-scripts/suites/**/*.json contains redirect stubs whose targets are missing: {}",
             counts.suites_target_missing_total
+        ));
+    }
+    if counts.suites_redirect_chain_depth_gt2_total > 0 {
+        warnings.push(format!(
+            "some suite script_redirect chains are deeper than 2 (consider updating suite stubs): {}",
+            counts.suites_redirect_chain_depth_gt2_total
         ));
     }
 
@@ -508,6 +621,14 @@ pub(crate) fn cmd_doctor_scripts(
         json!(counts.redirects_target_outside_library_total),
     );
     counts_obj.insert(
+        "redirects_chain_depth_gt2_total".to_string(),
+        json!(counts.redirects_chain_depth_gt2_total),
+    );
+    counts_obj.insert(
+        "redirects_chain_depth_max".to_string(),
+        json!(counts.redirects_chain_depth_max),
+    );
+    counts_obj.insert(
         "suites_json_total".to_string(),
         json!(counts.suites_json_total),
     );
@@ -526,6 +647,18 @@ pub(crate) fn cmd_doctor_scripts(
     counts_obj.insert(
         "suites_target_missing_total".to_string(),
         json!(counts.suites_target_missing_total),
+    );
+    counts_obj.insert(
+        "suites_redirect_target_is_redirect_total".to_string(),
+        json!(counts.suites_redirect_target_is_redirect_total),
+    );
+    counts_obj.insert(
+        "suites_redirect_chain_depth_gt2_total".to_string(),
+        json!(counts.suites_redirect_chain_depth_gt2_total),
+    );
+    counts_obj.insert(
+        "suites_redirect_chain_depth_max".to_string(),
+        json!(counts.suites_redirect_chain_depth_max),
     );
     counts_obj.insert(
         "registry_entries_total".to_string(),
@@ -569,9 +702,11 @@ pub(crate) fn cmd_doctor_scripts(
             "root_redirect_missing_to": examples.root_redirect_missing_to,
             "root_redirect_target_missing": examples.root_redirect_target_missing,
             "root_redirect_target_outside_library": examples.root_redirect_target_outside_library,
+            "root_redirect_chain_depth_gt2": examples.root_redirect_chain_depth_gt2,
             "suite_non_redirect": examples.suite_non_redirect,
             "suite_invalid_json": examples.suite_invalid_json,
             "suite_target_missing": examples.suite_target_missing,
+            "suite_redirect_chain_depth_gt2": examples.suite_redirect_chain_depth_gt2,
             "registry_duplicate_ids": examples.registry_duplicate_ids,
             "registry_path_missing": examples.registry_path_missing,
             "registry_path_outside_library": examples.registry_path_outside_library,
