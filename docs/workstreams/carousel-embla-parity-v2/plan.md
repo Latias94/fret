@@ -46,6 +46,8 @@ Gates:
 
 - `nextest` unit tests for integrator invariants.
 - A diag script that asserts “drag produces continued motion after release” (inertia presence).
+- A diag script that resizes during engine-driven motion without panics/hangs
+  (`tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-reinit-resize-gate.json`).
 
 ## Step 3 — Events + API handle (3–6 days)
 
@@ -88,4 +90,3 @@ We call v2 “done” when:
 - the engine is in use by the recipe by default (no feature flag),
 - the API + event surfaces are stable enough to document,
 - and the key parity claims are guarded by tests/scripts.
-

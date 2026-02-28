@@ -46,6 +46,8 @@ Gates:
 
 - `nextest` test: `select` fires exactly once per index transition.
 - UI gallery: counter updates on swipe/buttons.
+- Diag gate: resize during engine-driven motion does not panic and content remains visible
+  (`tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-reinit-resize-gate.json`).
 
 ## M3 — Seamless loop (loop=true)
 
@@ -74,4 +76,3 @@ Gates:
 
 - Unit tests for threshold/margin matrices.
 - Diag scripts for focus-in scroll-to-view and breakpoint flips.
-
