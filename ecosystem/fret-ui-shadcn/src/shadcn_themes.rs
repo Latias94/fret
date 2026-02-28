@@ -437,6 +437,22 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
         }
     }
 
+    // `fret-chart` accepts shadcn `chart-*` tokens, but some retained paths use
+    // `chart.palette.<n>` directly (tests and fixed-style overrides). Seed a small alias set so
+    // chart demos do not fall back to the default theme when the palette keys are absent.
+    for (idx, shadcn_key) in ["chart-1", "chart-2", "chart-3", "chart-4", "chart-5"]
+        .into_iter()
+        .enumerate()
+    {
+        let key = format!("chart.palette.{idx}");
+        if colors.contains_key(&key) {
+            continue;
+        }
+        if let Some(v) = colors.get(shadcn_key).cloned() {
+            colors.insert(key, v);
+        }
+    }
+
     // AI Elements + some shadcn recipes use `dark:hover:bg-accent/50` to soften hover in dark
     // schemes (e.g. attachment chips/rows). Our baseline theme defaults `color.menu.item.hover` to
     // `accent` when not explicitly configured, so we seed an explicit dark alpha here to keep
@@ -1139,6 +1155,17 @@ mod tests {
                 Some(ring_light),
                 "expected viewport marker to match ring in light scheme"
             );
+            for (idx, shadcn_key) in ["chart-1", "chart-2", "chart-3", "chart-4", "chart-5"]
+                .into_iter()
+                .enumerate()
+            {
+                let palette_key = format!("chart.palette.{idx}");
+                assert_eq!(
+                    cfg_light.colors.get(&palette_key).cloned(),
+                    cfg_light.colors.get(shadcn_key).cloned(),
+                    "expected {palette_key} to match {shadcn_key} in light scheme"
+                );
+            }
             assert_eq!(
                 cfg_light.colors.get("component.button.outline.bg").cloned(),
                 Some(outline_bg_light),
@@ -1211,6 +1238,17 @@ mod tests {
                 Some(ring_dark),
                 "expected viewport marker to match ring in dark scheme"
             );
+            for (idx, shadcn_key) in ["chart-1", "chart-2", "chart-3", "chart-4", "chart-5"]
+                .into_iter()
+                .enumerate()
+            {
+                let palette_key = format!("chart.palette.{idx}");
+                assert_eq!(
+                    cfg_dark.colors.get(&palette_key).cloned(),
+                    cfg_dark.colors.get(shadcn_key).cloned(),
+                    "expected {palette_key} to match {shadcn_key} in dark scheme"
+                );
+            }
             assert_eq!(
                 cfg_dark.colors.get("component.button.outline.bg").cloned(),
                 Some(outline_bg_dark),
