@@ -65,6 +65,8 @@ This file is an execution checklist for the design in `DESIGN.md`.
 - [x] Extract pinned-boundary-aware drop target computation into `tab_strip/kernel.rs`.
 - [x] Add “end of strip” header-space target (drop after last tab).
 - [x] Add edge auto-scroll during drag reorder.
+- [x] Extract edge auto-scroll math into `ecosystem/fret-dnd` (`compute_autoscroll_x/y`) and reuse
+  it in workspace + docking tab bars.
 - [ ] Refactor `WorkspaceTabStrip` to call kernel helpers (no behavior duplication).
 - [ ] Apply the same kernel to docking tab bars.
 - [ ] Gates:

@@ -19,12 +19,12 @@ Legend:
 | Keyboard nav (roving, APG-like) | Yes | Partial | Partial | Yes | Yes |
 | Do not steal editor focus on click (editor chrome rule) | Yes | N/A | N/A | Yes | Yes |
 | Drag reorder within strip | Yes | Yes | Yes (dock tab panel) | Yes | Yes |
-| “Drop after last tab” explicit target | Yes | Yes (header space) | Yes (empty space) | Partial | Yes |
+| “Drop after last tab” explicit target | Yes | Yes (header space) | Yes (empty space) | Yes | Yes |
 | Cross-pane move (drag to other pane) | Yes | Yes | Yes | Partial | Yes |
 | Drag-to-split (edge targets) | Yes | Yes | Partial | Partial | Yes |
 | Pinned tabs | Yes | No | No | Partial | Yes |
 | Separate pinned row | Yes (optional setting) | No | No | No | Optional |
-| Preview tabs (single preview per pane) | Yes | No | No | No | Optional (recommended) |
+| Preview tabs (single preview per pane) | Yes | No | No | Yes | Yes (recommended) |
 | MRU tab switch (Ctrl+Tab) | Yes | No | No | Partial | Yes |
 | Stable automation hooks (`test_id`/selectors) | Yes | Partial (DOM selectors) | Partial | Partial | Yes |
 

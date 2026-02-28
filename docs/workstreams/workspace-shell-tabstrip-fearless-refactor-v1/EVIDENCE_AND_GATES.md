@@ -41,6 +41,7 @@ Add tests close to the kernel/module (or in `ecosystem/fret-workspace/tests/` if
   - pin/unpin updates `pinned_tab_count` and preserves active tab.
 - Edge auto-scroll:
   - pointer near left/right edges produces deterministic scroll deltas.
+  - prefer shared helper coverage: `ecosystem/fret-dnd/src/scroll.rs` (`compute_autoscroll_x/y`)
 - Preview tab:
   - open previewable item replaces existing preview tab slot.
 - MRU:

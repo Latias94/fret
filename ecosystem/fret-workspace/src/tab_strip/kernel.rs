@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use fret_core::{Point, Px, Rect};
+use fret_dnd::{AutoScrollConfig, compute_autoscroll_x};
 
 use crate::tab_drag::{WorkspaceTabHitRect, WorkspaceTabInsertionSide, compute_tab_drop_target};
 
@@ -70,31 +71,23 @@ pub(crate) fn compute_tab_strip_edge_auto_scroll_delta_x(
         return Px(0.0);
     }
 
-    let left = viewport.origin.x.0;
-    let right = viewport.origin.x.0 + viewport.size.width.0;
-    let x = pointer.x.0;
-
-    if x < left || x > right {
+    if !viewport.contains(pointer) {
         return Px(0.0);
     }
 
-    let edge_zone = 24.0;
-    let max_step = 18.0;
-
-    let dist_left = x - left;
-    let dist_right = right - x;
-
-    if dist_left < edge_zone && current_offset_x.0 > 0.5 {
-        let t = ((edge_zone - dist_left) / edge_zone).clamp(0.0, 1.0);
-        return Px(-max_step * t);
+    let cfg = AutoScrollConfig {
+        margin_px: 24.0,
+        min_speed_px_per_tick: 0.0,
+        max_speed_px_per_tick: 18.0,
+    };
+    let dx = compute_autoscroll_x(cfg, viewport, pointer).unwrap_or(Px(0.0));
+    if dx.0 < 0.0 && current_offset_x.0 <= 0.5 {
+        return Px(0.0);
     }
-
-    if dist_right < edge_zone && (current_offset_x.0 + 0.5) < max_offset_x.0 {
-        let t = ((edge_zone - dist_right) / edge_zone).clamp(0.0, 1.0);
-        return Px(max_step * t);
+    if dx.0 > 0.0 && (current_offset_x.0 + 0.5) >= max_offset_x.0 {
+        return Px(0.0);
     }
-
-    Px(0.0)
+    dx
 }
 
 #[cfg(test)]

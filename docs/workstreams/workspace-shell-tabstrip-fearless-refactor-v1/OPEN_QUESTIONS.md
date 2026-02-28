@@ -119,3 +119,31 @@ Reuse strategy:
 
 - When docking needs shared pieces, extract **generic geometry/math** into existing `ecosystem/fret-dnd`
   (headless primitives), and keep workspace/docking policy wrappers in their own crates.
+
+## D11: Reference selection — Zed vs dockview vs gpui-component
+
+**Decision:** treat each upstream as a **reference for a specific slice**, not as a single “one true
+port”.
+
+- **Zed (`repo-ref/zed`) is the primary reference for editor semantics**:
+  - pinned boundary + optional separate pinned row,
+  - preview tabs + commit rules,
+  - drop targets + drag-to-split outcomes,
+  - focus neutrality rules for chrome.
+- **dockview (`repo-ref/dockview`) is the primary reference for overflow pipeline + header-space UX**:
+  - overflow membership computation and “more tabs” listing,
+  - header-space drop surfaces as first-class targets.
+- **gpui-component (`repo-ref/gpui-component`) is the reference for GPUI wiring patterns**, but it is
+  not a complete editor semantics reference (no pinned/preview/MRU baseline).
+
+Why:
+
+- Editor-grade tab bars are *outcome-heavy*: copying one source wholesale tends to import unrelated
+  constraints (DOM vs GPU scene, CSS layout vs measured rects).
+- Using a per-capability reference keeps contracts stable and reviewable.
+
+Practical rule:
+
+- If a behavior affects editor workflows (pinned/preview/split/focus), use Zed outcomes first.
+- If a behavior is about overflow UX and dropdown list patterns, use dockview outcomes first.
+- If a behavior is about implementation shape in GPUI-style UI, consult gpui-component for patterns.

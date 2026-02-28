@@ -172,7 +172,7 @@ generic UI-kit primitive. TabStrip policy is editor-heavy and likely belongs in 
 
 Recent baseline improvements (already landed):
 
-- `ecosystem/fret-workspace/src/tab_strip.rs` — roving keyboard navigation + wheel-to-horizontal
+- `ecosystem/fret-workspace/src/tab_strip/mod.rs` — roving keyboard navigation + wheel-to-horizontal
   scroll policy + focus stability.
 - `crates/fret-ui/src/declarative/host_widget/event/roving_flex.rs` — `PointerRegion` treated as a
   transparent wrapper for roving item collection.
@@ -180,6 +180,8 @@ Recent baseline improvements (already landed):
   under pointer regions.
 - `ecosystem/fret-workspace/tests/tab_strip_pointer_down_does_not_steal_focus.rs` — focus
   stability gate for tab strip pointer down.
+- `ecosystem/fret-dnd/src/scroll.rs` — shared axis auto-scroll helpers (`compute_autoscroll_x/y`)
+  reused by workspace + docking tab bars (avoids one-off edge-scroll formulas).
 
 Reference anchors:
 
