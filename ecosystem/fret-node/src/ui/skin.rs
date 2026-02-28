@@ -37,6 +37,10 @@ pub struct InteractionChromeHint {
     pub wire_glow_selected: Option<WireGlowHint>,
     /// Optional wire glow applied to drag preview wires (paint-only effect).
     pub wire_glow_preview: Option<WireGlowHint>,
+    /// Optional inner highlight applied to selected edges (paint-only, drawn on top of the core stroke).
+    pub wire_highlight_selected: Option<WireHighlightHint>,
+    /// Optional inner highlight applied to hovered edges (paint-only, drawn on top of the core stroke).
+    pub wire_highlight_hovered: Option<WireHighlightHint>,
     /// Optional wire outline applied to selected edges (paint-only, drawn behind the core stroke).
     pub wire_outline_selected: Option<WireOutlineHint>,
     /// Optional wire outline applied to drag preview wires (paint-only, drawn behind the core stroke).
@@ -51,6 +55,14 @@ pub struct WireGlowHint {
     pub blur_radius_px: f32,
     pub downsample: u32,
     pub alpha_mul: f32,
+}
+
+/// Paint-only wire highlight parameters (screen-space logical px).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct WireHighlightHint {
+    pub width_mul: f32,
+    pub alpha_mul: f32,
+    pub color: Option<Color>,
 }
 
 /// Paint-only wire outline parameters (screen-space logical px).

@@ -6,6 +6,8 @@ use fret_core::{EffectChain, EffectMode, EffectQuality, EffectStep};
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 
+use super::markers::WireHighlightPaint;
+
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(in super::super) fn paint_edges<H: UiHost>(
         &mut self,
@@ -28,6 +30,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             start_marker: Option<crate::ui::presenter::EdgeMarker>,
             end_marker: Option<crate::ui::presenter::EdgeMarker>,
             selected: bool,
+            hovered: bool,
         }
 
         fn stable_hash_u64<T: Hash>(tag: u8, key: &T) -> u64 {
@@ -247,6 +250,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 start_marker: edge.hint.start_marker.clone(),
                 end_marker: edge.hint.end_marker.clone(),
                 selected: edge.selected,
+                hovered: edge.hovered,
             };
 
             if edge.hovered {
@@ -266,6 +270,10 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             Self::EDGE_WIRE_OUTLINE_BUILD_BUDGET_PER_FRAME.select(view_interacting);
         let mut outline_budget = WorkBudget::new(outline_budget_limit);
         let mut outline_budget_skipped: u32 = 0;
+        let highlight_budget_limit =
+            Self::EDGE_WIRE_HIGHLIGHT_BUILD_BUDGET_PER_FRAME.select(view_interacting);
+        let mut highlight_budget = WorkBudget::new(highlight_budget_limit);
+        let mut highlight_budget_skipped: u32 = 0;
 
         for edge in edges_normal
             .into_iter()
@@ -383,6 +391,49 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 glow_pushed = true;
             }
 
+            let highlight_hint = if edge.hovered {
+                interaction_hint.wire_highlight_hovered
+            } else if edge.selected {
+                interaction_hint.wire_highlight_selected
+            } else {
+                None
+            };
+            let highlight = if let Some(hint) = highlight_hint {
+                let width_mul = if hint.width_mul.is_finite() {
+                    hint.width_mul.clamp(0.0, 1.0)
+                } else {
+                    0.0
+                };
+                let alpha_mul = if hint.alpha_mul.is_finite() {
+                    hint.alpha_mul.clamp(0.0, 1.0)
+                } else {
+                    0.0
+                };
+                let width = edge.width * width_mul;
+                if width.is_finite() && width > 1.0e-3 && alpha_mul > 1.0e-6 {
+                    if !highlight_budget.try_consume(1) {
+                        highlight_budget_skipped = highlight_budget_skipped.saturating_add(1);
+                        None
+                    } else {
+                        let mut color = hint.color.unwrap_or_else(|| {
+                            let t = 0.45;
+                            Color {
+                                r: edge.color.r + (1.0 - edge.color.r) * t,
+                                g: edge.color.g + (1.0 - edge.color.g) * t,
+                                b: edge.color.b + (1.0 - edge.color.b) * t,
+                                a: edge.color.a,
+                            }
+                        });
+                        color.a = (color.a * alpha_mul).clamp(0.0, 1.0);
+                        (color.a > 0.0).then_some(WireHighlightPaint { width, color })
+                    }
+                } else {
+                    None
+                }
+            } else {
+                None
+            };
+
             let (_stop, skipped) = if let Some(custom) = custom_paths.get(&edge.id) {
                 let fallback = Point::new(
                     Px(edge.to.x.0 - edge.from.x.0),
@@ -404,6 +455,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     edge.color,
                     edge.width,
                     edge.dash,
+                    highlight,
                     edge.start_marker.as_ref(),
                     edge.end_marker.as_ref(),
                     &mut wire_budget,
@@ -422,6 +474,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     edge.color,
                     edge.width,
                     edge.dash,
+                    highlight,
                     edge.start_marker.as_ref(),
                     edge.end_marker.as_ref(),
                     &mut wire_budget,
@@ -440,6 +493,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             cx.request_redraw();
         }
         if outline_budget_skipped > 0 {
+            cx.request_redraw();
+        }
+        if highlight_budget_skipped > 0 {
             cx.request_redraw();
         }
 

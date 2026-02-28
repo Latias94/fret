@@ -19,7 +19,8 @@ use crate::core::{EdgeId, EdgeKind, Graph, NodeId, PortId, PortKind};
 use super::presenter::EdgeRenderHint;
 use super::skin::{
     CanvasChromeHint, InteractionChromeHint, NodeChromeHint, NodeGraphSkin, NodeRingHint,
-    NodeShadowHint, PortChromeHint, PortShapeHint, WireGlowHint, WireOutlineHint,
+    NodeShadowHint, PortChromeHint, PortShapeHint, WireGlowHint, WireHighlightHint,
+    WireOutlineHint,
 };
 use super::style::NodeGraphStyle;
 
@@ -257,6 +258,45 @@ impl NodeGraphSkin for NodeGraphPresetSkinV1 {
             (None, None)
         };
 
+        let (wire_highlight_selected, wire_highlight_hovered) = match preset_id {
+            "schematic_contrast" => (
+                Some(WireHighlightHint {
+                    width_mul: 0.70,
+                    alpha_mul: 0.90,
+                    color: None,
+                }),
+                Some(WireHighlightHint {
+                    width_mul: 0.75,
+                    alpha_mul: 1.0,
+                    color: None,
+                }),
+            ),
+            "graph_dark" => (
+                Some(WireHighlightHint {
+                    width_mul: 0.65,
+                    alpha_mul: 0.85,
+                    color: None,
+                }),
+                Some(WireHighlightHint {
+                    width_mul: 0.70,
+                    alpha_mul: 0.95,
+                    color: None,
+                }),
+            ),
+            _ => (
+                Some(WireHighlightHint {
+                    width_mul: 0.65,
+                    alpha_mul: 0.80,
+                    color: None,
+                }),
+                Some(WireHighlightHint {
+                    width_mul: 0.70,
+                    alpha_mul: 0.95,
+                    color: None,
+                }),
+            ),
+        };
+
         let outline_color = Color {
             r: 0.0,
             g: 0.0,
@@ -301,6 +341,8 @@ impl NodeGraphSkin for NodeGraphPresetSkinV1 {
             dash_emphasis: Some(tokens.wire.dash_emphasis.into_dash()),
             wire_glow_selected,
             wire_glow_preview,
+            wire_highlight_selected,
+            wire_highlight_hovered,
             wire_outline_selected,
             wire_outline_preview,
             wire_outline_base,

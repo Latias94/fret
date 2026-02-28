@@ -334,6 +334,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     const EDGE_LABEL_TILE_BUILD_BUDGET_TILES_PER_FRAME: InteractionBudget =
         InteractionBudget::new(2, 1);
     const EDGE_WIRE_BUILD_BUDGET_PER_FRAME: InteractionBudget = InteractionBudget::new(256, 64);
+    const EDGE_WIRE_HIGHLIGHT_BUILD_BUDGET_PER_FRAME: InteractionBudget =
+        InteractionBudget::new(256, 64);
     const EDGE_WIRE_OUTLINE_BUILD_BUDGET_PER_FRAME: InteractionBudget =
         InteractionBudget::new(256, 64);
     const EDGE_MARKER_BUILD_BUDGET_PER_FRAME: InteractionBudget = InteractionBudget::new(96, 24);
