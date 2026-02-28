@@ -105,6 +105,28 @@ impl WinitAppDriver for CustomEffectV3WebDriver {
 
         scene.clear();
 
+        fn union_rect(a: Rect, b: Rect) -> Rect {
+            let ax0 = a.origin.x;
+            let ay0 = a.origin.y;
+            let ax1 = a.origin.x + a.size.width;
+            let ay1 = a.origin.y + a.size.height;
+
+            let bx0 = b.origin.x;
+            let by0 = b.origin.y;
+            let bx1 = b.origin.x + b.size.width;
+            let by1 = b.origin.y + b.size.height;
+
+            let x0 = ax0.min(bx0);
+            let y0 = ay0.min(by0);
+            let x1 = ax1.max(bx1);
+            let y1 = ay1.max(by1);
+
+            Rect::new(
+                Point::new(x0, y0),
+                Size::new((x1 - x0).max(Px(0.0)), (y1 - y0).max(Px(0.0))),
+            )
+        }
+
         // Background: a simple animated color grid.
         let cols = 10u32;
         let rows = 7u32;
@@ -129,21 +151,40 @@ impl WinitAppDriver for CustomEffectV3WebDriver {
             }
         }
 
-        // Lens in the center.
-        let lens_w = w.min(980.0) * 0.48;
-        let lens_h = h.min(720.0) * 0.42;
-        let lens_x = (w - lens_w) * 0.5;
-        let lens_y = (h - lens_h) * 0.5;
-        let lens = Rect::new(
-            Point::new(Px(lens_x), Px(lens_y)),
-            Size::new(Px(lens_w), Px(lens_h)),
-        );
-
         if let Some(effect) = self.effect {
             let strength_px = 18.0;
             let params = EffectParamsV1 {
                 vec4s: [[strength_px, 0.65, 2.0, 0.0], [0.0; 4], [0.0; 4], [0.0; 4]],
             };
+
+            // Two lenses in one backdrop source group:
+            // - Demonstrates renderer-provided `src_raw` + bounded `src_pyramid` sharing.
+            // - Allows multiple glass surfaces to reuse a single raw snapshot (and optionally a pyramid).
+            let lens_w = w.min(980.0) * 0.38;
+            let lens_h = h.min(720.0) * 0.42;
+            let gap = (w * 0.04).max(12.0);
+            let total_w = lens_w * 2.0 + gap;
+            let start_x = (w - total_w) * 0.5;
+            let lens_y = (h - lens_h) * 0.5;
+
+            let lens_a = Rect::new(
+                Point::new(Px(start_x), Px(lens_y)),
+                Size::new(Px(lens_w), Px(lens_h)),
+            );
+            let lens_b = Rect::new(
+                Point::new(Px(start_x + lens_w + gap), Px(lens_y)),
+                Size::new(Px(lens_w), Px(lens_h)),
+            );
+            let group_bounds = union_rect(lens_a, lens_b);
+
+            scene.push(SceneOp::PushBackdropSourceGroupV1 {
+                bounds: group_bounds,
+                pyramid: Some(CustomEffectPyramidRequestV1 {
+                    max_levels: 6,
+                    max_radius_px: Px(32.0),
+                }),
+                quality: EffectQuality::Auto,
+            });
 
             let chain = EffectChain::from_steps(&[
                 EffectStep::GaussianBlur {
@@ -167,43 +208,56 @@ impl WinitAppDriver for CustomEffectV3WebDriver {
             ])
             .sanitize();
 
-            scene.push(SceneOp::PushEffect {
-                bounds: lens,
-                mode: EffectMode::Backdrop,
-                chain,
-                quality: EffectQuality::Auto,
-            });
-            scene.push(SceneOp::Quad {
-                order: DrawOrder(10_000),
-                rect: lens,
-                background: Paint::Solid(Color {
-                    r: 1.0,
-                    g: 1.0,
-                    b: 1.0,
-                    a: 0.06,
-                }),
-                border: Edges::all(Px(0.0)),
-                border_paint: Paint::Solid(Color::TRANSPARENT),
-                corner_radii: Corners::all(Px(24.0)),
-            });
-            scene.push(SceneOp::PopEffect);
+            for (i, lens) in [lens_a, lens_b].into_iter().enumerate() {
+                let base = 10_000 + i as u32 * 8;
+                scene.push(SceneOp::PushEffect {
+                    bounds: lens,
+                    mode: EffectMode::Backdrop,
+                    chain: chain.clone(),
+                    quality: EffectQuality::Auto,
+                });
+                scene.push(SceneOp::Quad {
+                    order: DrawOrder(base),
+                    rect: lens,
+                    background: Paint::Solid(Color {
+                        r: 1.0,
+                        g: 1.0,
+                        b: 1.0,
+                        a: 0.06,
+                    }),
+                    border: Edges::all(Px(0.0)),
+                    border_paint: Paint::Solid(Color::TRANSPARENT),
+                    corner_radii: Corners::all(Px(24.0)),
+                });
+                scene.push(SceneOp::PopEffect);
 
-            // Outline highlight.
-            scene.push(SceneOp::Quad {
-                order: DrawOrder(10_001),
-                rect: lens,
-                background: Paint::Solid(Color::TRANSPARENT),
-                border: Edges::all(Px(1.0)),
-                border_paint: Paint::Solid(Color {
-                    r: 1.0,
-                    g: 1.0,
-                    b: 1.0,
-                    a: 0.18,
-                }),
-                corner_radii: Corners::all(Px(24.0)),
-            });
+                // Outline highlight.
+                scene.push(SceneOp::Quad {
+                    order: DrawOrder(base + 1),
+                    rect: lens,
+                    background: Paint::Solid(Color::TRANSPARENT),
+                    border: Edges::all(Px(1.0)),
+                    border_paint: Paint::Solid(Color {
+                        r: 1.0,
+                        g: 1.0,
+                        b: 1.0,
+                        a: 0.18,
+                    }),
+                    corner_radii: Corners::all(Px(24.0)),
+                });
+            }
+
+            scene.push(SceneOp::PopBackdropSourceGroup);
         } else {
             // Fallback: show lens bounds even if CustomV3 registration failed.
+            let lens_w = w.min(980.0) * 0.48;
+            let lens_h = h.min(720.0) * 0.42;
+            let lens_x = (w - lens_w) * 0.5;
+            let lens_y = (h - lens_h) * 0.5;
+            let lens = Rect::new(
+                Point::new(Px(lens_x), Px(lens_y)),
+                Size::new(Px(lens_w), Px(lens_h)),
+            );
             scene.push(SceneOp::Quad {
                 order: DrawOrder(10_000),
                 rect: lens,
