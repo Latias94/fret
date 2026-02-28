@@ -16,6 +16,10 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
             demo_dnd_dragging: Option<Model<bool>>,
             demo_dnd_long_press_pointer: Option<Model<Option<fret_core::PointerId>>>,
             api_snapshot: Option<Model<shadcn::CarouselApiSnapshot>>,
+            api_effect_current: Option<Model<usize>>,
+            api_effect_count: Option<Model<usize>>,
+            api_effect_last_select_generation: Option<Model<u64>>,
+            api_effect_last_reinit_generation: Option<Model<u64>>,
             expandable_selected: Option<Model<Option<usize>>>,
         }
 
@@ -753,6 +757,89 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
         .copied()
         .unwrap_or_default();
 
+    // Shadcn uses `setApi` + `api.on("select"|"reInit", ...)` to update counters. In Rust we
+    // demonstrate the same outcome by treating the `*_generation` fields as effect triggers.
+    let api_effect_current =
+        cx.with_state(CarouselPageState::default, |st| st.api_effect_current.clone());
+    let api_effect_current = match api_effect_current {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(0usize);
+            cx.with_state(CarouselPageState::default, |st| {
+                st.api_effect_current = Some(model.clone());
+            });
+            model
+        }
+    };
+    let api_effect_count = cx.with_state(CarouselPageState::default, |st| st.api_effect_count.clone());
+    let api_effect_count = match api_effect_count {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(0usize);
+            cx.with_state(CarouselPageState::default, |st| {
+                st.api_effect_count = Some(model.clone());
+            });
+            model
+        }
+    };
+    let api_effect_last_select_generation = cx.with_state(CarouselPageState::default, |st| {
+        st.api_effect_last_select_generation.clone()
+    });
+    let api_effect_last_select_generation = match api_effect_last_select_generation {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(0u64);
+            cx.with_state(CarouselPageState::default, |st| {
+                st.api_effect_last_select_generation = Some(model.clone());
+            });
+            model
+        }
+    };
+    let api_effect_last_reinit_generation = cx.with_state(CarouselPageState::default, |st| {
+        st.api_effect_last_reinit_generation.clone()
+    });
+    let api_effect_last_reinit_generation = match api_effect_last_reinit_generation {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(0u64);
+            cx.with_state(CarouselPageState::default, |st| {
+                st.api_effect_last_reinit_generation = Some(model.clone());
+            });
+            model
+        }
+    };
+
+    let last_select = cx
+        .watch_model(&api_effect_last_select_generation)
+        .copied()
+        .unwrap_or(0);
+    let last_reinit = cx
+        .watch_model(&api_effect_last_reinit_generation)
+        .copied()
+        .unwrap_or(0);
+    if api_snapshot_now.select_generation != last_select
+        || api_snapshot_now.reinit_generation != last_reinit
+    {
+        let next_count = api_snapshot_now.snap_count;
+        let next_current = if next_count > 0 {
+            api_snapshot_now.selected_index.saturating_add(1)
+        } else {
+            0
+        };
+
+        let _ = cx.app.models_mut().update(&api_effect_last_select_generation, |v| {
+            *v = api_snapshot_now.select_generation;
+        });
+        let _ = cx.app.models_mut().update(&api_effect_last_reinit_generation, |v| {
+            *v = api_snapshot_now.reinit_generation;
+        });
+        let _ = cx.app.models_mut().update(&api_effect_count, |v| *v = next_count);
+        let _ = cx
+            .app
+            .models_mut()
+            .update(&api_effect_current, |v| *v = next_current);
+    }
+
     let api_visual = SlideVisual {
         text_px: Px(36.0),
         line_height_px: Px(40.0),
@@ -769,15 +856,9 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
         .test_id("ui-gallery-carousel-api")
         .into_element(cx);
 
-    let api_counter_text = if api_snapshot_now.snap_count > 0 {
-        format!(
-            "Slide {} of {}",
-            api_snapshot_now.selected_index.saturating_add(1),
-            api_snapshot_now.snap_count
-        )
-    } else {
-        "Slide 0 of 0".to_string()
-    };
+    let current = cx.watch_model(&api_effect_current).copied().unwrap_or(0);
+    let count = cx.watch_model(&api_effect_count).copied().unwrap_or(0);
+    let api_counter_text = format!("Slide {} of {}", current, count);
     let api_counter = {
         let theme = Theme::global(&*cx.app);
         let style = fret_ui_kit::typography::control_text_style(
@@ -1061,7 +1142,7 @@ shadcn::Carousel::new(items)
                 .code(
                     "rust",
                     r#"let api = cx.app.models_mut().insert(shadcn::CarouselApiSnapshot::default());
-let api_now = cx.watch_model(&api).copied().unwrap_or_default();
+let snap = cx.watch_model(&api).copied().unwrap_or_default();
 
 // Upstream `carousel-api` does not wrap each card in `p-1`.
 let carousel = shadcn::Carousel::new(items_without_p1)
@@ -1070,13 +1151,17 @@ let carousel = shadcn::Carousel::new(items_without_p1)
     .refine_layout(LayoutRefinement::default().w_full().max_w(Px(320.0)))
     .into_element(cx);
 
+// `select` / `reInit` are observable via generation counters.
+if snap.select_generation != last_select || snap.reinit_generation != last_reinit {
+    last_select = snap.select_generation;
+    last_reinit = snap.reinit_generation;
+    count = snap.snap_count;
+    current = if count > 0 { snap.selected_index + 1 } else { 0 };
+}
+
 let counter = ui::text(
     cx,
-    format!(
-        \"Slide {} of {}\",
-        api_now.selected_index + 1,
-        api_now.snap_count
-    ),
+    format!(\"Slide {} of {}\", current, count),
 )
  .text_sm()
  .into_element(cx);"#,
