@@ -261,8 +261,8 @@ pub struct TextStyle {
     pub features: Vec<TextFontFeatureSetting>,
     /// Optional variable font axis overrides applied to the whole text run.
     ///
-    /// Note: `wght` overlaps with `weight`. Shaping backends should prefer `weight` so synthesis
-    /// participates consistently; `wght` entries in `axes` may be ignored.
+    /// Note: `wght` overlaps with `weight`. Shaping backends should interpret `wght` as an
+    /// override (mapping it to `FontWeight`) and exclude it from variation lists.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub axes: Vec<TextFontAxisSetting>,
     /// Controls how the prepared text is vertically placed inside an allocated bounds height.

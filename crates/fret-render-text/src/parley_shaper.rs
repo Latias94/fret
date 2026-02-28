@@ -1430,11 +1430,20 @@ fn shaping_properties_for_base_style(
     let mut out: Vec<StyleProperty<'static, [u8; 4]>> = Vec::new();
 
     if !style.axes.is_empty() {
+        // `wght` overlaps with the `FontWeight` attribute path. Prefer expressing it as
+        // `FontWeight` so fontique synthesis participates consistently (and avoid duplicate
+        // tag resolution ambiguity in the underlying shaping stack).
+        let mut wght_axis_override: Option<f32> = None;
         let axes_for_variations = style
             .axes
             .iter()
-            .filter(|a| !a.tag.trim().eq_ignore_ascii_case("wght"))
-            .cloned()
+            .filter_map(|a| {
+                if a.tag.trim().eq_ignore_ascii_case("wght") && a.value.is_finite() {
+                    wght_axis_override = Some(a.value);
+                    return None;
+                }
+                Some(a.clone())
+            })
             .collect::<Vec<_>>();
         if !axes_for_variations.is_empty() {
             let variations = font_variations_for_axes(&axes_for_variations);
@@ -1443,6 +1452,11 @@ fn shaping_properties_for_base_style(
                     Cow::Owned(variations),
                 )));
             }
+        }
+
+        if let Some(wght) = wght_axis_override {
+            let wght = wght.clamp(1.0, 1000.0).round() as u16;
+            out.push(StyleProperty::FontWeight(ParleyFontWeight::new(wght as f32)));
         }
     }
 
@@ -1585,6 +1599,34 @@ mod tests {
                 .iter()
                 .any(|p| matches!(p, StyleProperty::FontVariations(_))),
             "expected `wght` axis to be removed from FontVariations"
+        );
+    }
+
+    #[test]
+    fn base_style_maps_wght_axis_to_font_weight() {
+        let base = TextStyle {
+            font: FontId::family("Roboto Flex"),
+            size: Px(16.0),
+            weight: FontWeight(400),
+            axes: vec![fret_core::TextFontAxisSetting {
+                tag: "wght".into(),
+                value: 900.0,
+            }],
+            ..Default::default()
+        };
+
+        let props =
+            shaping_properties_for_base_style(&base).expect("expected base shaping properties");
+
+        assert!(
+            props.iter().any(|p| matches!(p, StyleProperty::FontWeight(_))),
+            "expected base `wght` axis to map to FontWeight"
+        );
+        assert!(
+            !props
+                .iter()
+                .any(|p| matches!(p, StyleProperty::FontVariations(_))),
+            "expected base `wght` axis to be removed from FontVariations"
         );
     }
 
