@@ -89,7 +89,16 @@ Non-goals (v2):
 ### ReInit + resize + slide changes
 
 - [ ] CAR2-160 Implement `reInit` event emission when geometry/options change.
+  - Implemented (internal): headless `Engine::reinit` and shadcn recipe wiring on snap/viewport
+    changes.
+  - Missing: a public event surface / API hook to observe `reInit`.
+  - Evidence:
+    - `ecosystem/fret-ui-headless/src/embla/engine.rs` (`Engine::reinit`)
+    - `ecosystem/fret-ui-shadcn/src/carousel.rs` (calls `engine.reinit(...)` when snaps/viewport change)
 - [ ] CAR2-170 Implement `resize` handling semantics (throttling + stable “reInit once” contract).
+  - Partial: re-init is triggered when `viewSize`/snaps/max offset change; no explicit throttling
+    contract yet.
+  - Gate (MVP): `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-reinit-resize-gate.json`
 - [ ] CAR2-180 Implement `slideChanges` semantics (detect add/remove/reorder in retained tree).
 
 ---

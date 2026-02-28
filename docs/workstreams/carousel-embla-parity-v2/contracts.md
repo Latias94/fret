@@ -144,6 +144,28 @@ Contract:
 - The engine exposes “slides currently in view” and “changed” signals.
 - Threshold/margin influence inclusion in the in-view set.
 
+## ReInit + resize contract
+
+Embla emits a `reInit` event when it re-initializes due to geometry or option changes (e.g. resize,
+breakpoints, slide list changes).
+
+### Contract: geometry-driven re-init is safe and preserves motion
+
+When the measured geometry changes in a way that affects snaps/limits (`scrollSnaps`, `contentSize`,
+`viewSize`):
+
+- The engine rebuilds its derived state (`limit`, targeting helpers, bounds config).
+- The engine preserves the scroll integrator state (velocity) but must ensure `location` and
+  `target` remain valid under the updated limits.
+- The selected index becomes the snap closest to the current scroll target vector after re-init.
+- The operation is idempotent and safe to call multiple times during continuous resize.
+
+### Event contract (still missing in-tree)
+
+- A `reInit` event must be observable by recipe-level code.
+- If re-init changes the selected index, `select` must also fire (order: `reInit` then `select` is
+  acceptable as long as it is stable and documented).
+
 ## Events + API surface
 
 Embla API expectations used by shadcn docs:
