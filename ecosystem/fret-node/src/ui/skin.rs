@@ -10,7 +10,7 @@ use fret_core::scene::DashPatternV1;
 
 use crate::core::{EdgeId, Graph, NodeId, PortId};
 
-use super::presenter::EdgeRenderHint;
+use super::presenter::{EdgeMarker, EdgeRenderHint};
 use super::style::NodeGraphStyle;
 
 /// Canvas-level chrome overrides (UI-only).
@@ -121,6 +121,8 @@ pub struct EdgeChromeHint {
     pub color: Option<Color>,
     pub width_mul: Option<f32>,
     pub dash: Option<DashPatternV1>,
+    pub start_marker: Option<EdgeMarker>,
+    pub end_marker: Option<EdgeMarker>,
 }
 
 /// Port shape hint.
@@ -217,8 +219,19 @@ pub trait NodeGraphSkin: Send + Sync {
 
     /// Refines an edge render hint after presenter + `edgeTypes` resolution.
     ///
-    /// v1 contract: refinements must be paint-only (color/width/dash) and must not affect hit
-    /// testing beyond interaction widths.
+    /// v1 contract: refinements must be paint-only (color/width/dash/markers) and must not affect
+    /// hit testing beyond interaction widths.
+    fn edge_chrome_hint(
+        &self,
+        _graph: &Graph,
+        _edge: EdgeId,
+        _style: &NodeGraphStyle,
+        _selected: bool,
+        _hovered: bool,
+    ) -> EdgeChromeHint {
+        EdgeChromeHint::default()
+    }
+
     fn edge_render_hint(
         &self,
         graph: &Graph,
@@ -228,8 +241,29 @@ pub trait NodeGraphSkin: Send + Sync {
         selected: bool,
         hovered: bool,
     ) -> EdgeRenderHint {
-        let _ = (graph, edge, style, selected, hovered);
-        base.clone()
+        let _ = (graph, edge, style);
+        let chrome = self.edge_chrome_hint(graph, edge, style, selected, hovered);
+
+        let mut out = base.clone();
+        if let Some(color) = chrome.color {
+            out.color = Some(color);
+        }
+        if let Some(width_mul) = chrome.width_mul
+            && width_mul.is_finite()
+            && width_mul > 1.0e-6
+        {
+            out.width_mul = width_mul;
+        }
+        if let Some(dash) = chrome.dash {
+            out.dash = Some(dash);
+        }
+        if let Some(marker) = chrome.start_marker {
+            out.start_marker = Some(marker);
+        }
+        if let Some(marker) = chrome.end_marker {
+            out.end_marker = Some(marker);
+        }
+        out
     }
 }
 

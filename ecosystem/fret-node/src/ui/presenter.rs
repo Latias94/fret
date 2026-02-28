@@ -184,7 +184,7 @@ pub enum EdgeMarkerKind {
 }
 
 /// Optional marker rendered at an edge endpoint.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct EdgeMarker {
     pub kind: EdgeMarkerKind,
     /// Marker size in screen-space pixels (logical px).
