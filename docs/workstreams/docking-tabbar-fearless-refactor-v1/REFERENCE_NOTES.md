@@ -44,6 +44,6 @@ Patterns worth copying:
 ## What Fret is currently missing (most load-bearing gaps)
 
 - Stable canonical index mapping for drop resolution under overflow (visible subset vs full list).
-- Scripted (diag) gates for auto-scroll while dragging (docking currently has unit coverage; workspace does not).
+- Scripted (diag) gates for auto-scroll while dragging (both docking and workspace currently have unit coverage).
 - Pinned/preview semantics (must live in workspace/editor policy layer).
 - Keyboard navigation + focus restore gates (should be scripted/gated, not hand-waved).
