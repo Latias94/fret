@@ -50,6 +50,7 @@ layering (mechanism in `crates/*`, policy in `ecosystem/*`).
 **Evidence anchors**
 
 - Zed pinned rows + drop targets: `repo-ref/zed/crates/workspace/src/pane.rs`
+- Fret pinned model + commands: `ecosystem/fret-workspace/src/tabs.rs` and `ecosystem/fret-workspace/src/commands.rs`
 
 **Gates**
 
