@@ -30,7 +30,7 @@
 
 ### Overflow
 
-- Implement overflow as a pipeline:
+- Refactor the existing overflow button/menu into a pipeline:
   - compute visible tabs
   - compute overflow tabs
   - ensure drop resolution works across both
@@ -58,4 +58,3 @@
 
 - How much of the overflow/drop resolution should be shared with workspace tab strip?
 - Should docking use explicit geometry surfaces everywhere, or rely on diagnostics for self-drawn cases?
-

@@ -12,7 +12,7 @@ Status legend:
 | Drop at end (insert_index == tab_count) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Cross-pane tab move | 🟡 | ✅ | ✅ | 🟡 | ✅ | ✅ |
 | Drag-to-split from tab/content | 🟡 | ✅ | ✅ | 🟡 | ✅ | ✅ |
-| Overflow dropdown | ❌ | ❌ | ✅ | 🟡 | ✅ | ✅ |
+| Overflow dropdown / menu | 🟡 | ❌ | ✅ | 🟡 | ✅ | ✅ |
 | Auto-scroll while dragging | ❌ | ❌ | ✅ | 🟡 | ✅ | ✅ |
 | Pinned tabs | ❌ | ❌ | ✅ | ❌ | ❌ | ✅ |
 | Preview tabs | ❌ | ❌ | ✅ | ❌ | ❌ | ✅ |
@@ -24,4 +24,3 @@ Notes:
 
 - “Fret docking TabBar” gates currently focus on drop resolution predicates.
 - “Fret workspace tab strip” already has explicit end-drop surfaces + split preview anchors.
-
