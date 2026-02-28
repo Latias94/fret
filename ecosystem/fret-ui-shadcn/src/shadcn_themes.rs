@@ -453,6 +453,21 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
         }
     }
 
+    // `fret-plot` historically reads `plot.palette.<n>` / `fret.plot.palette.<n>`.
+    // Seed a small alias set from shadcn's chart tokens so plot demos match the same palette
+    // baseline as `fret-chart` when a shadcn theme preset is installed.
+    for (idx, shadcn_key) in ["chart-1", "chart-2", "chart-3", "chart-4", "chart-5"]
+        .into_iter()
+        .enumerate()
+    {
+        if let Some(v) = colors.get(shadcn_key).cloned() {
+            let key = format!("plot.palette.{idx}");
+            colors.entry(key).or_insert_with(|| v.clone());
+            let key = format!("fret.plot.palette.{idx}");
+            colors.entry(key).or_insert_with(|| v.clone());
+        }
+    }
+
     // AI Elements + some shadcn recipes use `dark:hover:bg-accent/50` to soften hover in dark
     // schemes (e.g. attachment chips/rows). Our baseline theme defaults `color.menu.item.hover` to
     // `accent` when not explicitly configured, so we seed an explicit dark alpha here to keep
@@ -1165,6 +1180,18 @@ mod tests {
                     cfg_light.colors.get(shadcn_key).cloned(),
                     "expected {palette_key} to match {shadcn_key} in light scheme"
                 );
+                let palette_key = format!("plot.palette.{idx}");
+                assert_eq!(
+                    cfg_light.colors.get(&palette_key).cloned(),
+                    cfg_light.colors.get(shadcn_key).cloned(),
+                    "expected {palette_key} to match {shadcn_key} in light scheme"
+                );
+                let palette_key = format!("fret.plot.palette.{idx}");
+                assert_eq!(
+                    cfg_light.colors.get(&palette_key).cloned(),
+                    cfg_light.colors.get(shadcn_key).cloned(),
+                    "expected {palette_key} to match {shadcn_key} in light scheme"
+                );
             }
             assert_eq!(
                 cfg_light.colors.get("component.button.outline.bg").cloned(),
@@ -1243,6 +1270,18 @@ mod tests {
                 .enumerate()
             {
                 let palette_key = format!("chart.palette.{idx}");
+                assert_eq!(
+                    cfg_dark.colors.get(&palette_key).cloned(),
+                    cfg_dark.colors.get(shadcn_key).cloned(),
+                    "expected {palette_key} to match {shadcn_key} in dark scheme"
+                );
+                let palette_key = format!("plot.palette.{idx}");
+                assert_eq!(
+                    cfg_dark.colors.get(&palette_key).cloned(),
+                    cfg_dark.colors.get(shadcn_key).cloned(),
+                    "expected {palette_key} to match {shadcn_key} in dark scheme"
+                );
+                let palette_key = format!("fret.plot.palette.{idx}");
                 assert_eq!(
                     cfg_dark.colors.get(&palette_key).cloned(),
                     cfg_dark.colors.get(shadcn_key).cloned(),
