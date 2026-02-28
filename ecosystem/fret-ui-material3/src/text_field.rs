@@ -24,17 +24,17 @@ use fret_ui::elements::ElementContext;
 use fret_ui::{GlobalElementId, Invalidation, TextAreaStyle, Theme, UiHost};
 use fret_ui_kit::typography::{self, TextIntent};
 use fret_ui_kit::{
-    resolve_override_slot_with, ColorRef, OverrideSlot, WidgetState, WidgetStateProperty,
-    WidgetStates,
+    ColorRef, OverrideSlot, WidgetState, WidgetStateProperty, WidgetStates,
+    resolve_override_slot_with,
 };
 
 use crate::foundation::floating_label;
 use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
-    material_ink_layer_for_pressable, material_pressable_indication_config, RippleClip,
+    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
 };
 use crate::foundation::interactive_size::minimum_interactive_size;
-use crate::foundation::motion_scheme::{sys_spring_in_scope, MotionSchemeKey};
+use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
 use crate::motion::SpringAnimator;
 use crate::tokens::autocomplete as autocomplete_tokens;
 use crate::tokens::text_field as text_field_tokens;
@@ -659,11 +659,7 @@ impl TextField {
                                     float_progress = if should_float { 1.0 } else { 0.0 };
 
                                     let placeholder_opacity: f32 = if label.is_some() {
-                                        if focused && !populated {
-                                            1.0
-                                        } else {
-                                            0.0
-                                        }
+                                        if focused && !populated { 1.0 } else { 0.0 }
                                     } else {
                                         1.0
                                     };
@@ -808,11 +804,7 @@ impl TextField {
                                     };
 
                                     let placeholder_target_opacity = if label.is_some() {
-                                        if focused && !populated {
-                                            1.0
-                                        } else {
-                                            0.0
-                                        }
+                                        if focused && !populated { 1.0 } else { 0.0 }
                                     } else {
                                         1.0
                                     };

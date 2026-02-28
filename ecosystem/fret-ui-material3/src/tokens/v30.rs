@@ -3878,8 +3878,8 @@ fn inject_comp_outlined_card_colors_from_sys(cfg: &mut ThemeConfig) {
 #[cfg(test)]
 mod tests {
     use super::{
-        inject_sys_colors, inject_tokens, theme_config, theme_config_with_colors,
-        ColorSchemeOptions, DynamicVariant, SchemeMode, TypographyOptions,
+        ColorSchemeOptions, DynamicVariant, SchemeMode, TypographyOptions, inject_sys_colors,
+        inject_tokens, theme_config, theme_config_with_colors,
     };
 
     #[test]
@@ -4096,9 +4096,10 @@ mod tests {
         // Inject into an existing config should merge/overwrite.
         let mut cfg2 = fret_ui::theme::ThemeConfig::default();
         inject_tokens(&mut cfg2, &TypographyOptions::default());
-        assert!(cfg2
-            .text_styles
-            .contains_key("md.sys.typescale.title-medium"));
+        assert!(
+            cfg2.text_styles
+                .contains_key("md.sys.typescale.title-medium")
+        );
     }
 
     #[test]

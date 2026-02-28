@@ -838,9 +838,9 @@ fn outlined_supporting_text_color(
 #[cfg(test)]
 mod tests {
     use super::{outlined_label_color, outlined_supporting_text_color};
-    use crate::tokens::v30::{theme_config, TypographyOptions};
+    use crate::tokens::v30::{TypographyOptions, theme_config};
     use fret_app::App;
-    use fret_ui::{theme::ThemeConfig, Theme};
+    use fret_ui::{Theme, theme::ThemeConfig};
 
     fn apply_patch_color(cfg: &mut ThemeConfig, key: &str, hex: &str) {
         cfg.colors.insert(key.to_string(), hex.to_string());
