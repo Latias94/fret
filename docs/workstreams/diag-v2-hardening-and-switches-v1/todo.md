@@ -173,7 +173,9 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
 ## P3: Deprecations + debt removal
 
 - [ ] Turn off legacy writers by default:
-  - [ ] avoid writing `bundle.json` unless requested; prefer schema2/manifest.
+  - [x] Add config switches (`write_bundle_json`, `write_bundle_schema2`) and wire them into the runtime dump writer.
+  - [x] Tool-launched runs default to `write_bundle_json=false` and `write_bundle_schema2=true` (small-by-default artifacts).
+  - [ ] Decide whether manual defaults should also flip (and document the migration plan for downstream consumers).
 - [ ] Deprecate/remove flags that are now represented as config fields or capabilities.
 - [ ] Delete unused env var parsing paths once CI/scripts migrate (tracked by a migration checklist).
 

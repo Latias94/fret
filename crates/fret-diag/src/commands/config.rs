@@ -82,6 +82,9 @@ struct EffectiveConfig {
     inspect_path: SourcedPath,
     inspect_trigger_path: SourcedPath,
     screenshots_enabled: SourcedBool,
+    screenshot_on_dump: SourcedBool,
+    write_bundle_json: SourcedBool,
+    write_bundle_schema2: SourcedBool,
     redact_text: SourcedBool,
     max_events: SourcedUsize,
     max_snapshots: SourcedUsize,
@@ -206,6 +209,8 @@ fn runtime_known_config_keys() -> BTreeSet<&'static str> {
         "semantics_test_ids_only",
         "screenshots_enabled",
         "screenshot_on_dump",
+        "write_bundle_json",
+        "write_bundle_schema2",
         "redact_text",
         "max_debug_string_bytes",
         "max_gating_trace_entries",
@@ -464,6 +469,54 @@ fn compute_effective_runtime_config(
         }
     };
 
+    let screenshot_on_dump = if let Some(v) = env_flag_override(env, "FRET_DIAG_BUNDLE_SCREENSHOT")
+    {
+        SourcedBool {
+            value: v,
+            source: ValueSource::Env("env:FRET_DIAG_BUNDLE_SCREENSHOT"),
+        }
+    } else if let Some(v) = config_file.and_then(|c| c.screenshot_on_dump) {
+        SourcedBool {
+            value: v,
+            source: ValueSource::ConfigFile("config:screenshot_on_dump"),
+        }
+    } else {
+        SourcedBool {
+            value: false,
+            source: ValueSource::Default,
+        }
+    };
+
+    let write_bundle_json = if let Some(v) = config_file.and_then(|c| c.write_bundle_json) {
+        SourcedBool {
+            value: v,
+            source: ValueSource::ConfigFile("config:write_bundle_json"),
+        }
+    } else {
+        SourcedBool {
+            value: true,
+            source: ValueSource::Default,
+        }
+    };
+
+    let write_bundle_schema2 =
+        if let Some(v) = env_flag_override(env, "FRET_DIAG_BUNDLE_WRITE_SCHEMA2") {
+            SourcedBool {
+                value: v,
+                source: ValueSource::Env("env:FRET_DIAG_BUNDLE_WRITE_SCHEMA2"),
+            }
+        } else if let Some(v) = config_file.and_then(|c| c.write_bundle_schema2) {
+            SourcedBool {
+                value: v,
+                source: ValueSource::ConfigFile("config:write_bundle_schema2"),
+            }
+        } else {
+            SourcedBool {
+                value: false,
+                source: ValueSource::Default,
+            }
+        };
+
     let redact_text = if let Some(v) = env_flag_override(env, "FRET_DIAG_REDACT_TEXT") {
         SourcedBool {
             value: v,
@@ -627,6 +680,9 @@ fn compute_effective_runtime_config(
         inspect_path,
         inspect_trigger_path,
         screenshots_enabled,
+        screenshot_on_dump,
+        write_bundle_json,
+        write_bundle_schema2,
         redact_text,
         max_events,
         max_snapshots,
@@ -1155,6 +1211,9 @@ Use `--mode manual` to report what the runtime would see from the current proces
     print_sourced_path("inspect_path", &effective.inspect_path);
     print_sourced_path("inspect_trigger_path", &effective.inspect_trigger_path);
     print_sourced_bool("screenshots_enabled", &effective.screenshots_enabled);
+    print_sourced_bool("screenshot_on_dump", &effective.screenshot_on_dump);
+    print_sourced_bool("write_bundle_json", &effective.write_bundle_json);
+    print_sourced_bool("write_bundle_schema2", &effective.write_bundle_schema2);
     print_sourced_bool("redact_text", &effective.redact_text);
     print_sourced_usize("max_events", &effective.max_events);
     print_sourced_usize("max_snapshots", &effective.max_snapshots);

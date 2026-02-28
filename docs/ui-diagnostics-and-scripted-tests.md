@@ -52,16 +52,18 @@ Implementation pointers (where the code lives today):
 4. Locate the most recent bundle directory:
 
    - `cargo run -p fretboard -- diag latest`
-   - The full bundle file is `bundle.json` under that directory.
-   - Tooling may also write a compact schema2 view: `bundle.schema2.json` (preferred by tooling when present).
+   - The primary bundle artifact is `bundle.schema2.json` (preferred) or `bundle.json` under that directory.
 
 By default bundles go under `target/fret-diag/<timestamp>/` and `target/fret-diag/latest.txt` is updated.
 
 ## Bundle schema (v2) and semantics mode
 
-The runtime now always exports `bundle.json` schema v2:
+The runtime exports **schema v2** bundles (semantics tables + per-snapshot fingerprints).
 
-- `bundle.json` schema v2: semantics tables (`tables.semantics`) + per-snapshot fingerprints.
+Artifact note:
+
+- `bundle.json` is the large “raw” view (optional; can be disabled by tooling via config).
+- `bundle.schema2.json` is the compact schema2 view (recommended; preferred by tooling when present).
 
 Legacy note:
 
@@ -83,7 +85,7 @@ Overrides (both manual and script dumps):
 
 ## Sidecars (index/meta/test-id index)
 
-On native filesystem dumps, the runtime also writes bounded sidecars next to `bundle.json`:
+On native filesystem dumps, the runtime also writes bounded sidecars next to the bundle artifact:
 
 - `bundle.meta.json`: compact per-window counts (snapshots, semantics inline vs table, test-id totals for a considered snapshot).
 - `bundle.index.json`: per-window/per-snapshot index (frame ids, timestamps, semantics presence/source, and a bounded `test_id` bloom).
@@ -167,12 +169,12 @@ enable bundle screenshots:
 - `FRET_DIAG_BUNDLE_SCREENSHOT=1`
 
 When a bundle is dumped, the runner writes `frame.bmp` into the bundle directory (same folder as
-`bundle.json`).
+the bundle artifact).
 
 Notes:
 
 - This is **bundle-scoped** and **dump-triggered**:
-  - The runtime writes a `screenshot.request` file into the bundle directory when dumping `bundle.json`.
+  - The runtime writes a `screenshot.request` file into the bundle directory when dumping a bundle export.
   - The desktop runner detects that request and writes `frame.bmp` (and `screenshot.done`) as best-effort.
 - This is intentionally separate from the on-demand PNG screenshot protocol used by scripted steps
   like `capture_screenshot` (see below).
@@ -261,7 +263,8 @@ Notes:
 
 - The GUI prints a ready-to-copy `ws://.../?fret_devtools_token=...` URL on startup.
 - `FRET_DEVTOOLS_WS_PORT` overrides the default port (`7331`).
-- This is workspace-internal and versioned but not yet stabilized; the portable “source of truth” remains `bundle.json`.
+- This is workspace-internal and versioned but not yet stabilized; the portable “source of truth” remains the schema v2 bundle artifact
+  (`bundle.schema2.json` preferred, with `bundle.json` as an optional large raw view).
 ## Quick Start (scripted repro)
 
 1. Run the app with diagnostics enabled:
@@ -483,7 +486,7 @@ This is the fastest way to author stable selectors (GPUI/Zed-style inspect):
 
 3. Click the UI element you want to target.
 
-4. The app writes `pick.result.json` (and, by default, also dumps a `bundle.json` labelled `pick`).
+4. The app writes `pick.result.json` (and, by default, also dumps a bundle export labelled `pick`).
 
 Notes:
 
@@ -544,7 +547,7 @@ When UI structure or labels change, use pick to update a script step's selector 
 
 By default this overwrites the script file; use `--out <path>` to write to a new file.
 
-## What's inside `bundle.json`
+## What's inside bundle artifacts (`bundle.schema2.json` / `bundle.json`)
 
 Bundles are a per-window ring history plus snapshots (schema is versioned and intended to evolve).
 
@@ -583,7 +586,7 @@ Core:
 
 - `FRET_DIAG=1`: enable diagnostics collection.
 - `FRET_DIAG_DIR=...`: output directory (default `target/fret-diag`).
-- `FRET_DIAG_BUNDLE_JSON_FORMAT=pretty`: write pretty-printed `bundle.json` (default: compact/minified).
+- `FRET_DIAG_BUNDLE_JSON_FORMAT=pretty`: write pretty-printed raw `bundle.json` (when enabled; default: compact/minified).
 - `FRET_DIAG_CONFIG_PATH=...`: optional JSON config file (schema v1) for diagnostics runtime settings and paths.
   - Tooling writes `<dir>/diag.config.json` by default when launching via `fretboard diag run/suite/repro --launch`.
   - When an env var is set, it overrides the config file (compat-first manual escape hatch).
@@ -593,6 +596,9 @@ Core:
   - Schema v1 script compatibility:
     - Config file key: `allow_script_schema_v1` (default: `true`).
     - Tool-launched runs write `allow_script_schema_v1=false` so the runtime stays v2-only.
+  - Bundle artifact writing (size control):
+    - Config file key: `write_bundle_json` (default: `true`; tooling typically writes `false` for launched runs).
+    - Config file key: `write_bundle_schema2` (default: `false`; tooling typically writes `true` for launched runs).
   - Tip: print the effective merged config (and highlight unknown keys/envs):
     - `cargo run -p fretboard -- diag config doctor --mode launch --dir .fret/diag`
     - `cargo run -p fretboard -- diag config doctor --mode manual --report-json` (manual apps)
@@ -640,9 +646,9 @@ Semantics export:
   - `changed`: include semantics only when `semantics_fingerprint` changes (always keeps the last snapshot's semantics).
   - `last`: include semantics only on the last snapshot (default for script-driven dumps; useful for AI triage and very large UIs).
   - `off`: never include semantics in bundles (perf captures where semantics isn't needed).
-- `FRET_DIAG_BUNDLE_WRITE_SCHEMA2=1`: also write a compact `bundle.schema2.json` alongside `bundle.json` during dumps (default disabled).
-  - When launching via `fretboard diag ... --launch`, schema2/AI-focused flows may auto-enable this (e.g. `--ai-packet`, `--ai-only`,
-    `--pack-schema2-only`), unless you already set an explicit value.
+- `FRET_DIAG_BUNDLE_WRITE_SCHEMA2=1`: write a compact `bundle.schema2.json` during dumps (default disabled).
+  - Prefer setting `write_bundle_schema2=true` in the diagnostics config file (`FRET_DIAG_CONFIG_PATH`) for tooling-launched runs.
+  - Env vars override the config file (manual escape hatch).
 - `FRET_UI_GALLERY_INSPECTOR_KEEP_ALIVE=...`: keep-alive budget for the UI Gallery Inspector torture (retained host; ADR 0177).
 
 Privacy / size:
@@ -680,7 +686,7 @@ The screenshot completion log is append-only (bounded) and includes a `request_i
 
 Bundle screenshots (frame dump):
 
-- `FRET_DIAG_BUNDLE_SCREENSHOT=1`: write `frame.bmp` into each bundle directory when dumping `bundle.json`.
+- `FRET_DIAG_BUNDLE_SCREENSHOT=1`: write `frame.bmp` into each bundle directory when dumping a bundle export.
 
 Picking:
 
@@ -782,7 +788,7 @@ Recent additions:
 
 Notes:
 
-- `capture_bundle` always writes a new `bundle.json` directory.
+- `capture_bundle` always writes a new bundle export directory (primary artifact: `bundle.schema2.json` preferred, with `bundle.json` as an optional large raw view depending on config).
   - When `FRET_DIAG_GPU_SCREENSHOTS=1`, the dump includes a screenshot and the step waits until it is written (so downstream automation can rely on it deterministically).
   - If you want an explicit screenshot step, follow with `capture_screenshot`.
   - Optional `max_snapshots` caps how many snapshots are included in this export (clamped to `FRET_DIAG_MAX_SNAPSHOTS`).

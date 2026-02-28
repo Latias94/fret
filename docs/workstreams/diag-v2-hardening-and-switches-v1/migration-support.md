@@ -81,3 +81,11 @@ Discoverability:
 
 If a script includes `capture_screenshot`, tooling infers the capability and fails fast when it is missing.
 
+## Bundle artifacts (raw vs compact)
+
+For small-by-default artifacts (recommended for automation / AI loops), prefer:
+
+- `write_bundle_json=false` (omit the large raw `bundle.json`)
+- `write_bundle_schema2=true` (write `bundle.schema2.json` + sidecars)
+
+Tool-launched runs (`fretboard diag ... --launch`) typically write these defaults via `diag.config.json`.
