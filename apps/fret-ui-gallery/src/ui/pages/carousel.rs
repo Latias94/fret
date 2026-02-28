@@ -1003,6 +1003,26 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
         .test_id("ui-gallery-carousel-expandable")
         .into_element(cx);
 
+    // Loop (seamless, engine-backed): used by diag gates and parity evidence.
+    let loop_items = (1..=5)
+        .map(|idx| slide(cx, idx, basic_visual))
+        .collect::<Vec<_>>();
+    let loop_carousel = shadcn::Carousel::new(loop_items)
+        .opts(
+            shadcn::CarouselOptions::new()
+                .loop_enabled(true)
+                .embla_engine(true),
+        )
+        .refine_track_layout(LayoutRefinement::default().w_px(Px(336.0)))
+        .refine_layout(
+            LayoutRefinement::default()
+                .w_full()
+                .max_w(max_w_xs)
+                .mx_auto(),
+        )
+        .test_id("ui-gallery-carousel-loop")
+        .into_element(cx);
+
     // Orientation (vertical): aligns with upstream docs, and is used by the existing screenshot
     // diag script.
     let vertical_items = (1..=5)
@@ -1061,6 +1081,10 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
                 .description("A carousel with 5 items and previous/next buttons.")
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-carousel-demo"),
+            DocSection::new("Loop", loop_carousel)
+                .description("Seamless looping (`loop=true`) using the Embla-style headless engine.")
+                .max_w(Px(760.0))
+                .test_id_prefix("ui-gallery-carousel-loop"),
             DocSection::new("Basic", basic)
                 .description("Default slide width (basis-full).")
                 .max_w(Px(760.0))
