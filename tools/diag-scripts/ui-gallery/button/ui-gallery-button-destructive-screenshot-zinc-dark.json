@@ -25,7 +25,7 @@
       "type": "click_stable",
       "target": { "kind": "test_id", "id": "ui-gallery-theme-preset-item-zinc-dark" }
     },
-    { "type": "wait_frames", "n": 2 },
+    { "type": "wait_frames", "n": 10 },
     { "type": "press_key", "key": "escape" },
     { "type": "wait_frames", "n": 2 },
 
@@ -50,6 +50,7 @@
       "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-page-button" } },
       "timeout_frames": 600
     },
+    { "type": "wait_frames", "n": 20 },
 
     {
       "type": "scroll_into_view",
@@ -66,4 +67,3 @@
     { "type": "capture_bundle", "label": "ui-gallery-button-destructive-zinc-dark" }
   ]
 }
-

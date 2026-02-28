@@ -13,7 +13,7 @@ use fret_ui::element::{
     AnyElement, ColumnProps, ContainerProps, CrossAlign, GridProps, LayoutStyle, Length, MainAlign,
     MarginEdge, RowProps, TextProps,
 };
-use fret_ui::elements::{bounds_for_element, GlobalElementId};
+use fret_ui::elements::{GlobalElementId, bounds_for_element};
 use fret_ui::scroll::ScrollHandle;
 use fret_ui::tree::UiTree;
 use fret_ui::{ElementContext, UiHost};
@@ -3343,15 +3343,19 @@ fn build_item_dropdown_open_snapshot(
             .into_iter()
             .map(|(username, email)| {
                 let content = Item::new(vec![
-                    ItemMedia::new(vec![Avatar::new(vec![AvatarFallback::new(
-                        username
-                            .chars()
-                            .next()
-                            .map(|ch| ch.to_string())
-                            .unwrap_or_else(|| "?".to_owned()),
-                    )
-                    .into_element(cx)])
-                    .into_element(cx)])
+                    ItemMedia::new(vec![
+                        Avatar::new(vec![
+                            AvatarFallback::new(
+                                username
+                                    .chars()
+                                    .next()
+                                    .map(|ch| ch.to_string())
+                                    .unwrap_or_else(|| "?".to_owned()),
+                            )
+                            .into_element(cx),
+                        ])
+                        .into_element(cx),
+                    ])
                     .into_element(cx),
                     ItemContent::new(vec![
                         ItemTitle::new(username).into_element(cx),
@@ -3642,11 +3646,13 @@ fn render_button_group_demo_dropdown_menu<H: UiHost>(
     );
 
     ButtonGroup::new(vec![
-        ButtonGroup::new(vec![Button::new("Go Back")
-            .variant(ButtonVariant::Outline)
-            .size(ButtonSize::Icon)
-            .children([icon_stub(cx)])
-            .into()])
+        ButtonGroup::new(vec![
+            Button::new("Go Back")
+                .variant(ButtonVariant::Outline)
+                .size(ButtonSize::Icon)
+                .children([icon_stub(cx)])
+                .into(),
+        ])
         .into(),
         ButtonGroup::new(vec![
             Button::new("Archive")
@@ -7012,15 +7018,17 @@ fn assert_select_demo_open_option_metrics_match(web_name: &str) {
             let value: Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
             use fret_ui_shadcn::{SelectEntry, SelectGroup, SelectItem, SelectLabel};
 
-            let entries: Vec<SelectEntry> = vec![SelectGroup::new(vec![
-                SelectLabel::new("Fruits").into(),
-                SelectItem::new("apple", "Apple").into(),
-                SelectItem::new("banana", "Banana").into(),
-                SelectItem::new("blueberry", "Blueberry").into(),
-                SelectItem::new("grapes", "Grapes").into(),
-                SelectItem::new("pineapple", "Pineapple").into(),
-            ])
-            .into()];
+            let entries: Vec<SelectEntry> = vec![
+                SelectGroup::new(vec![
+                    SelectLabel::new("Fruits").into(),
+                    SelectItem::new("apple", "Apple").into(),
+                    SelectItem::new("banana", "Banana").into(),
+                    SelectItem::new("blueberry", "Blueberry").into(),
+                    SelectItem::new("grapes", "Grapes").into(),
+                    SelectItem::new("pineapple", "Pineapple").into(),
+                ])
+                .into(),
+            ];
 
             let content = fret_ui_shadcn::Select::new(value, open.clone())
                 .a11y_label("Select")
@@ -7049,15 +7057,17 @@ fn assert_select_demo_open_option_metrics_match(web_name: &str) {
                 let value: Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
                 use fret_ui_shadcn::{SelectEntry, SelectGroup, SelectItem, SelectLabel};
 
-                let entries: Vec<SelectEntry> = vec![SelectGroup::new(vec![
-                    SelectLabel::new("Fruits").into(),
-                    SelectItem::new("apple", "Apple").into(),
-                    SelectItem::new("banana", "Banana").into(),
-                    SelectItem::new("blueberry", "Blueberry").into(),
-                    SelectItem::new("grapes", "Grapes").into(),
-                    SelectItem::new("pineapple", "Pineapple").into(),
-                ])
-                .into()];
+                let entries: Vec<SelectEntry> = vec![
+                    SelectGroup::new(vec![
+                        SelectLabel::new("Fruits").into(),
+                        SelectItem::new("apple", "Apple").into(),
+                        SelectItem::new("banana", "Banana").into(),
+                        SelectItem::new("blueberry", "Blueberry").into(),
+                        SelectItem::new("grapes", "Grapes").into(),
+                        SelectItem::new("pineapple", "Pineapple").into(),
+                    ])
+                    .into(),
+                ];
 
                 let content = fret_ui_shadcn::Select::new(value, open.clone())
                     .a11y_label("Select")

@@ -925,6 +925,8 @@ pub struct TextBox {
     pub(crate) preset: TextPreset,
     pub(crate) selectable: bool,
     pub(crate) font_override: Option<FontId>,
+    pub(crate) features_override: Vec<fret_core::TextFontFeatureSetting>,
+    pub(crate) axes_override: Vec<fret_core::TextFontAxisSetting>,
     pub(crate) size_override: Option<Px>,
     pub(crate) line_height_override: Option<Px>,
     pub(crate) line_height_em_override: Option<f32>,
@@ -954,6 +956,8 @@ impl TextBox {
             preset,
             selectable: false,
             font_override: None,
+            features_override: Vec::new(),
+            axes_override: Vec::new(),
             size_override: None,
             line_height_override: None,
             line_height_em_override: None,
@@ -986,6 +990,8 @@ impl UiIntoElement for TextBox {
             text,
             preset,
             font_override,
+            features_override,
+            axes_override,
             size_override,
             line_height_override,
             line_height_em_override,
@@ -1024,6 +1030,12 @@ impl UiIntoElement for TextBox {
 
         if let Some(font) = font_override {
             style.font = font;
+        }
+        if !features_override.is_empty() {
+            style.features.extend(features_override);
+        }
+        if !axes_override.is_empty() {
+            style.axes.extend(axes_override);
         }
         if let Some(size) = size_override {
             style.size = size;

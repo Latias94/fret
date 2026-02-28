@@ -81,15 +81,19 @@ fn build_item_dropdown_overlay(
         .into_iter()
         .map(|(username, email)| {
             let content = Item::new(vec![
-                ItemMedia::new(vec![Avatar::new(vec![AvatarFallback::new(
-                    username
-                        .chars()
-                        .next()
-                        .map(|ch| ch.to_string())
-                        .unwrap_or_else(|| "?".to_owned()),
-                )
-                .into_element(cx)])
-                .into_element(cx)])
+                ItemMedia::new(vec![
+                    Avatar::new(vec![
+                        AvatarFallback::new(
+                            username
+                                .chars()
+                                .next()
+                                .map(|ch| ch.to_string())
+                                .unwrap_or_else(|| "?".to_owned()),
+                        )
+                        .into_element(cx),
+                    ])
+                    .into_element(cx),
+                ])
                 .into_element(cx),
                 ItemContent::new(vec![
                     ItemTitle::new(username).into_element(cx),

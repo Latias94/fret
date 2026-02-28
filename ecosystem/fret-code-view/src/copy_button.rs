@@ -115,20 +115,18 @@ pub(crate) fn render_copy_button<H: UiHost>(
             })
         });
 
-        let bg_pressed = theme.color_token("accent");
-        let bg_hover = theme.color_token("color.menu.item.hover");
-        let bg_idle = theme.color_token("secondary");
+        // Align to shadcn/ui ghost button semantics:
+        // - idle: transparent + muted-foreground
+        // - hover/pressed: bg-accent + text-accent-foreground
+        let bg_active = theme.color_token("accent");
         let radius_sm = theme.metric_token("metric.radius.sm");
         let font_size = theme.metric_token("metric.font.size");
         let line_height = theme.metric_token("metric.font.line_height");
-        let fg = theme.color_token("foreground");
 
-        let bg = if st.pressed {
-            bg_pressed
-        } else if st.hovered {
-            bg_hover
+        let (bg, fg) = if st.pressed || st.hovered {
+            (Some(bg_active), theme.color_token("accent-foreground"))
         } else {
-            bg_idle
+            (None, theme.color_token("muted-foreground"))
         };
 
         let pad_y = MetricRef::space(Space::N0p5).resolve(theme);
@@ -143,7 +141,7 @@ pub(crate) fn render_copy_button<H: UiHost>(
             }
             .into(),
             corner_radii: fret_core::Corners::all(radius_sm),
-            background: Some(bg),
+            background: bg,
             border: Edges::all(Px(0.0)),
             ..Default::default()
         };

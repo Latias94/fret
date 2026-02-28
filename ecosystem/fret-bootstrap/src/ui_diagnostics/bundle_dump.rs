@@ -229,9 +229,8 @@ fn dump_schema_v2(
         //
         // We intentionally keep this file name stable (`bundle.schema2.json`) so tooling can
         // consume it directly without reparsing the larger raw `bundle.json`.
-        let mut compact = bundle.clone();
-        compact.apply_semantics_mode_v1(bundle::BundleSemanticsModeV1::Last);
-        let _ = write_json_compact(dir.join("bundle.schema2.json"), &compact);
+        bundle.apply_semantics_mode_v1(bundle::BundleSemanticsModeV1::Last);
+        let _ = write_json_compact(dir.join("bundle.schema2.json"), &bundle);
     }
 
     Some(stats)

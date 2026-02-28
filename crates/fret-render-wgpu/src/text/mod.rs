@@ -2053,8 +2053,8 @@ impl TextSystem {
                             Px((line_top_px / scale).max(0.0)),
                             Px((baseline_pos_px / scale).max(0.0)),
                             Px(((line_height_px / scale).max(0.0)).max(1.0)),
-                            Px((line.ascent.max(0.0) / scale).max(0.0)),
-                            Px((line.descent.max(0.0) / scale).max(0.0)),
+                            Px((line.ascent.abs().max(0.0) / scale).max(0.0)),
+                            Px((line.descent.abs().max(0.0) / scale).max(0.0)),
                             caret_stops,
                             clusters,
                         ));
@@ -2364,8 +2364,8 @@ impl TextSystem {
                                 y_top: Px((line_top_px / scale).max(0.0)),
                                 y_baseline: Px((baseline_pos_px / scale).max(0.0)),
                                 height: Px(((line_height_px / scale).max(0.0)).max(1.0)),
-                                ascent: Px((unwrapped.ascent.max(0.0) / scale).max(0.0)),
-                                descent: Px((unwrapped.descent.max(0.0) / scale).max(0.0)),
+                                ascent: Px((unwrapped.ascent.abs().max(0.0) / scale).max(0.0)),
+                                descent: Px((unwrapped.descent.abs().max(0.0) / scale).max(0.0)),
                                 caret_stops,
                             });
 

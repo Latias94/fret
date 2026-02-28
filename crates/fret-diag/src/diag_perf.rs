@@ -164,7 +164,10 @@ hint: list perf suites via `fretboard diag list suites --contains perf-`\n\
 hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
                     ));
                 }
-                return Err(format!("script path does not exist: {}", resolved.display()));
+                return Err(format!(
+                    "script path does not exist: {}",
+                    resolved.display()
+                ));
             }
             vec![resolved]
         }

@@ -73,11 +73,13 @@ fn fret_combobox_popover_tracks_trigger_when_underlay_scrolls() {
                                 ..Default::default()
                             },
                             move |cx| {
-                                vec![Combobox::new(value, open)
-                                    .a11y_label("Combobox")
-                                    .placeholder("Select an option")
-                                    .items(items)
-                                    .into_element(cx)]
+                                vec![
+                                    Combobox::new(value, open)
+                                        .a11y_label("Combobox")
+                                        .placeholder("Select an option")
+                                        .items(items)
+                                        .into_element(cx),
+                                ]
                             },
                         )]
                     },
@@ -320,12 +322,14 @@ fn fret_combobox_responsive_drawer_blocks_underlay_scroll_on_mobile() {
                                 ..Default::default()
                             },
                             move |cx| {
-                                vec![Combobox::new(value, open)
-                                    .responsive(true)
-                                    .a11y_label("Combobox")
-                                    .placeholder("Select an option")
-                                    .items(items)
-                                    .into_element(cx)]
+                                vec![
+                                    Combobox::new(value, open)
+                                        .responsive(true)
+                                        .a11y_label("Combobox")
+                                        .placeholder("Select an option")
+                                        .items(items)
+                                        .into_element(cx),
+                                ]
                             },
                         )]
                     },
