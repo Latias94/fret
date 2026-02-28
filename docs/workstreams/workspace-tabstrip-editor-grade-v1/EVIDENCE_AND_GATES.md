@@ -42,11 +42,16 @@ Add promoted scripts under `tools/diag-scripts/workspace/**`:
    - open overflow menu, activate a hidden tab, assert it becomes active and scrolls into view
 
 4) Drag-to-split preview (bridge)
-   - start with screenshot-only gate for preview rendering
-   - replace with invariants-based gate once preview snapshot surface is stable
+   - promoted scripts:
+     - `workspace-shell-demo-tab-drag-to-split-right`
+     - `workspace-shell-demo-tab-drag-to-split-right-drop-preview-screenshot`
+   - notes:
+     - prefer `drag_pointer_until` over large raw pixel deltas to avoid runner/window-size drift
+     - the screenshot script may use `release_on_success: false` to keep the preview visible for
+       `capture_screenshot` before releasing
+   - replace screenshot-only gating with an invariants-based gate once the preview snapshot surface is stable
 
 ## Tooling checklist
 
 - `python3 tools/check_diag_scripts_registry.py` passes after script registration/promotions.
 - Avoid raw `bundle.json` by default; prefer schema2 + sidecars and `diag query/slice`.
-

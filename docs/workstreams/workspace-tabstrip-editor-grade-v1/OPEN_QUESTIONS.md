@@ -1,59 +1,41 @@
-# Workspace TabStrip (editor-grade) — Open Questions
+# Workspace TabStrip (editor-grade) v1 — Open questions
 
-## 1) What is the “source of truth” for UX parity?
+This file captures decisions that affect long-term behavior and scriptability. Prefer answering
+these with contracts + gates rather than ad-hoc implementation tweaks.
 
-Options:
-- Zed: editor-grade pane/tab bar interactions (pinned tabs, drag, split-on-drop, context menus).
-- Dockview: docking/tab drag invariants (drop targets, header space semantics, test coverage style).
+## Q1: Should “drag to split” be allowed while the pointer is still in the tab strip row?
 
-Recommendation:
-- Use Zed as the primary UX reference for *workspace/editor* tabs.
-- Use Dockview as the reference for *docking-style* drop target semantics and test strategy.
-
-Note:
-- Prefer invariants-based gates (diagnostics snapshots) over screenshot baselines. Use screenshots as
-  a temporary bridge when the invariant surface is not yet stable or expressible.
-
-## 2) Where should reusable pieces live (without making tiny crates)?
-
-Candidates:
-- `ecosystem/fret-workspace`: editor/workspace policy (default home for tab strip).
-- `ecosystem/fret-ui-kit`: reusable policy primitives (focus/roving/menus/dnd helpers).
-- `ecosystem/fret-ui-headless`: pure logic that should be UI-framework-agnostic.
+Why it matters:
+- Users expect “tab strip row” drags to mean reorder / move-to-pane.
+- Allowing split zones in the same row tends to cause accidental splits near the pane edges.
 
 Recommendation:
-- Keep `WorkspaceTabs` + `WorkspaceTabStrip` in `ecosystem/fret-workspace`.
-- Extract only clearly reusable helpers (e.g. “tab strip geometry kernel”, “edge autoscroll policy”)
-  into modules under `ecosystem/fret-ui-kit` or `ecosystem/fret-ui-headless` (module-level reuse,
-  not a new crate).
+- **No**. Treat the tab strip row as a “center-only” zone for split preview purposes.
+- Require the pointer to leave the tab strip row (into the pane content bounds) before split zones
+  can activate.
 
-## 3) Should Workspace tabs support OS-window tear-off?
+Gate:
+- Keep `workspace-shell-demo-tab-drag-to-split-right-drop-preview-screenshot` (screenshot) and add
+  an invariants-based split gate once preview routing is stable.
 
-Considerations:
-- Docking already owns cross-window/tear-off arbitration.
-- Workspace tabs are “documents”; tear-off may become a docking concern (panel-level).
+## Q2: Should diagnostics scripts rely on pixel deltas for editor-grade drag interactions?
 
-Recommendation:
-- Do not add OS-window tear-off to workspace tabs in M1/M2.
-- If needed later, integrate by hosting workspace panes inside the docking system rather than
-  duplicating cross-window drag semantics.
-
-## 4) What is the contract for drag/drop ownership?
-
-Open questions:
-- Should the tab strip output “intents” (headless) and let the shell decide commands?
-- Or should the strip dispatch commands directly (current approach)?
+Why it matters:
+- `set_window_inner_size` is best-effort; actual window bounds can differ across runners/OS.
+- Large deltas can overshoot window bounds, preventing edge-margin logic from triggering.
 
 Recommendation:
-- Move toward an intent surface (activate/close/reorder/pin/unpin/start-drag).
-- Keep `CommandId` dispatch as a thin adapter for demos and early apps.
+- Prefer `drag_to` when a stable target exists.
+- Prefer `drag_pointer_until` for “find the edge preview” style gates.
+- Only use raw `pointer_move` deltas for short, local motions.
 
-## 5) Pinned tabs: boundary vs separate row
+## Q3: Where should “keep drag session position fresh” live long-term?
 
-Open questions:
-- Do we want both modes?
-- If both: is it a setting or a compile-time choice?
+Today:
+- The tab strip interaction layer updates `DragSession::position` defensively during drag moves.
 
 Recommendation:
-- Support both modes, keep default as “single row + pinned boundary” (simpler).
-- Add a “separate pinned row” mode once geometry/overflow is stable.
+- Treat this as a **mechanism** concern. Long-term, move “drag session position tracking” into the
+  DnD/runtime layer (so non-tab surfaces don’t depend on tab-strip-local pointer capture).
+- Until then, keep the current workaround and gate it via scripts.
+

@@ -1,61 +1,31 @@
-# Workspace TabStrip (editor-grade) — TODO
+# Workspace TabStrip (editor-grade) v1 — TODO
 
-Scope: `ecosystem/fret-workspace` tab strip + pane/workspace shell integration.
+This TODO list is scoped to this workstream folder and is intended to keep the refactor landable.
 
-Non-goals:
-- Do **not** move editor policy into `crates/fret-ui` (mechanism/contract layer).
-- Do **not** build a general-purpose component library here; keep this workspace/editor oriented.
+## Diagnostics + gates
 
-## Audit + gap list
+- [x] Stabilize cross-pane move gate (`workspace-shell-demo-tab-cross-pane-move-to-end`).
+- [x] Stabilize reorder smoke gate (`workspace-shell-demo-tab-reorder-first-to-end-smoke`).
+- [x] Stabilize drag-to-split gates:
+  - [x] `workspace-shell-demo-tab-drag-to-split-right`
+  - [x] `workspace-shell-demo-tab-drag-to-split-right-drop-preview-screenshot`
+- [ ] Promote a minimal suite that runs in < 30s locally (e.g. `diag-hardening-smoke-workspace`) and keep it green.
+- [ ] Add a non-screenshot invariants-based split gate (post-split layout assertions + tab ownership), once split preview routing is stable.
 
-- [ ] Inventory current implementation and seams:
-  - `ecosystem/fret-workspace/src/tab_strip/mod.rs`
-  - `ecosystem/fret-workspace/src/tab_drag.rs`
-  - `ecosystem/fret-workspace/src/tabs.rs`
-- [ ] Identify missing editor-grade behaviors vs reference implementations:
-  - Zed pane tab bar (editor-grade UX): `repo-ref/zed/crates/workspace/src/pane.rs`
-  - Dockview tab DnD invariants/tests: `repo-ref/dockview/packages/dockview-core/src/__tests__/dockview/components/*`
+## Modularization (M1)
 
-## Refactor (fearless but modular)
+- [ ] Split `ecosystem/fret-workspace/src/tab_strip/mod.rs` into:
+  - `view.rs` (render-only; test_id anchors, tokens)
+  - `interaction.rs` (pointer handlers, focus, intent dispatch)
+  - `geometry.rs` (rect collection, hit testing)
+  - `kernel.rs` (pure-ish drop/insert computation; unit tests)
+- [ ] Keep public surface stable (no upstream callers rewritten unnecessarily).
+- [ ] Ensure `cargo nextest run -p fret-workspace` stays green throughout.
 
-- [ ] Split `ecosystem/fret-workspace/src/tab_strip/mod.rs` into cohesive modules:
-  - `view` (rendering + tokens)
-  - `interaction` (pointer/keyboard -> intents)
-  - `geometry` (rect caching, scroll viewport, overflow)
-  - keep `kernel` as the headless “compute” layer
-- [ ] Define an explicit intent surface for the tab strip:
-  - activate / close / reorder / pin-unpin / open context menu / start drag
-  - keep command dispatch as an adapter, not the core interaction output
-- [ ] Make drag+drop state ownership explicit:
-  - local reorder vs cross-pane drop vs “external drag” (should be ignored / delegated)
-- [ ] Add a small “UI contract” checklist for tab strip selectors:
-  - stable `test_id` for root, tab chrome, close button, overflow button, pinned boundary
+## Behavior parity (editor-grade)
 
-## Behavior work (editor-grade)
+- [ ] Drag-to-split: define when split zones are allowed while dragging a tab (tab strip row vs content area).
+- [ ] Overflow menu: deterministic activation + scroll-into-view behaviors.
+- [ ] Close policies: close button vs middle click vs keyboard (policy-layer ownership documented).
+- [ ] Keyboard nav: decide roving focus + MRU vs in-order cycling contract surface.
 
-- [ ] Pinned tabs:
-  - [ ] Support “separate row” and “single row + pinned boundary” modes (configurable)
-  - [ ] Ensure reorder cannot cross pinned boundary unless explicitly pin/unpin
-- [ ] Overflow and discoverability:
-  - [ ] Overflow button lists hidden tabs (stable `test_id` per entry)
-  - [ ] Scroll-to-active on activation, with hysteresis to avoid jitter
-- [ ] Keyboard:
-  - [ ] Roving focus + semantics role mapping consistent with APG expectations
-  - [ ] Tab cycle policy integrates with `WorkspaceTabs::TabCycleMode` (InOrder vs MRU)
-- [ ] Pointer:
-  - [ ] Middle-click close (optional policy)
-  - [ ] Close button hit target does not start a drag
-  - [ ] Double-click policy (new tab / maximize / no-op) lives in the shell layer
-
-## Diagnostics + regression gates
-
-- [ ] Add/extend promoted diag scripts under `tools/diag-scripts/workspace/**`:
-  - drag reorder within strip (invariants-first)
-  - drag tab to split-zone (drop preview) in workspace shell demo (start with screenshot, then invariants)
-  - pinned boundary behavior (pin/unpin + reorder)
-- [ ] Promote at least one workspace shell script into a smoke suite:
-  - suite: `diag-hardening-smoke-workspace`
-  - initial script: `workspace-shell-demo-tab-drag-to-split-right-drop-preview-screenshot`
-- [ ] For each new behavior, add at least one gate:
-  - invariants (preferred) via diagnostics snapshots
-  - screenshots only when invariants are insufficient
