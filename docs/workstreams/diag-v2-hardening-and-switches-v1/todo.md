@@ -172,6 +172,8 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
 - [x] Close multi-window gaps in schema v2 steps:
   - [x] add optional `window` targeting to selector-driven steps that currently lacked it (e.g. `click_stable`, `wheel`, pointer moves),
   - [x] update capability inference (keep using `diag.multi_window`) and ensure fail-fast gating.
+  - [x] Capability-gate runner cursor overrides (`set_cursor_*`) via `diag.cursor_screen_pos_override` so cross-window
+    docking scripts fail fast when runner support is missing.
   - [ ] (optional) consider adding `window` to `capture_screenshot` for “no-opinion” per-window evidence collection.
 - [x] Input determinism: optionally isolate external (non-script) keyboard input during scripted runs (parallel to pointer isolation),
   with an explicit escape hatch for interactive debugging.
