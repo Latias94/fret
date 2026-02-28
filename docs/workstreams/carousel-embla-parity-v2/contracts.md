@@ -10,6 +10,8 @@ Upstream references (local snapshots):
 - Drag semantics + preventClick: `repo-ref/embla-carousel/packages/embla-carousel/src/components/DragHandler.ts`
 - ScrollBody integrator: `repo-ref/embla-carousel/packages/embla-carousel/src/components/ScrollBody.ts`
 - Engine composition: `repo-ref/embla-carousel/packages/embla-carousel/src/components/Engine.ts`
+- Scroll containment (trim/keep): `repo-ref/embla-carousel/packages/embla-carousel/src/components/ScrollContain.ts`
+- Snap list grouping under containment: `repo-ref/embla-carousel/packages/embla-carousel/src/components/ScrollSnapList.ts`
 
 ## Layering (non-negotiable)
 
@@ -88,6 +90,32 @@ Embla release computes:
 The v2 engine will reproduce this shaping (best-effort) so that “fast swipe” and “slow drag”
 produce observably different settle behavior.
 
+## Contain scroll semantics
+
+Embla option `containScroll` influences the **scroll snap list** and the effective **scroll limit**
+when `loop=false`:
+
+- `containScroll=false`: do not contain snaps (use aligned snaps).
+- `containScroll='keepSnaps'`: clamp aligned snaps to scroll bounds but keep the full list.
+- `containScroll='trimSnaps'` (default): clamp aligned snaps and trim the list using Embla’s
+  `scrollContainLimit` rules (first/last snap groups expand to the edges via `ScrollSnapList`).
+
+Edge constraints during interaction:
+
+- The engine uses `ScrollBounds` to apply edge friction when the target and location are past the
+  scroll limit.
+- On pointer release, `ScrollBounds` may pull the target back to the limit when the displacement is
+  small (Embla uses a 10% of view threshold).
+
+Fret mapping (current baseline):
+
+- `ecosystem/fret-ui-headless::carousel::snap_model_1d` already matches Embla’s `containScroll`
+  outcomes for the shadcn Carousel recipe (v1 parity work).
+- `ecosystem/fret-ui-headless::embla::scroll_contain` is a direct port of Embla `ScrollContain` and
+  serves as a reference for v2 parity claims.
+- `ecosystem/fret-ui-headless::embla::scroll_bounds` is used by the v2 engine ticks (and is applied
+  while dragging in the shadcn recipe) to match Embla-style edge friction.
+
 ## Loop semantics
 
 ### Contract: loop=true means seamless loop
@@ -139,4 +167,3 @@ Fret v2 contract:
 
 We should avoid requiring callers to store arbitrary closures inside models; an event queue + model
 versioning is acceptable if it is easy to use in typical UI code.
-
