@@ -4,7 +4,10 @@ use fret_core::{Color, DrawOrder, Point, Px, Rect, Scene, SceneOp, Size, Transfo
 use fret_ui::retained_bridge::Widget as _;
 use fret_ui::{Invalidation, UiTree};
 
-use crate::ui::{NodeGraphCanvas, NodeGraphSkin, NodeGraphStyle, PortChromeHint, PortShapeHint};
+use crate::ui::{
+    NodeGraphCanvas, NodeGraphPresetFamily, NodeGraphPresetSkinV1, NodeGraphSkin, NodeGraphStyle,
+    PortChromeHint, PortShapeHint,
+};
 
 use super::{NullServices, TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports};
 
@@ -339,5 +342,55 @@ fn skin_port_shape_hint_renders_path_ops_for_non_circle_shapes() {
     assert!(
         stroke_path_hits >= 1,
         "expected at least one stroke Path op for the shaped pin"
+    );
+}
+
+#[test]
+fn preset_exec_ports_use_triangle_shape_and_emit_path_ops() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(800.0), Px(600.0)),
+    );
+
+    let mut host = TestUiHostImpl::default();
+    let (mut graph_value, _a, _a_in, a_out, _b, _b_in) = make_test_graph_two_nodes_with_ports();
+    graph_value
+        .ports
+        .entry(a_out)
+        .and_modify(|p| p.kind = crate::core::PortKind::Exec);
+    let graph = host.models.insert(graph_value);
+    let view = insert_view(&mut host);
+    let _ = view.update(&mut host, |s, _cx| {
+        s.zoom = 1.0;
+        s.interaction.only_render_visible_elements = false;
+        s.interaction.frame_view_duration_ms = 0;
+    });
+
+    let skin = NodeGraphPresetSkinV1::new_builtin(NodeGraphPresetFamily::WorkflowClean);
+    let style = NodeGraphStyle::default();
+    let mut canvas = NodeGraphCanvas::new(graph, view)
+        .with_style(style)
+        .with_skin(skin);
+
+    let mut tree = UiTree::<TestUiHostImpl>::default();
+    let mut services = NullServices::default();
+    let scene = paint_once(&mut canvas, &mut host, &mut tree, &mut services, bounds);
+
+    let mut path_ops = 0usize;
+    for op in scene.ops() {
+        if matches!(
+            op,
+            SceneOp::Path {
+                order: DrawOrder(4),
+                ..
+            }
+        ) {
+            path_ops += 1;
+        }
+    }
+
+    assert!(
+        path_ops > 0,
+        "expected at least one Path op for a non-circle preset port (exec should be Triangle)"
     );
 }
