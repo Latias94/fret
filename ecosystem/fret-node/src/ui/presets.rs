@@ -488,7 +488,7 @@ impl NodeGraphSkin for NodeGraphPresetSkinV1 {
             EdgeKind::Data => tokens.data_color.into(),
             EdgeKind::Exec => tokens.exec_color.into(),
         });
-        if self.edge_markers_enabled.load(Ordering::Relaxed) && kind == EdgeKind::Exec {
+        if self.edge_markers_enabled.load(Ordering::Relaxed) {
             let selected_mul = tokens
                 .marker_size_mul_selected
                 .unwrap_or(1.0)
@@ -505,19 +505,39 @@ impl NodeGraphSkin for NodeGraphPresetSkinV1 {
                 1.0
             };
 
-            if out.start_marker.is_none()
-                && let Some(marker) = tokens.marker_exec_start
-            {
-                let mut marker = marker.into_marker();
-                marker.size *= state_mul;
-                out.start_marker = Some(marker);
-            }
-            if out.end_marker.is_none()
-                && let Some(marker) = tokens.marker_exec_end
-            {
-                let mut marker = marker.into_marker();
-                marker.size *= state_mul;
-                out.end_marker = Some(marker);
+            match kind {
+                EdgeKind::Exec => {
+                    if out.start_marker.is_none()
+                        && let Some(marker) = tokens.marker_exec_start
+                    {
+                        let mut marker = marker.into_marker();
+                        marker.size *= state_mul;
+                        out.start_marker = Some(marker);
+                    }
+                    if out.end_marker.is_none()
+                        && let Some(marker) = tokens.marker_exec_end
+                    {
+                        let mut marker = marker.into_marker();
+                        marker.size *= state_mul;
+                        out.end_marker = Some(marker);
+                    }
+                }
+                EdgeKind::Data => {
+                    if out.start_marker.is_none()
+                        && let Some(marker) = tokens.marker_data_start
+                    {
+                        let mut marker = marker.into_marker();
+                        marker.size *= state_mul;
+                        out.start_marker = Some(marker);
+                    }
+                    if out.end_marker.is_none()
+                        && let Some(marker) = tokens.marker_data_end
+                    {
+                        let mut marker = marker.into_marker();
+                        marker.size *= state_mul;
+                        out.end_marker = Some(marker);
+                    }
+                }
             }
         }
         out
@@ -977,6 +997,8 @@ fn theme_derived_preset(
                     kind: EdgeMarkerKindTokensV1::Arrow,
                     size_px: 8.0,
                 }),
+                marker_data_end: None,
+                marker_data_start: None,
                 marker_size_mul_selected: Some(1.15),
                 marker_size_mul_hovered: Some(1.25),
             },
@@ -1190,6 +1212,10 @@ struct WireTokensV1 {
     marker_exec_end: Option<EdgeMarkerTokensV1>,
     #[serde(default)]
     marker_exec_start: Option<EdgeMarkerTokensV1>,
+    #[serde(default)]
+    marker_data_end: Option<EdgeMarkerTokensV1>,
+    #[serde(default)]
+    marker_data_start: Option<EdgeMarkerTokensV1>,
     #[serde(default)]
     marker_size_mul_selected: Option<f32>,
     #[serde(default)]
