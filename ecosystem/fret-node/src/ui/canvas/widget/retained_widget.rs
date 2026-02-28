@@ -15,6 +15,7 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
     fn command(&mut self, cx: &mut CommandCx<'_, H>, command: &CommandId) -> bool {
         let theme = cx.theme().snapshot();
         self.sync_style_from_color_mode(theme, Some(cx.services));
+        self.sync_skin(Some(cx.services));
         let snapshot = self.sync_view_state(cx.app);
         if cx.input_ctx.focus_is_text_input
             && (command.as_str().starts_with("node_graph.")
@@ -127,12 +128,14 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
     fn semantics(&mut self, cx: &mut SemanticsCx<'_, H>) {
         let theme = Theme::global(&*cx.app).snapshot();
         self.sync_style_from_color_mode(theme, None);
+        self.sync_skin(None);
         self.interaction.last_bounds = Some(cx.bounds);
         let snapshot = self.sync_view_state(cx.app);
 
         cx.set_role(fret_core::SemanticsRole::Viewport);
         cx.set_focusable(true);
         cx.set_label(self.presenter.a11y_canvas_label().as_ref());
+        cx.set_test_id("node_graph.canvas");
 
         let active_descendant = match (
             self.interaction.focused_port.is_some(),
@@ -212,6 +215,7 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
         let theme = cx.theme().snapshot();
         self.sync_style_from_color_mode(theme, Some(cx.services));
+        self.sync_skin(Some(cx.services));
         cx.observe_model(&self.graph, Invalidation::Layout);
         cx.observe_model(&self.view_state, Invalidation::Layout);
         if let Some(queue) = self.edit_queue.as_ref() {
@@ -220,13 +224,42 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
         if let Some(queue) = self.view_queue.as_ref() {
             cx.observe_model(queue, Invalidation::Layout);
         }
-        for &child in cx.children {
-            cx.layout_in(child, cx.bounds);
-        }
         self.interaction.last_bounds = Some(cx.bounds);
-        self.sync_view_state(cx.app);
-        self.drain_edit_queue(cx.app, cx.window);
+        let snapshot = self.sync_view_state(cx.app);
+
+        // Auto-measure node sizes before publishing diagnostics anchors so `ports_window` aligns
+        // with the geometry that will be used for hit-testing during the same frame.
         self.update_auto_measured_node_sizes(cx);
+
+        if self.diagnostics_anchor_ports.is_some() {
+            let (geom, _index) = self.canvas_derived(&*cx.app, &snapshot);
+            self.publish_derived_outputs(&*cx.app, &snapshot, cx.bounds, &geom);
+        }
+
+        let internals_snapshot = self
+            .internals
+            .as_ref()
+            .map(|store| store.snapshot())
+            .unwrap_or_default();
+        let anchors = self.diagnostics_anchor_ports.as_ref();
+        let zero = Rect::new(cx.bounds.origin, Size::new(Px(0.0), Px(0.0)));
+        for (index, &child) in cx.children.iter().enumerate() {
+            if let Some(anchors) = anchors
+                && index >= anchors.child_offset
+                && index < anchors.child_offset.saturating_add(anchors.ports.len())
+            {
+                let port_index = index.saturating_sub(anchors.child_offset);
+                let port = anchors.ports.get(port_index).copied();
+                let rect = port
+                    .as_ref()
+                    .and_then(|port| internals_snapshot.ports_window.get(port).copied())
+                    .unwrap_or(zero);
+                cx.layout_in(child, rect);
+            } else {
+                cx.layout_in(child, cx.bounds);
+            }
+        }
+        self.drain_edit_queue(cx.app, cx.window);
         let did_view_queue = self.drain_view_queue(cx.app, cx.window);
         let did_fit_on_mount =
             self.maybe_fit_view_on_mount(cx.app, cx.window, cx.bounds, did_view_queue);
@@ -308,6 +341,7 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
         let theme = cx.theme().snapshot();
         self.sync_style_from_color_mode(theme, Some(cx.services));
+        self.sync_skin(Some(cx.services));
         let snapshot = self.sync_view_state(cx.app);
         self.interaction.last_bounds = Some(cx.bounds);
 
@@ -335,6 +369,7 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
     fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
         let theme = cx.theme().snapshot();
         self.sync_style_from_color_mode(theme, Some(cx.services));
+        self.sync_skin(Some(cx.services));
         self.paint_root(cx);
     }
 }

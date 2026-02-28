@@ -1,4 +1,6 @@
 use super::*;
+use crate::ui::NodeChromeHint;
+use crate::ui::PortChromeHint;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(in super::super) fn collect_selected_nodes_render_data<H: UiHost>(
@@ -35,6 +37,11 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         continue;
                     }
 
+                    let hint = if let Some(skin) = this.skin.as_ref() {
+                        skin.node_chrome_hint(graph, node, &this.style, true)
+                    } else {
+                        NodeChromeHint::default()
+                    };
                     let title = presenter.node_title(graph, node);
                     let (inputs, outputs) = node_ports(graph, node);
                     let pin_rows = inputs.len().max(outputs.len());
@@ -48,6 +55,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         body,
                         pin_rows,
                         resize_handles,
+                        hint,
                     ));
 
                     let screen_w = node_geom.rect.size.width.0 * zoom;
@@ -68,7 +76,13 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                             },
                         );
                         let color = presenter.port_color(graph, port_id, &this.style);
-                        out.pins.push((port_id, handle.bounds, color));
+                        let hint = if let Some(skin) = this.skin.as_ref() {
+                            skin.port_chrome_hint(graph, port_id, &this.style, color)
+                        } else {
+                            PortChromeHint::default()
+                        };
+                        let fill = hint.fill.unwrap_or(color);
+                        out.pins.push((port_id, handle.bounds, fill, hint));
                     }
                 }
 

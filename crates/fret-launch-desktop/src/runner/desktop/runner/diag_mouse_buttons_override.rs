@@ -1,5 +1,4 @@
 use std::path::PathBuf;
-use std::time::SystemTime;
 
 use fret_core::AppWindowId;
 use slotmap::KeyData;
@@ -8,7 +7,7 @@ use slotmap::KeyData;
 pub(super) struct DiagMouseButtonsOverride {
     request_path: PathBuf,
     trigger_path: PathBuf,
-    last_trigger_mtime: Option<SystemTime>,
+    last_trigger_stamp: Option<u64>,
 }
 
 #[derive(Debug, Default)]
@@ -35,20 +34,25 @@ impl DiagMouseButtonsOverride {
         Some(Self {
             request_path: out_dir.join("mouse_buttons.override.txt"),
             trigger_path: out_dir.join("mouse_buttons.touch"),
-            last_trigger_mtime: None,
+            last_trigger_stamp: None,
         })
     }
 
     fn poll<D: super::WinitAppDriver>(&mut self, runner: &mut super::WinitRunner<D>) -> bool {
-        let modified = match std::fs::metadata(&self.trigger_path).and_then(|m| m.modified()) {
-            Ok(m) => m,
-            Err(_) => return false,
+        let stamp = match std::fs::read_to_string(&self.trigger_path) {
+            Ok(text) => text
+                .lines()
+                .rev()
+                .find_map(|line| line.trim().parse::<u64>().ok()),
+            Err(_) => None,
         };
-
-        if self.last_trigger_mtime.is_some_and(|prev| prev >= modified) {
+        let Some(stamp) = stamp else {
+            return false;
+        };
+        if self.last_trigger_stamp.is_some_and(|prev| prev >= stamp) {
             return false;
         }
-        self.last_trigger_mtime = Some(modified);
+        self.last_trigger_stamp = Some(stamp);
 
         let text = match std::fs::read_to_string(&self.request_path) {
             Ok(t) => t,

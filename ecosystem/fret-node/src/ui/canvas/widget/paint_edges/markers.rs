@@ -1,4 +1,11 @@
 use crate::ui::canvas::widget::*;
+use fret_core::scene::DashPatternV1;
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(super) struct WireHighlightPaint {
+    pub width: f32,
+    pub color: Color,
+}
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(super) fn push_edge_wire_and_markers_budgeted(
@@ -12,6 +19,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         to: Point,
         color: Color,
         width: f32,
+        dash: Option<DashPatternV1>,
+        highlight: Option<WireHighlightPaint>,
         start_marker: Option<&crate::ui::presenter::EdgeMarker>,
         end_marker: Option<&crate::ui::presenter::EdgeMarker>,
         wire_budget: &mut WorkBudget,
@@ -74,13 +83,36 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 
         if let Some(path) =
             self.paint_cache
-                .wire_path(services, route, from, to, zoom, scale_factor, width)
+                .wire_path(services, route, from, to, zoom, scale_factor, width, dash)
         {
             scene.push(SceneOp::Path {
                 order: DrawOrder(2),
                 origin: Point::new(Px(0.0), Px(0.0)),
                 path,
                 paint: color.into(),
+            });
+        }
+
+        if let Some(highlight) = highlight
+            && highlight.width.is_finite()
+            && highlight.width > 1.0e-3
+            && highlight.color.a > 0.0
+            && let Some(path) = self.paint_cache.wire_path(
+                services,
+                route,
+                from,
+                to,
+                zoom,
+                scale_factor,
+                highlight.width,
+                dash,
+            )
+        {
+            scene.push(SceneOp::Path {
+                order: DrawOrder(2),
+                origin: Point::new(Px(0.0), Px(0.0)),
+                path,
+                paint: highlight.color.into(),
             });
         }
 
@@ -170,6 +202,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         to: Point,
         color: Color,
         width: f32,
+        dash: Option<DashPatternV1>,
+        highlight: Option<WireHighlightPaint>,
         start_marker: Option<&crate::ui::presenter::EdgeMarker>,
         end_marker: Option<&crate::ui::presenter::EdgeMarker>,
         wire_budget: &mut WorkBudget,
@@ -238,12 +272,35 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             zoom,
             scale_factor,
             width,
+            dash,
         ) {
             scene.push(SceneOp::Path {
                 order: DrawOrder(2),
                 origin: Point::new(Px(0.0), Px(0.0)),
                 path,
                 paint: color.into(),
+            });
+        }
+
+        if let Some(highlight) = highlight
+            && highlight.width.is_finite()
+            && highlight.width > 1.0e-3
+            && highlight.color.a > 0.0
+            && let Some(path) = self.paint_cache.wire_path_from_commands(
+                services,
+                cache_key,
+                commands,
+                zoom,
+                scale_factor,
+                highlight.width,
+                dash,
+            )
+        {
+            scene.push(SceneOp::Path {
+                order: DrawOrder(2),
+                origin: Point::new(Px(0.0), Px(0.0)),
+                path,
+                paint: highlight.color.into(),
             });
         }
 

@@ -5,6 +5,7 @@
 pub mod a11y;
 pub mod canvas;
 pub mod commands;
+pub mod diag_anchors;
 pub mod edge_types;
 pub mod edit_queue;
 pub mod editor;
@@ -15,7 +16,9 @@ pub mod overlays;
 pub mod panel;
 pub mod portal;
 pub mod presenter;
+pub mod presets;
 pub mod registry;
+pub mod skin;
 pub mod style;
 pub mod view_queue;
 pub mod viewport_helper;
@@ -31,6 +34,7 @@ pub use canvas::{
     NoopNodeGraphCanvasMiddleware,
 };
 pub use commands::register_node_graph_commands;
+pub use diag_anchors::{NodeGraphDiagAnchor, NodeGraphDiagConnectingFlag};
 pub use edge_types::{EdgeCustomPath, EdgePathInput, EdgeTypeKey, NodeGraphEdgeTypes};
 pub use edit_queue::NodeGraphEditQueue;
 pub use editor::NodeGraphEditor;
@@ -58,7 +62,13 @@ pub use presenter::{
     InsertNodeCandidate, NodeGraphContextMenuAction, NodeGraphContextMenuItem, NodeGraphPresenter,
     NodeResizeConstraintsPx, NodeResizeHandleSet, RegistryNodeGraphPresenter,
 };
+pub use presets::{NodeGraphPresetFamily, NodeGraphPresetSkinV1};
 pub use registry::{NodeGraphNodeRenderer, NodeGraphNodeTypes};
+pub use skin::{
+    CanvasChromeHint, EdgeChromeHint, InteractionChromeHint, NodeChromeHint, NodeGraphSkin,
+    NodeGraphSkinRef, NodeRingHint, NodeShadowHint, NoopNodeGraphSkin, PortChromeHint,
+    PortShapeHint, WireGlowHint, WireHighlightHint, WireOutlineHint,
+};
 pub use style::{NodeGraphColorMode, NodeGraphStyle};
 pub use view_queue::{
     NodeGraphFitViewOptions, NodeGraphSetViewportOptions, NodeGraphViewQueue, NodeGraphViewRequest,

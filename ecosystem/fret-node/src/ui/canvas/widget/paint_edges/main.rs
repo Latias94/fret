@@ -1,5 +1,12 @@
 use crate::ui::canvas::widget::paint_render_data::RenderData;
 use crate::ui::canvas::widget::*;
+use fret_core::scene::DashPatternV1;
+use fret_core::scene::DropShadowV1;
+use fret_core::{EffectChain, EffectMode, EffectQuality, EffectStep};
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
+
+use super::markers::WireHighlightPaint;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(in super::super) fn paint_edges<H: UiHost>(
@@ -19,9 +26,141 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             color: Color,
             width: f32,
             route: EdgeRouteKind,
+            dash: Option<DashPatternV1>,
             start_marker: Option<crate::ui::presenter::EdgeMarker>,
             end_marker: Option<crate::ui::presenter::EdgeMarker>,
+            selected: bool,
+            hovered: bool,
         }
+
+        fn stable_hash_u64<T: Hash>(tag: u8, key: &T) -> u64 {
+            let mut hasher = DefaultHasher::new();
+            tag.hash(&mut hasher);
+            key.hash(&mut hasher);
+            hasher.finish()
+        }
+
+        fn bounds_from_points(points: &[Point]) -> Option<Rect> {
+            if points.is_empty() {
+                return None;
+            }
+            let mut min_x = f32::INFINITY;
+            let mut min_y = f32::INFINITY;
+            let mut max_x = f32::NEG_INFINITY;
+            let mut max_y = f32::NEG_INFINITY;
+            for p in points {
+                if !p.x.0.is_finite() || !p.y.0.is_finite() {
+                    continue;
+                }
+                min_x = min_x.min(p.x.0);
+                min_y = min_y.min(p.y.0);
+                max_x = max_x.max(p.x.0);
+                max_y = max_y.max(p.y.0);
+            }
+            if !min_x.is_finite() || !min_y.is_finite() || !max_x.is_finite() || !max_y.is_finite()
+            {
+                return None;
+            }
+            Some(Rect::new(
+                Point::new(Px(min_x), Px(min_y)),
+                Size::new(Px((max_x - min_x).max(0.0)), Px((max_y - min_y).max(0.0))),
+            ))
+        }
+
+        fn inflate_rect(rect: Rect, pad: f32) -> Rect {
+            let pad = if pad.is_finite() && pad > 0.0 {
+                pad
+            } else {
+                0.0
+            };
+            Rect::new(
+                Point::new(Px(rect.origin.x.0 - pad), Px(rect.origin.y.0 - pad)),
+                Size::new(
+                    Px(rect.size.width.0 + 2.0 * pad),
+                    Px(rect.size.height.0 + 2.0 * pad),
+                ),
+            )
+        }
+
+        fn glow_bounds_for_edge_route(
+            route: EdgeRouteKind,
+            from: Point,
+            to: Point,
+            zoom: f32,
+            width_screen_px: f32,
+            blur_radius_screen_px: f32,
+        ) -> Option<Rect> {
+            let z = zoom.max(1.0e-6);
+            let mut points: [Point; 6] = [from, to, from, to, from, to];
+            let mut n = 2usize;
+            match route {
+                EdgeRouteKind::Bezier => {
+                    let dx = to.x.0 - from.x.0;
+                    let ctrl = (dx.abs() * 0.5).clamp(40.0 / z, 160.0 / z);
+                    let dir = if dx >= 0.0 { 1.0 } else { -1.0 };
+                    let c1 = Point::new(Px(from.x.0 + dir * ctrl), from.y);
+                    let c2 = Point::new(Px(to.x.0 - dir * ctrl), to.y);
+                    points[2] = c1;
+                    points[3] = c2;
+                    n = 4;
+                }
+                EdgeRouteKind::Step => {
+                    let mx = 0.5 * (from.x.0 + to.x.0);
+                    points[2] = Point::new(Px(mx), from.y);
+                    points[3] = Point::new(Px(mx), to.y);
+                    n = 4;
+                }
+                EdgeRouteKind::Straight => {}
+            }
+
+            let mut rect = bounds_from_points(&points[..n])?;
+            let pad_screen =
+                (blur_radius_screen_px.max(0.0) + 0.5 * width_screen_px.max(0.0)).max(0.0);
+            let pad = pad_screen / z;
+            rect = inflate_rect(rect, pad);
+            Some(rect)
+        }
+
+        fn glow_bounds_for_custom_path(
+            commands: &[fret_core::PathCommand],
+            zoom: f32,
+            width_screen_px: f32,
+            blur_radius_screen_px: f32,
+        ) -> Option<Rect> {
+            let z = zoom.max(1.0e-6);
+            let mut points: Vec<Point> = Vec::with_capacity(commands.len().saturating_mul(2));
+            for cmd in commands {
+                match *cmd {
+                    fret_core::PathCommand::MoveTo(p) => points.push(p),
+                    fret_core::PathCommand::LineTo(p) => points.push(p),
+                    fret_core::PathCommand::QuadTo { ctrl, to } => {
+                        points.push(ctrl);
+                        points.push(to);
+                    }
+                    fret_core::PathCommand::CubicTo { ctrl1, ctrl2, to } => {
+                        points.push(ctrl1);
+                        points.push(ctrl2);
+                        points.push(to);
+                    }
+                    fret_core::PathCommand::Close => {}
+                }
+            }
+            let mut rect = bounds_from_points(&points)?;
+            let pad_screen =
+                (blur_radius_screen_px.max(0.0) + 0.5 * width_screen_px.max(0.0)).max(0.0);
+            let pad = pad_screen / z;
+            rect = inflate_rect(rect, pad);
+            Some(rect)
+        }
+
+        let interaction_hint = if let Some(skin) = self.skin.as_ref() {
+            self.graph
+                .read_ref(cx.app, |g| skin.interaction_chrome_hint(g, &self.style))
+                .ok()
+                .unwrap_or_default()
+        } else {
+            crate::ui::InteractionChromeHint::default()
+        };
 
         let edge_insert_marker_request = self
             .interaction
@@ -107,8 +246,11 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 color: edge.color,
                 width,
                 route,
+                dash: edge.hint.dash,
                 start_marker: edge.hint.start_marker.clone(),
                 end_marker: edge.hint.end_marker.clone(),
+                selected: edge.selected,
+                hovered: edge.hovered,
             };
 
             if edge.hovered {
@@ -124,12 +266,174 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         let mut marker_budget = WorkBudget::new(marker_budget_limit);
         let mut marker_budget_skipped: u32 = 0;
         let mut wire_budget = WorkBudget::new(u32::MAX / 2);
+        let outline_budget_limit =
+            Self::EDGE_WIRE_OUTLINE_BUILD_BUDGET_PER_FRAME.select(view_interacting);
+        let mut outline_budget = WorkBudget::new(outline_budget_limit);
+        let mut outline_budget_skipped: u32 = 0;
+        let highlight_budget_limit =
+            Self::EDGE_WIRE_HIGHLIGHT_BUILD_BUDGET_PER_FRAME.select(view_interacting);
+        let mut highlight_budget = WorkBudget::new(highlight_budget_limit);
+        let mut highlight_budget_skipped: u32 = 0;
 
         for edge in edges_normal
             .into_iter()
             .chain(edges_selected)
             .chain(edges_hovered)
         {
+            let outline = if edge.selected {
+                interaction_hint.wire_outline_selected
+            } else {
+                interaction_hint.wire_outline_base
+            };
+            if let Some(outline) = outline
+                && outline.width_mul.is_finite()
+                && outline.width_mul > 1.0e-3
+                && outline.color.a > 0.0
+            {
+                if !outline_budget.try_consume(1) {
+                    outline_budget_skipped = outline_budget_skipped.saturating_add(1);
+                } else {
+                    let outline_width = edge.width * outline.width_mul.max(0.0);
+                    if let Some(custom) = custom_paths.get(&edge.id) {
+                        let dash = edge
+                            .dash
+                            .map(|p| (p.dash.0.to_bits(), p.gap.0.to_bits(), p.phase.0.to_bits()));
+                        let key = (custom.cache_key, outline_width.to_bits(), dash);
+                        let outline_cache_key = stable_hash_u64(1, &key);
+                        if let Some(path) = self.paint_cache.wire_path_from_commands(
+                            cx.services,
+                            outline_cache_key,
+                            &custom.commands,
+                            zoom,
+                            cx.scale_factor,
+                            outline_width,
+                            edge.dash,
+                        ) {
+                            cx.scene.push(SceneOp::Path {
+                                order: DrawOrder(2),
+                                origin: Point::new(Px(0.0), Px(0.0)),
+                                path,
+                                paint: outline.color.into(),
+                            });
+                        }
+                    } else if let Some(path) = self.paint_cache.wire_path(
+                        cx.services,
+                        edge.route,
+                        edge.from,
+                        edge.to,
+                        zoom,
+                        cx.scale_factor,
+                        outline_width,
+                        edge.dash,
+                    ) {
+                        cx.scene.push(SceneOp::Path {
+                            order: DrawOrder(2),
+                            origin: Point::new(Px(0.0), Px(0.0)),
+                            path,
+                            paint: outline.color.into(),
+                        });
+                    }
+                }
+            }
+
+            let glow = edge
+                .selected
+                .then_some(interaction_hint.wire_glow_selected)
+                .flatten();
+
+            let glow_bounds = glow.and_then(|g| {
+                if let Some(custom) = custom_paths.get(&edge.id) {
+                    glow_bounds_for_custom_path(
+                        &custom.commands,
+                        zoom,
+                        edge.width,
+                        g.blur_radius_px,
+                    )
+                } else {
+                    glow_bounds_for_edge_route(
+                        edge.route,
+                        edge.from,
+                        edge.to,
+                        zoom,
+                        edge.width,
+                        g.blur_radius_px,
+                    )
+                }
+            });
+
+            let mut glow_pushed = false;
+            if let Some(glow) = glow
+                && let Some(bounds) = glow_bounds
+            {
+                let z = zoom.max(1.0e-6);
+                let blur_canvas = (glow.blur_radius_px / z).max(0.0);
+                let mut color = edge.color;
+                let alpha_mul = if glow.alpha_mul.is_finite() {
+                    glow.alpha_mul.clamp(0.0, 1.0)
+                } else {
+                    0.0
+                };
+                color.a = (color.a * alpha_mul).clamp(0.0, 1.0);
+                cx.scene.push(SceneOp::PushEffect {
+                    bounds,
+                    mode: EffectMode::FilterContent,
+                    chain: EffectChain::from_steps(&[EffectStep::DropShadowV1(
+                        DropShadowV1 {
+                            offset_px: Point::new(Px(0.0), Px(0.0)),
+                            blur_radius_px: Px(blur_canvas),
+                            downsample: glow.downsample,
+                            color,
+                        }
+                        .sanitize(),
+                    )]),
+                    quality: EffectQuality::Auto,
+                });
+                glow_pushed = true;
+            }
+
+            let highlight_hint = if edge.hovered {
+                interaction_hint.wire_highlight_hovered
+            } else if edge.selected {
+                interaction_hint.wire_highlight_selected
+            } else {
+                None
+            };
+            let highlight = if let Some(hint) = highlight_hint {
+                let width_mul = if hint.width_mul.is_finite() {
+                    hint.width_mul.clamp(0.0, 1.0)
+                } else {
+                    0.0
+                };
+                let alpha_mul = if hint.alpha_mul.is_finite() {
+                    hint.alpha_mul.clamp(0.0, 1.0)
+                } else {
+                    0.0
+                };
+                let width = edge.width * width_mul;
+                if width.is_finite() && width > 1.0e-3 && alpha_mul > 1.0e-6 {
+                    if !highlight_budget.try_consume(1) {
+                        highlight_budget_skipped = highlight_budget_skipped.saturating_add(1);
+                        None
+                    } else {
+                        let mut color = hint.color.unwrap_or_else(|| {
+                            let t = 0.45;
+                            Color {
+                                r: edge.color.r + (1.0 - edge.color.r) * t,
+                                g: edge.color.g + (1.0 - edge.color.g) * t,
+                                b: edge.color.b + (1.0 - edge.color.b) * t,
+                                a: edge.color.a,
+                            }
+                        });
+                        color.a = (color.a * alpha_mul).clamp(0.0, 1.0);
+                        (color.a > 0.0).then_some(WireHighlightPaint { width, color })
+                    }
+                } else {
+                    None
+                }
+            } else {
+                None
+            };
+
             let (_stop, skipped) = if let Some(custom) = custom_paths.get(&edge.id) {
                 let fallback = Point::new(
                     Px(edge.to.x.0 - edge.from.x.0),
@@ -150,6 +454,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     edge.to,
                     edge.color,
                     edge.width,
+                    edge.dash,
+                    highlight,
                     edge.start_marker.as_ref(),
                     edge.end_marker.as_ref(),
                     &mut wire_budget,
@@ -167,6 +473,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     edge.to,
                     edge.color,
                     edge.width,
+                    edge.dash,
+                    highlight,
                     edge.start_marker.as_ref(),
                     edge.end_marker.as_ref(),
                     &mut wire_budget,
@@ -175,9 +483,19 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 )
             };
             marker_budget_skipped = marker_budget_skipped.saturating_add(skipped);
+
+            if glow_pushed {
+                cx.scene.push(SceneOp::PopEffect);
+            }
         }
 
         if marker_budget_skipped > 0 {
+            cx.request_redraw();
+        }
+        if outline_budget_skipped > 0 {
+            cx.request_redraw();
+        }
+        if highlight_budget_skipped > 0 {
             cx.request_redraw();
         }
 
@@ -319,49 +637,117 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 .or(focused_target)
                 .and_then(|port| geom.port_center(port))
                 .unwrap_or(w.pos);
-            let color =
+            let invalid = interaction_hint.invalid.unwrap_or(Color {
+                r: 0.90,
+                g: 0.35,
+                b: 0.35,
+                a: 0.95,
+            });
+            let convertible = interaction_hint.convertible.unwrap_or(Color {
+                r: 0.95,
+                g: 0.75,
+                b: 0.20,
+                a: 0.95,
+            });
+            let preview = interaction_hint
+                .preview_wire
+                .unwrap_or(self.style.wire_color_preview);
+            let dash_invalid = interaction_hint.dash_invalid;
+            let dash_preview = interaction_hint.dash_preview;
+
+            let (color, dash) =
                 if hovered_port.is_some() && !hovered_port_valid && !hovered_port_convertible {
-                    Color {
-                        r: 0.90,
-                        g: 0.35,
-                        b: 0.35,
-                        a: 0.95,
-                    }
+                    (invalid, dash_invalid)
                 } else if hovered_port.is_some() && hovered_port_convertible && !hovered_port_valid
                 {
-                    Color {
-                        r: 0.95,
-                        g: 0.75,
-                        b: 0.20,
-                        a: 0.95,
-                    }
+                    (convertible, dash_preview)
                 } else if focused_port.is_some()
                     && !focused_port_valid
                     && !focused_port_convertible
                     && hovered_port.is_none()
                 {
-                    Color {
-                        r: 0.90,
-                        g: 0.35,
-                        b: 0.35,
-                        a: 0.95,
-                    }
+                    (invalid, dash_invalid)
                 } else if focused_port.is_some()
                     && focused_port_convertible
                     && !focused_port_valid
                     && hovered_port.is_none()
                 {
-                    Color {
-                        r: 0.95,
-                        g: 0.75,
-                        b: 0.20,
-                        a: 0.95,
-                    }
+                    (convertible, dash_preview)
                 } else {
-                    self.style.wire_color_preview
+                    (preview, dash_preview)
                 };
 
             let mut draw_preview = |from: Point| {
+                if let Some(outline) = interaction_hint.wire_outline_preview
+                    && outline.width_mul.is_finite()
+                    && outline.width_mul > 1.0e-3
+                    && outline.color.a > 0.0
+                {
+                    if !outline_budget.try_consume(1) {
+                        outline_budget_skipped = outline_budget_skipped.saturating_add(1);
+                    } else {
+                        let outline_width = self.style.wire_width * outline.width_mul.max(0.0);
+                        if let Some(path) = self.paint_cache.wire_path(
+                            cx.services,
+                            EdgeRouteKind::Bezier,
+                            from,
+                            to,
+                            zoom,
+                            cx.scale_factor,
+                            outline_width,
+                            dash,
+                        ) {
+                            cx.scene.push(SceneOp::Path {
+                                order: DrawOrder(2),
+                                origin: Point::new(Px(0.0), Px(0.0)),
+                                path,
+                                paint: outline.color.into(),
+                            });
+                        }
+                    }
+                }
+
+                let glow = interaction_hint.wire_glow_preview;
+                let glow_bounds = glow.and_then(|g| {
+                    glow_bounds_for_edge_route(
+                        EdgeRouteKind::Bezier,
+                        from,
+                        to,
+                        zoom,
+                        self.style.wire_width,
+                        g.blur_radius_px,
+                    )
+                });
+                let mut glow_pushed = false;
+                if let Some(glow) = glow
+                    && let Some(bounds) = glow_bounds
+                {
+                    let z = zoom.max(1.0e-6);
+                    let blur_canvas = (glow.blur_radius_px / z).max(0.0);
+                    let mut glow_color = color;
+                    let alpha_mul = if glow.alpha_mul.is_finite() {
+                        glow.alpha_mul.clamp(0.0, 1.0)
+                    } else {
+                        0.0
+                    };
+                    glow_color.a = (glow_color.a * alpha_mul).clamp(0.0, 1.0);
+                    cx.scene.push(SceneOp::PushEffect {
+                        bounds,
+                        mode: EffectMode::FilterContent,
+                        chain: EffectChain::from_steps(&[EffectStep::DropShadowV1(
+                            DropShadowV1 {
+                                offset_px: Point::new(Px(0.0), Px(0.0)),
+                                blur_radius_px: Px(blur_canvas),
+                                downsample: glow.downsample,
+                                color: glow_color,
+                            }
+                            .sanitize(),
+                        )]),
+                        quality: EffectQuality::Auto,
+                    });
+                    glow_pushed = true;
+                }
+
                 if let Some(path) = self.paint_cache.wire_path(
                     cx.services,
                     EdgeRouteKind::Bezier,
@@ -370,6 +756,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     zoom,
                     cx.scale_factor,
                     self.style.wire_width,
+                    dash,
                 ) {
                     cx.scene.push(SceneOp::Path {
                         order: DrawOrder(2),
@@ -377,6 +764,10 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         path,
                         paint: color.into(),
                     });
+                }
+
+                if glow_pushed {
+                    cx.scene.push(SceneOp::PopEffect);
                 }
             };
 

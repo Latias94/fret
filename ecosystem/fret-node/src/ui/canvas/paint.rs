@@ -14,12 +14,14 @@ use fret_canvas::budget::WorkBudget;
 use fret_canvas::cache::CacheStats;
 use fret_canvas::cache::PathCache;
 use fret_canvas::text::TextCache;
+use fret_core::scene::DashPatternV1;
 use fret_core::{
-    FillStyle, PathCommand, PathConstraints, PathId, PathStyle, Point, Px, SceneOp, StrokeCapV1,
-    StrokeJoinV1, StrokeStyleV2, TextBlobId, TextConstraints, TextMetrics, TextOverflow, TextStyle,
-    TextWrap,
+    FillStyle, PathCommand, PathConstraints, PathId, PathStyle, Point, Px, SceneOp, Size,
+    StrokeCapV1, StrokeJoinV1, StrokeStyleV2, TextBlobId, TextConstraints, TextMetrics,
+    TextOverflow, TextStyle, TextWrap,
 };
 
+use crate::ui::PortShapeHint;
 use crate::ui::presenter::{EdgeMarker, EdgeMarkerKind, EdgeRouteKind};
 
 use super::route_math::{edge_route_end_tangent, edge_route_start_tangent};
@@ -34,6 +36,9 @@ struct WirePathKey {
     zoom: i64,
     scale: i64,
     stroke_width: i64,
+    dash: i64,
+    gap: i64,
+    phase: i64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -69,6 +74,17 @@ struct MarkerTangentPathKey {
     scale: i64,
     size_screen: i64,
     pin_radius_screen: i64,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+struct PortShapePathKey {
+    shape: u8,
+    dir: u8,
+    w: i64,
+    h: i64,
+    zoom: i64,
+    scale: i64,
+    stroke_width_screen: i64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -193,6 +209,7 @@ impl CanvasPaintCache {
         zoom: f32,
         scale_factor: f32,
         width_px: f32,
+        dash: Option<DashPatternV1>,
     ) -> Option<PathId> {
         let zoom = if zoom.is_finite() && zoom > 0.0 {
             zoom
@@ -212,6 +229,8 @@ impl CanvasPaintCache {
             return None;
         }
 
+        let dash = dash.and_then(|p| scale_dash_pattern_screen_px_to_canvas_units(p, zoom));
+
         let q = |v: f32, step: f32| -> i64 {
             if !v.is_finite() {
                 return 0;
@@ -228,6 +247,9 @@ impl CanvasPaintCache {
             zoom: q(zoom, 0.0001),
             scale: q(scale_factor * zoom, 0.0001),
             stroke_width: q(stroke_width, 0.0001),
+            dash: dash.map(|p| q(p.dash.0, 0.01)).unwrap_or(0),
+            gap: dash.map(|p| q(p.gap.0, 0.01)).unwrap_or(0),
+            phase: dash.map(|p| q(p.phase.0, 0.01)).unwrap_or(0),
         };
 
         let cache_key = stable_path_key(1, &key);
@@ -257,7 +279,7 @@ impl CanvasPaintCache {
                         join: StrokeJoinV1::Round,
                         cap: StrokeCapV1::Round,
                         miter_limit: 4.0,
-                        dash: None,
+                        dash,
                     }),
                     PathConstraints {
                         scale_factor: scale_factor * zoom,
@@ -276,7 +298,7 @@ impl CanvasPaintCache {
                         join: StrokeJoinV1::Round,
                         cap: StrokeCapV1::Round,
                         miter_limit: 4.0,
-                        dash: None,
+                        dash,
                     }),
                     PathConstraints {
                         scale_factor: scale_factor * zoom,
@@ -305,7 +327,7 @@ impl CanvasPaintCache {
                         join: StrokeJoinV1::Round,
                         cap: StrokeCapV1::Round,
                         miter_limit: 4.0,
-                        dash: None,
+                        dash,
                     }),
                     PathConstraints {
                         scale_factor: scale_factor * zoom,
@@ -324,6 +346,7 @@ impl CanvasPaintCache {
         zoom: f32,
         scale_factor: f32,
         width_px: f32,
+        dash: Option<DashPatternV1>,
     ) -> Option<PathId> {
         if commands.is_empty() {
             return None;
@@ -340,6 +363,8 @@ impl CanvasPaintCache {
             return None;
         }
 
+        let dash = dash.and_then(|p| scale_dash_pattern_screen_px_to_canvas_units(p, zoom));
+
         let cache_key = stable_path_key(3, &cache_key);
         let (id, _metrics) = self.paths.prepare(
             services,
@@ -350,11 +375,227 @@ impl CanvasPaintCache {
                 join: StrokeJoinV1::Round,
                 cap: StrokeCapV1::Round,
                 miter_limit: 4.0,
-                dash: None,
+                dash,
             }),
             PathConstraints {
                 scale_factor: scale_factor * zoom,
             },
+        );
+        Some(id)
+    }
+
+    pub(crate) fn port_shape_fill_path(
+        &mut self,
+        services: &mut dyn fret_core::UiServices,
+        shape: PortShapeHint,
+        size: Size,
+        dir: Option<crate::core::PortDirection>,
+        zoom: f32,
+        scale_factor: f32,
+    ) -> Option<PathId> {
+        let zoom = if zoom.is_finite() && zoom > 0.0 {
+            zoom
+        } else {
+            1.0
+        };
+        if !size.width.0.is_finite()
+            || !size.height.0.is_finite()
+            || size.width.0 <= 0.0
+            || size.height.0 <= 0.0
+        {
+            return None;
+        }
+
+        let q = |v: f32, step: f32| -> i64 {
+            if !v.is_finite() {
+                return 0;
+            }
+            (v / step).round() as i64
+        };
+
+        let dir_tag = match dir {
+            Some(crate::core::PortDirection::In) => 1,
+            Some(crate::core::PortDirection::Out) => 2,
+            None => 0,
+        };
+        let shape_tag = match shape {
+            PortShapeHint::Circle => 0,
+            PortShapeHint::Diamond => 1,
+            PortShapeHint::Triangle => 2,
+        };
+
+        let key = PortShapePathKey {
+            shape: shape_tag,
+            dir: dir_tag,
+            w: q(size.width.0, 0.01),
+            h: q(size.height.0, 0.01),
+            zoom: q(zoom, 0.0001),
+            scale: q(scale_factor * zoom, 0.0001),
+            stroke_width_screen: 0,
+        };
+
+        let cache_key = stable_path_key(20, &key);
+        let constraints = PathConstraints {
+            scale_factor: scale_factor * zoom,
+        };
+        if let Some((id, _metrics)) = self.paths.get(cache_key, constraints) {
+            return Some(id);
+        }
+
+        let w = size.width.0;
+        let h = size.height.0;
+        let mx = 0.5 * w;
+        let my = 0.5 * h;
+        let commands: Vec<PathCommand> = match shape {
+            PortShapeHint::Circle => return None,
+            PortShapeHint::Diamond => vec![
+                PathCommand::MoveTo(Point::new(Px(mx), Px(0.0))),
+                PathCommand::LineTo(Point::new(Px(w), Px(my))),
+                PathCommand::LineTo(Point::new(Px(mx), Px(h))),
+                PathCommand::LineTo(Point::new(Px(0.0), Px(my))),
+                PathCommand::Close,
+            ],
+            PortShapeHint::Triangle => {
+                let tip_left = matches!(dir, Some(crate::core::PortDirection::In));
+                if tip_left {
+                    vec![
+                        PathCommand::MoveTo(Point::new(Px(0.0), Px(my))),
+                        PathCommand::LineTo(Point::new(Px(w), Px(0.0))),
+                        PathCommand::LineTo(Point::new(Px(w), Px(h))),
+                        PathCommand::Close,
+                    ]
+                } else {
+                    vec![
+                        PathCommand::MoveTo(Point::new(Px(w), Px(my))),
+                        PathCommand::LineTo(Point::new(Px(0.0), Px(0.0))),
+                        PathCommand::LineTo(Point::new(Px(0.0), Px(h))),
+                        PathCommand::Close,
+                    ]
+                }
+            }
+        };
+
+        let (id, _metrics) = self.paths.prepare(
+            services,
+            cache_key,
+            &commands,
+            PathStyle::Fill(FillStyle::default()),
+            constraints,
+        );
+        Some(id)
+    }
+
+    pub(crate) fn port_shape_stroke_path(
+        &mut self,
+        services: &mut dyn fret_core::UiServices,
+        shape: PortShapeHint,
+        size: Size,
+        dir: Option<crate::core::PortDirection>,
+        zoom: f32,
+        scale_factor: f32,
+        stroke_width_screen_px: f32,
+    ) -> Option<PathId> {
+        let zoom = if zoom.is_finite() && zoom > 0.0 {
+            zoom
+        } else {
+            1.0
+        };
+        if !size.width.0.is_finite()
+            || !size.height.0.is_finite()
+            || size.width.0 <= 0.0
+            || size.height.0 <= 0.0
+        {
+            return None;
+        }
+
+        let stroke_width_screen_px =
+            if stroke_width_screen_px.is_finite() && stroke_width_screen_px > 0.0 {
+                stroke_width_screen_px
+            } else {
+                return None;
+            };
+
+        let q = |v: f32, step: f32| -> i64 {
+            if !v.is_finite() {
+                return 0;
+            }
+            (v / step).round() as i64
+        };
+
+        let dir_tag = match dir {
+            Some(crate::core::PortDirection::In) => 1,
+            Some(crate::core::PortDirection::Out) => 2,
+            None => 0,
+        };
+        let shape_tag = match shape {
+            PortShapeHint::Circle => 0,
+            PortShapeHint::Diamond => 1,
+            PortShapeHint::Triangle => 2,
+        };
+
+        let key = PortShapePathKey {
+            shape: shape_tag,
+            dir: dir_tag,
+            w: q(size.width.0, 0.01),
+            h: q(size.height.0, 0.01),
+            zoom: q(zoom, 0.0001),
+            scale: q(scale_factor * zoom, 0.0001),
+            stroke_width_screen: q(stroke_width_screen_px, 0.001),
+        };
+
+        let cache_key = stable_path_key(21, &key);
+        let constraints = PathConstraints {
+            scale_factor: scale_factor * zoom,
+        };
+        if let Some((id, _metrics)) = self.paths.get(cache_key, constraints) {
+            return Some(id);
+        }
+
+        let w = size.width.0;
+        let h = size.height.0;
+        let mx = 0.5 * w;
+        let my = 0.5 * h;
+        let commands: Vec<PathCommand> = match shape {
+            PortShapeHint::Circle => return None,
+            PortShapeHint::Diamond => vec![
+                PathCommand::MoveTo(Point::new(Px(mx), Px(0.0))),
+                PathCommand::LineTo(Point::new(Px(w), Px(my))),
+                PathCommand::LineTo(Point::new(Px(mx), Px(h))),
+                PathCommand::LineTo(Point::new(Px(0.0), Px(my))),
+                PathCommand::Close,
+            ],
+            PortShapeHint::Triangle => {
+                let tip_left = matches!(dir, Some(crate::core::PortDirection::In));
+                if tip_left {
+                    vec![
+                        PathCommand::MoveTo(Point::new(Px(0.0), Px(my))),
+                        PathCommand::LineTo(Point::new(Px(w), Px(0.0))),
+                        PathCommand::LineTo(Point::new(Px(w), Px(h))),
+                        PathCommand::Close,
+                    ]
+                } else {
+                    vec![
+                        PathCommand::MoveTo(Point::new(Px(w), Px(my))),
+                        PathCommand::LineTo(Point::new(Px(0.0), Px(0.0))),
+                        PathCommand::LineTo(Point::new(Px(0.0), Px(h))),
+                        PathCommand::Close,
+                    ]
+                }
+            }
+        };
+
+        let (id, _metrics) = self.paths.prepare(
+            services,
+            cache_key,
+            &commands,
+            PathStyle::StrokeV2(StrokeStyleV2 {
+                width: Px(stroke_width_screen_px / zoom),
+                join: StrokeJoinV1::Miter,
+                cap: StrokeCapV1::Butt,
+                miter_limit: 4.0,
+                dash: None,
+            }),
+            constraints,
         );
         Some(id)
     }
@@ -796,4 +1037,19 @@ fn stable_path_key<T: Hash>(tag: u8, key: &T) -> u64 {
     tag.hash(&mut hasher);
     key.hash(&mut hasher);
     hasher.finish()
+}
+
+fn scale_dash_pattern_screen_px_to_canvas_units(
+    pattern: DashPatternV1,
+    zoom: f32,
+) -> Option<DashPatternV1> {
+    let z = zoom.max(1.0e-6);
+    let dash = pattern.dash.0 / z;
+    let gap = pattern.gap.0 / z;
+    let phase = pattern.phase.0 / z;
+    let period = dash + gap;
+    if !dash.is_finite() || !gap.is_finite() || !phase.is_finite() || dash <= 0.0 || period <= 0.0 {
+        return None;
+    }
+    Some(DashPatternV1::new(Px(dash), Px(gap), Px(phase)))
 }

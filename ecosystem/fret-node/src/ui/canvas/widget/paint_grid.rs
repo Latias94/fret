@@ -12,18 +12,31 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     ) {
         self.grid_scene_cache.begin_frame();
 
+        let canvas_hint = if let Some(skin) = self.skin.as_ref() {
+            self.graph
+                .read_ref(cx.app, |g| skin.canvas_chrome_hint(g, &self.style))
+                .ok()
+                .unwrap_or_default()
+        } else {
+            crate::ui::CanvasChromeHint::default()
+        };
+
         let pattern = self.style.grid_pattern;
         let spacing = self.style.grid_spacing;
         if !(spacing.is_finite() && spacing > 1.0e-3) {
             return;
         }
 
-        let line_width_px =
-            if self.style.grid_line_width.is_finite() && self.style.grid_line_width > 0.0 {
-                self.style.grid_line_width
-            } else {
-                1.0
-            };
+        let line_width_px = if let Some(v) = canvas_hint.grid_line_width_px
+            && v.is_finite()
+            && v > 0.0
+        {
+            v
+        } else if self.style.grid_line_width.is_finite() && self.style.grid_line_width > 0.0 {
+            self.style.grid_line_width
+        } else {
+            1.0
+        };
         let major_every = self.style.grid_major_every.max(1) as i64;
         let z = zoom.max(1.0e-6);
         let thickness_px = line_width_px.max(0.25);
@@ -35,8 +48,12 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         grid_tiles.tiles_in_rect(grid_rect, &mut self.grid_tiles_scratch);
         grid_tiles.sort_tiles_center_first(viewport_rect, &mut self.grid_tiles_scratch);
 
-        let major_color = self.style.grid_major_color;
-        let minor_color = self.style.grid_minor_color;
+        let major_color = canvas_hint
+            .grid_major
+            .unwrap_or(self.style.grid_major_color);
+        let minor_color = canvas_hint
+            .grid_minor
+            .unwrap_or(self.style.grid_minor_color);
         let spacing_bits = spacing.to_bits();
         let thickness_bits = thickness.0.to_bits();
         let pattern_tag: u32 = match pattern {

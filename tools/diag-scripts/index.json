@@ -126,12 +126,20 @@
     {
       "id": "docking-arbitration-demo-modal-dock-drag-viewport-capture",
       "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-modal-dock-drag-viewport-capture.json",
-      "required_capabilities": [],
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
       "suite_memberships": [
         "docking-arbitration"
       ],
-      "tags": [],
-      "target_hints": []
+      "tags": [
+        "docking",
+        "gate",
+        "modal"
+      ],
+      "target_hints": [
+        "Opens a popover and asserts docking drag closes it (capture), then opens a dialog and asserts underlay click does not leak through."
+      ]
     },
     {
       "id": "docking-arbitration-demo-multiwindow-chained-tearoff-two-tabs-merge",

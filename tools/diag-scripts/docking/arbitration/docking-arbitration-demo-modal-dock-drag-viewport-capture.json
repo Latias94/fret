@@ -1,8 +1,18 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
+  "meta": {
+    "name": "Docking arbitration demo: modal closes on dock drag + viewport capture stays correct",
+    "tags": ["docking", "modal", "gate"],
+    "required_capabilities": ["diag.script_v2"],
+    "target_hints": [
+      "Opens a popover and asserts docking drag closes it (capture), then opens a dialog and asserts underlay click does not leak through."
+    ]
+  },
   "steps": [
     { "type": "press_key", "key": "escape" },
     { "type": "wait_frames", "n": 5 },
+    { "type": "set_window_inner_size", "width_px": 1600.0, "height_px": 900.0 },
+    { "type": "wait_frames", "n": 10 },
     {
       "type": "wait_until",
       "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-dock-space" } },
@@ -26,11 +36,30 @@
     },
 
     {
-      "type": "drag_pointer",
+      "type": "pointer_down",
+      "window": { "kind": "current" },
       "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-left" },
-      "delta_x": 260.0,
+      "button": "left"
+    },
+    {
+      "type": "pointer_move",
+      "window": { "kind": "current" },
+      "delta_x": 24.0,
       "delta_y": 0.0,
-      "steps": 24
+      "steps": 12
+    },
+    {
+      "type": "wait_until",
+      "window": { "kind": "current" },
+      "predicate": { "kind": "dock_drag_active_is", "active": true },
+      "timeout_frames": 120
+    },
+    { "type": "pointer_up", "window": { "kind": "current" } },
+    {
+      "type": "wait_until",
+      "window": { "kind": "current" },
+      "predicate": { "kind": "dock_drag_active_is", "active": false },
+      "timeout_frames": 240
     },
     {
       "type": "wait_until",
@@ -49,12 +78,28 @@
       "timeout_frames": 240
     },
     {
-      "type": "drag_pointer",
+      "type": "pointer_down",
+      "window": { "kind": "current" },
       "target": { "kind": "test_id", "id": "dock-arb-viewport-left" },
-      "delta_x": 140.0,
-      "delta_y": 50.0,
+      "button": "left"
+    },
+    {
+      "type": "pointer_move",
+      "window": { "kind": "current" },
+      "delta_x": 12.0,
+      "delta_y": 6.0,
+      "steps": 8
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "pointer_move",
+      "window": { "kind": "current" },
+      "delta_x": 128.0,
+      "delta_y": 44.0,
       "steps": 18
     },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "pointer_up", "window": { "kind": "current" } },
 
     {
       "type": "wait_until",

@@ -51,7 +51,7 @@
 
     {
       "type": "drag_pointer_until",
-    "window": { "kind": "first_seen" },
+      "window": { "kind": "first_seen" },
       "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-right" },
       "delta_x": 2400.0,
       "delta_y": 0.0,
@@ -69,8 +69,14 @@
     {
       "type": "set_window_outer_position",
       "window": { "kind": "last_seen" },
-      "x_px": 180.0,
-      "y_px": 180.0
+      "x_px": 600.0,
+      "y_px": 120.0
+    },
+    {
+      "type": "set_window_inner_size",
+      "window": { "kind": "last_seen" },
+      "width_px": 900.0,
+      "height_px": 700.0
     },
     { "type": "wait_frames", "n": 10 },
 
@@ -82,58 +88,36 @@
     },
     { "type": "wait_frames", "n": 2 },
 
-    { "type": "raise_window", "window": { "kind": "last_seen" } },
-    { "type": "set_cursor_in_window_logical", "window": { "kind": "last_seen" }, "x_px": 640.0, "y_px": 260.0 },
-    { "type": "wait_frames", "n": 2 },
-
-    {
-      "type": "pointer_down",
-      "window": { "kind": "last_seen" },
-      "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-right" }
-    },
-    {
-      "type": "pointer_move",
-      "window": { "kind": "last_seen" },
-      "delta_x": 120.0,
-      "delta_y": 0.0,
-      "steps": 24
-    },
     {
       "type": "wait_until",
       "window": { "kind": "last_seen" },
-      "predicate": { "kind": "dock_drag_active_is", "active": true },
-      "timeout_frames": 120
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-right" } },
+      "timeout_frames": 240
     },
-    { "type": "wait_frames", "n": 2 },
 
     { "type": "raise_window", "window": { "kind": "last_seen" } },
-    { "type": "set_cursor_in_window_logical", "window": { "kind": "last_seen" }, "x_px": 220.0, "y_px": 220.0 },
     { "type": "wait_frames", "n": 2 },
 
     {
-      "type": "pointer_move",
+      "type": "drag_pointer_until",
       "window": { "kind": "last_seen" },
-      "delta_x": -800.0,
+      "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-right" },
+      "delta_x": -460.0,
       "delta_y": 0.0,
-      "steps": 90
-    },
-    {
-      "type": "wait_until",
-      "window": { "kind": "last_seen" },
+      "steps": 120,
       "predicate": { "kind": "dock_drag_current_window_is", "window": { "kind": "first_seen" } },
-      "timeout_frames": 240
+      "timeout_frames": 900
     },
-    { "type": "pointer_up", "window": { "kind": "last_seen" } },
+    { "type": "wait_frames", "n": 10 },
     {
       "type": "wait_until",
-      "window": { "kind": "last_seen" },
-      "predicate": { "kind": "dock_drag_active_is", "active": false },
-      "timeout_frames": 240
+      "predicate": { "kind": "known_window_count_is", "n": 1 },
+      "timeout_frames": 600
     },
 
     {
       "type": "wait_until",
-      "window": { "kind": "last_seen" },
+      "window": { "kind": "first_seen" },
       "predicate": { "kind": "dock_graph_canonical_is", "canonical": true },
       "timeout_frames": 240
     },

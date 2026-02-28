@@ -7,6 +7,7 @@ use std::time::{Duration, Instant};
 
 use fret_app::App;
 use fret_app::{CommandId, Effect, WindowRequest};
+use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
 use fret_core::{
     AppWindowId, Color, Corners, CursorIcon, DrawOrder, Edges, Event, KeyCode, Modifiers,
     MouseButton, Point, Px, Rect, SceneOp, Size, TextBlobId, TextConstraints, TextOverflow,
@@ -14,7 +15,7 @@ use fret_core::{
 };
 use fret_launch::{
     WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
-    WinitWindowContext, run_app,
+    WinitWindowContext,
 };
 use fret_runtime::PlatformCapabilities;
 use fret_runtime::{
@@ -38,6 +39,7 @@ use fret_node::io::NodeGraphViewState;
 use fret_node::io::NodeGraphViewStateFileV1;
 use fret_node::ops::{GraphOp, GraphTransaction};
 use fret_node::profile::{DataflowProfile, apply_transaction_with_profile};
+use fret_node::rules::{InsertNodeTemplate, PortTemplate};
 use fret_node::runtime::store::NodeGraphStore;
 use fret_node::schema::{
     NodeKindMigrateError, NodeKindMigrator, NodeRegistry, NodeSchema, PortDecl,
@@ -51,10 +53,11 @@ use fret_node::ui::style::{NodeGraphBackgroundPattern, NodeGraphStyle};
 use fret_node::ui::{
     MeasuredGeometryStore, MeasuredNodeGraphPresenter, NodeGraphA11yFocusedEdge,
     NodeGraphA11yFocusedNode, NodeGraphA11yFocusedPort, NodeGraphBlackboardOverlay,
-    NodeGraphCanvas, NodeGraphControlsOverlay, NodeGraphEdgeToolbar, NodeGraphEdgeTypes,
-    NodeGraphEditQueue, NodeGraphEditor, NodeGraphInternalsStore, NodeGraphMiniMapOverlay,
-    NodeGraphNodeToolbar, NodeGraphNodeTypes, NodeGraphOverlayHost, NodeGraphOverlayState,
-    NodeGraphPanel, NodeGraphPanelPosition, NodeGraphPortalHost, NodeGraphPortalNodeLayout,
+    NodeGraphCanvas, NodeGraphControlsOverlay, NodeGraphDiagAnchor, NodeGraphDiagConnectingFlag,
+    NodeGraphEdgeToolbar, NodeGraphEdgeTypes, NodeGraphEditQueue, NodeGraphEditor,
+    NodeGraphInternalsStore, NodeGraphMiniMapOverlay, NodeGraphNodeToolbar, NodeGraphNodeTypes,
+    NodeGraphOverlayHost, NodeGraphOverlayState, NodeGraphPanel, NodeGraphPanelPosition,
+    NodeGraphPortalHost, NodeGraphPortalNodeLayout, NodeGraphPresetFamily, NodeGraphPresetSkinV1,
     NodeGraphToolbarAlign, NodeGraphToolbarPosition, PortalNumberEditHandler, PortalNumberEditSpec,
     PortalNumberEditSubmit, PortalNumberEditor, RegistryNodeGraphPresenter,
     register_node_graph_commands,
@@ -81,6 +84,10 @@ const CMD_LOG_INTERNALS: &str = "node_graph_demo.log_internals";
 const CMD_LOG_MEASURED: &str = "node_graph_demo.log_measured";
 const CMD_BUMP_FLOAT_VALUE: &str = "node_graph_demo.bump_float_value";
 const CMD_CYCLE_BACKGROUND_PATTERN: &str = "node_graph_demo.cycle_background_pattern";
+const CMD_CYCLE_PRESET_FAMILY: &str = "node_graph_demo.cycle_preset_family";
+const CMD_TOGGLE_WIRE_GLOW: &str = "node_graph_demo.toggle_wire_glow";
+const CMD_TOGGLE_WIRE_HIGHLIGHT: &str = "node_graph_demo.toggle_wire_highlight";
+const CMD_TOGGLE_EDGE_MARKERS: &str = "node_graph_demo.toggle_edge_markers";
 const CMD_RESET_GRAPH: &str = "node_graph_demo.reset_graph";
 const CMD_SPAWN_STRESS_1K: &str = "node_graph_demo.spawn_stress_1k";
 const CMD_SPAWN_STRESS_5K: &str = "node_graph_demo.spawn_stress_5k";
@@ -383,6 +390,63 @@ impl NodeGraphPresenter for DemoPresenter {
         self.inner.profile_mut()
     }
 
+    fn list_conversions(&mut self, graph: &Graph, a: PortId, b: PortId) -> Vec<InsertNodeTemplate> {
+        let Some(port_a) = graph.ports.get(&a) else {
+            return Vec::new();
+        };
+        let Some(port_b) = graph.ports.get(&b) else {
+            return Vec::new();
+        };
+
+        let (from, to) = match (port_a.dir, port_b.dir) {
+            (PortDirection::Out, PortDirection::In) => (port_a, port_b),
+            (PortDirection::In, PortDirection::Out) => (port_b, port_a),
+            _ => return Vec::new(),
+        };
+
+        let (Some(from_ty), Some(to_ty)) = (from.ty.as_ref(), to.ty.as_ref()) else {
+            return Vec::new();
+        };
+
+        if !matches!((from_ty, to_ty), (TypeDesc::Float, TypeDesc::Int)) {
+            return Vec::new();
+        }
+
+        let mk_template = |kind: &str| InsertNodeTemplate {
+            kind: NodeKindKey::new(kind),
+            kind_version: 1,
+            collapsed: false,
+            data: serde_json::Value::Null,
+            ports: vec![
+                PortTemplate {
+                    key: PortKey::new("in"),
+                    dir: PortDirection::In,
+                    kind: PortKind::Data,
+                    capacity: PortCapacity::Single,
+                    ty: Some(TypeDesc::Float),
+                    data: serde_json::Value::Null,
+                },
+                PortTemplate {
+                    key: PortKey::new("out"),
+                    dir: PortDirection::Out,
+                    kind: PortKind::Data,
+                    capacity: PortCapacity::Single,
+                    ty: Some(TypeDesc::Int),
+                    data: serde_json::Value::Null,
+                },
+            ],
+            input: PortKey::new("in"),
+            output: PortKey::new("out"),
+        };
+
+        // Return multiple options to force the conversion picker (avoid auto-insert mutation in
+        // diagnostics runs).
+        vec![
+            mk_template("demo.convert.float_to_int.cast"),
+            mk_template("demo.convert.float_to_int.round"),
+        ]
+    }
+
     fn node_size_hint_px(
         &mut self,
         graph: &Graph,
@@ -560,6 +624,24 @@ fn build_demo_registry() -> NodeRegistry {
     });
 
     reg.register(NodeSchema {
+        kind: NodeKindKey::new("demo.int_sink"),
+        latest_kind_version: 1,
+        kind_aliases: Vec::new(),
+        title: "Int Sink".to_string(),
+        category: vec!["Demo".to_string()],
+        keywords: vec!["int".to_string(), "sink".to_string()],
+        ports: vec![PortDecl {
+            key: PortKey::new("in"),
+            dir: PortDirection::In,
+            kind: PortKind::Data,
+            capacity: PortCapacity::Single,
+            ty: Some(TypeDesc::Int),
+            label: Some("In".to_string()),
+        }],
+        default_data: serde_json::Value::Null,
+    });
+
+    reg.register(NodeSchema {
         kind: NodeKindKey::new(WEIRD_KIND),
         latest_kind_version: 1,
         kind_aliases: Vec::new(),
@@ -620,6 +702,7 @@ fn build_demo_graph(graph_id: GraphId) -> Graph {
     let node_add = NodeId::new();
     let node_out = NodeId::new();
     let node_weird = NodeId::new();
+    let node_int_sink = NodeId::new();
 
     let port_value_a_out = PortId::new();
     let port_value_b_out = PortId::new();
@@ -634,6 +717,7 @@ fn build_demo_graph(graph_id: GraphId) -> Graph {
     let port_weird_in_b = PortId::new();
     let port_weird_out_main = PortId::new();
     let port_weird_out_aux = PortId::new();
+    let port_int_sink_in = PortId::new();
 
     graph.nodes.insert(
         node_value_a,
@@ -732,6 +816,26 @@ fn build_demo_graph(graph_id: GraphId) -> Graph {
             hidden: false,
             collapsed: false,
             ports: vec![port_out_in],
+            data: serde_json::Value::Null,
+        },
+    );
+    graph.nodes.insert(
+        node_int_sink,
+        Node {
+            kind: NodeKindKey::new("demo.int_sink"),
+            kind_version: 1,
+            pos: CanvasPoint { x: 840.0, y: 320.0 },
+            selectable: None,
+            draggable: None,
+            connectable: None,
+            deletable: None,
+            parent: None,
+            extent: None,
+            expand_parent: None,
+            size: None,
+            hidden: false,
+            collapsed: false,
+            ports: vec![port_int_sink_in],
             data: serde_json::Value::Null,
         },
     );
@@ -895,6 +999,21 @@ fn build_demo_graph(graph_id: GraphId) -> Graph {
             connectable_start: None,
             connectable_end: None,
             ty: Some(TypeDesc::Float),
+            data: serde_json::Value::Null,
+        },
+    );
+    graph.ports.insert(
+        port_int_sink_in,
+        Port {
+            node: node_int_sink,
+            key: PortKey::new("in"),
+            dir: PortDirection::In,
+            kind: PortKind::Data,
+            capacity: PortCapacity::Single,
+            connectable: None,
+            connectable_start: None,
+            connectable_end: None,
+            ty: Some(TypeDesc::Int),
             data: serde_json::Value::Null,
         },
     );
@@ -1320,6 +1439,13 @@ impl NodeGraphDemoDriver {
     const VIEW_STATE_SAVE_DEBOUNCE: Duration = Duration::from_millis(500);
 
     fn save_view_state(&mut self, app: &mut App) {
+        let diagnostics_enabled = std::env::var("FRET_DIAG")
+            .ok()
+            .is_some_and(|v| !v.trim().is_empty() && v.trim() != "0");
+        if diagnostics_enabled {
+            return;
+        }
+
         let Some(models) = app.global::<NodeGraphDemoModels>() else {
             return;
         };
@@ -1417,17 +1543,65 @@ impl NodeGraphDemoDriver {
                 })
             },
         );
-        let canvas = NodeGraphCanvas::new(graph.clone(), view)
+
+        let preset_skin = app
+            .global::<Arc<NodeGraphPresetSkinV1>>()
+            .cloned()
+            .unwrap_or_else(|| {
+                NodeGraphPresetSkinV1::new_from_snapshot(
+                    Theme::global(app).snapshot(),
+                    NodeGraphPresetFamily::WorkflowClean,
+                )
+            });
+
+        let diagnostics_enabled = std::env::var("FRET_DIAG")
+            .ok()
+            .is_some_and(|v| !v.trim().is_empty() && v.trim() != "0");
+        let diag_anchor_ports: Vec<PortId> = if diagnostics_enabled {
+            graph
+                .read_ref(app, |g| {
+                    let find_port =
+                        |node_kind: &str, port_key: &str, dir: PortDirection| -> Option<PortId> {
+                            g.ports.iter().find_map(|(id, port)| {
+                                if port.dir != dir || port.key.0.as_str() != port_key {
+                                    return None;
+                                }
+                                let node = g.nodes.get(&port.node)?;
+                                if node.kind.0.as_str() != node_kind {
+                                    return None;
+                                }
+                                Some(*id)
+                            })
+                        };
+
+                    let float_out = find_port("demo.float.v0", "out", PortDirection::Out)?;
+                    let float_in = find_port("fret.variadic_merge", "in1", PortDirection::In)?;
+                    let float_out_b = find_port("demo.float", "out", PortDirection::Out)?;
+                    let int_in = find_port("demo.int_sink", "in", PortDirection::In)?;
+                    Some(vec![float_out, float_in, float_out_b, int_in])
+                })
+                .ok()
+                .flatten()
+                .unwrap_or_default()
+        } else {
+            Vec::new()
+        };
+
+        let mut canvas = NodeGraphCanvas::new(graph.clone(), view)
             .with_store(store.clone())
             .with_middleware(RejectNonFiniteTx)
             .with_presenter(presenter)
             .with_edge_types(edge_types)
             .with_style(style.clone())
+            .with_skin(preset_skin)
             .with_edit_queue(edits.clone())
             .with_overlay_state(overlays.clone())
             .with_internals_store(internals)
             .with_measured_output_store(measured.derived.clone())
             .with_close_command(CommandId::new("node_graph_demo.close"));
+        if !diag_anchor_ports.is_empty() {
+            canvas = canvas.with_diagnostics_anchor_ports(4, diag_anchor_ports.clone());
+        }
         let canvas_node = ui.create_node_retained(canvas);
 
         let a11y_port =
@@ -1436,7 +1610,28 @@ impl NodeGraphDemoDriver {
             ui.create_node_retained(NodeGraphA11yFocusedEdge::new(internals_overlay.clone()));
         let a11y_node =
             ui.create_node_retained(NodeGraphA11yFocusedNode::new(internals_overlay.clone()));
-        ui.set_children(canvas_node, vec![a11y_port, a11y_edge, a11y_node]);
+        let mut canvas_children = vec![a11y_port, a11y_edge, a11y_node];
+        if diagnostics_enabled && diag_anchor_ports.len() == 4 {
+            canvas_children.push(ui.create_node_retained(NodeGraphDiagConnectingFlag::new(
+                internals_overlay.clone(),
+                "node_graph_demo.flag.connecting",
+            )));
+            canvas_children.push(ui.create_node_retained(NodeGraphDiagAnchor::new(
+                "node_graph_demo.anchor.float_out",
+            )));
+            canvas_children.push(
+                ui.create_node_retained(NodeGraphDiagAnchor::new(
+                    "node_graph_demo.anchor.float_in",
+                )),
+            );
+            canvas_children.push(ui.create_node_retained(NodeGraphDiagAnchor::new(
+                "node_graph_demo.anchor.float_out_b",
+            )));
+            canvas_children.push(
+                ui.create_node_retained(NodeGraphDiagAnchor::new("node_graph_demo.anchor.int_in")),
+            );
+        }
+        ui.set_children(canvas_node, canvas_children);
 
         let overlay_host = NodeGraphOverlayHost::new(
             graph,
@@ -1645,12 +1840,16 @@ impl WinitAppDriver for NodeGraphDemoDriver {
         context: WinitWindowContext<'_, Self::WindowState>,
         changed: &[fret_app::ModelId],
     ) {
-        context
-            .state
-            .ui
-            .propagate_model_changes(context.app, changed);
+        let WinitWindowContext {
+            app, state, window, ..
+        } = context;
 
-        let Some(models) = context.app.global::<NodeGraphDemoModels>() else {
+        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
+            svc.record_model_changes(window, changed);
+        });
+        state.ui.propagate_model_changes(app, changed);
+
+        let Some(models) = app.global::<NodeGraphDemoModels>() else {
             return;
         };
         if changed.contains(&models.view.id()) {
@@ -1664,7 +1863,7 @@ impl WinitAppDriver for NodeGraphDemoDriver {
             if due {
                 self.pending_view_state_save = false;
                 self.last_view_state_save_at = Some(now);
-                self.save_view_state(context.app);
+                self.save_view_state(app);
             }
         }
     }
@@ -1674,10 +1873,13 @@ impl WinitAppDriver for NodeGraphDemoDriver {
         context: WinitWindowContext<'_, Self::WindowState>,
         changed: &[std::any::TypeId],
     ) {
-        context
-            .state
-            .ui
-            .propagate_global_changes(context.app, changed);
+        let WinitWindowContext {
+            app, state, window, ..
+        } = context;
+        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+            svc.record_global_changes(app, window, changed);
+        });
+        state.ui.propagate_global_changes(app, changed);
     }
 
     fn handle_event(&mut self, context: WinitEventContext<'_, Self::WindowState>, event: &Event) {
@@ -1687,6 +1889,19 @@ impl WinitAppDriver for NodeGraphDemoDriver {
             window,
             state,
         } = context;
+
+        let consumed = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+            if !svc.is_enabled() {
+                return false;
+            }
+            if svc.maybe_intercept_event_for_inspect_shortcuts(app, window, event) {
+                return true;
+            }
+            svc.maybe_intercept_event_for_picking(app, window, event)
+        });
+        if consumed {
+            return;
+        }
 
         if matches!(event, Event::WindowCloseRequested) {
             self.save_view_state(app);
@@ -1849,6 +2064,57 @@ impl WinitAppDriver for NodeGraphDemoDriver {
             tracing::info!(?pattern, "node graph demo background pattern changed");
 
             *state = Self::build_ui(app, window);
+            app.request_redraw(window);
+            return;
+        }
+
+        if command.as_str() == CMD_CYCLE_PRESET_FAMILY {
+            let Some(skin) = app.global::<Arc<NodeGraphPresetSkinV1>>().cloned() else {
+                return;
+            };
+
+            let next = skin.cycle();
+            tracing::info!(
+                preset = next.display_name(),
+                "node graph demo preset changed"
+            );
+
+            app.request_redraw(window);
+            return;
+        }
+
+        if command.as_str() == CMD_TOGGLE_WIRE_GLOW {
+            let Some(skin) = app.global::<Arc<NodeGraphPresetSkinV1>>().cloned() else {
+                return;
+            };
+
+            let enabled = skin.toggle_wire_glow();
+            tracing::info!(enabled, "node graph demo wire glow toggled");
+
+            app.request_redraw(window);
+            return;
+        }
+
+        if command.as_str() == CMD_TOGGLE_WIRE_HIGHLIGHT {
+            let Some(skin) = app.global::<Arc<NodeGraphPresetSkinV1>>().cloned() else {
+                return;
+            };
+
+            let enabled = skin.toggle_wire_highlight();
+            tracing::info!(enabled, "node graph demo wire highlight toggled");
+
+            app.request_redraw(window);
+            return;
+        }
+
+        if command.as_str() == CMD_TOGGLE_EDGE_MARKERS {
+            let Some(skin) = app.global::<Arc<NodeGraphPresetSkinV1>>().cloned() else {
+                return;
+            };
+
+            let enabled = skin.toggle_edge_markers();
+            tracing::info!(enabled, "node graph demo edge markers toggled");
+
             app.request_redraw(window);
             return;
         }
@@ -2052,12 +2318,99 @@ impl WinitAppDriver for NodeGraphDemoDriver {
         } = context;
 
         state.ui.set_root(state.root);
+        state.ui.request_semantics_snapshot();
         state.ui.ingest_paint_cache_source(scene);
+
+        let inspection_active = app
+            .with_global_mut_untracked(UiDiagnosticsService::default, |svc, _| {
+                svc.wants_inspection_active(window)
+            });
+        state.ui.set_inspection_active(inspection_active);
+
         scene.clear();
 
         let mut frame = UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
         frame.layout_all();
+
+        let semantics_snapshot = state.ui.semantics_snapshot_arc();
+        let drive = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+            svc.drive_script_for_window(
+                app,
+                window,
+                bounds,
+                scale_factor,
+                Some(&mut state.ui),
+                semantics_snapshot.as_deref(),
+            )
+        });
+
+        if drive.request_redraw {
+            app.request_redraw(window);
+            app.push_effect(Effect::RequestAnimationFrame(window));
+        }
+
+        let mut injected_any = false;
+        for event in drive.events {
+            injected_any = true;
+            state.ui.dispatch_event(app, services, &event);
+        }
+
+        if injected_any {
+            let mut deferred_effects: Vec<Effect> = Vec::new();
+            loop {
+                let effects = app.flush_effects();
+                if effects.is_empty() {
+                    break;
+                }
+
+                let mut applied_any_command = false;
+                for effect in effects {
+                    match effect {
+                        Effect::Command { window: w, command } => {
+                            if w.is_none() || w == Some(window) {
+                                let _ = state.ui.dispatch_command(app, services, &command);
+                                applied_any_command = true;
+                            } else {
+                                deferred_effects.push(Effect::Command { window: w, command });
+                            }
+                        }
+                        other => deferred_effects.push(other),
+                    }
+                }
+
+                if !applied_any_command {
+                    break;
+                }
+            }
+            for effect in deferred_effects {
+                app.push_effect(effect);
+            }
+
+            state.ui.request_semantics_snapshot();
+            let mut frame =
+                UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+            frame.layout_all();
+        }
+
+        let mut frame = UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
         frame.paint_all(scene);
+
+        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+            let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
+            svc.record_snapshot(
+                app,
+                window,
+                bounds,
+                scale_factor,
+                &mut state.ui,
+                element_runtime,
+                scene,
+            );
+            let _ = svc.maybe_dump_if_triggered();
+            if svc.is_enabled() {
+                app.push_effect(Effect::RequestAnimationFrame(window));
+            }
+        });
     }
 
     fn window_create_spec(
@@ -2118,7 +2471,12 @@ pub fn run() -> anyhow::Result<()> {
     );
 
     let view_state_path = fret_node::io::default_project_view_state_path(graph_value.graph_id);
-    let mut view_value =
+    let diagnostics_enabled = std::env::var("FRET_DIAG")
+        .ok()
+        .is_some_and(|v| !v.trim().is_empty() && v.trim() != "0");
+    let mut view_value = if diagnostics_enabled {
+        NodeGraphViewState::default()
+    } else {
         match NodeGraphViewStateFileV1::load_json_if_exists(&view_state_path, graph_value.graph_id)
         {
             Ok(Some(file)) => file.state,
@@ -2127,7 +2485,8 @@ pub fn run() -> anyhow::Result<()> {
                 tracing::warn!(?err, "failed to load node graph view state; using defaults");
                 NodeGraphViewState::default()
             }
-        };
+        }
+    };
     view_value.sanitize_for_graph(&graph_value);
 
     let store_value =
@@ -2159,6 +2518,10 @@ pub fn run() -> anyhow::Result<()> {
     app.set_global(Arc::new(DemoWeirdLayoutMeasuredState::new()));
     app.set_global(Arc::new(NodeGraphDemoStyleState::new()));
     app.set_global(Arc::new(NodeGraphDemoOverlayToggles::new()));
+    app.set_global(NodeGraphPresetSkinV1::new_from_snapshot(
+        Theme::global(&app).snapshot(),
+        NodeGraphPresetFamily::WorkflowClean,
+    ));
 
     let config = WinitRunnerConfig {
         main_window_title: "fret-demo node_graph_demo".to_string(),
@@ -2166,7 +2529,7 @@ pub fn run() -> anyhow::Result<()> {
         ..Default::default()
     };
 
-    run_app(config, app, NodeGraphDemoDriver::default()).map_err(anyhow::Error::from)
+    fret::run_native_demo(config, app, NodeGraphDemoDriver::default()).map_err(anyhow::Error::from)
 }
 
 fn kb(platform: PlatformFilter, key: KeyCode, mods: Modifiers) -> DefaultKeybinding {
@@ -2188,12 +2551,34 @@ fn register_demo_commands(registry: &mut CommandRegistry) {
             },
         )
     };
+    let mac_cmd_shift = |key: KeyCode| {
+        kb(
+            PlatformFilter::Macos,
+            key,
+            Modifiers {
+                meta: true,
+                shift: true,
+                ..Default::default()
+            },
+        )
+    };
     let win_ctrl = |key: KeyCode| {
         kb(
             PlatformFilter::Windows,
             key,
             Modifiers {
                 ctrl: true,
+                ..Default::default()
+            },
+        )
+    };
+    let win_ctrl_shift = |key: KeyCode| {
+        kb(
+            PlatformFilter::Windows,
+            key,
+            Modifiers {
+                ctrl: true,
+                shift: true,
                 ..Default::default()
             },
         )
@@ -2208,12 +2593,34 @@ fn register_demo_commands(registry: &mut CommandRegistry) {
             },
         )
     };
+    let linux_ctrl_shift = |key: KeyCode| {
+        kb(
+            PlatformFilter::Linux,
+            key,
+            Modifiers {
+                ctrl: true,
+                shift: true,
+                ..Default::default()
+            },
+        )
+    };
     let web_ctrl = |key: KeyCode| {
         kb(
             PlatformFilter::Web,
             key,
             Modifiers {
                 ctrl: true,
+                ..Default::default()
+            },
+        )
+    };
+    let web_ctrl_shift = |key: KeyCode| {
+        kb(
+            PlatformFilter::Web,
+            key,
+            Modifiers {
+                ctrl: true,
+                shift: true,
                 ..Default::default()
             },
         )
@@ -2291,6 +2698,66 @@ fn register_demo_commands(registry: &mut CommandRegistry) {
                 win_ctrl(KeyCode::KeyB),
                 linux_ctrl(KeyCode::KeyB),
                 web_ctrl(KeyCode::KeyB),
+            ]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_CYCLE_PRESET_FAMILY),
+        CommandMeta::new("Cycle NodeGraph Preset Family")
+            .with_category("Demo")
+            .with_keywords(["preset", "theme", "skin", "style"])
+            .with_scope(CommandScope::App)
+            .with_when(WhenExpr::parse("!focus.is_text_input").expect("valid when expr"))
+            .with_default_keybindings([
+                mac_cmd_shift(KeyCode::KeyP),
+                win_ctrl_shift(KeyCode::KeyP),
+                linux_ctrl_shift(KeyCode::KeyP),
+                web_ctrl_shift(KeyCode::KeyP),
+            ]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_TOGGLE_WIRE_GLOW),
+        CommandMeta::new("Toggle NodeGraph Wire Glow")
+            .with_category("Demo")
+            .with_keywords(["wire", "glow", "effect", "shadow"])
+            .with_scope(CommandScope::App)
+            .with_when(WhenExpr::parse("!focus.is_text_input").expect("valid when expr"))
+            .with_default_keybindings([
+                mac_cmd_shift(KeyCode::KeyG),
+                win_ctrl_shift(KeyCode::KeyG),
+                linux_ctrl_shift(KeyCode::KeyG),
+                web_ctrl_shift(KeyCode::KeyG),
+            ]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_TOGGLE_WIRE_HIGHLIGHT),
+        CommandMeta::new("Toggle NodeGraph Wire Highlight")
+            .with_category("Demo")
+            .with_keywords(["wire", "highlight", "inner", "stroke"])
+            .with_scope(CommandScope::App)
+            .with_when(WhenExpr::parse("!focus.is_text_input").expect("valid when expr"))
+            .with_default_keybindings([
+                mac_cmd_shift(KeyCode::KeyH),
+                win_ctrl_shift(KeyCode::KeyH),
+                linux_ctrl_shift(KeyCode::KeyH),
+                web_ctrl_shift(KeyCode::KeyH),
+            ]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_TOGGLE_EDGE_MARKERS),
+        CommandMeta::new("Toggle NodeGraph Edge Markers")
+            .with_category("Demo")
+            .with_keywords(["edge", "marker", "arrow", "arrowhead", "endpoint"])
+            .with_scope(CommandScope::App)
+            .with_when(WhenExpr::parse("!focus.is_text_input").expect("valid when expr"))
+            .with_default_keybindings([
+                mac_cmd_shift(KeyCode::KeyJ),
+                win_ctrl_shift(KeyCode::KeyJ),
+                linux_ctrl_shift(KeyCode::KeyJ),
+                web_ctrl_shift(KeyCode::KeyJ),
             ]),
     );
 

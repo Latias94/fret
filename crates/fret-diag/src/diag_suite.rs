@@ -669,40 +669,46 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
         warmup_frames = 5;
     }
 
-    let mut suite_script_env_defaults: std::collections::BTreeMap<String, String> =
-        std::collections::BTreeMap::new();
-    let mut suite_env_conflicts: Vec<String> = Vec::new();
-    for src in scripts.iter() {
-        for (key, value) in script_env_defaults(src) {
-            if let Some(prev) = suite_script_env_defaults.insert(key.clone(), value.clone())
-                && prev != value
-            {
-                suite_env_conflicts.push(format!(
-                    "{} wants {}={}, but another script requested {}={}",
-                    src.display(),
-                    key,
-                    value,
-                    key,
-                    prev
-                ));
+    let use_devtools_ws =
+        devtools_ws_url.is_some() || devtools_token.is_some() || devtools_session_id.is_some();
+    let reuse_process = use_devtools_ws || launch.is_none() || reuse_launch;
+    let tool_launched = launch.is_some() || reuse_launch;
+
+    if reuse_process {
+        // If the suite reuses a single process, we must pick a single launch env for the whole run.
+        // We treat `meta.env_defaults` as "suite-affecting" in this mode (and reject conflicts).
+        let mut suite_script_env_defaults: std::collections::BTreeMap<String, String> =
+            std::collections::BTreeMap::new();
+        let mut suite_env_conflicts: Vec<String> = Vec::new();
+        for src in scripts.iter() {
+            for (key, value) in script_env_defaults(src) {
+                if let Some(prev) = suite_script_env_defaults.insert(key.clone(), value.clone())
+                    && prev != value
+                {
+                    suite_env_conflicts.push(format!(
+                        "{} wants {}={}, but another script requested {}={}",
+                        src.display(),
+                        key,
+                        value,
+                        key,
+                        prev
+                    ));
+                }
             }
         }
-    }
-    if !suite_env_conflicts.is_empty() {
-        suite_env_conflicts.sort();
-        return Err(format!(
-            "conflicting script meta.env_defaults in suite:\n- {}",
-            suite_env_conflicts.join("\n- ")
-        ));
-    }
-    for (key, value) in suite_script_env_defaults {
-        push_env_if_missing(&mut launch_env, &key, &value);
+        if !suite_env_conflicts.is_empty() {
+            suite_env_conflicts.sort();
+            return Err(format!(
+                "conflicting script meta.env_defaults in suite:\n- {}",
+                suite_env_conflicts.join("\n- ")
+            ));
+        }
+        for (key, value) in suite_script_env_defaults {
+            push_env_if_missing(&mut launch_env, &key, &value);
+        }
     }
 
     let suite_launch_env = launch_env.clone();
-
-    let use_devtools_ws =
-        devtools_ws_url.is_some() || devtools_token.is_some() || devtools_session_id.is_some();
 
     let resolved_exit_path = {
         let raw = std::env::var_os("FRET_DIAG_EXIT_PATH")
@@ -806,8 +812,6 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
         None
     };
 
-    let reuse_process = use_devtools_ws || launch.is_none() || reuse_launch;
-    let tool_launched = launch.is_some() || reuse_launch;
     let mut child = if use_devtools_ws {
         None
     } else if reuse_process {
@@ -915,9 +919,13 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
     for (idx, src) in scripts.into_iter().enumerate() {
         let script_key = normalize_repo_relative_path(&workspace_root, &src);
         if !reuse_process {
+            let mut per_script_launch_env = suite_launch_env.clone();
+            for (key, value) in script_env_defaults(&src) {
+                push_env_if_missing(&mut per_script_launch_env, &key, &value);
+            }
             child = match maybe_launch_demo(
                 &launch,
-                &suite_launch_env,
+                &per_script_launch_env,
                 &workspace_root,
                 &resolved_ready_path,
                 &resolved_exit_path,

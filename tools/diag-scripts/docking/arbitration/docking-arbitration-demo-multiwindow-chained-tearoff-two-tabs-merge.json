@@ -44,8 +44,8 @@
       "type": "assert",
       "window": { "kind": "first_seen" },
       "predicate": {
-        "kind": "dock_graph_signature_is",
-        "signature": "dock(root=split(v,[split(h,[tabs([demo.viewport.left]),tabs([demo.viewport.right])]),tabs([demo.controls])]);floatings=[])"
+        "kind": "dock_graph_signature_fingerprint64_is",
+        "fingerprint64": 7509174212363425732
       }
     },
 
@@ -88,19 +88,42 @@
       "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-dock-space" } },
       "timeout_frames": 240
     },
-    { "type": "set_window_outer_position", "window": { "kind": "last_seen" }, "x_px": 1560.0, "y_px": 520.0 },
+    { "type": "set_window_outer_position", "window": { "kind": "last_seen" }, "x_px": 180.0, "y_px": 180.0 },
     { "type": "wait_frames", "n": 10 },
 
     { "type": "raise_window", "window": { "kind": "last_seen" } },
     { "type": "set_cursor_in_window_logical", "window": { "kind": "last_seen" }, "x_px": 640.0, "y_px": 260.0 },
     { "type": "wait_frames", "n": 2 },
-    { "type": "pointer_down", "window": { "kind": "last_seen" }, "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-right" } },
-    { "type": "pointer_move", "window": { "kind": "last_seen" }, "delta_x": 20.0, "delta_y": 0.0, "steps": 12 },
-    { "type": "wait_until", "window": { "kind": "last_seen" }, "predicate": { "kind": "dock_drag_active_is", "active": true }, "timeout_frames": 120 },
+    {
+      "type": "pointer_down",
+      "window": { "kind": "last_seen" },
+      "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-right" }
+    },
+    {
+      "type": "pointer_move",
+      "window": { "kind": "last_seen" },
+      "delta_x": 120.0,
+      "delta_y": 0.0,
+      "steps": 24
+    },
+    {
+      "type": "wait_until",
+      "window": { "kind": "last_seen" },
+      "predicate": { "kind": "dock_drag_active_is", "active": true },
+      "timeout_frames": 120
+    },
     { "type": "wait_frames", "n": 2 },
+
+    { "type": "raise_window", "window": { "kind": "last_seen" } },
     { "type": "set_cursor_in_window_logical", "window": { "kind": "last_seen" }, "x_px": 220.0, "y_px": 220.0 },
     { "type": "wait_frames", "n": 2 },
-    { "type": "pointer_move", "window": { "kind": "last_seen" }, "delta_x": -800.0, "delta_y": 0.0, "steps": 90 },
+    {
+      "type": "pointer_move",
+      "window": { "kind": "last_seen" },
+      "delta_x": -340.0,
+      "delta_y": 0.0,
+      "steps": 90
+    },
     {
       "type": "wait_until",
       "window": { "kind": "last_seen" },
@@ -108,20 +131,44 @@
       "timeout_frames": 240
     },
     { "type": "pointer_up", "window": { "kind": "last_seen" } },
-    { "type": "wait_until", "window": { "kind": "last_seen" }, "predicate": { "kind": "dock_drag_active_is", "active": false }, "timeout_frames": 240 },
+    {
+      "type": "wait_until",
+      "window": { "kind": "last_seen" },
+      "predicate": { "kind": "dock_drag_active_is", "active": false },
+      "timeout_frames": 240
+    },
     { "type": "wait_frames", "n": 20 },
 
-    { "type": "wait_until", "window": { "kind": "last_seen" }, "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-dock-space" } }, "timeout_frames": 240 },
+    {
+      "type": "wait_until",
+      "window": { "kind": "last_seen" },
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-dock-space" } },
+      "timeout_frames": 240
+    },
+    { "type": "set_window_outer_position", "window": { "kind": "last_seen" }, "x_px": 180.0, "y_px": 540.0 },
+    { "type": "wait_frames", "n": 10 },
+
     { "type": "raise_window", "window": { "kind": "last_seen" } },
     { "type": "set_cursor_in_window_logical", "window": { "kind": "last_seen" }, "x_px": 640.0, "y_px": 260.0 },
     { "type": "wait_frames", "n": 2 },
-    { "type": "pointer_down", "window": { "kind": "last_seen" }, "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-left" } },
-    { "type": "pointer_move", "window": { "kind": "last_seen" }, "delta_x": 20.0, "delta_y": 0.0, "steps": 12 },
-    { "type": "wait_until", "window": { "kind": "last_seen" }, "predicate": { "kind": "dock_drag_active_is", "active": true }, "timeout_frames": 120 },
+    {
+      "type": "pointer_down",
+      "window": { "kind": "last_seen" },
+      "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-left" }
+    },
+    { "type": "pointer_move", "window": { "kind": "last_seen" }, "delta_x": 120.0, "delta_y": 0.0, "steps": 24 },
+    {
+      "type": "wait_until",
+      "window": { "kind": "last_seen" },
+      "predicate": { "kind": "dock_drag_active_is", "active": true },
+      "timeout_frames": 120
+    },
     { "type": "wait_frames", "n": 2 },
+
+    { "type": "raise_window", "window": { "kind": "last_seen" } },
     { "type": "set_cursor_in_window_logical", "window": { "kind": "last_seen" }, "x_px": 220.0, "y_px": 220.0 },
     { "type": "wait_frames", "n": 2 },
-    { "type": "pointer_move", "window": { "kind": "last_seen" }, "delta_x": -800.0, "delta_y": 0.0, "steps": 90 },
+    { "type": "pointer_move", "window": { "kind": "last_seen" }, "delta_x": -340.0, "delta_y": 0.0, "steps": 90 },
     {
       "type": "wait_until",
       "window": { "kind": "last_seen" },
@@ -129,15 +176,20 @@
       "timeout_frames": 240
     },
     { "type": "pointer_up", "window": { "kind": "last_seen" } },
-    { "type": "wait_until", "window": { "kind": "last_seen" }, "predicate": { "kind": "dock_drag_active_is", "active": false }, "timeout_frames": 240 },
+    {
+      "type": "wait_until",
+      "window": { "kind": "last_seen" },
+      "predicate": { "kind": "dock_drag_active_is", "active": false },
+      "timeout_frames": 240
+    },
 
     { "type": "wait_until", "window": { "kind": "first_seen" }, "predicate": { "kind": "dock_graph_canonical_is", "canonical": true }, "timeout_frames": 240 },
     {
       "type": "assert",
       "window": { "kind": "first_seen" },
       "predicate": {
-        "kind": "dock_graph_signature_is",
-        "signature": "dock(root=split(v,[split(h,[tabs([demo.viewport.left]),tabs([demo.viewport.right])]),tabs([demo.controls])]);floatings=[])"
+        "kind": "dock_graph_signature_fingerprint64_is",
+        "fingerprint64": 7509174212363425732
       }
     },
 
@@ -145,4 +197,3 @@
     { "type": "wait_frames", "n": 2 }
   ]
 }
-

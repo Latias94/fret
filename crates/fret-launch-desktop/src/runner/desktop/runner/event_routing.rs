@@ -137,7 +137,14 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
     pub(super) fn route_internal_drag_hover_from_cursor(&mut self) -> bool {
         #[cfg(target_os = "macos")]
-        self.macos_refresh_cursor_screen_pos_for_dock_drag();
+        {
+            let diag_cursor_override_recent = self
+                .diag_last_cursor_override_tick
+                .is_some_and(|t| self.tick_id.0.saturating_sub(t.0) <= 2);
+            if !diag_cursor_override_recent {
+                self.macos_refresh_cursor_screen_pos_for_dock_drag();
+            }
+        }
 
         let Some(pointer_id) = self.dock_drag_pointer_id() else {
             return self.clear_internal_drag_hover_if_needed();
@@ -471,7 +478,14 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
     pub(super) fn route_internal_drag_drop_from_cursor(&mut self) -> bool {
         #[cfg(target_os = "macos")]
-        self.macos_refresh_cursor_screen_pos_for_dock_drag();
+        {
+            let diag_cursor_override_recent = self
+                .diag_last_cursor_override_tick
+                .is_some_and(|t| self.tick_id.0.saturating_sub(t.0) <= 2);
+            if !diag_cursor_override_recent {
+                self.macos_refresh_cursor_screen_pos_for_dock_drag();
+            }
+        }
 
         let Some(pointer_id) = self.dock_drag_pointer_id() else {
             return false;
