@@ -59,7 +59,12 @@ pub fn compute_autoscroll_y(
     let dy = if pointer.y.0 >= top && pointer.y.0 < top + margin {
         -ramp_speed(top + margin - pointer.y.0, margin, min_speed, max_speed)
     } else if pointer.y.0 <= bottom && pointer.y.0 > bottom - margin {
-        ramp_speed(pointer.y.0 - (bottom - margin), margin, min_speed, max_speed)
+        ramp_speed(
+            pointer.y.0 - (bottom - margin),
+            margin,
+            min_speed,
+            max_speed,
+        )
     } else {
         0.0
     };
@@ -105,12 +110,7 @@ fn sanitize_config(config: AutoScrollConfig) -> Option<(f32, f32, f32)> {
     (margin > 0.0 && max_speed > 0.0).then_some((margin, min_speed, max_speed))
 }
 
-fn ramp_speed(
-    distance_into_margin: f32,
-    margin: f32,
-    min_speed: f32,
-    max_speed: f32,
-) -> f32 {
+fn ramp_speed(distance_into_margin: f32, margin: f32, min_speed: f32, max_speed: f32) -> f32 {
     // Normalize to [0..1], clamp, then scale linearly.
     let t = (distance_into_margin / margin).clamp(0.0, 1.0);
     min_speed + t * (max_speed - min_speed)
@@ -167,7 +167,11 @@ mod tests {
             max_speed_px_per_tick: 10.0,
         };
         assert_eq!(
-            compute_autoscroll_x(cfg, rect(0.0, 0.0, 100.0, 100.0), Point::new(Px(10.0), Px(50.0))),
+            compute_autoscroll_x(
+                cfg,
+                rect(0.0, 0.0, 100.0, 100.0),
+                Point::new(Px(10.0), Px(50.0))
+            ),
             None,
             "exactly at the margin boundary should not scroll"
         );
