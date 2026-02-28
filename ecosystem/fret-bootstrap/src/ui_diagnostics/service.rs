@@ -59,7 +59,45 @@ struct TextFontStackKeyStability {
     stable_frames: u32,
 }
 
+thread_local! {
+    static SCRIPT_INJECTION_SCOPE: std::cell::Cell<bool> = std::cell::Cell::new(false);
+}
+
 impl UiDiagnosticsService {
+    pub fn with_script_injection_scope<R>(f: impl FnOnce() -> R) -> R {
+        SCRIPT_INJECTION_SCOPE.with(|cell| {
+            let prev = cell.replace(true);
+            let out = f();
+            cell.set(prev);
+            out
+        })
+    }
+
+    fn in_script_injection_scope() -> bool {
+        SCRIPT_INJECTION_SCOPE.with(|cell| cell.get())
+    }
+
+    fn any_script_running(&self) -> bool {
+        self.pending_script.is_some() || !self.active_scripts.is_empty()
+    }
+
+    pub fn should_ignore_external_pointer_event(&self, event: &Event) -> bool {
+        if !self.is_enabled() {
+            return false;
+        }
+        if !self.cfg.isolate_external_pointer_input_while_script_running {
+            return false;
+        }
+        if Self::in_script_injection_scope() {
+            return false;
+        }
+        if !self.any_script_running() {
+            return false;
+        }
+
+        matches!(event, Event::Pointer(_) | Event::InternalDrag(_))
+    }
+
     fn is_wasm_ws_only(&self) -> bool {
         cfg!(target_arch = "wasm32") && self.ws_is_configured()
     }

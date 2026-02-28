@@ -212,8 +212,18 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
             return;
         }
 
+        let diag_cursor_override_recent = self
+            .diag_last_cursor_override_tick
+            .is_some_and(|t| self.tick_id.0.saturating_sub(t.0) <= 2);
+        let diag_mouse_buttons_override_recent = self
+            .diag_last_mouse_buttons_override_tick
+            .is_some_and(|t| self.tick_id.0.saturating_sub(t.0) <= 2);
+
         match event {
             DeviceEvent::PointerMotion { delta } => {
+                if self.diag_isolate_pointer_input && diag_cursor_override_recent {
+                    return;
+                }
                 #[cfg(target_os = "windows")]
                 {
                     if let Some(p) = win32::cursor_pos_physical() {
@@ -269,6 +279,11 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 state: ElementState::Released,
                 ..
             } => {
+                if self.diag_isolate_pointer_input
+                    && (diag_cursor_override_recent || diag_mouse_buttons_override_recent)
+                {
+                    return;
+                }
                 // This fallback path is only for releases that occur outside all windows, where
                 // winit may not emit `WindowEvent::MouseInput`.
                 let Some(pointer_id) = dock_drag_pointer_id else {
@@ -1097,13 +1112,21 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     (mapped, pos, external_drag_token, screen_pos, scale_factor)
                 };
 
-                if let Some(p) = screen_pos {
-                    self.cursor_screen_pos = Some(p);
-                    #[cfg(target_os = "macos")]
-                    self.macos_calibrate_cursor_transform_from_window_sample(p, _scale_factor);
-                }
+                let diag_cursor_override_recent = self
+                    .diag_last_cursor_override_tick
+                    .is_some_and(|t| self.tick_id.0.saturating_sub(t.0) <= 2);
+                let suppress_os_cursor_sample =
+                    self.diag_isolate_pointer_input && diag_cursor_override_recent;
 
-                let _ = self.update_dock_tearoff_follow();
+                if !suppress_os_cursor_sample {
+                    if let Some(p) = screen_pos {
+                        self.cursor_screen_pos = Some(p);
+                        #[cfg(target_os = "macos")]
+                        self.macos_calibrate_cursor_transform_from_window_sample(p, _scale_factor);
+                    }
+
+                    let _ = self.update_dock_tearoff_follow();
+                }
 
                 let dock_drag_capture = self
                     .dock_drag_pointer_id()

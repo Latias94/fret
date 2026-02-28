@@ -70,7 +70,10 @@ mod tests {
         let mut base = BTreeMap::<String, String>::new();
         base.insert("FRET_DIAG_MAX_SNAPSHOTS".to_string(), "999".to_string());
         base.insert("FRET_DIAG_RENDERER_PERF".to_string(), "1".to_string());
-        base.insert("FRET_DIAG_BUNDLE_WRITE_SCHEMA2".to_string(), "1".to_string());
+        base.insert(
+            "FRET_DIAG_BUNDLE_WRITE_SCHEMA2".to_string(),
+            "1".to_string(),
+        );
         base.insert("FRET_SOMETHING_ELSE".to_string(), "1".to_string());
 
         let (scrubbed, keys) = scrub_inherited_env_for_tool_launch(&base);
