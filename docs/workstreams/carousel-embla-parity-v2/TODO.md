@@ -122,7 +122,11 @@ Non-goals (v2):
     geometry churn (see `api-and-events.md`).
   - Gate: `ecosystem/fret-ui-shadcn/tests/carousel_api_generations.rs`
   - Gate (MVP): `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-reinit-resize-gate.json`
-- [ ] CAR2-180 Implement `slideChanges` semantics (detect add/remove/reorder in retained tree).
+- [x] CAR2-180 Implement `slideChanges` semantics (detect add/remove/reorder in retained tree).
+  - Evidence:
+    - Content-id change detection: `ecosystem/fret-ui-shadcn/src/carousel.rs`
+  - Gate:
+    - `ecosystem/fret-ui-shadcn/tests/carousel_slide_changes_reinit.rs`
 
 ---
 

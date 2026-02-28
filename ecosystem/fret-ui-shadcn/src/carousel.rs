@@ -373,6 +373,7 @@ struct CarouselState {
     max_offset: Option<Model<Px>>,
     embla_engine: Option<Model<Option<headless_embla::engine::Engine>>>,
     slides_in_view_tracker: Option<Model<headless_embla::slides_in_view::SlidesInViewTracker>>,
+    slide_content_ids: Option<Model<Arc<[fret_ui::elements::GlobalElementId]>>>,
 }
 
 fn carousel_models<H: UiHost>(
@@ -481,6 +482,23 @@ fn carousel_slides_in_view_tracker_model<H: UiHost>(
         st.slides_in_view_tracker = Some(tracker.clone());
     });
     tracker
+}
+
+fn carousel_slide_content_ids_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+) -> Model<Arc<[fret_ui::elements::GlobalElementId]>> {
+    let existing = cx.with_state(CarouselState::default, |st| st.slide_content_ids.clone());
+    if let Some(existing) = existing {
+        return existing;
+    }
+
+    let ids: Arc<[fret_ui::elements::GlobalElementId]> =
+        Arc::from(Vec::<fret_ui::elements::GlobalElementId>::new());
+    let model = cx.app.models_mut().insert(ids);
+    cx.with_state(CarouselState::default, |st| {
+        st.slide_content_ids = Some(model.clone());
+    });
+    model
 }
 
 impl Default for Carousel {
@@ -1687,6 +1705,8 @@ impl Carousel {
 
             let mut item_ids = Vec::with_capacity(items_len);
             let item_ids_ref = &mut item_ids;
+            let mut slide_content_ids = Vec::with_capacity(items_len);
+            let slide_content_ids_ref = &mut slide_content_ids;
             let track = cx.flex(
                 FlexProps {
                     layout: track_layout,
@@ -1700,6 +1720,8 @@ impl Carousel {
                         .into_iter()
                         .enumerate()
                         .map(|(idx, content)| {
+                            slide_content_ids_ref.push(content.id);
+
                             let mut item_layout = LayoutRefinement::default()
                                 .flex_none()
                                 .min_w(MetricRef::Px(Px(0.0)))
@@ -2050,6 +2072,30 @@ impl Carousel {
             let mut did_reinit = false;
             if (snaps_changed || max_offset_changed || view_size_changed) && view_size_now.0 > 0.0 {
                 did_reinit = true;
+            }
+
+            if view_size_now.0 > 0.0 && !slide_content_ids.is_empty() {
+                let slide_content_ids_model = carousel_slide_content_ids_model(cx);
+                let prev: Arc<[fret_ui::elements::GlobalElementId]> = cx
+                    .watch_model(&slide_content_ids_model)
+                    .layout()
+                    .cloned()
+                    .unwrap_or_else(|| Arc::from(Vec::<fret_ui::elements::GlobalElementId>::new()));
+                let now: Arc<[fret_ui::elements::GlobalElementId]> =
+                    Arc::from(slide_content_ids.clone().into_boxed_slice());
+
+                let content_ids_changed = prev.len() != now.len()
+                    || prev
+                        .iter()
+                        .zip(now.iter())
+                        .any(|(a, b)| a != b);
+                if content_ids_changed {
+                    did_reinit = true;
+                    let _ = cx
+                        .app
+                        .models_mut()
+                        .update(&slide_content_ids_model, |v| *v = now);
+                }
             }
 
             if did_reinit && snaps_now.len() > 1 {
