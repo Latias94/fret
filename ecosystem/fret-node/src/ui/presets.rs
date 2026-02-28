@@ -19,7 +19,7 @@ use crate::core::{EdgeId, EdgeKind, Graph, NodeId, PortId, PortKind};
 use super::presenter::EdgeRenderHint;
 use super::skin::{
     CanvasChromeHint, InteractionChromeHint, NodeChromeHint, NodeGraphSkin, NodeRingHint,
-    NodeShadowHint, PortChromeHint, PortShapeHint, WireGlowHint,
+    NodeShadowHint, PortChromeHint, PortShapeHint, WireGlowHint, WireOutlineHint,
 };
 use super::style::NodeGraphStyle;
 
@@ -256,6 +256,27 @@ impl NodeGraphSkin for NodeGraphPresetSkinV1 {
         } else {
             (None, None)
         };
+
+        let outline_color = Color {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+            a: match preset_id {
+                "schematic_contrast" => 0.35,
+                "graph_dark" => 0.45,
+                _ => 0.25,
+            },
+        };
+        let (wire_outline_selected, wire_outline_preview) = (
+            Some(WireOutlineHint {
+                width_mul: 1.8,
+                color: outline_color,
+            }),
+            Some(WireOutlineHint {
+                width_mul: 1.8,
+                color: outline_color,
+            }),
+        );
         InteractionChromeHint {
             hover: Some(tokens.states.hover.color.into()),
             invalid: Some(tokens.states.invalid.color.into()),
@@ -266,6 +287,8 @@ impl NodeGraphSkin for NodeGraphPresetSkinV1 {
             dash_emphasis: Some(tokens.wire.dash_emphasis.into_dash()),
             wire_glow_selected,
             wire_glow_preview,
+            wire_outline_selected,
+            wire_outline_preview,
         }
     }
 

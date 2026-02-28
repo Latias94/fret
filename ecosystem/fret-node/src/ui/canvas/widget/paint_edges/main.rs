@@ -3,6 +3,8 @@ use crate::ui::canvas::widget::*;
 use fret_core::scene::DashPatternV1;
 use fret_core::scene::DropShadowV1;
 use fret_core::{EffectChain, EffectMode, EffectQuality, EffectStep};
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(in super::super) fn paint_edges<H: UiHost>(
@@ -26,6 +28,13 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             start_marker: Option<crate::ui::presenter::EdgeMarker>,
             end_marker: Option<crate::ui::presenter::EdgeMarker>,
             selected: bool,
+        }
+
+        fn stable_hash_u64<T: Hash>(tag: u8, key: &T) -> u64 {
+            let mut hasher = DefaultHasher::new();
+            tag.hash(&mut hasher);
+            key.hash(&mut hasher);
+            hasher.finish()
         }
 
         fn bounds_from_points(points: &[Point]) -> Option<Rect> {
@@ -259,6 +268,54 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             .chain(edges_selected)
             .chain(edges_hovered)
         {
+            if edge.selected
+                && let Some(outline) = interaction_hint.wire_outline_selected
+                && outline.width_mul.is_finite()
+                && outline.width_mul > 1.0e-3
+                && outline.color.a > 0.0
+            {
+                let outline_width = edge.width * outline.width_mul.max(0.0);
+                if let Some(custom) = custom_paths.get(&edge.id) {
+                    let dash = edge
+                        .dash
+                        .map(|p| (p.dash.0.to_bits(), p.gap.0.to_bits(), p.phase.0.to_bits()));
+                    let key = (custom.cache_key, outline_width.to_bits(), dash);
+                    let outline_cache_key = stable_hash_u64(1, &key);
+                    if let Some(path) = self.paint_cache.wire_path_from_commands(
+                        cx.services,
+                        outline_cache_key,
+                        &custom.commands,
+                        zoom,
+                        cx.scale_factor,
+                        outline_width,
+                        edge.dash,
+                    ) {
+                        cx.scene.push(SceneOp::Path {
+                            order: DrawOrder(2),
+                            origin: Point::new(Px(0.0), Px(0.0)),
+                            path,
+                            paint: outline.color.into(),
+                        });
+                    }
+                } else if let Some(path) = self.paint_cache.wire_path(
+                    cx.services,
+                    edge.route,
+                    edge.from,
+                    edge.to,
+                    zoom,
+                    cx.scale_factor,
+                    outline_width,
+                    edge.dash,
+                ) {
+                    cx.scene.push(SceneOp::Path {
+                        order: DrawOrder(2),
+                        origin: Point::new(Px(0.0), Px(0.0)),
+                        path,
+                        paint: outline.color.into(),
+                    });
+                }
+            }
+
             let glow = edge
                 .selected
                 .then_some(interaction_hint.wire_glow_selected)
@@ -550,6 +607,31 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 };
 
             let mut draw_preview = |from: Point| {
+                if let Some(outline) = interaction_hint.wire_outline_preview
+                    && outline.width_mul.is_finite()
+                    && outline.width_mul > 1.0e-3
+                    && outline.color.a > 0.0
+                {
+                    let outline_width = self.style.wire_width * outline.width_mul.max(0.0);
+                    if let Some(path) = self.paint_cache.wire_path(
+                        cx.services,
+                        EdgeRouteKind::Bezier,
+                        from,
+                        to,
+                        zoom,
+                        cx.scale_factor,
+                        outline_width,
+                        dash,
+                    ) {
+                        cx.scene.push(SceneOp::Path {
+                            order: DrawOrder(2),
+                            origin: Point::new(Px(0.0), Px(0.0)),
+                            path,
+                            paint: outline.color.into(),
+                        });
+                    }
+                }
+
                 let glow = interaction_hint.wire_glow_preview;
                 let glow_bounds = glow.and_then(|g| {
                     glow_bounds_for_edge_route(

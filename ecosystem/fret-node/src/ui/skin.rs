@@ -37,6 +37,10 @@ pub struct InteractionChromeHint {
     pub wire_glow_selected: Option<WireGlowHint>,
     /// Optional wire glow applied to drag preview wires (paint-only effect).
     pub wire_glow_preview: Option<WireGlowHint>,
+    /// Optional wire outline applied to selected edges (paint-only, drawn behind the core stroke).
+    pub wire_outline_selected: Option<WireOutlineHint>,
+    /// Optional wire outline applied to drag preview wires (paint-only, drawn behind the core stroke).
+    pub wire_outline_preview: Option<WireOutlineHint>,
 }
 
 /// Paint-only wire glow parameters (screen-space logical px).
@@ -45,6 +49,13 @@ pub struct WireGlowHint {
     pub blur_radius_px: f32,
     pub downsample: u32,
     pub alpha_mul: f32,
+}
+
+/// Paint-only wire outline parameters (screen-space logical px).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct WireOutlineHint {
+    pub width_mul: f32,
+    pub color: Color,
 }
 
 /// Per-node chrome overrides (UI-only).
