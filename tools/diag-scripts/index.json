@@ -3275,6 +3275,28 @@
         "Waits for the right-edge drop preview indicator to appear.",
         "Captures a screenshot while the preview is visible (used to gate docking drop overlay tokens)."
       ]
+    },
+    {
+      "id": "workspace-shell-demo-tab-middle-click-close-smoke",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-middle-click-close-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke-workspace"
+      ],
+      "tags": [
+        "close",
+        "gate",
+        "smoke",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": [
+        "Waits for a known tab in pane A to exist.",
+        "Middle-clicks the tab.",
+        "Asserts the tab is removed from the UI tree (not_exists)."
+      ]
     }
   ]
 }
