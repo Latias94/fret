@@ -166,7 +166,16 @@ Non-goals (v2):
 - [ ] CAR2-410 Implement Embla-like `focus` behavior:
   - focusing a slide (or focus entering slide) scrolls it into view
   - keyboard navigation remains predictable with roving focus policies
-- [ ] CAR2-420 A11y: role/roledescription + slide semantics parity audit.
+-  Evidence:
+  - `ecosystem/fret-ui-shadcn/src/carousel.rs` (`watch_focus`, Tab watcher)
+  - Gate: `ecosystem/fret-ui-shadcn/tests/carousel_focus_watch_tab_scrolls.rs`
+- [x] CAR2-410 Implement Embla-like `focus` behavior (MVP).
+- [x] CAR2-420 A11y: role/roledescription + slide semantics parity audit (with known gaps).
+  - Note: we currently stamp role/label/orientation, but do not yet have a portable
+    `aria-roledescription` equivalent in core semantics.
+  - Evidence:
+    - `ecosystem/fret-ui-shadcn/src/carousel.rs` (Region root + slide labels)
+    - Gate: `ecosystem/fret-ui-shadcn/tests/carousel_a11y_semantics.rs`
 
 ---
 

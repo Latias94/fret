@@ -90,6 +90,47 @@ Embla release computes:
 The v2 engine will reproduce this shaping (best-effort) so that “fast swipe” and “slow drag”
 produce observably different settle behavior.
 
+## Focus watcher semantics (`focus=true`)
+
+Embla option `focus` (default `true`) enables `SlideFocus`:
+
+- when the user presses **Tab** and focus moves into a slide, Embla scrolls the focused slide into
+  view instantly (`useDuration(0)` + `scrollTo.index(...)`).
+- Embla uses a small time window (≈10ms) between the Tab keydown and the focus event to avoid
+  reacting to non-keyboard focus changes.
+
+Fret mapping (v2 MVP):
+
+- `CarouselOptions.watch_focus` (default `true`) is the recipe-level equivalent of Embla `focus`.
+- The shadcn recipe infers the focused slide by comparing the **focused element's visual bounds**
+  against per-slide visual bounds from the previous frame.
+- When focus changes and either:
+  - a Tab press was observed recently, **or**
+  - the focused element is outside the viewport bounds (programmatic focus support),
+  then the recipe scrolls instantly to the snap that contains the focused slide.
+
+Evidence + gates:
+
+- Implementation: `ecosystem/fret-ui-shadcn/src/carousel.rs` (watch focus block in the geometry pass)
+- Gate: `ecosystem/fret-ui-shadcn/tests/carousel_focus_watch_tab_scrolls.rs`
+
+## Accessibility semantics (role/labels)
+
+Recipe-level stamping (v2 MVP):
+
+- Root: `SemanticsRole::Panel`, `label="Carousel"`, `orientation={horizontal|vertical}`.
+- Slides: `SemanticsRole::Group`, `label="Slide N of M"`.
+
+Known gap:
+
+- Core semantics does not currently expose a portable `aria-roledescription` equivalent, so we
+  cannot represent `aria-roledescription="carousel"` / `"slide"` yet.
+
+Evidence + gates:
+
+- Implementation: `ecosystem/fret-ui-shadcn/src/carousel.rs` (root + slide semantics decorations)
+- Gate: `ecosystem/fret-ui-shadcn/tests/carousel_a11y_semantics.rs`
+
 ## Contain scroll semantics
 
 Embla option `containScroll` influences the **scroll snap list** and the effective **scroll limit**
