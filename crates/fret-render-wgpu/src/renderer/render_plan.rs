@@ -327,6 +327,8 @@ pub(super) struct CustomEffectV3Pass {
     pub(super) src_raw: PlanTarget,
     pub(super) src_pyramid: PlanTarget,
     pub(super) pyramid_levels: u32,
+    pub(super) raw_wanted: bool,
+    pub(super) pyramid_wanted: bool,
     pub(super) dst: PlanTarget,
     pub(super) src_size: (u32, u32),
     pub(super) dst_size: (u32, u32),

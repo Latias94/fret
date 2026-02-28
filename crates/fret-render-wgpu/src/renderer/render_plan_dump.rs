@@ -396,6 +396,8 @@ enum JsonDumpPass {
         src_raw: &'static str,
         src_pyramid: &'static str,
         pyramid_levels: u32,
+        raw_wanted: bool,
+        pyramid_wanted: bool,
         dst: &'static str,
         src_size: [u32; 2],
         dst_size: [u32; 2],
@@ -668,6 +670,8 @@ fn encode_pass(p: &RenderPlanPass) -> JsonDumpPass {
             src_raw: plan_target_name(pass.src_raw),
             src_pyramid: plan_target_name(pass.src_pyramid),
             pyramid_levels: pass.pyramid_levels,
+            raw_wanted: pass.raw_wanted,
+            pyramid_wanted: pass.pyramid_wanted,
             dst: plan_target_name(pass.dst),
             src_size: [pass.src_size.0, pass.src_size.1],
             dst_size: [pass.dst_size.0, pass.dst_size.1],
@@ -834,6 +838,16 @@ struct JsonDumpCustomEffectSummary {
     user1_image_some: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
     user1_image_none: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    raw_requested: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    raw_distinct: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    raw_aliased: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pyramid_requested: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pyramid_degraded_to_zero: Option<usize>,
 }
 
 #[derive(Debug, serde::Serialize)]
@@ -863,6 +877,11 @@ fn summarize_custom_effects(passes: &[RenderPlanPass]) -> Vec<JsonDumpCustomEffe
         user0_image_none: usize,
         user1_image_some: usize,
         user1_image_none: usize,
+        raw_requested: usize,
+        raw_distinct: usize,
+        raw_aliased: usize,
+        pyramid_requested: usize,
+        pyramid_degraded_to_zero: usize,
     }
 
     let mut by_effect: HashMap<(fret_core::EffectId, Abi), Acc> = HashMap::new();
@@ -894,6 +913,20 @@ fn summarize_custom_effects(passes: &[RenderPlanPass]) -> Vec<JsonDumpCustomEffe
                 } else {
                     acc.user1_image_none += 1;
                 }
+                if p.raw_wanted {
+                    acc.raw_requested += 1;
+                    if p.src_raw == p.src {
+                        acc.raw_aliased += 1;
+                    } else {
+                        acc.raw_distinct += 1;
+                    }
+                }
+                if p.pyramid_wanted {
+                    acc.pyramid_requested += 1;
+                    if p.pyramid_levels == 0 {
+                        acc.pyramid_degraded_to_zero += 1;
+                    }
+                }
             }
             _ => {}
         }
@@ -915,6 +948,11 @@ fn summarize_custom_effects(passes: &[RenderPlanPass]) -> Vec<JsonDumpCustomEffe
             user0_image_none: (abi == Abi::V3).then_some(acc.user0_image_none),
             user1_image_some: (abi == Abi::V3).then_some(acc.user1_image_some),
             user1_image_none: (abi == Abi::V3).then_some(acc.user1_image_none),
+            raw_requested: (abi == Abi::V3).then_some(acc.raw_requested),
+            raw_distinct: (abi == Abi::V3).then_some(acc.raw_distinct),
+            raw_aliased: (abi == Abi::V3).then_some(acc.raw_aliased),
+            pyramid_requested: (abi == Abi::V3).then_some(acc.pyramid_requested),
+            pyramid_degraded_to_zero: (abi == Abi::V3).then_some(acc.pyramid_degraded_to_zero),
         })
         .collect();
 
