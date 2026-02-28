@@ -17,6 +17,7 @@ use serde::Deserialize;
 use crate::core::{EdgeId, EdgeKind, Graph, NodeId, PortId, PortKind};
 
 use super::presenter::EdgeRenderHint;
+use super::presenter::{EdgeMarker, EdgeMarkerKind};
 use super::skin::{
     CanvasChromeHint, InteractionChromeHint, NodeChromeHint, NodeGraphSkin, NodeRingHint,
     NodeShadowHint, PortChromeHint, PortShapeHint, WireGlowHint, WireHighlightHint,
@@ -488,8 +489,10 @@ impl NodeGraphSkin for NodeGraphPresetSkinV1 {
             EdgeKind::Exec => tokens.exec_color.into(),
         });
         if self.edge_markers_enabled.load(Ordering::Relaxed) && kind == EdgeKind::Exec {
-            if out.end_marker.is_none() {
-                out.end_marker = Some(crate::ui::presenter::EdgeMarker::arrow(12.0));
+            if out.end_marker.is_none()
+                && let Some(marker) = tokens.marker_exec_end
+            {
+                out.end_marker = Some(marker.into_marker());
             }
         }
         out
@@ -941,6 +944,10 @@ fn theme_derived_preset(
                         color: None,
                     },
                 }),
+                marker_exec_end: Some(EdgeMarkerTokensV1 {
+                    kind: EdgeMarkerKindTokensV1::Arrow,
+                    size_px: 12.0,
+                }),
             },
             states: StateTokensV1 {
                 hover: StateColorV1 {
@@ -1148,6 +1155,43 @@ struct WireTokensV1 {
     highlight_selected: Option<WireHighlightTokensV1>,
     #[serde(default)]
     highlight_hovered: Option<WireHighlightTokensV1>,
+    #[serde(default)]
+    marker_exec_end: Option<EdgeMarkerTokensV1>,
+}
+
+#[derive(Debug, Clone, Copy, Deserialize)]
+struct EdgeMarkerTokensV1 {
+    kind: EdgeMarkerKindTokensV1,
+    size_px: f32,
+}
+
+impl EdgeMarkerTokensV1 {
+    fn into_marker(self) -> EdgeMarker {
+        EdgeMarker {
+            kind: match self.kind {
+                EdgeMarkerKindTokensV1::Arrow => EdgeMarkerKind::Arrow,
+            },
+            size: self.size_px,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum EdgeMarkerKindTokensV1 {
+    Arrow,
+}
+
+impl<'de> Deserialize<'de> for EdgeMarkerKindTokensV1 {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        match s.as_str() {
+            "Arrow" => Ok(EdgeMarkerKindTokensV1::Arrow),
+            _ => Ok(EdgeMarkerKindTokensV1::Arrow),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, Deserialize)]
@@ -1285,6 +1329,25 @@ mod tests {
                 (Some(a), Some(b)) => assert_rgba_close(a, b),
                 _ => panic!("hovered highlight color mismatch for {id:?}"),
             }
+        }
+    }
+
+    #[test]
+    fn builtin_presets_wire_marker_tokens_are_present() {
+        let presets = builtin_presets();
+        for id in ["workflow_clean", "schematic_contrast", "graph_dark"] {
+            let preset = presets
+                .presets
+                .iter()
+                .find(|p| p.id == id)
+                .unwrap_or_else(|| panic!("expected preset {id:?}"));
+            let marker = preset
+                .paint_only_tokens
+                .wire
+                .marker_exec_end
+                .unwrap_or_else(|| panic!("expected wire.marker_exec_end for {id:?}"));
+            assert_eq!(marker.kind, EdgeMarkerKindTokensV1::Arrow);
+            assert_close(marker.size_px, 12.0);
         }
     }
 }
