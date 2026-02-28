@@ -6,8 +6,8 @@ use std::{
 };
 
 use fret_core::{
-    AttributedText, Edges, FontId, FontWeight, Px, TextOverflow, TextPaintStyle, TextShapingStyle,
-    TextSpan, TextStyle, TextWrap,
+    AttributedText, Color, Edges, FontId, FontWeight, Px, TextOverflow, TextPaintStyle,
+    TextShapingStyle, TextSpan, TextStyle, TextWrap,
 };
 use fret_ui::element::{
     AnyElement, ContainerProps, HoverRegionProps, InsetStyle, LayoutStyle, Length, OpacityProps,
@@ -24,7 +24,7 @@ use fret_ui_kit::{
     ChromeRefinement, ColorRef, Items, Justify, LayoutRefinement, MetricRef, Radius, Space,
 };
 
-use crate::copy_button::{CopyFeedbackRef, render_copy_button, render_copy_button_overlay};
+use crate::copy_button::{render_copy_button, render_copy_button_overlay, CopyFeedbackRef};
 use crate::prepare::CodeBlockPreparedState;
 use crate::syntax::syntax_color;
 
@@ -170,6 +170,8 @@ pub enum CodeBlockHeaderBackground {
     #[default]
     None,
     Secondary,
+    /// Upstream AI Elements uses `bg-muted/80` for the header row.
+    Muted80,
 }
 
 #[derive(Debug)]
@@ -613,6 +615,10 @@ fn render_code_block_header<H: UiHost>(
         CodeBlockHeaderBackground::None => {}
         CodeBlockHeaderBackground::Secondary => {
             props.background = Some(theme.color_token("secondary"));
+        }
+        CodeBlockHeaderBackground::Muted80 => {
+            let muted = theme.color_token("muted");
+            props.background = Some(Color { a: 0.8, ..muted });
         }
     }
     if divider {

@@ -353,7 +353,7 @@ fn code_block_hover_does_not_trigger_declarative_layout_invalidations() {
             let mut options = fret_code_view::CodeBlockUiOptions::default();
             options.show_header = true;
             options.header_divider = true;
-            options.header_background = fret_code_view::CodeBlockHeaderBackground::Secondary;
+            options.header_background = fret_code_view::CodeBlockHeaderBackground::Muted80;
             options.show_copy_button = true;
             options.copy_button_on_hover = true;
             options.copy_button_placement = fret_code_view::CodeBlockCopyButtonPlacement::Header;
