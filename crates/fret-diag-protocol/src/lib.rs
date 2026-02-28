@@ -972,6 +972,8 @@ pub enum UiActionStepV2 {
         target: UiSelectorV1,
         #[serde(default)]
         button: UiMouseButtonV1,
+        #[serde(default = "default_true")]
+        release_on_success: bool,
         delta_x: f32,
         delta_y: f32,
         #[serde(default = "default_drag_steps")]
@@ -1120,6 +1122,10 @@ fn default_capture_screenshot_timeout_frames() -> u32 {
 
 fn default_action_timeout_frames() -> u32 {
     180
+}
+
+fn default_true() -> bool {
+    true
 }
 
 fn default_scroll_delta_y() -> f32 {

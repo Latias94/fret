@@ -501,6 +501,34 @@
       "target_hints": []
     },
     {
+      "id": "node-graph-demo-preset-families-paint-only",
+      "path": "tools/diag-scripts/extras/node-graph-demo-preset-families-paint-only.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "fret-examples-node-graph"
+      ],
+      "tags": [
+        "edge_markers",
+        "gate",
+        "node_graph",
+        "preset",
+        "skin",
+        "wire_drag",
+        "wire_glow",
+        "wire_highlight"
+      ],
+      "target_hints": [
+        "Cycles the built-in node graph preset families via shortcut (paint-only skin revision).",
+        "Starts a wire drag session and captures bundles for debugging skin-driven chrome.",
+        "Toggles wire glow so bundles capture both glow and no-glow variants.",
+        "Toggles wire highlight so bundles capture both highlight and no-highlight variants.",
+        "Toggles edge markers so bundles capture both markers and no-markers variants.",
+        "Exercises invalid + convertible drops without mutating the graph (conversion picker forced)."
+      ]
+    },
+    {
       "id": "tooling-suite-prelude-reset-diagnostics",
       "path": "tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json",
       "required_capabilities": [],
@@ -3210,6 +3238,28 @@
       "target_hints": []
     },
     {
+      "id": "workspace-shell-demo-tab-close-button-closes-tab-smoke",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-button-closes-tab-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke-workspace"
+      ],
+      "tags": [
+        "close",
+        "gate",
+        "smoke",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": [
+        "Waits for the close button on the active tab (pane A, doc-a-2).",
+        "Clicks the close button.",
+        "Asserts the tab is removed from the UI tree."
+      ]
+    },
+    {
       "id": "workspace-shell-demo-tab-cross-pane-move-to-end",
       "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-cross-pane-move-to-end.json",
       "required_capabilities": [
@@ -3252,6 +3302,73 @@
         "workspace"
       ],
       "target_hints": []
+    },
+    {
+      "id": "workspace-shell-demo-tab-drag-to-split-right-drop-preview-screenshot",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-drag-to-split-right-drop-preview-screenshot.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke-workspace"
+      ],
+      "tags": [
+        "drop_preview",
+        "gate",
+        "screenshots",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": [
+        "Drags a tab from pane A toward the right edge of pane B.",
+        "Waits for the right-edge drop preview indicator to appear.",
+        "Captures a screenshot while the preview is visible (used to gate docking drop overlay tokens)."
+      ]
+    },
+    {
+      "id": "workspace-shell-demo-tab-middle-click-close-smoke",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-middle-click-close-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke-workspace"
+      ],
+      "tags": [
+        "close",
+        "gate",
+        "smoke",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": [
+        "Waits for a known tab in pane A to exist.",
+        "Middle-clicks the tab.",
+        "Asserts the tab is removed from the UI tree (not_exists)."
+      ]
+    },
+    {
+      "id": "workspace-shell-demo-tab-reorder-first-to-end-smoke",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-reorder-first-to-end-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke-workspace"
+      ],
+      "tags": [
+        "gate",
+        "reorder",
+        "smoke",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": [
+        "Asserts initial pos_in_set for a known tab.",
+        "Drags the first tab to reorder within the strip and drops it.",
+        "Asserts pos_in_set updates after the reorder."
+      ]
     }
   ]
 }

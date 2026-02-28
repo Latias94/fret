@@ -1,0 +1,31 @@
+# Workspace TabStrip (editor-grade) v1 — TODO
+
+This TODO list is scoped to this workstream folder and is intended to keep the refactor landable.
+
+## Diagnostics + gates
+
+- [x] Stabilize cross-pane move gate (`workspace-shell-demo-tab-cross-pane-move-to-end`).
+- [x] Stabilize reorder smoke gate (`workspace-shell-demo-tab-reorder-first-to-end-smoke`).
+- [x] Stabilize drag-to-split gates:
+  - [x] `workspace-shell-demo-tab-drag-to-split-right`
+  - [x] `workspace-shell-demo-tab-drag-to-split-right-drop-preview-screenshot`
+- [ ] Promote a minimal suite that runs in < 30s locally (e.g. `diag-hardening-smoke-workspace`) and keep it green.
+- [ ] Add a non-screenshot invariants-based split gate (post-split layout assertions + tab ownership), once split preview routing is stable.
+
+## Modularization (M1)
+
+- [ ] Split `ecosystem/fret-workspace/src/tab_strip/mod.rs` into:
+  - `view.rs` (render-only; test_id anchors, tokens)
+  - `interaction.rs` (pointer handlers, focus, intent dispatch)
+  - `geometry.rs` (rect collection, hit testing)
+  - `kernel.rs` (pure-ish drop/insert computation; unit tests)
+- [ ] Keep public surface stable (no upstream callers rewritten unnecessarily).
+- [ ] Ensure `cargo nextest run -p fret-workspace` stays green throughout.
+
+## Behavior parity (editor-grade)
+
+- [ ] Drag-to-split: define when split zones are allowed while dragging a tab (tab strip row vs content area).
+- [ ] Overflow menu: deterministic activation + scroll-into-view behaviors.
+- [ ] Close policies: close button vs middle click vs keyboard (policy-layer ownership documented).
+- [ ] Keyboard nav: decide roving focus + MRU vs in-order cycling contract surface.
+
