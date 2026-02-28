@@ -2,8 +2,8 @@ use std::cell::{Cell, RefCell};
 use std::sync::Arc;
 
 use fret_core::{
-    Color, Corners, Edges, FontId, FontWeight, Modifiers, MouseButton, Point, PointerId, Px, Rect,
-    SemanticsRole, TextOverflow, TextSlant, TextStyle, TextWrap,
+    Color, Corners, Edges, Modifiers, MouseButton, Point, Px, Rect, SemanticsRole, TextOverflow,
+    TextSlant, TextWrap,
 };
 use fret_runtime::{CommandId, Model, TickId};
 use fret_ui::action::{
@@ -17,7 +17,6 @@ use fret_ui::element::{
     ScrollAxis, ScrollProps, SemanticsProps, TextInkOverflow, TextProps,
 };
 use fret_ui::elements::GlobalElementId;
-use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::dnd as ui_dnd;
@@ -31,7 +30,11 @@ use crate::tab_drag::{
     WorkspaceTabInsertionSide,
 };
 
+mod drag_state;
 mod kernel;
+mod layouts;
+mod state;
+mod utils;
 
 #[cfg(feature = "shadcn-context-menu")]
 mod overflow;
@@ -44,227 +47,24 @@ use kernel::{
     compute_workspace_tab_strip_drop_target,
 };
 
+use drag_state::{WorkspaceTabStripDragState, get_drag_model};
+use layouts::{
+    centered_row, fill_grow_layout, fill_layout, fixed_square_layout, row_layout,
+    tab_list_semantics_layout, tab_strip_scroll_content_layout,
+};
+use state::WorkspaceTabStripState;
+use utils::{dnd_scope_for_pane, resolve_end_drop_target, scroll_rect_into_view_x, tab_text_style};
+
 use crate::tab_drag::compute_tab_drop_target;
+
+#[cfg(feature = "shadcn-context-menu")]
+use state::get_context_menu_open_model;
 
 #[cfg(feature = "shadcn-context-menu")]
 use fret_ui_shadcn::{
     ContextMenu, ContextMenuEntry, ContextMenuItem, DropdownMenu, DropdownMenuAlign,
     DropdownMenuEntry, DropdownMenuItem, DropdownMenuSide,
 };
-
-fn fill_layout() -> LayoutStyle {
-    let mut layout = LayoutStyle::default();
-    layout.size.width = Length::Fill;
-    layout.size.height = Length::Fill;
-    layout
-}
-
-fn tab_list_semantics_layout() -> LayoutStyle {
-    // The tab strip is commonly placed into "center" regions of editor-like top bars where it
-    // must be allowed to shrink; otherwise, long tab titles can push right-side controls out of
-    // the window.
-    //
-    // This mirrors Tailwind's `w-full min-w-0 flex-shrink` rule of thumb.
-    let mut layout = LayoutStyle::default();
-    layout.size.width = Length::Fill;
-    layout.size.min_width = Some(Length::Px(Px(0.0)));
-    layout.flex.shrink = 1.0;
-    layout
-}
-
-fn row_layout(height: Px) -> LayoutStyle {
-    let mut layout = LayoutStyle::default();
-    layout.size.width = Length::Fill;
-    layout.size.height = Length::Px(height);
-    layout.size.min_width = Some(Length::Px(Px(0.0)));
-    layout.flex.shrink = 1.0;
-    layout
-}
-
-fn scroll_content_row_layout() -> LayoutStyle {
-    let mut layout = LayoutStyle::default();
-    layout.size.width = Length::Auto;
-    layout.size.height = Length::Fill;
-    // Ensure the scroll content is at least as wide as the viewport so we have a stable
-    // "header space" region to the right of the last tab (dockview/Zed-style).
-    //
-    // This is the equivalent of CSS `min-width: 100%` on the scroll content row.
-    layout.size.min_width = Some(Length::Fraction(1.0));
-    layout.flex.shrink = 0.0;
-    layout
-}
-
-fn tab_strip_scroll_content_layout() -> LayoutStyle {
-    if std::env::var_os("FRET_DEBUG_TABSTRIP_FILL").is_some() {
-        fill_layout()
-    } else {
-        scroll_content_row_layout()
-    }
-}
-
-fn tab_text_style(theme: &Theme) -> TextStyle {
-    let px = theme.metric_by_key("font.size").unwrap_or(Px(13.0));
-    TextStyle {
-        font: FontId::default(),
-        size: px,
-        weight: FontWeight::MEDIUM,
-        slant: Default::default(),
-        line_height: None,
-        letter_spacing_em: None,
-        ..Default::default()
-    }
-}
-
-fn scroll_rect_into_view_x(handle: &ScrollHandle, viewport: Rect, child: Rect) {
-    let margin = Px(12.0);
-
-    let current = handle.offset();
-    let view_left = viewport.origin.x;
-    let view_right = Px(viewport.origin.x.0 + viewport.size.width.0);
-    let child_left = child.origin.x;
-    let child_right = Px(child.origin.x.0 + child.size.width.0);
-
-    let next_x = if child_left.0 < (view_left.0 + margin.0) {
-        Px(current.x.0 + (child_left.0 - (view_left.0 + margin.0)))
-    } else if child_right.0 > (view_right.0 - margin.0) {
-        Px(current.x.0 + (child_right.0 - (view_right.0 - margin.0)))
-    } else {
-        current.x
-    };
-
-    if next_x != current.x {
-        handle.set_offset(Point::new(next_x, current.y));
-    }
-}
-
-fn fixed_square_layout(size: Px) -> LayoutStyle {
-    let mut layout = LayoutStyle::default();
-    layout.size.width = Length::Px(size);
-    layout.size.height = Length::Px(size);
-    layout.flex.shrink = 0.0;
-    layout
-}
-
-fn fill_grow_layout() -> LayoutStyle {
-    let mut layout = fill_layout();
-    layout.size.min_width = Some(Length::Px(Px(0.0)));
-    layout.flex.grow = 1.0;
-    layout.flex.shrink = 1.0;
-    layout
-}
-
-fn centered_row<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    text: Arc<str>,
-    style: TextStyle,
-    color: Option<Color>,
-) -> AnyElement {
-    cx.flex(
-        FlexProps {
-            layout: fill_layout(),
-            direction: fret_core::Axis::Horizontal,
-            justify: MainAlign::Center,
-            align: CrossAlign::Center,
-            ..Default::default()
-        },
-        |cx| {
-            vec![cx.text_props(TextProps {
-                layout: LayoutStyle::default(),
-                text,
-                style: Some(style),
-                color,
-                wrap: TextWrap::None,
-                overflow: TextOverflow::Clip,
-                align: fret_core::TextAlign::Start,
-                ink_overflow: TextInkOverflow::None,
-            })]
-        },
-    )
-}
-
-#[derive(Debug, Default, Clone)]
-struct WorkspaceTabStripDragState {
-    pointer: Option<PointerId>,
-    start_tick: TickId,
-    start_position: Point,
-    dragged_tab: Option<Arc<str>>,
-    dragging: bool,
-    drop_target: WorkspaceTabStripDropTarget,
-    tab_rects: Vec<WorkspaceTabHitRect>,
-    pinned_boundary_rect: Option<Rect>,
-    end_drop_target_rect: Option<Rect>,
-    scroll_viewport_rect: Option<Rect>,
-}
-
-#[derive(Debug, Default)]
-struct WorkspaceTabStripDragStateModel {
-    model: Option<Model<WorkspaceTabStripDragState>>,
-}
-
-fn get_drag_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<WorkspaceTabStripDragState> {
-    let existing = cx.with_state(WorkspaceTabStripDragStateModel::default, |st| {
-        st.model.clone()
-    });
-    if let Some(m) = existing {
-        return m;
-    }
-
-    let model = cx
-        .app
-        .models_mut()
-        .insert(WorkspaceTabStripDragState::default());
-    cx.with_state(WorkspaceTabStripDragStateModel::default, |st| {
-        st.model = Some(model.clone());
-    });
-    model
-}
-
-fn fnv1a64(s: &str) -> u64 {
-    let mut h: u64 = 0xcbf29ce484222325;
-    for b in s.as_bytes() {
-        h ^= u64::from(*b);
-        h = h.wrapping_mul(0x100000001b3);
-    }
-    h
-}
-
-fn dnd_scope_for_pane(pane_id: Option<&Arc<str>>) -> ui_dnd::DndScopeId {
-    pane_id
-        .map(|id| ui_dnd::DndScopeId(fnv1a64(id.as_ref())))
-        .unwrap_or(ui_dnd::DND_SCOPE_DEFAULT)
-}
-
-fn tab_pinned_flag_for_id(
-    pinned_by_id: &std::collections::HashMap<Arc<str>, bool>,
-    id: &str,
-) -> bool {
-    pinned_by_id.get(id).copied().unwrap_or(false)
-}
-
-fn resolve_end_drop_target(
-    pinned_by_id: &std::collections::HashMap<Arc<str>, bool>,
-    rects: &[WorkspaceTabHitRect],
-    dragged: &str,
-) -> Option<Arc<str>> {
-    let dragged_pinned = tab_pinned_flag_for_id(pinned_by_id, dragged);
-
-    let mut best: Option<(Arc<str>, f32)> = None;
-    for r in rects.iter().filter(|r| r.id.as_ref() != dragged) {
-        if tab_pinned_flag_for_id(pinned_by_id, r.id.as_ref()) != dragged_pinned {
-            continue;
-        }
-        let right = r.rect.origin.x.0 + r.rect.size.width.0;
-        if best
-            .as_ref()
-            .map(|(_id, prev)| right > *prev)
-            .unwrap_or(true)
-        {
-            best = Some((r.id.clone(), right));
-        }
-    }
-
-    best.map(|(id, _)| id)
-}
 
 #[derive(Debug, Clone)]
 pub struct WorkspaceTab {
@@ -329,36 +129,6 @@ pub struct WorkspaceTabStrip {
     tab_drag: Option<Model<WorkspaceTabDragState>>,
     root_test_id: Option<Arc<str>>,
     tab_test_id_prefix: Option<Arc<str>>,
-}
-
-#[derive(Default)]
-struct WorkspaceTabStripState {
-    scroll: ScrollHandle,
-    last_active: Option<Arc<str>>,
-    last_tab_rects: Vec<WorkspaceTabHitRect>,
-    last_scroll_viewport: Option<Rect>,
-}
-
-#[cfg(feature = "shadcn-context-menu")]
-#[derive(Debug, Default)]
-struct WorkspaceTabStripContextMenuState {
-    open: Option<Model<bool>>,
-}
-
-#[cfg(feature = "shadcn-context-menu")]
-fn get_context_menu_open_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<bool> {
-    let existing = cx.with_state(WorkspaceTabStripContextMenuState::default, |st| {
-        st.open.clone()
-    });
-    if let Some(m) = existing {
-        return m;
-    }
-
-    let model = cx.app.models_mut().insert(false);
-    cx.with_state(WorkspaceTabStripContextMenuState::default, |st| {
-        st.open = Some(model.clone());
-    });
-    model
 }
 
 impl WorkspaceTabStrip {
