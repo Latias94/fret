@@ -32,7 +32,7 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
 - [x] Scrub all inherited `FRET_DIAG_*` env vars in `--launch` mode (prefix-based) so parent-shell overrides cannot
   silently drift tool-launched runs.
 - [x] Audit `--launch` entry points to ensure a single per-run config writer is used (`diag run/suite/repro/perf/repeat`
-  funnel through `maybe_launch_demo`).
+  funnel through `maybe_launch_demo`; evidence: `crates/fret-diag/src/compare.rs:maybe_launch_demo`).
 - [x] Tool-launched output safety defaults:
   - [x] `script_auto_dump=false` (avoid "dump on every injected step" explosions)
   - [x] `pick_auto_dump=false` (avoid "dump on every pick" explosions)
