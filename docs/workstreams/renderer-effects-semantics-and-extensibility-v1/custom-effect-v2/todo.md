@@ -78,3 +78,23 @@ Constraints:
 - [x] Write down a practical install/registration pattern for component authors (including “one line install”
       via builder wrappers on native) and a short WebGPU portability checklist.
   - Evidence: `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-v2/authoring-install-pattern.md`
+
+- [x] Map a liquid-glass authoring approach onto CustomV2 (edge bevel + refraction + highlight + grain),
+      with a recommended parameter packing and portability notes.
+  - Evidence: `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-v2/liquid-glass-mapping.md`
+
+## P5 — Ceiling check (deferred): what a “full liquid glass system” would require
+
+If we treat “liquid glass” as a ceiling reference (not just a single lens card), open designs tend to want:
+
+- dual-source sampling (unblurred backdrop for refraction + blurred backdrop for frosted center),
+- or a renderer-owned blur pyramid (bounded levels) that custom effects can sample deterministically,
+- and sometimes group-level sharing/caching so multiple glass surfaces don’t each re-blur the same backdrop.
+
+None of the above is required to *author a convincing card* today (CustomV2 + built-in blur is enough),
+but they are the likely requirements for a higher ceiling without pushing heavy multi-sample blur into user WGSL.
+
+Track as a future workstream:
+
+- CustomV3 candidate A: add one extra fixed binding for `src_unblurred_texture` alongside `src_texture`.
+- CustomV3 candidate B: expose a bounded `src_pyramid_texture` (atlas/array) + `sample_level(...)` helper.

@@ -95,6 +95,24 @@ Exit criteria:
   - `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-v2/README.md`
   - `crates/fret-render-wgpu/tests/effect_custom_v2_conformance.rs`
 
+## M5.1 (Optional) — CustomV3 ceiling bump (renderer-provided sources)
+
+Exit criteria:
+
+- A versioned CustomV3 ADR is reviewed and locked:
+  - Decision ADR: `docs/adr/0301-custom-effect-v3-renderer-provided-sources.md`
+  - Workstream: `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-v3/README.md`
+- `EffectStep::CustomV3` exists in `fret-core` with deterministic validation/fingerprint behavior.
+- wgpu backend binds the renderer-provided sources deterministically:
+  - `src` (current chain input),
+  - `src_raw` (chain root) or deterministic alias when not requested/unsupported,
+  - optional `src_pyramid` with explicit budgeting and deterministic degradation.
+- Conformance tests cover:
+  - `src_raw` correctness (differs from `src` after prior steps),
+  - pyramid level determinism and alias fallbacks,
+  - scissor/mask correctness and no undefined out-of-bounds reads.
+- Plan dump + counters report requested vs applied source features and degradation reasons.
+
 ## M6 (Optional) — Vector path + dash semantics closure
 
 Exit criteria:

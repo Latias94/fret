@@ -169,3 +169,4 @@ Pending / follow-ups:
 - CustomV1 semantics: `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-v1-semantics.md`
 - ADR 0299 (CustomV1 MVP): `docs/adr/0299-custom-effect-abi-wgpu-only-mvp.md`
 - Authoring guide: `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-v2/authoring-install-pattern.md`
+- Liquid glass mapping: `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-v2/liquid-glass-mapping.md`

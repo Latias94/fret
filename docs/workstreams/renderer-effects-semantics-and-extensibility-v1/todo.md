@@ -188,3 +188,9 @@ if left unspecified.
   - [x] Versioned ABI + capability discovery + conformance exist (wgpu backend).
   - Follow-ups: demo-oriented authoring templates + WebGPU/wasm runtime story tracked under
     `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-v2/README.md`.
+
+- [ ] CustomV3 ceiling bump (bounded, renderer-provided sources):
+  - Add a versioned CustomV3 ABI that provides a renderer-owned `src_raw` source and an optional bounded blur
+    pyramid, keeping the contract deterministic and budgetable.
+  - Tracking: `docs/adr/0301-custom-effect-v3-renderer-provided-sources.md` and
+    `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-v3/README.md`.
