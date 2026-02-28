@@ -889,6 +889,8 @@ pub enum UiActionStepV2 {
     ///
     /// Desktop runners may use this during scripted diagnostics to drive hover routing that is
     /// normally owned by OS cursor events (e.g. cross-window docking).
+    ///
+    /// Requires capability `diag.cursor_screen_pos_override`.
     SetCursorScreenPos {
         x_px: f32,
         y_px: f32,
@@ -899,6 +901,8 @@ pub enum UiActionStepV2 {
     /// global cursor location from window-local input.
     ///
     /// Coordinates are in window-client **physical pixels**.
+    ///
+    /// Requires capability `diag.cursor_screen_pos_override`.
     SetCursorInWindow {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         window: Option<UiWindowTargetV1>,
@@ -912,6 +916,8 @@ pub enum UiActionStepV2 {
     /// current window scale factor.
     ///
     /// Prefer this for deterministic scripts that already express geometry in logical pixels.
+    ///
+    /// Requires capability `diag.cursor_screen_pos_override`.
     SetCursorInWindowLogical {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         window: Option<UiWindowTargetV1>,

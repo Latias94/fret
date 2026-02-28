@@ -316,6 +316,7 @@ impl UiDiagnosticsService {
             target_os = "macos",
             target_os = "linux"
         )) {
+            caps.push("diag.cursor_screen_pos_override".to_string());
             caps.push("diag.mouse_buttons_override".to_string());
         }
 

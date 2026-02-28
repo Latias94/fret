@@ -151,6 +151,8 @@ pub(super) fn handle_assert_clipboard_text_step(
     output.request_redraw = true;
 
     // Keep the app producing frames while we wait for the runner response.
-    output.effects.push(Effect::RequestAnimationFrame(state_window));
+    output
+        .effects
+        .push(Effect::RequestAnimationFrame(state_window));
     true
 }
