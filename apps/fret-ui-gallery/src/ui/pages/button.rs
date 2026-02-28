@@ -4,8 +4,6 @@ use crate::ui::doc_layout::{self, DocSection};
 
 pub(super) fn preview_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let theme = Theme::global(&*cx.app).snapshot();
-    let outline_fg = ColorRef::Color(theme.color_token("foreground"));
-    let destructive_fg = ColorRef::Color(theme.color_token("destructive-foreground"));
 
     let variants = {
         doc_layout::wrap_controls_row_snapshot(cx, &theme, Space::N2, |cx| {
@@ -148,31 +146,17 @@ pub(super) fn preview_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
     let loading = {
         doc_layout::wrap_controls_row_snapshot(cx, &theme, Space::N2, |cx| {
             vec![
-                shadcn::Button::new("Generating")
+                // Upstream: `registry/new-york-v4/examples/button-loading.tsx`.
+                shadcn::Button::new("Submit")
                     .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
                     .disabled(true)
+                    .test_id("ui-gallery-button-loading-submit")
                     .children([
-                        shadcn::Spinner::new()
-                            .color(outline_fg.clone())
-                            .into_element(cx),
-                        ui::text(cx, "Generating")
+                        shadcn::Spinner::new().into_element(cx),
+                        ui::text(cx, "Submit")
                             .font_medium()
                             .nowrap()
-                            .text_color(outline_fg.clone())
-                            .into_element(cx),
-                    ])
-                    .into_element(cx),
-                shadcn::Button::new("Deleting")
-                    .variant(shadcn::ButtonVariant::Destructive)
-                    .disabled(true)
-                    .children([
-                        shadcn::Spinner::new()
-                            .color(destructive_fg.clone())
-                            .into_element(cx),
-                        ui::text(cx, "Deleting")
-                            .font_medium()
-                            .nowrap()
-                            .text_color(destructive_fg.clone())
                             .into_element(cx),
                     ])
                     .into_element(cx),
@@ -191,29 +175,6 @@ pub(super) fn preview_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
             ]
         })
         .test_id("ui-gallery-button-rounded-row")
-    };
-
-    let spinner = {
-        doc_layout::wrap_controls_row_snapshot(cx, &theme, Space::N2, |cx| {
-            vec![
-                shadcn::Button::new("Loading")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .disabled(true)
-                    .children([
-                        shadcn::Spinner::new()
-                            .color(outline_fg.clone())
-                            .into_element(cx),
-                        ui::text(cx, "Loading")
-                            .font_medium()
-                            .nowrap()
-                            .text_color(outline_fg.clone())
-                            .into_element(cx),
-                    ])
-                    .test_id("ui-gallery-button-spinner")
-                    .into_element(cx),
-            ]
-        })
-        .test_id("ui-gallery-button-spinner-row")
     };
 
     let button_group = {
@@ -242,11 +203,43 @@ pub(super) fn preview_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
                 cx,
                 fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
                 |cx| {
-                    shadcn::Button::new("RTL")
-                        .variant(shadcn::ButtonVariant::Outline)
-                        .leading_icon(fret_icons::IconId::new_static("lucide.arrow-left"))
-                        .test_id("ui-gallery-button-rtl")
-                        .into_element(cx)
+                    stack::hstack(
+                        cx,
+                        stack::HStackProps::default()
+                            .gap_x(Space::N2)
+                            .items_center()
+                            .layout(LayoutRefinement::default().w_full()),
+                        |cx| {
+                            vec![
+                                shadcn::Button::new("Default")
+                                    .test_id("ui-gallery-button-rtl-default")
+                                    .into_element(cx),
+                                shadcn::Button::new("Secondary")
+                                    .variant(shadcn::ButtonVariant::Secondary)
+                                    .test_id("ui-gallery-button-rtl-secondary")
+                                    .into_element(cx),
+                                shadcn::Button::new("Destructive")
+                                    .variant(shadcn::ButtonVariant::Destructive)
+                                    .test_id("ui-gallery-button-rtl-destructive")
+                                    .into_element(cx),
+                                shadcn::Button::new("Back")
+                                    .variant(shadcn::ButtonVariant::Outline)
+                                    .leading_icon(fret_icons::IconId::new_static(
+                                        "lucide.arrow-left",
+                                    ))
+                                    .test_id("ui-gallery-button-rtl-back")
+                                    .into_element(cx),
+                                shadcn::Button::new("Next")
+                                    .variant(shadcn::ButtonVariant::Outline)
+                                    .trailing_icon(fret_icons::IconId::new_static(
+                                        "lucide.arrow-right",
+                                    ))
+                                    .test_id("ui-gallery-button-rtl-next")
+                                    .into_element(cx),
+                            ]
+                        },
+                    )
+                    .test_id("ui-gallery-button-rtl-row-inner")
                 },
             )]
         })
@@ -265,7 +258,9 @@ pub(super) fn preview_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
 
     let body = doc_layout::render_doc_page(
         cx,
-        Some("Preview follows shadcn Button docs (plus a compact variants row and a deterministic link render example)."),
+        Some(
+            "Preview follows shadcn Button docs (plus a compact variants row and a deterministic link render example).",
+        ),
         vec![
             DocSection::new("Variants", variants)
                 .description("Default shadcn button variants.")
@@ -317,35 +312,13 @@ pub(super) fn preview_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
                 .description("Spinner + label for in-flight actions.")
                 .code(
                     "rust",
-                    r#"let theme = Theme::global(&*cx.app).snapshot();
-let outline_fg = ColorRef::Color(theme.color_token("foreground"));
-let destructive_fg = ColorRef::Color(theme.color_token("destructive-foreground"));
-
-shadcn::Button::new("Generating")
+                    r#"shadcn::Button::new("Submit")
     .variant(shadcn::ButtonVariant::Outline)
+    .size(shadcn::ButtonSize::Sm)
     .disabled(true)
     .children([
-        shadcn::Spinner::new().color(outline_fg.clone()).into_element(cx),
-        ui::text(cx, "Generating")
-            .font_medium()
-            .nowrap()
-            .text_color(outline_fg)
-            .into_element(cx),
-    ])
-    .into_element(cx);
-
-shadcn::Button::new("Deleting")
-    .variant(shadcn::ButtonVariant::Destructive)
-    .disabled(true)
-    .children([
-        shadcn::Spinner::new()
-            .color(destructive_fg.clone())
-            .into_element(cx),
-        ui::text(cx, "Deleting")
-            .font_medium()
-            .nowrap()
-            .text_color(destructive_fg)
-            .into_element(cx),
+        shadcn::Spinner::new().into_element(cx),
+        ui::text(cx, "Submit").into_element(cx),
     ])
     .into_element(cx);"#,
                 ),
@@ -355,15 +328,6 @@ shadcn::Button::new("Deleting")
                     "rust",
                     r#"shadcn::Button::new("Rounded")
     .refine_style(ChromeRefinement::default().rounded(Radius::Full))
-    .into_element(cx);"#,
-                ),
-            DocSection::new("Spinner", spinner)
-                .description("Render a spinner inside the button for loading state.")
-                .code(
-                    "rust",
-                    r#"shadcn::Button::new("Loading")
-    .disabled(true)
-    .children([shadcn::Spinner::new().into_element(cx)])
     .into_element(cx);"#,
                 ),
             DocSection::new("Button Group", button_group)
@@ -380,9 +344,16 @@ shadcn::Button::new("Deleting")
                 .description("Button layout should work under an RTL direction provider.")
                 .code(
                     "rust",
-                    r#"fret_ui_kit::primitives::direction::with_direction_provider(LayoutDirection::Rtl, |cx| {
-    shadcn::Button::new("RTL").into_element(cx)
-})"#,
+                    r#"fret_ui_kit::primitives::direction::with_direction_provider(
+    cx,
+    fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
+    |cx| {
+        shadcn::Button::new("Back")
+            .variant(shadcn::ButtonVariant::Outline)
+            .leading_icon(fret_icons::IconId::new_static("lucide.arrow-left"))
+            .into_element(cx)
+    },
+)"#,
                 ),
             DocSection::new("Notes", notes).description("Usage notes."),
         ],

@@ -1,12 +1,10 @@
 use std::sync::{Arc, Mutex};
 
-use fret_core::window::ColorScheme;
 use fret_core::{Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole};
 use fret_runtime::Model;
 use fret_ui::action::OnCloseAutoFocus;
 use fret_ui::element::{
-    AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, PositionStyle, PressableA11y,
-    PressableProps, SizeStyle,
+    AnyElement, ContainerProps, LayoutStyle, Length, PressableA11y, PressableProps, SizeStyle,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -14,6 +12,7 @@ use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::controllable_state;
 use fret_ui_kit::primitives::popover as radix_popover;
@@ -21,7 +20,7 @@ use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
 use fret_ui_kit::typography;
 use fret_ui_kit::{
     ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, Radius, ShadowPreset,
-    Size as ComponentSize, Space, ui,
+    Size as ComponentSize, Space, WidgetState, WidgetStateProperty, WidgetStates, ui,
 };
 
 use crate::{
@@ -284,7 +283,7 @@ pub fn native_select<H: UiHost>(
     layout: LayoutRefinement,
 ) -> AnyElement {
     cx.scope(|cx| {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
 
         let focus_restore_target = {
             let existing = cx.with_state(NativeSelectState::default, |st| {
@@ -305,19 +304,28 @@ pub fn native_select<H: UiHost>(
         let selected: Option<Arc<str>> = cx.watch_model(&model).cloned().unwrap_or_default();
 
         let resolved = resolve_input_chrome(
-            &theme,
+            Theme::global(&*cx.app),
             ComponentSize::default(),
             &chrome,
             InputTokenKeys::none(),
         );
 
+        // shadcn/ui v4 SelectTrigger:
+        // - size=default => `h-9` (36px) + `py-2` (8px) + `items-center`
+        // - size=sm => `h-8` (32px) + `py-1.5`-ish (we keep a slightly tighter 4px here)
+        //
+        // In Fret we must preserve the `items-center` outcome: the label/icon should be centered
+        // even when the content box is smaller than the label's fixed line box.
         let (h, py) = match size {
             NativeSelectSize::Sm => (Px(32.0), Px(4.0)),
             NativeSelectSize::Default => (Px(36.0), Px(8.0)),
         };
 
-        let mut text_style =
-            typography::control_text_style_scaled(&theme, FontId::ui(), resolved.text_px);
+        let mut text_style = typography::control_text_style_scaled(
+            Theme::global(&*cx.app),
+            FontId::ui(),
+            resolved.text_px,
+        );
         text_style.weight = FontWeight::NORMAL;
 
         let muted_fg = theme.color_token("muted-foreground");
@@ -337,15 +345,8 @@ pub fn native_select<H: UiHost>(
         let mut focus_ring = decl_style::focus_ring(&theme, resolved.radius);
         if aria_invalid {
             border_color = theme.color_token("destructive");
-            let ring_key = if theme.color_scheme == Some(ColorScheme::Dark) {
-                "destructive/40"
-            } else {
-                "destructive/20"
-            };
-            focus_ring.color = theme
-                .color_by_key(ring_key)
-                .or_else(|| theme.color_by_key("destructive/20"))
-                .unwrap_or(border_color);
+            focus_ring.color =
+                crate::theme_variants::invalid_control_ring_color(&theme, border_color);
         }
 
         let layout = decl_style::layout_style(&theme, layout.relative().min_w_0());
@@ -356,8 +357,6 @@ pub fn native_select<H: UiHost>(
         };
 
         let icon_size = Px(16.0);
-        let icon_right = Px(14.0);
-        let icon_top = Px((h.0 - icon_size.0) * 0.5);
         let icon_color = alpha_mul(theme.color_token("muted-foreground"), 0.5);
 
         let has_entries = !options.is_empty() || !optgroups.is_empty();
@@ -372,7 +371,7 @@ pub fn native_select<H: UiHost>(
         let test_id_prefix_for_trigger = test_id_prefix.clone();
         let test_id_prefix_for_content = test_id_prefix.clone();
 
-        let trigger = control_chrome_pressable_with_id_props(cx, move |cx, _st, trigger_id| {
+        let trigger = control_chrome_pressable_with_id_props(cx, move |cx, st, trigger_id| {
             *focus_restore_target_for_trigger
                 .lock()
                 .unwrap_or_else(|e| e.into_inner()) = Some(trigger_id);
@@ -380,6 +379,30 @@ pub fn native_select<H: UiHost>(
             if has_entries && !disabled {
                 cx.pressable_toggle_bool(&open_for_trigger);
             }
+
+            let mut states = WidgetStates::from_pressable(cx, st, !disabled);
+            states.set(WidgetState::Open, is_open);
+            let bg = WidgetStateProperty::new(ColorRef::Token {
+                key: "component.input.bg",
+                fallback: ColorFallback::Color(Color::TRANSPARENT),
+            })
+            .when(
+                WidgetStates::HOVERED,
+                ColorRef::Token {
+                    key: "component.input.bg_hover",
+                    fallback: ColorFallback::Color(Color::TRANSPARENT),
+                },
+            )
+            .when(
+                WidgetStates::ACTIVE,
+                ColorRef::Token {
+                    key: "component.input.bg_hover",
+                    fallback: ColorFallback::Color(Color::TRANSPARENT),
+                },
+            )
+            .resolve(states)
+            .clone()
+            .resolve(&theme_for_trigger);
 
             let pressable_props = PressableProps {
                 layout: pressable_layout,
@@ -396,11 +419,9 @@ pub fn native_select<H: UiHost>(
                 ..Default::default()
             };
 
-            // IMPORTANT: absolute positioning in `Container` is resolved relative to the container's
-            // inner content box (padding+border are excluded). shadcn's NativeSelect positions the
-            // chevron relative to a zero-padding wrapper, so we mirror that structure here:
-            //
-            // Pressable -> (clip) chrome wrapper (no padding) -> surface (padding+border) + chevron (absolute)
+            // IMPORTANT: shadcn's SelectTrigger is `flex items-center justify-between gap-2`.
+            // Make sure we mirror the `items-center` outcome here (don't rely on padding-only
+            // centering), otherwise the label reads bottom-heavy in fixed-height triggers.
             let chrome_props = ContainerProps {
                 layout: LayoutStyle {
                     size: SizeStyle {
@@ -438,12 +459,12 @@ pub fn native_select<H: UiHost>(
                             },
                             padding: Edges {
                                 left: resolved.padding.left,
-                                right: Px(36.0),
+                                right: resolved.padding.right,
                                 top: py,
                                 bottom: py,
                             }
                             .into(),
-                            background: Some(resolved.background),
+                            background: Some(bg),
                             shadow: None,
                             border: Edges::all(resolved.border_width),
                             border_color: Some(border_color),
@@ -468,53 +489,34 @@ pub fn native_select<H: UiHost>(
                                 .truncate();
 
                             content = content.overflow(fret_core::TextOverflow::Clip);
-                            vec![content.into_element(cx)]
+
+                            let mut icon = decl_icon::icon_with(
+                                cx,
+                                fret_icons::ids::ui::CHEVRON_DOWN,
+                                Some(icon_size),
+                                Some(ColorRef::Color(icon_color)),
+                            );
+                            if let Some(prefix) = test_id_prefix_for_trigger.as_deref() {
+                                icon = icon.test_id(format!("{prefix}-icon"));
+                            }
+
+                            vec![stack::hstack(
+                                cx,
+                                stack::HStackProps::default()
+                                    .layout(LayoutRefinement::default().w_full().h_full().min_w_0())
+                                    .justify_between()
+                                    .items_center()
+                                    .gap_x(Space::N2),
+                                |cx| vec![content.flex_1().min_w_0().into_element(cx), icon],
+                            )]
                         })
                     };
 
-                    let icon = decl_icon::icon_with(
-                        cx,
-                        fret_icons::ids::ui::CHEVRON_DOWN,
-                        Some(icon_size),
-                        Some(ColorRef::Color(icon_color)),
-                    );
-                    let mut icon = cx.container(
-                        ContainerProps {
-                            layout: LayoutStyle {
-                                position: PositionStyle::Absolute,
-                                inset: InsetStyle {
-                                    left: None.into(),
-                                    top: Some(icon_top).into(),
-                                    right: Some(icon_right).into(),
-                                    bottom: None.into(),
-                                },
-                                size: SizeStyle {
-                                    width: Length::Px(icon_size),
-                                    height: Length::Px(icon_size),
-                                    ..Default::default()
-                                },
-                                ..Default::default()
-                            },
-                            padding: Edges::all(Px(0.0)).into(),
-                            background: None,
-                            shadow: None,
-                            border: Edges::all(Px(0.0)),
-                            border_color: None,
-                            corner_radii: Corners::all(Px(0.0)),
-                            ..Default::default()
-                        },
-                        move |_cx| vec![icon],
-                    );
-
-                    if let Some(prefix) = test_id_prefix_for_trigger.as_deref() {
-                        icon = icon.test_id(format!("{prefix}-icon"));
-                    }
-
                     let disabled = disabled;
                     let out: Vec<AnyElement> = if disabled {
-                        vec![cx.opacity(0.5, move |_cx| vec![surface, icon])]
+                        vec![cx.opacity(0.5, move |_cx| vec![surface])]
                     } else {
-                        vec![surface, icon]
+                        vec![surface]
                     };
                     out
                 },

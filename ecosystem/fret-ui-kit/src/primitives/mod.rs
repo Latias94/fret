@@ -66,6 +66,7 @@ pub mod popper;
 pub mod popper_arrow;
 pub mod popper_content;
 pub mod portal;
+pub mod portal_inherited;
 pub mod presence;
 pub mod progress;
 pub mod radio_group;

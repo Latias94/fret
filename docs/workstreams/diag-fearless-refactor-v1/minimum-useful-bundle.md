@@ -7,26 +7,28 @@ scope: diagnostics, artifacts, schema
 
 # Minimum useful bundle contract
 
-This note defines the **minimum useful contract** for `bundle.json` and the boundaries between:
+This note defines the **minimum useful contract** for the diagnostics **bundle artifact** (`bundle.json` or `bundle.schema2.json`)
+and the boundaries between:
 
-- the canonical, shareable artifact (`bundle.json`), and
+- the canonical, shareable artifact (the bundle artifact), and
 - optional, regeneratable accelerators (sidecars like `bundle.index.json`).
 
 Goal: make the day-to-day debug loop (including AI/agentic triage) fast **without** requiring a new storage format.
 
-Non-goal: locking the entire `bundle.json` schema; only the *minimum useful surfaces* are described here.
+Non-goal: locking the entire bundle artifact schema; only the *minimum useful surfaces* are described here.
 
 ## Definitions
 
-- **Bundle**: a directory that contains `bundle.json` and optional adjacent files (sidecars, screenshots, manifests).
+- **Bundle**: a directory that contains a bundle artifact (`bundle.json` or `bundle.schema2.json`) and optional adjacent files
+  (sidecars, screenshots, manifests).
 - **Sidecar**: a bounded JSON file derived from a bundle, intended to make queries cheap without opening the full bundle.
-- **Regeneratable**: can be derived from `bundle.json` alone (no hidden state).
+- **Regeneratable**: can be derived from the bundle artifact alone (no hidden state).
 
-## Contract: what must remain in `bundle.json`
+## Contract: what must remain in the bundle artifact
 
 ### MUST
 
-`bundle.json` must include enough information to:
+The bundle artifact must include enough information to:
 
 1. Identify and order snapshots.
 2. Correlate snapshots with the app/page under test.
@@ -61,9 +63,9 @@ Recommendation:
 
 ### MAY
 
-Anything that is expensive, redundant, or primarily query-acceleration may be moved out of `bundle.json` into sidecars, as long as:
+Anything that is expensive, redundant, or primarily query-acceleration may be moved out of the bundle artifact into sidecars, as long as:
 
-- tools can still function (possibly slower) from `bundle.json` alone, and
+- tools can still function (possibly slower) from the bundle artifact alone, and
 - sidecars are clearly versioned and additive-only.
 
 Examples:
@@ -91,7 +93,6 @@ Current intended sidecars (native dumps):
 ## Compatibility and failure behavior
 
 - Missing sidecars must not cause hangs/timeouts. Tools should:
-  - either regenerate them from `bundle.json`, or
+  - either regenerate them from the bundle artifact, or
   - fail fast with a clear, actionable error (what file is missing and which command regenerates it).
-- Sidecars must not become the only source-of-truth; `bundle.json` remains canonical.
-
+- Sidecars must not become the only source-of-truth; the bundle artifact remains canonical.

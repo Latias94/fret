@@ -388,7 +388,7 @@ impl RelativeTimeZoneLabel {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
         let bg = theme.color_token("secondary");
         let fg = theme.color_token("secondary-foreground");
 
@@ -485,7 +485,7 @@ impl RelativeTimeZoneDisplay {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
         let fg = if self.muted {
             theme.color_token("muted-foreground")
         } else {

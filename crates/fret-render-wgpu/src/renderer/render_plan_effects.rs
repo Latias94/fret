@@ -2575,38 +2575,38 @@ fn compile_gaussian_blur_in_place(
     let desired_downsample = effect_blur_desired_downsample(requested_downsample, quality);
 
     // Prefer two-scratch downsampled blur when available.
-    if scratch_targets.len() >= 2 {
-        if let Some(downsample_scale) = choose_effect_blur_downsample_scale(
+    if scratch_targets.len() >= 2
+        && let Some(downsample_scale) = choose_effect_blur_downsample_scale(
             ctx.viewport_size,
             ctx.format,
             *budget_bytes,
             requested_downsample,
             quality,
-        ) {
-            let iterations =
-                blur_primitive::blur_iterations_for_radius(radius_px, downsample_scale, quality);
-            effect_degradations.gaussian_blur.applied =
-                effect_degradations.gaussian_blur.applied.saturating_add(1);
-            effect_blur_quality.gaussian_blur.record_applied(
-                downsample_scale,
-                iterations,
-                desired_downsample,
-            );
-            append_scissored_blur_in_place_two_scratch(
-                passes,
-                srcdst,
-                scratch_targets[0],
-                scratch_targets[1],
-                ctx.viewport_size,
-                downsample_scale,
-                iterations,
-                scissor,
-                ctx.clear,
-                None,
-                None,
-            );
-            return;
-        }
+        )
+    {
+        let iterations =
+            blur_primitive::blur_iterations_for_radius(radius_px, downsample_scale, quality);
+        effect_degradations.gaussian_blur.applied =
+            effect_degradations.gaussian_blur.applied.saturating_add(1);
+        effect_blur_quality.gaussian_blur.record_applied(
+            downsample_scale,
+            iterations,
+            desired_downsample,
+        );
+        append_scissored_blur_in_place_two_scratch(
+            passes,
+            srcdst,
+            scratch_targets[0],
+            scratch_targets[1],
+            ctx.viewport_size,
+            downsample_scale,
+            iterations,
+            scissor,
+            ctx.clear,
+            None,
+            None,
+        );
+        return;
     }
 
     // Fallback: single-scratch blur (still deterministic, but may be more expensive).

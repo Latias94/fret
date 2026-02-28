@@ -22,7 +22,6 @@ pub(crate) enum ParentLayoutKind {
     Root,
     Flex { direction: fret_core::Axis },
     Grid,
-    PassthroughOverlayStretch,
     PassthroughOverlayNoStretch,
     Overlay,
 }
@@ -711,8 +710,11 @@ fn build_flow_subtree_impl<H: UiHost>(
             let width_auto = matches!(props.layout.size.width, crate::element::Length::Auto);
             let height_auto = matches!(props.layout.size.height, crate::element::Length::Auto);
             let mut measured = width_auto || height_auto;
-            let mut min_content_width_as_max =
-                measured && matches!(wrap, fret_core::TextWrap::Word);
+            let mut min_content_width_as_max = measured
+                && matches!(
+                    wrap,
+                    fret_core::TextWrap::Word | fret_core::TextWrap::Balance
+                );
 
             if measured
                 && wrap == fret_core::TextWrap::None
@@ -772,8 +774,11 @@ fn build_flow_subtree_impl<H: UiHost>(
             let width_auto = matches!(props.layout.size.width, crate::element::Length::Auto);
             let height_auto = matches!(props.layout.size.height, crate::element::Length::Auto);
             let mut measured = width_auto || height_auto;
-            let mut min_content_width_as_max =
-                measured && matches!(wrap, fret_core::TextWrap::Word);
+            let mut min_content_width_as_max = measured
+                && matches!(
+                    wrap,
+                    fret_core::TextWrap::Word | fret_core::TextWrap::Balance
+                );
 
             if measured
                 && wrap == fret_core::TextWrap::None
@@ -833,8 +838,11 @@ fn build_flow_subtree_impl<H: UiHost>(
             let width_auto = matches!(props.layout.size.width, crate::element::Length::Auto);
             let height_auto = matches!(props.layout.size.height, crate::element::Length::Auto);
             let mut measured = width_auto || height_auto;
-            let mut min_content_width_as_max =
-                measured && matches!(wrap, fret_core::TextWrap::Word);
+            let mut min_content_width_as_max = measured
+                && matches!(
+                    wrap,
+                    fret_core::TextWrap::Word | fret_core::TextWrap::Balance
+                );
 
             if measured
                 && wrap == fret_core::TextWrap::None
@@ -1130,43 +1138,22 @@ fn style_for_item_in_parent<H: UiHost>(
             style.grid_column = taffy_grid_line(layout_style.grid.column);
             style.grid_row = taffy_grid_line(layout_style.grid.row);
         }
-        ParentLayoutKind::PassthroughOverlayStretch
-        | ParentLayoutKind::PassthroughOverlayNoStretch
-        | ParentLayoutKind::Overlay => {
+        ParentLayoutKind::PassthroughOverlayNoStretch | ParentLayoutKind::Overlay => {
             style.grid_column = overlay_grid_line();
             style.grid_row = overlay_grid_line();
         }
         ParentLayoutKind::Root => {}
     }
 
-    match parent_kind {
-        ParentLayoutKind::PassthroughOverlayStretch => {
-            // Passthrough wrappers should remain layout-transparent: their single child should
-            // inherit the wrapper's resolved box when possible, without forcing intrinsic leaves
-            // (e.g. Spacer) to stretch.
-            let is_spacer = with_element_record_for_node(app, window, node, |r| {
-                matches!(&r.instance, ElementInstance::Spacer(_))
-            })
-            .unwrap_or(false);
-            if is_spacer {
-                style.align_self = Some(AlignSelf::FlexStart);
-                style.justify_self = Some(AlignSelf::FlexStart);
-            } else {
-                style.align_self = Some(AlignSelf::Stretch);
-                style.justify_self = Some(AlignSelf::Stretch);
-            }
-        }
-        ParentLayoutKind::PassthroughOverlayNoStretch => {
-            // Behavioral wrappers (Semantics/Opacity/Container/...) should not stretch their
-            // single child; leave sizing to the child so shrink-wrapped widgets (e.g. button
-            // triggers) keep intrinsic bounds.
-            //
-            // Note: per-item stretching is controlled by the wrapper node's `align_items` /
-            // `justify_items` (set in `build_flow_subtree_impl`). Keeping `*_self` unset here lets
-            // the wrapper decide when it's appropriate to stretch layout containers vs. keep
-            // intrinsic sizing.
-        }
-        _ => {}
+    if let ParentLayoutKind::PassthroughOverlayNoStretch = parent_kind {
+        // Behavioral wrappers (Semantics/Opacity/Container/...) should not stretch their
+        // single child; leave sizing to the child so shrink-wrapped widgets (e.g. button
+        // triggers) keep intrinsic bounds.
+        //
+        // Note: per-item stretching is controlled by the wrapper node's `align_items` /
+        // `justify_items` (set in `build_flow_subtree_impl`). Keeping `*_self` unset here lets
+        // the wrapper decide when it's appropriate to stretch layout containers vs. keep
+        // intrinsic sizing.
     }
 
     if let Some(size) = root_override_size {
@@ -1224,7 +1211,6 @@ fn passthrough_wrapper_child<H: UiHost>(
         ElementInstance::FocusTraversalGate(_) => {
             Some((child, ParentLayoutKind::PassthroughOverlayNoStretch))
         }
-        ElementInstance::Pressable(_) => Some((child, ParentLayoutKind::PassthroughOverlayStretch)),
         ElementInstance::Container(_)
         | ElementInstance::PointerRegion(_)
         | ElementInstance::HoverRegion(_)

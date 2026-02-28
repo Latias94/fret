@@ -1,0 +1,50 @@
+{
+  "schema_version": 2,
+  "steps": [
+    {
+      "button": "left",
+      "target": {
+        "id": "ui-gallery-dialog-trigger",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "ui-gallery-dialog-close",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 60,
+      "type": "wait_until"
+    },
+    {
+      "key": "escape",
+      "modifiers": {
+        "alt": false,
+        "ctrl": false,
+        "meta": false,
+        "shift": false
+      },
+      "repeat": false,
+      "type": "press_key"
+    },
+    {
+      "predicate": {
+        "kind": "focus_is",
+        "target": {
+          "id": "ui-gallery-dialog-trigger",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 60,
+      "type": "wait_until"
+    },
+    {
+      "label": "ui-gallery-dialog-escape-focus-restore",
+      "type": "capture_bundle"
+    }
+  ]
+}

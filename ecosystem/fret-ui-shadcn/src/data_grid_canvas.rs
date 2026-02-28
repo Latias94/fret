@@ -18,7 +18,7 @@ use fret_ui::element::{
     SizeStyle, StackProps,
 };
 use fret_ui::scroll::ScrollHandle;
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, ThemeSnapshot, UiHost};
 use fret_ui_headless::grid_viewport::{
     GridAxisItem, GridAxisMeasureMode, GridAxisMetrics, GridViewport2D, compute_grid_viewport_2d,
 };
@@ -26,15 +26,15 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography::{UiTextSize, control_text_style};
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius};
 
-fn border_color(theme: &Theme) -> Color {
+fn border_color(theme: &ThemeSnapshot) -> Color {
     theme.color_token("border")
 }
 
-fn background_color(theme: &Theme) -> Color {
+fn background_color(theme: &ThemeSnapshot) -> Color {
     theme.color_token("background")
 }
 
-fn foreground_color(theme: &Theme) -> Color {
+fn foreground_color(theme: &ThemeSnapshot) -> Color {
     theme.color_token("foreground")
 }
 
@@ -187,7 +187,7 @@ impl DataGridCanvas {
         cx: &mut ElementContext<'_, H>,
         cell_text_at: impl Fn(u64, u64) -> Arc<str> + Send + Sync + 'static,
     ) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
 
         let root_chrome = ChromeRefinement::default()
             .rounded(Radius::Lg)
@@ -208,7 +208,9 @@ impl DataGridCanvas {
             Arc::new(cell_text_at);
 
         cx.container(root_props, move |cx| {
-            let theme = Theme::global(&*cx.app).clone();
+            let theme_full = Theme::global(&*cx.app);
+            let theme = theme_full.snapshot();
+            let cell_text_style = text_style(theme_full);
 
             let scrollbar_w = theme.metric_token("metric.scrollbar.width");
             let thumb = theme.color_token("scrollbar.thumb.background");
@@ -326,7 +328,7 @@ impl DataGridCanvas {
                         bg: background_color(&theme),
                         grid: border_color(&theme),
                         text: foreground_color(&theme),
-                        style: text_style(&theme),
+                        style: cell_text_style,
                         raster_scale_factor: 1.0,
                         cell_pad_x: Px(8.0),
                         cell_pad_y: Px(6.0),

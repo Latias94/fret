@@ -144,21 +144,62 @@ pub(super) fn preview_card(
     };
 
     let meeting_notes = {
-        let avatars = stack::hstack(
-            cx,
-            stack::HStackProps::default().gap(Space::N1).items_center(),
-            |cx| {
-                vec![
-                    shadcn::Avatar::new([shadcn::AvatarFallback::new("CN").into_element(cx)])
-                        .into_element(cx),
-                    shadcn::Avatar::new([shadcn::AvatarFallback::new("LR").into_element(cx)])
-                        .into_element(cx),
-                    shadcn::Avatar::new([shadcn::AvatarFallback::new("ER").into_element(cx)])
-                        .into_element(cx),
-                ]
-            },
-        )
-        .test_id("ui-gallery-card-notes-avatars");
+        let avatars = {
+            // Upstream shadcn Card docs use GitHub avatar images. In the in-tree gallery we prefer
+            // a deterministic in-repo texture to avoid network dependency in diagnostics runs.
+            let avatar_source = {
+                #[cfg(not(target_arch = "wasm32"))]
+                {
+                    static AVATAR_TEST_JPG: OnceLock<Option<ui_assets::ImageSource>> =
+                        OnceLock::new();
+                    AVATAR_TEST_JPG.get_or_init(|| {
+                        let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                            .join("../../assets/textures/test.jpg");
+                        if path.exists() {
+                            Some(ui_assets::ImageSource::from_path(Arc::new(path)))
+                        } else {
+                            None
+                        }
+                    })
+                }
+
+                #[cfg(target_arch = "wasm32")]
+                {
+                    static AVATAR_TEST_JPG: OnceLock<ui_assets::ImageSource> = OnceLock::new();
+                    Some(AVATAR_TEST_JPG.get_or_init(|| {
+                        ui_assets::ImageSource::from_url(Arc::<str>::from("textures/test.jpg"))
+                    }))
+                }
+            };
+
+            let avatar_fallbacks = ["CN", "LR", "ER"];
+            let avatars = avatar_fallbacks
+                .iter()
+                .map(|fallback| {
+                    let image_id = avatar_source
+                        .as_ref()
+                        .map(|source| cx.use_image_source_state(source).image)
+                        .flatten();
+                    let image = shadcn::AvatarImage::maybe(image_id).into_element(cx);
+                    let fallback = shadcn::AvatarFallback::new(*fallback)
+                        .when_image_missing(image_id)
+                        .delay_ms(120)
+                        .into_element(cx);
+                    shadcn::Avatar::new([image, fallback]).into_element(cx)
+                })
+                .collect::<Vec<_>>();
+
+            let count = shadcn::AvatarGroupCount::new([ui::text(cx, "+8")
+                .font_medium()
+                .nowrap()
+                .into_element(cx)])
+            .into_element(cx)
+            .test_id("ui-gallery-card-notes-avatar-count");
+
+            shadcn::AvatarGroup::new(avatars.into_iter().chain([count]).collect::<Vec<_>>())
+                .into_element(cx)
+                .test_id("ui-gallery-card-notes-avatars")
+        };
 
         let list = stack::vstack(
             cx,
@@ -174,34 +215,77 @@ pub(super) fn preview_card(
                 let ordered_list = {
                     let props = decl_style::container_props(
                         &theme,
-                        ChromeRefinement::default().pl(Space::N6).pt(Space::N4),
+                        // shadcn/ui v4 uses `ol.list-decimal.pl-6` where the marker lives outside the
+                        // text flow. Model that by giving the marker its own column instead of
+                        // prefixing `"1."` into the item string (which double-counts marker width and
+                        // causes earlier wraps like "Dark mode" / "support").
+                        ChromeRefinement::default().pt(Space::N4),
                         LayoutRefinement::default().w_full(),
                     );
 
                     cx.container(props, |cx| {
                         vec![stack::vstack(
                             cx,
-                            stack::VStackProps::default().gap(Space::N2).items_start(),
+                            stack::VStackProps::default()
+                                .gap(Space::N2)
+                                .items_stretch()
+                                .layout(LayoutRefinement::default().w_full()),
                             |cx| {
+                                let marker = |cx: &mut ElementContext<'_, App>, text: &str| {
+                                    ui::text(cx, text)
+                                        .text_sm()
+                                        // `pl-6` ≈ marker(16px) + gap(8px).
+                                        .w_space(Space::N4)
+                                        .text_align(fret_core::TextAlign::End)
+                                        .into_element(cx)
+                                };
+
+                                let item =
+                                    |cx: &mut ElementContext<'_, App>,
+                                     n: &str,
+                                     content: &str,
+                                     test_id: Option<&'static str>| {
+                                        let body = ui::text(cx, content)
+                                            .text_sm()
+                                            .flex_1()
+                                            .min_w_0()
+                                            .into_element(cx);
+                                        let body = match test_id {
+                                            Some(id) => body.test_id(id),
+                                            None => body,
+                                        };
+
+                                        stack::hstack(
+                                            cx,
+                                            stack::HStackProps::default()
+                                                .gap(Space::N2)
+                                                .items_start()
+                                                .layout(LayoutRefinement::default().w_full()),
+                                            |cx| vec![marker(cx, n), body],
+                                        )
+                                    };
+
                                 vec![
-                                    ui::text(
+                                    item(
                                         cx,
-                                        "1. New analytics widgets for daily/weekly metrics",
-                                    )
-                                    .text_sm()
-                                    .into_element(cx),
-                                    ui::text(cx, "2. Simplified navigation menu")
-                                        .text_sm()
-                                        .into_element(cx),
-                                    ui::text(cx, "3. Dark mode support")
-                                        .text_sm()
-                                        .into_element(cx),
-                                    ui::text(cx, "4. Timeline: 6 weeks")
-                                        .text_sm()
-                                        .into_element(cx),
-                                    ui::text(cx, "5. Follow-up meeting scheduled for next Tuesday")
-                                        .text_sm()
-                                        .into_element(cx),
+                                        "1.",
+                                        "New analytics widgets for daily/weekly metrics",
+                                        None,
+                                    ),
+                                    item(cx, "2.", "Simplified navigation menu", None),
+                                    item(
+                                        cx,
+                                        "3.",
+                                        "Dark mode support",
+                                        Some("ui-gallery-card-notes-item-dark-mode"),
+                                    ),
+                                    item(cx, "4.", "Timeline: 6 weeks", None),
+                                    item(
+                                        cx,
+                                        "5.",
+                                        "Follow-up meeting scheduled for next Tuesday",
+                                        None,
+                                    ),
                                 ]
                             },
                         )]
@@ -218,6 +302,13 @@ pub(super) fn preview_card(
                 shadcn::CardTitle::new("Meeting Notes").into_element(cx),
                 shadcn::CardDescription::new("Transcript from the meeting with the client.")
                     .into_element(cx),
+                shadcn::CardAction::new([shadcn::Button::new("Transcribe")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .leading_icon(fret_icons::IconId::new_static("lucide.captions"))
+                    .into_element(cx)
+                    .test_id("ui-gallery-card-notes-transcribe")])
+                .into_element(cx),
             ])
             .into_element(cx),
             shadcn::CardContent::new(vec![list]).into_element(cx),
@@ -424,11 +515,18 @@ pub(super) fn preview_card(
                 .into_element(cx)
         };
 
-        doc_layout::wrap_row_snapshot(
-            cx,
-            &theme,
-            Space::N4,
-            fret_ui::element::CrossAlign::Start,
+        let gap = MetricRef::space(Space::N4).resolve(&theme);
+        let layout =
+            decl_style::layout_style(&theme, LayoutRefinement::default().w_full().min_w_0());
+
+        cx.grid(
+            fret_ui::element::GridProps {
+                layout,
+                cols: 2,
+                gap: gap.into(),
+                align: fret_ui::element::CrossAlign::Stretch,
+                ..Default::default()
+            },
             |cx| {
                 let content_only = {
                     let card = shadcn::Card::new(vec![
@@ -628,10 +726,72 @@ pub(super) fn preview_card(
     shadcn::CardHeader::new(vec![
         shadcn::CardTitle::new("Meeting Notes").into_element(cx),
         shadcn::CardDescription::new("...").into_element(cx),
+        shadcn::CardAction::new([shadcn::Button::new("Transcribe")
+            .variant(shadcn::ButtonVariant::Outline)
+            .size(shadcn::ButtonSize::Sm)
+            .leading_icon(fret_icons::IconId::new_static("lucide.captions"))
+            .into_element(cx)])
+        .into_element(cx),
     ])
     .into_element(cx),
-    shadcn::CardContent::new(vec![cx.text("...")]).into_element(cx),
-    shadcn::CardFooter::new(vec![/* avatars */]).into_element(cx),
+    shadcn::CardContent::new(vec![
+        ui::text_block(
+            cx,
+            "Client requested dashboard redesign with focus on mobile responsiveness.",
+        )
+            .text_sm()
+            .into_element(cx),
+        // `ol.list-decimal.pl-6`-style: keep the marker out of the text flow.
+        stack::vstack(
+            cx,
+            stack::VStackProps::default().gap(Space::N2).items_stretch(),
+            |cx| {
+                let marker = |cx: &mut ElementContext<'_, App>, n: &str| {
+                    ui::text(cx, n)
+                        .text_sm()
+                        .w_space(Space::N4)
+                        .text_align(fret_core::TextAlign::End)
+                        .into_element(cx)
+                };
+                let item = |cx: &mut ElementContext<'_, App>, n: &str, content: &str| {
+                    stack::hstack(
+                        cx,
+                        stack::HStackProps::default()
+                            .gap(Space::N2)
+                            .items_start()
+                            .layout(LayoutRefinement::default().w_full()),
+                        |cx| {
+                            vec![
+                                marker(cx, n),
+                                ui::text(cx, content)
+                                    .text_sm()
+                                    .flex_1()
+                                    .min_w_0()
+                                    .into_element(cx),
+                            ]
+                        },
+                    )
+                };
+                vec![
+                    item(cx, "1.", "New analytics widgets for daily/weekly metrics"),
+                    item(cx, "2.", "Simplified navigation menu"),
+                    item(cx, "3.", "Dark mode support"),
+                    item(cx, "4.", "Timeline: 6 weeks"),
+                    item(cx, "5.", "Follow-up meeting scheduled for next Tuesday"),
+                ]
+            },
+        )
+        .into_element(cx),
+    ])
+    .into_element(cx),
+    shadcn::CardFooter::new(vec![shadcn::AvatarGroup::new(vec![
+        shadcn::Avatar::new([/* image + fallback */]).into_element(cx),
+        shadcn::Avatar::new([/* image + fallback */]).into_element(cx),
+        shadcn::Avatar::new([/* image + fallback */]).into_element(cx),
+        shadcn::AvatarGroupCount::new([ui::text(cx, "+8").into_element(cx)]).into_element(cx),
+    ])
+    .into_element(cx)])
+    .into_element(cx),
 ])
 .into_element(cx);"#,
                 ),

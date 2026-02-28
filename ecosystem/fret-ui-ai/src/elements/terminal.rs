@@ -21,11 +21,24 @@ use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
-use fret_ui_kit::{ChromeRefinement, ColorRef, Justify, LayoutRefinement, Radius, Space};
+use fret_ui_kit::{
+    ChromeRefinement, ColorFallback, ColorRef, Justify, LayoutRefinement, Radius, Space,
+};
 use fret_ui_shadcn::ScrollArea;
 
 use super::Shimmer;
 pub type OnTerminalClear = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx) + 'static>;
+
+fn token(key: &'static str, fallback: Color) -> ColorRef {
+    ColorRef::Token {
+        key,
+        fallback: ColorFallback::Color(fallback),
+    }
+}
+
+fn color(theme: &Theme, key: &'static str, fallback: Color) -> Color {
+    theme.color_by_key(key).unwrap_or(fallback)
+}
 
 fn zinc_950() -> Color {
     Color {
@@ -90,7 +103,8 @@ impl std::fmt::Debug for TerminalController {
 fn use_terminal_controller<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
 ) -> Option<TerminalController> {
-    cx.with_state(TerminalProviderState::default, |st| st.controller.clone())
+    cx.inherited_state::<TerminalProviderState>()
+        .and_then(|st| st.controller.clone())
 }
 
 #[derive(Clone)]
@@ -206,9 +220,9 @@ impl Terminal {
         let root_chrome = ChromeRefinement::default()
             .rounded(Radius::Lg)
             .border_1()
-            .bg(ColorRef::Color(zinc_950()))
-            .border_color(ColorRef::Color(zinc_800()))
-            .text_color(ColorRef::Color(zinc_100()))
+            .bg(token("component.terminal.bg", zinc_950()))
+            .border_color(token("component.terminal.border", zinc_800()))
+            .text_color(token("component.terminal.fg", zinc_100()))
             .merge(self.chrome);
 
         let controller = TerminalController {
@@ -223,9 +237,15 @@ impl Terminal {
 
         let children = children(cx, controller.clone());
 
+        let inner = stack::vstack(
+            cx,
+            stack::VStackProps::default().layout(LayoutRefinement::default().w_full().min_w_0()),
+            move |_cx| children,
+        );
+
         let root = cx.container(
             decl_style::container_props(&theme, root_chrome, self.layout),
-            move |_cx| children,
+            move |_cx| vec![inner],
         );
 
         if let Some(test_id) = self.test_id_root {
@@ -345,7 +365,7 @@ impl TerminalHeader {
             top: Px(0.0),
             bottom: Px(1.0),
         };
-        props.border_color = Some(zinc_800());
+        props.border_color = Some(color(&theme, "component.terminal.border", zinc_800()));
 
         cx.container(props, move |_cx| vec![hstack])
     }
@@ -397,7 +417,7 @@ impl TerminalTitle {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        let fg = zinc_400();
+        let fg = color(&theme, "component.terminal.muted_fg", zinc_400());
 
         let icon = decl_icon::icon_with(cx, self.icon, Some(Px(16.0)), Some(ColorRef::Color(fg)));
         let text = cx.text_props(TextProps {
@@ -679,12 +699,12 @@ impl TerminalCopyButton {
             pressable.a11y.test_id = test_id.clone();
 
             let fg = if st.hovered || st.pressed {
-                zinc_100()
+                color(&theme, "component.terminal.fg", zinc_100())
             } else {
-                zinc_400()
+                color(&theme, "component.terminal.muted_fg", zinc_400())
             };
             let bg = if st.pressed || st.hovered {
-                zinc_800()
+                color(&theme, "component.terminal.border", zinc_800())
             } else {
                 Color::TRANSPARENT
             };
@@ -802,12 +822,12 @@ impl TerminalClearButton {
             pressable.a11y.test_id = test_id.clone();
 
             let fg = if st.hovered || st.pressed {
-                zinc_100()
+                color(&theme, "component.terminal.fg", zinc_100())
             } else {
-                zinc_400()
+                color(&theme, "component.terminal.muted_fg", zinc_400())
             };
             let bg = if st.pressed || st.hovered {
-                zinc_800()
+                color(&theme, "component.terminal.border", zinc_800())
             } else {
                 Color::TRANSPARENT
             };
@@ -938,7 +958,7 @@ impl TerminalContent {
                 typography::TypographyPreset::control_monospace(typography::UiTextSize::Sm)
                     .resolve(&theme),
             ),
-            color: Some(zinc_100()),
+            color: Some(color(&theme, "component.terminal.fg", zinc_100())),
             wrap: TextWrap::Grapheme,
             overflow: TextOverflow::Clip,
             align: fret_core::TextAlign::Start,

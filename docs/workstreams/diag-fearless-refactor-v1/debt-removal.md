@@ -1,7 +1,7 @@
 ---
 title: Diagnostics Fearless Refactor v1 (Debt Removal)
 status: draft
-date: 2026-02-23
+date: 2026-02-24
 scope: diagnostics, env-knobs, schema, refactor, debt
 ---
 
@@ -29,6 +29,29 @@ Non-goals:
   1. documented as deprecated,
   2. removed from tooling first,
   3. removed from runtime parsing once no in-tree consumers rely on them.
+
+## Bundle artifact terminology + compatibility keys
+
+Policy:
+
+- Treat the diagnostics **bundle artifact** as the canonical input/output across tooling:
+  - `bundle.json` (raw / legacy / can be huge)
+  - `bundle.schema2.json` (preferred portable artifact for sidecar-first and AI loops)
+- Tooling and docs should say **bundle artifact** when they mean “either file”.
+- When tooling must talk about the legacy file specifically, say **raw `bundle.json`**.
+
+Compatibility strategy (fearless refactor prerequisite):
+
+- Output JSON produced by tooling may keep **legacy keys** for a while (e.g. `bundle_json`) as aliases,
+  but new code should prefer writing/reading the canonical key:
+  - canonical: `bundle_artifact`
+  - legacy alias: `bundle_json`
+
+Exit criteria to remove legacy keys:
+
+1. All in-tree scripts and consumers are updated to read `bundle_artifact` (or accept both keys).
+2. A deprecation period is documented (internal) and warnings are emitted when legacy keys are consumed.
+3. Legacy keys are removed from tooling outputs, then removed from any internal parsers.
 
 ## Canonical vs legacy (initial inventory)
 
@@ -76,7 +99,12 @@ Evidence anchors:
 This list stays intentionally short and actionable. When a compatibility layer is removed, add the
 commit hash + evidence anchor(s) here.
 
+- See also: `docs/workstreams/diag-fearless-refactor-v1/redundancy-removal-checklist.md` (risk-tiered removal plan).
+
 - Legacy schema-v1-only traversal helpers in tooling once all in-tree dumps default to schema v2.
+- Remaining `bundle.json`-only assumptions in CLI tooling once the bundle-artifact sweep is complete
+  (error messages, help text, and path resolution should accept `<bundle_dir|bundle.json|bundle.schema2.json>`).
+- Transitional output JSON aliases (`bundle_json` keys) once all in-tree consumers have migrated to `bundle_artifact`.
 
 Completed:
 

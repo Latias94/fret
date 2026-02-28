@@ -493,7 +493,7 @@ pub fn run() -> anyhow::Result<()> {
 
     let config = WinitRunnerConfig {
         main_window_title: "fret-demo canvas_datagrid_stress_demo".to_string(),
-        main_window_size: winit::dpi::LogicalSize::new(1200.0, 780.0),
+        main_window_size: fret_launch::WindowLogicalSize::new(1200.0, 780.0),
         ..Default::default()
     };
 

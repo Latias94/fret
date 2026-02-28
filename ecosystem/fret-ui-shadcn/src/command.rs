@@ -6,7 +6,8 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_core::{
-    Color, Corners, Edges, FontId, FontWeight, KeyCode, NodeId, Px, SemanticsRole, TextStyle,
+    AttributedText, Color, Corners, Edges, FontId, FontWeight, KeyCode, NodeId, Px, SemanticsRole,
+    TextAlign, TextOverflow, TextSpan, TextStyle, TextWrap,
 };
 use fret_icons::{IconId, ids};
 use fret_runtime::WindowCommandGatingService;
@@ -20,11 +21,11 @@ use fret_ui::action::ActivateReason;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
     PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps, RowProps,
-    SemanticsDecoration, SizeStyle, TextInputProps,
+    SemanticsDecoration, SizeStyle, StyledTextProps, TextInputProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::scroll::ScrollHandle;
-use fret_ui::{ElementContext, TextInputStyle, Theme, UiHost};
+use fret_ui::{ElementContext, TextInputStyle, Theme, ThemeSnapshot, UiHost};
 use fret_ui_headless::cmdk_score;
 use fret_ui_headless::cmdk_selection;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
@@ -244,21 +245,21 @@ pub fn command_entries_from_host_commands_with_gating_snapshot<H: UiHost>(
     entries
 }
 
-fn border(theme: &Theme) -> Color {
+fn border(theme: &ThemeSnapshot) -> Color {
     theme
         .color_by_key("border")
         .or_else(|| theme.color_by_key("input"))
         .expect("missing theme token: border/input")
 }
 
-fn bg(theme: &Theme) -> Color {
+fn bg(theme: &ThemeSnapshot) -> Color {
     theme
         .color_by_key("popover")
         .or_else(|| theme.color_by_key("background"))
         .expect("missing theme token: popover/background")
 }
 
-fn item_bg_hover(theme: &Theme) -> Color {
+fn item_bg_hover(theme: &ThemeSnapshot) -> Color {
     theme
         .color_by_key("accent")
         .or_else(|| theme.color_by_key("muted"))
@@ -319,14 +320,13 @@ fn command_text_input<H: UiHost>(
     expanded: Option<bool>,
     height: Px,
 ) -> AnyElement {
-    let theme = Theme::global(&*cx.app).clone();
-    let theme = &theme;
+    let theme = Theme::global(&*cx.app).snapshot();
 
-    let fg = theme.color_token("foreground");
+    let fg = theme.color_token("popover-foreground");
     let placeholder_fg = theme.color_token("muted-foreground");
-    let pad_y = MetricRef::space(Space::N3).resolve(theme);
+    let pad_y = MetricRef::space(Space::N3).resolve(&theme);
 
-    let mut chrome = TextInputStyle::from_theme(theme.snapshot());
+    let mut chrome = TextInputStyle::from_theme(theme.clone());
     // shadcn/ui v4: cmdk input uses `py-3` and relies on the wrapper for horizontal padding.
     chrome.padding = Edges {
         top: pad_y,
@@ -356,7 +356,7 @@ fn command_text_input<H: UiHost>(
     props.active_descendant = active_descendant;
     props.expanded = expanded;
     props.chrome = chrome;
-    props.text_style = item_text_style(theme);
+    props.text_style = item_text_style(&theme);
     props.layout.size = SizeStyle {
         width: Length::Fill,
         height: Length::Px(height),
@@ -374,6 +374,7 @@ fn cmdk_highlighted_label<H: UiHost>(
     label: Arc<str>,
     query: &str,
     fg: Color,
+    nonmatch_fg: Color,
     text_style: TextStyle,
 ) -> AnyElement {
     let text_px = text_style.size;
@@ -402,8 +403,6 @@ fn cmdk_highlighted_label<H: UiHost>(
             .into_element(cx);
     }
 
-    let muted_fg = Theme::global(&*cx.app).color_token("muted-foreground");
-
     let ranges = cmdk_score::command_match_ranges(label.as_ref(), query);
     if ranges.is_empty() {
         return apply_text_style(ui::text(cx, label))
@@ -427,7 +426,7 @@ fn cmdk_highlighted_label<H: UiHost>(
                 .into();
             pieces.push(
                 apply_text_style(ui::text(cx, text))
-                    .text_color(ColorRef::Color(muted_fg))
+                    .text_color(ColorRef::Color(nonmatch_fg))
                     .into_element(cx),
             );
         }
@@ -454,7 +453,7 @@ fn cmdk_highlighted_label<H: UiHost>(
             .into();
         pieces.push(
             apply_text_style(ui::text(cx, text))
-                .text_color(ColorRef::Color(muted_fg))
+                .text_color(ColorRef::Color(nonmatch_fg))
                 .into_element(cx),
         );
     }
@@ -479,7 +478,7 @@ fn cmdk_highlighted_label<H: UiHost>(
     )
 }
 
-pub(crate) fn item_text_style(theme: &Theme) -> TextStyle {
+pub(crate) fn item_text_style(theme: &ThemeSnapshot) -> TextStyle {
     let px = theme
         .metric_by_key("component.command.item.text_px")
         .or_else(|| theme.metric_by_key("font.size"))
@@ -493,7 +492,7 @@ pub(crate) fn item_text_style(theme: &Theme) -> TextStyle {
     style
 }
 
-fn heading_text_style(theme: &Theme) -> TextStyle {
+fn heading_text_style(theme: &ThemeSnapshot) -> TextStyle {
     // shadcn/ui v4: command group headings use `text-xs` / `leading-4`.
     let size = theme
         .metric_by_key("component.command.heading.text_px")
@@ -507,7 +506,7 @@ fn heading_text_style(theme: &Theme) -> TextStyle {
     style
 }
 
-pub(crate) fn shortcut_text_style(theme: &Theme) -> TextStyle {
+pub(crate) fn shortcut_text_style(theme: &ThemeSnapshot) -> TextStyle {
     let base_size = theme.metric_token("font.size");
     let base_line_height = theme.metric_token("font.line_height");
 
@@ -524,6 +523,70 @@ pub(crate) fn shortcut_text_style(theme: &Theme) -> TextStyle {
     // new-york-v4: `tracking-widest`.
     style.letter_spacing_em = Some(0.10);
     style
+}
+
+fn shortcut_is_symbol_char(ch: char) -> bool {
+    matches!(ch, '⌘' | '⌥' | '⌃' | '⇧')
+}
+
+fn shortcut_needs_symbol_font(text: &str) -> bool {
+    // shadcn command demo uses symbols like "⌘" directly. Our default UI font may not include
+    // these glyphs on Windows, leading to tofu squares. Prefer a symbol-capable UI font there.
+    text.chars().any(shortcut_is_symbol_char)
+}
+
+fn shortcut_symbol_font_for_platform(platform: Platform) -> Option<FontId> {
+    if platform == Platform::Windows {
+        // "Segoe UI Symbol" is available on standard Windows installs and covers common shortcut
+        // glyphs (e.g. ⌘ ⌥ ⌃ ⇧).
+        return Some(FontId::family("Segoe UI Symbol"));
+    }
+
+    None
+}
+
+fn shortcut_attributed_text_with_symbol_fallback(
+    text: Arc<str>,
+    symbol_font: FontId,
+) -> AttributedText {
+    if text.is_empty() {
+        return AttributedText::new(text, Arc::<[TextSpan]>::from([]));
+    }
+
+    let mut spans: Vec<TextSpan> = Vec::new();
+    let mut run_start = 0usize;
+    let mut run_is_symbol: Option<bool> = None;
+
+    for (idx, ch) in text.char_indices() {
+        let is_symbol = shortcut_is_symbol_char(ch);
+        match run_is_symbol {
+            None => {
+                run_start = idx;
+                run_is_symbol = Some(is_symbol);
+            }
+            Some(prev) if prev != is_symbol => {
+                let mut span = TextSpan::new(idx.saturating_sub(run_start));
+                if prev {
+                    span.shaping.font = Some(symbol_font.clone());
+                }
+                spans.push(span);
+
+                run_start = idx;
+                run_is_symbol = Some(is_symbol);
+            }
+            _ => {}
+        }
+    }
+
+    let end = text.len();
+    let prev = run_is_symbol.unwrap_or(false);
+    let mut span = TextSpan::new(end.saturating_sub(run_start));
+    if prev {
+        span.shaping.font = Some(symbol_font);
+    }
+    spans.push(span);
+
+    AttributedText::new(text, Arc::<[TextSpan]>::from(spans))
 }
 
 /// shadcn/ui `CommandShortcut` (v4).
@@ -547,10 +610,30 @@ impl CommandShortcut {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
-        let theme = &theme;
+        let theme = Theme::global(&*cx.app).snapshot();
         let fg = theme.color_token("muted-foreground");
-        let style = shortcut_text_style(theme);
+        let style = shortcut_text_style(&theme);
+        let platform = Platform::current();
+
+        if shortcut_needs_symbol_font(self.text.as_ref())
+            && let Some(symbol_font) = shortcut_symbol_font_for_platform(platform)
+        {
+            let layout = decl_style::layout_style(
+                &theme,
+                LayoutRefinement::default().flex_shrink_0().ml_auto(),
+            );
+            let rich = shortcut_attributed_text_with_symbol_fallback(self.text, symbol_font);
+            return cx.styled_text_props(StyledTextProps {
+                layout,
+                rich,
+                style: Some(style),
+                color: Some(fg),
+                wrap: TextWrap::None,
+                overflow: TextOverflow::Clip,
+                align: TextAlign::Start,
+                ink_overflow: Default::default(),
+            });
+        }
         let mut text = ui::text(cx, self.text)
             .layout(LayoutRefinement::default().flex_shrink_0().ml_auto())
             .text_size_px(style.size)
@@ -567,6 +650,19 @@ impl CommandShortcut {
         }
 
         text.into_element(cx)
+    }
+}
+
+#[cfg(test)]
+mod command_shortcut_tests {
+    use super::*;
+
+    #[test]
+    fn shortcut_symbol_detection() {
+        assert!(shortcut_needs_symbol_font("⌘P"));
+        assert!(shortcut_needs_symbol_font("⌥⇧K"));
+        assert!(!shortcut_needs_symbol_font("Ctrl+P"));
+        assert!(!shortcut_needs_symbol_font("Alt+Shift+K"));
     }
 }
 
@@ -607,20 +703,24 @@ impl Command {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let props = {
-            let theme = Theme::global(&*cx.app);
+        let (props, fg_root) = {
+            let theme = Theme::global(&*cx.app).snapshot();
             let base = ChromeRefinement::default()
                 .rounded(Radius::Lg)
                 .merge(
                     ChromeRefinement::default()
                         .border_width(Px(1.0))
-                        .border_color(ColorRef::Color(border(theme)))
-                        .bg(ColorRef::Color(bg(theme))),
+                        .border_color(ColorRef::Color(border(&theme)))
+                        .bg(ColorRef::Color(bg(&theme))),
                 )
                 .merge(self.chrome);
-            decl_style::container_props(theme, base, self.layout)
+            (
+                decl_style::container_props(&theme, base, self.layout),
+                theme.color_token("popover-foreground"),
+            )
         };
-        let children = self.children;
+        let children =
+            current_color::scope_children(cx, ColorRef::Color(fg_root), move |_cx| self.children);
         shadcn_layout::container_flow(cx, props, children)
     }
 }
@@ -687,7 +787,7 @@ impl CommandInput {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             cx.watch_model(&self.model).observe();
-            let theme = Theme::global(&*cx.app).clone();
+            let theme = Theme::global(&*cx.app).snapshot();
             let theme = &theme;
 
             let border = border(theme);
@@ -732,7 +832,7 @@ impl CommandInput {
             let pad_bottom = padding.bottom.map(|m| m.resolve(theme)).unwrap_or(Px(0.0));
             let pad_left = padding.left.map(|m| m.resolve(theme)).unwrap_or(pad_x);
 
-            let icon_fg = theme.color_token("muted-foreground");
+            let icon_fg = theme.color_token("popover-foreground");
 
             let mut wrapper = decl_style::container_props(
                 theme,
@@ -1062,9 +1162,9 @@ impl CommandEmpty {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let (fg, text_style) = {
-            let theme = Theme::global(&*cx.app);
+            let theme = Theme::global(&*cx.app).snapshot();
             let fg = theme.color_token("muted-foreground");
-            let text_style = item_text_style(theme);
+            let text_style = item_text_style(&theme);
             (fg, text_style)
         };
         cx.container(
@@ -1169,9 +1269,9 @@ impl CommandLoading {
         let progress = self.progress;
 
         let (fg, text_style) = {
-            let theme = Theme::global(&*cx.app);
+            let theme = Theme::global(&*cx.app).snapshot();
             let fg = theme.color_token("muted-foreground");
-            let text_style = item_text_style(theme);
+            let text_style = item_text_style(&theme);
             (fg, text_style)
         };
 
@@ -1410,25 +1510,31 @@ impl CommandList {
                 radius,
                 ring,
                 bg_hover,
+                fg_selected,
                 fg,
                 fg_disabled,
+                icon_fg,
+                icon_fg_disabled,
                 text_style,
                 item_layout,
             ) = {
-                let theme = Theme::global(&*cx.app);
-                let row_h = MetricRef::space(Space::N8).resolve(theme);
-                let row_gap = MetricRef::space(Space::N2).resolve(theme);
-                let pad_x = MetricRef::space(Space::N2).resolve(theme);
+                let theme = Theme::global(&*cx.app).snapshot();
+                let row_h = MetricRef::space(Space::N8).resolve(&theme);
+                let row_gap = MetricRef::space(Space::N2).resolve(&theme);
+                let pad_x = MetricRef::space(Space::N2).resolve(&theme);
                 // new-york-v4: `py-1.5` for `CommandItem` in the base `Command` surface.
-                let pad_y = MetricRef::space(Space::N1p5).resolve(theme);
-                let radius = MetricRef::radius(Radius::Sm).resolve(theme);
-                let ring = decl_style::focus_ring(theme, radius);
-                let bg_hover = item_bg_hover(theme);
+                let pad_y = MetricRef::space(Space::N1p5).resolve(&theme);
+                let radius = MetricRef::radius(Radius::Sm).resolve(&theme);
+                let ring = decl_style::focus_ring(&theme, radius);
+                let bg_hover = item_bg_hover(&theme);
+                let fg_selected = theme.color_token("accent-foreground");
                 let fg = theme.color_token("foreground");
                 let fg_disabled = alpha_mul(fg, 0.5);
-                let text_style = item_text_style(theme);
+                let icon_fg = theme.color_token("muted-foreground");
+                let icon_fg_disabled = alpha_mul(icon_fg, 0.5);
+                let text_style = item_text_style(&theme);
                 let item_layout = decl_style::layout_style(
-                    theme,
+                    &theme,
                     LayoutRefinement::default().w_full().min_h(row_h).min_w_0(),
                 );
                 (
@@ -1438,8 +1544,11 @@ impl CommandList {
                     radius,
                     ring,
                     bg_hover,
+                    fg_selected,
                     fg,
                     fg_disabled,
+                    icon_fg,
+                    icon_fg_disabled,
                     text_style,
                     item_layout,
                 )
@@ -1447,11 +1556,11 @@ impl CommandList {
 
             let scroll = self.scroll.w_full().min_w_0();
 
-            let theme = Theme::global(&*cx.app);
-            let border = border(theme);
-            let heading_style = heading_text_style(theme);
+            let theme = Theme::global(&*cx.app).snapshot();
+            let border = border(&theme);
+            let heading_style = heading_text_style(&theme);
             let fg_heading = theme.color_token("muted-foreground");
-            let group_pad_y = MetricRef::space(Space::N1).resolve(theme);
+            let group_pad_y = MetricRef::space(Space::N1).resolve(&theme);
 
             ScrollArea::new(vec![cx.roving_flex(
                 RovingFlexProps {
@@ -1632,8 +1741,10 @@ impl CommandList {
                                             }
                                             let hovered = st.hovered && !st.pressed;
                                             let pressed = st.pressed;
+                                            let focused = st.focused;
+                                            let selected = focused || hovered || pressed;
 
-                                            let bg = (hovered || pressed).then_some(bg_hover);
+                                            let bg = selected.then_some(bg_hover);
                                             let props = ContainerProps {
                                                 layout: {
                                                     let mut layout = LayoutStyle::default();
@@ -1656,11 +1767,23 @@ impl CommandList {
                                             };
 
                                             let child = cx.container(props, move |cx| {
-                                                let effective_fg =
-                                                    if enabled { fg } else { fg_disabled };
+                                                let text_fg = if enabled {
+                                                    if selected { fg_selected } else { fg }
+                                                } else {
+                                                    fg_disabled
+                                                };
+                                                let nonmatch_text_fg = if !enabled {
+                                                    icon_fg_disabled
+                                                } else if selected {
+                                                    text_fg
+                                                } else {
+                                                    icon_fg
+                                                };
+                                                let effective_icon_fg =
+                                                    if enabled { icon_fg } else { icon_fg_disabled };
                                                 current_color::scope_children(
                                                     cx,
-                                                    ColorRef::Color(effective_fg),
+                                                    ColorRef::Color(text_fg),
                                                     |cx| {
                                                         vec![cx.row(
                                                             RowProps {
@@ -1682,8 +1805,13 @@ impl CommandList {
                                                                     if let Some(icon) =
                                                                         leading_icon.clone()
                                                                     {
-                                                                        out.push(decl_icon::icon(
-                                                                            cx, icon,
+                                                                        out.push(decl_icon::icon_with(
+                                                                            cx,
+                                                                            icon,
+                                                                            None,
+                                                                            Some(ColorRef::Color(
+                                                                                effective_icon_fg,
+                                                                            )),
                                                                         ));
                                                                     }
                                                                     out.push(
@@ -1691,7 +1819,8 @@ impl CommandList {
                                                                             cx,
                                                                             label.clone(),
                                                                             query_for_row.as_ref(),
-                                                                            effective_fg,
+                                                                            text_fg,
+                                                                            nonmatch_text_fg,
                                                                             text_style.clone(),
                                                                         ),
                                                                     );
@@ -2383,7 +2512,7 @@ impl CommandPalette {
         }
 
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
+            let theme = Theme::global(&*cx.app).snapshot();
             let input_wrapper_h_fallback = self.input_wrapper_h.resolve(&theme);
             let input_h_fallback = self.input_h.resolve(&theme);
             let input_icon_size_fallback = self.input_icon_size.resolve(&theme);
@@ -2594,8 +2723,11 @@ impl CommandPalette {
 
             let bg_hover = item_bg_hover(&theme);
             let bg_selected = bg_hover;
+            let fg_selected = theme.color_token("accent-foreground");
             let fg = theme.color_token("foreground");
             let fg_disabled = alpha_mul(fg, 0.5);
+            let muted_fg = theme.color_token("muted-foreground");
+            let muted_fg_disabled = alpha_mul(muted_fg, 0.5);
             let text_style = item_text_style(&theme);
             let item_layout = decl_style::layout_style(
                 &theme,
@@ -2861,10 +2993,23 @@ impl CommandPalette {
                                     };
 
                                     let child = cx.container(props, move |cx| {
-                                        let effective_fg = if enabled { fg } else { fg_disabled };
+                                        let text_fg = if enabled {
+                                            if active_row { fg_selected } else { fg }
+                                        } else {
+                                            fg_disabled
+                                        };
+                                        let nonmatch_text_fg = if !enabled {
+                                            muted_fg_disabled
+                                        } else if active_row {
+                                            text_fg
+                                        } else {
+                                            muted_fg
+                                        };
+                                        let icon_fg =
+                                            if enabled { muted_fg } else { muted_fg_disabled };
                                         current_color::scope_children(
                                             cx,
-                                            ColorRef::Color(effective_fg),
+                                            ColorRef::Color(text_fg),
                                             |cx| {
                                                 vec![cx.row(
                                                     RowProps {
@@ -2919,7 +3064,9 @@ impl CommandPalette {
                                                                         cx,
                                                                         ids::ui::CHECK,
                                                                         Some(Px(16.0)),
-                                                                        None,
+                                                                        Some(ColorRef::Color(
+                                                                            icon_fg,
+                                                                        )),
                                                                     );
                                                                     let icon = cx.opacity(
                                                                         if checked {
@@ -2935,8 +3082,13 @@ impl CommandPalette {
                                                                 if let Some(icon) =
                                                                     leading_icon.clone()
                                                                 {
-                                                                    out.push(decl_icon::icon(
-                                                                        cx, icon,
+                                                                    out.push(decl_icon::icon_with(
+                                                                        cx,
+                                                                        icon,
+                                                                        None,
+                                                                        Some(ColorRef::Color(
+                                                                            icon_fg,
+                                                                        )),
                                                                     ));
                                                                 }
 
@@ -2944,7 +3096,8 @@ impl CommandPalette {
                                                                     cx,
                                                                     label.clone(),
                                                                     query_for_row.as_ref(),
-                                                                    effective_fg,
+                                                                    text_fg,
+                                                                    nonmatch_text_fg,
                                                                     text_style.clone(),
                                                                 ));
 

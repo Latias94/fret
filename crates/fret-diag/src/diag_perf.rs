@@ -1,5 +1,25 @@
 use super::*;
 
+#[path = "diag_perf/aux_scripts.rs"]
+mod aux_scripts;
+pub(crate) use aux_scripts::run_suite_aux_script_must_pass;
+#[path = "diag_perf/baseline_rows.rs"]
+mod baseline_rows;
+#[path = "diag_perf/hints.rs"]
+mod hints;
+#[path = "diag_perf/outputs.rs"]
+mod outputs;
+#[path = "diag_perf/reporting.rs"]
+mod reporting;
+#[path = "diag_perf/run_script.rs"]
+mod run_script;
+#[path = "diag_perf/runs_rows.rs"]
+mod runs_rows;
+#[path = "diag_perf/stats_rows.rs"]
+mod stats_rows;
+#[path = "diag_perf/thresholds.rs"]
+mod thresholds;
+
 #[derive(Debug, Clone)]
 pub(crate) struct PerfCmdContext {
     pub pack_after_run: bool,
@@ -23,6 +43,7 @@ pub(crate) struct PerfCmdContext {
     pub launch: Option<Vec<String>>,
     pub launch_env: Vec<(String, String)>,
     pub launch_high_priority: bool,
+    pub launch_write_bundle_json: bool,
     pub max_frame_p95_layout_us: Option<u64>,
     pub max_frame_p95_solve_us: Option<u64>,
     pub max_frame_p95_total_us: Option<u64>,
@@ -79,6 +100,7 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
         launch,
         launch_env,
         launch_high_priority,
+        launch_write_bundle_json,
         max_frame_p95_layout_us,
         max_frame_p95_solve_us,
         max_frame_p95_total_us,
@@ -117,75 +139,39 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
     let (bundle_doctor_mode, rest) = parse_bundle_doctor_mode_from_rest(&rest)?;
     if rest.is_empty() {
         return Err(
-            "missing suite name or script paths (try: fretboard diag perf ui-gallery)".to_string(),
+            "missing suite name or script paths (try: fretboard diag perf ui-gallery)\n\
+hint: list perf suites via `fretboard diag list suites --contains perf-`"
+                .to_string(),
         );
     }
 
     let mut suite_name: Option<String> = None;
     let scripts: Vec<PathBuf> = if rest.len() == 1 {
         let name = rest[0].as_str();
-        if let Some(paths) = perf_seed_policy::scripts_for_perf_suite_name(name) {
+        if let Some(paths) = perf_seed_policy::scripts_for_perf_suite_name(&workspace_root, name)? {
             suite_name = Some(name.to_string());
             paths
                 .iter()
-                .map(|p| resolve_path(&workspace_root, PathBuf::from(*p)))
-                .collect()
-        } else if name == "ui-gallery" {
-            suite_name = Some(name.to_string());
-            [
-                "tools/diag-scripts/ui-gallery-overlay-torture.json",
-                "tools/diag-scripts/ui-gallery-dropdown-open-select.json",
-                "tools/diag-scripts/ui-gallery-context-menu-right-click.json",
-                "tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json",
-                "tools/diag-scripts/ui-gallery-menubar-keyboard-nav.json",
-                "tools/diag-scripts/ui-gallery-virtual-list-torture.json",
-                "tools/diag-scripts/ui-gallery-material3-tabs-switch-perf.json",
-                "tools/diag-scripts/ui-gallery-view-cache-toggle-perf.json",
-                "tools/diag-scripts/ui-gallery-window-resize-stress.json",
-            ]
-            .into_iter()
-            .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-            .collect()
-        } else if name == "ui-gallery-steady" {
-            suite_name = Some(name.to_string());
-            [
-                "tools/diag-scripts/ui-gallery-overlay-torture-steady.json",
-                "tools/diag-scripts/ui-gallery-dropdown-open-select-steady.json",
-                "tools/diag-scripts/ui-gallery-context-menu-right-click-steady.json",
-                "tools/diag-scripts/ui-gallery-dialog-escape-focus-restore-steady.json",
-                "tools/diag-scripts/ui-gallery-hover-layout-torture-steady.json",
-                "tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json",
-                "tools/diag-scripts/ui-gallery-virtual-list-torture-steady.json",
-                "tools/diag-scripts/ui-gallery-material3-tabs-switch-perf-steady.json",
-                "tools/diag-scripts/ui-gallery-view-cache-toggle-perf-steady.json",
-                "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json",
-            ]
-            .into_iter()
-            .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-            .collect()
-        } else if name == "ui-resize-probes" {
-            suite_name = Some(name.to_string());
-            [
-                "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json",
-                "tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json",
-            ]
-            .into_iter()
-            .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-            .collect()
-        } else if name == "ui-code-editor-resize-probes" {
-            suite_name = Some(name.to_string());
-            ["tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json"]
-                .into_iter()
-                .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-                .collect()
-        } else if name == "extras-marquee-steady" {
-            suite_name = Some(name.to_string());
-            ["tools/diag-scripts/extras-marquee-steady.json"]
-                .into_iter()
                 .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
                 .collect()
         } else {
-            vec![resolve_path(&workspace_root, PathBuf::from(name))]
+            let resolved = resolve_path(&workspace_root, PathBuf::from(name));
+            if !resolved.exists() {
+                let looks_like_suite_name =
+                    !name.contains(['/', '\\', ':']) && !name.ends_with(".json");
+                if looks_like_suite_name {
+                    return Err(format!(
+                        "unknown perf suite or script path: {name:?}\n\
+hint: list perf suites via `fretboard diag list suites --contains perf-`\n\
+hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
+                    ));
+                }
+                return Err(format!(
+                    "script path does not exist: {}",
+                    resolved.display()
+                ));
+            }
+            vec![resolved]
         }
     } else {
         rest.iter()
@@ -282,6 +268,7 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
     };
     let wants_perf_thresholds = cli_thresholds.any() || perf_baseline.is_some();
     let mut child: Option<LaunchedDemo> = None;
+    let mut connected_fs: Option<ConnectedToolingTransport> = None;
     let launched_by_fretboard = reuse_launch && launch.is_some();
     let mut perf_launch_env = launch_env.clone();
     std::fs::create_dir_all(&resolved_out_dir).map_err(|e| e.to_string())?;
@@ -353,143 +340,29 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
         .map(|p| resolve_path(&workspace_root, p))
         .collect();
 
-    let run_suite_aux_script_must_pass =
-        |src: &PathBuf, child: &mut Option<LaunchedDemo>| -> Result<(), String> {
-            if use_devtools_ws {
-                let connected = connected_ws.as_ref().ok_or_else(|| {
-                    "missing DevTools WS transport (this is a tooling bug)".to_string()
-                })?;
-                let script_key = normalize_repo_relative_path(&workspace_root, src);
-                let script_json: serde_json::Value =
-                    serde_json::from_slice(&std::fs::read(src).map_err(|e| {
-                        let err = e.to_string();
-                        write_tooling_failure_script_result(
-                            &resolved_script_result_path,
-                            "tooling.script.read_failed",
-                            &err,
-                            "tooling_error",
-                            Some(script_key.clone()),
-                        );
-                        err
-                    })?)
-                    .map_err(|e| {
-                        let err = e.to_string();
-                        write_tooling_failure_script_result(
-                            &resolved_script_result_path,
-                            "tooling.script.parse_failed",
-                            &err,
-                            "tooling_error",
-                            Some(script_key.clone()),
-                        );
-                        err
-                    })?;
-                let (result, _bundle_path) = run_script_over_transport(
-                    &resolved_out_dir,
-                    connected,
-                    script_json,
-                    false,
-                    false,
-                    None,
-                    None,
-                    timeout_ms,
-                    poll_ms,
-                    &resolved_script_result_path,
-                    &perf_capabilities_check_path,
-                )
-                .inspect_err(|err| {
-                    write_tooling_failure_script_result_if_missing(
-                        &resolved_script_result_path,
-                        "tooling.run.failed",
-                        err,
-                        "tooling_error",
-                        Some(script_key.clone()),
-                    );
-                })?;
-
-                match result.stage {
-                    fret_diag_protocol::UiScriptStageV1::Passed => return Ok(()),
-                    fret_diag_protocol::UiScriptStageV1::Failed => {
-                        eprintln!(
-                            "FAIL {} (run_id={}) step={} reason={} last_bundle_dir={}",
-                            src.display(),
-                            result.run_id,
-                            result.step_index.unwrap_or(0),
-                            result.reason.as_deref().unwrap_or("unknown"),
-                            result.last_bundle_dir.as_deref().unwrap_or("")
-                        );
-                        stop_launched_demo(child, &resolved_exit_path, poll_ms);
-                        std::process::exit(1);
-                    }
-                    _ => {
-                        eprintln!(
-                            "unexpected script stage for {}: {:?}",
-                            src.display(),
-                            result
-                        );
-                        stop_launched_demo(child, &resolved_exit_path, poll_ms);
-                        std::process::exit(1);
-                    }
-                }
-            }
-
-            if !reuse_process {
-                clear_script_result_files(
-                    &resolved_script_result_path,
-                    &resolved_script_result_trigger_path,
-                );
-            }
-
-            let mut result = run_script_and_wait(
-                src,
-                &resolved_script_path,
-                &resolved_script_trigger_path,
-                &resolved_script_result_path,
-                &resolved_script_result_trigger_path,
-                timeout_ms,
-                poll_ms,
-            );
-            if let Ok(summary) = &result
-                && summary.stage.as_deref() == Some("failed")
-                && let Some(dir) =
-                    wait_for_failure_dump_bundle(&resolved_out_dir, summary, timeout_ms, poll_ms)
-                && let Some(name) = dir.file_name().and_then(|s| s.to_str())
-                && let Ok(summary) = result.as_mut()
-            {
-                summary.last_bundle_dir = Some(name.to_string());
-            }
-            let result = match result {
-                Ok(v) => v,
-                Err(e) => {
-                    stop_launched_demo(child, &resolved_exit_path, poll_ms);
-                    return Err(e);
-                }
-            };
-
-            match result.stage.as_deref() {
-                Some("passed") => Ok(()),
-                Some("failed") => {
-                    eprintln!(
-                        "FAIL {} (run_id={}) step={} reason={} last_bundle_dir={}",
-                        src.display(),
-                        result.run_id,
-                        result.step_index.unwrap_or(0),
-                        result.reason.as_deref().unwrap_or("unknown"),
-                        result.last_bundle_dir.as_deref().unwrap_or("")
-                    );
-                    stop_launched_demo(child, &resolved_exit_path, poll_ms);
-                    std::process::exit(1);
-                }
-                _ => {
-                    eprintln!(
-                        "unexpected script stage for {}: {:?}",
-                        src.display(),
-                        result
-                    );
-                    stop_launched_demo(child, &resolved_exit_path, poll_ms);
-                    std::process::exit(1);
-                }
-            }
-        };
+    let run_suite_aux_script_must_pass = |src: &PathBuf,
+                                          child: &mut Option<LaunchedDemo>,
+                                          connected_fs: Option<&ConnectedToolingTransport>|
+     -> Result<(), String> {
+        aux_scripts::run_suite_aux_script_must_pass(
+            src,
+            launch.is_some() || reuse_launch,
+            child,
+            use_devtools_ws,
+            connected_ws.as_ref(),
+            connected_fs,
+            &workspace_root,
+            &resolved_out_dir,
+            &resolved_exit_path,
+            true,
+            reuse_process,
+            &resolved_script_result_path,
+            &resolved_script_result_trigger_path,
+            &perf_capabilities_check_path,
+            timeout_ms,
+            poll_ms,
+        )
+    };
 
     if let Some(baseline) = perf_baseline.as_ref() {
         for src in &scripts {
@@ -503,24 +376,53 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
         }
     }
 
+    let mut launch_fs_transport_cfg =
+        crate::transport::FsDiagTransportConfig::from_out_dir(resolved_out_dir.clone());
+    launch_fs_transport_cfg.script_path = resolved_script_path.clone();
+    launch_fs_transport_cfg.script_trigger_path = resolved_script_trigger_path.clone();
+    launch_fs_transport_cfg.script_result_path = resolved_script_result_path.clone();
+    launch_fs_transport_cfg.script_result_trigger_path =
+        resolved_script_result_trigger_path.clone();
+
     if launched_by_fretboard && !reuse_process_per_script {
         child = maybe_launch_demo(
             &launch,
             &perf_launch_env,
             &workspace_root,
-            &resolved_out_dir,
             &resolved_ready_path,
             &resolved_exit_path,
+            &launch_fs_transport_cfg,
             false,
+            launch_write_bundle_json,
             timeout_ms,
             poll_ms,
             launch_high_priority,
-        )?;
+        )
+        .inspect_err(|err| {
+            write_tooling_failure_script_result_if_missing(
+                &resolved_script_result_path,
+                "tooling.launch.failed",
+                err,
+                "tooling_error",
+                Some("maybe_launch_demo".to_string()),
+            );
+        })?;
+        connected_fs = None;
     }
 
     if reuse_process && !reuse_process_per_script && !perf_suite_prewarm_scripts.is_empty() {
+        ensure_perf_fs_transport_connected(
+            &mut connected_fs,
+            use_devtools_ws,
+            &launch_fs_transport_cfg,
+            &resolved_ready_path,
+            child.is_some(),
+            timeout_ms,
+            poll_ms,
+            &resolved_script_result_path,
+        )?;
         for prewarm in &perf_suite_prewarm_scripts {
-            run_suite_aux_script_must_pass(prewarm, &mut child)?;
+            run_suite_aux_script_must_pass(prewarm, &mut child, connected_fs.as_ref())?;
         }
     }
 
@@ -528,23 +430,45 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
         if reuse_process_per_script && launched_by_fretboard && script_index > 0 {
             stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
             child = None;
+            connected_fs = None;
         }
         if reuse_process_per_script && launched_by_fretboard && child.is_none() {
             child = maybe_launch_demo(
                 &launch,
                 &perf_launch_env,
                 &workspace_root,
-                &resolved_out_dir,
                 &resolved_ready_path,
                 &resolved_exit_path,
+                &launch_fs_transport_cfg,
                 false,
+                launch_write_bundle_json,
                 timeout_ms,
                 poll_ms,
                 launch_high_priority,
-            )?;
+            )
+            .inspect_err(|err| {
+                write_tooling_failure_script_result_if_missing(
+                    &resolved_script_result_path,
+                    "tooling.launch.failed",
+                    err,
+                    "tooling_error",
+                    Some("maybe_launch_demo".to_string()),
+                );
+            })?;
+            connected_fs = None;
             if !perf_suite_prewarm_scripts.is_empty() {
+                ensure_perf_fs_transport_connected(
+                    &mut connected_fs,
+                    use_devtools_ws,
+                    &launch_fs_transport_cfg,
+                    &resolved_ready_path,
+                    child.is_some(),
+                    timeout_ms,
+                    poll_ms,
+                    &resolved_script_result_path,
+                )?;
                 for prewarm in &perf_suite_prewarm_scripts {
-                    run_suite_aux_script_must_pass(prewarm, &mut child)?;
+                    run_suite_aux_script_must_pass(prewarm, &mut child, connected_fs.as_ref())?;
                 }
             }
         }
@@ -555,14 +479,25 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
                     &launch,
                     &perf_launch_env,
                     &workspace_root,
-                    &resolved_out_dir,
                     &resolved_ready_path,
                     &resolved_exit_path,
+                    &launch_fs_transport_cfg,
                     false,
+                    launch_write_bundle_json,
                     timeout_ms,
                     poll_ms,
                     launch_high_priority,
-                )?;
+                )
+                .inspect_err(|err| {
+                    write_tooling_failure_script_result_if_missing(
+                        &resolved_script_result_path,
+                        "tooling.launch.failed",
+                        err,
+                        "tooling_error",
+                        Some("maybe_launch_demo".to_string()),
+                    );
+                })?;
+                connected_fs = None;
             }
 
             if !reuse_process {
@@ -573,176 +508,62 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
             }
 
             if !reuse_process && !perf_suite_prewarm_scripts.is_empty() {
+                ensure_perf_fs_transport_connected(
+                    &mut connected_fs,
+                    use_devtools_ws,
+                    &launch_fs_transport_cfg,
+                    &resolved_ready_path,
+                    child.is_some(),
+                    timeout_ms,
+                    poll_ms,
+                    &resolved_script_result_path,
+                )?;
                 for prewarm in &perf_suite_prewarm_scripts {
-                    run_suite_aux_script_must_pass(prewarm, &mut child)?;
+                    run_suite_aux_script_must_pass(prewarm, &mut child, connected_fs.as_ref())?;
                 }
             }
             if !perf_suite_prelude_scripts.is_empty() {
+                ensure_perf_fs_transport_connected(
+                    &mut connected_fs,
+                    use_devtools_ws,
+                    &launch_fs_transport_cfg,
+                    &resolved_ready_path,
+                    child.is_some(),
+                    timeout_ms,
+                    poll_ms,
+                    &resolved_script_result_path,
+                )?;
                 for prelude in &perf_suite_prelude_scripts {
-                    run_suite_aux_script_must_pass(prelude, &mut child)?;
+                    run_suite_aux_script_must_pass(prelude, &mut child, connected_fs.as_ref())?;
                 }
             }
 
+            ensure_perf_fs_transport_connected(
+                &mut connected_fs,
+                use_devtools_ws,
+                &launch_fs_transport_cfg,
+                &resolved_ready_path,
+                child.is_some(),
+                timeout_ms,
+                poll_ms,
+                &resolved_script_result_path,
+            )?;
             let script_key = normalize_repo_relative_path(&workspace_root, &src);
-            let bundle_path: Option<PathBuf> = if use_devtools_ws {
-                let connected = connected_ws.as_ref().ok_or_else(|| {
-                    "missing DevTools WS transport (this is a tooling bug)".to_string()
-                })?;
-                let script_json: serde_json::Value =
-                    serde_json::from_slice(&std::fs::read(&src).map_err(|e| {
-                        let err = e.to_string();
-                        write_tooling_failure_script_result(
-                            &resolved_script_result_path,
-                            "tooling.script.read_failed",
-                            &err,
-                            "tooling_error",
-                            Some(script_key.clone()),
-                        );
-                        err
-                    })?)
-                    .map_err(|e| {
-                        let err = e.to_string();
-                        write_tooling_failure_script_result(
-                            &resolved_script_result_path,
-                            "tooling.script.parse_failed",
-                            &err,
-                            "tooling_error",
-                            Some(script_key.clone()),
-                        );
-                        err
-                    })?;
-                let (result, bundle_path) = run_script_over_transport(
-                    &resolved_out_dir,
-                    connected,
-                    script_json,
-                    true,
-                    false,
-                    None,
-                    None,
-                    timeout_ms,
-                    poll_ms,
-                    &resolved_script_result_path,
-                    &perf_capabilities_check_path,
-                )
-                .inspect_err(|err| {
-                    write_tooling_failure_script_result_if_missing(
-                        &resolved_script_result_path,
-                        "tooling.run.failed",
-                        err,
-                        "tooling_error",
-                        Some(script_key.clone()),
-                    );
-                })?;
-
-                match result.stage {
-                    fret_diag_protocol::UiScriptStageV1::Passed => {}
-                    fret_diag_protocol::UiScriptStageV1::Failed => {
-                        eprintln!(
-                            "FAIL {} (run_id={}) step={} reason={} last_bundle_dir={}",
-                            src.display(),
-                            result.run_id,
-                            result.step_index.unwrap_or(0),
-                            result.reason.as_deref().unwrap_or("unknown"),
-                            result.last_bundle_dir.as_deref().unwrap_or("")
-                        );
-                        stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
-                        std::process::exit(1);
-                    }
-                    _ => {
-                        eprintln!(
-                            "unexpected script stage for {}: {:?}",
-                            src.display(),
-                            result
-                        );
-                        stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
-                        std::process::exit(1);
-                    }
-                }
-
-                bundle_path.map(|p| {
-                    let run_dir = run_id_artifact_dir(&resolved_out_dir, result.run_id);
-                    let stable = crate::resolve_bundle_artifact_path(&run_dir);
-                    if stable.is_file() { stable } else { p }
-                })
-            } else {
-                let mut result = run_script_and_wait(
-                    &src,
-                    &resolved_script_path,
-                    &resolved_script_trigger_path,
-                    &resolved_script_result_path,
-                    &resolved_script_result_trigger_path,
-                    timeout_ms,
-                    poll_ms,
-                );
-                let last_bundle_dir_name = match result.as_ref() {
-                    Ok(summary) if summary.stage.as_deref() == Some("failed") => {
-                        wait_for_failure_dump_bundle(
-                            &resolved_out_dir,
-                            summary,
-                            timeout_ms,
-                            poll_ms,
-                        )
-                        .and_then(|dir| {
-                            dir.file_name()
-                                .and_then(|s| s.to_str())
-                                .map(ToString::to_string)
-                        })
-                    }
-                    _ => None,
-                };
-                if let Some(name) = last_bundle_dir_name
-                    && let Ok(summary) = result.as_mut()
-                {
-                    summary.last_bundle_dir = Some(name);
-                }
-                let result = match result {
-                    Ok(v) => v,
-                    Err(e) => {
-                        stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
-                        return Err(e);
-                    }
-                };
-
-                match result.stage.as_deref() {
-                    Some("passed") => {}
-                    Some("failed") => {
-                        eprintln!(
-                            "FAIL {} (run_id={}) step={} reason={} last_bundle_dir={}",
-                            src.display(),
-                            result.run_id,
-                            result.step_index.unwrap_or(0),
-                            result.reason.as_deref().unwrap_or("unknown"),
-                            result.last_bundle_dir.as_deref().unwrap_or("")
-                        );
-                        stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
-                        std::process::exit(1);
-                    }
-                    _ => {
-                        eprintln!(
-                            "unexpected script stage for {}: {:?}",
-                            src.display(),
-                            result
-                        );
-                        stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
-                        std::process::exit(1);
-                    }
-                }
-
-                let bundle_dir = result
-                    .last_bundle_dir
-                    .as_deref()
-                    .filter(|s| !s.trim().is_empty())
-                    .map(PathBuf::from);
-
-                match bundle_dir {
-                    Some(bundle_dir) => Some(resolve_bundle_artifact_path(
-                        &resolved_out_dir.join(bundle_dir),
-                    )),
-                    None => read_latest_pointer(&resolved_out_dir)
-                        .or_else(|| find_latest_export_dir(&resolved_out_dir))
-                        .map(|path| resolve_bundle_artifact_path(path.as_path())),
-                }
-            };
+            let bundle_path = run_script::run_perf_script_and_resolve_bundle_artifact_path(
+                &src,
+                script_key.as_str(),
+                launch.is_some() || reuse_launch,
+                &mut child,
+                use_devtools_ws,
+                connected_ws.as_ref(),
+                connected_fs.as_ref(),
+                &resolved_out_dir,
+                &resolved_exit_path,
+                &resolved_script_result_path,
+                &perf_capabilities_check_path,
+                timeout_ms,
+                poll_ms,
+            )?;
 
             if let Some(bundle_path) = bundle_path {
                 let mut report =
@@ -793,19 +614,20 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
                         .unwrap_or(serde_json::Value::Null);
 
                     perf_hint_failures.extend(failures.clone());
-                    perf_hint_rows.push(serde_json::json!({
-                        "script": script_key.clone(),
-                        "sort": sort.as_str(),
-                        "repeat": repeat,
-                        "run_index": 0,
-                        "bundle": bundle_path.display().to_string(),
-                        "warmup_frames": report_warmup_frames,
-                        "hints": hints,
-                        "unit_costs": unit_costs,
-                        "worst": worst,
-                        "trace_chrome_json_path": trace_chrome_json_path,
-                        "failures": failures,
-                    }));
+                    hints::push_perf_hint_row(
+                        &mut perf_hint_rows,
+                        script_key.as_str(),
+                        sort,
+                        repeat,
+                        0usize,
+                        &bundle_path,
+                        report_warmup_frames,
+                        hints,
+                        unit_costs,
+                        worst,
+                        trace_chrome_json_path,
+                        failures,
+                    );
                 }
                 let top = report.top.first();
                 let top_total = top.map(|r| r.total_time_us).unwrap_or(0);
@@ -816,8 +638,8 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
                 let top_paint = top.map(|r| r.paint_time_us).unwrap_or(0);
                 let top_dispatch = top.map(|r| r.dispatch_time_us).unwrap_or(0);
                 let top_hit_test = top.map(|r| r.hit_test_time_us).unwrap_or(0);
-                let top_dispatch_events = top.map(|r| r.dispatch_events).unwrap_or(0);
-                let top_hit_test_queries = top.map(|r| r.hit_test_queries).unwrap_or(0);
+                let top_tick = top.map(|r| r.tick_id).unwrap_or(0);
+                let top_frame = top.map(|r| r.frame_id).unwrap_or(0);
                 let pointer_move_frames_present = report.pointer_move_frames_present;
                 let pointer_move_frames_considered = report.pointer_move_frames_considered as u64;
                 let pointer_move_max_dispatch_time_us = report.pointer_move_max_dispatch_time_us;
@@ -827,257 +649,18 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
                 let (
                     run_paint_cache_hit_test_only_replay_allowed_max,
                     run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
-                ) = bundle_paint_cache_hit_test_only_replay_maxes(
+                ) = diag_policy::bundle_paint_cache_hit_test_only_replay_maxes(
                     &bundle_path,
                     report_warmup_frames,
                 )?;
-                let top_hit_test_bounds_tree_queries =
-                    top.map(|r| r.hit_test_bounds_tree_queries).unwrap_or(0);
-                let top_hit_test_bounds_tree_disabled =
-                    top.map(|r| r.hit_test_bounds_tree_disabled).unwrap_or(0);
-                let top_hit_test_bounds_tree_misses =
-                    top.map(|r| r.hit_test_bounds_tree_misses).unwrap_or(0);
-                let top_hit_test_bounds_tree_hits =
-                    top.map(|r| r.hit_test_bounds_tree_hits).unwrap_or(0);
-                let top_hit_test_bounds_tree_candidate_rejected = top
-                    .map(|r| r.hit_test_bounds_tree_candidate_rejected)
-                    .unwrap_or(0);
-                let top_frame_arena_capacity_estimate_bytes = top
-                    .map(|r| r.frame_arena_capacity_estimate_bytes)
-                    .unwrap_or(0);
-                let top_frame_arena_grow_events =
-                    top.map(|r| r.frame_arena_grow_events).unwrap_or(0);
-                let top_element_children_vec_pool_reuses =
-                    top.map(|r| r.element_children_vec_pool_reuses).unwrap_or(0);
-                let top_element_children_vec_pool_misses =
-                    top.map(|r| r.element_children_vec_pool_misses).unwrap_or(0);
-                let top_frame = top.map(|r| r.frame_id).unwrap_or(0);
-                let top_tick = top.map(|r| r.tick_id).unwrap_or(0);
-                let top_view_cache_contained_relayouts =
-                    top.map(|r| r.view_cache_contained_relayouts).unwrap_or(0);
-                let top_view_cache_roots_total = top.map(|r| r.view_cache_roots_total).unwrap_or(0);
-                let top_view_cache_roots_reused =
-                    top.map(|r| r.view_cache_roots_reused).unwrap_or(0);
-                let top_view_cache_roots_first_mount =
-                    top.map(|r| r.view_cache_roots_first_mount).unwrap_or(0);
-                let top_view_cache_roots_node_recreated =
-                    top.map(|r| r.view_cache_roots_node_recreated).unwrap_or(0);
-                let top_view_cache_roots_cache_key_mismatch = top
-                    .map(|r| r.view_cache_roots_cache_key_mismatch)
-                    .unwrap_or(0);
-                let top_view_cache_roots_not_marked_reuse_root = top
-                    .map(|r| r.view_cache_roots_not_marked_reuse_root)
-                    .unwrap_or(0);
-                let top_view_cache_roots_needs_rerender =
-                    top.map(|r| r.view_cache_roots_needs_rerender).unwrap_or(0);
-                let top_view_cache_roots_layout_invalidated = top
-                    .map(|r| r.view_cache_roots_layout_invalidated)
-                    .unwrap_or(0);
-                let top_view_cache_roots_manual =
-                    top.map(|r| r.view_cache_roots_manual).unwrap_or(0);
-                let top_cache_roots_contained_relayout =
-                    top.map(|r| r.cache_roots_contained_relayout).unwrap_or(0);
-                let top_set_children_barrier_writes =
-                    top.map(|r| r.set_children_barrier_writes).unwrap_or(0);
-                let top_barrier_relayouts_scheduled =
-                    top.map(|r| r.barrier_relayouts_scheduled).unwrap_or(0);
-                let top_barrier_relayouts_performed =
-                    top.map(|r| r.barrier_relayouts_performed).unwrap_or(0);
-                let top_virtual_list_visible_range_checks = top
-                    .map(|r| r.virtual_list_visible_range_checks)
-                    .unwrap_or(0);
-                let top_virtual_list_visible_range_refreshes = top
-                    .map(|r| r.virtual_list_visible_range_refreshes)
-                    .unwrap_or(0);
-                let top_renderer_tick_id = top.map(|r| r.renderer_tick_id).unwrap_or(0);
-                let top_renderer_frame_id = top.map(|r| r.renderer_frame_id).unwrap_or(0);
-                let top_renderer_encode_scene_us =
-                    top.map(|r| r.renderer_encode_scene_us).unwrap_or(0);
-                let top_renderer_prepare_text_us =
-                    top.map(|r| r.renderer_prepare_text_us).unwrap_or(0);
-                let top_renderer_prepare_svg_us =
-                    top.map(|r| r.renderer_prepare_svg_us).unwrap_or(0);
-                let top_renderer_draw_calls = top.map(|r| r.renderer_draw_calls).unwrap_or(0);
-                let top_renderer_pipeline_switches =
-                    top.map(|r| r.renderer_pipeline_switches).unwrap_or(0);
-                let top_renderer_bind_group_switches =
-                    top.map(|r| r.renderer_bind_group_switches).unwrap_or(0);
-                let top_renderer_scissor_sets = top.map(|r| r.renderer_scissor_sets).unwrap_or(0);
-                let top_renderer_scene_encoding_cache_misses = top
-                    .map(|r| r.renderer_scene_encoding_cache_misses)
-                    .unwrap_or(0);
-                let top_renderer_material_quad_ops =
-                    top.map(|r| r.renderer_material_quad_ops).unwrap_or(0);
-                let top_renderer_material_sampled_quad_ops = top
-                    .map(|r| r.renderer_material_sampled_quad_ops)
-                    .unwrap_or(0);
-                let top_renderer_material_distinct =
-                    top.map(|r| r.renderer_material_distinct).unwrap_or(0);
-                let top_renderer_material_unknown_ids =
-                    top.map(|r| r.renderer_material_unknown_ids).unwrap_or(0);
-                let top_renderer_material_degraded_due_to_budget = top
-                    .map(|r| r.renderer_material_degraded_due_to_budget)
-                    .unwrap_or(0);
-                let top_renderer_text_atlas_upload_bytes =
-                    top.map(|r| r.renderer_text_atlas_upload_bytes).unwrap_or(0);
-                let top_renderer_text_atlas_evicted_pages = top
-                    .map(|r| r.renderer_text_atlas_evicted_pages)
-                    .unwrap_or(0);
-                let top_renderer_svg_upload_bytes =
-                    top.map(|r| r.renderer_svg_upload_bytes).unwrap_or(0);
-                let top_renderer_image_upload_bytes =
-                    top.map(|r| r.renderer_image_upload_bytes).unwrap_or(0);
-                let top_renderer_svg_raster_cache_misses =
-                    top.map(|r| r.renderer_svg_raster_cache_misses).unwrap_or(0);
-                let top_renderer_svg_raster_budget_evictions = top
-                    .map(|r| r.renderer_svg_raster_budget_evictions)
-                    .unwrap_or(0);
-                let top_renderer_svg_raster_budget_bytes =
-                    top.map(|r| r.renderer_svg_raster_budget_bytes).unwrap_or(0);
-                let top_renderer_svg_rasters_live =
-                    top.map(|r| r.renderer_svg_rasters_live).unwrap_or(0);
-                let top_renderer_svg_standalone_bytes_live = top
-                    .map(|r| r.renderer_svg_standalone_bytes_live)
-                    .unwrap_or(0);
-                let top_renderer_svg_mask_atlas_pages_live = top
-                    .map(|r| r.renderer_svg_mask_atlas_pages_live)
-                    .unwrap_or(0);
-                let top_renderer_svg_mask_atlas_bytes_live = top
-                    .map(|r| r.renderer_svg_mask_atlas_bytes_live)
-                    .unwrap_or(0);
-                let top_renderer_svg_mask_atlas_used_px =
-                    top.map(|r| r.renderer_svg_mask_atlas_used_px).unwrap_or(0);
-                let top_renderer_svg_mask_atlas_capacity_px = top
-                    .map(|r| r.renderer_svg_mask_atlas_capacity_px)
-                    .unwrap_or(0);
-                let top_renderer_svg_raster_cache_hits =
-                    top.map(|r| r.renderer_svg_raster_cache_hits).unwrap_or(0);
-                let top_renderer_svg_mask_atlas_page_evictions = top
-                    .map(|r| r.renderer_svg_mask_atlas_page_evictions)
-                    .unwrap_or(0);
-                let top_renderer_svg_mask_atlas_entries_evicted = top
-                    .map(|r| r.renderer_svg_mask_atlas_entries_evicted)
-                    .unwrap_or(0);
-                let top_renderer_intermediate_budget_bytes = top
-                    .map(|r| r.renderer_intermediate_budget_bytes)
-                    .unwrap_or(0);
-                let top_renderer_intermediate_in_use_bytes = top
-                    .map(|r| r.renderer_intermediate_in_use_bytes)
-                    .unwrap_or(0);
-                let top_renderer_intermediate_peak_in_use_bytes = top
-                    .map(|r| r.renderer_intermediate_peak_in_use_bytes)
-                    .unwrap_or(0);
-                let top_renderer_intermediate_release_targets = top
-                    .map(|r| r.renderer_intermediate_release_targets)
-                    .unwrap_or(0);
-                let top_renderer_intermediate_pool_allocations = top
-                    .map(|r| r.renderer_intermediate_pool_allocations)
-                    .unwrap_or(0);
-                let top_renderer_intermediate_pool_reuses = top
-                    .map(|r| r.renderer_intermediate_pool_reuses)
-                    .unwrap_or(0);
-                let top_renderer_intermediate_pool_releases = top
-                    .map(|r| r.renderer_intermediate_pool_releases)
-                    .unwrap_or(0);
-                let top_renderer_intermediate_pool_evictions = top
-                    .map(|r| r.renderer_intermediate_pool_evictions)
-                    .unwrap_or(0);
-                let top_renderer_intermediate_pool_free_bytes = top
-                    .map(|r| r.renderer_intermediate_pool_free_bytes)
-                    .unwrap_or(0);
-                let top_renderer_intermediate_pool_free_textures = top
-                    .map(|r| r.renderer_intermediate_pool_free_textures)
-                    .unwrap_or(0);
-
                 if stats_json {
-                    perf_json_rows.push(serde_json::json!({
-                        "script": script_key.clone(),
-                        "sort": sort.as_str(),
-                        "top_total_time_us": top_total,
-                        "top_layout_time_us": top_layout,
-                        "top_layout_engine_solve_time_us": top_solve,
-                        "top_layout_engine_solves": top_solves,
-                        "top_prepaint_time_us": top_prepaint,
-                        "top_paint_time_us": top_paint,
-                        "top_dispatch_time_us": top_dispatch,
-                        "top_hit_test_time_us": top_hit_test,
-                        "top_dispatch_events": top_dispatch_events,
-                        "top_hit_test_queries": top_hit_test_queries,
-                        "pointer_move_frames_present": pointer_move_frames_present,
-                        "pointer_move_frames_considered": pointer_move_frames_considered,
-                        "pointer_move_max_dispatch_time_us": pointer_move_max_dispatch_time_us,
-                        "pointer_move_max_hit_test_time_us": pointer_move_max_hit_test_time_us,
-                        "pointer_move_snapshots_with_global_changes": pointer_move_snapshots_with_global_changes,
-                        "top_hit_test_bounds_tree_queries": top_hit_test_bounds_tree_queries,
-                        "top_hit_test_bounds_tree_disabled": top_hit_test_bounds_tree_disabled,
-                        "top_hit_test_bounds_tree_misses": top_hit_test_bounds_tree_misses,
-                        "top_hit_test_bounds_tree_hits": top_hit_test_bounds_tree_hits,
-                        "top_hit_test_bounds_tree_candidate_rejected": top_hit_test_bounds_tree_candidate_rejected,
-                        "top_frame_arena_capacity_estimate_bytes": top_frame_arena_capacity_estimate_bytes,
-                        "top_frame_arena_grow_events": top_frame_arena_grow_events,
-                        "top_element_children_vec_pool_reuses": top_element_children_vec_pool_reuses,
-                        "top_element_children_vec_pool_misses": top_element_children_vec_pool_misses,
-                        "top_tick_id": top_tick,
-                        "top_frame_id": top_frame,
-                        "top_view_cache_contained_relayouts": top_view_cache_contained_relayouts,
-                        "top_view_cache_roots_total": top_view_cache_roots_total,
-                        "top_view_cache_roots_reused": top_view_cache_roots_reused,
-                        "top_view_cache_roots_first_mount": top_view_cache_roots_first_mount,
-                        "top_view_cache_roots_node_recreated": top_view_cache_roots_node_recreated,
-                        "top_view_cache_roots_cache_key_mismatch": top_view_cache_roots_cache_key_mismatch,
-                        "top_view_cache_roots_not_marked_reuse_root": top_view_cache_roots_not_marked_reuse_root,
-                        "top_view_cache_roots_needs_rerender": top_view_cache_roots_needs_rerender,
-                        "top_view_cache_roots_layout_invalidated": top_view_cache_roots_layout_invalidated,
-                        "top_view_cache_roots_manual": top_view_cache_roots_manual,
-                        "top_cache_roots_contained_relayout": top_cache_roots_contained_relayout,
-                        "top_set_children_barrier_writes": top_set_children_barrier_writes,
-                        "top_barrier_relayouts_scheduled": top_barrier_relayouts_scheduled,
-                        "top_barrier_relayouts_performed": top_barrier_relayouts_performed,
-                        "top_virtual_list_visible_range_checks": top_virtual_list_visible_range_checks,
-                        "top_virtual_list_visible_range_refreshes": top_virtual_list_visible_range_refreshes,
-                        "top_renderer_tick_id": top_renderer_tick_id,
-                        "top_renderer_frame_id": top_renderer_frame_id,
-                        "top_renderer_encode_scene_us": top_renderer_encode_scene_us,
-                        "top_renderer_prepare_text_us": top_renderer_prepare_text_us,
-                        "top_renderer_prepare_svg_us": top_renderer_prepare_svg_us,
-                        "top_renderer_draw_calls": top_renderer_draw_calls,
-                        "top_renderer_pipeline_switches": top_renderer_pipeline_switches,
-                        "top_renderer_bind_group_switches": top_renderer_bind_group_switches,
-                        "top_renderer_scissor_sets": top_renderer_scissor_sets,
-                        "top_renderer_scene_encoding_cache_misses": top_renderer_scene_encoding_cache_misses,
-                        "top_renderer_material_quad_ops": top_renderer_material_quad_ops,
-                        "top_renderer_material_sampled_quad_ops": top_renderer_material_sampled_quad_ops,
-                        "top_renderer_material_distinct": top_renderer_material_distinct,
-                        "top_renderer_material_unknown_ids": top_renderer_material_unknown_ids,
-                        "top_renderer_material_degraded_due_to_budget": top_renderer_material_degraded_due_to_budget,
-                        "top_renderer_text_atlas_upload_bytes": top_renderer_text_atlas_upload_bytes,
-                        "top_renderer_text_atlas_evicted_pages": top_renderer_text_atlas_evicted_pages,
-                        "top_renderer_svg_upload_bytes": top_renderer_svg_upload_bytes,
-                        "top_renderer_image_upload_bytes": top_renderer_image_upload_bytes,
-                        "top_renderer_svg_raster_cache_misses": top_renderer_svg_raster_cache_misses,
-                        "top_renderer_svg_raster_budget_evictions": top_renderer_svg_raster_budget_evictions,
-                        "top_renderer_svg_raster_budget_bytes": top_renderer_svg_raster_budget_bytes,
-                        "top_renderer_svg_rasters_live": top_renderer_svg_rasters_live,
-                        "top_renderer_svg_standalone_bytes_live": top_renderer_svg_standalone_bytes_live,
-                        "top_renderer_svg_mask_atlas_pages_live": top_renderer_svg_mask_atlas_pages_live,
-                        "top_renderer_svg_mask_atlas_bytes_live": top_renderer_svg_mask_atlas_bytes_live,
-                        "top_renderer_svg_mask_atlas_used_px": top_renderer_svg_mask_atlas_used_px,
-    	                                "top_renderer_svg_mask_atlas_capacity_px": top_renderer_svg_mask_atlas_capacity_px,
-    	                                "top_renderer_svg_raster_cache_hits": top_renderer_svg_raster_cache_hits,
-    	                                "top_renderer_svg_mask_atlas_page_evictions": top_renderer_svg_mask_atlas_page_evictions,
-    	                                "top_renderer_svg_mask_atlas_entries_evicted": top_renderer_svg_mask_atlas_entries_evicted,
-    	                                "top_renderer_intermediate_budget_bytes": top_renderer_intermediate_budget_bytes,
-    	                                "top_renderer_intermediate_in_use_bytes": top_renderer_intermediate_in_use_bytes,
-    	                                "top_renderer_intermediate_peak_in_use_bytes": top_renderer_intermediate_peak_in_use_bytes,
-    	                                "top_renderer_intermediate_release_targets": top_renderer_intermediate_release_targets,
-    	                                "top_renderer_intermediate_pool_allocations": top_renderer_intermediate_pool_allocations,
-    	                                "top_renderer_intermediate_pool_reuses": top_renderer_intermediate_pool_reuses,
-    	                                "top_renderer_intermediate_pool_releases": top_renderer_intermediate_pool_releases,
-    	                                "top_renderer_intermediate_pool_evictions": top_renderer_intermediate_pool_evictions,
-    	                                "top_renderer_intermediate_pool_free_bytes": top_renderer_intermediate_pool_free_bytes,
-    	                                "top_renderer_intermediate_pool_free_textures": top_renderer_intermediate_pool_free_textures,
-    	                                "bundle": bundle_path.display().to_string(),
-    	                            }));
+                    stats_rows::push_perf_json_row(
+                        &mut perf_json_rows,
+                        script_key.as_str(),
+                        sort,
+                        &report,
+                        &bundle_path,
+                    );
                 } else {
                     println!(
                         "PERF {} sort={} top.us(total/layout/solve/prepaint/paint/dispatch/hit_test)={}/{}/{}/{}/{}/{}/{} top.tick={} top.frame={} bundle={}",
@@ -1183,61 +766,54 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
                         perf_baseline_headroom_pct,
                     );
 
-                    perf_baseline_rows.push(serde_json::json!({
-                        "script": script_key.clone(),
-                        "measured_max": {
-                            "top_total_time_us": top_total,
-                            "top_layout_time_us": top_layout,
-                            "top_layout_engine_solve_time_us": top_solve,
-                            "pointer_move_max_dispatch_time_us": pointer_move_max_dispatch_time_us,
-                            "pointer_move_max_hit_test_time_us": pointer_move_max_hit_test_time_us,
-                            "pointer_move_snapshots_with_global_changes": pointer_move_snapshots_with_global_changes,
-                            "run_paint_cache_hit_test_only_replay_allowed_max": run_paint_cache_hit_test_only_replay_allowed_max,
-                            "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
-                            "renderer_encode_scene_us": report.max_renderer_encode_scene_us,
-                            "renderer_upload_us": report.max_renderer_upload_us,
-                            "renderer_record_passes_us": report.max_renderer_record_passes_us,
-                            "renderer_encoder_finish_us": report.max_renderer_encoder_finish_us,
-                            "renderer_prepare_text_us": report.max_renderer_prepare_text_us,
-                            "renderer_prepare_svg_us": report.max_renderer_prepare_svg_us,
-                        },
-                        "measured_p90": {
-                            "top_total_time_us": p90_total,
-                            "top_layout_time_us": p90_layout,
-                            "top_layout_engine_solve_time_us": p90_solve,
-                        },
-                        "measured_p95": {
-                            "top_total_time_us": p95_total,
-                            "top_layout_time_us": p95_layout,
-                            "top_layout_engine_solve_time_us": p95_solve,
-                        },
-                        "threshold_seed": {
-                            "top_total_time_us": seed_total_value,
-                            "top_layout_time_us": seed_layout_value,
-                            "top_layout_engine_solve_time_us": seed_solve_value,
-                        },
-                        "threshold_seed_source": {
-                            "top_total_time_us": seed_total.as_str(),
-                            "top_layout_time_us": seed_layout.as_str(),
-                            "top_layout_engine_solve_time_us": seed_solve.as_str(),
-                        },
-                        "thresholds": {
-                            "max_top_total_us": thr_total,
-                            "max_top_layout_us": thr_layout,
-                            "max_top_solve_us": thr_solve,
-                            "max_pointer_move_dispatch_us": thr_pointer_move_dispatch,
-                            "max_pointer_move_hit_test_us": thr_pointer_move_hit_test,
-                            "max_pointer_move_global_changes": thr_pointer_move_global_changes,
-                            "min_run_paint_cache_hit_test_only_replay_allowed_max": thr_min_run_paint_cache_hit_test_only_replay_allowed_max,
-                            "max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": thr_max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
-                            "max_renderer_encode_scene_us": thr_renderer_encode_scene_us,
-                            "max_renderer_upload_us": thr_renderer_upload_us,
-                            "max_renderer_record_passes_us": thr_renderer_record_passes_us,
-                            "max_renderer_encoder_finish_us": thr_renderer_encoder_finish_us,
-                            "max_renderer_prepare_text_us": thr_renderer_prepare_text_us,
-                            "max_renderer_prepare_svg_us": thr_renderer_prepare_svg_us,
-                        },
-                    }));
+                    baseline_rows::push_perf_baseline_row_single(
+                        &mut perf_baseline_rows,
+                        script_key.as_str(),
+                        baseline_rows::TopTimesUs::new(top_total, top_layout, top_solve),
+                        baseline_rows::TopTimesUs::new(p90_total, p90_layout, p90_solve),
+                        baseline_rows::TopTimesUs::new(p95_total, p95_layout, p95_solve),
+                        baseline_rows::PointerMoveMetrics::new(
+                            pointer_move_max_dispatch_time_us,
+                            pointer_move_max_hit_test_time_us,
+                            pointer_move_snapshots_with_global_changes,
+                        ),
+                        baseline_rows::PaintCacheReplayMetrics::new(
+                            run_paint_cache_hit_test_only_replay_allowed_max,
+                            run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+                        ),
+                        baseline_rows::RendererTimesUs::new(
+                            report.max_renderer_encode_scene_us,
+                            report.max_renderer_upload_us,
+                            report.max_renderer_record_passes_us,
+                            report.max_renderer_encoder_finish_us,
+                            report.max_renderer_prepare_text_us,
+                            report.max_renderer_prepare_svg_us,
+                        ),
+                        seed_total,
+                        seed_layout,
+                        seed_solve,
+                        seed_total_value,
+                        seed_layout_value,
+                        seed_solve_value,
+                        thr_total,
+                        thr_layout,
+                        thr_solve,
+                        baseline_rows::PointerMoveMetrics::new(
+                            thr_pointer_move_dispatch,
+                            thr_pointer_move_hit_test,
+                            thr_pointer_move_global_changes,
+                        ),
+                        thr_min_run_paint_cache_hit_test_only_replay_allowed_max,
+                        thr_max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+                        baseline_rows::RendererTimesUs::new(
+                            thr_renderer_encode_scene_us,
+                            thr_renderer_upload_us,
+                            thr_renderer_record_passes_us,
+                            thr_renderer_encoder_finish_us,
+                            thr_renderer_prepare_text_us,
+                            thr_renderer_prepare_svg_us,
+                        ),
+                    );
                 }
                 if wants_perf_thresholds {
                     let baseline_thresholds = perf_baseline
@@ -1297,155 +873,65 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
                         baseline_thresholds
                             .max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
                     );
-                    let run = serde_json::json!({
-                        "run_index": 0,
-                        "top_total_time_us": top_total,
-                        "top_layout_time_us": top_layout,
-                        "top_layout_engine_solve_time_us": top_solve,
-                        "top_layout_engine_solves": top_solves,
-                        "pointer_move_frames_present": pointer_move_frames_present,
-                        "pointer_move_frames_considered": pointer_move_frames_considered,
-                        "pointer_move_max_dispatch_time_us": pointer_move_max_dispatch_time_us,
-                        "pointer_move_max_hit_test_time_us": pointer_move_max_hit_test_time_us,
-                        "pointer_move_snapshots_with_global_changes": pointer_move_snapshots_with_global_changes,
-                        "run_paint_cache_hit_test_only_replay_allowed_max": run_paint_cache_hit_test_only_replay_allowed_max,
-                        "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
-                        "top_tick_id": top_tick,
-                        "top_frame_id": top_frame,
-                        "bundle": bundle_path.display().to_string(),
-                    });
-                    let row = serde_json::json!({
-                        "script": script_key.clone(),
-                        "sort": sort.as_str(),
-                        "repeat": 1,
-                        "runs": [run],
-                        "observed_aggregate": perf_threshold_agg.as_str(),
-                        "observed": {
-                            "top_total_time_us": top_total,
-                            "top_layout_time_us": top_layout,
-                            "top_layout_engine_solve_time_us": top_solve,
+                    thresholds::push_single_run_threshold_row_and_failures(
+                        &mut perf_threshold_rows,
+                        &mut perf_threshold_failures,
+                        thresholds::SingleRunThresholdInputs {
+                            script_key: script_key.as_str(),
+                            sort,
+                            perf_threshold_agg,
+                            cli_thresholds,
+                            baseline_thresholds,
+                            top_total,
+                            top_layout,
+                            top_solve,
+                            top_solves,
+                            top_tick,
+                            top_frame,
+                            frame_p95_total_time_us: report.p95_total_time_us,
+                            frame_p95_layout_time_us: report.p95_layout_time_us,
+                            frame_p95_layout_engine_solve_time_us: report
+                                .p95_layout_engine_solve_time_us,
+                            pointer_move_frames_present,
+                            pointer_move_frames_considered,
+                            pointer_move_max_dispatch_time_us,
+                            pointer_move_max_hit_test_time_us,
+                            pointer_move_snapshots_with_global_changes,
+                            run_paint_cache_hit_test_only_replay_allowed_max,
+                            run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+                            max_renderer_encode_scene_us: report.max_renderer_encode_scene_us,
+                            max_renderer_upload_us: report.max_renderer_upload_us,
+                            max_renderer_record_passes_us: report.max_renderer_record_passes_us,
+                            max_renderer_encoder_finish_us: report.max_renderer_encoder_finish_us,
+                            max_renderer_prepare_text_us: report.max_renderer_prepare_text_us,
+                            max_renderer_prepare_svg_us: report.max_renderer_prepare_svg_us,
+                            bundle_path: bundle_path.as_path(),
+                            thr_total,
+                            src_total,
+                            thr_layout,
+                            src_layout,
+                            thr_solve,
+                            src_solve,
+                            thr_frame_p95_total,
+                            src_frame_p95_total,
+                            thr_frame_p95_layout,
+                            src_frame_p95_layout,
+                            thr_frame_p95_solve,
+                            src_frame_p95_solve,
+                            thr_pointer_move_dispatch,
+                            src_pointer_move_dispatch,
+                            thr_pointer_move_hit_test,
+                            src_pointer_move_hit_test,
+                            thr_pointer_move_global_changes,
+                            src_pointer_move_global_changes,
+                            thr_paint_cache_hit_test_only_replay_allowed_max:
+                                thr_paint_cache_hit_test_only_replay_allowed_max,
+                            src_paint_cache_hit_test_only_replay_allowed_max,
+                            thr_paint_cache_hit_test_only_replay_rejected_key_mismatch_max:
+                                thr_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+                            src_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
                         },
-                        "worst_run": {
-                            "top_total_time_us": top_total,
-                            "bundle": bundle_path.display().to_string(),
-                            "trace_chrome": bundle_path
-                                .parent()
-                                .map(|dir| dir.join("trace.chrome.json"))
-                                .filter(|p| p.is_file())
-                                .map(|p| p.display().to_string()),
-                        },
-                        "max": {
-                            "top_total_time_us": top_total,
-                            "top_layout_time_us": top_layout,
-                            "top_layout_engine_solve_time_us": top_solve,
-                            "frame_p95_total_time_us": report.p95_total_time_us,
-                            "frame_p95_layout_time_us": report.p95_layout_time_us,
-                            "frame_p95_layout_engine_solve_time_us": report.p95_layout_engine_solve_time_us,
-                            "pointer_move_max_dispatch_time_us": pointer_move_max_dispatch_time_us,
-                            "pointer_move_max_hit_test_time_us": pointer_move_max_hit_test_time_us,
-                            "pointer_move_snapshots_with_global_changes": pointer_move_snapshots_with_global_changes,
-                            "run_paint_cache_hit_test_only_replay_allowed_max": run_paint_cache_hit_test_only_replay_allowed_max,
-                            "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
-                        },
-                        "p50": {
-                            "top_total_time_us": top_total,
-                            "top_layout_time_us": top_layout,
-                            "top_layout_engine_solve_time_us": top_solve,
-                            "frame_p95_total_time_us": report.p95_total_time_us,
-                            "frame_p95_layout_time_us": report.p95_layout_time_us,
-                            "frame_p95_layout_engine_solve_time_us": report.p95_layout_engine_solve_time_us,
-                        },
-                        "p95": {
-                            "top_total_time_us": top_total,
-                            "top_layout_time_us": top_layout,
-                            "top_layout_engine_solve_time_us": top_solve,
-                            "frame_p95_total_time_us": report.p95_total_time_us,
-                            "frame_p95_layout_time_us": report.p95_layout_time_us,
-                            "frame_p95_layout_engine_solve_time_us": report.p95_layout_engine_solve_time_us,
-                        },
-                        "thresholds": {
-                            "max_top_total_us": thr_total,
-                            "max_top_layout_us": thr_layout,
-                            "max_top_solve_us": thr_solve,
-                            "max_frame_p95_total_us": thr_frame_p95_total,
-                            "max_frame_p95_layout_us": thr_frame_p95_layout,
-                            "max_frame_p95_solve_us": thr_frame_p95_solve,
-                            "max_pointer_move_dispatch_us": thr_pointer_move_dispatch,
-                            "max_pointer_move_hit_test_us": thr_pointer_move_hit_test,
-                            "max_pointer_move_global_changes": thr_pointer_move_global_changes,
-                            "min_run_paint_cache_hit_test_only_replay_allowed_max": thr_paint_cache_hit_test_only_replay_allowed_max,
-                            "max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": thr_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
-                        },
-                        "threshold_sources": {
-                            "max_top_total_us": src_total,
-                            "max_top_layout_us": src_layout,
-                            "max_top_solve_us": src_solve,
-                            "max_frame_p95_total_us": src_frame_p95_total,
-                            "max_frame_p95_layout_us": src_frame_p95_layout,
-                            "max_frame_p95_solve_us": src_frame_p95_solve,
-                            "max_pointer_move_dispatch_us": src_pointer_move_dispatch,
-                            "max_pointer_move_hit_test_us": src_pointer_move_hit_test,
-                            "max_pointer_move_global_changes": src_pointer_move_global_changes,
-                            "min_run_paint_cache_hit_test_only_replay_allowed_max": src_paint_cache_hit_test_only_replay_allowed_max,
-                            "max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": src_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
-                        },
-                    });
-                    perf_threshold_rows.push(row);
-                    perf_threshold_failures.extend(scan_perf_threshold_failures(
-                        script_key.as_str(),
-                        sort,
-                        perf_threshold_agg,
-                        cli_thresholds,
-                        baseline_thresholds,
-                        top_total,
-                        top_total,
-                        top_total,
-                        top_layout,
-                        top_layout,
-                        top_layout,
-                        top_solve,
-                        top_solve,
-                        top_solve,
-                        report.p95_total_time_us,
-                        report.p95_total_time_us,
-                        report.p95_total_time_us,
-                        report.p95_layout_time_us,
-                        report.p95_layout_time_us,
-                        report.p95_layout_time_us,
-                        report.p95_layout_engine_solve_time_us,
-                        report.p95_layout_engine_solve_time_us,
-                        report.p95_layout_engine_solve_time_us,
-                        pointer_move_frames_present,
-                        pointer_move_max_dispatch_time_us,
-                        pointer_move_max_hit_test_time_us,
-                        pointer_move_snapshots_with_global_changes,
-                        run_paint_cache_hit_test_only_replay_allowed_max,
-                        run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
-                        report.max_renderer_encode_scene_us,
-                        report.max_renderer_encode_scene_us,
-                        report.max_renderer_encode_scene_us,
-                        report.max_renderer_upload_us,
-                        report.max_renderer_upload_us,
-                        report.max_renderer_upload_us,
-                        report.max_renderer_record_passes_us,
-                        report.max_renderer_record_passes_us,
-                        report.max_renderer_record_passes_us,
-                        report.max_renderer_encoder_finish_us,
-                        report.max_renderer_encoder_finish_us,
-                        report.max_renderer_encoder_finish_us,
-                        report.max_renderer_prepare_text_us,
-                        report.max_renderer_prepare_text_us,
-                        report.max_renderer_prepare_text_us,
-                        report.max_renderer_prepare_svg_us,
-                        report.max_renderer_prepare_svg_us,
-                        report.max_renderer_prepare_svg_us,
-                        Some(bundle_path.as_path()),
-                        Some(0),
-                        None,
-                        None,
-                        None,
-                        None,
-                    ));
+                    );
                 }
 
                 match &overall_worst {
@@ -1453,21 +939,19 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
                     _ => overall_worst = Some((top_total, src.clone(), bundle_path)),
                 }
             } else if stats_json {
-                perf_json_rows.push(serde_json::json!({
-                    "script": script_key.clone(),
-                    "sort": sort.as_str(),
-                    "error": "no_last_bundle_dir",
-                }));
-            } else {
-                println!(
-                    "PERF {} sort={} (no last_bundle_dir recorded)",
-                    src.display(),
-                    sort.as_str()
+                reporting::push_perf_json_no_last_bundle_dir(
+                    &mut perf_json_rows,
+                    script_key.clone(),
+                    sort,
+                    None,
                 );
+            } else {
+                reporting::print_perf_no_last_bundle_dir(src.as_path(), sort, None);
             }
 
             if !reuse_process {
                 stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                connected_fs = None;
             }
             continue;
         }
@@ -1506,14 +990,25 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
                     &launch,
                     &perf_launch_env,
                     &workspace_root,
-                    &resolved_out_dir,
                     &resolved_ready_path,
                     &resolved_exit_path,
+                    &launch_fs_transport_cfg,
                     false,
+                    launch_write_bundle_json,
                     timeout_ms,
                     poll_ms,
                     launch_high_priority,
-                )?;
+                )
+                .inspect_err(|err| {
+                    write_tooling_failure_script_result_if_missing(
+                        &resolved_script_result_path,
+                        "tooling.launch.failed",
+                        err,
+                        "tooling_error",
+                        Some("maybe_launch_demo".to_string()),
+                    );
+                })?;
+                connected_fs = None;
             }
 
             if !reuse_process {
@@ -1524,196 +1019,79 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
             }
 
             if !reuse_process && !perf_suite_prewarm_scripts.is_empty() {
+                ensure_perf_fs_transport_connected(
+                    &mut connected_fs,
+                    use_devtools_ws,
+                    &launch_fs_transport_cfg,
+                    &resolved_ready_path,
+                    child.is_some(),
+                    timeout_ms,
+                    poll_ms,
+                    &resolved_script_result_path,
+                )?;
                 for prewarm in &perf_suite_prewarm_scripts {
-                    run_suite_aux_script_must_pass(prewarm, &mut child)?;
+                    run_suite_aux_script_must_pass(prewarm, &mut child, connected_fs.as_ref())?;
                 }
             }
             if !perf_suite_prelude_scripts.is_empty()
                 && (!reuse_process || suite_prelude_each_run || run_index == 0)
             {
+                ensure_perf_fs_transport_connected(
+                    &mut connected_fs,
+                    use_devtools_ws,
+                    &launch_fs_transport_cfg,
+                    &resolved_ready_path,
+                    child.is_some(),
+                    timeout_ms,
+                    poll_ms,
+                    &resolved_script_result_path,
+                )?;
                 for prelude in &perf_suite_prelude_scripts {
-                    run_suite_aux_script_must_pass(prelude, &mut child)?;
+                    run_suite_aux_script_must_pass(prelude, &mut child, connected_fs.as_ref())?;
                 }
             }
 
-            let bundle_path: Option<PathBuf> = if use_devtools_ws {
-                let connected = connected_ws.as_ref().ok_or_else(|| {
-                    "missing DevTools WS transport (this is a tooling bug)".to_string()
-                })?;
-                let script_json: serde_json::Value =
-                    serde_json::from_slice(&std::fs::read(&src).map_err(|e| {
-                        let err = e.to_string();
-                        write_tooling_failure_script_result(
-                            &resolved_script_result_path,
-                            "tooling.script.read_failed",
-                            &err,
-                            "tooling_error",
-                            Some(src.display().to_string()),
-                        );
-                        err
-                    })?)
-                    .map_err(|e| {
-                        let err = e.to_string();
-                        write_tooling_failure_script_result(
-                            &resolved_script_result_path,
-                            "tooling.script.parse_failed",
-                            &err,
-                            "tooling_error",
-                            Some(src.display().to_string()),
-                        );
-                        err
-                    })?;
-                let (result, bundle_path) = run_script_over_transport(
-                    &resolved_out_dir,
-                    connected,
-                    script_json,
-                    true,
-                    false,
-                    None,
-                    None,
-                    timeout_ms,
-                    poll_ms,
-                    &resolved_script_result_path,
-                    &perf_capabilities_check_path,
-                )
-                .inspect_err(|err| {
-                    write_tooling_failure_script_result_if_missing(
-                        &resolved_script_result_path,
-                        "tooling.run.failed",
-                        err,
-                        "tooling_error",
-                        Some(src.display().to_string()),
-                    );
-                })?;
-
-                match result.stage {
-                    fret_diag_protocol::UiScriptStageV1::Passed => {}
-                    fret_diag_protocol::UiScriptStageV1::Failed => {
-                        eprintln!(
-                            "FAIL {} (run_id={}) step={} reason={} last_bundle_dir={}",
-                            src.display(),
-                            result.run_id,
-                            result.step_index.unwrap_or(0),
-                            result.reason.as_deref().unwrap_or("unknown"),
-                            result.last_bundle_dir.as_deref().unwrap_or("")
-                        );
-                        stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
-                        std::process::exit(1);
-                    }
-                    _ => {
-                        eprintln!(
-                            "unexpected script stage for {}: {:?}",
-                            src.display(),
-                            result
-                        );
-                        stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
-                        std::process::exit(1);
-                    }
-                }
-
-                bundle_path.map(|p| {
-                    let run_dir = run_id_artifact_dir(&resolved_out_dir, result.run_id);
-                    let stable = crate::resolve_bundle_artifact_path(&run_dir);
-                    if stable.is_file() { stable } else { p }
-                })
-            } else {
-                let mut result = run_script_and_wait(
-                    &src,
-                    &resolved_script_path,
-                    &resolved_script_trigger_path,
-                    &resolved_script_result_path,
-                    &resolved_script_result_trigger_path,
-                    timeout_ms,
-                    poll_ms,
-                );
-                let last_bundle_dir_name = match result.as_ref() {
-                    Ok(summary) if summary.stage.as_deref() == Some("failed") => {
-                        wait_for_failure_dump_bundle(
-                            &resolved_out_dir,
-                            summary,
-                            timeout_ms,
-                            poll_ms,
-                        )
-                        .and_then(|dir| {
-                            dir.file_name()
-                                .and_then(|s| s.to_str())
-                                .map(ToString::to_string)
-                        })
-                    }
-                    _ => None,
-                };
-                if let Some(name) = last_bundle_dir_name
-                    && let Ok(summary) = result.as_mut()
-                {
-                    summary.last_bundle_dir = Some(name);
-                }
-                let result = match result {
-                    Ok(v) => v,
-                    Err(e) => {
-                        stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
-                        return Err(e);
-                    }
-                };
-
-                match result.stage.as_deref() {
-                    Some("passed") => {}
-                    Some("failed") => {
-                        eprintln!(
-                            "FAIL {} (run_id={}) step={} reason={} last_bundle_dir={}",
-                            src.display(),
-                            result.run_id,
-                            result.step_index.unwrap_or(0),
-                            result.reason.as_deref().unwrap_or("unknown"),
-                            result.last_bundle_dir.as_deref().unwrap_or("")
-                        );
-                        stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
-                        std::process::exit(1);
-                    }
-                    _ => {
-                        eprintln!(
-                            "unexpected script stage for {}: {:?}",
-                            src.display(),
-                            result
-                        );
-                        stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
-                        std::process::exit(1);
-                    }
-                }
-
-                let bundle_dir = result
-                    .last_bundle_dir
-                    .as_deref()
-                    .filter(|s| !s.trim().is_empty())
-                    .map(PathBuf::from);
-
-                match bundle_dir {
-                    Some(bundle_dir) => Some(resolve_bundle_artifact_path(
-                        &resolved_out_dir.join(bundle_dir),
-                    )),
-                    None => read_latest_pointer(&resolved_out_dir)
-                        .or_else(|| find_latest_export_dir(&resolved_out_dir))
-                        .map(|path| resolve_bundle_artifact_path(path.as_path())),
-                }
-            };
+            ensure_perf_fs_transport_connected(
+                &mut connected_fs,
+                use_devtools_ws,
+                &launch_fs_transport_cfg,
+                &resolved_ready_path,
+                child.is_some(),
+                timeout_ms,
+                poll_ms,
+                &resolved_script_result_path,
+            )?;
+            let script_key = normalize_repo_relative_path(&workspace_root, &src);
+            let bundle_path = run_script::run_perf_script_and_resolve_bundle_artifact_path(
+                &src,
+                script_key.as_str(),
+                launch.is_some() || reuse_launch,
+                &mut child,
+                use_devtools_ws,
+                connected_ws.as_ref(),
+                connected_fs.as_ref(),
+                &resolved_out_dir,
+                &resolved_exit_path,
+                &resolved_script_result_path,
+                &perf_capabilities_check_path,
+                timeout_ms,
+                poll_ms,
+            )?;
 
             let Some(bundle_path) = bundle_path else {
                 if stats_json {
-                    perf_json_rows.push(serde_json::json!({
-                        "script": src.display().to_string(),
-                        "sort": sort.as_str(),
-                        "repeat": repeat,
-                        "error": "no_last_bundle_dir",
-                    }));
-                } else {
-                    println!(
-                        "PERF {} sort={} repeat={} (no last_bundle_dir recorded)",
-                        src.display(),
-                        sort.as_str(),
-                        repeat
+                    reporting::push_perf_json_no_last_bundle_dir(
+                        &mut perf_json_rows,
+                        src.display().to_string(),
+                        sort,
+                        Some(repeat),
                     );
+                } else {
+                    reporting::print_perf_no_last_bundle_dir(src.as_path(), sort, Some(repeat));
                 }
                 if !reuse_process {
                     stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                    connected_fs = None;
                 }
                 break;
             };
@@ -1747,7 +1125,6 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
                     crate::trace::write_chrome_trace_from_bundle_path(&bundle_path, &trace_path);
             }
 
-            let script_key = normalize_repo_relative_path(&workspace_root, &src);
             if wants_perf_hints {
                 let triage =
                     triage_json_from_stats(&bundle_path, &report, sort, report_warmup_frames);
@@ -1777,183 +1154,30 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
                     .unwrap_or(serde_json::Value::Null);
 
                 perf_hint_failures.extend(failures.clone());
-                perf_hint_rows.push(serde_json::json!({
-                    "script": script_key.clone(),
-                    "sort": sort.as_str(),
-                    "repeat": repeat,
-                    "run_index": run_index,
-                    "bundle": bundle_path.display().to_string(),
-                    "warmup_frames": report_warmup_frames,
-                    "hints": hints,
-                    "unit_costs": unit_costs,
-                    "worst": worst,
-                    "trace_chrome_json_path": trace_chrome_json_path,
-                    "failures": failures,
-                }));
+                hints::push_perf_hint_row(
+                    &mut perf_hint_rows,
+                    script_key.as_str(),
+                    sort,
+                    repeat,
+                    run_index,
+                    &bundle_path,
+                    report_warmup_frames,
+                    hints,
+                    unit_costs,
+                    worst,
+                    trace_chrome_json_path,
+                    failures,
+                );
             }
 
             let top = report.top.first();
             let top_total = top.map(|r| r.total_time_us).unwrap_or(0);
             let top_layout = top.map(|r| r.layout_time_us).unwrap_or(0);
             let top_solve = top.map(|r| r.layout_engine_solve_time_us).unwrap_or(0);
-            let top_solves = top.map(|r| r.layout_engine_solves).unwrap_or(0);
             let top_prepaint = top.map(|r| r.prepaint_time_us).unwrap_or(0);
             let top_paint = top.map(|r| r.paint_time_us).unwrap_or(0);
             let top_dispatch = top.map(|r| r.dispatch_time_us).unwrap_or(0);
             let top_hit_test = top.map(|r| r.hit_test_time_us).unwrap_or(0);
-            let top_dispatch_events = top.map(|r| r.dispatch_events).unwrap_or(0);
-            let top_hit_test_queries = top.map(|r| r.hit_test_queries).unwrap_or(0);
-            let top_hit_test_bounds_tree_queries =
-                top.map(|r| r.hit_test_bounds_tree_queries).unwrap_or(0);
-            let top_hit_test_bounds_tree_disabled =
-                top.map(|r| r.hit_test_bounds_tree_disabled).unwrap_or(0);
-            let top_hit_test_bounds_tree_misses =
-                top.map(|r| r.hit_test_bounds_tree_misses).unwrap_or(0);
-            let top_hit_test_bounds_tree_hits =
-                top.map(|r| r.hit_test_bounds_tree_hits).unwrap_or(0);
-            let top_hit_test_bounds_tree_candidate_rejected = top
-                .map(|r| r.hit_test_bounds_tree_candidate_rejected)
-                .unwrap_or(0);
-            let top_frame_arena_capacity_estimate_bytes = top
-                .map(|r| r.frame_arena_capacity_estimate_bytes)
-                .unwrap_or(0);
-            let top_frame_arena_grow_events = top.map(|r| r.frame_arena_grow_events).unwrap_or(0);
-            let top_element_children_vec_pool_reuses =
-                top.map(|r| r.element_children_vec_pool_reuses).unwrap_or(0);
-            let top_element_children_vec_pool_misses =
-                top.map(|r| r.element_children_vec_pool_misses).unwrap_or(0);
-            let top_frame = top.map(|r| r.frame_id).unwrap_or(0);
-            let top_tick = top.map(|r| r.tick_id).unwrap_or(0);
-            let top_view_cache_contained_relayouts =
-                top.map(|r| r.view_cache_contained_relayouts).unwrap_or(0);
-            let top_view_cache_roots_total = top.map(|r| r.view_cache_roots_total).unwrap_or(0);
-            let top_view_cache_roots_reused = top.map(|r| r.view_cache_roots_reused).unwrap_or(0);
-            let top_view_cache_roots_first_mount =
-                top.map(|r| r.view_cache_roots_first_mount).unwrap_or(0);
-            let top_view_cache_roots_node_recreated =
-                top.map(|r| r.view_cache_roots_node_recreated).unwrap_or(0);
-            let top_view_cache_roots_cache_key_mismatch = top
-                .map(|r| r.view_cache_roots_cache_key_mismatch)
-                .unwrap_or(0);
-            let top_view_cache_roots_not_marked_reuse_root = top
-                .map(|r| r.view_cache_roots_not_marked_reuse_root)
-                .unwrap_or(0);
-            let top_view_cache_roots_needs_rerender =
-                top.map(|r| r.view_cache_roots_needs_rerender).unwrap_or(0);
-            let top_view_cache_roots_layout_invalidated = top
-                .map(|r| r.view_cache_roots_layout_invalidated)
-                .unwrap_or(0);
-            let top_view_cache_roots_manual = top.map(|r| r.view_cache_roots_manual).unwrap_or(0);
-            let top_cache_roots_contained_relayout =
-                top.map(|r| r.cache_roots_contained_relayout).unwrap_or(0);
-            let top_set_children_barrier_writes =
-                top.map(|r| r.set_children_barrier_writes).unwrap_or(0);
-            let top_barrier_relayouts_scheduled =
-                top.map(|r| r.barrier_relayouts_scheduled).unwrap_or(0);
-            let top_barrier_relayouts_performed =
-                top.map(|r| r.barrier_relayouts_performed).unwrap_or(0);
-            let top_virtual_list_visible_range_checks = top
-                .map(|r| r.virtual_list_visible_range_checks)
-                .unwrap_or(0);
-            let top_virtual_list_visible_range_refreshes = top
-                .map(|r| r.virtual_list_visible_range_refreshes)
-                .unwrap_or(0);
-            let top_renderer_tick_id = top.map(|r| r.renderer_tick_id).unwrap_or(0);
-            let top_renderer_frame_id = top.map(|r| r.renderer_frame_id).unwrap_or(0);
-            let top_renderer_encode_scene_us = top.map(|r| r.renderer_encode_scene_us).unwrap_or(0);
-            let top_renderer_prepare_text_us = top.map(|r| r.renderer_prepare_text_us).unwrap_or(0);
-            let top_renderer_prepare_svg_us = top.map(|r| r.renderer_prepare_svg_us).unwrap_or(0);
-            let top_renderer_draw_calls = top.map(|r| r.renderer_draw_calls).unwrap_or(0);
-            let top_renderer_pipeline_switches =
-                top.map(|r| r.renderer_pipeline_switches).unwrap_or(0);
-            let top_renderer_bind_group_switches =
-                top.map(|r| r.renderer_bind_group_switches).unwrap_or(0);
-            let top_renderer_scissor_sets = top.map(|r| r.renderer_scissor_sets).unwrap_or(0);
-            let top_renderer_scene_encoding_cache_misses = top
-                .map(|r| r.renderer_scene_encoding_cache_misses)
-                .unwrap_or(0);
-            let top_renderer_material_quad_ops =
-                top.map(|r| r.renderer_material_quad_ops).unwrap_or(0);
-            let top_renderer_material_sampled_quad_ops = top
-                .map(|r| r.renderer_material_sampled_quad_ops)
-                .unwrap_or(0);
-            let top_renderer_material_distinct =
-                top.map(|r| r.renderer_material_distinct).unwrap_or(0);
-            let top_renderer_material_unknown_ids =
-                top.map(|r| r.renderer_material_unknown_ids).unwrap_or(0);
-            let top_renderer_material_degraded_due_to_budget = top
-                .map(|r| r.renderer_material_degraded_due_to_budget)
-                .unwrap_or(0);
-            let top_renderer_text_atlas_upload_bytes =
-                top.map(|r| r.renderer_text_atlas_upload_bytes).unwrap_or(0);
-            let top_renderer_text_atlas_evicted_pages = top
-                .map(|r| r.renderer_text_atlas_evicted_pages)
-                .unwrap_or(0);
-            let top_renderer_svg_upload_bytes =
-                top.map(|r| r.renderer_svg_upload_bytes).unwrap_or(0);
-            let top_renderer_image_upload_bytes =
-                top.map(|r| r.renderer_image_upload_bytes).unwrap_or(0);
-            let top_renderer_svg_raster_cache_misses =
-                top.map(|r| r.renderer_svg_raster_cache_misses).unwrap_or(0);
-            let top_renderer_svg_raster_budget_evictions = top
-                .map(|r| r.renderer_svg_raster_budget_evictions)
-                .unwrap_or(0);
-            let top_renderer_svg_raster_budget_bytes =
-                top.map(|r| r.renderer_svg_raster_budget_bytes).unwrap_or(0);
-            let top_renderer_svg_rasters_live =
-                top.map(|r| r.renderer_svg_rasters_live).unwrap_or(0);
-            let top_renderer_svg_standalone_bytes_live = top
-                .map(|r| r.renderer_svg_standalone_bytes_live)
-                .unwrap_or(0);
-            let top_renderer_svg_mask_atlas_pages_live = top
-                .map(|r| r.renderer_svg_mask_atlas_pages_live)
-                .unwrap_or(0);
-            let top_renderer_svg_mask_atlas_bytes_live = top
-                .map(|r| r.renderer_svg_mask_atlas_bytes_live)
-                .unwrap_or(0);
-            let top_renderer_svg_mask_atlas_used_px =
-                top.map(|r| r.renderer_svg_mask_atlas_used_px).unwrap_or(0);
-            let top_renderer_svg_mask_atlas_capacity_px = top
-                .map(|r| r.renderer_svg_mask_atlas_capacity_px)
-                .unwrap_or(0);
-            let top_renderer_svg_raster_cache_hits =
-                top.map(|r| r.renderer_svg_raster_cache_hits).unwrap_or(0);
-            let top_renderer_svg_mask_atlas_page_evictions = top
-                .map(|r| r.renderer_svg_mask_atlas_page_evictions)
-                .unwrap_or(0);
-            let top_renderer_svg_mask_atlas_entries_evicted = top
-                .map(|r| r.renderer_svg_mask_atlas_entries_evicted)
-                .unwrap_or(0);
-            let top_renderer_intermediate_budget_bytes = top
-                .map(|r| r.renderer_intermediate_budget_bytes)
-                .unwrap_or(0);
-            let top_renderer_intermediate_in_use_bytes = top
-                .map(|r| r.renderer_intermediate_in_use_bytes)
-                .unwrap_or(0);
-            let top_renderer_intermediate_peak_in_use_bytes = top
-                .map(|r| r.renderer_intermediate_peak_in_use_bytes)
-                .unwrap_or(0);
-            let top_renderer_intermediate_release_targets = top
-                .map(|r| r.renderer_intermediate_release_targets)
-                .unwrap_or(0);
-            let top_renderer_intermediate_pool_allocations = top
-                .map(|r| r.renderer_intermediate_pool_allocations)
-                .unwrap_or(0);
-            let top_renderer_intermediate_pool_reuses = top
-                .map(|r| r.renderer_intermediate_pool_reuses)
-                .unwrap_or(0);
-            let top_renderer_intermediate_pool_releases = top
-                .map(|r| r.renderer_intermediate_pool_releases)
-                .unwrap_or(0);
-            let top_renderer_intermediate_pool_evictions = top
-                .map(|r| r.renderer_intermediate_pool_evictions)
-                .unwrap_or(0);
-            let top_renderer_intermediate_pool_free_bytes = top
-                .map(|r| r.renderer_intermediate_pool_free_bytes)
-                .unwrap_or(0);
-            let top_renderer_intermediate_pool_free_textures = top
-                .map(|r| r.renderer_intermediate_pool_free_textures)
-                .unwrap_or(0);
 
             runs_total.push(top_total);
             runs_layout.push(top_layout);
@@ -1965,8 +1189,6 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
             runs_frame_p95_total.push(report.p95_total_time_us);
             runs_frame_p95_layout.push(report.p95_layout_time_us);
             runs_frame_p95_solve.push(report.p95_layout_engine_solve_time_us);
-            let pointer_move_frames_present = report.pointer_move_frames_present;
-            let pointer_move_frames_considered = report.pointer_move_frames_considered as u64;
             let pointer_move_max_dispatch_time_us = report.pointer_move_max_dispatch_time_us;
             let pointer_move_max_hit_test_time_us = report.pointer_move_max_hit_test_time_us;
             let pointer_move_snapshots_with_global_changes =
@@ -1974,7 +1196,10 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
             let (
                 run_paint_cache_hit_test_only_replay_allowed_max,
                 run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
-            ) = bundle_paint_cache_hit_test_only_replay_maxes(&bundle_path, report_warmup_frames)?;
+            ) = diag_policy::bundle_paint_cache_hit_test_only_replay_maxes(
+                &bundle_path,
+                report_warmup_frames,
+            )?;
             runs_pointer_move_dispatch.push(pointer_move_max_dispatch_time_us);
             runs_pointer_move_hit_test.push(pointer_move_max_hit_test_time_us);
             runs_pointer_move_global_changes.push(pointer_move_snapshots_with_global_changes);
@@ -1988,118 +1213,21 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
             runs_renderer_encoder_finish_us.push(report.max_renderer_encoder_finish_us);
             runs_renderer_prepare_text_us.push(report.max_renderer_prepare_text_us);
             runs_renderer_prepare_svg_us.push(report.max_renderer_prepare_svg_us);
-            runs_json.push(serde_json::json!({
-                "run_index": run_index,
-                "frames_considered": report.snapshots_considered,
-                "frames_warmup_skipped": report.snapshots_skipped_warmup,
-                "top_total_time_us": top_total,
-                "top_layout_time_us": top_layout,
-                "top_layout_engine_solve_time_us": top_solve,
-                "top_layout_engine_solves": top_solves,
-                "top_prepaint_time_us": top_prepaint,
-                "top_paint_time_us": top_paint,
-                "top_dispatch_time_us": top_dispatch,
-                "top_hit_test_time_us": top_hit_test,
-                "frame_p50_total_time_us": report.p50_total_time_us,
-                "frame_p95_total_time_us": report.p95_total_time_us,
-                "frame_max_total_time_us": report.max_total_time_us,
-                "frame_p50_ui_thread_cpu_time_us": report.p50_ui_thread_cpu_time_us,
-                "frame_p95_ui_thread_cpu_time_us": report.p95_ui_thread_cpu_time_us,
-                "frame_max_ui_thread_cpu_time_us": report.max_ui_thread_cpu_time_us,
-                "frame_p50_layout_time_us": report.p50_layout_time_us,
-                "frame_p95_layout_time_us": report.p95_layout_time_us,
-                "frame_p50_layout_engine_solve_time_us": report.p50_layout_engine_solve_time_us,
-                "frame_p95_layout_engine_solve_time_us": report.p95_layout_engine_solve_time_us,
-                "frame_max_layout_engine_solve_time_us": report.max_layout_engine_solve_time_us,
-                "frame_p50_prepaint_time_us": report.p50_prepaint_time_us,
-                "frame_p95_prepaint_time_us": report.p95_prepaint_time_us,
-                "frame_max_prepaint_time_us": report.max_prepaint_time_us,
-                "frame_p50_paint_time_us": report.p50_paint_time_us,
-                "frame_p95_paint_time_us": report.p95_paint_time_us,
-                "frame_max_paint_time_us": report.max_paint_time_us,
-                "frame_p50_dispatch_time_us": report.p50_dispatch_time_us,
-                "frame_p95_dispatch_time_us": report.p95_dispatch_time_us,
-                "frame_p50_hit_test_time_us": report.p50_hit_test_time_us,
-                "frame_p95_hit_test_time_us": report.p95_hit_test_time_us,
-                "top_dispatch_events": top_dispatch_events,
-                "top_hit_test_queries": top_hit_test_queries,
-                "pointer_move_frames_present": pointer_move_frames_present,
-                "pointer_move_frames_considered": pointer_move_frames_considered,
-                "pointer_move_max_dispatch_time_us": pointer_move_max_dispatch_time_us,
-                "pointer_move_max_hit_test_time_us": pointer_move_max_hit_test_time_us,
-                "pointer_move_snapshots_with_global_changes": pointer_move_snapshots_with_global_changes,
-                "run_paint_cache_hit_test_only_replay_allowed_max": run_paint_cache_hit_test_only_replay_allowed_max,
-                "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
-                "top_hit_test_bounds_tree_queries": top_hit_test_bounds_tree_queries,
-                "top_hit_test_bounds_tree_disabled": top_hit_test_bounds_tree_disabled,
-                "top_hit_test_bounds_tree_misses": top_hit_test_bounds_tree_misses,
-                "top_hit_test_bounds_tree_hits": top_hit_test_bounds_tree_hits,
-                "top_hit_test_bounds_tree_candidate_rejected": top_hit_test_bounds_tree_candidate_rejected,
-                "top_frame_arena_capacity_estimate_bytes": top_frame_arena_capacity_estimate_bytes,
-                "top_frame_arena_grow_events": top_frame_arena_grow_events,
-                "top_element_children_vec_pool_reuses": top_element_children_vec_pool_reuses,
-                "top_element_children_vec_pool_misses": top_element_children_vec_pool_misses,
-                "top_tick_id": top_tick,
-                "top_frame_id": top_frame,
-                "top_view_cache_contained_relayouts": top_view_cache_contained_relayouts,
-                "top_view_cache_roots_total": top_view_cache_roots_total,
-                "top_view_cache_roots_reused": top_view_cache_roots_reused,
-                "top_view_cache_roots_first_mount": top_view_cache_roots_first_mount,
-                "top_view_cache_roots_node_recreated": top_view_cache_roots_node_recreated,
-                "top_view_cache_roots_cache_key_mismatch": top_view_cache_roots_cache_key_mismatch,
-                "top_view_cache_roots_not_marked_reuse_root": top_view_cache_roots_not_marked_reuse_root,
-                "top_view_cache_roots_needs_rerender": top_view_cache_roots_needs_rerender,
-                "top_view_cache_roots_layout_invalidated": top_view_cache_roots_layout_invalidated,
-                "top_view_cache_roots_manual": top_view_cache_roots_manual,
-                "top_cache_roots_contained_relayout": top_cache_roots_contained_relayout,
-                "top_set_children_barrier_writes": top_set_children_barrier_writes,
-                "top_barrier_relayouts_scheduled": top_barrier_relayouts_scheduled,
-                "top_barrier_relayouts_performed": top_barrier_relayouts_performed,
-                "top_virtual_list_visible_range_checks": top_virtual_list_visible_range_checks,
-                "top_virtual_list_visible_range_refreshes": top_virtual_list_visible_range_refreshes,
-                "top_renderer_tick_id": top_renderer_tick_id,
-                "top_renderer_frame_id": top_renderer_frame_id,
-                "top_renderer_encode_scene_us": top_renderer_encode_scene_us,
-                "top_renderer_prepare_text_us": top_renderer_prepare_text_us,
-                "top_renderer_prepare_svg_us": top_renderer_prepare_svg_us,
-                "top_renderer_draw_calls": top_renderer_draw_calls,
-                "top_renderer_pipeline_switches": top_renderer_pipeline_switches,
-                "top_renderer_bind_group_switches": top_renderer_bind_group_switches,
-                "top_renderer_scissor_sets": top_renderer_scissor_sets,
-                "top_renderer_scene_encoding_cache_misses": top_renderer_scene_encoding_cache_misses,
-                "top_renderer_material_quad_ops": top_renderer_material_quad_ops,
-                "top_renderer_material_sampled_quad_ops": top_renderer_material_sampled_quad_ops,
-                "top_renderer_material_distinct": top_renderer_material_distinct,
-                "top_renderer_material_unknown_ids": top_renderer_material_unknown_ids,
-                "top_renderer_material_degraded_due_to_budget": top_renderer_material_degraded_due_to_budget,
-                "top_renderer_text_atlas_upload_bytes": top_renderer_text_atlas_upload_bytes,
-                "top_renderer_text_atlas_evicted_pages": top_renderer_text_atlas_evicted_pages,
-                "top_renderer_svg_upload_bytes": top_renderer_svg_upload_bytes,
-                "top_renderer_image_upload_bytes": top_renderer_image_upload_bytes,
-                "top_renderer_svg_raster_cache_misses": top_renderer_svg_raster_cache_misses,
-                "top_renderer_svg_raster_budget_evictions": top_renderer_svg_raster_budget_evictions,
-                "top_renderer_svg_raster_budget_bytes": top_renderer_svg_raster_budget_bytes,
-                "top_renderer_svg_rasters_live": top_renderer_svg_rasters_live,
-                "top_renderer_svg_standalone_bytes_live": top_renderer_svg_standalone_bytes_live,
-                "top_renderer_svg_mask_atlas_pages_live": top_renderer_svg_mask_atlas_pages_live,
-                "top_renderer_svg_mask_atlas_bytes_live": top_renderer_svg_mask_atlas_bytes_live,
-                "top_renderer_svg_mask_atlas_used_px": top_renderer_svg_mask_atlas_used_px,
-    	                        "top_renderer_svg_mask_atlas_capacity_px": top_renderer_svg_mask_atlas_capacity_px,
-    	                        "top_renderer_svg_raster_cache_hits": top_renderer_svg_raster_cache_hits,
-    	                        "top_renderer_svg_mask_atlas_page_evictions": top_renderer_svg_mask_atlas_page_evictions,
-    	                        "top_renderer_svg_mask_atlas_entries_evicted": top_renderer_svg_mask_atlas_entries_evicted,
-    	                        "top_renderer_intermediate_budget_bytes": top_renderer_intermediate_budget_bytes,
-    	                        "top_renderer_intermediate_in_use_bytes": top_renderer_intermediate_in_use_bytes,
-    	                        "top_renderer_intermediate_peak_in_use_bytes": top_renderer_intermediate_peak_in_use_bytes,
-    	                        "top_renderer_intermediate_release_targets": top_renderer_intermediate_release_targets,
-    	                        "top_renderer_intermediate_pool_allocations": top_renderer_intermediate_pool_allocations,
-    	                        "top_renderer_intermediate_pool_reuses": top_renderer_intermediate_pool_reuses,
-    	                        "top_renderer_intermediate_pool_releases": top_renderer_intermediate_pool_releases,
-    	                        "top_renderer_intermediate_pool_evictions": top_renderer_intermediate_pool_evictions,
-    	                        "top_renderer_intermediate_pool_free_bytes": top_renderer_intermediate_pool_free_bytes,
-    	                        "top_renderer_intermediate_pool_free_textures": top_renderer_intermediate_pool_free_textures,
-    	                        "bundle": bundle_path.display().to_string(),
-    	                    }));
+            runs_rows::push_perf_repeat_run_json_row(
+                &mut runs_json,
+                run_index,
+                &report,
+                top_total,
+                top_layout,
+                top_solve,
+                top_prepaint,
+                top_paint,
+                top_dispatch,
+                top_hit_test,
+                run_paint_cache_hit_test_only_replay_allowed_max,
+                run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+                &bundle_path,
+            );
 
             match &script_worst {
                 Some((prev_us, _, _)) if *prev_us >= top_total => {}
@@ -2123,379 +1251,30 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
 
             if !reuse_process {
                 stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                connected_fs = None;
             }
         }
 
         if runs_total.len() == repeat {
             if stats_json {
-                let mut top_frame_arena_capacity_estimate_bytes: Vec<u64> =
-                    Vec::with_capacity(repeat);
-                let mut top_frame_arena_grow_events: Vec<u64> = Vec::with_capacity(repeat);
-                let mut top_element_children_vec_pool_reuses: Vec<u64> = Vec::with_capacity(repeat);
-                let mut top_element_children_vec_pool_misses: Vec<u64> = Vec::with_capacity(repeat);
-                let mut top_view_cache_contained_relayouts: Vec<u64> = Vec::with_capacity(repeat);
-                let mut top_view_cache_roots_total: Vec<u64> = Vec::with_capacity(repeat);
-                let mut top_view_cache_roots_reused: Vec<u64> = Vec::with_capacity(repeat);
-                let mut top_view_cache_roots_cache_key_mismatch: Vec<u64> =
-                    Vec::with_capacity(repeat);
-                let mut top_view_cache_roots_needs_rerender: Vec<u64> = Vec::with_capacity(repeat);
-                let mut top_view_cache_roots_layout_invalidated: Vec<u64> =
-                    Vec::with_capacity(repeat);
-                let mut top_cache_roots_contained_relayout: Vec<u64> = Vec::with_capacity(repeat);
-                let mut top_set_children_barrier_writes: Vec<u64> = Vec::with_capacity(repeat);
-                let mut top_barrier_relayouts_scheduled: Vec<u64> = Vec::with_capacity(repeat);
-                let mut top_barrier_relayouts_performed: Vec<u64> = Vec::with_capacity(repeat);
-                let mut top_virtual_list_visible_range_checks: Vec<u64> =
-                    Vec::with_capacity(repeat);
-                let mut top_virtual_list_visible_range_refreshes: Vec<u64> =
-                    Vec::with_capacity(repeat);
-                let mut top_renderer_encode_scene_us: Vec<u64> = Vec::with_capacity(repeat);
-                let mut top_renderer_prepare_text_us: Vec<u64> = Vec::with_capacity(repeat);
-                let mut top_renderer_draw_calls: Vec<u64> = Vec::with_capacity(repeat);
-                let mut top_renderer_pipeline_switches: Vec<u64> = Vec::with_capacity(repeat);
-                let mut top_renderer_bind_group_switches: Vec<u64> = Vec::with_capacity(repeat);
-                let mut top_renderer_scene_encoding_cache_misses: Vec<u64> =
-                    Vec::with_capacity(repeat);
-                let mut top_renderer_material_quad_ops: Vec<u64> = Vec::with_capacity(repeat);
-                let mut top_renderer_material_sampled_quad_ops: Vec<u64> =
-                    Vec::with_capacity(repeat);
-                let mut top_renderer_material_distinct: Vec<u64> = Vec::with_capacity(repeat);
-                let mut top_renderer_material_unknown_ids: Vec<u64> = Vec::with_capacity(repeat);
-                let mut top_renderer_material_degraded_due_to_budget: Vec<u64> =
-                    Vec::with_capacity(repeat);
-                let mut top_renderer_text_atlas_upload_bytes: Vec<u64> = Vec::with_capacity(repeat);
-                let mut top_renderer_text_atlas_evicted_pages: Vec<u64> =
-                    Vec::with_capacity(repeat);
-                let mut top_renderer_svg_upload_bytes: Vec<u64> = Vec::with_capacity(repeat);
-                let mut top_renderer_image_upload_bytes: Vec<u64> = Vec::with_capacity(repeat);
-                let mut top_renderer_svg_raster_cache_misses: Vec<u64> = Vec::with_capacity(repeat);
-                let mut top_renderer_svg_raster_budget_evictions: Vec<u64> =
-                    Vec::with_capacity(repeat);
-                let mut top_renderer_svg_rasters_live: Vec<u64> = Vec::with_capacity(repeat);
-                let mut top_renderer_svg_mask_atlas_pages_live: Vec<u64> =
-                    Vec::with_capacity(repeat);
-                let mut top_renderer_svg_mask_atlas_used_px: Vec<u64> = Vec::with_capacity(repeat);
-                let mut top_renderer_intermediate_budget_bytes: Vec<u64> =
-                    Vec::with_capacity(repeat);
-                let mut top_renderer_intermediate_in_use_bytes: Vec<u64> =
-                    Vec::with_capacity(repeat);
-                let mut top_renderer_intermediate_peak_in_use_bytes: Vec<u64> =
-                    Vec::with_capacity(repeat);
-                let mut top_renderer_intermediate_release_targets: Vec<u64> =
-                    Vec::with_capacity(repeat);
-                let mut top_renderer_intermediate_pool_allocations: Vec<u64> =
-                    Vec::with_capacity(repeat);
-                let mut top_renderer_intermediate_pool_reuses: Vec<u64> =
-                    Vec::with_capacity(repeat);
-                let mut top_renderer_intermediate_pool_releases: Vec<u64> =
-                    Vec::with_capacity(repeat);
-                let mut top_renderer_intermediate_pool_evictions: Vec<u64> =
-                    Vec::with_capacity(repeat);
-                let mut top_renderer_intermediate_pool_free_bytes: Vec<u64> =
-                    Vec::with_capacity(repeat);
-                let mut top_renderer_intermediate_pool_free_textures: Vec<u64> =
-                    Vec::with_capacity(repeat);
-                for run in &runs_json {
-                    top_frame_arena_capacity_estimate_bytes.push(
-                        run.get("top_frame_arena_capacity_estimate_bytes")
-                            .and_then(|v| v.as_u64())
-                            .unwrap_or(0),
-                    );
-                    top_frame_arena_grow_events.push(
-                        run.get("top_frame_arena_grow_events")
-                            .and_then(|v| v.as_u64())
-                            .unwrap_or(0),
-                    );
-                    top_element_children_vec_pool_reuses.push(
-                        run.get("top_element_children_vec_pool_reuses")
-                            .and_then(|v| v.as_u64())
-                            .unwrap_or(0),
-                    );
-                    top_element_children_vec_pool_misses.push(
-                        run.get("top_element_children_vec_pool_misses")
-                            .and_then(|v| v.as_u64())
-                            .unwrap_or(0),
-                    );
-                    top_view_cache_contained_relayouts.push(
-                        run.get("top_view_cache_contained_relayouts")
-                            .and_then(|v| v.as_u64())
-                            .unwrap_or(0),
-                    );
-                    top_view_cache_roots_total.push(
-                        run.get("top_view_cache_roots_total")
-                            .and_then(|v| v.as_u64())
-                            .unwrap_or(0),
-                    );
-                    top_view_cache_roots_reused.push(
-                        run.get("top_view_cache_roots_reused")
-                            .and_then(|v| v.as_u64())
-                            .unwrap_or(0),
-                    );
-                    top_view_cache_roots_cache_key_mismatch.push(
-                        run.get("top_view_cache_roots_cache_key_mismatch")
-                            .and_then(|v| v.as_u64())
-                            .unwrap_or(0),
-                    );
-                    top_view_cache_roots_needs_rerender.push(
-                        run.get("top_view_cache_roots_needs_rerender")
-                            .and_then(|v| v.as_u64())
-                            .unwrap_or(0),
-                    );
-                    top_view_cache_roots_layout_invalidated.push(
-                        run.get("top_view_cache_roots_layout_invalidated")
-                            .and_then(|v| v.as_u64())
-                            .unwrap_or(0),
-                    );
-                    top_cache_roots_contained_relayout.push(
-                        run.get("top_cache_roots_contained_relayout")
-                            .and_then(|v| v.as_u64())
-                            .unwrap_or(0),
-                    );
-                    top_set_children_barrier_writes.push(
-                        run.get("top_set_children_barrier_writes")
-                            .and_then(|v| v.as_u64())
-                            .unwrap_or(0),
-                    );
-                    top_barrier_relayouts_scheduled.push(
-                        run.get("top_barrier_relayouts_scheduled")
-                            .and_then(|v| v.as_u64())
-                            .unwrap_or(0),
-                    );
-                    top_barrier_relayouts_performed.push(
-                        run.get("top_barrier_relayouts_performed")
-                            .and_then(|v| v.as_u64())
-                            .unwrap_or(0),
-                    );
-                    top_virtual_list_visible_range_checks.push(
-                        run.get("top_virtual_list_visible_range_checks")
-                            .and_then(|v| v.as_u64())
-                            .unwrap_or(0),
-                    );
-                    top_virtual_list_visible_range_refreshes.push(
-                        run.get("top_virtual_list_visible_range_refreshes")
-                            .and_then(|v| v.as_u64())
-                            .unwrap_or(0),
-                    );
-                    top_renderer_encode_scene_us.push(
-                        run.get("top_renderer_encode_scene_us")
-                            .and_then(|v| v.as_u64())
-                            .unwrap_or(0),
-                    );
-                    top_renderer_prepare_text_us.push(
-                        run.get("top_renderer_prepare_text_us")
-                            .and_then(|v| v.as_u64())
-                            .unwrap_or(0),
-                    );
-                    top_renderer_draw_calls.push(
-                        run.get("top_renderer_draw_calls")
-                            .and_then(|v| v.as_u64())
-                            .unwrap_or(0),
-                    );
-                    top_renderer_pipeline_switches.push(
-                        run.get("top_renderer_pipeline_switches")
-                            .and_then(|v| v.as_u64())
-                            .unwrap_or(0),
-                    );
-                    top_renderer_bind_group_switches.push(
-                        run.get("top_renderer_bind_group_switches")
-                            .and_then(|v| v.as_u64())
-                            .unwrap_or(0),
-                    );
-                    top_renderer_scene_encoding_cache_misses.push(
-                        run.get("top_renderer_scene_encoding_cache_misses")
-                            .and_then(|v| v.as_u64())
-                            .unwrap_or(0),
-                    );
-                    top_renderer_material_quad_ops.push(
-                        run.get("top_renderer_material_quad_ops")
-                            .and_then(|v| v.as_u64())
-                            .unwrap_or(0),
-                    );
-                    top_renderer_material_sampled_quad_ops.push(
-                        run.get("top_renderer_material_sampled_quad_ops")
-                            .and_then(|v| v.as_u64())
-                            .unwrap_or(0),
-                    );
-                    top_renderer_material_distinct.push(
-                        run.get("top_renderer_material_distinct")
-                            .and_then(|v| v.as_u64())
-                            .unwrap_or(0),
-                    );
-                    top_renderer_material_unknown_ids.push(
-                        run.get("top_renderer_material_unknown_ids")
-                            .and_then(|v| v.as_u64())
-                            .unwrap_or(0),
-                    );
-                    top_renderer_material_degraded_due_to_budget.push(
-                        run.get("top_renderer_material_degraded_due_to_budget")
-                            .and_then(|v| v.as_u64())
-                            .unwrap_or(0),
-                    );
-                    top_renderer_text_atlas_upload_bytes.push(
-                        run.get("top_renderer_text_atlas_upload_bytes")
-                            .and_then(|v| v.as_u64())
-                            .unwrap_or(0),
-                    );
-                    top_renderer_text_atlas_evicted_pages.push(
-                        run.get("top_renderer_text_atlas_evicted_pages")
-                            .and_then(|v| v.as_u64())
-                            .unwrap_or(0),
-                    );
-                    top_renderer_svg_upload_bytes.push(
-                        run.get("top_renderer_svg_upload_bytes")
-                            .and_then(|v| v.as_u64())
-                            .unwrap_or(0),
-                    );
-                    top_renderer_image_upload_bytes.push(
-                        run.get("top_renderer_image_upload_bytes")
-                            .and_then(|v| v.as_u64())
-                            .unwrap_or(0),
-                    );
-                    top_renderer_svg_raster_cache_misses.push(
-                        run.get("top_renderer_svg_raster_cache_misses")
-                            .and_then(|v| v.as_u64())
-                            .unwrap_or(0),
-                    );
-                    top_renderer_svg_raster_budget_evictions.push(
-                        run.get("top_renderer_svg_raster_budget_evictions")
-                            .and_then(|v| v.as_u64())
-                            .unwrap_or(0),
-                    );
-                    top_renderer_svg_rasters_live.push(
-                        run.get("top_renderer_svg_rasters_live")
-                            .and_then(|v| v.as_u64())
-                            .unwrap_or(0),
-                    );
-                    top_renderer_svg_mask_atlas_pages_live.push(
-                        run.get("top_renderer_svg_mask_atlas_pages_live")
-                            .and_then(|v| v.as_u64())
-                            .unwrap_or(0),
-                    );
-                    top_renderer_svg_mask_atlas_used_px.push(
-                        run.get("top_renderer_svg_mask_atlas_used_px")
-                            .and_then(|v| v.as_u64())
-                            .unwrap_or(0),
-                    );
-                    top_renderer_intermediate_budget_bytes.push(
-                        run.get("top_renderer_intermediate_budget_bytes")
-                            .and_then(|v| v.as_u64())
-                            .unwrap_or(0),
-                    );
-                    top_renderer_intermediate_in_use_bytes.push(
-                        run.get("top_renderer_intermediate_in_use_bytes")
-                            .and_then(|v| v.as_u64())
-                            .unwrap_or(0),
-                    );
-                    top_renderer_intermediate_peak_in_use_bytes.push(
-                        run.get("top_renderer_intermediate_peak_in_use_bytes")
-                            .and_then(|v| v.as_u64())
-                            .unwrap_or(0),
-                    );
-                    top_renderer_intermediate_release_targets.push(
-                        run.get("top_renderer_intermediate_release_targets")
-                            .and_then(|v| v.as_u64())
-                            .unwrap_or(0),
-                    );
-                    top_renderer_intermediate_pool_allocations.push(
-                        run.get("top_renderer_intermediate_pool_allocations")
-                            .and_then(|v| v.as_u64())
-                            .unwrap_or(0),
-                    );
-                    top_renderer_intermediate_pool_reuses.push(
-                        run.get("top_renderer_intermediate_pool_reuses")
-                            .and_then(|v| v.as_u64())
-                            .unwrap_or(0),
-                    );
-                    top_renderer_intermediate_pool_releases.push(
-                        run.get("top_renderer_intermediate_pool_releases")
-                            .and_then(|v| v.as_u64())
-                            .unwrap_or(0),
-                    );
-                    top_renderer_intermediate_pool_evictions.push(
-                        run.get("top_renderer_intermediate_pool_evictions")
-                            .and_then(|v| v.as_u64())
-                            .unwrap_or(0),
-                    );
-                    top_renderer_intermediate_pool_free_bytes.push(
-                        run.get("top_renderer_intermediate_pool_free_bytes")
-                            .and_then(|v| v.as_u64())
-                            .unwrap_or(0),
-                    );
-                    top_renderer_intermediate_pool_free_textures.push(
-                        run.get("top_renderer_intermediate_pool_free_textures")
-                            .and_then(|v| v.as_u64())
-                            .unwrap_or(0),
-                    );
-                }
-                perf_json_rows.push(serde_json::json!({
-    	                        "script": src.display().to_string(),
-    	                        "sort": sort.as_str(),
-    		                        "repeat": repeat,
-    		                            "runs": runs_json,
-    		                            "stats": {
-    		                                "total_time_us": summarize_times_us(&runs_total),
-    		                                "layout_time_us": summarize_times_us(&runs_layout),
-    		                                "layout_engine_solve_time_us": summarize_times_us(&runs_solve),
-    		                                "prepaint_time_us": summarize_times_us(&runs_prepaint),
-    		                                "paint_time_us": summarize_times_us(&runs_paint),
-    		                                "dispatch_time_us": summarize_times_us(&runs_dispatch),
-    		                                "hit_test_time_us": summarize_times_us(&runs_hit_test),
-    		                                "pointer_move_max_dispatch_time_us": summarize_times_us(&runs_pointer_move_dispatch),
-    		                                "pointer_move_max_hit_test_time_us": summarize_times_us(&runs_pointer_move_hit_test),
-    		                                "pointer_move_snapshots_with_global_changes": summarize_times_us(&runs_pointer_move_global_changes),
-    		                                "top_frame_arena_capacity_estimate_bytes": summarize_times_us(&top_frame_arena_capacity_estimate_bytes),
-    		                                "top_frame_arena_grow_events": summarize_times_us(&top_frame_arena_grow_events),
-    		                                "top_element_children_vec_pool_reuses": summarize_times_us(&top_element_children_vec_pool_reuses),
-    		                                "top_element_children_vec_pool_misses": summarize_times_us(&top_element_children_vec_pool_misses),
-    	                                "top_view_cache_contained_relayouts": summarize_times_us(&top_view_cache_contained_relayouts),
-    	                                "top_view_cache_roots_total": summarize_times_us(&top_view_cache_roots_total),
-    	                                "top_view_cache_roots_reused": summarize_times_us(&top_view_cache_roots_reused),
-    	                                "top_view_cache_roots_cache_key_mismatch": summarize_times_us(&top_view_cache_roots_cache_key_mismatch),
-    	                                "top_view_cache_roots_needs_rerender": summarize_times_us(&top_view_cache_roots_needs_rerender),
-    	                                "top_view_cache_roots_layout_invalidated": summarize_times_us(&top_view_cache_roots_layout_invalidated),
-    	                                "top_cache_roots_contained_relayout": summarize_times_us(&top_cache_roots_contained_relayout),
-    	                                "top_set_children_barrier_writes": summarize_times_us(&top_set_children_barrier_writes),
-    	                                "top_barrier_relayouts_scheduled": summarize_times_us(&top_barrier_relayouts_scheduled),
-    	                                "top_barrier_relayouts_performed": summarize_times_us(&top_barrier_relayouts_performed),
-    	                                "top_virtual_list_visible_range_checks": summarize_times_us(&top_virtual_list_visible_range_checks),
-    	                                "top_virtual_list_visible_range_refreshes": summarize_times_us(&top_virtual_list_visible_range_refreshes),
-    	                                "top_renderer_encode_scene_us": summarize_times_us(&top_renderer_encode_scene_us),
-    	                                "top_renderer_prepare_text_us": summarize_times_us(&top_renderer_prepare_text_us),
-    	                                "top_renderer_draw_calls": summarize_times_us(&top_renderer_draw_calls),
-    	                                "top_renderer_pipeline_switches": summarize_times_us(&top_renderer_pipeline_switches),
-    	                                "top_renderer_bind_group_switches": summarize_times_us(&top_renderer_bind_group_switches),
-    	                                "top_renderer_scene_encoding_cache_misses": summarize_times_us(&top_renderer_scene_encoding_cache_misses),
-    	                                "top_renderer_material_quad_ops": summarize_times_us(&top_renderer_material_quad_ops),
-    	                                "top_renderer_material_sampled_quad_ops": summarize_times_us(&top_renderer_material_sampled_quad_ops),
-    	                                "top_renderer_material_distinct": summarize_times_us(&top_renderer_material_distinct),
-    	                                "top_renderer_material_unknown_ids": summarize_times_us(&top_renderer_material_unknown_ids),
-    	                                "top_renderer_material_degraded_due_to_budget": summarize_times_us(&top_renderer_material_degraded_due_to_budget),
-    	                                "top_renderer_text_atlas_upload_bytes": summarize_times_us(&top_renderer_text_atlas_upload_bytes),
-    	                                "top_renderer_text_atlas_evicted_pages": summarize_times_us(&top_renderer_text_atlas_evicted_pages),
-    	                                "top_renderer_svg_upload_bytes": summarize_times_us(&top_renderer_svg_upload_bytes),
-    	                                "top_renderer_image_upload_bytes": summarize_times_us(&top_renderer_image_upload_bytes),
-    	                                "top_renderer_svg_raster_cache_misses": summarize_times_us(&top_renderer_svg_raster_cache_misses),
-    	                                "top_renderer_svg_raster_budget_evictions": summarize_times_us(&top_renderer_svg_raster_budget_evictions),
-    	                                "top_renderer_svg_rasters_live": summarize_times_us(&top_renderer_svg_rasters_live),
-    	                                "top_renderer_svg_mask_atlas_pages_live": summarize_times_us(&top_renderer_svg_mask_atlas_pages_live),
-    	                                "top_renderer_svg_mask_atlas_used_px": summarize_times_us(&top_renderer_svg_mask_atlas_used_px),
-    	                                "top_renderer_intermediate_budget_bytes": summarize_times_us(&top_renderer_intermediate_budget_bytes),
-    	                                "top_renderer_intermediate_in_use_bytes": summarize_times_us(&top_renderer_intermediate_in_use_bytes),
-    	                                "top_renderer_intermediate_peak_in_use_bytes": summarize_times_us(&top_renderer_intermediate_peak_in_use_bytes),
-    	                                "top_renderer_intermediate_release_targets": summarize_times_us(&top_renderer_intermediate_release_targets),
-    	                                "top_renderer_intermediate_pool_allocations": summarize_times_us(&top_renderer_intermediate_pool_allocations),
-    	                                "top_renderer_intermediate_pool_reuses": summarize_times_us(&top_renderer_intermediate_pool_reuses),
-    	                                "top_renderer_intermediate_pool_releases": summarize_times_us(&top_renderer_intermediate_pool_releases),
-    	                                "top_renderer_intermediate_pool_evictions": summarize_times_us(&top_renderer_intermediate_pool_evictions),
-    	                                "top_renderer_intermediate_pool_free_bytes": summarize_times_us(&top_renderer_intermediate_pool_free_bytes),
-    	                                "top_renderer_intermediate_pool_free_textures": summarize_times_us(&top_renderer_intermediate_pool_free_textures),
-    	                            },
-    	                            "worst_run": script_worst.as_ref().map(|(us, bundle, run_index)| serde_json::json!({
-    	                                "top_total_time_us": us,
-    	                                "bundle": bundle.display().to_string(),
-    	                                "run_index": run_index,
-    	                            })),
-    	                        }));
+                reporting::push_perf_json_repeat_summary_row(
+                    &mut perf_json_rows,
+                    src.as_path(),
+                    sort,
+                    repeat,
+                    &runs_json,
+                    &runs_total,
+                    &runs_layout,
+                    &runs_solve,
+                    &runs_prepaint,
+                    &runs_paint,
+                    &runs_dispatch,
+                    &runs_hit_test,
+                    &runs_pointer_move_dispatch,
+                    &runs_pointer_move_hit_test,
+                    &runs_pointer_move_global_changes,
+                    script_worst.as_ref(),
+                );
             } else {
                 let total = summarize_times_us(&runs_total);
                 let layout = summarize_times_us(&runs_layout);
@@ -2504,32 +1283,17 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
                 let paint = summarize_times_us(&runs_paint);
                 let dispatch = summarize_times_us(&runs_dispatch);
                 let hit_test = summarize_times_us(&runs_hit_test);
-                println!(
-                    "PERF {} sort={} repeat={} p50.us(total/layout/solve/prepaint/paint/dispatch/hit_test)={}/{}/{}/{}/{}/{}/{} p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)={}/{}/{}/{}/{}/{}/{} max.us(total/layout/solve/prepaint/paint/dispatch/hit_test)={}/{}/{}/{}/{}/{}/{}",
-                    src.display(),
-                    sort.as_str(),
+                reporting::print_perf_repeat_summary(
+                    src.as_path(),
+                    sort,
                     repeat,
-                    total.get("p50").and_then(|v| v.as_u64()).unwrap_or(0),
-                    layout.get("p50").and_then(|v| v.as_u64()).unwrap_or(0),
-                    solve.get("p50").and_then(|v| v.as_u64()).unwrap_or(0),
-                    prepaint.get("p50").and_then(|v| v.as_u64()).unwrap_or(0),
-                    paint.get("p50").and_then(|v| v.as_u64()).unwrap_or(0),
-                    dispatch.get("p50").and_then(|v| v.as_u64()).unwrap_or(0),
-                    hit_test.get("p50").and_then(|v| v.as_u64()).unwrap_or(0),
-                    total.get("p95").and_then(|v| v.as_u64()).unwrap_or(0),
-                    layout.get("p95").and_then(|v| v.as_u64()).unwrap_or(0),
-                    solve.get("p95").and_then(|v| v.as_u64()).unwrap_or(0),
-                    prepaint.get("p95").and_then(|v| v.as_u64()).unwrap_or(0),
-                    paint.get("p95").and_then(|v| v.as_u64()).unwrap_or(0),
-                    dispatch.get("p95").and_then(|v| v.as_u64()).unwrap_or(0),
-                    hit_test.get("p95").and_then(|v| v.as_u64()).unwrap_or(0),
-                    total.get("max").and_then(|v| v.as_u64()).unwrap_or(0),
-                    layout.get("max").and_then(|v| v.as_u64()).unwrap_or(0),
-                    solve.get("max").and_then(|v| v.as_u64()).unwrap_or(0),
-                    prepaint.get("max").and_then(|v| v.as_u64()).unwrap_or(0),
-                    paint.get("max").and_then(|v| v.as_u64()).unwrap_or(0),
-                    dispatch.get("max").and_then(|v| v.as_u64()).unwrap_or(0),
-                    hit_test.get("max").and_then(|v| v.as_u64()).unwrap_or(0),
+                    &total,
+                    &layout,
+                    &solve,
+                    &prepaint,
+                    &paint,
+                    &dispatch,
+                    &hit_test,
                 );
             }
 
@@ -2767,91 +1531,95 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
                     perf_baseline_headroom_pct,
                 );
 
-                perf_baseline_rows.push(serde_json::json!({
-                    "script": script_key.clone(),
-                    "measured_max": {
-                        "top_total_time_us": max_total,
-                        "top_layout_time_us": max_layout,
-                        "top_layout_engine_solve_time_us": max_solve,
-                        "frame_p95_total_time_us": max_frame_p95_total,
-                        "frame_p95_layout_time_us": max_frame_p95_layout,
-                        "frame_p95_layout_engine_solve_time_us": max_frame_p95_solve,
-                        "pointer_move_max_dispatch_time_us": max_pointer_move_dispatch,
-                        "pointer_move_max_hit_test_time_us": max_pointer_move_hit_test,
-                        "pointer_move_snapshots_with_global_changes": max_pointer_move_global_changes,
-                        "run_paint_cache_hit_test_only_replay_allowed_max": max_run_paint_cache_hit_test_only_replay_allowed_max,
-                        "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
-                        "renderer_encode_scene_us": max_renderer_encode_scene_us,
-                        "renderer_upload_us": max_renderer_upload_us,
-                        "renderer_record_passes_us": max_renderer_record_passes_us,
-                        "renderer_encoder_finish_us": max_renderer_encoder_finish_us,
-                        "renderer_prepare_text_us": max_renderer_prepare_text_us,
-                        "renderer_prepare_svg_us": max_renderer_prepare_svg_us,
-                    },
-                    "measured_p90": {
-                        "top_total_time_us": p90_total,
-                        "top_layout_time_us": p90_layout,
-                        "top_layout_engine_solve_time_us": p90_solve,
-                        "frame_p95_total_time_us": p90_frame_p95_total,
-                        "frame_p95_layout_time_us": p90_frame_p95_layout,
-                        "frame_p95_layout_engine_solve_time_us": p90_frame_p95_solve,
-                        "renderer_encode_scene_us": p90_renderer_encode_scene_us,
-                        "renderer_upload_us": p90_renderer_upload_us,
-                        "renderer_record_passes_us": p90_renderer_record_passes_us,
-                        "renderer_encoder_finish_us": p90_renderer_encoder_finish_us,
-                        "renderer_prepare_text_us": p90_renderer_prepare_text_us,
-                        "renderer_prepare_svg_us": p90_renderer_prepare_svg_us,
-                    },
-                    "measured_p95": {
-                        "top_total_time_us": p95_total,
-                        "top_layout_time_us": p95_layout,
-                        "top_layout_engine_solve_time_us": p95_solve,
-                        "frame_p95_total_time_us": p95_frame_p95_total,
-                        "frame_p95_layout_time_us": p95_frame_p95_layout,
-                        "frame_p95_layout_engine_solve_time_us": p95_frame_p95_solve,
-                        "renderer_encode_scene_us": p95_renderer_encode_scene_us,
-                        "renderer_upload_us": p95_renderer_upload_us,
-                        "renderer_record_passes_us": p95_renderer_record_passes_us,
-                        "renderer_encoder_finish_us": p95_renderer_encoder_finish_us,
-                        "renderer_prepare_text_us": p95_renderer_prepare_text_us,
-                        "renderer_prepare_svg_us": p95_renderer_prepare_svg_us,
-                    },
-                    "threshold_seed": {
-                        "top_total_time_us": seed_total_value,
-                        "top_layout_time_us": seed_layout_value,
-                        "top_layout_engine_solve_time_us": seed_solve_value,
-                        "frame_p95_total_time_us": wants_frame_p95_thresholds.then_some(seed_frame_p95_total_value),
-                        "frame_p95_layout_time_us": wants_frame_p95_thresholds.then_some(seed_frame_p95_layout_value),
-                        "frame_p95_layout_engine_solve_time_us": wants_frame_p95_thresholds.then_some(seed_frame_p95_solve_value),
-                    },
-                    "threshold_seed_source": {
-                        "top_total_time_us": seed_total.as_str(),
-                        "top_layout_time_us": seed_layout.as_str(),
-                        "top_layout_engine_solve_time_us": seed_solve.as_str(),
-                        "frame_p95_total_time_us": wants_frame_p95_thresholds.then_some(seed_frame_p95_total.as_str()),
-                        "frame_p95_layout_time_us": wants_frame_p95_thresholds.then_some(seed_frame_p95_layout.as_str()),
-                        "frame_p95_layout_engine_solve_time_us": wants_frame_p95_thresholds.then_some(seed_frame_p95_solve.as_str()),
-                    },
-                    "thresholds": {
-                        "max_top_total_us": (!wants_frame_p95_thresholds).then_some(thr_total),
-                        "max_top_layout_us": (!wants_frame_p95_thresholds).then_some(thr_layout),
-                        "max_top_solve_us": (!wants_frame_p95_thresholds).then_some(thr_solve),
-                        "max_frame_p95_total_us": thr_frame_p95_total,
-                        "max_frame_p95_layout_us": thr_frame_p95_layout,
-                        "max_frame_p95_solve_us": thr_frame_p95_solve,
-                        "max_pointer_move_dispatch_us": thr_pointer_move_dispatch,
-                        "max_pointer_move_hit_test_us": thr_pointer_move_hit_test,
-                        "max_pointer_move_global_changes": thr_pointer_move_global_changes,
-                        "min_run_paint_cache_hit_test_only_replay_allowed_max": thr_min_run_paint_cache_hit_test_only_replay_allowed_max,
-                        "max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": thr_max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
-                        "max_renderer_encode_scene_us": thr_renderer_encode_scene_us,
-                        "max_renderer_upload_us": thr_renderer_upload_us,
-                        "max_renderer_record_passes_us": thr_renderer_record_passes_us,
-                        "max_renderer_encoder_finish_us": thr_renderer_encoder_finish_us,
-                        "max_renderer_prepare_text_us": thr_renderer_prepare_text_us,
-                        "max_renderer_prepare_svg_us": thr_renderer_prepare_svg_us,
-                    },
-                }));
+                baseline_rows::push_perf_baseline_row_repeat(
+                    &mut perf_baseline_rows,
+                    script_key.as_str(),
+                    baseline_rows::TopTimesUs::new(max_total, max_layout, max_solve),
+                    baseline_rows::TopTimesUs::new(
+                        max_frame_p95_total,
+                        max_frame_p95_layout,
+                        max_frame_p95_solve,
+                    ),
+                    baseline_rows::PointerMoveMetrics::new(
+                        max_pointer_move_dispatch,
+                        max_pointer_move_hit_test,
+                        max_pointer_move_global_changes,
+                    ),
+                    baseline_rows::PaintCacheReplayMetrics::new(
+                        max_run_paint_cache_hit_test_only_replay_allowed_max,
+                        max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+                    ),
+                    baseline_rows::RendererTimesUs::new(
+                        max_renderer_encode_scene_us,
+                        max_renderer_upload_us,
+                        max_renderer_record_passes_us,
+                        max_renderer_encoder_finish_us,
+                        max_renderer_prepare_text_us,
+                        max_renderer_prepare_svg_us,
+                    ),
+                    baseline_rows::TopTimesUs::new(p90_total, p90_layout, p90_solve),
+                    baseline_rows::TopTimesUs::new(
+                        p90_frame_p95_total,
+                        p90_frame_p95_layout,
+                        p90_frame_p95_solve,
+                    ),
+                    baseline_rows::RendererTimesUs::new(
+                        p90_renderer_encode_scene_us,
+                        p90_renderer_upload_us,
+                        p90_renderer_record_passes_us,
+                        p90_renderer_encoder_finish_us,
+                        p90_renderer_prepare_text_us,
+                        p90_renderer_prepare_svg_us,
+                    ),
+                    baseline_rows::TopTimesUs::new(p95_total, p95_layout, p95_solve),
+                    baseline_rows::TopTimesUs::new(
+                        p95_frame_p95_total,
+                        p95_frame_p95_layout,
+                        p95_frame_p95_solve,
+                    ),
+                    baseline_rows::RendererTimesUs::new(
+                        p95_renderer_encode_scene_us,
+                        p95_renderer_upload_us,
+                        p95_renderer_record_passes_us,
+                        p95_renderer_encoder_finish_us,
+                        p95_renderer_prepare_text_us,
+                        p95_renderer_prepare_svg_us,
+                    ),
+                    seed_total,
+                    seed_layout,
+                    seed_solve,
+                    seed_frame_p95_total,
+                    seed_frame_p95_layout,
+                    seed_frame_p95_solve,
+                    seed_total_value,
+                    seed_layout_value,
+                    seed_solve_value,
+                    seed_frame_p95_total_value,
+                    seed_frame_p95_layout_value,
+                    seed_frame_p95_solve_value,
+                    wants_frame_p95_thresholds,
+                    thr_total,
+                    thr_layout,
+                    thr_solve,
+                    thr_frame_p95_total,
+                    thr_frame_p95_layout,
+                    thr_frame_p95_solve,
+                    baseline_rows::PointerMoveMetrics::new(
+                        thr_pointer_move_dispatch,
+                        thr_pointer_move_hit_test,
+                        thr_pointer_move_global_changes,
+                    ),
+                    thr_min_run_paint_cache_hit_test_only_replay_allowed_max,
+                    thr_max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+                    baseline_rows::RendererTimesUs::new(
+                        thr_renderer_encode_scene_us,
+                        thr_renderer_upload_us,
+                        thr_renderer_record_passes_us,
+                        thr_renderer_encoder_finish_us,
+                        thr_renderer_prepare_text_us,
+                        thr_renderer_prepare_svg_us,
+                    ),
+                );
             }
 
             if wants_perf_thresholds {
@@ -2973,156 +1741,100 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
                     PerfThresholdAggregate::P90 => p90_renderer_prepare_svg_us,
                     PerfThresholdAggregate::P95 => p95_renderer_prepare_svg_us,
                 };
-                let row = serde_json::json!({
-                    "script": script_key.clone(),
-                    "sort": sort.as_str(),
-                    "repeat": repeat,
-                    "runs": runs_json,
-                    "observed_aggregate": perf_threshold_agg.as_str(),
-                    "observed": {
-                        "top_total_time_us": observed_total,
-                        "top_layout_time_us": observed_layout,
-                        "top_layout_engine_solve_time_us": observed_solve,
-                        "frame_p95_total_time_us": observed_frame_p95_total,
-                        "frame_p95_layout_time_us": observed_frame_p95_layout,
-                        "frame_p95_layout_engine_solve_time_us": observed_frame_p95_solve,
+                thresholds::push_repeat_threshold_row_and_failures(
+                    &mut perf_threshold_rows,
+                    &mut perf_threshold_failures,
+                    thresholds::RepeatThresholdInputs {
+                        script_key: script_key.as_str(),
+                        sort,
+                        repeat,
+                        runs_json: &runs_json,
+                        perf_threshold_agg,
+                        cli_thresholds,
+                        baseline_thresholds,
+                        observed_total,
+                        max_total,
+                        p95_total,
+                        sorted_total: &sorted_total,
+                        p90_total,
+                        observed_layout,
+                        max_layout,
+                        p95_layout,
+                        sorted_layout: &sorted_layout,
+                        p90_layout,
+                        observed_solve,
+                        max_solve,
+                        p95_solve,
+                        sorted_solve: &sorted_solve,
+                        p90_solve,
+                        observed_frame_p95_total,
+                        max_frame_p95_total,
+                        p95_frame_p95_total,
+                        sorted_frame_p95_total: &sorted_frame_p95_total,
+                        p90_frame_p95_total,
+                        observed_frame_p95_layout,
+                        max_frame_p95_layout,
+                        p95_frame_p95_layout,
+                        sorted_frame_p95_layout: &sorted_frame_p95_layout,
+                        p90_frame_p95_layout,
+                        observed_frame_p95_solve,
+                        max_frame_p95_solve,
+                        p95_frame_p95_solve,
+                        sorted_frame_p95_solve: &sorted_frame_p95_solve,
+                        p90_frame_p95_solve,
+                        pointer_move_frames_present,
+                        max_pointer_move_dispatch,
+                        max_pointer_move_hit_test,
+                        max_pointer_move_global_changes,
+                        max_run_paint_cache_hit_test_only_replay_allowed_max,
+                        max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+                        observed_renderer_encode_scene_us,
+                        max_renderer_encode_scene_us,
+                        p95_renderer_encode_scene_us,
+                        observed_renderer_upload_us,
+                        max_renderer_upload_us,
+                        p95_renderer_upload_us,
+                        observed_renderer_record_passes_us,
+                        max_renderer_record_passes_us,
+                        p95_renderer_record_passes_us,
+                        observed_renderer_encoder_finish_us,
+                        max_renderer_encoder_finish_us,
+                        p95_renderer_encoder_finish_us,
+                        observed_renderer_prepare_text_us,
+                        max_renderer_prepare_text_us,
+                        p95_renderer_prepare_text_us,
+                        observed_renderer_prepare_svg_us,
+                        max_renderer_prepare_svg_us,
+                        p95_renderer_prepare_svg_us,
+                        script_worst: &script_worst,
+                        script_worst_layout: &script_worst_layout,
+                        script_worst_solve: &script_worst_solve,
+                        thr_total,
+                        src_total,
+                        thr_layout,
+                        src_layout,
+                        thr_solve,
+                        src_solve,
+                        thr_frame_p95_total,
+                        src_frame_p95_total,
+                        thr_frame_p95_layout,
+                        src_frame_p95_layout,
+                        thr_frame_p95_solve,
+                        src_frame_p95_solve,
+                        thr_pointer_move_dispatch,
+                        src_pointer_move_dispatch,
+                        thr_pointer_move_hit_test,
+                        src_pointer_move_hit_test,
+                        thr_pointer_move_global_changes,
+                        src_pointer_move_global_changes,
+                        thr_paint_cache_hit_test_only_replay_allowed_max:
+                            thr_paint_cache_hit_test_only_replay_allowed_max,
+                        src_paint_cache_hit_test_only_replay_allowed_max,
+                        thr_paint_cache_hit_test_only_replay_rejected_key_mismatch_max:
+                            thr_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+                        src_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
                     },
-                    "worst_run": script_worst.as_ref().map(|(us, bundle, run_index)| serde_json::json!({
-                        "top_total_time_us": us,
-                        "bundle": bundle.display().to_string(),
-                        "run_index": run_index,
-                        "trace_chrome": bundle
-                            .parent()
-                            .map(|dir| dir.join("trace.chrome.json"))
-                            .filter(|p| p.is_file())
-                            .map(|p| p.display().to_string()),
-                    })),
-                    "max": {
-                        "top_total_time_us": max_total,
-                        "top_layout_time_us": max_layout,
-                        "top_layout_engine_solve_time_us": max_solve,
-                        "frame_p95_total_time_us": max_frame_p95_total,
-                        "frame_p95_layout_time_us": max_frame_p95_layout,
-                        "frame_p95_layout_engine_solve_time_us": max_frame_p95_solve,
-                        "pointer_move_max_dispatch_time_us": max_pointer_move_dispatch,
-                        "pointer_move_max_hit_test_time_us": max_pointer_move_hit_test,
-                        "pointer_move_snapshots_with_global_changes": max_pointer_move_global_changes,
-                        "run_paint_cache_hit_test_only_replay_allowed_max": max_run_paint_cache_hit_test_only_replay_allowed_max,
-                        "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
-                    },
-                    "p50": {
-                        "top_total_time_us": percentile_nearest_rank_sorted(&sorted_total, 0.50),
-                        "top_layout_time_us": percentile_nearest_rank_sorted(&sorted_layout, 0.50),
-                        "top_layout_engine_solve_time_us": percentile_nearest_rank_sorted(&sorted_solve, 0.50),
-                        "frame_p95_total_time_us": percentile_nearest_rank_sorted(&sorted_frame_p95_total, 0.50),
-                        "frame_p95_layout_time_us": percentile_nearest_rank_sorted(&sorted_frame_p95_layout, 0.50),
-                        "frame_p95_layout_engine_solve_time_us": percentile_nearest_rank_sorted(&sorted_frame_p95_solve, 0.50),
-                    },
-                    "p90": {
-                        "top_total_time_us": p90_total,
-                        "top_layout_time_us": p90_layout,
-                        "top_layout_engine_solve_time_us": p90_solve,
-                        "frame_p95_total_time_us": p90_frame_p95_total,
-                        "frame_p95_layout_time_us": p90_frame_p95_layout,
-                        "frame_p95_layout_engine_solve_time_us": p90_frame_p95_solve,
-                    },
-                    "p95": {
-                        "top_total_time_us": p95_total,
-                        "top_layout_time_us": p95_layout,
-                        "top_layout_engine_solve_time_us": p95_solve,
-                        "frame_p95_total_time_us": p95_frame_p95_total,
-                        "frame_p95_layout_time_us": p95_frame_p95_layout,
-                        "frame_p95_layout_engine_solve_time_us": p95_frame_p95_solve,
-                    },
-                    "thresholds": {
-                        "max_top_total_us": thr_total,
-                        "max_top_layout_us": thr_layout,
-                        "max_top_solve_us": thr_solve,
-                        "max_frame_p95_total_us": thr_frame_p95_total,
-                        "max_frame_p95_layout_us": thr_frame_p95_layout,
-                        "max_frame_p95_solve_us": thr_frame_p95_solve,
-                        "max_pointer_move_dispatch_us": thr_pointer_move_dispatch,
-                        "max_pointer_move_hit_test_us": thr_pointer_move_hit_test,
-                        "max_pointer_move_global_changes": thr_pointer_move_global_changes,
-                        "min_run_paint_cache_hit_test_only_replay_allowed_max": thr_paint_cache_hit_test_only_replay_allowed_max,
-                        "max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": thr_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
-                    },
-                    "threshold_sources": {
-                        "max_top_total_us": src_total,
-                        "max_top_layout_us": src_layout,
-                        "max_top_solve_us": src_solve,
-                        "max_frame_p95_total_us": src_frame_p95_total,
-                        "max_frame_p95_layout_us": src_frame_p95_layout,
-                        "max_frame_p95_solve_us": src_frame_p95_solve,
-                        "max_pointer_move_dispatch_us": src_pointer_move_dispatch,
-                        "max_pointer_move_hit_test_us": src_pointer_move_hit_test,
-                        "max_pointer_move_global_changes": src_pointer_move_global_changes,
-                        "min_run_paint_cache_hit_test_only_replay_allowed_max": src_paint_cache_hit_test_only_replay_allowed_max,
-                        "max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": src_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
-                    },
-                });
-                perf_threshold_rows.push(row);
-                perf_threshold_failures.extend(scan_perf_threshold_failures(
-                    script_key.as_str(),
-                    sort,
-                    perf_threshold_agg,
-                    cli_thresholds,
-                    baseline_thresholds,
-                    observed_total,
-                    max_total,
-                    p95_total,
-                    observed_layout,
-                    max_layout,
-                    p95_layout,
-                    observed_solve,
-                    max_solve,
-                    p95_solve,
-                    observed_frame_p95_total,
-                    max_frame_p95_total,
-                    p95_frame_p95_total,
-                    observed_frame_p95_layout,
-                    max_frame_p95_layout,
-                    p95_frame_p95_layout,
-                    observed_frame_p95_solve,
-                    max_frame_p95_solve,
-                    p95_frame_p95_solve,
-                    pointer_move_frames_present,
-                    max_pointer_move_dispatch,
-                    max_pointer_move_hit_test,
-                    max_pointer_move_global_changes,
-                    max_run_paint_cache_hit_test_only_replay_allowed_max,
-                    max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
-                    observed_renderer_encode_scene_us,
-                    max_renderer_encode_scene_us,
-                    p95_renderer_encode_scene_us,
-                    observed_renderer_upload_us,
-                    max_renderer_upload_us,
-                    p95_renderer_upload_us,
-                    observed_renderer_record_passes_us,
-                    max_renderer_record_passes_us,
-                    p95_renderer_record_passes_us,
-                    observed_renderer_encoder_finish_us,
-                    max_renderer_encoder_finish_us,
-                    p95_renderer_encoder_finish_us,
-                    observed_renderer_prepare_text_us,
-                    max_renderer_prepare_text_us,
-                    p95_renderer_prepare_text_us,
-                    observed_renderer_prepare_svg_us,
-                    max_renderer_prepare_svg_us,
-                    p95_renderer_prepare_svg_us,
-                    script_worst
-                        .as_ref()
-                        .map(|(_us, bundle, _run)| bundle.as_path()),
-                    script_worst.as_ref().map(|(_us, _bundle, run)| *run),
-                    script_worst_layout
-                        .as_ref()
-                        .map(|(_us, bundle, _run)| bundle.as_path()),
-                    script_worst_layout.as_ref().map(|(_us, _bundle, run)| *run),
-                    script_worst_solve
-                        .as_ref()
-                        .map(|(_us, bundle, _run)| bundle.as_path()),
-                    script_worst_solve.as_ref().map(|(_us, _bundle, run)| *run),
-                ));
+                );
             }
         }
     }
@@ -3130,7 +1842,7 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
     stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
 
     if let Some(test_id) = check_pixels_changed_test_id.as_deref() {
-        check_out_dir_for_pixels_changed(&resolved_out_dir, test_id, warmup_frames)?;
+        stats::check_out_dir_for_pixels_changed(&resolved_out_dir, test_id, warmup_frames)?;
     }
 
     if let Some(path) = perf_baseline_out.as_ref() {
@@ -3138,57 +1850,38 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
         let policy = seed_policy
             .as_ref()
             .ok_or_else(|| "internal error: missing seed policy".to_string())?;
-        let payload = serde_json::json!({
-            "schema_version": 1,
-            "generated_unix_ms": now_unix_ms(),
-            "kind": "perf_baseline",
-            "out_path": out_path.display().to_string(),
-            "warmup_frames": warmup_frames,
-            "sort": sort.as_str(),
-            "repeat": repeat,
-            "headroom_pct": perf_baseline_headroom_pct,
-            "threshold_seed_policy": policy.threshold_seed_policy_json(),
-            "rows": perf_baseline_rows,
-        });
-        write_json_value(out_path, &payload)?;
-        if !stats_json {
-            println!("wrote perf baseline: {}", out_path.display());
-        }
+        outputs::write_perf_baseline_json(
+            out_path,
+            warmup_frames,
+            sort,
+            repeat,
+            perf_baseline_headroom_pct,
+            policy.threshold_seed_policy_json(),
+            &perf_baseline_rows,
+            stats_json,
+        )?;
     }
 
     let mut perf_threshold_failure: Option<(usize, PathBuf)> = None;
     if wants_perf_thresholds {
-        let out_path = resolved_out_dir.join("check.perf_thresholds.json");
-        let payload = serde_json::json!({
-            "schema_version": 1,
-            "generated_unix_ms": now_unix_ms(),
-            "kind": "perf_thresholds",
-            "out_dir": resolved_out_dir.display().to_string(),
-            "warmup_frames": warmup_frames,
-            "observed_aggregate": perf_threshold_agg.as_str(),
-            "suite_hooks": {
-                "prewarm": perf_suite_prewarm_scripts.iter().map(|p| p.display().to_string()).collect::<Vec<_>>(),
-                "prelude": perf_suite_prelude_scripts.iter().map(|p| p.display().to_string()).collect::<Vec<_>>(),
-                "prelude_each_run": suite_prelude_each_run,
-            },
-            "thresholds": {
-                "max_top_total_us": cli_thresholds.max_top_total_us,
-                "max_top_layout_us": cli_thresholds.max_top_layout_us,
-                "max_top_solve_us": cli_thresholds.max_top_solve_us,
-                "max_pointer_move_dispatch_us": cli_thresholds.max_pointer_move_dispatch_us,
-                "max_pointer_move_hit_test_us": cli_thresholds.max_pointer_move_hit_test_us,
-                "max_pointer_move_global_changes": cli_thresholds.max_pointer_move_global_changes,
-                "min_run_paint_cache_hit_test_only_replay_allowed_max": cli_thresholds.min_run_paint_cache_hit_test_only_replay_allowed_max,
-                "max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": cli_thresholds.max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
-            },
-            "baseline": perf_baseline.as_ref().map(|b| serde_json::json!({
+        let baseline_summary = perf_baseline.as_ref().map(|b| {
+            serde_json::json!({
                 "path": b.path.display().to_string(),
                 "scripts": b.thresholds_by_script.len(),
-            })),
-            "rows": perf_threshold_rows,
-            "failures": perf_threshold_failures,
+            })
         });
-        let _ = write_json_value(&out_path, &payload);
+        let out_path = outputs::write_perf_thresholds_json(
+            &resolved_out_dir,
+            warmup_frames,
+            perf_threshold_agg,
+            &perf_suite_prewarm_scripts,
+            &perf_suite_prelude_scripts,
+            suite_prelude_each_run,
+            &cli_thresholds,
+            baseline_summary,
+            &perf_threshold_rows,
+            &perf_threshold_failures,
+        );
         if !perf_threshold_failures.is_empty() {
             perf_threshold_failure = Some((perf_threshold_failures.len(), out_path.clone()));
         }
@@ -3196,19 +1889,13 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
 
     let mut perf_hint_failure: Option<(usize, PathBuf)> = None;
     if wants_perf_hints {
-        let out_path = resolved_out_dir.join("check.perf_hints.json");
-        let payload = serde_json::json!({
-            "schema_version": 1,
-            "generated_unix_ms": now_unix_ms(),
-            "kind": "perf_hints",
-            "out_dir": resolved_out_dir.display().to_string(),
-            "warmup_frames": warmup_frames,
-            "min_severity": perf_hint_gate_opts.min_severity.as_str(),
-            "deny": perf_hint_gate_opts.deny_codes.iter().cloned().collect::<Vec<_>>(),
-            "rows": perf_hint_rows,
-            "failures": perf_hint_failures,
-        });
-        let _ = write_json_value(&out_path, &payload);
+        let out_path = outputs::write_perf_hints_json(
+            &resolved_out_dir,
+            warmup_frames,
+            &perf_hint_gate_opts,
+            &perf_hint_rows,
+            &perf_hint_failures,
+        );
         if !perf_hint_failures.is_empty() {
             perf_hint_failure = Some((perf_hint_failures.len(), out_path.clone()));
         }
@@ -3219,23 +1906,11 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
     }
 
     if stats_json {
-        let worst = overall_worst.as_ref().map(|(us, src, bundle)| {
-            serde_json::json!({
-                "script": src.display().to_string(),
-                "top_total_time_us": us,
-                "bundle": bundle.display().to_string(),
-            })
-        });
-        let payload = serde_json::json!({
-            "schema_version": 1,
-            "sort": sort.as_str(),
-            "repeat": repeat,
-            "rows": perf_json_rows,
-            "worst_overall": worst,
-        });
-        println!(
-            "{}",
-            serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "{}".to_string())
+        outputs::print_perf_stats_stdout_json(
+            sort,
+            repeat,
+            &perf_json_rows,
+            overall_worst.as_ref(),
         );
     } else if let Some((us, src, bundle)) = overall_worst {
         println!(
@@ -3264,4 +1939,45 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
     }
 
     std::process::exit(0);
+}
+
+fn ensure_perf_fs_transport_connected(
+    connected_fs: &mut Option<ConnectedToolingTransport>,
+    use_devtools_ws: bool,
+    fs_transport_cfg: &crate::transport::FsDiagTransportConfig,
+    ready_path: &Path,
+    require_ready: bool,
+    timeout_ms: u64,
+    poll_ms: u64,
+    script_result_path: &Path,
+) -> Result<(), String> {
+    if use_devtools_ws {
+        return Ok(());
+    }
+    if connected_fs.is_some() {
+        return Ok(());
+    }
+
+    match connect_filesystem_tooling(
+        fs_transport_cfg,
+        ready_path,
+        require_ready,
+        timeout_ms,
+        poll_ms,
+    ) {
+        Ok(v) => {
+            *connected_fs = Some(v);
+            Ok(())
+        }
+        Err(err) => {
+            write_tooling_failure_script_result(
+                script_result_path,
+                "tooling.connect.failed",
+                &err,
+                "tooling_error",
+                Some("connect_filesystem_tooling".to_string()),
+            );
+            Err(err)
+        }
+    }
 }

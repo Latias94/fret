@@ -32,7 +32,7 @@ pub(crate) fn cmd_perf_baseline_from_bundles(
     }
     if rest.len() < 2 {
         return Err(
-            "missing script path and bundle paths (try: fretboard diag perf-baseline-from-bundles tools/diag-scripts/ui-gallery-image-object-fit-perf-steady.json .fret/diag/exports/1234)".to_string(),
+            "missing script path and bundle artifact paths (try: fretboard diag perf-baseline-from-bundles tools/diag-scripts/ui-gallery/perf/ui-gallery-image-object-fit-perf-steady.json .fret/diag/exports/1234)".to_string(),
         );
     }
 
@@ -67,7 +67,7 @@ pub(crate) fn cmd_perf_baseline_from_bundles(
         let bundle_path = resolve_bundle_artifact_path(&bundle_src);
         if !bundle_path.is_file() {
             return Err(format!(
-                "bundle path does not contain bundle.json or bundle.schema2.json: {}",
+                "path does not contain a bundle artifact (bundle.json or bundle.schema2.json): {}",
                 bundle_src.display()
             ));
         }
@@ -86,7 +86,10 @@ pub(crate) fn cmd_perf_baseline_from_bundles(
         let (
             run_paint_cache_hit_test_only_replay_allowed_max,
             run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
-        ) = bundle_paint_cache_hit_test_only_replay_maxes(&bundle_path, warmup_frames)?;
+        ) = diag_policy::bundle_paint_cache_hit_test_only_replay_maxes(
+            &bundle_path,
+            warmup_frames,
+        )?;
         let renderer_encode_scene_us = report.max_renderer_encode_scene_us;
         let renderer_upload_us = report.max_renderer_upload_us;
         let renderer_record_passes_us = report.max_renderer_record_passes_us;

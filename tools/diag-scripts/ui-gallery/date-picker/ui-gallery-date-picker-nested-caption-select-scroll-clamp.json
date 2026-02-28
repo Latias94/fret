@@ -1,0 +1,126 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "UI Gallery: DatePicker nested caption Select scroll clamp",
+    "required_capabilities": ["diag.script_v2", "diag.overlay_placement_trace"],
+    "tags": ["ui-gallery", "shadcn", "date-picker", "calendar", "select", "overlay", "scroll"]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-nav-date-picker" } },
+      "timeout_frames": 600
+    },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-nav-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-date-picker" },
+      "delta_y": 240.0,
+      "padding_px": 8.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_bounds_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-date-picker" },
+      "stable_frames": 4,
+      "max_move_px": 0.75,
+      "timeout_frames": 600
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-date-picker.chrome" },
+      "stable_frames": 2,
+      "max_move_px": 1.0,
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-page-date-picker" } },
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 20 },
+
+    { "type": "set_window_inner_size", "width_px": 1024.0, "height_px": 600.0 },
+    { "type": "wait_frames", "n": 20 },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-date-picker-dropdowns-trigger" },
+      "delta_y": -420.0,
+      "padding_px": 16.0,
+      "timeout_frames": 1800
+    },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-date-picker-dropdowns-trigger" } },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-date-picker-dropdowns-popover-content" } },
+      "timeout_frames": 600
+    },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-date-picker-dropdowns-calendar.caption-year-trigger" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-date-picker-dropdowns-calendar.caption-year-trigger" },
+      "stable_frames": 2,
+      "max_move_px": 1.0,
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "select-scroll-viewport" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_overlay_placement_trace",
+      "query": { "kind": "placed_rect", "anchor_test_id": "ui-gallery-date-picker-dropdowns-calendar.caption-year-trigger" },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "select-scroll-viewport" },
+        "padding_px": 2.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "select-scroll-down-button" } },
+      "timeout_frames": 240
+    },
+
+    { "type": "press_key", "key": "escape" },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "not_exists", "target": { "kind": "test_id", "id": "select-scroll-viewport" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-date-picker-dropdowns-popover-content" } }
+    },
+
+    { "type": "press_key", "key": "escape" },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "not_exists", "target": { "kind": "test_id", "id": "ui-gallery-date-picker-dropdowns-popover-content" } },
+      "timeout_frames": 600
+    },
+
+    { "type": "capture_bundle", "label": "ui-gallery-date-picker-nested-caption-select-scroll-clamp" }
+  ]
+}

@@ -195,8 +195,8 @@ pub fn select_item_aligned_position(inputs: SelectItemAlignedInputs) -> SelectIt
         SelectItemAlignedOutputs {
             left,
             right,
-            top: None.into(),
-            bottom: Some(Px(0.0)).into(),
+            top: None,
+            bottom: Some(Px(0.0)),
             width,
             min_width,
             height,
@@ -234,8 +234,8 @@ pub fn select_item_aligned_position(inputs: SelectItemAlignedInputs) -> SelectIt
         SelectItemAlignedOutputs {
             left,
             right,
-            top: Some(Px(0.0)).into(),
-            bottom: None.into(),
+            top: Some(Px(0.0)),
+            bottom: None,
             width,
             min_width,
             height,

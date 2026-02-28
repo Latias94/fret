@@ -7,7 +7,7 @@ fn main() -> anyhow::Result<()> {
 
     if demo == "--list" || demo == "-l" {
         eprintln!(
-            "Available demos:\n  simple-todo\n  todo_demo\n  components_gallery\n  genui_demo\n  emoji_conformance_demo\n  cjk_conformance_demo\n  chart_demo\n  chart_declarative_demo\n  chart_multi_axis_demo\n  echarts_demo\n  category_line_demo\n  horizontal_bars_demo\n  plot_demo\n  plot_image_demo\n  bars_demo\n  grouped_bars_demo\n  stacked_bars_demo\n  area_demo\n  candlestick_demo\n  error_bars_demo\n  heatmap_demo\n  histogram_demo\n  histogram2d_demo\n  shaded_demo\n  stairs_demo\n  stems_demo\n  linked_cursor_demo\n  inf_lines_demo\n  tags_demo\n  drag_demo\n  effects_demo\n  liquid_glass_demo\n  custom_effect_v1_demo\n  custom_effect_v2_demo\n  postprocess_theme_demo"
+            "Available demos:\n  simple-todo\n  todo_demo\n  query_async_tokio_demo\n  async_playground_demo\n  components_gallery\n  genui_demo\n  emoji_conformance_demo\n  cjk_conformance_demo\n  chart_demo\n  chart_declarative_demo\n  chart_multi_axis_demo\n  echarts_demo\n  category_line_demo\n  horizontal_bars_demo\n  plot_demo\n  plot_image_demo\n  bars_demo\n  grouped_bars_demo\n  stacked_bars_demo\n  area_demo\n  candlestick_demo\n  error_bars_demo\n  heatmap_demo\n  histogram_demo\n  histogram2d_demo\n  shaded_demo\n  stairs_demo\n  stems_demo\n  linked_cursor_demo\n  inf_lines_demo\n  tags_demo\n  drag_demo\n  effects_demo\n  liquid_glass_demo\n  custom_effect_v1_demo\n  custom_effect_v2_demo\n  custom_effect_v3_demo\n  postprocess_theme_demo"
         );
         return Ok(());
     }
@@ -17,6 +17,12 @@ fn main() -> anyhow::Result<()> {
             fret_examples::simple_todo_demo::run()
         }
         "todo_demo" | "todo-demo" => fret_examples::todo_demo::run(),
+        "query_async_tokio_demo" | "query-async-tokio-demo" => {
+            fret_examples::query_async_tokio_demo::run()
+        }
+        "async_playground_demo" | "async-playground-demo" => {
+            fret_examples::async_playground_demo::run()
+        }
         "components_gallery" => fret_examples::components_gallery::run(),
         "genui_demo" => fret_examples::genui_demo::run(),
         "emoji_conformance_demo" => fret_examples::emoji_conformance_demo::run(),
@@ -52,6 +58,9 @@ fn main() -> anyhow::Result<()> {
         }
         "custom_effect_v2_demo" | "custom-effect-v2-demo" => {
             fret_examples::custom_effect_v2_demo::run()
+        }
+        "custom_effect_v3_demo" | "custom-effect-v3-demo" => {
+            fret_examples::custom_effect_v3_demo::run()
         }
         "postprocess_theme_demo" | "postprocess-theme-demo" => {
             fret_examples::postprocess_theme_demo::run()

@@ -1,0 +1,178 @@
+{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-nav-search"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-nav-search"
+      }
+    },
+    {
+      "type": "press_key",
+      "key": "a",
+      "modifiers": {
+        "ctrl": true
+      }
+    },
+    {
+      "type": "press_key",
+      "key": "backspace"
+    },
+    {
+      "type": "type_text",
+      "text": "code_editor_mvp"
+    },
+    {
+      "type": "wait_frames",
+      "n": 2
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-nav-code-editor-mvp"
+        },
+        "padding_px": 8.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-nav-code-editor-mvp"
+      }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-page-code-editor-mvp"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_frames",
+      "n": 30
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-code-editor-a11y-composition-drag-gate-viewport"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "type_text_into",
+      "target": {
+        "kind": "role_and_name",
+        "role": "text_field",
+        "name": "Code editor a11y composition drag gate"
+      },
+      "text": "",
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_frames",
+      "n": 2
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-code-editor-a11y-composition-drag-before"
+    },
+    {
+      "type": "scroll_into_view",
+      "container": {
+        "kind": "test_id",
+        "id": "ui-gallery-content-viewport"
+      },
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-code-editor-a11y-composition-drag-inject-preedit"
+      },
+      "delta_y": -240.0,
+      "require_fully_within_window": true,
+      "padding_px": 8.0,
+      "timeout_frames": 240
+    },
+    {
+      "type": "click",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-code-editor-a11y-composition-drag-inject-preedit"
+      }
+    },
+    {
+      "type": "wait_frames",
+      "n": 2
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": {
+          "kind": "role_and_name",
+          "role": "text_field",
+          "name": "Code editor a11y composition drag gate"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-code-editor-a11y-composition-drag-preedit"
+    },
+    {
+      "type": "wheel",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-code-editor-a11y-composition-drag-gate-viewport"
+      },
+      "delta_y": 120.0
+    },
+    {
+      "type": "wait_frames",
+      "n": 2
+    },
+    {
+      "type": "drag_pointer",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-code-editor-a11y-composition-drag-gate-viewport"
+      },
+      "delta_x": -160.0,
+      "delta_y": 36.0,
+      "steps": 12
+    },
+    {
+      "type": "wait_frames",
+      "n": 2
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-code-editor-a11y-composition-drag-after"
+    }
+  ]
+}

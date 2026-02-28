@@ -3,38 +3,26 @@ use super::super::*;
 pub(super) fn resolve_repro_scripts(
     rest: &[String],
     workspace_root: &Path,
-) -> (Vec<PathBuf>, Option<String>) {
+) -> Result<(Vec<PathBuf>, Option<String>), String> {
     if rest.len() == 1 && rest[0] == "ui-gallery" {
-        (
-            diag_suite_scripts::ui_gallery_suite_scripts()
-                .into_iter()
-                .map(|p| resolve_path(workspace_root, PathBuf::from(p)))
-                .collect(),
-            Some("ui-gallery".to_string()),
-        )
+        let inputs = diag_suite_scripts::ui_gallery_suite_scripts();
+        let scripts = expand_script_inputs(workspace_root, &inputs)?;
+        Ok((scripts, Some("ui-gallery".to_string())))
     } else if rest.len() == 1 && rest[0] == "ui-gallery-code-editor" {
-        (
-            diag_suite_scripts::ui_gallery_code_editor_suite_scripts()
-                .into_iter()
-                .map(|p| resolve_path(workspace_root, PathBuf::from(p)))
-                .collect(),
-            Some("ui-gallery-code-editor".to_string()),
-        )
+        let inputs = diag_suite_scripts::ui_gallery_code_editor_suite_scripts();
+        let scripts = expand_script_inputs(workspace_root, &inputs)?;
+        Ok((scripts, Some("ui-gallery-code-editor".to_string())))
     } else if rest.len() == 1 && rest[0] == "docking-arbitration" {
-        (
-            diag_suite_scripts::docking_arbitration_suite_scripts()
-                .into_iter()
-                .map(|p| resolve_path(workspace_root, PathBuf::from(p)))
-                .collect(),
-            Some("docking-arbitration".to_string()),
-        )
+        let inputs = diag_suite_scripts::docking_arbitration_suite_scripts();
+        let scripts = expand_script_inputs(workspace_root, &inputs)?;
+        Ok((scripts, Some("docking-arbitration".to_string())))
     } else {
-        (
+        Ok((
             rest.iter()
                 .map(|p| resolve_path(workspace_root, PathBuf::from(p)))
                 .collect(),
             None,
-        )
+        ))
     }
 }
 

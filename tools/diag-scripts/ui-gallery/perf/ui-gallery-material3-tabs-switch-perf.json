@@ -1,0 +1,148 @@
+{
+  "schema_version": 2,
+  "steps": [
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "ui-gallery-nav-search",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "ui-gallery-nav-scroll",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "button": "left",
+      "target": {
+        "id": "ui-gallery-nav-search",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "key": "a",
+      "modifiers": {
+        "alt": false,
+        "ctrl": true,
+        "meta": false,
+        "shift": false
+      },
+      "repeat": false,
+      "type": "press_key"
+    },
+    {
+      "key": "backspace",
+      "modifiers": {
+        "alt": false,
+        "ctrl": false,
+        "meta": false,
+        "shift": false
+      },
+      "repeat": false,
+      "type": "press_key"
+    },
+    {
+      "text": "material3_tabs",
+      "type": "type_text"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "predicate": {
+        "eps_px": 0.0,
+        "kind": "bounds_within_window",
+        "padding_px": 8.0,
+        "target": {
+          "id": "ui-gallery-nav-material3-tabs",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "n": 4,
+      "type": "wait_frames"
+    },
+    {
+      "target": {
+        "id": "ui-gallery-nav-material3-tabs",
+        "kind": "test_id"
+      },
+      "type": "move_pointer"
+    },
+    {
+      "button": "left",
+      "target": {
+        "id": "ui-gallery-nav-material3-tabs",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "ui-gallery-material3-tabs",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 600,
+      "type": "wait_until"
+    },
+    {
+      "button": "left",
+      "target": {
+        "id": "ui-gallery-material3-tab-settings",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "button": "left",
+      "target": {
+        "id": "ui-gallery-material3-tab-overview",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "button": "left",
+      "target": {
+        "id": "ui-gallery-material3-tab-settings",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "label": "ui-gallery-material3-tabs-switch-perf",
+      "type": "capture_bundle"
+    }
+  ]
+}

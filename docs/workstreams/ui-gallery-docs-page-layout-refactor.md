@@ -75,7 +75,7 @@ Legend:
 | Component | Entry point | Layout | Docs Parity | Section text | Code samples | Diag Coverage | Notes |
 |---|---|---|---|---|---|---|---|
 | Data Table | `apps/fret-ui-gallery/src/ui/pages/data_table.rs` | Docs-style | Examples Partial / API ✅ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-data-table-*.json` (16) | shadcn Data Table is a guide recipe; keep parity gaps explicit and gated. |
-| Carousel | `apps/fret-ui-gallery/src/ui/pages/carousel.rs` | Docs-style | Examples ✅ / API ✅ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-carousel-*.json` (3) | Keeps existing drag/swipe + expandable demo test IDs stable. |
+| Carousel | `apps/fret-ui-gallery/src/ui/pages/carousel.rs` | Docs-style | Examples ✅ / API ✅ | Yes | Key sections only | `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-*.json` (3) | Keeps existing drag/swipe + expandable demo test IDs stable. |
 | Chart | `apps/fret-ui-gallery/src/ui/pages/chart.rs` | Docs-style | Examples ✅ / API ✅ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-chart-*.json` (1) | Focuses on tooltip/legend composition, not full chart runtime parity. |
 | Command | `apps/fret-ui-gallery/src/ui/pages/command.rs` | Docs-style | Examples ✅ / API ✅ | Yes | Key sections only | `tools/diag-scripts/ui-gallery-command-*.json` (1) | A11y AX activation scripts use the `tools/diag-scripts/a11y-*.json` prefix and are excluded from the ui-gallery suite. |
 

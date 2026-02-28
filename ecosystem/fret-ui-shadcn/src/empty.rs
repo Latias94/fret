@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret_core::{Edges, Px, TextAlign, TextOverflow, TextWrap};
+use fret_core::{Edges, Px, TextAlign, TextOverflow};
 use fret_ui::element::{AnyElement, CrossAlign, FlexProps, LayoutQueryRegionProps, MainAlign};
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
@@ -34,7 +34,7 @@ impl Empty {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
 
         let border = theme.color_token("border");
         let fg = theme.color_token("foreground");
@@ -134,12 +134,13 @@ impl EmptyHeader {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
         let gap = MetricRef::space(Space::N2).resolve(&theme);
         let max_w = MetricRef::Px(Px(384.0));
         let layout = decl_style::layout_style(
             &theme,
             LayoutRefinement::default()
+                .w_full()
                 .max_w(max_w)
                 .min_w_0()
                 .merge(self.layout),
@@ -202,7 +203,7 @@ impl EmptyMedia {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
 
         let mut layout = LayoutRefinement::default()
             .mb(Space::N2)
@@ -257,7 +258,7 @@ impl EmptyTitle {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
         let fg = theme.color_token("foreground");
         let px = theme
             .metric_by_key("component.empty.title_px")
@@ -273,6 +274,9 @@ impl EmptyTitle {
             .line_height_px(line_height)
             .font_medium()
             .text_align(TextAlign::Center)
+            .text_balance()
+            .w_full()
+            .min_w_0()
             .text_color(ColorRef::Color(fg))
             .into_element(cx)
     }
@@ -290,7 +294,7 @@ impl EmptyDescription {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
         let fg = theme.color_token("muted-foreground");
         let px = theme
             .metric_by_key("component.empty.description_px")
@@ -305,9 +309,10 @@ impl EmptyDescription {
             .text_size_px(px)
             .line_height_px(line_height)
             .font_normal()
-            .wrap(TextWrap::Word)
+            .text_balance()
             .overflow(TextOverflow::Clip)
             .text_align(TextAlign::Center)
+            .w_full()
             .max_w(Px(384.0))
             .min_w_0()
             .text_color(ColorRef::Color(fg))
@@ -336,7 +341,7 @@ impl EmptyContent {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
         let gap = MetricRef::space(Space::N4).resolve(&theme);
         let max_w = MetricRef::Px(Px(384.0));
         let layout = decl_style::layout_style(

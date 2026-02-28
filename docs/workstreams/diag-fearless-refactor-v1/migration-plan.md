@@ -18,15 +18,15 @@ See also:
 
 ### Option 1 (preferred): Sidecar-first + schema v2 adoption
 
-Keep `bundle.json` canonical, but make day-to-day tooling prefer **bounded sidecars**:
+Keep the bundle artifact canonical (`bundle.json` or `bundle.schema2.json`), but make day-to-day tooling prefer **bounded sidecars**:
 
 - `frames.index.json` for per-frame triage and hotspots
 - `bundle.index.json` / `bundle.meta.json` / `test_ids.index.json` for fast selectors and inventories
 
-Adopt `bundle.json` schema v2 features where available (semantics table + per-snapshot fingerprints) so bundles remain small while
+Adopt bundle schema v2 features where available (semantics table + per-snapshot fingerprints) so bundles remain small while
 still supporting selector-driven automation.
 
-This option is compatible with “fearless refactors”: tools can regenerate sidecars from `bundle.json`, and missing/invalid sidecars
+This option is compatible with “fearless refactors”: tools can regenerate sidecars from the bundle artifact, and missing/invalid sidecars
 degrade into clear, actionable errors.
 
 ### Option 2 (later): Chunked bundle format / manifest-first storage
@@ -42,10 +42,16 @@ current pain for in-tree workflows.
 - `diag doctor` is the first step in every scripted repro loop.
 - `diag triage --lite` / `diag hotspots --lite` are the default first-pass tools.
 - `diag ai-packet` always includes lite reports and does not fail hard when heavy reports cannot be produced.
+- Shareable repro zips default to bounded artifacts when available:
+  - Preferred (bounded AI handoff): `diag pack|run|suite|repro --ai-only`.
+  - Compat (offline viewer-friendly, includes bundle artifact): `diag pack|run|suite|repro --include-all --pack-schema2-only`.
+  - Ensure canonical sidecars (`bundle.meta.json`, `bundle.index.json`, `test_ids.index.json`, `frames.index.json`) are packed
+    under `/_root/` so AI loops can stay fast without materializing large bundles.
 
 Exit criteria:
 
 - maintainers can triage “huge bundles” without opening `bundle.json` in memory.
+- a typical repro can be shared as a small zip without losing the ability to run lite triage offline.
 
 ### Phase B: Consolidate semantics traversal
 
@@ -60,6 +66,8 @@ Exit criteria:
 
 - Make module boundaries in `ecosystem/fret-bootstrap/src/ui_diagnostics/` and `crates/fret-diag/src/stats/` stick.
 - Delete transitional forwarders/wrappers that exist only due to historical file layout.
+- Keep the CLI entrypoint (`crates/fret-diag/src/lib.rs`) thin by extracting cohesive helpers into dedicated modules (zip packing,
+  evidence indexing, subcommand handlers).
 
 Exit criteria:
 

@@ -108,7 +108,7 @@ Pursue **Option B** as the long-term “correct ceiling” for liquid glass, but
    per-frame counters.
 2) **M2.1 (design+ADR):** define a contract-backed **glass group** primitive (Option B), including budgeting and
    diagnostics vocabulary, without committing to an implementation.
-   - Tracking ADR: `docs/adr/0302-custom-effect-v3-backdrop-source-groups.md`
+   - Tracking ADR: `docs/adr/0305-custom-effect-v3-backdrop-source-groups.md`
 3) **M2.2 (implementation):** implement group snapshot + shared pyramid in the wgpu backend under budgets, with
    conformance + `fretboard diag` evidence.
 
@@ -153,5 +153,5 @@ For Option B (future):
 
 ## Evidence anchors
 
-- CustomV3 contract: `docs/adr/0301-custom-effect-v3-renderer-provided-sources.md`
+- CustomV3 contract: `docs/adr/0304-custom-effect-v3-renderer-provided-sources.md`
 - V3 workstream index: `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-v3/README.md`

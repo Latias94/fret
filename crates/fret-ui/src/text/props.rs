@@ -152,7 +152,57 @@ fn mix_text_style(mut state: u64, style: &TextStyle) -> u64 {
     state = mix_u64(state, u64::from(style.weight.0));
     state = mix_text_slant(state, style.slant);
     state = mix_option_px(state, style.line_height);
+    state = mix_option_f32(state, style.line_height_em);
+    state = mix_u64(
+        state,
+        match style.line_height_policy {
+            fret_core::TextLineHeightPolicy::ExpandToFit => 1,
+            fret_core::TextLineHeightPolicy::FixedFromStyle => 2,
+        },
+    );
     state = mix_option_f32(state, style.letter_spacing_em);
+    state = mix_u64(
+        state,
+        match style.vertical_placement {
+            fret_core::TextVerticalPlacement::CenterMetricsBox => 1,
+            fret_core::TextVerticalPlacement::BoundsAsLineBox => 2,
+        },
+    );
+    state = mix_u64(
+        state,
+        match style.leading_distribution {
+            fret_core::TextLeadingDistribution::Even => 1,
+            fret_core::TextLeadingDistribution::Proportional => 2,
+        },
+    );
+    state = mix_u64(state, style.features.len() as u64);
+    for feature in &style.features {
+        state = mix_bytes(state, feature.tag.as_bytes());
+        state = mix_u64(state, u64::from(feature.value));
+    }
+    state = mix_u64(state, style.axes.len() as u64);
+    for axis in &style.axes {
+        state = mix_bytes(state, axis.tag.as_bytes());
+        state = mix_f32(state, axis.value);
+    }
+    state = mix_u64(state, style.strut_style.is_some() as u64);
+    if let Some(strut) = style.strut_style.as_ref() {
+        state = mix_u64(state, strut.font.is_some() as u64);
+        if let Some(font) = strut.font.as_ref() {
+            state = mix_font_id(state, font);
+        }
+        state = mix_option_px(state, strut.size);
+        state = mix_option_px(state, strut.line_height);
+        state = mix_option_f32(state, strut.line_height_em);
+        state = mix_u64(
+            state,
+            match strut.leading_distribution.unwrap_or_default() {
+                fret_core::TextLeadingDistribution::Even => 1,
+                fret_core::TextLeadingDistribution::Proportional => 2,
+            },
+        );
+        state = mix_u64(state, u64::from(strut.force));
+    }
     state
 }
 
@@ -173,8 +223,9 @@ fn mix_text_wrap(state: u64, wrap: TextWrap) -> u64 {
         match wrap {
             TextWrap::None => 1,
             TextWrap::Word => 2,
-            TextWrap::Grapheme => 3,
-            TextWrap::WordBreak => 4,
+            TextWrap::Balance => 3,
+            TextWrap::Grapheme => 4,
+            TextWrap::WordBreak => 5,
         },
     )
 }

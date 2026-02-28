@@ -43,6 +43,7 @@ use crate::overlay;
 use crate::primitives::dialog;
 use crate::primitives::popper;
 use crate::primitives::popper_arrow;
+use crate::primitives::portal_inherited;
 use crate::primitives::trigger_a11y;
 use crate::{OverlayController, OverlayPresence, OverlayRequest};
 
@@ -202,7 +203,8 @@ pub fn select_listbox_semantics_id<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     overlay_root_name: &str,
 ) -> GlobalElementId {
-    cx.with_root_name(overlay_root_name, |cx| {
+    let inherited = portal_inherited::PortalInherited::capture(cx);
+    portal_inherited::with_root_name_inheriting(cx, overlay_root_name, inherited, |cx| {
         select_listbox_semantics_id_in_scope::<H>(cx)
     })
 }
@@ -499,6 +501,18 @@ pub fn select_mouse_open_guard_pointer_up_decision(
     guard: &mut SelectMouseOpenGuardState,
     up: PointerUpCx,
 ) -> SelectMouseOpenGuardPointerUpDecision {
+    if let (Some(last_tick), Some(decision)) = (
+        guard.last_pointer_up_tick_id,
+        guard.last_pointer_up_decision,
+    ) {
+        // The same platform pointer-up can be routed to multiple elements (e.g. trigger capture +
+        // barrier dismissal). Prefer a tolerant tick match so both consumers observe the same
+        // decision even if the runtime assigns adjacent `TickId`s during routing.
+        if up.tick_id == last_tick || up.tick_id.0 == last_tick.0 + 1 {
+            return decision;
+        }
+    }
+
     if up.button != fret_core::MouseButton::Left {
         return SelectMouseOpenGuardPointerUpDecision::NoGuard;
     }
@@ -506,15 +520,21 @@ pub fn select_mouse_open_guard_pointer_up_decision(
         return SelectMouseOpenGuardPointerUpDecision::NoGuard;
     }
 
-    let Some(down) = guard.take() else {
-        return SelectMouseOpenGuardPointerUpDecision::NoGuard;
+    let decision = if let Some(down) = guard.take() {
+        let up_pos = up.position_window.unwrap_or(up.position);
+        if select_mouse_open_is_within_click_slop(down, up_pos) {
+            SelectMouseOpenGuardPointerUpDecision::Suppress
+        } else {
+            SelectMouseOpenGuardPointerUpDecision::Allow
+        }
+    } else {
+        SelectMouseOpenGuardPointerUpDecision::NoGuard
     };
 
-    if select_mouse_open_is_within_click_slop(down, up.position) {
-        SelectMouseOpenGuardPointerUpDecision::Suppress
-    } else {
-        SelectMouseOpenGuardPointerUpDecision::Allow
-    }
+    guard.last_pointer_up_tick_id = Some(up.tick_id);
+    guard.last_pointer_up_decision = Some(decision);
+
+    decision
 }
 
 pub fn select_mouse_open_guard_pointer_up_decision_shared(
@@ -641,6 +661,11 @@ pub struct SelectItemAlignedElementInputs {
     pub viewport: GlobalElementId,
     pub listbox: GlobalElementId,
     pub content_panel: GlobalElementId,
+    /// Optional scroll max offset (Y) for the viewport.
+    ///
+    /// When provided, it is used to derive a stable `items_height` (`viewport.scrollHeight`) even
+    /// when the listbox content element's bounds are clipped by the scroll viewport.
+    pub scroll_max_offset_y: Option<Px>,
     /// Optional probe element that represents the intrinsic content width (e.g. max item label).
     ///
     /// When present, the measured width is used as an additional lower bound for the item-aligned
@@ -684,11 +709,16 @@ pub fn select_item_aligned_layout_from_elements<H: UiHost>(
         .or_else(|| overlay::anchor_bounds_for_element(cx, inputs.selected_item_text))?;
     // The headless solver expects `items_height` to match Radix `viewport.scrollHeight`.
     //
-    // In our shadcn ports `inputs.listbox` typically points at the element that lays out the full
-    // listbox content (including the `SelectViewport` padding such as `p-1`). Because this element
-    // grows to fit all rows even when clipped by the scroll viewport, its laid-out height is the
-    // closest analogue to `scrollHeight`.
-    let items_height = listbox.size.height;
+    // Prefer deriving this from the viewport height plus its max scroll offset when available,
+    // since scroll implementations may clip content element bounds in a way that makes "content
+    // height" appear equal to the viewport height for short lists.
+    let items_height = if let Some(max_y) = inputs.scroll_max_offset_y {
+        Px((viewport.size.height.0 + max_y.0).max(0.0))
+    } else {
+        // Fallback to content bounds: in many shadcn ports `inputs.listbox` points at the element
+        // that lays out the full listbox content (including viewport padding such as `p-1`).
+        listbox.size.height
+    };
 
     if let Some(probe_id) = inputs.content_width_probe
         && let Some(probe) = cx.last_bounds_for_element(probe_id)
@@ -1067,11 +1097,15 @@ impl SelectTriggerKeyState {
 #[derive(Debug, Default)]
 pub struct SelectMouseOpenGuardState {
     mouse_open_down_pos: Option<Point>,
+    last_pointer_up_tick_id: Option<fret_runtime::TickId>,
+    last_pointer_up_decision: Option<SelectMouseOpenGuardPointerUpDecision>,
 }
 
 impl SelectMouseOpenGuardState {
     pub fn clear(&mut self) {
         self.mouse_open_down_pos = None;
+        self.last_pointer_up_tick_id = None;
+        self.last_pointer_up_decision = None;
     }
 
     pub fn record_if_opened(&mut self, was_open: bool, now_open: bool, down_pos: Point) {
@@ -1080,6 +1114,8 @@ impl SelectMouseOpenGuardState {
         } else {
             self.mouse_open_down_pos = None;
         }
+        self.last_pointer_up_tick_id = None;
+        self.last_pointer_up_decision = None;
     }
 
     pub fn take(&mut self) -> Option<Point> {
@@ -2131,6 +2167,7 @@ mod tests {
                         viewport: viewport_id.get().expect("viewport id"),
                         listbox: listbox_id.get().expect("listbox id"),
                         content_panel: content_panel_id.get().expect("content_panel id"),
+                        scroll_max_offset_y: None,
                         content_width_probe: None,
                         selected_item: selected_item_id.get().expect("selected_item id"),
                         selected_item_text: selected_item_text_id
@@ -2347,20 +2384,26 @@ mod tests {
         fret_ui::elements::with_element_cx(&mut app, window, b, "test", |cx| {
             let overlay_root_name = "select-overlay";
             let expected = select_listbox_semantics_id::<App>(cx, overlay_root_name);
-            let actual = cx.with_root_name(overlay_root_name, |cx| {
-                select_listbox_pressable_with_id_props::<App>(cx, |_cx, _st, _id| {
-                    (
-                        PressableProps {
-                            layout: LayoutStyle::default(),
-                            enabled: true,
-                            focusable: false,
-                            ..Default::default()
-                        },
-                        Vec::new(),
-                    )
-                })
-                .id
-            });
+            let inherited = portal_inherited::PortalInherited::capture(cx);
+            let actual = portal_inherited::with_root_name_inheriting(
+                cx,
+                overlay_root_name,
+                inherited,
+                |cx| {
+                    select_listbox_pressable_with_id_props::<App>(cx, |_cx, _st, _id| {
+                        (
+                            PressableProps {
+                                layout: LayoutStyle::default(),
+                                enabled: true,
+                                focusable: false,
+                                ..Default::default()
+                            },
+                            Vec::new(),
+                        )
+                    })
+                    .id
+                },
+            );
             assert_eq!(expected, actual);
         });
     }
@@ -2826,6 +2869,60 @@ mod tests {
         ));
         assert!(host.models_mut().get_copied(&open).unwrap_or(false));
         assert!(host.prevented_focus_on_pointer_down);
+    }
+
+    #[test]
+    fn mouse_open_guard_pointer_up_decision_is_reusable_within_tick() {
+        let guard = select_mouse_open_guard();
+
+        select_mouse_open_guard_record_if_opened(
+            &guard,
+            false,
+            true,
+            Point::new(Px(10.0), Px(12.0)),
+        );
+
+        let up = PointerUpCx {
+            pointer_id: fret_core::PointerId(0),
+            position: Point::new(Px(10.0), Px(12.0)),
+            position_local: Point::new(Px(10.0), Px(12.0)),
+            position_window: Some(Point::new(Px(10.0), Px(12.0))),
+            tick_id: fret_runtime::TickId(42),
+            pixels_per_point: 1.0,
+            velocity_window: None,
+            button: fret_core::MouseButton::Left,
+            modifiers: Modifiers::default(),
+            is_click: true,
+            click_count: 1,
+            pointer_type: PointerType::Mouse,
+        };
+
+        assert_eq!(
+            select_mouse_open_guard_pointer_up_decision_shared(&guard, up),
+            SelectMouseOpenGuardPointerUpDecision::Suppress
+        );
+        assert_eq!(
+            select_mouse_open_guard_pointer_up_decision_shared(&guard, up),
+            SelectMouseOpenGuardPointerUpDecision::Suppress
+        );
+
+        let up_next_tick = PointerUpCx {
+            tick_id: fret_runtime::TickId(43),
+            ..up
+        };
+        assert_eq!(
+            select_mouse_open_guard_pointer_up_decision_shared(&guard, up_next_tick),
+            SelectMouseOpenGuardPointerUpDecision::Suppress
+        );
+
+        let up_clear = PointerUpCx {
+            tick_id: fret_runtime::TickId(44),
+            ..up
+        };
+        assert_eq!(
+            select_mouse_open_guard_pointer_up_decision_shared(&guard, up_clear),
+            SelectMouseOpenGuardPointerUpDecision::NoGuard
+        );
     }
 
     #[test]

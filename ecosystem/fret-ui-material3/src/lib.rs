@@ -56,7 +56,7 @@ pub use autocomplete::{
 };
 pub use badge::{Badge, BadgePlacement, BadgeValue};
 pub use bottom_sheet::{DockedBottomSheet, DockedBottomSheetVariant, ModalBottomSheet};
-pub use button::{Button, ButtonStyle, ButtonVariant};
+pub use button::{Button, ButtonSize, ButtonStyle, ButtonVariant};
 pub use card::{Card, CardStyle, CardVariant};
 pub use carousel_item::{CarouselItem, CarouselItemStyle, CarouselItemVariant};
 pub use checkbox::{Checkbox, CheckboxStyle};

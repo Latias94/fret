@@ -153,12 +153,13 @@ This ADR is partially implemented in a way that preserves the intended crate bou
     sampling while waiting for the demo to exit.
   - Tooling can optionally gate on process footprint thresholds (CPU/memory) and writes `check.resource_footprint.json` as
     evidence (fails `diag repro` on threshold violations).
-  - Evidence: `crates/fret-diag/src/lib.rs` (`diag repro`, `pack_repro_zip_multi`; `apps/fretboard/src/diag.rs` is a thin wrapper).
+  - Evidence: `crates/fret-diag/src/diag_repro.rs` (`diag repro`), `crates/fret-diag/src/pack_zip.rs` (`pack_repro_zip_multi`);
+    `apps/fretboard/src/diag.rs` is a thin wrapper.
 - **Missing repaint checks (`fretboard`)**
   - Tooling provides multiple “missing repaint” gates, including a coarse check that fails when `semantics_fingerprint`
     changes but `scene_fingerprint` does not (`--check-semantics-changed-repainted`), and includes a small semantics diff
     summary to aid triage. When `--dump-semantics-changed-repainted-json` is set, it also writes a structured
-    `check.semantics_changed_repainted.json` next to `bundle.json` for machine consumption.
+    `check.semantics_changed_repainted.json` next to the bundle artifact for machine consumption.
   - Evidence: `crates/fret-diag/src/stats.rs` (`check_bundle_for_semantics_changed_repainted*`).
 - **Redraw-efficiency gates (`fretboard`)**
   - Tooling provides an “idle should not paint” gate (`--check-idle-no-paint-min <n>`) that asserts a trailing streak of

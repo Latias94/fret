@@ -1,5 +1,79 @@
 use super::*;
 
+fn resolve_run_script_source(workspace_root: &Path, raw: &str) -> Result<PathBuf, String> {
+    let raw = raw.trim();
+    if raw.is_empty() {
+        return Err("missing script path or script id".to_string());
+    }
+
+    let candidate = resolve_path(workspace_root, PathBuf::from(raw));
+    if candidate.is_file() {
+        return Ok(candidate);
+    }
+
+    // A common footgun is putting flags before the required script input.
+    if raw.starts_with('-') {
+        return Err(format!(
+            "missing script path or script id (first argument must be a script; got `{raw}`)\n\
+hint: try `fretboard diag run <script.json|script_id> ...`"
+        ));
+    }
+
+    // If the user passed an explicit path (contains a separator) but it doesn't exist, treat it
+    // as a path typo rather than an id.
+    if raw.contains('/') || raw.contains('\\') {
+        return Err(format!(
+            "script file not found: {}\n\
+hint: if you meant a promoted script id, pass the id without any path separators (see tools/diag-scripts/index.json)",
+            candidate.display()
+        ));
+    }
+
+    let registry_path = crate::script_registry::promoted_registry_default_path(workspace_root);
+    if !registry_path.is_file() {
+        return Err(format!(
+            "script file not found: {}\n\
+and promoted scripts registry is missing: {}\n\
+hint: pass an explicit path, or ensure `tools/diag-scripts/index.json` exists (run `python tools/check_diag_scripts_registry.py --write`)",
+            candidate.display(),
+            registry_path.display()
+        ));
+    }
+
+    let registry = crate::script_registry::PromotedScriptRegistry::load_from_path(&registry_path)?;
+    let query = crate::script_registry::normalize_script_id_query(raw);
+
+    if let Some(entry) = registry.resolve_id(&query) {
+        let resolved = resolve_path(workspace_root, PathBuf::from(&entry.path));
+        if resolved.is_file() {
+            return Ok(resolved);
+        }
+        return Err(format!(
+            "promoted script id resolved to a missing path: {query}\n\
+path: {}\n\
+hint: regenerate tools/diag-scripts/index.json (python tools/check_diag_scripts_registry.py --write)",
+            resolved.display()
+        ));
+    }
+
+    let suggestions = registry.suggest_ids(&query, 5);
+    if suggestions.is_empty() {
+        return Err(format!(
+            "unknown script id (and no file exists at workspace root): {query}\n\
+hint: use an explicit path like `tools/diag-scripts/.../script.json`"
+        ));
+    }
+
+    let mut msg = format!(
+        "unknown script id (and no file exists at workspace root): {query}\n\
+hint: try one of these promoted ids:"
+    );
+    for s in suggestions {
+        msg.push_str(&format!("\n- {s}"));
+    }
+    Err(msg)
+}
+
 #[derive(Debug, Clone)]
 pub(crate) struct RunChecks {
     pub check_chart_sampling_window_shifts_min: Option<u64>,
@@ -104,6 +178,7 @@ pub(crate) struct RunChecks {
 #[derive(Debug, Clone)]
 pub(crate) struct RunCmdContext {
     pub pack_after_run: bool,
+    pub ensure_ai_packet: bool,
     pub rest: Vec<String>,
     pub workspace_root: PathBuf,
     pub resolved_out_dir: PathBuf,
@@ -117,6 +192,7 @@ pub(crate) struct RunCmdContext {
     pub pack_include_root_artifacts: bool,
     pub pack_include_triage: bool,
     pub pack_include_screenshots: bool,
+    pub pack_schema2_only: bool,
     pub stats_top: usize,
     pub sort_override: Option<BundleStatsSort>,
     pub warmup_frames: u64,
@@ -131,6 +207,7 @@ pub(crate) struct RunCmdContext {
     pub launch_env: Vec<(String, String)>,
     pub reuse_launch: bool,
     pub launch_high_priority: bool,
+    pub launch_write_bundle_json: bool,
     pub keep_open: bool,
     pub checks: RunChecks,
 }
@@ -139,6 +216,7 @@ pub(crate) struct RunCmdContext {
 pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
     let RunCmdContext {
         pack_after_run,
+        ensure_ai_packet,
         rest,
         workspace_root,
         resolved_out_dir,
@@ -152,6 +230,7 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         pack_include_root_artifacts,
         pack_include_triage,
         pack_include_screenshots,
+        pack_schema2_only,
         stats_top,
         sort_override,
         warmup_frames,
@@ -166,6 +245,7 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         launch_env,
         reuse_launch,
         launch_high_priority,
+        launch_write_bundle_json,
         keep_open,
         checks,
     } = ctx;
@@ -274,7 +354,10 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
 
     let (bundle_doctor_mode, rest) = parse_bundle_doctor_mode_from_rest(&rest)?;
     let Some(src) = rest.first().cloned() else {
-        return Err("missing script path (try: fretboard diag run ./script.json)".to_string());
+        return Err(
+            "missing script path or script id (try: fretboard diag run <script.json|script_id>)"
+                .to_string(),
+        );
     };
     if rest.len() != 1 {
         return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
@@ -292,11 +375,12 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         }
     }
 
-    let wants_pack = pack_after_run
+    let wants_pack_zip = pack_after_run
         || pack_out.is_some()
         || pack_include_root_artifacts
         || pack_include_triage
         || pack_include_screenshots;
+    let wants_post_run_bundle = wants_pack_zip || ensure_ai_packet;
 
     let mut pack_defaults = (
         pack_include_root_artifacts,
@@ -307,7 +391,7 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         pack_defaults = (true, true, true);
     }
 
-    let src = resolve_path(&workspace_root, PathBuf::from(src));
+    let src = resolve_run_script_source(&workspace_root, &src)?;
     let use_devtools_ws =
         devtools_ws_url.is_some() || devtools_token.is_some() || devtools_session_id.is_some();
     if use_devtools_ws {
@@ -325,8 +409,22 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         })?;
 
         std::fs::create_dir_all(&resolved_out_dir).map_err(|e| e.to_string())?;
-        let script_json = serde_json::from_slice(&std::fs::read(&src).map_err(|e| e.to_string())?)
-            .map_err(|e| e.to_string())?;
+        let (script_json, upgraded) = crate::script_execution::load_script_json_for_execution(
+            &src,
+            crate::script_execution::ScriptLoadPolicy {
+                tool_launched: false,
+                write_failure: write_tooling_failure_script_result_if_missing,
+                failure_note: None,
+                include_stage_in_note: true,
+            },
+            &resolved_script_result_path,
+        )?;
+        if upgraded {
+            eprintln!(
+                "warning: script schema_version=1 detected; tooling upgraded to schema_version=2 for execution (source={})",
+                src.display()
+            );
+        }
 
         let wants_post_run_checks = check_stale_paint_test_id.is_some()
             || check_stale_scene_test_id.is_some()
@@ -414,7 +512,7 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
             || check_retained_vlist_keep_alive_reuse_min.is_some()
             || check_retained_vlist_keep_alive_budget.is_some();
 
-        let _ = write_script(&src, &resolved_script_path);
+        let _ = write_json_value(&resolved_script_path, &script_json);
 
         let connected = connect_devtools_ws_tooling(
             ws_url.as_str(),
@@ -437,7 +535,7 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
             &resolved_out_dir,
             &connected,
             script_json,
-            wants_post_run_checks || wants_pack,
+            wants_post_run_checks || wants_pack_zip || ensure_ai_packet,
             trace_chrome,
             Some("diag-run"),
             None,
@@ -516,7 +614,31 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
             )?;
         }
 
-        if wants_pack {
+        if ensure_ai_packet {
+            if let Some(bundle_path) = bundle_path.as_ref() {
+                let bundle_dir = resolve_bundle_root_dir(bundle_path)?;
+                let packet_dir = bundle_dir.join("ai.packet");
+                match crate::commands::ai_packet::ensure_ai_packet_dir_best_effort(
+                    Some(bundle_path),
+                    &bundle_dir,
+                    &packet_dir,
+                    pack_defaults.1,
+                    stats_top,
+                    sort_override,
+                    warmup_frames,
+                    None,
+                ) {
+                    Ok(()) => println!("AI-PACKET {}", packet_dir.display()),
+                    Err(err) => eprintln!("AI-PACKET-ERROR {err}"),
+                }
+            } else {
+                eprintln!(
+                    "AI-PACKET-ERROR no bundle artifact captured over DevTools WS (ensure bundles are embedded or the runtime bundle dir is accessible)"
+                );
+            }
+        }
+
+        if wants_pack_zip {
             if let Some(bundle_path) = bundle_path.as_ref() {
                 let bundle_dir = resolve_bundle_root_dir(bundle_path)?;
                 let out = pack_out
@@ -539,6 +661,7 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
                     pack_defaults.0,
                     pack_defaults.1,
                     pack_defaults.2,
+                    pack_schema2_only,
                     false,
                     false,
                     &artifacts_root,
@@ -577,14 +700,24 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         &launch,
         &run_launch_env,
         &workspace_root,
-        &resolved_out_dir,
         &resolved_ready_path,
         &resolved_exit_path,
+        &fs_transport_cfg,
         pack_defaults.2 || check_pixels_changed_test_id.is_some() || script_wants_screenshots,
+        launch_write_bundle_json,
         timeout_ms,
         poll_ms,
         launch_high_priority,
-    )?;
+    )
+    .inspect_err(|err| {
+        write_tooling_failure_script_result_if_missing(
+            &resolved_script_result_path,
+            "tooling.launch.failed",
+            err,
+            "tooling_error",
+            Some("maybe_launch_demo".to_string()),
+        );
+    })?;
     let _stop_guard = if keep_open {
         None
     } else {
@@ -611,34 +744,28 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
             Some("connect_filesystem_tooling".to_string()),
         );
     })?;
-    let script_json: serde_json::Value =
-        serde_json::from_slice(&std::fs::read(&src).map_err(|e| {
-            let err = e.to_string();
-            write_tooling_failure_script_result_if_missing(
-                &resolved_script_result_path,
-                "tooling.script.read_failed",
-                &err,
-                "tooling_error",
-                Some("read script json".to_string()),
-            );
-            err
-        })?)
-        .map_err(|e| {
-            let err = e.to_string();
-            write_tooling_failure_script_result_if_missing(
-                &resolved_script_result_path,
-                "tooling.script.parse_failed",
-                &err,
-                "tooling_error",
-                Some("parse script json".to_string()),
-            );
-            err
-        })?;
+    let tool_launched = launch.is_some() || reuse_launch;
+    let (script_json, upgraded) = crate::script_execution::load_script_json_for_execution(
+        &src,
+        crate::script_execution::ScriptLoadPolicy {
+            tool_launched,
+            write_failure: write_tooling_failure_script_result_if_missing,
+            failure_note: None,
+            include_stage_in_note: true,
+        },
+        &resolved_script_result_path,
+    )?;
+    if upgraded {
+        eprintln!(
+            "warning: script schema_version=1 detected; tooling upgraded to schema_version=2 for execution (source={})",
+            src.display()
+        );
+    }
     let (script_result, _bundle_path) = run_script_over_transport(
         &resolved_out_dir,
         &connected,
         script_json,
-        wants_pack,
+        wants_post_run_bundle,
         trace_chrome,
         Some("diag-run"),
         None,
@@ -788,7 +915,7 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
             )?;
         }
 
-    if wants_pack {
+    if wants_post_run_bundle {
         let mut bundle_path = wait_for_bundle_artifact_from_script_result(
             &resolved_out_dir,
             &result,
@@ -810,40 +937,61 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
                 run_bundle_doctor_for_bundle_path(&bundle_path, bundle_doctor_mode, warmup_frames)?;
             }
             let bundle_dir = resolve_bundle_root_dir(&bundle_path)?;
-            let out = pack_out
-                .clone()
-                .map(|p| resolve_path(&workspace_root, p))
-                .unwrap_or_else(|| default_pack_out_path(&resolved_out_dir, &bundle_dir));
 
-            let artifacts_root = if bundle_dir.starts_with(&resolved_out_dir) {
-                resolved_out_dir.clone()
-            } else {
-                bundle_dir
-                    .parent()
-                    .unwrap_or(&resolved_out_dir)
-                    .to_path_buf()
-            };
+            if ensure_ai_packet {
+                let packet_dir = bundle_dir.join("ai.packet");
+                match crate::commands::ai_packet::ensure_ai_packet_dir_best_effort(
+                    Some(&bundle_path),
+                    &bundle_dir,
+                    &packet_dir,
+                    pack_defaults.1,
+                    stats_top,
+                    sort_override,
+                    warmup_frames,
+                    None,
+                ) {
+                    Ok(()) => println!("AI-PACKET {}", packet_dir.display()),
+                    Err(err) => eprintln!("AI-PACKET-ERROR {err}"),
+                }
+            }
 
-            if let Err(err) = pack_bundle_dir_to_zip(
-                &bundle_dir,
-                &out,
-                pack_defaults.0,
-                pack_defaults.1,
-                pack_defaults.2,
-                false,
-                false,
-                &artifacts_root,
-                stats_top,
-                sort_override.unwrap_or(BundleStatsSort::Invalidation),
-                warmup_frames,
-            ) {
-                eprintln!("PACK-ERROR {err}");
-            } else {
-                println!("PACK {}", out.display());
+            if wants_pack_zip {
+                let out = pack_out
+                    .clone()
+                    .map(|p| resolve_path(&workspace_root, p))
+                    .unwrap_or_else(|| default_pack_out_path(&resolved_out_dir, &bundle_dir));
+
+                let artifacts_root = if bundle_dir.starts_with(&resolved_out_dir) {
+                    resolved_out_dir.clone()
+                } else {
+                    bundle_dir
+                        .parent()
+                        .unwrap_or(&resolved_out_dir)
+                        .to_path_buf()
+                };
+
+                if let Err(err) = pack_bundle_dir_to_zip(
+                    &bundle_dir,
+                    &out,
+                    pack_defaults.0,
+                    pack_defaults.1,
+                    pack_defaults.2,
+                    pack_schema2_only,
+                    false,
+                    false,
+                    &artifacts_root,
+                    stats_top,
+                    sort_override.unwrap_or(BundleStatsSort::Invalidation),
+                    warmup_frames,
+                ) {
+                    eprintln!("PACK-ERROR {err}");
+                } else {
+                    println!("PACK {}", out.display());
+                }
             }
         } else {
             eprintln!(
-                "PACK-ERROR no bundle artifact found (add `capture_bundle` or enable script auto-dumps)"
+                "POST-RUN-ERROR no bundle artifact found (add `capture_bundle` or enable script auto-dumps)"
             );
         }
     }

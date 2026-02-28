@@ -196,7 +196,8 @@ fn alert_with_patch<H: UiHost>(
             .border_color(ColorRef::Color(border))
             .text_color(ColorRef::Color(fg))
             .merge(chrome_override),
-        LayoutRefinement::default().merge(layout_override),
+        // shadcn/ui v4: Alert root uses `w-full` by default.
+        LayoutRefinement::default().w_full().merge(layout_override),
     );
 
     if let Some(from) = theme.color_by_key("foreground") {
@@ -285,8 +286,8 @@ impl AlertTitle {
             .text_size_px(px)
             .line_height_px(line_height)
             .font_weight(FontWeight::MEDIUM)
-            .wrap(TextWrap::Word)
-            .overflow(TextOverflow::Clip)
+            // Upstream shadcn/ui `AlertTitle` uses `line-clamp-1` (single-line truncation).
+            .truncate()
             .text_color(ColorRef::Color(fg))
             .into_element(cx)
     }
@@ -355,5 +356,30 @@ mod tests {
             element.semantics_decoration.as_ref().and_then(|d| d.role),
             Some(SemanticsRole::Alert)
         );
+    }
+
+    #[test]
+    fn alert_title_defaults_to_single_line_truncation() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(100.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            AlertTitle::new("A very long alert title that should truncate").into_element(cx)
+        });
+
+        let ElementKind::Text(props) = &element.kind else {
+            panic!(
+                "expected AlertTitle to be a Text element, got {:?}",
+                element.kind
+            );
+        };
+
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
     }
 }

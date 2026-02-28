@@ -1720,12 +1720,10 @@ dependencies = [
  "fret-framework",
  "fret-icons",
  "fret-launch",
- "fret-router-ui",
  "fret-runtime",
  "fret-ui",
  "fret-ui-kit",
  "fret-ui-shadcn",
- "fret-workspace",
  "slotmap",
  "thiserror 2.0.18",
  "wgpu",
@@ -2123,6 +2121,7 @@ dependencies = [
  "serde_json",
  "slotmap",
  "time",
+ "tokio",
  "tracing",
  "tracing-subscriber",
  "ureq",
@@ -2270,24 +2269,43 @@ dependencies = [
 name = "fret-launch"
 version = "0.1.0"
 dependencies = [
+ "fret-launch-core",
+ "fret-launch-desktop",
+ "fret-launch-web",
+]
+
+[[package]]
+name = "fret-launch-core"
+version = "0.1.0"
+dependencies = [
+ "bytemuck",
+ "fret-app",
+ "fret-core",
+ "fret-render",
+ "fret-runtime",
+ "subsecond",
+ "thiserror 2.0.18",
+ "wgpu",
+ "winit",
+]
+
+[[package]]
+name = "fret-launch-desktop"
+version = "0.1.0"
+dependencies = [
  "anyhow",
  "block2 0.6.2",
  "bytemuck",
  "fret-app",
  "fret-core",
- "fret-fonts",
+ "fret-diag-protocol",
+ "fret-launch-core",
  "fret-platform",
  "fret-platform-native",
- "fret-platform-web",
  "fret-render",
- "fret-runner-web",
  "fret-runner-winit",
  "fret-runtime",
- "fret-webview",
- "fret-webview-wry",
- "getrandom 0.3.4",
  "image",
- "js-sys",
  "keyboard-types",
  "objc",
  "objc2 0.6.3",
@@ -2305,14 +2323,34 @@ dependencies = [
  "thiserror 2.0.18",
  "tracing",
  "tungstenite",
- "wasm-bindgen",
- "wasm-bindgen-futures",
- "web-sys",
  "wgpu",
  "windows 0.62.2",
  "windows-sys 0.61.2",
  "winit",
  "zbus",
+]
+
+[[package]]
+name = "fret-launch-web"
+version = "0.1.0"
+dependencies = [
+ "fret-app",
+ "fret-core",
+ "fret-fonts",
+ "fret-launch-core",
+ "fret-platform-web",
+ "fret-render",
+ "fret-runner-web",
+ "fret-runner-winit",
+ "fret-runtime",
+ "getrandom 0.3.4",
+ "js-sys",
+ "tracing",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
+ "wgpu",
+ "winit",
 ]
 
 [[package]]
@@ -2967,6 +3005,7 @@ version = "0.1.0"
 dependencies = [
  "fret-app",
  "fret-core",
+ "fret-dnd",
  "fret-runtime",
  "fret-ui",
  "fret-ui-kit",

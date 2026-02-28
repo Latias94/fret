@@ -1,6 +1,6 @@
 # Length percentage semantics v1 — TODO
 
-Last updated: 2026-02-24
+Last updated: 2026-02-25
 
 This file is the *living checklist* for `length-percentage-semantics-v1`.
 Use `length-percentage-semantics-v1-milestones.md` for phase planning.
@@ -57,7 +57,7 @@ Use `length-percentage-semantics-v1-milestones.md` for phase planning.
 - [x] Migrate components to native percent/fraction fields:
   - [x] carousel (basis-full default)
     - Evidence: `ecosystem/fret-ui-shadcn/src/carousel.rs` (basis-full uses `LengthRefinement::Fill`)
-    - Gate: `tools/diag-scripts/ui-gallery-carousel-basic-screenshot.json`
+    - Gate: `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-basic-screenshot.json`
   - [x] overlay roots / sheets that currently rely on explicit px extents
     - Evidence: `ecosystem/fret-ui-shadcn/src/sheet.rs` (remove viewport clamp; use `Length::Fill`/`Length::Fraction` max constraints)
     - Gate: `ecosystem/fret-ui-shadcn/src/sheet.rs` (`sheet_bottom_auto_max_height_fraction_clamps_tall_content_with_edge_gap`)
@@ -82,6 +82,6 @@ Use `length-percentage-semantics-v1-milestones.md` for phase planning.
 Known gates in this workstream:
 
 - M0/M1/M2 unit tests: `crates/fret-ui/src/declarative/tests/layout/basics.rs`
-- Carousel basic screenshot gate: `tools/diag-scripts/ui-gallery-carousel-basic-screenshot.json`
+- Carousel basic screenshot gate: `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-basic-screenshot.json`
 - Sheet escape focus-restore gate: `tools/diag-scripts/ui-gallery-sheet-escape-focus-restore.json`
 - Drawer docs layout smoke gate: `tools/diag-scripts/ui-gallery-drawer-docs-smoke.json`

@@ -8,6 +8,7 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 documentation.workspace = true
+description = "Lucide icon pack integration for Fret (embedded SVGs + optional app registry wiring)."
 
 [features]
 default = ["semantic-ui"]
@@ -15,7 +16,7 @@ semantic-ui = []
 app-integration = ["dep:fret-app", "dep:fret-core"]
 
 [dependencies]
-fret-icons = { path = "../fret-icons" }
-fret-app = { path = "../../crates/fret-app", optional = true }
-fret-core = { path = "../../crates/fret-core", optional = true }
+fret-icons = { version = "0.1.0", path = "../fret-icons" }
+fret-app = { version = "0.1.0", path = "../../crates/fret-app", optional = true }
+fret-core = { version = "0.1.0", path = "../../crates/fret-core", optional = true }
 rust-embed.workspace = true

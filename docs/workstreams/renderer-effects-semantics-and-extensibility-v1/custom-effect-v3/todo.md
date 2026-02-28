@@ -78,7 +78,7 @@ This TODO tracks the V3 work as landable steps. It intentionally starts with “
     - `crates/fret-render-wgpu/src/renderer/types.rs` (`RenderPerfSnapshot.custom_effect_v3_pyramid_cache_{hits,misses}`)
 - [x] M2.1 (contract): propose an explicit scene-level “glass group” primitive (ADR) to share snapshot/pyramid
       across multiple surfaces deterministically.
-  - ADR draft: `docs/adr/0302-custom-effect-v3-backdrop-source-groups.md`
+  - ADR draft: `docs/adr/0305-custom-effect-v3-backdrop-source-groups.md`
 - [x] M2.2 (wgpu): implement group snapshot + shared sources.
   - Evidence:
     - `crates/fret-core/src/scene/{mod.rs,validate.rs,fingerprint.rs}`

@@ -19,7 +19,46 @@ pub(super) fn sidebar_view(
     selected_page: &Model<Arc<str>>,
     workspace_tabs: &Model<Vec<Arc<str>>>,
 ) -> AnyElement {
+    // When the sidebar is view-cached, the input widget can still update its own subtree without
+    // forcing the cached page list to be recomputed. Read `nav_query` at this outer level so a
+    // query change invalidates the shell and we can safely bypass caching while searching.
+    let query = cx
+        .get_model_cloned(nav_query, Invalidation::Layout)
+        .unwrap_or_default();
+    let searching = !query.trim().is_empty();
+
     if cache_sidebar {
+        if searching {
+            return cx.keyed("ui_gallery.sidebar.search", |cx| {
+                let selected = cx
+                    .get_model_cloned(selected_page, Invalidation::Layout)
+                    .unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
+
+                if (bisect & BISECT_SIMPLE_SIDEBAR) != 0 {
+                    cx.container(
+                        decl_style::container_props(
+                            theme,
+                            ChromeRefinement::default()
+                                .bg(ColorRef::Color(theme.color_token("muted")))
+                                .p(Space::N4),
+                            LayoutRefinement::default().w_px(Px(280.0)).h_full(),
+                        ),
+                        |cx| vec![cx.text("Sidebar (disabled)")],
+                    )
+                } else {
+                    ui::sidebar_view(
+                        cx,
+                        theme,
+                        selected.as_ref(),
+                        query.as_str(),
+                        nav_query.clone(),
+                        selected_page.clone(),
+                        workspace_tabs.clone(),
+                    )
+                }
+            });
+        }
+
         cx.view_cache(
             {
                 let mut layout = LayoutStyle::default();
@@ -128,6 +167,12 @@ pub(super) fn content_view(
                 }
             },
             |cx| {
+                // Read `selected_page` within the view-cache scope so model invalidations can mark
+                // this cache root dirty and force a rerender. If the model is only read outside the
+                // boundary, view-cache reuse can incorrectly keep showing the previous page.
+                let selected = cx
+                    .get_model_cloned(selected_page, Invalidation::Layout)
+                    .unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
                 vec![cx.keyed(("ui_gallery.content", selected.as_ref()), |cx| {
                     if (bisect & BISECT_SIMPLE_CONTENT) != 0 {
                         cx.container(

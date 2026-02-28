@@ -12,9 +12,12 @@ pub(crate) fn dispatch_simple(
     resolved_trigger_path: &Path,
     trace_out: Option<PathBuf>,
     pack_out: &Option<PathBuf>,
+    ensure_ai_packet: bool,
+    pack_ai_only: bool,
     pack_include_root_artifacts: bool,
     pack_include_triage: bool,
     pack_include_screenshots: bool,
+    pack_schema2_only: bool,
     triage_out: &Option<PathBuf>,
     lint_out: &Option<PathBuf>,
     meta_out: &Option<PathBuf>,
@@ -55,7 +58,14 @@ pub(crate) fn dispatch_simple(
 ) -> Option<Result<(), String>> {
     let res = match sub {
         "path" => commands::session::cmd_path(rest, pack_after_run, resolved_trigger_path),
-        "poke" => commands::session::cmd_poke(rest, pack_after_run, resolved_trigger_path),
+        "poke" => commands::session::cmd_poke(
+            rest,
+            pack_after_run,
+            resolved_out_dir,
+            resolved_trigger_path,
+            timeout_ms,
+            poll_ms,
+        ),
         "latest" => commands::session::cmd_latest(rest, pack_after_run, resolved_out_dir),
         "trace" => {
             if pack_after_run {
@@ -64,7 +74,7 @@ pub(crate) fn dispatch_simple(
             (|| -> Result<(), String> {
                 let Some(src) = rest.first().cloned() else {
                     return Err(
-                        "missing bundle path (try: fretboard diag trace <bundle_dir|bundle.json|bundle.schema2.json>)"
+                        "missing bundle artifact path (try: fretboard diag trace <bundle_dir|bundle.json|bundle.schema2.json>)"
                             .to_string(),
                     );
                 };
@@ -88,9 +98,12 @@ pub(crate) fn dispatch_simple(
             workspace_root,
             resolved_out_dir,
             pack_out.clone(),
+            ensure_ai_packet,
+            pack_ai_only,
             pack_include_root_artifacts,
             pack_include_triage,
             pack_include_screenshots,
+            pack_schema2_only,
             stats_top,
             sort_override,
             warmup_frames,

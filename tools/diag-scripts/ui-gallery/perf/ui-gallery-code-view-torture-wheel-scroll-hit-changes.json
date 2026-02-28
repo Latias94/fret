@@ -1,0 +1,55 @@
+{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "code_view_torture" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-code-view-torture" },
+        "padding_px": 8.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-code-view-torture" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-code-view-torture" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 20 },
+
+    { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-gallery-code-view-root" } },
+    { "type": "wait_frames", "n": 5 },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-code-view-root" }, "delta_y": -240.0 },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-code-view-root" }, "delta_y": -240.0 },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-code-view-root" }, "delta_y": -240.0 },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-code-view-root" }, "delta_y": -240.0 },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-code-view-root" }, "delta_y": -240.0 },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-code-view-root" }, "delta_y": -240.0 },
+    { "type": "wait_frames", "n": 5 },
+
+    { "type": "capture_bundle", "label": "ui-gallery-code-view-torture-wheel-scroll-hit-changes" }
+  ]
+}

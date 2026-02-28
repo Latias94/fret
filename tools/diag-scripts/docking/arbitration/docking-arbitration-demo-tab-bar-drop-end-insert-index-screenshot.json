@@ -1,0 +1,77 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Docking arbitration demo: tab bar drop-at-end insert marker screenshot",
+    "tags": ["docking", "tabbar", "insert_marker", "screenshots", "gate"],
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "target_hints": [
+      "Starts a tab drag in the docking arbitration demo.",
+      "Moves the cursor to the end of the tab bar to resolve insert_index.",
+      "Captures a screenshot while the tab insert marker should be visible."
+    ]
+  },
+  "steps": [
+    { "type": "set_window_inner_size", "width_px": 1600.0, "height_px": 900.0 },
+    { "type": "wait_frames", "n": 10 },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 5 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-dock-space" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-right" } },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "pointer_down",
+      "window": { "kind": "current" },
+      "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-right" },
+      "button": "left"
+    },
+    { "type": "pointer_move", "window": { "kind": "current" }, "delta_x": 20.0, "delta_y": 0.0, "steps": 12 },
+    { "type": "wait_until", "window": { "kind": "current" }, "predicate": { "kind": "dock_drag_active_is", "active": true }, "timeout_frames": 120 },
+
+    { "type": "set_cursor_in_window_logical", "window": { "kind": "current" }, "x_px": 1440.0, "y_px": 18.0 },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "wait_until",
+      "window": { "kind": "current" },
+      "predicate": { "kind": "dock_drop_resolve_source_is", "source": "tab_bar" },
+      "timeout_frames": 120
+    },
+    {
+      "type": "wait_until",
+      "window": { "kind": "current" },
+      "predicate": { "kind": "dock_drop_resolved_is_some", "some": true },
+      "timeout_frames": 120
+    },
+    {
+      "type": "wait_until",
+      "window": { "kind": "current" },
+      "predicate": { "kind": "dock_drop_resolved_zone_is", "zone": "center" },
+      "timeout_frames": 120
+    },
+    {
+      "type": "wait_until",
+      "window": { "kind": "current" },
+      "predicate": { "kind": "dock_drop_resolved_insert_index_is", "index": 1 },
+      "timeout_frames": 120
+    },
+
+    { "type": "wait_frames", "n": 6 },
+    { "type": "capture_screenshot", "label": "docking-arbitration-demo-tab-insert-marker-end" },
+
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "pointer_up", "window": { "kind": "current" } },
+    { "type": "wait_until", "window": { "kind": "current" }, "predicate": { "kind": "dock_drag_active_is", "active": false }, "timeout_frames": 240 },
+
+    { "type": "capture_bundle", "label": "docking-arbitration-demo-tab-bar-drop-end-insert-index-screenshot" }
+  ]
+}
+

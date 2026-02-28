@@ -1,0 +1,43 @@
+{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "ai shimmer" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-ai-shimmer-demo" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-ai-shimmer-demo" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-ai-shimmer-root" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 90 },
+    { "type": "capture_bundle", "label": "shimmer-a" },
+    { "type": "capture_screenshot", "label": "shimmer-a" },
+    { "type": "wait_frames", "n": 15 },
+    { "type": "capture_bundle", "label": "shimmer-b" },
+    { "type": "capture_screenshot", "label": "shimmer-b" }
+  ]
+}

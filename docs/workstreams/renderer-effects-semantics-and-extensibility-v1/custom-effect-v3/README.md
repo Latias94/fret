@@ -69,7 +69,7 @@ Work bounding:
 
 Normative contract:
 
-- `docs/adr/0301-custom-effect-v3-renderer-provided-sources.md`
+- `docs/adr/0304-custom-effect-v3-renderer-provided-sources.md`
 
 This folder tracks the fearless refactor plan to land that ADR in the wgpu backend while keeping WebGPU/WASM
 constraints visible.

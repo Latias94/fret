@@ -255,7 +255,7 @@ fn combobox_chips_with_patch<H: UiHost>(
     style_override: ComboboxStyle,
 ) -> AnyElement {
     cx.scope(|cx| {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
         let open_change_reason_model = {
             let existing = cx.with_state(ComboboxChipsState::default, |st| {
                 st.open_change_reason.clone()
@@ -343,16 +343,26 @@ fn combobox_chips_with_patch<H: UiHost>(
                 let a11y_label_for_trigger = a11y_label.clone();
 
                 let size = Size::default();
+                let (control_radius, control_text_px, button_h, button_px, button_py) = {
+                    let theme_full = Theme::global(&*cx.app);
+                    (
+                        size.control_radius(theme_full),
+                        size.control_text_px(theme_full),
+                        size.button_h(theme_full),
+                        size.button_px(theme_full),
+                        size.button_py(theme_full),
+                    )
+                };
                 let radius = chrome_patch
                     .radius
                     .as_ref()
                     .map(|m| m.resolve(&theme))
-                    .unwrap_or_else(|| size.control_radius(&theme));
+                    .unwrap_or(control_radius);
                 let ring = decl_style::focus_ring(&theme, radius);
 
                 let text_style = TextStyle {
                     font: FontId::default(),
-                    size: size.control_text_px(&theme),
+                    size: control_text_px,
                     weight: FontWeight::MEDIUM,
                     line_height: theme
                         .metric_by_key("font.line_height")
@@ -364,9 +374,9 @@ fn combobox_chips_with_patch<H: UiHost>(
                     .min_height
                     .as_ref()
                     .map(|m| m.resolve(&theme))
-                    .unwrap_or_else(|| size.button_h(&theme));
-                let pad_x = size.button_px(&theme);
-                let pad_y = size.button_py(&theme);
+                    .unwrap_or(button_h);
+                let pad_x = button_px;
+                let pad_y = button_py;
                 let border_w = chrome_patch
                     .border_width
                     .as_ref()

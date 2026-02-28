@@ -65,6 +65,8 @@ Key upstream semantics:
 
 - Pass: `CommandItem.checkmark(bool)` + `CommandShortcut` support the common "left check + right shortcut" row layout.
 - Pass: `CommandItem.children(...)` allows rich custom row content.
+- Pass: Highlighted rows use `accent` background and `accent-foreground` text (cmdk `data-[selected=true]` parity).
+- Pass: Default item icons stay `muted-foreground` even when the row is highlighted (aligns shadcn `[_svg:not([class*='text-'])]:text-muted-foreground`).
 - Pass: Default `CommandPalette` rows can render cmdk-style match highlighting (matched characters use `foreground`; non-matched characters use `muted-foreground`).
 
 ### CommandDialog

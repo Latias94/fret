@@ -5,7 +5,7 @@ use fret_core::{Axis, Color, FontId, FontWeight, Px, TextStyle};
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::{AnyElement, CrossAlign, FlexProps, MainAlign, Overflow};
 use fret_ui::scroll::VirtualListScrollHandle;
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::declarative::table::{
@@ -24,11 +24,11 @@ use crate::dropdown_menu::{
     DropdownMenu, DropdownMenuAlign, DropdownMenuEntry, DropdownMenuItem, DropdownMenuSide,
 };
 
-fn border_color(theme: &Theme) -> Color {
+fn border_color(theme: &ThemeSnapshot) -> Color {
     theme.color_token("border")
 }
 
-fn table_text_style(theme: &Theme) -> TextStyle {
+fn table_text_style(theme: &ThemeSnapshot) -> TextStyle {
     let px = theme
         .metric_by_key("component.table.text_px")
         .or_else(|| theme.metric_by_key("font.size"))
@@ -383,7 +383,7 @@ impl DataTable {
             output: _output,
         } = self;
 
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
         let border = border_color(&theme);
 
         let state_revision = state.revision(&*cx.app).unwrap_or(0);
@@ -572,7 +572,7 @@ impl DataTable {
             output,
         } = self;
 
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
         let border = border_color(&theme);
 
         let state_revision = state.revision(&*cx.app).unwrap_or(0);
@@ -589,7 +589,7 @@ impl DataTable {
         root_props.layout.overflow = Overflow::Clip;
 
         let root = cx.container(root_props, move |cx| {
-            let theme = Theme::global(&*cx.app).clone();
+            let theme = Theme::global(&*cx.app).snapshot();
             let scroll_handle = cx.with_state(VirtualListScrollHandle::new, |h| h.clone());
 
             let header_style = TextStyle {
@@ -645,7 +645,7 @@ impl DataTable {
                     }
 
                     if !column_actions_menu_enabled {
-                        let theme = Theme::global(&*cx.app).clone();
+                        let theme = Theme::global(&*cx.app).snapshot();
                         let label = (header_label)(col);
                         let style = header_style.clone();
                         let header_fg = header_fg;
@@ -728,7 +728,7 @@ impl DataTable {
                         )];
                     }
 
-                    let theme = Theme::global(&*cx.app).clone();
+                    let theme = Theme::global(&*cx.app).snapshot();
                     let label = (header_label)(col);
                     let style = header_style.clone();
                     let header_fg = header_fg;

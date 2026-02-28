@@ -1,9 +1,17 @@
 # fret
 
+> [!WARNING]
+> **Experimental — under heavy development.**
+>
+> This project is an experiment in AI-driven software development. The vast majority of the code, tests, and documentation were written by AI (Codex). Humans direct architecture, priorities, and design decisions, but have not reviewed most of the code line-by-line. Treat this accordingly — there will be bugs, rough edges, and things that don't work. Use at your own risk.
+
 Desktop-first, batteries-included entry points for building UI apps with Fret.
 
 This is an **ecosystem-level** crate. It intentionally provides a small, ergonomic surface for
 applications while keeping the framework/kernel crates (`crates/*`) policy-light.
+
+For repository overview / architecture docs, see the monorepo README:
+https://github.com/Latias94/fret
 
 ## Quick start (in this repo)
 
@@ -52,9 +60,11 @@ fn main() -> fret::Result<()> {
 ## Features
 
 - `desktop`: enable the native desktop stack (winit + wgpu) via `fret-framework/native-wgpu`.
+- `batteries`: “works out of the box” bundle (enabled by default).
+- `config-files`: load layered config files from `.fret/` (settings/keymap/menubar). Enabled by default.
 - `diagnostics`: enable default diagnostics (tracing + panic hook).
 - `ui-assets`: enable UI render-asset caches (images/SVG) and install default budgets.
-- `icons-lucide` / `icons-radix`: install a built-in icon pack (mutually exclusive).
+- `icons`: install the default built-in icon pack (Lucide).
 - `preload-icon-svgs`: pre-register SVG icons on GPU ready.
 - `command-palette`: enable the command palette wiring in the golden-path driver.
 

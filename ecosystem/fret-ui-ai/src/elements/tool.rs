@@ -81,43 +81,46 @@ impl ToolStatus {
     }
 
     pub fn icon_color(self, theme: &Theme) -> Option<Color> {
+        fn token(theme: &Theme, key: &'static str, fallback: Color) -> Color {
+            theme.color_by_key(key).unwrap_or(fallback)
+        }
+
         match self {
             // Align with AI Elements' Tailwind palette (600 shades).
-            Self::ApprovalRequested => Some(Color {
-                // yellow-600 (#ca8a04)
-                r: 0.792,
-                g: 0.541,
-                b: 0.016,
-                a: 1.0,
-            }),
-            Self::ApprovalResponded => Some(Color {
-                // blue-600 (#2563eb)
-                r: 0.145,
-                g: 0.388,
-                b: 0.922,
-                a: 1.0,
-            }),
-            Self::OutputAvailable => Some(Color {
-                // green-600 (#16a34a)
-                r: 0.086,
-                g: 0.639,
-                b: 0.290,
-                a: 1.0,
-            }),
-            Self::OutputDenied => Some(Color {
-                // orange-600 (#ea580c)
-                r: 0.918,
-                g: 0.345,
-                b: 0.047,
-                a: 1.0,
-            }),
-            Self::OutputError => Some(theme.color_by_key("destructive").unwrap_or(Color {
-                // red-600 (#dc2626)
-                r: 0.863,
-                g: 0.149,
-                b: 0.149,
-                a: 1.0,
-            })),
+            Self::ApprovalRequested => Some(token(
+                theme,
+                "component.tool.status.approval_requested.icon",
+                // Tailwind: yellow-600 (#ca8a04).
+                fret_ui_kit::colors::linear_from_hex_rgb(0xca_8a_04),
+            )),
+            Self::ApprovalResponded => Some(token(
+                theme,
+                "component.tool.status.approval_responded.icon",
+                // Tailwind: blue-600 (#2563eb).
+                fret_ui_kit::colors::linear_from_hex_rgb(0x25_63_eb),
+            )),
+            Self::OutputAvailable => Some(token(
+                theme,
+                "component.tool.status.output_available.icon",
+                // Tailwind: green-600 (#16a34a).
+                fret_ui_kit::colors::linear_from_hex_rgb(0x16_a3_4a),
+            )),
+            Self::OutputDenied => Some(token(
+                theme,
+                "component.tool.status.output_denied.icon",
+                // Tailwind: orange-600 (#ea580c).
+                fret_ui_kit::colors::linear_from_hex_rgb(0xea_58_0c),
+            )),
+            Self::OutputError => Some(
+                theme
+                    .color_by_key("component.tool.status.output_error.icon")
+                    .unwrap_or_else(|| {
+                        theme.color_by_key("destructive").unwrap_or(Color {
+                            // Tailwind: red-600 (#dc2626).
+                            ..fret_ui_kit::colors::linear_from_hex_rgb(0xdc_26_26)
+                        })
+                    }),
+            ),
             _ => None,
         }
     }

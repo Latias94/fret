@@ -63,6 +63,7 @@ impl PendingCancelCrossWindowDrag {
 #[derive(Debug, Clone)]
 pub(super) struct PendingScript {
     pub(super) steps: Vec<UiActionStepV2>,
+    pub(super) legacy_schema_v1: bool,
 }
 
 impl PendingScript {
@@ -91,6 +92,7 @@ impl PendingScript {
         }
         Some(Self {
             steps: script.steps.into_iter().map(UiActionStepV2::from).collect(),
+            legacy_schema_v1: true,
         })
     }
 
@@ -100,6 +102,7 @@ impl PendingScript {
         }
         Some(Self {
             steps: script.steps,
+            legacy_schema_v1: false,
         })
     }
 }
@@ -108,12 +111,14 @@ impl PendingScript {
 pub(super) enum V2StepState {
     ClickStable(V2ClickStableState),
     ClickSelectableTextSpanStable(V2ClickSelectableTextSpanStableState),
+    LongPress(V2LongPressState),
     WaitBoundsStable(V2WaitBoundsStableState),
     EnsureVisible(V2EnsureVisibleState),
     ScrollIntoView(V2ScrollIntoViewState),
     TypeTextInto(V2TypeTextIntoState),
     MenuSelect(V2MenuSelectState),
     MenuSelectPath(V2MenuSelectPathState),
+    AssertClipboardText(V2AssertClipboardTextState),
     DragPointer(V2DragPointerState),
     DragPointerUntil(V2DragPointerUntilState),
     DragTo(V2DragToState),
@@ -126,6 +131,7 @@ pub(super) enum V2StepState {
 pub(super) struct V2PointerSessionState {
     pub(super) window: AppWindowId,
     pub(super) button: UiMouseButtonV1,
+    pub(super) pointer_type: fret_core::PointerType,
     pub(super) modifiers: Modifiers,
     pub(super) position: Point,
 }
@@ -153,6 +159,18 @@ pub(super) struct V2ClickSelectableTextSpanStableState {
     pub(super) remaining_frames: u32,
     pub(super) stable_count: u32,
     pub(super) last_pos: Option<Point>,
+}
+
+#[derive(Debug, Clone)]
+pub(super) struct V2LongPressState {
+    pub(super) step_index: usize,
+    pub(super) window: AppWindowId,
+    pub(super) position: Point,
+    pub(super) pointer_type: fret_core::PointerType,
+    pub(super) modifiers: Modifiers,
+    pub(super) duration_ms: u64,
+    pub(super) started_monotonic_ms: Option<u64>,
+    pub(super) down_issued: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -197,6 +215,34 @@ pub(super) struct V2MenuSelectPathState {
     pub(super) remaining_frames: u32,
     pub(super) phase: u32,
     pub(super) next_index: usize,
+}
+
+#[derive(Debug, Clone)]
+pub(super) struct V2AssertClipboardTextState {
+    pub(super) step_index: usize,
+    pub(super) window: AppWindowId,
+    pub(super) expected_text: String,
+    pub(super) remaining_frames: u32,
+    pub(super) request_issued: bool,
+    pub(super) token: Option<fret_core::ClipboardToken>,
+}
+
+impl V2AssertClipboardTextState {
+    pub(super) fn new(
+        step_index: usize,
+        window: AppWindowId,
+        expected_text: String,
+        timeout_frames: u32,
+    ) -> Self {
+        Self {
+            step_index,
+            window,
+            expected_text,
+            remaining_frames: timeout_frames.max(1),
+            request_issued: false,
+            token: None,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]

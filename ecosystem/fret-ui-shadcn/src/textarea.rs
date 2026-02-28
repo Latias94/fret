@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use fret_core::window::ColorScheme;
 use fret_core::{Color, Corners, CursorIcon, Edges, FontId, MouseButton, Px};
 use fret_runtime::Model;
 use fret_ui::element::{
@@ -200,22 +199,34 @@ pub fn textarea<H: UiHost>(
 ) -> AnyElement {
     let show_resize_handle = resizable && !disabled;
 
-    let theme = Theme::global(&*cx.app).clone();
+    let theme_live = Theme::global(&*cx.app);
+    let theme = theme_live.snapshot();
 
-    let resolved = resolve_input_chrome(&theme, size, &chrome, InputTokenKeys::none());
+    let resolved = resolve_input_chrome(theme_live, size, &chrome, InputTokenKeys::none());
 
     let text_style = if stable_line_boxes {
-        typography::text_area_control_text_style_scaled(&theme, FontId::ui(), resolved.text_px)
+        typography::text_area_control_text_style_scaled(
+            Theme::global(&*cx.app),
+            FontId::ui(),
+            resolved.text_px,
+        )
     } else {
-        typography::text_area_content_text_style_scaled(&theme, FontId::ui(), resolved.text_px)
+        typography::text_area_content_text_style_scaled(
+            Theme::global(&*cx.app),
+            FontId::ui(),
+            resolved.text_px,
+        )
     };
 
     let mut chrome = TextAreaStyle::default();
     chrome.padding_x = resolved.padding.left;
-    chrome.padding_y = resolved.padding.top;
+    // shadcn/ui `Textarea` uses `py-2` (while `Input` uses `py-1`), so prefer a textarea-specific
+    // padding intent here rather than reusing input padding wholesale.
+    chrome.padding_y = fret_ui_kit::MetricRef::space(Space::N2).resolve(&theme);
     chrome.background = resolved.background;
     chrome.border = Edges::all(resolved.border_width);
     chrome.border_color = resolved.border_color;
+    chrome.border_color_focused = resolved.border_color_focused;
     chrome.corner_radii = Corners::all(resolved.radius);
     chrome.text_color = resolved.text_color;
     chrome.placeholder_color = theme
@@ -230,21 +241,12 @@ pub fn textarea<H: UiHost>(
     if aria_invalid {
         let border_color = theme.color_token("destructive");
         chrome.border_color = border_color;
+        chrome.border_color_focused = border_color;
         if let Some(mut ring) = chrome.focus_ring.take() {
-            let ring_key = if theme.color_scheme == Some(ColorScheme::Dark) {
-                "destructive/40"
-            } else {
-                "destructive/20"
-            };
-            ring.color = theme
-                .color_by_key(ring_key)
-                .or_else(|| theme.color_by_key("destructive/20"))
-                .unwrap_or(border_color);
+            ring.color = crate::theme_variants::invalid_control_ring_color(&theme, border_color);
             chrome.focus_ring = Some(ring);
         }
     }
-
-    let root_layout = decl_style::layout_style(&theme, layout.relative().w_full());
 
     let mut props = TextAreaProps::new(model);
     props.enabled = !disabled;
@@ -256,40 +258,50 @@ pub fn textarea<H: UiHost>(
     props.chrome = chrome;
     props.text_style = text_style;
     props.min_height = min_height;
-    props.layout = root_layout;
     props.layout.size = SizeStyle {
         width: Length::Fill,
         height: Length::Auto,
+        min_width: Some(Length::Px(Px(0.0))),
         min_height: Some(Length::Px(min_height)),
         ..Default::default()
     };
 
-    if disabled {
-        return cx.opacity(0.5, move |cx| vec![cx.text_area(props)]);
-    }
+    let mut root_layout = decl_style::layout_style(
+        &theme,
+        LayoutRefinement::default()
+            .relative()
+            .w_full()
+            .min_w_0()
+            .merge(layout),
+    );
+    root_layout.overflow = fret_ui::element::Overflow::Visible;
+    props.layout = root_layout;
 
-    if !show_resize_handle {
-        return cx.text_area(props);
-    }
+    let root_shadow = decl_style::shadow_xs(&theme, resolved.radius);
 
     let outer_layout = props.layout;
     let size_style = props.layout.size;
-    let mut inner_layout = decl_style::layout_style(&theme, LayoutRefinement::default().w_full());
+    let mut inner_layout =
+        decl_style::layout_style(&theme, LayoutRefinement::default().w_full().min_w_0());
     inner_layout.size = size_style;
     props.layout = inner_layout;
 
-    cx.container(
+    let root = cx.container(
         ContainerProps {
             layout: outer_layout,
             padding: Edges::all(Px(0.0)).into(),
             background: None,
-            shadow: None,
+            shadow: Some(root_shadow),
             border: Edges::all(Px(0.0)),
             border_color: None,
-            corner_radii: Corners::all(Px(0.0)),
+            corner_radii: Corners::all(resolved.radius),
             ..Default::default()
         },
         move |cx| {
+            if !show_resize_handle {
+                return vec![cx.text_area(props)];
+            }
+
             let (height_override, drag) = textarea_resize_models(cx);
             let override_px = cx
                 .app
@@ -298,7 +310,7 @@ pub fn textarea<H: UiHost>(
                 .ok()
                 .flatten();
 
-            let theme = Theme::global(&*cx.app).clone();
+            let theme = Theme::global(&*cx.app).snapshot();
             let resize_handle_layout = decl_style::layout_style(
                 &theme,
                 LayoutRefinement::default()
@@ -311,9 +323,10 @@ pub fn textarea<H: UiHost>(
             let grip_color = theme
                 .color_by_key("muted-foreground")
                 .unwrap_or_else(|| theme.color_token("foreground"));
-            let grip_border_color = alpha_mul(grip_color, 0.55);
-            let grip_layout =
-                decl_style::layout_style(&theme, LayoutRefinement::default().size_full());
+            let grip_layout = decl_style::layout_style(
+                &theme,
+                LayoutRefinement::default().relative().size_full(),
+            );
 
             let mut props = props;
             if let Some(px) = override_px {
@@ -334,7 +347,7 @@ pub fn textarea<H: UiHost>(
 
                         host.prevent_default(fret_runtime::DefaultAction::FocusOnPointerDown);
                         host.capture_pointer();
-                        host.set_cursor_icon(CursorIcon::RowResize);
+                        host.set_cursor_icon(CursorIcon::NwseResize);
 
                         let start = down.position_window.unwrap_or(down.position);
                         let start_height = host
@@ -360,7 +373,7 @@ pub fn textarea<H: UiHost>(
                 cx.pressable_on_pointer_move_for(
                     id,
                     Arc::new(move |host, action_cx, mv| {
-                        host.set_cursor_icon(CursorIcon::RowResize);
+                        host.set_cursor_icon(CursorIcon::NwseResize);
 
                         let Some(drag) = host.models_mut().read(&drag_move, |v| *v).ok().flatten()
                         else {
@@ -392,23 +405,120 @@ pub fn textarea<H: UiHost>(
 
                 let mut pressable = PressableProps::default();
                 pressable.layout = resize_handle_layout;
+                let dot_color = alpha_mul(grip_color, 0.65);
+                let dot_size = Px(2.0);
+                let dot_radius = Px(1.0);
+
+                let dot = |cx: &mut ElementContext<'_, H>, right: Px, bottom: Px| {
+                    cx.container(
+                        ContainerProps {
+                            layout: decl_style::layout_style(
+                                &theme,
+                                LayoutRefinement::default()
+                                    .absolute()
+                                    .right_px(right)
+                                    .bottom_px(bottom)
+                                    .w_px(dot_size)
+                                    .h_px(dot_size),
+                            ),
+                            padding: Edges::all(Px(0.0)).into(),
+                            background: Some(dot_color),
+                            shadow: None,
+                            border: Edges::all(Px(0.0)),
+                            border_color: None,
+                            corner_radii: Corners::all(dot_radius),
+                            ..Default::default()
+                        },
+                        move |_cx| [],
+                    )
+                };
+
                 let grip = cx.container(
                     ContainerProps {
                         layout: grip_layout,
                         padding: Edges::all(Px(0.0)).into(),
                         background: None,
                         shadow: None,
-                        border: Edges::all(Px(1.0)),
-                        border_color: Some(grip_border_color),
-                        corner_radii: Corners::all(Px(3.0)),
+                        border: Edges::all(Px(0.0)),
+                        border_color: None,
+                        corner_radii: Corners::all(Px(0.0)),
                         ..Default::default()
                     },
-                    move |_cx| [],
+                    move |cx| {
+                        vec![
+                            dot(cx, Px(2.0), Px(2.0)),
+                            dot(cx, Px(5.0), Px(5.0)),
+                            dot(cx, Px(8.0), Px(8.0)),
+                        ]
+                    },
                 );
+
                 (pressable, vec![grip])
             });
 
             vec![textarea, resize_handle]
         },
-    )
+    );
+
+    if disabled {
+        cx.opacity(0.5, move |_cx| vec![root])
+    } else {
+        root
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Px, Rect, Size as CoreSize};
+    use fret_ui::element::{ElementKind, Length};
+    use fret_ui::elements;
+
+    #[test]
+    fn textarea_wraps_in_shadow_container_like_shadcn() {
+        let mut app = App::new();
+        crate::shadcn_themes::apply_shadcn_new_york_v4(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Slate,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(320.0), Px(180.0)),
+        );
+
+        let model = app.models_mut().insert(String::new());
+        let el =
+            elements::with_element_cx(&mut app, window, bounds, "textarea-shadow-wrapper", |cx| {
+                Textarea::new(model.clone())
+                    .a11y_label("Textarea")
+                    .resizable(false)
+                    .into_element(cx)
+            });
+
+        let ElementKind::Container(root) = &el.kind else {
+            panic!(
+                "expected Textarea root to be a shadow container, got {:?}",
+                el.kind
+            );
+        };
+        assert!(
+            root.shadow.is_some(),
+            "expected Textarea to have shadow-xs wrapper"
+        );
+        assert_eq!(root.layout.size.width, Length::Fill);
+
+        let child = el.children.first().expect("shadow wrapper child");
+        let ElementKind::TextArea(props) = &child.kind else {
+            panic!(
+                "expected shadow wrapper child to be TextArea, got {:?}",
+                child.kind
+            );
+        };
+        assert_eq!(props.layout.size.width, Length::Fill);
+    }
 }

@@ -10,7 +10,7 @@ use fret_ui::element::{AnyElement, Overflow};
 use fret_ui::{ElementContext, Theme, UiHost};
 
 use crate::declarative::style as decl_style;
-use crate::{ChromeRefinement, LayoutRefinement};
+use crate::{ChromeRefinement, LayoutRefinement, Space};
 
 /// Radix-style `AspectRatio` wrapper.
 ///
@@ -52,19 +52,30 @@ impl AspectRatio {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let base_layout = LayoutRefinement::default().w_full();
-        let mut props = {
-            let theme = Theme::global(&*cx.app);
-            decl_style::container_props(
-                theme,
-                self.chrome,
-                base_layout.aspect_ratio(self.ratio).merge(self.layout),
-            )
-        };
+        let base_layout = LayoutRefinement::default().relative().w_full();
+        let theme = Theme::global(&*cx.app);
+        let mut props = decl_style::container_props(
+            theme,
+            self.chrome,
+            base_layout.aspect_ratio(self.ratio).merge(self.layout),
+        );
         props.layout.overflow = self.overflow;
 
+        // Radix-style outcome: provide a full-size content host so percent sizing (`w_full/h_full`)
+        // on the child resolves against an explicit containing block.
+        let content_host = decl_style::container_props(
+            theme,
+            ChromeRefinement::default(),
+            LayoutRefinement::default()
+                .absolute()
+                .inset(Space::N0)
+                .size_full(),
+        );
+
         let child = self.child;
-        cx.container(props, move |_cx| vec![child])
+        cx.container(props, move |cx| {
+            vec![cx.container(content_host, move |_cx| vec![child])]
+        })
     }
 }
 

@@ -15,81 +15,19 @@ description = "Application launch glue that wires Fret app, platform, runner, an
 # Declaring it avoids `unexpected_cfgs` warnings under Rust's check-cfg.
 cargo-clippy = []
 # Dev-only fast-restart state restore (window geometry, later docking/app state).
-dev-state = ["dep:serde", "dep:serde_json"]
+dev-state = ["fret-launch-desktop/dev-state"]
 # Dev-only hotpatch integration (Subsecond). Feature-gated to avoid leaking dev tooling deps
 # into normal builds. See ADR 0105.
-hotpatch-subsecond = ["dep:serde_json", "dep:subsecond", "dep:tungstenite"]
-diag-screenshots = ["dep:serde_json", "dep:image"]
-wasm-emoji-fonts = ["fret-fonts/emoji"]
-wasm-cjk-lite-fonts = ["fret-fonts/cjk-lite"]
-webview-wry = ["dep:fret-webview", "dep:fret-webview-wry", "fret-webview-wry/wry"]
+hotpatch-subsecond = ["fret-launch-desktop/hotpatch-subsecond"]
+diag-screenshots = ["fret-launch-desktop/diag-screenshots"]
+wasm-emoji-fonts = ["fret-launch-web/wasm-emoji-fonts"]
+wasm-cjk-lite-fonts = ["fret-launch-web/wasm-cjk-lite-fonts"]
 
 [dependencies]
-fret-app = { version = "0.1.0", path = "../fret-app" }
-fret-core = { version = "0.1.0", path = "../fret-core" }
-fret-runtime = { version = "0.1.0", path = "../fret-runtime" }
-fret-render = { version = "0.1.0", path = "../fret-render" }
-fret-runner-winit = { version = "0.1.0", path = "../fret-runner-winit" }
-anyhow.workspace = true
-bytemuck.workspace = true
-thiserror.workspace = true
-tracing.workspace = true
-wgpu.workspace = true
-winit.workspace = true
+fret-launch-core = { version = "0.1.0", path = "../fret-launch-core" }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-fret-platform = { version = "0.1.0", path = "../fret-platform" }
-fret-platform-native = { version = "0.1.0", path = "../fret-platform-native" }
-fret-webview = { version = "0.1.0", path = "../fret-webview", optional = true }
-fret-webview-wry = { version = "0.1.0", path = "../fret-webview-wry", optional = true }
-pollster.workspace = true
-slotmap.workspace = true
-stacksafe.workspace = true
-serde = { workspace = true, optional = true }
-serde_json = { workspace = true, optional = true }
-image = { workspace = true, optional = true }
-subsecond = { version = "0.7.2", optional = true }
-tungstenite = { version = "0.27.0", optional = true }
-
-[target.'cfg(all(not(target_arch = "wasm32"), any(target_os = "windows", target_os = "macos", target_os = "linux")))'.dependencies]
-renderdog.workspace = true
+fret-launch-desktop = { version = "0.1.0", path = "../fret-launch-desktop" }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-fret-fonts = { version = "0.1.0", path = "../fret-fonts" }
-fret-platform-web = { version = "0.1.0", path = "../fret-platform-web" }
-fret-runner-web = { version = "0.1.0", path = "../fret-runner-web" }
-getrandom = { workspace = true, features = ["wasm_js"] }
-wasm-bindgen = "0.2"
-wasm-bindgen-futures = "0.4"
-js-sys = "0.3"
-web-sys = { version = "0.3", features = ["CssStyleDeclaration", "Document", "Element", "EventTarget", "File", "FilePropertyBag", "HtmlCanvasElement", "HtmlElement", "Location", "MediaQueryList", "MediaQueryListEvent", "Node", "UrlSearchParams", "VisualViewport", "Window", "console"] }
-
-[target.'cfg(all(not(target_arch = "wasm32"), target_os = "macos"))'.dependencies]
-objc.workspace = true
-keyboard-types.workspace = true
-objc2 = { version = "0.6.3", features = ["relax-sign-encoding"] }
-objc2-foundation = { version = "0.3.2", default-features = false, features = ["std", "NSArray", "NSGeometry", "NSString", "objc2-core-foundation"] }
-objc2-app-kit = { version = "0.3.2", default-features = false, features = ["std", "NSApplication", "NSEvent", "NSMenu", "NSMenuItem", "NSResponder", "NSScreen"] }
-
-[target.'cfg(all(not(target_arch = "wasm32"), target_os = "windows"))'.dependencies]
-windows-sys = { workspace = true, features = ["Win32_Foundation", "Win32_Graphics_Dwm", "Win32_Storage_FileSystem", "Win32_System_LibraryLoader", "Win32_System_Registry", "Win32_UI_Accessibility", "Win32_UI_WindowsAndMessaging"] }
-windows = { workspace = true, features = [
-    "Win32_Foundation",
-    "Win32_Graphics_Direct3D",
-    "Win32_Graphics_Direct3D11",
-    "Win32_Graphics_Direct3D11on12",
-    "Win32_Graphics_Direct3D12",
-    "Win32_Graphics_Dxgi_Common",
-    "Win32_Media_MediaFoundation",
-    "Win32_System_Com",
-] }
-
-[target.'cfg(all(not(target_arch = "wasm32"), target_os = "linux"))'.dependencies]
-zbus.workspace = true
-
-[target.'cfg(all(not(target_arch = "wasm32"), target_os = "ios"))'.dependencies]
-block2 = "0.6.1"
-objc2 = { version = "0.6.3", features = ["relax-sign-encoding"] }
-objc2-core-foundation = { version = "0.3.2", default-features = false, features = ["std", "CFCGTypes"] }
-objc2-foundation = { version = "0.3.2", default-features = false, features = ["std", "block2", "NSDictionary", "NSNotification", "NSString", "NSOperation"] }
-objc2-ui-kit = { version = "0.3.2", default-features = false, features = ["std", "objc2-core-foundation", "UIApplication", "UIView", "UIWindow", "UIGeometry", "UIResponder"] }
+fret-launch-web = { version = "0.1.0", path = "../fret-launch-web" }

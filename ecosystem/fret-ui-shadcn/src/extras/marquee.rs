@@ -1,8 +1,10 @@
 use std::sync::Arc;
 
 use fret_core::{Point, Px, SemanticsRole, Transform2D};
-use fret_ui::element::{AnyElement, HoverRegionProps, VisualTransformProps};
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::element::{
+    AnyElement, HoverRegionProps, LayoutQueryRegionProps, VisualTransformProps,
+};
+use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::scheduling;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
@@ -123,7 +125,7 @@ impl Marquee {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
+            let theme = Theme::global(&*cx.app).snapshot();
 
             let speed = self.speed_px_per_frame;
             let pause_on_hover = self.pause_on_hover;
@@ -163,101 +165,157 @@ impl Marquee {
                 last_frame: u64,
             }
 
-            let theme_for_inner = theme.clone();
-            let build_inner = move |cx: &mut ElementContext<'_, H>, paused: bool| {
-                let reduced_motion = fret_ui_kit::declarative::prefers_reduced_motion(
-                    cx,
-                    fret_ui::Invalidation::Paint,
-                    false,
-                );
-                let paused = paused || reduced_motion;
-                let animating = speed.0.abs() > 0.0 && !paused;
-                scheduling::set_continuous_frames(cx, animating);
+            let track_gap_px = MetricRef::space(track_gap).resolve(&theme);
+            let inner_layout = decl_style::layout_style(&theme, LayoutRefinement::default());
 
-                let frame = cx.app.frame_id().0;
-                let phase = cx.with_state_for(marquee_id, MarqueePhaseState::default, |st| {
-                    if st.last_frame == 0 {
-                        // Align with the previous `frame_id * speed` behavior by counting the
-                        // first observed frame as a single tick.
-                        st.last_frame = frame.saturating_sub(1);
-                    }
-                    let delta = frame.saturating_sub(st.last_frame);
-                    st.last_frame = frame;
-
-                    if speed.0.abs() <= 0.0 {
-                        st.phase_px = 0.0;
-                        return st.phase_px;
-                    }
-
-                    if paused {
-                        return st.phase_px;
-                    }
-
-                    st.phase_px += (delta as f32) * speed.0;
-                    st.phase_px
-                });
-
-                let translate_x = if speed.0.abs() > 0.0 {
-                    let base = cycle_width_px.unwrap_or_else(|| {
-                        cx.environment_viewport_width(fret_ui::Invalidation::Layout)
-                    });
-                    let gap_px = MetricRef::space(track_gap).resolve(&theme_for_inner);
-                    let cycle = base.0.max(0.0) + gap_px.0.max(0.0);
-                    if cycle > 0.0 {
-                        phase.rem_euclid(cycle)
-                    } else {
-                        phase
-                    }
-                } else {
-                    0.0
-                };
-
-                let translate_x = match direction {
-                    MarqueeDirection::Left => -translate_x,
-                    MarqueeDirection::Right => translate_x,
-                };
-
-                let transform = Transform2D::translation(Point::new(Px(translate_x), Px(0.0)));
-                let inner_layout =
-                    decl_style::layout_style(&theme_for_inner, LayoutRefinement::default());
-                cx.visual_transform_props(
-                    VisualTransformProps {
-                        layout: inner_layout,
-                        transform,
-                    },
-                    move |_cx| vec![track_row],
-                )
+            let region_props = LayoutQueryRegionProps {
+                layout: decl_style::layout_style(
+                    &theme,
+                    LayoutRefinement::default().w_full().min_w_0().merge(layout),
+                ),
+                name: None,
             };
 
-            let mut props = decl_style::container_props(
-                &theme,
-                ChromeRefinement::default().merge(chrome),
-                LayoutRefinement::default()
-                    .w_full()
-                    .overflow_hidden()
-                    .merge(layout),
-            );
-            props.layout.overflow = fret_ui::element::Overflow::Clip;
+            fret_ui_kit::declarative::container_query_region_with_id(
+                cx,
+                "shadcn.extras.marquee",
+                region_props,
+                move |cx, region_id| {
+                    let region_width = cx
+                        .layout_query_bounds(region_id, Invalidation::Layout)
+                        .map(|r| r.size.width)
+                        .filter(|w| w.0 > 0.0);
+                    let viewport_width = cx.environment_viewport_width(Invalidation::Layout);
+                    let base_cycle_width_px = marquee_default_cycle_width_px(
+                        cycle_width_px,
+                        region_width,
+                        viewport_width,
+                    );
 
-            let root = cx.container(props, move |cx| {
-                let inner = if pause_on_hover {
-                    cx.hover_region(HoverRegionProps::default(), move |cx, hovered| {
-                        vec![build_inner(cx, hovered)]
-                    })
-                } else {
-                    build_inner(cx, false)
-                };
+                    let build_inner = move |cx: &mut ElementContext<'_, H>, paused: bool| {
+                        let reduced_motion = fret_ui_kit::declarative::prefers_reduced_motion(
+                            cx,
+                            Invalidation::Paint,
+                            false,
+                        );
+                        let paused = paused || reduced_motion;
+                        let animating = speed.0.abs() > 0.0 && !paused;
+                        scheduling::set_continuous_frames(cx, animating);
 
-                vec![inner]
-            });
+                        let frame = cx.app.frame_id().0;
+                        let phase =
+                            cx.with_state_for(marquee_id, MarqueePhaseState::default, |st| {
+                                if st.last_frame == 0 {
+                                    // Align with the previous `frame_id * speed` behavior by counting the
+                                    // first observed frame as a single tick.
+                                    st.last_frame = frame.saturating_sub(1);
+                                }
+                                let delta = frame.saturating_sub(st.last_frame);
+                                st.last_frame = frame;
 
-            let root = attach_test_id(root, test_id);
-            root.attach_semantics(
-                fret_ui::element::SemanticsDecoration::default()
-                    .role(SemanticsRole::Group)
-                    .label(a11y_label),
+                                if speed.0.abs() <= 0.0 {
+                                    st.phase_px = 0.0;
+                                    return st.phase_px;
+                                }
+
+                                if paused {
+                                    return st.phase_px;
+                                }
+
+                                st.phase_px += (delta as f32) * speed.0;
+                                st.phase_px
+                            });
+
+                        let translate_x = if speed.0.abs() > 0.0 {
+                            let cycle = base_cycle_width_px.0.max(0.0) + track_gap_px.0.max(0.0);
+                            if cycle > 0.0 {
+                                phase.rem_euclid(cycle)
+                            } else {
+                                phase
+                            }
+                        } else {
+                            0.0
+                        };
+
+                        let translate_x = match direction {
+                            MarqueeDirection::Left => -translate_x,
+                            MarqueeDirection::Right => translate_x,
+                        };
+
+                        let transform =
+                            Transform2D::translation(Point::new(Px(translate_x), Px(0.0)));
+                        cx.visual_transform_props(
+                            VisualTransformProps {
+                                layout: inner_layout.clone(),
+                                transform,
+                            },
+                            move |_cx| vec![track_row],
+                        )
+                    };
+
+                    let mut props = decl_style::container_props(
+                        &theme,
+                        ChromeRefinement::default().merge(chrome),
+                        LayoutRefinement::default().w_full().overflow_hidden(),
+                    );
+                    props.layout.overflow = fret_ui::element::Overflow::Clip;
+
+                    let root = cx.container(props, move |cx| {
+                        let inner = if pause_on_hover {
+                            cx.hover_region(HoverRegionProps::default(), move |cx, hovered| {
+                                vec![build_inner(cx, hovered)]
+                            })
+                        } else {
+                            build_inner(cx, false)
+                        };
+
+                        vec![inner]
+                    });
+
+                    let root = attach_test_id(root, test_id);
+                    vec![
+                        root.attach_semantics(
+                            fret_ui::element::SemanticsDecoration::default()
+                                .role(SemanticsRole::Group)
+                                .label(a11y_label),
+                        ),
+                    ]
+                },
             )
         })
+    }
+}
+
+fn marquee_default_cycle_width_px(
+    override_cycle_width_px: Option<Px>,
+    region_width: Option<Px>,
+    viewport_width: Px,
+) -> Px {
+    override_cycle_width_px
+        .or(region_width)
+        .unwrap_or(viewport_width)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn marquee_default_cycle_width_prefers_override() {
+        let width = marquee_default_cycle_width_px(Some(Px(123.0)), Some(Px(456.0)), Px(789.0));
+        assert_eq!(width.0, 123.0);
+    }
+
+    #[test]
+    fn marquee_default_cycle_width_prefers_region_over_viewport() {
+        let width = marquee_default_cycle_width_px(None, Some(Px(456.0)), Px(789.0));
+        assert_eq!(width.0, 456.0);
+    }
+
+    #[test]
+    fn marquee_default_cycle_width_falls_back_to_viewport() {
+        let width = marquee_default_cycle_width_px(None, None, Px(789.0));
+        assert_eq!(width.0, 789.0);
     }
 }
 

@@ -13,7 +13,7 @@ Exit criteria:
 
 - [x] One v2 binding shape is chosen (with rationale) and written down:
   - A single user-provided image input referenced by `ImageId` (plus `UvRect` + `ImageSamplingHint`).
-  - Evidence: `README.md`, `docs/adr/0300-custom-effect-v2-user-image-input.md`.
+  - Evidence: `README.md`, `docs/adr/0303-custom-effect-v2-user-image-input.md`.
 - [x] Capability discovery shape is specified (what does the app learn at runtime?).
   - Current shape: `RendererCapabilities.custom_effect_v2_user_image` (wgpu backend).
   - Evidence: `crates/fret-render-wgpu/src/capabilities.rs`.

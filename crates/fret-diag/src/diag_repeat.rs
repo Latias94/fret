@@ -18,6 +18,7 @@ pub(crate) struct RepeatCmdContext {
     pub launch: Option<Vec<String>>,
     pub launch_env: Vec<(String, String)>,
     pub launch_high_priority: bool,
+    pub launch_write_bundle_json: bool,
     pub perf_repeat: u64,
     pub compare_eps_px: f32,
     pub compare_ignore_bounds: bool,
@@ -49,6 +50,7 @@ pub(crate) fn cmd_repeat(ctx: RepeatCmdContext) -> Result<(), String> {
         launch,
         launch_env,
         launch_high_priority,
+        launch_write_bundle_json,
         perf_repeat,
         compare_eps_px,
         compare_ignore_bounds,
@@ -83,19 +85,37 @@ pub(crate) fn cmd_repeat(ctx: RepeatCmdContext) -> Result<(), String> {
     let repeat_launch_env = launch_env.clone();
     let reuse_process = launch.is_none() || reuse_launch;
 
+    let mut launch_fs_transport_cfg =
+        crate::transport::FsDiagTransportConfig::from_out_dir(resolved_out_dir.clone());
+    launch_fs_transport_cfg.script_path = resolved_script_path.clone();
+    launch_fs_transport_cfg.script_trigger_path = resolved_script_trigger_path.clone();
+    launch_fs_transport_cfg.script_result_path = resolved_script_result_path.clone();
+    launch_fs_transport_cfg.script_result_trigger_path =
+        resolved_script_result_trigger_path.clone();
+
     let mut child = if reuse_process {
         maybe_launch_demo(
             &launch,
             &repeat_launch_env,
             &workspace_root,
-            &resolved_out_dir,
             &resolved_ready_path,
             &resolved_exit_path,
+            &launch_fs_transport_cfg,
             wants_screenshots,
+            launch_write_bundle_json,
             timeout_ms,
             poll_ms,
             launch_high_priority,
-        )?
+        )
+        .inspect_err(|err| {
+            write_tooling_failure_script_result_if_missing(
+                &resolved_script_result_path,
+                "tooling.launch.failed",
+                err,
+                "tooling_error",
+                Some("maybe_launch_demo".to_string()),
+            );
+        })?
     } else {
         None
     };
@@ -316,14 +336,24 @@ pub(crate) fn cmd_repeat(ctx: RepeatCmdContext) -> Result<(), String> {
                 &launch,
                 &repeat_launch_env,
                 &workspace_root,
-                &resolved_out_dir,
                 &resolved_ready_path,
                 &resolved_exit_path,
+                &launch_fs_transport_cfg,
                 wants_screenshots,
+                launch_write_bundle_json,
                 timeout_ms,
                 poll_ms,
                 launch_high_priority,
-            )?;
+            )
+            .inspect_err(|err| {
+                write_tooling_failure_script_result_if_missing(
+                    &resolved_script_result_path,
+                    "tooling.launch.failed",
+                    err,
+                    "tooling_error",
+                    Some("maybe_launch_demo".to_string()),
+                );
+            })?;
         }
 
         let mut summary = run_script_and_wait(
@@ -354,7 +384,7 @@ pub(crate) fn cmd_repeat(ctx: RepeatCmdContext) -> Result<(), String> {
             Ok(s) => {
                 let stage = s.stage.as_deref().unwrap_or("unknown").to_string();
 
-                let bundle_json = s
+                let bundle_artifact = s
                     .last_bundle_dir
                     .as_deref()
                     .and_then(|d| (!d.trim().is_empty()).then_some(d.trim()))
@@ -405,9 +435,9 @@ pub(crate) fn cmd_repeat(ctx: RepeatCmdContext) -> Result<(), String> {
                 }
 
                 let mut perf: Option<serde_json::Value> = None;
-                if let Some(bundle_json) = bundle_json.as_ref()
+                if let Some(bundle_artifact) = bundle_artifact.as_ref()
                     && let Ok(report) = bundle_stats_from_path(
-                        bundle_json,
+                        bundle_artifact,
                         1,
                         BundleStatsSort::Time,
                         BundleStatsOptions { warmup_frames },
@@ -430,9 +460,9 @@ pub(crate) fn cmd_repeat(ctx: RepeatCmdContext) -> Result<(), String> {
                 }
 
                 let mut lint: Option<serde_json::Value> = None;
-                if let Some(bundle_json) = bundle_json.as_ref()
+                if let Some(bundle_artifact) = bundle_artifact.as_ref()
                     && let Ok(report) = lint_bundle_from_path(
-                        bundle_json,
+                        bundle_artifact,
                         warmup_frames,
                         LintOptions {
                             all_test_ids_bounds: lint_all_test_ids_bounds,
@@ -487,12 +517,12 @@ pub(crate) fn cmd_repeat(ctx: RepeatCmdContext) -> Result<(), String> {
                 let mut compare_to_baseline: Option<serde_json::Value> = None;
                 if stage == "passed" {
                     if baseline_bundle.is_none() {
-                        if let Some(bundle_json) = bundle_json.clone() {
+                        if let Some(bundle_artifact) = bundle_artifact.clone() {
                             baseline_run = Some(run_index);
-                            baseline_bundle = Some(bundle_json);
+                            baseline_bundle = Some(bundle_artifact);
                         }
                     } else if let (Some(base), Some(cur)) =
-                        (baseline_bundle.as_ref(), bundle_json.as_ref())
+                        (baseline_bundle.as_ref(), bundle_artifact.as_ref())
                     {
                         let report = compare_bundles(
                             base,
@@ -548,7 +578,8 @@ pub(crate) fn cmd_repeat(ctx: RepeatCmdContext) -> Result<(), String> {
                     "reason_code": s.reason_code,
                     "reason": s.reason,
                     "last_bundle_dir": s.last_bundle_dir,
-                    "bundle_json": bundle_json.as_ref().map(|p| p.display().to_string()),
+                    "bundle_json": bundle_artifact.as_ref().map(|p| p.display().to_string()),
+                    "bundle_artifact": bundle_artifact.as_ref().map(|p| p.display().to_string()),
                     "perf": perf,
                     "lint": lint,
                     "evidence": evidence,

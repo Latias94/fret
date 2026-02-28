@@ -11,7 +11,7 @@ use fret_ui::element::{
     PressableProps, RovingFlexProps, RovingFocusProps, SpinnerProps, StackProps, SvgIconProps,
 };
 use fret_ui::elements::GlobalElementId;
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, ThemeSnapshot, UiHost};
 use fret_ui_headless::motion::tolerance::Tolerance;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
@@ -95,33 +95,33 @@ fn apply_trigger_inherited_style(
     element
 }
 
-fn tabs_gap(theme: &Theme) -> Px {
+fn tabs_gap(theme: &ThemeSnapshot) -> Px {
     theme
         .metric_by_key("component.tabs.gap")
         .unwrap_or_else(|| MetricRef::space(Space::N2).resolve(theme))
 }
 
-fn tabs_list_height(theme: &Theme) -> Px {
+fn tabs_list_height(theme: &ThemeSnapshot) -> Px {
     theme
         .metric_by_key("component.tabs.list_height")
         .unwrap_or(Px(36.0))
 }
 
-fn tabs_list_padding(theme: &Theme) -> Px {
+fn tabs_list_padding(theme: &ThemeSnapshot) -> Px {
     theme
         .metric_by_key("component.tabs.list_padding")
         .unwrap_or(Px(3.0))
 }
 
-fn tabs_list_bg(theme: &Theme) -> Color {
+fn tabs_list_bg(theme: &ThemeSnapshot) -> Color {
     theme.color_token("muted")
 }
 
-fn tabs_list_fg_muted(theme: &Theme) -> Color {
+fn tabs_list_fg_muted(theme: &ThemeSnapshot) -> Color {
     theme.color_token("muted-foreground")
 }
 
-fn tabs_trigger_text_style(theme: &Theme) -> TextStyle {
+fn tabs_trigger_text_style(theme: &ThemeSnapshot) -> TextStyle {
     let px = theme
         .metric_by_key("component.tabs.trigger.text_px")
         .or_else(|| theme.metric_by_key("font.size"))
@@ -135,24 +135,42 @@ fn tabs_trigger_text_style(theme: &Theme) -> TextStyle {
     style
 }
 
-fn tabs_trigger_radius(theme: &Theme) -> Px {
+fn tabs_trigger_radius(theme: &ThemeSnapshot) -> Px {
     theme
         .metric_by_key("component.tabs.trigger.radius")
         .unwrap_or_else(|| MetricRef::radius(Radius::Md).resolve(theme))
 }
 
-fn tabs_trigger_bg_active(theme: &Theme) -> Color {
-    theme.color_token("background")
-}
-
-fn tabs_trigger_border_active(theme: &Theme) -> Color {
+fn tabs_trigger_bg_active(theme: &ThemeSnapshot) -> Color {
     theme
-        .color_by_key("input")
-        .or_else(|| theme.color_by_key("border"))
-        .expect("missing theme token: input/border")
+        .color_by_key("component.tabs.trigger.bg_active")
+        .unwrap_or_else(|| {
+            if theme.color_scheme == Some(ColorScheme::Dark) {
+                theme
+                    .color_by_key("component.input.bg")
+                    .unwrap_or_else(|| theme.color_token("background"))
+            } else {
+                theme.color_token("background")
+            }
+        })
 }
 
-fn tabs_trigger_border_width(theme: &Theme) -> Px {
+fn tabs_trigger_border_active(theme: &ThemeSnapshot) -> Color {
+    theme
+        .color_by_key("component.tabs.trigger.border_active")
+        .unwrap_or_else(|| {
+            if theme.color_scheme == Some(ColorScheme::Dark) {
+                theme
+                    .color_by_key("input")
+                    .or_else(|| theme.color_by_key("border"))
+                    .unwrap_or_else(|| theme.color_token("border"))
+            } else {
+                Color::TRANSPARENT
+            }
+        })
+}
+
+fn tabs_trigger_border_width(theme: &ThemeSnapshot) -> Px {
     theme
         .metric_by_key("component.tabs.trigger.border_width")
         .unwrap_or(Px(1.0))
@@ -284,7 +302,7 @@ fn tabs_shared_indicator<H: UiHost>(
             radius,
             spring,
         ) = {
-            let theme = Theme::global(&*cx.app);
+            let theme = Theme::global(&*cx.app).snapshot();
 
             let mut states = WidgetStates::empty();
             if disabled {
@@ -297,18 +315,14 @@ fn tabs_shared_indicator<H: UiHost>(
             // shadcn new-york-v4 `TabsTrigger` defaults:
             // - light: `text-foreground`
             // - dark: `text-muted-foreground`
-            let fg_inactive = if theme.color_scheme == Some(ColorScheme::Dark) {
-                ColorRef::Color(tabs_list_fg_muted(theme))
-            } else {
-                ColorRef::Color(theme.color_token("foreground"))
-            };
+            let fg_inactive = crate::theme_variants::tabs_trigger_inactive_fg(&theme);
             let fg_active = ColorRef::Color(theme.color_token("foreground"));
             let fg_disabled = ColorRef::Color(alpha_mul(theme.color_token("foreground"), 0.5));
 
-            let bg_active = ColorRef::Color(tabs_trigger_bg_active(theme));
-            let border_active = ColorRef::Color(tabs_trigger_border_active(theme));
-            let border_w = tabs_trigger_border_width(theme);
-            let radius = tabs_trigger_radius(theme);
+            let bg_active = ColorRef::Color(tabs_trigger_bg_active(&theme));
+            let border_active = ColorRef::Color(tabs_trigger_border_active(&theme));
+            let border_w = tabs_trigger_border_width(&theme);
+            let radius = tabs_trigger_radius(&theme);
 
             let default_trigger_fg = WidgetStateProperty::new(fg_inactive)
                 .when(WidgetStates::SELECTED, fg_active)
@@ -325,14 +339,14 @@ fn tabs_shared_indicator<H: UiHost>(
                 &default_trigger_bg,
                 states,
             )
-            .map(|bg| bg.resolve(theme))
+            .map(|bg| bg.resolve(&theme))
             .unwrap_or(Color::TRANSPARENT);
             let border_color = resolve_override_slot_opt(
                 style_override.trigger_border_color.as_ref(),
                 &default_trigger_border,
                 states,
             )
-            .map(|border| border.resolve(theme))
+            .map(|border| border.resolve(&theme))
             .unwrap_or(Color::TRANSPARENT);
 
             let (target_x, target_y, target_width, target_height) = if tab_count > 0 {
@@ -371,8 +385,8 @@ fn tabs_shared_indicator<H: UiHost>(
                 (0.0, 0.0, 0.0, 0.0)
             };
 
-            let shadow =
-                (!disabled && selected_idx.is_some()).then(|| decl_style::shadow_sm(theme, radius));
+            let shadow = (!disabled && selected_idx.is_some())
+                .then(|| decl_style::shadow_sm(&theme, radius));
             let spring = shared_indicator_spring_description(&*cx.app);
 
             (
@@ -785,7 +799,7 @@ impl TabsRoot {
             layout: LayoutRefinement::default(),
             force_mount_content: false,
             list_full_width: false,
-            content_fill_remaining: false,
+            content_fill_remaining: true,
             shared_indicator_motion: false,
             content_presence_motion: false,
             test_id: None,
@@ -812,7 +826,7 @@ impl TabsRoot {
             layout: LayoutRefinement::default(),
             force_mount_content: false,
             list_full_width: false,
-            content_fill_remaining: false,
+            content_fill_remaining: true,
             shared_indicator_motion: false,
             content_presence_motion: false,
             test_id: None,
@@ -1183,7 +1197,7 @@ impl Tabs {
             layout: LayoutRefinement::default(),
             force_mount_content: false,
             list_full_width: false,
-            content_fill_remaining: false,
+            content_fill_remaining: true,
             shared_indicator_motion: false,
             content_presence_motion: false,
             test_id: None,
@@ -1209,7 +1223,7 @@ impl Tabs {
             layout: LayoutRefinement::default(),
             force_mount_content: false,
             list_full_width: false,
-            content_fill_remaining: false,
+            content_fill_remaining: true,
             shared_indicator_motion: false,
             content_presence_motion: false,
             test_id: None,
@@ -1388,7 +1402,7 @@ impl Tabs {
             radix_tabs::tabs_use_value_model(cx, controlled_model, || default_value.clone())
                 .model();
 
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
         let gap = tabs_gap(&theme);
         let text_style = tabs_trigger_text_style(&theme);
 
@@ -1439,7 +1453,14 @@ impl Tabs {
             // parent, causing horizontal overflow in app shells like the UI gallery.
             let mut refinement = LayoutRefinement::default().w_full().min_w_0();
             if content_fill_remaining {
-                refinement = refinement.flex_1();
+                // shadcn/ui uses `flex-1` on `TabsContent`. In practice that intent is "fill the
+                // remaining main-axis space when the parent is a definite-size flex container".
+                //
+                // Note: Avoid Tailwind's `flex: 1 1 0%` (`basis=0`) here. Taffy currently
+                // shrink-wraps some auto-sized flex containers around the sum of flex bases, which
+                // can collapse panels in unconstrained compositions. `flex: 1 1 auto` keeps
+                // intrinsic sizing stable while still allowing fill in the common case.
+                refinement = refinement.flex_grow(1.0).flex_shrink(1.0);
             }
             decl_style::layout_style(&theme, refinement)
         };
@@ -1591,12 +1612,8 @@ impl Tabs {
                                 // shadcn new-york-v4 `TabsTrigger` defaults:
                                 // - light: `text-foreground`
                                 // - dark: `text-muted-foreground`
-                                let fg_inactive = if theme.color_scheme == Some(ColorScheme::Dark)
-                                {
-                                    ColorRef::Color(tabs_list_fg_muted(&theme))
-                                } else {
-                                    ColorRef::Color(theme.color_token("foreground"))
-                                };
+                                let fg_inactive =
+                                    crate::theme_variants::tabs_trigger_inactive_fg(&theme);
                                 let fg_active = ColorRef::Color(theme.color_token("foreground"));
                                 let fg_disabled =
                                     ColorRef::Color(alpha_mul(theme.color_token("foreground"), 0.5));
@@ -2175,6 +2192,54 @@ mod tests {
     use fret_ui::element::ColumnProps;
     use fret_ui::elements::{ElementRuntime, GlobalElementId, node_for_element};
     use fret_ui::tree::UiTree;
+
+    #[test]
+    fn tabs_content_defaults_to_flex_grow_fill_like_shadcn() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        crate::shadcn_themes::apply_shadcn_new_york_v4(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Slate,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let model = app.models_mut().insert(Some(Arc::from("alpha")));
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(240.0)),
+        );
+
+        let el = fret_ui::elements::with_element_cx(&mut app, window, bounds, "tabs-fill", |cx| {
+            Tabs::new(model.clone())
+                .items([
+                    TabsItem::new("alpha", "Alpha", [cx.text("Panel")]),
+                    TabsItem::new("beta", "Beta", [cx.text("Panel")]),
+                ])
+                .into_element(cx)
+        });
+
+        fn find_tab_panel_semantics<'a>(
+            el: &'a AnyElement,
+        ) -> Option<&'a fret_ui::element::SemanticsProps> {
+            match &el.kind {
+                fret_ui::element::ElementKind::Semantics(props)
+                    if props.role == SemanticsRole::TabPanel =>
+                {
+                    return Some(props);
+                }
+                _ => {}
+            }
+            el.children
+                .iter()
+                .find_map(|child| find_tab_panel_semantics(child))
+        }
+
+        let panel = find_tab_panel_semantics(&el).expect("expected TabsContent tabpanel semantics");
+        assert_eq!(panel.layout.flex.grow, 1.0);
+        assert_eq!(panel.layout.flex.shrink, 1.0);
+        assert_eq!(panel.layout.size.width, Length::Fill);
+        assert_eq!(panel.layout.size.min_width, Some(Length::Px(Px(0.0))));
+    }
 
     #[test]
     fn tabs_selected_trigger_is_vertically_centered_in_tab_list() {

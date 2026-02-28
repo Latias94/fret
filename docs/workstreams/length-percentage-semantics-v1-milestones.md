@@ -80,3 +80,7 @@ Remove recipe-layer workarounds and make shadcn components match upstream docs b
 
 - At least one shadcn component removes an ad-hoc px clamp in favor of native percent/fraction semantics.
 - A diag script gate exists for the migrated component page in UI gallery.
+
+**Status**
+
+Done (see `docs/workstreams/length-percentage-semantics-v1-todo.md` for evidence anchors).

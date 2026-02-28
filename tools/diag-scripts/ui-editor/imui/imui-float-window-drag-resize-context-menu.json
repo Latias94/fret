@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "steps": [
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui.float_window.title_bar:a" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui-float-demo.drop-zone" }
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "drag_pointer",
+      "target": { "kind": "test_id", "id": "imui.float_window.title_bar:a" },
+      "delta_x": 520.0,
+      "delta_y": 170.0,
+      "steps": 16
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_overlapping",
+        "a": { "kind": "test_id", "id": "imui.float_window.window:a" },
+        "b": { "kind": "test_id", "id": "imui-float-demo.drop-zone" },
+        "eps_px": 1.0
+      }
+    },
+
+    {
+      "type": "drag_pointer",
+      "target": { "kind": "test_id", "id": "imui.float_window.resize.corner:a" },
+      "delta_x": 180.0,
+      "delta_y": 140.0,
+      "steps": 16
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "imui.float_window.window:a" },
+        "min_w_px": 220.0,
+        "min_h_px": 160.0,
+        "eps_px": 1.0
+      }
+    },
+
+    {
+      "type": "move_pointer",
+      "target": {
+        "kind": "role_and_name",
+        "role": "button",
+        "name": "Context menu (right click)"
+      }
+    },
+    {
+      "type": "click",
+      "button": "right",
+      "target": {
+        "kind": "role_and_name",
+        "role": "button",
+        "name": "Context menu (right click)"
+      }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui-float-demo.ctx.close" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "imui-float-demo.ctx.close" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "imui-float-demo.ctx.close" }
+      },
+      "timeout_frames": 240
+    },
+
+    { "type": "capture_bundle", "label": "imui-float-window-drag-resize-context-menu" }
+  ]
+}

@@ -85,7 +85,9 @@ Minimum capability vocabulary (v1):
 - `diag.script_v2`: supports Script schema v2 steps.
 - `diag.screenshot_png`: supports on-demand PNG screenshots requested by scripted steps.
 - `diag.multi_window`: supports explicit window targeting and cross-window assertions.
-- `diag.pointer_kind_touch`: supports touch pointer injection (future runner-dependent).
+- `diag.pointer_kind_touch`: supports touch pointer injection (runner-dependent).
+- `diag.pointer_kind_pen`: supports pen pointer injection (runner-dependent).
+- `diag.gesture_tap`: supports tap gesture steps (runner-dependent).
 - `diag.gesture_pinch`: supports pinch/zoom gestures (future runner-dependent).
 
 Tooling SHOULD accept the un-namespaced aliases (`script_v2`, `screenshot_png`, etc) as backwards-compatible inputs,

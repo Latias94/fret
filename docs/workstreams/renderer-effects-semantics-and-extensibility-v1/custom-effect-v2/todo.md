@@ -12,7 +12,7 @@ scope: renderer, effects, extensibility, abi
 - [x] Decision locked: add a single **user-provided image texture** input referenced by `ImageId`.
   - Rationale: unlocks LUT/noise/normal-map recipes without growing a renderer-owned catalog into an implicit “asset system”.
   - Boundedness: exactly one extra sampled image (+ sampler) with fixed bind shape; no resource tables in v2.
-  - See: `docs/adr/0300-custom-effect-v2-user-image-input.md` and `README.md`.
+  - See: `docs/adr/0303-custom-effect-v2-user-image-input.md` and `README.md`.
 
 Constraints:
 

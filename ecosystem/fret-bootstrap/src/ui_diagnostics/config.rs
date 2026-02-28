@@ -100,6 +100,11 @@ pub struct UiDiagnosticsConfig {
     pub trigger_path: PathBuf,
     pub ready_path: PathBuf,
     pub exit_path: PathBuf,
+    /// Whether the diagnostics runtime should accept script schema v1 inputs.
+    ///
+    /// Tooling upgrades scripts to schema v2 on execution; tool-launched runs typically disable
+    /// schema v1 parsing to keep the runtime on the v2-only path.
+    pub allow_script_schema_v1: bool,
     /// When enabled, keep requesting redraws even when no script is running.
     ///
     /// This is intended for scripted diagnostics runs where the external driver triggers scripts
@@ -134,7 +139,22 @@ pub struct UiDiagnosticsConfig {
     pub redact_text: bool,
     pub max_debug_string_bytes: usize,
     pub max_gating_trace_entries: usize,
+    /// When enabled, ignore external pointer input events (mouse/touch/pen) while a diagnostics
+    /// script is running.
+    pub isolate_external_pointer_input_while_script_running: bool,
+    /// When enabled, ignore external keyboard/text/IME events while a diagnostics script is
+    /// running.
+    pub isolate_external_keyboard_input_while_script_running: bool,
     pub screenshot_on_dump: bool,
+    /// Whether the diagnostics runtime should write the large raw bundle artifact (`bundle.json`)
+    /// during dumps.
+    pub write_bundle_json: bool,
+    /// When enabled, write a compact schema2 bundle artifact (`bundle.schema2.json`) alongside
+    /// dumps (tooling can prefer this view and omit the larger raw artifact).
+    ///
+    /// This is intended for schema2-first + AI/sidecar-first workflows to avoid requiring
+    /// tooling to parse large raw bundles just to produce a portable artifact.
+    pub write_bundle_schema2: bool,
     /// Optional fixed frame delta (ms) for deterministic diagnostics/scripted tests (ADR 0240).
     ///
     /// When set, the per-window frame clock uses a synthetic monotonic time that advances by this
@@ -262,6 +282,11 @@ impl Default for UiDiagnosticsConfig {
                     .and_then(|s| resolve_config_path(&out_dir, s))
             })
             .unwrap_or_else(|| out_dir.join("exit.touch"));
+
+        let allow_script_schema_v1 = config_file
+            .as_ref()
+            .and_then(|c| c.allow_script_schema_v1)
+            .unwrap_or(true);
 
         let script_keepalive = enabled
             && env_flag_override("FRET_DIAG_SCRIPT_KEEPALIVE")
@@ -512,8 +537,31 @@ impl Default for UiDiagnosticsConfig {
             })
             .unwrap_or(200)
             .clamp(0, 2000);
+        let isolate_external_pointer_input_while_script_running =
+            env_flag_override("FRET_DIAG_ISOLATE_POINTER_INPUT")
+                .or_else(|| {
+                    config_file
+                        .as_ref()
+                        .and_then(|c| c.isolate_external_pointer_input_while_script_running)
+                })
+                .unwrap_or(false);
+        let isolate_external_keyboard_input_while_script_running =
+            env_flag_override("FRET_DIAG_ISOLATE_KEYBOARD_INPUT")
+                .or_else(|| {
+                    config_file
+                        .as_ref()
+                        .and_then(|c| c.isolate_external_keyboard_input_while_script_running)
+                })
+                .unwrap_or(false);
         let screenshot_on_dump = env_flag_override("FRET_DIAG_BUNDLE_SCREENSHOT")
             .or_else(|| config_file.as_ref().and_then(|c| c.screenshot_on_dump))
+            .unwrap_or(false);
+        let write_bundle_json = config_file
+            .as_ref()
+            .and_then(|c| c.write_bundle_json)
+            .unwrap_or(true);
+        let write_bundle_schema2 = env_flag_override("FRET_DIAG_BUNDLE_WRITE_SCHEMA2")
+            .or_else(|| config_file.as_ref().and_then(|c| c.write_bundle_schema2))
             .unwrap_or(false);
         let frame_clock_fixed_delta_ms = fret_core::WindowFrameClockService::fixed_delta_from_env()
             .map(|d| d.as_millis())
@@ -531,6 +579,7 @@ impl Default for UiDiagnosticsConfig {
             trigger_path,
             ready_path,
             exit_path,
+            allow_script_schema_v1,
             script_keepalive,
             max_events,
             max_snapshots,
@@ -557,7 +606,11 @@ impl Default for UiDiagnosticsConfig {
             redact_text,
             max_debug_string_bytes,
             max_gating_trace_entries,
+            isolate_external_pointer_input_while_script_running,
+            isolate_external_keyboard_input_while_script_running,
             screenshot_on_dump,
+            write_bundle_json,
+            write_bundle_schema2,
             frame_clock_fixed_delta_ms,
             devtools_ws_url,
             devtools_token,

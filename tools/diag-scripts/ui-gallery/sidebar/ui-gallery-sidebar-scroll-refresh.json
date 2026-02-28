@@ -1,0 +1,70 @@
+{
+  "schema_version": 2,
+  "steps": [
+    {
+      "key": "escape",
+      "modifiers": {
+        "alt": false,
+        "ctrl": false,
+        "meta": false,
+        "shift": false
+      },
+      "repeat": false,
+      "type": "press_key"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "target": {
+        "id": "ui-gallery-nav-intro",
+        "kind": "test_id"
+      },
+      "type": "move_pointer"
+    },
+    {
+      "delta_x": 0.0,
+      "delta_y": -240.0,
+      "target": {
+        "id": "ui-gallery-nav-intro",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 5,
+      "type": "wait_frames"
+    },
+    {
+      "delta_x": 0.0,
+      "delta_y": -240.0,
+      "target": {
+        "id": "ui-gallery-nav-intro",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 5,
+      "type": "wait_frames"
+    },
+    {
+      "delta_x": 0.0,
+      "delta_y": 240.0,
+      "target": {
+        "id": "ui-gallery-nav-intro",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 5,
+      "type": "wait_frames"
+    },
+    {
+      "label": "ui-gallery-sidebar-scroll-refresh",
+      "type": "capture_bundle"
+    }
+  ]
+}

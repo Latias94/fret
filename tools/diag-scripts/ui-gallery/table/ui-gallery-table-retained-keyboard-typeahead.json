@@ -1,0 +1,162 @@
+{
+  "schema_version": 2,
+  "steps": [
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "ui-gallery-nav-search",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "button": "left",
+      "target": {
+        "id": "ui-gallery-nav-search",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "text": "table retained",
+      "type": "type_text"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "ui-gallery-nav-table-retained-torture",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "button": "left",
+      "target": {
+        "id": "ui-gallery-nav-table-retained-torture",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "ui-gallery-table-retained-torture-root",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "ui-gallery-table-retained-row-0",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "target": {
+        "id": "ui-gallery-table-retained-row-0",
+        "kind": "test_id"
+      },
+      "type": "move_pointer"
+    },
+    {
+      "button": "left",
+      "target": {
+        "id": "ui-gallery-table-retained-row-0",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "delta_x": 0.0,
+      "delta_y": 120.0,
+      "target": {
+        "id": "ui-gallery-table-retained-torture-root",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "key": "9",
+      "modifiers": {
+        "alt": false,
+        "ctrl": false,
+        "meta": false,
+        "shift": false
+      },
+      "repeat": false,
+      "type": "press_key"
+    },
+    {
+      "key": "0",
+      "modifiers": {
+        "alt": false,
+        "ctrl": false,
+        "meta": false,
+        "shift": false
+      },
+      "repeat": false,
+      "type": "press_key"
+    },
+    {
+      "key": "0",
+      "modifiers": {
+        "alt": false,
+        "ctrl": false,
+        "meta": false,
+        "shift": false
+      },
+      "repeat": false,
+      "type": "press_key"
+    },
+    {
+      "key": "0",
+      "modifiers": {
+        "alt": false,
+        "ctrl": false,
+        "meta": false,
+        "shift": false
+      },
+      "repeat": false,
+      "type": "press_key"
+    },
+    {
+      "predicate": {
+        "eps_px": 0.0,
+        "kind": "bounds_within_window",
+        "padding_px": 2.0,
+        "target": {
+          "id": "ui-gallery-table-retained-row-9000",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "label": "ui-gallery-table-retained-keyboard-typeahead",
+      "type": "capture_bundle"
+    }
+  ]
+}

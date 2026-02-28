@@ -14,6 +14,7 @@ use fret_runtime::{CommandId, Model};
 use fret_ui::element::Elements;
 use fret_ui::{ElementContext, Invalidation, UiTree};
 
+use crate::Defaults;
 use crate::{BootstrapError, Result, UiAppBuilder, UiAppDriver};
 
 /// A per-frame message router that turns typed messages into `CommandId`.
@@ -331,10 +332,10 @@ fn mvu_on_command<P: Program>(
 /// - a default `on_command` that routes these messages to `Program::update`
 /// - an internal `tick` model to force a full layout refresh after each `update`
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
-pub fn app_with_hooks<P: Program>(
+pub(crate) fn mvu_bootstrap_builder_with_hooks<P: Program>(
     root_name: &'static str,
     configure: fn(MvuUiAppDriver<P::State, P::Message>) -> MvuUiAppDriver<P::State, P::Message>,
-) -> Result<UiAppBuilder<MvuWindowState<P::State, P::Message>>> {
+) -> fret_bootstrap::UiAppBootstrapBuilder<MvuWindowState<P::State, P::Message>> {
     let driver =
         fret_bootstrap::ui_app_driver::UiAppDriver::new(
             root_name,
@@ -358,29 +359,24 @@ pub fn app_with_hooks<P: Program>(
 
     let builder = fret_bootstrap::BootstrapBuilder::new(App::new(), driver.into_fn_driver());
 
-    #[cfg(feature = "diagnostics")]
-    let builder = builder.with_default_diagnostics();
+    builder
+}
 
-    let builder = builder
-        .with_default_config_files()
+/// Create a desktop-first MVU app builder with conservative defaults applied.
+///
+/// Compared to `app_with_hooks`, this adds:
+/// - a `MessageRouter<M>` parameter to `Program::view` to build typed commands
+/// - a default `on_command` that routes these messages to `Program::update`
+/// - an internal `tick` model to force a full layout refresh after each `update`
+#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+pub fn app_with_hooks<P: Program>(
+    root_name: &'static str,
+    configure: fn(MvuUiAppDriver<P::State, P::Message>) -> MvuUiAppDriver<P::State, P::Message>,
+) -> Result<UiAppBuilder<MvuWindowState<P::State, P::Message>>> {
+    let builder = mvu_bootstrap_builder_with_hooks::<P>(root_name, configure);
+    let builder = crate::apply_desktop_defaults_with(builder, Defaults::default())
         .map_err(BootstrapError::from)?;
-
-    #[cfg(feature = "shadcn")]
-    let builder = builder.install_app(fret_ui_shadcn::install_app);
-
-    #[cfg(feature = "ui-assets")]
-    let builder = builder.with_ui_assets_budgets(64 * 1024 * 1024, 4096, 16 * 1024 * 1024, 4096);
-
-    #[cfg(feature = "icons-lucide")]
-    let builder = builder.with_lucide_icons();
-
-    #[cfg(feature = "icons-radix")]
-    let builder = builder.with_radix_icons();
-
-    #[cfg(feature = "preload-icon-svgs")]
-    let builder = builder.preload_icon_svgs_on_gpu_ready();
-
-    Ok(UiAppBuilder::new(builder))
+    Ok(UiAppBuilder::from_bootstrap(builder))
 }
 
 /// Same as [`app_with_hooks`], but without a driver configuration hook.

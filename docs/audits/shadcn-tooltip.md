@@ -49,6 +49,8 @@ Radix semantics, and Base UI `Tooltip.Root` lifecycle behavior.
 - Pass: Content is rendered through overlay root (portal-like behavior).
 - Pass: Supports side/align/offset and arrow defaults aligned with shadcn usage.
 - Pass: Motion taxonomy aligns with shadcn expectations (fade/zoom/slide with transform origin).
+- Pass: `TooltipContent` applies the upstream `text-xs` style to descendant text nodes by default
+  (when no explicit text style is provided), matching the container-level `text-xs` class in shadcn.
 
 ## Known gaps
 

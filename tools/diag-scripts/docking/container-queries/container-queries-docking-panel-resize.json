@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "steps": [
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 5 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "cq-dock-demo-mode" } },
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 8 },
+    { "type": "capture_bundle", "label": "container-queries-docking-before" },
+    { "type": "capture_screenshot" },
+    {
+      "type": "drag_pointer",
+      "target": { "kind": "test_id", "id": "cq-dock-demo-split-anchor" },
+      "delta_x": -560.0,
+      "delta_y": 0.0,
+      "steps": 24
+    },
+    { "type": "wait_frames", "n": 12 },
+    { "type": "capture_bundle", "label": "container-queries-docking-after" },
+    { "type": "capture_screenshot" },
+    { "type": "capture_bundle", "label": "container-queries-docking-panel-resize" }
+  ]
+}
+

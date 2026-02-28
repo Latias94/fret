@@ -1,5 +1,6 @@
 use crate::layout as shadcn_layout;
 use crate::popper_arrow::{self, DiamondArrowStyle};
+use crate::surface_slot::{ShadcnSurfaceSlot, with_surface_slot_provider};
 use fret_ui_kit::declarative::ModelWatchExt;
 use fret_ui_kit::declarative::scheduling;
 use fret_ui_kit::declarative::style as decl_style;
@@ -9,6 +10,7 @@ use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::dismissable_layer as radix_dismissable_layer;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
+use fret_ui_kit::primitives::portal_inherited;
 use fret_ui_kit::primitives::presence as radix_presence;
 use fret_ui_kit::primitives::tooltip as radix_tooltip;
 use fret_ui_kit::tooltip_provider;
@@ -27,15 +29,22 @@ use fret_ui::element::{
     SpinnerProps, SvgIconProps,
 };
 use fret_ui::overlay_placement::{Align, Side};
-use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
+use fret_ui::{ElementContext, Invalidation, Theme, ThemeSnapshot, UiHost};
 
 use crate::overlay_motion;
 
-fn apply_tooltip_inherited_fg(mut element: AnyElement, fg: fret_core::Color) -> AnyElement {
+fn apply_tooltip_inherited_defaults(
+    mut element: AnyElement,
+    fg: fret_core::Color,
+    text_style: &TextStyle,
+) -> AnyElement {
     match &mut element.kind {
         ElementKind::Text(props) => {
             if props.color.is_none() {
                 props.color = Some(fg);
+            }
+            if props.style.is_none() {
+                props.style = Some(text_style.clone());
             }
         }
         ElementKind::SvgIcon(SvgIconProps { color, .. }) => {
@@ -53,22 +62,38 @@ fn apply_tooltip_inherited_fg(mut element: AnyElement, fg: fret_core::Color) -> 
         ElementKind::Spinner(SpinnerProps { color, .. }) => {
             color.get_or_insert(fg);
         }
+        ElementKind::StyledText(props) => {
+            if props.color.is_none() {
+                props.color = Some(fg);
+            }
+            if props.style.is_none() {
+                props.style = Some(text_style.clone());
+            }
+        }
+        ElementKind::SelectableText(props) => {
+            if props.color.is_none() {
+                props.color = Some(fg);
+            }
+            if props.style.is_none() {
+                props.style = Some(text_style.clone());
+            }
+        }
         _ => {}
     }
 
     element.children = element
         .children
         .into_iter()
-        .map(|child| apply_tooltip_inherited_fg(child, fg))
+        .map(|child| apply_tooltip_inherited_defaults(child, fg, text_style))
         .collect();
     element
 }
 
-fn tooltip_text_fg(theme: &Theme) -> fret_core::Color {
+fn tooltip_text_fg(theme: &ThemeSnapshot) -> fret_core::Color {
     theme.color_token("background")
 }
 
-fn tooltip_text_style(theme: &Theme) -> TextStyle {
+fn tooltip_text_style(theme: &ThemeSnapshot) -> TextStyle {
     // new-york-v4 uses `text-xs` for tooltips (base is `text-sm`).
     let base_px = theme.metric_token("font.size");
     let base_line_height = theme.metric_token("font.line_height");
@@ -85,7 +110,7 @@ fn tooltip_text_style(theme: &Theme) -> TextStyle {
     style
 }
 
-fn tooltip_content_chrome(theme: &Theme) -> ChromeRefinement {
+fn tooltip_content_chrome(theme: &ThemeSnapshot) -> ChromeRefinement {
     // shadcn/ui v4 (2025-09-22): tooltip uses `bg-foreground text-background`.
     let bg = theme.color_token("foreground");
 
@@ -94,6 +119,21 @@ fn tooltip_content_chrome(theme: &Theme) -> ChromeRefinement {
         .bg(ColorRef::Color(bg))
         .px(Space::N3)
         .py(Space::N1p5)
+}
+
+fn tooltip_diamond_arrow_options(
+    enabled: bool,
+    arrow_size: Px,
+    arrow_padding: Px,
+) -> (Option<popper::ArrowOptions>, Px) {
+    let (options, protrusion) = popper::diamond_arrow_options(enabled, arrow_size, arrow_padding);
+    if options.is_none() {
+        return (options, protrusion);
+    }
+
+    // new-york-v4 arrow uses `translate-*- [calc(-50%_-_2px)]`, which effectively adds ~2px of
+    // main-axis offset between the trigger and the panel.
+    (options, Px(protrusion.0 + 2.0))
 }
 
 #[derive(Clone)]
@@ -690,7 +730,7 @@ impl Tooltip {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
 
         let layout = decl_style::layout_style(&theme, self.layout);
         let side_offset = if self.side_offset == Px(0.0) {
@@ -887,7 +927,7 @@ impl Tooltip {
                 };
 
                 let (arrow_options, arrow_protrusion) =
-                    popper::diamond_arrow_options(arrow, arrow_size, arrow_padding);
+                    tooltip_diamond_arrow_options(arrow, arrow_size, arrow_padding);
                 let direction = direction_prim::use_direction_in_scope(cx, None);
 
                 let layout = popper::popper_content_layout_sized(
@@ -1115,152 +1155,163 @@ impl Tooltip {
             let overlay_root_name = radix_tooltip::tooltip_root_name(tooltip_id);
             let opacity = motion.opacity;
             let scale = motion.scale;
-            let direction = direction_prim::use_direction_in_scope(cx, None);
+            let portal_ctx = portal_inherited::PortalInherited::capture(cx);
+            let direction = portal_ctx.direction;
 
-            let overlay_children = cx.with_root_name(&overlay_root_name, move |cx| {
-                let cursor_for_anchor = if track_cursor_axis.enabled() {
-                    cx.watch_model(&last_pointer_for_overlay)
-                        .layout()
-                        .copied()
-                        .unwrap_or(None)
-                } else {
-                    None
-                };
-                let anchor = overlay::anchor_bounds_for_element(cx, anchor_id).map(|anchor| {
-                    tooltip_anchor_with_cursor_axis(anchor, cursor_for_anchor, track_cursor_axis)
-                });
-                let Some(anchor) = anchor else {
-                    return Vec::new();
-                };
+            let overlay_children = portal_inherited::with_root_name_inheriting(
+                cx,
+                &overlay_root_name,
+                portal_ctx,
+                move |cx| {
+                    let cursor_for_anchor = if track_cursor_axis.enabled() {
+                        cx.watch_model(&last_pointer_for_overlay)
+                            .layout()
+                            .copied()
+                            .unwrap_or(None)
+                    } else {
+                        None
+                    };
+                    let anchor = overlay::anchor_bounds_for_element(cx, anchor_id).map(|anchor| {
+                        tooltip_anchor_with_cursor_axis(
+                            anchor,
+                            cursor_for_anchor,
+                            track_cursor_axis,
+                        )
+                    });
+                    let Some(anchor) = anchor else {
+                        return Vec::new();
+                    };
 
-                let last_content_size = cx.last_bounds_for_element(content_id).map(|r| r.size);
-                let estimated_size = Size::new(Px(240.0), Px(44.0));
-                let content_size = last_content_size.unwrap_or(estimated_size);
+                    let last_content_size = cx.last_bounds_for_element(content_id).map(|r| r.size);
+                    let estimated_size = Size::new(Px(240.0), Px(44.0));
+                    let content_size = last_content_size.unwrap_or(estimated_size);
 
-                let outer = overlay::outer_bounds_with_window_margin_for_environment(
-                    cx,
-                    fret_ui::Invalidation::Layout,
-                    window_margin,
-                );
+                    let outer = overlay::outer_bounds_with_window_margin_for_environment(
+                        cx,
+                        fret_ui::Invalidation::Layout,
+                        window_margin,
+                    );
 
-                let align = match align {
-                    TooltipAlign::Start => Align::Start,
-                    TooltipAlign::Center => Align::Center,
-                    TooltipAlign::End => Align::End,
-                };
-                let side = match side {
-                    TooltipSide::Top => Side::Top,
-                    TooltipSide::Right => Side::Right,
-                    TooltipSide::Bottom => Side::Bottom,
-                    TooltipSide::Left => Side::Left,
-                };
+                    let align = match align {
+                        TooltipAlign::Start => Align::Start,
+                        TooltipAlign::Center => Align::Center,
+                        TooltipAlign::End => Align::End,
+                    };
+                    let side = match side {
+                        TooltipSide::Top => Side::Top,
+                        TooltipSide::Right => Side::Right,
+                        TooltipSide::Bottom => Side::Bottom,
+                        TooltipSide::Left => Side::Left,
+                    };
 
-                let (arrow_options, arrow_protrusion) =
-                    popper::diamond_arrow_options(arrow, arrow_size, arrow_padding);
+                    let (arrow_options, arrow_protrusion) =
+                        tooltip_diamond_arrow_options(arrow, arrow_size, arrow_padding);
 
-                let placement =
-                    popper::PopperContentPlacement::new(direction, side, align, side_offset)
-                        .with_shift_cross_axis(true)
-                        .with_arrow(arrow_options, arrow_protrusion)
-                        .with_hide_when_detached(hide_when_detached);
-                let reference_hidden = placement.reference_hidden(outer, anchor);
+                    let placement =
+                        popper::PopperContentPlacement::new(direction, side, align, side_offset)
+                            .with_shift_cross_axis(true)
+                            .with_arrow(arrow_options, arrow_protrusion)
+                            .with_hide_when_detached(hide_when_detached);
+                    let reference_hidden = placement.reference_hidden(outer, anchor);
 
-                let layout =
-                    popper::popper_content_layout_sized(outer, anchor, content_size, placement);
+                    let layout =
+                        popper::popper_content_layout_sized(outer, anchor, content_size, placement);
 
-                let placed = layout.rect;
-                let mut wrapper_insets = popper_arrow::wrapper_insets(&layout, arrow_protrusion);
-                let slide_insets = overlay_motion::shadcn_slide_insets(layout.side);
-                wrapper_insets.top.0 += slide_insets.top.0;
-                wrapper_insets.right.0 += slide_insets.right.0;
-                wrapper_insets.bottom.0 += slide_insets.bottom.0;
-                wrapper_insets.left.0 += slide_insets.left.0;
+                    let placed = layout.rect;
+                    let mut wrapper_insets =
+                        popper_arrow::wrapper_insets(&layout, arrow_protrusion);
+                    let slide_insets = overlay_motion::shadcn_slide_insets(layout.side);
+                    wrapper_insets.top.0 += slide_insets.top.0;
+                    wrapper_insets.right.0 += slide_insets.right.0;
+                    wrapper_insets.bottom.0 += slide_insets.bottom.0;
+                    wrapper_insets.left.0 += slide_insets.left.0;
 
-                let debug_panel = panel_test_id.as_ref().map(|test_id| {
-                    cx.semantics(
-                        SemanticsProps {
-                            role: fret_core::SemanticsRole::Generic,
-                            test_id: Some(test_id.clone()),
-                            layout: LayoutStyle {
-                                position: PositionStyle::Absolute,
-                                inset: InsetStyle {
-                                    left: Some(placed.origin.x).into(),
-                                    top: Some(placed.origin.y).into(),
-                                    ..Default::default()
-                                },
-                                size: SizeStyle {
-                                    width: Length::Px(placed.size.width),
-                                    height: Length::Px(placed.size.height),
+                    let debug_panel = panel_test_id.as_ref().map(|test_id| {
+                        cx.semantics(
+                            SemanticsProps {
+                                role: fret_core::SemanticsRole::Generic,
+                                test_id: Some(test_id.clone()),
+                                layout: LayoutStyle {
+                                    position: PositionStyle::Absolute,
+                                    inset: InsetStyle {
+                                        left: Some(placed.origin.x).into(),
+                                        top: Some(placed.origin.y).into(),
+                                        ..Default::default()
+                                    },
+                                    size: SizeStyle {
+                                        width: Length::Px(placed.size.width),
+                                        height: Length::Px(placed.size.height),
+                                        ..Default::default()
+                                    },
                                     ..Default::default()
                                 },
                                 ..Default::default()
                             },
-                            ..Default::default()
+                            |_cx| Vec::new(),
+                        )
+                    });
+
+                    let wrapper = popper_content::popper_wrapper_at_with_panel(
+                        cx,
+                        placed,
+                        wrapper_insets,
+                        Overflow::Visible,
+                        move |_cx| vec![content],
+                        move |cx, content| {
+                            // new-york-v4: `size-2.5 rotate-45 rounded-[2px] translate-y-[calc(-50%_-_2px)]`
+                            // (i.e. a lightly rounded diamond that overlaps the panel edge).
+                            let arrow_el = popper_arrow::diamond_arrow_element_refined(
+                                cx,
+                                &layout,
+                                wrapper_insets,
+                                arrow_size,
+                                DiamondArrowStyle {
+                                    bg: arrow_bg,
+                                    border: None,
+                                    border_width: Px(0.0),
+                                },
+                                Px(2.0),
+                                Px(-2.0),
+                                arrow_test_id.clone(),
+                            );
+
+                            if let Some(arrow_el) = arrow_el {
+                                vec![arrow_el, content]
+                            } else {
+                                vec![content]
+                            }
                         },
-                        |_cx| Vec::new(),
-                    )
-                });
+                    );
 
-                let wrapper = popper_content::popper_wrapper_at_with_panel(
-                    cx,
-                    placed,
-                    wrapper_insets,
-                    Overflow::Visible,
-                    move |_cx| vec![content],
-                    move |cx, content| {
-                        // new-york-v4: `size-2.5 rotate-45 rounded-[2px] translate-y-[calc(-50%_-_2px)]`
-                        // (i.e. a slightly outset, lightly rounded diamond).
-                        let arrow_el = popper_arrow::diamond_arrow_element_refined(
-                            cx,
-                            &layout,
-                            wrapper_insets,
-                            arrow_size,
-                            DiamondArrowStyle {
-                                bg: arrow_bg,
-                                border: None,
-                                border_width: Px(0.0),
-                            },
-                            Px(2.0),
-                            Px(2.0),
-                            arrow_test_id.clone(),
-                        );
+                    let origin = popper::popper_content_transform_origin(
+                        &layout,
+                        anchor,
+                        arrow.then_some(arrow_size),
+                    );
+                    let opacity = if reference_hidden { 0.0 } else { opacity };
+                    let transform = overlay_motion::shadcn_popper_presence_transform(
+                        layout.side,
+                        origin,
+                        opacity,
+                        scale,
+                        opening,
+                    );
 
-                        if let Some(arrow_el) = arrow_el {
-                            vec![arrow_el, content]
-                        } else {
-                            vec![content]
-                        }
-                    },
-                );
+                    let mut children = Vec::new();
+                    if let Some(debug_panel) = debug_panel {
+                        children.push(debug_panel);
+                    }
+                    children.push(wrapper);
 
-                let origin = popper::popper_content_transform_origin(
-                    &layout,
-                    anchor,
-                    arrow.then_some(arrow_size),
-                );
-                let opacity = if reference_hidden { 0.0 } else { opacity };
-                let transform = overlay_motion::shadcn_popper_presence_transform(
-                    layout.side,
-                    origin,
-                    opacity,
-                    scale,
-                    opening,
-                );
-
-                let mut children = Vec::new();
-                if let Some(debug_panel) = debug_panel {
-                    children.push(debug_panel);
-                }
-                children.push(wrapper);
-
-                vec![overlay_motion::wrap_opacity_and_render_transform_gated(
-                    cx,
-                    opacity,
-                    transform,
-                    !reference_hidden,
-                    children,
-                )]
-            });
+                    vec![overlay_motion::wrap_opacity_and_render_transform_gated(
+                        cx,
+                        opacity,
+                        transform,
+                        !reference_hidden,
+                        children,
+                    )]
+                },
+            );
 
             let mut request = radix_tooltip::tooltip_request(
                 tooltip_id,
@@ -1352,11 +1403,26 @@ impl TooltipContent {
         }
     }
 
+    /// Builds a `TooltipContent` element in the `TooltipContent` surface slot scope.
+    ///
+    /// Upstream shadcn/ui uses `data-slot=tooltip-content` selectors to refine nested defaults
+    /// (e.g. `Kbd` uses `bg-background/20 text-background` inside tooltips). Fret models these
+    /// selectors via inherited state, so this helper ensures descendants can observe the slot.
+    #[track_caller]
+    pub fn with<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        with_surface_slot_provider(cx, ShadcnSurfaceSlot::TooltipContent, |cx| {
+            TooltipContent::new(f(cx)).into_element(cx)
+        })
+    }
+
     pub fn text<H: UiHost>(
         cx: &mut ElementContext<'_, H>,
         text: impl Into<Arc<str>>,
     ) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
         let text = text.into();
 
         let text_style = tooltip_text_style(&theme);
@@ -1388,16 +1454,17 @@ impl TooltipContent {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
 
         let base_layout = LayoutRefinement::default().flex_shrink_0();
         let chrome = tooltip_content_chrome(&theme).merge(self.chrome);
         let props = decl_style::container_props(&theme, chrome, base_layout.merge(self.layout));
         let fg = tooltip_text_fg(&theme);
+        let text_style = tooltip_text_style(&theme);
         let children = self
             .children
             .into_iter()
-            .map(|child| apply_tooltip_inherited_fg(child, fg))
+            .map(|child| apply_tooltip_inherited_defaults(child, fg, &text_style))
             .collect();
         let container = shadcn_layout::container_flow(cx, props, children);
         container.attach_semantics(
@@ -1490,6 +1557,7 @@ mod tests {
         use fret_ui::element::ElementKind;
         use fret_ui::elements::GlobalElementId;
 
+        let text_style = TextStyle::default();
         let fg = Color {
             r: 0.1,
             g: 0.2,
@@ -1521,7 +1589,7 @@ mod tests {
             vec![text_no_color, text_with_color],
         );
 
-        let out = apply_tooltip_inherited_fg(root, fg);
+        let out = apply_tooltip_inherited_defaults(root, fg, &text_style);
         let colors: Vec<Option<Color>> = out
             .children
             .iter()
@@ -1534,6 +1602,59 @@ mod tests {
         assert_eq!(colors.len(), 2);
         assert_eq!(colors[0], Some(fg));
         assert_ne!(colors[1], Some(fg));
+    }
+
+    #[test]
+    fn tooltip_content_applies_default_text_style_to_descendant_text() {
+        use fret_ui::element::ElementKind;
+        use fret_ui::elements::GlobalElementId;
+
+        let fg = fret_core::Color {
+            r: 0.1,
+            g: 0.2,
+            b: 0.3,
+            a: 0.4,
+        };
+        let style = TextStyle {
+            size: Px(11.0),
+            ..Default::default()
+        };
+
+        let text_no_style = AnyElement::new(
+            GlobalElementId(1),
+            ElementKind::Text(TextProps::new("tip")),
+            Vec::new(),
+        );
+
+        let mut text_with_style = TextProps::new("fixed");
+        text_with_style.style = Some(TextStyle {
+            size: Px(18.0),
+            ..Default::default()
+        });
+        let text_with_style = AnyElement::new(
+            GlobalElementId(2),
+            ElementKind::Text(text_with_style),
+            Vec::new(),
+        );
+
+        let root = AnyElement::new(
+            GlobalElementId(3),
+            ElementKind::Container(ContainerProps::default()),
+            vec![text_no_style, text_with_style],
+        );
+
+        let out = apply_tooltip_inherited_defaults(root, fg, &style);
+        let (first, second) = (&out.children[0], &out.children[1]);
+
+        let ElementKind::Text(first_props) = &first.kind else {
+            panic!("expected first child to be Text, got {:?}", first.kind);
+        };
+        let ElementKind::Text(second_props) = &second.kind else {
+            panic!("expected second child to be Text, got {:?}", second.kind);
+        };
+
+        assert_eq!(first_props.style.as_ref().map(|s| s.size), Some(style.size));
+        assert_eq!(second_props.style.as_ref().map(|s| s.size), Some(Px(18.0)));
     }
 
     #[test]

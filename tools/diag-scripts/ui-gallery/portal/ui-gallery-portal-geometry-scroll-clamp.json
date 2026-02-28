@@ -1,0 +1,113 @@
+{
+  "schema_version": 2,
+  "steps": [
+    {
+      "key": "escape",
+      "modifiers": {
+        "alt": false,
+        "ctrl": false,
+        "meta": false,
+        "shift": false
+      },
+      "repeat": false,
+      "type": "press_key"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "button": "left",
+      "target": {
+        "id": "ui-gallery-overlay-reset",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "n": 5,
+      "type": "wait_frames"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "ui-gallery-portal-geometry-trigger",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 120,
+      "type": "wait_until"
+    },
+    {
+      "button": "left",
+      "target": {
+        "id": "ui-gallery-portal-geometry-trigger",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "ui-gallery-portal-geometry-popover-content",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 120,
+      "type": "wait_until"
+    },
+    {
+      "predicate": {
+        "eps_px": 0.0,
+        "kind": "bounds_within_window",
+        "padding_px": 4.0,
+        "target": {
+          "id": "ui-gallery-portal-geometry-popover-content",
+          "kind": "test_id"
+        }
+      },
+      "type": "assert"
+    },
+    {
+      "delta_x": 0.0,
+      "delta_y": 240.0,
+      "target": {
+        "id": "ui-gallery-portal-geometry-scroll-area",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 5,
+      "type": "wait_frames"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "ui-gallery-portal-geometry-popover-content",
+          "kind": "test_id"
+        }
+      },
+      "type": "assert"
+    },
+    {
+      "predicate": {
+        "eps_px": 0.0,
+        "kind": "bounds_within_window",
+        "padding_px": 4.0,
+        "target": {
+          "id": "ui-gallery-portal-geometry-popover-content",
+          "kind": "test_id"
+        }
+      },
+      "type": "assert"
+    },
+    {
+      "label": "ui-gallery-portal-geometry-scroll-clamp",
+      "type": "capture_bundle"
+    }
+  ]
+}

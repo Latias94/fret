@@ -18,6 +18,7 @@ pub(super) fn handle_pointer_down_step(
 ) -> bool {
     let UiActionStepV2::PointerDown {
         window: target_window,
+        pointer_kind,
         target,
         button: button_ui,
         modifiers,
@@ -94,7 +95,7 @@ pub(super) fn handle_pointer_down_step(
 
                 let modifiers = core_modifiers_from_ui(modifiers);
                 let pointer_id = PointerId(0);
-                let pointer_type = PointerType::Mouse;
+                let pointer_type = pointer_type_from_kind(pointer_kind);
                 let button = match button_ui {
                     UiMouseButtonV1::Left => MouseButton::Left,
                     UiMouseButtonV1::Right => MouseButton::Right,
@@ -142,6 +143,7 @@ pub(super) fn handle_pointer_down_step(
                 active.pointer_session = Some(V2PointerSessionState {
                     window,
                     button: button_ui,
+                    pointer_type,
                     modifiers,
                     position: pos,
                 });
@@ -188,6 +190,7 @@ pub(super) fn handle_pointer_move_step(
 ) -> bool {
     let UiActionStepV2::PointerMove {
         window: target_window,
+        pointer_kind,
         delta_x,
         delta_y,
         steps,
@@ -300,8 +303,22 @@ pub(super) fn handle_pointer_move_step(
                 },
             };
 
+            if let Some(want) = pointer_kind {
+                let want_type = pointer_type_from_kind(Some(want));
+                if want_type != session.pointer_type {
+                    *force_dump_label = Some(format!(
+                        "script-step-{step_index:04}-pointer_move-pointer-kind-mismatch"
+                    ));
+                    *stop_script = true;
+                    *failure_reason = Some("pointer_session_pointer_kind_mismatch".to_string());
+                    output.request_redraw = true;
+                    active.v2_step_state = None;
+                    return true;
+                }
+            }
+
             let pointer_id = PointerId(0);
-            let pointer_type = PointerType::Mouse;
+            let pointer_type = session.pointer_type;
 
             if state.frame == 0 {
                 state.frame = 1;
@@ -389,6 +406,7 @@ pub(super) fn handle_pointer_up_step(
 ) -> bool {
     let UiActionStepV2::PointerUp {
         window: target_window,
+        pointer_kind,
         button: want_button,
     } = step
     else {
@@ -448,9 +466,19 @@ pub(super) fn handle_pointer_up_step(
                 *failure_reason = Some("pointer_up_button_mismatch".to_string());
                 output.request_redraw = true;
                 active.v2_step_state = None;
+            } else if let Some(want) = pointer_kind
+                && pointer_type_from_kind(Some(want)) != session.pointer_type
+            {
+                *force_dump_label = Some(format!(
+                    "script-step-{step_index:04}-pointer_up-pointer-kind-mismatch"
+                ));
+                *stop_script = true;
+                *failure_reason = Some("pointer_session_pointer_kind_mismatch".to_string());
+                output.request_redraw = true;
+                active.v2_step_state = None;
             } else {
                 let pointer_id = PointerId(0);
-                let pointer_type = PointerType::Mouse;
+                let pointer_type = session.pointer_type;
                 let button = match session.button {
                     UiMouseButtonV1::Left => MouseButton::Left,
                     UiMouseButtonV1::Right => MouseButton::Right,

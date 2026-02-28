@@ -78,7 +78,7 @@ pub(super) fn try_build_test_id_slice_payload_streaming_inline(
         type Value = ();
 
         fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(f, "bundle.json object")
+            write!(f, "bundle artifact object")
         }
 
         fn visit_map<M>(self, mut map: M) -> Result<(), M::Error>
@@ -415,6 +415,39 @@ pub(super) fn try_build_test_id_slice_payload_streaming_inline(
         where
             D: serde::Deserializer<'de>,
         {
+            deserializer.deserialize_option(SemanticsOptVisitor { nodes: self.nodes })
+        }
+    }
+
+    struct SemanticsOptVisitor<'a> {
+        nodes: &'a mut Option<Vec<serde_json::Value>>,
+    }
+
+    impl<'de> Visitor<'de> for SemanticsOptVisitor<'_> {
+        type Value = ();
+
+        fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "semantics object or null")
+        }
+
+        fn visit_none<E>(self) -> Result<(), E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(())
+        }
+
+        fn visit_unit<E>(self) -> Result<(), E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(())
+        }
+
+        fn visit_some<D>(self, deserializer: D) -> Result<(), D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
             deserializer.deserialize_map(SemanticsVisitor { nodes: self.nodes })
         }
     }
@@ -568,7 +601,7 @@ pub(super) fn try_build_test_id_slice_payload_streaming_table(
         type Value = ();
 
         fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(f, "bundle.json object")
+            write!(f, "bundle artifact object")
         }
 
         fn visit_map<M>(self, mut map: M) -> Result<(), M::Error>
@@ -911,11 +944,25 @@ pub(super) fn try_build_test_id_slice_payload_streaming_table(
         return Ok(None);
     };
 
-    let nodes = stream_read_semantics_table_nodes(bundle_path, found_snapshot.window, expected_fp)?;
+    let nodes = crate::json_bundle::stream_read_semantics_table_nodes(
+        bundle_path,
+        found_snapshot.window,
+        expected_fp,
+    )?;
     let Some(nodes) = nodes else {
+        let bundle_dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
         return Err(format!(
-            "bundle semantics_source=table but no matching semantics table entry found (window={} semantics_fingerprint={expected_fp})",
-            found_snapshot.window
+            "bundle.index.json indicates semantics_source=table, but the bundle artifact has no matching semantics table entry \
+(window={} semantics_fingerprint={expected_fp}).\n\
+  bundle: {}\n\
+  hint: try regenerating schema2 and sidecars:\n\
+    - fretboard diag doctor --fix-schema2 {} --warmup-frames {warmup_frames}\n\
+    - fretboard diag index {} --warmup-frames {warmup_frames}\n\
+  if this came from a share zip, re-extract/re-capture to ensure the schema2 bundle includes tables.semantics.entries.",
+            found_snapshot.window,
+            bundle_path.display(),
+            bundle_dir.display(),
+            bundle_dir.display(),
         ));
     };
 
@@ -929,374 +976,6 @@ pub(super) fn try_build_test_id_slice_payload_streaming_table(
         max_matches,
         max_ancestors,
     )?))
-}
-
-fn stream_read_semantics_table_nodes(
-    bundle_path: &Path,
-    window_id: u64,
-    semantics_fingerprint: u64,
-) -> Result<Option<Vec<serde_json::Value>>, String> {
-    const FOUND_TABLE_MARKER: &str = "__FRET_DIAG_FOUND_TABLE__";
-
-    struct RootSeed {
-        window_id: u64,
-        semantics_fingerprint: u64,
-        out: std::rc::Rc<std::cell::RefCell<Option<Vec<serde_json::Value>>>>,
-    }
-
-    impl<'de> DeserializeSeed<'de> for RootSeed {
-        type Value = ();
-
-        fn deserialize<D>(self, deserializer: D) -> Result<(), D::Error>
-        where
-            D: serde::Deserializer<'de>,
-        {
-            deserializer.deserialize_map(RootVisitor {
-                window_id: self.window_id,
-                semantics_fingerprint: self.semantics_fingerprint,
-                out: self.out,
-            })
-        }
-    }
-
-    struct RootVisitor {
-        window_id: u64,
-        semantics_fingerprint: u64,
-        out: std::rc::Rc<std::cell::RefCell<Option<Vec<serde_json::Value>>>>,
-    }
-
-    impl<'de> Visitor<'de> for RootVisitor {
-        type Value = ();
-
-        fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(f, "bundle.json object")
-        }
-
-        fn visit_map<M>(self, mut map: M) -> Result<(), M::Error>
-        where
-            M: MapAccess<'de>,
-        {
-            while let Some(key) = map.next_key::<String>()? {
-                match key.as_str() {
-                    "tables" => {
-                        map.next_value_seed(TablesSeed {
-                            window_id: self.window_id,
-                            semantics_fingerprint: self.semantics_fingerprint,
-                            out: self.out.clone(),
-                        })?;
-                    }
-                    _ => {
-                        map.next_value::<IgnoredAny>()?;
-                    }
-                }
-            }
-            Ok(())
-        }
-    }
-
-    struct TablesSeed {
-        window_id: u64,
-        semantics_fingerprint: u64,
-        out: std::rc::Rc<std::cell::RefCell<Option<Vec<serde_json::Value>>>>,
-    }
-
-    impl<'de> DeserializeSeed<'de> for TablesSeed {
-        type Value = ();
-
-        fn deserialize<D>(self, deserializer: D) -> Result<(), D::Error>
-        where
-            D: serde::Deserializer<'de>,
-        {
-            deserializer.deserialize_map(TablesVisitor {
-                window_id: self.window_id,
-                semantics_fingerprint: self.semantics_fingerprint,
-                out: self.out,
-            })
-        }
-    }
-
-    struct TablesVisitor {
-        window_id: u64,
-        semantics_fingerprint: u64,
-        out: std::rc::Rc<std::cell::RefCell<Option<Vec<serde_json::Value>>>>,
-    }
-
-    impl<'de> Visitor<'de> for TablesVisitor {
-        type Value = ();
-
-        fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(f, "tables object")
-        }
-
-        fn visit_map<M>(self, mut map: M) -> Result<(), M::Error>
-        where
-            M: MapAccess<'de>,
-        {
-            while let Some(key) = map.next_key::<String>()? {
-                match key.as_str() {
-                    "semantics" => {
-                        map.next_value_seed(SemanticsTableSeed {
-                            window_id: self.window_id,
-                            semantics_fingerprint: self.semantics_fingerprint,
-                            out: self.out.clone(),
-                        })?;
-                    }
-                    _ => {
-                        map.next_value::<IgnoredAny>()?;
-                    }
-                }
-            }
-            Ok(())
-        }
-    }
-
-    struct SemanticsTableSeed {
-        window_id: u64,
-        semantics_fingerprint: u64,
-        out: std::rc::Rc<std::cell::RefCell<Option<Vec<serde_json::Value>>>>,
-    }
-
-    impl<'de> DeserializeSeed<'de> for SemanticsTableSeed {
-        type Value = ();
-
-        fn deserialize<D>(self, deserializer: D) -> Result<(), D::Error>
-        where
-            D: serde::Deserializer<'de>,
-        {
-            deserializer.deserialize_map(SemanticsTableVisitor {
-                window_id: self.window_id,
-                semantics_fingerprint: self.semantics_fingerprint,
-                out: self.out,
-            })
-        }
-    }
-
-    struct SemanticsTableVisitor {
-        window_id: u64,
-        semantics_fingerprint: u64,
-        out: std::rc::Rc<std::cell::RefCell<Option<Vec<serde_json::Value>>>>,
-    }
-
-    impl<'de> Visitor<'de> for SemanticsTableVisitor {
-        type Value = ();
-
-        fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(f, "semantics table object")
-        }
-
-        fn visit_map<M>(self, mut map: M) -> Result<(), M::Error>
-        where
-            M: MapAccess<'de>,
-        {
-            while let Some(key) = map.next_key::<String>()? {
-                match key.as_str() {
-                    "entries" => {
-                        map.next_value_seed(EntriesSeed {
-                            window_id: self.window_id,
-                            semantics_fingerprint: self.semantics_fingerprint,
-                            out: self.out.clone(),
-                        })?;
-                    }
-                    _ => {
-                        map.next_value::<IgnoredAny>()?;
-                    }
-                }
-            }
-            Ok(())
-        }
-    }
-
-    struct EntriesSeed {
-        window_id: u64,
-        semantics_fingerprint: u64,
-        out: std::rc::Rc<std::cell::RefCell<Option<Vec<serde_json::Value>>>>,
-    }
-
-    impl<'de> DeserializeSeed<'de> for EntriesSeed {
-        type Value = ();
-
-        fn deserialize<D>(self, deserializer: D) -> Result<(), D::Error>
-        where
-            D: serde::Deserializer<'de>,
-        {
-            deserializer.deserialize_seq(EntriesVisitor {
-                window_id: self.window_id,
-                semantics_fingerprint: self.semantics_fingerprint,
-                out: self.out,
-            })
-        }
-    }
-
-    struct EntriesVisitor {
-        window_id: u64,
-        semantics_fingerprint: u64,
-        out: std::rc::Rc<std::cell::RefCell<Option<Vec<serde_json::Value>>>>,
-    }
-
-    impl<'de> Visitor<'de> for EntriesVisitor {
-        type Value = ();
-
-        fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(f, "semantics entries array")
-        }
-
-        fn visit_seq<A>(self, mut seq: A) -> Result<(), A::Error>
-        where
-            A: SeqAccess<'de>,
-        {
-            while seq
-                .next_element_seed(EntrySeed {
-                    window_id: self.window_id,
-                    semantics_fingerprint: self.semantics_fingerprint,
-                    out: self.out.clone(),
-                })?
-                .is_some()
-            {}
-            Ok(())
-        }
-    }
-
-    struct EntrySeed {
-        window_id: u64,
-        semantics_fingerprint: u64,
-        out: std::rc::Rc<std::cell::RefCell<Option<Vec<serde_json::Value>>>>,
-    }
-
-    impl<'de> DeserializeSeed<'de> for EntrySeed {
-        type Value = ();
-
-        fn deserialize<D>(self, deserializer: D) -> Result<(), D::Error>
-        where
-            D: serde::Deserializer<'de>,
-        {
-            deserializer.deserialize_map(EntryVisitor {
-                window_id: self.window_id,
-                semantics_fingerprint: self.semantics_fingerprint,
-                out: self.out,
-            })
-        }
-    }
-
-    struct EntryVisitor {
-        window_id: u64,
-        semantics_fingerprint: u64,
-        out: std::rc::Rc<std::cell::RefCell<Option<Vec<serde_json::Value>>>>,
-    }
-
-    impl<'de> Visitor<'de> for EntryVisitor {
-        type Value = ();
-
-        fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(f, "semantics entry object")
-        }
-
-        fn visit_map<M>(self, mut map: M) -> Result<(), M::Error>
-        where
-            M: MapAccess<'de>,
-        {
-            let mut window: Option<u64> = None;
-            let mut fp: Option<u64> = None;
-            let mut nodes: Option<Vec<serde_json::Value>> = None;
-
-            while let Some(key) = map.next_key::<String>()? {
-                match key.as_str() {
-                    "window" => {
-                        window = Some(map.next_value::<u64>()?);
-                    }
-                    "semantics_fingerprint" | "semanticsFingerprint" => {
-                        fp = Some(map.next_value::<u64>()?);
-                    }
-                    "semantics" => {
-                        let is_match = window == Some(self.window_id)
-                            && fp == Some(self.semantics_fingerprint);
-                        if is_match {
-                            map.next_value_seed(SemanticsSeed { nodes: &mut nodes })?;
-                        } else {
-                            map.next_value::<IgnoredAny>()?;
-                        }
-                    }
-                    _ => {
-                        map.next_value::<IgnoredAny>()?;
-                    }
-                }
-            }
-
-            if window == Some(self.window_id) && fp == Some(self.semantics_fingerprint) {
-                if let Some(nodes) = nodes {
-                    self.out.borrow_mut().replace(nodes);
-                    return Err(serde::de::Error::custom(FOUND_TABLE_MARKER));
-                }
-            }
-            Ok(())
-        }
-    }
-
-    struct SemanticsSeed<'a> {
-        nodes: &'a mut Option<Vec<serde_json::Value>>,
-    }
-
-    impl<'de> DeserializeSeed<'de> for SemanticsSeed<'_> {
-        type Value = ();
-
-        fn deserialize<D>(self, deserializer: D) -> Result<(), D::Error>
-        where
-            D: serde::Deserializer<'de>,
-        {
-            deserializer.deserialize_map(SemanticsVisitor { nodes: self.nodes })
-        }
-    }
-
-    struct SemanticsVisitor<'a> {
-        nodes: &'a mut Option<Vec<serde_json::Value>>,
-    }
-
-    impl<'de> Visitor<'de> for SemanticsVisitor<'_> {
-        type Value = ();
-
-        fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(f, "semantics object")
-        }
-
-        fn visit_map<M>(self, mut map: M) -> Result<(), M::Error>
-        where
-            M: MapAccess<'de>,
-        {
-            while let Some(key) = map.next_key::<String>()? {
-                match key.as_str() {
-                    "nodes" => {
-                        *self.nodes = Some(map.next_value::<Vec<serde_json::Value>>()?);
-                    }
-                    _ => {
-                        map.next_value::<IgnoredAny>()?;
-                    }
-                }
-            }
-            Ok(())
-        }
-    }
-
-    let file = std::fs::File::open(bundle_path).map_err(|e| e.to_string())?;
-    let reader = std::io::BufReader::new(file);
-    let mut de = serde_json::Deserializer::from_reader(reader);
-
-    let out: std::rc::Rc<std::cell::RefCell<Option<Vec<serde_json::Value>>>> =
-        std::rc::Rc::new(std::cell::RefCell::new(None));
-
-    let res = RootSeed {
-        window_id,
-        semantics_fingerprint,
-        out: out.clone(),
-    }
-    .deserialize(&mut de);
-
-    if let Err(err) = res {
-        let msg = err.to_string();
-        if !msg.starts_with(FOUND_TABLE_MARKER) {
-            return Err(err.to_string());
-        }
-    }
-
-    Ok(out.borrow_mut().take())
 }
 
 #[cfg(test)]

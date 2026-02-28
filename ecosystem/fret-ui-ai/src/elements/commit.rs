@@ -46,39 +46,23 @@ fn status_color(status: CommitFileStatusKind) -> ColorRef {
     match status {
         CommitFileStatusKind::Added => ColorRef::Token {
             key: "color.commit.file.added",
-            fallback: ColorFallback::Color(Color {
-                r: 0.086,
-                g: 0.639,
-                b: 0.290,
-                a: 1.0,
-            }),
+            // Tailwind: green-600 (#16a34a).
+            fallback: ColorFallback::Color(fret_ui_kit::colors::linear_from_hex_rgb(0x16_a3_4a)),
         },
         CommitFileStatusKind::Deleted => ColorRef::Token {
             key: "color.commit.file.deleted",
-            fallback: ColorFallback::Color(Color {
-                r: 0.863,
-                g: 0.149,
-                b: 0.149,
-                a: 1.0,
-            }),
+            // Tailwind: red-600 (#dc2626).
+            fallback: ColorFallback::Color(fret_ui_kit::colors::linear_from_hex_rgb(0xdc_26_26)),
         },
         CommitFileStatusKind::Modified => ColorRef::Token {
             key: "color.commit.file.modified",
-            fallback: ColorFallback::Color(Color {
-                r: 0.792,
-                g: 0.541,
-                b: 0.016,
-                a: 1.0,
-            }),
+            // Tailwind: yellow-600 (#ca8a04).
+            fallback: ColorFallback::Color(fret_ui_kit::colors::linear_from_hex_rgb(0xca_8a_04)),
         },
         CommitFileStatusKind::Renamed => ColorRef::Token {
             key: "color.commit.file.renamed",
-            fallback: ColorFallback::Color(Color {
-                r: 0.145,
-                g: 0.388,
-                b: 0.922,
-                a: 1.0,
-            }),
+            // Tailwind: blue-600 (#2563eb).
+            fallback: ColorFallback::Color(fret_ui_kit::colors::linear_from_hex_rgb(0x25_63_eb)),
         },
     }
 }
@@ -777,12 +761,8 @@ impl CommitCopyButton {
             pressable.a11y.test_id = test_id.clone();
 
             let fg = theme.color_token("muted-foreground");
-            let bg_hover = theme
-                .color_by_key("color.menu.item.hover")
-                .unwrap_or_else(|| theme.color_token("secondary"));
-            let bg_pressed = theme
-                .color_by_key("accent")
-                .unwrap_or_else(|| theme.color_token("secondary"));
+            let bg_hover = theme.color_token("color.menu.item.hover");
+            let bg_pressed = theme.color_token("accent");
 
             let bg = if st.pressed {
                 alpha(bg_pressed, 0.9)

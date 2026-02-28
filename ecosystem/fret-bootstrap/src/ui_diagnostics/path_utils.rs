@@ -36,3 +36,22 @@ fn sanitize_label(label: &str) -> String {
         out
     }
 }
+
+fn format_bundle_dump_note(
+    label: &str,
+    dump_max_snapshots: Option<usize>,
+    request_id: Option<u64>,
+) -> String {
+    if dump_max_snapshots.is_none() && request_id.is_none() {
+        return label.to_string();
+    }
+
+    let mut out = format!("label={label}");
+    if let Some(n) = dump_max_snapshots {
+        out.push_str(&format!(" max_snapshots={n}"));
+    }
+    if let Some(id) = request_id {
+        out.push_str(&format!(" request_id={id}"));
+    }
+    out
+}

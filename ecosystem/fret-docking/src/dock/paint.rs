@@ -560,6 +560,57 @@ pub(super) fn paint_drop_overlay(
     let primary = theme.color_token("primary");
     let radius_sm = theme.metric_token("metric.radius.sm");
     let radius_md = theme.metric_token("metric.radius.md");
+    let primary_alpha = |alpha: f32| Color {
+        a: alpha,
+        ..primary
+    };
+
+    let overlay_float_bg = theme
+        .color_by_key("component.docking.drop_overlay.float.bg")
+        .unwrap_or_else(|| primary_alpha(0.10));
+    let overlay_float_border = theme
+        .color_by_key("component.docking.drop_overlay.float.border")
+        .unwrap_or_else(|| primary_alpha(0.85));
+    let overlay_empty_bg = theme
+        .color_by_key("component.docking.drop_overlay.empty.bg")
+        .unwrap_or_else(|| primary_alpha(0.08));
+    let overlay_empty_border = theme
+        .color_by_key("component.docking.drop_overlay.empty.border")
+        .unwrap_or_else(|| primary_alpha(0.75));
+    let overlay_center_content_bg = theme
+        .color_by_key("component.docking.drop_overlay.center.content.bg")
+        .unwrap_or_else(|| primary_alpha(0.12));
+    let overlay_center_content_border = theme
+        .color_by_key("component.docking.drop_overlay.center.content.border")
+        .unwrap_or_else(|| primary_alpha(0.65));
+    let overlay_center_tab_bar_bg = theme
+        .color_by_key("component.docking.drop_overlay.center.tab_bar.bg")
+        .unwrap_or_else(|| primary_alpha(0.14));
+    let overlay_center_tab_bar_border = theme
+        .color_by_key("component.docking.drop_overlay.center.tab_bar.border")
+        .unwrap_or_else(|| primary_alpha(0.45));
+    let overlay_zone_bg = theme
+        .color_by_key("component.docking.drop_overlay.zone.bg")
+        .unwrap_or_else(|| primary_alpha(0.16));
+    let overlay_zone_border = theme
+        .color_by_key("component.docking.drop_overlay.zone.border")
+        .unwrap_or_else(|| primary_alpha(0.85));
+
+    let tab_insert_preview_bg = theme
+        .color_by_key("component.docking.tab_insert.preview.bg")
+        .unwrap_or_else(|| primary_alpha(0.22));
+    let tab_insert_preview_border = theme
+        .color_by_key("component.docking.tab_insert.preview.border")
+        .unwrap_or_else(|| primary_alpha(0.85));
+    let tab_insert_marker_bg = theme
+        .color_by_key("component.docking.tab_insert.marker.bg")
+        .unwrap_or_else(|| primary_alpha(0.85));
+    let tab_insert_marker_border = theme
+        .color_by_key("component.docking.tab_insert.marker.border")
+        .unwrap_or_else(|| primary_alpha(1.0));
+    let tab_insert_marker_cap_bg = theme
+        .color_by_key("component.docking.tab_insert.marker.cap.bg")
+        .unwrap_or_else(|| primary_alpha(0.92));
 
     match target {
         DockDropTarget::Float { window: w } => {
@@ -570,9 +621,9 @@ pub(super) fn paint_drop_overlay(
             scene.push(SceneOp::Quad {
                 order: fret_core::DrawOrder(10_000),
                 rect: zone,
-                background: fret_core::Paint::Solid(Color { a: 0.10, ..primary }),
+                background: fret_core::Paint::Solid(overlay_float_bg),
                 border: Edges::all(Px(3.0)),
-                border_paint: fret_core::Paint::Solid(Color { a: 0.85, ..primary }),
+                border_paint: fret_core::Paint::Solid(overlay_float_border),
                 corner_radii: fret_core::Corners::all(Px(radius_md.0.max(6.0))),
             });
         }
@@ -584,9 +635,9 @@ pub(super) fn paint_drop_overlay(
             scene.push(SceneOp::Quad {
                 order: fret_core::DrawOrder(10_000),
                 rect: zone,
-                background: fret_core::Paint::Solid(Color { a: 0.08, ..primary }),
+                background: fret_core::Paint::Solid(overlay_empty_bg),
                 border: Edges::all(Px(3.0)),
-                border_paint: fret_core::Paint::Solid(Color { a: 0.75, ..primary }),
+                border_paint: fret_core::Paint::Solid(overlay_empty_border),
                 corner_radii: fret_core::Corners::all(Px(radius_md.0.max(6.0))),
             });
         }
@@ -602,17 +653,17 @@ pub(super) fn paint_drop_overlay(
                     scene.push(SceneOp::Quad {
                         order: fret_core::DrawOrder(9_985),
                         rect: content,
-                        background: fret_core::Paint::Solid(Color { a: 0.12, ..primary }),
+                        background: fret_core::Paint::Solid(overlay_center_content_bg),
                         border: Edges::all(Px(2.0)),
-                        border_paint: fret_core::Paint::Solid(Color { a: 0.65, ..primary }),
+                        border_paint: fret_core::Paint::Solid(overlay_center_content_border),
                         corner_radii: fret_core::Corners::all(Px(radius_sm.0.max(4.0))),
                     });
                     scene.push(SceneOp::Quad {
                         order: fret_core::DrawOrder(9_990),
                         rect: tab_bar,
-                        background: fret_core::Paint::Solid(Color { a: 0.14, ..primary }),
+                        background: fret_core::Paint::Solid(overlay_center_tab_bar_bg),
                         border: Edges::all(Px(1.0)),
-                        border_paint: fret_core::Paint::Solid(Color { a: 0.45, ..primary }),
+                        border_paint: fret_core::Paint::Solid(overlay_center_tab_bar_border),
                         corner_radii: fret_core::Corners::all(Px(radius_sm.0.max(4.0))),
                     });
                 }
@@ -667,9 +718,9 @@ pub(super) fn paint_drop_overlay(
                         scene.push(SceneOp::Quad {
                             order: fret_core::DrawOrder(9_995),
                             rect: preview,
-                            background: fret_core::Paint::Solid(Color { a: 0.22, ..primary }),
+                            background: fret_core::Paint::Solid(tab_insert_preview_bg),
                             border: Edges::all(Px(2.0)),
-                            border_paint: fret_core::Paint::Solid(Color { a: 0.85, ..primary }),
+                            border_paint: fret_core::Paint::Solid(tab_insert_preview_border),
                             corner_radii: fret_core::Corners::all(Px(radius_sm.0.max(4.0))),
                         });
 
@@ -723,9 +774,9 @@ pub(super) fn paint_drop_overlay(
                     scene.push(SceneOp::Quad {
                         order: fret_core::DrawOrder(10_000),
                         rect: marker,
-                        background: fret_core::Paint::Solid(Color { a: 0.85, ..primary }),
+                        background: fret_core::Paint::Solid(tab_insert_marker_bg),
                         border: Edges::all(Px(1.0)),
-                        border_paint: fret_core::Paint::Solid(Color { a: 1.0, ..primary }),
+                        border_paint: fret_core::Paint::Solid(tab_insert_marker_border),
                         corner_radii: fret_core::Corners::all(Px(3.0)),
                     });
 
@@ -745,7 +796,7 @@ pub(super) fn paint_drop_overlay(
                         scene.push(SceneOp::Quad {
                             order: fret_core::DrawOrder(10_001),
                             rect: cap,
-                            background: fret_core::Paint::Solid(Color { a: 0.92, ..primary }),
+                            background: fret_core::Paint::Solid(tab_insert_marker_cap_bg),
                             border: Edges::all(Px(0.0)),
                             border_paint: fret_core::Paint::TRANSPARENT,
                             corner_radii: fret_core::Corners::all(Px(2.0)),
@@ -800,9 +851,9 @@ pub(super) fn paint_drop_overlay(
             scene.push(SceneOp::Quad {
                 order: fret_core::DrawOrder(10_000),
                 rect: overlay,
-                background: fret_core::Paint::Solid(Color { a: 0.16, ..primary }),
+                background: fret_core::Paint::Solid(overlay_zone_bg),
                 border: Edges::all(Px(2.0)),
-                border_paint: fret_core::Paint::Solid(Color { a: 0.85, ..primary }),
+                border_paint: fret_core::Paint::Solid(overlay_zone_border),
                 corner_radii: fret_core::Corners::all(Px(radius_sm.0.max(4.0))),
             });
         }

@@ -1,7 +1,7 @@
 ---
 title: Diagnostics Fearless Refactor v1
 status: draft
-date: 2026-02-22
+date: 2026-02-24
 scope: diagnostics, automation, tooling, refactor
 ---
 
@@ -17,6 +17,12 @@ keeping the day-to-day debugging loop fast:
 
 This workstream is intentionally scoped to refactors and additive sidecars. It must not change the core runtime contracts in
 `crates/fret-ui` (mechanism only).
+
+Canonical tracking docs (kept up to date as implementation evolves):
+
+- Workstream overview: `docs/workstreams/diag-fearless-refactor-v1.md`
+- TODO tracker: `docs/workstreams/diag-fearless-refactor-v1-todo.md`
+- Milestones: `docs/workstreams/diag-fearless-refactor-v1-milestones.md`
 
 Related living docs:
 
@@ -40,6 +46,8 @@ Related living docs:
   - `crates/fret-diag/src/diag_stats.rs` (extracted `diag stats` command handler)
   - `crates/fret-diag/src/diag_matrix.rs` (extracted `diag matrix` command handler)
   - `crates/fret-diag/src/diag_repro.rs` (extracted `diag repro` command handler)
+- Bundle/repro zip packing is also isolated to reduce churn in the CLI entrypoint:
+  - `crates/fret-diag/src/pack_zip.rs`
 - `crates/fret-diag/src/stats.rs` remains large, but UI gallery checks have started moving into dedicated submodules under
   `crates/fret-diag/src/stats/`:
   - `crates/fret-diag/src/stats/ui_gallery_markdown_editor.rs`
@@ -53,13 +61,13 @@ Related living docs:
 - `fret-diag` CLI commands treat sidecars as optional accelerators:
   - validate `kind` / `schema_version` / `warmup_frames`,
   - accept `_root/` bundle layouts,
-  - regenerate invalid sidecars from adjacent `bundle.json` when possible.
+  - regenerate invalid sidecars from an adjacent bundle artifact when possible.
   - Evidence: `crates/fret-diag/src/commands/sidecars.rs`
 
 ## Goals
 
 1. **Artifact ergonomics**
-   - Keep `bundle.json` reviewable and bounded.
+   - Keep bundle artifacts bounded; keep raw `bundle.json` reviewable when present.
    - Add small sidecars for fast queries (indexing, fingerprints, bloom filters, step markers).
 2. **Implementation modularity**
    - Split the monolithic `ui_diagnostics.rs` by responsibility (script engine, bundle dump, index writing, WS bridge).
@@ -79,8 +87,8 @@ Related living docs:
 
 See:
 
-- TODO list: `docs/workstreams/diag-fearless-refactor-v1/todo.md`
-- Milestones: `docs/workstreams/diag-fearless-refactor-v1/milestones.md`
+- TODO list: `docs/workstreams/diag-fearless-refactor-v1-todo.md`
+- Milestones: `docs/workstreams/diag-fearless-refactor-v1-milestones.md`
 - Migration plan: `docs/workstreams/diag-fearless-refactor-v1/migration-plan.md`
 - Sidecar details: `docs/workstreams/diag-fearless-refactor-v1/frames-index.md`
 - Agent loop: `docs/workstreams/diag-fearless-refactor-v1/agent-loop.md`

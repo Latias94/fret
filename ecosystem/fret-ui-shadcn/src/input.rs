@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use fret_core::window::ColorScheme;
 use fret_core::{Corners, FontId, KeyCode, NodeId, Px, SemanticsRole};
 use fret_runtime::{CommandId, Model};
 use fret_ui::action::{ActionCx, KeyDownCx, UiFocusActionHost};
@@ -71,6 +70,7 @@ pub struct Input {
     model: Model<String>,
     a11y_label: Option<Arc<str>>,
     a11y_role: Option<SemanticsRole>,
+    test_id: Option<Arc<str>>,
     placeholder: Option<Arc<str>>,
     aria_invalid: bool,
     aria_required: bool,
@@ -94,6 +94,7 @@ impl Input {
             model,
             a11y_label: None,
             a11y_role: None,
+            test_id: None,
             placeholder: None,
             aria_invalid: false,
             aria_required: false,
@@ -119,6 +120,16 @@ impl Input {
 
     pub fn a11y_role(mut self, role: SemanticsRole) -> Self {
         self.a11y_role = Some(role);
+        self
+    }
+
+    /// Sets a stable `test_id` on the underlying `TextInput` element (not the outer chrome wrapper).
+    ///
+    /// This is preferred over calling `.test_id(...)` on the returned `AnyElement`, because
+    /// diagnostics scripts (`type_text_into`, focus assertions) need to target the focusable
+    /// text input node directly.
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
         self
     }
 
@@ -232,6 +243,7 @@ impl Input {
             self.model,
             self.a11y_label,
             self.a11y_role,
+            self.test_id,
             self.placeholder,
             self.aria_invalid,
             self.aria_required,
@@ -267,6 +279,7 @@ pub fn input<H: UiHost>(
         model,
         a11y_label,
         a11y_role,
+        None,
         placeholder,
         false,
         false,
@@ -292,6 +305,7 @@ fn input_with_style_and_submit<H: UiHost>(
     model: Model<String>,
     a11y_label: Option<Arc<str>>,
     a11y_role: Option<SemanticsRole>,
+    test_id: Option<Arc<str>>,
     placeholder: Option<Arc<str>>,
     aria_invalid: bool,
     aria_required: bool,
@@ -309,6 +323,7 @@ fn input_with_style_and_submit<H: UiHost>(
     corner_radii_override: Option<Corners>,
 ) -> AnyElement {
     let theme = Theme::global(&*cx.app);
+    let theme_snapshot = theme.snapshot();
     let submit_command = submit_command.filter(|cmd| cx.command_is_enabled(cmd));
     let cancel_command = cancel_command.filter(|cmd| cx.command_is_enabled(cmd));
 
@@ -321,12 +336,14 @@ fn input_with_style_and_submit<H: UiHost>(
             border: Some("input"),
             border_focus: Some("ring"),
             fg: Some("foreground"),
-            selection: Some("ring/50"),
+            // shadcn/ui v4 `Input` uses `selection:bg-primary selection:text-primary-foreground`.
+            // We currently model the background color only.
+            selection: Some("primary"),
             ..InputTokenKeys::none()
         },
     );
 
-    let mut chrome = TextInputStyle::from_theme(theme.snapshot());
+    let mut chrome = TextInputStyle::from_theme(theme_snapshot.clone());
     chrome.padding = resolved.padding;
     chrome.corner_radii = Corners::all(resolved.radius);
     chrome.border = fret_core::Edges::all(resolved.border_width);
@@ -364,15 +381,8 @@ fn input_with_style_and_submit<H: UiHost>(
         chrome.border_color = border_color;
         chrome.border_color_focused = border_color;
         if let Some(mut ring) = chrome.focus_ring.take() {
-            let ring_key = if theme.color_scheme == Some(ColorScheme::Dark) {
-                "destructive/40"
-            } else {
-                "destructive/20"
-            };
-            ring.color = theme
-                .color_by_key(ring_key)
-                .or_else(|| theme.color_by_key("destructive/20"))
-                .unwrap_or(border_color);
+            ring.color =
+                crate::theme_variants::invalid_control_ring_color(&theme_snapshot, border_color);
             chrome.focus_ring = Some(ring);
         }
     }
@@ -400,6 +410,7 @@ fn input_with_style_and_submit<H: UiHost>(
     props.focusable = !disabled;
     props.a11y_label = a11y_label;
     props.a11y_role = a11y_role;
+    props.test_id = test_id;
     props.placeholder = placeholder;
     props.a11y_required = aria_required;
     props.a11y_invalid = aria_invalid.then_some(fret_core::SemanticsInvalid::True);
@@ -411,12 +422,24 @@ fn input_with_style_and_submit<H: UiHost>(
     props.text_style = text_style;
     props.layout.size = SizeStyle {
         width: Length::Fill,
-        height: Length::Px(resolved.min_height),
+        height: Length::Fill,
         min_width: Some(Length::Px(fret_core::Px(0.0))),
         ..Default::default()
     };
     props.layout.overflow = Overflow::Clip;
-    decl_style::apply_layout_refinement(theme, layout_override, &mut props.layout);
+
+    // shadcn/ui `Input` uses `shadow-xs`. The text input widget does not expose a shadow field in
+    // its chrome style, so we model the outcome by wrapping it in a shadow-only container.
+    let mut root_layout = decl_style::layout_style(
+        theme,
+        LayoutRefinement::default()
+            .w_full()
+            .min_w_0()
+            .h_px(resolved.min_height)
+            .merge(layout_override),
+    );
+    root_layout.overflow = fret_ui::element::Overflow::Visible;
+    let root_shadow = decl_style::shadow_xs(theme, resolved.radius);
 
     let model_for_hook = props.model.clone();
     let on_submit_hook = on_submit.clone();
@@ -448,6 +471,17 @@ fn input_with_style_and_submit<H: UiHost>(
         props
     });
 
+    let input = cx.container(
+        fret_ui::element::ContainerProps {
+            layout: root_layout,
+            background: None,
+            shadow: Some(root_shadow),
+            corner_radii: Corners::all(resolved.radius),
+            ..Default::default()
+        },
+        |_cx| vec![input],
+    );
+
     if disabled {
         cx.opacity(0.5, move |_cx| vec![input])
     } else {
@@ -459,8 +493,13 @@ fn input_with_style_and_submit<H: UiHost>(
 mod tests {
     use super::*;
 
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Px, Rect, Size as CoreSize};
+    use fret_ui::element::{ElementKind, Length};
+    use fret_ui::elements;
+
     #[test]
-    fn input_selection_color_uses_ring_50_in_shadcn_light_theme() {
+    fn input_selection_color_uses_primary_in_shadcn_light_theme() {
         let mut app = fret_app::App::new();
         crate::shadcn_themes::apply_shadcn_new_york_v4(
             &mut app,
@@ -469,9 +508,7 @@ mod tests {
         );
 
         let theme = Theme::global(&app);
-        let expected = theme
-            .color_by_key("ring/50")
-            .expect("shadcn new-york-v4 seeds ring/50");
+        let expected = theme.color_token("primary");
 
         let resolved = resolve_input_chrome(
             theme,
@@ -482,11 +519,57 @@ mod tests {
                 border: Some("input"),
                 border_focus: Some("ring"),
                 fg: Some("foreground"),
-                selection: Some("ring/50"),
+                selection: Some("primary"),
                 ..InputTokenKeys::none()
             },
         );
 
         assert_eq!(resolved.selection_color, expected);
+    }
+
+    #[test]
+    fn input_wraps_in_shadow_container_like_shadcn() {
+        let mut app = App::new();
+        crate::shadcn_themes::apply_shadcn_new_york_v4(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Slate,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(320.0), Px(120.0)),
+        );
+
+        let model = app.models_mut().insert(String::new());
+        let el =
+            elements::with_element_cx(&mut app, window, bounds, "input-shadow-wrapper", |cx| {
+                Input::new(model.clone())
+                    .a11y_label("Input")
+                    .into_element(cx)
+            });
+
+        let ElementKind::Container(root) = &el.kind else {
+            panic!(
+                "expected Input root to be a shadow container, got {:?}",
+                el.kind
+            );
+        };
+        assert!(
+            root.shadow.is_some(),
+            "expected Input to have shadow-xs wrapper"
+        );
+        assert_eq!(root.layout.size.width, Length::Fill);
+
+        let child = el.children.first().expect("shadow wrapper child");
+        let ElementKind::TextInput(props) = &child.kind else {
+            panic!(
+                "expected shadow wrapper child to be TextInput, got {:?}",
+                child.kind
+            );
+        };
+        assert_eq!(props.layout.size.width, Length::Fill);
+        assert_eq!(props.layout.size.height, Length::Fill);
     }
 }

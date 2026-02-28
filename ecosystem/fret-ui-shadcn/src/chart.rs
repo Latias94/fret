@@ -203,7 +203,7 @@ impl ChartTooltipContent {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
         let text_xs_px = theme
             .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_XS_PX)
             .unwrap_or(Px(12.0));
@@ -726,7 +726,7 @@ impl ChartLegendContent {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
         let text_xs_line_height = theme
             .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_XS_LINE_HEIGHT)
             .unwrap_or(Px(16.0));

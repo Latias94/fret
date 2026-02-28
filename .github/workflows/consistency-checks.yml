@@ -20,6 +20,9 @@ jobs:
         with:
           toolchain: 1.92.0
 
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+
       - name: Check ADR numbering
         run: python3 tools/check_adr_numbers.py
 
@@ -32,8 +35,20 @@ jobs:
       - name: Check stringly command parsing
         run: python3 tools/check_stringly_command_parsing.py
 
+      - name: Check diag script taxonomy drift
+        run: python3 tools/diag-scripts/migrate-script-library.py --check-root
+
+      - name: Check diag script registry
+        run: python3 tools/check_diag_scripts_registry.py
+
       - name: Check generated icon artifacts
         run: python3 tools/check_icons_generation.py --pack all
+
+      - name: Check consumption profiles (portable)
+        run: python3 tools/check_consumption_profiles.py
+
+      - name: Check fret-launch-core portability (no platform SDK deps)
+        run: python3 tools/check_launch_core_portability.py
 
   cargo-deny-licenses:
     name: cargo-deny (licenses/sources/advisories)

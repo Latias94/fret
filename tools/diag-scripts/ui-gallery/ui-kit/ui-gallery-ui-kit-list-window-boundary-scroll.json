@@ -1,0 +1,280 @@
+{
+  "schema_version": 2,
+  "steps": [
+    {
+      "button": "left",
+      "target": {
+        "id": "ui-gallery-nav-ui-kit-list-torture",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "predicate": {
+        "kind": "focus_is",
+        "target": {
+          "id": "ui-gallery-nav-ui-kit-list-torture",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 60,
+      "type": "wait_until"
+    },
+    {
+      "key": "enter",
+      "modifiers": {
+        "alt": false,
+        "ctrl": false,
+        "meta": false,
+        "shift": false
+      },
+      "repeat": false,
+      "type": "press_key"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "ui-gallery-ui-kit-list-root",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "ui-gallery-ui-kit-list-row-0-label",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "target": {
+        "id": "ui-gallery-ui-kit-list-row-0-label",
+        "kind": "test_id"
+      },
+      "type": "move_pointer"
+    },
+    {
+      "n": 6,
+      "type": "wait_frames"
+    },
+    {
+      "delta_x": 0.0,
+      "delta_y": 10.0,
+      "target": {
+        "id": "ui-gallery-ui-kit-list-row-0-label",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "delta_x": 0.0,
+      "delta_y": 10.0,
+      "target": {
+        "id": "ui-gallery-ui-kit-list-row-0-label",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "delta_x": 0.0,
+      "delta_y": 10.0,
+      "target": {
+        "id": "ui-gallery-ui-kit-list-row-0-label",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "delta_x": 0.0,
+      "delta_y": 10.0,
+      "target": {
+        "id": "ui-gallery-ui-kit-list-row-0-label",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "delta_x": 0.0,
+      "delta_y": 10.0,
+      "target": {
+        "id": "ui-gallery-ui-kit-list-row-0-label",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "delta_x": 0.0,
+      "delta_y": 10.0,
+      "target": {
+        "id": "ui-gallery-ui-kit-list-row-0-label",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "delta_x": 0.0,
+      "delta_y": 10.0,
+      "target": {
+        "id": "ui-gallery-ui-kit-list-row-0-label",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "delta_x": 0.0,
+      "delta_y": 10.0,
+      "target": {
+        "id": "ui-gallery-ui-kit-list-row-0-label",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "delta_x": 0.0,
+      "delta_y": 10.0,
+      "target": {
+        "id": "ui-gallery-ui-kit-list-row-0-label",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "delta_x": 0.0,
+      "delta_y": 10.0,
+      "target": {
+        "id": "ui-gallery-ui-kit-list-row-0-label",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 5,
+      "type": "wait_frames"
+    },
+    {
+      "delta_x": 0.0,
+      "delta_y": -10.0,
+      "target": {
+        "id": "ui-gallery-ui-kit-list-row-0-label",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "delta_x": 0.0,
+      "delta_y": -10.0,
+      "target": {
+        "id": "ui-gallery-ui-kit-list-row-0-label",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "delta_x": 0.0,
+      "delta_y": -10.0,
+      "target": {
+        "id": "ui-gallery-ui-kit-list-row-0-label",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "delta_x": 0.0,
+      "delta_y": -10.0,
+      "target": {
+        "id": "ui-gallery-ui-kit-list-row-0-label",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "delta_x": 0.0,
+      "delta_y": -10.0,
+      "target": {
+        "id": "ui-gallery-ui-kit-list-row-0-label",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "delta_x": 0.0,
+      "delta_y": -10.0,
+      "target": {
+        "id": "ui-gallery-ui-kit-list-row-0-label",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 5,
+      "type": "wait_frames"
+    },
+    {
+      "label": "ui-gallery-ui-kit-list-window-boundary-scroll",
+      "type": "capture_bundle"
+    }
+  ]
+}

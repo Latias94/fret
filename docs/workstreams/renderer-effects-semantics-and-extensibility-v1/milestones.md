@@ -84,7 +84,7 @@ Exit criteria:
 Exit criteria:
 
 - [x] The CustomV2 “one extra input” story is locked (with rationale and capability gating):
-  - Decision ADR: `docs/adr/0300-custom-effect-v2-user-image-input.md`
+  - Decision ADR: `docs/adr/0303-custom-effect-v2-user-image-input.md`
   - Workstream: `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-v2/README.md`
 - [x] A versioned ABI exists with deterministic degradation rules and capability gating (wgpu backend).
 - [x] Conformance tests cover the extra input and scissor/mask semantics.
@@ -100,7 +100,7 @@ Exit criteria:
 Exit criteria:
 
 - A versioned CustomV3 ADR is reviewed and locked:
-  - Decision ADR: `docs/adr/0301-custom-effect-v3-renderer-provided-sources.md`
+  - Decision ADR: `docs/adr/0304-custom-effect-v3-renderer-provided-sources.md`
   - Workstream: `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-v3/README.md`
 - `EffectStep::CustomV3` exists in `fret-core` with deterministic validation/fingerprint behavior.
 - wgpu backend binds the renderer-provided sources deterministically:

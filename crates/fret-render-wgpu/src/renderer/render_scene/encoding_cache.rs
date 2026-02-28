@@ -172,9 +172,11 @@ impl Renderer {
     ) -> (SceneEncoding, bool) {
         let cache_hit = self.scene_encoding_cache.is_hit(key);
         render_scene_span.record("encoding_cache_hit", cache_hit);
-        let miss_reasons = (!cache_hit && (perf_enabled || trace_enabled))
-            .then(|| miss_reasons_for_key_change(self.scene_encoding_cache.key(), key))
-            .unwrap_or(0);
+        let miss_reasons = if !cache_hit && (perf_enabled || trace_enabled) {
+            miss_reasons_for_key_change(self.scene_encoding_cache.key(), key)
+        } else {
+            0
+        };
         if !cache_hit && miss_reasons != 0 {
             render_scene_span.record("encoding_cache_miss_reasons", miss_reasons);
             if trace_enabled {

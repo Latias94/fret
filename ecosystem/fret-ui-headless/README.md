@@ -17,3 +17,11 @@ Experimental learning project (not production-ready).
 - hover intent / tooltip delay groups
 - table helpers and small layout-adjacent utilities
 
+## Upstream references (non-normative)
+
+Some modules in this crate intentionally port or align with upstream interaction engines for
+behavioral parity. For Carousel, we reference Embla Carousel:
+
+- https://github.com/davidjerleke/embla-carousel
+
+See `src/embla/*` for Embla-aligned headless helpers.

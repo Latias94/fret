@@ -442,6 +442,7 @@ impl UiRendererTextFontTraceSnapshotV1 {
             match wrap {
                 fret_core::TextWrap::None => "none",
                 fret_core::TextWrap::Word => "word",
+                fret_core::TextWrap::Balance => "balance",
                 fret_core::TextWrap::WordBreak => "word_break",
                 fret_core::TextWrap::Grapheme => "grapheme",
             }

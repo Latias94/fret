@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
 use fret_diag_protocol::{
-    DevtoolsBundleDumpedV1, DiagTransportMessageV1, FilesystemCapabilitiesV1,
+    DevtoolsBundleDumpV1, DevtoolsBundleDumpedV1, DiagTransportMessageV1, FilesystemCapabilitiesV1,
 };
 
 use crate::util::{now_unix_ms, read_json_value, touch, write_json_value};
@@ -126,7 +126,21 @@ impl DiagTransport for FsDiagTransport {
                 let _ = touch(&st.cfg.pick_trigger_path);
             }
             "bundle.dump" => {
-                // File-trigger dump does not currently support labels; always uses the default dump path.
+                // Extend the filesystem trigger surface with an optional request envelope so the
+                // runtime can mirror WS semantics (label/max_snapshots/request_id).
+                //
+                // This is best-effort: if the runtime ignores it, we still fall back to the
+                // legacy trigger touch.
+                if let Ok(parsed) = serde_json::from_value::<DevtoolsBundleDumpV1>(msg.payload) {
+                    let request_path = st.cfg.out_dir.join("dump.request.json");
+                    let payload = serde_json::json!({
+                        "schema_version": 1,
+                        "label": parsed.label,
+                        "max_snapshots": parsed.max_snapshots,
+                        "request_id": msg.request_id,
+                    });
+                    let _ = write_json_value(&request_path, &payload);
+                }
                 let _ = touch(&st.cfg.trigger_path);
             }
             "script.push" | "script.run" => {
@@ -324,23 +338,7 @@ impl State {
 }
 
 fn normalize_capability_string(raw: &str) -> String {
-    let raw = raw.trim();
-    if raw.is_empty() {
-        return String::new();
-    }
-    if raw.contains('.') {
-        return raw.to_string();
-    }
-
-    let mapped = match raw {
-        "script_v2" => "diag.script_v2",
-        "screenshot_png" => "diag.screenshot_png",
-        "multi_window" => "diag.multi_window",
-        "pointer_kind_touch" => "diag.pointer_kind_touch",
-        "gesture_pinch" => "diag.gesture_pinch",
-        _ => raw,
-    };
-    mapped.to_string()
+    crate::compat::normalize_capability_lossy(raw)
 }
 
 fn stamp_is_newer(slot: &mut Option<u64>, stamp: Option<u64>) -> bool {
@@ -390,6 +388,9 @@ mod tests {
                 "foo.bar".to_string(),
                 "diag.screenshot_png".to_string(),
             ],
+            runner_kind: None,
+            runner_version: None,
+            hints: None,
         };
         write_json_value(
             &dir.join("capabilities.json"),

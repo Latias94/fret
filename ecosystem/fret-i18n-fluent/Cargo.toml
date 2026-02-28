@@ -8,9 +8,10 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 documentation.workspace = true
+description = "Fluent-based i18n integration for Fret (message bundles, parsing, and formatting)."
 
 [dependencies]
-fret-i18n = { path = "../../crates/fret-i18n" }
+fret-i18n = { version = "0.1.0", path = "../../crates/fret-i18n" }
 fluent-bundle.workspace = true
 fluent-syntax.workspace = true
 unic-langid.workspace = true

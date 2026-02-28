@@ -699,8 +699,7 @@ impl Renderer {
                     .saturating_add(1);
             }
         }
-        let id = self.gpu_resources.register_render_target(desc);
-        id
+        self.gpu_resources.register_render_target(desc)
     }
 
     pub fn register_image(&mut self, desc: ImageDescriptor) -> fret_core::ImageId {

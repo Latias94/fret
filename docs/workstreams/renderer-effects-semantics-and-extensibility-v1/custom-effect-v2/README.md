@@ -165,7 +165,7 @@ Pending / follow-ups:
 
 ## References
 
-- Decision ADR: `docs/adr/0300-custom-effect-v2-user-image-input.md`
+- Decision ADR: `docs/adr/0303-custom-effect-v2-user-image-input.md`
 - CustomV1 semantics: `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-v1-semantics.md`
 - ADR 0299 (CustomV1 MVP): `docs/adr/0299-custom-effect-abi-wgpu-only-mvp.md`
 - Authoring guide: `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-v2/authoring-install-pattern.md`

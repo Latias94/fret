@@ -59,10 +59,8 @@ pub(crate) fn cmd_matrix(ctx: MatrixCmdContext) -> Result<(), String> {
         );
     };
 
-    let scripts: Vec<PathBuf> = diag_suite_scripts::ui_gallery_suite_scripts()
-        .into_iter()
-        .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-        .collect();
+    let inputs = diag_suite_scripts::ui_gallery_suite_scripts();
+    let scripts: Vec<PathBuf> = expand_script_inputs(&workspace_root, &inputs)?;
 
     let compare_opts = CompareOptions {
         warmup_frames,
@@ -146,8 +144,9 @@ pub(crate) fn cmd_matrix(ctx: MatrixCmdContext) -> Result<(), String> {
         None,
         None,
         viewport_input_gate,
-        viewport_input_gate
-            .map(|_| ui_gallery_script_requires_viewport_input_gate as fn(&Path) -> bool),
+        viewport_input_gate.map(|_| {
+            diag_policy::ui_gallery_script_requires_viewport_input_gate as fn(&Path) -> bool
+        }),
         None,
         None,
     )?;
@@ -164,11 +163,13 @@ pub(crate) fn cmd_matrix(ctx: MatrixCmdContext) -> Result<(), String> {
         reuse_stable_gate,
         reuse_gate,
         overlay_synthesis_gate,
-        overlay_synthesis_gate
-            .map(|_| ui_gallery_script_requires_overlay_synthesis_gate as fn(&Path) -> bool),
+        overlay_synthesis_gate.map(|_| {
+            diag_policy::ui_gallery_script_requires_overlay_synthesis_gate as fn(&Path) -> bool
+        }),
         viewport_input_gate,
-        viewport_input_gate
-            .map(|_| ui_gallery_script_requires_viewport_input_gate as fn(&Path) -> bool),
+        viewport_input_gate.map(|_| {
+            diag_policy::ui_gallery_script_requires_viewport_input_gate as fn(&Path) -> bool
+        }),
         None,
         None,
     )?;

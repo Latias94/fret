@@ -11,7 +11,7 @@ use fret_ui::element::{
     LayoutStyle, Length, MainAlign, OpacityProps, PressableProps, RovingFlexProps,
     RovingFocusProps, RowProps, VisualTransformProps,
 };
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::declarative::transition::ticks_60hz_for_duration;
@@ -23,14 +23,14 @@ use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radiu
 
 use crate::overlay_motion;
 
-fn border_color(theme: &Theme) -> Color {
+fn border_color(theme: &ThemeSnapshot) -> Color {
     theme
         .color_by_key("border")
         .or_else(|| theme.color_by_key("input"))
         .expect("missing theme token: border/input")
 }
 
-fn trigger_text_style(theme: &Theme) -> TextStyle {
+fn trigger_text_style(theme: &ThemeSnapshot) -> TextStyle {
     let px = theme
         .metric_by_key("component.accordion.trigger.text_px")
         .or_else(|| theme.metric_by_key("font.size"))
@@ -44,7 +44,7 @@ fn trigger_text_style(theme: &Theme) -> TextStyle {
     style
 }
 
-fn trigger_gap(theme: &Theme) -> Px {
+fn trigger_gap(theme: &ThemeSnapshot) -> Px {
     theme
         .metric_by_key("component.accordion.trigger.gap")
         .unwrap_or_else(|| MetricRef::space(Space::N4).resolve(theme))
@@ -213,7 +213,7 @@ pub mod composable {
             enabled: bool,
             focusable: bool,
         ) -> AnyElement {
-            let theme = Theme::global(&*cx.app).clone();
+            let theme = Theme::global(&*cx.app).snapshot();
 
             let a11y_label = self.a11y_label.unwrap_or_else(|| value.clone());
             let test_id = self.test_id;
@@ -423,7 +423,7 @@ pub mod composable {
         }
 
         fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-            let theme = Theme::global(&*cx.app).clone();
+            let theme = Theme::global(&*cx.app).snapshot();
             let chrome = ChromeRefinement::default()
                 .pt(Space::N0)
                 .pb(Space::N4)
@@ -692,7 +692,7 @@ pub mod composable {
         #[track_caller]
         pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
             cx.scope(|cx| {
-                let theme = Theme::global(&*cx.app).clone();
+                let theme = Theme::global(&*cx.app).snapshot();
 
                 let model = self.model;
                 let items = self.items;
@@ -838,17 +838,18 @@ pub mod composable {
 
                                     let motion =
                                         cx.keyed(("accordion-motion", value.clone()), |cx| {
-                                            let toggle_duration = theme
+                                            let theme_full = Theme::global(&*cx.app);
+                                            let toggle_duration = theme_full
                                                 .duration_ms_by_key(
                                                     "duration.shadcn.motion.collapsible.toggle",
                                                 )
                                                 .or_else(|| {
-                                                    theme.duration_ms_by_key(
+                                                    theme_full.duration_ms_by_key(
                                                         "duration.motion.collapsible.toggle",
                                                     )
                                                 })
                                                 .or_else(|| {
-                                                    theme.duration_ms_by_key(
+                                                    theme_full.duration_ms_by_key(
                                                         "duration.shadcn.motion.200",
                                                     )
                                                 })
@@ -856,12 +857,12 @@ pub mod composable {
                                                 .unwrap_or(Duration::from_millis(200));
                                             let toggle_ticks =
                                                 ticks_60hz_for_duration(toggle_duration);
-                                            let toggle_easing = theme
+                                            let toggle_easing = theme_full
                                                 .easing_by_key(
                                                     "easing.shadcn.motion.collapsible.toggle",
                                                 )
                                                 .or_else(|| {
-                                                    theme.easing_by_key(
+                                                    theme_full.easing_by_key(
                                                         "easing.motion.collapsible.toggle",
                                                     )
                                                 })
@@ -1048,7 +1049,7 @@ impl AccordionTrigger {
         enabled: bool,
         focusable: bool,
     ) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
 
         let a11y_label = self.a11y_label.unwrap_or_else(|| value.clone());
         let test_id = self.test_id;
@@ -1256,7 +1257,7 @@ impl AccordionContent {
     }
 
     fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
         let chrome = ChromeRefinement::default()
             .pt(Space::N0)
             .pb(Space::N4)
@@ -1516,12 +1517,12 @@ impl Accordion {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
 
-            let model = self.model;
-            let items = self.items;
-            let group_disabled = self.disabled;
-            let layout = self.layout;
+        let model = self.model;
+        let items = self.items;
+        let group_disabled = self.disabled;
+        let layout = self.layout;
             let loop_navigation = self.loop_navigation;
             let orientation = self.orientation;
             let dir = self.dir;
@@ -1653,27 +1654,28 @@ impl Accordion {
                                     let mut children = Vec::new();
 
                                     let motion = cx.keyed(("accordion-motion", value.clone()), |cx| {
-                                        let toggle_duration = theme
+                                        let theme_full = Theme::global(&*cx.app);
+                                        let toggle_duration = theme_full
                                             .duration_ms_by_key(
                                                 "duration.shadcn.motion.collapsible.toggle",
                                             )
                                             .or_else(|| {
-                                                theme.duration_ms_by_key(
+                                                theme_full.duration_ms_by_key(
                                                     "duration.motion.collapsible.toggle",
                                                 )
                                             })
                                             .or_else(|| {
-                                                theme.duration_ms_by_key("duration.shadcn.motion.200")
+                                                theme_full.duration_ms_by_key("duration.shadcn.motion.200")
                                             })
                                             .map(|ms| Duration::from_millis(ms as u64))
                                             .unwrap_or(Duration::from_millis(200));
                                         let toggle_ticks = ticks_60hz_for_duration(toggle_duration);
-                                        let toggle_easing = theme
+                                        let toggle_easing = theme_full
                                             .easing_by_key(
                                                 "easing.shadcn.motion.collapsible.toggle",
                                             )
                                             .or_else(|| {
-                                                theme.easing_by_key(
+                                                theme_full.easing_by_key(
                                                     "easing.motion.collapsible.toggle",
                                                 )
                                             })

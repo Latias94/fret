@@ -47,7 +47,7 @@ fn web_vs_fret_layout_table_demo_row_heights_and_caption_gap() {
     );
 
     let mut services = StyleAwareServices::default();
-    let (ui, snap, root) = run_fret_root_with_ui_and_services(bounds, &mut services, |cx| {
+    let (_ui, snap, _root) = run_fret_root_with_ui_and_services(bounds, &mut services, |cx| {
         let head_row = cx.semantics(
             fret_ui::element::SemanticsProps {
                 role: SemanticsRole::Panel,
@@ -142,8 +142,9 @@ fn web_vs_fret_layout_table_demo_row_heights_and_caption_gap() {
             },
         );
 
-        let caption =
-            fret_ui_shadcn::TableCaption::new("A list of your recent invoices.").into_element(cx);
+        let caption = fret_ui_shadcn::TableCaption::new("A list of your recent invoices.")
+            .into_element(cx)
+            .test_id("Golden:table-demo:caption");
 
         vec![
             fret_ui_shadcn::Table::new(vec![
@@ -225,30 +226,8 @@ fn web_vs_fret_layout_table_demo_row_heights_and_caption_gap() {
         2.0,
     );
 
-    let target_caption_y =
-        footer_row.bounds.origin.y.0 + footer_row.bounds.size.height.0 + web_caption_gap;
-    let target_caption_h = web_caption.rect.h;
-
-    let mut nodes = Vec::new();
-    collect_subtree_nodes(&ui, root, &mut nodes);
-
-    let mut best: Option<Rect> = None;
-    let mut best_score = f32::INFINITY;
-    for id in nodes {
-        let Some(bounds) = ui.debug_node_bounds(id) else {
-            continue;
-        };
-        let score = (bounds.origin.y.0 - target_caption_y).abs()
-            + (bounds.size.height.0 - target_caption_h).abs()
-            + bounds.origin.x.0.abs();
-        if score < best_score {
-            best_score = score;
-            best = Some(bounds);
-        }
-    }
-
-    let caption_bounds = best.expect("fret caption bounds");
-    let fret_caption_gap = caption_bounds.origin.y.0
+    let caption = find_by_test_id(&snap, "Golden:table-demo:caption");
+    let fret_caption_gap = caption.bounds.origin.y.0
         - (footer_row.bounds.origin.y.0 + footer_row.bounds.size.height.0);
     assert_close_px(
         "table-demo caption gap",

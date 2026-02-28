@@ -1,0 +1,212 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Docking arbitration demo: tab bar drop-at-end resolves insert_index == tab_count under overflow",
+    "tags": ["docking", "tabbar", "overflow", "gate"],
+    "required_capabilities": ["diag.script_v2"],
+    "env_defaults": {
+      "FRET_DOCK_ARB_PRESET": "large"
+    },
+    "target_hints": [
+      "Builds a long tab stack by merging multiple single-tab viewports into one leaf, then asserts drop-at-end resolves insert_index == tab_count.",
+      "This gate avoids pixel-based tab rect assumptions; it relies on docking interaction diagnostics."
+    ]
+  },
+  "steps": [
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 5 },
+    { "type": "set_window_inner_size", "width_px": 980.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 10 },
+
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-dock-space" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-left" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-right" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-extra-7" } },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "pointer_down",
+      "window": { "kind": "current" },
+      "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-right" },
+      "button": "left"
+    },
+    { "type": "pointer_move", "window": { "kind": "current" }, "delta_x": 20.0, "delta_y": 0.0, "steps": 12 },
+    { "type": "wait_until", "window": { "kind": "current" }, "predicate": { "kind": "dock_drag_active_is", "active": true }, "timeout_frames": 120 },
+    { "type": "move_pointer", "window": { "kind": "current" }, "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-left" } },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "pointer_up", "window": { "kind": "current" } },
+    { "type": "wait_until", "window": { "kind": "current" }, "predicate": { "kind": "dock_drag_active_is", "active": false }, "timeout_frames": 240 },
+    { "type": "wait_frames", "n": 6 },
+
+    {
+      "type": "pointer_down",
+      "window": { "kind": "current" },
+      "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-extra-0" },
+      "button": "left"
+    },
+    { "type": "pointer_move", "window": { "kind": "current" }, "delta_x": 20.0, "delta_y": 0.0, "steps": 12 },
+    { "type": "wait_until", "window": { "kind": "current" }, "predicate": { "kind": "dock_drag_active_is", "active": true }, "timeout_frames": 120 },
+    { "type": "move_pointer", "window": { "kind": "current" }, "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-left" } },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "pointer_up", "window": { "kind": "current" } },
+    { "type": "wait_until", "window": { "kind": "current" }, "predicate": { "kind": "dock_drag_active_is", "active": false }, "timeout_frames": 240 },
+    { "type": "wait_frames", "n": 4 },
+
+    {
+      "type": "pointer_down",
+      "window": { "kind": "current" },
+      "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-extra-1" },
+      "button": "left"
+    },
+    { "type": "pointer_move", "window": { "kind": "current" }, "delta_x": 20.0, "delta_y": 0.0, "steps": 12 },
+    { "type": "wait_until", "window": { "kind": "current" }, "predicate": { "kind": "dock_drag_active_is", "active": true }, "timeout_frames": 120 },
+    { "type": "move_pointer", "window": { "kind": "current" }, "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-left" } },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "pointer_up", "window": { "kind": "current" } },
+    { "type": "wait_until", "window": { "kind": "current" }, "predicate": { "kind": "dock_drag_active_is", "active": false }, "timeout_frames": 240 },
+    { "type": "wait_frames", "n": 4 },
+
+    {
+      "type": "pointer_down",
+      "window": { "kind": "current" },
+      "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-extra-2" },
+      "button": "left"
+    },
+    { "type": "pointer_move", "window": { "kind": "current" }, "delta_x": 20.0, "delta_y": 0.0, "steps": 12 },
+    { "type": "wait_until", "window": { "kind": "current" }, "predicate": { "kind": "dock_drag_active_is", "active": true }, "timeout_frames": 120 },
+    { "type": "move_pointer", "window": { "kind": "current" }, "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-left" } },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "pointer_up", "window": { "kind": "current" } },
+    { "type": "wait_until", "window": { "kind": "current" }, "predicate": { "kind": "dock_drag_active_is", "active": false }, "timeout_frames": 240 },
+    { "type": "wait_frames", "n": 4 },
+
+    {
+      "type": "pointer_down",
+      "window": { "kind": "current" },
+      "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-extra-3" },
+      "button": "left"
+    },
+    { "type": "pointer_move", "window": { "kind": "current" }, "delta_x": 20.0, "delta_y": 0.0, "steps": 12 },
+    { "type": "wait_until", "window": { "kind": "current" }, "predicate": { "kind": "dock_drag_active_is", "active": true }, "timeout_frames": 120 },
+    { "type": "move_pointer", "window": { "kind": "current" }, "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-left" } },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "pointer_up", "window": { "kind": "current" } },
+    { "type": "wait_until", "window": { "kind": "current" }, "predicate": { "kind": "dock_drag_active_is", "active": false }, "timeout_frames": 240 },
+    { "type": "wait_frames", "n": 4 },
+
+    {
+      "type": "pointer_down",
+      "window": { "kind": "current" },
+      "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-extra-4" },
+      "button": "left"
+    },
+    { "type": "pointer_move", "window": { "kind": "current" }, "delta_x": 20.0, "delta_y": 0.0, "steps": 12 },
+    { "type": "wait_until", "window": { "kind": "current" }, "predicate": { "kind": "dock_drag_active_is", "active": true }, "timeout_frames": 120 },
+    { "type": "move_pointer", "window": { "kind": "current" }, "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-left" } },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "pointer_up", "window": { "kind": "current" } },
+    { "type": "wait_until", "window": { "kind": "current" }, "predicate": { "kind": "dock_drag_active_is", "active": false }, "timeout_frames": 240 },
+    { "type": "wait_frames", "n": 4 },
+
+    {
+      "type": "pointer_down",
+      "window": { "kind": "current" },
+      "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-extra-5" },
+      "button": "left"
+    },
+    { "type": "pointer_move", "window": { "kind": "current" }, "delta_x": 20.0, "delta_y": 0.0, "steps": 12 },
+    { "type": "wait_until", "window": { "kind": "current" }, "predicate": { "kind": "dock_drag_active_is", "active": true }, "timeout_frames": 120 },
+    { "type": "move_pointer", "window": { "kind": "current" }, "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-left" } },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "pointer_up", "window": { "kind": "current" } },
+    { "type": "wait_until", "window": { "kind": "current" }, "predicate": { "kind": "dock_drag_active_is", "active": false }, "timeout_frames": 240 },
+    { "type": "wait_frames", "n": 4 },
+
+    {
+      "type": "pointer_down",
+      "window": { "kind": "current" },
+      "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-extra-6" },
+      "button": "left"
+    },
+    { "type": "pointer_move", "window": { "kind": "current" }, "delta_x": 20.0, "delta_y": 0.0, "steps": 12 },
+    { "type": "wait_until", "window": { "kind": "current" }, "predicate": { "kind": "dock_drag_active_is", "active": true }, "timeout_frames": 120 },
+    { "type": "move_pointer", "window": { "kind": "current" }, "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-left" } },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "pointer_up", "window": { "kind": "current" } },
+    { "type": "wait_until", "window": { "kind": "current" }, "predicate": { "kind": "dock_drag_active_is", "active": false }, "timeout_frames": 240 },
+    { "type": "wait_frames", "n": 4 },
+
+    {
+      "type": "pointer_down",
+      "window": { "kind": "current" },
+      "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-extra-7" },
+      "button": "left"
+    },
+    { "type": "pointer_move", "window": { "kind": "current" }, "delta_x": 20.0, "delta_y": 0.0, "steps": 12 },
+    { "type": "wait_until", "window": { "kind": "current" }, "predicate": { "kind": "dock_drag_active_is", "active": true }, "timeout_frames": 120 },
+    { "type": "move_pointer", "window": { "kind": "current" }, "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-left" } },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "pointer_up", "window": { "kind": "current" } },
+    { "type": "wait_until", "window": { "kind": "current" }, "predicate": { "kind": "dock_drag_active_is", "active": false }, "timeout_frames": 240 },
+    { "type": "wait_frames", "n": 12 },
+
+    {
+      "type": "pointer_down",
+      "window": { "kind": "current" },
+      "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-left" },
+      "button": "left"
+    },
+    { "type": "pointer_move", "window": { "kind": "current" }, "delta_x": 20.0, "delta_y": 0.0, "steps": 12 },
+    { "type": "wait_until", "window": { "kind": "current" }, "predicate": { "kind": "dock_drag_active_is", "active": true }, "timeout_frames": 120 },
+
+    { "type": "set_cursor_in_window_logical", "window": { "kind": "current" }, "x_px": 940.0, "y_px": 18.0 },
+    { "type": "wait_frames", "n": 4 },
+    {
+      "type": "wait_until",
+      "window": { "kind": "current" },
+      "predicate": { "kind": "dock_drop_resolve_source_is", "source": "tab_bar" },
+      "timeout_frames": 120
+    },
+    {
+      "type": "wait_until",
+      "window": { "kind": "current" },
+      "predicate": { "kind": "dock_drop_resolved_is_some", "some": true },
+      "timeout_frames": 120
+    },
+    {
+      "type": "wait_until",
+      "window": { "kind": "current" },
+      "predicate": { "kind": "dock_drop_resolved_zone_is", "zone": "center" },
+      "timeout_frames": 120
+    },
+    {
+      "type": "wait_until",
+      "window": { "kind": "current" },
+      "predicate": { "kind": "dock_drop_resolved_insert_index_is", "index": 10 },
+      "timeout_frames": 120
+    },
+
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "pointer_up", "window": { "kind": "current" } },
+    { "type": "wait_until", "window": { "kind": "current" }, "predicate": { "kind": "dock_drag_active_is", "active": false }, "timeout_frames": 240 },
+
+    { "type": "capture_bundle", "label": "docking-arbitration-demo-tab-bar-drop-end-insert-index-overflow" }
+  ]
+}
+

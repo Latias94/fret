@@ -135,7 +135,7 @@ impl DatePickerWithPresets {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
+            let theme = Theme::global(&*cx.app).snapshot();
             let open = self.open.clone();
             let month = self.month.clone();
             let selected = self.selected.clone();
@@ -170,10 +170,22 @@ impl DatePickerWithPresets {
                 .into_element(
                     cx,
                     move |cx| {
-                        let theme = Theme::global(&*cx.app).clone();
-                        let theme_for_content = theme.clone();
+                        let theme = Theme::global(&*cx.app).snapshot();
                         let calendar_icon_for_content = calendar_icon.clone();
                         let button_text_for_content = button_text.clone();
+
+                        let fg_fallback = ColorRef::Color(theme.color_token("foreground"));
+                        let muted_fg = ColorRef::Color(theme.color_token("muted-foreground"));
+                        let (text_size, text_weight, line_height) = {
+                            let theme_full = Theme::global(&*cx.app);
+                            let mut text_style =
+                                button_text_style(theme_full, ButtonSize::default());
+                            text_style.weight = fret_core::FontWeight::NORMAL;
+                            let line_height = text_style
+                                .line_height
+                                .unwrap_or_else(|| theme_full.metric_token("font.line_height"));
+                            (text_style.size, text_style.weight, line_height)
+                        };
 
                         let content = stack::hstack(
                             cx,
@@ -183,23 +195,16 @@ impl DatePickerWithPresets {
                                 .gap_x(Space::N2)
                                 .layout(LayoutRefinement::default().w_full().min_w_0()),
                             move |cx| {
-                                let fg = current_color::inherited_current_color(cx).unwrap_or_else(
-                                    || ColorRef::Color(theme_for_content.color_token("foreground")),
-                                );
-                                let mut text_style =
-                                    button_text_style(&theme_for_content, ButtonSize::default());
-                                text_style.weight = fret_core::FontWeight::NORMAL;
-                                let line_height = text_style.line_height.unwrap_or_else(|| {
-                                    theme_for_content.metric_token("font.line_height")
-                                });
+                                let fg = current_color::inherited_current_color(cx)
+                                    .unwrap_or_else(|| fg_fallback.clone());
 
                                 vec![
                                     crate::icon::icon(cx, calendar_icon_for_content),
                                     ui::text(cx, button_text_for_content.clone())
-                                        .text_size_px(text_style.size)
+                                        .text_size_px(text_size)
                                         .fixed_line_box_px(line_height)
                                         .line_box_in_bounds()
-                                        .font_weight(text_style.weight)
+                                        .font_weight(text_weight)
                                         .nowrap()
                                         .text_color(fg)
                                         .into_element(cx),
@@ -219,10 +224,9 @@ impl DatePickerWithPresets {
                             );
 
                         if selected_empty {
-                            let muted = ColorRef::Color(theme.color_token("muted-foreground"));
                             button = button.style(
                                 ButtonStyle::default()
-                                    .foreground(WidgetStateProperty::new(Some(muted))),
+                                    .foreground(WidgetStateProperty::new(Some(muted_fg))),
                             );
                         }
 

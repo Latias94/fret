@@ -1,0 +1,106 @@
+{
+  "schema_version": 2,
+  "steps": [
+    {
+      "button": "left",
+      "target": {
+        "id": "ui-gallery-nav-virtual-list-torture",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "predicate": {
+        "kind": "focus_is",
+        "target": {
+          "id": "ui-gallery-nav-virtual-list-torture",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 60,
+      "type": "wait_until"
+    },
+    {
+      "key": "enter",
+      "modifiers": {
+        "alt": false,
+        "ctrl": false,
+        "meta": false,
+        "shift": false
+      },
+      "repeat": false,
+      "type": "press_key"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "ui-gallery-virtual-list-root",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "predicate": {
+        "kind": "visible_in_window",
+        "target": {
+          "id": "ui-gallery-virtual-list-row-0-label",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "target": {
+        "id": "ui-gallery-virtual-list-row-0-label",
+        "kind": "test_id"
+      },
+      "type": "move_pointer"
+    },
+    {
+      "n": 40,
+      "type": "wait_frames"
+    },
+    {
+      "label": "ui-gallery-virtual-list-small-scroll-no-window-shifts-before",
+      "type": "capture_bundle"
+    },
+    {
+      "delta_x": 0.0,
+      "delta_y": 60.0,
+      "target": {
+        "id": "ui-gallery-virtual-list-root",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 10,
+      "type": "wait_frames"
+    },
+    {
+      "delta_x": 0.0,
+      "delta_y": -60.0,
+      "target": {
+        "id": "ui-gallery-virtual-list-root",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 12,
+      "type": "wait_frames"
+    },
+    {
+      "label": "ui-gallery-virtual-list-small-scroll-no-window-shifts-after",
+      "type": "capture_bundle"
+    },
+    {
+      "label": "ui-gallery-virtual-list-small-scroll-no-window-shifts",
+      "type": "capture_bundle"
+    }
+  ]
+}

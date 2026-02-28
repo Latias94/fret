@@ -3,6 +3,7 @@ use std::sync::Arc;
 use fret_core::SemanticsRole;
 use fret_ui::element::{AnyElement, SemanticsProps};
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_kit::declarative::current_color;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorRef, Justify, LayoutRefinement, Radius, Space};
@@ -157,6 +158,16 @@ impl MessageContent {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
+        let bubble_fg = if self.from == MessageRole::User {
+            // Upstream (ai-elements) uses `text-foreground` for user bubbles.
+            Some(
+                theme
+                    .color_by_key("fret.ai.message.user.fg")
+                    .unwrap_or_else(|| theme.color_token("foreground")),
+            )
+        } else {
+            None
+        };
         let base_chrome = if self.from == MessageRole::User {
             let bg = theme
                 .color_by_key("fret.ai.message.user.bg")
@@ -181,16 +192,22 @@ impl MessageContent {
         };
         let layout = base_layout.merge(self.layout);
         let children = self.children;
+        let bubble_fg = bubble_fg.map(ColorRef::Color);
 
         let props = decl_style::container_props(&theme, chrome, layout);
         let content = cx.container(props, move |cx| {
-            vec![stack::vstack(
+            let stack = stack::vstack(
                 cx,
                 stack::VStackProps::default()
                     .layout(LayoutRefinement::default().min_w_0())
                     .gap(Space::N2),
                 move |_cx| children,
-            )]
+            );
+
+            match bubble_fg.clone() {
+                Some(fg) => current_color::scope_children(cx, fg, move |_cx| vec![stack]),
+                None => vec![stack],
+            }
         });
 
         let Some(test_id) = self.test_id else {

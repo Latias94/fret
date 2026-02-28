@@ -1,11 +1,14 @@
 use std::sync::Arc;
 
-use fret_core::{Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextStyle};
+use fret_core::{
+    Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextFontAxisSetting,
+    TextFontFeatureSetting, TextStyle,
+};
 use fret_icons::IconId;
 use fret_runtime::{CommandId, Effect};
 use fret_ui::action::{OnActivate, OnHoverChange};
 use fret_ui::element::{AnyElement, PressableA11y, PressableKeyActivation, PressableProps};
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, ThemeNamedColorKey, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
@@ -168,34 +171,36 @@ pub(crate) fn variant_style(variant: ButtonVariant) -> ButtonVariantStyle {
             )),
         },
         ButtonVariant::Destructive => ButtonVariantStyle {
-            background: WidgetStateProperty::new(token("destructive", ColorFallback::ThemeAccent))
-                .when(
-                    WidgetStates::HOVERED,
-                    token(
-                        "destructive.hover.background",
-                        ColorFallback::ThemeTokenAlphaMul {
-                            key: "destructive",
-                            mul: 0.9,
-                        },
-                    ),
-                )
-                .when(
-                    WidgetStates::ACTIVE,
-                    token(
-                        "destructive.active.background",
-                        ColorFallback::ThemeTokenAlphaMul {
-                            key: "destructive",
-                            mul: 0.9,
-                        },
-                    ),
+            background: WidgetStateProperty::new(token(
+                "component.button.destructive.bg",
+                ColorFallback::ThemeTokenAlphaMul {
+                    key: "destructive",
+                    mul: 1.0,
+                },
+            ))
+            .when(
+                WidgetStates::HOVERED,
+                token(
+                    "destructive.hover.background",
+                    ColorFallback::ThemeTokenAlphaMul {
+                        key: "destructive",
+                        mul: 0.9,
+                    },
                 ),
+            )
+            .when(
+                WidgetStates::ACTIVE,
+                token(
+                    "destructive.active.background",
+                    ColorFallback::ThemeTokenAlphaMul {
+                        key: "destructive",
+                        mul: 0.9,
+                    },
+                ),
+            ),
             border_color: WidgetStateProperty::new(transparent.clone()),
-            foreground: WidgetStateProperty::new(ColorRef::Color(Color {
-                r: 1.0,
-                g: 1.0,
-                b: 1.0,
-                a: 1.0,
-            })),
+            // Upstream shadcn button uses `text-white` for destructive.
+            foreground: WidgetStateProperty::new(ColorRef::Named(ThemeNamedColorKey::White)),
         },
         ButtonVariant::Secondary => ButtonVariantStyle {
             background: WidgetStateProperty::new(token(
@@ -230,19 +235,25 @@ pub(crate) fn variant_style(variant: ButtonVariant) -> ButtonVariantStyle {
         },
         ButtonVariant::Outline => ButtonVariantStyle {
             background: WidgetStateProperty::new(token(
-                "background",
+                "component.button.outline.bg",
                 ColorFallback::ThemeSurfaceBackground,
             ))
             .when(
                 WidgetStates::HOVERED,
-                token("accent", ColorFallback::ThemeHoverBackground),
+                token(
+                    "component.button.outline.bg_hover",
+                    ColorFallback::ThemeHoverBackground,
+                ),
             )
             .when(
                 WidgetStates::ACTIVE,
-                token("accent", ColorFallback::ThemeHoverBackground),
+                token(
+                    "component.button.outline.bg_hover",
+                    ColorFallback::ThemeHoverBackground,
+                ),
             ),
             border_color: WidgetStateProperty::new(token(
-                "border",
+                "component.button.outline.border",
                 ColorFallback::ThemePanelBorder,
             ))
             .when(
@@ -252,7 +263,15 @@ pub(crate) fn variant_style(variant: ButtonVariant) -> ButtonVariantStyle {
             foreground: WidgetStateProperty::new(token(
                 "foreground",
                 ColorFallback::ThemeTextPrimary,
-            )),
+            ))
+            .when(
+                WidgetStates::HOVERED,
+                token("accent-foreground", ColorFallback::ThemeTextPrimary),
+            )
+            .when(
+                WidgetStates::ACTIVE,
+                token("accent-foreground", ColorFallback::ThemeTextPrimary),
+            ),
         },
         ButtonVariant::Ghost => ButtonVariantStyle {
             background: WidgetStateProperty::new(transparent.clone())
@@ -322,6 +341,9 @@ pub struct Button {
     children: Vec<AnyElement>,
     leading_icon: Option<IconId>,
     trailing_icon: Option<IconId>,
+    label_font_override: Option<FontId>,
+    label_features_override: Vec<TextFontFeatureSetting>,
+    label_axes_override: Vec<TextFontAxisSetting>,
     leading_icon_size: Option<Px>,
     content_justify: Justify,
     text_weight_override: Option<FontWeight>,
@@ -330,6 +352,7 @@ pub struct Button {
     on_hover_change: Option<OnHoverChange>,
     toggle_model: Option<fret_runtime::Model<bool>>,
     disabled: bool,
+    focusable: bool,
     test_id: Option<Arc<str>>,
     render: Option<ButtonRender>,
     variant: ButtonVariant,
@@ -363,6 +386,7 @@ impl std::fmt::Debug for Button {
             .field("on_hover_change", &self.on_hover_change.is_some())
             .field("toggle_model", &self.toggle_model.is_some())
             .field("disabled", &self.disabled)
+            .field("focusable", &self.focusable)
             .field("test_id", &self.test_id)
             .field("render", &self.render)
             .field("variant", &self.variant)
@@ -386,6 +410,9 @@ impl Button {
             children: Vec::new(),
             leading_icon: None,
             trailing_icon: None,
+            label_font_override: None,
+            label_features_override: Vec::new(),
+            label_axes_override: Vec::new(),
             leading_icon_size: None,
             content_justify: Justify::Center,
             text_weight_override: None,
@@ -394,6 +421,7 @@ impl Button {
             on_hover_change: None,
             toggle_model: None,
             disabled: false,
+            focusable: true,
             test_id: None,
             render: None,
             variant: ButtonVariant::default(),
@@ -418,6 +446,36 @@ impl Button {
     pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
         self.children = children.into_iter().collect();
         self
+    }
+
+    pub fn label_font(mut self, font: FontId) -> Self {
+        self.label_font_override = Some(font);
+        self
+    }
+
+    pub fn label_font_monospace(self) -> Self {
+        self.label_font(FontId::monospace())
+    }
+
+    pub fn label_font_feature(mut self, tag: impl Into<String>, value: u32) -> Self {
+        self.label_features_override.push(TextFontFeatureSetting {
+            tag: tag.into().into(),
+            value,
+        });
+        self
+    }
+
+    pub fn label_font_axis(mut self, tag: impl Into<String>, value: f32) -> Self {
+        self.label_axes_override.push(TextFontAxisSetting {
+            tag: tag.into().into(),
+            value,
+        });
+        self
+    }
+
+    /// Enables OpenType tabular numbers (`font-variant-numeric: tabular-nums`) for the default label text.
+    pub fn label_tabular_nums(self) -> Self {
+        self.label_font_feature("tnum", 1)
     }
 
     /// Adds a leading icon rendered under the button's `currentColor` scope.
@@ -487,6 +545,11 @@ impl Button {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    pub fn focusable(mut self, focusable: bool) -> Self {
+        self.focusable = focusable;
         self
     }
 
@@ -565,7 +628,7 @@ impl Button {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
+            let theme = Theme::global(&*cx.app).snapshot();
 
             let variant_style = variant_style(self.variant);
             let has_outline_shadow = self.variant == ButtonVariant::Outline;
@@ -588,7 +651,7 @@ impl Button {
                 ButtonSize::Icon | ButtonSize::IconSm | ButtonSize::IconLg
             );
             if is_icon_button {
-                let icon = size.icon_button_size(&theme);
+                let icon = size.icon_button_size(Theme::global(&*cx.app));
                 let has_explicit_w = base_layout
                     .size
                     .as_ref()
@@ -610,7 +673,7 @@ impl Button {
                     base_layout = base_layout.h_px(icon).min_h(icon);
                 }
             } else {
-                let min_h = size.button_h(&theme);
+                let min_h = size.button_h(Theme::global(&*cx.app));
 
                 // shadcn/ui v4 buttons use Tailwind `h-*` to pin the border-box height across
                 // variants (including `outline`). Using `min-height` alone allows chrome padding +
@@ -653,6 +716,8 @@ impl Button {
                 || command
                     .as_ref()
                     .is_some_and(|cmd| !cx.command_is_enabled(cmd));
+            // Upstream: disabled `<button disabled>` is not focusable.
+            let focusable = self.focusable && !disabled;
             let user_chrome = self.chrome;
             let user_bg_override = user_chrome.background.is_some();
             let user_border_override = user_chrome.border_color.is_some();
@@ -660,7 +725,7 @@ impl Button {
             let border_override = self.border_override;
             let border_width_override = self.border_width_override;
             let corner_radii_override = self.corner_radii_override;
-            let text_style = button_text_style(&theme, self.size);
+            let text_style = button_text_style(Theme::global(&*cx.app), self.size);
             let text_px = text_style.size;
             let text_weight = self.text_weight_override.unwrap_or(text_style.weight);
             let text_line_height = text_style
@@ -677,6 +742,9 @@ impl Button {
             let trailing_icon = self.trailing_icon;
             let leading_icon_size = self.leading_icon_size;
             let content_justify = self.content_justify;
+            let label_font_override = self.label_font_override;
+            let label_features_override = self.label_features_override;
+            let label_axes_override = self.label_axes_override;
 
             let pressable = control_chrome_pressable_with_id_props(cx, move |cx, st, _id| {
                 cx.pressable_dispatch_command_if_enabled_opt(command);
@@ -782,7 +850,7 @@ impl Button {
                 let pressable_props = PressableProps {
                     layout: pressable_layout,
                     enabled: !disabled,
-                    focusable: true,
+                    focusable,
                     focus_ring: Some(decl_style::focus_ring(&theme, focus_radius)),
                     key_activation: render_key_activation,
                     a11y: PressableA11y {
@@ -819,16 +887,24 @@ impl Button {
                             }
 
                             if !visible_label.is_empty() {
-                                content.push(
-                                    ui::text(cx, visible_label.clone())
-                                        .text_size_px(text_px)
-                                        .fixed_line_box_px(text_line_height)
-                                        .line_box_in_bounds()
-                                        .font_weight(text_weight)
-                                        .nowrap()
-                                        .text_color(fg.clone())
-                                        .into_element(cx),
-                                );
+                                let mut label = ui::text(cx, visible_label.clone())
+                                    .text_size_px(text_px)
+                                    .fixed_line_box_px(text_line_height)
+                                    .line_box_in_bounds()
+                                    .font_weight(text_weight)
+                                    .nowrap()
+                                    .text_color(fg.clone());
+                                if let Some(font) = label_font_override {
+                                    label = label.font(font);
+                                }
+                                for feature in &label_features_override {
+                                    label =
+                                        label.font_feature(feature.tag.to_string(), feature.value);
+                                }
+                                for axis in &label_axes_override {
+                                    label = label.font_axis(axis.tag.to_string(), axis.value);
+                                }
+                                content.push(label.into_element(cx));
                             }
 
                             if let Some(icon) = trailing_icon.clone() {
@@ -840,14 +916,20 @@ impl Button {
                             children.take().unwrap_or_default()
                         };
 
-                        vec![fret_ui_kit::declarative::stack::hstack(
-                            cx,
-                            fret_ui_kit::declarative::stack::HStackProps::default()
-                                .justify(content_justify)
-                                .items_center()
-                                .gap_x(gap),
-                            |_cx| content,
-                        )]
+                        let mut props = fret_ui_kit::declarative::stack::HStackProps::default()
+                            .justify(content_justify)
+                            .items_center()
+                            .gap_x(gap);
+                        if is_icon {
+                            // shadcn/ui icon buttons are `inline-flex items-center justify-center`
+                            // in a fixed square. Ensure the content stack stretches so the icon
+                            // is centered within that box.
+                            props = props.layout(LayoutRefinement::default().w_full().h_full());
+                        }
+
+                        vec![fret_ui_kit::declarative::stack::hstack(cx, props, |_cx| {
+                            content
+                        })]
                     })
                 };
 
@@ -883,6 +965,34 @@ mod tests {
     use fret_ui::elements;
     use fret_ui::tree::UiTree;
     use std::collections::HashMap;
+
+    fn blend_over(fg: Color, bg: Color) -> Color {
+        let a = fg.a.clamp(0.0, 1.0);
+        Color {
+            r: fg.r * a + bg.r * (1.0 - a),
+            g: fg.g * a + bg.g * (1.0 - a),
+            b: fg.b * a + bg.b * (1.0 - a),
+            a: 1.0,
+        }
+    }
+
+    fn alpha_mul(mut c: Color, mul: f32) -> Color {
+        c.a *= mul;
+        c
+    }
+
+    fn relative_luminance(c: Color) -> f32 {
+        // The theme pipeline stores colors in linear space, so we can use the WCAG coefficients
+        // directly.
+        (0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b).clamp(0.0, 1.0)
+    }
+
+    fn contrast_ratio(a: Color, b: Color) -> f32 {
+        let l1 = relative_luminance(a);
+        let l2 = relative_luminance(b);
+        let (hi, lo) = if l1 >= l2 { (l1, l2) } else { (l2, l1) };
+        (hi + 0.05) / (lo + 0.05)
+    }
 
     struct FakeServices;
 
@@ -1036,14 +1146,61 @@ mod tests {
     }
 
     #[test]
+    fn disabled_button_is_not_focusable() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(200.0), Px(80.0)),
+        );
+
+        elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            "disabled-button-focusable",
+            |cx| {
+                let el = Button::new("Hello").disabled(true).into_element(cx);
+                let ElementKind::Opacity(root) = &el.kind else {
+                    panic!(
+                        "expected disabled Button to be wrapped in Opacity, got {:?}",
+                        el.kind
+                    );
+                };
+                assert!(
+                    (root.opacity - 0.5).abs() < 1e-6,
+                    "expected disabled Button to apply opacity 0.5"
+                );
+
+                let child = el.children.first().expect("opacity child");
+                let ElementKind::Pressable(pressable) = &child.kind else {
+                    panic!(
+                        "expected Opacity child to be a Pressable, got {:?}",
+                        child.kind
+                    );
+                };
+                assert!(
+                    !pressable.focusable,
+                    "expected disabled Button to be non-focusable"
+                );
+            },
+        );
+    }
+
+    #[test]
     fn icon_button_sizes_apply_min_dimensions() {
         let mut app = App::new();
         let window = AppWindowId::default();
 
-        let theme = Theme::global(&app).clone();
-        let expected_sm = fret_ui_kit::Size::Small.icon_button_size(&theme);
-        let expected_md = fret_ui_kit::Size::Medium.icon_button_size(&theme);
-        let expected_lg = fret_ui_kit::Size::Large.icon_button_size(&theme);
+        let (expected_sm, expected_md, expected_lg) = {
+            let theme = Theme::global(&app);
+            (
+                fret_ui_kit::Size::Small.icon_button_size(theme),
+                fret_ui_kit::Size::Medium.icon_button_size(theme),
+                fret_ui_kit::Size::Large.icon_button_size(theme),
+            )
+        };
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -1093,7 +1250,7 @@ mod tests {
     fn button_padding_x_compacts_when_icon_present() {
         let mut app = App::new();
         let window = AppWindowId::default();
-        let theme = Theme::global(&app).clone();
+        let theme = Theme::global(&app).snapshot();
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -1186,8 +1343,7 @@ mod tests {
         );
         let mut services = FakeServices;
 
-        let theme = Theme::global(&app).clone();
-        let ring = theme.color_token("ring");
+        let ring = Theme::global(&app).snapshot().color_token("ring");
 
         let id_out: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
 
@@ -1600,9 +1756,10 @@ mod tests {
         let mut scene = Scene::default();
         ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
 
-        let theme = Theme::global(&app).clone();
-        let (expected_bg, _expected_bg_hover, _expected_bg_active, _border, _fg) =
-            variant_colors(&theme, ButtonVariant::Default);
+        let (expected_bg, _expected_bg_hover, _expected_bg_active, _border, _fg) = {
+            let theme = Theme::global(&app);
+            variant_colors(theme, ButtonVariant::Default)
+        };
 
         let mut best_quad: Option<(Rect, Color, f32)> = None;
         for op in scene.ops() {
@@ -1634,6 +1791,66 @@ mod tests {
             actual_bg,
             expected_bg,
             0.02,
+        );
+    }
+
+    #[test]
+    fn destructive_button_text_contrast_is_reasonable_in_zinc_dark() {
+        let mut app = App::new();
+        crate::shadcn_themes::apply_shadcn_new_york_v4(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Zinc,
+            crate::shadcn_themes::ShadcnColorScheme::Dark,
+        );
+
+        let theme = Theme::global(&app);
+        let snap = theme.snapshot();
+
+        let (bg, _bg_hover, _bg_active, _border, fg) =
+            variant_colors(theme, ButtonVariant::Destructive);
+        let surface = snap.color_token("background");
+        let bg_composited = blend_over(bg, surface);
+
+        let ratio = contrast_ratio(fg, bg_composited);
+        assert!(
+            ratio >= 4.5,
+            "expected destructive button contrast >= 4.5, got {ratio:.2} (fg={:?} bg={:?} bg_composited={:?} surface={:?})",
+            fg,
+            bg,
+            bg_composited,
+            surface,
+        );
+    }
+
+    #[test]
+    fn disabled_destructive_button_text_contrast_is_reasonable_in_zinc_dark() {
+        let mut app = App::new();
+        crate::shadcn_themes::apply_shadcn_new_york_v4(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Zinc,
+            crate::shadcn_themes::ShadcnColorScheme::Dark,
+        );
+
+        let theme = Theme::global(&app);
+        let snap = theme.snapshot();
+
+        let (bg, _bg_hover, _bg_active, _border, fg) =
+            variant_colors(theme, ButtonVariant::Destructive);
+        let surface = snap.color_token("background");
+
+        // Disabled buttons are wrapped in an opacity node (`disabled:opacity-50` upstream).
+        // Model that as group alpha applied when compositing each pixel over the surface.
+        let disabled_opacity = 0.5;
+        let text_pixel = blend_over(alpha_mul(fg, disabled_opacity), surface);
+        let bg_pixel = blend_over(alpha_mul(bg, disabled_opacity), surface);
+
+        let ratio = contrast_ratio(text_pixel, bg_pixel);
+        assert!(
+            ratio >= 3.0,
+            "expected disabled destructive button contrast >= 3.0, got {ratio:.2} (text={:?} bg={:?} surface={:?})",
+            text_pixel,
+            bg_pixel,
+            surface,
         );
     }
 }

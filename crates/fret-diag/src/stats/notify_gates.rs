@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use crate::util::{now_unix_ms, write_json_value};
+use crate::stats::notify_gates_streaming;
 
 pub(crate) fn check_bundle_for_notify_hotspot_file_max(
     bundle_path: &Path,
@@ -8,10 +8,7 @@ pub(crate) fn check_bundle_for_notify_hotspot_file_max(
     max_count: u64,
     warmup_frames: u64,
 ) -> Result<(), String> {
-    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
-    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
-    check_bundle_for_notify_hotspot_file_max_json(
-        &bundle,
+    notify_gates_streaming::check_bundle_for_notify_hotspot_file_max_streaming(
         bundle_path,
         file_filter,
         max_count,
@@ -19,6 +16,11 @@ pub(crate) fn check_bundle_for_notify_hotspot_file_max(
     )
 }
 
+#[cfg(test)]
+use crate::util::{now_unix_ms, write_json_value};
+
+#[cfg(test)]
+#[allow(dead_code)]
 pub(crate) fn check_bundle_for_notify_hotspot_file_max_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
@@ -116,6 +118,7 @@ pub(crate) fn check_bundle_for_notify_hotspot_file_max_json(
         "schema_version": 1,
         "generated_unix_ms": now_unix_ms(),
         "kind": "notify_hotspots",
+        "bundle_artifact": bundle_path.display().to_string(),
         "bundle_json": bundle_path.display().to_string(),
         "evidence_dir": evidence_dir.display().to_string(),
         "evidence_path": evidence_path.display().to_string(),

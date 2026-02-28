@@ -5,14 +5,15 @@ use fret_ui::element::{
     AnyElement, ColumnProps, ContainerProps, CrossAlign, ElementKind, LayoutQueryRegionProps,
     MainAlign, PressableA11y, PressableProps, RowProps, SemanticsDecoration,
 };
-use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
+use fret_ui::{ElementContext, Invalidation, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::control_registry::{ControlId, LabelEntry, control_registry_model};
 use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::field_state as field_state_prim;
+use fret_ui_kit::theme_tokens;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space, ui};
 
-fn muted_foreground(theme: &Theme) -> fret_core::Color {
+fn muted_foreground(theme: &ThemeSnapshot) -> fret_core::Color {
     theme
         .color_by_key("muted.foreground")
         .or_else(|| theme.color_by_key("muted-foreground"))
@@ -263,25 +264,26 @@ impl FieldSet {
             || self.children.iter().any(is_checkbox_group_element);
 
         let (gap, layout, rest_layout, legend_gap, muted, desc_mt_neg_n1, desc_mt_neg_n1p5) = {
-            let theme = Theme::global(&*cx.app);
+            let theme = Theme::global(&*cx.app).snapshot();
             // Upstream `FieldSet` uses `gap-6`, but overrides to `gap-3` when a checkbox/radio group
             // is present via CSS `:has` selectors.
             let gap = if has_radio_or_checkbox_group {
-                MetricRef::space(Space::N3).resolve(theme)
+                MetricRef::space(Space::N3).resolve(&theme)
             } else {
-                MetricRef::space(Space::N6).resolve(theme)
+                MetricRef::space(Space::N6).resolve(&theme)
             };
             let layout = decl_style::layout_style(
-                theme,
+                &theme,
                 LayoutRefinement::default().w_full().merge(self.layout),
             );
-            let rest_layout = decl_style::layout_style(theme, LayoutRefinement::default().w_full());
-            let legend_gap = MetricRef::space(Space::N3).resolve(theme);
-            let muted = muted_foreground(theme);
+            let rest_layout =
+                decl_style::layout_style(&theme, LayoutRefinement::default().w_full());
+            let legend_gap = MetricRef::space(Space::N3).resolve(&theme);
+            let muted = muted_foreground(&theme);
             let desc_mt_neg_n1 =
-                decl_style::layout_style(theme, LayoutRefinement::default().mt_neg(Space::N1));
+                decl_style::layout_style(&theme, LayoutRefinement::default().mt_neg(Space::N1));
             let desc_mt_neg_n1p5 =
-                decl_style::layout_style(theme, LayoutRefinement::default().mt_neg(Space::N1p5));
+                decl_style::layout_style(&theme, LayoutRefinement::default().mt_neg(Space::N1p5));
             (
                 gap,
                 layout,
@@ -811,14 +813,22 @@ impl FieldLabel {
             return el;
         };
 
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
         let pressable_layout_default = if wrap_children.is_some() {
             LayoutRefinement::default().w_full().min_w_0()
         } else {
-            LayoutRefinement::default().flex_1().min_w_0()
+            // `FieldLabel` is commonly used inside `FieldContent` (a vertical column). Using
+            // `flex-1` here makes the label a main-axis flex item, which can collapse to a zero
+            // main size in auto-sized columns and cause visible overlap with sibling text.
+            //
+            // Keep the default layout non-flex; parent recipes can opt into `flex-1` explicitly
+            // when they truly need a horizontally flexible label in a row.
+            LayoutRefinement::default().min_w_0()
         };
         let pressable_layout =
             decl_style::layout_style(&theme, pressable_layout_default.merge(self.layout));
+        let render_text_block =
+            !matches!(pressable_layout.size.width, fret_ui::element::Length::Auto);
         let control_registry = control_registry_model(cx);
         let text = self.text.clone();
         let fg = fg.clone();
@@ -941,16 +951,19 @@ impl FieldLabel {
                     direction_prim::LayoutDirection::Rtl => TextAlign::End,
                     direction_prim::LayoutDirection::Ltr => TextAlign::Start,
                 };
-                vec![
-                    ui::label(cx, text.clone())
-                        .text_size_px(px)
-                        .line_height_px(line_height)
-                        .font_medium()
-                        .text_color(fg.clone())
-                        .wrap(TextWrap::Word)
-                        .text_align(align)
-                        .into_element(cx),
-                ]
+                let mut builder = ui::label(cx, text.clone());
+                if render_text_block {
+                    builder = builder.w_full().min_w_0();
+                }
+                let mut label = builder
+                    .text_size_px(px)
+                    .line_height_px(line_height)
+                    .font_medium()
+                    .text_color(fg.clone())
+                    .wrap(TextWrap::Word)
+                    .text_align(align)
+                    .into_element(cx);
+                vec![label]
             } else {
                 Vec::new()
             };
@@ -979,14 +992,18 @@ impl FieldDescription {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let (fg, px, line_height) = {
-            let theme = Theme::global(&*cx.app);
-            let fg = muted_foreground(theme);
+            let theme = Theme::global(&*cx.app).snapshot();
+            let fg = muted_foreground(&theme);
             let px = theme
                 .metric_by_key("component.field.description_px")
+                .or_else(|| theme.metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_PX))
                 .or_else(|| theme.metric_by_key("font.size"))
                 .unwrap_or_else(|| theme.metric_token("font.size"));
             let line_height = theme
                 .metric_by_key("component.field.description_line_height")
+                .or_else(|| {
+                    theme.metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT)
+                })
                 .or_else(|| theme.metric_by_key("font.line_height"))
                 .unwrap_or_else(|| theme.metric_token("font.line_height"));
             (fg, px, line_height)
@@ -1026,10 +1043,14 @@ impl FieldError {
             let fg = theme.color_token("destructive");
             let px = theme
                 .metric_by_key("component.field.error_px")
+                .or_else(|| theme.metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_PX))
                 .or_else(|| theme.metric_by_key("font.size"))
                 .unwrap_or_else(|| theme.metric_token("font.size"));
             let line_height = theme
                 .metric_by_key("component.field.error_line_height")
+                .or_else(|| {
+                    theme.metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT)
+                })
                 .or_else(|| theme.metric_by_key("font.line_height"))
                 .unwrap_or_else(|| theme.metric_token("font.line_height"));
             (fg, px, line_height)
@@ -1240,18 +1261,21 @@ impl Field {
 
         field_state_prim::with_field_state_provider(cx, field_state, |cx| {
             let (gap, wrapper, inner_layout, muted, desc_mt_neg) = {
-                let theme = Theme::global(&*cx.app);
-                let gap = MetricRef::space(Space::N3).resolve(theme);
+                let theme = Theme::global(&*cx.app).snapshot();
+                // shadcn/ui v4 `FormItem`: `grid gap-2`.
+                let gap = MetricRef::space(Space::N2).resolve(&theme);
                 let wrapper = decl_style::container_props(
-                    theme,
+                    &theme,
                     self.chrome,
                     LayoutRefinement::default().w_full().merge(self.layout),
                 );
-                let inner_layout =
-                    decl_style::layout_style(theme, LayoutRefinement::default().w_full().min_w_0());
-                let muted = muted_foreground(theme);
+                let inner_layout = decl_style::layout_style(
+                    &theme,
+                    LayoutRefinement::default().w_full().min_w_0(),
+                );
+                let muted = muted_foreground(&theme);
                 let desc_mt_neg =
-                    decl_style::layout_style(theme, LayoutRefinement::default().mt_neg(Space::N1));
+                    decl_style::layout_style(&theme, LayoutRefinement::default().mt_neg(Space::N1));
                 (gap, wrapper, inner_layout, muted, desc_mt_neg)
             };
 
@@ -1274,15 +1298,19 @@ impl Field {
                 region_props,
                 move |cx, region_id| {
                     vec![cx.container(wrapper, move |cx| {
-                        let md_breakpoint = fret_ui_kit::declarative::container_breakpoints(
+                        // Container queries are frame-lagged. When the region width is
+                        // temporarily unknown (e.g. in single-pass layout test harnesses), fall
+                        // back to viewport behavior so we avoid branching on a missing
+                        // measurement.
+                        let default_when_unknown =
+                            cx.environment_viewport_width(Invalidation::Layout).0
+                                >= fret_ui_kit::declarative::container_queries::tailwind::MD.0;
+                        let md_breakpoint = fret_ui_kit::declarative::container_width_at_least(
                             cx,
                             region_id,
                             Invalidation::Layout,
-                            false,
-                            &[(
-                                fret_ui_kit::declarative::container_queries::tailwind::MD,
-                                true,
-                            )],
+                            default_when_unknown,
+                            fret_ui_kit::declarative::container_queries::tailwind::MD,
                             fret_ui_kit::declarative::ContainerQueryHysteresis::default(),
                         );
 
@@ -1415,6 +1443,48 @@ mod tests {
         assert_eq!(
             element.semantics_decoration.as_ref().and_then(|d| d.role),
             Some(SemanticsRole::List)
+        );
+    }
+
+    #[test]
+    fn field_vertical_defaults_to_gap_2() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(120.0), Px(120.0)),
+        );
+
+        let theme = Theme::global(&app).snapshot();
+        let expected = MetricRef::space(Space::N2).resolve(&theme);
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            Field::new([cx.text("Label"), cx.text("Control")])
+                .orientation(FieldOrientation::Vertical)
+                .into_element(cx)
+        });
+
+        fn find_first_column_gap(el: &AnyElement) -> Option<Px> {
+            if let ElementKind::Column(props) = &el.kind {
+                return match props.gap {
+                    fret_ui::element::SpacingLength::Px(px) => Some(px),
+                    _ => None,
+                };
+            }
+            for child in &el.children {
+                if let Some(found) = find_first_column_gap(child) {
+                    return Some(found);
+                }
+            }
+            None
+        }
+
+        let gap = find_first_column_gap(&element).expect("field should contain a Column");
+        assert!(
+            (gap.0 - expected.0).abs() <= 0.5,
+            "expected Field gap≈{}px, got {}px",
+            expected.0,
+            gap.0
         );
     }
 }

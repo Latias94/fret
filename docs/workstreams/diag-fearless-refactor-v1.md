@@ -50,6 +50,11 @@ Today, diagnostics is powerful but the “fearless refactor” tax is high:
 ## Current state (as of 2026-02-24)
 
 - Runtime exports schema v2 bundles by default (semantics are deduplicated via `tables.semantics`).
+  - Note: the large raw on-disk artifact is named `bundle.json` when enabled.
+  - `bundle.schema2.json` is available as a compact companion artifact:
+    - default: tooling-derived via `diag doctor --fix-schema2`,
+    - opt-in at capture time: set `write_bundle_schema2=true` (and/or `write_bundle_json=false`) in the diagnostics config file (`FRET_DIAG_CONFIG_PATH`).
+    - policy: tool-launched runs (`--launch`) are small-by-default via per-run `diag.config.json` (manual runs keep compat defaults unless configured).
 - Older bundles may still be schema v1 (inline-only semantics, no tables); tooling remains compatible.
 - Tooling can:
   - convert bundles (`fretboard diag bundle-v2`) for measurement/compat,
@@ -57,11 +62,14 @@ Today, diagnostics is powerful but the “fearless refactor” tax is high:
   - export bounded “AI packets” (`fretboard diag ai-packet`),
   - slice bundles without grepping `bundle.json` (`fretboard diag slice`).
 - Tooling treats `bundle.schema2.json` as a first-class **bundle artifact** input (alongside `bundle.json`), and can
-  “heal” older bundle dirs via `fretboard diag bundle-doctor fix`.
+  “heal” older bundle dirs via `cargo run -p fretboard -- diag doctor --fix-schema2 --fix-sidecars <bundle_dir> --warmup-frames <n>`
+  (or by using `--bundle-doctor fix` in `diag run|suite|repro`).
 - Runtime `bundle.index.json` includes a bounded `test_id` bloom (`test_id_bloom_hex`) on tail snapshots to make
   `diag query snapshots --test-id ...` fast without loading the full bundle.
 - Runtime script dumps include `script.result.json`, and `bundle.index.json` may include additive `script.steps` markers for
   mapping `step_index` to a snapshot selector without re-parsing the full bundle.
+
+See: `docs/workstreams/diag-fearless-refactor-v1/schema2-first-decision.md` for the schema2-first policy draft and exit criteria.
 
 ## Plan: two-phase evolution (preferred order)
 
@@ -73,6 +81,9 @@ This workstream follows the repo preference: **finish “Plan 1” before “Pla
 - Keep `bundle.json` as an optional compatibility artifact (older runs, deep debugging).
 - Make schema v2 + semantics-table the default for runtime-produced bundles.
 - Prefer `FRET_DIAG_BUNDLE_SEMANTICS_MODE=last|changed` for script runs and AI loops.
+- Keep shareable zips bounded when `bundle.schema2.json` is available:
+  - Preferred (bounded AI handoff): `diag run|suite|repro --bundle-doctor fix --pack --ai-only`
+  - Compat (offline viewer-friendly, includes bundle artifact): `diag run|suite|repro --bundle-doctor fix --pack --include-all --pack-schema2-only`
 - Treat indexes and slices as the default review/debug units:
   - `bundle.index.json` for “jump to the right snapshot quickly”,
   - `test_ids.index.json` for fast `test_id` discovery,

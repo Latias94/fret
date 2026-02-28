@@ -1,0 +1,5 @@
+{
+  "schema_version": 1,
+  "kind": "script_redirect",
+  "to": "tools/diag-scripts/ui-gallery/field/ui-gallery-field-responsive-orientation-container-md.json"
+}

@@ -91,9 +91,13 @@ fn switch_bg_on(theme: &Theme) -> Color {
 
 fn switch_bg_off(theme: &Theme) -> Color {
     theme
-        .color_by_key("input")
-        .or_else(|| theme.color_by_key("muted"))
-        .unwrap_or_else(|| theme.color_token("input"))
+        .color_by_key("component.switch.track.bg_off")
+        .unwrap_or_else(|| {
+            theme
+                .color_by_key("input")
+                .or_else(|| theme.color_by_key("muted"))
+                .unwrap_or_else(|| theme.color_token("input"))
+        })
 }
 
 fn switch_thumb_bg(theme: &Theme) -> Color {
@@ -723,10 +727,10 @@ mod tests {
         let mut scene = Scene::default();
         ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
 
-        let theme = Theme::global(&app).clone();
-        let track_bg = fret_core::Paint::Solid(switch_bg_off(&theme));
-        let thumb_size = switch_thumb(&theme, SwitchSize::Default);
-        let thumb_bg = fret_core::Paint::Solid(switch_thumb_bg(&theme));
+        let theme = Theme::global(&app);
+        let track_bg = fret_core::Paint::Solid(switch_bg_off(theme));
+        let thumb_size = switch_thumb(theme, SwitchSize::Default);
+        let thumb_bg = fret_core::Paint::Solid(switch_thumb_bg(theme));
 
         let mut track_rect: Option<Rect> = None;
         let mut thumb_rect: Option<Rect> = None;
@@ -1200,10 +1204,10 @@ mod tests {
         let mut scene = Scene::default();
         ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
 
-        let theme = Theme::global(&app).clone();
-        let track_bg = fret_core::Paint::Solid(switch_bg_off(&theme));
-        let thumb_size = switch_thumb(&theme, SwitchSize::Sm);
-        let thumb_bg = fret_core::Paint::Solid(switch_thumb_bg(&theme));
+        let theme = Theme::global(&app);
+        let track_bg = fret_core::Paint::Solid(switch_bg_off(theme));
+        let thumb_size = switch_thumb(theme, SwitchSize::Sm);
+        let thumb_bg = fret_core::Paint::Solid(switch_thumb_bg(theme));
 
         let mut track_rect: Option<Rect> = None;
         let mut thumb_rect: Option<Rect> = None;

@@ -124,7 +124,7 @@ impl MyEffects {
 ## Evidence anchors in this repo
 
 - Helper type: `ecosystem/fret-ui-kit/src/custom_effects.rs` (`CustomEffectProgramV2`)
-- CustomV2 ABI + contracts: `docs/adr/0300-custom-effect-v2-user-image-input.md`
+- CustomV2 ABI + contracts: `docs/adr/0303-custom-effect-v2-user-image-input.md`
 - CustomV2 implementation tracker: `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-v2/README.md`
 - A Web/WASM “starter” demo that follows this pattern:
   - `apps/fret-examples/src/custom_effect_v2_identity_web_demo.rs`

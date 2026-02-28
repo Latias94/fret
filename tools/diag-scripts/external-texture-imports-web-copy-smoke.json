@@ -1,17 +1,5 @@
 {
-  "schema_version": 2,
-  "steps": [
-    {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "exists",
-        "target": { "kind": "test_id", "id": "external-texture-imports-web-root" }
-      },
-      "timeout_frames": 240
-    },
-    { "type": "wait_frames", "n": 4 },
-    { "type": "reset_diagnostics" },
-    { "type": "wait_frames", "n": 12 },
-    { "type": "capture_bundle", "label": "external-texture-imports-web-copy-smoke" }
-  ]
+  "schema_version": 1,
+  "kind": "script_redirect",
+  "to": "tools/diag-scripts/tooling/external-texture-imports/external-texture-imports-web-copy-smoke.json"
 }

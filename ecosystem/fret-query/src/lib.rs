@@ -1088,6 +1088,100 @@ impl QueryClient {
         self.use_query_async_local(app, window, key, policy, fetch)
     }
 
+    /// Cancel the current inflight task for the given key (best-effort).
+    ///
+    /// This is different from [`Self::invalidate`]:
+    /// - `invalidate` marks the entry as stale (and may trigger a refetch on the next observation),
+    /// - `cancel_inflight` only stops the current request and keeps freshness unchanged.
+    ///
+    /// Notes:
+    /// - Cancellation is cooperative (fetch implementations should check the `CancellationToken`).
+    /// - A canceled task completion (if it still produces one) will be ignored as stale.
+    pub fn cancel_inflight<H, T>(&mut self, app: &mut H, key: QueryKey<T>)
+    where
+        H: UiHost,
+        T: Any + Send + Sync + 'static,
+    {
+        let key_id = key.id();
+
+        let (namespace, hash, debug_label, type_name, model_id, new_status, had_inflight) = {
+            let mut entries = self
+                .runtime
+                .entries
+                .lock()
+                .unwrap_or_else(|p| p.into_inner());
+            let Some(entry) = entries.get_mut(&key_id) else {
+                return;
+            };
+
+            let had_inflight = entry.inflight.is_some();
+            entry.inflight = None;
+            entry.retry.next_retry_at = None;
+            if let Some(token) = entry.retry.scheduled_wake.take() {
+                token.cancel();
+            }
+
+            let model = self
+                .handles
+                .get(&key_id)
+                .and_then(|any| any.downcast_ref::<Model<QueryState<T>>>().cloned());
+
+            let (new_status, had_inflight) = if let Some(model) = model {
+                let state = model.read_ref(app, |s| (*s).clone()).ok();
+                let state = state.unwrap_or_else(QueryState::<T>::default);
+                let new_status = if state.data.is_some() {
+                    QueryStatus::Success
+                } else {
+                    QueryStatus::Idle
+                };
+                (new_status, had_inflight)
+            } else {
+                (QueryStatus::Idle, had_inflight)
+            };
+
+            if entry.status == QueryStatus::Loading {
+                entry.status = new_status;
+            }
+
+            (
+                entry.namespace,
+                entry.hash,
+                entry.debug_label,
+                entry.type_name,
+                entry.model_id,
+                new_status,
+                had_inflight,
+            )
+        };
+
+        let model = self
+            .handles
+            .get(&key_id)
+            .and_then(|any| any.downcast_ref::<Model<QueryState<T>>>().cloned());
+        if let Some(model) = model {
+            let _ = app.models_mut().update(&model, |st| {
+                let was_loading = st.status == QueryStatus::Loading;
+                st.inflight = None;
+                st.retry.next_retry_at = None;
+                if was_loading {
+                    st.status = new_status;
+                }
+            });
+        }
+
+        if had_inflight {
+            tracing::debug!(
+                target: "fret_query::diag",
+                namespace,
+                hash,
+                debug_label,
+                type_name,
+                model_id = ?model_id,
+                "query inflight cancelled explicitly"
+            );
+        }
+    }
+
     pub fn invalidate<H, T>(&mut self, _app: &mut H, key: QueryKey<T>)
     where
         H: UiHost,

@@ -1,0 +1,169 @@
+{
+  "meta": {
+    "required_capabilities": [
+      "diag.script_v2",
+      "diag.screenshot_png"
+    ]
+  },
+  "schema_version": 2,
+  "steps": [
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "ui-gallery-nav-search",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 600,
+      "type": "wait_until"
+    },
+    {
+      "button": "left",
+      "target": {
+        "id": "ui-gallery-nav-search",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "key": "a",
+      "modifiers": {
+        "alt": false,
+        "ctrl": true,
+        "meta": false,
+        "shift": false
+      },
+      "repeat": false,
+      "type": "press_key"
+    },
+    {
+      "key": "backspace",
+      "modifiers": {
+        "alt": false,
+        "ctrl": false,
+        "meta": false,
+        "shift": false
+      },
+      "repeat": false,
+      "type": "press_key"
+    },
+    {
+      "text": "select",
+      "type": "type_text"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "button": "left",
+      "target": {
+        "id": "ui-gallery-nav-select",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "ui-gallery-page-select",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 600,
+      "type": "wait_until"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "ui-gallery-select-trigger",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 600,
+      "type": "wait_until"
+    },
+    {
+      "button": "left",
+      "target": {
+        "id": "ui-gallery-select-trigger",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "ui-gallery-select-item-apple",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 60,
+      "type": "wait_until"
+    },
+    {
+      "label": "ui-gallery-select-wheel-scroll-before",
+      "timeout_frames": 300,
+      "type": "capture_screenshot"
+    },
+    {
+      "target": {
+        "id": "ui-gallery-select-item-apple",
+        "kind": "test_id"
+      },
+      "type": "move_pointer"
+    },
+    {
+      "delta_x": 0.0,
+      "delta_y": -120.0,
+      "target": {
+        "id": "ui-gallery-select-item-apple",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 5,
+      "type": "wait_frames"
+    },
+    {
+      "delta_x": 0.0,
+      "delta_y": -240.0,
+      "target": {
+        "id": "ui-gallery-select-item-apple",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 5,
+      "type": "wait_frames"
+    },
+    {
+      "delta_x": 0.0,
+      "delta_y": 120.0,
+      "target": {
+        "id": "ui-gallery-select-item-apple",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 5,
+      "type": "wait_frames"
+    },
+    {
+      "label": "ui-gallery-select-wheel-scroll-after",
+      "timeout_frames": 300,
+      "type": "capture_screenshot"
+    },
+    {
+      "label": "ui-gallery-select-wheel-scroll-screenshots",
+      "type": "capture_bundle"
+    }
+  ]
+}

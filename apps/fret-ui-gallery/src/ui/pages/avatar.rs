@@ -377,7 +377,7 @@ pub(super) fn preview_avatar(
                 },
             )]
         })
-        .test_id("ui-gallery-avatar-rtl")
+        .test_id("ui-gallery-avatar-rtl-row")
     };
 
     let notes = doc_layout::notes(

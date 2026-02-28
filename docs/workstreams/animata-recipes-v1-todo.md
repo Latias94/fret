@@ -80,9 +80,9 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Animata source:
     - `repo-ref/animata/animata/carousel/expandable.tsx`
   - Output:
-    - `tools/diag-scripts/ui-gallery-carousel-expandable-fixed-frame-delta.json`
+    - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-expandable-fixed-frame-delta.json`
   - Evidence:
-    - `tools/diag-scripts/ui-gallery-carousel-expandable-fixed-frame-delta.json`
+    - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-expandable-fixed-frame-delta.json`
     - `apps/fret-ui-gallery/src/ui/pages/carousel.rs` (section "Animata: Expandable")
 
 - [x] AR-GATE-005 Add a fixed-delta diag gate for Sonner `stack.shift` staggered reflow (non-expanded).

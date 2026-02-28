@@ -169,7 +169,7 @@ impl<H: UiHost> Default for MarkdownComponents<H> {
         let mut code_block_ui = fret_code_view::CodeBlockUiOptions::default();
         code_block_ui.show_header = true;
         code_block_ui.header_divider = true;
-        code_block_ui.header_background = fret_code_view::CodeBlockHeaderBackground::Secondary;
+        code_block_ui.header_background = fret_code_view::CodeBlockHeaderBackground::Muted80;
         code_block_ui.show_copy_button = true;
         code_block_ui.copy_button_on_hover = true;
         code_block_ui.copy_button_placement = fret_code_view::CodeBlockCopyButtonPlacement::Header;

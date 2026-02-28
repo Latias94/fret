@@ -182,16 +182,13 @@ pub(super) fn preview_dropdown_menu(
         }
     };
 
-    let button_trigger = |cx: &mut ElementContext<'_, App>,
-                          open_model: Model<bool>,
-                          label: &'static str,
-                          test_id: &'static str| {
-        shadcn::Button::new(label)
-            .variant(shadcn::ButtonVariant::Outline)
-            .toggle_model(open_model.clone())
-            .test_id(test_id)
-            .into_element(cx)
-    };
+    let button_trigger =
+        |cx: &mut ElementContext<'_, App>, label: &'static str, test_id: &'static str| {
+            shadcn::Button::new(label)
+                .variant(shadcn::ButtonVariant::Outline)
+                .test_id(test_id)
+                .into_element(cx)
+        };
 
     let action_text = cx
         .app
@@ -204,7 +201,6 @@ pub(super) fn preview_dropdown_menu(
         |cx| {
             shadcn::Button::new("Open menu")
                 .variant(shadcn::ButtonVariant::Outline)
-                .toggle_model(open.clone())
                 .test_id("ui-gallery-dropdown-menu-demo-trigger")
                 .into_element(cx)
         },
@@ -252,14 +248,7 @@ pub(super) fn preview_dropdown_menu(
 
     let basic = shadcn::DropdownMenu::new(basic_open.clone()).into_element(
         cx,
-        |cx| {
-            button_trigger(
-                cx,
-                basic_open.clone(),
-                "Basic",
-                "ui-gallery-dropdown-menu-basic-trigger",
-            )
-        },
+        |cx| button_trigger(cx, "Basic", "ui-gallery-dropdown-menu-basic-trigger"),
         |_cx| {
             vec![
                 shadcn::DropdownMenuEntry::Label(shadcn::DropdownMenuLabel::new("My Account")),
@@ -278,14 +267,7 @@ pub(super) fn preview_dropdown_menu(
 
     let submenu = shadcn::DropdownMenu::new(submenu_open.clone()).into_element(
         cx,
-        |cx| {
-            button_trigger(
-                cx,
-                submenu_open.clone(),
-                "Submenu",
-                "ui-gallery-dropdown-menu-submenu-trigger",
-            )
-        },
+        |cx| button_trigger(cx, "Submenu", "ui-gallery-dropdown-menu-submenu-trigger"),
         |_cx| {
             vec![
                 shadcn::DropdownMenuEntry::Item(
@@ -312,7 +294,6 @@ pub(super) fn preview_dropdown_menu(
         |cx| {
             button_trigger(
                 cx,
-                shortcuts_open.clone(),
                 "Shortcuts",
                 "ui-gallery-dropdown-menu-shortcuts-trigger",
             )
@@ -335,14 +316,7 @@ pub(super) fn preview_dropdown_menu(
 
     let icons = shadcn::DropdownMenu::new(icons_open.clone()).into_element(
         cx,
-        |cx| {
-            button_trigger(
-                cx,
-                icons_open.clone(),
-                "Icons",
-                "ui-gallery-dropdown-menu-icons-trigger",
-            )
-        },
+        |cx| button_trigger(cx, "Icons", "ui-gallery-dropdown-menu-icons-trigger"),
         |cx| {
             vec![
                 shadcn::DropdownMenuEntry::Item(
@@ -366,7 +340,6 @@ pub(super) fn preview_dropdown_menu(
         |cx| {
             button_trigger(
                 cx,
-                checkboxes_open.clone(),
                 "Checkboxes",
                 "ui-gallery-dropdown-menu-checkboxes-trigger",
             )
@@ -390,7 +363,6 @@ pub(super) fn preview_dropdown_menu(
         |cx| {
             button_trigger(
                 cx,
-                checkboxes_icons_open.clone(),
                 "Checkboxes Icons",
                 "ui-gallery-dropdown-menu-checkboxes-icons-trigger",
             )
@@ -417,14 +389,7 @@ pub(super) fn preview_dropdown_menu(
 
     let radio_group = shadcn::DropdownMenu::new(radio_open.clone()).into_element(
         cx,
-        |cx| {
-            button_trigger(
-                cx,
-                radio_open.clone(),
-                "Radio Group",
-                "ui-gallery-dropdown-menu-radio-trigger",
-            )
-        },
+        |cx| button_trigger(cx, "Radio Group", "ui-gallery-dropdown-menu-radio-trigger"),
         |_cx| {
             vec![shadcn::DropdownMenuEntry::RadioGroup(
                 shadcn::DropdownMenuRadioGroup::new(theme_mode.clone())
@@ -440,7 +405,6 @@ pub(super) fn preview_dropdown_menu(
         |cx| {
             button_trigger(
                 cx,
-                radio_icons_open.clone(),
                 "Radio Icons",
                 "ui-gallery-dropdown-menu-radio-icons-trigger",
             )
@@ -473,7 +437,6 @@ pub(super) fn preview_dropdown_menu(
         |cx| {
             button_trigger(
                 cx,
-                destructive_open.clone(),
                 "Destructive",
                 "ui-gallery-dropdown-menu-destructive-trigger",
             )
@@ -518,14 +481,7 @@ pub(super) fn preview_dropdown_menu(
         .arrow(true)
         .into_element(
             cx,
-            |cx| {
-                button_trigger(
-                    cx,
-                    complex_open.clone(),
-                    "Complex",
-                    "ui-gallery-dropdown-menu-complex-trigger",
-                )
-            },
+            |cx| button_trigger(cx, "Complex", "ui-gallery-dropdown-menu-complex-trigger"),
             |cx| {
                 vec![
                     shadcn::DropdownMenuEntry::Label(shadcn::DropdownMenuLabel::new("Actions")),
@@ -559,14 +515,7 @@ pub(super) fn preview_dropdown_menu(
     let rtl = doc_layout::rtl(cx, |cx| {
         shadcn::DropdownMenu::new(rtl_open.clone()).into_element(
             cx,
-            |cx| {
-                button_trigger(
-                    cx,
-                    rtl_open.clone(),
-                    "RTL",
-                    "ui-gallery-dropdown-menu-rtl-trigger",
-                )
-            },
+            |cx| button_trigger(cx, "RTL", "ui-gallery-dropdown-menu-rtl-trigger"),
             |_cx| {
                 vec![
                     shadcn::DropdownMenuEntry::Item(

@@ -15,6 +15,7 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_headless::motion::inertia::{InertiaBounds, InertiaSimulation};
 use fret_ui_headless::motion::simulation::Simulation1D;
 use fret_ui_headless::motion::tolerance::Tolerance;
+use fret_ui_headless::snap_points as headless_snap_points;
 
 use crate::Sheet;
 use crate::layout as shadcn_layout;
@@ -174,7 +175,7 @@ impl DrawerContent {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
         let side = drawer_side_in_scope(cx);
 
         let bg = theme.color_token("background");
@@ -858,15 +859,9 @@ impl Drawer {
                         let _ = host.models_mut().update(&offset_for_up, |v| *v = Px(0.0));
                         let _ = host.models_mut().update(&open_for_up, |v| *v = false);
                     } else {
-                        let nearest = targets
-                            .iter()
-                            .copied()
-                            .min_by(|a, b| {
-                                let da = (a.0 - projected_offset.0).abs();
-                                let db = (b.0 - projected_offset.0).abs();
-                                da.total_cmp(&db)
-                            })
-                            .unwrap_or(Px(0.0));
+                        let nearest =
+                            headless_snap_points::closest_value_px(&targets, projected_offset)
+                                .unwrap_or(Px(0.0));
 
                         let _ = host.models_mut().update(&runtime_for_up, |st| {
                             st.settling = true;

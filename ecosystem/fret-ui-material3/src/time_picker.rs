@@ -474,7 +474,11 @@ impl TimePickerDialog {
                 let open_model_for_request = self.open.clone();
                 let open_model_for_overlay = self.open.clone();
 
-                let scrim_alpha = (scrim_base.a * self.scrim_opacity * transition.progress)
+                let scrim_opacity = Theme::global(&*cx.app)
+                    .number_by_key("md.sys.fret.material.time-picker.scrim.opacity")
+                    .unwrap_or(self.scrim_opacity)
+                    .clamp(0.0, 1.0);
+                let scrim_alpha = (scrim_base.a * scrim_opacity * transition.progress)
                     .clamp(0.0, 1.0);
                 let scrim_color = with_alpha(scrim_base, scrim_alpha);
 

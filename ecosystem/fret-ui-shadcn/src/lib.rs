@@ -112,6 +112,7 @@ pub mod app_integration;
 
 mod surface_slot;
 mod test_id;
+mod theme_variants;
 mod ui_builder_ext;
 mod ui_ext;
 
@@ -146,7 +147,10 @@ pub use calendar_range::CalendarRange;
 pub use card::{
     Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardSize, CardTitle,
 };
-pub use carousel::{Carousel, CarouselOrientation};
+pub use carousel::{
+    Carousel, CarouselAlign, CarouselApiSnapshot, CarouselAutoplayConfig, CarouselContainScroll,
+    CarouselOptions, CarouselOrientation, CarouselSlidesToScroll,
+};
 pub use chart::{
     ChartLegendContent, ChartLegendItem, ChartLegendVerticalAlign, ChartTooltipContent,
     ChartTooltipContentKind, ChartTooltipIndicator, ChartTooltipItem,
@@ -270,7 +274,8 @@ pub use select::{
 };
 pub use separator::{Separator, SeparatorOrientation, separator};
 pub use sheet::{
-    Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetSide, SheetTitle,
+    Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetSide,
+    SheetTitle,
 };
 pub use shortcut_hint::ShortcutHint;
 pub use sidebar::{

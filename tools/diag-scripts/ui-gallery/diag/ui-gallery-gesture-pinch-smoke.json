@@ -1,0 +1,40 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "UI gallery: gesture pinch smoke",
+    "tags": ["ui-gallery", "diag", "gesture", "pinch"],
+    "required_capabilities": ["diag.script_v2", "diag.gesture_pinch"],
+    "target_hints": [
+      "Exercises the intent-level pinch step (touch-first).",
+      "Waits for a pinch_gesture event in the diagnostics ring as proof of delivery.",
+      "Fails fast when the runner does not advertise diag.gesture_pinch."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+      "timeout_frames": 600
+    },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 10 },
+
+    {
+      "type": "pinch",
+      "target": { "kind": "role_and_name", "role": "text_field", "name": "Search components" },
+      "delta": 0.25,
+      "steps": 8
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "event_kind_seen", "event_kind": "pointer.pinch_gesture" },
+      "timeout_frames": 240
+    },
+
+    { "type": "capture_bundle", "label": "ui-gallery-gesture-pinch-smoke" }
+  ]
+}

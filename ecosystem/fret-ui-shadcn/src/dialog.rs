@@ -1,15 +1,17 @@
 use std::sync::Arc;
 
-use fret_core::{Color, Corners, Edges, Point, Px, SemanticsRole, TextOverflow, TextWrap};
+use fret_core::{
+    Color, Corners, Edges, Point, Px, SemanticsRole, TextAlign, TextOverflow, TextWrap,
+};
 use fret_icons::ids;
 use fret_runtime::{Model, ModelId};
 use fret_ui::action::{OnCloseAutoFocus, OnDismissRequest, OnOpenAutoFocus};
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
+    AnyElement, ContainerProps, CrossAlign, ElementKind, FlexProps, LayoutStyle, Length, MainAlign,
     OpacityProps, PressableA11y, PressableProps, RingPlacement, RingStyle, SemanticFlexProps,
     SemanticsDecoration, SizeStyle,
 };
-use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
+use fret_ui::{ElementContext, Invalidation, Theme, ThemeNamedColorKey, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::glass::{GlassPanelProps, glass_panel};
@@ -18,6 +20,7 @@ use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::dialog as radix_dialog;
+use fret_ui_kit::primitives::portal_inherited;
 use fret_ui_kit::recipes::glass::GlassEffectRefinement;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
@@ -27,13 +30,10 @@ use fret_ui_kit::{
 use crate::layout as shadcn_layout;
 use crate::overlay_motion;
 
-fn default_overlay_color() -> Color {
-    Color {
-        r: 0.0,
-        g: 0.0,
-        b: 0.0,
-        a: 0.5,
-    }
+fn default_overlay_color(theme: &ThemeSnapshot) -> Color {
+    let mut scrim = theme.named_color(ThemeNamedColorKey::Black);
+    scrim.a = 0.5;
+    scrim
 }
 
 /// Overlay backdrop visual style for shadcn `Dialog`.
@@ -269,7 +269,7 @@ impl Dialog {
         content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
     ) -> AnyElement {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
+            let theme = Theme::global(&*cx.app).snapshot();
             let is_open = cx
                 .watch_model(&self.open)
                 .layout()
@@ -351,134 +351,142 @@ impl Dialog {
                         self.on_close_auto_focus.clone(),
                     );
 
-                let overlay_color = self.overlay_color.unwrap_or_else(default_overlay_color);
+                let overlay_color = self
+                    .overlay_color
+                    .unwrap_or_else(|| default_overlay_color(&theme));
                 let overlay_closable = self.overlay_closable;
                 let window_padding_px = MetricRef::space(self.window_padding).resolve(&theme);
 
                 let opacity = motion.progress;
                 let overlay_backdrop = self.overlay_backdrop.clone();
-                let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
-                    let barrier_fill: AnyElement = match overlay_backdrop {
-                        DialogOverlayBackdrop::Solid => cx.container(
-                            ContainerProps {
-                                layout: LayoutStyle {
-                                    size: SizeStyle {
-                                        width: Length::Fill,
-                                        height: Length::Fill,
+                let portal_inherited = portal_inherited::PortalInherited::capture(cx);
+                let overlay_children = portal_inherited::with_root_name_inheriting(
+                    cx,
+                    &overlay_root_name,
+                    portal_inherited,
+                    |cx| {
+                        let barrier_fill: AnyElement = match overlay_backdrop {
+                            DialogOverlayBackdrop::Solid => cx.container(
+                                ContainerProps {
+                                    layout: LayoutStyle {
+                                        size: SizeStyle {
+                                            width: Length::Fill,
+                                            height: Length::Fill,
+                                            ..Default::default()
+                                        },
                                         ..Default::default()
                                     },
+                                    padding: Edges::all(Px(0.0)).into(),
+                                    background: Some(overlay_color),
+                                    shadow: None,
+                                    border: Edges::all(Px(0.0)),
+                                    border_color: None,
+                                    corner_radii: Corners::all(Px(0.0)),
                                     ..Default::default()
                                 },
-                                padding: Edges::all(Px(0.0)).into(),
-                                background: Some(overlay_color),
-                                shadow: None,
-                                border: Edges::all(Px(0.0)),
-                                border_color: None,
-                                corner_radii: Corners::all(Px(0.0)),
-                                ..Default::default()
-                            },
-                            |_cx| Vec::new(),
-                        ),
-                        DialogOverlayBackdrop::Glass(refinement) => {
-                            let mut layout = LayoutStyle::default();
-                            layout.size.width = Length::Fill;
-                            layout.size.height = Length::Fill;
+                                |_cx| Vec::new(),
+                            ),
+                            DialogOverlayBackdrop::Glass(refinement) => {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Fill;
+                                layout.size.height = Length::Fill;
 
-                            let chrome = ChromeRefinement::default()
-                                .p(Space::N0)
-                                .radius(Px(0.0))
-                                .border_width(Px(0.0))
-                                .bg(ColorRef::Color(overlay_color));
-                            let effect = GlassEffectRefinement {
-                                blur_radius_px: Some(refinement.blur_radius_px),
-                                blur_downsample: Some(refinement.blur_downsample),
-                                saturation: Some(refinement.saturation),
-                                brightness: Some(refinement.brightness),
-                                contrast: Some(refinement.contrast),
-                            };
+                                let chrome = ChromeRefinement::default()
+                                    .p(Space::N0)
+                                    .radius(Px(0.0))
+                                    .border_width(Px(0.0))
+                                    .bg(ColorRef::Color(overlay_color));
+                                let effect = GlassEffectRefinement {
+                                    blur_radius_px: Some(refinement.blur_radius_px),
+                                    blur_downsample: Some(refinement.blur_downsample),
+                                    saturation: Some(refinement.saturation),
+                                    brightness: Some(refinement.brightness),
+                                    contrast: Some(refinement.contrast),
+                                };
 
-                            glass_panel(
-                                cx,
-                                GlassPanelProps {
-                                    layout,
-                                    chrome,
-                                    effect,
+                                glass_panel(
+                                    cx,
+                                    GlassPanelProps {
+                                        layout,
+                                        chrome,
+                                        effect,
+                                        ..Default::default()
+                                    },
+                                    |_cx| Vec::<AnyElement>::new(),
+                                )
+                            }
+                        };
+
+                        crate::a11y_modal::begin_modal_a11y_scope(cx.app, open_id);
+                        let content = content(cx);
+                        let content_id = content.id;
+                        content_element_for_trigger.set(Some(content_id));
+                        crate::a11y_modal::end_modal_a11y_scope(cx.app, open_id);
+
+                        // Center the dialog via an input-transparent flex wrapper so we don't need
+                        // last-frame bounds (which can cause a 1-frame jump on first open).
+                        let outer = cx.environment_viewport_bounds(fret_ui::Invalidation::Layout);
+                        let origin = Point::new(
+                            Px(outer.origin.x.0 + outer.size.width.0 * 0.5),
+                            Px(outer.origin.y.0 + outer.size.height.0 * 0.5),
+                        );
+                        let zoom = overlay_motion::shadcn_zoom_transform(origin, opacity);
+
+                        let mut centered_layout = LayoutStyle::default();
+                        centered_layout.size.width = Length::Fill;
+                        centered_layout.size.height = Length::Fill;
+                        let centered = cx.semantic_flex(
+                            SemanticFlexProps {
+                                role: SemanticsRole::Generic,
+                                flex: FlexProps {
+                                    layout: centered_layout,
+                                    direction: fret_core::Axis::Vertical,
+                                    padding: Edges::all(window_padding_px).into(),
+                                    justify: MainAlign::Center,
+                                    align: CrossAlign::Center,
                                     ..Default::default()
                                 },
-                                |_cx| Vec::<AnyElement>::new(),
-                            )
-                        }
-                    };
-
-                    crate::a11y_modal::begin_modal_a11y_scope(cx.app, open_id);
-                    let content = content(cx);
-                    let content_id = content.id;
-                    content_element_for_trigger.set(Some(content_id));
-                    crate::a11y_modal::end_modal_a11y_scope(cx.app, open_id);
-
-                    // Center the dialog via an input-transparent flex wrapper so we don't need
-                    // last-frame bounds (which can cause a 1-frame jump on first open).
-                    let outer = cx.environment_viewport_bounds(fret_ui::Invalidation::Layout);
-                    let origin = Point::new(
-                        Px(outer.origin.x.0 + outer.size.width.0 * 0.5),
-                        Px(outer.origin.y.0 + outer.size.height.0 * 0.5),
-                    );
-                    let zoom = overlay_motion::shadcn_zoom_transform(origin, opacity);
-
-                    let mut centered_layout = LayoutStyle::default();
-                    centered_layout.size.width = Length::Fill;
-                    centered_layout.size.height = Length::Fill;
-                    let centered = cx.semantic_flex(
-                        SemanticFlexProps {
-                            role: SemanticsRole::Generic,
-                            flex: FlexProps {
-                                layout: centered_layout,
-                                direction: fret_core::Axis::Vertical,
-                                padding: Edges::all(window_padding_px).into(),
-                                justify: MainAlign::Center,
-                                align: CrossAlign::Center,
-                                ..Default::default()
                             },
-                        },
-                        move |_cx| vec![content],
-                    );
-                    let dialog = overlay_motion::wrap_opacity_and_render_transform(
-                        cx,
-                        opacity,
-                        zoom,
-                        vec![centered],
-                    );
-
-                    let opacity_layout = LayoutStyle {
-                        size: SizeStyle {
-                            width: Length::Fill,
-                            height: Length::Fill,
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    };
-                    let barrier = cx.opacity_props(
-                        OpacityProps {
-                            layout: opacity_layout,
+                            move |_cx| vec![content],
+                        );
+                        let dialog = overlay_motion::wrap_opacity_and_render_transform(
+                            cx,
                             opacity,
-                        },
-                        move |_cx| vec![barrier_fill],
-                    );
-                    let open_for_children = self.open.clone();
-                    let dialog_options = radix_dialog::DialogOptions::default()
-                        .dismiss_on_overlay_press(overlay_closable)
-                        .initial_focus(None)
-                        .on_open_auto_focus(on_open_auto_focus.clone())
-                        .on_close_auto_focus(on_close_auto_focus.clone());
-                    radix_dialog::modal_dialog_layer_elements_with_dismiss_handler(
-                        cx,
-                        open_for_children.clone(),
-                        dialog_options,
-                        on_dismiss_request_for_barrier.clone(),
-                        [barrier],
-                        dialog,
-                    )
-                });
+                            zoom,
+                            vec![centered],
+                        );
+
+                        let opacity_layout = LayoutStyle {
+                            size: SizeStyle {
+                                width: Length::Fill,
+                                height: Length::Fill,
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        };
+                        let barrier = cx.opacity_props(
+                            OpacityProps {
+                                layout: opacity_layout,
+                                opacity,
+                            },
+                            move |_cx| vec![barrier_fill],
+                        );
+                        let open_for_children = self.open.clone();
+                        let dialog_options = radix_dialog::DialogOptions::default()
+                            .dismiss_on_overlay_press(overlay_closable)
+                            .initial_focus(None)
+                            .on_open_auto_focus(on_open_auto_focus.clone())
+                            .on_close_auto_focus(on_close_auto_focus.clone());
+                        radix_dialog::modal_dialog_layer_elements_with_dismiss_handler(
+                            cx,
+                            open_for_children.clone(),
+                            dialog_options,
+                            on_dismiss_request_for_barrier.clone(),
+                            [barrier],
+                            dialog,
+                        )
+                    },
+                );
 
                 if let Some(content_element) = content_element_for_trigger.get() {
                     cx.with_state(DialogA11yState::default, |st| {
@@ -546,7 +554,7 @@ impl DialogContent {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
 
         let chrome = crate::ui_builder_ext::surfaces::dialog_style_chrome().merge(self.chrome);
 
@@ -638,7 +646,7 @@ impl DialogClose {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
+            let theme = Theme::global(&*cx.app).snapshot();
 
             let fg = theme
                 .color_by_key("muted.foreground")
@@ -743,13 +751,75 @@ impl DialogHeader {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        use fret_ui_kit::declarative::ViewportQueryHysteresis;
+
+        // Upstream shadcn uses Tailwind `sm:` to switch `text-center` -> `text-left`.
+        //
+        // In normal runtime frames this should be driven by the committed viewport snapshot
+        // (ADR 0232). For unit tests that construct elements without a committed viewport
+        // environment, fall back to the root bounds passed to `ElementContext`.
+        let sm_breakpoint = {
+            let threshold = fret_ui_kit::declarative::viewport_tailwind::SM;
+            let viewport_width = cx.environment_viewport_width(Invalidation::Layout);
+            if viewport_width.0 <= 0.0 {
+                cx.bounds.size.width.0 >= threshold.0
+            } else {
+                fret_ui_kit::declarative::viewport_width_at_least(
+                    cx,
+                    Invalidation::Layout,
+                    threshold,
+                    ViewportQueryHysteresis::default(),
+                )
+            }
+        };
+
+        fn apply_header_text_alignment(mut element: AnyElement, align: TextAlign) -> AnyElement {
+            let apply_text = |layout: &mut LayoutStyle, text_align: &mut TextAlign| {
+                if matches!(layout.size.width, Length::Auto) {
+                    layout.size.width = Length::Fill;
+                }
+                if layout.size.min_width.is_none() {
+                    layout.size.min_width = Some(Length::Px(Px(0.0)));
+                }
+                *text_align = align;
+            };
+
+            match &mut element.kind {
+                ElementKind::Text(props) => apply_text(&mut props.layout, &mut props.align),
+                ElementKind::StyledText(props) => apply_text(&mut props.layout, &mut props.align),
+                ElementKind::SelectableText(props) => {
+                    apply_text(&mut props.layout, &mut props.align)
+                }
+                _ => {}
+            }
+
+            element.children = element
+                .children
+                .into_iter()
+                .map(|child| apply_header_text_alignment(child, align))
+                .collect();
+            element
+        }
+
+        let align = if sm_breakpoint {
+            TextAlign::Start
+        } else {
+            TextAlign::Center
+        };
+
         let props = decl_style::container_props(
             Theme::global(&*cx.app),
-            ChromeRefinement::default().pb(Space::N4),
-            LayoutRefinement::default(),
+            ChromeRefinement::default(),
+            LayoutRefinement::default().w_full().min_w_0(),
         );
-        let children = self.children;
-        shadcn_layout::container_vstack_gap(cx, props, Space::N1p5, children)
+
+        let children = self
+            .children
+            .into_iter()
+            .map(|child| apply_header_text_alignment(child, align))
+            .collect();
+
+        shadcn_layout::container_vstack_gap(cx, props, Space::N2, children)
     }
 }
 
@@ -780,7 +850,7 @@ impl DialogFooter {
 
         let props = decl_style::container_props(
             Theme::global(&*cx.app),
-            ChromeRefinement::default().pt(Space::N4),
+            ChromeRefinement::default(),
             LayoutRefinement::default().w_full(),
         );
 
@@ -825,7 +895,7 @@ impl DialogTitle {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
         let fg = theme
             .color_by_key("foreground")
             .unwrap_or_else(|| theme.color_token("foreground"));
@@ -843,7 +913,6 @@ impl DialogTitle {
             .text_size_px(px)
             .line_height_px(line_height)
             .font_semibold()
-            .letter_spacing_em(-0.02)
             .text_color(ColorRef::Color(fg))
             .wrap(TextWrap::Word)
             .overflow(TextOverflow::Clip)
@@ -871,7 +940,7 @@ impl DialogDescription {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
         let fg = theme
             .color_by_key("muted.foreground")
             .or_else(|| theme.color_by_key("muted-foreground"))
@@ -996,6 +1065,112 @@ mod tests {
 
         assert_eq!(changed, Some(true));
         assert_eq!(completed, Some(true));
+    }
+
+    fn find_text<'a>(el: &'a AnyElement, needle: &str) -> Option<&'a fret_ui::element::TextProps> {
+        match &el.kind {
+            fret_ui::element::ElementKind::Text(props) if props.text.as_ref() == needle => {
+                return Some(props);
+            }
+            _ => {}
+        }
+        for child in &el.children {
+            if let Some(found) = find_text(child, needle) {
+                return Some(found);
+            }
+        }
+        None
+    }
+
+    #[test]
+    fn dialog_header_defaults_to_w_full_without_padding() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(360.0), Px(200.0)),
+        );
+
+        let el = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            DialogHeader::new([
+                DialogTitle::new("Title").into_element(cx),
+                DialogDescription::new("Description").into_element(cx),
+            ])
+            .into_element(cx)
+        });
+
+        let ElementKind::Container(props) = &el.kind else {
+            panic!(
+                "expected DialogHeader root to be a Container, got {:?}",
+                el.kind
+            );
+        };
+        assert_eq!(props.layout.size.width, Length::Fill);
+        assert_eq!(
+            props.padding.top,
+            fret_ui::element::SpacingLength::Px(Px(0.0))
+        );
+        assert_eq!(
+            props.padding.right,
+            fret_ui::element::SpacingLength::Px(Px(0.0))
+        );
+        assert_eq!(
+            props.padding.bottom,
+            fret_ui::element::SpacingLength::Px(Px(0.0))
+        );
+        assert_eq!(
+            props.padding.left,
+            fret_ui::element::SpacingLength::Px(Px(0.0))
+        );
+    }
+
+    #[test]
+    fn dialog_header_centers_text_below_sm_breakpoint() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(360.0), Px(200.0)),
+        );
+
+        let el = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            DialogHeader::new([
+                DialogTitle::new("Title").into_element(cx),
+                DialogDescription::new("Description").into_element(cx),
+            ])
+            .into_element(cx)
+        });
+
+        for label in ["Title", "Description"] {
+            let text = find_text(&el, label).expect("expected dialog header text node");
+            assert_eq!(text.align, TextAlign::Center);
+            assert_eq!(text.layout.size.width, Length::Fill);
+            assert_eq!(text.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        }
+    }
+
+    #[test]
+    fn dialog_header_left_aligns_text_at_sm_breakpoint() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(200.0)),
+        );
+
+        let el = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            DialogHeader::new([
+                DialogTitle::new("Title").into_element(cx),
+                DialogDescription::new("Description").into_element(cx),
+            ])
+            .into_element(cx)
+        });
+
+        for label in ["Title", "Description"] {
+            let text = find_text(&el, label).expect("expected dialog header text node");
+            assert_eq!(text.align, TextAlign::Start);
+            assert_eq!(text.layout.size.width, Length::Fill);
+        }
     }
 
     fn render_dialog_frame_with_footer(

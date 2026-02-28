@@ -37,6 +37,7 @@ mod render_plan_compiler;
 mod render_plan_dump;
 mod render_plan_effects;
 mod render_scene;
+mod render_text_dump;
 mod resources;
 mod scene_encoding_cache;
 mod services;

@@ -10,7 +10,7 @@ use fret_ui::element::{
     Overflow, PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps, SemanticFlexProps,
     TextProps,
 };
-use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
+use fret_ui::{ElementContext, Invalidation, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
@@ -413,7 +413,7 @@ impl Calendar {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
 
         let month_model = self.month.clone();
         let selected_model = self.selected.clone();
@@ -687,6 +687,7 @@ impl Calendar {
                             close_on_select.clone(),
                             initial_focus_out.clone(),
                             grid_text_style.clone(),
+                            test_id_prefix.clone(),
                         );
                     }
                     vec![stack::vstack(
@@ -847,6 +848,17 @@ impl Calendar {
                                                         "{p}.caption-month-trigger"
                                                     ))
                                                 });
+
+                                            // shadcn/ui `Calendar` dropdown caption layout uses compact,
+                                            // input-like triggers (h-8, px-2) inside the month caption row.
+                                            let caption_select_chrome = ChromeRefinement::default()
+                                                .px(Space::N2)
+                                                .py(Space::N1);
+                                            let caption_select_layout = LayoutRefinement::default()
+                                                .h_px(day_size)
+                                                .min_w_0()
+                                                .min_h_0();
+
                                             let mut month_select =
                                                 Select::new_controllable::<H, Arc<str>>(
                                                     cx,
@@ -861,6 +873,9 @@ impl Calendar {
                                             }
 
                                             let month_select = month_select
+                                                .refine_style(caption_select_chrome.clone())
+                                                .refine_layout(caption_select_layout.clone())
+                                                .side_offset(Px(0.0))
                                                 .position(SelectPosition::Popper)
                                                 .on_value_change(move |host, _acx, raw| {
                                                     let Ok(month_num) = raw.parse::<u8>() else {
@@ -974,6 +989,9 @@ impl Calendar {
                                             }
 
                                             let year_select = year_select
+                                                .refine_style(caption_select_chrome.clone())
+                                                .refine_layout(caption_select_layout.clone())
+                                                .side_offset(Px(0.0))
                                                 .position(SelectPosition::Popper)
                                                 .on_value_change(move |host, _acx, raw| {
                                                     let Ok(year) = raw.parse::<i32>() else {
@@ -1018,7 +1036,7 @@ impl Calendar {
                                             stack::hstack(
                                                 cx,
                                                 stack::HStackProps::default()
-                                                    .gap(Space::N2)
+                                                    .gap(Space::N1p5)
                                                     .items_center(),
                                                 move |_cx| vec![month_select, year_select],
                                             )
@@ -1370,7 +1388,7 @@ impl Calendar {
 #[allow(clippy::too_many_arguments)]
 fn calendar_multi_month_view<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
+    theme: &ThemeSnapshot,
     is_row: bool,
     start_month: CalendarMonth,
     month_model: Model<CalendarMonth>,
@@ -1396,6 +1414,7 @@ fn calendar_multi_month_view<H: UiHost>(
     close_on_select: Option<Model<bool>>,
     initial_focus_out: Option<Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>>,
     grid_text_style: TextStyle,
+    test_id_prefix: Option<Arc<str>>,
 ) -> Vec<AnyElement> {
     let gap_px = decl_style::space(theme, Space::N4);
     let months_span = if is_row {
@@ -1425,13 +1444,20 @@ fn calendar_multi_month_view<H: UiHost>(
             (ids::ui::CHEVRON_LEFT, ids::ui::CHEVRON_RIGHT)
         };
 
+        let prev_test_id = test_id_prefix
+            .as_ref()
+            .map(|p| Arc::from(format!("{p}.nav-prev")));
+        let next_test_id = test_id_prefix
+            .as_ref()
+            .map(|p| Arc::from(format!("{p}.nav-next")));
+
         let month_model_prev = month_model.clone();
         let prev = calendar_nav_icon_button(
             cx,
             "Go to the Previous Month",
             day_size,
             prev_icon,
-            None,
+            prev_test_id,
             prev_enabled,
             move |host| {
                 if disable_navigation {
@@ -1450,7 +1476,7 @@ fn calendar_multi_month_view<H: UiHost>(
             "Go to the Next Month",
             day_size,
             next_icon,
-            None,
+            next_test_id,
             next_enabled,
             move |host| {
                 if disable_navigation {
@@ -1490,7 +1516,7 @@ fn calendar_multi_month_view<H: UiHost>(
                 .iter()
                 .copied()
                 .map(|m| {
-                    calendar_month_view(
+                    let month_el = calendar_month_view(
                         cx,
                         theme,
                         m,
@@ -1515,7 +1541,18 @@ fn calendar_multi_month_view<H: UiHost>(
                         close_on_select.clone(),
                         initial_focus_out.clone(),
                         grid_text_style.clone(),
-                    )
+                        test_id_prefix.as_ref(),
+                    );
+
+                    let month_test_id = test_id_prefix
+                        .as_ref()
+                        .map(|prefix| Arc::from(format!("{prefix}.month:{}", m.first_day())));
+
+                    if let Some(month_test_id) = month_test_id {
+                        month_el.test_id(month_test_id)
+                    } else {
+                        month_el
+                    }
                 })
                 .collect::<Vec<_>>()
         })
@@ -1529,7 +1566,7 @@ fn calendar_multi_month_view<H: UiHost>(
                 .iter()
                 .copied()
                 .map(|m| {
-                    calendar_month_view(
+                    let month_el = calendar_month_view(
                         cx,
                         theme,
                         m,
@@ -1554,7 +1591,18 @@ fn calendar_multi_month_view<H: UiHost>(
                         close_on_select.clone(),
                         initial_focus_out.clone(),
                         grid_text_style.clone(),
-                    )
+                        test_id_prefix.as_ref(),
+                    );
+
+                    let month_test_id = test_id_prefix
+                        .as_ref()
+                        .map(|prefix| Arc::from(format!("{prefix}.month:{}", m.first_day())));
+
+                    if let Some(month_test_id) = month_test_id {
+                        month_el.test_id(month_test_id)
+                    } else {
+                        month_el
+                    }
                 })
                 .collect::<Vec<_>>()
         })
@@ -1575,7 +1623,7 @@ fn calendar_multi_month_view<H: UiHost>(
 #[allow(clippy::too_many_arguments)]
 fn calendar_month_view<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
+    theme: &ThemeSnapshot,
     month: CalendarMonth,
     locale: CalendarLocale,
     month_bounds: Option<(CalendarMonth, CalendarMonth)>,
@@ -1598,6 +1646,7 @@ fn calendar_month_view<H: UiHost>(
     close_on_select: Option<Model<bool>>,
     initial_focus_out: Option<Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>>,
     grid_text_style: TextStyle,
+    test_id_prefix: Option<&Arc<str>>,
 ) -> AnyElement {
     let grid = if fixed_weeks {
         month_grid(month, week_start).to_vec()
@@ -1862,7 +1911,7 @@ fn calendar_month_view<H: UiHost>(
                     focus_date.is_some_and(|d| d == day.date),
                     day_size,
                     row_bottom_gap,
-                    None,
+                    test_id_prefix,
                     &selected_model,
                     required,
                     close_on_select.clone(),
@@ -2157,7 +2206,7 @@ fn calendar_cell_slot<H: UiHost>(
 
 fn calendar_hidden_day_cell<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
+    theme: &ThemeSnapshot,
     size: Px,
     week_row_gap: Px,
 ) -> AnyElement {
@@ -2194,7 +2243,7 @@ fn calendar_hidden_day_cell<H: UiHost>(
 
 fn calendar_day_cell<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
+    theme: &ThemeSnapshot,
     locale: CalendarLocale,
     date: Date,
     in_month: bool,

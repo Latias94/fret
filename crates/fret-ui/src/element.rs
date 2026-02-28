@@ -411,18 +411,13 @@ pub struct InsetStyle {
     pub left: InsetEdge,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub enum InsetEdge {
     Px(Px),
     Fill,
     Fraction(f32),
+    #[default]
     Auto,
-}
-
-impl Default for InsetEdge {
-    fn default() -> Self {
-        Self::Auto
-    }
 }
 
 impl From<Px> for InsetEdge {
@@ -1162,19 +1157,10 @@ impl Default for OpacityProps {
 ///
 /// This is intentionally layout-only + paint-only: it does not imply semantics beyond its
 /// children, and it is input-transparent (hit-test passes through).
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct ForegroundScopeProps {
     pub layout: LayoutStyle,
     pub foreground: Option<Color>,
-}
-
-impl Default for ForegroundScopeProps {
-    fn default() -> Self {
-        Self {
-            layout: LayoutStyle::default(),
-            foreground: None,
-        }
-    }
 }
 
 /// Scoped post-processing effect wrapper for declarative element subtrees (ADR 0117).

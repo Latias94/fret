@@ -45,11 +45,32 @@ impl UiDiagnosticsWsBridge {
             "devtools.bundles".to_string(),
             // Runner/diagnostics capabilities (used for fail-fast gating).
             "diag.script_v2".to_string(),
+            "diag.pointer_kind_touch".to_string(),
+            "diag.pointer_kind_pen".to_string(),
+            "diag.gesture_tap".to_string(),
+            "diag.gesture_long_press".to_string(),
+            "diag.gesture_swipe".to_string(),
+            "diag.gesture_pinch".to_string(),
             "diag.text_ime_trace".to_string(),
             "diag.text_input_snapshot".to_string(),
             "diag.shortcut_routing_trace".to_string(),
             "diag.overlay_placement_trace".to_string(),
         ];
+        if !cfg!(target_arch = "wasm32") {
+            caps.push("diag.multi_window".to_string());
+            caps.push("diag.window_insets_override".to_string());
+            caps.push("diag.clipboard_force_unavailable".to_string());
+            caps.push("diag.clipboard_text".to_string());
+            caps.push("diag.incoming_open_inject".to_string());
+            if cfg!(any(
+                target_os = "windows",
+                target_os = "macos",
+                target_os = "linux"
+            )) {
+                caps.push("diag.cursor_screen_pos_override".to_string());
+                caps.push("diag.mouse_buttons_override".to_string());
+            }
+        }
         if screenshots_enabled {
             caps.push("diag.screenshot_png".to_string());
         }

@@ -7,10 +7,11 @@ use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
     RenderTransformProps, SemanticFlexProps, SemanticsDecoration, SizeStyle,
 };
-use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
+use fret_ui::{ElementContext, Invalidation, Theme, ThemeNamedColorKey, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::alert_dialog as radix_alert_dialog;
+use fret_ui_kit::primitives::portal_inherited;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
     Radius, Space, ui,
@@ -21,13 +22,10 @@ use crate::overlay_motion;
 
 use crate::button::{Button, ButtonVariant};
 
-fn default_overlay_color() -> Color {
-    Color {
-        r: 0.0,
-        g: 0.0,
-        b: 0.0,
-        a: 0.5,
-    }
+fn default_overlay_color(theme: &ThemeSnapshot) -> Color {
+    let mut scrim = theme.named_color(ThemeNamedColorKey::Black);
+    scrim.a = 0.5;
+    scrim
 }
 
 type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
@@ -172,7 +170,7 @@ impl AlertDialog {
         content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
     ) -> AnyElement {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
+            let theme = Theme::global(&*cx.app).snapshot();
             let is_open = cx.watch_model(&self.open).paint().copied().unwrap_or(false);
             let open_id = self.open.id();
 
@@ -226,93 +224,102 @@ impl AlertDialog {
                     radix_alert_dialog::clear_cancel_for_open_model(cx, open_id);
                 }
 
-                let overlay_color = self.overlay_color.unwrap_or_else(default_overlay_color);
+                let overlay_color = self
+                    .overlay_color
+                    .unwrap_or_else(|| default_overlay_color(&theme));
                 let window_padding_px = MetricRef::space(self.window_padding).resolve(&theme);
                 let opacity = motion.progress;
 
-                let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
-                    let barrier_fill = cx.container(
-                        ContainerProps {
-                            layout: LayoutStyle {
-                                size: SizeStyle {
-                                    width: Length::Fill,
-                                    height: Length::Fill,
+                let portal_inherited = portal_inherited::PortalInherited::capture(cx);
+                let overlay_children = portal_inherited::with_root_name_inheriting(
+                    cx,
+                    &overlay_root_name,
+                    portal_inherited,
+                    |cx| {
+                        let barrier_fill = cx.container(
+                            ContainerProps {
+                                layout: LayoutStyle {
+                                    size: SizeStyle {
+                                        width: Length::Fill,
+                                        height: Length::Fill,
+                                        ..Default::default()
+                                    },
                                     ..Default::default()
                                 },
+                                padding: Edges::all(Px(0.0)).into(),
+                                background: Some(overlay_color),
+                                shadow: None,
+                                border: Edges::all(Px(0.0)),
+                                border_color: None,
+                                corner_radii: Corners::all(Px(0.0)),
                                 ..Default::default()
                             },
-                            padding: Edges::all(Px(0.0)).into(),
-                            background: Some(overlay_color),
-                            shadow: None,
-                            border: Edges::all(Px(0.0)),
-                            border_color: None,
-                            corner_radii: Corners::all(Px(0.0)),
-                            ..Default::default()
-                        },
-                        |_cx| Vec::new(),
-                    );
+                            |_cx| Vec::new(),
+                        );
 
-                    crate::a11y_modal::begin_modal_a11y_scope(cx.app, open_id);
-                    let content = content(cx);
-                    content_element_for_trigger.set(Some(content.id));
-                    crate::a11y_modal::end_modal_a11y_scope(cx.app, open_id);
+                        crate::a11y_modal::begin_modal_a11y_scope(cx.app, open_id);
+                        let content = content(cx);
+                        content_element_for_trigger.set(Some(content.id));
+                        crate::a11y_modal::end_modal_a11y_scope(cx.app, open_id);
 
-                    // Center like `Dialog` via an input-transparent flex wrapper so we don't need
-                    // last-frame bounds (which can cause a 1-frame jump on first open).
-                    let outer = cx.environment_viewport_bounds(fret_ui::Invalidation::Layout);
-                    let origin = Point::new(
-                        Px(outer.origin.x.0 + outer.size.width.0 * 0.5),
-                        Px(outer.origin.y.0 + outer.size.height.0 * 0.5),
-                    );
-                    let zoom = overlay_motion::shadcn_zoom_transform(origin, opacity);
+                        // Center like `Dialog` via an input-transparent flex wrapper so we don't need
+                        // last-frame bounds (which can cause a 1-frame jump on first open).
+                        let outer = cx.environment_viewport_bounds(fret_ui::Invalidation::Layout);
+                        let origin = Point::new(
+                            Px(outer.origin.x.0 + outer.size.width.0 * 0.5),
+                            Px(outer.origin.y.0 + outer.size.height.0 * 0.5),
+                        );
+                        let zoom = overlay_motion::shadcn_zoom_transform(origin, opacity);
 
-                    let mut centered_layout = LayoutStyle::default();
-                    centered_layout.size.width = Length::Fill;
-                    centered_layout.size.height = Length::Fill;
-                    let centered = cx.semantic_flex(
-                        SemanticFlexProps {
-                            role: SemanticsRole::Generic,
-                            flex: FlexProps {
-                                layout: centered_layout,
-                                direction: fret_core::Axis::Vertical,
-                                padding: Edges::all(window_padding_px).into(),
-                                justify: MainAlign::Center,
-                                align: CrossAlign::Center,
+                        let mut centered_layout = LayoutStyle::default();
+                        centered_layout.size.width = Length::Fill;
+                        centered_layout.size.height = Length::Fill;
+                        let centered = cx.semantic_flex(
+                            SemanticFlexProps {
+                                role: SemanticsRole::Generic,
+                                flex: FlexProps {
+                                    layout: centered_layout,
+                                    direction: fret_core::Axis::Vertical,
+                                    padding: Edges::all(window_padding_px).into(),
+                                    justify: MainAlign::Center,
+                                    align: CrossAlign::Center,
+                                    ..Default::default()
+                                },
+                            },
+                            move |_cx| vec![content],
+                        );
+
+                        let opacity_layout = LayoutStyle {
+                            size: SizeStyle {
+                                width: Length::Fill,
+                                height: Length::Fill,
                                 ..Default::default()
                             },
-                        },
-                        move |_cx| vec![content],
-                    );
-
-                    let opacity_layout = LayoutStyle {
-                        size: SizeStyle {
-                            width: Length::Fill,
-                            height: Length::Fill,
                             ..Default::default()
-                        },
-                        ..Default::default()
-                    };
-                    let content_layout = opacity_layout.clone();
-                    let barrier_children = [barrier_fill];
-                    let open_for_children = self.open.clone();
+                        };
+                        let content_layout = opacity_layout.clone();
+                        let barrier_children = [barrier_fill];
+                        let open_for_children = self.open.clone();
 
-                    let content = overlay_motion::wrap_opacity_and_render_transform_with_layouts(
-                        cx,
-                        opacity_layout,
-                        opacity,
-                        RenderTransformProps {
-                            layout: content_layout,
-                            transform: zoom,
-                        },
-                        vec![centered],
-                    );
-                    radix_alert_dialog::alert_dialog_modal_layer_elements(
-                        cx,
-                        open_for_children.clone(),
-                        barrier_children,
-                        content,
-                    )
-                });
+                        let content =
+                            overlay_motion::wrap_opacity_and_render_transform_with_layouts(
+                                cx,
+                                opacity_layout,
+                                opacity,
+                                RenderTransformProps {
+                                    layout: content_layout,
+                                    transform: zoom,
+                                },
+                                vec![centered],
+                            );
+                        radix_alert_dialog::alert_dialog_modal_layer_elements(
+                            cx,
+                            open_for_children.clone(),
+                            barrier_children,
+                            content,
+                        )
+                    },
+                );
 
                 if let Some(content_element) = content_element_for_trigger.get() {
                     cx.with_state(AlertDialogA11yState::default, |st| {
@@ -410,7 +417,7 @@ impl AlertDialogContent {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
 
         let bg = theme.color_token("background");
         let border = theme.color_token("border");
@@ -686,7 +693,7 @@ impl AlertDialogFooter {
             )
         } else if content_is_sm {
             // Tailwind (size=sm): `grid grid-cols-2 gap-2`
-            let theme = Theme::global(&*cx.app).clone();
+            let theme = Theme::global(&*cx.app).snapshot();
             let layout = decl_style::layout_style(
                 &theme,
                 LayoutRefinement::default().flex_1().min_w_0().w_full(),
@@ -742,7 +749,7 @@ impl AlertDialogTitle {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
         let fg = theme
             .color_by_key("foreground")
             .unwrap_or_else(|| theme.color_token("foreground"));
@@ -788,7 +795,7 @@ impl AlertDialogDescription {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
         let fg = theme
             .color_by_key("muted.foreground")
             .or_else(|| theme.color_by_key("muted-foreground"))

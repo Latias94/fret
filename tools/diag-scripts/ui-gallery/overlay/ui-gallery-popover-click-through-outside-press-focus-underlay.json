@@ -1,0 +1,89 @@
+{
+  "schema_version": 2,
+  "steps": [
+    {
+      "key": "escape",
+      "modifiers": {
+        "alt": false,
+        "ctrl": false,
+        "meta": false,
+        "shift": false
+      },
+      "repeat": false,
+      "type": "press_key"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "button": "left",
+      "target": {
+        "id": "ui-gallery-overlay-reset",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "n": 5,
+      "type": "wait_frames"
+    },
+    {
+      "button": "left",
+      "target": {
+        "id": "ui-gallery-popover-trigger",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "ui-gallery-popover-close",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 60,
+      "type": "wait_until"
+    },
+    {
+      "button": "left",
+      "target": {
+        "id": "ui-gallery-overlay-underlay",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "n": 5,
+      "type": "wait_frames"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "ui-gallery-popover-dismissed",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 120,
+      "type": "wait_until"
+    },
+    {
+      "predicate": {
+        "kind": "focus_is",
+        "target": {
+          "id": "ui-gallery-overlay-underlay",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 120,
+      "type": "wait_until"
+    },
+    {
+      "label": "ui-gallery-popover-click-through-outside-press-focus-underlay",
+      "type": "capture_bundle"
+    }
+  ]
+}

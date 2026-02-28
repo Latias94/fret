@@ -466,16 +466,7 @@ impl WinitAppDriver for ExternalTextureImportsWebDriver {
             app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _| svc.is_enabled());
         state.ui.set_debug_enabled(diag_enabled);
 
-        let consumed = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
-            if !svc.is_enabled() {
-                return false;
-            }
-            if svc.maybe_intercept_event_for_inspect_shortcuts(app, window, event) {
-                return true;
-            }
-            svc.maybe_intercept_event_for_picking(app, window, event)
-        });
-        if consumed {
+        if fret_bootstrap::ui_diagnostics::maybe_consume_event(app, window, event) {
             return;
         }
 
@@ -599,7 +590,7 @@ pub fn build_app() -> App {
 pub fn build_runner_config() -> WinitRunnerConfig {
     WinitRunnerConfig {
         main_window_title: "fret-demo external_texture_imports_web_demo".to_string(),
-        main_window_size: winit::dpi::LogicalSize::new(980.0, 720.0),
+        main_window_size: fret_launch::WindowLogicalSize::new(980.0, 720.0),
         ..Default::default()
     }
 }

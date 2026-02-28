@@ -85,7 +85,8 @@ What ships now (Phase 1 subset):
   - `bundle.index.json`
   - `test_ids.index.json`
   - `test_ids.json` (human-facing; may be deprecated later)
-- The sidecars are usable on their own (no `bundle.json`) for common “AI packet” loops:
+  - `frames.index.json` (for `triage --lite` / `hotspots --lite` workflows)
+- The sidecars are usable on their own (no bundle artifact) for common “AI packet” loops:
   - `fretboard diag meta <packet_dir|bundle.meta.json> --meta-report`
   - `fretboard diag query test-id <packet_dir|test_ids.index.json> <pattern>`
   - `fretboard diag query snapshots <packet_dir|bundle.index.json> [--test-id <id>]`

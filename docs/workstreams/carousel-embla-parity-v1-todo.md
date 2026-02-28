@@ -53,7 +53,7 @@ Use `carousel-embla-parity-v1-milestones.md` for timeline/phase planning.
 - Carousel implementation: `ecosystem/fret-ui-shadcn/src/carousel.rs` (uses `fret_ui_headless::carousel::DEFAULT_DRAG_THRESHOLD_PX`)
 - UI gallery demo surface: `apps/fret-ui-gallery/src/ui/pages/carousel.rs` (`ui-gallery-carousel-demo-inner-button`)
 - Rust test gate: `ecosystem/fret-ui-shadcn/tests/carousel_pointer_passthrough.rs`
-- Diag script gate: `tools/diag-scripts/ui-gallery-carousel-demo-swipe-and-buttons.json`
+- Diag script gate: `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-swipe-and-buttons.json`
 
 ### Follow-ups (v2+)
 

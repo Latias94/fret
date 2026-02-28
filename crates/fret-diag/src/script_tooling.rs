@@ -1,10 +1,16 @@
-use fret_diag_protocol::{UiActionScriptV1, UiActionScriptV2, UiActionStepV1, UiActionStepV2};
+use fret_diag_protocol::{
+    UiActionScriptV1, UiActionScriptV2, UiActionStepV1, UiActionStepV2, UiPointerKindV1,
+    UiWindowTargetV1,
+};
 use serde_json::Value;
+use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
 pub(crate) struct NormalizedScript {
     pub(crate) normalized: String,
     pub(crate) changed: bool,
+    pub(crate) write_path: PathBuf,
+    pub(crate) redirect_chain: Vec<PathBuf>,
 }
 
 pub(crate) struct ScriptSchemaReport {
@@ -17,13 +23,22 @@ pub(crate) struct ScriptLintReport {
     pub(crate) error_scripts: usize,
 }
 
+#[derive(Debug, Clone)]
+pub(crate) struct ResolvedScriptJson {
+    pub(crate) value: Value,
+    pub(crate) write_path: PathBuf,
+    pub(crate) redirect_chain: Vec<PathBuf>,
+}
+
 pub(crate) fn normalize_script_from_path(path: &Path) -> Result<NormalizedScript, String> {
-    let bytes = std::fs::read(path).map_err(|e| e.to_string())?;
-    let mut value: Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    let resolved = read_script_json_resolving_redirects(path)?;
+
+    let mut value = resolved.value;
     canonicalize_json_value(&mut value);
     let mut normalized = serde_json::to_string_pretty(&value).map_err(|e| e.to_string())?;
     normalized.push('\n');
 
+    let bytes = std::fs::read(&resolved.write_path).map_err(|e| e.to_string())?;
     let mut original = String::from_utf8_lossy(&bytes).to_string();
     original = original.replace("\r\n", "\n");
     if !original.ends_with('\n') {
@@ -33,6 +48,8 @@ pub(crate) fn normalize_script_from_path(path: &Path) -> Result<NormalizedScript
     Ok(NormalizedScript {
         changed: original != normalized,
         normalized,
+        write_path: resolved.write_path,
+        redirect_chain: resolved.redirect_chain,
     })
 }
 
@@ -110,14 +127,10 @@ pub(crate) fn lint_scripts(scripts: &[PathBuf]) -> ScriptLintReport {
 }
 
 fn validate_script(path: &Path) -> Result<Value, String> {
-    let bytes = std::fs::read(path).map_err(|e| e.to_string())?;
-    let value: Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    let resolved = read_script_json_resolving_redirects(path)?;
+    let value = resolved.value;
 
-    let schema_version = value
-        .get("schema_version")
-        .and_then(|v| v.as_u64())
-        .unwrap_or(0)
-        .min(u32::MAX as u64) as u32;
+    let schema_version = crate::compat::script::script_schema_version_from_value(&value);
 
     match schema_version {
         1 => {
@@ -125,6 +138,8 @@ fn validate_script(path: &Path) -> Result<Value, String> {
                 serde_json::from_value(value).map_err(|e| e.to_string())?;
             Ok(serde_json::json!({
                 "path": path.display().to_string(),
+                "resolved_path": resolved.write_path.display().to_string(),
+                "redirect_chain": resolved.redirect_chain.iter().map(|p| p.display().to_string()).collect::<Vec<_>>(),
                 "schema_version": 1,
             }))
         }
@@ -133,6 +148,8 @@ fn validate_script(path: &Path) -> Result<Value, String> {
                 serde_json::from_value(value).map_err(|e| e.to_string())?;
             Ok(serde_json::json!({
                 "path": path.display().to_string(),
+                "resolved_path": resolved.write_path.display().to_string(),
+                "redirect_chain": resolved.redirect_chain.iter().map(|p| p.display().to_string()).collect::<Vec<_>>(),
                 "schema_version": 2,
             }))
         }
@@ -144,14 +161,10 @@ fn validate_script(path: &Path) -> Result<Value, String> {
 }
 
 fn lint_script(path: &Path) -> Result<Value, String> {
-    let bytes = std::fs::read(path).map_err(|e| e.to_string())?;
-    let value: Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    let resolved = read_script_json_resolving_redirects(path)?;
+    let value = resolved.value;
 
-    let schema_version = value
-        .get("schema_version")
-        .and_then(|v| v.as_u64())
-        .unwrap_or(0)
-        .min(u32::MAX as u64) as u32;
+    let schema_version = crate::compat::script::script_schema_version_from_value(&value);
 
     let mut findings: Vec<Value> = Vec::new();
     let (declared_required, inferred_required, step_summary) = match schema_version {
@@ -196,6 +209,24 @@ fn lint_script(path: &Path) -> Result<Value, String> {
         }
     }
 
+    if !resolved.redirect_chain.is_empty() {
+        findings.push(serde_json::json!({
+            "severity": "info",
+            "code": "script.redirect_resolved",
+            "message": "script path is a redirect stub; tooling resolved it before execution",
+            "resolved_path": resolved.write_path.display().to_string(),
+            "redirect_chain": resolved.redirect_chain.iter().map(|p| p.display().to_string()).collect::<Vec<_>>(),
+        }));
+    }
+
+    if schema_version == 1 {
+        findings.push(serde_json::json!({
+            "severity": "warning",
+            "code": "script.schema_v1_deprecated",
+            "message": "script schema_version=1 is deprecated; prefer schema_version=2 (tooling upgrades v1→v2 on execution)",
+        }));
+    }
+
     if inferred_required.iter().any(|c| c == "diag.screenshot_png")
         && !declared_required.iter().any(|c| c == "diag.screenshot_png")
     {
@@ -220,7 +251,7 @@ fn lint_script(path: &Path) -> Result<Value, String> {
         findings.push(serde_json::json!({
             "severity": "warning",
             "code": "script.no_capture_bundle",
-            "message": "script has no capture_bundle step; successful runs may produce no portable bundle.json",
+            "message": "script has no capture_bundle step; successful runs may produce no portable bundle artifact",
         }));
     }
 
@@ -235,6 +266,8 @@ fn lint_script(path: &Path) -> Result<Value, String> {
 
     Ok(serde_json::json!({
         "path": path.display().to_string(),
+        "resolved_path": resolved.write_path.display().to_string(),
+        "redirect_chain": resolved.redirect_chain.iter().map(|p| p.display().to_string()).collect::<Vec<_>>(),
         "status": "passed",
         "schema_version": schema_version,
         "capabilities": {
@@ -245,6 +278,106 @@ fn lint_script(path: &Path) -> Result<Value, String> {
         "steps": step_summary,
         "findings": findings,
     }))
+}
+
+pub(crate) fn read_script_json_resolving_redirects(
+    path: &Path,
+) -> Result<ResolvedScriptJson, String> {
+    let bytes = std::fs::read(path).map_err(|e| e.to_string())?;
+    let value: Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    resolve_script_json_redirects_from_value(path, value)
+}
+
+pub(crate) fn resolve_script_json_redirects_from_value(
+    path: &Path,
+    mut value: Value,
+) -> Result<ResolvedScriptJson, String> {
+    const MAX_REDIRECT_DEPTH: usize = 8;
+
+    fn find_repo_root_for_path(p: &Path) -> Option<PathBuf> {
+        let mut cur = p;
+        while let Some(parent) = cur.parent() {
+            if parent.join("Cargo.toml").is_file() {
+                return Some(parent.to_path_buf());
+            }
+            cur = parent;
+        }
+        None
+    }
+
+    fn resolve_to_path(from: &Path, to: &str) -> PathBuf {
+        let to_path = PathBuf::from(to);
+        if to_path.is_absolute() {
+            return to_path;
+        }
+
+        let looks_repo_relative = to.starts_with("tools/")
+            || to.starts_with("crates/")
+            || to.starts_with("apps/")
+            || to.starts_with("docs/")
+            || to.starts_with(".fret/");
+
+        if looks_repo_relative {
+            if let Some(root) = find_repo_root_for_path(from) {
+                return root.join(to_path);
+            }
+        }
+
+        from.parent()
+            .unwrap_or_else(|| Path::new("."))
+            .join(to_path)
+    }
+
+    let mut read_path = path.to_path_buf();
+    let mut write_path = path.to_path_buf();
+    let mut redirect_chain: Vec<PathBuf> = Vec::new();
+    let mut visited: BTreeSet<PathBuf> = BTreeSet::new();
+
+    for _ in 0..=MAX_REDIRECT_DEPTH {
+        let canon = std::fs::canonicalize(&read_path).unwrap_or_else(|_| read_path.clone());
+        if !visited.insert(canon.clone()) {
+            return Err(format!(
+                "script redirect loop detected (revisiting): {}",
+                canon.display()
+            ));
+        }
+
+        let is_redirect = value
+            .get("kind")
+            .and_then(|v| v.as_str())
+            .map(|s| s == "script_redirect")
+            .unwrap_or(false);
+        if !is_redirect {
+            return Ok(ResolvedScriptJson {
+                value,
+                write_path,
+                redirect_chain,
+            });
+        }
+
+        let schema_version = crate::compat::script::script_schema_version_from_value(&value);
+        if schema_version != 1 {
+            return Err(format!(
+                "invalid script_redirect schema_version (expected 1): {schema_version}"
+            ));
+        }
+
+        let to = value
+            .get("to")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| "invalid script_redirect (missing string field: to)".to_string())?;
+
+        redirect_chain.push(read_path.clone());
+        read_path = resolve_to_path(&read_path, to);
+        write_path = read_path.clone();
+
+        let bytes = std::fs::read(&read_path).map_err(|e| e.to_string())?;
+        value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    }
+
+    Err(format!(
+        "script redirect depth exceeded (max_depth={MAX_REDIRECT_DEPTH})"
+    ))
 }
 
 fn infer_required_capabilities_v1(script: &UiActionScriptV1) -> Vec<String> {
@@ -259,8 +392,81 @@ fn infer_required_capabilities_v1(script: &UiActionScriptV1) -> Vec<String> {
 
 fn infer_required_capabilities_v2(script: &UiActionScriptV2) -> Vec<String> {
     let mut caps: Vec<String> = Vec::new();
+    fn window_target_requires_multi_window(window: &UiWindowTargetV1) -> bool {
+        matches!(
+            window,
+            UiWindowTargetV1::FirstSeenOther
+                | UiWindowTargetV1::LastSeenOther
+                | UiWindowTargetV1::WindowFfi { .. }
+        )
+    }
+    fn step_window_target(step: &UiActionStepV2) -> Option<&UiWindowTargetV1> {
+        match step {
+            UiActionStepV2::Click { window, .. }
+            | UiActionStepV2::Tap { window, .. }
+            | UiActionStepV2::Pinch { window, .. }
+            | UiActionStepV2::MovePointer { window, .. }
+            | UiActionStepV2::PointerDown { window, .. }
+            | UiActionStepV2::DragPointer { window, .. }
+            | UiActionStepV2::PointerMove { window, .. }
+            | UiActionStepV2::PointerUp { window, .. }
+            | UiActionStepV2::MovePointerSweep { window, .. }
+            | UiActionStepV2::Wheel { window, .. }
+            | UiActionStepV2::WaitUntil { window, .. }
+            | UiActionStepV2::Assert { window, .. }
+            | UiActionStepV2::ClickStable { window, .. }
+            | UiActionStepV2::ClickSelectableTextSpanStable { window, .. }
+            | UiActionStepV2::WaitBoundsStable { window, .. }
+            | UiActionStepV2::EnsureVisible { window, .. }
+            | UiActionStepV2::ScrollIntoView { window, .. }
+            | UiActionStepV2::TypeTextInto { window, .. }
+            | UiActionStepV2::MenuSelect { window, .. }
+            | UiActionStepV2::MenuSelectPath { window, .. }
+            | UiActionStepV2::DragTo { window, .. }
+            | UiActionStepV2::SetSliderValue { window, .. }
+            | UiActionStepV2::SetWindowInnerSize { window, .. }
+            | UiActionStepV2::SetWindowOuterPosition { window, .. }
+            | UiActionStepV2::SetCursorInWindow { window, .. }
+            | UiActionStepV2::SetCursorInWindowLogical { window, .. }
+            | UiActionStepV2::SetMouseButtons { window, .. }
+            | UiActionStepV2::RaiseWindow { window, .. }
+            | UiActionStepV2::DragPointerUntil { window, .. } => window.as_ref(),
+            _ => None,
+        }
+    }
+    fn step_pointer_kind(step: &UiActionStepV2) -> Option<UiPointerKindV1> {
+        match step {
+            UiActionStepV2::Click { pointer_kind, .. }
+            | UiActionStepV2::Tap { pointer_kind, .. }
+            | UiActionStepV2::LongPress { pointer_kind, .. }
+            | UiActionStepV2::Swipe { pointer_kind, .. }
+            | UiActionStepV2::Pinch { pointer_kind, .. }
+            | UiActionStepV2::MovePointer { pointer_kind, .. }
+            | UiActionStepV2::PointerDown { pointer_kind, .. }
+            | UiActionStepV2::DragPointer { pointer_kind, .. }
+            | UiActionStepV2::PointerMove { pointer_kind, .. }
+            | UiActionStepV2::PointerUp { pointer_kind, .. }
+            | UiActionStepV2::MovePointerSweep { pointer_kind, .. }
+            | UiActionStepV2::Wheel { pointer_kind, .. }
+            | UiActionStepV2::ClickStable { pointer_kind, .. }
+            | UiActionStepV2::ClickSelectableTextSpanStable { pointer_kind, .. }
+            | UiActionStepV2::ScrollIntoView { pointer_kind, .. }
+            | UiActionStepV2::TypeTextInto { pointer_kind, .. }
+            | UiActionStepV2::MenuSelect { pointer_kind, .. }
+            | UiActionStepV2::MenuSelectPath { pointer_kind, .. }
+            | UiActionStepV2::DragTo { pointer_kind, .. }
+            | UiActionStepV2::SetSliderValue { pointer_kind, .. }
+            | UiActionStepV2::DragPointerUntil { pointer_kind, .. } => *pointer_kind,
+            _ => None,
+        }
+    }
     push_cap(&mut caps, "diag.script_v2");
     for step in &script.steps {
+        if let Some(window) = step_window_target(step)
+            && window_target_requires_multi_window(window)
+        {
+            push_cap(&mut caps, "diag.multi_window");
+        }
         if matches!(step, UiActionStepV2::CaptureScreenshot { .. }) {
             push_cap(&mut caps, "diag.screenshot_png");
         }
@@ -273,11 +479,64 @@ fn infer_required_capabilities_v2(script: &UiActionScriptV2) -> Vec<String> {
         if matches!(step, UiActionStepV2::WaitOverlayPlacementTrace { .. }) {
             push_cap(&mut caps, "diag.overlay_placement_trace");
         }
+        if matches!(
+            step,
+            UiActionStepV2::SetCursorScreenPos { .. }
+                | UiActionStepV2::SetCursorInWindow { .. }
+                | UiActionStepV2::SetCursorInWindowLogical { .. }
+        ) {
+            push_cap(&mut caps, "diag.cursor_screen_pos_override");
+        }
         if matches!(step, UiActionStepV2::SetMouseButtons { .. }) {
             push_cap(&mut caps, "diag.mouse_buttons_override");
         }
+        if matches!(
+            step,
+            UiActionStepV2::SetClipboardText { .. } | UiActionStepV2::AssertClipboardText { .. }
+        ) {
+            push_cap(&mut caps, "diag.clipboard_text");
+        }
+        if matches!(step, UiActionStepV2::SetClipboardForceUnavailable { .. }) {
+            push_cap(&mut caps, "diag.clipboard_force_unavailable");
+        }
+        if matches!(step, UiActionStepV2::InjectIncomingOpen { .. }) {
+            push_cap(&mut caps, "diag.incoming_open_inject");
+        }
+        if matches!(step, UiActionStepV2::Tap { .. }) {
+            push_cap(&mut caps, "diag.gesture_tap");
+        }
+        if matches!(step, UiActionStepV2::LongPress { .. }) {
+            push_cap(&mut caps, "diag.gesture_long_press");
+        }
+        if matches!(step, UiActionStepV2::Swipe { .. }) {
+            push_cap(&mut caps, "diag.gesture_swipe");
+        }
+        if matches!(step, UiActionStepV2::Pinch { .. }) {
+            push_cap(&mut caps, "diag.gesture_pinch");
+        }
+        if matches!(step_pointer_kind(step), Some(UiPointerKindV1::Touch)) {
+            push_cap(&mut caps, "diag.pointer_kind_touch");
+        }
+        if matches!(step_pointer_kind(step), Some(UiPointerKindV1::Pen)) {
+            push_cap(&mut caps, "diag.pointer_kind_pen");
+        }
     }
     caps
+}
+
+pub(crate) fn infer_required_capabilities_from_value(value: &Value) -> Vec<String> {
+    let schema_version = crate::compat::script::script_schema_version_from_value(value);
+    match schema_version {
+        1 => serde_json::from_value::<UiActionScriptV1>(value.clone())
+            .ok()
+            .map(|script| infer_required_capabilities_v1(&script))
+            .unwrap_or_default(),
+        2 => serde_json::from_value::<UiActionScriptV2>(value.clone())
+            .ok()
+            .map(|script| infer_required_capabilities_v2(&script))
+            .unwrap_or_default(),
+        _ => Vec::new(),
+    }
 }
 
 fn summarize_steps_v1(script: &UiActionScriptV1) -> Value {
@@ -353,6 +612,7 @@ pub(crate) fn canonicalize_json_value(value: &mut Value) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fret_diag_protocol::{UiMouseButtonV1, UiSelectorV1};
 
     #[test]
     fn canonicalize_sorts_keys_recursively() {
@@ -381,5 +641,142 @@ mod tests {
         let inferred = infer_required_capabilities_v2(&script);
         assert!(inferred.iter().any(|c| c == "diag.script_v2"));
         assert!(inferred.iter().any(|c| c == "diag.screenshot_png"));
+    }
+
+    #[test]
+    fn lint_infers_cursor_override_capability() {
+        let script = UiActionScriptV2 {
+            schema_version: 2,
+            meta: None,
+            steps: vec![UiActionStepV2::SetCursorInWindowLogical {
+                window: None,
+                x_px: 1.0,
+                y_px: 2.0,
+            }],
+        };
+        let inferred = infer_required_capabilities_v2(&script);
+        assert!(
+            inferred
+                .iter()
+                .any(|c| c == "diag.cursor_screen_pos_override")
+        );
+    }
+
+    #[test]
+    fn lint_infers_pointer_kind_touch_capability() {
+        let script = UiActionScriptV2 {
+            schema_version: 2,
+            meta: None,
+            steps: vec![UiActionStepV2::Click {
+                window: None,
+                pointer_kind: Some(UiPointerKindV1::Touch),
+                target: UiSelectorV1::TestId {
+                    id: "touch-target".to_string(),
+                },
+                button: UiMouseButtonV1::Left,
+                click_count: 1,
+                modifiers: None,
+            }],
+        };
+        let inferred = infer_required_capabilities_v2(&script);
+        assert!(inferred.iter().any(|c| c == "diag.pointer_kind_touch"));
+    }
+
+    #[test]
+    fn lint_infers_pointer_kind_pen_capability() {
+        let script = UiActionScriptV2 {
+            schema_version: 2,
+            meta: None,
+            steps: vec![UiActionStepV2::Click {
+                window: None,
+                pointer_kind: Some(UiPointerKindV1::Pen),
+                target: UiSelectorV1::TestId {
+                    id: "pen-target".to_string(),
+                },
+                button: UiMouseButtonV1::Left,
+                click_count: 1,
+                modifiers: None,
+            }],
+        };
+        let inferred = infer_required_capabilities_v2(&script);
+        assert!(inferred.iter().any(|c| c == "diag.pointer_kind_pen"));
+    }
+
+    #[test]
+    fn lint_infers_gesture_tap_capability() {
+        let script = UiActionScriptV2 {
+            schema_version: 2,
+            meta: None,
+            steps: vec![UiActionStepV2::Tap {
+                window: None,
+                pointer_kind: None,
+                target: UiSelectorV1::TestId {
+                    id: "tap-target".to_string(),
+                },
+                modifiers: None,
+            }],
+        };
+        let inferred = infer_required_capabilities_v2(&script);
+        assert!(inferred.iter().any(|c| c == "diag.gesture_tap"));
+    }
+
+    #[test]
+    fn lint_infers_gesture_pinch_capability() {
+        let script = UiActionScriptV2 {
+            schema_version: 2,
+            meta: None,
+            steps: vec![UiActionStepV2::Pinch {
+                window: None,
+                pointer_kind: None,
+                target: UiSelectorV1::TestId {
+                    id: "pinch-target".to_string(),
+                },
+                delta: 0.25,
+                steps: 8,
+                modifiers: None,
+            }],
+        };
+        let inferred = infer_required_capabilities_v2(&script);
+        assert!(inferred.iter().any(|c| c == "diag.gesture_pinch"));
+    }
+
+    #[test]
+    fn lint_infers_gesture_long_press_capability() {
+        let script = UiActionScriptV2 {
+            schema_version: 2,
+            meta: None,
+            steps: vec![UiActionStepV2::LongPress {
+                window: None,
+                pointer_kind: None,
+                target: UiSelectorV1::TestId {
+                    id: "press-target".to_string(),
+                },
+                duration_ms: 125,
+                modifiers: None,
+            }],
+        };
+        let inferred = infer_required_capabilities_v2(&script);
+        assert!(inferred.iter().any(|c| c == "diag.gesture_long_press"));
+    }
+
+    #[test]
+    fn lint_infers_gesture_swipe_capability() {
+        let script = UiActionScriptV2 {
+            schema_version: 2,
+            meta: None,
+            steps: vec![UiActionStepV2::Swipe {
+                window: None,
+                pointer_kind: None,
+                target: UiSelectorV1::TestId {
+                    id: "swipe-target".to_string(),
+                },
+                delta_x: 0.0,
+                delta_y: 100.0,
+                steps: 8,
+                modifiers: None,
+            }],
+        };
+        let inferred = infer_required_capabilities_v2(&script);
+        assert!(inferred.iter().any(|c| c == "diag.gesture_swipe"));
     }
 }

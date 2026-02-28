@@ -104,7 +104,7 @@ impl ButtonGroupText {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
 
         let bg = theme.color_token("muted");
         let fg = theme.color_token("foreground");
@@ -156,14 +156,7 @@ impl ButtonGroupText {
         let mut el = cx.container(props, move |cx| {
             let content = cx.flex(
                 FlexProps {
-                    layout: LayoutStyle {
-                        size: SizeStyle {
-                            width: Length::Fill,
-                            height: Length::Fill,
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
+                    layout: LayoutStyle::default(),
                     direction: Axis::Horizontal,
                     gap: Px(8.0).into(),
                     padding: Edges {
@@ -415,7 +408,7 @@ impl ButtonGroup {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
 
         let has_nested_group = self
             .items

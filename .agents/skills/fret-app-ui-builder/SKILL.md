@@ -133,6 +133,16 @@ These are the most common places app authors get stuck. Keep the work **layered*
 ### Layout/overflow (avoid clipped focus rings)
 
 - Use token-driven layout/chrome via `UiBuilder` (declarative-only).
+- When porting from shadcn/Tailwind, align **layout constraints first** (e.g. `w-full`, `flex-1`, `items-stretch`, `min-w-0`) before chasing pixels/tokens:
+  - `references/mind-models/mm-layout-and-sizing.md`
+- Tailwind → Fret (declarative) constraint mapping cheat sheet (common “why does my port look wrong?” causes):
+  - `w-full` / `h-full` → `.ui().w_full()` / `.ui().h_full()`
+  - `flex-1` (≈ `flex: 1 1 0%`) → `.ui().flex_1()` (tip: pair with `.ui().min_w_0()` for text-heavy rows)
+  - `flex-none` → `.ui().flex_none()`
+  - `items-stretch` → on flex containers: `ui::h_flex(...).items_stretch()` / `ui::v_flex(...).items_stretch()`
+  - `min-w-0` / `min-h-0` → `.ui().min_w_0()` / `.ui().min_h(Px(0.0))`
+  - `truncate` / `overflow-hidden` → `.ui().truncate()` / `.ui().overflow_hidden()`
+  - Rule of thumb: Fret does not implicitly “stretch” children; if a subtree should behave like a block-level element, make it explicit (`w_full`, `items_stretch`, `flex_1`, `min_w_0`).
 - Don’t clip focus rings by accident: keep the pressable/root overflow visible; clip only inside chrome.
 
 ### Interaction policy (press/dismiss/roving/typeahead/timers)

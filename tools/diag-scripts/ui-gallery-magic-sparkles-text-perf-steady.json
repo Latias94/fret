@@ -1,44 +1,5 @@
 {
-  "schema_version": 2,
-  "steps": [
-    {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
-      },
-      "timeout_frames": 240
-    },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
-    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
-    { "type": "press_key", "key": "backspace" },
-    { "type": "type_text", "text": "sparkles" },
-    {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-nav-magic-sparkles-text" }
-      },
-      "timeout_frames": 240
-    },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-magic-sparkles-text" } },
-
-    {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-magic-sparkles-text" }
-      },
-      "timeout_frames": 360
-    },
-
-    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
-    { "type": "wait_frames", "n": 4 },
-    { "type": "reset_diagnostics" },
-
-    { "type": "wait_frames", "n": 180 },
-    { "type": "capture_bundle", "label": "ui-gallery-magic-sparkles-text-perf-steady" },
-    { "type": "wait_frames", "n": 2 }
-  ]
+  "schema_version": 1,
+  "kind": "script_redirect",
+  "to": "tools/diag-scripts/ui-gallery/perf/ui-gallery-magic-sparkles-text-perf-steady.json"
 }
-

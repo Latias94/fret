@@ -871,7 +871,7 @@ impl<TData> DataTableToolbar<TData> {
                 sync_column_pinning(&mut *cx.app, &self.state, &desired_pinning);
 
                 let selected_count = state_value.row_selection.len();
-                let theme = Theme::global(&*cx.app).clone();
+                let theme = Theme::global(&*cx.app).snapshot();
 
                 let column_label = Arc::clone(&self.column_label);
                 let columns = Arc::clone(&self.columns);
@@ -1152,7 +1152,7 @@ impl<TData> DataTableToolbar<TData> {
                             .into_element(cx)
                         },
                         move |cx| {
-                            let theme = Theme::global(&*cx.app).clone();
+                            let theme = Theme::global(&*cx.app).snapshot();
                             let transparent = fret_core::Color::TRANSPARENT;
 
                             let items: Vec<CommandEntry> = faceted_items_for_content
@@ -1708,6 +1708,7 @@ impl DataTablePagination {
                 Button::new(Arc::from(format!("Rows per page: {current_size}")))
                     .variant(ButtonVariant::Outline)
                     .size(ButtonSize::Sm)
+                    .label_tabular_nums()
                     .into_element(cx)
             },
             move |_cx| {
@@ -1731,7 +1732,10 @@ impl DataTablePagination {
             move |cx| {
                 let theme = Theme::global(&*cx.app);
                 let muted_fg = theme.color_by_key("muted-foreground");
-                let mut text = ui::raw_text(cx, selected_label.clone()).nowrap();
+                let mut text = ui::text(cx, selected_label.clone())
+                    .text_sm()
+                    .tabular_nums()
+                    .nowrap();
                 if let Some(color) = muted_fg {
                     text = text.text_color(ColorRef::Color(color));
                 }
@@ -1762,6 +1766,7 @@ impl DataTablePagination {
                     Button::new(page_label.clone())
                         .variant(ButtonVariant::Ghost)
                         .size(ButtonSize::Sm)
+                        .label_tabular_nums()
                         .into_element(cx),
                     Button::new("Go to next page")
                         .variant(ButtonVariant::Outline)

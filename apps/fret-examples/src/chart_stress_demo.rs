@@ -735,7 +735,7 @@ pub fn build_app() -> App {
 pub fn build_runner_config() -> WinitRunnerConfig {
     WinitRunnerConfig {
         main_window_title: "fret-demo chart_stress_demo (delinea + fret-chart)".to_string(),
-        main_window_size: winit::dpi::LogicalSize::new(1280.0, 720.0),
+        main_window_size: fret_launch::WindowLogicalSize::new(1280.0, 720.0),
         ..Default::default()
     }
 }

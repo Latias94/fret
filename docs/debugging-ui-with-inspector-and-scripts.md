@@ -130,8 +130,10 @@ Fret’s scripted actions are *selector-driven* and run inside the app via file 
 
 - Run one script:
   - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json`
-- Run one script and auto-pack a shareable zip (bundle + `_root/` artifacts):
-  - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json --pack --include-all`
+- Run one script and auto-pack a bounded shareable zip for AI triage (does not ship full bundle artifacts):
+  - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json --bundle-doctor fix --pack --ai-only`
+- If you need an offline viewer-friendly zip (includes the bundle artifact):
+  - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json --bundle-doctor fix --pack --include-all --pack-schema2-only`
 - Run the baseline suite:
   - `cargo run -p fretboard -- diag suite ui-gallery`
 

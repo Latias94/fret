@@ -15,7 +15,7 @@ This file tracks tasks for `docs/workstreams/diag-fearless-refactor-v1.md`.
   - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/fs_triggers.rs`
 - [x] Extract “bundle writer” responsibilities (schema selection, semantics-mode application, JSON writing) into a module:
   - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/bundle_dump.rs`
-- [ ] Extract “script runner” responsibilities (step state machine + evidence capture) into a module:
+- [x] Extract “script runner” responsibilities (step state machine + evidence capture) into a module:
   - [x] Extract pending-script start/bootstrap helper:
     - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/script_runner.rs`
   - [x] Extract single-active-script migration helper:
@@ -73,13 +73,18 @@ This file tracks tasks for `docs/workstreams/diag-fearless-refactor-v1.md`.
     - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/inspect.rs`
   - [x] Pick flow (run ids + result export + pending resolution):
     - [x] `ecosystem/fret-bootstrap/src/ui_diagnostics/pick_flow.rs`
-- [ ] Keep DevTools WS wiring isolated (already split; ensure minimal coupling).
+- [x] Keep DevTools WS wiring isolated (already split; ensure minimal coupling).
+  - Evidence: `ecosystem/fret-bootstrap/src/ui_diagnostics/ui_diagnostics_devtools_ws.rs` (`drive_devtools_requests_for_window`),
+    `ecosystem/fret-bootstrap/src/ui_diagnostics_ws_bridge.rs`.
 
 ## Bundle size & AI loops (Plan 1, schema2-first)
 
 - [x] Document recommended defaults for AI loops (env presets) and keep them consistent across tooling and runtime:
   - `docs/ui-diagnostics-and-scripted-tests.md` (AI presets)
-- [ ] Ensure `bundle.index.json` / `test_ids.index.json` generation is part of the “pack/repro” happy path (where appropriate).
+- [x] Keep shareable zips bounded when `bundle.schema2.json` is available:
+  - Preferred (bounded AI handoff): `diag run|suite|repro --pack --ai-only`.
+  - Compat (offline viewer-friendly): `diag run|suite|repro --pack --include-all --pack-schema2-only` (or `--schema2-only`).
+- [x] Ensure `bundle.index.json` / `test_ids.index.json` generation is part of the “pack/repro” happy path (where appropriate).
   - [x] Runtime writes canonical sidecars on dump (native filesystem):
     - [x] `bundle.index.json`
     - [x] `bundle.meta.json`
@@ -91,32 +96,219 @@ This file tracks tasks for `docs/workstreams/diag-fearless-refactor-v1.md`.
     - [x] `diag meta` reads `bundle.meta.json` when present
     - [x] `diag query test-id` reads `test_ids.index.json` when present
     - [x] `diag query snapshots` / `diag slice` read `bundle.index.json` when present (selection + semantics presence)
+  - [x] Packing includes canonical sidecars under `_root/` (even when the bundle dir is relocated):
+    - [x] `diag pack --include-all` (and repro multi-pack with `--include-all`).
+    - [x] Includes `frames.index.json` to support `triage --lite` without materializing large bundles.
+- [x] Reduce CLI entrypoint churn by isolating zip packing logic:
+  - `crates/fret-diag/src/pack_zip.rs`
+- [x] Reduce CLI entrypoint churn by isolating evidence indexing:
+  - `crates/fret-diag/src/evidence_index.rs`
+- [x] Reduce CLI entrypoint churn by isolating perf-hint gating helpers:
+  - `crates/fret-diag/src/perf_hint_gate.rs`
 - [x] Add a short “AI-first” recipe to `docs/ui-diagnostics-and-scripted-tests.md` that links to:
   - `diag meta`, `diag index`, `diag query`, `diag slice`, `diag ai-packet`.
-- [ ] Finish the “bundle artifact” naming sweep so common failure messages and CLI hints do not assume `bundle.json`.
+- [x] Finish the “bundle artifact” naming sweep so common failure messages and CLI hints do not assume `bundle.json`.
   - [x] Rename internal helpers away from `*_bundle_json_*` naming:
     - `crates/fret-diag/src/paths.rs` (`resolve_bundle_artifact_path`, `wait_for_bundle_artifact_*`)
-- [ ] Decide how far to push schema2-first:
-  - [ ] runtime dumps: when should `bundle.schema2.json` be emitted by default (vs tooling-derived only)?
-  - [ ] compatibility: when is it acceptable to stop treating `bundle.json` as a required artifact?
+  - [x] Ensure `diag doctor` distinguishes raw `bundle.json` from the resolved bundle artifact in `doctor.json`.
+  - [x] Add bundle-artifact aliases to `repro.summary.json` (keep older `*_bundle_json` keys for compatibility).
+  - [x] Add bundle-artifact aliases to `diag repeat` output (keep older `bundle_json` key for compatibility).
+  - [x] Add bundle-artifact aliases to stats/lint check JSON evidence payloads (keep older `bundle_json` key for compatibility).
+    - Evidence: `crates/fret-diag/src/stats/stale.rs`, `crates/fret-diag/src/stats/vlist.rs`,
+      `crates/fret-diag/src/stats/windowed_rows.rs`, `crates/fret-diag/src/stats/ui_gallery_code_editor.rs`,
+      `crates/fret-diag/src/stats/ui_gallery_markdown_editor.rs`, `crates/fret-diag/src/lint.rs`.
+  - [x] Update CLI user-facing hints to prefer “bundle artifact” wording where supported:
+    - `crates/fret-diag/src/diag_simple_dispatch.rs` (`diag trace`)
+    - `crates/fret-diag/src/diag_perf_baseline.rs` (`perf-baseline-from-bundles`)
+    - `crates/fret-diag/src/lib.rs` (`--diff` arg errors)
+    - `crates/fret-diag/src/paths.rs` (integrity failure notes mention raw `bundle.json`)
+  - [x] Sweep remaining narrow modules and tests that still talk about `bundle.json` when they mean “bundle artifact”:
+    - [x] `crates/fret-diag/src/artifacts.rs` (docs/comments + test expectations)
+    - [x] `crates/fret-diag/src/api.rs` (test fixture filenames `*.bundle.json`)
+    - [x] `apps/fret-devtools-mcp/src/main.rs` (resolve/compare via bundle artifacts, prefer `bundle.schema2.json`)
+- [x] Add a convenience `--ai-packet` flag to generate `ai.packet/` alongside common workflows:
+  - `diag run <script.json> --ai-packet` (writes `<bundle_dir>/ai.packet/`)
+  - `diag pack <bundle_dir> --ai-packet` (best-effort ensure before zipping)
+- [x] Add a bounded share zip mode that packs only AI artifacts (no full bundle artifact):
+  - `diag pack <bundle_dir> --ai-only` (packs `ai.packet/` + nearby script sources)
+- [x] Add a sidecars-only mode to build ai packets without reading the bundle artifact:
+  - `diag ai-packet <bundle_dir> --sidecars-only`
+  - Goal: allow regenerating `ai.packet/` from a shared bundle dir where only sidecars are present (or the raw bundle is too large).
+- [x] Make repro AI-only packing resilient when only sidecars are available for some items:
+  - `diag repro ... --ai-only` should be able to generate `ai.packet/` from sidecars per item before packing.
+- [x] Remove repeated ai.packet generation logic from pack/run/repro by centralizing in a single helper.
+  - Evidence: `crates/fret-diag/src/commands/ai_packet.rs` (`ensure_ai_packet_dir_best_effort`), used by pack/run/repro.
+- [x] Deduplicate common “looks like a path” + “resolve bundle artifact or latest” CLI parsing helpers across commands.
+  - Evidence: `crates/fret-diag/src/commands/args.rs`, used by `agent`, `ai-packet`, `bundle-v2`, `hotspots`, `slice`.
+- [x] Deduplicate “resolve latest bundle dir” helper.
+  - Evidence: `crates/fret-diag/src/commands/args.rs` (`resolve_latest_bundle_dir_path`), used by `doctor`.
+- [x] Remove remaining direct `read_latest_pointer` usage from `commands/*` (prefer shared helpers).
+  - Evidence: `crates/fret-diag/src/commands/args.rs`, `crates/fret-diag/src/commands/session.rs`.
+- [x] Deduplicate latest bundle resolution helpers outside `commands/*`.
+  - Evidence: `crates/fret-diag/src/latest.rs`, `crates/fret-diag/src/diag_perf.rs`, `crates/fret-diag/src/post_run_checks.rs`,
+    `crates/fret-diag/src/paths.rs`.
+- [x] Decide how far to push schema2-first:
+  - [x] Decide the runtime emission policy for `bundle.schema2.json` (tooling-derived today):
+    - Proposed policy draft: `docs/workstreams/diag-fearless-refactor-v1/schema2-first-decision.md`.
+    - [x] Implement an opt-in runtime companion artifact (`bundle.schema2.json`) emission path.
+      - Evidence: `ecosystem/fret-bootstrap/src/ui_diagnostics/config.rs` (`write_bundle_schema2`),
+        `ecosystem/fret-bootstrap/src/ui_diagnostics/bundle_dump.rs`.
+    - [x] Make tool-launched workflows default to enabling runtime schema2 emission for schema2/AI-focused flows.
+      - Evidence: `crates/fret-diag/src/compare.rs` (writes `diag.config.json` with `write_bundle_schema2=true`
+        for tool-launched runs).
+    - [x] Make `write_bundle_schema2` config-only (no env override) to shrink the “switch” surface for launched runs.
+      - Evidence: `ecosystem/fret-bootstrap/src/ui_diagnostics/config.rs`, `crates/fret-diag/src/commands/config.rs`.
+    - [x] Decide whether scripted runs should default to emitting schema2, and whether raw `bundle.json` can be skipped.
+      - Decision: tool-launched runs default to `write_bundle_json=false` and `write_bundle_schema2=true` (manual runs keep compat defaults unless configured).
+  - [ ] Decide when it is acceptable to stop treating raw `bundle.json` as a required artifact for common flows.
+    - Decision: treat raw as optional for tool-launched flows; keep it supported for deep debugging and for manual runs that do not use a config file.
+    - Follow-up: add an explicit “raw required” inventory list (where `bundle.json` is still the only viable view) before flipping more defaults.
 
 ## Schema migration hygiene
 
 - [ ] Decide the migration policy for schema v1 → v2:
   - [x] Document a conservative draft policy (phases + exit criteria):
     - `docs/workstreams/diag-fearless-refactor-v1.md`
-  - [ ] Decide when to flip manual dump defaults to v2 (owner decision).
-  - [ ] Decide deprecation messaging + migration recipes for older v1 repros.
-- [ ] Add one regression guard that prevents re-introducing forked protocol types in the runtime runner.
+  - [x] Decide when to flip manual dump defaults to v2 (owner decision).
+    - Decision: do not flip manual defaults yet; revisit once exit criteria in `schema2-first-decision.md` are met.
+  - [ ] Decide deprecation messaging + migration recipes for older v1 repros (still pending).
+- [x] Add one regression guard that prevents re-introducing forked protocol types in the runtime runner.
+  - Evidence: `crates/fret-diag-protocol/src/lib.rs` (`DiagScreenshotRequestV1` / `DiagScreenshotResultFileV1`),
+    `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps.rs` (request writer),
+    `crates/fret-launch/src/runner/desktop/runner/diag_screenshots.rs` (reader + result writer).
+- [x] Consolidate semantics traversal helpers in `crates/fret-diag/src/json_bundle.rs`:
+  - [x] Treat explicit inline `null` semantics as "missing" (fall back to schema2 semantics table).
+  - [x] Centralize semantics table presence scanning for in-place schema conversion.
+  - [x] Centralize the streaming schema2 semantics table reader used by `diag slice`.
+  - Evidence: `crates/fret-diag/src/json_bundle.rs` (`SemanticsResolver`, `SemanticsTablePresence`), `crates/fret-diag/src/commands/bundle_v2.rs`.
 
 ## Tooling modularization (reduce single-file blast radius)
 
 - [x] Finish modularizing `diag ai-packet` and remove the temporary monolith module once parity is proven:
   - [x] delete `crates/fret-diag/src/commands/ai_packet/monolith.rs`
   - [x] keep module boundaries stable (`budget`, `anchors`, `slices`, `fs`)
+- [x] Extract triage JSON generation out of the CLI entrypoint file:
+  - [x] Move `triage_json_from_stats` into `crates/fret-diag/src/triage_json.rs` (keep a thin wrapper in `crates/fret-diag/src/lib.rs`).
+  - [x] Keep existing call sites unchanged (`crate::triage_json_from_stats`), and keep tests compiling.
+- [x] Extract `diag perf` suite aux-script runner into a helper module (reduce churn + keep `diag_perf.rs` shorter):
+  - `crates/fret-diag/src/diag_perf/aux_scripts.rs`
+- [x] Extract “run perf script + resolve bundle artifact” logic into a helper module (dedupe the two call sites):
+  - `crates/fret-diag/src/diag_perf/run_script.rs`
+- [x] Extract `diag perf` output/reporting helpers into a helper module (reduce repeated println/JSON error rows):
+  - `crates/fret-diag/src/diag_perf/reporting.rs`
+- [x] Extract `diag perf` perf-hints row assembly into a helper module (reduce churn + keep `diag_perf.rs` shorter):
+  - `crates/fret-diag/src/diag_perf/hints.rs`
+- [x] Extract `diag perf` perf stats JSON row assembly into a helper module (reduce churn + keep `diag_perf.rs` shorter):
+  - `crates/fret-diag/src/diag_perf/stats_rows.rs`
+- [x] Reduce `stats_rows::push_perf_json_row` argument list by passing `&BundleStatsReport` (derive fields inside the module).
+  - Evidence: `crates/fret-diag/src/diag_perf/stats_rows.rs`, `crates/fret-diag/src/diag_perf.rs`.
+- [x] Extract `diag perf` output payload writers into a helper module (reduce churn + keep `diag_perf.rs` shorter):
+  - `crates/fret-diag/src/diag_perf/outputs.rs`
+- [x] Extract `diag perf` stats stdout JSON payload assembly into `outputs.rs` (reduce churn + keep `diag_perf.rs` shorter).
+- [x] Extract `diag perf` repeat per-run JSON row assembly into a helper module (reduce churn + keep `diag_perf.rs` shorter):
+  - `crates/fret-diag/src/diag_perf/runs_rows.rs`
+- [x] Extract `diag perf` perf-threshold row assembly into a helper module (reduce churn + keep `diag_perf.rs` shorter):
+  - `crates/fret-diag/src/diag_perf/thresholds.rs`
+- [x] Extract `diag perf` perf-baseline row assembly into a helper module (reduce churn + keep `diag_perf.rs` shorter):
+  - `crates/fret-diag/src/diag_perf/baseline_rows.rs`
+
+## Large-bundle ergonomics (avoid materializing `bundle.json`)
+
+Goal: common tooling should keep working even when `bundle.json` is too large to load into memory as `serde_json::Value`.
+
+- [x] Make `diag lint` stream bundle artifacts instead of reading+materializing the full JSON.
+  - Prefer schema2 semantics tables (`tables.semantics.entries[*]`) when a snapshot has `semantics_fingerprint`.
+  - Fall back to extracting inline semantics nodes (`debug.semantics.nodes`) when table entries are missing.
+  - Keep output JSON stable (additive-only); do not remove legacy keys.
+  - Evidence anchors (implementation targets):
+    - `crates/fret-diag/src/lint.rs`
+    - `crates/fret-diag/src/lint/streaming.rs`
+    - `crates/fret-diag/src/json_bundle.rs` (`stream_read_semantics_table_nodes`)
+    - `crates/fret-diag/src/commands/slice_streaming.rs` (streaming extraction patterns)
+- [x] Add one regression test that `diag lint` can handle a schema2-only bundle with table semantics without materializing the bundle.
+
+- [x] Make `diag stats` degrade gracefully for large bundle artifacts.
+  - Prefer `bundle.schema2.json` when the user passes a raw `bundle.json` file and schema2 is present next to it.
+  - When the bundle artifact is too large to materialize, fall back to a stats-lite report derived from `frames.index.json`
+    (and keep a clear hint to regen sidecars / use `diag triage --lite`).
+  - Evidence anchors:
+    - `crates/fret-diag/src/diag_stats.rs`
+    - `crates/fret-diag/src/stats.rs`
+
+- [x] Audit `diag stats --check-*` flags for stats-lite compatibility.
+  - In stats-lite mode, checks that are not on the allowlist fail fast with an actionable message.
+  - When a check can be implemented from sidecars (frames/bundle indexes) or streaming, port it so it works for huge bundles.
+  - Evidence anchors:
+    - `crates/fret-diag/src/diag_stats.rs`
+    - `crates/fret-diag/src/diag_stats/check_support.rs`
+
+- [x] Evolve `frames.index.json` (schema v1, additive) so stats-lite can run more checks.
+  - [x] Add top-level `features: string[]` (additive; do not bump `schema_version` yet).
+  - [x] Add optional per-window aggregates to `windows[i].aggregates` for gate-friendly counters that are:
+    - small,
+    - stable across schema evolution,
+    - computable via streaming (no need to materialize the bundle).
+  - [x] Update `ensure_frames_index_json` to treat missing required `features[]` as "outdated" and regenerate.
+  - [x] Document the new fields in `docs/workstreams/diag-fearless-refactor-v1/frames-index.md`.
+
+- [ ] Port selected `diag stats --check-*` gates to sidecars (so they work in stats-lite mode).
+  - [x] Define a small “compat matrix” in code (agent-friendly): `check -> stats-lite data source`.
+  - [x] Expose the compat matrix as machine-readable JSON for agents:
+    - `fretboard diag stats --stats-lite-checks-json`
+  - [x] Reduce streaming gate churn by extracting shared deserializer helpers:
+    - `crates/fret-diag/src/json_stream.rs`
+  - [x] Migrate existing streaming gates to the shared helper (reduce duplication):
+    - `crates/fret-diag/src/stats/notify_gates_streaming.rs`
+    - `crates/fret-diag/src/stats/drag_cache_gates_streaming.rs`
+    - `crates/fret-diag/src/stats/wheel_scroll_streaming/`
+  - [x] Split wheel-scroll streaming gates into a directory module (reduce file-size blast radius):
+    - `crates/fret-diag/src/stats/wheel_scroll_streaming/mod.rs` (exports)
+    - `crates/fret-diag/src/stats/wheel_scroll_streaming/checks.rs` (gate entrypoints)
+    - `crates/fret-diag/src/stats/wheel_scroll_streaming/types.rs` (shared structs)
+    - `crates/fret-diag/src/stats/wheel_scroll_streaming/wheel_frames_min.rs` (streamed wheel frame index)
+    - `crates/fret-diag/src/stats/wheel_scroll_streaming/tests.rs` (regression tests)
+    - `crates/fret-diag/src/stats/wheel_scroll_streaming/before_after_metas.rs` (stream reader)
+    - `crates/fret-diag/src/stats/wheel_scroll_streaming/inline_semantics_lite.rs` (stream reader)
+  - [x] Remove the remaining wheel-scroll legacy shim:
+    - move `read_window_before_after_metas` into `before_after_metas.rs`
+    - move `stream_read_inline_semantics_lite_for_pairs` into `inline_semantics_lite.rs`
+    - delete the `legacy.rs` shim module
+  - [x] Split retained virtual-list streaming gates into dedicated submodules:
+    - `crates/fret-diag/src/stats/retained_vlist_gates_streaming/`
+  - [x] First wave (frames-index aggregates):
+    - [x] `--check-viewport-input-min` (post-warmup viewport_input event count).
+    - [x] `--check-dock-drag-min` (post-warmup dock-drag-active frames).
+    - [x] `--check-viewport-capture-min` (post-warmup capture-active frames).
+    - [x] `--check-view-cache-reuse-min` (post-warmup reuse event count).
+  - [ ] Second wave (still sidecar-only, but may need additional signals):
+    - [x] `--check-overlay-synthesis-min` (synthesized overlay counts).
+    - [x] `--check-stale-paint` (streaming; does not materialize full bundle JSON).
+    - [x] `--check-stale-scene` (streaming; does not materialize full bundle JSON).
+    - [x] `--check-wheel-scroll*` (streaming; does not materialize full bundle JSON).
+    - [x] `--check-semantics-changed-repainted` (streaming; does not materialize full bundle JSON; loads schema2 semantics table nodes for diffs).
+    - [x] `--check-notify-hotspot-file-max` (streaming; does not materialize full bundle JSON).
+    - [x] `--check-gc-sweep-liveness` (streaming; does not materialize full bundle JSON).
+    - [x] `--check-drag-cache-root-paint-only` (streaming; does not materialize full bundle JSON).
+    - [x] `--check-view-cache-reuse-stable-min` (frames-index aggregates; reuse streak tail/max).
+    - [x] `--check-idle-no-paint-min` (frames-index aggregates; idle streak tail/max).
+    - [x] `--check-retained-vlist-reconcile-no-notify-min` (streaming; does not materialize full bundle JSON; legacy alias: `--check-retained-vlist-reconcile-no-notify`).
+    - [x] `--check-retained-vlist-keep-alive-reuse-min` (streaming; does not materialize full bundle JSON).
+    - [x] `--check-retained-vlist-attach-detach-max` (streaming; does not materialize full bundle JSON).
 
 ## Plan 2 (defer until Plan 1 is solid)
 
 - [ ] Prototype manifest-first chunked bundle layout (snapshots/logs/semantics split).
 - [ ] Add a compatibility materializer to emit `bundle.json` from the manifest.
 - [ ] Add packing/hashing conventions and a `diag pack` integration path.
+
+## Debt removal (remove the baggage)
+
+Keep this section aligned with:
+
+- `docs/workstreams/diag-fearless-refactor-v1/debt-removal.md`
+- `docs/workstreams/diag-fearless-refactor-v1/redundancy-removal-checklist.md`
+
+- [ ] Start removing medium-risk compatibility outputs (after a deprecation window):
+  - stop writing legacy JSON alias keys (keep reading them longer),
+  - reduce flag alias sprawl where it hurts discoverability.
+- [ ] Decide the “raw bundle.json optional” policy for scripted runs (high risk; requires exit criteria).

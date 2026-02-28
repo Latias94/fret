@@ -5,9 +5,9 @@
 </p>
 
 > [!WARNING]
-> **Experimental learning project (not production-ready).**
+> **Experimental — under heavy development.**
 >
-> Fret is used to explore architecture and interaction ideas for Rust GUI systems. LLM tooling is used heavily as a development accelerator, and non-trivial changes are manually reviewed for code correctness and architecture direction before adoption. APIs and behavior may change quickly. **Do not use Fret in production systems.**
+> This project is an experiment in AI-driven software development. The vast majority of the code, tests, and documentation were written by AI (Codex). Humans direct architecture, priorities, and design decisions, but have not reviewed most of the code line-by-line. Treat this accordingly — there will be bugs, rough edges, and things that don't work. Use at your own risk.
 
 Fret is the precision fretboard for your Rust UI: a GPU-first framework that turns application logic into crisp, fluid interactions.
 

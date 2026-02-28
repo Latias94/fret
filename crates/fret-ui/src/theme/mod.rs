@@ -10,7 +10,7 @@ use std::{
 
 use crate::UiHost;
 use crate::theme_registry::{ThemeTokenKind, canonicalize_token_key};
-use crate::{ThemeColorKey, ThemeMetricKey};
+use crate::{ThemeColorKey, ThemeMetricKey, ThemeNamedColorKey};
 
 const FALLBACK_COLOR: Color = Color {
     r: 1.0,
@@ -349,6 +349,25 @@ fn default_color_tokens(colors: ThemeColors) -> HashMap<String, Color> {
         "ring-offset-background".to_string(),
         colors.surface_background,
     );
+    // Named colors used by some shadcn recipes (e.g. `text-white`).
+    out.insert(
+        "white".to_string(),
+        Color {
+            r: 1.0,
+            g: 1.0,
+            b: 1.0,
+            a: 1.0,
+        },
+    );
+    out.insert(
+        "black".to_string(),
+        Color {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+            a: 1.0,
+        },
+    );
 
     out.insert("card".to_string(), colors.panel_background);
     out.insert("card-foreground".to_string(), colors.text_primary);
@@ -683,6 +702,11 @@ impl ThemeSnapshot {
         self.color_required(key)
     }
 
+    /// Resolves a named (non-semantic) color token used by upstream ecosystems (e.g. `text-white`).
+    pub fn named_color(&self, key: ThemeNamedColorKey) -> Color {
+        self.color_token(key.canonical_name())
+    }
+
     pub fn metric_by_key(&self, key: &str) -> Option<Px> {
         let key = canonicalize_token_key(ThemeTokenKind::Metric, key);
         self.metric_tokens.get(key).copied()
@@ -782,6 +806,44 @@ impl Theme {
     /// Non-panicking theme token access with diagnostics + fallback behavior.
     pub fn color_token(&self, key: &str) -> Color {
         self.color_required(key)
+    }
+
+    /// Resolve a syntax highlight tag (e.g. `keyword.operator`) into a theme color.
+    ///
+    /// Lookup order:
+    ///
+    /// 1) `color.syntax.<highlight>`
+    /// 2) prefix fallback: `color.syntax.keyword.operator` -> `color.syntax.keyword`
+    /// 3) built-in semantic fallbacks for common highlight roots
+    pub fn syntax_color(&self, highlight: &str) -> Option<Color> {
+        let mut cur = Some(highlight);
+        while let Some(name) = cur {
+            let mut key = String::with_capacity("color.syntax.".len() + name.len());
+            key.push_str("color.syntax.");
+            key.push_str(name);
+            if let Some(c) = self.color_by_key(key.as_str()) {
+                return Some(c);
+            }
+            cur = name.rsplit_once('.').map(|(prefix, _)| prefix);
+        }
+
+        let fallback = highlight.split('.').next().unwrap_or(highlight);
+        match fallback {
+            "comment" => Some(self.color_token("muted-foreground")),
+            "keyword" | "operator" => Some(self.color_token("primary")),
+            "property" | "variable" => Some(self.color_token("foreground")),
+            "punctuation" => Some(self.color_token("muted-foreground")),
+
+            "string" => Some(self.color_token("foreground")),
+            "number" | "boolean" | "constant" => Some(self.color_token("primary")),
+            "type" | "constructor" | "function" => Some(self.color_token("foreground")),
+            _ => None,
+        }
+    }
+
+    /// Resolves a named (non-semantic) color token used by upstream ecosystems (e.g. `text-white`).
+    pub fn named_color(&self, key: ThemeNamedColorKey) -> Color {
+        self.color_token(key.canonical_name())
     }
 
     pub fn metric_by_key(&self, key: &str) -> Option<Px> {
@@ -995,11 +1057,11 @@ impl Theme {
 
         let mut changed = false;
 
-        if let Some(scheme) = cfg.color_scheme {
-            if self.color_scheme != Some(scheme) {
-                self.color_scheme = Some(scheme);
-                changed = true;
-            }
+        if let Some(scheme) = cfg.color_scheme
+            && self.color_scheme != Some(scheme)
+        {
+            self.color_scheme = Some(scheme);
+            changed = true;
         }
 
         let mut next_numbers = HashMap::new();
@@ -1747,11 +1809,11 @@ impl Theme {
 
         let mut changed = false;
 
-        if let Some(scheme) = cfg.color_scheme {
-            if self.color_scheme != Some(scheme) {
-                self.color_scheme = Some(scheme);
-                changed = true;
-            }
+        if let Some(scheme) = cfg.color_scheme
+            && self.color_scheme != Some(scheme)
+        {
+            self.color_scheme = Some(scheme);
+            changed = true;
         }
 
         let colors = canonicalize_config_map(ThemeTokenKind::Color, &cfg.colors);
@@ -2155,9 +2217,31 @@ fn assert_no_legacy_theme_keys(_cfg: &ThemeConfig) {
 mod tests {
     use super::parse_color_to_linear;
     use super::{CubicBezier, Theme, ThemeConfig};
-    use crate::{ThemeColorKey, ThemeMetricKey};
+    use crate::{ThemeColorKey, ThemeMetricKey, ThemeNamedColorKey};
     use fret_core::{Corners, FontId, FontWeight, Px, TextSlant, TextStyle};
     use std::collections::HashMap;
+
+    #[test]
+    fn syntax_color_resolves_prefix_fallback_tokens() {
+        let mut host = crate::test_host::TestHost::default();
+        Theme::with_global_mut(&mut host, |theme| {
+            let mut colors = HashMap::<String, String>::new();
+            colors.insert("color.syntax.keyword".to_string(), "#ff0000".to_string());
+            theme.apply_config(&ThemeConfig {
+                name: "test".to_string(),
+                colors,
+                ..Default::default()
+            });
+
+            let exact = theme
+                .syntax_color("keyword")
+                .expect("exact token should resolve");
+            let prefixed = theme
+                .syntax_color("keyword.operator")
+                .expect("prefixed tag should resolve via prefix fallback");
+            assert_eq!(exact, prefixed);
+        });
+    }
 
     #[test]
     fn shadcn_semantic_palette_aliases_exist_on_default_theme() {
@@ -2463,6 +2547,25 @@ mod tests {
     }
 
     #[test]
+    fn named_colors_exist_on_default_snapshot() {
+        let host = crate::test_host::TestHost::default();
+        let theme = Theme::global(&host);
+        let snap = theme.snapshot();
+
+        let white = snap.named_color(ThemeNamedColorKey::White);
+        assert!((white.r - 1.0).abs() < 1e-6);
+        assert!((white.g - 1.0).abs() < 1e-6);
+        assert!((white.b - 1.0).abs() < 1e-6);
+        assert!((white.a - 1.0).abs() < 1e-6);
+
+        let black = snap.named_color(ThemeNamedColorKey::Black);
+        assert!((black.r - 0.0).abs() < 1e-6);
+        assert!((black.g - 0.0).abs() < 1e-6);
+        assert!((black.b - 0.0).abs() < 1e-6);
+        assert!((black.a - 1.0).abs() < 1e-6);
+    }
+
+    #[test]
     fn typed_theme_keys_resolve_via_semantic_palette() {
         let host = crate::test_host::TestHost::default();
         let theme = Theme::global(&host);
@@ -2602,6 +2705,8 @@ mod tests {
                     line_height_em: None,
                     line_height_policy: Default::default(),
                     letter_spacing_em: None,
+                    features: Vec::new(),
+                    axes: Vec::new(),
                     vertical_placement: fret_core::TextVerticalPlacement::CenterMetricsBox,
                     leading_distribution: Default::default(),
                     strut_style: None,

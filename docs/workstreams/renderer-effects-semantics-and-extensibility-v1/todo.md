@@ -183,7 +183,7 @@ if left unspecified.
 
 - [x] CustomV2 ceiling bump (bounded):
   - [x] Lock the “one extra input” story (chosen: single user image input via `ImageId`):
-    - `docs/adr/0300-custom-effect-v2-user-image-input.md`
+    - `docs/adr/0303-custom-effect-v2-user-image-input.md`
     - `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-v2/README.md`
   - [x] Versioned ABI + capability discovery + conformance exist (wgpu backend).
   - Follow-ups: demo-oriented authoring templates + WebGPU/wasm runtime story tracked under
@@ -196,7 +196,7 @@ if left unspecified.
       (e.g. `srcdst` + scratch targets), and deterministically degrade to `levels = 1` when headroom is insufficient.
   - [ ] M2 sharing/caching: deferred (requires an explicit mechanism-level design).
   - Evidence:
-    - `docs/adr/0301-custom-effect-v3-renderer-provided-sources.md`
+    - `docs/adr/0304-custom-effect-v3-renderer-provided-sources.md`
     - `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-v3/README.md`
     - `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs`
     - `crates/fret-render-wgpu/tests/effect_custom_v3_conformance.rs`

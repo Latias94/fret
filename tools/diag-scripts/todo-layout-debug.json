@@ -1,38 +1,5 @@
 {
-  "schema_version": 2,
-  "meta": {
-    "name": "todo-layout-debug",
-    "required_capabilities": ["diag.screenshot_png"],
-    "tags": ["todo_demo", "layout", "text_overflow"]
-  },
-  "steps": [
-    {
-      "type": "wait_until",
-      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "todo-filter-all" } },
-      "timeout_frames": 240
-    },
-    { "type": "wait_frames", "n": 10 },
-    { "type": "capture_screenshot", "label": "idle", "timeout_frames": 120 },
-
-    { "type": "click", "target": { "kind": "test_id", "id": "todo-filter-active" } },
-    { "type": "wait_frames", "n": 10 },
-    { "type": "capture_screenshot", "label": "filter-active", "timeout_frames": 120 },
-
-    { "type": "click", "target": { "kind": "test_id", "id": "todo-filter-completed" } },
-    { "type": "wait_frames", "n": 10 },
-    { "type": "capture_screenshot", "label": "filter-completed", "timeout_frames": 120 },
-
-    { "type": "click", "target": { "kind": "test_id", "id": "todo-filter-all" } },
-    { "type": "wait_frames", "n": 10 },
-    { "type": "capture_bundle", "label": "after-filter-toggles", "max_snapshots": 120 },
-    { "type": "capture_screenshot", "label": "filter-all", "timeout_frames": 120 },
-
-    { "type": "set_window_inner_size", "width_px": 560.0, "height_px": 820.0 },
-    { "type": "wait_frames", "n": 20 },
-    { "type": "capture_screenshot", "label": "resized-tall", "timeout_frames": 120 },
-
-    { "type": "set_window_inner_size", "width_px": 560.0, "height_px": 520.0 },
-    { "type": "wait_frames", "n": 20 },
-    { "type": "capture_screenshot", "label": "resized-short", "timeout_frames": 120 }
-  ]
+  "schema_version": 1,
+  "kind": "script_redirect",
+  "to": "tools/diag-scripts/tooling/todo/todo-layout-debug.json"
 }

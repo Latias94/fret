@@ -16,6 +16,8 @@ pub(super) fn handle_menu_select_step(
     failure_reason: &mut Option<String>,
 ) -> bool {
     let UiActionStepV2::MenuSelect {
+        window: _,
+        pointer_kind,
         menu,
         item,
         timeout_frames,
@@ -24,6 +26,7 @@ pub(super) fn handle_menu_select_step(
         return false;
     };
 
+    let pointer_type = pointer_type_from_kind(pointer_kind);
     active.wait_until = None;
     active.screenshot_wait = None;
 
@@ -107,7 +110,7 @@ pub(super) fn handle_menu_select_step(
                 }
                 output
                     .events
-                    .extend(click_events(pos, UiMouseButtonV1::Left, 1));
+                    .extend(click_events(pos, UiMouseButtonV1::Left, 1, pointer_type));
                 state.phase = 2;
                 active.v2_step_state = Some(V2StepState::MenuSelect(state));
                 output.request_redraw = true;
@@ -177,7 +180,7 @@ pub(super) fn handle_menu_select_step(
                 }
                 output
                     .events
-                    .extend(click_events(pos, UiMouseButtonV1::Left, 1));
+                    .extend(click_events(pos, UiMouseButtonV1::Left, 1, pointer_type));
                 active.v2_step_state = None;
                 active.next_step = active.next_step.saturating_add(1);
                 output.request_redraw = true;
@@ -215,6 +218,8 @@ pub(super) fn handle_menu_select_path_step(
     failure_reason: &mut Option<String>,
 ) -> bool {
     let UiActionStepV2::MenuSelectPath {
+        window: _,
+        pointer_kind,
         path,
         timeout_frames,
     } = step
@@ -222,6 +227,7 @@ pub(super) fn handle_menu_select_path_step(
         return false;
     };
 
+    let pointer_type = pointer_type_from_kind(pointer_kind);
     active.wait_until = None;
     active.screenshot_wait = None;
 
@@ -314,9 +320,12 @@ pub(super) fn handle_menu_select_path_step(
                                 svc.cfg.max_debug_string_bytes,
                             );
                         }
-                        output
-                            .events
-                            .extend(click_events(pos, UiMouseButtonV1::Left, 1));
+                        output.events.extend(click_events(
+                            pos,
+                            UiMouseButtonV1::Left,
+                            1,
+                            pointer_type,
+                        ));
                         state.next_index = state.next_index.saturating_add(1);
                         state.phase = 0;
                         active.v2_step_state = Some(V2StepState::MenuSelectPath(state));

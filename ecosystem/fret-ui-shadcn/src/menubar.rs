@@ -15,7 +15,7 @@ use fret_ui::element::{
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side};
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::collection_semantics::CollectionSemanticsExt as _;
@@ -27,6 +27,7 @@ use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::menubar as menu;
 use fret_ui_kit::primitives::menubar::trigger_row as menubar_trigger_row;
 use fret_ui_kit::primitives::popper;
+use fret_ui_kit::primitives::portal_inherited;
 use fret_ui_kit::primitives::presence as radix_presence;
 use fret_ui_kit::primitives::roving_focus_group;
 use fret_ui_kit::typography;
@@ -43,7 +44,7 @@ fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c
 }
 
-fn is_dark_background(theme: &Theme) -> bool {
+fn is_dark_background(theme: &ThemeSnapshot) -> bool {
     let bg = theme.color_token("background");
     let luma = 0.2126 * bg.r + 0.7152 * bg.g + 0.0722 * bg.b;
     luma < 0.5
@@ -230,7 +231,9 @@ impl MenubarItem {
         self
     }
 
-    /// Adds a leading icon that is built under the item's resolved foreground color.
+    /// Prefer this over `leading(icon(cx, ...))` so the icon follows shadcn's menubar icon rules
+    /// (default items use muted foreground; destructive items force destructive foreground) without
+    /// relying on per-callsite color configuration.
     pub fn leading_icon(mut self, icon: IconId) -> Self {
         self.leading_icon = Some(icon);
         self
@@ -352,7 +355,7 @@ impl MenubarShortcut {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
         let fg = theme.color_token("muted-foreground");
         let font_size = theme.metric_token("font.size");
         let font_line_height = theme.metric_token("font.line_height");
@@ -646,7 +649,8 @@ fn menu_row_children<H: UiHost>(
     indicator_on: Option<bool>,
     has_submenu: bool,
     bg: Color,
-    fg: Color,
+    text_fg: Color,
+    icon_fg: Color,
     pad_left: Px,
     pad_x: Px,
     pad_y: Px,
@@ -713,18 +717,19 @@ fn menu_row_children<H: UiHost>(
                             cx,
                             ids::ui::CHECK,
                             Some(Px(16.0)),
-                            Some(ColorRef::Color(fg)),
+                            Some(ColorRef::Color(text_fg)),
                         )]
                     },
                 ));
             }
 
             if let Some(l) = leading {
-                row.push(menu_icon_slot(cx, l));
+                let scoped = cx.foreground_scope(icon_fg, move |_cx| vec![l]);
+                row.push(menu_icon_slot(cx, scoped));
             } else if let Some(icon) = leading_icon {
-                let icon_el =
-                    decl_icon::icon_with(cx, icon, Some(Px(16.0)), Some(ColorRef::Color(fg)));
-                row.push(menu_icon_slot(cx, icon_el));
+                let icon_el = decl_icon::icon_with(cx, icon, Some(Px(16.0)), None);
+                let scoped = cx.foreground_scope(icon_fg, move |_cx| vec![icon_el]);
+                row.push(menu_icon_slot(cx, scoped));
             } else if reserve_leading_slot {
                 row.push(menu_icon_slot_empty(cx));
             }
@@ -736,7 +741,7 @@ fn menu_row_children<H: UiHost>(
                 .basis_0()
                 .text_size_px(text_style.size)
                 .font_weight(text_style.weight)
-                .text_color(ColorRef::Color(fg))
+                .text_color(ColorRef::Color(text_fg))
                 .nowrap();
             if let Some(line_height) = text_style.line_height {
                 label_text = label_text
@@ -753,7 +758,7 @@ fn menu_row_children<H: UiHost>(
             }
 
             if has_submenu {
-                row.push(submenu_chevron_right_text(cx, fg, text_style.clone()));
+                row.push(submenu_chevron_right_text(cx, text_fg, text_style.clone()));
             }
 
             vec![cx.flex(
@@ -962,7 +967,7 @@ impl Menubar {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
+            let theme = Theme::global(&*cx.app).snapshot();
 
             let radius = self
                 .chrome
@@ -1299,13 +1304,12 @@ impl MenubarMenuEntries {
                 model
             };
 
-            let theme = Theme::global(&*cx.app).clone();
+            let theme = Theme::global(&*cx.app).snapshot();
             let enabled = !(menu.disabled || menubar_disabled_in_scope(cx));
 
             let radius = MetricRef::radius(Radius::Sm).resolve(&theme);
             let ring = decl_style::focus_ring(&theme, radius);
             let bg_hover = theme.color_token("accent");
-            let bg_open = alpha_mul(bg_hover, 0.35);
             let fg = theme.color_token("foreground");
             let fg_muted = theme.color_token("muted-foreground");
 
@@ -1435,18 +1439,29 @@ impl MenubarMenuEntries {
                 let overlay_root_name_for_controls: Arc<str> = Arc::from(overlay_root_name.clone());
                 let content_id_for_trigger =
                     menu::content_panel::menu_content_semantics_id(cx, &overlay_root_name);
+                let portal_ctx = portal_inherited::PortalInherited::capture(cx);
                 let submenu_cfg = menu::sub::MenuSubmenuConfig::default();
-                let submenu = cx.with_root_name(&overlay_root_name, |cx| {
-                    menu::root::sync_root_open_and_ensure_submenu(cx, is_open, cx.root_id(), submenu_cfg)
-                });
+                let submenu = portal_inherited::with_root_name_inheriting(
+                    cx,
+                    &overlay_root_name,
+                    portal_ctx,
+                    |cx| {
+                        menu::root::sync_root_open_and_ensure_submenu(
+                            cx,
+                            is_open,
+                            cx.root_id(),
+                            submenu_cfg,
+                        )
+                    },
+                );
                 let mut states = WidgetStates::from_pressable(cx, st, enabled);
                 states.set(WidgetState::Open, is_open);
 
                 let trigger_bg_prop = WidgetStateProperty::new(None)
-                    .when(WidgetStates::HOVERED, Some(alpha_mul(bg_hover, 0.8)))
-                    .when(WidgetStates::ACTIVE, Some(alpha_mul(bg_hover, 0.8)))
-                    .when(WidgetStates::FOCUSED, Some(alpha_mul(bg_hover, 0.8)))
-                    .when(WidgetStates::OPEN, Some(bg_open))
+                    .when(WidgetStates::HOVERED, Some(bg_hover))
+                    .when(WidgetStates::ACTIVE, Some(bg_hover))
+                    .when(WidgetStates::FOCUSED, Some(bg_hover))
+                    .when(WidgetStates::OPEN, Some(bg_hover))
                     .when(WidgetStates::DISABLED, None);
 
                 let trigger_bg = *trigger_bg_prop.resolve(states);
@@ -1498,10 +1513,14 @@ impl MenubarMenuEntries {
                     let last_item_focus_id_for_children = last_item_focus_id.clone();
                     let last_item_focus_id_for_children_for_content =
                         last_item_focus_id_for_children.clone();
-                    let direction = direction_prim::use_direction_in_scope(cx, None);
+                    let direction = portal_ctx.direction;
 
                     let (overlay_children, dismissible_on_pointer_move) =
-                        cx.with_root_name(&overlay_root_name, move |cx| {
+                        portal_inherited::with_root_name_inheriting(
+                        cx,
+                        &overlay_root_name,
+                        portal_ctx,
+                        move |cx| {
                         let Some(anchor) = overlay::anchor_bounds_for_element(cx, trigger_id) else {
                             return (Vec::new(), None);
                         };
@@ -1812,7 +1831,6 @@ impl MenubarMenuEntries {
                                                         }
                                                         MenubarEntry::Label(label) => {
                                                             let text = label.text.clone();
-                                                            let fg = alpha_mul(fg_muted, 0.85);
                                                             let pad_left =
                                                                 if label.inset { pad_x_inset } else { pad_x };
                                                             out.push(cx.container(
@@ -1954,11 +1972,10 @@ impl MenubarMenuEntries {
                                                                         Color::TRANSPARENT,
                                                                     );
                                                                     let fg_prop =
-                                                                        WidgetStateProperty::new(fg)
-                                                                            .when(
-                                                                                WidgetStates::DISABLED,
-                                                                                alpha_mul(fg_muted, 0.85),
-                                                                            );
+                                                                        WidgetStateProperty::new(fg).when(
+                                                                            WidgetStates::DISABLED,
+                                                                            alpha_mul(fg, 0.5),
+                                                                        );
 
                                                                     let bg = *bg_prop.resolve(states);
                                                                     let fg = *fg_prop.resolve(states);
@@ -2010,6 +2027,7 @@ impl MenubarMenuEntries {
                                                                         Some(checked_now),
                                                                         false,
                                                                         bg,
+                                                                        fg,
                                                                         fg,
                                                                         pad_x,
                                                                         pad_x,
@@ -2142,11 +2160,10 @@ impl MenubarMenuEntries {
                                                                         Color::TRANSPARENT,
                                                                     );
                                                                     let fg_prop =
-                                                                        WidgetStateProperty::new(fg)
-                                                                            .when(
-                                                                                WidgetStates::DISABLED,
-                                                                                alpha_mul(fg_muted, 0.85),
-                                                                            );
+                                                                        WidgetStateProperty::new(fg).when(
+                                                                            WidgetStates::DISABLED,
+                                                                            alpha_mul(fg, 0.5),
+                                                                        );
 
                                                                     let bg = *bg_prop.resolve(states);
                                                                     let fg = *fg_prop.resolve(states);
@@ -2198,6 +2215,7 @@ impl MenubarMenuEntries {
                                                                         Some(is_selected),
                                                                         false,
                                                                         bg,
+                                                                        fg,
                                                                         fg,
                                                                         pad_x,
                                                                         pad_x,
@@ -2403,11 +2421,10 @@ impl MenubarMenuEntries {
                                                                         Color::TRANSPARENT,
                                                                     );
                                                                     let fg_prop =
-                                                                        WidgetStateProperty::new(base_fg)
-                                                                            .when(
-                                                                                WidgetStates::DISABLED,
-                                                                                alpha_mul(fg_muted, 0.85),
-                                                                            );
+                                                                        WidgetStateProperty::new(base_fg).when(
+                                                                            WidgetStates::DISABLED,
+                                                                            alpha_mul(base_fg, 0.5),
+                                                                        );
 
                                                                     let bg = *bg_prop.resolve(states);
                                                                     let fg = *fg_prop.resolve(states);
@@ -2469,7 +2486,24 @@ impl MenubarMenuEntries {
                                                                         })
                                                                     };
 
-                                                                     let children = menu_row_children(
+                                                                    let icon_fg = if has_submenu {
+                                                                        fg
+                                                                    } else {
+                                                                        let base = if variant
+                                                                            == MenubarItemVariant::Destructive
+                                                                        {
+                                                                            destructive_fg
+                                                                        } else {
+                                                                            fg_muted
+                                                                        };
+                                                                        if item_enabled {
+                                                                            base
+                                                                        } else {
+                                                                            alpha_mul(base, 0.5)
+                                                                        }
+                                                                    };
+
+                                                                    let children = menu_row_children(
                                                                           cx,
                                                                           label.clone(),
                                                                           leading_icon,
@@ -2480,6 +2514,7 @@ impl MenubarMenuEntries {
                                                                          has_submenu,
                                                                          bg,
                                                                          fg,
+                                                                         icon_fg,
                                                                          pad_left,
                                                                          pad_x,
                                                                          pad_y,
@@ -2552,11 +2587,10 @@ impl MenubarMenuEntries {
                                                                         Color::TRANSPARENT,
                                                                     );
                                                                     let fg_prop =
-                                                                        WidgetStateProperty::new(fg)
-                                                                            .when(
-                                                                                WidgetStates::DISABLED,
-                                                                                alpha_mul(fg_muted, 0.85),
-                                                                            );
+                                                                        WidgetStateProperty::new(fg).when(
+                                                                            WidgetStates::DISABLED,
+                                                                            alpha_mul(fg, 0.5),
+                                                                        );
 
                                                                     let bg = *bg_prop.resolve(states);
                                                                     let fg = *fg_prop.resolve(states);
@@ -2714,7 +2748,8 @@ impl MenubarMenuEntries {
                                 st.geometry = Some(*geometry);
                             }
                             (st.open_value.clone(), st.geometry)
-                        });
+                        },
+                        );
 
                         if submenu_motion.present {
                             let open_value = open_submenu
@@ -2935,7 +2970,6 @@ impl MenubarMenuEntries {
                                                                      }
                                                                     MenubarEntry::Label(label) => {
                                                                         let text = label.text.clone();
-                                                                        let fg = alpha_mul(fg_muted, 0.85);
                                                                         let pad_left = if label.inset {
                                                                             pad_x_inset
                                                                         } else {
@@ -3054,7 +3088,7 @@ impl MenubarMenuEntries {
                                                                                 let fg_prop =
                                                                                     WidgetStateProperty::new(fg).when(
                                                                                         WidgetStates::DISABLED,
-                                                                                        alpha_mul(fg_muted, 0.85),
+                                                                                        alpha_mul(fg, 0.5),
                                                                                     );
 
                                                                                 let bg = *bg_prop.resolve(states);
@@ -3107,6 +3141,7 @@ impl MenubarMenuEntries {
                                                                                     Some(checked_now),
                                                                                     false,
                                                                                     bg,
+                                                                                    fg,
                                                                                     fg,
                                                                                     pad_x,
                                                                                     pad_x,
@@ -3213,7 +3248,7 @@ impl MenubarMenuEntries {
                                                                                 let fg_prop =
                                                                                     WidgetStateProperty::new(fg).when(
                                                                                         WidgetStates::DISABLED,
-                                                                                        alpha_mul(fg_muted, 0.85),
+                                                                                        alpha_mul(fg, 0.5),
                                                                                     );
 
                                                                                 let bg = *bg_prop.resolve(states);
@@ -3266,6 +3301,7 @@ impl MenubarMenuEntries {
                                                                                     Some(is_selected),
                                                                                     false,
                                                                                     bg,
+                                                                                    fg,
                                                                                     fg,
                                                                                     pad_x,
                                                                                     pad_x,
@@ -3377,7 +3413,7 @@ impl MenubarMenuEntries {
                                                                                 let fg_prop =
                                                                                     WidgetStateProperty::new(base_fg).when(
                                                                                         WidgetStates::DISABLED,
-                                                                                        alpha_mul(fg_muted, 0.85),
+                                                                                        alpha_mul(base_fg, 0.5),
                                                                                     );
 
                                                                                 let bg = *bg_prop.resolve(states);
@@ -3424,6 +3460,19 @@ impl MenubarMenuEntries {
                                                                                     ..Default::default()
                                                                                 };
 
+                                                                                let icon_base = if variant
+                                                                                    == MenubarItemVariant::Destructive
+                                                                                {
+                                                                                    destructive_fg
+                                                                                } else {
+                                                                                    fg_muted
+                                                                                };
+                                                                                let icon_fg = if item_enabled {
+                                                                                    icon_base
+                                                                                } else {
+                                                                                    alpha_mul(icon_base, 0.5)
+                                                                                };
+
                                                                                 let children = menu_row_children(
                                                                                     cx,
                                                                                     label.clone(),
@@ -3435,6 +3484,7 @@ impl MenubarMenuEntries {
                                                                                     false,
                                                                                     bg,
                                                                                     fg,
+                                                                                    icon_fg,
                                                                                     pad_left,
                                                                                     pad_x,
                                                                                     pad_y,
@@ -4770,8 +4820,7 @@ mod tests {
 
         render_frame(&mut ui, &mut app, &mut services, window, bounds);
 
-        let theme = Theme::global(&app).clone();
-        let expected_bg = theme.color_token("accent");
+        let expected_bg = Theme::global(&app).snapshot().color_token("accent");
 
         let mut scene = fret_core::Scene::default();
         ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);

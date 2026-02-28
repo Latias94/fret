@@ -167,19 +167,63 @@ impl Renderer {
             let mut active_mask_image: Option<UniformMaskImageSelection> = None;
             let mut active_scissor: Option<ScissorRect> = None;
 
-            let mut set_scissor =
-                |pass: &mut wgpu::RenderPass<'_>,
-                 scissor: ScissorRect,
-                 frame_perf: &mut RenderPerfStats| {
-                    if active_scissor != Some(scissor) {
-                        if set_scissor_rect_absolute(pass, scissor, target_origin, target_size)
-                            && perf_enabled
+            #[cfg(all(debug_assertions, not(target_arch = "wasm32")))]
+            fn parse_env_u64(name: &str) -> Option<u64> {
+                std::env::var(name).ok().and_then(|v| v.parse::<u64>().ok())
+            }
+
+            #[cfg(all(debug_assertions, not(target_arch = "wasm32")))]
+            fn parse_scissor_rect_env(name: &str) -> Option<ScissorRect> {
+                let v = std::env::var(name).ok()?;
+                let mut it = v.split([',', ' ']).filter(|s| !s.is_empty());
+                let x = it.next()?.parse::<u32>().ok()?;
+                let y = it.next()?.parse::<u32>().ok()?;
+                let w = it.next()?.parse::<u32>().ok()?;
+                let h = it.next()?.parse::<u32>().ok()?;
+                Some(ScissorRect { x, y, w, h })
+            }
+
+            fn set_scissor(
+                pass: &mut wgpu::RenderPass<'_>,
+                ordered_draw_ix: usize,
+                scissor: ScissorRect,
+                active_scissor: &mut Option<ScissorRect>,
+                target_origin: (u32, u32),
+                target_size: (u32, u32),
+                perf_enabled: bool,
+                frame_perf: &mut RenderPerfStats,
+            ) -> bool {
+                #[cfg(all(debug_assertions, not(target_arch = "wasm32")))]
+                let scissor = {
+                    let global = parse_scissor_rect_env("FRET_RENDER_SCISSOR_OVERRIDE");
+                    let draw_ix = parse_env_u64("FRET_RENDER_SCISSOR_OVERRIDE_DRAW_IX");
+                    let draw = parse_scissor_rect_env("FRET_RENDER_SCISSOR_OVERRIDE_RECT");
+                    match (global, draw_ix, draw) {
+                        (Some(global), _, _) => global,
+                        (None, Some(draw_ix), Some(draw))
+                            if draw_ix as usize == ordered_draw_ix =>
                         {
-                            frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
+                            draw
                         }
-                        active_scissor = Some(scissor);
+                        _ => scissor,
                     }
                 };
+
+                if *active_scissor == Some(scissor) {
+                    return true;
+                }
+
+                let applied = set_scissor_rect_absolute(pass, scissor, target_origin, target_size);
+                if applied {
+                    if perf_enabled {
+                        frame_perf.scissor_sets = frame_perf.scissor_sets.saturating_add(1);
+                    }
+                    *active_scissor = Some(scissor);
+                } else {
+                    *active_scissor = None;
+                }
+                applied
+            }
 
             let mut set_uniform =
                 |pass: &mut wgpu::RenderPass<'_>,
@@ -222,6 +266,7 @@ impl Renderer {
                             || active_quad_pipeline != Some(draw.pipeline)
                         {
                             pass.set_pipeline(quad_pipeline);
+                            active_scissor = None;
                             if perf_enabled {
                                 frame_perf.pipeline_switches =
                                     frame_perf.pipeline_switches.saturating_add(1);
@@ -256,7 +301,19 @@ impl Renderer {
                             mask_image,
                             frame_perf,
                         );
-                        set_scissor(&mut pass, draw.scissor, frame_perf);
+                        if !set_scissor(
+                            &mut pass,
+                            i,
+                            draw.scissor,
+                            &mut active_scissor,
+                            target_origin,
+                            target_size,
+                            perf_enabled,
+                            frame_perf,
+                        ) {
+                            i += 1;
+                            continue;
+                        }
                         pass.draw(
                             0..6,
                             draw.first_instance..(draw.first_instance + draw.instance_count),
@@ -275,6 +332,7 @@ impl Renderer {
 
                         if !matches!(active_pipeline, ActivePipeline::Viewport) {
                             pass.set_pipeline(viewport_pipeline);
+                            active_scissor = None;
                             if perf_enabled {
                                 frame_perf.pipeline_switches =
                                     frame_perf.pipeline_switches.saturating_add(1);
@@ -319,7 +377,19 @@ impl Renderer {
                             frame_perf.texture_bind_group_switches =
                                 frame_perf.texture_bind_group_switches.saturating_add(1);
                         }
-                        set_scissor(&mut pass, draw.scissor, frame_perf);
+                        if !set_scissor(
+                            &mut pass,
+                            i,
+                            draw.scissor,
+                            &mut active_scissor,
+                            target_origin,
+                            target_size,
+                            perf_enabled,
+                            frame_perf,
+                        ) {
+                            i += 1;
+                            continue;
+                        }
                         pass.draw(
                             draw.first_vertex..(draw.first_vertex + draw.vertex_count),
                             0..1,
@@ -370,6 +440,7 @@ impl Renderer {
 
                         if !matches!(active_pipeline, ActivePipeline::Viewport) {
                             pass.set_pipeline(viewport_pipeline);
+                            active_scissor = None;
                             if perf_enabled {
                                 frame_perf.pipeline_switches =
                                     frame_perf.pipeline_switches.saturating_add(1);
@@ -410,7 +481,19 @@ impl Renderer {
                             frame_perf.texture_bind_group_switches =
                                 frame_perf.texture_bind_group_switches.saturating_add(1);
                         }
-                        set_scissor(&mut pass, draw.scissor, frame_perf);
+                        if !set_scissor(
+                            &mut pass,
+                            i,
+                            draw.scissor,
+                            &mut active_scissor,
+                            target_origin,
+                            target_size,
+                            perf_enabled,
+                            frame_perf,
+                        ) {
+                            i += 1;
+                            continue;
+                        }
                         pass.draw(
                             draw.first_vertex..(draw.first_vertex + draw.vertex_count),
                             0..1,
@@ -429,6 +512,7 @@ impl Renderer {
 
                         if !matches!(active_pipeline, ActivePipeline::Mask) {
                             pass.set_pipeline(mask_pipeline);
+                            active_scissor = None;
                             if perf_enabled {
                                 frame_perf.pipeline_switches =
                                     frame_perf.pipeline_switches.saturating_add(1);
@@ -469,7 +553,19 @@ impl Renderer {
                             frame_perf.texture_bind_group_switches =
                                 frame_perf.texture_bind_group_switches.saturating_add(1);
                         }
-                        set_scissor(&mut pass, draw.scissor, frame_perf);
+                        if !set_scissor(
+                            &mut pass,
+                            i,
+                            draw.scissor,
+                            &mut active_scissor,
+                            target_origin,
+                            target_size,
+                            perf_enabled,
+                            frame_perf,
+                        ) {
+                            i += 1;
+                            continue;
+                        }
                         pass.draw(
                             draw.first_vertex..(draw.first_vertex + draw.vertex_count),
                             0..1,
@@ -490,6 +586,7 @@ impl Renderer {
                             TextDrawKind::Mask => {
                                 if !matches!(active_pipeline, ActivePipeline::TextMask) {
                                     pass.set_pipeline(text_pipeline);
+                                    active_scissor = None;
                                     if perf_enabled {
                                         frame_perf.pipeline_switches =
                                             frame_perf.pipeline_switches.saturating_add(1);
@@ -532,6 +629,7 @@ impl Renderer {
                             TextDrawKind::MaskOutline => {
                                 if !matches!(active_pipeline, ActivePipeline::TextMaskOutline) {
                                     pass.set_pipeline(text_outline_pipeline);
+                                    active_scissor = None;
                                     if perf_enabled {
                                         frame_perf.pipeline_switches =
                                             frame_perf.pipeline_switches.saturating_add(1);
@@ -574,6 +672,7 @@ impl Renderer {
                             TextDrawKind::Color => {
                                 if !matches!(active_pipeline, ActivePipeline::TextColor) {
                                     pass.set_pipeline(text_color_pipeline);
+                                    active_scissor = None;
                                     if perf_enabled {
                                         frame_perf.pipeline_switches =
                                             frame_perf.pipeline_switches.saturating_add(1);
@@ -616,6 +715,7 @@ impl Renderer {
                             TextDrawKind::Subpixel => {
                                 if !matches!(active_pipeline, ActivePipeline::TextSubpixel) {
                                     pass.set_pipeline(text_subpixel_pipeline);
+                                    active_scissor = None;
                                     if perf_enabled {
                                         frame_perf.pipeline_switches =
                                             frame_perf.pipeline_switches.saturating_add(1);
@@ -658,6 +758,7 @@ impl Renderer {
                             TextDrawKind::SubpixelOutline => {
                                 if !matches!(active_pipeline, ActivePipeline::TextSubpixelOutline) {
                                     pass.set_pipeline(text_subpixel_outline_pipeline);
+                                    active_scissor = None;
                                     if perf_enabled {
                                         frame_perf.pipeline_switches =
                                             frame_perf.pipeline_switches.saturating_add(1);
@@ -716,7 +817,19 @@ impl Renderer {
                             mask_image,
                             frame_perf,
                         );
-                        set_scissor(&mut pass, draw.scissor, frame_perf);
+                        if !set_scissor(
+                            &mut pass,
+                            i,
+                            draw.scissor,
+                            &mut active_scissor,
+                            target_origin,
+                            target_size,
+                            perf_enabled,
+                            frame_perf,
+                        ) {
+                            i += 1;
+                            continue;
+                        }
                         pass.draw(
                             draw.first_vertex..(draw.first_vertex + draw.vertex_count),
                             draw.paint_index..(draw.paint_index + 1),
@@ -735,6 +848,7 @@ impl Renderer {
 
                         if !matches!(active_pipeline, ActivePipeline::Path) {
                             pass.set_pipeline(path_pipeline);
+                            active_scissor = None;
                             if perf_enabled {
                                 frame_perf.pipeline_switches =
                                     frame_perf.pipeline_switches.saturating_add(1);
@@ -767,7 +881,19 @@ impl Renderer {
                             mask_image,
                             frame_perf,
                         );
-                        set_scissor(&mut pass, draw.scissor, frame_perf);
+                        if !set_scissor(
+                            &mut pass,
+                            i,
+                            draw.scissor,
+                            &mut active_scissor,
+                            target_origin,
+                            target_size,
+                            perf_enabled,
+                            frame_perf,
+                        ) {
+                            i += 1;
+                            continue;
+                        }
                         pass.draw(
                             draw.first_vertex..(draw.first_vertex + draw.vertex_count),
                             draw.paint_index..(draw.paint_index + 1),

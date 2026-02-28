@@ -14,6 +14,8 @@ pub(super) fn handle_move_pointer_sweep_step(
     force_dump_label: &mut Option<String>,
 ) -> bool {
     let UiActionStepV2::MovePointerSweep {
+        window: _,
+        pointer_kind,
         target,
         delta_x,
         delta_y,
@@ -24,6 +26,7 @@ pub(super) fn handle_move_pointer_sweep_step(
         return false;
     };
 
+    let pointer_type = pointer_type_from_kind(pointer_kind);
     active.wait_until = None;
     active.screenshot_wait = None;
 
@@ -182,7 +185,9 @@ pub(super) fn handle_move_pointer_sweep_step(
         let x = state.start.x.0 + (state.end.x.0 - state.start.x.0) * t;
         let y = state.start.y.0 + (state.end.y.0 - state.start.y.0) * t;
         let position = Point::new(fret_core::Px(x), fret_core::Px(y));
-        output.events.push(move_pointer_event(position));
+        output
+            .events
+            .push(move_pointer_event(position, pointer_type));
 
         state.next_step = state.next_step.saturating_add(1);
         state.wait_frames_remaining = state.frames_per_step.saturating_sub(1);

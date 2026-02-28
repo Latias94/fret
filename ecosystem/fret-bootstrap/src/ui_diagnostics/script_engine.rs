@@ -36,6 +36,10 @@ pub(super) fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> b
 
     match step {
         UiActionStepV2::Click { .. }
+        | UiActionStepV2::Tap { .. }
+        | UiActionStepV2::LongPress { .. }
+        | UiActionStepV2::Swipe { .. }
+        | UiActionStepV2::Pinch { .. }
         | UiActionStepV2::ClickStable { .. }
         | UiActionStepV2::ClickSelectableTextSpanStable { .. }
         | UiActionStepV2::WaitBoundsStable { .. }
@@ -67,6 +71,8 @@ pub(super) fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> b
         | UiActionStepV2::SetWindowInnerSize { .. }
         | UiActionStepV2::SetWindowInsets { .. }
         | UiActionStepV2::SetClipboardForceUnavailable { .. }
+        | UiActionStepV2::SetClipboardText { .. }
+        | UiActionStepV2::AssertClipboardText { .. }
         | UiActionStepV2::InjectIncomingOpen { .. }
         | UiActionStepV2::SetWindowOuterPosition { .. }
         | UiActionStepV2::SetCursorScreenPos { .. }
@@ -82,6 +88,10 @@ pub(super) fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> b
 pub(super) fn script_step_kind_name(step: &UiActionStepV2) -> &'static str {
     match step {
         UiActionStepV2::Click { .. } => "click",
+        UiActionStepV2::Tap { .. } => "tap",
+        UiActionStepV2::LongPress { .. } => "long_press",
+        UiActionStepV2::Swipe { .. } => "swipe",
+        UiActionStepV2::Pinch { .. } => "pinch",
         UiActionStepV2::ClickStable { .. } => "click_stable",
         UiActionStepV2::ClickSelectableTextSpanStable { .. } => "click_selectable_text_span_stable",
         UiActionStepV2::DragPointer { .. } => "drag_pointer",
@@ -96,6 +106,8 @@ pub(super) fn script_step_kind_name(step: &UiActionStepV2) -> &'static str {
         UiActionStepV2::CaptureBundle { .. } => "capture_bundle",
         UiActionStepV2::CaptureScreenshot { .. } => "capture_screenshot",
         UiActionStepV2::ResetDiagnostics => "reset_diagnostics",
+        UiActionStepV2::SetClipboardText { .. } => "set_clipboard_text",
+        UiActionStepV2::AssertClipboardText { .. } => "assert_clipboard_text",
         _ => "step",
     }
 }
@@ -202,11 +214,27 @@ pub(super) fn dispatch_drive_script_step(
             );
         }
         step @ (UiActionStepV2::SetClipboardForceUnavailable { .. }
+        | UiActionStepV2::SetClipboardText { .. }
         | UiActionStepV2::InjectIncomingOpen { .. }
         | UiActionStepV2::WaitFrames { .. }
         | UiActionStepV2::ResetDiagnostics) => {
             let handled =
                 script_steps::handle_effect_only_steps(service, window, step, active, output);
+            debug_assert!(handled);
+        }
+        step @ UiActionStepV2::AssertClipboardText { .. } => {
+            let handled = script_steps_clipboard::handle_assert_clipboard_text_step(
+                service,
+                app,
+                window,
+                step_index,
+                step,
+                active,
+                output,
+                force_dump_label,
+                stop_script,
+                failure_reason,
+            );
             debug_assert!(handled);
         }
         step
@@ -324,6 +352,98 @@ pub(super) fn dispatch_drive_script_step(
         }
         step @ UiActionStepV2::Click { .. } => {
             let should_return = script_steps_pointer::handle_click_step(
+                service,
+                app,
+                window,
+                window_bounds,
+                anchor_window,
+                step_index,
+                step,
+                element_runtime,
+                semantics_snapshot,
+                ui.as_deref_mut(),
+                active,
+                output,
+                force_dump_label,
+                handoff_to,
+                stop_script,
+                failure_reason,
+            );
+            if should_return {
+                return DriveScriptStepDispatchOutcome::ReturnOutput;
+            }
+        }
+        step @ UiActionStepV2::Tap { .. } => {
+            let should_return = script_steps_pointer::handle_tap_step(
+                service,
+                app,
+                window,
+                window_bounds,
+                anchor_window,
+                step_index,
+                step,
+                element_runtime,
+                semantics_snapshot,
+                ui.as_deref_mut(),
+                active,
+                output,
+                force_dump_label,
+                handoff_to,
+                stop_script,
+                failure_reason,
+            );
+            if should_return {
+                return DriveScriptStepDispatchOutcome::ReturnOutput;
+            }
+        }
+        step @ UiActionStepV2::LongPress { .. } => {
+            let should_return = script_steps_pointer::handle_long_press_step(
+                service,
+                app,
+                window,
+                window_bounds,
+                anchor_window,
+                step_index,
+                step,
+                element_runtime,
+                semantics_snapshot,
+                ui.as_deref_mut(),
+                active,
+                output,
+                force_dump_label,
+                handoff_to,
+                stop_script,
+                failure_reason,
+            );
+            if should_return {
+                return DriveScriptStepDispatchOutcome::ReturnOutput;
+            }
+        }
+        step @ UiActionStepV2::Swipe { .. } => {
+            let should_return = script_steps_pointer::handle_swipe_step(
+                service,
+                app,
+                window,
+                window_bounds,
+                anchor_window,
+                step_index,
+                step,
+                element_runtime,
+                semantics_snapshot,
+                ui.as_deref_mut(),
+                active,
+                output,
+                force_dump_label,
+                handoff_to,
+                stop_script,
+                failure_reason,
+            );
+            if should_return {
+                return DriveScriptStepDispatchOutcome::ReturnOutput;
+            }
+        }
+        step @ UiActionStepV2::Pinch { .. } => {
+            let should_return = script_steps_pointer::handle_pinch_step(
                 service,
                 app,
                 window,
@@ -794,7 +914,7 @@ pub(super) fn finalize_drive_script_for_window(
                             unix_ms: unix_ms_now(),
                             kind: "bundle_dumped".to_string(),
                             step_index: Some(step_index as u32),
-                            note: Some(label.to_string()),
+                            note: Some(format_bundle_dump_note(label, None, None)),
                             bundle_dir: Some(display_path(&service.cfg.out_dir, dir)),
                             window: Some(window.data().as_ffi()),
                             tick_id: Some(app.tick_id().0),
@@ -805,6 +925,7 @@ pub(super) fn finalize_drive_script_for_window(
                 }
             }
         } else if let Some(label) = force_dump_label {
+            let note = format_bundle_dump_note(&label, force_dump_max_snapshots, None);
             push_script_event_log(
                 &mut active,
                 &service.cfg,
@@ -812,7 +933,7 @@ pub(super) fn finalize_drive_script_for_window(
                     unix_ms: unix_ms_now(),
                     kind: "bundle_dump_requested".to_string(),
                     step_index: Some(step_index as u32),
-                    note: Some(label.clone()),
+                    note: Some(note),
                     bundle_dir: None,
                     window: Some(window.data().as_ffi()),
                     tick_id: Some(app.tick_id().0),
@@ -852,6 +973,7 @@ pub(super) fn finalize_drive_script_for_window(
         });
     } else {
         if let Some(label) = force_dump_label {
+            let note = format_bundle_dump_note(&label, force_dump_max_snapshots, None);
             push_script_event_log(
                 &mut active,
                 &service.cfg,
@@ -859,7 +981,7 @@ pub(super) fn finalize_drive_script_for_window(
                     unix_ms: unix_ms_now(),
                     kind: "bundle_dump_requested".to_string(),
                     step_index: Some(step_index as u32),
-                    note: Some(label.clone()),
+                    note: Some(note),
                     bundle_dir: None,
                     window: Some(window.data().as_ffi()),
                     tick_id: Some(app.tick_id().0),
@@ -1277,11 +1399,8 @@ impl UiDiagnosticsService {
         self.ensure_ready_file();
         self.poll_script_trigger();
 
-        #[cfg(feature = "diagnostics-ws")]
         let devtools_request_redraw =
-            self.drive_devtools_ws_requests_for_window(app, window, scale_factor, ui.as_deref());
-        #[cfg(not(feature = "diagnostics-ws"))]
-        let devtools_request_redraw = false;
+            self.drive_devtools_requests_for_window(app, window, scale_factor, ui.as_deref());
 
         self.maybe_start_pending_script(app, window);
 

@@ -8,12 +8,13 @@ use fret_ui::element::{
     PositionStyle, SemanticsDecoration, SizeStyle,
 };
 use fret_ui::overlay_placement::Side;
-use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
+use fret_ui::{ElementContext, Invalidation, Theme, ThemeNamedColorKey, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::declarative::{occlusion_insets_or_zero, safe_area_insets_or_zero};
 use fret_ui_kit::primitives::dialog as radix_dialog;
+use fret_ui_kit::primitives::portal_inherited;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, OverlayController, OverlayPresence, Space, ui,
 };
@@ -21,13 +22,10 @@ use fret_ui_kit::{
 use crate::layout as shadcn_layout;
 use crate::overlay_motion;
 
-fn default_overlay_color() -> Color {
-    Color {
-        r: 0.0,
-        g: 0.0,
-        b: 0.0,
-        a: 0.5,
-    }
+fn default_overlay_color(theme: &ThemeSnapshot) -> Color {
+    let mut scrim = theme.named_color(ThemeNamedColorKey::Black);
+    scrim.a = 0.5;
+    scrim
 }
 
 type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
@@ -95,6 +93,34 @@ fn with_sheet_side_provider<H: UiHost, R>(
 
 fn sheet_side_in_scope<H: UiHost>(cx: &ElementContext<'_, H>) -> SheetSide {
     inherited_sheet_side(cx).unwrap_or_default()
+}
+
+#[derive(Debug, Default)]
+struct SheetOpenProviderState {
+    current: Option<Model<bool>>,
+}
+
+fn inherited_sheet_open<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<Model<bool>> {
+    cx.inherited_state_where::<SheetOpenProviderState>(|st| st.current.is_some())
+        .and_then(|st| st.current.clone())
+}
+
+#[track_caller]
+fn with_sheet_open_provider<H: UiHost, R>(
+    cx: &mut ElementContext<'_, H>,
+    open: Model<bool>,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
+) -> R {
+    let prev = cx.with_state(SheetOpenProviderState::default, |st| {
+        let prev = st.current.clone();
+        st.current = Some(open);
+        prev
+    });
+    let out = f(cx);
+    cx.with_state(SheetOpenProviderState::default, |st| {
+        st.current = prev;
+    });
+    out
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -333,7 +359,7 @@ impl Sheet {
         content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
     ) -> AnyElement {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
+            let theme = Theme::global(&*cx.app).snapshot();
             let is_open = cx.watch_model(&self.open).paint().copied().unwrap_or(false);
 
             let trigger = trigger(cx);
@@ -379,7 +405,9 @@ impl Sheet {
 
                 let open = self.open.clone();
                 let open_for_children = open.clone();
-                let overlay_color = self.overlay_color.unwrap_or_else(default_overlay_color);
+                let overlay_color = self
+                    .overlay_color
+                    .unwrap_or_else(|| default_overlay_color(&theme));
                 let overlay_closable = self.overlay_closable;
                 let sheet_side = self.side;
                 let dialog_options = radix_dialog::DialogOptions::default()
@@ -404,200 +432,211 @@ impl Sheet {
                     .unwrap_or(default_size);
 
                 let opacity = motion.progress;
-                let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
-                    let barrier_fill = cx.container(
-                        ContainerProps {
-                            layout: LayoutStyle {
-                                size: SizeStyle {
-                                    width: Length::Fill,
+                let portal_inherited = portal_inherited::PortalInherited::capture(cx);
+                let overlay_children = portal_inherited::with_root_name_inheriting(
+                    cx,
+                    &overlay_root_name,
+                    portal_inherited,
+                    |cx| {
+                        let barrier_fill = cx.container(
+                            ContainerProps {
+                                layout: LayoutStyle {
+                                    size: SizeStyle {
+                                        width: Length::Fill,
+                                        height: Length::Fill,
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                padding: Edges::all(Px(0.0)).into(),
+                                background: Some(overlay_color),
+                                shadow: None,
+                                border: Edges::all(Px(0.0)),
+                                border_color: None,
+                                corner_radii: Corners::all(Px(0.0)),
+                                ..Default::default()
+                            },
+                            |_cx| Vec::new(),
+                        );
+
+                        let content =
+                            with_sheet_open_provider(cx, open_for_children.clone(), |cx| {
+                                with_sheet_side_provider(cx, sheet_side, |cx| content(cx))
+                            });
+                        let vertical_auto_max_height_fraction = if vertical_auto_max_height_fraction
+                            .is_finite()
+                            && vertical_auto_max_height_fraction > 0.0
+                        {
+                            vertical_auto_max_height_fraction.min(1.0)
+                        } else {
+                            0.0
+                        };
+
+                        let (inset, size, estimated_motion_distance) = match sheet_side {
+                            SheetSide::Right => (
+                                InsetStyle {
+                                    top: Some(Px(0.0)).into(),
+                                    right: Some(Px(0.0)).into(),
+                                    bottom: Some(Px(0.0)).into(),
+                                    left: None.into(),
+                                },
+                                SizeStyle {
+                                    width: size_override
+                                        .map(|spec| spec.as_length())
+                                        .unwrap_or(Length::Px(default_size)),
+                                    max_width: match (size_override, max_size_override) {
+                                        (Some(SheetSizeOverride::Px(_)), _) => Some(Length::Fill),
+                                        (_, Some(max_px)) => Some(Length::Px(max_px)),
+                                        _ => Some(Length::Fill),
+                                    },
                                     height: Length::Fill,
+                                    ..Default::default()
+                                },
+                                estimated_motion_distance_px,
+                            ),
+                            SheetSide::Left => (
+                                InsetStyle {
+                                    top: Some(Px(0.0)).into(),
+                                    right: None.into(),
+                                    bottom: Some(Px(0.0)).into(),
+                                    left: Some(Px(0.0)).into(),
+                                },
+                                SizeStyle {
+                                    width: size_override
+                                        .map(|spec| spec.as_length())
+                                        .unwrap_or(Length::Px(default_size)),
+                                    max_width: match (size_override, max_size_override) {
+                                        (Some(SheetSizeOverride::Px(_)), _) => Some(Length::Fill),
+                                        (_, Some(max_px)) => Some(Length::Px(max_px)),
+                                        _ => Some(Length::Fill),
+                                    },
+                                    height: Length::Fill,
+                                    ..Default::default()
+                                },
+                                estimated_motion_distance_px,
+                            ),
+                            SheetSide::Top => (
+                                InsetStyle {
+                                    top: Some(Px(0.0)).into(),
+                                    right: Some(Px(0.0)).into(),
+                                    bottom: None.into(),
+                                    left: Some(Px(0.0)).into(),
+                                },
+                                SizeStyle {
+                                    width: Length::Fill,
+                                    height: if let Some(spec) = size_override {
+                                        spec.as_length()
+                                    } else {
+                                        Length::Auto
+                                    },
+                                    max_height: if size_override.is_some() {
+                                        Some(Length::Fill)
+                                    } else if vertical_auto_max_height_fraction < 1.0 {
+                                        Some(Length::Fraction(vertical_auto_max_height_fraction))
+                                    } else {
+                                        None
+                                    },
+                                    ..Default::default()
+                                },
+                                estimated_motion_distance_px,
+                            ),
+                            SheetSide::Bottom => (
+                                InsetStyle {
+                                    top: None.into(),
+                                    right: Some(Px(0.0)).into(),
+                                    bottom: Some(Px(0.0)).into(),
+                                    left: Some(Px(0.0)).into(),
+                                },
+                                SizeStyle {
+                                    width: Length::Fill,
+                                    height: if let Some(spec) = size_override {
+                                        spec.as_length()
+                                    } else {
+                                        Length::Auto
+                                    },
+                                    max_height: if size_override.is_some() {
+                                        Some(Length::Fill)
+                                    } else if vertical_auto_max_height_fraction < 1.0 {
+                                        Some(Length::Fraction(vertical_auto_max_height_fraction))
+                                    } else {
+                                        None
+                                    },
+                                    ..Default::default()
+                                },
+                                estimated_motion_distance_px,
+                            ),
+                        };
+
+                        let motion_side = match sheet_side {
+                            SheetSide::Left => Side::Left,
+                            SheetSide::Right => Side::Right,
+                            SheetSide::Top => Side::Top,
+                            SheetSide::Bottom => Side::Bottom,
+                        };
+
+                        let wrapper = cx.container(
+                            ContainerProps {
+                                layout: LayoutStyle {
+                                    position: PositionStyle::Absolute,
+                                    inset,
+                                    margin: match sheet_side {
+                                        SheetSide::Top if vertical_edge_gap_px.0 > 0.0 => {
+                                            MarginEdges {
+                                                bottom: MarginEdge::Px(vertical_edge_gap_px),
+                                                ..Default::default()
+                                            }
+                                        }
+                                        SheetSide::Bottom if vertical_edge_gap_px.0 > 0.0 => {
+                                            MarginEdges {
+                                                top: MarginEdge::Px(vertical_edge_gap_px),
+                                                ..Default::default()
+                                            }
+                                        }
+                                        _ => Default::default(),
+                                    },
+                                    size,
+                                    overflow: Overflow::Visible,
                                     ..Default::default()
                                 },
                                 ..Default::default()
                             },
-                            padding: Edges::all(Px(0.0)).into(),
-                            background: Some(overlay_color),
-                            shadow: None,
-                            border: Edges::all(Px(0.0)),
-                            border_color: None,
-                            corner_radii: Corners::all(Px(0.0)),
-                            ..Default::default()
-                        },
-                        |_cx| Vec::new(),
-                    );
+                            move |_cx| vec![content],
+                        );
 
-                    let content = with_sheet_side_provider(cx, sheet_side, |cx| content(cx));
-                    let vertical_auto_max_height_fraction = if vertical_auto_max_height_fraction
-                        .is_finite()
-                        && vertical_auto_max_height_fraction > 0.0
-                    {
-                        vertical_auto_max_height_fraction.min(1.0)
-                    } else {
-                        0.0
-                    };
+                        let motion_distance = match sheet_side {
+                            SheetSide::Left | SheetSide::Right => cx
+                                .last_bounds_for_element(wrapper.id)
+                                .map(|r| r.size.width)
+                                .unwrap_or(estimated_motion_distance),
+                            SheetSide::Top | SheetSide::Bottom if size_override.is_none() => cx
+                                .last_bounds_for_element(wrapper.id)
+                                .map(|r| r.size.height)
+                                .unwrap_or(estimated_motion_distance),
+                            SheetSide::Top | SheetSide::Bottom => estimated_motion_distance,
+                        };
+                        let slide = overlay_motion::shadcn_modal_slide_transform(
+                            motion_side,
+                            motion_distance,
+                            opacity,
+                        );
 
-                    let (inset, size, estimated_motion_distance) = match sheet_side {
-                        SheetSide::Right => (
-                            InsetStyle {
-                                top: Some(Px(0.0)).into(),
-                                right: Some(Px(0.0)).into(),
-                                bottom: Some(Px(0.0)).into(),
-                                left: None.into(),
-                            },
-                            SizeStyle {
-                                width: size_override
-                                    .map(|spec| spec.as_length())
-                                    .unwrap_or(Length::Px(default_size)),
-                                max_width: match (size_override, max_size_override) {
-                                    (Some(SheetSizeOverride::Px(_)), _) => Some(Length::Fill),
-                                    (_, Some(max_px)) => Some(Length::Px(max_px)),
-                                    _ => Some(Length::Fill),
-                                },
-                                height: Length::Fill,
-                                ..Default::default()
-                            },
-                            estimated_motion_distance_px,
-                        ),
-                        SheetSide::Left => (
-                            InsetStyle {
-                                top: Some(Px(0.0)).into(),
-                                right: None.into(),
-                                bottom: Some(Px(0.0)).into(),
-                                left: Some(Px(0.0)).into(),
-                            },
-                            SizeStyle {
-                                width: size_override
-                                    .map(|spec| spec.as_length())
-                                    .unwrap_or(Length::Px(default_size)),
-                                max_width: match (size_override, max_size_override) {
-                                    (Some(SheetSizeOverride::Px(_)), _) => Some(Length::Fill),
-                                    (_, Some(max_px)) => Some(Length::Px(max_px)),
-                                    _ => Some(Length::Fill),
-                                },
-                                height: Length::Fill,
-                                ..Default::default()
-                            },
-                            estimated_motion_distance_px,
-                        ),
-                        SheetSide::Top => (
-                            InsetStyle {
-                                top: Some(Px(0.0)).into(),
-                                right: Some(Px(0.0)).into(),
-                                bottom: None.into(),
-                                left: Some(Px(0.0)).into(),
-                            },
-                            SizeStyle {
-                                width: Length::Fill,
-                                height: if let Some(spec) = size_override {
-                                    spec.as_length()
-                                } else {
-                                    Length::Auto
-                                },
-                                max_height: if size_override.is_some() {
-                                    Some(Length::Fill)
-                                } else if vertical_auto_max_height_fraction < 1.0 {
-                                    Some(Length::Fraction(vertical_auto_max_height_fraction))
-                                } else {
-                                    None
-                                },
-                                ..Default::default()
-                            },
-                            estimated_motion_distance_px,
-                        ),
-                        SheetSide::Bottom => (
-                            InsetStyle {
-                                top: None.into(),
-                                right: Some(Px(0.0)).into(),
-                                bottom: Some(Px(0.0)).into(),
-                                left: Some(Px(0.0)).into(),
-                            },
-                            SizeStyle {
-                                width: Length::Fill,
-                                height: if let Some(spec) = size_override {
-                                    spec.as_length()
-                                } else {
-                                    Length::Auto
-                                },
-                                max_height: if size_override.is_some() {
-                                    Some(Length::Fill)
-                                } else if vertical_auto_max_height_fraction < 1.0 {
-                                    Some(Length::Fraction(vertical_auto_max_height_fraction))
-                                } else {
-                                    None
-                                },
-                                ..Default::default()
-                            },
-                            estimated_motion_distance_px,
-                        ),
-                    };
+                        let content = overlay_motion::wrap_opacity_and_render_transform(
+                            cx,
+                            opacity,
+                            slide,
+                            vec![wrapper],
+                        );
 
-                    let motion_side = match sheet_side {
-                        SheetSide::Left => Side::Left,
-                        SheetSide::Right => Side::Right,
-                        SheetSide::Top => Side::Top,
-                        SheetSide::Bottom => Side::Bottom,
-                    };
-
-                    let wrapper = cx.container(
-                        ContainerProps {
-                            layout: LayoutStyle {
-                                position: PositionStyle::Absolute,
-                                inset,
-                                margin: match sheet_side {
-                                    SheetSide::Top if vertical_edge_gap_px.0 > 0.0 => MarginEdges {
-                                        bottom: MarginEdge::Px(vertical_edge_gap_px),
-                                        ..Default::default()
-                                    },
-                                    SheetSide::Bottom if vertical_edge_gap_px.0 > 0.0 => {
-                                        MarginEdges {
-                                            top: MarginEdge::Px(vertical_edge_gap_px),
-                                            ..Default::default()
-                                        }
-                                    }
-                                    _ => Default::default(),
-                                },
-                                size,
-                                overflow: Overflow::Visible,
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        },
-                        move |_cx| vec![content],
-                    );
-
-                    let motion_distance = match sheet_side {
-                        SheetSide::Left | SheetSide::Right => cx
-                            .last_bounds_for_element(wrapper.id)
-                            .map(|r| r.size.width)
-                            .unwrap_or(estimated_motion_distance),
-                        SheetSide::Top | SheetSide::Bottom if size_override.is_none() => cx
-                            .last_bounds_for_element(wrapper.id)
-                            .map(|r| r.size.height)
-                            .unwrap_or(estimated_motion_distance),
-                        SheetSide::Top | SheetSide::Bottom => estimated_motion_distance,
-                    };
-                    let slide = overlay_motion::shadcn_modal_slide_transform(
-                        motion_side,
-                        motion_distance,
-                        opacity,
-                    );
-
-                    let content = overlay_motion::wrap_opacity_and_render_transform(
-                        cx,
-                        opacity,
-                        slide,
-                        vec![wrapper],
-                    );
-
-                    radix_dialog::modal_dialog_layer_elements_with_dismiss_handler(
-                        cx,
-                        open_for_children.clone(),
-                        dialog_options.clone(),
-                        on_dismiss_request_for_barrier.clone(),
-                        [barrier_fill],
-                        content,
-                    )
-                });
+                        radix_dialog::modal_dialog_layer_elements_with_dismiss_handler(
+                            cx,
+                            open_for_children.clone(),
+                            dialog_options.clone(),
+                            on_dismiss_request_for_barrier.clone(),
+                            [barrier_fill],
+                            content,
+                        )
+                    },
+                );
 
                 let request = radix_dialog::modal_dialog_request_with_options_and_dismiss_handler(
                     id,
@@ -616,12 +655,54 @@ impl Sheet {
     }
 }
 
+/// shadcn/ui `SheetClose` (v4).
+///
+/// Upstream `SheetClose` is a thin wrapper around the underlying primitive's `Close` component.
+/// In Fret, sheets are backed by modal overlays, so this delegates to `DialogClose`.
+#[derive(Clone)]
+pub struct SheetClose {
+    inner: crate::DialogClose,
+}
+
+impl std::fmt::Debug for SheetClose {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SheetClose").finish()
+    }
+}
+
+impl SheetClose {
+    pub fn new(open: Model<bool>) -> Self {
+        Self {
+            // SheetClose should behave like a primitive close affordance (no forced positioning).
+            // Delegate visuals to `DialogClose`, but override the default absolute positioning.
+            inner: crate::DialogClose::new(open)
+                .refine_layout(LayoutRefinement::default().relative().inset(Space::N0)),
+        }
+    }
+
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.inner = self.inner.refine_style(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.inner = self.inner.refine_layout(layout);
+        self
+    }
+
+    #[track_caller]
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self.inner.into_element(cx)
+    }
+}
+
 /// shadcn/ui `SheetContent` (v4).
 #[derive(Debug)]
 pub struct SheetContent {
     children: Vec<AnyElement>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
+    show_close_button: bool,
 }
 
 impl SheetContent {
@@ -631,6 +712,7 @@ impl SheetContent {
             children,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
+            show_close_button: true,
         }
     }
 
@@ -644,9 +726,15 @@ impl SheetContent {
         self
     }
 
+    /// Controls whether the default top-right close affordance is rendered.
+    pub fn show_close_button(mut self, show: bool) -> Self {
+        self.show_close_button = show;
+        self
+    }
+
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
 
         let bg = theme.color_token("background");
         let border = theme.color_token("border");
@@ -744,7 +832,14 @@ impl SheetContent {
             };
             props
         };
-        let children = self.children;
+
+        let mut children = self.children;
+        if self.show_close_button {
+            if let Some(open) = inherited_sheet_open(cx) {
+                let close = crate::dialog::DialogClose::new(open).into_element(cx);
+                children.push(close);
+            }
+        }
         let container = shadcn_layout::container_vstack(
             cx,
             ContainerProps {
@@ -831,7 +926,7 @@ impl SheetTitle {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
         let fg = theme
             .color_by_key("foreground")
             .unwrap_or_else(|| theme.color_token("foreground"));
@@ -870,7 +965,7 @@ impl SheetDescription {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
         let fg = theme
             .color_by_key("muted.foreground")
             .or_else(|| theme.color_by_key("muted-foreground"))
@@ -1800,6 +1895,148 @@ mod tests {
                 click_count: 1,
             }),
         );
+        assert_eq!(app.models().get_copied(&open), Some(false));
+    }
+
+    #[test]
+    fn sheet_close_button_closes() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let content_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        // First frame: render closed.
+        let _ = render_sheet_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            None,
+            true,
+            SheetSide::Right,
+            content_id.clone(),
+            Rc::new(Cell::new(None)),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        // Open via trigger click.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        assert_eq!(app.models().get_copied(&open), Some(true));
+
+        // Render open + let the enter transition settle so hit-testing is deterministic.
+        let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            crate::overlay_motion::SHADCN_MOTION_DURATION_500,
+        ) as usize
+            + 4;
+        for _ in 0..settle_frames {
+            let _ = render_sheet_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                open.clone(),
+                None,
+                true,
+                SheetSide::Right,
+                content_id.clone(),
+                Rc::new(Cell::new(None)),
+            );
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        }
+
+        ui.request_semantics_snapshot();
+        let _ = render_sheet_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            None,
+            true,
+            SheetSide::Right,
+            content_id.clone(),
+            Rc::new(Cell::new(None)),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let close = snap
+            .nodes
+            .iter()
+            .find(|n| {
+                n.role == fret_core::SemanticsRole::Button && n.label.as_deref() == Some("Close")
+            })
+            .expect("close button semantics node");
+        let close_center = Point::new(
+            Px(close.bounds.origin.x.0 + close.bounds.size.width.0 / 2.0),
+            Px(close.bounds.origin.y.0 + close.bounds.size.height.0 / 2.0),
+        );
+
+        // Click the default top-right close affordance (same positioning as shadcn/Radix).
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: close_center,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: close_center,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
         assert_eq!(app.models().get_copied(&open), Some(false));
     }
 

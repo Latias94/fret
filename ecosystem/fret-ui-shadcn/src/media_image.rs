@@ -133,7 +133,7 @@ impl MediaImage {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
         let image = self.source.resolve(cx);
 
         let chrome = ChromeRefinement::default().merge(self.chrome);

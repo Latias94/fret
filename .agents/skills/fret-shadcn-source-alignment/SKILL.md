@@ -38,6 +38,22 @@ Defaults if unclear:
 - Treat interaction semantics as Radix truth; treat composition/sizing/tokens as shadcn truth; add at least one gate.
 - When DOM-focused assumptions are involved, consult Base UI as an additional headless reference for part composition and accessibility patterns.
 
+## Tailwind → Fret layout constraints (quick sanity check)
+
+Most “my shadcn page port looks totally different” reports come from missing **constraints**, not tokens:
+the subtree collapses to content width/height, text wraps aggressively, and the result looks like a
+broken layout (e.g. “vertical text / narrow cards”).
+
+Common Tailwind classes and their Fret declarative equivalents:
+
+- `w-full` / `h-full` → `.ui().w_full()` / `.ui().h_full()`
+- `flex-1` (≈ `flex: 1 1 0%`) → `.ui().flex_1()` (often pair with `.ui().min_w_0()` in rows)
+- `items-stretch` → on flex containers: `ui::h_flex(...).items_stretch()` / `ui::v_flex(...).items_stretch()`
+- `min-w-0` → `.ui().min_w_0()` (critical for text-heavy children inside horizontal flex rows)
+- `truncate` / `overflow-hidden` → `.ui().truncate()` / `.ui().overflow_hidden()`
+
+Rule of thumb: treat “fill/grow/shrink/truncate” as **recipe policy** (shadcn layer), not as a layout-engine default.
+
 ## Smallest starting point (one command)
 
 - `cargo run -p fretboard -- dev native --bin components_gallery`
@@ -99,6 +115,22 @@ Rules of thumb:
 
 shadcn/Radix sources assume DOM + CSS. In Fret, “matching upstream” often means translating CSS
 idioms into explicit scene operations and layout/paint contracts.
+
+**Tailwind layout constraints parity (don’t chase pixels yet)**
+
+shadcn UI “looks wrong” surprisingly often because a few layout constraints went missing during the
+port (classic symptoms: shrink-to-content containers, narrow columns, aggressive word wrapping).
+
+Before doing token work, verify the Tailwind → Fret constraint mapping is applied consistently:
+
+- `w-full` / `h-full`
+- `flex-1` (i.e. `flex: 1 1 0%`) + `min-w-0`
+- `items-stretch` vs `items-center` defaults
+- `overflow-x-auto` (often modeled as `ScrollArea(axis=X, type=Auto)`)
+
+Cheatsheet (canonical, kept in the app-builder skill for reuse):
+
+- `.agents/skills/fret-app-ui-builder/references/mind-models/mm-layout-and-sizing.md`
 
 Use this mini playbook to decide where to implement a visual parity fix and when it’s worth adding
 a new render primitive.

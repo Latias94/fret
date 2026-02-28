@@ -1,0 +1,44 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "UI gallery: nav search clamps scroll offset",
+    "tags": ["ui-gallery", "nav", "search", "scroll"],
+    "required_capabilities": ["diag.script_v2"]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 600
+    },
+
+    { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-gallery-nav-scroll" } },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-nav-scroll" }, "delta_y": 1200.0 },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-nav-scroll" }, "delta_y": 1200.0 },
+    { "type": "wait_frames", "n": 2 },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "carousel" },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-carousel" },
+        "padding_px": 8.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 600
+    },
+    { "type": "capture_bundle", "label": "ui-gallery-nav-search-clamps-scroll-offset" }
+  ]
+}
+

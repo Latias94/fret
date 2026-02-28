@@ -10,7 +10,7 @@ pub(in crate::ui) fn preview_ai_prompt_input_provider_demo(
     use fret_runtime::Model;
     use fret_ui::element::{ContainerProps, PressableA11y, PressableProps};
     use fret_ui_kit::declarative::stack;
-    use fret_ui_kit::{LayoutRefinement, Space};
+    use fret_ui_kit::{ColorRef, LayoutRefinement, Space, ui};
 
     #[derive(Default)]
     struct DemoModels {
@@ -114,13 +114,24 @@ pub(in crate::ui) fn preview_ai_prompt_input_provider_demo(
                     } else {
                         theme.color_token("secondary")
                     };
+                    let fg = if st.hovered {
+                        theme.color_token("foreground")
+                    } else {
+                        theme.color_token("secondary-foreground")
+                    };
 
                     let mut props = ContainerProps::default();
                     props.padding = Edges::symmetric(Px(12.0), Px(6.0)).into();
                     props.background = Some(bg);
                     props.corner_radii = Corners::all(theme.metric_token("metric.radius.sm"));
 
-                    vec![cx.container(props, move |cx| vec![cx.text(add_external_label.clone())])]
+                    vec![cx.container(props, move |cx| {
+                        vec![
+                            ui::text(cx, add_external_label.clone())
+                                .text_color(ColorRef::Color(fg))
+                                .into_element(cx),
+                        ]
+                    })]
                 },
             );
 

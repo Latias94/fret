@@ -1,0 +1,216 @@
+{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-nav-search"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-nav-search"
+      }
+    },
+    {
+      "type": "press_key",
+      "key": "a",
+      "modifiers": {
+        "ctrl": true
+      }
+    },
+    {
+      "type": "press_key",
+      "key": "backspace"
+    },
+    {
+      "type": "type_text",
+      "text": "code_editor_mvp"
+    },
+    {
+      "type": "wait_frames",
+      "n": 2
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-nav-code-editor-mvp"
+        },
+        "padding_px": 8.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-nav-code-editor-mvp"
+      }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-page-code-editor-mvp"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_frames",
+      "n": 30
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-code-editor-boundary-identifier-switch"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-code-editor-boundary-set-identifier"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-code-editor-boundary-set-identifier"
+      }
+    },
+    {
+      "type": "wait_frames",
+      "n": 4
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-code-editor-word-gate-soft-wrap-viewport"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "type_text_into",
+      "target": {
+        "kind": "role_and_name",
+        "role": "text_field",
+        "name": "Code editor word gate soft wrap"
+      },
+      "text": "",
+      "timeout_frames": 240
+    },
+    {
+      "type": "press_key",
+      "key": "home",
+      "modifiers": {
+        "ctrl": true
+      }
+    },
+    {
+      "type": "wait_frames",
+      "n": 2
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-code-editor-word-boundary-soft-wrap-double-click-identifier-caret0"
+    },
+    {
+      "type": "click",
+      "target": {
+        "kind": "role_and_name",
+        "role": "text_field",
+        "name": "Code editor word gate soft wrap"
+      },
+      "click_count": 2
+    },
+    {
+      "type": "wait_frames",
+      "n": 2
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-code-editor-word-boundary-soft-wrap-double-click-identifier"
+    },
+    {
+      "type": "click",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-code-editor-boundary-set-unicode"
+      }
+    },
+    {
+      "type": "wait_frames",
+      "n": 4
+    },
+    {
+      "type": "type_text_into",
+      "target": {
+        "kind": "role_and_name",
+        "role": "text_field",
+        "name": "Code editor word gate soft wrap"
+      },
+      "text": "",
+      "timeout_frames": 240
+    },
+    {
+      "type": "press_key",
+      "key": "home",
+      "modifiers": {
+        "ctrl": true
+      }
+    },
+    {
+      "type": "wait_frames",
+      "n": 2
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-code-editor-word-boundary-soft-wrap-double-click-unicode-caret0"
+    },
+    {
+      "type": "click",
+      "target": {
+        "kind": "role_and_name",
+        "role": "text_field",
+        "name": "Code editor word gate soft wrap"
+      },
+      "click_count": 2
+    },
+    {
+      "type": "wait_frames",
+      "n": 2
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-code-editor-word-boundary-soft-wrap-double-click-unicode"
+    }
+  ]
+}

@@ -20,6 +20,30 @@ pub(super) fn preview_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
         .into_element(cx)
     };
 
+    let make_tooltip_with_test_ids =
+        |cx: &mut ElementContext<'_, App>,
+         label: &'static str,
+         trigger_test_id: &'static str,
+         side: shadcn::TooltipSide,
+         content: &'static str,
+         panel_test_id: &'static str,
+         text_test_id: &'static str| {
+            shadcn::Tooltip::new(
+                shadcn::Button::new(label)
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .test_id(trigger_test_id)
+                    .into_element(cx),
+                shadcn::TooltipContent::new(vec![
+                    shadcn::TooltipContent::text(cx, content).test_id(text_test_id),
+                ])
+                .into_element(cx),
+            )
+            .arrow(true)
+            .side(side)
+            .panel_test_id(panel_test_id)
+            .into_element(cx)
+        };
+
     let body = shadcn::TooltipProvider::new()
         .delay(Duration::ZERO)
         .timeout_duration(Duration::from_millis(400))
@@ -27,6 +51,7 @@ pub(super) fn preview_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
             let demo_tooltip = shadcn::Tooltip::new(
                 shadcn::Button::new("Hover")
                     .variant(shadcn::ButtonVariant::Outline)
+                    .test_id("ui-gallery-tooltip-demo-trigger")
                     .into_element(cx),
                 shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(
                     cx,
@@ -35,9 +60,41 @@ pub(super) fn preview_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
                 .into_element(cx),
             )
             .arrow(true)
+            .arrow_test_id("ui-gallery-tooltip-demo-arrow")
             .side(shadcn::TooltipSide::Top)
+            .panel_test_id("ui-gallery-tooltip-demo-panel")
             .into_element(cx)
             .test_id("ui-gallery-tooltip-demo");
+
+            let focus_start = shadcn::Button::new("Focus Start")
+                .variant(shadcn::ButtonVariant::Outline)
+                .test_id("ui-gallery-tooltip-focus-start")
+                .into_element(cx);
+            let focus_tooltip = shadcn::Tooltip::new(
+                shadcn::Button::new("Focus Trigger")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .test_id("ui-gallery-tooltip-focus-trigger")
+                    .into_element(cx),
+                shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(
+                    cx,
+                    "Opens on keyboard focus",
+                )
+                .test_id("ui-gallery-tooltip-focus-text")])
+                .into_element(cx),
+            )
+            .arrow(true)
+            .arrow_test_id("ui-gallery-tooltip-focus-arrow")
+            .side(shadcn::TooltipSide::Top)
+            .panel_test_id("ui-gallery-tooltip-focus-panel")
+            .into_element(cx)
+            .test_id("ui-gallery-tooltip-focus");
+
+            let focus_row = stack::hstack(
+                cx,
+                stack::HStackProps::default().gap(Space::N2).items_center(),
+                |_cx| vec![focus_start, focus_tooltip],
+            )
+            .test_id("ui-gallery-tooltip-focus-row");
 
             let side_row = stack::hstack(
                 cx,
@@ -53,13 +110,17 @@ pub(super) fn preview_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
             )
             .test_id("ui-gallery-tooltip-sides");
 
+            let keyboard_icon = doc_layout::icon(cx, "lucide.save")
+                .test_id("ui-gallery-tooltip-keyboard-icon");
+            let keyboard_trigger = shadcn::Button::new("")
+                .a11y_label("Save")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::IconSm)
+                .children([keyboard_icon])
+                .test_id("ui-gallery-tooltip-keyboard-trigger")
+                .into_element(cx);
             let keyboard_tooltip = shadcn::Tooltip::new(
-                shadcn::Button::new("")
-                    .a11y_label("Save")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .size(shadcn::ButtonSize::IconSm)
-                    .icon(fret_icons::IconId::new_static("lucide.save"))
-                    .into_element(cx),
+                keyboard_trigger,
                 shadcn::TooltipContent::new(vec![stack::hstack(
                     cx,
                     stack::HStackProps::default().gap(Space::N2).items_center(),
@@ -109,11 +170,14 @@ pub(super) fn preview_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
                                     shadcn::TooltipSide::Left,
                                     "إضافة إلى المكتبة",
                                 ),
-                                make_tooltip(
+                                make_tooltip_with_test_ids(
                                     cx,
                                     "أعلى",
+                                    "ui-gallery-tooltip-rtl-top-trigger",
                                     shadcn::TooltipSide::Top,
                                     "إضافة إلى المكتبة",
+                                    "ui-gallery-tooltip-rtl-top-panel",
+                                    "ui-gallery-tooltip-rtl-top-text",
                                 ),
                                 make_tooltip(
                                     cx,
@@ -162,6 +226,24 @@ pub(super) fn preview_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
 .side(shadcn::TooltipSide::Top)
 .into_element(cx);"#,
                 ),
+                    DocSection::new("Keyboard Focus", focus_row)
+                        .description("Tooltips should open when the trigger receives keyboard focus.")
+                        .code(
+                            "rust",
+                            r#"shadcn::Tooltip::new(
+    shadcn::Button::new("Focus Trigger")
+        .variant(shadcn::ButtonVariant::Outline)
+        .into_element(cx),
+    shadcn::TooltipContent::new([shadcn::TooltipContent::text(
+        cx,
+        "Opens on keyboard focus",
+    )])
+    .into_element(cx),
+)
+.side(shadcn::TooltipSide::Top)
+.arrow(true)
+.into_element(cx);"#,
+                        ),
                     DocSection::new("Side", side_row)
                         .description("Tooltips can be placed on the four sides of the trigger.")
                         .code(

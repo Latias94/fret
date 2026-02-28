@@ -2,7 +2,6 @@ use std::cell::Cell;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
-use fret_core::window::ColorScheme;
 use fret_core::{Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextStyle};
 use fret_icons::ids;
 use fret_runtime::Model;
@@ -592,7 +591,7 @@ fn combobox_with_patch<H: UiHost>(
     style_override: ComboboxStyle,
 ) -> AnyElement {
     cx.scope(|cx| {
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
         let open_change_reason_model = {
             let existing =
                 cx.with_state(ComboboxState::default, |st| st.open_change_reason.clone());
@@ -683,7 +682,7 @@ fn combobox_with_patch<H: UiHost>(
             .radius
             .as_ref()
             .map(|m| m.resolve(&theme))
-            .unwrap_or_else(|| size.control_radius(&theme));
+            .unwrap_or_else(|| size.control_radius(Theme::global(&*cx.app)));
         let mut ring = decl_style::focus_ring(&theme, radius);
 
         let (resolved_label, has_selection) = selected
@@ -699,7 +698,7 @@ fn combobox_with_patch<H: UiHost>(
 
         let text_style = TextStyle {
             font: FontId::default(),
-            size: size.control_text_px(&theme),
+            size: size.control_text_px(Theme::global(&*cx.app)),
             weight: match trigger_variant {
                 ComboboxTriggerVariant::Default => FontWeight::MEDIUM,
                 ComboboxTriggerVariant::Button => FontWeight::NORMAL,
@@ -714,9 +713,9 @@ fn combobox_with_patch<H: UiHost>(
             .min_height
             .as_ref()
             .map(|m| m.resolve(&theme))
-            .unwrap_or_else(|| size.button_h(&theme));
-        let pad_x = size.button_px(&theme);
-        let pad_y = size.button_py(&theme);
+            .unwrap_or_else(|| size.button_h(Theme::global(&*cx.app)));
+        let pad_x = size.button_px(Theme::global(&*cx.app));
+        let pad_y = size.button_py(Theme::global(&*cx.app));
         let border_w = chrome_patch
             .border_width
             .as_ref()
@@ -737,20 +736,44 @@ fn combobox_with_patch<H: UiHost>(
         trigger_layout.size.height = Length::Auto;
         trigger_layout.size.min_height = Some(Length::Px(min_h));
 
-        let bg_base = chrome_patch
-            .background
-            .as_ref()
-            .map(|c| c.resolve(&theme))
-            .unwrap_or_else(|| {
-                theme
-                    .color_by_key("background")
-                    .unwrap_or_else(|| theme.color_token("background"))
-            });
-        let bg_hover = theme
-            .color_by_key("accent")
-            .or_else(|| theme.color_by_key("accent.background"))
-            .unwrap_or_else(|| theme.color_token("accent"));
-        let bg_pressed = theme.color_token("accent");
+        let (bg_base, bg_hover, bg_pressed) = match trigger_variant {
+            ComboboxTriggerVariant::Default => {
+                // Upstream shadcn combobox chips root uses:
+                // - light: `bg-transparent`
+                // - dark: `dark:bg-input/30`
+                let base = chrome_patch
+                    .background
+                    .as_ref()
+                    .map(|c| c.resolve(&theme))
+                    .unwrap_or_else(|| {
+                        theme
+                            .color_by_key("component.input.bg")
+                            .unwrap_or_else(|| {
+                                theme
+                                    .color_by_key("background")
+                                    .unwrap_or_else(|| theme.color_token("background"))
+                            })
+                    });
+                (base, base, base)
+            }
+            ComboboxTriggerVariant::Button => {
+                let base = chrome_patch
+                    .background
+                    .as_ref()
+                    .map(|c| c.resolve(&theme))
+                    .unwrap_or_else(|| {
+                        theme
+                            .color_by_key("background")
+                            .unwrap_or_else(|| theme.color_token("background"))
+                    });
+                let hover = theme
+                    .color_by_key("accent")
+                    .or_else(|| theme.color_by_key("accent.background"))
+                    .unwrap_or_else(|| theme.color_token("accent"));
+                let pressed = theme.color_token("accent");
+                (base, hover, pressed)
+            }
+        };
         let fg_base = chrome_patch
             .text_color
             .as_ref()
@@ -760,10 +783,13 @@ fn combobox_with_patch<H: UiHost>(
                     .color_by_key("foreground")
                     .unwrap_or_else(|| theme.color_token("foreground"))
             });
-        let fg_hover = theme
-            .color_by_key("accent-foreground")
-            .or_else(|| theme.color_by_key("accent.foreground"))
-            .unwrap_or(fg_base);
+        let fg_hover = match trigger_variant {
+            ComboboxTriggerVariant::Default => fg_base,
+            ComboboxTriggerVariant::Button => theme
+                .color_by_key("accent-foreground")
+                .or_else(|| theme.color_by_key("accent.foreground"))
+                .unwrap_or(fg_base),
+        };
         let muted_fg = theme
             .color_by_key("muted-foreground")
             .or_else(|| theme.color_by_key("muted_foreground"))
@@ -786,15 +812,7 @@ fn combobox_with_patch<H: UiHost>(
             border_base = border_color;
             ring_border = border_color;
 
-            let ring_key = if theme.color_scheme == Some(ColorScheme::Dark) {
-                "destructive/40"
-            } else {
-                "destructive/20"
-            };
-            ring.color = theme
-                .color_by_key(ring_key)
-                .or_else(|| theme.color_by_key("destructive/20"))
-                .unwrap_or(border_color);
+            ring.color = crate::theme_variants::invalid_control_ring_color(&theme, border_color);
         }
 
         let default_trigger_bg = WidgetStateProperty::new(ColorRef::Color(bg_base))

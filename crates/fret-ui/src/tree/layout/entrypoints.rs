@@ -171,14 +171,6 @@ impl<H: UiHost> UiTree<H> {
                     .get(root)
                     .is_some_and(|node| node.invalidation.layout)
             });
-            if self.semantics_requested {
-                let semantics_started = self.debug_enabled.then(Instant::now);
-                self.semantics_requested = false;
-                self.refresh_semantics_snapshot(app);
-                if let Some(semantics_started) = semantics_started {
-                    self.debug_stats.layout_semantics_refresh_time += semantics_started.elapsed();
-                }
-            }
             let prepaint_started = self.debug_enabled.then(Instant::now);
             self.prepaint_after_layout_stable_frame(app);
             if let Some(prepaint_started) = prepaint_started {
@@ -190,6 +182,15 @@ impl<H: UiHost> UiTree<H> {
             self.repair_focus_node_from_focused_element_if_needed(app);
             if let Some(focus_started) = focus_started {
                 self.debug_stats.layout_focus_repair_time += focus_started.elapsed();
+            }
+
+            if self.semantics_requested {
+                let semantics_started = self.debug_enabled.then(Instant::now);
+                self.semantics_requested = false;
+                self.refresh_semantics_snapshot(app);
+                if let Some(semantics_started) = semantics_started {
+                    self.debug_stats.layout_semantics_refresh_time += semantics_started.elapsed();
+                }
             }
 
             let deferred_cleanup_started = self.debug_enabled.then(Instant::now);
@@ -240,6 +241,8 @@ impl<H: UiHost> UiTree<H> {
         {
             self.debug_stats.layout_fast_path_taken = true;
             self.prepaint_after_layout(app, scale_factor);
+
+            self.repair_focus_node_from_focused_element_if_needed(app);
 
             if self.semantics_requested {
                 self.semantics_requested = false;
@@ -472,32 +475,6 @@ impl<H: UiHost> UiTree<H> {
             }
         }
 
-        if self.semantics_requested {
-            let (_, semantics_elapsed) = fret_perf::measure_span(
-                layout_phase_time_enabled,
-                trace_layout,
-                || {
-                    tracing::trace_span!(
-                        "fret.ui.layout.refresh_semantics",
-                        window = ?window,
-                        frame_id = frame_id.0,
-                        pass_kind = ?pass_kind,
-                    )
-                },
-                || {
-                    self.semantics_requested = false;
-                    self.refresh_semantics_snapshot(app);
-                },
-            );
-            if profile_layout_all {
-                t_refresh_semantics = semantics_elapsed;
-            }
-            if self.debug_enabled
-                && let Some(semantics_elapsed) = semantics_elapsed
-            {
-                self.debug_stats.layout_semantics_refresh_time += semantics_elapsed;
-            }
-        }
         if pass_kind == LayoutPassKind::Final {
             self.flush_layout_bounds_records_if_needed(app);
             let (_, prepaint_elapsed) = fret_perf::measure_span(
@@ -538,6 +515,33 @@ impl<H: UiHost> UiTree<H> {
             );
             if let Some(focus_elapsed) = focus_elapsed {
                 self.debug_stats.layout_focus_repair_time += focus_elapsed;
+            }
+        }
+
+        if self.semantics_requested {
+            let (_, semantics_elapsed) = fret_perf::measure_span(
+                layout_phase_time_enabled,
+                trace_layout,
+                || {
+                    tracing::trace_span!(
+                        "fret.ui.layout.refresh_semantics",
+                        window = ?window,
+                        frame_id = frame_id.0,
+                        pass_kind = ?pass_kind,
+                    )
+                },
+                || {
+                    self.semantics_requested = false;
+                    self.refresh_semantics_snapshot(app);
+                },
+            );
+            if profile_layout_all {
+                t_refresh_semantics = semantics_elapsed;
+            }
+            if self.debug_enabled
+                && let Some(semantics_elapsed) = semantics_elapsed
+            {
+                self.debug_stats.layout_semantics_refresh_time += semantics_elapsed;
             }
         }
         let (_, deferred_cleanup_elapsed) = fret_perf::measure_span(
@@ -811,6 +815,23 @@ impl<H: UiHost> UiTree<H> {
         }
         if canonical != focused && self.node_exists(canonical) {
             self.set_focus(Some(canonical));
+        }
+
+        let Some(focused) = self.focus() else {
+            return;
+        };
+        let Some(node) = self.nodes.get(focused) else {
+            return;
+        };
+        if node.bounds.size.width.0 <= 0.0 || node.bounds.size.height.0 <= 0.0 {
+            #[cfg(debug_assertions)]
+            if crate::runtime_config::ui_runtime_config().debug_focus_repair {
+                eprintln!(
+                    "focus_repair: clearing focus={focused:?} due to empty bounds={:?}",
+                    node.bounds
+                );
+            }
+            self.set_focus(None);
         }
     }
 

@@ -10,6 +10,12 @@ milestones, use:
 
 Active workstreams:
 
+- `docs/workstreams/workspace-shell-tabstrip-fearless-refactor-v1/DESIGN.md`
+- `docs/workstreams/workspace-shell-tabstrip-fearless-refactor-v1/TODO.md`
+- `docs/workstreams/workspace-shell-tabstrip-fearless-refactor-v1/MILESTONES.md`
+- `docs/workstreams/workspace-shell-tabstrip-fearless-refactor-v1/PARITY_MATRIX.md`
+- `docs/workstreams/workspace-shell-tabstrip-fearless-refactor-v1/OPEN_QUESTIONS.md`
+- `docs/workstreams/workspace-shell-tabstrip-fearless-refactor-v1/EVIDENCE_AND_GATES.md`
 - `docs/workstreams/genui-json-render-v1.md`
 - `docs/workstreams/genui-json-render-v1-todo.md`
 - `docs/workstreams/genui-json-render-v1-milestones.md`
@@ -23,6 +29,9 @@ Active workstreams:
 - `docs/workstreams/app-iteration-fast-restart-v1.md`
 - `docs/workstreams/app-iteration-fast-restart-v1-todo.md`
 - `docs/workstreams/app-iteration-fast-restart-v1-milestones.md`
+- `docs/workstreams/fret-node-style-skinning-v1/m0-style-contracts-and-gates.md`
+- `docs/workstreams/fret-node-style-skinning-v1/m1-per-node-chrome-hints.md`
+- `docs/workstreams/fret-node-style-skinning-v1/m2-theme-presets-dify-blueprint-shadergraph.md`
 - `docs/workstreams/renderer-vnext-fearless-refactor-v1.md`
 - `docs/workstreams/renderer-vnext-fearless-refactor-v1-refactor-design.md`
 - `docs/workstreams/renderer-vnext-fearless-refactor-v1-todo.md`

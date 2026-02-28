@@ -8,12 +8,18 @@ pub(super) fn semantics_diff_detail(
     before: &serde_json::Value,
     after: &serde_json::Value,
 ) -> serde_json::Value {
-    use serde_json::json;
-
     let (Some(before_nodes), Some(after_nodes)) = (semantics.nodes(before), semantics.nodes(after))
     else {
         return serde_json::Value::Null;
     };
+    semantics_diff_detail_nodes(before_nodes, after_nodes)
+}
+
+pub(super) fn semantics_diff_detail_nodes(
+    before_nodes: &[serde_json::Value],
+    after_nodes: &[serde_json::Value],
+) -> serde_json::Value {
+    use serde_json::json;
 
     let mut before_by_id: HashMap<u64, &serde_json::Value> = HashMap::new();
     for node in before_nodes {
@@ -133,7 +139,13 @@ pub(super) fn semantics_diff_summary(
     else {
         return String::new();
     };
+    semantics_diff_summary_nodes(before_nodes, after_nodes)
+}
 
+pub(super) fn semantics_diff_summary_nodes(
+    before_nodes: &[serde_json::Value],
+    after_nodes: &[serde_json::Value],
+) -> String {
     let mut before_by_id: HashMap<u64, &serde_json::Value> = HashMap::new();
     for node in before_nodes {
         let Some(id) = node.get("id").and_then(|v| v.as_u64()) else {
@@ -386,12 +398,7 @@ pub(super) fn semantics_node_y_for_test_id(
     snapshot: &serde_json::Value,
     test_id: &str,
 ) -> Option<f64> {
-    let nodes = semantics.nodes(snapshot)?;
-    let node = nodes.iter().find(|n| {
-        n.get("test_id")
-            .and_then(|v| v.as_str())
-            .is_some_and(|id| id == test_id)
-    })?;
+    let node = crate::json_bundle::semantics_node_for_test_id(semantics, snapshot, test_id)?;
     node.get("bounds")
         .and_then(|v| v.get("y"))
         .and_then(|v| v.as_f64())
@@ -402,15 +409,8 @@ pub(super) fn semantics_node_fields_for_test_id(
     snapshot: &serde_json::Value,
     test_id: &str,
 ) -> (Option<f64>, Option<String>, Option<String>) {
-    let Some(nodes) = semantics.nodes(snapshot) else {
-        return (None, None, None);
-    };
-    let node = nodes.iter().find(|n| {
-        n.get("test_id")
-            .and_then(|v| v.as_str())
-            .is_some_and(|id| id == test_id)
-    });
-    let Some(node) = node else {
+    let Some(node) = crate::json_bundle::semantics_node_for_test_id(semantics, snapshot, test_id)
+    else {
         return (None, None, None);
     };
     let y = node
@@ -433,14 +433,7 @@ pub(super) fn semantics_node_id_for_test_id(
     snapshot: &serde_json::Value,
     test_id: &str,
 ) -> Option<u64> {
-    let nodes = semantics.nodes(snapshot)?;
-    nodes
-        .iter()
-        .find(|n| {
-            n.get("test_id")
-                .and_then(|v| v.as_str())
-                .is_some_and(|id| id == test_id)
-        })?
+    crate::json_bundle::semantics_node_for_test_id(semantics, snapshot, test_id)?
         .get("id")
         .and_then(|v| v.as_u64())
 }

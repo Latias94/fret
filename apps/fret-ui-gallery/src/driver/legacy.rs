@@ -18,7 +18,7 @@ use fret_runtime::{
     ImageUpdateToken, MenuItemToggle, MenuItemToggleKind, PlatformCapabilities,
     WindowCommandAvailabilityService, WindowCommandEnabledService,
 };
-use fret_ui::UiTree;
+use fret_ui::{PaintCachePolicy, UiTree};
 use fret_ui::action::{UiActionHost, UiActionHostAdapter};
 use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui_shadcn as shadcn;
@@ -58,6 +58,20 @@ use router::{
     apply_page_router_update_side_effects, build_ui_gallery_page_router,
     page_from_gallery_location,
 };
+
+fn apply_ui_gallery_text_font_fallback_overrides(config: &mut fret_render::TextFontFamilyConfig) {
+    #[cfg(target_os = "windows")]
+    {
+        if config.common_fallback_injection == fret_core::TextCommonFallbackInjection::PlatformDefault
+        {
+            // UI gallery demos intentionally include symbol glyphs (e.g. "⌘") to align with shadcn
+            // docs. On Windows, relying on system fallback can yield tofu squares. Prefer injecting
+            // the curated common fallback stack so missing glyphs can resolve via "Segoe UI Symbol"
+            // / "Segoe UI Emoji" when available.
+            config.common_fallback_injection = fret_core::TextCommonFallbackInjection::CommonFallback;
+        }
+    }
+}
 
 #[derive(Default)]
 struct DebugHudState {
@@ -1141,6 +1155,30 @@ impl UiGalleryDriver {
             env_bool(env_name, default)
         };
 
+        let config_paint_cache_policy = |env_name: &str, _query_name: &str| {
+            #[cfg(target_arch = "wasm32")]
+            {
+                if let Some(v) = bool_from_window_query(_query_name) {
+                    return if v {
+                        PaintCachePolicy::Enabled
+                    } else {
+                        PaintCachePolicy::Disabled
+                    };
+                }
+            }
+
+            let Some(v) = std::env::var_os(env_name).filter(|v| !v.is_empty()) else {
+                return PaintCachePolicy::Auto;
+            };
+
+            match v.to_string_lossy().trim().to_ascii_lowercase().as_str() {
+                "0" | "false" | "no" | "off" | "disabled" => PaintCachePolicy::Disabled,
+                "1" | "true" | "yes" | "on" | "enabled" => PaintCachePolicy::Enabled,
+                "auto" => PaintCachePolicy::Auto,
+                _ => PaintCachePolicy::Auto,
+            }
+        };
+
         let view_cache_enabled_value =
             config_bool("FRET_UI_GALLERY_VIEW_CACHE", "fret_ui_gallery_view_cache", false);
         let view_cache_enabled = app.models_mut().insert(view_cache_enabled_value);
@@ -1199,6 +1237,10 @@ impl UiGalleryDriver {
             "FRET_UI_GALLERY_VIEW_CACHE",
             "fret_ui_gallery_view_cache",
             false,
+        ));
+        ui.set_paint_cache_policy(config_paint_cache_policy(
+            "FRET_UI_GALLERY_PAINT_CACHE",
+            "fret_ui_gallery_paint_cache",
         ));
         ui.set_debug_enabled(
             std::env::var_os("FRET_UI_DEBUG_STATS").is_some_and(|v| !v.is_empty())
@@ -2526,7 +2568,7 @@ pub fn build_app() -> App {
 }
 
 pub fn build_runner_config() -> WinitRunnerConfig {
-    fn parse_main_window_size_override() -> Option<winit::dpi::LogicalSize<f64>> {
+    fn parse_main_window_size_override() -> Option<fret_launch::WindowLogicalSize> {
         let raw = std::env::var("FRET_UI_GALLERY_MAIN_WINDOW_SIZE").ok()?;
         let trimmed = raw.trim();
         if trimmed.is_empty() {
@@ -2543,7 +2585,7 @@ pub fn build_runner_config() -> WinitRunnerConfig {
             return None;
         }
 
-        Some(winit::dpi::LogicalSize::new(w, h))
+        Some(fret_launch::WindowLogicalSize::new(w, h))
     }
 
     let main_window_size = match parse_main_window_size_override() {
@@ -2555,7 +2597,7 @@ pub fn build_runner_config() -> WinitRunnerConfig {
             );
             size
         }
-        None => winit::dpi::LogicalSize::new(1080.0, 720.0),
+        None => fret_launch::WindowLogicalSize::new(1080.0, 720.0),
     };
 
     WinitRunnerConfig {
@@ -2595,6 +2637,9 @@ pub fn run() -> anyhow::Result<()> {
         })
         .with_default_diagnostics()
         .with_default_config_files_for_root(&project_root)?
+        .configure(|c| {
+            apply_ui_gallery_text_font_fallback_overrides(&mut c.text_font_families);
+        })
         .with_config_files_watcher_for_root(Duration::from_millis(500), &project_root)
         .with_ui_assets_budgets(64 * 1024 * 1024, 4096, 16 * 1024 * 1024, 4096)
         .preload_icon_svgs_on_gpu_ready()
@@ -2625,6 +2670,9 @@ pub fn run_with_event_loop(event_loop: winit::event_loop::EventLoop) -> anyhow::
         })
         .with_default_diagnostics()
         .with_default_config_files_for_root(&project_root)?
+        .configure(|c| {
+            apply_ui_gallery_text_font_fallback_overrides(&mut c.text_font_families);
+        })
         .with_config_files_watcher_for_root(Duration::from_millis(500), &project_root)
         .with_ui_assets_budgets(64 * 1024 * 1024, 4096, 16 * 1024 * 1024, 4096)
         .preload_icon_svgs_on_gpu_ready()
@@ -3241,16 +3289,7 @@ impl WinitAppDriver for UiGalleryDriver {
 
         #[cfg(not(target_arch = "wasm32"))]
         {
-            let consumed =
-                app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
-                    if !svc.is_enabled() {
-                        return false;
-                    }
-                    if svc.maybe_intercept_event_for_inspect_shortcuts(app, window, event) {
-                        return true;
-                    }
-                    svc.maybe_intercept_event_for_picking(app, window, event)
-                });
+            let consumed = fret_bootstrap::ui_diagnostics::maybe_consume_event(app, window, event);
             if consumed {
                 return;
             }
@@ -3817,7 +3856,7 @@ impl WinitAppDriver for UiGalleryDriver {
         match &request.kind {
             CreateWindowKind::DockRestore { logical_window_id } => Some(WindowCreateSpec::new(
                 format!("fret-ui-gallery - {logical_window_id}"),
-                winit::dpi::LogicalSize::new(980.0, 720.0),
+                fret_launch::WindowLogicalSize::new(980.0, 720.0),
             )),
             CreateWindowKind::DockFloating { .. } => None,
         }

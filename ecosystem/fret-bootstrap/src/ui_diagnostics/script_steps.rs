@@ -1,5 +1,7 @@
 use super::*;
 
+use fret_diag_protocol::{DiagScreenshotRequestV1, DiagScreenshotWindowRequestV1};
+
 pub(super) fn handle_window_effect_steps(
     svc: &mut UiDiagnosticsService,
     window: AppWindowId,
@@ -299,6 +301,14 @@ pub(super) fn handle_effect_only_steps(
             output.request_redraw = true;
             true
         }
+        UiActionStepV2::SetClipboardText { text } => {
+            output.effects.push(Effect::ClipboardSetText { text });
+            active.wait_until = None;
+            active.screenshot_wait = None;
+            active.next_step = active.next_step.saturating_add(1);
+            output.request_redraw = true;
+            true
+        }
         UiActionStepV2::InjectIncomingOpen { items } => {
             let items = items
                 .into_iter()
@@ -429,18 +439,18 @@ pub(super) fn handle_capture_steps(
                             run_id = active.run_id
                         );
 
-                        let req = serde_json::json!({
-                            "schema_version": 1,
-                            "out_dir": svc.cfg.out_dir.to_string_lossy(),
-                            "bundle_dir_name": bundle_dir_name,
-                            "request_id": request_id,
-                            "windows": [{
-                                "window": window_ffi,
-                                "tick_id": app.tick_id().0,
-                                "frame_id": app.frame_id().0,
-                                "scale_factor": scale_factor as f64,
-                            }]
-                        });
+                        let req = DiagScreenshotRequestV1 {
+                            schema_version: 1,
+                            out_dir: svc.cfg.out_dir.to_string_lossy().to_string(),
+                            bundle_dir_name,
+                            request_id: Some(request_id.clone()),
+                            windows: vec![DiagScreenshotWindowRequestV1 {
+                                window: window_ffi,
+                                tick_id: app.tick_id().0,
+                                frame_id: app.frame_id().0,
+                                scale_factor: scale_factor as f64,
+                            }],
+                        };
 
                         let bytes = serde_json::to_vec_pretty(&req).ok();
                         if let Some(bytes) = bytes {

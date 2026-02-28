@@ -1,13 +1,12 @@
 use std::sync::Arc;
 
-use fret_core::window::ColorScheme;
 use fret_core::{Axis, Color, Corners, Edges, Px};
 use fret_icons::ids;
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::{
     AnyElement, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, PressableProps,
 };
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
@@ -32,34 +31,34 @@ fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c
 }
 
-fn checkbox_size(theme: &Theme) -> Px {
+fn checkbox_size(theme: &ThemeSnapshot) -> Px {
     theme
         .metric_by_key("component.checkbox.size")
         .unwrap_or(Px(16.0))
 }
 
-fn checkbox_radius(theme: &Theme) -> Px {
+fn checkbox_radius(theme: &ThemeSnapshot) -> Px {
     theme
         .metric_by_key("component.checkbox.radius")
         .unwrap_or_else(|| MetricRef::radius(Radius::Sm).resolve(theme))
 }
 
-fn checkbox_border(theme: &Theme) -> Color {
+fn checkbox_border(theme: &ThemeSnapshot) -> Color {
     theme
         .color_by_key("input")
         .or_else(|| theme.color_by_key("border"))
         .expect("missing theme token: input/border")
 }
 
-fn checkbox_bg_checked(theme: &Theme) -> Color {
+fn checkbox_bg_checked(theme: &ThemeSnapshot) -> Color {
     theme.color_token("primary")
 }
 
-fn checkbox_fg_checked(theme: &Theme) -> Color {
+fn checkbox_fg_checked(theme: &ThemeSnapshot) -> Color {
     theme.color_token("primary-foreground")
 }
 
-fn checkbox_ring_color(theme: &Theme) -> Color {
+fn checkbox_ring_color(theme: &ThemeSnapshot) -> Color {
     theme.color_token("ring")
 }
 
@@ -266,7 +265,7 @@ impl Checkbox {
             let checked = self.checked;
             let aria_invalid = self.aria_invalid;
 
-            let theme = Theme::global(&*cx.app).clone();
+            let theme = Theme::global(&*cx.app).snapshot();
 
             let size = checkbox_size(&theme);
             let radius = checkbox_radius(&theme);
@@ -281,21 +280,17 @@ impl Checkbox {
             };
             let mut ring = decl_style::focus_ring(&theme, radius);
             ring.color = if aria_invalid {
-                let ring_key = if theme.color_scheme == Some(ColorScheme::Dark) {
-                    "destructive/40"
-                } else {
-                    "destructive/20"
-                };
-                theme
-                    .color_by_key(ring_key)
-                    .or_else(|| theme.color_by_key("destructive/20"))
-                    .unwrap_or(ring_border)
+                crate::theme_variants::invalid_control_ring_color(&theme, ring_border)
             } else {
                 alpha_mul(ring_border, 0.5)
             };
 
-            let default_background = WidgetStateProperty::new(None)
-                .when(WidgetStates::SELECTED, Some(ColorRef::Color(bg_on)));
+            // Upstream shadcn checkbox uses `dark:bg-input/30` for the unchecked state.
+            let default_background = WidgetStateProperty::new(Some(ColorRef::Token {
+                key: "component.input.bg",
+                fallback: fret_ui_kit::ColorFallback::Color(Color::TRANSPARENT),
+            }))
+            .when(WidgetStates::SELECTED, Some(ColorRef::Color(bg_on)));
             let default_border_color_off = if aria_invalid {
                 theme.color_token("destructive")
             } else {
@@ -357,7 +352,7 @@ impl Checkbox {
                     }
                 }
 
-                let theme = Theme::global(&*cx.app).clone();
+                let theme = Theme::global(&*cx.app).snapshot();
                 let state = match &checked {
                     CheckboxCheckedModel::Bool(model) => {
                         CheckedState::from(cx.watch_model(model).copied().unwrap_or(false))

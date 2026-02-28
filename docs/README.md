@@ -10,10 +10,12 @@ New to the repo? Start with:
 ## Sources of Truth
 
 - Progress: `docs/roadmap.md` and `docs/shadcn-declarative-progress.md`
+- Framework modularity (Bevy-like consumption profiles): `docs/workstreams/framework-modularity-fearless-refactor-v1/design.md`
 - Overlay + input arbitration v2: `docs/overlay-and-input-arbitration-v2-refactor-roadmap.md`
 - Overlay + pointer occlusion v2 progress: `docs/workstreams/overlay-input-arbitration-v2.md`
 - Foundation closure (P0, cross-workstream milestones): `docs/workstreams/foundation-closure-p0.md` and `docs/workstreams/foundation-closure-p0-todo.md`
 - Headless table engine parity (TanStack Table core): `docs/workstreams/headless-table-tanstack-parity.md` and `docs/workstreams/headless-table-tanstack-parity-todo.md`
+- Theme token alignment (semantic vs named vs component-derived): `docs/workstreams/theme-token-alignment-v1/design.md`, `docs/workstreams/theme-token-alignment-v1/todo.md`, and `docs/workstreams/theme-token-alignment-v1/milestones.md`
 - Charts (ECharts alignment): `docs/audits/echarts-alignment.md` and `docs/delinea-echarts-alignment.md`
 - Text system v2 tracker: `docs/workstreams/text-system-v2-parley.md`
 - UI typography presets (stable control text line boxes): `docs/workstreams/ui-typography-presets-v1.md`
@@ -56,6 +58,20 @@ these are the only crate names we treat as stable entry points; internal crates 
 Web/wasm runs through tooling (not through `fret`):
 
 - `cargo run -p fretboard -- dev web --demo ui_gallery`
+
+## Consumption profiles (modularity)
+
+Fret is designed to be consumed modularly. If you want a stable “pick only what you need” story, track:
+
+- Design: `docs/workstreams/framework-modularity-fearless-refactor-v1/design.md`
+- TODO: `docs/workstreams/framework-modularity-fearless-refactor-v1/todo.md`
+- Milestones: `docs/workstreams/framework-modularity-fearless-refactor-v1/milestones.md`
+
+Portable profiles we treat as regression gates:
+
+- Contracts-only: `fret-core` (+ `fret-runtime`, `fret-platform`, `fret-render-core`)
+- UI substrate: `fret-ui`
+- Manual assembly facade (portable): `fret-framework` with `--no-default-features --features core,runtime,ui`
 
 ## State management (authoring ergonomics)
 

@@ -122,7 +122,7 @@ impl Ticker {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
+            let theme = Theme::global(&*cx.app).snapshot();
 
             let symbol = self.symbol.clone();
             let label = Arc::<str>::from(format!("Ticker {symbol}"));

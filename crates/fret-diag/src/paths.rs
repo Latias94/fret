@@ -82,7 +82,7 @@ pub(crate) fn resolve_bundle_root_dir(path: &Path) -> Result<PathBuf, String> {
         return Ok(path.to_path_buf());
     }
     let Some(parent) = path.parent() else {
-        return Err(format!("invalid bundle path: {}", path.display()));
+        return Err(format!("invalid bundle artifact path: {}", path.display()));
     };
     Ok(parent.to_path_buf())
 }
@@ -202,7 +202,7 @@ pub(crate) fn resolve_bundle_artifact_path(path: &Path) -> PathBuf {
         Err(err) => {
             record_tooling_artifact_integrity_failure_for_dir(
                 path,
-                &format!("failed to materialize bundle.json from chunks: {err}"),
+                &format!("failed to materialize raw bundle.json from chunks: {err}"),
             );
         }
     }
@@ -228,15 +228,13 @@ pub(crate) fn resolve_bundle_artifact_path(path: &Path) -> PathBuf {
             Err(err) => {
                 record_tooling_artifact_integrity_failure_for_dir(
                     &crate::run_artifacts::run_id_artifact_dir(path, run_id),
-                    &format!("failed to materialize bundle.json from chunks: {err}"),
+                    &format!("failed to materialize raw bundle.json from chunks: {err}"),
                 );
             }
         }
     }
 
-    if let Some(dir) = crate::compare::read_latest_pointer(path)
-        .or_else(|| crate::compare::find_latest_export_dir(path))
-    {
+    if let Some(dir) = crate::latest::latest_bundle_dir_path_opt(path) {
         let nested_v2 = dir.join("bundle.schema2.json");
         if nested_v2.is_file() {
             return nested_v2;
@@ -248,6 +246,104 @@ pub(crate) fn resolve_bundle_artifact_path(path: &Path) -> PathBuf {
     }
 
     direct
+}
+
+pub(crate) fn prefer_schema2_sibling_for_bundle_json_path(bundle_path: &Path) -> PathBuf {
+    if bundle_path.is_dir() {
+        return resolve_bundle_artifact_path(bundle_path);
+    }
+    let Some(file_name) = bundle_path.file_name() else {
+        return bundle_path.to_path_buf();
+    };
+    if !file_name.eq_ignore_ascii_case("bundle.json") {
+        return bundle_path.to_path_buf();
+    }
+    let Some(parent) = bundle_path.parent() else {
+        return bundle_path.to_path_buf();
+    };
+    let schema2 = parent.join("bundle.schema2.json");
+    if schema2.is_file() {
+        return schema2;
+    }
+    bundle_path.to_path_buf()
+}
+
+pub(crate) fn resolve_bundle_artifact_path_no_materialize(bundle_dir: &Path) -> Option<PathBuf> {
+    if !bundle_dir.is_dir() {
+        return bundle_dir.is_file().then(|| bundle_dir.to_path_buf());
+    }
+
+    let direct_v2 = bundle_dir.join("bundle.schema2.json");
+    if direct_v2.is_file() {
+        return Some(direct_v2);
+    }
+    let direct = bundle_dir.join("bundle.json");
+    if direct.is_file() {
+        return Some(direct);
+    }
+
+    let root_v2 = bundle_dir.join("_root").join("bundle.schema2.json");
+    if root_v2.is_file() {
+        return Some(root_v2);
+    }
+    let root = bundle_dir.join("_root").join("bundle.json");
+    if root.is_file() {
+        return Some(root);
+    }
+
+    None
+}
+
+pub(crate) fn resolve_bundle_schema2_artifact_path_no_materialize(
+    bundle_dir: &Path,
+) -> Option<PathBuf> {
+    if !bundle_dir.is_dir() {
+        if bundle_dir.is_file()
+            && bundle_dir
+                .file_name()
+                .is_some_and(|s| s.eq_ignore_ascii_case("bundle.schema2.json"))
+        {
+            return Some(bundle_dir.to_path_buf());
+        }
+        return None;
+    }
+
+    let direct_v2 = bundle_dir.join("bundle.schema2.json");
+    if direct_v2.is_file() {
+        return Some(direct_v2);
+    }
+    let root_v2 = bundle_dir.join("_root").join("bundle.schema2.json");
+    if root_v2.is_file() {
+        return Some(root_v2);
+    }
+
+    None
+}
+
+pub(crate) fn resolve_raw_bundle_artifact_path_no_materialize(
+    bundle_dir: &Path,
+) -> Option<PathBuf> {
+    if !bundle_dir.is_dir() {
+        if bundle_dir.is_file()
+            && bundle_dir
+                .file_name()
+                .is_some_and(|s| s.eq_ignore_ascii_case("bundle.json"))
+        {
+            return Some(bundle_dir.to_path_buf());
+        }
+        return None;
+    }
+
+    let direct = bundle_dir.join("bundle.json");
+    if direct.is_file() {
+        return Some(direct);
+    }
+    let root = bundle_dir.join("_root").join("bundle.json");
+    if root.is_file() {
+        return Some(root);
+    }
+
+    None
 }
 
 pub(crate) fn wait_for_bundle_artifact_from_script_result(
@@ -276,8 +372,7 @@ pub(crate) fn wait_for_bundle_artifact_from_script_result(
             .and_then(|s| (!s.trim().is_empty()).then_some(s.trim()))
             .map(PathBuf::from)
             .map(|p| if p.is_absolute() { p } else { out_dir.join(p) })
-            .or_else(|| crate::compare::read_latest_pointer(out_dir))
-            .or_else(|| crate::compare::find_latest_export_dir(out_dir));
+            .or_else(|| crate::latest::latest_bundle_dir_path_opt(out_dir));
         if let Some(dir) = dir {
             let bundle_path = resolve_bundle_artifact_path(&dir);
             if bundle_path.is_file() {

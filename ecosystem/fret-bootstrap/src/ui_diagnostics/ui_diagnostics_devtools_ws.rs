@@ -23,6 +23,24 @@ pub(super) struct PendingDevtoolsSemanticsNodeGetRequest {
 }
 
 impl UiDiagnosticsService {
+    pub(super) fn drive_devtools_requests_for_window(
+        &mut self,
+        app: &App,
+        window: AppWindowId,
+        scale_factor: f32,
+        ui: Option<&UiTree<App>>,
+    ) -> bool {
+        #[cfg(feature = "diagnostics-ws")]
+        {
+            return self.drive_devtools_ws_requests_for_window(app, window, scale_factor, ui);
+        }
+        #[cfg(not(feature = "diagnostics-ws"))]
+        {
+            let _ = (app, window, scale_factor, ui);
+            return false;
+        }
+    }
+
     #[cfg(feature = "diagnostics-ws")]
     pub(super) fn ws_is_configured(&self) -> bool {
         self.cfg.devtools_ws_url.is_some() && self.cfg.devtools_token.is_some()
@@ -199,18 +217,18 @@ impl UiDiagnosticsService {
                 return false;
             }
 
-            let req = serde_json::json!({
-                "schema_version": 1,
-                "out_dir": self.cfg.out_dir.to_string_lossy(),
-                "bundle_dir_name": bundle_dir_name.clone(),
-                "request_id": pending.request_id_str.clone(),
-                "windows": [{
-                    "window": pending.window_ffi,
-                    "tick_id": app.tick_id().0,
-                    "frame_id": app.frame_id().0,
-                    "scale_factor": scale_factor as f64,
-                }]
-            });
+            let req = DiagScreenshotRequestV1 {
+                schema_version: 1,
+                out_dir: self.cfg.out_dir.to_string_lossy().to_string(),
+                bundle_dir_name: bundle_dir_name.clone(),
+                request_id: Some(pending.request_id_str.clone()),
+                windows: vec![DiagScreenshotWindowRequestV1 {
+                    window: pending.window_ffi,
+                    tick_id: app.tick_id().0,
+                    frame_id: app.frame_id().0,
+                    scale_factor: scale_factor as f64,
+                }],
+            };
 
             let write_ok = serde_json::to_vec_pretty(&req).ok().is_some_and(|bytes| {
                 if let Some(parent) = self.cfg.screenshot_request_path.parent() {
@@ -595,6 +613,37 @@ impl UiDiagnosticsService {
                     .get("script")
                     .cloned()
                     .unwrap_or_else(|| msg.payload.clone());
+                let schema_version: u32 = script_value
+                    .get("schema_version")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0)
+                    .min(u32::MAX as u64) as u32;
+                if schema_version == 1 && !self.cfg.allow_script_schema_v1 {
+                    let run_id = self.next_script_run_id();
+                    self.pending_script = None;
+                    self.pending_script_run_id = None;
+                    self.write_script_result(UiScriptResultV1 {
+                        schema_version: 1,
+                        run_id,
+                        updated_unix_ms: unix_ms_now(),
+                        window: None,
+                        stage: UiScriptStageV1::Failed,
+                        step_index: None,
+                        reason_code: Some("script.schema_v1_disabled".to_string()),
+                        reason: Some(
+                            "script schema_version=1 is disabled; upgrade to schema_version=2"
+                                .to_string(),
+                        ),
+                        evidence: None,
+                        last_bundle_dir: self
+                            .last_dump_dir
+                            .as_ref()
+                            .map(|p| display_path(&self.cfg.out_dir, p)),
+                        last_bundle_artifact: self.last_dump_artifact_stats.clone(),
+                    });
+                    return;
+                }
+
                 let Some(script) = PendingScript::from_json_value(script_value) else {
                     return;
                 };
