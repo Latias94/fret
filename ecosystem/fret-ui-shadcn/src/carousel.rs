@@ -42,6 +42,14 @@ pub struct CarouselApiSnapshot {
     pub reinit_generation: u64,
 }
 
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct CarouselSlidesInViewSnapshot {
+    pub slides_in_view: Arc<[usize]>,
+    pub slides_enter_view: Arc<[usize]>,
+    pub slides_left_view: Arc<[usize]>,
+    pub generation: u64,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct CarouselAutoplayConfig {
     pub delay: Duration,
@@ -183,6 +191,10 @@ pub struct CarouselOptions {
     /// This is *not* a wall-clock duration in milliseconds. See:
     /// - `docs/workstreams/carousel-embla-parity-v2/contracts.md`
     pub embla_duration: f32,
+    /// Minimum visible fraction (0..=1) required to count a slide as "in view" for slidesInView.
+    pub in_view_threshold: f32,
+    /// Viewport margin (px) applied on both ends for slidesInView intersection tests.
+    pub in_view_margin_px: Px,
     pub pixel_tolerance_px: f32,
 }
 
@@ -202,6 +214,8 @@ impl Default for CarouselOptions {
             duration: Duration::from_millis(25),
             embla_engine: false,
             embla_duration: 25.0,
+            in_view_threshold: 0.0,
+            in_view_margin_px: Px(0.0),
             pixel_tolerance_px: 2.0,
         }
     }
@@ -272,6 +286,16 @@ impl CarouselOptions {
         self
     }
 
+    pub fn in_view_threshold(mut self, threshold: f32) -> Self {
+        self.in_view_threshold = threshold;
+        self
+    }
+
+    pub fn in_view_margin_px(mut self, margin: Px) -> Self {
+        self.in_view_margin_px = margin;
+        self
+    }
+
     pub fn pixel_tolerance_px(mut self, pixel_tolerance_px: f32) -> Self {
         self.pixel_tolerance_px = pixel_tolerance_px;
         self
@@ -292,6 +316,7 @@ pub struct Carousel {
     options: CarouselOptions,
     drag_config: headless_carousel::CarouselDragConfig,
     api_snapshot: Option<Model<CarouselApiSnapshot>>,
+    slides_in_view_snapshot: Option<Model<CarouselSlidesInViewSnapshot>>,
     autoplay: Option<CarouselAutoplayConfig>,
     test_id: Option<Arc<str>>,
 }
@@ -347,6 +372,7 @@ struct CarouselState {
     slides: Option<Model<Arc<[headless_carousel::CarouselSlide1D]>>>,
     max_offset: Option<Model<Px>>,
     embla_engine: Option<Model<Option<headless_embla::engine::Engine>>>,
+    slides_in_view_tracker: Option<Model<headless_embla::slides_in_view::SlidesInViewTracker>>,
 }
 
 fn carousel_models<H: UiHost>(
@@ -437,6 +463,26 @@ fn carousel_models<H: UiHost>(
     )
 }
 
+fn carousel_slides_in_view_tracker_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+) -> Model<headless_embla::slides_in_view::SlidesInViewTracker> {
+    let existing = cx.with_state(CarouselState::default, |st| {
+        st.slides_in_view_tracker.clone()
+    });
+    if let Some(existing) = existing {
+        return existing;
+    }
+
+    let tracker = cx
+        .app
+        .models_mut()
+        .insert(headless_embla::slides_in_view::SlidesInViewTracker::default());
+    cx.with_state(CarouselState::default, |st| {
+        st.slides_in_view_tracker = Some(tracker.clone());
+    });
+    tracker
+}
+
 impl Default for Carousel {
     fn default() -> Self {
         Self::new(Vec::new())
@@ -458,6 +504,7 @@ impl Carousel {
             options: CarouselOptions::default(),
             drag_config: headless_carousel::CarouselDragConfig::default(),
             api_snapshot: None,
+            slides_in_view_snapshot: None,
             autoplay: None,
             test_id: None,
         }
@@ -533,6 +580,14 @@ impl Carousel {
         self
     }
 
+    pub fn slides_in_view_snapshot_model(
+        mut self,
+        model: Model<CarouselSlidesInViewSnapshot>,
+    ) -> Self {
+        self.slides_in_view_snapshot = Some(model);
+        self
+    }
+
     /// Adds an Embla-style autoplay policy surface (shadcn `carousel-plugin` outcome).
     pub fn autoplay(mut self, config: CarouselAutoplayConfig) -> Self {
         self.autoplay = Some(config);
@@ -569,6 +624,7 @@ impl Carousel {
             let autoplay_stop_on_interaction =
                 autoplay_cfg.is_some_and(|cfg| cfg.stop_on_interaction);
             let root_test_id = self.test_id.unwrap_or_else(|| Arc::from("carousel"));
+            let slides_in_view_snapshot_model = self.slides_in_view_snapshot;
 
             let (
                 index_model,
@@ -1627,6 +1683,7 @@ impl Carousel {
             } else {
                 Vec::new()
             };
+            let loop_translates_for_items = loop_translates.clone();
 
             let mut item_ids = Vec::with_capacity(items_len);
             let item_ids_ref = &mut item_ids;
@@ -1716,7 +1773,8 @@ impl Carousel {
                                     .test_id(test_id),
                             );
 
-                            let translate = loop_translates.get(idx).copied().unwrap_or(0.0);
+                            let translate =
+                                loop_translates_for_items.get(idx).copied().unwrap_or(0.0);
                             if translate == 0.0 {
                                 return item;
                             }
@@ -1901,6 +1959,67 @@ impl Carousel {
                         }
                     }
                 };
+            }
+
+            if let Some(snapshot_model) = slides_in_view_snapshot_model.clone() {
+                if view_size_now.0 > 0.0 && !slides_now.is_empty() {
+                    let tracker_model = carousel_slides_in_view_tracker_model(cx);
+                    let threshold = options.in_view_threshold;
+                    let margin_px = options.in_view_margin_px.0;
+                    let snapshot_prev_generation = cx
+                        .watch_model(&snapshot_model)
+                        .layout()
+                        .read_ref(|v| v.generation)
+                        .ok()
+                        .unwrap_or(0);
+
+                    let slides_for_view = slides_now
+                        .iter()
+                        .enumerate()
+                        .map(|(idx, s)| {
+                            let translate = loop_translates.get(idx).copied().unwrap_or(0.0);
+                            headless_embla::slide_looper::Slide1D {
+                                start: s.start.0 + translate,
+                                size: s.size.0,
+                            }
+                        })
+                        .collect::<Vec<_>>();
+
+                    let mut update_out = None;
+                    let mut generation = 0;
+                    let _ = cx.app.models_mut().update(&tracker_model, |tracker| {
+                        let out = tracker.update(
+                            &slides_for_view,
+                            axis_offset.0.max(0.0),
+                            view_size_now.0.max(0.0),
+                            threshold,
+                            margin_px,
+                        );
+                        generation = tracker.generation();
+                        update_out = Some(out);
+                    });
+
+                    if let Some(update_out) = update_out {
+                        let should_emit = update_out.changed || snapshot_prev_generation == 0;
+                        if should_emit {
+                            let headless_embla::slides_in_view::SlidesInViewUpdate {
+                                slides_in_view,
+                                slides_enter_view,
+                                slides_left_view,
+                                changed: _,
+                            } = update_out;
+
+                            let _ = cx.app.models_mut().update(&snapshot_model, |v| {
+                                v.slides_in_view = Arc::from(slides_in_view.into_boxed_slice());
+                                v.slides_enter_view =
+                                    Arc::from(slides_enter_view.into_boxed_slice());
+                                v.slides_left_view =
+                                    Arc::from(slides_left_view.into_boxed_slice());
+                                v.generation = generation;
+                            });
+                        }
+                    }
+                }
             }
 
             let snaps_arc: Arc<[Px]> = Arc::from(snaps_now.clone().into_boxed_slice());

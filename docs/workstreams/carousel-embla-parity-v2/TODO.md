@@ -96,8 +96,13 @@ Non-goals (v2):
 
 ### Slides in view
 
-- [ ] CAR2-150 Implement `slidesInView` with `inViewThreshold` + `inViewMargin`.
+- [x] CAR2-150 Implement `slidesInView` with `inViewThreshold` + `inViewMargin`.
   - Provide both: current in-view set and “changed since last frame” signals.
+  - Evidence:
+    - Headless tracker: `ecosystem/fret-ui-headless/src/embla/slides_in_view.rs`
+    - Recipe wiring + snapshot model: `ecosystem/fret-ui-shadcn/src/carousel.rs`
+  - Gate:
+    - `ecosystem/fret-ui-shadcn/tests/carousel_slides_in_view_snapshot.rs`
 
 ### ReInit + resize + slide changes
 

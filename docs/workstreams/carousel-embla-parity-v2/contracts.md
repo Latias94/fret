@@ -157,6 +157,19 @@ Contract:
 - The engine exposes “slides currently in view” and “changed” signals.
 - Threshold/margin influence inclusion in the in-view set.
 
+Implementation (MVP shipped):
+
+- Headless: a deterministic 1D viewport intersection tracker that approximates Embla’s
+  `IntersectionObserver`-driven behavior.
+- Recipe: exposes a policy-only snapshot model (`CarouselSlidesInViewSnapshot`) whose `generation`
+  increments when the in-view set changes (and carries enter/leave indices for that generation).
+
+Evidence anchors:
+
+- Headless tracker: `ecosystem/fret-ui-headless/src/embla/slides_in_view.rs`
+- Recipe wiring: `ecosystem/fret-ui-shadcn/src/carousel.rs`
+- Gate: `ecosystem/fret-ui-shadcn/tests/carousel_slides_in_view_snapshot.rs`
+
 ## ReInit + resize contract
 
 Embla emits a `reInit` event when it re-initializes due to geometry or option changes (e.g. resize,

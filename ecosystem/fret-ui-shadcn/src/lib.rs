@@ -149,7 +149,7 @@ pub use card::{
 };
 pub use carousel::{
     Carousel, CarouselAlign, CarouselApiSnapshot, CarouselAutoplayConfig, CarouselContainScroll,
-    CarouselOptions, CarouselOrientation, CarouselSlidesToScroll,
+    CarouselOptions, CarouselOrientation, CarouselSlidesInViewSnapshot, CarouselSlidesToScroll,
 };
 pub use chart::{
     ChartLegendContent, ChartLegendItem, ChartLegendVerticalAlign, ChartTooltipContent,
