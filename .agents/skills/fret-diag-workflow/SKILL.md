@@ -23,7 +23,7 @@ Use `fret-ui-review` when the goal is an architecture/UX audit rather than produ
   - `fretboard diag meta ...`
   - `fretboard diag query ...`
   - `fretboard diag slice ...`
-- When you need repository-wide search, use `tools/rg-safe.ps1` (excludes diag artifact directories).
+- When you need repository-wide search, use `tools/rg-safe.ps1` (excludes diag artifact directories and bundle artifacts).
 
 ## Success criteria (what “good” looks like)
 
@@ -131,7 +131,7 @@ Prefer bounded queries over `rg bundle.json`:
 - `fretboard diag query test-id <bundle_dir|bundle.json|bundle.schema2.json> <pattern> --top 50`
 - `fretboard diag slice <bundle_dir|bundle.json|bundle.schema2.json> --test-id <test_id>`
 
-When searching the repository (not bundle artifacts), prefer `tools/rg-safe.ps1` (excludes `target/fret-diag/**` and `.fret/diag/**`).
+When searching the repository (not bundle artifacts), prefer `tools/rg-safe.ps1` (excludes `target/fret-diag/**`, `.fret/diag/**`, `bundle.json`, and `bundle.schema2.json`).
 
 Useful safe-search templates (PowerShell):
 
