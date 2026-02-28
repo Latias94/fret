@@ -18,6 +18,7 @@ Use `fret-ui-review` when the goal is an architecture/UX audit rather than produ
 
 - Do **not** run `rg` on `bundle.json` (or on `target/fret-diag/**` / `.fret/diag/**`) — it can explode to tens of
   thousands of lines.
+- Do **not** `cat` / `Get-Content` a raw `bundle.json` (same explosion risk; it is frequently megabytes-to-hundreds-of-MB).
 - Prefer bounded tooling queries:
   - `fretboard diag meta ...`
   - `fretboard diag query ...`
@@ -107,6 +108,11 @@ Supported `pointer_kind` values in scripts: `mouse`, `touch`, `pen`.
 
 - Run one script:
   - `fretboard diag run <script.json|script_id> --launch -- <cmd>`
+- Deep debugging (opt-in raw `bundle.json` for tool-launched runs):
+  - `fretboard diag run <script.json|script_id> --launch-write-bundle-json --launch -- <cmd>`
+  - Notes:
+    - `--launch-write-bundle-json` must appear **before** `--launch`.
+    - Not supported for `diag matrix` (too many runs; high risk of output explosion).
 - Pack a bounded share artifact (preferred in chat/AI loops):
   - `fretboard diag pack <bundle_dir> --ai-only`
 - Optional (compat): pack a schema2-only zip (still includes the bundle artifact, but avoids raw `bundle.json`):
@@ -135,12 +141,18 @@ For evidence-first triage (reason codes + bounded traces), see: `references/evid
   - Use a promoted `script_id` (recommended) or an explicit path under `tools/diag-scripts/`.
   - Run `diag list scripts` to confirm the id exists.
   - If scripts were recently moved, run `diag doctor scripts` to detect broken redirects / registry drift.
+- “no bundles are produced”
+  - Likely cause: diagnostics are not enabled or the app isn't wired to the diagnostics driver.
+  - Fix: launch via `fretboard diag run ... --launch -- <cmd>` (recommended) or set `FRET_DIAG=1` for manual runs.
 - “tooling.launch.failed”
   - Check the `--dir` path is writable; tool-launched runs require writing `<dir>/diag.config.json`.
   - Inspect `<dir>/script.result.json` for a bounded, machine-readable `reason_code` and error note.
 - “timeout”
   - Replace sleeps with `wait_until`, `wait_bounds_stable`, and `click_stable`.
   - Add an intermediate `capture_bundle` close to the suspected failure point.
+- “artifacts are unexpectedly huge”
+  - Run `fretboard diag config doctor --mode launch` to spot output-explosion risks before rerunning.
+  - Check whether you enabled `--launch-write-bundle-json` or `FRET_DIAG_BUNDLE_JSON_FORMAT=pretty`.
 - “screenshot requested but capability missing”
   - Ensure the runner advertises `diag.screenshot_png` and enable screenshots (prefer config `screenshots_enabled=true`
     via `FRET_DIAG_CONFIG_PATH`; manual escape hatch: `FRET_DIAG_GPU_SCREENSHOTS=1`).
@@ -206,6 +218,15 @@ Use invariants-first, evidence-first gates; avoid snapshotting every internal st
 - Layout sweep playbook (page-level): `references/layout-sweep.md`
 - Web runner transport notes: `references/web-runner.md`
 
+## Maintainer guardrails (keep `--launch` consistent)
+
+When adding or refactoring a diagnostics entrypoint that supports `--launch`:
+
+- Always funnel tool-launched execution through `maybe_launch_demo` so the per-run `<out_dir>/diag.config.json` write +
+  `FRET_DIAG_CONFIG_PATH` wiring stays consistent across `run/suite/repro/perf`.
+- Plumb `--launch-write-bundle-json` through the same path (never reintroduce a silent fallback to raw `bundle.json`).
+- On tooling failures, write a bounded `script.result.json` with a stable `reason_code` (e.g. `tooling.launch.failed`).
+
 ## Evidence anchors
 
 Where the code lives:
@@ -242,18 +263,11 @@ Where the code lives:
 - Targeting pixels/coordinates instead of `test_id`/semantics selectors (scripts become brittle).
 - Running the “wrong” binary that isn’t wired through the diagnostics driver (no bundle/script execution).
 - Debugging an interaction bug with only geometry snapshots: add scripted steps + focused assertions.
+- Enabling raw `bundle.json` writing by accident (avoid `--launch-write-bundle-json` unless you truly need it).
 - Web runner:
   - Forgetting `fret_devtools_ws` / `fret_devtools_token` query params (no WS bridge, no scripts/bundles).
   - Assuming the web app can write `target/fret-diag/...` (it cannot; you must export via WS).
   - Running a script that never calls `capture_bundle` (nothing to export).
-
-## Troubleshooting
-
-- Symptom: no bundles are produced.
-  - Likely cause: diagnostics are not enabled.
-  - Fix: launch via `fretboard diag run ... --launch -- <cmd>` or set `FRET_DIAG=1`.
-- Symptom: selectors are flaky (misses, clicks wrong node).
-  - Fix: prefer `test_id` + v2 intent steps (`click_stable`, `ensure_visible`) over coordinates.
 
 ## Related skills
 
