@@ -118,6 +118,10 @@ pub struct Autocomplete {
     set_query_on_select: bool,
     on_select: Option<OnAutocompleteSelect>,
     input_id_out: Option<Rc<Cell<Option<GlobalElementId>>>>,
+    leading_icon: Option<fret_icons::IconId>,
+    leading_icon_a11y_label: Option<Arc<str>>,
+    leading_icon_test_id: Option<Arc<str>>,
+    on_leading_icon_pointer_down: Option<OnPressablePointerDown>,
     show_trailing_dropdown_icon: bool,
     trailing_dropdown_icon_a11y_label: Option<Arc<str>>,
     disabled: bool,
@@ -135,6 +139,10 @@ impl std::fmt::Debug for Autocomplete {
             .field("variant", &self.variant)
             .field("disabled", &self.disabled)
             .field("error", &self.error)
+            .field(
+                "leading_icon",
+                &self.leading_icon.as_ref().map(|i| i.as_str()),
+            )
             .field("label", &self.label)
             .field("placeholder", &self.placeholder)
             .field("supporting_text", &self.supporting_text)
@@ -155,6 +163,10 @@ impl Autocomplete {
             set_query_on_select: true,
             on_select: None,
             input_id_out: None,
+            leading_icon: None,
+            leading_icon_a11y_label: None,
+            leading_icon_test_id: None,
+            on_leading_icon_pointer_down: None,
             show_trailing_dropdown_icon: false,
             trailing_dropdown_icon_a11y_label: None,
             disabled: false,
@@ -199,6 +211,26 @@ impl Autocomplete {
 
     pub fn input_id_out(mut self, input_id_out: Rc<Cell<Option<GlobalElementId>>>) -> Self {
         self.input_id_out = Some(input_id_out);
+        self
+    }
+
+    pub fn leading_icon(mut self, icon: fret_icons::IconId) -> Self {
+        self.leading_icon = Some(icon);
+        self
+    }
+
+    pub fn leading_icon_a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.leading_icon_a11y_label = Some(label.into());
+        self
+    }
+
+    pub fn leading_icon_test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.leading_icon_test_id = Some(id.into());
+        self
+    }
+
+    pub fn on_leading_icon_pointer_down(mut self, on_pointer_down: OnPressablePointerDown) -> Self {
+        self.on_leading_icon_pointer_down = Some(on_pointer_down);
         self
     }
 
@@ -575,6 +607,19 @@ fn autocomplete_into_element<H: UiHost>(
             .expanded(Some(open_now))
             .input_id_out(input_id_out.clone())
             .field_id_out(field_id_out.clone());
+
+        if let Some(icon) = autocomplete.leading_icon.clone() {
+            text_field = text_field.leading_icon(icon);
+            if let Some(label) = autocomplete.leading_icon_a11y_label.clone() {
+                text_field = text_field.leading_icon_a11y_label(label);
+            }
+            if let Some(id) = autocomplete.leading_icon_test_id.clone() {
+                text_field = text_field.leading_icon_test_id(id);
+            }
+            if let Some(handler) = autocomplete.on_leading_icon_pointer_down.clone() {
+                text_field = text_field.on_leading_icon_pointer_down(handler);
+            }
+        }
 
         if autocomplete.show_trailing_dropdown_icon {
             let open = runtime.open.clone();

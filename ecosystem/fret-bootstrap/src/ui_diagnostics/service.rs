@@ -41,6 +41,8 @@ pub struct UiDiagnosticsService {
     pick_overlay_grace_frames: HashMap<AppWindowId, u32>,
     pick_armed_run_id: Option<u64>,
     pending_pick: Option<PendingPick>,
+    clipboard_text_responses: std::collections::VecDeque<DiagClipboardTextResponse>,
+    next_clipboard_token: u64,
     app_snapshot_provider:
         Option<Arc<dyn Fn(&App, AppWindowId) -> Option<serde_json::Value> + 'static>>,
     #[cfg(feature = "diagnostics-ws")]
@@ -51,6 +53,18 @@ pub struct UiDiagnosticsService {
         Option<ui_diagnostics_devtools_ws::PendingDevtoolsSemanticsNodeGetRequest>,
     #[cfg(feature = "diagnostics-ws")]
     ws_bridge: UiDiagnosticsWsBridge,
+}
+
+#[derive(Debug, Clone)]
+pub(super) struct DiagClipboardTextResponse {
+    pub(super) token: fret_core::ClipboardToken,
+    pub(super) kind: DiagClipboardTextResponseKind,
+}
+
+#[derive(Debug, Clone)]
+pub(super) enum DiagClipboardTextResponseKind {
+    Text(String),
+    Unavailable { message: Option<String> },
 }
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -64,6 +78,38 @@ thread_local! {
 }
 
 impl UiDiagnosticsService {
+    pub(super) fn allocate_clipboard_token(&mut self) -> fret_core::ClipboardToken {
+        let next = self.next_clipboard_token.max(1);
+        self.next_clipboard_token = next.saturating_add(1);
+        fret_core::ClipboardToken(next)
+    }
+
+    pub(super) fn clipboard_text_response_for_token(
+        &self,
+        token: fret_core::ClipboardToken,
+    ) -> Option<&DiagClipboardTextResponseKind> {
+        self.clipboard_text_responses
+            .iter()
+            .rev()
+            .find(|r| r.token == token)
+            .map(|r| &r.kind)
+    }
+
+    pub(super) fn reset_clipboard_text_responses(&mut self) {
+        self.clipboard_text_responses.clear();
+        self.next_clipboard_token = 1;
+    }
+
+    fn record_clipboard_text_response(&mut self, response: DiagClipboardTextResponse) {
+        // Keep this bounded; clipboard assertions are a diagnostics-only surface and should not
+        // grow unbounded during long-running apps.
+        const MAX_RESPONSES: usize = 128;
+        while self.clipboard_text_responses.len() >= MAX_RESPONSES {
+            self.clipboard_text_responses.pop_front();
+        }
+        self.clipboard_text_responses.push_back(response);
+    }
+
     pub fn with_script_injection_scope<R>(f: impl FnOnce() -> R) -> R {
         SCRIPT_INJECTION_SCOPE.with(|cell| {
             let prev = cell.replace(true);
@@ -96,6 +142,26 @@ impl UiDiagnosticsService {
         }
 
         matches!(event, Event::Pointer(_) | Event::InternalDrag(_))
+    }
+
+    pub fn should_ignore_external_keyboard_event(&self, event: &Event) -> bool {
+        if !self.is_enabled() {
+            return false;
+        }
+        if !self.cfg.isolate_external_keyboard_input_while_script_running {
+            return false;
+        }
+        if Self::in_script_injection_scope() {
+            return false;
+        }
+        if !self.any_script_running() {
+            return false;
+        }
+
+        matches!(
+            event,
+            Event::KeyDown { .. } | Event::KeyUp { .. } | Event::TextInput(_) | Event::Ime(_)
+        )
     }
 
     fn is_wasm_ws_only(&self) -> bool {
@@ -564,6 +630,24 @@ impl UiDiagnosticsService {
         let mut recorded = RecordedUiEventV1::from_event(app, window, event, self.cfg.redact_text);
         truncate_string_bytes(&mut recorded.debug, self.cfg.max_debug_string_bytes);
         ring.push_event(&self.cfg, recorded);
+
+        match event {
+            Event::ClipboardText { token, text } => {
+                self.record_clipboard_text_response(DiagClipboardTextResponse {
+                    token: *token,
+                    kind: DiagClipboardTextResponseKind::Text(text.clone()),
+                });
+            }
+            Event::ClipboardTextUnavailable { token, message } => {
+                self.record_clipboard_text_response(DiagClipboardTextResponse {
+                    token: *token,
+                    kind: DiagClipboardTextResponseKind::Unavailable {
+                        message: message.clone(),
+                    },
+                });
+            }
+            _ => {}
+        }
 
         if let Some(active) = self.active_scripts.get_mut(&window)
             && let Event::Ime(ime) = event

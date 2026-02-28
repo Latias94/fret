@@ -1,10 +1,11 @@
 {
   "meta": {
     "required_capabilities": [
+      "diag.script_v2",
       "diag.screenshot_png"
     ]
   },
-  "schema_version": 1,
+  "schema_version": 2,
   "steps": [
     {
       "predicate": {
@@ -18,6 +19,7 @@
       "type": "wait_until"
     },
     {
+      "button": "left",
       "target": {
         "id": "ui-gallery-nav-search",
         "kind": "test_id"
@@ -27,12 +29,23 @@
     {
       "key": "a",
       "modifiers": {
-        "ctrl": true
+        "alt": false,
+        "ctrl": true,
+        "meta": false,
+        "shift": false
       },
+      "repeat": false,
       "type": "press_key"
     },
     {
       "key": "backspace",
+      "modifiers": {
+        "alt": false,
+        "ctrl": false,
+        "meta": false,
+        "shift": false
+      },
+      "repeat": false,
       "type": "press_key"
     },
     {
@@ -44,6 +57,7 @@
       "type": "wait_frames"
     },
     {
+      "button": "left",
       "target": {
         "id": "ui-gallery-nav-select",
         "kind": "test_id"
@@ -73,6 +87,7 @@
       "type": "wait_until"
     },
     {
+      "button": "left",
       "target": {
         "id": "ui-gallery-select-trigger",
         "kind": "test_id"
@@ -92,6 +107,7 @@
     },
     {
       "label": "ui-gallery-select-wheel-scroll-before",
+      "timeout_frames": 300,
       "type": "capture_screenshot"
     },
     {
@@ -102,6 +118,7 @@
       "type": "move_pointer"
     },
     {
+      "delta_x": 0.0,
       "delta_y": -120.0,
       "target": {
         "id": "ui-gallery-select-item-apple",
@@ -114,6 +131,7 @@
       "type": "wait_frames"
     },
     {
+      "delta_x": 0.0,
       "delta_y": -240.0,
       "target": {
         "id": "ui-gallery-select-item-apple",
@@ -126,6 +144,7 @@
       "type": "wait_frames"
     },
     {
+      "delta_x": 0.0,
       "delta_y": 120.0,
       "target": {
         "id": "ui-gallery-select-item-apple",
@@ -139,6 +158,7 @@
     },
     {
       "label": "ui-gallery-select-wheel-scroll-after",
+      "timeout_frames": 300,
       "type": "capture_screenshot"
     },
     {

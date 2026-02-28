@@ -163,6 +163,7 @@ fn runtime_known_env_vars() -> BTreeSet<&'static str> {
         "FRET_DIAG_MAX_DEBUG_STRING_BYTES",
         "FRET_DIAG_MAX_GATING_TRACE_ENTRIES",
         "FRET_DIAG_ISOLATE_POINTER_INPUT",
+        "FRET_DIAG_ISOLATE_KEYBOARD_INPUT",
         "FRET_DIAG_BUNDLE_SCREENSHOT",
         "FRET_DIAG_BUNDLE_JSON_FORMAT",
         "FRET_DIAG_BUNDLE_SEMANTICS_MODE",
@@ -216,6 +217,7 @@ fn runtime_known_config_keys() -> BTreeSet<&'static str> {
         "max_debug_string_bytes",
         "max_gating_trace_entries",
         "isolate_external_pointer_input_while_script_running",
+        "isolate_external_keyboard_input_while_script_running",
         "frame_clock_fixed_delta_ms",
         "devtools_embed_bundle",
     ])

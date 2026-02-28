@@ -21,17 +21,17 @@ use fret_ui::{Theme, UiHost};
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::typography::{self, TextIntent};
 use fret_ui_kit::{
-    resolve_override_slot_opt_with, resolve_override_slot_with, ColorRef, OverrideSlot,
-    WidgetStateProperty, WidgetStates,
+    ColorRef, OverrideSlot, WidgetStateProperty, WidgetStates, resolve_override_slot_opt_with,
+    resolve_override_slot_with,
 };
 
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
-    material_ink_layer_for_pressable, material_pressable_indication_config, RippleClip,
+    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
 };
-use crate::foundation::interaction::{pressable_interaction, PressableInteraction};
-use crate::foundation::motion_scheme::{sys_spring_in_scope, MotionSchemeKey};
+use crate::foundation::interaction::{PressableInteraction, pressable_interaction};
+use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
 use crate::foundation::token_resolver::MaterialTokenResolver;
 use crate::motion::{SpringAnimator, SpringSpec};
 use crate::tokens::button as button_tokens;
@@ -48,8 +48,12 @@ pub enum ButtonVariant {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ButtonSize {
+    XSmall,
     #[default]
     Small,
+    Medium,
+    Large,
+    XLarge,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -205,13 +209,14 @@ impl Button {
                 let pressed = enabled && st.pressed;
                 let (base_radius, pressed_radius, corner_spring, size_tokens, label_style) = {
                     let theme = Theme::global(&*cx.app);
-                    let base_radius = button_shape_radius(theme);
-                    let pressed_radius = button_pressed_shape_radius(theme);
+                    let base_radius = button_shape_radius(theme, self.size);
+                    let pressed_radius = button_pressed_shape_radius(theme, self.size);
                     let scheme_spring =
                         sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastSpatial);
-                    let corner_spring = button_pressed_corner_spring(theme, scheme_spring);
+                    let corner_spring =
+                        button_pressed_corner_spring(theme, self.size, scheme_spring);
                     let size_tokens = button_size_tokens(theme, self.size);
-                    let label_style = button_label_style(theme);
+                    let label_style = button_label_style(theme, self.size);
                     (
                         base_radius,
                         pressed_radius,
@@ -326,7 +331,7 @@ impl Button {
                         button_tokens::pressed_state_layer_opacity(theme, self.variant);
                     let config = material_pressable_indication_config(theme, None);
 
-                    let outline = button_outline(theme, self.variant, enabled);
+                    let outline = button_outline(theme, self.variant, enabled, size_tokens);
                     let outline = outline.map(|mut outline| {
                         outline.color = resolve_override_slot_with(
                             self.style.outline_color.as_ref(),
@@ -497,41 +502,116 @@ struct ButtonCornerRuntime {
     spring: SpringAnimator,
 }
 
-fn button_label_style(theme: &Theme) -> fret_core::TextStyle {
+fn button_label_text_key(size: ButtonSize) -> &'static str {
+    match size {
+        ButtonSize::XSmall => "md.comp.button.xsmall.label-text",
+        ButtonSize::Small => "md.comp.button.small.label-text",
+        ButtonSize::Medium => "md.comp.button.medium.label-text",
+        ButtonSize::Large => "md.comp.button.large.label-text",
+        ButtonSize::XLarge => "md.comp.button.xlarge.label-text",
+    }
+}
+
+fn button_label_style(theme: &Theme, size: ButtonSize) -> fret_core::TextStyle {
     let style = theme
-        .text_style_by_key("md.comp.button.label-text")
+        .text_style_by_key(button_label_text_key(size))
+        .or_else(|| theme.text_style_by_key("md.comp.button.label-text"))
         .or_else(|| theme.text_style_by_key("md.sys.typescale.label-large"))
         .or_else(|| theme.text_style_by_key("text_style.button"))
         .unwrap_or_default();
     typography::with_intent(style, TextIntent::Control)
 }
 
-fn button_shape_radius(theme: &Theme) -> f32 {
+fn button_shape_radius(theme: &Theme, size: ButtonSize) -> f32 {
     theme
-        .metric_by_key("md.comp.button.container.shape.round")
+        .metric_by_key(button_container_shape_round_key(size))
         .or_else(|| theme.metric_by_key("md.sys.shape.corner.full"))
         .unwrap_or(Px(999.0))
         .0
 }
 
-fn button_pressed_shape_radius(theme: &Theme) -> f32 {
+fn button_container_shape_round_key(size: ButtonSize) -> &'static str {
+    match size {
+        ButtonSize::XSmall => "md.comp.button.xsmall.container.shape.round",
+        ButtonSize::Small => "md.comp.button.small.container.shape.round",
+        ButtonSize::Medium => "md.comp.button.medium.container.shape.round",
+        ButtonSize::Large => "md.comp.button.large.container.shape.round",
+        ButtonSize::XLarge => "md.comp.button.xlarge.container.shape.round",
+    }
+}
+
+fn button_pressed_container_shape_key(size: ButtonSize) -> &'static str {
+    match size {
+        ButtonSize::XSmall => "md.comp.button.xsmall.pressed.container.shape",
+        ButtonSize::Small => "md.comp.button.small.pressed.container.shape",
+        ButtonSize::Medium => "md.comp.button.medium.pressed.container.shape",
+        ButtonSize::Large => "md.comp.button.large.pressed.container.shape",
+        ButtonSize::XLarge => "md.comp.button.xlarge.pressed.container.shape",
+    }
+}
+
+fn button_pressed_shape_radius(theme: &Theme, size: ButtonSize) -> f32 {
     theme
-        .metric_by_key("md.comp.button.pressed.container.shape")
+        .metric_by_key(button_pressed_container_shape_key(size))
         .or_else(|| theme.metric_by_key("md.sys.shape.corner.small"))
         .unwrap_or(Px(8.0))
         .0
 }
 
-fn button_pressed_corner_spring(theme: &Theme, scheme_fallback: SpringSpec) -> SpringSpec {
+fn button_pressed_corner_spring_key_damping(size: ButtonSize) -> &'static str {
+    match size {
+        ButtonSize::XSmall => {
+            "md.comp.button.xsmall.pressed.container.corner-size.motion.spring.damping"
+        }
+        ButtonSize::Small => {
+            "md.comp.button.small.pressed.container.corner-size.motion.spring.damping"
+        }
+        ButtonSize::Medium => {
+            "md.comp.button.medium.pressed.container.corner-size.motion.spring.damping"
+        }
+        ButtonSize::Large => {
+            "md.comp.button.large.pressed.container.corner-size.motion.spring.damping"
+        }
+        ButtonSize::XLarge => {
+            "md.comp.button.xlarge.pressed.container.corner-size.motion.spring.damping"
+        }
+    }
+}
+
+fn button_pressed_corner_spring_key_stiffness(size: ButtonSize) -> &'static str {
+    match size {
+        ButtonSize::XSmall => {
+            "md.comp.button.xsmall.pressed.container.corner-size.motion.spring.stiffness"
+        }
+        ButtonSize::Small => {
+            "md.comp.button.small.pressed.container.corner-size.motion.spring.stiffness"
+        }
+        ButtonSize::Medium => {
+            "md.comp.button.medium.pressed.container.corner-size.motion.spring.stiffness"
+        }
+        ButtonSize::Large => {
+            "md.comp.button.large.pressed.container.corner-size.motion.spring.stiffness"
+        }
+        ButtonSize::XLarge => {
+            "md.comp.button.xlarge.pressed.container.corner-size.motion.spring.stiffness"
+        }
+    }
+}
+
+fn button_pressed_corner_spring(
+    theme: &Theme,
+    size: ButtonSize,
+    scheme_fallback: SpringSpec,
+) -> SpringSpec {
     let tokens = MaterialTokenResolver::new(theme);
     SpringSpec {
         damping: tokens.number_comp_or_sys(
-            "md.comp.button.pressed.container.corner-size.motion.spring.damping",
+            button_pressed_corner_spring_key_damping(size),
             "md.sys.motion.spring.fast.spatial.damping",
             scheme_fallback.damping,
         ),
         stiffness: tokens.number_comp_or_sys(
-            "md.comp.button.pressed.container.corner-size.motion.spring.stiffness",
+            button_pressed_corner_spring_key_stiffness(size),
             "md.sys.motion.spring.fast.spatial.stiffness",
             scheme_fallback.stiffness,
         ),
@@ -568,10 +648,31 @@ struct ButtonSizeTokens {
     trailing_space: Px,
     icon_size: Px,
     icon_label_space: Px,
+    outlined_outline_width: Px,
 }
 
 fn button_size_tokens(theme: &Theme, size: ButtonSize) -> ButtonSizeTokens {
     match size {
+        ButtonSize::XSmall => ButtonSizeTokens {
+            container_height: theme
+                .metric_by_key("md.comp.button.xsmall.container.height")
+                .unwrap_or(Px(32.0)),
+            leading_space: theme
+                .metric_by_key("md.comp.button.xsmall.leading-space")
+                .unwrap_or(Px(12.0)),
+            trailing_space: theme
+                .metric_by_key("md.comp.button.xsmall.trailing-space")
+                .unwrap_or(Px(12.0)),
+            icon_size: theme
+                .metric_by_key("md.comp.button.xsmall.icon.size")
+                .unwrap_or(Px(20.0)),
+            icon_label_space: theme
+                .metric_by_key("md.comp.button.xsmall.icon-label-space")
+                .unwrap_or(Px(8.0)),
+            outlined_outline_width: theme
+                .metric_by_key("md.comp.button.xsmall.outlined.outline.width")
+                .unwrap_or(Px(1.0)),
+        },
         ButtonSize::Small => ButtonSizeTokens {
             container_height: theme
                 .metric_by_key("md.comp.button.small.container.height")
@@ -588,6 +689,69 @@ fn button_size_tokens(theme: &Theme, size: ButtonSize) -> ButtonSizeTokens {
             icon_label_space: theme
                 .metric_by_key("md.comp.button.small.icon-label-space")
                 .unwrap_or(Px(8.0)),
+            outlined_outline_width: theme
+                .metric_by_key("md.comp.button.small.outlined.outline.width")
+                .unwrap_or(Px(1.0)),
+        },
+        ButtonSize::Medium => ButtonSizeTokens {
+            container_height: theme
+                .metric_by_key("md.comp.button.medium.container.height")
+                .unwrap_or(Px(56.0)),
+            leading_space: theme
+                .metric_by_key("md.comp.button.medium.leading-space")
+                .unwrap_or(Px(24.0)),
+            trailing_space: theme
+                .metric_by_key("md.comp.button.medium.trailing-space")
+                .unwrap_or(Px(24.0)),
+            icon_size: theme
+                .metric_by_key("md.comp.button.medium.icon.size")
+                .unwrap_or(Px(24.0)),
+            icon_label_space: theme
+                .metric_by_key("md.comp.button.medium.icon-label-space")
+                .unwrap_or(Px(8.0)),
+            outlined_outline_width: theme
+                .metric_by_key("md.comp.button.medium.outlined.outline.width")
+                .unwrap_or(Px(1.0)),
+        },
+        ButtonSize::Large => ButtonSizeTokens {
+            container_height: theme
+                .metric_by_key("md.comp.button.large.container.height")
+                .unwrap_or(Px(96.0)),
+            leading_space: theme
+                .metric_by_key("md.comp.button.large.leading-space")
+                .unwrap_or(Px(48.0)),
+            trailing_space: theme
+                .metric_by_key("md.comp.button.large.trailing-space")
+                .unwrap_or(Px(48.0)),
+            icon_size: theme
+                .metric_by_key("md.comp.button.large.icon.size")
+                .unwrap_or(Px(32.0)),
+            icon_label_space: theme
+                .metric_by_key("md.comp.button.large.icon-label-space")
+                .unwrap_or(Px(12.0)),
+            outlined_outline_width: theme
+                .metric_by_key("md.comp.button.large.outlined.outline.width")
+                .unwrap_or(Px(2.0)),
+        },
+        ButtonSize::XLarge => ButtonSizeTokens {
+            container_height: theme
+                .metric_by_key("md.comp.button.xlarge.container.height")
+                .unwrap_or(Px(136.0)),
+            leading_space: theme
+                .metric_by_key("md.comp.button.xlarge.leading-space")
+                .unwrap_or(Px(64.0)),
+            trailing_space: theme
+                .metric_by_key("md.comp.button.xlarge.trailing-space")
+                .unwrap_or(Px(64.0)),
+            icon_size: theme
+                .metric_by_key("md.comp.button.xlarge.icon.size")
+                .unwrap_or(Px(40.0)),
+            icon_label_space: theme
+                .metric_by_key("md.comp.button.xlarge.icon-label-space")
+                .unwrap_or(Px(16.0)),
+            outlined_outline_width: theme
+                .metric_by_key("md.comp.button.xlarge.outlined.outline.width")
+                .unwrap_or(Px(3.0)),
         },
     }
 }
@@ -598,13 +762,16 @@ struct ButtonOutline {
     color: Color,
 }
 
-fn button_outline(theme: &Theme, variant: ButtonVariant, enabled: bool) -> Option<ButtonOutline> {
+fn button_outline(
+    theme: &Theme,
+    variant: ButtonVariant,
+    enabled: bool,
+    size_tokens: ButtonSizeTokens,
+) -> Option<ButtonOutline> {
     if variant != ButtonVariant::Outlined {
         return None;
     }
-    let width = theme
-        .metric_by_key("md.comp.button.small.outlined.outline.width")
-        .unwrap_or(Px(1.0));
+    let width = size_tokens.outlined_outline_width;
 
     let mut color = if enabled {
         theme

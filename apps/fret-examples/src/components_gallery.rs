@@ -1730,16 +1730,7 @@ impl WinitAppDriver for ComponentsGalleryDriver {
             state,
         } = context;
 
-        let consumed = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
-            if !svc.is_enabled() {
-                return false;
-            }
-            if svc.maybe_intercept_event_for_inspect_shortcuts(app, window, event) {
-                return true;
-            }
-            svc.maybe_intercept_event_for_picking(app, window, event)
-        });
-        if consumed {
+        if fret_bootstrap::ui_diagnostics::maybe_consume_event(app, window, event) {
             return;
         }
         if matches!(event, Event::WindowCloseRequested) {

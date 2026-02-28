@@ -22,12 +22,12 @@ use fret_ui_kit::overlay_controller;
 use fret_ui_kit::primitives::focus_scope as focus_scope_prim;
 use fret_ui_kit::typography::{self, TextIntent};
 use fret_ui_kit::{
-    merge_override_slot, resolve_override_slot_with, ColorRef, OverlayController, OverlayPresence,
-    OverrideSlot, WidgetStateProperty, WidgetStates,
+    ColorRef, OverlayController, OverlayPresence, OverrideSlot, WidgetStateProperty, WidgetStates,
+    merge_override_slot, resolve_override_slot_with,
 };
 
 use crate::foundation::indication::{
-    material_ink_layer_for_pressable, material_pressable_indication_config, RippleClip,
+    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
 };
 use crate::foundation::surface::material_surface_style;
 use crate::motion;

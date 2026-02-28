@@ -163,4 +163,3 @@ fn tab_strip_pinned_boundary_has_deterministic_test_id() {
         "expected pinned boundary to expose a deterministic test_id"
     );
 }
-

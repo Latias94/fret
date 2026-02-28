@@ -385,6 +385,11 @@ impl UiBuilder<crate::ui::TextBox> {
         self.wrap(TextWrap::WordBreak).overflow(TextOverflow::Clip)
     }
 
+    /// Enables balanced line breaking (Tailwind `text-balance`).
+    pub fn text_balance(self) -> Self {
+        self.wrap(TextWrap::Balance)
+    }
+
     /// Opt into "bounds-as-line-box" baseline placement for fixed-height controls.
     ///
     /// This is intended for single-line labels that should look vertically centered inside a
@@ -440,6 +445,11 @@ impl UiBuilder<crate::ui::RawTextBox> {
     /// breaks inside long tokens such as URLs, paths, and identifiers).
     pub fn break_words(self) -> Self {
         self.wrap(TextWrap::WordBreak).overflow(TextOverflow::Clip)
+    }
+
+    /// Enables balanced line breaking (Tailwind `text-balance`).
+    pub fn text_balance(self) -> Self {
+        self.wrap(TextWrap::Balance)
     }
 }
 

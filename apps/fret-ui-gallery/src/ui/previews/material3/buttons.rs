@@ -3,6 +3,52 @@ use super::super::super::*;
 pub(in crate::ui) fn preview_material3_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
 
+    let sizes_with_icons = |cx: &mut ElementContext<'_, App>, variant: material3::ButtonVariant| {
+        stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N2).items_center(),
+            move |cx| {
+                vec![
+                    material3::Button::new("XS")
+                        .variant(variant)
+                        .size(material3::ButtonSize::XSmall)
+                        .leading_icon(fret_icons::ids::ui::SEARCH)
+                        .trailing_icon(fret_icons::ids::ui::CHEVRON_RIGHT)
+                        .test_id("ui-gallery-material3-button-size-xsmall")
+                        .into_element(cx),
+                    material3::Button::new("S")
+                        .variant(variant)
+                        .size(material3::ButtonSize::Small)
+                        .leading_icon(fret_icons::ids::ui::SEARCH)
+                        .trailing_icon(fret_icons::ids::ui::CHEVRON_RIGHT)
+                        .test_id("ui-gallery-material3-button-size-small")
+                        .into_element(cx),
+                    material3::Button::new("M")
+                        .variant(variant)
+                        .size(material3::ButtonSize::Medium)
+                        .leading_icon(fret_icons::ids::ui::SEARCH)
+                        .trailing_icon(fret_icons::ids::ui::CHEVRON_RIGHT)
+                        .test_id("ui-gallery-material3-button-size-medium")
+                        .into_element(cx),
+                    material3::Button::new("L")
+                        .variant(variant)
+                        .size(material3::ButtonSize::Large)
+                        .leading_icon(fret_icons::ids::ui::SEARCH)
+                        .trailing_icon(fret_icons::ids::ui::CHEVRON_RIGHT)
+                        .test_id("ui-gallery-material3-button-size-large")
+                        .into_element(cx),
+                    material3::Button::new("XL")
+                        .variant(variant)
+                        .size(material3::ButtonSize::XLarge)
+                        .leading_icon(fret_icons::ids::ui::SEARCH)
+                        .trailing_icon(fret_icons::ids::ui::CHEVRON_RIGHT)
+                        .test_id("ui-gallery-material3-button-size-xlarge")
+                        .into_element(cx),
+                ]
+            },
+        )
+    };
+
     let row = |cx: &mut ElementContext<'_, App>,
                variant: material3::ButtonVariant,
                label: &'static str| {
@@ -62,6 +108,9 @@ pub(in crate::ui) fn preview_material3_button(cx: &mut ElementContext<'_, App>) 
 
     vec![
         cx.text("Material 3 Buttons: token-driven colors + state layer + bounded ripple."),
+        cx.text("Sizes (xsmall..xlarge) + leading/trailing icons:"),
+        sizes_with_icons(cx, material3::ButtonVariant::Filled),
+        sizes_with_icons(cx, material3::ButtonVariant::Outlined),
         row(cx, material3::ButtonVariant::Filled, "Filled"),
         row(cx, material3::ButtonVariant::Tonal, "Tonal"),
         row(cx, material3::ButtonVariant::Elevated, "Elevated"),

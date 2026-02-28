@@ -16,7 +16,7 @@ use fret_ui::element::{
     PressableA11y, PressableProps, TextProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
-use fret_ui_kit::headless::calendar::{month_grid, CalendarMonth};
+use fret_ui_kit::headless::calendar::{CalendarMonth, month_grid};
 use fret_ui_kit::overlay_controller;
 use fret_ui_kit::primitives::focus_scope as focus_scope_prim;
 use fret_ui_kit::typography::{self, TextIntent};
