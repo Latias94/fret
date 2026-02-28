@@ -87,6 +87,8 @@ layering (mechanism in `crates/*`, policy in `ecosystem/*`).
 
 - Unit test: reorder intent is correct for a matrix of rects + pointer positions.
 - Integration test: cross-pane drop updates active tab and preserves pinned boundary.
+- Diag script: drag a tab to another pane header-space end target, assert moved:
+  - `tools/diag-scripts/workspace-shell-demo-tab-cross-pane-move-to-end.json`
 
 ## M5 — Drag-to-split (edge targets) integration
 

@@ -72,6 +72,7 @@ This file is an execution checklist for the design in `DESIGN.md`.
 - [ ] Gates:
   - [ ] unit tests for hit testing → insertion side matrix
   - [ ] integration test for cross-pane move intents
+  - [x] diag: cross-pane move by dropping into header space end target
 
 ## M5 — Drag-to-split integration
 

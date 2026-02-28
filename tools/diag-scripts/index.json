@@ -2778,6 +2778,23 @@
       "target_hints": []
     },
     {
+      "id": "workspace-shell-demo-tab-cross-pane-move-to-end",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-cross-pane-move-to-end.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "workspace-shell-demo"
+      ],
+      "tags": [
+        "cross_pane",
+        "gate",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "workspace-shell-demo-tab-drag-and-scroll",
       "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-drag-and-scroll.json",
       "required_capabilities": [],
