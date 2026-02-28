@@ -21,7 +21,6 @@ use fret_ui::element::{
     Overflow, PositionStyle, RowProps, SpacingLength, TextProps,
 };
 use fret_ui_kit::custom_effects::CustomEffectProgramV3;
-use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn as shadcn;
 
 use crate::custom_effect_v3_wgsl::CUSTOM_EFFECT_V3_LENS_WGSL;
@@ -107,6 +106,10 @@ impl MvuProgram for Program {
 }
 
 fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> Elements {
+    // Animations make refraction far easier to see than static gradients.
+    // Hold a continuous-frames lease so the backdrop moves without user input.
+    let _frames = cx.begin_continuous_frames();
+
     let globals = cx.app.global::<DemoGlobals>();
     let effect = globals.and_then(|g| g.program.id());
     let Some(effect) = effect else {
@@ -133,7 +136,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> Elements {
 }
 
 fn stage(cx: &mut ElementContext<'_, App>, enabled: bool, effect: EffectId) -> AnyElement {
-    let stripes = stripes_background(cx);
+    let backdrop = animated_backdrop(cx);
     let lenses = lens_row(cx, enabled, effect);
 
     let title = shadcn::typography::h3(cx, "Custom Effect V3 (CustomV3)");
@@ -203,58 +206,137 @@ fn stage(cx: &mut ElementContext<'_, App>, enabled: bool, effect: EffectId) -> A
             layout: stage_layout,
             ..Default::default()
         },
-        move |_cx| vec![stripes, content],
+        move |_cx| vec![backdrop, content],
     )
 }
 
-fn stripes_background(cx: &mut ElementContext<'_, App>) -> AnyElement {
-    let stripes = shadcn::stack::hstack(
-        cx,
-        shadcn::stack::HStackProps::default()
-            .layout(LayoutRefinement::default().size_full())
-            .gap(Space::N0)
-            .items_stretch(),
-        |cx| {
-            (0..10)
-                .map(|i| {
-                    let t = (i as f32) / 9.0;
+fn animated_backdrop(cx: &mut ElementContext<'_, App>) -> AnyElement {
+    let viewport = cx.environment_viewport_bounds(Invalidation::Paint);
+    let w = viewport.size.width.0.max(1.0);
+    let h = viewport.size.height.0.max(1.0);
+
+    // Use frame-driven motion so the demo stays deterministic under `diag` scripts.
+    let t = (cx.frame_id.0 as f32) * (1.0 / 60.0);
+
+    let cols = 18u32;
+    let rows = 10u32;
+    let tile_w = (w / cols as f32).max(1.0);
+    let tile_h = (h / rows as f32).max(1.0);
+
+    let mut layout = LayoutStyle::default();
+    layout.position = PositionStyle::Absolute;
+    layout.inset.left = Some(Px(0.0)).into();
+    layout.inset.right = Some(Px(0.0)).into();
+    layout.inset.top = Some(Px(0.0)).into();
+    layout.inset.bottom = Some(Px(0.0)).into();
+
+    cx.container(
+        ContainerProps {
+            layout,
+            ..Default::default()
+        },
+        move |cx| {
+            let mut out: Vec<AnyElement> = Vec::new();
+
+            // High-frequency, slowly varying tile colors give the lens something to refract.
+            for iy in 0..rows {
+                for ix in 0..cols {
+                    let x = ix as f32 * tile_w;
+                    let y = iy as f32 * tile_h;
+                    let phase = t * 0.75 + (ix as f32) * 0.27 + (iy as f32) * 0.19;
                     let c = Color {
-                        r: (t * std::f32::consts::TAU).sin() * 0.5 + 0.5,
-                        g: ((t + 0.33) * std::f32::consts::TAU).sin() * 0.5 + 0.5,
-                        b: ((t + 0.66) * std::f32::consts::TAU).sin() * 0.5 + 0.5,
+                        r: 0.14 + 0.12 * phase.sin().abs(),
+                        g: 0.12 + 0.14 * (phase * 1.3).cos().abs(),
+                        b: 0.18 + 0.12 * (phase * 0.9).sin().abs(),
                         a: 1.0,
                     };
 
-                    let mut stripe_layout = LayoutStyle::default();
-                    stripe_layout.flex.grow = 1.0;
-                    stripe_layout.size.height = Length::Fill;
+                    let mut tile_layout = LayoutStyle::default();
+                    tile_layout.position = PositionStyle::Absolute;
+                    tile_layout.inset.left = Some(Px(x)).into();
+                    tile_layout.inset.top = Some(Px(y)).into();
+                    tile_layout.size.width = Length::Px(Px(tile_w + 1.0));
+                    tile_layout.size.height = Length::Px(Px(tile_h + 1.0));
 
+                    out.push(
+                        cx.container(
+                            ContainerProps {
+                                layout: tile_layout,
+                                background: Some(c),
+                                ..Default::default()
+                            },
+                            |_cx| Vec::<AnyElement>::new(),
+                        )
+                        .into(),
+                    );
+                }
+            }
+
+            // Moving bars create crisp edges; refraction becomes obvious even in stills.
+            let bar_w = 56.0;
+            let stride = 120.0;
+            let speed = 140.0;
+            let count = ((w / stride).ceil() as u32).max(10) + 2;
+            for i in 0..count {
+                let x = ((i as f32) * stride + t * speed).rem_euclid(w + stride) - stride;
+
+                let mut bar_layout = LayoutStyle::default();
+                bar_layout.position = PositionStyle::Absolute;
+                bar_layout.inset.left = Some(Px(x)).into();
+                bar_layout.inset.top = Some(Px(0.0)).into();
+                bar_layout.size.width = Length::Px(Px(bar_w));
+                bar_layout.size.height = Length::Fill;
+
+                out.push(
                     cx.container(
                         ContainerProps {
-                            layout: stripe_layout,
-                            background: Some(c),
+                            layout: bar_layout,
+                            background: Some(Color {
+                                r: 1.0,
+                                g: 1.0,
+                                b: 1.0,
+                                a: 0.04,
+                            }),
                             ..Default::default()
                         },
                         |_cx| Vec::<AnyElement>::new(),
                     )
-                })
-                .collect::<Vec<_>>()
-        },
-    );
+                    .into(),
+                );
+            }
 
-    let mut stripes_layout = LayoutStyle::default();
-    stripes_layout.position = PositionStyle::Absolute;
-    stripes_layout.inset.left = Some(Px(0.0)).into();
-    stripes_layout.inset.right = Some(Px(0.0)).into();
-    stripes_layout.inset.top = Some(Px(0.0)).into();
-    stripes_layout.inset.bottom = Some(Px(0.0)).into();
+            // A soft moving blob provides local contrast and lets you judge dispersion.
+            let blob_r = 140.0;
+            let blob_x = (w * 0.65 + (t * 0.7).sin() * (w * 0.18)).clamp(0.0, w);
+            let blob_y = (h * 0.28 + (t * 0.9).cos() * (h * 0.12)).clamp(0.0, h);
 
-    cx.container(
-        ContainerProps {
-            layout: stripes_layout,
-            ..Default::default()
+            let mut blob_layout = LayoutStyle::default();
+            blob_layout.position = PositionStyle::Absolute;
+            blob_layout.inset.left = Some(Px(blob_x - blob_r)).into();
+            blob_layout.inset.top = Some(Px(blob_y - blob_r)).into();
+            blob_layout.size.width = Length::Px(Px(blob_r * 2.0));
+            blob_layout.size.height = Length::Px(Px(blob_r * 2.0));
+
+            out.push(
+                cx.container(
+                    ContainerProps {
+                        layout: blob_layout,
+                        background: Some(Color {
+                            r: 0.96,
+                            g: 0.92,
+                            b: 0.25,
+                            a: 0.20,
+                        }),
+                        corner_radii: Corners::all(Px(blob_r)),
+                        ..Default::default()
+                    },
+                    |_cx| Vec::<AnyElement>::new(),
+                )
+                .into(),
+            );
+
+            out
         },
-        move |_cx| vec![stripes],
     )
 }
 
