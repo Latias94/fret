@@ -29,7 +29,8 @@ This file is an execution checklist for the design in `DESIGN.md`.
   - [ ] optional close button in overflow list
 - [ ] Gates:
   - [x] test: overflow membership stable under resize + scroll offset changes
-  - [ ] diag script: open overflow list, select an overflowed tab, assert active
+  - [x] diag script: open overflow list, select an overflowed tab, assert active
+    - `tools/diag-scripts/ui-gallery/workspace-tabstrip/ui-gallery-workspace-tabstrip-overflow-select-command.json`
 
 ## M2 — Pinned boundary
 
