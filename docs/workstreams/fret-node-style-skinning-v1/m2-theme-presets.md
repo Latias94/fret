@@ -25,6 +25,13 @@ Current implementation status (2026-02-27):
 - Kit extraction is still a follow-up (see “Next: theme integration”): move the preset authoring
   API into a kit layer and keep `ecosystem/fret-node` focused on the editor UI wiring.
 
+Recent additions (2026-02-28):
+
+- Exec ports use `Triangle` shape in presets (blueprint-friendly readability), while data ports
+  remain `Circle`.
+- Wire glow is supported for selected edges and drag preview wires (renderer effect-based) and can
+  be toggled in the demo via `primary+shift+g` (skin revision bump, paint-only).
+
 ## Goals
 
 - Provide a “best default” that matches the host `ThemeSnapshot` (shadcn-aligned).

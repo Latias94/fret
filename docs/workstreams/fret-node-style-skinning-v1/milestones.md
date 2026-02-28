@@ -29,7 +29,8 @@ Acceptance:
 
 - Nodes: per-node header palette overrides render correctly on the main path.
 - Nodes: selection/focus emphasis is configurable and paint-only.
-- Ports: minimal hint surface exists (color/size + shape enum, with only `Circle` implemented).
+- Ports: chrome hint surface exists (fill/stroke/inner scale + shape enum) and non-circle shapes
+  (`Diamond`, `Triangle`) paint correctly without affecting geometry/hit-testing.
 - Edges: dash/width/color are overrideable, ordering is explicit.
 
 Evidence anchors:
@@ -41,6 +42,8 @@ Evidence anchors:
 
 - Port chrome hints conformance:
   - `ecosystem/fret-node/src/ui/canvas/widget/tests/skin_port_chrome_hints_conformance.rs`
+  - `ecosystem/fret-node/src/ui/canvas/widget/paint_nodes/static_nodes.rs`
+  - `ecosystem/fret-node/src/ui/canvas/paint.rs`
 
 - Selected/focus ring conformance:
   - `ecosystem/fret-node/src/ui/canvas/widget/tests/skin_node_ring_hints_conformance.rs`
@@ -66,3 +69,24 @@ Evidence anchors (current implementation):
   - `ecosystem/fret-node/src/ui/presets.rs`
 - Demo preset switching:
   - `apps/fret-examples/src/node_graph_demo.rs`
+
+## M3 — Blueprint-grade styling (effects) (In progress)
+
+Acceptance (v0):
+
+- Node shadow/glow can be expressed as a skin hint and implemented via renderer effects.
+- Selected wires and drag preview wires can render with a soft glow for editor-grade readability.
+
+Evidence anchors:
+
+- Node shadow hint surface + conformance:
+  - `ecosystem/fret-node/src/ui/skin.rs`
+  - `ecosystem/fret-node/src/ui/canvas/widget/tests/skin_node_shadow_hints_conformance.rs`
+- Wire glow hint surface + conformance:
+  - `ecosystem/fret-node/src/ui/skin.rs`
+  - `ecosystem/fret-node/src/ui/canvas/widget/paint_edges/main.rs`
+  - `ecosystem/fret-node/src/ui/canvas/widget/tests/skin_wire_glow_hints_conformance.rs`
+- Demo toggles (visual iteration):
+  - `apps/fret-examples/src/node_graph_demo.rs` (`primary+shift+g`)
+- Scripted gate captures both glow variants:
+  - `tools/diag-scripts/extras/node-graph-demo-preset-families-paint-only.json`

@@ -14,7 +14,7 @@ scope: ecosystem/fret-node
 - [x] Per-node header palette (header background + title text color) on the main paint path.
 - [x] Port chrome hints (paint-only) for fill/stroke/inner scale with conformance coverage.
 - [x] Node chrome: selected/focus ring contract (paint-only) with conformance tests.
-- [x] Port chrome hints: shape enum contract (only `Circle` implemented).
+- [x] Port chrome hints: shape enum + Diamond/Triangle paint implementation (paint-only).
 - [ ] Edge chrome hints: marker/arrowhead overrides (policy stays in ecosystem).
 - [ ] Ensure skin ordering is explicit and deterministic (style → presenter → edgeTypes → skin).
 
@@ -26,6 +26,14 @@ scope: ecosystem/fret-node
 - [ ] Extract kit-level presets derived from `ThemeSnapshot` (pure function + documented token mapping).
 - [x] Add one scripted/diag gate for “preset switch is paint-only” (node graph demo script).
   - Script: `node-graph-demo-preset-families-paint-only` (`tools/diag-scripts/extras/node-graph-demo-preset-families-paint-only.json`)
+
+## M3 (blueprint-grade effects, v0)
+
+- [x] Node shadow/glow via renderer effect (`PushEffect` + `DropShadowV1`) under `NodeChromeHint.shadow`.
+- [x] Wire glow via renderer effect (`PushEffect` + `DropShadowV1`) for selected edges and drag preview wires.
+- [x] Add demo toggle for wire glow (`primary+shift+g`) and capture both variants in the diag gate script.
+- [ ] Wire outline / dual-stroke strategy (cheap “blueprint readability” baseline, even when effects degrade).
+- [ ] Wire gradients (mechanism-level) or a policy-level approximation (two-pass stroke with cached paths).
 
 ## Follow-ups (likely)
 

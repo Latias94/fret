@@ -59,6 +59,34 @@ paint-first and cache-safe.
   additional shapes in paint without changing geometry/hit-tests.
 - Port hover feedback should be legible at all zoom levels (paint-only ring + optional glow).
 
+## Implemented v0 (in-tree, no renderer changes)
+
+This workstream now has a “v0 blueprint look” path using the existing renderer effect mechanism:
+
+- Node shadow/glow: `NodeChromeHint.shadow` is implemented using `SceneOp::PushEffect` with
+  `EffectStep::DropShadowV1` (paint-only, zoom-stable via screen-px → canvas-unit conversion).
+- Wire glow: selected edges and drag preview wires can be wrapped in the same `DropShadowV1`
+  effect with `offset=0`, producing a soft glow.
+
+This is intentionally an approximation:
+
+- It does not yet implement true gradient strokes or multi-stop wire materials.
+- It uses bounded effect chains (`EffectChain` max 4) and can degrade deterministically under
+  budgets (ADR 0118/ADR 0117).
+
+Evidence anchors:
+
+- Node shadow hint + conformance:
+  - `ecosystem/fret-node/src/ui/skin.rs`
+  - `ecosystem/fret-node/src/ui/canvas/widget/paint_nodes/static_nodes.rs`
+  - `ecosystem/fret-node/src/ui/canvas/widget/tests/skin_node_shadow_hints_conformance.rs`
+- Wire glow hint + conformance:
+  - `ecosystem/fret-node/src/ui/skin.rs`
+  - `ecosystem/fret-node/src/ui/canvas/widget/paint_edges/main.rs`
+  - `ecosystem/fret-node/src/ui/canvas/widget/tests/skin_wire_glow_hints_conformance.rs`
+- Visual iteration (demo):
+  - `apps/fret-examples/src/node_graph_demo.rs` (`primary+shift+g` toggles wire glow)
+
 ## Where the work belongs (mechanism vs policy)
 
 - `ecosystem/fret-node`:
@@ -115,4 +143,3 @@ Extend the existing hint structs rather than inventing ad-hoc style knobs:
   - Scene op: `crates/fret-render-wgpu/src/renderer/render_scene/encode/ops.rs`
   - Path dash: `crates/fret-core/src/vector_path.rs`
   - Path dash tessellation: `crates/fret-render-wgpu/src/renderer/path.rs`
-
