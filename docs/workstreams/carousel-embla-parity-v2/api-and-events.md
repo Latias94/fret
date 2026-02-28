@@ -107,20 +107,36 @@ Ordering:
 - The exact ordering between `reInit` and `select` is not required to match Embla perfectly, but it
   must be stable and documented.
 
-## Resize throttling (open question)
+## Resize throttling (decision)
 
-Embla can emit `reInit` during resize; in Rust/native we may want stronger guarantees to reduce
-noise:
+Embla can emit `reInit` during continuous resize. In a native renderer, emitting an observable
+`reInit` signal on every geometry change is often too noisy for app-level state (counters, button
+states, logging).
 
-- Option A: emit `reInit` for every geometry change (simple, possibly noisy).
-- Option B: coalesce resize-triggered re-init events into “at most once per N frames”.
-- Option C: coalesce into “once after stable frames” (debounce).
+Decision (v2 MVP):
 
-Decision should be driven by:
+- We may re-initialize the internal engine whenever geometry changes.
+- The observable `reInit` signal is **throttled** to *at most once per N frames* during continuous
+  geometry churn.
 
-- UI gallery demo stability
-- diagnostics bundle size/variance
-- real app responsiveness during interactive resize
+Current implementation:
+
+- `N = 4` frames (best-effort; tuned for stability, not a hard public API guarantee).
+  - Note: this can delay an observable `reInit` signal by up to `N - 1` frames after a geometry
+    change. The engine may still re-initialize internally immediately for correctness.
+  - We also avoid dropping re-inits: if a geometry change is detected but throttled, we emit a
+    single `reInit` once geometry stabilizes (the next frame with no further changes).
+
+Rationale:
+
+- keeps UI gallery demos readable (no event storms)
+- keeps diag bundles smaller and less variable
+- still provides timely updates during interactive resize
+
+Evidence anchors:
+
+- Recipe throttling: `ecosystem/fret-ui-shadcn/src/carousel.rs`
+- Gate: `ecosystem/fret-ui-shadcn/tests/carousel_api_generations.rs`
 
 ## Proposed evolution path
 
@@ -154,7 +170,7 @@ then promote the key parts to an ADR.
 - Unit tests (recommended):
   - `select_generation` increments exactly once per index change.
   - `reinit_generation` increments on snap/viewport changes.
+  - `reinit_generation` is throttled during continuous geometry churn.
 - Diag scripts:
   - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-inertia-pixels-changed.json`
   - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-reinit-resize-gate.json`
-

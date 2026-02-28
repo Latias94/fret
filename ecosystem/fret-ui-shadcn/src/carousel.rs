@@ -310,6 +310,8 @@ struct CarouselRuntime {
     autoplay_hovered: bool,
     api_select_generation: u64,
     api_reinit_generation: u64,
+    api_last_reinit_emit_frame: Option<u64>,
+    api_reinit_pending: bool,
     api_last_selected_index: usize,
 }
 
@@ -328,6 +330,8 @@ impl Default for CarouselRuntime {
             autoplay_hovered: false,
             api_select_generation: 0,
             api_reinit_generation: 0,
+            api_last_reinit_emit_frame: None,
+            api_reinit_pending: false,
             api_last_selected_index: 0,
         }
     }
@@ -1852,17 +1856,41 @@ impl Carousel {
             // measures and emits `select`/`reInit`).
             let extent_ready = view_size_now.0 > 0.0 && snaps_len > 0;
 
-            if did_reinit
+            let now_frame = cx.app.frame_id().0;
+            const REINIT_EMIT_MIN_FRAME_DELTA: u64 = 4;
+            let reinit_pending = runtime_snapshot.api_reinit_pending || did_reinit;
+            let should_emit_reinit = if reinit_pending && !did_reinit {
+                // Geometry has stabilized after a change burst: emit once immediately so app state
+                // (counters, button states) can converge.
+                true
+            } else {
+                // Continuous churn: throttle to at most once per N frames.
+                did_reinit
+                    && runtime_snapshot
+                        .api_last_reinit_emit_frame
+                        .map_or(true, |last| {
+                            now_frame.saturating_sub(last) >= REINIT_EMIT_MIN_FRAME_DELTA
+                        })
+            };
+
+            if should_emit_reinit
                 || (extent_ready && clamped_index != runtime_snapshot.api_last_selected_index)
             {
                 let _ = cx.app.models_mut().update(&runtime_model, |st| {
-                    if did_reinit {
+                    st.api_reinit_pending = reinit_pending && !should_emit_reinit;
+                    if should_emit_reinit {
                         st.api_reinit_generation = st.api_reinit_generation.saturating_add(1);
+                        st.api_last_reinit_emit_frame = Some(now_frame);
                     }
                     if extent_ready && clamped_index != st.api_last_selected_index {
                         st.api_last_selected_index = clamped_index;
                         st.api_select_generation = st.api_select_generation.saturating_add(1);
                     }
+                });
+            } else if did_reinit && !runtime_snapshot.api_reinit_pending {
+                // Ensure we don't drop a re-init that was detected but throttled this frame.
+                let _ = cx.app.models_mut().update(&runtime_model, |st| {
+                    st.api_reinit_pending = true;
                 });
             }
 

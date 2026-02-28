@@ -214,8 +214,10 @@ fn carousel_api_reinit_generation_increments_on_geometry_change() {
     );
 
     // The recipe derives geometry from the previous layout pass (`last_bounds_for_element`), so we
-    // need two frames to observe a size change and emit a re-init signal.
-    for _ in 0..2 {
+    // need at least two frames to observe a size change. Additionally, the observable `reInit`
+    // signal is throttled, so we allow a few extra frames for the increment to become visible.
+    let mut after = before;
+    for _ in 0..8 {
         render_frame(
             &mut ui,
             &mut app,
@@ -227,12 +229,81 @@ fn carousel_api_reinit_generation_increments_on_geometry_change() {
             Px(200.0),
             Px(240.0),
         );
+        after = app.models().get_copied(&api).expect("api snapshot");
+        if after.reinit_generation > before.reinit_generation {
+            break;
+        }
     }
 
-    let after = app.models().get_copied(&api).expect("api snapshot");
     assert_eq!(
         after.reinit_generation,
         before.reinit_generation.saturating_add(1),
         "expected reinit_generation to increment once on geometry change; before={before:?} after={after:?}"
+    );
+}
+
+#[test]
+fn carousel_api_reinit_generation_throttles_during_continuous_geometry_changes() {
+    let window = AppWindowId::default();
+    let bounds = window_bounds();
+
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let api = app
+        .models_mut()
+        .insert(fret_ui_shadcn::CarouselApiSnapshot::default());
+    let opts = fret_ui_shadcn::CarouselOptions::default();
+
+    for _ in 0..3 {
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            api.clone(),
+            opts,
+            Px(200.0),
+            Px(200.0),
+        );
+    }
+
+    let before = app.models().get_copied(&api).expect("api snapshot");
+    assert!(
+        before.snap_count > 0,
+        "expected measurable snaps; snapshot={before:?}"
+    );
+
+    // Simulate an interactive resize/geometry churn by alternating the item basis each frame.
+    // We only require that re-init signals are throttled (not emitted on every frame).
+    for i in 0..16 {
+        let basis = if (i % 2) == 0 { Px(200.0) } else { Px(240.0) };
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            api.clone(),
+            opts,
+            Px(200.0),
+            basis,
+        );
+    }
+
+    let after = app.models().get_copied(&api).expect("api snapshot");
+    let delta = after
+        .reinit_generation
+        .saturating_sub(before.reinit_generation);
+    assert!(
+        delta >= 1,
+        "expected at least one re-init during geometry churn; before={before:?} after={after:?}"
+    );
+    assert!(
+        delta <= 6,
+        "expected re-init to be throttled during continuous geometry churn; before={before:?} after={after:?}"
     );
 }

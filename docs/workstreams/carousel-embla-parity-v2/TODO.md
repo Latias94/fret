@@ -102,9 +102,11 @@ Non-goals (v2):
   - Evidence:
     - `ecosystem/fret-ui-headless/src/embla/engine.rs` (`Engine::reinit`)
     - `ecosystem/fret-ui-shadcn/src/carousel.rs` (calls `engine.reinit(...)` when snaps/viewport change)
-- [ ] CAR2-170 Implement `resize` handling semantics (throttling + stable “reInit once” contract).
-  - Partial: re-init is triggered when `viewSize`/snaps/max offset change; no explicit throttling
-    contract yet.
+- [x] CAR2-170 Implement `resize` handling semantics (throttling + stable “reInit once” contract) (MVP).
+  - Implemented: observable `reInit` is throttled and coalesced (see `api-and-events.md`).
+  - Decision (v2 MVP): throttle observable `reInit` to “at most once per N frames” during continuous
+    geometry churn (see `api-and-events.md`).
+  - Gate: `ecosystem/fret-ui-shadcn/tests/carousel_api_generations.rs`
   - Gate (MVP): `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-reinit-resize-gate.json`
 - [ ] CAR2-180 Implement `slideChanges` semantics (detect add/remove/reorder in retained tree).
 
