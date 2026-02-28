@@ -361,6 +361,8 @@
           "dash_emphasis": { "dash_px": 10.0, "gap_px": 2.0, "phase_px": 0.0 },
           "marker_exec_start": { "kind": "Arrow", "size_px": 8.0 },
           "marker_exec_end": { "kind": "Arrow", "size_px": 12.0 },
+          "marker_data_start": { "kind": "Arrow", "size_px": 5.0 },
+          "marker_data_end": { "kind": "Arrow", "size_px": 7.0 },
           "marker_size_mul_selected": 1.15,
           "marker_size_mul_hovered": 1.25,
           "highlight_selected": {
