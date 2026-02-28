@@ -255,6 +255,7 @@ fn gpu_custom_effect_v3_backdrop_source_group_raw_snapshots_before_prior_backdro
 
     let mut renderer = Renderer::new(&ctx.adapter, &ctx.device);
     renderer.set_intermediate_budget_bytes(u64::MAX);
+    renderer.set_perf_enabled(true);
 
     let wgsl = r#"
 fn fret_custom_effect(src: vec4<f32>, _uv: vec2<f32>, pos_px: vec2<f32>, _params: EffectParamsV1) -> vec4<f32> {
@@ -358,6 +359,25 @@ fn fret_custom_effect(src: vec4<f32>, _uv: vec2<f32>, pos_px: vec2<f32>, _params
     scene.push(SceneOp::PopBackdropSourceGroup);
 
     let pixels = render_and_readback(&ctx, &mut renderer, &scene, size);
+
+    let snap = renderer
+        .take_last_frame_perf_snapshot()
+        .expect("expected last_frame_perf snapshot with perf enabled");
+    assert_eq!(
+        snap.effect_degradations.backdrop_source_groups.requested, 1,
+        "expected one backdrop source group push"
+    );
+    assert_eq!(
+        snap.effect_degradations.backdrop_source_groups.applied_raw, 1,
+        "expected group raw snapshot to be applied"
+    );
+    assert_eq!(
+        snap.effect_degradations
+            .backdrop_source_groups
+            .pyramid_requested,
+        0,
+        "this conformance does not request a group pyramid"
+    );
 
     let sample_x = margin + tile_px / 2 - 2;
     let sample_y = margin + tile_px / 2;

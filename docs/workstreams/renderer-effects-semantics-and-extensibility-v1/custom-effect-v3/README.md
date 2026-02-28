@@ -38,10 +38,13 @@ Counters:
 - `raw_requested`, `raw_distinct`, `raw_aliased_to_src`
 - `pyramid_requested`, `pyramid_applied_levels_ge2`
 - `pyramid_degraded_to_one_budget_zero`, `pyramid_degraded_to_one_budget_insufficient`
+ 
+Backdrop source group counters:
 
-Known gap:
-
-- ADR 0302 group-specific requested/applied/degraded counters are not implemented yet.
+- `backdrop_source_groups.requested`, `backdrop_source_groups.applied_raw`
+- `backdrop_source_groups.raw_degraded_*`
+- `backdrop_source_groups.pyramid_requested`, `backdrop_source_groups.pyramid_applied_levels_ge2`
+- `backdrop_source_groups.pyramid_degraded_to_one_*`, `backdrop_source_groups.pyramid_skipped_raw_unavailable`
 
 ## Design anchor
 

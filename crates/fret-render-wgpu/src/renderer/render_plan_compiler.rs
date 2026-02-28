@@ -395,7 +395,7 @@ fn compile_for_scene_inner(
             }
         };
 
-    let mut apply_chain_in_place =
+    let apply_chain_in_place =
         |passes: &mut Vec<RenderPlanPass>,
          draw_scopes: &[DrawScope],
          srcdst: super::PlanTarget,
@@ -408,7 +408,9 @@ fn compile_for_scene_inner(
          extra_in_use_bytes: u64,
          unavailable_mask_targets: &[super::PlanTarget],
          reserved_targets: &[super::PlanTarget],
-         backdrop_source_group: Option<effects::BackdropSourceGroupCtx>| {
+         backdrop_source_group: Option<effects::BackdropSourceGroupCtx>,
+         effect_degradations: &mut EffectDegradationSnapshot,
+         effect_blur_quality: &mut BlurQualitySnapshot| {
             if srcdst == super::PlanTarget::Output || scissor.w == 0 || scissor.h == 0 {
                 return;
             }
@@ -461,8 +463,8 @@ fn compile_for_scene_inner(
                 scissor,
                 mask_uniform_index,
                 unavailable_mask_targets,
-                &mut effect_degradations,
-                &mut effect_blur_quality,
+                effect_degradations,
+                effect_blur_quality,
                 effects::EffectCompileCtx {
                     viewport_size: ctx_viewport_size,
                     format,
@@ -552,6 +554,8 @@ fn compile_for_scene_inner(
                                     &unavailable_mask_targets,
                                     &backdrop_source_group_reserved_targets,
                                     backdrop_source_group,
+                                    &mut effect_degradations,
+                                    &mut effect_blur_quality,
                                 );
                                 if before == passes.len()
                                     && !chain.is_empty()
@@ -711,6 +715,8 @@ fn compile_for_scene_inner(
                                 &[],
                                 &backdrop_source_group_reserved_targets,
                                 None,
+                                &mut effect_degradations,
+                                &mut effect_blur_quality,
                             );
                             if before == passes.len()
                                 && !scope.chain.is_empty()
@@ -959,10 +965,17 @@ fn compile_for_scene_inner(
                         pyramid,
                         quality,
                     } => {
+                        let g = &mut effect_degradations.backdrop_source_groups;
+                        g.requested = g.requested.saturating_add(1);
+                        if pyramid.is_some() {
+                            g.pyramid_requested = g.pyramid_requested.saturating_add(1);
+                        }
+
                         let parent_scope = draw_scopes.last().expect("draw scope");
                         let parent_target = parent_scope.target;
 
                         let mut raw_target: Option<super::PlanTarget> = None;
+                        let mut had_free_target = false;
                         for t in [
                             super::PlanTarget::Intermediate0,
                             super::PlanTarget::Intermediate1,
@@ -975,6 +988,7 @@ fn compile_for_scene_inner(
                                 continue;
                             }
                             raw_target = Some(t);
+                            had_free_target = true;
                             break;
                         }
 
@@ -982,7 +996,33 @@ fn compile_for_scene_inner(
                         let mut reserved_bytes: u64 = 0;
                         let mut pyramid_choice: Option<effects::CustomV3PyramidChoice> = None;
 
+                        let can_afford_raw = had_free_target
+                            && can_allocate_intermediate_bytes(
+                                &draw_scopes,
+                                raw_bytes,
+                                clip_path_mask_in_use_bytes
+                                    .saturating_add(backdrop_source_group_in_use_bytes),
+                            );
+                        if !can_afford_raw {
+                            raw_target = None;
+                            if pyramid.is_some() {
+                                g.pyramid_skipped_raw_unavailable =
+                                    g.pyramid_skipped_raw_unavailable.saturating_add(1);
+                            }
+                            if !had_free_target {
+                                g.raw_degraded_target_exhausted =
+                                    g.raw_degraded_target_exhausted.saturating_add(1);
+                            } else if intermediate_budget_bytes == 0 {
+                                g.raw_degraded_budget_zero =
+                                    g.raw_degraded_budget_zero.saturating_add(1);
+                            } else {
+                                g.raw_degraded_budget_insufficient =
+                                    g.raw_degraded_budget_insufficient.saturating_add(1);
+                            }
+                        }
+
                         if let Some(raw_target) = raw_target {
+                            g.applied_raw = g.applied_raw.saturating_add(1);
                             passes.push(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
                                 src: parent_target,
                                 dst: raw_target,
@@ -1026,6 +1066,8 @@ fn compile_for_scene_inner(
                                 );
 
                                 if choice.levels >= 2 {
+                                    g.pyramid_applied_levels_ge2 =
+                                        g.pyramid_applied_levels_ge2.saturating_add(1);
                                     reserved_bytes = reserved_bytes.saturating_add(
                                         effects::estimate_custom_v3_pyramid_bytes(
                                             viewport_size,
@@ -1033,6 +1075,19 @@ fn compile_for_scene_inner(
                                             choice.levels,
                                         ),
                                     );
+                                } else if let Some(reason) = choice.degraded_to_one {
+                                    match reason {
+                                        effects::CustomV3PyramidDegradeReason::BudgetZero => {
+                                            g.pyramid_degraded_to_one_budget_zero = g
+                                                .pyramid_degraded_to_one_budget_zero
+                                                .saturating_add(1);
+                                        }
+                                        effects::CustomV3PyramidDegradeReason::BudgetInsufficient => {
+                                            g.pyramid_degraded_to_one_budget_insufficient = g
+                                                .pyramid_degraded_to_one_budget_insufficient
+                                                .saturating_add(1);
+                                        }
+                                    }
                                 }
                                 pyramid_choice = Some(choice);
                             }

@@ -234,6 +234,53 @@ impl CustomEffectV3SourceDegradationCounters {
 }
 
 #[derive(Debug, Default, Clone, Copy)]
+pub struct BackdropSourceGroupDegradationCounters {
+    pub requested: u64,
+    pub applied_raw: u64,
+    pub raw_degraded_budget_zero: u64,
+    pub raw_degraded_budget_insufficient: u64,
+    pub raw_degraded_target_exhausted: u64,
+
+    pub pyramid_requested: u64,
+    pub pyramid_applied_levels_ge2: u64,
+    pub pyramid_degraded_to_one_budget_zero: u64,
+    pub pyramid_degraded_to_one_budget_insufficient: u64,
+    pub pyramid_skipped_raw_unavailable: u64,
+}
+
+impl BackdropSourceGroupDegradationCounters {
+    pub(crate) fn saturating_add_assign(&mut self, other: Self) {
+        self.requested = self.requested.saturating_add(other.requested);
+        self.applied_raw = self.applied_raw.saturating_add(other.applied_raw);
+        self.raw_degraded_budget_zero = self
+            .raw_degraded_budget_zero
+            .saturating_add(other.raw_degraded_budget_zero);
+        self.raw_degraded_budget_insufficient = self
+            .raw_degraded_budget_insufficient
+            .saturating_add(other.raw_degraded_budget_insufficient);
+        self.raw_degraded_target_exhausted = self
+            .raw_degraded_target_exhausted
+            .saturating_add(other.raw_degraded_target_exhausted);
+
+        self.pyramid_requested = self
+            .pyramid_requested
+            .saturating_add(other.pyramid_requested);
+        self.pyramid_applied_levels_ge2 = self
+            .pyramid_applied_levels_ge2
+            .saturating_add(other.pyramid_applied_levels_ge2);
+        self.pyramid_degraded_to_one_budget_zero = self
+            .pyramid_degraded_to_one_budget_zero
+            .saturating_add(other.pyramid_degraded_to_one_budget_zero);
+        self.pyramid_degraded_to_one_budget_insufficient = self
+            .pyramid_degraded_to_one_budget_insufficient
+            .saturating_add(other.pyramid_degraded_to_one_budget_insufficient);
+        self.pyramid_skipped_raw_unavailable = self
+            .pyramid_skipped_raw_unavailable
+            .saturating_add(other.pyramid_skipped_raw_unavailable);
+    }
+}
+
+#[derive(Debug, Default, Clone, Copy)]
 pub struct EffectDegradationSnapshot {
     pub gaussian_blur: EffectDegradationCounters,
     pub drop_shadow: EffectDegradationCounters,
@@ -246,6 +293,7 @@ pub struct EffectDegradationSnapshot {
     pub noise: EffectDegradationCounters,
     pub custom_effect: EffectDegradationCounters,
     pub custom_effect_v3_sources: CustomEffectV3SourceDegradationCounters,
+    pub backdrop_source_groups: BackdropSourceGroupDegradationCounters,
 }
 
 impl EffectDegradationSnapshot {
@@ -266,6 +314,8 @@ impl EffectDegradationSnapshot {
             .saturating_add_assign(other.custom_effect);
         self.custom_effect_v3_sources
             .saturating_add_assign(other.custom_effect_v3_sources);
+        self.backdrop_source_groups
+            .saturating_add_assign(other.backdrop_source_groups);
     }
 }
 
