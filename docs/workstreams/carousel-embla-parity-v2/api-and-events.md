@@ -1,6 +1,6 @@
 # Carousel Embla parity (v2) — API + events (workstream design)
 
-Status: Draft
+Status: Implemented (MVP; still evolving)
 
 This document captures a **workstream-level** design for a Rust-native `CarouselApi` surface and
 its observable event semantics (`select` / `reInit`) while we are still iterating inside
@@ -48,6 +48,28 @@ It now includes MVP event observability:
 
 This provides an “effect-like” hook in Rust: render code can remember the last generation and react
 when it changes.
+
+### `CarouselApi` handle (shipping today)
+
+`ecosystem/fret-ui-shadcn::CarouselApi` is a Rust-native handle published via a model:
+
+- the recipe writes `Some(CarouselApi)` into a `Model<Option<CarouselApi>>` (shadcn `setApi` outcome)
+- commands are enqueued via an internal command queue model (no `UiActionHost` required)
+- events are observed via a cursor (`CarouselEventCursor`) polled by the caller (no stored closures)
+
+Supported (v2 MVP):
+
+- commands:
+  - `scroll_prev`, `scroll_next`, `scroll_to(index)`
+- queries (via `snapshot()`):
+  - `selected_index`, `snap_count`, `can_scroll_prev`, `can_scroll_next`
+- queries (Embla-like helpers):
+  - `selected_scroll_snap()`
+  - `scroll_snap_list()` (recipe snap offsets; not Embla’s internal sign convention)
+  - `slides_in_view()` (when the recipe wires `CarouselSlidesInViewSnapshot`)
+- event polling:
+  - `events_since(&mut host, &mut cursor)` emits `ReInit` / `Select { selected_index }` when the
+    underlying generation counters change
 
 ### Internal engine re-init (shipping today)
 
@@ -137,6 +159,9 @@ Evidence anchors:
 
 - Recipe throttling: `ecosystem/fret-ui-shadcn/src/carousel.rs`
 - Gate: `ecosystem/fret-ui-shadcn/tests/carousel_api_generations.rs`
+- Handle + cursor: `ecosystem/fret-ui-shadcn/src/carousel.rs`
+- Gate: `ecosystem/fret-ui-shadcn/tests/carousel_api_handle.rs`
+- UI gallery example: `apps/fret-ui-gallery/src/ui/pages/carousel.rs`
 
 ## Proposed evolution path
 
@@ -148,13 +173,9 @@ Evidence anchors:
   - inertia pixels changed
   - resize during engine-driven motion does not panic and content stays visible
 
-### Phase 2: `CarouselApi` handle
+### Phase 2 (now): `CarouselApi` handle
 
-Add a small handle that:
-
-- reads from models (snapshot) for queries
-- writes via actions/effects for commands
-- exposes a subscription mechanism (likely still generation-based, or an explicit queue)
+The handle is implemented in-tree and used by the UI gallery `carousel-api` demo.
 
 ### Phase 3: stabilize and consider ADR
 
@@ -171,6 +192,8 @@ then promote the key parts to an ADR.
   - `select_generation` increments exactly once per index change.
   - `reinit_generation` increments on snap/viewport changes.
   - `reinit_generation` is throttled during continuous geometry churn.
+  - handle commands advance selection and emit observable events:
+    - `ecosystem/fret-ui-shadcn/tests/carousel_api_handle.rs`
 - Diag scripts:
   - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-inertia-pixels-changed.json`
   - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-reinit-resize-gate.json`

@@ -40,7 +40,7 @@ Non-goals (v2):
   - Key point: Embla `duration` is a numeric integrator parameter (not a `Duration` in ms).
   - Deliverable: `docs/workstreams/carousel-embla-parity-v2/contracts.md`
   - Evidence: `docs/workstreams/carousel-embla-parity-v2/contracts.md`
-- [ ] CAR2-020 Workstream design: `CarouselApi` surface in Rust (methods + events + lifetimes).
+- [x] CAR2-020 Workstream design: `CarouselApi` surface in Rust (methods + events + lifetimes).
   - Deliverable: `docs/workstreams/carousel-embla-parity-v2/api-and-events.md`
   - Note: promote to an ADR only if/when the surface becomes stable and/or must be treated as
     a long-lived contract outside `ecosystem/*`.
@@ -132,17 +132,23 @@ Non-goals (v2):
 
 ## P2 — API surface parity (recipe-level, Rust-native)
 
-- [ ] CAR2-210 Provide a `CarouselApi` handle with:
+- [x] CAR2-210 Provide a `CarouselApi` handle with:
   - `scrollPrev/scrollNext/scrollTo(index)`
   - `selectedScrollSnap`
   - `scrollSnapList`
   - `canScrollPrev/canScrollNext`
   - `slidesInView` (if implemented)
-- [ ] CAR2-220 Provide an event subscription surface:
+-  Evidence:
+  - `ecosystem/fret-ui-shadcn/src/carousel.rs` (`CarouselApi`)
+  - Gate: `ecosystem/fret-ui-shadcn/tests/carousel_api_handle.rs`
+- [x] CAR2-220 Provide an event subscription surface:
   - `on_select` and `on_reinit` (at least)
   - make it usable without storing arbitrary closures inside models
-- [ ] CAR2-230 Align shadcn `setApi` example ergonomics in Rust (state + effect-like updates).
-  - Workstream design note (draft): `docs/workstreams/carousel-embla-parity-v2/api-and-events.md`
+-  Evidence:
+  - `ecosystem/fret-ui-shadcn/src/carousel.rs` (`CarouselEventCursor` + `events_since`)
+  - UI gallery: `apps/fret-ui-gallery/src/ui/pages/carousel.rs` (API demo)
+- [x] CAR2-230 Align shadcn `setApi` example ergonomics in Rust (state + effect-like updates).
+  - Workstream design note: `docs/workstreams/carousel-embla-parity-v2/api-and-events.md`
 
 ---
 
