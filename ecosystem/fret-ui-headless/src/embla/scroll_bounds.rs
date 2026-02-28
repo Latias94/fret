@@ -90,4 +90,3 @@ mod tests {
         assert!(body.target() > -350.0);
     }
 }
-

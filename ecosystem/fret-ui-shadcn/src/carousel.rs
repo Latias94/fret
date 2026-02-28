@@ -614,7 +614,7 @@ impl Carousel {
                         return;
                     };
 
-                    engine.tick();
+                    engine.tick(false);
                     settled = engine.scroll_body.settled();
                     let loc = engine.scroll_body.location();
                     let mapped = Px((-loc).clamp(0.0, max_offset.0.max(0.0)));
@@ -1042,6 +1042,7 @@ impl Carousel {
             let snaps_for_prev = snaps_model.clone();
             let embla_engine_for_prev = embla_engine_model.clone();
             let max_offset_for_prev = max_offset_model.clone();
+            let extent_for_prev = extent_model.clone();
             let autoplay_stop_for_prev = autoplay_stop_on_interaction;
             let loop_for_prev = options.loop_enabled;
             let embla_engine_enabled_for_prev = embla_engine_enabled;
@@ -1078,6 +1079,11 @@ impl Carousel {
                     }
 
                     if embla_engine_enabled_for_prev && !loop_for_prev {
+                        let view_size = host
+                            .models_mut()
+                            .read(&extent_for_prev, |v| v.0.max(0.0))
+                            .ok()
+                            .unwrap_or(0.0);
                         let max_offset = host
                             .models_mut()
                             .read(&max_offset_for_prev, |v| *v)
@@ -1098,7 +1104,7 @@ impl Carousel {
                                 skip_snaps: false,
                                 duration: embla_duration_for_prev.max(0.0),
                                 base_friction: 0.68,
-                                view_size: 0.0,
+                                view_size,
                                 start_snap: index,
                             },
                         );
@@ -1168,6 +1174,7 @@ impl Carousel {
             let snaps_for_next = snaps_model.clone();
             let embla_engine_for_next = embla_engine_model.clone();
             let max_offset_for_next = max_offset_model.clone();
+            let extent_for_next = extent_model.clone();
             let autoplay_stop_for_next = autoplay_stop_on_interaction;
             let loop_for_next = options.loop_enabled;
             let embla_engine_enabled_for_next = embla_engine_enabled;
@@ -1204,6 +1211,11 @@ impl Carousel {
                     }
 
                     if embla_engine_enabled_for_next && !loop_for_next {
+                        let view_size = host
+                            .models_mut()
+                            .read(&extent_for_next, |v| v.0.max(0.0))
+                            .ok()
+                            .unwrap_or(0.0);
                         let max_offset = host
                             .models_mut()
                             .read(&max_offset_for_next, |v| *v)
@@ -1224,7 +1236,7 @@ impl Carousel {
                                 skip_snaps: false,
                                 duration: embla_duration_for_next.max(0.0),
                                 base_friction: 0.68,
-                                view_size: 0.0,
+                                view_size,
                                 start_snap: index,
                             },
                         );

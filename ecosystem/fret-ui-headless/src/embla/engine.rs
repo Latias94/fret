@@ -3,6 +3,7 @@ use crate::embla::drag_release::{
 };
 use crate::embla::limit::Limit;
 use crate::embla::scroll_body::ScrollBody;
+use crate::embla::scroll_bounds::{ScrollBounds, ScrollBoundsConfig};
 use crate::embla::scroll_limit::scroll_limit;
 use crate::embla::scroll_target::{ScrollTarget, Target};
 use crate::embla::utils::{DIRECTION_NONE, Direction};
@@ -44,9 +45,11 @@ pub struct Engine {
     pub index_current: usize,
     pub index_previous: usize,
 
+    pub scroll_bounds: ScrollBounds,
+
     config: EngineConfig,
-    _content_size: f32,
-    _limit: Limit,
+    content_size: f32,
+    limit: Limit,
 }
 
 impl Engine {
@@ -66,15 +69,20 @@ impl Engine {
         let mut scroll_body =
             ScrollBody::new(start_location, config.duration, config.base_friction);
         scroll_body.set_target(start_location);
+        let mut scroll_bounds = ScrollBounds::new(ScrollBoundsConfig {
+            view_size: config.view_size.max(0.0),
+        });
+        scroll_bounds.toggle_active(!config.loop_enabled);
 
         Self {
             scroll_body,
             scroll_target,
             index_current: start_snap,
             index_previous: start_snap,
+            scroll_bounds,
             config,
-            _content_size: content_size,
-            _limit: limit,
+            content_size,
+            limit,
         }
     }
 
@@ -104,8 +112,10 @@ impl Engine {
     }
 
     /// One engine step (typically one rendered frame).
-    pub fn tick(&mut self) {
+    pub fn tick(&mut self, pointer_down: bool) {
         self.scroll_body.seek();
+        self.scroll_bounds
+            .constrain(self.limit, &mut self.scroll_body, pointer_down);
         self.sync_target_vector();
     }
 

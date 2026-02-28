@@ -36,9 +36,10 @@ Non-goals (v2):
 
 ## P0 — Contracts (hard-to-change)
 
-- [ ] CAR2-010 Decide and document **Embla option semantics** vs existing Fret shadcn options.
+- [x] CAR2-010 Decide and document **Embla option semantics** vs existing Fret shadcn options.
   - Key point: Embla `duration` is a numeric integrator parameter (not a `Duration` in ms).
   - Deliverable: `docs/workstreams/carousel-embla-parity-v2/contracts.md`
+  - Evidence: `docs/workstreams/carousel-embla-parity-v2/contracts.md`
 - [ ] CAR2-020 ADR: `CarouselApi` surface in Rust (methods + events + lifetimes).
   - Deliverable: `docs/adr/xxxx-carousel-api-surface.md`
 - [ ] CAR2-030 ADR: Scroll physics determinism + reduced-motion behavior.
@@ -52,9 +53,21 @@ Non-goals (v2):
 
 ### Scroll body + animator
 
-- [ ] CAR2-110 Implement an Embla-style `ScrollBody` integrator (location/target/velocity/direction).
-- [ ] CAR2-120 Implement friction/duration shaping from `DragHandler`:
+- [x] CAR2-110 Implement an Embla-style `ScrollBody` integrator (location/target/velocity/direction).
+  - Evidence: `ecosystem/fret-ui-headless/src/embla/scroll_body.rs`
+- [x] CAR2-120 Implement friction/duration shaping from `DragHandler`:
   - baseDuration, forceBoost, forceFactor, baseFriction adjustments
+  - Evidence:
+    - `ecosystem/fret-ui-headless/src/embla/drag_release.rs`
+    - `ecosystem/fret-ui-headless/src/embla/engine.rs` (`Engine::on_drag_release`)
+- [x] CAR2-125 Port core targeting helpers (snap selection + limits) needed by the engine.
+  - Evidence:
+    - `ecosystem/fret-ui-headless/src/embla/scroll_target.rs`
+    - `ecosystem/fret-ui-headless/src/embla/scroll_limit.rs`
+- [x] CAR2-126 Port edge constraint helper (`ScrollBounds`) and apply it during engine ticks.
+  - Evidence:
+    - `ecosystem/fret-ui-headless/src/embla/scroll_bounds.rs`
+    - `ecosystem/fret-ui-headless/src/embla/engine.rs` (`Engine::tick`)
 - [ ] CAR2-130 Define edge constraints behavior (contain/trim/keep) with physics applied.
 
 ### Loopers
@@ -118,4 +131,3 @@ Non-goals (v2):
   - inertial swipe (touch + mouse)
   - loop visual continuity
   - focus-in triggers scroll-to-view
-
