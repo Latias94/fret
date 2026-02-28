@@ -13,6 +13,8 @@ Outcomes:
   - drag-to-split “drop preview” in workspace shell demo
     - initial: `workspace-shell-demo-tab-drag-to-split-right-drop-preview-screenshot`
     - follow-up: replace with an invariants-based gate once the drop preview snapshot surface is stable
+  - middle-click close behavior (smoke):
+    - `workspace-shell-demo-tab-middle-click-close-smoke`
 
 Acceptance:
 - `python3 tools/check_diag_scripts_registry.py` passes.
