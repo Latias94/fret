@@ -65,6 +65,7 @@ Usage:
   fretboard diag latest [--dir <dir>]
   fretboard diag list scripts [--contains <needle>] [--all] [--top <n>] [--case-sensitive] [--json]
   fretboard diag list sessions [--dir <dir>] [--contains <needle>] [--all] [--top <n>] [--case-sensitive] [--json]
+  fretboard diag sessions clean [--dir <dir>] --keep <n> [--older-than-days <n>] [--top <n>] [--apply] [--json]
   fretboard diag doctor [<bundle_dir|bundle.json|bundle.schema2.json>] [--check|--strict] [--fix|--fix-dry-run] [--fix-schema2] [--json]
   fretboard diag doctor scripts [--max-examples <n>] [--json]
   fretboard diag trace <bundle_dir|bundle.json|bundle.schema2.json> [--trace-out <path>]

@@ -54,7 +54,8 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
   - [x] Add `--session-auto` / `--session <id>` for tool-launched commands (`--launch`) that makes the effective out dir
     `<base_dir>/sessions/<session_id>/`.
   - [x] Add a small `session.json` metadata file in the session root (best-effort).
-  - [ ] Add a safe discovery command (bounded output): `diag list sessions --dir <base_dir>` (optional).
+  - [x] Add a safe discovery command (bounded output): `diag list sessions --dir <base_dir>`.
+  - [x] Add a safe cleanup command (dry-run by default): `diag sessions clean --dir <base_dir> --keep <n> [--apply]`.
 
 ## P0.5: Script library modularization (UX scalability)
 

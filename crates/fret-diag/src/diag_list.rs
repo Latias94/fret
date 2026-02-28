@@ -155,72 +155,6 @@ hint: generate it via `python tools/check_diag_scripts_registry.py --write`",
     Ok(())
 }
 
-#[derive(Debug, Clone)]
-struct SessionListEntry {
-    session_id: String,
-    session_dir: String,
-    created_unix_ms: Option<u64>,
-    pid: Option<u64>,
-    diag_subcommand: Option<String>,
-}
-
-fn collect_sessions(out_dir: &Path) -> Result<Vec<SessionListEntry>, String> {
-    let sessions_root = out_dir.join(crate::session::SESSIONS_DIRNAME);
-    if !sessions_root.is_dir() {
-        return Ok(Vec::new());
-    }
-
-    let mut out: Vec<SessionListEntry> = Vec::new();
-    let iter = std::fs::read_dir(&sessions_root).map_err(|e| e.to_string())?;
-    for entry in iter.flatten() {
-        let path = entry.path();
-        if !path.is_dir() {
-            continue;
-        }
-        let session_id = path
-            .file_name()
-            .and_then(|s| s.to_str())
-            .unwrap_or("session")
-            .to_string();
-        let session_dir = path.to_string_lossy().to_string();
-
-        let mut created_unix_ms: Option<u64> = None;
-        let mut pid: Option<u64> = None;
-        let mut diag_subcommand: Option<String> = None;
-
-        let session_json = path.join("session.json");
-        if let Ok(bytes) = std::fs::read(&session_json)
-            && let Ok(v) = serde_json::from_slice::<serde_json::Value>(&bytes)
-        {
-            created_unix_ms = v.get("created_unix_ms").and_then(|v| v.as_u64());
-            pid = v.get("pid").and_then(|v| v.as_u64());
-            diag_subcommand = v
-                .get("diag_subcommand")
-                .and_then(|v| v.as_str())
-                .map(|s| s.to_string());
-        } else if let Some((prefix, _)) = session_id.split_once('-') {
-            created_unix_ms = prefix.trim().parse::<u64>().ok();
-        }
-
-        out.push(SessionListEntry {
-            session_id,
-            session_dir,
-            created_unix_ms,
-            pid,
-            diag_subcommand,
-        });
-    }
-
-    out.sort_by(|a, b| {
-        b.created_unix_ms
-            .unwrap_or(0)
-            .cmp(&a.created_unix_ms.unwrap_or(0))
-            .then_with(|| a.session_id.cmp(&b.session_id))
-    });
-
-    Ok(out)
-}
-
 fn cmd_list_sessions(
     rest: &[String],
     out_dir: &Path,
@@ -229,20 +163,23 @@ fn cmd_list_sessions(
 ) -> Result<(), String> {
     let opts = parse_list_filter_options("sessions", rest)?;
 
-    let mut sessions = collect_sessions(out_dir)?;
+    let mut sessions = crate::session::collect_sessions(out_dir)?;
 
     if let Some(needle) = opts.contains.as_deref() {
         let needle_lower = needle.to_ascii_lowercase();
         sessions.retain(|s| {
             if opts.case_sensitive {
                 s.session_id.contains(needle)
-                    || s.session_dir.contains(needle)
+                    || s.session_dir.to_string_lossy().contains(needle)
                     || s.diag_subcommand
                         .as_deref()
                         .is_some_and(|v| v.contains(needle))
             } else {
                 s.session_id.to_ascii_lowercase().contains(&needle_lower)
-                    || s.session_dir.to_ascii_lowercase().contains(&needle_lower)
+                    || s.session_dir
+                        .to_string_lossy()
+                        .to_ascii_lowercase()
+                        .contains(&needle_lower)
                     || s.diag_subcommand
                         .as_deref()
                         .is_some_and(|v| v.to_ascii_lowercase().contains(&needle_lower))
@@ -259,7 +196,7 @@ fn cmd_list_sessions(
         let payload = serde_json::json!({
             "sessions": sessions.iter().map(|s| serde_json::json!({
                 "session_id": s.session_id,
-                "session_dir": s.session_dir,
+                "session_dir": s.session_dir.display().to_string(),
                 "created_unix_ms": s.created_unix_ms,
                 "pid": s.pid,
                 "diag_subcommand": s.diag_subcommand,
@@ -284,7 +221,11 @@ fn cmd_list_sessions(
         let sub = s.diag_subcommand.unwrap_or_else(|| "?".to_string());
         println!(
             "{} (created_unix_ms={} pid={} sub={}) -> {}",
-            s.session_id, created, pid, sub, s.session_dir
+            s.session_id,
+            created,
+            pid,
+            sub,
+            s.session_dir.display()
         );
     }
 
@@ -381,7 +322,7 @@ mod tests {
         )
         .expect("write b");
 
-        let sessions = collect_sessions(&root).expect("collect sessions");
+        let sessions = crate::session::collect_sessions(&root).expect("collect sessions");
         assert_eq!(sessions.len(), 2);
         assert_eq!(sessions[0].session_id, "200-1");
         assert_eq!(sessions[1].session_id, "100-1");

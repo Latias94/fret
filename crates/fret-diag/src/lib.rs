@@ -38,6 +38,7 @@ mod diag_policy;
 mod diag_repeat;
 mod diag_repro;
 mod diag_run;
+mod diag_sessions;
 mod diag_simple_dispatch;
 mod diag_stats;
 mod diag_suite;
@@ -2596,6 +2597,12 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
         "list" => diag_list::cmd_list(
             &rest,
             &workspace_root,
+            &resolved_out_dir,
+            stats_json,
+            stats_top_override,
+        ),
+        "sessions" => diag_sessions::cmd_sessions(
+            &rest,
             &resolved_out_dir,
             stats_json,
             stats_top_override,
