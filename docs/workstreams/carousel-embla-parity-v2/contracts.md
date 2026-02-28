@@ -103,6 +103,9 @@ Embla behavior:
 - Drag does not “win” on pointer down.
 - After `dragThreshold` px in the main axis, the drag wins and click is prevented (`preventClick`).
 - On click prevention, the click is stopped and default prevented.
+- When `dragFree=true` and the user mouse-downs while the carousel is still moving
+  (`abs(target - location) >= 2`), Embla also prevents the resulting click so “click-to-stop” does
+  not activate slide content.
 
 Fret translation:
 
@@ -110,6 +113,8 @@ Fret translation:
   - parent can observe capture-phase moves and steal capture after threshold,
   - capture switch emits `PointerCancel` to the previous capture target.
 - We consider “click prevented” satisfied if the descendant activation is suppressed.
+- For the `dragFree` “click-to-stop” case, the recipe may steal pointer capture on down and consume
+  the corresponding up to suppress descendant activation.
 
 ### Contract: force shaping on release
 

@@ -524,6 +524,7 @@ struct CarouselRuntime {
     drag: headless_carousel::CarouselDragState,
     settling: bool,
     embla_settling: bool,
+    prevent_click: bool,
     settle_from: Px,
     settle_to: Px,
     settle_generation: u64,
@@ -547,6 +548,7 @@ impl Default for CarouselRuntime {
             drag: headless_carousel::CarouselDragState::default(),
             settling: false,
             embla_settling: false,
+            prevent_click: false,
             settle_from: Px(0.0),
             settle_to: Px(0.0),
             settle_generation: 0,
@@ -1337,6 +1339,32 @@ impl Carousel {
                     return false;
                 }
 
+                let stop_click_should_be_prevented = (|| {
+                    if !drag_free_for_down {
+                        return false;
+                    }
+                    if down.pointer_type != fret_core::PointerType::Mouse {
+                        return false;
+                    }
+                    let settling = host
+                        .models_mut()
+                        .read(&runtime_for_down, |st| st.embla_settling)
+                        .ok()
+                        .unwrap_or(false);
+                    if !settling {
+                        return false;
+                    }
+                    host.models_mut()
+                        .read(&embla_engine_for_down, |v| {
+                            v.as_ref().is_some_and(|engine| {
+                                (engine.scroll_body.target() - engine.scroll_body.location()).abs()
+                                    >= 2.0
+                            })
+                        })
+                        .ok()
+                        .unwrap_or(false)
+                })();
+
                 if autoplay_stop_for_down {
                     let token = host
                         .models_mut()
@@ -1366,6 +1394,7 @@ impl Carousel {
                     );
                     st.settling = false;
                     st.embla_settling = false;
+                    st.prevent_click = stop_click_should_be_prevented;
                 });
 
                 let snaps: Arc<[Px]> = host
@@ -1423,7 +1452,12 @@ impl Carousel {
                     engine.scroll_target.set_target_vector(loc);
                     *v = Some(engine);
                 });
-                false
+                if stop_click_should_be_prevented {
+                    host.capture_pointer();
+                    true
+                } else {
+                    false
+                }
             });
 
             let runtime_for_move = runtime_model.clone();
@@ -1591,8 +1625,17 @@ impl Carousel {
                     .ok()
                     .unwrap_or_default();
                 if !runtime.drag.dragging {
+                    if runtime.prevent_click {
+                        host.release_pointer_capture();
+                        let _ = host.models_mut().update(&runtime_for_up, |st| {
+                            st.drag = headless_carousel::CarouselDragState::default();
+                            st.prevent_click = false;
+                        });
+                        return true;
+                    }
                     let _ = host.models_mut().update(&runtime_for_up, |st| {
                         st.drag = headless_carousel::CarouselDragState::default();
+                        st.prevent_click = false;
                     });
                     return false;
                 }
@@ -1710,6 +1753,7 @@ impl Carousel {
                         st.drag = headless_carousel::CarouselDragState::default();
                         st.settling = false;
                         st.embla_settling = true;
+                        st.prevent_click = false;
                     });
                     host.request_redraw(cx.window);
                     return true;
@@ -1756,6 +1800,7 @@ impl Carousel {
                     st.drag = headless_carousel::CarouselDragState::default();
                     st.settling = true;
                     st.embla_settling = false;
+                    st.prevent_click = false;
                     st.settle_from = offset;
                     st.settle_to = release.target_offset;
                     st.settle_generation = st.settle_generation.saturating_add(1);
@@ -1781,6 +1826,7 @@ impl Carousel {
                     st.drag = headless_carousel::CarouselDragState::default();
                     st.settling = false;
                     st.embla_settling = false;
+                    st.prevent_click = false;
                 });
                 let _ = host.models_mut().update(&embla_engine_for_cancel, |v| {
                     *v = None;

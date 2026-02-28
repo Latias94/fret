@@ -68,6 +68,10 @@ Non-goals (v2):
   - Evidence:
     - `ecosystem/fret-ui-headless/src/embla/drag_release.rs`
     - `ecosystem/fret-ui-headless/src/embla/engine.rs` (`Engine::on_drag_release`)
+- [x] CAR2-121 DragFree: prevent mouse “click-to-stop” from activating slide content.
+  - Evidence:
+    - `ecosystem/fret-ui-shadcn/src/carousel.rs` (`CarouselRuntime.prevent_click` + pointer capture on down)
+    - Gate: `ecosystem/fret-ui-shadcn/tests/carousel_drag_free_prevent_click.rs`
 - [x] CAR2-125 Port core targeting helpers (snap selection + limits) needed by the engine.
   - Evidence:
     - `ecosystem/fret-ui-headless/src/embla/scroll_target.rs`
