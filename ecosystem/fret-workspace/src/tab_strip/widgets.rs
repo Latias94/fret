@@ -130,4 +130,3 @@ pub(super) fn tab_trailing_slot_placeholder<H: UiHost>(
         |_cx| Vec::new(),
     )
 }
-

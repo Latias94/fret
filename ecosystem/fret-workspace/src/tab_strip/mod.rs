@@ -2,8 +2,7 @@ use std::cell::{Cell, RefCell};
 use std::sync::Arc;
 
 use fret_core::{
-    Color, Corners, Edges, MouseButton, Point, Px, SemanticsRole, TextOverflow, TextSlant,
-    TextWrap,
+    Color, Corners, Edges, MouseButton, Point, Px, SemanticsRole, TextOverflow, TextSlant, TextWrap,
 };
 use fret_runtime::{CommandId, Model};
 use fret_ui::action::{
@@ -22,8 +21,7 @@ use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::dnd as ui_dnd;
 
 use crate::commands::{
-    tab_activate_command, tab_close_command,
-    tab_pin_command, tab_unpin_command,
+    tab_activate_command, tab_close_command, tab_pin_command, tab_unpin_command,
 };
 use crate::tab_drag::{
     DRAG_KIND_WORKSPACE_TAB, WorkspaceTabDragState, WorkspaceTabDropZone, WorkspaceTabInsertionSide,
@@ -31,8 +29,8 @@ use crate::tab_drag::{
 
 mod drag_state;
 mod geometry;
-mod interaction;
 mod intent;
+mod interaction;
 mod kernel;
 mod layouts;
 mod state;
@@ -51,12 +49,10 @@ use kernel::{
     compute_workspace_tab_strip_drop_target,
 };
 
-use drag_state::{
-    WorkspaceTabStripDragState, get_drag_model, read_drag_snapshot_for_pointer,
-};
+use drag_state::{WorkspaceTabStripDragState, get_drag_model, read_drag_snapshot_for_pointer};
 use geometry::{bounds_for_optional_element_id, collect_tab_hit_rects};
-use interaction::tab_pointer_down_handler;
 use intent::{WorkspaceTabStripIntent, dispatch_intent};
+use interaction::tab_pointer_down_handler;
 use layouts::{
     centered_row, fill_grow_layout, fill_layout, fixed_square_layout, row_layout,
     tab_list_semantics_layout, tab_strip_scroll_content_layout,
@@ -620,25 +616,6 @@ impl WorkspaceTabStrip {
                                                                     return false;
                                                                 };
 
-                                                                if !mv.buttons.left {
-                                                                    ui_dnd::clear_pointer_in_scope(
-                                                                        host.models_mut(),
-                                                                        &dnd,
-                                                                        acx.window,
-                                                                        DRAG_KIND_WORKSPACE_TAB,
-                                                                        dnd_scope,
-                                                                        mv.pointer_id,
-                                                                    );
-                                                                    let _ = host.models_mut().update(&drag_model, |st| {
-                                                                        if st.pointer != Some(mv.pointer_id) {
-                                                                            return;
-                                                                        }
-                                                                        *st = WorkspaceTabStripDragState::default();
-                                                                    });
-                                                                    host.request_redraw(acx.window);
-                                                                    return false;
-                                                                }
-
                                                                 let mut activate_on_drag_start = false;
                                                                 let mut drag_start_position: Option<Point> = None;
 
@@ -663,7 +640,17 @@ impl WorkspaceTabStrip {
                                                                         sensor,
                                                                         ui_dnd::SensorOutput::DragStart { .. }
                                                                     ) {
-                                                                        return false;
+                                                                        // Defensive fallback: some synthetic/scripted pointer
+                                                                        // injections can produce move events that do not advance the
+                                                                        // DnD sensor in the way we expect (tick quirks, transport
+                                                                        // differences). Keep the user-visible behavior stable by
+                                                                        // falling back to a simple distance threshold.
+                                                                        let dx = mv.position.x.0 - start_position.x.0;
+                                                                        let dy = mv.position.y.0 - start_position.y.0;
+                                                                        let dist2 = (dx * dx) + (dy * dy);
+                                                                        if dist2 < (6.0 * 6.0) {
+                                                                            return false;
+                                                                        }
                                                                     }
                                                                     activate_on_drag_start = true;
                                                                     drag_start_position = Some(start_position);
@@ -753,6 +740,18 @@ impl WorkspaceTabStrip {
                                                                         drag_start_position.unwrap_or(mv.position),
                                                                     );
                                                                     if let Some(drag) = host.drag_mut(mv.pointer_id) {
+                                                                        drag.position = mv.position;
+                                                                        drag.dragging = true;
+                                                                    }
+                                                                }
+
+                                                                // Keep the drag session position fresh on every move so other
+                                                                // workspace surfaces (pane drop zones, split previews, etc.) can
+                                                                // resolve hover/drop behavior from `DragSession::position`.
+                                                                if dragging || activate_on_drag_start {
+                                                                    if let Some(drag) = host.drag_mut(mv.pointer_id)
+                                                                        && drag.kind == DRAG_KIND_WORKSPACE_TAB
+                                                                    {
                                                                         drag.position = mv.position;
                                                                         drag.dragging = true;
                                                                     }
@@ -1369,8 +1368,10 @@ impl WorkspaceTabStrip {
                                 });
                             }
 
-                            let should_sync_rects =
-                                drag_snapshot.pointer.is_some() || drag_snapshot.dragged_tab.is_some();
+                            // Keep geometry synced even when we're not actively dragging so the first
+                            // drag move can resolve drop targets immediately (no "first move has no
+                            // rects" gap).
+                            let should_sync_rects = true;
                             let should_clear = drag_snapshot.dragged_tab.as_ref().is_some_and(|dragged| {
                                 !rects_for_hit.iter().any(|r| r.id.as_ref() == dragged.as_ref())
                             });

@@ -28,4 +28,3 @@ pub(super) fn collect_tab_hit_rects<H: UiHost>(
     }
     rects
 }
-

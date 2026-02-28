@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret_core::{Rect};
+use fret_core::Rect;
 use fret_runtime::Model;
 use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, UiHost};
@@ -22,7 +22,9 @@ struct WorkspaceTabStripContextMenuState {
 }
 
 #[cfg(feature = "shadcn-context-menu")]
-pub(super) fn get_context_menu_open_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<bool> {
+pub(super) fn get_context_menu_open_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+) -> Model<bool> {
     let existing = cx.with_state(WorkspaceTabStripContextMenuState::default, |st| {
         st.open.clone()
     });
@@ -36,4 +38,3 @@ pub(super) fn get_context_menu_open_model<H: UiHost>(cx: &mut ElementContext<'_,
     });
     model
 }
-

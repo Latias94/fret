@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use fret_core::{FontId, FontWeight, Point, Px, Rect, TextStyle};
+use fret_ui::Theme;
 use fret_ui::scroll::ScrollHandle;
-use fret_ui::{Theme};
 use fret_ui_kit::dnd as ui_dnd;
 
 use crate::tab_drag::WorkspaceTabHitRect;
@@ -88,4 +88,3 @@ pub(super) fn resolve_end_drop_target(
 
     best.map(|(id, _)| id)
 }
-

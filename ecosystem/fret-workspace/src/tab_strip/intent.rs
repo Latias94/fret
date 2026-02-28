@@ -39,8 +39,12 @@ pub(super) fn dispatch_intent<H: UiActionHost + ?Sized>(
             side,
         } => {
             let cmd = match side {
-                WorkspaceTabInsertionSide::Before => tab_move_active_before_command(target_tab_id.as_ref()),
-                WorkspaceTabInsertionSide::After => tab_move_active_after_command(target_tab_id.as_ref()),
+                WorkspaceTabInsertionSide::Before => {
+                    tab_move_active_before_command(target_tab_id.as_ref())
+                }
+                WorkspaceTabInsertionSide::After => {
+                    tab_move_active_after_command(target_tab_id.as_ref())
+                }
             };
             if let Some(cmd) = cmd {
                 host.dispatch_command(Some(window), cmd);
