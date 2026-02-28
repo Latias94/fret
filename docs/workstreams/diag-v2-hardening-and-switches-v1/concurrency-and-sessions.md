@@ -106,6 +106,12 @@ Tooling writes a small, best-effort `session.json` into the session dir:
 
 This is purely for human/agent discoverability and does not affect runtime behavior.
 
+### Discoverability
+
+Tooling can list known sessions under a base dir:
+
+- `cargo run -p fretboard -- diag list sessions --dir target/fret-diag-agent-a`
+
 ## CLI surface (proposed)
 
 ### Tool-launched runs (preferred)

@@ -2593,7 +2593,13 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     };
 
     match sub.as_str() {
-        "list" => diag_list::cmd_list(&rest, &workspace_root, stats_json, stats_top_override),
+        "list" => diag_list::cmd_list(
+            &rest,
+            &workspace_root,
+            &resolved_out_dir,
+            stats_json,
+            stats_top_override,
+        ),
         "artifact" | "artifacts" => commands::artifact::cmd_artifact(
             &rest,
             pack_after_run,
