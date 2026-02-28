@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use fret_core::{
     Color, Corners, Edges, FontId, FontWeight, Modifiers, MouseButton, Point, PointerId, Px, Rect,
-    SemanticsRole, TextOverflow, TextStyle, TextWrap,
+    SemanticsRole, TextOverflow, TextSlant, TextStyle, TextWrap,
 };
 use fret_runtime::{CommandId, Model, TickId};
 use fret_ui::action::{
@@ -228,6 +228,38 @@ fn dnd_scope_for_pane(pane_id: Option<&Arc<str>>) -> ui_dnd::DndScopeId {
         .unwrap_or(ui_dnd::DND_SCOPE_DEFAULT)
 }
 
+fn tab_pinned_flag_for_id(
+    pinned_by_id: &std::collections::HashMap<Arc<str>, bool>,
+    id: &str,
+) -> bool {
+    pinned_by_id.get(id).copied().unwrap_or(false)
+}
+
+fn resolve_end_drop_target(
+    pinned_by_id: &std::collections::HashMap<Arc<str>, bool>,
+    rects: &[WorkspaceTabHitRect],
+    dragged: &str,
+) -> Option<Arc<str>> {
+    let dragged_pinned = tab_pinned_flag_for_id(pinned_by_id, dragged);
+
+    let mut best: Option<(Arc<str>, f32)> = None;
+    for r in rects.iter().filter(|r| r.id.as_ref() != dragged) {
+        if tab_pinned_flag_for_id(pinned_by_id, r.id.as_ref()) != dragged_pinned {
+            continue;
+        }
+        let right = r.rect.origin.x.0 + r.rect.size.width.0;
+        if best
+            .as_ref()
+            .map(|(_id, prev)| right > *prev)
+            .unwrap_or(true)
+        {
+            best = Some((r.id.clone(), right));
+        }
+    }
+
+    best.map(|(id, _)| id)
+}
+
 #[derive(Debug, Clone)]
 pub struct WorkspaceTab {
     pub id: Arc<str>,
@@ -236,6 +268,7 @@ pub struct WorkspaceTab {
     pub close_command: Option<CommandId>,
     pub dirty: bool,
     pub pinned: bool,
+    pub preview: bool,
 }
 
 impl WorkspaceTab {
@@ -251,6 +284,7 @@ impl WorkspaceTab {
             close_command: None,
             dirty: false,
             pinned: false,
+            preview: false,
         }
     }
 
@@ -266,6 +300,11 @@ impl WorkspaceTab {
 
     pub fn pinned(mut self, pinned: bool) -> Self {
         self.pinned = pinned;
+        self
+    }
+
+    pub fn preview(mut self, preview: bool) -> Self {
+        self.preview = preview;
         self
     }
 }
@@ -392,7 +431,8 @@ impl WorkspaceTabStrip {
             .filter_map(|id| {
                 let activate = tab_activate_command(id.as_ref())?;
                 let mut tab = WorkspaceTab::new(id.clone(), title(id.as_ref()), activate)
-                    .pinned(state.is_tab_pinned(id.as_ref()));
+                    .pinned(state.is_tab_pinned(id.as_ref()))
+                    .preview(state.is_tab_preview(id.as_ref()));
                 if let Some(close) = tab_close_command(id.as_ref()) {
                     tab = tab.close_command(close);
                 }
@@ -506,6 +546,11 @@ impl WorkspaceTabStrip {
                 ..Default::default()
             },
             |cx| {
+                let pinned_by_id: Arc<std::collections::HashMap<Arc<str>, bool>> = Arc::new(
+                    tabs.iter()
+                        .map(|tab| (tab.id.clone(), tab.pinned))
+                        .collect(),
+                );
                 let roving_tab_commands: Arc<[CommandId]> = tabs
                     .iter()
                     .map(|tab| tab.command.clone())
@@ -696,6 +741,7 @@ impl WorkspaceTabStrip {
                                             let tab_close_command = tab.close_command.clone();
                                             let tab_dirty = tab.dirty;
                                             let tab_pinned = tab.pinned;
+                                            let tab_preview = tab.preview;
                                             let tab_test_id_prefix_for_tab = tab_test_id_prefix.clone();
                                             #[cfg(feature = "shadcn-context-menu")]
                                             let has_left = index > 0;
@@ -881,6 +927,7 @@ impl WorkspaceTabStrip {
                                                             let dragged_tab_id = tab_id.clone();
                                                             let dnd = dnd.clone();
                                                             let scroll_handle = scroll_handle.clone();
+                                                            let pinned_by_id = pinned_by_id.clone();
                                                             Arc::new(move |host, acx, mv| {
                                                                 let mut start_tick = TickId::default();
                                                                 let mut start_position = Point::default();
@@ -974,25 +1021,18 @@ impl WorkspaceTabStrip {
                                                                         scroll_viewport_rect,
                                                                     );
                                                                 if matches!(drop_target, WorkspaceTabStripDropTarget::End) {
-                                                                    let mut best: Option<(Arc<str>, f32)> = None;
-                                                                    for r in tab_rects.iter().filter(|r| r.id.as_ref() != dragged.as_ref()) {
-                                                                        let right = r.rect.origin.x.0 + r.rect.size.width.0;
-                                                                        if best
-                                                                            .as_ref()
-                                                                            .map(|(_id, prev)| right > *prev)
-                                                                            .unwrap_or(true)
-                                                                        {
-                                                                            best = Some((r.id.clone(), right));
-                                                                        }
-                                                                    }
-                                                                    drop_target = best
-                                                                        .map(|(id, _)| {
-                                                                            WorkspaceTabStripDropTarget::Tab(
-                                                                                id,
-                                                                                WorkspaceTabInsertionSide::After,
-                                                                            )
-                                                                        })
-                                                                        .unwrap_or(WorkspaceTabStripDropTarget::None);
+                                                                    drop_target = resolve_end_drop_target(
+                                                                        pinned_by_id.as_ref(),
+                                                                        &tab_rects,
+                                                                        dragged.as_ref(),
+                                                                    )
+                                                                    .map(|id| {
+                                                                        WorkspaceTabStripDropTarget::Tab(
+                                                                            id,
+                                                                            WorkspaceTabInsertionSide::After,
+                                                                        )
+                                                                    })
+                                                                    .unwrap_or(WorkspaceTabStripDropTarget::None);
                                                                 }
 
                                                                 let _ = host.models_mut().update(&drag_model, |st| {
@@ -1295,7 +1335,16 @@ impl WorkspaceTabStrip {
                                                                                     layout
                                                                                 },
                                                                                 text: label,
-                                                                                style: Some(text_style.clone()),
+                                                                                style: Some({
+                                                                                    if tab_preview {
+                                                                                        let mut style =
+                                                                                            text_style.clone();
+                                                                                        style.slant = TextSlant::Italic;
+                                                                                        style
+                                                                                    } else {
+                                                                                        text_style.clone()
+                                                                                    }
+                                                                                }),
                                                                                 color: Some(tab_fg),
                                                                                 wrap: TextWrap::None,
                                                                                 overflow: TextOverflow::Ellipsis,
@@ -1748,21 +1797,18 @@ impl WorkspaceTabStrip {
                                         viewport_for_hit,
                                     );
                                     let next = match next {
-                                        WorkspaceTabStripDropTarget::End => rects_for_hit
-                                            .iter()
-                                            .filter(|r| r.id.as_ref() != dragged)
-                                            .max_by(|a, b| {
-                                                let ar = a.rect.origin.x.0 + a.rect.size.width.0;
-                                                let br = b.rect.origin.x.0 + b.rect.size.width.0;
-                                                ar.total_cmp(&br)
-                                            })
-                                            .map(|r| {
-                                                WorkspaceTabStripDropTarget::Tab(
-                                                    r.id.clone(),
-                                                    WorkspaceTabInsertionSide::After,
-                                                )
-                                            })
-                                            .unwrap_or(WorkspaceTabStripDropTarget::None),
+                                        WorkspaceTabStripDropTarget::End => resolve_end_drop_target(
+                                            pinned_by_id.as_ref(),
+                                            &rects_for_hit,
+                                            dragged,
+                                        )
+                                        .map(|id| {
+                                            WorkspaceTabStripDropTarget::Tab(
+                                                id,
+                                                WorkspaceTabInsertionSide::After,
+                                            )
+                                        })
+                                        .unwrap_or(WorkspaceTabStripDropTarget::None),
                                         other => other,
                                     };
                                     if next != drag_snapshot.drop_target {
