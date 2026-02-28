@@ -838,9 +838,16 @@ fn config_doctor_report_json(
         });
 
     let launch_policy = if mode == DoctorMode::Launch {
+        let scrubbed_keys_legacy: Vec<String> = crate::launch_env_policy::TOOL_LAUNCH_SCRUB_ENV_PREFIXES
+            .iter()
+            .map(|p| format!("{p}*"))
+            .collect();
         serde_json::json!({
             "reserved_env_keys": crate::launch_env_policy::TOOL_LAUNCH_RESERVED_ENV_KEYS,
             "scrubbed_inherited_env_prefixes": crate::launch_env_policy::TOOL_LAUNCH_SCRUB_ENV_PREFIXES,
+            // Back-compat for older doctor parsers: this used to be an explicit key list; it is now
+            // a pattern list since scrubbing is prefix-based.
+            "scrubbed_inherited_env_keys": scrubbed_keys_legacy,
             "explicit_env_override_keys": launch_env_override_keys,
         })
     } else {
