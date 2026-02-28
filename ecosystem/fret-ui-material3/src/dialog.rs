@@ -501,8 +501,12 @@ impl Dialog {
                         |color| color.resolve(theme),
                         || dialog_tokens::scrim_color(theme),
                     );
+                    let scrim_opacity = theme
+                        .number_by_key("md.comp.dialog.scrim.opacity")
+                        .unwrap_or(self.scrim_opacity)
+                        .clamp(0.0, 1.0);
                     let scrim_alpha = (scrim_color.a
-                        * self.scrim_opacity
+                        * scrim_opacity
                         * transition.progress)
                         .clamp(0.0, 1.0);
                     let scrim_color = with_alpha(scrim_color, scrim_alpha);
