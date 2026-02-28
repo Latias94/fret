@@ -6,14 +6,14 @@ diagnostics gates (scripts) so refactors remain fearless and reversible.
 ## M1 — Modularize + baseline gates
 
 Outcomes:
-- `WorkspaceTabStrip` implementation is split into small modules (view/interaction/geometry/kernel).
+- `WorkspaceTabStrip` implementation is split into small modules (interaction/geometry/kernel/theme/widgets).
 - Stable `test_id` anchors exist for scriptability (root + tabs + pinned boundary + overflow).
 - At least 2 promoted diagnostics scripts gate:
   - reorder within a single strip (invariants-first):
     - `workspace-shell-demo-tab-reorder-first-to-end-smoke` (currently: first -> after second)
-  - drag-to-split “drop preview” in workspace shell demo
-    - initial: `workspace-shell-demo-tab-drag-to-split-right-drop-preview-screenshot`
-    - follow-up: replace with an invariants-based gate once the drop preview snapshot surface is stable
+  - drag-to-split in workspace shell demo:
+    - invariants gate: `workspace-shell-demo-tab-drag-to-split-right`
+    - screenshot evidence gate: `workspace-shell-demo-tab-drag-to-split-right-drop-preview-screenshot`
   - middle-click close behavior (smoke):
     - `workspace-shell-demo-tab-middle-click-close-smoke`
   - close button behavior (smoke):

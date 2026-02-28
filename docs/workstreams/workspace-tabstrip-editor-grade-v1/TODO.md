@@ -14,11 +14,9 @@ This TODO list is scoped to this workstream folder and is intended to keep the r
 
 ## Modularization (M1)
 
-- [ ] Split `ecosystem/fret-workspace/src/tab_strip/mod.rs` into:
-  - `view.rs` (render-only; test_id anchors, tokens)
-  - `interaction.rs` (pointer handlers, focus, intent dispatch)
-  - `geometry.rs` (rect collection, hit testing)
-  - `kernel.rs` (pure-ish drop/insert computation; unit tests)
+- [x] Split tab strip implementation into modules under `ecosystem/fret-workspace/src/tab_strip/`.
+- [ ] Keep shrinking `ecosystem/fret-workspace/src/tab_strip/mod.rs` by moving more render-only code into
+  `widgets.rs`/`layouts.rs` and by keeping the interaction surface small and auditable.
 - [ ] Keep public surface stable (no upstream callers rewritten unnecessarily).
 - [ ] Ensure `cargo nextest run -p fret-workspace` stays green throughout.
 
@@ -28,4 +26,3 @@ This TODO list is scoped to this workstream folder and is intended to keep the r
 - [ ] Overflow menu: deterministic activation + scroll-into-view behaviors.
 - [ ] Close policies: close button vs middle click vs keyboard (policy-layer ownership documented).
 - [ ] Keyboard nav: decide roving focus + MRU vs in-order cycling contract surface.
-
