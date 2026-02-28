@@ -148,6 +148,10 @@ pub struct CarouselOptions {
     pub align: CarouselAlign,
     pub slides_to_scroll: CarouselSlidesToScroll,
     pub contain_scroll: CarouselContainScroll,
+    /// Initial selected snap index (Embla `startSnap`).
+    pub start_snap: usize,
+    /// Whether pointer dragging is enabled (Embla `draggable`).
+    pub draggable: bool,
     /// Wrap prev/next selection (note: this is *not* a seamless loop engine yet).
     pub loop_enabled: bool,
     /// Embla-style skipSnaps (best-effort without momentum physics).
@@ -166,6 +170,8 @@ impl Default for CarouselOptions {
             align: CarouselAlign::Center,
             slides_to_scroll: CarouselSlidesToScroll::Fixed(1),
             contain_scroll: CarouselContainScroll::TrimSnaps,
+            start_snap: 0,
+            draggable: true,
             loop_enabled: false,
             skip_snaps: false,
             drag_free: false,
@@ -192,6 +198,16 @@ impl CarouselOptions {
 
     pub fn contain_scroll(mut self, contain_scroll: CarouselContainScroll) -> Self {
         self.contain_scroll = contain_scroll;
+        self
+    }
+
+    pub fn start_snap(mut self, start_snap: usize) -> Self {
+        self.start_snap = start_snap;
+        self
+    }
+
+    pub fn draggable(mut self, draggable: bool) -> Self {
+        self.draggable = draggable;
         self
     }
 
@@ -239,16 +255,33 @@ pub struct Carousel {
     test_id: Option<Arc<str>>,
 }
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy)]
 struct CarouselRuntime {
     drag: headless_carousel::CarouselDragState,
     settling: bool,
     settle_from: Px,
     settle_to: Px,
     settle_generation: u64,
+    selection_initialized: bool,
     autoplay_token: Option<TimerToken>,
     autoplay_paused: bool,
     autoplay_hovered: bool,
+}
+
+impl Default for CarouselRuntime {
+    fn default() -> Self {
+        Self {
+            drag: headless_carousel::CarouselDragState::default(),
+            settling: false,
+            settle_from: Px(0.0),
+            settle_to: Px(0.0),
+            settle_generation: 0,
+            selection_initialized: false,
+            autoplay_token: None,
+            autoplay_paused: false,
+            autoplay_hovered: false,
+        }
+    }
 }
 
 #[derive(Default)]
@@ -263,6 +296,7 @@ struct CarouselState {
 
 fn carousel_models<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
+    start_snap: usize,
 ) -> (
     Model<usize>,
     Model<Px>,
@@ -281,7 +315,7 @@ fn carousel_models<H: UiHost>(
     });
 
     if needs_init {
-        let index = cx.app.models_mut().insert(0usize);
+        let index = cx.app.models_mut().insert(start_snap);
         let offset = cx.app.models_mut().insert(Px(0.0));
         let runtime = cx.app.models_mut().insert(CarouselRuntime::default());
         let extent = cx.app.models_mut().insert(Px(0.0));
@@ -453,7 +487,7 @@ impl Carousel {
                 extent_model,
                 snaps_model,
                 max_offset_model,
-            ) = carousel_models(cx);
+            ) = carousel_models(cx, options.start_snap);
 
             let root_layout = decl_style::layout_style(
                 &theme,
@@ -1107,10 +1141,11 @@ impl Carousel {
             let pointer_layout =
                 decl_style::layout_style(&theme, LayoutRefinement::default().size_full());
 
+            let drag_enabled = items_len > 1 && options.draggable;
             let pointer_region = cx.pointer_region(
                 PointerRegionProps {
                     layout: pointer_layout,
-                    enabled: items_len > 1,
+                    enabled: drag_enabled,
                     capture_phase_pointer_moves: true,
                 },
                 move |cx| {
@@ -1258,12 +1293,21 @@ impl Carousel {
 
             // Clamp index/offset when snaps change (e.g. window resize).
             let snaps_len = snaps_now.len();
-            let clamped_index = if snaps_len == 0 {
-                0
+            let selection_source_index = if !runtime_snapshot.selection_initialized
+                && !runtime_snapshot.settling
+                && !runtime_snapshot.drag.dragging
+            {
+                options.start_snap
             } else {
-                index_now.min(snaps_len.saturating_sub(1))
+                index_now
             };
-            if clamped_index != index_now {
+            let clamped_index = if snaps_len == 0 {
+                // Keep the requested selection until we have measurable snaps to clamp against.
+                selection_source_index
+            } else {
+                selection_source_index.min(snaps_len.saturating_sub(1))
+            };
+            if snaps_len > 0 && clamped_index != index_now {
                 let _ = cx
                     .app
                     .models_mut()
@@ -1281,6 +1325,27 @@ impl Carousel {
             // viewport/item extent (Embla initializes canScrollPrev/Next to false until it
             // measures and emits `select`/`reInit`).
             let extent_ready = view_size_now.0 > 0.0 && snaps_len > 0;
+
+            // Embla's `startSnap` selects the initial snap before the user interacts. Because this
+            // recipe derives snaps from measured geometry (available after at least one layout
+            // pass), we apply the initial snap once snaps become available.
+            if extent_ready
+                && !runtime_snapshot.selection_initialized
+                && !runtime_snapshot.settling
+                && !runtime_snapshot.drag.dragging
+            {
+                let target = snaps_now
+                    .get(clamped_index)
+                    .copied()
+                    .unwrap_or(Px(0.0));
+                let target = Px(target.0.clamp(0.0, max_offset_now.0.max(0.0)));
+                let _ = cx.app.models_mut().update(&offset_model, |v| *v = target);
+                let _ = cx.app.models_mut().update(&runtime_model, |st| {
+                    st.selection_initialized = true;
+                });
+                cx.request_frame();
+            }
+
             let prev_disabled =
                 !extent_ready || snaps_len <= 1 || (!options.loop_enabled && clamped_index == 0);
             let next_disabled = !extent_ready
