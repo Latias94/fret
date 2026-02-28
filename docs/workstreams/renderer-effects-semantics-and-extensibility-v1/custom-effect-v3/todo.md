@@ -22,10 +22,21 @@ This TODO tracks the V3 work as landable steps. It intentionally starts with “
   - `user1_unsupported`,
   - etc.
 
+- [ ] Define cache-key and generation implications:
+  - ensure v3 registration generations and any source-prep knobs that affect encode output contribute to
+    the scene encoding cache key.
+
 ## P1 — M0: Dual-source (`src_raw`) plumbing
 
 - [ ] `fret-core`: add `EffectStep::CustomV3` + fingerprint/validate.
-- [ ] `fret-render-wgpu`: preserve chain root for the v3 effect pass, and bind it as `src_raw`.
+- [ ] `fret-render-wgpu`: introduce a “source preparation” step for V3:
+  - ensure `src_raw` is read-only (cannot alias a render attachment being written this pass),
+  - decide whether to preserve a scratch copy or render into an intermediate then composite back,
+  - add deterministic degradation when scratch/budgets are insufficient (`src_raw == src`).
+- [ ] `fret-render-wgpu`: add render-plan reporting for v3 source prep outcomes:
+  - whether raw is distinct or aliased,
+  - requested/applied pyramid levels (once implemented),
+  - degradation reasons surfaced in counters and plan dumps.
 - [ ] Add conformance test: `src_raw` differs from `src` when a prior step modifies the chain (e.g. blur),
       and the shader can sample both deterministically under scissor/mask.
 
@@ -58,4 +69,3 @@ This TODO tracks the V3 work as landable steps. It intentionally starts with “
   - compositing/ordering semantics,
   - determinism under partial reuse.
 - [ ] Only pursue after M0/M1 are stable and diagnosable.
-

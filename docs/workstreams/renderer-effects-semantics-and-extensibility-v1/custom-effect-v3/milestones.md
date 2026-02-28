@@ -17,6 +17,7 @@ Outcome:
   - `src_raw` is the chain root (pre-steps),
   - `src` is the current chain input (post-previous steps),
   - scissor/mask semantics remain correct.
+- Plan dump + counters make it visible when `src_raw` had to alias `src` (targets/budget constraints).
 
 ## M1 — Bounded blur pyramid (optional)
 
@@ -32,4 +33,3 @@ Outcome:
 
 - A mechanism-level way to share pyramid/capture work across multiple glass surfaces exists,
   without hidden implicit caches.
-

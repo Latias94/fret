@@ -86,6 +86,8 @@ Where:
 Semantics:
 
 - If `want_raw == false`, `src_raw` aliases `src` deterministically.
+- If `want_raw == true` but the backend cannot provide a read-only raw source (insufficient scratch targets,
+  unsupported backend, or insufficient budgets), it deterministically degrades to `src_raw == src` (tracked).
 - If `pyramid == None`, `src_pyramid` aliases `src_raw` deterministically with `pyramid_levels == 1`.
 - If `pyramid` is requested but budgets/capabilities do not allow it, deterministically degrade to
   `pyramid_levels == 1` and `src_pyramid == src_raw` (tracked via counters).
@@ -108,6 +110,23 @@ The prelude provides helpers that are WebGPU-friendly:
 - `fret_sample_src_pyramid_bilinear(level, pixel_pos_px) -> vec4<f32>` (level clamped to `[0, pyramid_levels-1]`)
 
 The renderer remains responsible for scissor/mask semantics and for deterministic clamping.
+
+### Source semantics (color, premultiply, addressing)
+
+All sources (`src`, `src_raw`, `src_pyramid`) are treated as:
+
+- **linear premultiplied** color storage (consistent with effect evaluation rules in ADR 0117),
+- **clamp-to-edge** addressing for any sampling helper the renderer provides,
+- **LOD 0** when sampling `src` / `src_raw` helpers.
+
+For the pyramid:
+
+- `src_pyramid` is a renderer-owned mip chain derived from `src_raw`.
+- The pyramid is generated deterministically by repeated 2× downsampling from level `k` → `k+1` using a fixed,
+  renderer-owned filter (baseline: 2×2 box filter in linear premultiplied space).
+- Sampling a pyramid level uses the level’s texel grid deterministically and clamps out-of-bounds access.
+- The portable contract does not expose arbitrary mip filtering; authors must use the provided helper
+  (`fret_sample_src_pyramid_bilinear`) to keep portability and determinism.
 
 ### Capability gating
 

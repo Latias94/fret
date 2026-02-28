@@ -45,6 +45,17 @@ constraints visible.
 3) **M2: optional sharing** (deferred):
    - consider group-level reuse/caching once the per-layer pyramid path is correct and diagnosable.
 
+## Implementation hazards (wgpu)
+
+- `src_raw` must be a **read-only** source. If the chain’s destination texture is also the chain root, the backend
+  cannot sample `srcdst` while writing to it in the same pass; it must either:
+  - evaluate the final pass into a different target and then composite back, or
+  - preserve a scratch copy of the raw chain root.
+  If neither is possible under budgets/targets, V3 must deterministically alias `src_raw == src` and report it.
+
+- The pyramid (when requested) is expected to be derived from `src_raw` and may require additional scratch targets.
+  Degrade deterministically to `levels = 1` when budgets are insufficient.
+
 ## Deliverables
 
 - ADR implementation in `fret-core` + `fret-render-wgpu`.
@@ -55,4 +66,3 @@ constraints visible.
   - pyramid sampling determinism (level dimensions and sampling clamps),
   - deterministic degradation under budget pressure.
 - Authoring demo templates (apps only; no ecosystem recipes in this workstream).
-
