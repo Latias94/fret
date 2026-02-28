@@ -2,13 +2,23 @@
   "schema_version": 2,
     "meta": {
     "name": "Node graph demo: preset families + wire drag smoke (paint-only)",
-    "tags": ["gate", "node_graph", "preset", "skin", "wire_drag", "wire_glow", "wire_highlight"],
+    "tags": [
+      "gate",
+      "node_graph",
+      "preset",
+      "skin",
+      "wire_drag",
+      "wire_glow",
+      "wire_highlight",
+      "edge_markers"
+    ],
     "required_capabilities": ["diag.script_v2"],
     "target_hints": [
       "Cycles the built-in node graph preset families via shortcut (paint-only skin revision).",
       "Starts a wire drag session and captures bundles for debugging skin-driven chrome.",
       "Toggles wire glow so bundles capture both glow and no-glow variants.",
       "Toggles wire highlight so bundles capture both highlight and no-highlight variants.",
+      "Toggles edge markers so bundles capture both markers and no-markers variants.",
       "Exercises invalid + convertible drops without mutating the graph (conversion picker forced)."
     ]
   },
@@ -72,6 +82,10 @@
     { "type": "wait_frames", "n": 2 },
     { "type": "capture_bundle", "label": "node-graph-demo-wire-highlight-toggled-off" },
 
+    { "type": "press_shortcut", "shortcut": "primary+shift+j" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "capture_bundle", "label": "node-graph-demo-edge-markers-toggled-on" },
+
     {
       "type": "drag_to",
       "from": { "kind": "test_id", "id": "node_graph_demo.anchor.float_out" },
@@ -90,6 +104,10 @@
     { "type": "press_shortcut", "shortcut": "primary+shift+h" },
     { "type": "wait_frames", "n": 2 },
     { "type": "capture_bundle", "label": "node-graph-demo-wire-highlight-toggled-on" },
+
+    { "type": "press_shortcut", "shortcut": "primary+shift+j" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "capture_bundle", "label": "node-graph-demo-edge-markers-toggled-off" },
 
     {
       "type": "drag_to",
