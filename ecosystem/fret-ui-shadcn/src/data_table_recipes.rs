@@ -1708,6 +1708,7 @@ impl DataTablePagination {
                 Button::new(Arc::from(format!("Rows per page: {current_size}")))
                     .variant(ButtonVariant::Outline)
                     .size(ButtonSize::Sm)
+                    .label_tabular_nums()
                     .into_element(cx)
             },
             move |_cx| {
@@ -1765,6 +1766,7 @@ impl DataTablePagination {
                     Button::new(page_label.clone())
                         .variant(ButtonVariant::Ghost)
                         .size(ButtonSize::Sm)
+                        .label_tabular_nums()
                         .into_element(cx),
                     Button::new("Go to next page")
                         .variant(ButtonVariant::Outline)
