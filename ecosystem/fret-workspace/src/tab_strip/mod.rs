@@ -28,14 +28,20 @@ use crate::commands::{
 };
 use crate::tab_drag::{
     DRAG_KIND_WORKSPACE_TAB, WorkspaceTabDragState, WorkspaceTabDropZone, WorkspaceTabHitRect,
-    WorkspaceTabInsertionSide, compute_tab_drop_target,
+    WorkspaceTabInsertionSide,
 };
+
+mod kernel;
 
 #[cfg(feature = "shadcn-context-menu")]
 mod overflow;
 
 #[cfg(feature = "shadcn-context-menu")]
 use overflow::compute_overflowed_tab_ids;
+
+use kernel::{WorkspaceTabStripDropTarget, compute_workspace_tab_strip_drop_target};
+
+use crate::tab_drag::compute_tab_drop_target;
 
 #[cfg(feature = "shadcn-context-menu")]
 use fret_ui_shadcn::{
@@ -123,14 +129,6 @@ fn scroll_rect_into_view_x(handle: &ScrollHandle, viewport: Rect, child: Rect) {
     }
 }
 
-fn rect_contains_point(rect: Rect, point: Point) -> bool {
-    let left = rect.origin.x.0;
-    let top = rect.origin.y.0;
-    let right = rect.origin.x.0 + rect.size.width.0;
-    let bottom = rect.origin.y.0 + rect.size.height.0;
-    point.x.0 >= left && point.x.0 <= right && point.y.0 >= top && point.y.0 <= bottom
-}
-
 fn fixed_square_layout(size: Px) -> LayoutStyle {
     let mut layout = LayoutStyle::default();
     layout.size.width = Length::Px(size);
@@ -174,14 +172,6 @@ fn centered_row<H: UiHost>(
             })]
         },
     )
-}
-
-#[derive(Debug, Default, Clone)]
-enum WorkspaceTabStripDropTarget {
-    #[default]
-    None,
-    Tab(Arc<str>, WorkspaceTabInsertionSide),
-    PinnedBoundary,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -968,24 +958,13 @@ impl WorkspaceTabStrip {
                                                                 }
 
                                                                 let dragged = dragged_tab.expect("checked above");
-                                                                let drop_target = pinned_boundary_rect
-                                                                    .is_some_and(|rect| {
-                                                                        rect_contains_point(rect, mv.position)
-                                                                    })
-                                                                    .then_some(WorkspaceTabStripDropTarget::PinnedBoundary)
-                                                                    .unwrap_or_else(|| {
-                                                                        compute_tab_drop_target(
-                                                                            mv.position,
-                                                                            dragged.as_ref(),
-                                                                            &tab_rects,
-                                                                        )
-                                                                        .map(|(target, side)| {
-                                                                            WorkspaceTabStripDropTarget::Tab(
-                                                                                target, side,
-                                                                            )
-                                                                        })
-                                                                        .unwrap_or(WorkspaceTabStripDropTarget::None)
-                                                                    });
+                                                                let drop_target =
+                                                                    compute_workspace_tab_strip_drop_target(
+                                                                        mv.position,
+                                                                        dragged.as_ref(),
+                                                                        &tab_rects,
+                                                                        pinned_boundary_rect,
+                                                                    );
 
                                                                 let _ = host.models_mut().update(&drag_model, |st| {
                                                                     if st.pointer != Some(mv.pointer_id) {
