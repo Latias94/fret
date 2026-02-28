@@ -258,44 +258,16 @@ impl NodeGraphSkin for NodeGraphPresetSkinV1 {
             (None, None)
         };
 
-        let (wire_highlight_selected, wire_highlight_hovered) = match preset_id {
-            "schematic_contrast" => (
-                Some(WireHighlightHint {
-                    width_mul: 0.70,
-                    alpha_mul: 0.90,
-                    color: None,
-                }),
-                Some(WireHighlightHint {
-                    width_mul: 0.75,
-                    alpha_mul: 1.0,
-                    color: None,
-                }),
-            ),
-            "graph_dark" => (
-                Some(WireHighlightHint {
-                    width_mul: 0.65,
-                    alpha_mul: 0.85,
-                    color: None,
-                }),
-                Some(WireHighlightHint {
-                    width_mul: 0.70,
-                    alpha_mul: 0.95,
-                    color: None,
-                }),
-            ),
-            _ => (
-                Some(WireHighlightHint {
-                    width_mul: 0.65,
-                    alpha_mul: 0.80,
-                    color: None,
-                }),
-                Some(WireHighlightHint {
-                    width_mul: 0.70,
-                    alpha_mul: 0.95,
-                    color: None,
-                }),
-            ),
-        };
+        let (wire_highlight_selected, wire_highlight_hovered) = (
+            tokens
+                .wire
+                .highlight_selected
+                .map(WireHighlightTokensV1::into_hint),
+            tokens
+                .wire
+                .highlight_hovered
+                .map(WireHighlightTokensV1::into_hint),
+        );
 
         let outline_color = Color {
             r: 0.0,
@@ -893,6 +865,40 @@ fn theme_derived_preset(
                 dash_preview,
                 dash_invalid,
                 dash_emphasis,
+                highlight_selected: Some(match family {
+                    NodeGraphPresetFamily::WorkflowClean => WireHighlightTokensV1 {
+                        width_mul: 0.65,
+                        alpha_mul: 0.80,
+                        color: None,
+                    },
+                    NodeGraphPresetFamily::SchematicContrast => WireHighlightTokensV1 {
+                        width_mul: 0.70,
+                        alpha_mul: 0.90,
+                        color: None,
+                    },
+                    NodeGraphPresetFamily::GraphDark => WireHighlightTokensV1 {
+                        width_mul: 0.65,
+                        alpha_mul: 0.85,
+                        color: None,
+                    },
+                }),
+                highlight_hovered: Some(match family {
+                    NodeGraphPresetFamily::WorkflowClean => WireHighlightTokensV1 {
+                        width_mul: 0.70,
+                        alpha_mul: 0.95,
+                        color: None,
+                    },
+                    NodeGraphPresetFamily::SchematicContrast => WireHighlightTokensV1 {
+                        width_mul: 0.75,
+                        alpha_mul: 1.0,
+                        color: None,
+                    },
+                    NodeGraphPresetFamily::GraphDark => WireHighlightTokensV1 {
+                        width_mul: 0.70,
+                        alpha_mul: 0.95,
+                        color: None,
+                    },
+                }),
             },
             states: StateTokensV1 {
                 hover: StateColorV1 {
@@ -1096,6 +1102,28 @@ struct WireTokensV1 {
     dash_preview: DashPatternTokensV1,
     dash_invalid: DashPatternTokensV1,
     dash_emphasis: DashPatternTokensV1,
+    #[serde(default)]
+    highlight_selected: Option<WireHighlightTokensV1>,
+    #[serde(default)]
+    highlight_hovered: Option<WireHighlightTokensV1>,
+}
+
+#[derive(Debug, Clone, Copy, Deserialize)]
+struct WireHighlightTokensV1 {
+    width_mul: f32,
+    alpha_mul: f32,
+    #[serde(default)]
+    color: Option<RgbaV1>,
+}
+
+impl WireHighlightTokensV1 {
+    fn into_hint(self) -> WireHighlightHint {
+        WireHighlightHint {
+            width_mul: self.width_mul,
+            alpha_mul: self.alpha_mul,
+            color: self.color.map(Into::into),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -1130,6 +1158,60 @@ impl<'de> Deserialize<'de> for PortShapeHint {
             "Diamond" => Ok(PortShapeHint::Diamond),
             "Triangle" => Ok(PortShapeHint::Triangle),
             _ => Ok(PortShapeHint::Circle),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn assert_close(a: f32, b: f32) {
+        assert!(
+            (a - b).abs() <= 1.0e-6,
+            "expected {a:?} to be close to {b:?}"
+        );
+    }
+
+    #[test]
+    fn builtin_presets_wire_highlight_tokens_are_present() {
+        let presets = builtin_presets();
+        let cases = [
+            ("workflow_clean", (0.65, 0.80), (0.70, 0.95)),
+            ("schematic_contrast", (0.70, 0.90), (0.75, 1.0)),
+            ("graph_dark", (0.65, 0.85), (0.70, 0.95)),
+        ];
+
+        for (id, selected, hovered) in cases {
+            let preset = presets
+                .presets
+                .iter()
+                .find(|p| p.id == id)
+                .unwrap_or_else(|| panic!("expected preset {id:?}"));
+            let sel = preset
+                .paint_only_tokens
+                .wire
+                .highlight_selected
+                .unwrap_or_else(|| panic!("expected wire.highlight_selected for {id:?}"));
+            let hov = preset
+                .paint_only_tokens
+                .wire
+                .highlight_hovered
+                .unwrap_or_else(|| panic!("expected wire.highlight_hovered for {id:?}"));
+
+            assert_close(sel.width_mul, selected.0);
+            assert_close(sel.alpha_mul, selected.1);
+            assert!(
+                sel.color.is_none(),
+                "expected no selected highlight color for {id:?}"
+            );
+
+            assert_close(hov.width_mul, hovered.0);
+            assert_close(hov.alpha_mul, hovered.1);
+            assert!(
+                hov.color.is_none(),
+                "expected no hovered highlight color for {id:?}"
+            );
         }
     }
 }
