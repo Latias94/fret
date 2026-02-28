@@ -201,6 +201,36 @@ impl UiBuilder<crate::ui::TextBox> {
         self
     }
 
+    pub fn font_feature(mut self, tag: impl Into<String>, value: u32) -> Self {
+        self.inner
+            .features_override
+            .push(fret_core::TextFontFeatureSetting {
+                tag: tag.into().into(),
+                value,
+            });
+        self
+    }
+
+    pub fn font_axis(mut self, tag: impl Into<String>, value: f32) -> Self {
+        self.inner
+            .axes_override
+            .push(fret_core::TextFontAxisSetting {
+                tag: tag.into().into(),
+                value,
+            });
+        self
+    }
+
+    /// Enables OpenType tabular numbers (`font-variant-numeric: tabular-nums`).
+    pub fn tabular_nums(self) -> Self {
+        self.font_feature("tnum", 1)
+    }
+
+    /// Enables OpenType slashed zero (`font-variant-numeric: slashed-zero`).
+    pub fn slashed_zero(self) -> Self {
+        self.font_feature("zero", 1)
+    }
+
     pub fn font_ui(self) -> Self {
         self.font(FontId::ui())
     }
