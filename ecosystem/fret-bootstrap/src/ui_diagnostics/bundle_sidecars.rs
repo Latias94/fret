@@ -33,6 +33,7 @@ pub(super) fn write_bundle_sidecars(
     let mut index = bundle_index::build_bundle_index_json(&label, windows, semantics_table);
     let meta = bundle_index::build_bundle_meta_json(&label, windows, semantics_table);
     let test_ids_index = bundle_index::build_test_ids_index_json(&label, windows, semantics_table);
+    let window_map = bundle_index::build_window_map_json(&label, windows);
 
     if is_script_dump {
         if let Some(script_result) = read_script_result_v1(&service.cfg.script_result_path) {
@@ -49,4 +50,5 @@ pub(super) fn write_bundle_sidecars(
     let _ = write_json_compact(dir.join("bundle.index.json"), &index);
     let _ = write_json_compact(dir.join("bundle.meta.json"), &meta);
     let _ = write_json_compact(dir.join("test_ids.index.json"), &test_ids_index);
+    let _ = write_json_compact(dir.join("window.map.json"), &window_map);
 }

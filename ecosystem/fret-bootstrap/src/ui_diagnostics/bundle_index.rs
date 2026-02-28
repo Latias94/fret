@@ -372,6 +372,62 @@ pub(super) fn build_bundle_meta_json(
     })
 }
 
+pub(super) fn build_window_map_json(
+    bundle_label: &str,
+    windows: &[UiDiagnosticsWindowBundleV1],
+) -> Value {
+    let warmup_frames = DEFAULT_WARMUP_FRAMES;
+
+    let mut windows_out: Vec<Value> = Vec::with_capacity(windows.len());
+
+    for w in windows {
+        let first = w.snapshots.first();
+        let last = w.snapshots.last();
+
+        let last_bounds = last.map(|s| s.window_bounds.clone());
+        let last_scale_factor = last.map(|s| s.scale_factor);
+        let last_primary_pointer_type = last.and_then(|s| s.primary_pointer_type.clone());
+        let last_hover_detection = last
+            .and_then(|s| s.caps.as_ref())
+            .map(|c| c.ui_window_hover_detection.clone());
+        let last_docking_interaction_present = last
+            .and_then(|s| s.debug.docking_interaction.as_ref())
+            .is_some();
+
+        windows_out.push(json!({
+            "window": w.window,
+            "snapshots_total": w.snapshots.len(),
+            "events_total": w.events.len(),
+            "first_seen": first.map(|s| json!({
+                "tick_id": s.tick_id,
+                "frame_id": s.frame_id,
+                "timestamp_unix_ms": s.timestamp_unix_ms,
+                "window_snapshot_seq": s.window_snapshot_seq,
+            })),
+            "last_seen": last.map(|s| json!({
+                "tick_id": s.tick_id,
+                "frame_id": s.frame_id,
+                "timestamp_unix_ms": s.timestamp_unix_ms,
+                "window_snapshot_seq": s.window_snapshot_seq,
+                "window_bounds": last_bounds,
+                "scale_factor": last_scale_factor,
+                "primary_pointer_type": last_primary_pointer_type,
+                "ui_window_hover_detection": last_hover_detection,
+                "docking_interaction_present": last_docking_interaction_present,
+            })),
+        }));
+    }
+
+    json!({
+        "schema_version": 1,
+        "kind": "window_map",
+        "bundle": bundle_label,
+        "warmup_frames": warmup_frames,
+        "windows_total": windows.len(),
+        "windows": windows_out,
+    })
+}
+
 pub(super) fn build_test_ids_index_json(
     bundle_label: &str,
     windows: &[UiDiagnosticsWindowBundleV1],

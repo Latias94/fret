@@ -72,9 +72,9 @@ Planned outcomes:
     - runtime scopes selector resolution while a base ref is active
   - [ ] Ensure the feature is capability-gated (tooling-side) and does not leak policy into `fret-ui`.
 - [ ] Multi-viewport docking evidence (make cross-window failures explainable, not just “timeout”):
-  - [ ] Export a per-run `window_map.json` (window ids, viewport kind, parent/child relationships if known).
+  - [x] Export a bounded `window.map.json` sidecar in bundle export dirs (window ids + last bounds + hover detection).
   - [ ] Record input routing decisions for dock/tear-out flows (why a hover/click went to a different window).
-  - [ ] Add a bounded `diag meta windows` query to avoid opening large artifacts.
+  - [x] Add a bounded `diag windows <bundle_dir|bundle.schema2.json>` query to avoid opening large artifacts.
 - [ ] Fast mode policy (determinism + speed):
   - [ ] Make “fast mode vs human-speed” explicit via config (stabilization defaults, animation handling).
   - [ ] Add a bounded “fast mode” smoke suite (runs faster than today without introducing flake).
