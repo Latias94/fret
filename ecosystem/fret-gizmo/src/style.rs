@@ -113,17 +113,13 @@ impl GizmoPartVisuals {
             rotate_view_ring_radius_scale: 1.2,
             rotate_view_ring_thickness_scale: 1.0,
             rotate_view_ring_color: Color {
-                r: 0.9,
-                g: 0.9,
-                b: 0.9,
                 a: 0.8,
+                ..Color::from_srgb_hex_rgb(0xe6_e6_e6)
             },
             rotate_arcball_ring_thickness_scale: 1.0,
             rotate_arcball_ring_color: Color {
-                r: 1.0,
-                g: 1.0,
-                b: 1.0,
                 a: 0.12,
+                ..Color::from_srgb_hex_rgb(0xff_ff_ff)
             },
             rotate_arcball_ring_hover_alpha: 0.55,
             rotate_ring_fill_alpha: 0.22,
@@ -148,30 +144,10 @@ impl GizmoVisuals {
             bounds_handle_size_px: 12.0,
             show_occluded: true,
             occluded_alpha: 0.25,
-            x_color: Color {
-                r: 1.0,
-                g: 0.2,
-                b: 0.4,
-                a: 1.0,
-            },
-            y_color: Color {
-                r: 0.2,
-                g: 1.0,
-                b: 0.4,
-                a: 1.0,
-            },
-            z_color: Color {
-                r: 0.2,
-                g: 0.5,
-                b: 1.0,
-                a: 1.0,
-            },
-            hover_color: Color {
-                r: 1.0,
-                g: 0.85,
-                b: 0.2,
-                a: 1.0,
-            },
+            x_color: Color::from_srgb_hex_rgb(0xff_33_66),
+            y_color: Color::from_srgb_hex_rgb(0x33_ff_66),
+            z_color: Color::from_srgb_hex_rgb(0x33_80_ff),
+            hover_color: Color::from_srgb_hex_rgb(0xff_d9_33),
         }
     }
 
@@ -232,29 +208,18 @@ impl GizmoVisualPreset {
                 show_occluded: true,
                 occluded_alpha: 0.25,
                 x_color: Color {
-                    r: 0.95,
-                    g: 0.35,
-                    b: 0.45,
                     a: 0.95,
+                    ..Color::from_srgb_hex_rgb(0xf2_59_73)
                 },
                 y_color: Color {
-                    r: 0.35,
-                    g: 0.95,
-                    b: 0.55,
                     a: 0.95,
+                    ..Color::from_srgb_hex_rgb(0x59_f2_8c)
                 },
                 z_color: Color {
-                    r: 0.35,
-                    g: 0.60,
-                    b: 0.98,
                     a: 0.95,
+                    ..Color::from_srgb_hex_rgb(0x59_99_fa)
                 },
-                hover_color: Color {
-                    r: 1.0,
-                    g: 0.92,
-                    b: 0.35,
-                    a: 1.0,
-                },
+                hover_color: Color::from_srgb_hex_rgb(0xff_eb_59),
             },
             Self::HighContrast => GizmoVisuals {
                 size_px: 112.0,
@@ -263,30 +228,10 @@ impl GizmoVisualPreset {
                 bounds_handle_size_px: 14.0,
                 show_occluded: true,
                 occluded_alpha: 0.35,
-                x_color: Color {
-                    r: 1.0,
-                    g: 0.15,
-                    b: 0.25,
-                    a: 1.0,
-                },
-                y_color: Color {
-                    r: 0.15,
-                    g: 1.0,
-                    b: 0.35,
-                    a: 1.0,
-                },
-                z_color: Color {
-                    r: 0.15,
-                    g: 0.55,
-                    b: 1.0,
-                    a: 1.0,
-                },
-                hover_color: Color {
-                    r: 1.0,
-                    g: 0.95,
-                    b: 0.25,
-                    a: 1.0,
-                },
+                x_color: Color::from_srgb_hex_rgb(0xff_26_40),
+                y_color: Color::from_srgb_hex_rgb(0x26_ff_59),
+                z_color: Color::from_srgb_hex_rgb(0x26_8c_ff),
+                hover_color: Color::from_srgb_hex_rgb(0xff_f2_40),
             },
         }
     }
@@ -373,41 +318,20 @@ impl ViewGizmoVisuals {
             pick_padding_px: 6.0,
             center_button_radius_px: 12.0,
             face_color: Color {
-                r: 0.22,
-                g: 0.22,
-                b: 0.24,
                 a: 0.35,
+                ..Color::from_srgb_hex_rgb(0x38_38_3d)
             },
             edge_color: Color {
-                r: 0.95,
-                g: 0.95,
-                b: 0.98,
                 a: 0.9,
+                ..Color::from_srgb_hex_rgb(0xf2_f2_fa)
             },
             hover_color: Color {
-                r: 1.0,
-                g: 0.85,
-                b: 0.3,
                 a: 0.55,
+                ..Color::from_srgb_hex_rgb(0xff_d9_4d)
             },
-            x_color: Color {
-                r: 1.0,
-                g: 0.2,
-                b: 0.4,
-                a: 1.0,
-            },
-            y_color: Color {
-                r: 0.2,
-                g: 1.0,
-                b: 0.4,
-                a: 1.0,
-            },
-            z_color: Color {
-                r: 0.2,
-                g: 0.5,
-                b: 1.0,
-                a: 1.0,
-            },
+            x_color: Color::from_srgb_hex_rgb(0xff_33_66),
+            y_color: Color::from_srgb_hex_rgb(0x33_ff_66),
+            z_color: Color::from_srgb_hex_rgb(0x33_80_ff),
         }
     }
 
@@ -471,41 +395,20 @@ impl ViewGizmoVisualPreset {
                 pick_padding_px: 4.0,
                 center_button_radius_px: 12.0,
                 face_color: Color {
-                    r: 0.15,
-                    g: 0.15,
-                    b: 0.18,
                     a: 0.85,
+                    ..Color::from_srgb_hex_rgb(0x26_26_2e)
                 },
                 edge_color: Color {
-                    r: 1.0,
-                    g: 1.0,
-                    b: 1.0,
                     a: 0.55,
+                    ..Color::from_srgb_hex_rgb(0xff_ff_ff)
                 },
                 hover_color: Color {
-                    r: 1.0,
-                    g: 0.9,
-                    b: 0.35,
                     a: 0.75,
+                    ..Color::from_srgb_hex_rgb(0xff_e6_59)
                 },
-                x_color: Color {
-                    r: 1.0,
-                    g: 0.2,
-                    b: 0.4,
-                    a: 1.0,
-                },
-                y_color: Color {
-                    r: 0.2,
-                    g: 1.0,
-                    b: 0.4,
-                    a: 1.0,
-                },
-                z_color: Color {
-                    r: 0.2,
-                    g: 0.5,
-                    b: 1.0,
-                    a: 1.0,
-                },
+                x_color: Color::from_srgb_hex_rgb(0xff_33_66),
+                y_color: Color::from_srgb_hex_rgb(0x33_ff_66),
+                z_color: Color::from_srgb_hex_rgb(0x33_80_ff),
             },
             Self::HighContrast => ViewGizmoVisuals {
                 margin_px: Vec2::new(16.0, 16.0),
@@ -513,41 +416,20 @@ impl ViewGizmoVisualPreset {
                 pick_padding_px: 4.0,
                 center_button_radius_px: 12.0,
                 face_color: Color {
-                    r: 0.08,
-                    g: 0.08,
-                    b: 0.10,
                     a: 0.92,
+                    ..Color::from_srgb_hex_rgb(0x14_14_1a)
                 },
                 edge_color: Color {
-                    r: 1.0,
-                    g: 1.0,
-                    b: 1.0,
                     a: 0.75,
+                    ..Color::from_srgb_hex_rgb(0xff_ff_ff)
                 },
                 hover_color: Color {
-                    r: 1.0,
-                    g: 0.95,
-                    b: 0.25,
                     a: 0.85,
+                    ..Color::from_srgb_hex_rgb(0xff_f2_40)
                 },
-                x_color: Color {
-                    r: 1.0,
-                    g: 0.2,
-                    b: 0.4,
-                    a: 1.0,
-                },
-                y_color: Color {
-                    r: 0.2,
-                    g: 1.0,
-                    b: 0.4,
-                    a: 1.0,
-                },
-                z_color: Color {
-                    r: 0.2,
-                    g: 0.5,
-                    b: 1.0,
-                    a: 1.0,
-                },
+                x_color: Color::from_srgb_hex_rgb(0xff_33_66),
+                y_color: Color::from_srgb_hex_rgb(0x33_ff_66),
+                z_color: Color::from_srgb_hex_rgb(0x33_80_ff),
             },
         }
     }

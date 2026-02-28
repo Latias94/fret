@@ -28,28 +28,20 @@ impl Default for Grid3dConfig {
             half_extent: 10.0,
             major_every: 5,
             minor_color: Color {
-                r: 0.30,
-                g: 0.30,
-                b: 0.34,
                 a: 0.28,
+                ..Color::from_srgb_hex_rgb(0x4d_4d_57)
             },
             major_color: Color {
-                r: 0.45,
-                g: 0.45,
-                b: 0.50,
                 a: 0.42,
+                ..Color::from_srgb_hex_rgb(0x73_73_80)
             },
             axis_u_color: Color {
-                r: 0.95,
-                g: 0.35,
-                b: 0.32,
                 a: 0.80,
+                ..Color::from_srgb_hex_rgb(0xf2_59_52)
             },
             axis_v_color: Color {
-                r: 0.32,
-                g: 0.55,
-                b: 1.00,
                 a: 0.80,
+                ..Color::from_srgb_hex_rgb(0x52_8c_ff)
             },
             depth: DepthMode::Test,
         }
