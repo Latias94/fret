@@ -56,8 +56,8 @@ fn hash01(p: vec2<f32>) -> f32 {
 
 fn fret_custom_effect(src: vec4<f32>, _uv: vec2<f32>, pos_px: vec2<f32>, params: EffectParamsV1) -> vec4<f32> {
   // params.vec4s[0]:
-  // - x: refraction_height_px (controls edge thickness)
-  // - y: refraction_amount_px (controls displacement)
+  // - x: refraction_height_px (controls edge thickness; caller should scale to render px)
+  // - y: refraction_amount_px (controls displacement; caller should scale to render px)
   // - z: pyramid_level
   // - w: frost_mix (0..1)
   let refraction_height_px = clamp(params.vec4s[0].x, 0.0, 96.0);
@@ -66,7 +66,7 @@ fn fret_custom_effect(src: vec4<f32>, _uv: vec2<f32>, pos_px: vec2<f32>, params:
   let frost_mix = clamp(params.vec4s[0].w, 0.0, 1.0);
 
   // params.vec4s[1]:
-  // - x: corner_radius_px
+  // - x: corner_radius_px (caller should scale to render px)
   // - y: depth_effect (0..1)
   // - z: dispersion (0..1)
   // - w: highlight_alpha (0..1)
@@ -77,7 +77,7 @@ fn fret_custom_effect(src: vec4<f32>, _uv: vec2<f32>, pos_px: vec2<f32>, params:
 
   // params.vec4s[2]:
   // - x: inner_shadow_alpha (0..1)
-  // - y: inner_shadow_radius_px
+  // - y: inner_shadow_radius_px (caller should scale to render px)
   // - z: vignette_strength (0..1)
   // - w: noise_alpha (0..0.1)
   let inner_shadow_alpha = clamp(params.vec4s[2].x, 0.0, 1.0);
@@ -102,6 +102,11 @@ fn fret_custom_effect(src: vec4<f32>, _uv: vec2<f32>, pos_px: vec2<f32>, params:
   let radii = vec4<f32>(corner_radius_px, corner_radius_px, corner_radius_px, corner_radius_px);
   let radius = radius_at(centered, radii);
   let sd = sd_rounded_rect(centered, half_size, radius);
+  if (sd > 0.0) {
+    // Outside the rounded rect (but still within the effect bounds). Returning the unmodified chain
+    // input avoids bright fringes when clip coverage is applied at the chain end.
+    return src;
+  }
   let inside_px = clamp(-sd, 0.0, 4096.0);
   let inside01 = select(0.0, inside_px / max(refraction_height_px, 1.0), refraction_height_px > 0.0);
 
@@ -153,7 +158,7 @@ fn fret_custom_effect(src: vec4<f32>, _uv: vec2<f32>, pos_px: vec2<f32>, params:
   let n = hash01(floor(pos_px) + vec2<f32>(17.0, 91.0)) - 0.5;
   out_rgb = out_rgb + vec3<f32>(n) * noise_alpha;
 
-  return vec4<f32>(out_rgb, 1.0);
+  return vec4<f32>(clamp(out_rgb, vec3<f32>(0.0), vec3<f32>(1.0)), src.a);
 }
 "#;
 
@@ -206,6 +211,7 @@ impl WinitAppDriver for CustomEffectV3WebDriver {
             window,
             bounds,
             scene,
+            scale_factor,
             ..
         } = context;
 
@@ -262,16 +268,19 @@ impl WinitAppDriver for CustomEffectV3WebDriver {
         }
 
         if let Some(effect) = self.effect {
+            // The shader operates in render-pixel space, so any distance-like params must be scaled.
+            // Keep `max_sample_offset_px` in logical px (the renderer scales it internally).
+            let sf = scale_factor.max(1.0e-6);
             let params = EffectParamsV1 {
                 vec4s: [
                     // (refraction_height_px, refraction_amount_px, pyramid_level, frost_mix)
-                    [22.0, 34.0, 3.0, 0.75],
+                    [22.0 * sf, 34.0 * sf, 3.0, 0.75],
                     // (corner_radius_px, depth_effect, dispersion, highlight_alpha)
-                    [24.0, 0.18, 0.55, 0.32],
+                    [24.0 * sf, 0.18, 0.55, 0.32],
                     // (inner_shadow_alpha, inner_shadow_radius_px, vignette_strength, noise_alpha)
-                    [0.22, 28.0, 0.25, 0.012],
+                    [0.22, 28.0 * sf, 0.25, 0.012],
                     // tint (rgb + alpha)
-                    [1.0, 1.0, 1.0, 0.10],
+                    [1.0, 1.0, 1.0, 0.08],
                 ],
             };
 
@@ -345,7 +354,7 @@ impl WinitAppDriver for CustomEffectV3WebDriver {
                         r: 1.0,
                         g: 1.0,
                         b: 1.0,
-                        a: 0.12,
+                        a: 0.08,
                     }),
                     border: Edges::all(Px(0.0)),
                     border_paint: Paint::Solid(Color::TRANSPARENT),
@@ -364,7 +373,7 @@ impl WinitAppDriver for CustomEffectV3WebDriver {
                         r: 1.0,
                         g: 1.0,
                         b: 1.0,
-                        a: 0.18,
+                        a: 0.12,
                     }),
                     corner_radii: Corners::all(Px(24.0)),
                 });
