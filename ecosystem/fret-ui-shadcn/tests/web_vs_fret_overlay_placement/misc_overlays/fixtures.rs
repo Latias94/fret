@@ -223,16 +223,14 @@ fn build_drawer_dialog_mobile_overlay(
                 .into_element(cx)
         },
         |cx| {
-            DrawerContent::new(vec![
-                DrawerHeader::new(vec![
-                    DrawerTitle::new("Edit profile").into_element(cx),
-                    DrawerDescription::new(
-                        "Make changes to your profile here. Click save when you're done.",
-                    )
-                    .into_element(cx),
-                ])
+            DrawerContent::new(vec![DrawerHeader::new(vec![
+                DrawerTitle::new("Edit profile").into_element(cx),
+                DrawerDescription::new(
+                    "Make changes to your profile here. Click save when you're done.",
+                )
                 .into_element(cx),
             ])
+            .into_element(cx)])
             .into_element(cx)
         },
     )

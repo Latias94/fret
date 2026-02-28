@@ -736,6 +736,11 @@ pub(crate) fn maybe_launch_demo(
         // tool-launched runs so compat paths stay removable.
         allow_script_schema_v1: Some(false),
         screenshots_enabled: Some(wants_screenshots),
+        // Keep default artifacts small-by-default for tool-launched runs:
+        // - sidecars + manifest are sufficient for most triage flows
+        // - compact schema2 view is useful for downstream tooling without the raw monolith
+        write_bundle_json: Some(false),
+        write_bundle_schema2: Some(true),
         // Keep script-driven bundle dumps reasonably small by default.
         //
         // The runtime exports full frame snapshots; large dump windows can easily produce

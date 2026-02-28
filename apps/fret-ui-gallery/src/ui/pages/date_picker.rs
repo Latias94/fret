@@ -13,6 +13,9 @@ pub(super) fn preview_date_picker(
 ) -> Vec<AnyElement> {
     #[derive(Default)]
     struct DatePickerModels {
+        basic_open: Option<Model<bool>>,
+        basic_month: Option<Model<CalendarMonth>>,
+        basic_selected: Option<Model<Option<Date>>>,
         range_open: Option<Model<bool>>,
         range_month: Option<Model<CalendarMonth>>,
         range_selected: Option<Model<DateRangeSelection>>,
@@ -73,6 +76,28 @@ pub(super) fn preview_date_picker(
         };
 
         format!("{month} {:02}, {}", date.day(), date.year())
+    }
+
+    fn format_date_lll_dd_y_en(date: Date) -> String {
+        use time::Month;
+
+        let month = match date.month() {
+            Month::January => "Jan",
+            Month::February => "Feb",
+            Month::March => "Mar",
+            Month::April => "Apr",
+            Month::May => "May",
+            Month::June => "Jun",
+            Month::July => "Jul",
+            Month::August => "Aug",
+            Month::September => "Sep",
+            Month::October => "Oct",
+            Month::November => "Nov",
+            Month::December => "Dec",
+        };
+
+        let day = format!("{:02}", date.day());
+        format!("{month} {day}, {}", date.year())
     }
 
     fn parse_date_month_dd_yyyy_en(raw: &str) -> Option<Date> {
@@ -172,6 +197,9 @@ pub(super) fn preview_date_picker(
         .unwrap_or_else(|| time::OffsetDateTime::now_utc().date());
 
     let (
+        basic_open,
+        basic_month,
+        basic_selected,
         range_open,
         range_month,
         range_selected,
@@ -198,6 +226,9 @@ pub(super) fn preview_date_picker(
         time_value,
     ) = cx.with_state(DatePickerModels::default, |st| {
         (
+            st.basic_open.clone(),
+            st.basic_month.clone(),
+            st.basic_selected.clone(),
             st.range_open.clone(),
             st.range_month.clone(),
             st.range_selected.clone(),
@@ -226,6 +257,9 @@ pub(super) fn preview_date_picker(
     });
 
     let (
+        basic_open,
+        basic_month,
+        basic_selected,
         range_open,
         range_month,
         range_selected,
@@ -251,6 +285,9 @@ pub(super) fn preview_date_picker(
         time_selected,
         time_value,
     ) = match (
+        basic_open,
+        basic_month,
+        basic_selected,
         range_open,
         range_month,
         range_selected,
@@ -277,6 +314,9 @@ pub(super) fn preview_date_picker(
         time_value,
     ) {
         (
+            Some(basic_open),
+            Some(basic_month),
+            Some(basic_selected),
             Some(range_open),
             Some(range_month),
             Some(range_selected),
@@ -302,6 +342,9 @@ pub(super) fn preview_date_picker(
             Some(time_selected),
             Some(time_value),
         ) => (
+            basic_open,
+            basic_month,
+            basic_selected,
             range_open,
             range_month,
             range_selected,
@@ -328,10 +371,17 @@ pub(super) fn preview_date_picker(
             time_value,
         ),
         _ => {
+            let basic_open = cx.app.models_mut().insert(false);
             let range_open = cx.app.models_mut().insert(false);
             let diag_month = CalendarMonth::from_date(
                 Date::from_calendar_date(2024, time::Month::February, 1).expect("valid date"),
             );
+            let basic_month = cx.app.models_mut().insert(if diag_calendar_roving {
+                diag_month
+            } else {
+                CalendarMonth::from_date(today)
+            });
+            let basic_selected = cx.app.models_mut().insert(None::<Date>);
             let range_month = cx.app.models_mut().insert(if diag_calendar_roving {
                 diag_month
             } else {
@@ -392,6 +442,9 @@ pub(super) fn preview_date_picker(
             let time_value = cx.app.models_mut().insert(String::from("10:30:00"));
 
             cx.with_state(DatePickerModels::default, |st| {
+                st.basic_open = Some(basic_open.clone());
+                st.basic_month = Some(basic_month.clone());
+                st.basic_selected = Some(basic_selected.clone());
                 st.range_open = Some(range_open.clone());
                 st.range_month = Some(range_month.clone());
                 st.range_selected = Some(range_selected.clone());
@@ -421,6 +474,9 @@ pub(super) fn preview_date_picker(
             });
 
             (
+                basic_open,
+                basic_month,
+                basic_selected,
                 range_open,
                 range_month,
                 range_selected,
@@ -449,11 +505,126 @@ pub(super) fn preview_date_picker(
         }
     };
 
-    let simple = shadcn::DatePicker::new(open, month, selected.clone())
-        .placeholder("Pick a date")
-        .refine_layout(LayoutRefinement::default().w_px(Px(240.0)))
+    let demo = {
+        let selected_now = cx.app.models().read(&selected, |v| *v).ok().flatten();
+        if let Some(selected_now) = selected_now {
+            let _ = cx
+                .app
+                .models_mut()
+                .update(&month, |m| *m = CalendarMonth::from_date(selected_now));
+        }
+
+        let button_text = selected_now
+            .map(format_date_lll_dd_y_en)
+            .unwrap_or_else(|| String::from("Pick a date"));
+
+        shadcn::Popover::new(open.clone())
+            .side(shadcn::PopoverSide::Bottom)
+            .align(shadcn::PopoverAlign::Start)
+            .into_element(
+                cx,
+                |cx| {
+                    let mut button = shadcn::Button::new(button_text)
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .toggle_model(open.clone())
+                        .content_justify(fret_ui_kit::Justify::Between)
+                        .text_weight(FontWeight::NORMAL)
+                        .trailing_icon(fret_icons::IconId::new_static("lucide.chevron-down"))
+                        .refine_layout(LayoutRefinement::default().w_px(Px(212.0)))
+                        .test_id("ui-gallery-date-picker-demo-trigger");
+
+                    if selected_now.is_none() {
+                        button = button.style(shadcn::button::ButtonStyle::default().foreground(
+                            fret_ui_kit::WidgetStateProperty::new(Some(ColorRef::Token {
+                                key: "muted-foreground",
+                                fallback: fret_ui_kit::ColorFallback::ThemeTextMuted,
+                            })),
+                        ));
+                    }
+
+                    button.into_element(cx)
+                },
+                |cx| {
+                    let calendar = shadcn::Calendar::new(month.clone(), selected.clone())
+                        .into_element(cx)
+                        .test_id("ui-gallery-date-picker-demo-calendar");
+
+                    shadcn::PopoverContent::new([calendar])
+                        .refine_style(ChromeRefinement::default().p(Space::N0))
+                        .refine_layout(
+                            LayoutRefinement::default().w(fret_ui_kit::LengthRefinement::Auto),
+                        )
+                        .into_element(cx)
+                        .test_id("ui-gallery-date-picker-demo-content")
+                },
+            )
+            .test_id("ui-gallery-date-picker-demo")
+    };
+
+    let basic = {
+        let open = basic_open.clone();
+        let month = basic_month.clone();
+        let selected = basic_selected.clone();
+
+        let selected_now = cx.app.models().read(&selected, |v| *v).ok().flatten();
+        if let Some(selected_now) = selected_now {
+            let _ = cx
+                .app
+                .models_mut()
+                .update(&month, |m| *m = CalendarMonth::from_date(selected_now));
+        }
+
+        let button_text = selected_now
+            .map(format_date_lll_dd_y_en)
+            .unwrap_or_else(|| String::from("Pick a date"));
+
+        shadcn::Field::new([
+            shadcn::FieldLabel::new("Date").into_element(cx),
+            shadcn::Popover::new(open.clone())
+                .side(shadcn::PopoverSide::Bottom)
+                .align(shadcn::PopoverAlign::Start)
+                .into_element(
+                    cx,
+                    |cx| {
+                        let mut button = shadcn::Button::new(button_text)
+                            .variant(shadcn::ButtonVariant::Outline)
+                            .toggle_model(open.clone())
+                            .content_justify_start()
+                            .text_weight(FontWeight::NORMAL)
+                            .refine_layout(LayoutRefinement::default().w_px(Px(176.0)));
+
+                        if selected_now.is_none() {
+                            button =
+                                button.style(shadcn::button::ButtonStyle::default().foreground(
+                                    fret_ui_kit::WidgetStateProperty::new(Some(ColorRef::Token {
+                                        key: "muted-foreground",
+                                        fallback: fret_ui_kit::ColorFallback::ThemeTextMuted,
+                                    })),
+                                ));
+                        }
+
+                        button
+                            .into_element(cx)
+                            .test_id("ui-gallery-date-picker-basic-trigger")
+                    },
+                    |cx| {
+                        let calendar = shadcn::Calendar::new(month.clone(), selected.clone())
+                            .into_element(cx)
+                            .test_id("ui-gallery-date-picker-basic-calendar");
+
+                        shadcn::PopoverContent::new([calendar])
+                            .refine_style(ChromeRefinement::default().p(Space::N0))
+                            .refine_layout(
+                                LayoutRefinement::default().w(fret_ui_kit::LengthRefinement::Auto),
+                            )
+                            .into_element(cx)
+                            .test_id("ui-gallery-date-picker-basic-content")
+                    },
+                ),
+        ])
         .into_element(cx)
-        .test_id("ui-gallery-date-picker-simple");
+        .test_id("ui-gallery-date-picker-basic")
+    };
 
     let mut range_picker = shadcn::DateRangePicker::new(
         range_open.clone(),
@@ -502,6 +673,8 @@ pub(super) fn preview_date_picker(
                         shadcn::Button::new(button_text)
                             .variant(shadcn::ButtonVariant::Outline)
                             .toggle_model(open.clone())
+                            .content_justify_start()
+                            .text_weight(FontWeight::NORMAL)
                             .refine_layout(LayoutRefinement::default().w_px(Px(176.0)))
                             .into_element(cx)
                             .test_id("ui-gallery-date-picker-dob-trigger")
@@ -509,6 +682,7 @@ pub(super) fn preview_date_picker(
                     |cx| {
                         let calendar = shadcn::Calendar::new(month.clone(), selected.clone())
                             .caption_layout(shadcn::CalendarCaptionLayout::Dropdown)
+                            .test_id_prefix("ui-gallery-date-picker-dob-calendar")
                             .close_on_select(open.clone())
                             .into_element(cx)
                             .test_id("ui-gallery-date-picker-dob-calendar");
@@ -527,6 +701,110 @@ pub(super) fn preview_date_picker(
         ])
         .into_element(cx)
         .test_id("ui-gallery-date-picker-dob")
+    };
+
+    #[derive(Default)]
+    struct DropdownsModels {
+        open: Option<Model<bool>>,
+        month: Option<Model<CalendarMonth>>,
+        selected: Option<Model<Option<Date>>>,
+    }
+
+    let dropdowns = {
+        let (open, month, selected) = cx.with_state(DropdownsModels::default, |st| {
+            (st.open.clone(), st.month.clone(), st.selected.clone())
+        });
+
+        let (open, month, selected) = match (open, month, selected) {
+            (Some(open), Some(month), Some(selected)) => (open, month, selected),
+            _ => {
+                let open = cx.app.models_mut().insert(false);
+                let month = cx.app.models_mut().insert(CalendarMonth::from_date(today));
+                let selected = cx.app.models_mut().insert(None::<Date>);
+
+                cx.with_state(DropdownsModels::default, |st| {
+                    st.open = Some(open.clone());
+                    st.month = Some(month.clone());
+                    st.selected = Some(selected.clone());
+                });
+
+                (open, month, selected)
+            }
+        };
+
+        let is_desktop = fret_ui_kit::declarative::viewport_queries::viewport_width_at_least(
+            cx,
+            fret_ui::Invalidation::Layout,
+            fret_ui_kit::declarative::viewport_queries::tailwind::MD,
+            fret_ui_kit::declarative::viewport_queries::ViewportQueryHysteresis::default(),
+        );
+
+        let content_month = month.clone();
+        let content_selected = selected.clone();
+        let content = move |cx: &mut ElementContext<'_, App>| {
+            shadcn::Calendar::new(content_month.clone(), content_selected.clone())
+                .caption_layout(shadcn::CalendarCaptionLayout::Dropdown)
+                .test_id_prefix("ui-gallery-date-picker-dropdowns-calendar")
+                .into_element(cx)
+        };
+
+        let trigger_open = open.clone();
+        let trigger = move |cx: &mut ElementContext<'_, App>| {
+            shadcn::Button::new("Pick a date")
+                .variant(shadcn::ButtonVariant::Outline)
+                .toggle_model(trigger_open.clone())
+                .refine_layout(LayoutRefinement::default().w_px(Px(240.0)))
+                .into_element(cx)
+                .test_id("ui-gallery-date-picker-dropdowns-trigger")
+        };
+
+        let overlay = if is_desktop {
+            shadcn::Popover::new(open.clone())
+                .side(shadcn::PopoverSide::Bottom)
+                .align(shadcn::PopoverAlign::Start)
+                .into_element(
+                    cx,
+                    move |cx| trigger(cx),
+                    move |cx| {
+                        shadcn::PopoverContent::new([content(cx)])
+                            .refine_style(ChromeRefinement::default().p(Space::N0))
+                            .refine_layout(
+                                LayoutRefinement::default()
+                                    .w(fret_ui_kit::LengthRefinement::Auto)
+                                    .min_w_0()
+                                    .min_h_0(),
+                            )
+                            .into_element(cx)
+                            .test_id("ui-gallery-date-picker-dropdowns-popover-content")
+                    },
+                )
+        } else {
+            let done_open = open.clone();
+            shadcn::Drawer::new(open.clone()).into_element(
+                cx,
+                move |cx| trigger(cx),
+                move |cx| {
+                    shadcn::DrawerContent::new([
+                        content(cx),
+                        shadcn::DrawerFooter::new([shadcn::Button::new("Done")
+                            .variant(shadcn::ButtonVariant::Outline)
+                            .toggle_model(done_open.clone())
+                            .into_element(cx)
+                            .test_id("ui-gallery-date-picker-dropdowns-done")])
+                        .into_element(cx),
+                    ])
+                    .into_element(cx)
+                    .test_id("ui-gallery-date-picker-dropdowns-drawer-content")
+                },
+            )
+        };
+
+        shadcn::Field::new([
+            shadcn::FieldLabel::new("With dropdowns").into_element(cx),
+            overlay,
+        ])
+        .into_element(cx)
+        .test_id("ui-gallery-date-picker-dropdowns")
     };
 
     let presets = shadcn::DatePickerWithPresets::new(
@@ -812,13 +1090,58 @@ pub(super) fn preview_date_picker(
             "Preview mirrors shadcn Date Picker docs (Basic + Range + Date of birth + Input + Time + Natural language + RTL). Extra: presets.",
         ),
         vec![
-            DocSection::new("Basic", simple)
-                .description("A basic date picker component.")
+            DocSection::new("Demo", demo)
+                .description("A compact date picker trigger (docs: Date Picker demo).")
                 .code(
                     "rust",
-                    r#"shadcn::DatePicker::new(open, month, selected)
-    .placeholder("Pick a date")
-    .into_element(cx);"#,
+                    r#"shadcn::Popover::new(open.clone()).into_element(
+    cx,
+    |cx| {
+        shadcn::Button::new("Pick a date")
+            .variant(shadcn::ButtonVariant::Outline)
+            .toggle_model(open.clone())
+            .trailing_icon(fret_icons::IconId::new_static("lucide.chevron-down"))
+            .into_element(cx)
+    },
+    |cx| {
+        shadcn::PopoverContent::new([
+            shadcn::Calendar::new(month, selected).into_element(cx),
+        ])
+        .refine_style(ChromeRefinement::default().p(Space::N0))
+        .refine_layout(LayoutRefinement::default().w(LengthRefinement::Auto))
+        .into_element(cx)
+    },
+);"#,
+                )
+                .max_w(Px(980.0))
+                .no_shell(),
+            DocSection::new("Basic", basic)
+                .description("A basic date picker component (docs: Date Picker Basic).")
+                .code(
+                    "rust",
+                    r#"shadcn::Field::new([
+    shadcn::FieldLabel::new("Date").into_element(cx),
+    shadcn::Popover::new(open.clone()).into_element(
+        cx,
+        |cx| {
+            shadcn::Button::new("Pick a date")
+                .variant(shadcn::ButtonVariant::Outline)
+                .toggle_model(open.clone())
+                .content_justify_start()
+                .text_weight(FontWeight::NORMAL)
+                .into_element(cx)
+        },
+        |cx| {
+            shadcn::PopoverContent::new([
+                shadcn::Calendar::new(month, selected).into_element(cx),
+            ])
+            .refine_style(ChromeRefinement::default().p(Space::N0))
+            .refine_layout(LayoutRefinement::default().w(LengthRefinement::Auto))
+            .into_element(cx)
+        },
+    ),
+])
+.into_element(cx);"#,
                 )
                 .max_w(Px(980.0))
                 .no_shell(),
@@ -974,6 +1297,31 @@ shadcn::FieldGroup::new([
                     r#"shadcn::DatePickerWithPresets::new(open, month, selected)
     .today(today) // optional: make presets deterministic
     .into_element(cx);"#,
+                )
+                .max_w(Px(780.0))
+                .no_shell(),
+            DocSection::new("Extras: With Dropdowns", dropdowns)
+                .description(
+                    "Gallery-only: desktop uses a Popover; mobile uses a Drawer. Calendar caption uses dropdown month/year selection.",
+                )
+                .code(
+                    "rust",
+                    r#"let is_desktop = viewport_queries::viewport_width_at_least(
+    cx,
+    Invalidation::Layout,
+    viewport_queries::tailwind::MD,
+    viewport_queries::ViewportQueryHysteresis::default(),
+);
+
+let calendar = shadcn::Calendar::new(month, selected)
+    .caption_layout(shadcn::CalendarCaptionLayout::Dropdown)
+    .into_element(cx);
+
+if is_desktop {
+    shadcn::Popover::new(open).into_element(cx, trigger, |_| calendar)
+} else {
+    shadcn::Drawer::new(open).into_element(cx, trigger, |_| calendar)
+};"#,
                 )
                 .max_w(Px(780.0))
                 .no_shell(),

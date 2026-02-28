@@ -137,7 +137,9 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
     let (bundle_doctor_mode, rest) = parse_bundle_doctor_mode_from_rest(&rest)?;
     if rest.is_empty() {
         return Err(
-            "missing suite name or script paths (try: fretboard diag perf ui-gallery)".to_string(),
+            "missing suite name or script paths (try: fretboard diag perf ui-gallery)\n\
+hint: list perf suites via `fretboard diag list suites --contains perf-`"
+                .to_string(),
         );
     }
 
@@ -151,7 +153,20 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
                 .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
                 .collect()
         } else {
-            vec![resolve_path(&workspace_root, PathBuf::from(name))]
+            let resolved = resolve_path(&workspace_root, PathBuf::from(name));
+            if !resolved.exists() {
+                let looks_like_suite_name =
+                    !name.contains(['/', '\\', ':']) && !name.ends_with(".json");
+                if looks_like_suite_name {
+                    return Err(format!(
+                        "unknown perf suite or script path: {name:?}\n\
+hint: list perf suites via `fretboard diag list suites --contains perf-`\n\
+hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
+                    ));
+                }
+                return Err(format!("script path does not exist: {}", resolved.display()));
+            }
+            vec![resolved]
         }
     } else {
         rest.iter()

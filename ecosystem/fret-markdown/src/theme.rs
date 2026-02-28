@@ -63,7 +63,9 @@ impl MarkdownTheme {
         let inline_code_fg =
             color(theme, "inline_code.fg").unwrap_or_else(|| theme.color_token("foreground"));
         let inline_code_bg =
-            color(theme, "inline_code.bg").unwrap_or_else(|| theme.color_token("accent"));
+            // Upstream shadcn docs style inline code as `bg-muted`.
+            // Source: `repo-ref/ui/apps/v4/components/component-preview.tsx`.
+            color(theme, "inline_code.bg").unwrap_or_else(|| theme.color_token("muted"));
         let inline_code_padding_x = metric(theme, "inline_code.padding_x").unwrap_or(Px(3.0));
         let inline_code_padding_y = metric(theme, "inline_code.padding_y").unwrap_or(Px(1.0));
 

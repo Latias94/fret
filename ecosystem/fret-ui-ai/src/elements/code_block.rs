@@ -133,7 +133,7 @@ impl CodeBlock {
         let options = fret_code_view::CodeBlockUiOptions {
             show_header: self.show_header,
             header_divider: self.show_header,
-            header_background: fret_code_view::CodeBlockHeaderBackground::Secondary,
+            header_background: fret_code_view::CodeBlockHeaderBackground::Muted80,
             show_copy_button: false,
             copy_button_on_hover: true,
             copy_button_placement: fret_code_view::CodeBlockCopyButtonPlacement::Overlay,

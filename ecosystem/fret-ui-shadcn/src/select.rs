@@ -1,6 +1,8 @@
 use crate::popper_arrow::{self, DiamondArrowStyle};
 use crate::test_id::attach_test_id;
-use fret_core::{Color, Corners, Edges, FontId, FontWeight, Point, Px, SemanticsRole, TextStyle};
+use fret_core::{
+    Color, Corners, Edges, FontId, FontWeight, Point, Px, Rect, SemanticsRole, TextStyle,
+};
 use fret_icons::ids;
 use fret_runtime::{Effect, Model, TimerToken};
 use fret_ui::action::{ActionCx, OnDismissRequest};
@@ -102,6 +104,32 @@ fn select_list_desired_height(
     let content_height = Px(item_height.0.max(0.0) * item_count as f32);
 
     Px(content_height.0.min(max_height.0).max(min_height.0))
+}
+
+fn select_content_desired_width_with_probe(
+    outer: Rect,
+    anchor: Rect,
+    min_width: Px,
+    border_width: Px,
+    width_probe_w: Option<Px>,
+    position: SelectPosition,
+) -> Px {
+    let base = radix_select::select_popper_desired_width(outer, anchor, min_width);
+    let probe = width_probe_w.map(|probe_w| {
+        let border_extra = Px(border_width.0 * 2.0);
+        Px(probe_w.0 + border_extra.0)
+    });
+
+    let desired = match (position, probe) {
+        // Upstream shadcn/radix `position="popper"` keeps the content at least as wide as the
+        // trigger (`min-w-[var(--radix-select-trigger-width)]`). Do not let the width probe shrink
+        // the popup below the trigger-derived base width once it becomes available a frame later.
+        (SelectPosition::Popper, Some(probe)) => Px(base.0.max(probe.0)),
+        (_, Some(probe)) => probe,
+        (_, None) => base,
+    };
+
+    Px(desired.0.max(min_width.0).min(outer.size.width.0))
 }
 
 fn select_scroll_with_buttons<H: UiHost, C, I>(
@@ -2097,13 +2125,14 @@ fn select_impl<H: UiHost>(
                             .and_then(|id| cx.last_bounds_for_element(id))
                             .map(|rect| rect.size.width)
                     };
-                    let desired_w = if let Some(probe_w) = width_probe_w {
-                        let border_extra = Px(border_width.0 * 2.0);
-                        Px(probe_w.0 + border_extra.0)
-                    } else {
-                        radix_select::select_popper_desired_width(outer, anchor, min_width)
-                    };
-                    let desired_w = Px(desired_w.0.max(min_width.0).min(outer.size.width.0));
+                    let desired_w = select_content_desired_width_with_probe(
+                        outer,
+                        anchor,
+                        min_width,
+                        border_width,
+                        width_probe_w,
+                        position,
+                    );
                     if std::env::var("FRET_DEBUG_SELECT_POPPER_WIDTH")
                         .ok()
                         .is_some_and(|v| v == "1")
@@ -2258,6 +2287,36 @@ fn select_impl<H: UiHost>(
                     let transform_origin = placement.transform_origin;
                     let popper_layout = placement.popper_layout;
                     let placed = placement.placed;
+
+                    // shadcn/ui v4 (Radix Select, `position="popper"`) keeps the popper wrapper
+                    // flush to the trigger (`sideOffset=0`) but applies a small translate to the
+                    // visible content (`translate-x/y-1`) based on the resolved side.
+                    //
+                    // Model that by shifting the *panel* within the wrapper while keeping the
+                    // wrapper rect stable for placement diagnostics and goldens.
+                    let panel_insets = if position == SelectPosition::Popper {
+                        let gap = Px(4.0);
+                        match motion_side {
+                            Side::Bottom => Edges {
+                                top: Px(wrapper_insets.top.0 + gap.0),
+                                ..wrapper_insets
+                            },
+                            Side::Top => Edges {
+                                top: Px(wrapper_insets.top.0 - gap.0),
+                                ..wrapper_insets
+                            },
+                            Side::Left => Edges {
+                                left: Px(wrapper_insets.left.0 - gap.0),
+                                ..wrapper_insets
+                            },
+                            Side::Right => Edges {
+                                left: Px(wrapper_insets.left.0 + gap.0),
+                                ..wrapper_insets
+                            },
+                        }
+                    } else {
+                        wrapper_insets
+                    };
 
                     cx.diagnostics_record_overlay_placement_placed_rect(
                         Some(overlay_root_name.as_str()),
@@ -3393,7 +3452,7 @@ fn select_impl<H: UiHost>(
                                             PressableProps {
                                                 layout: popper_content::popper_panel_layout(
                                                     placed,
-                                                    wrapper_insets,
+                                                    panel_insets,
                                                     // Keep the panel itself unclipped so the Select surface shadow
                                                     // can extend beyond the panel rect (matching shadcn/ui).
                                                     Overflow::Visible,
@@ -3833,6 +3892,54 @@ mod tests {
 
         assert_eq!(changed, Some(true));
         assert_eq!(completed, Some(true));
+    }
+
+    #[test]
+    fn select_popper_width_probe_does_not_shrink_below_trigger_base() {
+        let outer = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+        let anchor = Rect::new(
+            Point::new(Px(100.0), Px(100.0)),
+            Size::new(Px(240.0), Px(36.0)),
+        );
+
+        let min_width = Px(128.0);
+        let border_width = Px(1.0);
+        let base = radix_select::select_popper_desired_width(outer, anchor, min_width);
+
+        let probe_smaller = Some(Px(120.0));
+        let w_smaller = select_content_desired_width_with_probe(
+            outer,
+            anchor,
+            min_width,
+            border_width,
+            probe_smaller,
+            SelectPosition::Popper,
+        );
+        assert!(
+            (w_smaller.0 - base.0).abs() <= 0.01,
+            "expected popper width to remain at base when probe is smaller (base={}, got={})",
+            base.0,
+            w_smaller.0
+        );
+
+        let probe_larger = Some(Px(320.0));
+        let w_larger = select_content_desired_width_with_probe(
+            outer,
+            anchor,
+            min_width,
+            border_width,
+            probe_larger,
+            SelectPosition::Popper,
+        );
+        assert!(
+            w_larger.0 > base.0 + 0.01,
+            "expected popper width to grow when probe is larger (base={}, got={})",
+            base.0,
+            w_larger.0
+        );
     }
 
     #[derive(Default)]

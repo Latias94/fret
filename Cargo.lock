@@ -1854,6 +1854,7 @@ dependencies = [
  "fret-core",
  "fret-runtime",
  "fret-syntax",
+ "fret-syntax-theme",
  "fret-ui",
  "fret-ui-kit",
  "fret-undo",
@@ -1888,6 +1889,7 @@ dependencies = [
  "fret-core",
  "fret-runtime",
  "fret-syntax",
+ "fret-syntax-theme",
  "fret-ui",
  "fret-ui-kit",
  "fret-ui-shadcn",
@@ -2670,6 +2672,15 @@ dependencies = [
  "tree-sitter-typescript",
  "tree-sitter-yaml",
  "tree-sitter-zig",
+]
+
+[[package]]
+name = "fret-syntax-theme"
+version = "0.1.0"
+dependencies = [
+ "fret-app",
+ "fret-core",
+ "fret-ui",
 ]
 
 [[package]]
