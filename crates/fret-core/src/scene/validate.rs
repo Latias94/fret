@@ -398,6 +398,38 @@ impl SceneRecording {
                                     true
                                 }
                             }
+                            EffectStep::CustomV3 {
+                                params,
+                                max_sample_offset_px,
+                                user0,
+                                user1,
+                                sources,
+                                ..
+                            } => {
+                                let base_ok =
+                                    params.is_finite() && px_is_finite(max_sample_offset_px);
+                                if !base_ok {
+                                    false
+                                } else {
+                                    let input_ok = |input: Option<CustomEffectImageInputV1>| {
+                                        input.is_none_or(|input| {
+                                            input.uv.u0.is_finite()
+                                                && input.uv.v0.is_finite()
+                                                && input.uv.u1.is_finite()
+                                                && input.uv.v1.is_finite()
+                                        })
+                                    };
+                                    if !input_ok(user0) || !input_ok(user1) {
+                                        false
+                                    } else if let Some(req) = sources.pyramid {
+                                        req.max_levels > 0
+                                            && px_is_finite(req.max_radius_px)
+                                            && req.max_radius_px.0 >= 0.0
+                                    } else {
+                                        true
+                                    }
+                                }
+                            }
                         };
                         if !ok {
                             return Err(SceneValidationError {

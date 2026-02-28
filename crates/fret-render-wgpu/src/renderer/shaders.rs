@@ -3757,6 +3757,39 @@ pub(super) fn custom_effect_v2_mask_shader_source(user_source: &str) -> String {
     )
 }
 
+const CUSTOM_EFFECT_V3_UNMASKED_SHADER_PART_A: &str =
+    include_str!("pipelines/wgsl/custom_effect_v3_unmasked_part_a.wgsl");
+const CUSTOM_EFFECT_V3_UNMASKED_SHADER_PART_B: &str =
+    include_str!("pipelines/wgsl/custom_effect_v3_unmasked_part_b.wgsl");
+
+const CUSTOM_EFFECT_V3_MASKED_SHADER_PART_A: &str =
+    include_str!("pipelines/wgsl/custom_effect_v3_masked_part_a.wgsl");
+const CUSTOM_EFFECT_V3_MASKED_SHADER_PART_B: &str =
+    include_str!("pipelines/wgsl/custom_effect_v3_masked_part_b.wgsl");
+
+const CUSTOM_EFFECT_V3_MASK_SHADER_PART_A: &str =
+    include_str!("pipelines/wgsl/custom_effect_v3_mask_part_a.wgsl");
+const CUSTOM_EFFECT_V3_MASK_SHADER_PART_B: &str =
+    include_str!("pipelines/wgsl/custom_effect_v3_mask_part_b.wgsl");
+
+pub(super) fn custom_effect_v3_unmasked_shader_source(user_source: &str) -> String {
+    format!(
+        "{CUSTOM_EFFECT_V3_UNMASKED_SHADER_PART_A}{user_source}\n{CUSTOM_EFFECT_V3_UNMASKED_SHADER_PART_B}"
+    )
+}
+
+pub(super) fn custom_effect_v3_masked_shader_source(user_source: &str) -> String {
+    format!(
+        "{CUSTOM_EFFECT_V3_MASKED_SHADER_PART_A}{CLIP_SDF_CORE_WGSL}{user_source}\n{CUSTOM_EFFECT_V3_MASKED_SHADER_PART_B}"
+    )
+}
+
+pub(super) fn custom_effect_v3_mask_shader_source(user_source: &str) -> String {
+    format!(
+        "{CUSTOM_EFFECT_V3_MASK_SHADER_PART_A}{user_source}\n{CUSTOM_EFFECT_V3_MASK_SHADER_PART_B}"
+    )
+}
+
 pub(super) const BLUR_H_SHADER: &str = include_str!("pipelines/wgsl/blur_h.wgsl");
 
 pub(super) const BLUR_V_SHADER: &str = include_str!("pipelines/wgsl/blur_v.wgsl");

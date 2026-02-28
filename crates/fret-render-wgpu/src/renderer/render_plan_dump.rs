@@ -391,6 +391,27 @@ enum JsonDumpPass {
         input_sampling: &'static str,
         load: JsonDumpLoadOp,
     },
+    CustomEffectV3 {
+        src: &'static str,
+        src_raw: &'static str,
+        src_pyramid: &'static str,
+        pyramid_levels: u32,
+        dst: &'static str,
+        src_size: [u32; 2],
+        dst_size: [u32; 2],
+        dst_scissor: Option<JsonDumpScissorRect>,
+        dst_scissor_space: Option<&'static str>,
+        mask_uniform_index: Option<u32>,
+        mask: Option<JsonDumpMaskRef>,
+        effect: String,
+        user0_image: Option<String>,
+        user0_uv: [f32; 4],
+        user0_sampling: &'static str,
+        user1_image: Option<String>,
+        user1_uv: [f32; 4],
+        user1_sampling: &'static str,
+        load: JsonDumpLoadOp,
+    },
     ClipMask {
         dst: &'static str,
         dst_size: [u32; 2],
@@ -642,6 +663,45 @@ fn encode_pass(p: &RenderPlanPass) -> JsonDumpPass {
             },
             load: encode_load_op(pass.load),
         },
+        RenderPlanPass::CustomEffectV3(pass) => JsonDumpPass::CustomEffectV3 {
+            src: plan_target_name(pass.src),
+            src_raw: plan_target_name(pass.src_raw),
+            src_pyramid: plan_target_name(pass.src_pyramid),
+            pyramid_levels: pass.pyramid_levels,
+            dst: plan_target_name(pass.dst),
+            src_size: [pass.src_size.0, pass.src_size.1],
+            dst_size: [pass.dst_size.0, pass.dst_size.1],
+            dst_scissor: pass.dst_scissor.map(Into::into),
+            dst_scissor_space: pass.dst_scissor.map(|_| "dst_local"),
+            mask_uniform_index: pass.mask_uniform_index,
+            mask: pass.mask.map(Into::into),
+            effect: format!("{:?}", pass.effect),
+            user0_image: pass.user0_image.map(|id| format!("{id:?}")),
+            user0_uv: [
+                pass.user0_uv.u0,
+                pass.user0_uv.v0,
+                pass.user0_uv.u1,
+                pass.user0_uv.v1,
+            ],
+            user0_sampling: match pass.user0_sampling {
+                fret_core::scene::ImageSamplingHint::Default => "default",
+                fret_core::scene::ImageSamplingHint::Linear => "linear",
+                fret_core::scene::ImageSamplingHint::Nearest => "nearest",
+            },
+            user1_image: pass.user1_image.map(|id| format!("{id:?}")),
+            user1_uv: [
+                pass.user1_uv.u0,
+                pass.user1_uv.v0,
+                pass.user1_uv.u1,
+                pass.user1_uv.v1,
+            ],
+            user1_sampling: match pass.user1_sampling {
+                fret_core::scene::ImageSamplingHint::Default => "default",
+                fret_core::scene::ImageSamplingHint::Linear => "linear",
+                fret_core::scene::ImageSamplingHint::Nearest => "nearest",
+            },
+            load: encode_load_op(pass.load),
+        },
         RenderPlanPass::ClipMask(pass) => JsonDumpPass::ClipMask {
             dst: plan_target_name(pass.dst),
             dst_size: [pass.dst_size.0, pass.dst_size.1],
@@ -701,6 +761,7 @@ struct JsonDumpCounts {
     drop_shadow: usize,
     custom_effect_v1: usize,
     custom_effect_v2: usize,
+    custom_effect_v3: usize,
     clip_mask: usize,
     release_target: usize,
 }
@@ -724,6 +785,7 @@ fn pass_counts(plan: &RenderPlan) -> JsonDumpCounts {
         drop_shadow: 0,
         custom_effect_v1: 0,
         custom_effect_v2: 0,
+        custom_effect_v3: 0,
         clip_mask: 0,
         release_target: 0,
     };
@@ -746,6 +808,7 @@ fn pass_counts(plan: &RenderPlan) -> JsonDumpCounts {
             RenderPlanPass::DropShadow(_) => c.drop_shadow += 1,
             RenderPlanPass::CustomEffect(_) => c.custom_effect_v1 += 1,
             RenderPlanPass::CustomEffectV2(_) => c.custom_effect_v2 += 1,
+            RenderPlanPass::CustomEffectV3(_) => c.custom_effect_v3 += 1,
             RenderPlanPass::ClipMask(_) => c.clip_mask += 1,
             RenderPlanPass::ReleaseTarget(_) => c.release_target += 1,
         }
@@ -759,8 +822,18 @@ struct JsonDumpCustomEffectSummary {
     effect: String,
     abi: &'static str,
     pass_count: usize,
-    input_image_some: usize,
-    input_image_none: usize,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    input_image_some: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    input_image_none: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    user0_image_some: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    user0_image_none: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    user1_image_some: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    user1_image_none: Option<usize>,
 }
 
 #[derive(Debug, serde::Serialize)]
@@ -778,6 +851,7 @@ fn summarize_custom_effects(passes: &[RenderPlanPass]) -> Vec<JsonDumpCustomEffe
     enum Abi {
         V1,
         V2,
+        V3,
     }
 
     #[derive(Debug, Default, Clone, Copy)]
@@ -785,6 +859,10 @@ fn summarize_custom_effects(passes: &[RenderPlanPass]) -> Vec<JsonDumpCustomEffe
         pass_count: usize,
         input_image_some: usize,
         input_image_none: usize,
+        user0_image_some: usize,
+        user0_image_none: usize,
+        user1_image_some: usize,
+        user1_image_none: usize,
     }
 
     let mut by_effect: HashMap<(fret_core::EffectId, Abi), Acc> = HashMap::new();
@@ -803,6 +881,20 @@ fn summarize_custom_effects(passes: &[RenderPlanPass]) -> Vec<JsonDumpCustomEffe
                     acc.input_image_none += 1;
                 }
             }
+            RenderPlanPass::CustomEffectV3(p) => {
+                let acc = by_effect.entry((p.effect, Abi::V3)).or_default();
+                acc.pass_count += 1;
+                if p.user0_image.is_some() {
+                    acc.user0_image_some += 1;
+                } else {
+                    acc.user0_image_none += 1;
+                }
+                if p.user1_image.is_some() {
+                    acc.user1_image_some += 1;
+                } else {
+                    acc.user1_image_none += 1;
+                }
+            }
             _ => {}
         }
     }
@@ -814,10 +906,15 @@ fn summarize_custom_effects(passes: &[RenderPlanPass]) -> Vec<JsonDumpCustomEffe
             abi: match abi {
                 Abi::V1 => "custom_v1.params_only",
                 Abi::V2 => "custom_v2.user_image",
+                Abi::V3 => "custom_v3.renderer_sources",
             },
             pass_count: acc.pass_count,
-            input_image_some: acc.input_image_some,
-            input_image_none: acc.input_image_none,
+            input_image_some: (abi == Abi::V2).then_some(acc.input_image_some),
+            input_image_none: (abi == Abi::V2).then_some(acc.input_image_none),
+            user0_image_some: (abi == Abi::V3).then_some(acc.user0_image_some),
+            user0_image_none: (abi == Abi::V3).then_some(acc.user0_image_none),
+            user1_image_some: (abi == Abi::V3).then_some(acc.user1_image_some),
+            user1_image_none: (abi == Abi::V3).then_some(acc.user1_image_none),
         })
         .collect();
 
@@ -968,6 +1065,15 @@ fn summarize_target_usage(passes: &[RenderPlanPass]) -> Vec<JsonDumpTargetUsage>
                     bump_usage(&mut usage, mask.target, "mask", mask.size);
                 }
             }
+            RenderPlanPass::CustomEffectV3(pass) => {
+                bump_usage(&mut usage, pass.src, "src", pass.src_size);
+                bump_usage(&mut usage, pass.src_raw, "src", pass.src_size);
+                bump_usage(&mut usage, pass.src_pyramid, "src", pass.src_size);
+                bump_usage(&mut usage, pass.dst, "dst", pass.dst_size);
+                if let Some(mask) = pass.mask {
+                    bump_usage(&mut usage, mask.target, "mask", mask.size);
+                }
+            }
             RenderPlanPass::ClipMask(pass) => {
                 bump_usage(&mut usage, pass.dst, "dst", pass.dst_size);
             }
@@ -1048,16 +1154,16 @@ mod tests {
             .find(|s| s.abi == "custom_v1.params_only")
             .expect("v1 summary");
         assert_eq!(v1.pass_count, 1);
-        assert_eq!(v1.input_image_some, 0);
-        assert_eq!(v1.input_image_none, 0);
+        assert_eq!(v1.input_image_some, None);
+        assert_eq!(v1.input_image_none, None);
 
         let v2 = summary
             .iter()
             .find(|s| s.abi == "custom_v2.user_image")
             .expect("v2 summary");
         assert_eq!(v2.pass_count, 2);
-        assert_eq!(v2.input_image_some, 1);
-        assert_eq!(v2.input_image_none, 1);
+        assert_eq!(v2.input_image_some, Some(1));
+        assert_eq!(v2.input_image_none, Some(1));
     }
 
     #[test]

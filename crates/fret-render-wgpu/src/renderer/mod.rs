@@ -206,6 +206,7 @@ struct CustomEffectEntry {
 enum CustomEffectAbi {
     V1,
     V2,
+    V3,
 }
 
 pub struct RenderSceneParams<'a> {

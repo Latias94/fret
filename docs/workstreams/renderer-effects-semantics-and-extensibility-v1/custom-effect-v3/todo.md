@@ -28,16 +28,20 @@ This TODO tracks the V3 work as landable steps. It intentionally starts with “
 
 ## P1 — M0: Dual-source (`src_raw`) plumbing
 
-- [ ] `fret-core`: add `EffectStep::CustomV3` + fingerprint/validate.
+- [x] `fret-core`: add `EffectStep::CustomV3` + fingerprint/validate.
 - [ ] `fret-render-wgpu`: introduce a “source preparation” step for V3:
   - ensure `src_raw` is read-only (cannot alias a render attachment being written this pass),
   - decide whether to preserve a scratch copy or render into an intermediate then composite back,
   - add deterministic degradation when scratch/budgets are insufficient (`src_raw == src`).
+  - Status: **partial** — the backend preserves a chain-root copy when scratch+budget allow and otherwise aliases;
+    pyramid prep is not implemented yet.
 - [ ] `fret-render-wgpu`: add render-plan reporting for v3 source prep outcomes:
   - whether raw is distinct or aliased,
   - requested/applied pyramid levels (once implemented),
   - degradation reasons surfaced in counters and plan dumps.
-- [ ] Add conformance test: `src_raw` differs from `src` when a prior step modifies the chain (e.g. blur),
+  - Status: **partial** — plan dump includes v3 passes and `pyramid_levels`, but it does not yet surface raw-alias
+    outcomes or degradation counters.
+- [x] Add conformance test: `src_raw` differs from `src` when a prior step modifies the chain (e.g. blur),
       and the shader can sample both deterministically under scissor/mask.
 
 ## P2 — M1: Optional bounded pyramid (`src_pyramid`)

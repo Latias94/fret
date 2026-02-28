@@ -51,8 +51,8 @@ pub use dock::{
     DropZone, EdgeDockDecision,
 };
 pub use effects::{
-    CustomEffectDescriptorV1, CustomEffectDescriptorV2, CustomEffectProgramLanguage,
-    CustomEffectRegistrationError, CustomEffectService,
+    CustomEffectDescriptorV1, CustomEffectDescriptorV2, CustomEffectDescriptorV3,
+    CustomEffectProgramLanguage, CustomEffectRegistrationError, CustomEffectService,
 };
 pub use file_dialog::{
     FileDialogDataEvent, FileDialogFilter, FileDialogOptions, FileDialogSelection,

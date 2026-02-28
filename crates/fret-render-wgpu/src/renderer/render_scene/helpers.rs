@@ -238,6 +238,7 @@ pub(super) fn render_plan_pass_trace_kind(pass: &RenderPlanPass) -> &'static str
         RenderPlanPass::DropShadow(_) => "drop_shadow",
         RenderPlanPass::CustomEffect(_) => "custom_effect",
         RenderPlanPass::CustomEffectV2(_) => "custom_effect_v2",
+        RenderPlanPass::CustomEffectV3(_) => "custom_effect_v3",
         RenderPlanPass::FullscreenBlit(_) => "fullscreen_blit",
         RenderPlanPass::ClipMask(_) => "clip_mask",
         RenderPlanPass::ReleaseTarget(_) => "release_target",
@@ -453,6 +454,17 @@ pub(super) fn render_plan_pass_trace_meta(pass: &RenderPlanPass) -> RenderPlanPa
             render_origin,
             render_size,
         },
+        RenderPlanPass::CustomEffectV3(pass) => RenderPlanPassTraceMeta {
+            src: Some(pass.src),
+            dst: Some(pass.dst),
+            load: Some(load_label(pass.load)),
+            scissor: pass.dst_scissor.map(|s| s.0),
+            scissor_space: pass
+                .dst_scissor
+                .map(|_| RenderPlanPassTraceScissorSpace::DstLocal),
+            render_origin,
+            render_size,
+        },
         RenderPlanPass::ClipMask(pass) => RenderPlanPassTraceMeta {
             src: None,
             dst: Some(pass.dst),
@@ -559,6 +571,17 @@ pub(super) fn render_plan_pass_render_space(
             }
         }
         RenderPlanPass::CustomEffectV2(pass) => {
+            if let Some(LocalScissorRect(scissor)) = pass.dst_scissor {
+                if scissor.w == 0 || scissor.h == 0 {
+                    None
+                } else {
+                    Some(((scissor.x, scissor.y), (scissor.w, scissor.h)))
+                }
+            } else {
+                Some(((0, 0), pass.dst_size))
+            }
+        }
+        RenderPlanPass::CustomEffectV3(pass) => {
             if let Some(LocalScissorRect(scissor)) = pass.dst_scissor {
                 if scissor.w == 0 || scissor.h == 0 {
                     None

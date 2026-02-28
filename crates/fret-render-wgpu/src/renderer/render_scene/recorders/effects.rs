@@ -1018,6 +1018,359 @@ pub(in super::super) fn record_custom_effect_v2_pass(
     );
 }
 
+pub(in super::super) fn record_custom_effect_v3_pass(
+    exec: &mut RenderSceneExecutor<'_>,
+    ctx: &RecordPassCtx<'_>,
+    pass: &CustomEffectV3Pass,
+) {
+    let effect = pass.effect;
+
+    let Some(entry) = exec.renderer.custom_effects.get(effect) else {
+        let blit = FullscreenBlitPass {
+            src: pass.src,
+            dst: pass.dst,
+            src_size: pass.src_size,
+            dst_size: pass.dst_size,
+            dst_scissor: pass.dst_scissor,
+            encode_output_srgb: false,
+            load: pass.load,
+        };
+        record_fullscreen_blit_pass(exec, &blit);
+        return;
+    };
+    if entry.abi != CustomEffectAbi::V3 {
+        let blit = FullscreenBlitPass {
+            src: pass.src,
+            dst: pass.dst,
+            src_size: pass.src_size,
+            dst_size: pass.dst_size,
+            dst_scissor: pass.dst_scissor,
+            encode_output_srgb: false,
+            load: pass.load,
+        };
+        record_fullscreen_blit_pass(exec, &blit);
+        return;
+    }
+
+    exec.renderer
+        .ensure_custom_effect_v3_pipelines(exec.device, exec.format, effect);
+    if !exec
+        .renderer
+        .pipelines
+        .custom_effect_v3_pipelines
+        .contains_key(&effect)
+    {
+        let blit = FullscreenBlitPass {
+            src: pass.src,
+            dst: pass.dst,
+            src_size: pass.src_size,
+            dst_size: pass.dst_size,
+            dst_scissor: pass.dst_scissor,
+            encode_output_srgb: false,
+            load: pass.load,
+        };
+        record_fullscreen_blit_pass(exec, &blit);
+        return;
+    }
+
+    // Params (64B)
+    let packed = pack_effect_params_v1(pass.params);
+    exec.queue.write_buffer(
+        &exec.renderer.effect_params.custom_effect_param_buffer,
+        0,
+        packed.as_ref(),
+    );
+    if exec.perf_enabled {
+        exec.frame_perf.uniform_bytes = exec
+            .frame_perf
+            .uniform_bytes
+            .saturating_add(packed.len() as u64);
+    }
+
+    // Meta (48B): pyramid levels + user UV rects.
+    let mut meta_bytes = [0u8; 48];
+    meta_bytes[0..4].copy_from_slice(&pass.pyramid_levels.to_le_bytes());
+
+    let u0 = pass.user0_uv;
+    meta_bytes[16..20].copy_from_slice(&u0.u0.to_bits().to_le_bytes());
+    meta_bytes[20..24].copy_from_slice(&u0.v0.to_bits().to_le_bytes());
+    meta_bytes[24..28].copy_from_slice(&u0.u1.to_bits().to_le_bytes());
+    meta_bytes[28..32].copy_from_slice(&u0.v1.to_bits().to_le_bytes());
+
+    let u1 = pass.user1_uv;
+    meta_bytes[32..36].copy_from_slice(&u1.u0.to_bits().to_le_bytes());
+    meta_bytes[36..40].copy_from_slice(&u1.v0.to_bits().to_le_bytes());
+    meta_bytes[40..44].copy_from_slice(&u1.u1.to_bits().to_le_bytes());
+    meta_bytes[44..48].copy_from_slice(&u1.v1.to_bits().to_le_bytes());
+
+    exec.queue.write_buffer(
+        &exec.renderer.effect_params.custom_effect_v3_meta_buffer,
+        0,
+        &meta_bytes,
+    );
+    if exec.perf_enabled {
+        exec.frame_perf.uniform_bytes = exec.frame_perf.uniform_bytes.saturating_add(48);
+    }
+
+    let Some(src_view) = require_color_src_view(
+        &mut *exec.frame_targets,
+        pass.src,
+        pass.src_size,
+        "CustomEffectV3",
+    ) else {
+        return;
+    };
+    let Some(src_raw_view) = require_color_src_view(
+        &mut *exec.frame_targets,
+        pass.src_raw,
+        pass.src_size,
+        "CustomEffectV3",
+    ) else {
+        return;
+    };
+    let Some(src_pyramid_view) = require_color_src_view(
+        &mut *exec.frame_targets,
+        pass.src_pyramid,
+        pass.src_size,
+        "CustomEffectV3",
+    ) else {
+        return;
+    };
+
+    let dst_view_owned = ensure_color_dst_view_owned(
+        &mut *exec.frame_targets,
+        &mut exec.renderer.intermediate_pool,
+        exec.device,
+        pass.dst,
+        pass.dst_size,
+        exec.format,
+        exec.usage,
+        "CustomEffectV3",
+    );
+    let dst_view = dst_view_owned.as_ref().unwrap_or(exec.target_view);
+
+    let user0_view = pass
+        .user0_image
+        .and_then(|id| {
+            let view = exec.renderer.gpu_resources.image_view(id)?;
+            let format = exec.renderer.gpu_resources.image_format(id)?;
+            let f = exec.renderer.adapter.get_texture_format_features(format);
+            let ok_usage = f
+                .allowed_usages
+                .contains(wgpu::TextureUsages::TEXTURE_BINDING);
+            let ok_sample_type = format.sample_type(None, Some(exec.device.features()))
+                == Some(wgpu::TextureSampleType::Float { filterable: true });
+            (ok_usage && ok_sample_type).then_some(view)
+        })
+        .unwrap_or(&exec.renderer.globals.custom_effect_input_fallback_view);
+
+    let user1_view = pass
+        .user1_image
+        .and_then(|id| {
+            let view = exec.renderer.gpu_resources.image_view(id)?;
+            let format = exec.renderer.gpu_resources.image_format(id)?;
+            let f = exec.renderer.adapter.get_texture_format_features(format);
+            let ok_usage = f
+                .allowed_usages
+                .contains(wgpu::TextureUsages::TEXTURE_BINDING);
+            let ok_sample_type = format.sample_type(None, Some(exec.device.features()))
+                == Some(wgpu::TextureSampleType::Float { filterable: true });
+            (ok_usage && ok_sample_type).then_some(view)
+        })
+        .unwrap_or(&exec.renderer.globals.custom_effect_input_fallback_view);
+
+    let user0_sampler = match pass.user0_sampling {
+        fret_core::scene::ImageSamplingHint::Nearest => {
+            &exec.renderer.globals.image_sampler_nearest
+        }
+        _ => &exec.renderer.globals.viewport_sampler,
+    };
+    let user1_sampler = match pass.user1_sampling {
+        fret_core::scene::ImageSamplingHint::Nearest => {
+            &exec.renderer.globals.image_sampler_nearest
+        }
+        _ => &exec.renderer.globals.viewport_sampler,
+    };
+
+    let layout_unmasked = exec.renderer.custom_effect_v3_bind_group_layout_ref();
+    let layout_mask = exec.renderer.custom_effect_v3_mask_bind_group_layout_ref();
+
+    let param_buffer = &exec.renderer.effect_params.custom_effect_param_buffer;
+    let meta_buffer = &exec.renderer.effect_params.custom_effect_v3_meta_buffer;
+
+    let uniform_stride = exec.renderer.uniforms.uniform_stride;
+
+    if let Some(mask) = pass.mask {
+        let mask_uniform_index = pass
+            .mask_uniform_index
+            .expect("mask pass needs uniform index");
+        let uniform_offset = (u64::from(mask_uniform_index) * uniform_stride) as u32;
+        let Some(mask_view) = require_mask_view(
+            &mut *exec.frame_targets,
+            mask.target,
+            mask.size,
+            "CustomEffectV3",
+        ) else {
+            return;
+        };
+
+        let bind_group = exec.device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("fret custom-effect v3 mask bind group"),
+            layout: layout_mask,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::TextureView(&src_view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: param_buffer.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: wgpu::BindingResource::TextureView(&src_raw_view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 3,
+                    resource: wgpu::BindingResource::TextureView(&src_pyramid_view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 4,
+                    resource: meta_buffer.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 5,
+                    resource: wgpu::BindingResource::TextureView(user0_view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 6,
+                    resource: wgpu::BindingResource::Sampler(user0_sampler),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 7,
+                    resource: wgpu::BindingResource::TextureView(user1_view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 8,
+                    resource: wgpu::BindingResource::Sampler(user1_sampler),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 9,
+                    resource: wgpu::BindingResource::TextureView(&mask_view),
+                },
+            ],
+        });
+
+        let pipeline = exec.renderer.custom_effect_v3_mask_pipeline_ref(effect);
+        run_fullscreen_triangle_pass_uniform_texture(
+            &mut *exec.encoder,
+            "fret custom-effect v3 mask pass",
+            pipeline,
+            dst_view,
+            pass.load,
+            exec.renderer.pick_uniform_bind_group_for_mask_image(
+                exec.encoding
+                    .uniform_mask_images
+                    .get(mask_uniform_index as usize)
+                    .copied()
+                    .flatten(),
+            ),
+            &[uniform_offset, ctx.render_space_offset_u32],
+            &bind_group,
+            &[],
+            pass.dst_scissor,
+            pass.dst_size,
+            exec.perf_enabled.then_some(&mut *exec.frame_perf),
+        );
+        return;
+    }
+
+    let bind_group = exec.device.create_bind_group(&wgpu::BindGroupDescriptor {
+        label: Some("fret custom-effect v3 bind group"),
+        layout: layout_unmasked,
+        entries: &[
+            wgpu::BindGroupEntry {
+                binding: 0,
+                resource: wgpu::BindingResource::TextureView(&src_view),
+            },
+            wgpu::BindGroupEntry {
+                binding: 1,
+                resource: param_buffer.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 2,
+                resource: wgpu::BindingResource::TextureView(&src_raw_view),
+            },
+            wgpu::BindGroupEntry {
+                binding: 3,
+                resource: wgpu::BindingResource::TextureView(&src_pyramid_view),
+            },
+            wgpu::BindGroupEntry {
+                binding: 4,
+                resource: meta_buffer.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 5,
+                resource: wgpu::BindingResource::TextureView(user0_view),
+            },
+            wgpu::BindGroupEntry {
+                binding: 6,
+                resource: wgpu::BindingResource::Sampler(user0_sampler),
+            },
+            wgpu::BindGroupEntry {
+                binding: 7,
+                resource: wgpu::BindingResource::TextureView(user1_view),
+            },
+            wgpu::BindGroupEntry {
+                binding: 8,
+                resource: wgpu::BindingResource::Sampler(user1_sampler),
+            },
+        ],
+    });
+
+    if let Some(mask_uniform_index) = pass.mask_uniform_index {
+        let uniform_offset = (u64::from(mask_uniform_index) * uniform_stride) as u32;
+        let pipeline = exec.renderer.custom_effect_v3_masked_pipeline_ref(effect);
+        run_fullscreen_triangle_pass_uniform_texture(
+            &mut *exec.encoder,
+            "fret custom-effect v3 masked pass",
+            pipeline,
+            dst_view,
+            pass.load,
+            exec.renderer.pick_uniform_bind_group_for_mask_image(
+                exec.encoding
+                    .uniform_mask_images
+                    .get(mask_uniform_index as usize)
+                    .copied()
+                    .flatten(),
+            ),
+            &[uniform_offset, ctx.render_space_offset_u32],
+            &bind_group,
+            &[],
+            pass.dst_scissor,
+            pass.dst_size,
+            exec.perf_enabled.then_some(&mut *exec.frame_perf),
+        );
+        return;
+    }
+
+    let pipeline = exec.renderer.custom_effect_v3_pipeline_ref(effect);
+    run_fullscreen_triangle_pass_uniform_texture(
+        &mut *exec.encoder,
+        "fret custom-effect v3 pass",
+        pipeline,
+        dst_view,
+        pass.load,
+        exec.renderer.pick_uniform_bind_group_for_mask_image(None),
+        &[0, ctx.render_space_offset_u32],
+        &bind_group,
+        &[],
+        pass.dst_scissor,
+        pass.dst_size,
+        exec.perf_enabled.then_some(&mut *exec.frame_perf),
+    );
+}
+
 pub(in super::super) fn record_composite_premul_pass(
     exec: &mut RenderSceneExecutor<'_>,
     ctx: &RecordPassCtx<'_>,

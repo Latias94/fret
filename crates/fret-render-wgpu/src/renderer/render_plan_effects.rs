@@ -3,9 +3,9 @@ use super::frame_targets::downsampled_size;
 use super::intermediate_pool::estimate_texture_bytes;
 use super::{
     AlphaThresholdPass, BackdropWarpPass, BlurAxis, BlurPass, ClipMaskPass, ColorAdjustPass,
-    ColorMatrixPass, CustomEffectPass, CustomEffectV2Pass, DitherPass, DropShadowPass,
-    FullscreenBlitPass, LocalScissorRect, MaskRef, NoisePass, PlanTarget, RenderPlanPass,
-    ScaleMode, ScaleNearestPass, ScissorRect,
+    ColorMatrixPass, CustomEffectPass, CustomEffectV2Pass, CustomEffectV3Pass, DitherPass,
+    DropShadowPass, FullscreenBlitPass, LocalScissorRect, MaskRef, NoisePass, PlanTarget,
+    RenderPlanPass, ScaleMode, ScaleNearestPass, ScissorRect,
 };
 
 #[derive(Clone, Copy, Debug)]
@@ -148,7 +148,9 @@ pub(super) fn apply_chain_in_place(
         let last_step_is_custom = steps.last().is_some_and(|s| {
             matches!(
                 *s,
-                fret_core::EffectStep::CustomV1 { .. } | fret_core::EffectStep::CustomV2 { .. }
+                fret_core::EffectStep::CustomV1 { .. }
+                    | fret_core::EffectStep::CustomV2 { .. }
+                    | fret_core::EffectStep::CustomV3 { .. }
             )
         });
         let can_commit_with_mask = !has_mask
@@ -162,7 +164,31 @@ pub(super) fn apply_chain_in_place(
             && can_commit_with_mask
         {
             let work = scratch_targets[0];
-            let work_scratch_targets = &scratch_targets[1..];
+            let chain_wants_raw = steps.iter().any(|s| match *s {
+                fret_core::EffectStep::CustomV3 { sources, .. } => sources.want_raw,
+                _ => false,
+            });
+            let chain_raw = (chain_wants_raw
+                && scratch_targets.len() >= 3
+                && budget_bytes >= full.saturating_mul(4))
+            .then_some(scratch_targets[1]);
+            let work_scratch_targets = if chain_raw.is_some() {
+                &scratch_targets[2..]
+            } else {
+                &scratch_targets[1..]
+            };
+
+            if let Some(chain_raw) = chain_raw {
+                passes.push(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
+                    src: srcdst,
+                    dst: chain_raw,
+                    src_size: ctx.viewport_size,
+                    dst_size: ctx.viewport_size,
+                    dst_scissor: None,
+                    encode_output_srgb: false,
+                    load: wgpu::LoadOp::Clear(ctx.clear),
+                }));
+            }
 
             passes.push(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
                 src: srcdst,
@@ -175,6 +201,9 @@ pub(super) fn apply_chain_in_place(
             }));
 
             let mut work_budget_bytes = budget_bytes.saturating_sub(full);
+            if chain_raw.is_some() {
+                work_budget_bytes = work_budget_bytes.saturating_sub(full);
+            }
 
             // Apply all steps except the final one in-place on the work buffer using per-step
             // padded scissors. The final step is handled separately so we can commit the result
@@ -200,6 +229,7 @@ pub(super) fn apply_chain_in_place(
                     effect_degradations,
                     effect_blur_quality,
                     ctx,
+                    chain_raw,
                 );
             }
 
@@ -208,7 +238,9 @@ pub(super) fn apply_chain_in_place(
                 && last_step_is_custom
                 && matches!(
                     final_step,
-                    fret_core::EffectStep::CustomV1 { .. } | fret_core::EffectStep::CustomV2 { .. }
+                    fret_core::EffectStep::CustomV1 { .. }
+                        | fret_core::EffectStep::CustomV2 { .. }
+                        | fret_core::EffectStep::CustomV3 { .. }
                 )
             {
                 // Optimized path: commit the final Custom effect step directly into `srcdst`, reading
@@ -266,6 +298,61 @@ pub(super) fn apply_chain_in_place(
                             load: wgpu::LoadOp::Load,
                         }));
                     }
+                    fret_core::EffectStep::CustomV3 {
+                        id,
+                        params,
+                        max_sample_offset_px: _,
+                        user0,
+                        user1,
+                        sources,
+                    } => {
+                        let (user0_image, user0_uv, user0_sampling) = match user0 {
+                            None => (
+                                None,
+                                fret_core::scene::UvRect::FULL,
+                                fret_core::scene::ImageSamplingHint::Default,
+                            ),
+                            Some(input) => (Some(input.image), input.uv, input.sampling),
+                        };
+                        let (user1_image, user1_uv, user1_sampling) = match user1 {
+                            None => (
+                                None,
+                                fret_core::scene::UvRect::FULL,
+                                fret_core::scene::ImageSamplingHint::Default,
+                            ),
+                            Some(input) => (Some(input.image), input.uv, input.sampling),
+                        };
+
+                        let src_raw = if sources.want_raw {
+                            chain_raw.unwrap_or(work)
+                        } else {
+                            work
+                        };
+                        let src_pyramid = src_raw;
+                        let pyramid_levels = sources.pyramid.map(|_| 1).unwrap_or(0);
+
+                        passes.push(RenderPlanPass::CustomEffectV3(CustomEffectV3Pass {
+                            src: work,
+                            src_raw,
+                            src_pyramid,
+                            pyramid_levels,
+                            dst: srcdst,
+                            src_size: ctx.viewport_size,
+                            dst_size: ctx.viewport_size,
+                            dst_scissor: Some(LocalScissorRect(scissor)),
+                            mask_uniform_index,
+                            mask,
+                            effect: id,
+                            params,
+                            user0_image,
+                            user0_uv,
+                            user0_sampling,
+                            user1_image,
+                            user1_uv,
+                            user1_sampling,
+                            load: wgpu::LoadOp::Load,
+                        }));
+                    }
                     _ => {}
                 }
             } else {
@@ -286,6 +373,7 @@ pub(super) fn apply_chain_in_place(
                         effect_degradations,
                         effect_blur_quality,
                         ctx,
+                        chain_raw,
                     );
                 }
 
@@ -322,6 +410,33 @@ pub(super) fn apply_chain_in_place(
             return;
         }
     }
+
+    let chain_wants_raw = steps.len() >= 2
+        && steps.iter().any(|s| match *s {
+            fret_core::EffectStep::CustomV3 { sources, .. } => sources.want_raw,
+            _ => false,
+        });
+
+    let full = estimate_texture_bytes(ctx.viewport_size, ctx.format, 1);
+    let (chain_raw, scratch_targets): (Option<PlanTarget>, &[PlanTarget]) = if chain_wants_raw
+        && scratch_targets.len() >= 2
+        && budget_bytes >= full.saturating_mul(2)
+    {
+        let chain_raw = scratch_targets[0];
+        passes.push(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
+            src: srcdst,
+            dst: chain_raw,
+            src_size: ctx.viewport_size,
+            dst_size: ctx.viewport_size,
+            dst_scissor: None,
+            encode_output_srgb: false,
+            load: wgpu::LoadOp::Clear(ctx.clear),
+        }));
+        budget_bytes = budget_bytes.saturating_sub(full);
+        (Some(chain_raw), &scratch_targets[1..])
+    } else {
+        (None, scratch_targets.as_slice())
+    };
 
     // Clip/shape masks are coverage (alpha) multipliers. If we apply them at every effect step in a
     // chain, coverage compounds (e.g. clip^2) and produces visible edge darkening (especially
@@ -1325,6 +1440,84 @@ pub(super) fn apply_chain_in_place(
                     mask,
                 );
             }
+            fret_core::EffectStep::CustomV3 {
+                id,
+                params,
+                max_sample_offset_px: _,
+                user0,
+                user1,
+                sources,
+            } => {
+                effect_degradations.custom_effect.requested = effect_degradations
+                    .custom_effect
+                    .requested
+                    .saturating_add(1);
+                if !color_adjust_enabled(ctx.viewport_size, ctx.format, budget_bytes) {
+                    if budget_bytes == 0 {
+                        effect_degradations.custom_effect.degraded_budget_zero =
+                            effect_degradations
+                                .custom_effect
+                                .degraded_budget_zero
+                                .saturating_add(1);
+                    } else {
+                        effect_degradations
+                            .custom_effect
+                            .degraded_budget_insufficient = effect_degradations
+                            .custom_effect
+                            .degraded_budget_insufficient
+                            .saturating_add(1);
+                    }
+                    continue;
+                }
+                let Some(&scratch) = scratch_targets.first() else {
+                    effect_degradations.custom_effect.degraded_target_exhausted =
+                        effect_degradations
+                            .custom_effect
+                            .degraded_target_exhausted
+                            .saturating_add(1);
+                    continue;
+                };
+                effect_degradations.custom_effect.applied =
+                    effect_degradations.custom_effect.applied.saturating_add(1);
+
+                let (user0_image, user0_uv, user0_sampling) = match user0 {
+                    None => (
+                        None,
+                        fret_core::scene::UvRect::FULL,
+                        fret_core::scene::ImageSamplingHint::Default,
+                    ),
+                    Some(input) => (Some(input.image), input.uv, input.sampling),
+                };
+                let (user1_image, user1_uv, user1_sampling) = match user1 {
+                    None => (
+                        None,
+                        fret_core::scene::UvRect::FULL,
+                        fret_core::scene::ImageSamplingHint::Default,
+                    ),
+                    Some(input) => (Some(input.image), input.uv, input.sampling),
+                };
+
+                append_custom_effect_v3_in_place_single_scratch(
+                    passes,
+                    srcdst,
+                    scratch,
+                    ctx.viewport_size,
+                    Some(scissor),
+                    id,
+                    params,
+                    user0_image,
+                    user0_uv,
+                    user0_sampling,
+                    user1_image,
+                    user1_uv,
+                    user1_sampling,
+                    sources,
+                    chain_raw,
+                    ctx.clear,
+                    mask_uniform_index,
+                    mask,
+                );
+            }
         }
     }
 }
@@ -1366,6 +1559,10 @@ fn effect_step_max_sample_pad_px(step: fret_core::EffectStep, scale_factor: f32)
             max_sample_offset_px,
             ..
         } => max_sample_offset_px.0,
+        fret_core::EffectStep::CustomV3 {
+            max_sample_offset_px,
+            ..
+        } => max_sample_offset_px.0,
         _ => 0.0,
     };
 
@@ -1393,6 +1590,7 @@ fn apply_step_in_place_with_scratch_targets(
     effect_degradations: &mut super::EffectDegradationSnapshot,
     effect_blur_quality: &mut super::BlurQualitySnapshot,
     ctx: EffectCompileCtx,
+    custom_v3_chain_raw: Option<PlanTarget>,
 ) {
     match step {
         fret_core::EffectStep::GaussianBlur {
@@ -1902,6 +2100,82 @@ fn apply_step_in_place_with_scratch_targets(
                 input_image,
                 input_uv,
                 input_sampling,
+                ctx.clear,
+                None,
+                None,
+            );
+        }
+        fret_core::EffectStep::CustomV3 {
+            id,
+            params,
+            max_sample_offset_px: _,
+            user0,
+            user1,
+            sources,
+        } => {
+            effect_degradations.custom_effect.requested = effect_degradations
+                .custom_effect
+                .requested
+                .saturating_add(1);
+            if !color_adjust_enabled(ctx.viewport_size, ctx.format, *budget_bytes) {
+                if *budget_bytes == 0 {
+                    effect_degradations.custom_effect.degraded_budget_zero = effect_degradations
+                        .custom_effect
+                        .degraded_budget_zero
+                        .saturating_add(1);
+                } else {
+                    effect_degradations
+                        .custom_effect
+                        .degraded_budget_insufficient = effect_degradations
+                        .custom_effect
+                        .degraded_budget_insufficient
+                        .saturating_add(1);
+                }
+                return;
+            }
+            let Some(&scratch) = scratch_targets.first() else {
+                effect_degradations.custom_effect.degraded_target_exhausted = effect_degradations
+                    .custom_effect
+                    .degraded_target_exhausted
+                    .saturating_add(1);
+                return;
+            };
+            effect_degradations.custom_effect.applied =
+                effect_degradations.custom_effect.applied.saturating_add(1);
+
+            let (user0_image, user0_uv, user0_sampling) = match user0 {
+                None => (
+                    None,
+                    fret_core::scene::UvRect::FULL,
+                    fret_core::scene::ImageSamplingHint::Default,
+                ),
+                Some(input) => (Some(input.image), input.uv, input.sampling),
+            };
+            let (user1_image, user1_uv, user1_sampling) = match user1 {
+                None => (
+                    None,
+                    fret_core::scene::UvRect::FULL,
+                    fret_core::scene::ImageSamplingHint::Default,
+                ),
+                Some(input) => (Some(input.image), input.uv, input.sampling),
+            };
+
+            append_custom_effect_v3_in_place_single_scratch(
+                passes,
+                srcdst,
+                scratch,
+                ctx.viewport_size,
+                Some(scissor),
+                id,
+                params,
+                user0_image,
+                user0_uv,
+                user0_sampling,
+                user1_image,
+                user1_uv,
+                user1_sampling,
+                sources,
+                custom_v3_chain_raw,
                 ctx.clear,
                 None,
                 None,
@@ -3229,6 +3503,118 @@ fn append_custom_effect_v2_in_place_single_scratch(
         input_image,
         input_uv,
         input_sampling,
+        load: wgpu::LoadOp::Clear(clear),
+    }));
+    passes.push(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
+        src: scratch,
+        dst: srcdst,
+        src_size: size,
+        dst_size: size,
+        dst_scissor: None,
+        encode_output_srgb: false,
+        load: wgpu::LoadOp::Clear(clear),
+    }));
+}
+
+#[allow(clippy::too_many_arguments)]
+fn append_custom_effect_v3_in_place_single_scratch(
+    passes: &mut Vec<RenderPlanPass>,
+    srcdst: PlanTarget,
+    scratch: PlanTarget,
+    size: (u32, u32),
+    scissor: Option<ScissorRect>,
+    effect: fret_core::EffectId,
+    params: fret_core::EffectParamsV1,
+    user0_image: Option<fret_core::ImageId>,
+    user0_uv: fret_core::scene::UvRect,
+    user0_sampling: fret_core::scene::ImageSamplingHint,
+    user1_image: Option<fret_core::ImageId>,
+    user1_uv: fret_core::scene::UvRect,
+    user1_sampling: fret_core::scene::ImageSamplingHint,
+    sources: fret_core::scene::CustomEffectSourcesV3,
+    chain_raw: Option<PlanTarget>,
+    clear: wgpu::Color,
+    mask_uniform_index: Option<u32>,
+    mask: Option<MaskRef>,
+) {
+    debug_assert_ne!(srcdst, PlanTarget::Output);
+    debug_assert_ne!(scratch, PlanTarget::Output);
+    debug_assert_ne!(srcdst, scratch);
+
+    let pyramid_levels = sources.pyramid.map(|_| 1).unwrap_or(0);
+
+    if let Some(scissor) = scissor {
+        if scissor.w == 0 || scissor.h == 0 {
+            return;
+        }
+
+        passes.push(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
+            src: srcdst,
+            dst: scratch,
+            src_size: size,
+            dst_size: size,
+            dst_scissor: None,
+            encode_output_srgb: false,
+            load: wgpu::LoadOp::Clear(clear),
+        }));
+
+        let src_raw = if sources.want_raw {
+            chain_raw.unwrap_or(scratch)
+        } else {
+            scratch
+        };
+        let src_pyramid = src_raw;
+
+        passes.push(RenderPlanPass::CustomEffectV3(CustomEffectV3Pass {
+            src: scratch,
+            src_raw,
+            src_pyramid,
+            pyramid_levels,
+            dst: srcdst,
+            src_size: size,
+            dst_size: size,
+            dst_scissor: Some(LocalScissorRect(scissor)),
+            mask_uniform_index,
+            mask,
+            effect,
+            params,
+            user0_image,
+            user0_uv,
+            user0_sampling,
+            user1_image,
+            user1_uv,
+            user1_sampling,
+            load: wgpu::LoadOp::Load,
+        }));
+        return;
+    }
+
+    let src_raw = if sources.want_raw {
+        chain_raw.unwrap_or(srcdst)
+    } else {
+        srcdst
+    };
+    let src_pyramid = src_raw;
+
+    passes.push(RenderPlanPass::CustomEffectV3(CustomEffectV3Pass {
+        src: srcdst,
+        src_raw,
+        src_pyramid,
+        pyramid_levels,
+        dst: scratch,
+        src_size: size,
+        dst_size: size,
+        dst_scissor: None,
+        mask_uniform_index: None,
+        mask: None,
+        effect,
+        params,
+        user0_image,
+        user0_uv,
+        user0_sampling,
+        user1_image,
+        user1_uv,
+        user1_sampling,
         load: wgpu::LoadOp::Clear(clear),
     }));
     passes.push(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {

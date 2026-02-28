@@ -12,7 +12,9 @@ use super::shaders::{
     custom_effect_mask_shader_source, custom_effect_masked_shader_source,
     custom_effect_unmasked_shader_source, custom_effect_v2_mask_shader_source,
     custom_effect_v2_masked_shader_source, custom_effect_v2_unmasked_shader_source,
-    drop_shadow_masked_shader_source, quad_shader_source, upscale_nearest_masked_shader_source,
+    custom_effect_v3_mask_shader_source, custom_effect_v3_masked_shader_source,
+    custom_effect_v3_unmasked_shader_source, drop_shadow_masked_shader_source, quad_shader_source,
+    upscale_nearest_masked_shader_source,
 };
 use super::{clamp_corner_radii_for_rect, svg_draw_rect_px};
 use fret_core::PathService as _;
@@ -78,6 +80,12 @@ fn shaders_parse_as_wgsl() {
         custom_effect_v2_masked_shader_source(CUSTOM_EFFECT_IDENTITY_WGSL);
     let custom_effect_v2_mask_src =
         custom_effect_v2_mask_shader_source(CUSTOM_EFFECT_IDENTITY_WGSL);
+    let custom_effect_v3_unmasked_src =
+        custom_effect_v3_unmasked_shader_source(CUSTOM_EFFECT_IDENTITY_WGSL);
+    let custom_effect_v3_masked_src =
+        custom_effect_v3_masked_shader_source(CUSTOM_EFFECT_IDENTITY_WGSL);
+    let custom_effect_v3_mask_src =
+        custom_effect_v3_mask_shader_source(CUSTOM_EFFECT_IDENTITY_WGSL);
     for (name, src) in [
         ("viewport", VIEWPORT_SHADER),
         ("quad", quad_src.as_str()),
@@ -129,6 +137,12 @@ fn shaders_parse_as_wgsl() {
             custom_effect_v2_masked_src.as_str(),
         ),
         ("custom_effect_v2_mask", custom_effect_v2_mask_src.as_str()),
+        ("custom_effect_v3", custom_effect_v3_unmasked_src.as_str()),
+        (
+            "custom_effect_v3_masked",
+            custom_effect_v3_masked_src.as_str(),
+        ),
+        ("custom_effect_v3_mask", custom_effect_v3_mask_src.as_str()),
     ] {
         naga::front::wgsl::parse_str(src)
             .unwrap_or_else(|err| panic!("WGSL parse failed for {name} shader: {err}"));
@@ -159,6 +173,12 @@ fn shaders_validate_for_webgpu() {
         custom_effect_v2_masked_shader_source(CUSTOM_EFFECT_IDENTITY_WGSL);
     let custom_effect_v2_mask_src =
         custom_effect_v2_mask_shader_source(CUSTOM_EFFECT_IDENTITY_WGSL);
+    let custom_effect_v3_unmasked_src =
+        custom_effect_v3_unmasked_shader_source(CUSTOM_EFFECT_IDENTITY_WGSL);
+    let custom_effect_v3_masked_src =
+        custom_effect_v3_masked_shader_source(CUSTOM_EFFECT_IDENTITY_WGSL);
+    let custom_effect_v3_mask_src =
+        custom_effect_v3_mask_shader_source(CUSTOM_EFFECT_IDENTITY_WGSL);
     for (name, src) in [
         ("viewport", VIEWPORT_SHADER),
         ("quad", quad_src.as_str()),
@@ -210,6 +230,12 @@ fn shaders_validate_for_webgpu() {
             custom_effect_v2_masked_src.as_str(),
         ),
         ("custom_effect_v2_mask", custom_effect_v2_mask_src.as_str()),
+        ("custom_effect_v3", custom_effect_v3_unmasked_src.as_str()),
+        (
+            "custom_effect_v3_masked",
+            custom_effect_v3_masked_src.as_str(),
+        ),
+        ("custom_effect_v3_mask", custom_effect_v3_mask_src.as_str()),
     ] {
         let module = naga::front::wgsl::parse_str(src)
             .unwrap_or_else(|err| panic!("WGSL parse failed for {name} shader: {err}"));

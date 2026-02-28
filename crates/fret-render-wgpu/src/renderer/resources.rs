@@ -515,6 +515,13 @@ impl Renderer {
             mapped_at_creation: false,
         });
 
+        let custom_effect_v3_meta_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("fret custom-effect v3 meta buffer"),
+            size: 256,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
         let effect_params = super::gpu_effect_params::GpuEffectParams {
             clip_mask_param_buffer,
             clip_mask_param_bind_group,
@@ -530,6 +537,7 @@ impl Renderer {
             drop_shadow_param_buffer,
             custom_effect_param_buffer,
             custom_effect_v2_input_meta_buffer,
+            custom_effect_v3_meta_buffer,
         };
 
         let render_plan_strict_output_clear =

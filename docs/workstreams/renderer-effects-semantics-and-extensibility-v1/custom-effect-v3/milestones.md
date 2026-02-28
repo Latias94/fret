@@ -19,6 +19,14 @@ Outcome:
   - scissor/mask semantics remain correct.
 - Plan dump + counters make it visible when `src_raw` had to alias `src` (targets/budget constraints).
 
+Current status:
+
+- Implemented `EffectStep::CustomV3` + validation/fingerprint and a wgpu pipeline/pass for CustomV3, including a
+  bounded attempt to preserve a chain-root `src_raw` scratch copy under budgets.
+- Conformance exists for `src_raw` vs `src` correctness in a blur→custom chain.
+- Gaps: no explicit degradation counters yet (raw-alias outcomes are not surfaced), and the pyramid path is not
+  implemented (the backend currently aliases `src_pyramid` and reports `pyramid_levels` as 0/1 only).
+
 ## M1 — Bounded blur pyramid (optional)
 
 Outcome:
