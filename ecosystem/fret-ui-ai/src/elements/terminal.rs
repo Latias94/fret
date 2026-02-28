@@ -41,39 +41,23 @@ fn color(theme: &Theme, key: &'static str, fallback: Color) -> Color {
 }
 
 fn zinc_950() -> Color {
-    Color {
-        r: 9.0 / 255.0,
-        g: 9.0 / 255.0,
-        b: 11.0 / 255.0,
-        a: 1.0,
-    }
+    // Tailwind zinc-950 (#09090b).
+    fret_ui_kit::colors::linear_from_hex_rgb(0x09_09_0B)
 }
 
 fn zinc_100() -> Color {
-    Color {
-        r: 244.0 / 255.0,
-        g: 244.0 / 255.0,
-        b: 245.0 / 255.0,
-        a: 1.0,
-    }
+    // Tailwind zinc-100 (#f4f4f5).
+    fret_ui_kit::colors::linear_from_hex_rgb(0xF4_F4_F5)
 }
 
 fn zinc_800() -> Color {
-    Color {
-        r: 39.0 / 255.0,
-        g: 39.0 / 255.0,
-        b: 42.0 / 255.0,
-        a: 1.0,
-    }
+    // Tailwind zinc-800 (#27272a).
+    fret_ui_kit::colors::linear_from_hex_rgb(0x27_27_2A)
 }
 
 fn zinc_400() -> Color {
-    Color {
-        r: 161.0 / 255.0,
-        g: 161.0 / 255.0,
-        b: 170.0 / 255.0,
-        a: 1.0,
-    }
+    // Tailwind zinc-400 (#a1a1aa).
+    fret_ui_kit::colors::linear_from_hex_rgb(0xA1_A1_AA)
 }
 
 #[derive(Debug, Default, Clone)]

@@ -1,0 +1,174 @@
+struct Viewport {
+  viewport_size: vec2<f32>,
+  clip_head: u32,
+  clip_count: u32,
+  mask_head: u32,
+  mask_count: u32,
+  mask_scope_head: u32,
+  mask_scope_count: u32,
+  output_is_srgb: u32,
+  _pad0: u32,
+  mask_viewport_origin: vec2<f32>,
+  mask_viewport_size: vec2<f32>,
+  text_gamma_ratios: vec4<f32>,
+  text_grayscale_enhanced_contrast: f32,
+  text_subpixel_enhanced_contrast: f32,
+  _pad_text_quality0: u32,
+  _pad_text_quality1: u32,
+};
+
+@group(0) @binding(0) var<uniform> viewport: Viewport;
+
+struct RenderSpace {
+  origin_px: vec2<f32>,
+  size_px: vec2<f32>,
+};
+
+@group(0) @binding(5) var<uniform> render_space: RenderSpace;
+
+// Renderer-owned pattern atlas (deterministic utility inputs).
+@group(0) @binding(3) var fret_material_catalog_texture: texture_2d_array<f32>;
+@group(0) @binding(4) var fret_material_catalog_sampler: sampler;
+
+const FRET_MATERIAL_CATALOG_LAYER_HASH_NOISE: i32 = 0;
+const FRET_MATERIAL_CATALOG_LAYER_BAYER8X8: i32 = 1;
+
+fn fret_local_px(pos_px: vec2<f32>) -> vec2<f32> {
+  return pos_px - render_space.origin_px;
+}
+
+fn fret_catalog_hash_noise01(pos_px: vec2<f32>) -> f32 {
+  let x = i32(floor(pos_px.x)) & 63;
+  let y = i32(floor(pos_px.y)) & 63;
+  return textureLoad(
+    fret_material_catalog_texture,
+    vec2<i32>(x, y),
+    FRET_MATERIAL_CATALOG_LAYER_HASH_NOISE,
+    0
+  ).r;
+}
+
+fn fret_catalog_bayer8x8_01(pos_px: vec2<f32>) -> f32 {
+  let x = i32(floor(pos_px.x)) & 63;
+  let y = i32(floor(pos_px.y)) & 63;
+  return textureLoad(
+    fret_material_catalog_texture,
+    vec2<i32>(x, y),
+    FRET_MATERIAL_CATALOG_LAYER_BAYER8X8,
+    0
+  ).r;
+}
+
+@group(1) @binding(0) var src_texture: texture_2d<f32>;
+@group(1) @binding(2) var src_raw_texture: texture_2d<f32>;
+@group(1) @binding(3) var src_pyramid_texture: texture_2d<f32>;
+
+struct CustomEffectV3MetaV1 {
+  pyramid_levels: u32,
+  _pad0: u32,
+  _pad1: u32,
+  _pad2: u32,
+  // (u0, v0, u1, v1)
+  user0_uv_rect: vec4<f32>,
+  // (u0, v0, u1, v1)
+  user1_uv_rect: vec4<f32>,
+};
+
+@group(1) @binding(4) var<uniform> v3_meta: CustomEffectV3MetaV1;
+
+@group(1) @binding(5) var user0_texture: texture_2d<f32>;
+@group(1) @binding(6) var user0_sampler: sampler;
+@group(1) @binding(7) var user1_texture: texture_2d<f32>;
+@group(1) @binding(8) var user1_sampler: sampler;
+
+fn fret_sample_src_raw_at_pos(pos_px: vec2<f32>) -> vec4<f32> {
+  let dims_u = textureDimensions(src_raw_texture);
+  if (dims_u.x == 0u || dims_u.y == 0u) {
+    return vec4<f32>(0.0);
+  }
+  let x = clamp(i32(floor(pos_px.x)), 0, i32(dims_u.x) - 1);
+  let y = clamp(i32(floor(pos_px.y)), 0, i32(dims_u.y) - 1);
+  return textureLoad(src_raw_texture, vec2<i32>(x, y), 0);
+}
+
+fn fret_pyramid_levels() -> u32 {
+  return max(v3_meta.pyramid_levels, 1u);
+}
+
+fn fret_sample_src_pyramid_at_pos(level: u32, pos_px: vec2<f32>) -> vec4<f32> {
+  let l = min(level, fret_pyramid_levels() - 1u);
+  let dims_u = textureDimensions(src_pyramid_texture, i32(l));
+  if (dims_u.x == 0u || dims_u.y == 0u) {
+    return vec4<f32>(0.0);
+  }
+  let scale_u = 1u << l;
+  let scale = max(f32(scale_u), 1.0);
+  let p = pos_px / vec2<f32>(scale);
+  let x = clamp(i32(floor(p.x)), 0, i32(dims_u.x) - 1);
+  let y = clamp(i32(floor(p.y)), 0, i32(dims_u.y) - 1);
+  return textureLoad(src_pyramid_texture, vec2<i32>(x, y), i32(l));
+}
+
+fn fret_user0_uv_from_local(local_px: vec2<f32>) -> vec2<f32> {
+  let size = max(render_space.size_px, vec2<f32>(1.0));
+  let t = clamp(local_px / size, vec2<f32>(0.0), vec2<f32>(1.0));
+  let r = v3_meta.user0_uv_rect;
+  let u = mix(r.x, r.z, t.x);
+  let v = mix(r.y, r.w, t.y);
+  return clamp(vec2<f32>(u, v), vec2<f32>(0.0), vec2<f32>(1.0));
+}
+
+fn fret_user0_uv(pos_px: vec2<f32>) -> vec2<f32> {
+  return fret_user0_uv_from_local(fret_local_px(pos_px));
+}
+
+fn fret_sample_user0(uv: vec2<f32>) -> vec4<f32> {
+  return textureSampleLevel(user0_texture, user0_sampler, clamp(uv, vec2<f32>(0.0), vec2<f32>(1.0)), 0.0);
+}
+
+fn fret_sample_user0_at_pos(pos_px: vec2<f32>) -> vec4<f32> {
+  return textureSampleLevel(user0_texture, user0_sampler, fret_user0_uv(pos_px), 0.0);
+}
+
+fn fret_user1_uv_from_local(local_px: vec2<f32>) -> vec2<f32> {
+  let size = max(render_space.size_px, vec2<f32>(1.0));
+  let t = clamp(local_px / size, vec2<f32>(0.0), vec2<f32>(1.0));
+  let r = v3_meta.user1_uv_rect;
+  let u = mix(r.x, r.z, t.x);
+  let v = mix(r.y, r.w, t.y);
+  return clamp(vec2<f32>(u, v), vec2<f32>(0.0), vec2<f32>(1.0));
+}
+
+fn fret_user1_uv(pos_px: vec2<f32>) -> vec2<f32> {
+  return fret_user1_uv_from_local(fret_local_px(pos_px));
+}
+
+fn fret_sample_user1(uv: vec2<f32>) -> vec4<f32> {
+  return textureSampleLevel(user1_texture, user1_sampler, clamp(uv, vec2<f32>(0.0), vec2<f32>(1.0)), 0.0);
+}
+
+fn fret_sample_user1_at_pos(pos_px: vec2<f32>) -> vec4<f32> {
+  return textureSampleLevel(user1_texture, user1_sampler, fret_user1_uv(pos_px), 0.0);
+}
+
+struct EffectParamsV1 {
+  vec4s: array<vec4<f32>, 4>,
+};
+
+@group(1) @binding(1) var<uniform> params: EffectParamsV1;
+
+struct VsOut {
+  @builtin(position) pos: vec4<f32>,
+};
+
+@vertex
+fn vs_main(@builtin(vertex_index) vid: u32) -> VsOut {
+  var pos = array<vec2<f32>, 3>(
+    vec2<f32>(-1.0, -3.0),
+    vec2<f32>( 3.0,  1.0),
+    vec2<f32>(-1.0,  1.0),
+  );
+  var out: VsOut;
+  out.pos = vec4<f32>(pos[vid], 0.0, 1.0);
+  return out;
+}

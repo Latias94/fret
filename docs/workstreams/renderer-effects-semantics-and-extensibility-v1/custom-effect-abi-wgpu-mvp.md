@@ -87,6 +87,8 @@ MVP scoping constraints:
 - Single pass (no user-declared multi-pass bundles).
 - Params-only (fixed 64-byte payload) + a single source texture.
 - No user-provided textures in v1 (use built-in `BackdropWarpV2` + built-in effects for distortion).
+- Renderer-owned utility patterns MAY be exposed via the shader prelude (e.g. deterministic noise/dither),
+  without expanding the portable core contract.
 - Custom effects declare a bounded sampling extent (`max_sample_offset_px`) so the renderer can
   deterministically allocate enough padding for common chains (e.g. blur → custom refraction).
 
@@ -99,7 +101,7 @@ Binding shapes are versioned and strictly limited:
 
 Future shapes (v2+) may add:
 
-- one renderer-owned catalog texture (e.g. blue noise),
+- one renderer-owned catalog texture (e.g. noise/LUT atlas),
 - one user-provided sampled texture (for normal maps / displacement fields),
 - explicit sampler controls (bounded).
 
@@ -179,11 +181,17 @@ Notes:
 - The renderer applies clip/mask coverage *after* the custom function, so authors do not need to implement masking.
 - In wgpu, custom effects also receive a renderer-owned `render_space` uniform that provides the
   effect bounds (`origin_px`, `size_px`) for local coordinate math (Android/Flutter-style shaders).
+- The renderer may also expose a small deterministic pattern atlas (e.g. hash-noise + Bayer) via stable helper
+  functions in the shader prelude.
 - `max_sample_offset_px` should conservatively bound how far the shader may read from `pos_px`
   when sampling the source texture (e.g. maximum displacement + dispersion offset). This is used
   by the render plan to add deterministic padding for chains that include blur before the custom
   pass.
 - Backends may impose a maximum WGSL source size (wgpu MVP caps v1 sources at 64KiB) and reject oversized programs.
+
+For the stable prelude surface, see:
+
+- `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-v1-semantics.md`
 
 ## Usage (ecosystem / app code)
 

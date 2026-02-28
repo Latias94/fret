@@ -107,7 +107,8 @@ Usage:
   fretboard dev native [--bin <name> | --choose] [--profile <cargo_profile>] [--hotpatch] [--watch] [--watch-poll-ms <ms>] [--no-watch] [--dev-state-reset] [-- <args...>]
   fretboard dev native [--bin <name> | --choose] [--profile <cargo_profile>] --hotpatch-devserver <ws_endpoint> [--hotpatch-build-id <auto|none|u64>] [-- <args...>]
   fretboard dev native [--bin <name> | --choose] [--profile <cargo_profile>] --hotpatch-dx [--hotpatch-dx-ws <ws_endpoint>] [--hotpatch-build-id <auto|none|u64>] [-- <args...>]
-  fretboard dev web [--port <port>] [--demo <demo> | --choose] [--devtools-ws-url <ws://.../> --devtools-token <token>]
+  fretboard dev web [--no-open] [--port <port>] [--demo <demo> | --choose] [--devtools-ws-url <ws://.../> --devtools-token <token>]
+  fretboard dev web --open [--no-open] [--port <port>] [--demo <demo> | --choose]
 
 Examples:
   fretboard new todo --name my-todo
@@ -173,6 +174,7 @@ Examples:
   fretboard dev native --bin hotpatch_smoke_demo --hotpatch
   fretboard dev native --bin hotpatch_smoke_demo --hotpatch-dx
   fretboard dev web --demo plot_demo
+  fretboard dev web --demo custom_effect_v2_web_demo
 "#
     );
     Ok(())

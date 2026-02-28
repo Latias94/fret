@@ -1055,6 +1055,10 @@ pub(crate) fn dev_web(args: Vec<String>) -> Result<(), String> {
     let mut port: Option<u16> = None;
     let mut demo: Option<String> = None;
     let mut choose = false;
+    // Dev web is primarily an interactive workflow; default to opening the browser
+    // once the server is reachable. Use `--no-open` for CI or when you explicitly
+    // do not want the auto-open behavior.
+    let mut open = true;
     let mut devtools_ws_url: Option<String> = None;
     let mut devtools_token: Option<String> = None;
 
@@ -1074,6 +1078,8 @@ pub(crate) fn dev_web(args: Vec<String>) -> Result<(), String> {
                 );
             }
             "--choose" => choose = true,
+            "--open" => open = true,
+            "--no-open" => open = false,
             "--devtools-ws-url" => {
                 devtools_ws_url = Some(
                     it.next()
@@ -1138,7 +1144,6 @@ pub(crate) fn dev_web(args: Vec<String>) -> Result<(), String> {
     }
 
     eprintln!("Starting Trunk dev server in `{}`", display_path(&web_dir));
-    eprintln!("Open: {url}");
 
     let mut cmd = Command::new("trunk");
     cmd.current_dir(web_dir).args(["serve"]);
@@ -1146,17 +1151,95 @@ pub(crate) fn dev_web(args: Vec<String>) -> Result<(), String> {
         cmd.args(["--port", &port.to_string()]);
     }
 
-    let status = cmd.status().map_err(|e| {
+    let mut child = cmd.spawn().map_err(|e| {
         if e.kind() == std::io::ErrorKind::NotFound {
             "failed to run `trunk` (not found). Install it with: `cargo install trunk`".to_string()
         } else {
             e.to_string()
         }
     })?;
+
+    std::thread::spawn({
+        let url = url.clone();
+        move || {
+            use std::net::{SocketAddr, TcpStream, ToSocketAddrs as _};
+            use std::time::{Duration, Instant};
+
+            let start = Instant::now();
+            let deadline = Duration::from_secs(30);
+
+            let Ok(mut addrs) = format!("127.0.0.1:{effective_port}").to_socket_addrs() else {
+                return;
+            };
+            let Some(addr) = addrs.find(SocketAddr::is_ipv4) else {
+                return;
+            };
+
+            while start.elapsed() < deadline {
+                if TcpStream::connect_timeout(&addr, Duration::from_millis(150)).is_ok() {
+                    eprintln!("\nFret web demo ready: {url}\n");
+                    if open {
+                        if let Err(err) = open_url(&url) {
+                            eprintln!("warning: failed to open browser: {err}");
+                        }
+                    }
+                    return;
+                }
+                std::thread::sleep(Duration::from_millis(200));
+            }
+
+            eprintln!("\nFret web demo (may still be building): {url}\n");
+            if open {
+                if let Err(err) = open_url(&url) {
+                    eprintln!("warning: failed to open browser: {err}");
+                }
+            }
+        }
+    });
+
+    let status = child.wait().map_err(|e| e.to_string())?;
     if !status.success() {
         return Err(format!("trunk exited with status: {status}"));
     }
     Ok(())
+}
+
+fn open_url(url: &str) -> Result<(), String> {
+    #[cfg(windows)]
+    {
+        let status = Command::new("cmd")
+            .args(["/C", "start", "", url])
+            .status()
+            .map_err(|e| e.to_string())?;
+        if !status.success() {
+            return Err(format!("cmd start exited with status: {status}"));
+        }
+        return Ok(());
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        let status = Command::new("open")
+            .arg(url)
+            .status()
+            .map_err(|e| e.to_string())?;
+        if !status.success() {
+            return Err(format!("open exited with status: {status}"));
+        }
+        return Ok(());
+    }
+
+    #[cfg(all(not(windows), not(target_os = "macos")))]
+    {
+        let status = Command::new("xdg-open")
+            .arg(url)
+            .status()
+            .map_err(|e| e.to_string())?;
+        if !status.success() {
+            return Err(format!("xdg-open exited with status: {status}"));
+        }
+        return Ok(());
+    }
 }
 
 fn dev_native_hotpatch_dx(

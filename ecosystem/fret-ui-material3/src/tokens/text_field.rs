@@ -117,6 +117,113 @@ pub(crate) fn supporting_text_color(
     }
 }
 
+pub(crate) fn leading_icon_size(theme: &Theme, variant: TextFieldVariant) -> Px {
+    let key = match variant {
+        TextFieldVariant::Outlined => "md.comp.outlined-text-field.leading-icon.size",
+        TextFieldVariant::Filled => "md.comp.filled-text-field.leading-icon.size",
+    };
+    theme.metric_by_key(key).unwrap_or(Px(24.0))
+}
+
+pub(crate) fn leading_icon_color(
+    theme: &Theme,
+    variant: TextFieldVariant,
+    hovered: bool,
+    disabled: bool,
+    error: bool,
+    focused: bool,
+) -> (Color, f32) {
+    let (color_key, opacity_key) = if disabled {
+        (
+            match variant {
+                TextFieldVariant::Outlined => {
+                    "md.comp.outlined-text-field.disabled.leading-icon.color"
+                }
+                TextFieldVariant::Filled => "md.comp.filled-text-field.disabled.leading-icon.color",
+            },
+            Some(match variant {
+                TextFieldVariant::Outlined => {
+                    "md.comp.outlined-text-field.disabled.leading-icon.opacity"
+                }
+                TextFieldVariant::Filled => {
+                    "md.comp.filled-text-field.disabled.leading-icon.opacity"
+                }
+            }),
+        )
+    } else if error && focused {
+        (
+            match variant {
+                TextFieldVariant::Outlined => {
+                    "md.comp.outlined-text-field.error.focus.leading-icon.color"
+                }
+                TextFieldVariant::Filled => {
+                    "md.comp.filled-text-field.error.focus.leading-icon.color"
+                }
+            },
+            None,
+        )
+    } else if error && hovered {
+        (
+            match variant {
+                TextFieldVariant::Outlined => {
+                    "md.comp.outlined-text-field.error.hover.leading-icon.color"
+                }
+                TextFieldVariant::Filled => {
+                    "md.comp.filled-text-field.error.hover.leading-icon.color"
+                }
+            },
+            None,
+        )
+    } else if error {
+        (
+            match variant {
+                TextFieldVariant::Outlined => {
+                    "md.comp.outlined-text-field.error.leading-icon.color"
+                }
+                TextFieldVariant::Filled => "md.comp.filled-text-field.error.leading-icon.color",
+            },
+            None,
+        )
+    } else if focused {
+        (
+            match variant {
+                TextFieldVariant::Outlined => {
+                    "md.comp.outlined-text-field.focus.leading-icon.color"
+                }
+                TextFieldVariant::Filled => "md.comp.filled-text-field.focus.leading-icon.color",
+            },
+            None,
+        )
+    } else if hovered {
+        (
+            match variant {
+                TextFieldVariant::Outlined => {
+                    "md.comp.outlined-text-field.hover.leading-icon.color"
+                }
+                TextFieldVariant::Filled => "md.comp.filled-text-field.hover.leading-icon.color",
+            },
+            None,
+        )
+    } else {
+        (
+            match variant {
+                TextFieldVariant::Outlined => "md.comp.outlined-text-field.leading-icon.color",
+                TextFieldVariant::Filled => "md.comp.filled-text-field.leading-icon.color",
+            },
+            None,
+        )
+    };
+
+    let color = theme
+        .color_by_key(color_key)
+        .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
+        .unwrap_or_else(|| theme.color_token("md.sys.color.on-surface-variant"));
+    let opacity = opacity_key
+        .and_then(|k| theme.number_by_key(k))
+        .unwrap_or(1.0);
+    (color, opacity)
+}
+
 pub(crate) fn trailing_icon_size(theme: &Theme, variant: TextFieldVariant) -> Px {
     let key = match variant {
         TextFieldVariant::Outlined => "md.comp.outlined-text-field.trailing-icon.size",

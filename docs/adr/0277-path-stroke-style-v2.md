@@ -61,6 +61,7 @@ Dash uses the same base model as ADR 0271:
 - `DashPatternV1 { dash_px, gap_px, phase_px }`
 - `period = dash + gap`
 - no “perimeter fitting” (do not adjust to evenly divide lengths)
+- Coverage rule (phase sign convention): `m = (s + phase) mod period`; dash is **on** iff `m < dash`.
 
 For vector paths, we must define a stable anchoring rule:
 

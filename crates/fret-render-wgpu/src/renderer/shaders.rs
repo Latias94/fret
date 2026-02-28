@@ -4,7 +4,11 @@ fn saturate(x: f32) -> f32 {
 }
 
 fn sdf_aa(sdf: f32) -> f32 {
-  return max(fwidth(sdf), 1e-4);
+  // `fwidth(sdf)` uses `abs(dpdx) + abs(dpdy)`, which makes diagonal edges (notably rounded
+  // corners) appear softer/thinner than axis-aligned edges. Using the isotropic gradient length
+  // keeps coverage more uniform across edge angles.
+  let g = vec2<f32>(dpdx(sdf), dpdy(sdf));
+  return max(length(g), 1e-4);
 }
 
 fn sdf_coverage_smooth(sdf: f32) -> f32 {
@@ -31,18 +35,19 @@ fn gradient_tile_mode_apply(t: f32, tile_mode: u32) -> f32 {
 }
 
 fn pick_corner_radius(center_to_point: vec2<f32>, radii: vec4<f32>) -> f32 {
-  if (center_to_point.x < 0.0) {
-    if (center_to_point.y < 0.0) { return radii.x; }
-    return radii.w;
-  }
-  if (center_to_point.y < 0.0) { return radii.y; }
-  return radii.z;
+  // IMPORTANT (WebGPU/wasm): Keep this function branchless so that callers can safely use
+  // derivative ops (dpdx/dpdy) later in the call chain from uniform control flow.
+  let left = center_to_point.x < 0.0;
+  let top = center_to_point.y < 0.0;
+
+  let r_top = select(radii.y, radii.x, left);
+  let r_bottom = select(radii.z, radii.w, left);
+  return select(r_bottom, r_top, top);
 }
 
 fn quad_sdf_impl(corner_center_to_point: vec2<f32>, corner_radius: f32) -> f32 {
-  if (corner_radius == 0.0) {
-    return max(corner_center_to_point.x, corner_center_to_point.y);
-  }
+  // Branchless variant of the standard rectangle / rounded-rectangle SDF:
+  // https://iquilezles.org/articles/distfunctions2d/
   let signed_distance_to_inset_quad =
     length(max(vec2<f32>(0.0), corner_center_to_point)) +
     min(0.0, max(corner_center_to_point.x, corner_center_to_point.y));
@@ -707,11 +712,15 @@ fn material_eval(p: Paint, local_pos: vec2<f32>, sample_catalog: bool) -> vec4<f
   let noise_r0 = mat_rand01(noise_cell, seed);
   var noise_r = noise_r0;
   if (sample_catalog) {
-    let noise_xi = noise_cell.x & 63u;
-    let noise_yi = noise_cell.y & 63u;
-    let noise_uv = (vec2<f32>(f32(noise_xi) + 0.5, f32(noise_yi) + 0.5) / 64.0);
-    let noise_layer = i32(p.color_space);
-    noise_r = textureSample(material_catalog_texture, material_catalog_sampler, noise_uv, noise_layer).r;
+    let noise_xi = i32(noise_cell.x & 63u);
+    let noise_yi = i32(noise_cell.y & 63u);
+    let noise_layer = clamp(i32(p.color_space), 0, 1);
+    noise_r = textureLoad(
+      material_catalog_texture,
+      vec2<i32>(noise_xi, noise_yi),
+      noise_layer,
+      0
+    ).r;
   }
   let noise_intensity = clamp(p.params2.y, 0.0, 1.0);
   let noise_cov = noise_intensity * noise_r;
@@ -891,7 +900,7 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
     let alpha_inner = select(0.0, alpha_inner_raw, inner_valid);
 
     alpha_fill = alpha_inner;
-    border_cov = saturate(alpha_outer - alpha_inner);
+    border_cov = alpha_outer * (1.0 - alpha_inner);
   }
 
   let fill = paint_eval_fill(inst.fill_paint, input.local_pos) * alpha_fill;
@@ -1261,6 +1270,9 @@ pub(super) const BLIT_SHADER: &str = include_str!("pipelines/wgsl/blit.wgsl");
 pub(super) const BLIT_SRGB_ENCODE_SHADER: &str =
     include_str!("pipelines/wgsl/blit_srgb_encode.wgsl");
 
+pub(super) const MIP_DOWNSAMPLE_BOX_2X2_SHADER: &str =
+    include_str!("pipelines/wgsl/mip_downsample_box_2x2.wgsl");
+
 pub(super) const DROP_SHADOW_SHADER: &str = include_str!("pipelines/wgsl/drop_shadow.wgsl");
 
 const DROP_SHADOW_MASKED_SHADER_PART_A: &str =
@@ -1478,6 +1490,7 @@ fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
 
 @fragment
 fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
+  let clip = clip_alpha(pos.xy);
   let dims = textureDimensions(src_texture);
   let x = u32(floor(pos.x));
   let y = u32(floor(pos.y));
@@ -1495,7 +1508,6 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
     return vec4<f32>(0.0);
   }
   let sample = textureLoad(src_texture, vec2<i32>(i32(sx), i32(sy)), 0);
-  let clip = clip_alpha(pos.xy);
   return vec4<f32>(sample.rgb * clip, clip);
 }
 "#;
@@ -2135,6 +2147,7 @@ fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
 
 @fragment
 fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
+  let clip = clip_alpha(pos.xy);
   let dims = textureDimensions(src_texture);
   let x = i32(floor(pos.x));
   let y = i32(floor(pos.y));
@@ -2168,7 +2181,6 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
     color = vec4<f32>(rgb_u * a, a);
   }
 
-  let clip = clip_alpha(pos.xy);
   return vec4<f32>(color.rgb * clip, clip);
 }
 "#;
@@ -2341,28 +2353,6 @@ fn warp_map_offset_px(pixel_pos_px: vec2<f32>) -> vec2<f32> {
   return v * strength;
 }
 
-fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
-  var alpha = 1.0;
-  var idx = viewport.clip_head;
-  for (var i = 0u; i < 64u; i = i + 1u) {
-    if (i >= viewport.clip_count) {
-      break;
-    }
-    if (idx == 0xffffffffu) {
-      break;
-    }
-    let clip = clip_stack.clips[idx];
-    idx = bitcast<u32>(clip.inv0.w);
-    let clip_local = vec2<f32>(
-      dot(clip.inv0.xy, pixel_pos) + clip.inv0.z,
-      dot(clip.inv1.xy, pixel_pos) + clip.inv1.z
-    );
-    let sdf = quad_sdf(clip_local, clip.rect.xy, clip.rect.zw, clip.corner_radii);
-    alpha = alpha * sdf_coverage_linear(sdf);
-  }
-  return alpha;
-}
-
 @fragment
 fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
   let dims = textureDimensions(src_texture);
@@ -2398,8 +2388,7 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
     color = vec4<f32>(rgb_u * a, a);
   }
 
-  let clip = clip_alpha(pos.xy);
-  return vec4<f32>(color.rgb * clip, clip);
+  return color;
 }
 "#;
 
@@ -2959,6 +2948,7 @@ fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
 
 @fragment
 fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
+  let clip = clip_alpha(pos.xy);
   let dims = textureDimensions(src_texture);
   let x = i32(floor(pos.x));
   let y = i32(floor(pos.y));
@@ -2983,7 +2973,6 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
   rgb = (rgb - vec3<f32>(0.5)) * c + vec3<f32>(0.5);
   rgb = saturate3(rgb);
 
-  let clip = clip_alpha(pos.xy);
   return vec4<f32>(rgb * a * clip, clip);
 }
 "#;
@@ -3291,6 +3280,7 @@ fn apply_color_matrix(tex: vec4<f32>) -> vec4<f32> {
 
 @fragment
 fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
+  let clip = clip_alpha(pos.xy);
   let dims = textureDimensions(src_texture);
   let x = i32(floor(pos.x));
   let y = i32(floor(pos.y));
@@ -3301,7 +3291,6 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
   let tex = textureLoad(src_texture, vec2<i32>(x, y), 0);
   let out = apply_color_matrix(tex);
 
-  let clip = clip_alpha(pos.xy);
   return vec4<f32>(out.rgb * clip, clip);
 }
 "#;
@@ -3580,6 +3569,7 @@ fn threshold_t(a: f32) -> f32 {
 
 @fragment
 fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
+  let clip = clip_alpha(pos.xy);
   let dims = textureDimensions(src_texture);
   let x = i32(floor(pos.x));
   let y = i32(floor(pos.y));
@@ -3591,7 +3581,6 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
   let t = threshold_t(tex.a);
   let out = tex * t;
 
-  let clip = clip_alpha(pos.xy);
   return vec4<f32>(out.rgb * clip, clip);
 }
 "#;
@@ -3742,6 +3731,72 @@ pub(super) fn custom_effect_masked_shader_source(user_source: &str) -> String {
 
 pub(super) fn custom_effect_mask_shader_source(user_source: &str) -> String {
     format!("{CUSTOM_EFFECT_MASK_SHADER_PART_A}{user_source}\n{CUSTOM_EFFECT_MASK_SHADER_PART_B}")
+}
+
+const CUSTOM_EFFECT_V2_UNMASKED_SHADER_PART_A: &str =
+    include_str!("pipelines/wgsl/custom_effect_v2_unmasked_part_a.wgsl");
+const CUSTOM_EFFECT_V2_UNMASKED_SHADER_PART_B: &str =
+    include_str!("pipelines/wgsl/custom_effect_v2_unmasked_part_b.wgsl");
+
+const CUSTOM_EFFECT_V2_MASKED_SHADER_PART_A: &str =
+    include_str!("pipelines/wgsl/custom_effect_v2_masked_part_a.wgsl");
+const CUSTOM_EFFECT_V2_MASKED_SHADER_PART_B: &str =
+    include_str!("pipelines/wgsl/custom_effect_v2_masked_part_b.wgsl");
+
+const CUSTOM_EFFECT_V2_MASK_SHADER_PART_A: &str =
+    include_str!("pipelines/wgsl/custom_effect_v2_mask_part_a.wgsl");
+const CUSTOM_EFFECT_V2_MASK_SHADER_PART_B: &str =
+    include_str!("pipelines/wgsl/custom_effect_v2_mask_part_b.wgsl");
+
+pub(super) fn custom_effect_v2_unmasked_shader_source(user_source: &str) -> String {
+    format!(
+        "{CUSTOM_EFFECT_V2_UNMASKED_SHADER_PART_A}{user_source}\n{CUSTOM_EFFECT_V2_UNMASKED_SHADER_PART_B}"
+    )
+}
+
+pub(super) fn custom_effect_v2_masked_shader_source(user_source: &str) -> String {
+    format!(
+        "{CUSTOM_EFFECT_V2_MASKED_SHADER_PART_A}{CLIP_SDF_CORE_WGSL}{user_source}\n{CUSTOM_EFFECT_V2_MASKED_SHADER_PART_B}"
+    )
+}
+
+pub(super) fn custom_effect_v2_mask_shader_source(user_source: &str) -> String {
+    format!(
+        "{CUSTOM_EFFECT_V2_MASK_SHADER_PART_A}{user_source}\n{CUSTOM_EFFECT_V2_MASK_SHADER_PART_B}"
+    )
+}
+
+const CUSTOM_EFFECT_V3_UNMASKED_SHADER_PART_A: &str =
+    include_str!("pipelines/wgsl/custom_effect_v3_unmasked_part_a.wgsl");
+const CUSTOM_EFFECT_V3_UNMASKED_SHADER_PART_B: &str =
+    include_str!("pipelines/wgsl/custom_effect_v3_unmasked_part_b.wgsl");
+
+const CUSTOM_EFFECT_V3_MASKED_SHADER_PART_A: &str =
+    include_str!("pipelines/wgsl/custom_effect_v3_masked_part_a.wgsl");
+const CUSTOM_EFFECT_V3_MASKED_SHADER_PART_B: &str =
+    include_str!("pipelines/wgsl/custom_effect_v3_masked_part_b.wgsl");
+
+const CUSTOM_EFFECT_V3_MASK_SHADER_PART_A: &str =
+    include_str!("pipelines/wgsl/custom_effect_v3_mask_part_a.wgsl");
+const CUSTOM_EFFECT_V3_MASK_SHADER_PART_B: &str =
+    include_str!("pipelines/wgsl/custom_effect_v3_mask_part_b.wgsl");
+
+pub(super) fn custom_effect_v3_unmasked_shader_source(user_source: &str) -> String {
+    format!(
+        "{CUSTOM_EFFECT_V3_UNMASKED_SHADER_PART_A}{user_source}\n{CUSTOM_EFFECT_V3_UNMASKED_SHADER_PART_B}"
+    )
+}
+
+pub(super) fn custom_effect_v3_masked_shader_source(user_source: &str) -> String {
+    format!(
+        "{CUSTOM_EFFECT_V3_MASKED_SHADER_PART_A}{CLIP_SDF_CORE_WGSL}{user_source}\n{CUSTOM_EFFECT_V3_MASKED_SHADER_PART_B}"
+    )
+}
+
+pub(super) fn custom_effect_v3_mask_shader_source(user_source: &str) -> String {
+    format!(
+        "{CUSTOM_EFFECT_V3_MASK_SHADER_PART_A}{user_source}\n{CUSTOM_EFFECT_V3_MASK_SHADER_PART_B}"
+    )
 }
 
 pub(super) const BLUR_H_SHADER: &str = include_str!("pipelines/wgsl/blur_h.wgsl");
@@ -4460,6 +4515,9 @@ struct MaskStack {
 @group(0) @binding(6) var mask_image_sampler: sampler;
 @group(0) @binding(7) var mask_image_texture: texture_2d<f32>;
 
+@group(0) @binding(3) var material_catalog_texture: texture_2d_array<f32>;
+@group(0) @binding(4) var material_catalog_sampler: sampler;
+
 const MAX_STOPS: u32 = 8u;
 
 struct Paint {
@@ -4569,40 +4627,221 @@ fn paint_sample_stops(p: Paint, t: f32) -> vec4<f32> {
   return prev_color;
 }
 
+fn mat_hash_u32(x: u32) -> u32 {
+  var v = x;
+  v = v ^ (v >> 16u);
+  v = v * 0x7feb352du;
+  v = v ^ (v >> 15u);
+  v = v * 0x846ca68bu;
+  v = v ^ (v >> 16u);
+  return v;
+}
+
+fn mat_hash2(p: vec2<u32>, seed: u32) -> u32 {
+  let h = p.x ^ (p.y * 0x9e3779b9u) ^ (seed * 0x85ebca6bu);
+  return mat_hash_u32(h);
+}
+
+fn mat_rand01(p: vec2<u32>, seed: u32) -> f32 {
+  let h = mat_hash2(p, seed);
+  return f32(h) * (1.0 / 4294967295.0);
+}
+
+fn mat_rot(v: vec2<f32>, a: f32) -> vec2<f32> {
+  let s = sin(a);
+  let c = cos(a);
+  return vec2<f32>(c * v.x - s * v.y, s * v.x + c * v.y);
+}
+
+fn material_eval(p: Paint, local_pos: vec2<f32>, sample_catalog: bool) -> vec4<f32> {
+  let base = p.params0;
+  let fg = p.params1;
+  let pos = local_pos + p.params3.zw;
+
+  // params2: primary (x/y), thickness/radius (z), seed (w)
+  // params3: time/phase (x), angle/softness (y), offset (z/w)
+  let spacing = max(p.params2.x, 1.0);
+  let spacing_y = max(p.params2.y, 1.0);
+  let thickness = max(p.params2.z, 0.0);
+  let seed = u32(max(p.params2.w, 0.0));
+  let time = p.params3.x;
+  let angle = p.params3.y;
+
+  let tm0 = p.tile_mode == 0u;
+  let tm1 = p.tile_mode == 1u;
+  let tm2 = p.tile_mode == 2u;
+  let tm3 = p.tile_mode == 3u;
+  let tm4 = p.tile_mode == 4u;
+  let tm5 = p.tile_mode == 5u;
+  let tm6 = p.tile_mode == 6u;
+  let tm7 = p.tile_mode == 7u;
+
+  // 0 DotGrid
+  let dot_cell = pos / spacing;
+  let dot_frac = fract(dot_cell) - vec2<f32>(0.5);
+  let dot_r = select(spacing * 0.12, thickness, thickness > 0.0);
+  let dot_d = length(dot_frac) * spacing;
+  let dot_aa = max(fwidth(dot_d), 1e-4);
+  let dot_cov = 1.0 - smoothstep(dot_r, dot_r + dot_aa, dot_d);
+  let mat0 = base * (1.0 - dot_cov) + fg * dot_cov;
+
+  // 1 Grid
+  let grid_cell = pos / vec2<f32>(spacing, spacing_y);
+  let grid_frac = abs(fract(grid_cell) - vec2<f32>(0.5));
+  let grid_dx = grid_frac.x * spacing;
+  let grid_dy = grid_frac.y * spacing_y;
+  let grid_w = select(1.0, thickness, thickness > 0.0);
+  let grid_aa_x = max(fwidth(grid_dx), 1e-4);
+  let grid_aa_y = max(fwidth(grid_dy), 1e-4);
+  let grid_cov_x = 1.0 - smoothstep(grid_w * 0.5, grid_w * 0.5 + grid_aa_x, grid_dx);
+  let grid_cov_y = 1.0 - smoothstep(grid_w * 0.5, grid_w * 0.5 + grid_aa_y, grid_dy);
+  let grid_cov = max(grid_cov_x, grid_cov_y);
+  let mat1 = base * (1.0 - grid_cov) + fg * grid_cov;
+
+  // 2 Checkerboard
+  let chk_cell = vec2<u32>(
+    u32(floor(pos.x / spacing)),
+    u32(floor(pos.y / spacing_y))
+  );
+  let chk_parity = (chk_cell.x + chk_cell.y) & 1u;
+  let mat2 = select(base, fg, chk_parity == 1u);
+
+  // 3 Stripe
+  let stripe_p2 = mat_rot(pos, angle);
+  let stripe_u = stripe_p2.x / spacing;
+  let stripe_du = abs(fract(stripe_u) - 0.5) * spacing;
+  let stripe_w = select(spacing * 0.25, thickness, thickness > 0.0);
+  let stripe_aa = max(fwidth(stripe_du), 1e-4);
+  let stripe_cov = 1.0 - smoothstep(stripe_w * 0.5, stripe_w * 0.5 + stripe_aa, stripe_du);
+  let mat3 = base * (1.0 - stripe_cov) + fg * stripe_cov;
+
+  // 4 Noise (deterministic cell noise; optionally sampled from a renderer-owned catalog texture)
+  let noise_scale = spacing;
+  let noise_cell = vec2<u32>(
+    u32(floor(pos.x / noise_scale + 0.5)),
+    u32(floor(pos.y / noise_scale + 0.5))
+  );
+  let noise_r0 = mat_rand01(noise_cell, seed);
+  var noise_r = noise_r0;
+  if (sample_catalog) {
+    let noise_xi = i32(noise_cell.x & 63u);
+    let noise_yi = i32(noise_cell.y & 63u);
+    let noise_layer = clamp(i32(p.color_space), 0, 1);
+    noise_r = textureLoad(
+      material_catalog_texture,
+      vec2<i32>(noise_xi, noise_yi),
+      noise_layer,
+      0
+    ).r;
+  }
+  let noise_intensity = clamp(p.params2.y, 0.0, 1.0);
+  let noise_cov = noise_intensity * noise_r;
+  let mat4 = base * (1.0 - noise_cov) + fg * noise_cov;
+
+  // 5 Beam (caller-driven phase via `time`)
+  let beam_p2 = mat_rot(pos, angle);
+  let beam_u = beam_p2.x;
+  let beam_center = time;
+  let beam_width = max(p.params2.x, 1.0);
+  let beam_soft = max(p.params2.y, 0.0);
+  let beam_d = abs(beam_u - beam_center);
+  let beam_aa = max(fwidth(beam_d), 1e-4);
+  let beam_cov = 1.0 - smoothstep(beam_width * 0.5, beam_width * 0.5 + beam_soft + beam_aa, beam_d);
+  let mat5 = base * (1.0 - beam_cov) + fg * beam_cov;
+
+  // 6 Sparkle (cell-based, explicit `time`, explicit `seed`)
+  let sp_cell_size = max(p.params2.x, 1.0);
+  let sp_cell = vec2<u32>(
+    u32(floor(pos.x / sp_cell_size)),
+    u32(floor(pos.y / sp_cell_size))
+  );
+  let sp_r0 = mat_rand01(sp_cell, seed);
+  let sp_density = clamp(p.params2.y, 0.0, 1.0);
+  let sp_enabled = sp_r0 <= sp_density;
+  let sp_rx = mat_rand01(sp_cell, seed ^ 0x68bc21ebu);
+  let sp_ry = mat_rand01(sp_cell, seed ^ 0x02e5be93u);
+  let sp_phase = mat_rand01(sp_cell, seed ^ 0xa1b3c5d7u) * 6.2831853;
+  let sp_p_cell = (fract(pos / sp_cell_size) - vec2<f32>(sp_rx, sp_ry)) * sp_cell_size;
+  let sp_radius = select(sp_cell_size * 0.08, thickness, thickness > 0.0);
+  let sp_d = length(sp_p_cell);
+  let sp_aa = max(fwidth(sp_d), 1e-4);
+  let sp_cov = 1.0 - smoothstep(sp_radius, sp_radius + sp_aa, sp_d);
+  let sp_twinkle = 0.5 + 0.5 * sin(time * 2.0 + sp_phase);
+  let sp_k = sp_cov * sp_twinkle;
+  let sp_out = base * (1.0 - sp_k) + fg * sp_k;
+  let mat6 = select(base, sp_out, sp_enabled);
+
+  // 7 ConicSweep (center in params2.xy, width in params2.z (turns), phase in params3.x (turns))
+  let con_center = p.params2.xy;
+  let con_v = local_pos - con_center;
+  let con_a = atan2(con_v.y, con_v.x);
+  let con_turns = fract(con_a * (1.0 / 6.2831853) + fract(p.params3.x));
+  let con_d = abs(fract(con_turns + 0.5) - 0.5);
+  let con_w = clamp(p.params2.z, 0.0, 0.5);
+  let con_soft = max(p.params3.y, 0.0);
+  let con_aa = max(fwidth(con_d), 1e-4);
+  let con_cov = 1.0 - smoothstep(con_w, con_w + con_soft + con_aa, con_d);
+  let mat7 = base * (1.0 - con_cov) + fg * con_cov;
+
+  var material = base;
+  material = select(material, mat0, tm0);
+  material = select(material, mat1, tm1);
+  material = select(material, mat2, tm2);
+  material = select(material, mat3, tm3);
+  material = select(material, mat4, tm4);
+  material = select(material, mat5, tm5);
+  material = select(material, mat6, tm6);
+  material = select(material, mat7, tm7);
+  return material;
+}
+
 fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
-  if (p.kind == 0u) {
-    return p.params0;
-  }
-  if (p.kind == 1u) {
-    let start = p.params0.xy;
-    let end = p.params0.zw;
-    let dir = end - start;
-    let len2 = dot(dir, dir);
-    let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
-    let tt = gradient_tile_mode_apply(t, p.tile_mode);
-    return paint_sample_stops(p, tt);
-  }
-  if (p.kind == 2u) {
-    let center = p.params0.xy;
-    let radius = max(p.params0.zw, vec2<f32>(1e-6));
-    let d = (local_pos - center) / radius;
-    let t = length(d);
-    let tt = gradient_tile_mode_apply(t, p.tile_mode);
-    return paint_sample_stops(p, tt);
-  }
-  if (p.kind == 4u) {
-    let center = p.params0.xy;
-    let start = p.params0.z;
-    let span = max(p.params0.w, 1e-6);
-    let v = local_pos - center;
-    let a = atan2(v.y, v.x);
-    let turns = fract(a * (1.0 / 6.2831853) + 1.0);
-    let rel = fract(turns - fract(start) + 1.0);
-    let t = rel / span;
-    let tt = gradient_tile_mode_apply(t, p.tile_mode);
-    return paint_sample_stops(p, tt);
-  }
-  return vec4<f32>(0.0);
+  // WebGPU/WGSL constraint: derivative ops (fwidth/dpdx/dpdy) must only be used from uniform control flow.
+  // Because `p.kind` is per-instance (not uniform), we avoid control-flow branching on it here and instead
+  // compute candidate fills eagerly and select the final result.
+  let is_solid = p.kind == 0u;
+  let is_linear = p.kind == 1u;
+  let is_radial = p.kind == 2u;
+  let is_material = p.kind == 3u;
+  let is_conic = p.kind == 4u;
+
+  let solid = p.params0;
+
+  let start = p.params0.xy;
+  let end = p.params0.zw;
+  let dir = end - start;
+  let len2 = dot(dir, dir);
+  let lin_denom = max(len2, 1e-6);
+  let lin_t0 = dot(local_pos - start, dir) / lin_denom;
+  let lin_t = select(0.0, lin_t0, len2 > 1e-6);
+  let linear = paint_sample_stops(p, gradient_tile_mode_apply(lin_t, p.tile_mode));
+
+  let radial_center = p.params0.xy;
+  let radial_radius = max(p.params0.zw, vec2<f32>(1e-6));
+  let radial_d = (local_pos - radial_center) / radial_radius;
+  let radial_t = length(radial_d);
+  let radial = paint_sample_stops(p, gradient_tile_mode_apply(radial_t, p.tile_mode));
+
+  let conic_center = p.params0.xy;
+  let conic_start = p.params0.z;
+  let conic_span = max(p.params0.w, 1e-6);
+  let conic_v = local_pos - conic_center;
+  let conic_a = atan2(conic_v.y, conic_v.x);
+  let conic_turns = fract(conic_a * (1.0 / 6.2831853) + 1.0);
+  let conic_rel = fract(conic_turns - fract(conic_start) + 1.0);
+  let conic_t = conic_rel / conic_span;
+  let conic = paint_sample_stops(p, gradient_tile_mode_apply(conic_t, p.tile_mode));
+
+  let material_sampled = is_material && (p.stop_count != 0u);
+  let material = material_eval(p, local_pos, material_sampled);
+
+  var out = vec4<f32>(0.0);
+  out = select(out, solid, is_solid);
+  out = select(out, linear, is_linear);
+  out = select(out, radial, is_radial);
+  out = select(out, material, is_material);
+  out = select(out, conic, is_conic);
+  return out;
 }
 
 struct VsIn {
@@ -6886,3 +7125,20 @@ pub(super) fn noise_masked_shader_source() -> String {
 }
 
 pub(super) const NOISE_MASK_SHADER: &str = include_str!("pipelines/wgsl/noise_mask.wgsl");
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn path_shader_wgsl_validates_under_naga() {
+        let module = naga::front::wgsl::parse_str(PATH_SHADER).expect("PATH_SHADER must parse");
+        let mut validator = naga::valid::Validator::new(
+            naga::valid::ValidationFlags::all(),
+            naga::valid::Capabilities::all(),
+        );
+        validator
+            .validate(&module)
+            .expect("PATH_SHADER must validate under naga");
+    }
+}

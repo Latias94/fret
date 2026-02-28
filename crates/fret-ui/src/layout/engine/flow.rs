@@ -710,8 +710,11 @@ fn build_flow_subtree_impl<H: UiHost>(
             let width_auto = matches!(props.layout.size.width, crate::element::Length::Auto);
             let height_auto = matches!(props.layout.size.height, crate::element::Length::Auto);
             let mut measured = width_auto || height_auto;
-            let mut min_content_width_as_max =
-                measured && matches!(wrap, fret_core::TextWrap::Word);
+            let mut min_content_width_as_max = measured
+                && matches!(
+                    wrap,
+                    fret_core::TextWrap::Word | fret_core::TextWrap::Balance
+                );
 
             if measured
                 && wrap == fret_core::TextWrap::None
@@ -771,8 +774,11 @@ fn build_flow_subtree_impl<H: UiHost>(
             let width_auto = matches!(props.layout.size.width, crate::element::Length::Auto);
             let height_auto = matches!(props.layout.size.height, crate::element::Length::Auto);
             let mut measured = width_auto || height_auto;
-            let mut min_content_width_as_max =
-                measured && matches!(wrap, fret_core::TextWrap::Word);
+            let mut min_content_width_as_max = measured
+                && matches!(
+                    wrap,
+                    fret_core::TextWrap::Word | fret_core::TextWrap::Balance
+                );
 
             if measured
                 && wrap == fret_core::TextWrap::None
@@ -832,8 +838,11 @@ fn build_flow_subtree_impl<H: UiHost>(
             let width_auto = matches!(props.layout.size.width, crate::element::Length::Auto);
             let height_auto = matches!(props.layout.size.height, crate::element::Length::Auto);
             let mut measured = width_auto || height_auto;
-            let mut min_content_width_as_max =
-                measured && matches!(wrap, fret_core::TextWrap::Word);
+            let mut min_content_width_as_max = measured
+                && matches!(
+                    wrap,
+                    fret_core::TextWrap::Word | fret_core::TextWrap::Balance
+                );
 
             if measured
                 && wrap == fret_core::TextWrap::None

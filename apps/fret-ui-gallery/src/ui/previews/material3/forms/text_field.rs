@@ -8,6 +8,22 @@ pub(in crate::ui) fn preview_material3_text_field(
 ) -> Vec<AnyElement> {
     use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
 
+    #[derive(Default)]
+    struct LocalState {
+        icons_value: Option<Model<String>>,
+    }
+
+    let icons_value = cx.with_state(LocalState::default, |st| st.icons_value.clone());
+    let icons_value = if let Some(model) = icons_value {
+        model
+    } else {
+        let model = cx.app.models_mut().insert(String::new());
+        cx.with_state(LocalState::default, |st| {
+            st.icons_value = Some(model.clone())
+        });
+        model
+    };
+
     let disabled_now = cx
         .get_model_copied(&disabled, Invalidation::Layout)
         .unwrap_or(false);
@@ -45,6 +61,7 @@ pub(in crate::ui) fn preview_material3_text_field(
         .label("Name")
         .placeholder("Type here")
         .supporting_text(supporting)
+        .leading_icon(fret_icons::ids::ui::SEARCH)
         .disabled(disabled_now)
         .error(error_now)
         .test_id("ui-gallery-material3-text-field")
@@ -67,6 +84,7 @@ pub(in crate::ui) fn preview_material3_text_field(
         .label("Email")
         .placeholder("name@example.com")
         .supporting_text(supporting)
+        .leading_icon(fret_icons::ids::ui::FILE)
         .disabled(disabled_now)
         .error(error_now)
         .test_id("ui-gallery-material3-text-field-filled")
@@ -145,5 +163,30 @@ pub(in crate::ui) fn preview_material3_text_field(
         outlined_card,
         filled_card,
         override_card,
+        shadcn::Card::new(vec![
+            shadcn::CardHeader::new(vec![
+                shadcn::CardTitle::new("Icons").into_element(cx),
+                shadcn::CardDescription::new(
+                    "Leading/trailing icon slots with minimum touch target hit regions.",
+                )
+                .into_element(cx),
+            ])
+            .into_element(cx),
+            shadcn::CardContent::new(vec![
+                material3::TextField::new(icons_value)
+                    .variant(material3::TextFieldVariant::Outlined)
+                    .label("Search")
+                    .placeholder("Query")
+                    .supporting_text("Leading icon is decorative; trailing icon is pressable.")
+                    .leading_icon(fret_icons::ids::ui::SEARCH)
+                    .trailing_icon(fret_icons::ids::ui::CHEVRON_DOWN)
+                    .trailing_icon_a11y_label("Toggle suggestions")
+                    .test_id("ui-gallery-material3-text-field-icons")
+                    .into_element(cx),
+            ])
+            .into_element(cx),
+        ])
+        .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+        .into_element(cx),
     ]
 }

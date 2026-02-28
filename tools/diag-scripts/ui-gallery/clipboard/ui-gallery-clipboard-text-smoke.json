@@ -1,0 +1,76 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery clipboard: paste smoke",
+    "required_capabilities": ["diag.clipboard_text", "diag.script_v2"],
+    "target_hints": [
+      "Sets OS clipboard text and pastes into a focused textarea to validate the end-to-end paste flow deterministically.",
+      "Note: on native runners this mutates the OS clipboard (not a sandboxed clipboard)."
+    ]
+  },
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 10 },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_shortcut", "shortcut": "primary+a", "repeat": false },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "ai chat" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-ai-chat-demo" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-nav-ai-chat-demo" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-ai-chat-prompt-textarea" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-ai-chat-prompt-textarea" },
+      "delta_y": -360.0,
+      "padding_px": 16.0,
+      "timeout_frames": 1800
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-ai-chat-prompt-textarea" }
+    },
+    { "type": "wait_frames", "n": 2 },
+
+    { "type": "reset_diagnostics" },
+    { "type": "press_shortcut", "shortcut": "primary+a", "repeat": false },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "set_clipboard_text", "text": "hello from diag clipboard" },
+    { "type": "press_shortcut", "shortcut": "primary+v", "repeat": false },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_contains",
+        "target": { "kind": "test_id", "id": "ui-gallery-ai-chat-prompt-textarea" },
+        "text": "hello from diag clipboard"
+      },
+      "timeout_frames": 600
+    },
+    { "type": "capture_bundle", "label": "ui-gallery-clipboard-text-smoke" }
+  ]
+}

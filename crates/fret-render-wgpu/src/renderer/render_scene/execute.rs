@@ -12,6 +12,7 @@ impl Renderer {
     ) -> wgpu::CommandBuffer {
         self.render_scene_frame_index = self.render_scene_frame_index.saturating_add(1);
         let frame_index = self.render_scene_frame_index;
+        self.reset_frame_local_custom_effect_v3_caches();
 
         let RenderSceneParams {
             format,
@@ -125,6 +126,9 @@ impl Renderer {
             frame_perf.material_degraded_due_to_budget = frame_perf
                 .material_degraded_due_to_budget
                 .saturating_add(encoding.material_degraded_due_to_budget);
+            frame_perf.path_material_paints_degraded_to_solid_base = frame_perf
+                .path_material_paints_degraded_to_solid_base
+                .saturating_add(encoding.path_material_paints_degraded_to_solid_base);
         }
 
         let postprocess = self.pick_debug_postprocess(viewport_size, format);

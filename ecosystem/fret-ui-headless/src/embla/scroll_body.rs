@@ -94,6 +94,19 @@ impl ScrollBody {
         self.target += delta;
     }
 
+    /// Applies a loop offset to all location-like values while preserving velocity/integration state.
+    ///
+    /// This mirrors Embla's `ScrollLooper` behavior where the loop distance is added to both
+    /// location and target entities without resetting motion.
+    pub fn add_loop_distance(&mut self, delta: f32) {
+        self.location += delta;
+        self.offset_location += delta;
+        self.previous_location += delta;
+        self.target += delta;
+        self.raw_location += delta;
+        self.raw_location_previous += delta;
+    }
+
     pub fn duration(&self) -> f32 {
         self.scroll_duration
     }
@@ -110,6 +123,22 @@ impl ScrollBody {
     pub fn use_friction(&mut self, friction: f32) -> &mut Self {
         self.scroll_friction = friction;
         self
+    }
+
+    pub fn set_base_duration(&mut self, base_duration: f32) {
+        let was_base = (self.scroll_duration - self.base_duration).abs() <= 0.0001;
+        self.base_duration = base_duration;
+        if was_base {
+            self.scroll_duration = base_duration;
+        }
+    }
+
+    pub fn set_base_friction(&mut self, base_friction: f32) {
+        let was_base = (self.scroll_friction - self.base_friction).abs() <= 0.0001;
+        self.base_friction = base_friction;
+        if was_base {
+            self.scroll_friction = base_friction;
+        }
     }
 
     pub fn use_base_duration(&mut self) -> &mut Self {

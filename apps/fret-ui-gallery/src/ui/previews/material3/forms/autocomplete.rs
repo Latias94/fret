@@ -111,6 +111,7 @@ pub(in crate::ui) fn preview_material3_autocomplete(
         .label("Search")
         .placeholder("Type to filter")
         .supporting_text(supporting)
+        .leading_icon(fret_icons::ids::ui::SEARCH)
         .items(items.clone())
         .disabled(disabled_now)
         .error(error_now)
@@ -138,6 +139,7 @@ pub(in crate::ui) fn preview_material3_autocomplete(
         .label("Search (filled)")
         .placeholder("Type to filter")
         .supporting_text(supporting)
+        .leading_icon(fret_icons::ids::ui::SEARCH)
         .items(items.clone())
         .disabled(disabled_now)
         .error(error_now)
@@ -167,6 +169,7 @@ pub(in crate::ui) fn preview_material3_autocomplete(
         .supporting_text(
             "Policy: when the input blurs, the query reverts to the committed selection.",
         )
+        .leading_icon(fret_icons::ids::ui::SEARCH)
         .items(items.clone())
         .disabled(disabled_now)
         .error(error_now)

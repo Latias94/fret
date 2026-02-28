@@ -76,6 +76,11 @@ pub fn wrap_with_constraints(
         } => wrap_word(shaper, input, text_len, max_width.0 * scale, scale),
         TextConstraints {
             max_width: Some(max_width),
+            wrap: TextWrap::Balance,
+            ..
+        } => wrap_word_balance(shaper, input, text_len, max_width.0 * scale, scale),
+        TextConstraints {
+            max_width: Some(max_width),
             wrap: TextWrap::WordBreak,
             ..
         } => wrap_word_break(shaper, input, text_len, max_width.0 * scale, scale),
@@ -142,6 +147,11 @@ pub fn wrap_with_constraints_measure_only(
             wrap: TextWrap::Word,
             ..
         } => wrap_word_measure_only(shaper, input, text_len, max_width.0 * scale, scale),
+        TextConstraints {
+            max_width: Some(max_width),
+            wrap: TextWrap::Balance,
+            ..
+        } => wrap_word_balance_measure_only(shaper, input, text_len, max_width.0 * scale, scale),
         TextConstraints {
             max_width: Some(max_width),
             wrap: TextWrap::WordBreak,
@@ -276,6 +286,88 @@ fn wrap_with_newlines_measure_only(
         line_ranges,
         lines,
     }
+}
+
+fn balanced_word_wrap_width_px(
+    shaper: &mut ParleyShaper,
+    input: TextInputRef<'_>,
+    text_len: usize,
+    max_width_px: f32,
+    scale: f32,
+) -> f32 {
+    if !(max_width_px.is_finite() && max_width_px > 0.0) {
+        return max_width_px;
+    }
+
+    let baseline = wrap_word_measure_only(shaper, input, text_len, max_width_px, scale);
+    let line_count = baseline.lines.len();
+    if line_count <= 1 {
+        return max_width_px;
+    }
+
+    let single_line = shaper.shape_single_line_metrics(input, scale);
+    let unwrapped_width_px = single_line.width.max(0.0);
+    if !(unwrapped_width_px.is_finite() && unwrapped_width_px > 0.0) {
+        return max_width_px;
+    }
+
+    let target = (unwrapped_width_px / (line_count as f32))
+        .clamp(0.0, max_width_px)
+        .max(0.0);
+    if !(target.is_finite() && target > 0.0) {
+        return max_width_px;
+    }
+
+    let mut lo = target;
+    let mut hi = max_width_px;
+
+    if wrap_word_measure_only(shaper, input, text_len, hi, scale)
+        .lines
+        .len()
+        > line_count
+    {
+        return max_width_px;
+    }
+
+    for _ in 0..12 {
+        let mid = (lo + hi) * 0.5;
+        if !mid.is_finite() || (hi - lo).abs() <= 0.5 {
+            break;
+        }
+
+        let mid_lines = wrap_word_measure_only(shaper, input, text_len, mid, scale)
+            .lines
+            .len();
+        if mid_lines <= line_count {
+            hi = mid;
+        } else {
+            lo = mid;
+        }
+    }
+
+    hi.clamp(0.0, max_width_px)
+}
+
+fn wrap_word_balance(
+    shaper: &mut ParleyShaper,
+    input: TextInputRef<'_>,
+    text_len: usize,
+    max_width_px: f32,
+    scale: f32,
+) -> WrappedLayout {
+    let width_px = balanced_word_wrap_width_px(shaper, input, text_len, max_width_px, scale);
+    wrap_word(shaper, input, text_len, width_px, scale)
+}
+
+fn wrap_word_balance_measure_only(
+    shaper: &mut ParleyShaper,
+    input: TextInputRef<'_>,
+    text_len: usize,
+    max_width_px: f32,
+    scale: f32,
+) -> WrappedLayout {
+    let width_px = balanced_word_wrap_width_px(shaper, input, text_len, max_width_px, scale);
+    wrap_word_measure_only(shaper, input, text_len, width_px, scale)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -1527,6 +1619,60 @@ mod tests {
             boundaries.contains(&wrapped.kept_end),
             "expected ellipsis cut point to land on a grapheme boundary; kept_end={} text={text:?}",
             wrapped.kept_end
+        );
+    }
+
+    #[test]
+    fn balance_keeps_line_count_and_avoids_shorter_last_line() {
+        let mut shaper = shaper_with_bundled_fonts();
+        let base = TextStyle {
+            font: FontId::family("Inter"),
+            size: Px(16.0),
+            ..Default::default()
+        };
+
+        let text =
+            "You haven't created any projects yet. Get started by creating your first project.";
+        let max_width = Px(240.0);
+
+        let word = wrap_with_constraints_measure_only(
+            &mut shaper,
+            TextInputRef::plain(text, &base),
+            TextConstraints {
+                max_width: Some(max_width),
+                wrap: TextWrap::Word,
+                overflow: TextOverflow::Clip,
+                align: fret_core::TextAlign::Start,
+                scale_factor: 1.0,
+            },
+        );
+        assert!(
+            word.lines.len() >= 2,
+            "expected the fixture text to wrap under the chosen width"
+        );
+        let word_last = word.lines.last().unwrap().width;
+
+        let balanced = wrap_with_constraints_measure_only(
+            &mut shaper,
+            TextInputRef::plain(text, &base),
+            TextConstraints {
+                max_width: Some(max_width),
+                wrap: TextWrap::Balance,
+                overflow: TextOverflow::Clip,
+                align: fret_core::TextAlign::Start,
+                scale_factor: 1.0,
+            },
+        );
+
+        assert_eq!(balanced.lines.len(), word.lines.len());
+        let balanced_last = balanced.lines.last().unwrap().width;
+        assert!(
+            balanced_last + 0.5 >= word_last,
+            "expected balanced wrap to avoid a shorter last line; word_last={word_last} balanced_last={balanced_last}"
+        );
+        assert!(
+            balanced.lines.iter().all(|l| l.width <= max_width.0 + 0.5),
+            "expected balanced lines to respect max_width"
         );
     }
 

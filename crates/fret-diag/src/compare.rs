@@ -672,11 +672,18 @@ fn tool_launched_diag_config(
         // 10s of MB per bundle, which makes sharing/triage harder and increases the chance
         // of accidental output explosions.
         script_dump_max_snapshots: Some(10),
+        // Tool-launched runs should be small-by-default; auto-dumping after every injected
+        // step is useful during script authoring but is too explosive for suites.
+        script_auto_dump: Some(false),
+        pick_auto_dump: Some(false),
         // Bound the length of exported debug strings (paths, etc).
         max_debug_string_bytes: Some(2048),
         // Keep tool-launched scripted runs deterministic even if the user moves/clicks the real
         // mouse while playback is active (especially for cross-window docking/tear-off).
         isolate_external_pointer_input_while_script_running: Some(true),
+        // Keep tool-launched scripted runs deterministic even if the user types while playback
+        // is active (keyboard/text/IME interference).
+        isolate_external_keyboard_input_while_script_running: Some(true),
         ..Default::default()
     };
 
@@ -846,6 +853,9 @@ pub(crate) fn maybe_launch_demo(
     // Runner-visible knob: used to best-effort isolate OS cursor/device events during scripted
     // docking drags. The diagnostics runtime also reads this as an env override.
     cmd.env("FRET_DIAG_ISOLATE_POINTER_INPUT", "1");
+    // Keep tool-launched scripted runs deterministic even if the user types while playback is
+    // active. The diagnostics runtime reads this as an env override.
+    cmd.env("FRET_DIAG_ISOLATE_KEYBOARD_INPUT", "1");
 
     // Config file is the compat-first consolidation path for diagnostics runtime config.
     //
@@ -1029,7 +1039,17 @@ mod tool_launch_config_tests {
         assert_eq!(cfg.write_bundle_json, Some(false));
         assert_eq!(cfg.write_bundle_schema2, Some(true));
         assert_eq!(cfg.script_dump_max_snapshots, Some(10));
+        assert_eq!(cfg.script_auto_dump, Some(false));
+        assert_eq!(cfg.pick_auto_dump, Some(false));
         assert_eq!(cfg.max_debug_string_bytes, Some(2048));
+        assert_eq!(
+            cfg.isolate_external_pointer_input_while_script_running,
+            Some(true)
+        );
+        assert_eq!(
+            cfg.isolate_external_keyboard_input_while_script_running,
+            Some(true)
+        );
         assert_eq!(cfg.redact_text, Some(false));
     }
 

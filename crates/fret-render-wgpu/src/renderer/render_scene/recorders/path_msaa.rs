@@ -73,11 +73,9 @@ pub(in super::super) fn record_path_msaa_batch_pass(
                 },
                 ops: wgpu::Operations {
                     load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
-                    store: if intermediate.sample_count > 1 {
-                        wgpu::StoreOp::Discard
-                    } else {
-                        wgpu::StoreOp::Store
-                    },
+                    // NOTE: Keep MSAA store as `Store` for Vulkan robustness. Some drivers have
+                    // been observed to misbehave when using `Discard` with a resolve target.
+                    store: wgpu::StoreOp::Store,
                 },
             })],
             depth_stencil_attachment: None,

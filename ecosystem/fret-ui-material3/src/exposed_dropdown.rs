@@ -9,7 +9,9 @@ use std::cell::Cell;
 use std::rc::Rc;
 use std::sync::Arc;
 
+use fret_icons::IconId;
 use fret_runtime::Model;
+use fret_ui::action::OnPressablePointerDown;
 use fret_ui::element::AnyElement;
 use fret_ui::elements::{ElementContext, GlobalElementId};
 use fret_ui::{Invalidation, UiHost};
@@ -25,6 +27,10 @@ pub struct ExposedDropdown {
     open_on_focus: bool,
     sync_query_from_selected_on_blur: bool,
     on_select: Option<OnAutocompleteSelect>,
+    leading_icon: Option<IconId>,
+    leading_icon_a11y_label: Option<Arc<str>>,
+    leading_icon_test_id: Option<Arc<str>>,
+    on_leading_icon_pointer_down: Option<OnPressablePointerDown>,
     disabled: bool,
     error: bool,
     label: Option<Arc<str>>,
@@ -45,6 +51,10 @@ impl std::fmt::Debug for ExposedDropdown {
             )
             .field("disabled", &self.disabled)
             .field("error", &self.error)
+            .field(
+                "leading_icon",
+                &self.leading_icon.as_ref().map(|i| i.as_str()),
+            )
             .field("label", &self.label)
             .field("placeholder", &self.placeholder)
             .field("supporting_text", &self.supporting_text)
@@ -64,6 +74,10 @@ impl ExposedDropdown {
             open_on_focus: false,
             sync_query_from_selected_on_blur: true,
             on_select: None,
+            leading_icon: None,
+            leading_icon_a11y_label: None,
+            leading_icon_test_id: None,
+            on_leading_icon_pointer_down: None,
             disabled: false,
             error: false,
             label: None,
@@ -101,6 +115,26 @@ impl ExposedDropdown {
 
     pub fn on_select(mut self, on_select: OnAutocompleteSelect) -> Self {
         self.on_select = Some(on_select);
+        self
+    }
+
+    pub fn leading_icon(mut self, icon: IconId) -> Self {
+        self.leading_icon = Some(icon);
+        self
+    }
+
+    pub fn leading_icon_a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.leading_icon_a11y_label = Some(label.into());
+        self
+    }
+
+    pub fn leading_icon_test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.leading_icon_test_id = Some(id.into());
+        self
+    }
+
+    pub fn on_leading_icon_pointer_down(mut self, on_pointer_down: OnPressablePointerDown) -> Self {
+        self.on_leading_icon_pointer_down = Some(on_pointer_down);
         self
     }
 
@@ -221,6 +255,19 @@ fn exposed_dropdown_into_element<H: UiHost>(
             .input_id_out(input_id_out)
             .disabled(exposed.disabled)
             .error(exposed.error);
+
+        if let Some(icon) = exposed.leading_icon {
+            ac = ac.leading_icon(icon);
+            if let Some(label) = exposed.leading_icon_a11y_label {
+                ac = ac.leading_icon_a11y_label(label);
+            }
+            if let Some(id) = exposed.leading_icon_test_id {
+                ac = ac.leading_icon_test_id(id);
+            }
+            if let Some(handler) = exposed.on_leading_icon_pointer_down {
+                ac = ac.on_leading_icon_pointer_down(handler);
+            }
+        }
 
         if let Some(label) = exposed.label {
             ac = ac.label(label);

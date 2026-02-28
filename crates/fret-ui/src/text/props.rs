@@ -223,8 +223,9 @@ fn mix_text_wrap(state: u64, wrap: TextWrap) -> u64 {
         match wrap {
             TextWrap::None => 1,
             TextWrap::Word => 2,
-            TextWrap::Grapheme => 3,
-            TextWrap::WordBreak => 4,
+            TextWrap::Balance => 3,
+            TextWrap::Grapheme => 4,
+            TextWrap::WordBreak => 5,
         },
     )
 }

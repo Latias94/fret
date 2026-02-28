@@ -112,7 +112,7 @@ impl TextMeasureCaches {
         let max_width_for_fast = match constraints {
             TextConstraints {
                 max_width: Some(max_width),
-                wrap: TextWrap::Word | TextWrap::WordBreak | TextWrap::Grapheme,
+                wrap: TextWrap::Word | TextWrap::Balance | TextWrap::WordBreak | TextWrap::Grapheme,
                 overflow: TextOverflow::Clip,
                 ..
             } if allow_fast_wrap_measure && !text.contains('\n') => Some(max_width),
@@ -284,7 +284,7 @@ impl TextMeasureCaches {
         });
         let limit = match normalized_constraints.wrap {
             TextWrap::None => MEASURE_CACHE_PER_BUCKET_LIMIT_WRAP_NONE,
-            TextWrap::Word | TextWrap::WordBreak | TextWrap::Grapheme => {
+            TextWrap::Word | TextWrap::Balance | TextWrap::WordBreak | TextWrap::Grapheme => {
                 MEASURE_CACHE_PER_BUCKET_LIMIT
             }
         };
@@ -350,7 +350,7 @@ impl TextMeasureCaches {
         let max_width_for_fast = match constraints {
             TextConstraints {
                 max_width: Some(max_width),
-                wrap: TextWrap::Word | TextWrap::WordBreak | TextWrap::Grapheme,
+                wrap: TextWrap::Word | TextWrap::Balance | TextWrap::WordBreak | TextWrap::Grapheme,
                 overflow: TextOverflow::Clip,
                 ..
             } if allow_fast_wrap_measure && !rich.text.as_ref().contains('\n') => Some(max_width),
@@ -545,7 +545,7 @@ impl TextMeasureCaches {
         });
         let limit = match normalized_constraints.wrap {
             TextWrap::None => MEASURE_CACHE_PER_BUCKET_LIMIT_WRAP_NONE,
-            TextWrap::Word | TextWrap::WordBreak | TextWrap::Grapheme => {
+            TextWrap::Word | TextWrap::Balance | TextWrap::WordBreak | TextWrap::Grapheme => {
                 MEASURE_CACHE_PER_BUCKET_LIMIT
             }
         };

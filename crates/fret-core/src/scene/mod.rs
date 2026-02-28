@@ -417,6 +417,54 @@ impl DropShadowV1 {
     }
 }
 
+/// Optional user image input for bounded custom effects (v2).
+///
+/// This is intentionally small and portable: it references an `ImageId` registered through the
+/// existing image service and uses the existing `ImageSamplingHint` vocabulary.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct CustomEffectImageInputV1 {
+    pub image: ImageId,
+    pub uv: UvRect,
+    pub sampling: ImageSamplingHint,
+}
+
+impl CustomEffectImageInputV1 {
+    pub const fn new(image: ImageId) -> Self {
+        Self {
+            image,
+            uv: UvRect::FULL,
+            sampling: ImageSamplingHint::Default,
+        }
+    }
+}
+
+/// Custom effect source selection for CustomV3.
+///
+/// This stays bounded and deterministic: callers can request a distinct `src_raw` source and an
+/// optional bounded pyramid, but backends may degrade by aliasing sources under budgets or
+/// unsupported capabilities.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct CustomEffectSourcesV3 {
+    pub want_raw: bool,
+    pub pyramid: Option<CustomEffectPyramidRequestV1>,
+}
+
+impl Default for CustomEffectSourcesV3 {
+    fn default() -> Self {
+        Self {
+            want_raw: false,
+            pyramid: None,
+        }
+    }
+}
+
+/// Bounded request for a renderer-owned blur pyramid derived from `src_raw` (v3).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct CustomEffectPyramidRequestV1 {
+    pub max_levels: u8,
+    pub max_radius_px: crate::Px,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum EffectStep {
     GaussianBlur {
@@ -458,6 +506,32 @@ pub enum EffectStep {
         /// Backends may clamp or degrade behavior under tight budgets.
         max_sample_offset_px: crate::Px,
     },
+    CustomV2 {
+        id: EffectId,
+        params: EffectParamsV1,
+        /// Maximum sampling offset (in logical px) that the custom effect may use when reading
+        /// from its source texture.
+        ///
+        /// This preserves the deterministic chain padding story from v1.
+        max_sample_offset_px: crate::Px,
+        /// Optional user-provided image input (v2 ceiling bump).
+        input_image: Option<CustomEffectImageInputV1>,
+    },
+    CustomV3 {
+        id: EffectId,
+        params: EffectParamsV1,
+        /// Maximum sampling offset (in logical px) that the custom effect may use when reading
+        /// from its source textures.
+        ///
+        /// This preserves the deterministic chain padding story from v1/v2.
+        max_sample_offset_px: crate::Px,
+        /// Optional user-provided image input 0 (v2-compatible).
+        user0: Option<CustomEffectImageInputV1>,
+        /// Optional user-provided image input 1 (v3 ceiling bump).
+        user1: Option<CustomEffectImageInputV1>,
+        /// Renderer-provided sources request (raw + optional pyramid).
+        sources: CustomEffectSourcesV3,
+    },
 }
 
 impl EffectStep {
@@ -488,6 +562,87 @@ impl EffectStep {
                     crate::Px(0.0)
                 },
             },
+            EffectStep::CustomV2 {
+                id,
+                params,
+                max_sample_offset_px,
+                input_image,
+            } => EffectStep::CustomV2 {
+                id,
+                params: params.sanitize(),
+                max_sample_offset_px: if max_sample_offset_px.0.is_finite() {
+                    crate::Px(max_sample_offset_px.0.max(0.0))
+                } else {
+                    crate::Px(0.0)
+                },
+                input_image: input_image.map(|mut input| {
+                    if !input.uv.u0.is_finite() {
+                        input.uv.u0 = 0.0;
+                    }
+                    if !input.uv.v0.is_finite() {
+                        input.uv.v0 = 0.0;
+                    }
+                    if !input.uv.u1.is_finite() {
+                        input.uv.u1 = 1.0;
+                    }
+                    if !input.uv.v1.is_finite() {
+                        input.uv.v1 = 1.0;
+                    }
+                    input
+                }),
+            },
+            EffectStep::CustomV3 {
+                id,
+                params,
+                max_sample_offset_px,
+                user0,
+                user1,
+                mut sources,
+            } => {
+                let sanitize_input = |input: Option<CustomEffectImageInputV1>| {
+                    input.map(|mut input| {
+                        if !input.uv.u0.is_finite() {
+                            input.uv.u0 = 0.0;
+                        }
+                        if !input.uv.v0.is_finite() {
+                            input.uv.v0 = 0.0;
+                        }
+                        if !input.uv.u1.is_finite() {
+                            input.uv.u1 = 1.0;
+                        }
+                        if !input.uv.v1.is_finite() {
+                            input.uv.v1 = 1.0;
+                        }
+                        input
+                    })
+                };
+
+                sources.pyramid = sources.pyramid.map(|req| {
+                    let max_levels = req.max_levels.max(1).min(7);
+                    let max_radius_px = if req.max_radius_px.0.is_finite() {
+                        crate::Px(req.max_radius_px.0.max(0.0))
+                    } else {
+                        crate::Px(0.0)
+                    };
+                    CustomEffectPyramidRequestV1 {
+                        max_levels,
+                        max_radius_px,
+                    }
+                });
+
+                EffectStep::CustomV3 {
+                    id,
+                    params: params.sanitize(),
+                    max_sample_offset_px: if max_sample_offset_px.0.is_finite() {
+                        crate::Px(max_sample_offset_px.0.max(0.0))
+                    } else {
+                        crate::Px(0.0)
+                    },
+                    user0: sanitize_input(user0),
+                    user1: sanitize_input(user1),
+                    sources,
+                }
+            }
             EffectStep::AlphaThreshold { cutoff, soft } => EffectStep::AlphaThreshold {
                 cutoff: if cutoff.is_finite() { cutoff } else { 0.0 },
                 soft: if soft.is_finite() { soft.max(0.0) } else { 0.0 },
@@ -727,6 +882,23 @@ impl SceneRecording {
         out
     }
 
+    pub fn with_backdrop_source_group_v1<T>(
+        &mut self,
+        bounds: Rect,
+        pyramid: Option<CustomEffectPyramidRequestV1>,
+        quality: EffectQuality,
+        f: impl FnOnce(&mut Self) -> T,
+    ) -> T {
+        self.push(SceneOp::PushBackdropSourceGroupV1 {
+            bounds,
+            pyramid,
+            quality,
+        });
+        let out = f(self);
+        self.push(SceneOp::PopBackdropSourceGroup);
+        out
+    }
+
     pub fn ops(&self) -> &[SceneOp] {
         &self.ops
     }
@@ -818,6 +990,23 @@ pub enum SceneOp {
         quality: EffectQuality,
     },
     PopEffect,
+
+    /// Backdrop source group (v1): a mechanism-level scope that enables renderers to share a raw
+    /// backdrop snapshot (and optional pyramid) across multiple CustomV3 “liquid glass” surfaces.
+    ///
+    /// `bounds` are computation bounds (not an implicit clip). `pyramid` is an optional bounded
+    /// request for a shared renderer-owned blur pyramid derived from the group snapshot.
+    ///
+    /// See ADR 0302.
+    PushBackdropSourceGroupV1 {
+        /// Computation bounds (not an implicit clip).
+        bounds: Rect,
+        /// Optional bounded pyramid request shared by the group (upper bound).
+        pyramid: Option<CustomEffectPyramidRequestV1>,
+        /// Quality hint used for deterministic budgeting/degradation.
+        quality: EffectQuality,
+    },
+    PopBackdropSourceGroup,
 
     PushCompositeGroup {
         desc: CompositeGroupDesc,

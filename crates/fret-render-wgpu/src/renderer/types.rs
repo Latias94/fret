@@ -199,6 +199,88 @@ impl EffectDegradationCounters {
 }
 
 #[derive(Debug, Default, Clone, Copy)]
+pub struct CustomEffectV3SourceDegradationCounters {
+    pub raw_requested: u64,
+    pub raw_distinct: u64,
+    pub raw_aliased_to_src: u64,
+
+    pub pyramid_requested: u64,
+    pub pyramid_applied_levels_ge2: u64,
+    pub pyramid_degraded_to_one_budget_zero: u64,
+    pub pyramid_degraded_to_one_budget_insufficient: u64,
+}
+
+impl CustomEffectV3SourceDegradationCounters {
+    pub(crate) fn saturating_add_assign(&mut self, other: Self) {
+        self.raw_requested = self.raw_requested.saturating_add(other.raw_requested);
+        self.raw_distinct = self.raw_distinct.saturating_add(other.raw_distinct);
+        self.raw_aliased_to_src = self
+            .raw_aliased_to_src
+            .saturating_add(other.raw_aliased_to_src);
+
+        self.pyramid_requested = self
+            .pyramid_requested
+            .saturating_add(other.pyramid_requested);
+        self.pyramid_applied_levels_ge2 = self
+            .pyramid_applied_levels_ge2
+            .saturating_add(other.pyramid_applied_levels_ge2);
+        self.pyramid_degraded_to_one_budget_zero = self
+            .pyramid_degraded_to_one_budget_zero
+            .saturating_add(other.pyramid_degraded_to_one_budget_zero);
+        self.pyramid_degraded_to_one_budget_insufficient = self
+            .pyramid_degraded_to_one_budget_insufficient
+            .saturating_add(other.pyramid_degraded_to_one_budget_insufficient);
+    }
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+pub struct BackdropSourceGroupDegradationCounters {
+    pub requested: u64,
+    pub applied_raw: u64,
+    pub raw_degraded_budget_zero: u64,
+    pub raw_degraded_budget_insufficient: u64,
+    pub raw_degraded_target_exhausted: u64,
+
+    pub pyramid_requested: u64,
+    pub pyramid_applied_levels_ge2: u64,
+    pub pyramid_degraded_to_one_budget_zero: u64,
+    pub pyramid_degraded_to_one_budget_insufficient: u64,
+    pub pyramid_skipped_raw_unavailable: u64,
+}
+
+impl BackdropSourceGroupDegradationCounters {
+    pub(crate) fn saturating_add_assign(&mut self, other: Self) {
+        self.requested = self.requested.saturating_add(other.requested);
+        self.applied_raw = self.applied_raw.saturating_add(other.applied_raw);
+        self.raw_degraded_budget_zero = self
+            .raw_degraded_budget_zero
+            .saturating_add(other.raw_degraded_budget_zero);
+        self.raw_degraded_budget_insufficient = self
+            .raw_degraded_budget_insufficient
+            .saturating_add(other.raw_degraded_budget_insufficient);
+        self.raw_degraded_target_exhausted = self
+            .raw_degraded_target_exhausted
+            .saturating_add(other.raw_degraded_target_exhausted);
+
+        self.pyramid_requested = self
+            .pyramid_requested
+            .saturating_add(other.pyramid_requested);
+        self.pyramid_applied_levels_ge2 = self
+            .pyramid_applied_levels_ge2
+            .saturating_add(other.pyramid_applied_levels_ge2);
+        self.pyramid_degraded_to_one_budget_zero = self
+            .pyramid_degraded_to_one_budget_zero
+            .saturating_add(other.pyramid_degraded_to_one_budget_zero);
+        self.pyramid_degraded_to_one_budget_insufficient = self
+            .pyramid_degraded_to_one_budget_insufficient
+            .saturating_add(other.pyramid_degraded_to_one_budget_insufficient);
+        self.pyramid_skipped_raw_unavailable = self
+            .pyramid_skipped_raw_unavailable
+            .saturating_add(other.pyramid_skipped_raw_unavailable);
+    }
+}
+
+#[derive(Debug, Default, Clone, Copy)]
 pub struct EffectDegradationSnapshot {
     pub gaussian_blur: EffectDegradationCounters,
     pub drop_shadow: EffectDegradationCounters,
@@ -210,6 +292,8 @@ pub struct EffectDegradationSnapshot {
     pub dither: EffectDegradationCounters,
     pub noise: EffectDegradationCounters,
     pub custom_effect: EffectDegradationCounters,
+    pub custom_effect_v3_sources: CustomEffectV3SourceDegradationCounters,
+    pub backdrop_source_groups: BackdropSourceGroupDegradationCounters,
 }
 
 impl EffectDegradationSnapshot {
@@ -228,6 +312,10 @@ impl EffectDegradationSnapshot {
         self.noise.saturating_add_assign(other.noise);
         self.custom_effect
             .saturating_add_assign(other.custom_effect);
+        self.custom_effect_v3_sources
+            .saturating_add_assign(other.custom_effect_v3_sources);
+        self.backdrop_source_groups
+            .saturating_add_assign(other.backdrop_source_groups);
     }
 }
 
@@ -400,6 +488,8 @@ pub struct RenderPerfSnapshot {
     pub render_plan_degradations_composite_group_blend_to_over: u64,
     pub effect_degradations: EffectDegradationSnapshot,
     pub effect_blur_quality: BlurQualitySnapshot,
+    pub custom_effect_v3_pyramid_cache_hits: u64,
+    pub custom_effect_v3_pyramid_cache_misses: u64,
 
     pub clip_path_mask_cache_bytes_live: u64,
     pub clip_path_mask_cache_entries_live: u64,
@@ -438,6 +528,13 @@ pub struct RenderPerfSnapshot {
     pub texture_bind_group_switches: u64,
     pub scissor_sets: u64,
 
+    // Path MSAA observability (best-effort).
+    pub path_msaa_samples_requested: u32,
+    pub path_msaa_samples_effective: u32,
+    // Counts frames where Vulkan path MSAA was requested but degraded to non-MSAA (e.g. opt-out
+    // via env var). This is intended for diagnostics and may evolve over time.
+    pub path_msaa_vulkan_safety_valve_degradations: u64,
+
     pub uniform_bytes: u64,
     pub instance_bytes: u64,
     pub vertex_bytes: u64,
@@ -456,6 +553,13 @@ pub struct RenderPerfSnapshot {
     pub material_distinct: u64,
     pub material_unknown_ids: u64,
     pub material_degraded_due_to_budget: u64,
+
+    // Path material paint degradations (best-effort).
+    //
+    // The wgpu path pipeline supports `Paint::Material`, but encoding may still deterministically
+    // degrade a requested material paint (typically to the base solid color) if it cannot be
+    // represented (unknown id, per-frame material budgets, or future capability gates).
+    pub path_material_paints_degraded_to_solid_base: u64,
 }
 
 #[derive(Debug, Default)]
@@ -534,6 +638,8 @@ pub(super) struct RenderPerfStats {
     pub(super) render_plan_degradations_composite_group_blend_to_over: u64,
     pub(super) effect_degradations: EffectDegradationSnapshot,
     pub(super) effect_blur_quality: BlurQualitySnapshot,
+    pub(super) custom_effect_v3_pyramid_cache_hits: u64,
+    pub(super) custom_effect_v3_pyramid_cache_misses: u64,
 
     pub(super) clip_path_mask_cache_bytes_live: u64,
     pub(super) clip_path_mask_cache_entries_live: u64,
@@ -572,6 +678,10 @@ pub(super) struct RenderPerfStats {
     pub(super) texture_bind_group_switches: u64,
     pub(super) scissor_sets: u64,
 
+    pub(super) path_msaa_samples_requested: u32,
+    pub(super) path_msaa_samples_effective: u32,
+    pub(super) path_msaa_vulkan_safety_valve_degradations: u64,
+
     pub(super) uniform_bytes: u64,
     pub(super) instance_bytes: u64,
     pub(super) vertex_bytes: u64,
@@ -585,6 +695,8 @@ pub(super) struct RenderPerfStats {
     pub(super) material_distinct: u64,
     pub(super) material_unknown_ids: u64,
     pub(super) material_degraded_due_to_budget: u64,
+
+    pub(super) path_material_paints_degraded_to_solid_base: u64,
 }
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -852,6 +964,12 @@ pub(super) enum EffectMarkerKind {
         quality: fret_core::EffectQuality,
     },
     Pop,
+    BackdropSourceGroupPush {
+        scissor: ScissorRect,
+        pyramid: Option<fret_core::scene::CustomEffectPyramidRequestV1>,
+        quality: fret_core::EffectQuality,
+    },
+    BackdropSourceGroupPop,
     ClipPathPush {
         scissor: ScissorRect,
         uniform_index: u32,
@@ -904,6 +1022,8 @@ pub(super) struct SceneEncoding {
     pub(super) material_distinct: u64,
     pub(super) material_unknown_ids: u64,
     pub(super) material_degraded_due_to_budget: u64,
+
+    pub(super) path_material_paints_degraded_to_solid_base: u64,
 }
 
 impl SceneEncoding {
@@ -933,6 +1053,7 @@ impl SceneEncoding {
         self.material_distinct = 0;
         self.material_unknown_ids = 0;
         self.material_degraded_due_to_budget = 0;
+        self.path_material_paints_degraded_to_solid_base = 0;
     }
 }
 

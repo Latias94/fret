@@ -1828,8 +1828,8 @@ mod tests {
 
         let ratio = contrast_ratio(fg, bg_composited);
         assert!(
-            ratio >= 3.0,
-            "expected destructive button contrast >= 3.0, got {ratio:.2} (fg={:?} bg={:?} bg_composited={:?} surface={:?})",
+            ratio >= 4.5,
+            "expected destructive button contrast >= 4.5, got {ratio:.2} (fg={:?} bg={:?} bg_composited={:?} surface={:?})",
             fg,
             bg,
             bg_composited,
@@ -1861,8 +1861,8 @@ mod tests {
 
         let ratio = contrast_ratio(text_pixel, bg_pixel);
         assert!(
-            ratio >= 2.0,
-            "expected disabled destructive button contrast >= 2.0, got {ratio:.2} (text={:?} bg={:?} surface={:?})",
+            ratio >= 3.0,
+            "expected disabled destructive button contrast >= 3.0, got {ratio:.2} (text={:?} bg={:?} surface={:?})",
             text_pixel,
             bg_pixel,
             surface,
