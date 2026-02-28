@@ -156,14 +156,7 @@ impl ButtonGroupText {
         let mut el = cx.container(props, move |cx| {
             let content = cx.flex(
                 FlexProps {
-                    layout: LayoutStyle {
-                        size: SizeStyle {
-                            width: Length::Fill,
-                            height: Length::Fill,
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
+                    layout: LayoutStyle::default(),
                     direction: Axis::Horizontal,
                     gap: Px(8.0).into(),
                     padding: Edges {
