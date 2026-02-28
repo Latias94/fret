@@ -182,6 +182,23 @@ fn encode_effect_marker(m: EffectMarker) -> JsonDumpEffectMarker {
             opacity: Some(opacity),
         },
         EffectMarkerKind::CompositeGroupPop => JsonDumpEffectMarker::Pop { draw_ix: m.draw_ix },
+        EffectMarkerKind::BackdropSourceGroupPush {
+            scissor,
+            pyramid,
+            quality,
+        } => JsonDumpEffectMarker::Push {
+            draw_ix: m.draw_ix,
+            scissor: scissor.into(),
+            scissor_space: "absolute",
+            uniform_index: 0,
+            mode: "BackdropSourceGroup".to_string(),
+            quality: format!("{quality:?}"),
+            chain: format!("pyramid={pyramid:?}"),
+            opacity: None,
+        },
+        EffectMarkerKind::BackdropSourceGroupPop => {
+            JsonDumpEffectMarker::Pop { draw_ix: m.draw_ix }
+        }
     }
 }
 

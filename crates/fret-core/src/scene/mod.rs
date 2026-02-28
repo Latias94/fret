@@ -882,6 +882,23 @@ impl SceneRecording {
         out
     }
 
+    pub fn with_backdrop_source_group_v1<T>(
+        &mut self,
+        bounds: Rect,
+        pyramid: Option<CustomEffectPyramidRequestV1>,
+        quality: EffectQuality,
+        f: impl FnOnce(&mut Self) -> T,
+    ) -> T {
+        self.push(SceneOp::PushBackdropSourceGroupV1 {
+            bounds,
+            pyramid,
+            quality,
+        });
+        let out = f(self);
+        self.push(SceneOp::PopBackdropSourceGroup);
+        out
+    }
+
     pub fn ops(&self) -> &[SceneOp] {
         &self.ops
     }
@@ -973,6 +990,23 @@ pub enum SceneOp {
         quality: EffectQuality,
     },
     PopEffect,
+
+    /// Backdrop source group (v1): a mechanism-level scope that enables renderers to share a raw
+    /// backdrop snapshot (and optional pyramid) across multiple CustomV3 “liquid glass” surfaces.
+    ///
+    /// `bounds` are computation bounds (not an implicit clip). `pyramid` is an optional bounded
+    /// request for a shared renderer-owned blur pyramid derived from the group snapshot.
+    ///
+    /// See ADR 0302.
+    PushBackdropSourceGroupV1 {
+        /// Computation bounds (not an implicit clip).
+        bounds: Rect,
+        /// Optional bounded pyramid request shared by the group (upper bound).
+        pyramid: Option<CustomEffectPyramidRequestV1>,
+        /// Quality hint used for deterministic budgeting/degradation.
+        quality: EffectQuality,
+    },
+    PopBackdropSourceGroup,
 
     PushCompositeGroup {
         desc: CompositeGroupDesc,

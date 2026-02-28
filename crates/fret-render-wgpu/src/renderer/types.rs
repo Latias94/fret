@@ -914,6 +914,12 @@ pub(super) enum EffectMarkerKind {
         quality: fret_core::EffectQuality,
     },
     Pop,
+    BackdropSourceGroupPush {
+        scissor: ScissorRect,
+        pyramid: Option<fret_core::scene::CustomEffectPyramidRequestV1>,
+        quality: fret_core::EffectQuality,
+    },
+    BackdropSourceGroupPop,
     ClipPathPush {
         scissor: ScissorRect,
         uniform_index: u32,

@@ -42,6 +42,7 @@ fn apply_single_step_effect_with_scissor(
             clear: wgpu::Color::TRANSPARENT,
             scale_factor: 1.0,
         },
+        None,
     );
     passes
 }

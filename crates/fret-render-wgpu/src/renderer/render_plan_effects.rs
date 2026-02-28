@@ -17,6 +17,24 @@ pub(super) struct EffectCompileCtx {
     pub(super) scale_factor: f32,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum CustomV3PyramidDegradeReason {
+    BudgetZero,
+    BudgetInsufficient,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) struct CustomV3PyramidChoice {
+    pub(super) levels: u32,
+    pub(super) degraded_to_one: Option<CustomV3PyramidDegradeReason>,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub(super) struct BackdropSourceGroupCtx {
+    pub(super) raw_target: PlanTarget,
+    pub(super) pyramid: Option<CustomV3PyramidChoice>,
+}
+
 pub(super) fn available_scratch_targets(
     in_use_targets: &[PlanTarget],
     srcdst: PlanTarget,
@@ -52,6 +70,7 @@ pub(super) fn apply_chain_in_place(
     effect_degradations: &mut super::EffectDegradationSnapshot,
     effect_blur_quality: &mut super::BlurQualitySnapshot,
     ctx: EffectCompileCtx,
+    backdrop_source_group: Option<BackdropSourceGroupCtx>,
 ) {
     if srcdst == PlanTarget::Output || scissor.w == 0 || scissor.h == 0 {
         return;
@@ -61,6 +80,9 @@ pub(super) fn apply_chain_in_place(
     if steps.is_empty() {
         return;
     }
+
+    let group_raw = backdrop_source_group.map(|g| g.raw_target);
+    let group_pyramid = backdrop_source_group.and_then(|g| g.pyramid);
 
     let mut budget_bytes = ctx.intermediate_budget_bytes;
     let srcdst_bytes = estimate_texture_bytes(ctx.viewport_size, ctx.format, 1);
@@ -169,6 +191,7 @@ pub(super) fn apply_chain_in_place(
                 _ => false,
             });
             let chain_raw = (chain_wants_raw
+                && group_raw.is_none()
                 && scratch_targets.len() >= 3
                 && budget_bytes >= full.saturating_mul(4))
             .then_some(scratch_targets[1]);
@@ -230,6 +253,7 @@ pub(super) fn apply_chain_in_place(
                     effect_blur_quality,
                     ctx,
                     chain_raw,
+                    backdrop_source_group,
                 );
             }
 
@@ -325,19 +349,45 @@ pub(super) fn apply_chain_in_place(
 
                         let raw_needed = sources.want_raw || sources.pyramid.is_some();
                         let src_raw = if raw_needed {
-                            chain_raw.unwrap_or(work)
+                            group_raw.or(chain_raw).unwrap_or(work)
                         } else {
                             work
                         };
                         let src_pyramid = src_raw;
-                        let pyramid_levels = choose_custom_v3_pyramid_levels_and_charge(
-                            sources,
-                            ctx.viewport_size,
-                            ctx.format,
-                            &mut work_budget_bytes,
-                            estimate_texture_bytes(ctx.viewport_size, ctx.format, 1),
-                            &mut effect_degradations.custom_effect_v3_sources,
-                        );
+                        let pyramid_levels = if sources.pyramid.is_some()
+                            && let Some(choice) = group_pyramid
+                        {
+                            let v3 = &mut effect_degradations.custom_effect_v3_sources;
+                            v3.pyramid_requested = v3.pyramid_requested.saturating_add(1);
+                            if choice.levels >= 2 {
+                                v3.pyramid_applied_levels_ge2 =
+                                    v3.pyramid_applied_levels_ge2.saturating_add(1);
+                            } else if let Some(reason) = choice.degraded_to_one {
+                                match reason {
+                                    CustomV3PyramidDegradeReason::BudgetZero => {
+                                        v3.pyramid_degraded_to_one_budget_zero = v3
+                                            .pyramid_degraded_to_one_budget_zero
+                                            .saturating_add(1);
+                                    }
+                                    CustomV3PyramidDegradeReason::BudgetInsufficient => {
+                                        v3.pyramid_degraded_to_one_budget_insufficient = v3
+                                            .pyramid_degraded_to_one_budget_insufficient
+                                            .saturating_add(1);
+                                    }
+                                }
+                            }
+                            let req = sources.pyramid.unwrap();
+                            choice.levels.min((req.max_levels as u32).max(1))
+                        } else {
+                            choose_custom_v3_pyramid_levels_and_charge(
+                                sources,
+                                ctx.viewport_size,
+                                ctx.format,
+                                &mut work_budget_bytes,
+                                estimate_texture_bytes(ctx.viewport_size, ctx.format, 1),
+                                &mut effect_degradations.custom_effect_v3_sources,
+                            )
+                        };
 
                         if sources.want_raw {
                             let v3 = &mut effect_degradations.custom_effect_v3_sources;
@@ -394,6 +444,7 @@ pub(super) fn apply_chain_in_place(
                         effect_blur_quality,
                         ctx,
                         chain_raw,
+                        backdrop_source_group,
                     );
                 }
 
@@ -431,7 +482,8 @@ pub(super) fn apply_chain_in_place(
         }
     }
 
-    let chain_wants_raw = steps.len() >= 2
+    let chain_wants_raw = group_raw.is_none()
+        && steps.len() >= 2
         && steps.iter().any(|s| match *s {
             fret_core::EffectStep::CustomV3 { sources, .. } => sources.want_raw,
             _ => false,
@@ -1518,18 +1570,44 @@ pub(super) fn apply_chain_in_place(
                 };
 
                 let raw_needed = sources.want_raw || sources.pyramid.is_some();
-                let pyramid_levels = choose_custom_v3_pyramid_levels_and_charge(
-                    sources,
-                    ctx.viewport_size,
-                    ctx.format,
-                    &mut budget_bytes,
-                    estimate_texture_bytes(ctx.viewport_size, ctx.format, 1).saturating_mul(2),
-                    &mut effect_degradations.custom_effect_v3_sources,
-                );
+                let pyramid_levels = if sources.pyramid.is_some()
+                    && let Some(choice) = group_pyramid
+                {
+                    let v3 = &mut effect_degradations.custom_effect_v3_sources;
+                    v3.pyramid_requested = v3.pyramid_requested.saturating_add(1);
+                    if choice.levels >= 2 {
+                        v3.pyramid_applied_levels_ge2 =
+                            v3.pyramid_applied_levels_ge2.saturating_add(1);
+                    } else if let Some(reason) = choice.degraded_to_one {
+                        match reason {
+                            CustomV3PyramidDegradeReason::BudgetZero => {
+                                v3.pyramid_degraded_to_one_budget_zero =
+                                    v3.pyramid_degraded_to_one_budget_zero.saturating_add(1);
+                            }
+                            CustomV3PyramidDegradeReason::BudgetInsufficient => {
+                                v3.pyramid_degraded_to_one_budget_insufficient = v3
+                                    .pyramid_degraded_to_one_budget_insufficient
+                                    .saturating_add(1);
+                            }
+                        }
+                    }
+                    let req = sources.pyramid.unwrap();
+                    choice.levels.min((req.max_levels as u32).max(1))
+                } else {
+                    choose_custom_v3_pyramid_levels_and_charge(
+                        sources,
+                        ctx.viewport_size,
+                        ctx.format,
+                        &mut budget_bytes,
+                        estimate_texture_bytes(ctx.viewport_size, ctx.format, 1).saturating_mul(2),
+                        &mut effect_degradations.custom_effect_v3_sources,
+                    )
+                };
                 if sources.want_raw {
                     let v3 = &mut effect_degradations.custom_effect_v3_sources;
                     v3.raw_requested = v3.raw_requested.saturating_add(1);
-                    if chain_raw.unwrap_or(srcdst) == srcdst {
+                    let effective_raw = group_raw.or(chain_raw).unwrap_or(srcdst);
+                    if effective_raw == srcdst {
                         v3.raw_aliased_to_src = v3.raw_aliased_to_src.saturating_add(1);
                     } else {
                         v3.raw_distinct = v3.raw_distinct.saturating_add(1);
@@ -1552,7 +1630,7 @@ pub(super) fn apply_chain_in_place(
                     sources,
                     raw_needed,
                     pyramid_levels,
-                    chain_raw,
+                    group_raw.or(chain_raw),
                     ctx.clear,
                     mask_uniform_index,
                     mask,
@@ -1676,6 +1754,52 @@ fn choose_custom_v3_pyramid_levels_and_charge(
     1
 }
 
+pub(super) fn choose_custom_v3_pyramid_choice_for_request(
+    req: fret_core::scene::CustomEffectPyramidRequestV1,
+    size: (u32, u32),
+    format: wgpu::TextureFormat,
+    budget_bytes: u64,
+    base_required_bytes: u64,
+) -> CustomV3PyramidChoice {
+    let max_for_size = max_mip_levels_for_size(size);
+    let mut levels = (req.max_levels as u32).max(1).min(max_for_size).min(7);
+    if levels < 2 {
+        return CustomV3PyramidChoice {
+            levels: 1,
+            degraded_to_one: None,
+        };
+    }
+
+    let headroom_before = budget_bytes.saturating_sub(base_required_bytes);
+    while levels >= 2 {
+        let required = estimate_mipped_texture_bytes(size, format, 1, levels);
+        if required <= headroom_before {
+            return CustomV3PyramidChoice {
+                levels,
+                degraded_to_one: None,
+            };
+        }
+        levels = levels.saturating_sub(1);
+    }
+
+    CustomV3PyramidChoice {
+        levels: 1,
+        degraded_to_one: Some(if budget_bytes == 0 {
+            CustomV3PyramidDegradeReason::BudgetZero
+        } else {
+            CustomV3PyramidDegradeReason::BudgetInsufficient
+        }),
+    }
+}
+
+pub(super) fn estimate_custom_v3_pyramid_bytes(
+    size: (u32, u32),
+    format: wgpu::TextureFormat,
+    levels: u32,
+) -> u64 {
+    estimate_mipped_texture_bytes(size, format, 1, levels.max(1))
+}
+
 #[allow(clippy::too_many_arguments)]
 fn apply_step_in_place_with_scratch_targets(
     passes: &mut Vec<RenderPlanPass>,
@@ -1690,6 +1814,7 @@ fn apply_step_in_place_with_scratch_targets(
     effect_blur_quality: &mut super::BlurQualitySnapshot,
     ctx: EffectCompileCtx,
     custom_v3_chain_raw: Option<PlanTarget>,
+    backdrop_source_group: Option<BackdropSourceGroupCtx>,
 ) {
     match step {
         fret_core::EffectStep::GaussianBlur {
@@ -2260,18 +2385,45 @@ fn apply_step_in_place_with_scratch_targets(
             };
 
             let raw_needed = sources.want_raw || sources.pyramid.is_some();
-            let pyramid_levels = choose_custom_v3_pyramid_levels_and_charge(
-                sources,
-                ctx.viewport_size,
-                ctx.format,
-                budget_bytes,
-                estimate_texture_bytes(ctx.viewport_size, ctx.format, 1).saturating_mul(2),
-                &mut effect_degradations.custom_effect_v3_sources,
-            );
+            let group_raw = backdrop_source_group.map(|g| g.raw_target);
+            let group_pyramid = backdrop_source_group.and_then(|g| g.pyramid);
+            let pyramid_levels = if sources.pyramid.is_some()
+                && let Some(choice) = group_pyramid
+            {
+                let v3 = &mut effect_degradations.custom_effect_v3_sources;
+                v3.pyramid_requested = v3.pyramid_requested.saturating_add(1);
+                if choice.levels >= 2 {
+                    v3.pyramid_applied_levels_ge2 = v3.pyramid_applied_levels_ge2.saturating_add(1);
+                } else if let Some(reason) = choice.degraded_to_one {
+                    match reason {
+                        CustomV3PyramidDegradeReason::BudgetZero => {
+                            v3.pyramid_degraded_to_one_budget_zero =
+                                v3.pyramid_degraded_to_one_budget_zero.saturating_add(1);
+                        }
+                        CustomV3PyramidDegradeReason::BudgetInsufficient => {
+                            v3.pyramid_degraded_to_one_budget_insufficient = v3
+                                .pyramid_degraded_to_one_budget_insufficient
+                                .saturating_add(1);
+                        }
+                    }
+                }
+                let req = sources.pyramid.unwrap();
+                choice.levels.min((req.max_levels as u32).max(1))
+            } else {
+                choose_custom_v3_pyramid_levels_and_charge(
+                    sources,
+                    ctx.viewport_size,
+                    ctx.format,
+                    budget_bytes,
+                    estimate_texture_bytes(ctx.viewport_size, ctx.format, 1).saturating_mul(2),
+                    &mut effect_degradations.custom_effect_v3_sources,
+                )
+            };
             if sources.want_raw {
                 let v3 = &mut effect_degradations.custom_effect_v3_sources;
                 v3.raw_requested = v3.raw_requested.saturating_add(1);
-                if custom_v3_chain_raw.unwrap_or(srcdst) == srcdst {
+                let effective_raw = group_raw.or(custom_v3_chain_raw).unwrap_or(srcdst);
+                if effective_raw == srcdst {
                     v3.raw_aliased_to_src = v3.raw_aliased_to_src.saturating_add(1);
                 } else {
                     v3.raw_distinct = v3.raw_distinct.saturating_add(1);
@@ -2294,7 +2446,7 @@ fn apply_step_in_place_with_scratch_targets(
                 sources,
                 raw_needed,
                 pyramid_levels,
-                custom_v3_chain_raw,
+                group_raw.or(custom_v3_chain_raw),
                 ctx.clear,
                 None,
                 None,

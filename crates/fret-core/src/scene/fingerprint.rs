@@ -530,6 +530,32 @@ pub(super) fn mix_scene_op(state: u64, op: SceneOp) -> u64 {
             state
         }
         SceneOp::PopEffect => mix_u64(state, 107),
+        SceneOp::PushBackdropSourceGroupV1 {
+            bounds,
+            pyramid,
+            quality,
+        } => {
+            let mut state = mix_u64(state, 112);
+            state = mix_rect(state, bounds);
+            state = mix_u64(
+                state,
+                match quality {
+                    EffectQuality::Auto => 1,
+                    EffectQuality::Low => 2,
+                    EffectQuality::Medium => 3,
+                    EffectQuality::High => 4,
+                },
+            );
+            match pyramid {
+                None => mix_u64(state, 0),
+                Some(req) => {
+                    let mut state = mix_u64(state, 1);
+                    state = mix_u64(state, u64::from(req.max_levels));
+                    mix_px(state, req.max_radius_px)
+                }
+            }
+        }
+        SceneOp::PopBackdropSourceGroup => mix_u64(state, 113),
         SceneOp::PushCompositeGroup { desc } => {
             let mut state = mix_u64(state, 110);
             state = mix_rect(state, desc.bounds);
