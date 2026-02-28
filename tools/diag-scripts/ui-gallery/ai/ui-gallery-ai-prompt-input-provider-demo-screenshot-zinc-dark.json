@@ -21,7 +21,12 @@
     { "type": "wait_frames", "n": 20 },
 
     { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-theme-preset-trigger" } },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-theme-preset-item-zinc-dark" } },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-theme-preset-item-zinc-dark" } },
+      "timeout_frames": 240
+    },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-theme-preset-item-zinc-dark" } },
     { "type": "wait_frames", "n": 3 },
     { "type": "press_key", "key": "escape" },
     { "type": "wait_frames", "n": 2 },
@@ -77,4 +82,3 @@
     { "type": "capture_bundle", "label": "ui-gallery-ai-prompt-input-provider-zinc-dark" }
   ]
 }
-

@@ -10,6 +10,7 @@ use fret_ui::{ElementContext, UiHost};
 pub(crate) enum ShadcnSurfaceSlot {
     PopoverContent,
     CardContent,
+    TooltipContent,
 }
 
 #[derive(Debug, Default)]

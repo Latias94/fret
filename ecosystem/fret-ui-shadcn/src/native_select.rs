@@ -312,7 +312,7 @@ pub fn native_select<H: UiHost>(
 
         let (h, py) = match size {
             NativeSelectSize::Sm => (Px(32.0), Px(4.0)),
-            NativeSelectSize::Default => (Px(36.0), Px(8.0)),
+            NativeSelectSize::Default => (Px(40.0), Px(8.0)),
         };
 
         let mut text_style = typography::control_text_style_scaled(

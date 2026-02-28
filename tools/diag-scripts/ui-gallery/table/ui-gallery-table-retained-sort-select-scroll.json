@@ -1,82 +1,184 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "steps": [
     {
-      "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+        "target": {
+          "id": "ui-gallery-nav-search",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 240
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
-    { "type": "type_text", "text": "table retained" },
     {
-      "type": "wait_until",
+      "button": "left",
+      "target": {
+        "id": "ui-gallery-nav-search",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "text": "table retained",
+      "type": "type_text"
+    },
+    {
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-nav-table-retained-torture" }
+        "target": {
+          "id": "ui-gallery-nav-table-retained-torture",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 240
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-table-retained-torture" } },
     {
-      "type": "wait_until",
+      "button": "left",
+      "target": {
+        "id": "ui-gallery-nav-table-retained-torture",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-table-retained-torture-root" }
+        "target": {
+          "id": "ui-gallery-table-retained-torture-root",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 240
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
-
     {
-      "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-table-retained-header-name" }
+        "target": {
+          "id": "ui-gallery-table-retained-header-name",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 240
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-table-retained-header-name" } },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "wait_frames", "n": 2 },
-
     {
-      "type": "wait_until",
+      "button": "left",
+      "target": {
+        "id": "ui-gallery-table-retained-header-name",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-table-retained-row-0" }
+        "target": {
+          "id": "ui-gallery-table-retained-row-0",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 240
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
-    { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-gallery-table-retained-row-0" } },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-table-retained-row-0" } },
-    { "type": "wait_frames", "n": 2 },
     {
-      "type": "wait_until",
+      "target": {
+        "id": "ui-gallery-table-retained-row-0",
+        "kind": "test_id"
+      },
+      "type": "move_pointer"
+    },
+    {
+      "button": "left",
+      "target": {
+        "id": "ui-gallery-table-retained-row-0",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-table-retained-row-0-cell-name" }
+        "target": {
+          "id": "ui-gallery-table-retained-row-0-cell-name",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 240
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
     {
-      "type": "assert",
       "predicate": {
-        "kind": "bounds_overlapping_x",
-        "a": { "kind": "test_id", "id": "ui-gallery-table-retained-header-name" },
-        "b": { "kind": "test_id", "id": "ui-gallery-table-retained-row-0-cell-name" },
-        "eps_px": 1.0
-      }
+        "a": {
+          "id": "ui-gallery-table-retained-header-name",
+          "kind": "test_id"
+        },
+        "b": {
+          "id": "ui-gallery-table-retained-row-0-cell-name",
+          "kind": "test_id"
+        },
+        "eps_px": 1.0,
+        "kind": "bounds_overlapping_x"
+      },
+      "type": "assert"
     },
-
-    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-table-retained-torture-root" }, "delta_y": 120.0 },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-table-retained-torture-root" }, "delta_y": 120.0 },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-table-retained-torture-root" }, "delta_y": 120.0 },
-    { "type": "wait_frames", "n": 5 },
-
-    { "type": "capture_bundle", "label": "ui-gallery-table-retained-sort-select-scroll" }
+    {
+      "delta_x": 0.0,
+      "delta_y": 120.0,
+      "target": {
+        "id": "ui-gallery-table-retained-torture-root",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "delta_x": 0.0,
+      "delta_y": 120.0,
+      "target": {
+        "id": "ui-gallery-table-retained-torture-root",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "delta_x": 0.0,
+      "delta_y": 120.0,
+      "target": {
+        "id": "ui-gallery-table-retained-torture-root",
+        "kind": "test_id"
+      },
+      "type": "wheel"
+    },
+    {
+      "n": 5,
+      "type": "wait_frames"
+    },
+    {
+      "label": "ui-gallery-table-retained-sort-select-scroll",
+      "type": "capture_bundle"
+    }
   ]
 }

@@ -14,6 +14,16 @@ description: "Runs and triages Fret UI diagnostics via `fretboard diag` (scripts
 
 Use `fret-ui-review` when the goal is an architecture/UX audit rather than producing repro artifacts.
 
+## Safety (bounded output)
+
+- Do **not** run `rg` on `bundle.json` (or on `target/fret-diag/**` / `.fret/diag/**`) — it can explode to tens of
+  thousands of lines.
+- Prefer bounded tooling queries:
+  - `fretboard diag meta ...`
+  - `fretboard diag query ...`
+  - `fretboard diag slice ...`
+- When you need repository-wide search, use `tools/rg-safe.ps1` (excludes diag artifact directories).
+
 ## When to use
 
 - A UI bug is hard to reproduce, flaky, or requires “human timing”.
@@ -55,6 +65,15 @@ List promoted scripts (discoverability):
 
 - `cargo run -p fretboard -- diag list scripts`
 
+List known suites (from promoted registry `suite_memberships`):
+
+- `cargo run -p fretboard -- diag list suites`
+- (filter) `cargo run -p fretboard -- diag list suites --contains perf-`
+
+Check script library drift (taxonomy + redirects + registry):
+
+- `cargo run -p fretboard -- diag doctor scripts`
+
 ## Choose a transport
 
 - Native (filesystem-trigger; recommended for day-to-day):
@@ -72,7 +91,7 @@ List promoted scripts (discoverability):
 4. Declare capabilities explicitly when the script is intentionally narrow:
    - Screenshots: `diag.screenshot_png`
    - Touch / pen injection: `diag.pointer_kind_touch`, `diag.pointer_kind_pen`
-   - Gestures: `diag.gesture_tap`, `diag.gesture_pinch`
+   - Gestures: `diag.gesture_tap`, `diag.gesture_long_press`, `diag.gesture_swipe`, `diag.gesture_pinch`
 
 Tip: if the user says “it only happens with touch/pen”, use `pointer_kind` on pointer-driven steps (capability-gated).
 
@@ -105,6 +124,7 @@ For evidence-first triage (reason codes + bounded traces), see: `references/evid
 - “missing diag subcommand / script file not found”
   - Use a promoted `script_id` (recommended) or an explicit path under `tools/diag-scripts/`.
   - Run `diag list scripts` to confirm the id exists.
+  - If scripts were recently moved, run `diag doctor scripts` to detect broken redirects / registry drift.
 - “timeout”
   - Replace sleeps with `wait_until`, `wait_bounds_stable`, and `click_stable`.
   - Add an intermediate `capture_bundle` close to the suspected failure point.

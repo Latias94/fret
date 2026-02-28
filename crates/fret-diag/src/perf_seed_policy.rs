@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 use serde_json::Value;
 
 use crate::compare::normalize_repo_relative_path;
+use crate::script_registry::{PromotedScriptRegistry, promoted_registry_default_path};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum PerfBaselineSeed {
@@ -149,53 +150,68 @@ struct SeedPresetFile {
     rules: Vec<(String, PerfSeedMetric, PerfBaselineSeed)>,
 }
 
-pub(crate) fn scripts_for_perf_suite_name(name: &str) -> Option<&'static [&'static str]> {
+fn perf_suite_membership_name(name: &str) -> Option<&'static str> {
     match name {
-        "docking-arbitration-steady" => Some(&[
-            "tools/diag-scripts/docking-arbitration-demo-nary-splitter-drag-perf-large-layout-steady.json",
-            "tools/diag-scripts/docking-arbitration-demo-nary-tab-drag-hover-perf-large-layout-steady.json",
-        ]),
-        "ui-gallery" => Some(&[
-            "tools/diag-scripts/ui-gallery-overlay-torture.json",
-            "tools/diag-scripts/ui-gallery-dropdown-open-select.json",
-            "tools/diag-scripts/ui-gallery-context-menu-right-click.json",
-            "tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json",
-            "tools/diag-scripts/ui-gallery-menubar-keyboard-nav.json",
-            "tools/diag-scripts/ui-gallery-virtual-list-torture.json",
-            "tools/diag-scripts/ui-gallery-material3-tabs-switch-perf.json",
-            "tools/diag-scripts/ui-gallery-view-cache-toggle-perf.json",
-            "tools/diag-scripts/ui-gallery-window-resize-stress.json",
-        ]),
-        "ui-gallery-steady" => Some(&[
-            "tools/diag-scripts/ui-gallery-overlay-torture-steady.json",
-            "tools/diag-scripts/ui-gallery-dropdown-open-select-steady.json",
-            "tools/diag-scripts/ui-gallery-context-menu-right-click-steady.json",
-            "tools/diag-scripts/ui-gallery-dialog-escape-focus-restore-steady.json",
-            "tools/diag-scripts/ui-gallery-hover-layout-torture-steady.json",
-            "tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json",
-            "tools/diag-scripts/ui-gallery-virtual-list-torture-steady.json",
-            "tools/diag-scripts/ui-gallery-material3-tabs-switch-perf-steady.json",
-            "tools/diag-scripts/ui-gallery-view-cache-toggle-perf-steady.json",
-            "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json",
-        ]),
-        "ui-gallery-complex-steady" => Some(&[
-            "tools/diag-scripts/ui-gallery-chrome-torture-steady.json",
-            "tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json",
-            "tools/diag-scripts/ui-gallery-virtual-list-torture-steady.json",
-            "tools/diag-scripts/ui-gallery-overlay-torture-steady.json",
-        ]),
-        "ui-gallery-complex-typical" => Some(&[
-            "tools/diag-scripts/ui-gallery-chrome-torture-typical.json",
-            "tools/diag-scripts/ui-gallery-code-editor-torture-idle-typical.json",
-            "tools/diag-scripts/ui-gallery-virtual-list-torture-typical.json",
-            "tools/diag-scripts/ui-gallery-overlay-torture-typical.json",
-        ]),
-        "extras-marquee-steady" => Some(&["tools/diag-scripts/extras-marquee-steady.json"]),
-        "liquid-glass-backdrop-warp-steady" => {
-            Some(&["tools/diag-scripts/liquid-glass-backdrop-warp-steady.json"])
+        "ui-gallery" | "perf-ui-gallery" => Some("perf-ui-gallery"),
+        "ui-gallery-steady" | "perf-ui-gallery-steady" => Some("perf-ui-gallery-steady"),
+        "ui-resize-probes" | "perf-ui-resize-probes" => Some("perf-ui-resize-probes"),
+        "ui-code-editor-resize-probes" | "perf-ui-code-editor-resize-probes" => {
+            Some("perf-ui-code-editor-resize-probes")
+        }
+        "ui-gallery-complex-steady" | "perf-ui-gallery-complex-steady" => {
+            Some("perf-ui-gallery-complex-steady")
+        }
+        "ui-gallery-complex-typical" | "perf-ui-gallery-complex-typical" => {
+            Some("perf-ui-gallery-complex-typical")
+        }
+        "docking-arbitration-steady" | "perf-docking-arbitration-steady" => {
+            Some("perf-docking-arbitration-steady")
+        }
+        "extras-marquee-steady" | "perf-extras-marquee-steady" => {
+            Some("perf-extras-marquee-steady")
+        }
+        "liquid-glass-backdrop-warp-steady" | "perf-liquid-glass-backdrop-warp-steady" => {
+            Some("perf-liquid-glass-backdrop-warp-steady")
         }
         _ => None,
     }
+}
+
+fn is_known_perf_suite_name(name: &str) -> bool {
+    perf_suite_membership_name(name).is_some()
+}
+
+pub(crate) fn scripts_for_perf_suite_name(
+    workspace_root: &Path,
+    name: &str,
+) -> Result<Option<Vec<String>>, String> {
+    let Some(membership) = perf_suite_membership_name(name) else {
+        return Ok(None);
+    };
+
+    let registry_path = promoted_registry_default_path(workspace_root);
+    let registry = PromotedScriptRegistry::load_from_path(&registry_path)?;
+
+    let mut entries: Vec<(&str, &str)> = registry
+        .entries()
+        .iter()
+        .filter(|e| e.suite_memberships.iter().any(|s| s == membership))
+        .map(|e| (e.id.as_str(), e.path.as_str()))
+        .collect();
+    entries
+        .sort_by(|(a_id, a_path), (b_id, b_path)| a_id.cmp(b_id).then_with(|| a_path.cmp(b_path)));
+
+    let out: Vec<String> = entries
+        .into_iter()
+        .map(|(_id, path)| path.to_string())
+        .collect();
+    if out.is_empty() {
+        return Err(format!(
+            "perf suite resolved to no scripts in promoted registry: suite={name:?} membership={membership:?}\n\
+hint: ensure tools/diag-scripts/suites/{membership}/*.json exists and regenerate tools/diag-scripts/index.json via `python tools/check_diag_scripts_registry.py --write`"
+        ));
+    }
+    Ok(Some(out))
 }
 
 pub(crate) fn resolve_perf_baseline_seed_policy(
@@ -329,7 +345,7 @@ fn scope_is_suite_like(scope: &str, suite_name: Option<&str>) -> bool {
         || scope == "this-suite"
         || scope.starts_with("suite:")
         || suite_name.is_some_and(|s| s == scope)
-        || scripts_for_perf_suite_name(scope).is_some()
+        || is_known_perf_suite_name(scope)
 }
 
 fn read_seed_preset(workspace_root: &Path, path: &Path) -> Result<SeedPresetFile, String> {
@@ -424,7 +440,7 @@ fn parse_cli_seed_spec(
     let suite_like = scope == "*"
         || scope == "this-suite"
         || scope.starts_with("suite:")
-        || scripts_for_perf_suite_name(scope).is_some();
+        || is_known_perf_suite_name(scope);
     Ok((scope.to_string(), metric, seed, suite_like))
 }
 
@@ -435,13 +451,15 @@ fn expand_scope_to_script_keys(
     scope: &str,
 ) -> Result<Vec<String>, String> {
     let all_keys: Vec<String> = scripts_by_key.keys().cloned().collect();
+    let scope_norm = scope.replace('\\', "/");
+    let scope = scope_norm.as_str();
 
     if scope == "*" || scope == "this-suite" || suite_name.is_some_and(|s| s == scope) {
         return Ok(all_keys);
     }
 
     if let Some(name) = scope.strip_prefix("suite:") {
-        let Some(paths) = scripts_for_perf_suite_name(name) else {
+        let Some(paths) = scripts_for_perf_suite_name(workspace_root, name)? else {
             return Err(format!("unknown perf suite in seed scope: {name:?}"));
         };
         let mut out: Vec<String> = Vec::new();
@@ -454,7 +472,7 @@ fn expand_scope_to_script_keys(
         return Ok(out);
     }
 
-    if let Some(paths) = scripts_for_perf_suite_name(scope) {
+    if let Some(paths) = scripts_for_perf_suite_name(workspace_root, scope)? {
         let mut out: Vec<String> = Vec::new();
         for p in paths {
             let key = normalize_repo_relative_path(workspace_root, &workspace_root.join(p));
@@ -474,7 +492,35 @@ fn expand_scope_to_script_keys(
     if scripts_by_key.contains_key(&key) {
         Ok(vec![key])
     } else {
-        Ok(Vec::new())
+        // Compatibility: allow rule scopes to reference a `script_redirect` stub path.
+        // This keeps old preset files working after script taxonomy moves.
+        let scope_path = if Path::new(scope).is_absolute() {
+            PathBuf::from(scope)
+        } else {
+            workspace_root.join(scope)
+        };
+        let bytes = std::fs::read(&scope_path).ok();
+        let redirected = bytes
+            .as_deref()
+            .and_then(|b| serde_json::from_slice::<Value>(b).ok())
+            .and_then(|v| {
+                let kind = v.get("kind").and_then(|v| v.as_str());
+                let to = v.get("to").and_then(|v| v.as_str());
+                if kind == Some("script_redirect") {
+                    to.map(|s| s.to_string())
+                } else {
+                    None
+                }
+            })
+            .map(|to| to.replace('\\', "/"))
+            .map(|to| normalize_repo_relative_path(workspace_root, &workspace_root.join(to)));
+        if let Some(key) = redirected
+            && scripts_by_key.contains_key(&key)
+        {
+            Ok(vec![key])
+        } else {
+            Ok(Vec::new())
+        }
     }
 }
 
@@ -485,11 +531,21 @@ mod tests {
     #[test]
     fn seed_policy_preset_and_cli_overrides_apply_in_order() {
         let workspace_root = std::env::temp_dir().join("fret-diag-seed-policy-test");
-        let script_path = workspace_root.join("tools/diag-scripts/extras-marquee-steady.json");
+        let script_path =
+            workspace_root.join("tools/diag-scripts/extras/extras-marquee-steady.json");
         let scripts = vec![script_path];
 
         let preset_path = workspace_root.join("preset.json");
-        std::fs::create_dir_all(workspace_root.join("tools/diag-scripts")).unwrap();
+        std::fs::create_dir_all(workspace_root.join("tools/diag-scripts/extras")).unwrap();
+        std::fs::write(
+            workspace_root.join("tools/diag-scripts/extras-marquee-steady.json"),
+            r#"{
+  "schema_version": 1,
+  "kind": "script_redirect",
+  "to": "tools/diag-scripts/extras/extras-marquee-steady.json"
+}"#,
+        )
+        .unwrap();
         std::fs::write(
             &preset_path,
             r#"{
@@ -514,7 +570,7 @@ mod tests {
         )
         .unwrap();
 
-        let script_key = "tools/diag-scripts/extras-marquee-steady.json";
+        let script_key = "tools/diag-scripts/extras/extras-marquee-steady.json";
         assert_eq!(
             policy.seed_for(script_key, PerfSeedMetric::TopTotalTimeUs),
             PerfBaselineSeed::P90
@@ -546,9 +602,9 @@ mod tests {
     #[test]
     fn built_in_defaults_cover_ui_gallery_resize_stress() {
         let workspace_root = std::env::temp_dir().join("fret-diag-seed-policy-test-defaults");
-        let scripts = vec![
-            workspace_root.join("tools/diag-scripts/ui-gallery-window-resize-stress-steady.json"),
-        ];
+        let scripts = vec![workspace_root.join(
+            "tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress-steady.json",
+        )];
         let policy = resolve_perf_baseline_seed_policy(
             &workspace_root,
             Some("ui-gallery-steady"),
@@ -557,7 +613,7 @@ mod tests {
             &[],
         )
         .unwrap();
-        let key = "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json";
+        let key = "tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress-steady.json";
         assert_eq!(
             policy.seed_for(key, PerfSeedMetric::TopTotalTimeUs),
             PerfBaselineSeed::P95

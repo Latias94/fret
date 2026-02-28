@@ -44,6 +44,8 @@ Today:
 - ad-hoc runs should prefer `--script-dir` / `--glob` inputs.
 - `diag run` accepts either an explicit script path or a promoted `script_id` (resolved via `tools/diag-scripts/index.json`).
 - `diag list scripts` prints `script_id -> path` for promoted scripts (same registry; intended for discoverability).
+- `diag perf` suite expansion selects scripts by `suite_memberships` in the promoted registry, so perf suite naming stays
+  stable as scripts move (as long as suite memberships are maintained via suite directories/redirect stubs).
 
 Long-term:
 
@@ -82,6 +84,9 @@ Tip (maintenance):
     - `python tools/diag-scripts/migrate-script-library.py --apply --write-redirects --include-name-glob "*zinc-dark.json"`
 
 3) Validate closures:
+
+- Tooling-side health check (bounded, read-only; no Python required):
+  - `cargo run -p fretboard -- diag doctor scripts`
 
 - Taxonomy drift check (for already-migrated areas):
   - `python tools/diag-scripts/migrate-script-library.py --check-root`

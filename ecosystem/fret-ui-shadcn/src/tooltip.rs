@@ -1,5 +1,6 @@
 use crate::layout as shadcn_layout;
 use crate::popper_arrow::{self, DiamondArrowStyle};
+use crate::surface_slot::{ShadcnSurfaceSlot, with_surface_slot_provider};
 use fret_ui_kit::declarative::ModelWatchExt;
 use fret_ui_kit::declarative::scheduling;
 use fret_ui_kit::declarative::style as decl_style;
@@ -1400,6 +1401,21 @@ impl TooltipContent {
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
         }
+    }
+
+    /// Builds a `TooltipContent` element in the `TooltipContent` surface slot scope.
+    ///
+    /// Upstream shadcn/ui uses `data-slot=tooltip-content` selectors to refine nested defaults
+    /// (e.g. `Kbd` uses `bg-background/20 text-background` inside tooltips). Fret models these
+    /// selectors via inherited state, so this helper ensures descendants can observe the slot.
+    #[track_caller]
+    pub fn with<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        with_surface_slot_provider(cx, ShadcnSurfaceSlot::TooltipContent, |cx| {
+            TooltipContent::new(f(cx)).into_element(cx)
+        })
     }
 
     pub fn text<H: UiHost>(

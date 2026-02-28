@@ -50,9 +50,7 @@ fn resolve_border(theme: &Theme) -> Color {
 }
 
 fn resolve_accent_hover(theme: &Theme) -> Color {
-    theme
-        .color_by_key("color.menu.item.hover")
-        .unwrap_or_else(|| theme.color_token("accent"))
+    theme.color_token("color.menu.item.hover")
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

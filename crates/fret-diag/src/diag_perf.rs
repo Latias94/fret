@@ -137,75 +137,36 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
     let (bundle_doctor_mode, rest) = parse_bundle_doctor_mode_from_rest(&rest)?;
     if rest.is_empty() {
         return Err(
-            "missing suite name or script paths (try: fretboard diag perf ui-gallery)".to_string(),
+            "missing suite name or script paths (try: fretboard diag perf ui-gallery)\n\
+hint: list perf suites via `fretboard diag list suites --contains perf-`"
+                .to_string(),
         );
     }
 
     let mut suite_name: Option<String> = None;
     let scripts: Vec<PathBuf> = if rest.len() == 1 {
         let name = rest[0].as_str();
-        if let Some(paths) = perf_seed_policy::scripts_for_perf_suite_name(name) {
+        if let Some(paths) = perf_seed_policy::scripts_for_perf_suite_name(&workspace_root, name)? {
             suite_name = Some(name.to_string());
             paths
                 .iter()
-                .map(|p| resolve_path(&workspace_root, PathBuf::from(*p)))
-                .collect()
-        } else if name == "ui-gallery" {
-            suite_name = Some(name.to_string());
-            [
-                "tools/diag-scripts/ui-gallery-overlay-torture.json",
-                "tools/diag-scripts/ui-gallery-dropdown-open-select.json",
-                "tools/diag-scripts/ui-gallery-context-menu-right-click.json",
-                "tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json",
-                "tools/diag-scripts/ui-gallery-menubar-keyboard-nav.json",
-                "tools/diag-scripts/ui-gallery-virtual-list-torture.json",
-                "tools/diag-scripts/ui-gallery-material3-tabs-switch-perf.json",
-                "tools/diag-scripts/ui-gallery-view-cache-toggle-perf.json",
-                "tools/diag-scripts/ui-gallery-window-resize-stress.json",
-            ]
-            .into_iter()
-            .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-            .collect()
-        } else if name == "ui-gallery-steady" {
-            suite_name = Some(name.to_string());
-            [
-                "tools/diag-scripts/ui-gallery-overlay-torture-steady.json",
-                "tools/diag-scripts/ui-gallery-dropdown-open-select-steady.json",
-                "tools/diag-scripts/ui-gallery-context-menu-right-click-steady.json",
-                "tools/diag-scripts/ui-gallery-dialog-escape-focus-restore-steady.json",
-                "tools/diag-scripts/ui-gallery-hover-layout-torture-steady.json",
-                "tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json",
-                "tools/diag-scripts/ui-gallery-virtual-list-torture-steady.json",
-                "tools/diag-scripts/ui-gallery-material3-tabs-switch-perf-steady.json",
-                "tools/diag-scripts/ui-gallery-view-cache-toggle-perf-steady.json",
-                "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json",
-            ]
-            .into_iter()
-            .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-            .collect()
-        } else if name == "ui-resize-probes" {
-            suite_name = Some(name.to_string());
-            [
-                "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json",
-                "tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json",
-            ]
-            .into_iter()
-            .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-            .collect()
-        } else if name == "ui-code-editor-resize-probes" {
-            suite_name = Some(name.to_string());
-            ["tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json"]
-                .into_iter()
-                .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-                .collect()
-        } else if name == "extras-marquee-steady" {
-            suite_name = Some(name.to_string());
-            ["tools/diag-scripts/extras-marquee-steady.json"]
-                .into_iter()
                 .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
                 .collect()
         } else {
-            vec![resolve_path(&workspace_root, PathBuf::from(name))]
+            let resolved = resolve_path(&workspace_root, PathBuf::from(name));
+            if !resolved.exists() {
+                let looks_like_suite_name =
+                    !name.contains(['/', '\\', ':']) && !name.ends_with(".json");
+                if looks_like_suite_name {
+                    return Err(format!(
+                        "unknown perf suite or script path: {name:?}\n\
+hint: list perf suites via `fretboard diag list suites --contains perf-`\n\
+hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
+                    ));
+                }
+                return Err(format!("script path does not exist: {}", resolved.display()));
+            }
+            vec![resolved]
         }
     } else {
         rest.iter()
@@ -380,6 +341,7 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
      -> Result<(), String> {
         aux_scripts::run_suite_aux_script_must_pass(
             src,
+            launch.is_some() || reuse_launch,
             child,
             use_devtools_ws,
             connected_ws.as_ref(),
@@ -555,6 +517,7 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
             let bundle_path = run_script::run_perf_script_and_resolve_bundle_artifact_path(
                 &src,
                 script_key.as_str(),
+                launch.is_some() || reuse_launch,
                 &mut child,
                 use_devtools_ws,
                 connected_ws.as_ref(),
@@ -1057,6 +1020,7 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
             let bundle_path = run_script::run_perf_script_and_resolve_bundle_artifact_path(
                 &src,
                 script_key.as_str(),
+                launch.is_some() || reuse_launch,
                 &mut child,
                 use_devtools_ws,
                 connected_ws.as_ref(),

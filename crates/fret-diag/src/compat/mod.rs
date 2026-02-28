@@ -18,6 +18,8 @@ pub(crate) fn normalize_capability(raw: &str) -> Option<String> {
         "pointer_kind_touch" => "diag.pointer_kind_touch",
         "pointer_kind_pen" => "diag.pointer_kind_pen",
         "gesture_tap" => "diag.gesture_tap",
+        "gesture_long_press" => "diag.gesture_long_press",
+        "gesture_swipe" => "diag.gesture_swipe",
         "gesture_pinch" => "diag.gesture_pinch",
         _ => raw,
     };

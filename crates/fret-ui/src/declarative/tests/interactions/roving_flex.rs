@@ -130,6 +130,108 @@ fn roving_flex_arrow_keys_move_focus_and_update_selection() {
 }
 
 #[test]
+fn roving_flex_collects_items_under_pointer_regions() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let model = app
+        .models_mut()
+        .insert(Option::<Arc<str>>::Some(Arc::from("a")));
+    let values: Arc<[Arc<str>]> = Arc::from([Arc::from("a"), Arc::from("b"), Arc::from("c")]);
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "roving-flex-pointer-region",
+        |cx| {
+            let props = crate::element::RovingFlexProps {
+                flex: crate::element::FlexProps {
+                    direction: fret_core::Axis::Vertical,
+                    ..Default::default()
+                },
+                roving: crate::element::RovingFocusProps {
+                    enabled: true,
+                    wrap: true,
+                    disabled: Arc::from([false, false, false]),
+                },
+            };
+
+            vec![cx.roving_flex(props, |cx| {
+                let values = values.clone();
+                let model = model.clone();
+                cx.roving_on_navigate(Arc::new(|_host, _cx, it| {
+                    use crate::action::RovingNavigateResult;
+                    use fret_core::KeyCode;
+
+                    let Some(current) = it.current else {
+                        return RovingNavigateResult::NotHandled;
+                    };
+                    if it.key != KeyCode::ArrowDown {
+                        return RovingNavigateResult::NotHandled;
+                    }
+                    let next = (current + 1) % it.len;
+                    RovingNavigateResult::Handled { target: Some(next) }
+                }));
+                cx.roving_on_active_change(Arc::new(move |host, _cx, idx| {
+                    let Some(value) = values.get(idx).cloned() else {
+                        return;
+                    };
+                    let next = Some(value);
+                    let _ = host
+                        .models_mut()
+                        .update(&model, |v: &mut Option<Arc<str>>| *v = next);
+                }));
+
+                let mut make = |label: &'static str| {
+                    cx.pointer_region(crate::element::PointerRegionProps::default(), |cx| {
+                        vec![
+                            cx.pressable(crate::element::PressableProps::default(), |cx, _st| {
+                                vec![cx.text(label)]
+                            }),
+                        ]
+                    })
+                };
+                vec![make("a"), make("b"), make("c")]
+            })]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let roving = ui.children(root)[0];
+    let wrap_a = ui.children(roving)[0];
+    let wrap_b = ui.children(roving)[1];
+    let a = ui.children(wrap_a)[0];
+    let b = ui.children(wrap_b)[0];
+    ui.set_focus(Some(a));
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::KeyDown {
+            key: fret_core::KeyCode::ArrowDown,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        },
+    );
+
+    assert_eq!(ui.focus(), Some(b));
+    let selected = app.models_mut().read(&model, |v| v.clone()).unwrap();
+    assert_eq!(selected.as_deref(), Some("b"));
+}
+
+#[test]
 fn roving_flex_treats_descendant_focus_as_active_item() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

@@ -46,7 +46,10 @@ Notes:
   - `fret-runner-web` (compat shim re-exporting `fret-platform-web`)
   - `fret-render` (wgpu-based renderer)
 - Integration / wiring:
-  - `fret-launch` (cross-platform launcher glue; depends on backend crates)
+  - `fret-launch-core` (shared launcher surface; platform-SDK-free)
+  - `fret-launch-desktop` (desktop-first native launcher implementation)
+  - `fret-launch-web` (web/wasm launcher implementation)
+  - `fret-launch` (thin cross-platform facade over per-target launchers)
 - Public facade:
   - `fret` (re-exports)
 - Other core glue:

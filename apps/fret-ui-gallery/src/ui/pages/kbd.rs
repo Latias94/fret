@@ -128,17 +128,18 @@ pub(super) fn preview_kbd(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
                         .variant(shadcn::ButtonVariant::Outline)
                         .size(shadcn::ButtonSize::Sm)
                         .into_element(cx),
-                    shadcn::TooltipContent::new(vec![stack::hstack(
-                        cx,
-                        stack::HStackProps::default().gap(Space::N2).items_center(),
-                        |cx| {
-                            vec![
-                                ui::text(cx, "Save Changes").into_element(cx),
-                                shadcn::Kbd::new("S").into_element(cx),
-                            ]
-                        },
-                    )])
-                    .into_element(cx),
+                    shadcn::TooltipContent::with(cx, |cx| {
+                        vec![stack::hstack(
+                            cx,
+                            stack::HStackProps::default().gap(Space::N2).items_center(),
+                            |cx| {
+                                vec![
+                                    ui::text(cx, "Save Changes").into_element(cx),
+                                    shadcn::Kbd::new("S").into_element(cx),
+                                ]
+                            },
+                        )]
+                    }),
                 )
                 .arrow(true)
                 .open_delay_frames(10)
@@ -150,21 +151,22 @@ pub(super) fn preview_kbd(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
                         .variant(shadcn::ButtonVariant::Outline)
                         .size(shadcn::ButtonSize::Sm)
                         .into_element(cx),
-                    shadcn::TooltipContent::new(vec![stack::hstack(
-                        cx,
-                        stack::HStackProps::default().gap(Space::N2).items_center(),
-                        |cx| {
-                            vec![
-                                ui::text(cx, "Print Document").into_element(cx),
-                                shadcn::KbdGroup::new([
-                                    shadcn::Kbd::new("Ctrl").into_element(cx),
-                                    shadcn::Kbd::new("P").into_element(cx),
-                                ])
-                                .into_element(cx),
-                            ]
-                        },
-                    )])
-                    .into_element(cx),
+                    shadcn::TooltipContent::with(cx, |cx| {
+                        vec![stack::hstack(
+                            cx,
+                            stack::HStackProps::default().gap(Space::N2).items_center(),
+                            |cx| {
+                                vec![
+                                    ui::text(cx, "Print Document").into_element(cx),
+                                    shadcn::KbdGroup::new([
+                                        shadcn::Kbd::new("Ctrl").into_element(cx),
+                                        shadcn::Kbd::new("P").into_element(cx),
+                                    ])
+                                    .into_element(cx),
+                                ]
+                            },
+                        )]
+                    }),
                 )
                 .arrow(true)
                 .open_delay_frames(10)

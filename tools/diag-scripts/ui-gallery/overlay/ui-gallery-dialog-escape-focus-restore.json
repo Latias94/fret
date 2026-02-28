@@ -1,27 +1,50 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "steps": [
     {
-      "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-dialog-trigger" }
+      "button": "left",
+      "target": {
+        "id": "ui-gallery-dialog-trigger",
+        "kind": "test_id"
+      },
+      "type": "click"
     },
     {
-      "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-dialog-close" }
+        "target": {
+          "id": "ui-gallery-dialog-close",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 60
+      "timeout_frames": 60,
+      "type": "wait_until"
     },
-    { "type": "press_key", "key": "escape" },
     {
-      "type": "wait_until",
+      "key": "escape",
+      "modifiers": {
+        "alt": false,
+        "ctrl": false,
+        "meta": false,
+        "shift": false
+      },
+      "repeat": false,
+      "type": "press_key"
+    },
+    {
       "predicate": {
         "kind": "focus_is",
-        "target": { "kind": "test_id", "id": "ui-gallery-dialog-trigger" }
+        "target": {
+          "id": "ui-gallery-dialog-trigger",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 60
+      "timeout_frames": 60,
+      "type": "wait_until"
     },
-    { "type": "capture_bundle", "label": "ui-gallery-dialog-escape-focus-restore" }
+    {
+      "label": "ui-gallery-dialog-escape-focus-restore",
+      "type": "capture_bundle"
+    }
   ]
 }

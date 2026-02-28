@@ -51,6 +51,9 @@ docs and the `new-york-v4` registry implementation in `repo-ref/ui`.
 
 - Pass: Scrollbar thumb styling matches the registry wrapper defaults (`bg-border` + `rounded-full`)
   via the runtime's rounded thumb paint and shadcn token mapping.
+- Pass: Viewport paints a focus-visible ring (`focus-visible:ring-[3px]`) via a focusable wrapper
+  semantics node inside a focus-ring container (`decl_style::focus_ring`). This keeps the viewport
+  input-transparent so touch-pan scrolling still targets the `Scroll` mechanism.
 
 ## Validation
 

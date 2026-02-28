@@ -15,7 +15,8 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
 - [x] Audit `tools/diag-configs/diag.config.example.json` for drift; ensure every field is either:
   - implemented, or
   - explicitly documented as “planned / ignored by runtime”.
-- [x] Make tooling push schema v2 scripts by default (normalize/upgrade on write) and warn when schema v1 scripts are observed.
+- [x] Make tooling push schema v2 scripts by default (normalize on write) and warn when schema v1 scripts are observed.
+- [x] Tool-launched runs (`--launch` / `--reuse-launch`) reject schema v1 scripts (require an explicit `diag script upgrade --write` migration).
 - [x] Add a runtime compat switch for schema v1 scripts:
   - [x] enable/disable v1 script parsing explicitly (default: enabled for manual, disabled for tool-launched runs),
   - [x] record legacy usage in `script.result.json` evidence (so triage can detect compat paths).
@@ -36,7 +37,16 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
 - [x] Decide whether suites should be:
   - [ ] registry-driven (preferred), or
   - [x] glob-driven (acceptable for small sets, but brittle long-term). (v1 decision: curated suite directories + redirect stubs)
-- [x] As an intermediate step, switch built-in suites from hard-coded file lists to directory inputs (deterministic `**/*.json` expansion).
+- [x] As an intermediate step, switch built-in suite definitions away from Rust-side hard-coded file lists:
+  - `diag suite`: curated suite directories + deterministic `**/*.json` expansion,
+  - `diag perf`: suite membership resolved via the promoted registry (`tools/diag-scripts/index.json` `suite_memberships`).
+- [x] De-duplicate `diag perf` suite script lists by using a single source of truth:
+  - `perf_seed_policy::scripts_for_perf_suite_name` is now used by `diag perf` for suite name expansion.
+- [x] Move `diag suite` specialized harnesses off Rust-side hard-coded script lists:
+  - scripts now live under `tools/diag-scripts/suites/<suite-name>/` and are expanded deterministically at runtime.
+- [x] Allow `diag suite <suite-name>` to run any `tools/diag-scripts/suites/<suite-name>/` directory even when the suite
+  name was not added to a Rust-side allowlist (suite-specific env defaults remain opt-in).
+- [x] Normalize `perf_seed_policy` suite script paths to canonical taxonomy (keep compatibility for redirect-stub scopes in preset files).
 - [x] Ensure capability inference resolves `script_redirect` stubs (screenshots / required caps / env defaults).
 - [x] Add a script registry file (v1, generated; scope: suites + `_prelude`):
   - [x] file: `tools/diag-scripts/index.json`
@@ -47,6 +57,13 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
   and print suggestions when the id is unknown.
 - [x] Add a small discoverability helper to list promoted scripts:
   - [x] `fretboard diag list scripts` (reads `tools/diag-scripts/index.json` and prints `id -> path`)
+- [x] Add a small discoverability helper to list known suites:
+  - [x] `fretboard diag list suites` (reads `tools/diag-scripts/index.json` and prints `suite_memberships` counts)
+- [x] Improve “unknown suite / missing script path” errors to suggest bounded discovery helpers:
+  - `diag list suites`, `diag list scripts` (avoid grepping the repo or artifacts).
+- [x] Ensure promoted canonical scripts are schema v2 (keep `script_redirect` stubs as schema v1):
+  - [x] `fretboard diag doctor scripts` reports and suggests upgrades for promoted schema v1 scripts.
+  - [x] Upgrade the remaining promoted schema v1 scripts via `diag script upgrade --write`.
 - [x] Prefer `--suite-prelude` for shared resets (`tools/diag-scripts/_prelude/*`) and document the convention.
 - [x] Document a migration runbook (dry-run plan → apply moves → validate suites) and link it from `docs/ui-diagnostics-and-scripted-tests.md`.
 - [x] Decide path-move compatibility strategy:
@@ -58,7 +75,7 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
 - [x] Add a migration helper script (plan + apply moves + optional redirects/rewrite).
 - [x] Add a guardrail so the taxonomy stays stable:
   - [x] `tools/diag-scripts/migrate-script-library.py --check-root` detects “root scripts” (supports optional filters like `--include-prefix ui-gallery-`).
-  - [ ] (optional) promote the check into `fretboard diag doctor` once the taxonomy settles for non-ui-gallery areas.
+  - [x] Promote the check into tooling (`fretboard diag doctor scripts`) so drift is visible without relying on Python or ad-hoc greps.
   - [ ] document the expected target folders for common categories (ui-gallery, docking, tooling).
 - [ ] Execute incremental taxonomy migrations (small batches + redirects + closure checks):
   - [x] `ui-gallery/select` (17 scripts)
@@ -139,6 +156,8 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
   - [x] legacy capability aliases (`script_v2` → `diag.script_v2`, etc),
   - [x] v1 bundle schema reading,
   - [x] v1 script schema reading (if still supported).
+- [x] Ensure capabilities are advertised consistently across transports (filesystem + DevTools WS):
+  - [x] gesture capabilities include `diag.gesture_long_press` and `diag.gesture_swipe` when supported.
 - [x] Close multi-window gaps in schema v2 steps:
   - [x] add optional `window` targeting to selector-driven steps that currently lacked it (e.g. `click_stable`, `wheel`, pointer moves),
   - [x] update capability inference (keep using `diag.multi_window`) and ensure fail-fast gating.
@@ -154,18 +173,15 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
 ## P3: Deprecations + debt removal
 
 - [ ] Turn off legacy writers by default:
-  - [ ] avoid writing `bundle.json` unless requested; prefer schema2/manifest.
+  - [x] Add config switches (`write_bundle_json`, `write_bundle_schema2`) and wire them into the runtime dump writer.
+  - [x] Tool-launched runs default to `write_bundle_json=false` and `write_bundle_schema2=true` (small-by-default artifacts).
+  - [ ] Decide whether manual defaults should also flip (and document the migration plan for downstream consumers).
 - [ ] Deprecate/remove flags that are now represented as config fields or capabilities.
 - [ ] Delete unused env var parsing paths once CI/scripts migrate (tracked by a migration checklist).
 
 ## Migration support (fearless refactor safety)
 
-- [ ] Provide a script migration guide:
-  - [ ] `diag pick-apply` workflows,
-  - [ ] `diag script normalize --check` in CI,
-  - [ ] “upgrade script v1 → v2” helper (if any v1 scripts remain).
-- [ ] Add a “compat matrix” table for:
-  - [ ] bundle schema variants,
-  - [ ] script schema variants,
-  - [ ] transports,
-  - [ ] required capabilities.
+- [x] Provide a script migration guide (runbook + guardrails): `docs/workstreams/diag-v2-hardening-and-switches-v1/migration-support.md`
+  - [ ] (optional) document `diag pick-apply` workflows (when they stabilize).
+  - [ ] (optional) add `diag script normalize --check` to CI once script churn stabilizes.
+- [x] Add a “compat matrix” table: `docs/workstreams/diag-v2-hardening-and-switches-v1/compat-matrix.md`

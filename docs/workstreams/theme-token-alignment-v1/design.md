@@ -84,10 +84,16 @@ For each migrated parity rule, leave at least one of:
 Avoid “add a new golden by default”; prefer token/geometry invariants and diag screenshots for the
 few places where literal colors matter.
 
+## Refactor plan (how we keep drift from returning)
+
+This workstream is not only a one-off parity sweep; it should leave behind a repeatable, low-drama
+way to port new recipes without reintroducing “semantic vs literal” confusion.
+
+See: `docs/workstreams/theme-token-alignment-v1/refactor-plan.md`.
+
 ## References
 
 - ADR 0032 (tokens + resolution): `docs/adr/0032-style-tokens-and-theme-resolution.md`
 - shadcn parity tracker: `docs/shadcn-declarative-progress.md`
 - Tailwind semantics notes: `docs/tailwind-semantics-alignment.md`
 - Repo refs: `docs/repo-ref.md` (upstream shadcn/ui v4 sources live under `repo-ref/ui`)
-

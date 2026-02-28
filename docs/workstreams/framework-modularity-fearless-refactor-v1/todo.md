@@ -21,11 +21,11 @@ This is a TODO list for the workstream described in `design.md`.
 
 - [x] Add a portable consumption profiles gate (`python3 tools/check_consumption_profiles.py`) and run it in CI (`.github/workflows/consistency-checks.yml`).
 - [ ] Add a minimal “contracts-only” build gate:
-  - [ ] `cargo check -p fret-core`
+  - [x] `cargo check -p fret-core`
 - [ ] Add a minimal “UI substrate” build gate:
-  - [ ] `cargo check -p fret-ui`
+  - [x] `cargo check -p fret-ui`
 - [ ] Add a minimal “manual assembly” build gate:
-  - [ ] `cargo check -p fret-framework --no-default-features --features core,runtime,ui`
+  - [x] `cargo check -p fret-framework --no-default-features --features core,runtime,ui`
 - [ ] Add a minimal “batteries” build gate:
   - [ ] `cargo check -p fret` (ecosystem meta crate, default features)
 - [ ] Ensure `python3 tools/check_layering.py` remains a required gate.
@@ -37,10 +37,10 @@ This is a TODO list for the workstream described in `design.md`.
   - [ ] winit event loop / window state / IME routing
   - [ ] web RAF + browser event mapping
   - [ ] effect draining glue (clipboard/dialog/open-url/etc)
-- [ ] Decide and document the split strategy:
-  - [ ] keep `fret-launch` as a small facade
-  - [ ] move heavy implementation to `fret-launch-desktop` / `fret-launch-web` (or equivalent)
-- [ ] Add a compile-time feature matrix so a user can opt into only one platform backend.
+- [x] Decide and document the split strategy:
+  - [x] keep `fret-launch` as a small facade
+  - [x] move heavy implementation to `fret-launch-desktop` / `fret-launch-web`
+- [x] Add a compile-time surface matrix so a user can opt into only one platform backend (target + crate selection).
 
 ## M3 — Public surface hygiene (maintenance)
 
