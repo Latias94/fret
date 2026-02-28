@@ -760,6 +760,29 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-carousel-loop-continuity-touch-gate",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-loop-continuity-touch-gate.json",
+      "required_capabilities": [
+        "diag.pointer_kind_touch",
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-motion-pilot"
+      ],
+      "tags": [
+        "carousel",
+        "gate",
+        "loop",
+        "touch",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "UI gallery Carousel page: Loop section (`loop=true` + Embla engine).",
+        "Expected: repeated swipes do not clamp or hang; content remains visible."
+      ]
+    },
+    {
       "id": "ui-gallery-chart-accessibility-layer-keyboard",
       "path": "tools/diag-scripts/ui-gallery/chart/ui-gallery-chart-accessibility-layer-keyboard.json",
       "required_capabilities": [],
