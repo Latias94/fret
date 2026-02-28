@@ -151,11 +151,13 @@ This file tracks tasks for `docs/workstreams/diag-fearless-refactor-v1.md`.
   - [ ] Decide the runtime emission policy for `bundle.schema2.json` (tooling-derived today):
     - Proposed policy draft: `docs/workstreams/diag-fearless-refactor-v1/schema2-first-decision.md`.
     - [x] Implement an opt-in runtime companion artifact (`bundle.schema2.json`) emission path.
-      - Evidence: `ecosystem/fret-bootstrap/src/ui_diagnostics/config.rs` (`FRET_DIAG_BUNDLE_WRITE_SCHEMA2`),
+      - Evidence: `ecosystem/fret-bootstrap/src/ui_diagnostics/config.rs` (`write_bundle_schema2`),
         `ecosystem/fret-bootstrap/src/ui_diagnostics/bundle_dump.rs`.
-    - [x] Make launched tooling workflows auto-enable runtime schema2 emission for schema2/AI-focused flows.
-      - Evidence: `crates/fret-diag/src/lib.rs` (injects `FRET_DIAG_BUNDLE_WRITE_SCHEMA2=1` for `--launch` when
-        `--ai-packet` / `--ai-only` / `--pack-schema2-only` are set).
+    - [x] Make tool-launched workflows default to enabling runtime schema2 emission for schema2/AI-focused flows.
+      - Evidence: `crates/fret-diag/src/compare.rs` (writes `diag.config.json` with `write_bundle_schema2=true`
+        for tool-launched runs).
+    - [x] Make `write_bundle_schema2` config-only (no env override) to shrink the “switch” surface for launched runs.
+      - Evidence: `ecosystem/fret-bootstrap/src/ui_diagnostics/config.rs`, `crates/fret-diag/src/commands/config.rs`.
     - [ ] Decide whether scripted runs should default to emitting schema2, and whether raw `bundle.json` can be skipped.
   - [ ] Decide when it is acceptable to stop treating raw `bundle.json` as a required artifact for common flows
     (keep it supported for deep debugging).

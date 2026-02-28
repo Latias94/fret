@@ -772,9 +772,6 @@ pub(crate) fn maybe_launch_demo(
         let _ = std::fs::write(&config_path, bytes);
     }
 
-    if wants_screenshots {
-        cmd.env("FRET_DIAG_GPU_SCREENSHOTS", "1");
-    }
     for (key, value) in launch_env {
         match key.as_str() {
             "FRET_DIAG"

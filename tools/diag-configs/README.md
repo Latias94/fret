@@ -19,7 +19,11 @@ As of `2026-02-26`, **all fields present in the example config are implemented**
 
 Notes:
 
-- Resolution order is **env overrides config file** (manual escape hatch), then runtime defaults.
+- Resolution order is usually **env overrides config file** (manual escape hatch), then runtime defaults.
+- A few fields are intentionally **config-only** (no env override) to keep tool-launched runs deterministic and to avoid
+  adding more “switches” during the v2 hardening period:
+  - `write_bundle_json`
+  - `write_bundle_schema2`
 - Most `paths.*` values are resolved relative to the effective `out_dir` when the config value is not absolute.
 - Some numeric fields are clamped by the runtime for safety/bundle size control.
 
@@ -35,6 +39,12 @@ Notes:
   - iOS note: relative paths may be re-rooted to `$HOME`/`tmp` (see `resolve_ios_diag_out_dir`).
 - `paths`:
   - Runtime: `c.paths.*` is used for all supported trigger/result/script/inspect/screenshot files.
+- `write_bundle_json`:
+  - Runtime: `c.write_bundle_json` controls whether the large raw `bundle.json` is written.
+  - Default: `true` (manual dumps keep writing it unless explicitly configured).
+- `write_bundle_schema2`:
+  - Runtime: `c.write_bundle_schema2` controls whether a compact `bundle.schema2.json` companion artifact is written.
+  - Default: `false`.
 - `allow_script_schema_v1`:
   - Runtime: `c.allow_script_schema_v1` controls whether script schema v1 inputs are accepted.
   - Default: `true` (manual/backwards-compat).
@@ -119,5 +129,4 @@ All `paths` fields in the example config are used by the runtime as a fallback w
 The runtime currently has a few relevant toggles that are **not** part of `UiDiagnosticsConfigFileV1`, so they cannot be
 expressed in `FRET_DIAG_CONFIG_PATH` (they are env-only or transport-only today):
 
-- `write_bundle_schema2` (env-only): `FRET_DIAG_BUNDLE_WRITE_SCHEMA2`.
 - DevTools WS connection (`devtools_ws_url` / `devtools_token`): provided by URL query (wasm32) or env vars (native).

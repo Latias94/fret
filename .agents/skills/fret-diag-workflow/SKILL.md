@@ -24,6 +24,13 @@ Use `fret-ui-review` when the goal is an architecture/UX audit rather than produ
   - `fretboard diag slice ...`
 - When you need repository-wide search, use `tools/rg-safe.ps1` (excludes diag artifact directories).
 
+## Success criteria (what “good” looks like)
+
+- A repro runs end-to-end with `--launch` and produces a bounded share artifact (`ai.packet/`, sidecars, and optionally
+  `bundle.schema2.json`) without requiring `bundle.json` to be opened/grepped.
+- The failure is explained by stable `reason_code` + bounded evidence in `script.result.json` / `triage.json`.
+- If the issue is likely to regress: one landable gate exists (script suite and/or a Rust test).
+
 ## When to use
 
 - A UI bug is hard to reproduce, flaky, or requires “human timing”.
@@ -94,6 +101,7 @@ Check script library drift (taxonomy + redirects + registry):
    - Gestures: `diag.gesture_tap`, `diag.gesture_long_press`, `diag.gesture_swipe`, `diag.gesture_pinch`
 
 Tip: if the user says “it only happens with touch/pen”, use `pointer_kind` on pointer-driven steps (capability-gated).
+Supported `pointer_kind` values in scripts: `mouse`, `touch`, `pen`.
 
 ## Run + share artifacts (small-by-default)
 
@@ -101,6 +109,8 @@ Tip: if the user says “it only happens with touch/pen”, use `pointer_kind` o
   - `fretboard diag run <script.json|script_id> --launch -- <cmd>`
 - Pack a bounded share artifact (preferred in chat/AI loops):
   - `fretboard diag pack <bundle_dir> --ai-only`
+- Optional (compat): pack a schema2-only zip (still includes the bundle artifact, but avoids raw `bundle.json`):
+  - `fretboard diag pack <bundle_dir> --include-all --pack-schema2-only`
 - Generate an AI packet directory (bounded, index-rich):
   - `fretboard diag ai-packet <bundle_dir|bundle.json|bundle.schema2.json> --packet-out <dir>`
   - If you only have sidecars: add `--sidecars-only`.
@@ -129,7 +139,8 @@ For evidence-first triage (reason codes + bounded traces), see: `references/evid
   - Replace sleeps with `wait_until`, `wait_bounds_stable`, and `click_stable`.
   - Add an intermediate `capture_bundle` close to the suspected failure point.
 - “screenshot requested but capability missing”
-  - Ensure the runner advertises `diag.screenshot_png` and enable screenshots (`FRET_DIAG_GPU_SCREENSHOTS=1`).
+  - Ensure the runner advertises `diag.screenshot_png` and enable screenshots (prefer config `screenshots_enabled=true`
+    via `FRET_DIAG_CONFIG_PATH`; manual escape hatch: `FRET_DIAG_GPU_SCREENSHOTS=1`).
 - “selectors flaky”
   - Add/repair `test_id` in the component/recipe layer; run `diag lint` for duplicates/missing ids.
 
@@ -220,7 +231,8 @@ Where the code lives:
 
 ## Common pitfalls
 
-- Scripts that call `capture_screenshot` without `FRET_DIAG_GPU_SCREENSHOTS=1`.
+- Scripts that call `capture_screenshot` without enabling screenshots (`screenshots_enabled=true` in
+  `FRET_DIAG_CONFIG_PATH`, or `FRET_DIAG_GPU_SCREENSHOTS=1` in manual runs).
 - Targeting pixels/coordinates instead of `test_id`/semantics selectors (scripts become brittle).
 - Running the “wrong” binary that isn’t wired through the diagnostics driver (no bundle/script execution).
 - Debugging an interaction bug with only geometry snapshots: add scripted steps + focused assertions.

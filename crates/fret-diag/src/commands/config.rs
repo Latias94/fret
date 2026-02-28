@@ -167,7 +167,6 @@ fn runtime_known_env_vars() -> BTreeSet<&'static str> {
         "FRET_DIAG_BUNDLE_WRITE_INDEX",
         "FRET_DIAG_BUNDLE_DUMP_MAX_SEMANTICS_NODES",
         "FRET_DIAG_BUNDLE_DUMP_SEMANTICS_TEST_IDS_ONLY",
-        "FRET_DIAG_BUNDLE_WRITE_SCHEMA2",
         "FRET_DEVTOOLS_WS",
         "FRET_DEVTOOLS_TOKEN",
         // Fixed frame delta override is handled by `fret-core`:
@@ -499,23 +498,17 @@ fn compute_effective_runtime_config(
         }
     };
 
-    let write_bundle_schema2 =
-        if let Some(v) = env_flag_override(env, "FRET_DIAG_BUNDLE_WRITE_SCHEMA2") {
-            SourcedBool {
-                value: v,
-                source: ValueSource::Env("env:FRET_DIAG_BUNDLE_WRITE_SCHEMA2"),
-            }
-        } else if let Some(v) = config_file.and_then(|c| c.write_bundle_schema2) {
-            SourcedBool {
-                value: v,
-                source: ValueSource::ConfigFile("config:write_bundle_schema2"),
-            }
-        } else {
-            SourcedBool {
-                value: false,
-                source: ValueSource::Default,
-            }
-        };
+    let write_bundle_schema2 = if let Some(v) = config_file.and_then(|c| c.write_bundle_schema2) {
+        SourcedBool {
+            value: v,
+            source: ValueSource::ConfigFile("config:write_bundle_schema2"),
+        }
+    } else {
+        SourcedBool {
+            value: false,
+            source: ValueSource::Default,
+        }
+    };
 
     let redact_text = if let Some(v) = env_flag_override(env, "FRET_DIAG_REDACT_TEXT") {
         SourcedBool {

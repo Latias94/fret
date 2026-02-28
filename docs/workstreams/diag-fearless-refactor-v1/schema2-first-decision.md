@@ -43,14 +43,14 @@ Rationale:
 - Tooling-derived schema2 requires reading/parsing the raw artifact (which may be huge).
 - Runtime already has the structured bundle in memory; writing a compact schema2 companion is cheaper and more reliable.
 
-Proposed knobs (names TBD; keep conservative and internal until proven):
+Proposed knobs (config-file driven; keep conservative and internal until proven):
 
-- `FRET_DIAG_BUNDLE_WRITE_SCHEMA2=1`
-  - When enabled, the runtime writes `bundle.schema2.json` alongside `bundle.json` for dumps.
+- Config file key: `write_bundle_schema2=true`
+  - When enabled, the runtime writes `bundle.schema2.json` for dumps.
   - The schema2 artifact should be generated using the same semantics mode as tooling uses today (`mode=last`).
-- `FRET_DIAG_BUNDLE_WRITE_RAW=0`
-  - Optional future step (not recommended immediately): for scripted runs, allow skipping raw `bundle.json` emission.
-  - Keep manual dumps writing raw by default.
+- Config file key: `write_bundle_json=false`
+  - Optional: for scripted runs, allow skipping large raw `bundle.json` emission.
+  - Keep manual dumps writing raw by default unless explicitly configured.
 
 ### B) Tooling defaults
 
@@ -58,7 +58,7 @@ Proposed knobs (names TBD; keep conservative and internal until proven):
 - Prefer `bundle.schema2.json` as the **bundle artifact** input when both exist (where it is sufficient).
 - `diag doctor --fix-schema2` stays as a self-heal fallback, even if the runtime can emit schema2.
 - When tooling launches an app (`--launch`) for schema2/AI-focused flows, it should default to enabling
-  runtime schema2 emission (`FRET_DIAG_BUNDLE_WRITE_SCHEMA2=1`) unless the caller already set an explicit value.
+  runtime schema2 emission (`write_bundle_schema2=true`) unless the caller already set an explicit value.
 
 ## Exit criteria to treat raw `bundle.json` as “optional” for common flows
 

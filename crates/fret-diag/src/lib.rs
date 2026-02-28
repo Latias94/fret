@@ -2260,23 +2260,9 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
         resolve_path(&workspace_root, raw)
     };
 
-    // If the tooling is launching the app and we intend to produce schema2-focused artifacts
-    // (`bundle.schema2.json`, `frames.index.json`, ai packets), default to enabling schema2
-    // emission at the runtime. This is opt-in at the runtime layer, but the tooling can safely
-    // enable it for launched runs.
-    let wants_runtime_schema2 = pack_schema2_only || pack_ai_only || ensure_ai_packet;
-    if launch.is_some()
-        && wants_runtime_schema2
-        && !launch_env
-            .iter()
-            .any(|(k, _)| k == "FRET_DIAG_BUNDLE_WRITE_SCHEMA2")
-        && std::env::var_os("FRET_DIAG_BUNDLE_WRITE_SCHEMA2").is_none()
-    {
-        launch_env.push((
-            "FRET_DIAG_BUNDLE_WRITE_SCHEMA2".to_string(),
-            "1".to_string(),
-        ));
-    }
+    // Note: schema2 emission and raw bundle writing are controlled via the diagnostics config file
+    // (`FRET_DIAG_CONFIG_PATH`) for tool-launched runs. Avoid adding more env-var switches here:
+    // the goal is a single config surface with minimal env overrides.
 
     let fs_transport_cfg = crate::transport::FsDiagTransportConfig {
         out_dir: resolved_out_dir.clone(),

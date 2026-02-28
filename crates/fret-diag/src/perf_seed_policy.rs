@@ -167,7 +167,9 @@ fn perf_suite_membership_name(name: &str) -> Option<&'static str> {
         "docking-arbitration-steady" | "perf-docking-arbitration-steady" => {
             Some("perf-docking-arbitration-steady")
         }
-        "extras-marquee-steady" | "perf-extras-marquee-steady" => Some("perf-extras-marquee-steady"),
+        "extras-marquee-steady" | "perf-extras-marquee-steady" => {
+            Some("perf-extras-marquee-steady")
+        }
         "liquid-glass-backdrop-warp-steady" | "perf-liquid-glass-backdrop-warp-steady" => {
             Some("perf-liquid-glass-backdrop-warp-steady")
         }

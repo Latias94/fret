@@ -589,7 +589,8 @@ Core:
 - `FRET_DIAG_BUNDLE_JSON_FORMAT=pretty`: write pretty-printed raw `bundle.json` (when enabled; default: compact/minified).
 - `FRET_DIAG_CONFIG_PATH=...`: optional JSON config file (schema v1) for diagnostics runtime settings and paths.
   - Tooling writes `<dir>/diag.config.json` by default when launching via `fretboard diag run/suite/repro --launch`.
-  - When an env var is set, it overrides the config file (compat-first manual escape hatch).
+  - For most fields, an env var overrides the config file (compat-first manual escape hatch). A few size-control knobs
+    are intentionally config-only for tool-launched determinism (see `tools/diag-configs/README.md`).
   - In `--launch` mode, tooling-owned env vars and paths are reserved; `--env` cannot override them (use `--dir` / `--*-path` flags instead).
   - Example file to copy/modify: `tools/diag-configs/diag.config.example.json`.
   - Drift audit notes for the example file: `tools/diag-configs/README.md`.
@@ -646,9 +647,7 @@ Semantics export:
   - `changed`: include semantics only when `semantics_fingerprint` changes (always keeps the last snapshot's semantics).
   - `last`: include semantics only on the last snapshot (default for script-driven dumps; useful for AI triage and very large UIs).
   - `off`: never include semantics in bundles (perf captures where semantics isn't needed).
-- `FRET_DIAG_BUNDLE_WRITE_SCHEMA2=1`: write a compact `bundle.schema2.json` during dumps (default disabled).
-  - Prefer setting `write_bundle_schema2=true` in the diagnostics config file (`FRET_DIAG_CONFIG_PATH`) for tooling-launched runs.
-  - Env vars override the config file (manual escape hatch).
+- Prefer setting `write_bundle_schema2=true` in the diagnostics config file (`FRET_DIAG_CONFIG_PATH`) when you want a compact schema2 artifact (`bundle.schema2.json`) to be written during dumps.
 - `FRET_UI_GALLERY_INSPECTOR_KEEP_ALIVE=...`: keep-alive budget for the UI Gallery Inspector torture (retained host; ADR 0177).
 
 Privacy / size:
