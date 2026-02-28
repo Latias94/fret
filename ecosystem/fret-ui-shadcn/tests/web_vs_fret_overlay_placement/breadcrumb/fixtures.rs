@@ -42,11 +42,9 @@ fn build_breadcrumb_demo_ellipsis(
                             props.a11y.label = Some(Arc::from("Toggle menu"));
 
                             cx.pressable(props, move |cx, _st| {
-                                vec![
-                                    bc::BreadcrumbEllipsis::new()
-                                        .size(Px(16.0))
-                                        .into_element(cx),
-                                ]
+                                vec![bc::BreadcrumbEllipsis::new()
+                                    .size(Px(16.0))
+                                    .into_element(cx)]
                             })
                         },
                         |_cx| {
@@ -184,11 +182,9 @@ fn build_breadcrumb_responsive_menu(
                             props.a11y.label = Some(Arc::from("Toggle menu"));
 
                             cx.pressable(props, move |cx, _st| {
-                                vec![
-                                    bc::BreadcrumbEllipsis::new()
-                                        .size(Px(16.0))
-                                        .into_element(cx),
-                                ]
+                                vec![bc::BreadcrumbEllipsis::new()
+                                    .size(Px(16.0))
+                                    .into_element(cx)]
                             })
                         },
                         |_cx| {
@@ -246,11 +242,9 @@ fn build_breadcrumb_responsive_drawer(
                             props.a11y.label = Some(Arc::from("Toggle Menu"));
 
                             cx.pressable(props, move |cx, _st| {
-                                vec![
-                                    bc::BreadcrumbEllipsis::new()
-                                        .size(Px(16.0))
-                                        .into_element(cx),
-                                ]
+                                vec![bc::BreadcrumbEllipsis::new()
+                                    .size(Px(16.0))
+                                    .into_element(cx)]
                             })
                         },
                         |cx| {
@@ -309,11 +303,9 @@ fn build_breadcrumb_responsive_drawer(
                                         )]
                                     },
                                 ),
-                                DrawerFooter::new(vec![
-                                    Button::new("Close")
-                                        .variant(ButtonVariant::Outline)
-                                        .into_element(cx),
-                                ])
+                                DrawerFooter::new(vec![Button::new("Close")
+                                    .variant(ButtonVariant::Outline)
+                                    .into_element(cx)])
                                 .into_element(cx),
                             ])
                             .into_element(cx)
@@ -323,22 +315,18 @@ fn build_breadcrumb_responsive_drawer(
                 bc::BreadcrumbSeparator::new().into_element(cx),
                 bc::BreadcrumbItem::new().into_element(cx, |cx| {
                     let layout = LayoutRefinement::default().max_w(Px(80.0));
-                    vec![
-                        bc::BreadcrumbLink::new("Data Fetching")
-                            .truncate(true)
-                            .refine_layout(layout)
-                            .into_element(cx),
-                    ]
+                    vec![bc::BreadcrumbLink::new("Data Fetching")
+                        .truncate(true)
+                        .refine_layout(layout)
+                        .into_element(cx)]
                 }),
                 bc::BreadcrumbSeparator::new().into_element(cx),
                 bc::BreadcrumbItem::new().into_element(cx, |cx| {
                     let layout = LayoutRefinement::default().max_w(Px(80.0));
-                    vec![
-                        bc::BreadcrumbPage::new("Caching and Revalidating")
-                            .truncate(true)
-                            .refine_layout(layout)
-                            .into_element(cx),
-                    ]
+                    vec![bc::BreadcrumbPage::new("Caching and Revalidating")
+                        .truncate(true)
+                        .refine_layout(layout)
+                        .into_element(cx)]
                 }),
             ]
         })]
