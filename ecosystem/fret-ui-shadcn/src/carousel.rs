@@ -608,13 +608,14 @@ impl Carousel {
                     .unwrap_or(Px(0.0));
                 let mut next_offset = None;
                 let mut settled = false;
+                let pointer_down = runtime_snapshot.drag.armed || runtime_snapshot.drag.dragging;
 
                 let _ = cx.app.models_mut().update(&embla_engine_model, |v| {
                     let Some(engine) = v.as_mut() else {
                         return;
                     };
 
-                    engine.tick(false);
+                    engine.tick(pointer_down);
                     settled = engine.scroll_body.settled();
                     let loc = engine.scroll_body.location();
                     let mapped = Px((-loc).clamp(0.0, max_offset.0.max(0.0)));
@@ -671,7 +672,16 @@ impl Carousel {
             let offset_for_down = offset_model.clone();
             let runtime_for_down = runtime_model.clone();
             let embla_engine_for_down = embla_engine_model.clone();
+            let snaps_for_down = snaps_model.clone();
+            let max_offset_for_down = max_offset_model.clone();
+            let extent_for_down = extent_model.clone();
+            let index_for_down = index_model.clone();
             let autoplay_stop_for_down = autoplay_stop_on_interaction;
+            let loop_for_down = options.loop_enabled;
+            let embla_engine_enabled_for_down = embla_engine_enabled;
+            let embla_duration_for_down = options.embla_duration;
+            let skip_snaps_for_down = options.skip_snaps;
+            let drag_free_for_down = options.drag_free;
             let on_down: fret_ui::action::OnPointerDown = Arc::new(move |host, _cx, down| {
                 if down.button != MouseButton::Left {
                     return false;
@@ -710,8 +720,62 @@ impl Carousel {
                     st.settling = false;
                     st.embla_settling = false;
                 });
+
+                let snaps: Arc<[Px]> = host
+                    .models_mut()
+                    .read(&snaps_for_down, |v| v.clone())
+                    .ok()
+                    .unwrap_or_else(|| Arc::from(Vec::<Px>::new()));
+                let max_offset = host
+                    .models_mut()
+                    .read(&max_offset_for_down, |v| *v)
+                    .ok()
+                    .unwrap_or(Px(0.0));
+                let view_size = host
+                    .models_mut()
+                    .read(&extent_for_down, |v| v.0.max(0.0))
+                    .ok()
+                    .unwrap_or(0.0);
+                let index: usize = host
+                    .models_mut()
+                    .read(&index_for_down, |v| *v)
+                    .ok()
+                    .unwrap_or(0);
+
+                let can_use_embla_engine =
+                    embla_engine_enabled_for_down && !loop_for_down && snaps.len() > 1;
+
                 let _ = host.models_mut().update(&embla_engine_for_down, |v| {
-                    *v = None;
+                    if !can_use_embla_engine || view_size <= 0.0 {
+                        *v = None;
+                        return;
+                    }
+
+                    let content_size = max_offset.0.max(0.0);
+                    let mut scroll_snaps = snaps.iter().map(|px| -px.0).collect::<Vec<_>>();
+                    if scroll_snaps.is_empty() {
+                        scroll_snaps.push(0.0);
+                    }
+
+                    let mut engine = headless_embla::engine::Engine::new(
+                        scroll_snaps,
+                        content_size,
+                        headless_embla::engine::EngineConfig {
+                            loop_enabled: false,
+                            drag_free: drag_free_for_down,
+                            skip_snaps: skip_snaps_for_down,
+                            duration: embla_duration_for_down.max(0.0),
+                            base_friction: 0.68,
+                            view_size,
+                            start_snap: index,
+                        },
+                    );
+
+                    let loc = -start_offset.0;
+                    engine.scroll_body.set_location(loc);
+                    engine.scroll_body.set_target(loc);
+                    engine.scroll_target.set_target_vector(loc);
+                    *v = Some(engine);
                 });
                 false
             });
@@ -719,6 +783,7 @@ impl Carousel {
             let runtime_for_move = runtime_model.clone();
             let offset_for_move = offset_model.clone();
             let max_offset_for_move = max_offset_model.clone();
+            let embla_engine_for_move = embla_engine_model.clone();
             let dnd_service_for_move = fret_ui_kit::dnd::dnd_service_model(cx);
             let direction_for_move = layout_direction;
             let on_move: fret_ui::action::OnPointerMove = Arc::new(move |host, _cx, mv| {
@@ -756,6 +821,12 @@ impl Carousel {
                     .ok()
                     .unwrap_or(Px(0.0));
 
+                let cur_offset = host
+                    .models_mut()
+                    .read(&offset_for_move, |v| *v)
+                    .ok()
+                    .unwrap_or(Px(0.0));
+
                 let max_offset = if max_offset.0 > 0.0 {
                     max_offset
                 } else {
@@ -782,7 +853,7 @@ impl Carousel {
 
                 let mut steal_capture = false;
                 let mut consumed = false;
-                let mut next_offset = None;
+                let mut desired_offset_unclamped = None;
 
                 let _ = host.models_mut().update(&runtime_for_move, |st| {
                     let out = headless_carousel::on_pointer_move(
@@ -802,16 +873,53 @@ impl Carousel {
                     );
                     steal_capture = out.steal_capture;
                     consumed = out.consumed;
-                    next_offset = out.next_offset;
+
+                    if st.drag.dragging {
+                        let delta = match track_direction {
+                            fret_core::Axis::Horizontal => mv.position.x.0 - st.drag.start.x.0,
+                            fret_core::Axis::Vertical => mv.position.y.0 - st.drag.start.y.0,
+                        };
+                        let sign = if track_direction == fret_core::Axis::Horizontal
+                            && direction_for_move == LayoutDirection::Rtl
+                        {
+                            -1.0
+                        } else {
+                            1.0
+                        };
+                        desired_offset_unclamped = Some(Px(st.drag.start_offset.0 - delta * sign));
+                    }
                 });
 
                 if steal_capture {
                     host.capture_pointer();
                 }
 
-                if let Some(next) = next_offset {
-                    let _ = host.models_mut().update(&offset_for_move, |v| *v = next);
-                    host.request_redraw(_cx.window);
+                if let Some(desired) = desired_offset_unclamped {
+                    let mut next_offset = None;
+                    let _ = host.models_mut().update(&embla_engine_for_move, |v| {
+                        let Some(engine) = v.as_mut() else {
+                            next_offset = Some(Px(desired.0.clamp(0.0, max_offset.0)));
+                            return;
+                        };
+
+                        let location = -cur_offset.0;
+                        let target = -desired.0;
+                        engine.scroll_body.set_location(location);
+                        engine.scroll_body.set_target(target);
+                        engine.constrain_bounds(true);
+
+                        let constrained = engine.scroll_body.target();
+                        next_offset = Some(Px(-constrained));
+
+                        engine.scroll_body.set_location(constrained);
+                        engine.scroll_body.set_target(constrained);
+                        engine.scroll_target.set_target_vector(constrained);
+                    });
+
+                    if let Some(next) = next_offset {
+                        let _ = host.models_mut().update(&offset_for_move, |v| *v = next);
+                        host.request_redraw(_cx.window);
+                    }
                 }
 
                 consumed

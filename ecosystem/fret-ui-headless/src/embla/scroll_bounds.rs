@@ -89,4 +89,18 @@ mod tests {
 
         assert!(body.target() > -350.0);
     }
+
+    #[test]
+    fn scroll_bounds_pulls_back_when_pointer_is_up_and_displacement_is_small() {
+        let limit = Limit::new(-300.0, 0.0);
+        let mut body = ScrollBody::new(-350.0, 25.0, 0.68);
+        body.set_target(-360.0);
+
+        let bounds = ScrollBounds::new(ScrollBoundsConfig { view_size: 320.0 });
+        bounds.constrain(limit, &mut body, false);
+
+        assert_eq!(body.target(), -300.0);
+        assert_eq!(body.duration(), 25.0);
+        assert_eq!(body.friction(), 0.68);
+    }
 }

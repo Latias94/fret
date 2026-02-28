@@ -68,6 +68,8 @@ Non-goals (v2):
   - Evidence:
     - `ecosystem/fret-ui-headless/src/embla/scroll_bounds.rs`
     - `ecosystem/fret-ui-headless/src/embla/engine.rs` (`Engine::tick`)
+- [x] CAR2-127 Apply `ScrollBounds` while dragging (pointerDown=true) for Embla-like edge friction.
+  - Evidence: `ecosystem/fret-ui-shadcn/src/carousel.rs` (pointer move uses `Engine::constrain_bounds`)
 - [ ] CAR2-130 Define edge constraints behavior (contain/trim/keep) with physics applied.
 
 ### Loopers

@@ -92,6 +92,11 @@ impl Engine {
             .set_target_vector(self.scroll_body.target());
     }
 
+    pub fn constrain_bounds(&mut self, pointer_down: bool) {
+        self.scroll_bounds
+            .constrain(self.limit, &mut self.scroll_body, pointer_down);
+    }
+
     fn apply_target(&mut self, target: Target) -> Option<SelectEvent> {
         let source_snap = self.index_current;
         if target.distance != 0.0 {
@@ -114,8 +119,7 @@ impl Engine {
     /// One engine step (typically one rendered frame).
     pub fn tick(&mut self, pointer_down: bool) {
         self.scroll_body.seek();
-        self.scroll_bounds
-            .constrain(self.limit, &mut self.scroll_body, pointer_down);
+        self.constrain_bounds(pointer_down);
         self.sync_target_vector();
     }
 
