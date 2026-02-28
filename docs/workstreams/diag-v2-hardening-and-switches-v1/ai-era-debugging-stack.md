@@ -128,6 +128,7 @@ This layer is primarily about **reducing diff noise and flake surface**, not add
 Status (2026-02-28):
 
 - Base reference scoping exists in schema v2 scripts via `set_base_ref` / `clear_base_ref`.
+- A bounded `window.map.json` sidecar exists for bundle export dirs, and tooling can print a bounded report via `diag windows`.
 
 ### Layer 5: Human GUI (DevTools) + agent integration
 

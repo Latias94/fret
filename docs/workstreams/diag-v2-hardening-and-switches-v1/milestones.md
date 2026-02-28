@@ -131,9 +131,9 @@ Exit criteria:
   - selector-driven steps can use relative selectors scoped to that base,
   - failures report a stable `reason_code` when a ref is missing or resolves to multiple nodes.
 - Multi-viewport docking evidence exists (bounded, queryable):
-  - a per-run `window_map.json` is exported (window ids + viewport kind + optional parent/child relationship hints),
+  - a bounded `window.map.json` sidecar is exported (window ids + last bounds + hover detection),
   - routing decisions that matter for docking (hover/click target window selection) are recorded in a bounded log,
-  - tooling offers a bounded query (e.g. `diag meta windows`) to inspect this without opening large artifacts.
+  - tooling offers a bounded query (e.g. `diag windows`) to inspect this without opening large artifacts.
 - Fast mode is an explicit policy (config-driven) and has a small smoke suite proving it doesn’t introduce flake.
 
 Evidence anchors (expected):
