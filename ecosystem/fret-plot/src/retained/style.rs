@@ -5,18 +5,20 @@ use fret_core::scene::Color;
 
 use crate::plot::colormap::ColorMapId;
 
-pub const DEFAULT_SERIES_PALETTE: [Color; 10] = [
-    Color::from_srgb_hex_rgb(0x59_a6_f2),
-    Color::from_srgb_hex_rgb(0xf2_73_8c),
-    Color::from_srgb_hex_rgb(0x73_d9_8c),
-    Color::from_srgb_hex_rgb(0xf2_bf_59),
-    Color::from_srgb_hex_rgb(0xbf_8c_f2),
-    Color::from_srgb_hex_rgb(0x59_d9_d9),
-    Color::from_srgb_hex_rgb(0xf2_59_d9),
-    Color::from_srgb_hex_rgb(0xa6_a6_a6),
-    Color::from_srgb_hex_rgb(0x8c_bf_59),
-    Color::from_srgb_hex_rgb(0x59_8c_f2),
-];
+pub fn default_series_palette() -> [Color; 10] {
+    [
+        Color::from_srgb_hex_rgb(0x59_a6_f2),
+        Color::from_srgb_hex_rgb(0xf2_73_8c),
+        Color::from_srgb_hex_rgb(0x73_d9_8c),
+        Color::from_srgb_hex_rgb(0xf2_bf_59),
+        Color::from_srgb_hex_rgb(0xbf_8c_f2),
+        Color::from_srgb_hex_rgb(0x59_d9_d9),
+        Color::from_srgb_hex_rgb(0xf2_59_d9),
+        Color::from_srgb_hex_rgb(0xa6_a6_a6),
+        Color::from_srgb_hex_rgb(0x8c_bf_59),
+        Color::from_srgb_hex_rgb(0x59_8c_f2),
+    ]
+}
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MouseReadoutMode {
     /// Show mouse coordinates as a tooltip near the cursor.
@@ -157,7 +159,7 @@ impl Default for LinePlotStyle {
             tick_count: 5,
             stroke_color: Color::from_srgb_hex_rgb(0x59_a6_f2),
             stroke_width: Px(1.5),
-            series_palette: DEFAULT_SERIES_PALETTE,
+            series_palette: default_series_palette(),
             clamp_to_data_bounds: true,
             overscroll_fraction: 0.03,
             emphasize_hovered_series: true,
