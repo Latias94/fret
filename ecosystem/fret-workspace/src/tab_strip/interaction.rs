@@ -1,0 +1,81 @@
+use std::sync::Arc;
+
+use fret_core::{Modifiers, MouseButton};
+use fret_runtime::{CommandId, DefaultAction, Model};
+use fret_ui::action::{
+    ActionCx, OnPressablePointerDown, PressablePointerDownResult, UiPointerActionHost,
+};
+
+use fret_ui_kit::dnd as ui_dnd;
+
+use crate::tab_drag::DRAG_KIND_WORKSPACE_TAB;
+
+use super::drag_state::WorkspaceTabStripDragState;
+use super::kernel::WorkspaceTabStripDropTarget;
+use super::intent::{WorkspaceTabStripIntent, dispatch_intent};
+
+pub(super) fn tab_pointer_down_handler(
+    drag_model: Model<WorkspaceTabStripDragState>,
+    tab_id: Arc<str>,
+    tab_activate_command: CommandId,
+    pane_activate_cmd: Option<CommandId>,
+    tab_close_command: Option<CommandId>,
+    dnd: ui_dnd::DndServiceModel,
+    dnd_scope: ui_dnd::DndScopeId,
+) -> OnPressablePointerDown {
+    Arc::new(move |host: &mut dyn UiPointerActionHost, acx: ActionCx, down| {
+        host.prevent_default(DefaultAction::FocusOnPointerDown);
+        match down.button {
+            MouseButton::Middle => {
+                if let Some(cmd) = pane_activate_cmd.clone() {
+                    dispatch_intent(host, acx.window, WorkspaceTabStripIntent::Activate(cmd));
+                }
+                if let Some(cmd) = tab_close_command.clone() {
+                    dispatch_intent(host, acx.window, WorkspaceTabStripIntent::Close(cmd));
+                    dispatch_intent(host, acx.window, WorkspaceTabStripIntent::RequestRedraw);
+                }
+                host.prevent_default(DefaultAction::FocusOnPointerDown);
+                return PressablePointerDownResult::SkipDefaultAndStopPropagation;
+            }
+            MouseButton::Right => {
+                if let Some(cmd) = pane_activate_cmd.clone() {
+                    dispatch_intent(host, acx.window, WorkspaceTabStripIntent::Activate(cmd));
+                }
+                dispatch_intent(
+                    host,
+                    acx.window,
+                    WorkspaceTabStripIntent::Activate(tab_activate_command.clone()),
+                );
+                dispatch_intent(host, acx.window, WorkspaceTabStripIntent::RequestRedraw);
+                host.prevent_default(DefaultAction::FocusOnPointerDown);
+                return PressablePointerDownResult::SkipDefault;
+            }
+            _ => {}
+        }
+
+        if down.button != MouseButton::Left {
+            return PressablePointerDownResult::Continue;
+        }
+        if down.modifiers != Modifiers::default() {
+            return PressablePointerDownResult::Continue;
+        }
+
+        let _ = host.models_mut().update(&drag_model, |st| {
+            st.pointer = Some(down.pointer_id);
+            st.start_tick = down.tick_id;
+            st.start_position = down.position;
+            st.dragged_tab = Some(tab_id.clone());
+            st.dragging = false;
+            st.drop_target = WorkspaceTabStripDropTarget::None;
+        });
+        ui_dnd::clear_pointer_in_scope(
+            host.models_mut(),
+            &dnd,
+            acx.window,
+            DRAG_KIND_WORKSPACE_TAB,
+            dnd_scope,
+            down.pointer_id,
+        );
+        PressablePointerDownResult::Continue
+    })
+}

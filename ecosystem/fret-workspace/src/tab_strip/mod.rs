@@ -2,7 +2,7 @@ use std::cell::{Cell, RefCell};
 use std::sync::Arc;
 
 use fret_core::{
-    Color, Corners, Edges, Modifiers, MouseButton, Point, Px, SemanticsRole, TextOverflow, TextSlant,
+    Color, Corners, Edges, MouseButton, Point, Px, SemanticsRole, TextOverflow, TextSlant,
     TextWrap,
 };
 use fret_runtime::{CommandId, Model};
@@ -31,6 +31,7 @@ use crate::tab_drag::{
 
 mod drag_state;
 mod geometry;
+mod interaction;
 mod intent;
 mod kernel;
 mod layouts;
@@ -54,6 +55,7 @@ use drag_state::{
     WorkspaceTabStripDragState, get_drag_model, read_drag_snapshot_for_pointer,
 };
 use geometry::{bounds_for_optional_element_id, collect_tab_hit_rects};
+use interaction::tab_pointer_down_handler;
 use intent::{WorkspaceTabStripIntent, dispatch_intent};
 use layouts::{
     centered_row, fill_grow_layout, fill_layout, fixed_square_layout, row_layout,
@@ -570,111 +572,17 @@ impl WorkspaceTabStrip {
                                                         );
                                                         cx.pressable_on_activate(handler);
 
-                                                        let dnd_on_down: OnPressablePointerDown = {
-                                                            let drag_model = drag_model.clone();
-                                                            let tab_id = tab_id.clone();
-                                                            let tab_activate_command =
-                                                                tab_activate_command.clone();
-                                                            let pane_activate_cmd_for_pointer =
-                                                                pane_activate_cmd_for_activate
-                                                                    .clone();
-                                                            let tab_close_command =
-                                                                tab_close_command.clone();
-                                                            let dnd = dnd.clone();
-                                                            Arc::new(move |host, acx, down| {
-                                                                host.prevent_default(
-                                                                    fret_runtime::DefaultAction::FocusOnPointerDown,
-                                                                );
-                                                                match down.button {
-                                                                    MouseButton::Middle => {
-                                                                        if let Some(cmd) =
-                                                                            pane_activate_cmd_for_pointer
-                                                                                .clone()
-                                                                        {
-                                                                            dispatch_intent(
-                                                                                host,
-                                                                                acx.window,
-                                                                                WorkspaceTabStripIntent::Activate(cmd),
-                                                                            );
-                                                                        }
-                                                                        if let Some(cmd) =
-                                                                            tab_close_command.clone()
-                                                                        {
-                                                                            dispatch_intent(
-                                                                                host,
-                                                                                acx.window,
-                                                                                WorkspaceTabStripIntent::Close(cmd),
-                                                                            );
-                                                                            dispatch_intent(
-                                                                                host,
-                                                                                acx.window,
-                                                                                WorkspaceTabStripIntent::RequestRedraw,
-                                                                            );
-                                                                        }
-                                                                        host.prevent_default(
-                                                                            fret_runtime::DefaultAction::FocusOnPointerDown,
-                                                                        );
-                                                                        return PressablePointerDownResult::SkipDefaultAndStopPropagation;
-                                                                    }
-                                                                    MouseButton::Right => {
-                                                                        if let Some(cmd) =
-                                                                            pane_activate_cmd_for_pointer
-                                                                                .clone()
-                                                                        {
-                                                                            dispatch_intent(
-                                                                                host,
-                                                                                acx.window,
-                                                                                WorkspaceTabStripIntent::Activate(cmd),
-                                                                            );
-                                                                        }
-                                                                        dispatch_intent(
-                                                                            host,
-                                                                            acx.window,
-                                                                            WorkspaceTabStripIntent::Activate(
-                                                                                tab_activate_command.clone(),
-                                                                            ),
-                                                                        );
-                                                                        dispatch_intent(
-                                                                            host,
-                                                                            acx.window,
-                                                                            WorkspaceTabStripIntent::RequestRedraw,
-                                                                        );
-                                                                        host.prevent_default(
-                                                                            fret_runtime::DefaultAction::FocusOnPointerDown,
-                                                                        );
-                                                                        return PressablePointerDownResult::SkipDefault;
-                                                                    }
-                                                                    _ => {}
-                                                                }
-
-                                                                if down.button != MouseButton::Left
-                                                                {
-                                                                    return PressablePointerDownResult::Continue;
-                                                                }
-                                                                if down.modifiers != Modifiers::default() {
-                                                                    return PressablePointerDownResult::Continue;
-                                                                }
-
-                                                                let _ = host.models_mut().update(&drag_model, |st| {
-                                                                    st.pointer = Some(down.pointer_id);
-                                                                    st.start_tick = down.tick_id;
-                                                                    st.start_position = down.position;
-                                                                    st.dragged_tab = Some(tab_id.clone());
-                                                                    st.dragging = false;
-                                                                    st.drop_target = WorkspaceTabStripDropTarget::None;
-                                                                });
-                                                                ui_dnd::clear_pointer_in_scope(
-                                                                    host.models_mut(),
-                                                                    &dnd,
-                                                                    acx.window,
-                                                                    DRAG_KIND_WORKSPACE_TAB,
-                                                                    dnd_scope,
-                                                                    down.pointer_id,
-                                                                );
-                                                                PressablePointerDownResult::Continue
-                                                            })
-                                                        };
-                                                        cx.pressable_on_pointer_down(dnd_on_down);
+                                                        cx.pressable_on_pointer_down(
+                                                            tab_pointer_down_handler(
+                                                                drag_model.clone(),
+                                                                tab_id.clone(),
+                                                                tab_activate_command.clone(),
+                                                                pane_activate_cmd_for_activate.clone(),
+                                                                tab_close_command.clone(),
+                                                                dnd.clone(),
+                                                                dnd_scope,
+                                                            ),
+                                                        );
 
                                                         let dnd_on_move: OnPressablePointerMove = {
                                                             let drag_model = drag_model.clone();
