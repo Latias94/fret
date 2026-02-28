@@ -20,8 +20,16 @@ Experimental learning project (not production-ready).
 ## Upstream references (non-normative)
 
 Some modules in this crate intentionally port or align with upstream interaction engines for
-behavioral parity. For Carousel, we reference Embla Carousel:
+behavioral parity:
 
-- https://github.com/davidjerleke/embla-carousel
+- cmdk (command palette scoring + selection math): https://github.com/pacocoursey/cmdk
+  - See `src/cmdk_score.rs` and `src/cmdk_selection.rs`.
+- Floating UI (safe hover corridor inspiration): https://github.com/floating-ui/floating-ui
+  - See `src/safe_hover.rs` (inspired by Floating UI's `safePolygon` idea).
+- Flutter (physics/motion primitives): https://github.com/flutter/flutter
+  - See `src/motion/*` (spring/friction/tolerance shapes).
+- Embla Carousel (carousel behavior): https://github.com/davidjerleke/embla-carousel
+  - See `src/embla/*`.
 
-See `src/embla/*` for Embla-aligned headless helpers.
+See [`docs/reference-stack-ui-behavior.md`](../../docs/reference-stack-ui-behavior.md) for repo-level
+guidance on which upstream references are used for which behavior classes.

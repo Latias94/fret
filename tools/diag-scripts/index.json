@@ -2493,6 +2493,16 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-radio-group-description-layout",
+      "path": "tools/diag-scripts/ui-gallery/radio-group/ui-gallery-radio-group-description-layout.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-select-commit-and-label-update-bundle",
       "path": "tools/diag-scripts/ui-gallery/select/ui-gallery-select-commit-and-label-update-bundle.json",
       "required_capabilities": [
