@@ -2962,6 +2962,10 @@ fn script_required_capabilities_value(value: &serde_json::Value) -> Vec<String> 
         }
     }
 
+    for cap in crate::script_tooling::infer_required_capabilities_from_value(value) {
+        required.push(cap);
+    }
+
     if let Some(meta_required) = value
         .get("meta")
         .and_then(|m| m.get("required_capabilities"))
@@ -3253,6 +3257,36 @@ mod capability_tests {
             .filter_map(|v| v.as_str().map(|s| s.to_string()))
             .collect::<Vec<_>>();
         assert!(missing.contains(&"diag.screenshot_png".to_string()));
+
+        let _ = std::fs::remove_dir_all(&out_dir);
+    }
+
+    #[test]
+    fn script_required_capabilities_include_step_inferred_caps() {
+        let out_dir = make_temp_dir("fret-diag-capabilities-infer");
+        let script_path = out_dir.join("script.json");
+
+        let script = serde_json::json!({
+            "schema_version": 2,
+            "steps": [
+                { "type": "set_cursor_in_window_logical", "window": null, "x_px": 1.0, "y_px": 2.0 },
+                { "type": "set_clipboard_text", "text": "hello" },
+                { "type": "inject_incoming_open", "items": [
+                    { "kind": "text", "text": "hello", "media_type": "text/plain" }
+                ] }
+            ]
+        });
+        std::fs::write(
+            &script_path,
+            serde_json::to_string_pretty(&script).unwrap() + "\n",
+        )
+        .unwrap();
+
+        let required = script_required_capabilities(&script_path);
+        assert!(required.contains(&"diag.script_v2".to_string()));
+        assert!(required.contains(&"diag.cursor_screen_pos_override".to_string()));
+        assert!(required.contains(&"diag.clipboard_text".to_string()));
+        assert!(required.contains(&"diag.incoming_open_inject".to_string()));
 
         let _ = std::fs::remove_dir_all(&out_dir);
     }

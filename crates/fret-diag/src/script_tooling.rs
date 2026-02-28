@@ -479,8 +479,28 @@ fn infer_required_capabilities_v2(script: &UiActionScriptV2) -> Vec<String> {
         if matches!(step, UiActionStepV2::WaitOverlayPlacementTrace { .. }) {
             push_cap(&mut caps, "diag.overlay_placement_trace");
         }
+        if matches!(
+            step,
+            UiActionStepV2::SetCursorScreenPos { .. }
+                | UiActionStepV2::SetCursorInWindow { .. }
+                | UiActionStepV2::SetCursorInWindowLogical { .. }
+        ) {
+            push_cap(&mut caps, "diag.cursor_screen_pos_override");
+        }
         if matches!(step, UiActionStepV2::SetMouseButtons { .. }) {
             push_cap(&mut caps, "diag.mouse_buttons_override");
+        }
+        if matches!(
+            step,
+            UiActionStepV2::SetClipboardText { .. } | UiActionStepV2::AssertClipboardText { .. }
+        ) {
+            push_cap(&mut caps, "diag.clipboard_text");
+        }
+        if matches!(step, UiActionStepV2::SetClipboardForceUnavailable { .. }) {
+            push_cap(&mut caps, "diag.clipboard_force_unavailable");
+        }
+        if matches!(step, UiActionStepV2::InjectIncomingOpen { .. }) {
+            push_cap(&mut caps, "diag.incoming_open_inject");
         }
         if matches!(step, UiActionStepV2::Tap { .. }) {
             push_cap(&mut caps, "diag.gesture_tap");
@@ -502,6 +522,21 @@ fn infer_required_capabilities_v2(script: &UiActionScriptV2) -> Vec<String> {
         }
     }
     caps
+}
+
+pub(crate) fn infer_required_capabilities_from_value(value: &Value) -> Vec<String> {
+    let schema_version = crate::compat::script::script_schema_version_from_value(value);
+    match schema_version {
+        1 => serde_json::from_value::<UiActionScriptV1>(value.clone())
+            .ok()
+            .map(|script| infer_required_capabilities_v1(&script))
+            .unwrap_or_default(),
+        2 => serde_json::from_value::<UiActionScriptV2>(value.clone())
+            .ok()
+            .map(|script| infer_required_capabilities_v2(&script))
+            .unwrap_or_default(),
+        _ => Vec::new(),
+    }
 }
 
 fn summarize_steps_v1(script: &UiActionScriptV1) -> Value {
@@ -606,6 +641,25 @@ mod tests {
         let inferred = infer_required_capabilities_v2(&script);
         assert!(inferred.iter().any(|c| c == "diag.script_v2"));
         assert!(inferred.iter().any(|c| c == "diag.screenshot_png"));
+    }
+
+    #[test]
+    fn lint_infers_cursor_override_capability() {
+        let script = UiActionScriptV2 {
+            schema_version: 2,
+            meta: None,
+            steps: vec![UiActionStepV2::SetCursorInWindowLogical {
+                window: None,
+                x_px: 1.0,
+                y_px: 2.0,
+            }],
+        };
+        let inferred = infer_required_capabilities_v2(&script);
+        assert!(
+            inferred
+                .iter()
+                .any(|c| c == "diag.cursor_screen_pos_override")
+        );
     }
 
     #[test]

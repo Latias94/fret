@@ -307,12 +307,16 @@ impl UiDiagnosticsService {
         caps.push("diag.overlay_placement_trace".to_string());
         caps.push("diag.window_insets_override".to_string());
         caps.push("diag.clipboard_force_unavailable".to_string());
+        if !cfg!(target_arch = "wasm32") {
+            caps.push("diag.clipboard_text".to_string());
+        }
         caps.push("diag.incoming_open_inject".to_string());
         if cfg!(any(
             target_os = "windows",
             target_os = "macos",
             target_os = "linux"
         )) {
+            caps.push("diag.cursor_screen_pos_override".to_string());
             caps.push("diag.mouse_buttons_override".to_string());
         }
 

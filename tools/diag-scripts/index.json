@@ -830,6 +830,22 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-clipboard-text-smoke",
+      "path": "tools/diag-scripts/ui-gallery/clipboard/ui-gallery-clipboard-text-smoke.json",
+      "required_capabilities": [
+        "diag.clipboard_text",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke"
+      ],
+      "tags": [],
+      "target_hints": [
+        "Sets OS clipboard text and pastes into a focused textarea to validate the end-to-end paste flow deterministically.",
+        "Note: on native runners this mutates the OS clipboard (not a sandboxed clipboard)."
+      ]
+    },
+    {
       "id": "ui-gallery-code-editor-a11y-composition-baseline",
       "path": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-a11y-composition-baseline.json",
       "required_capabilities": [],
@@ -1884,6 +1900,19 @@
       "required_capabilities": [],
       "suite_memberships": [
         "perf-ui-gallery-steady"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-incoming-open-inject-smoke",
+      "path": "tools/diag-scripts/ui-gallery/incoming/ui-gallery-incoming-open-inject-smoke.json",
+      "required_capabilities": [
+        "diag.incoming_open_inject",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke"
       ],
       "tags": [],
       "target_hints": []
