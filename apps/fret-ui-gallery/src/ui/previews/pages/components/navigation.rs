@@ -156,12 +156,13 @@ pub(in crate::ui) fn preview_pagination(cx: &mut ElementContext<'_, App>) -> Vec
     let icons_only = {
         let rows_per_page = shadcn::Select::new(rows_per_page.clone(), rows_per_page_open.clone())
             .placeholder("25")
+            .trigger_test_id("ui-gallery-pagination-rows-per-page-trigger")
             .refine_layout(LayoutRefinement::default().w_px(Px(80.0)))
             .items([
-                shadcn::SelectItem::new("10", "10"),
-                shadcn::SelectItem::new("25", "25"),
-                shadcn::SelectItem::new("50", "50"),
-                shadcn::SelectItem::new("100", "100"),
+                shadcn::SelectItem::new("10", "10").label_tabular_nums(),
+                shadcn::SelectItem::new("25", "25").label_tabular_nums(),
+                shadcn::SelectItem::new("50", "50").label_tabular_nums(),
+                shadcn::SelectItem::new("100", "100").label_tabular_nums(),
             ])
             .into_element(cx);
 
