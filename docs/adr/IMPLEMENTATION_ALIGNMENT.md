@@ -24,19 +24,20 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 ## Summary
 
 - Last updated: 2026-02-28
-- ADR count (numbered): 266
+- ADR count (numbered): 267
 
 - Aligned: 109
 - Aligned (with known gaps): 96
 - N/A (superseded): 2
 - Not audited: 18
-- Not implemented: 6
+- Not implemented: 7
 - Partially aligned: 35
 
 ## Matrix
 
 | ADR | ADR Status | Implementation Alignment | Notes |
 | --- | --- | --- | --- |
+| [`0302-custom-effect-v3-backdrop-source-groups.md`](0302-custom-effect-v3-backdrop-source-groups.md) | Draft | Not implemented | Defines an explicit scene-level “backdrop source group” mechanism for sharing a raw snapshot + optional pyramid across multiple CustomV3 liquid-glass surfaces, avoiding hidden implicit caches. Tracking: `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-v3/m2-sharing-and-caching-design.md`. |
 | [`0301-custom-effect-v3-renderer-provided-sources.md`](0301-custom-effect-v3-renderer-provided-sources.md) | Draft | Aligned (with known gaps) | CustomV3 exists end-to-end for wgpu (contract + pipeline + render-plan + plan dump): core surface `crates/fret-core/src/{effects.rs,lib.rs,scene/mod.rs,scene/validate.rs,scene/fingerprint.rs}`; wgpu backend `crates/fret-render-wgpu/src/renderer/{services.rs,shaders.rs,gpu_pipelines.rs,render_plan.rs,render_plan_compiler.rs,render_plan_effects.rs,render_plan_dump.rs,render_scene/recorders/effects.rs,v3_pyramid.rs,types.rs}`; pyramid downsample pipeline `crates/fret-render-wgpu/src/renderer/pipelines/mip_downsample.rs` + WGSL `crates/fret-render-wgpu/src/renderer/pipelines/wgsl/mip_downsample_box_2x2.wgsl`; and WGSL parts `crates/fret-render-wgpu/src/renderer/pipelines/wgsl/custom_effect_v3_*.wgsl`. Conformance: `crates/fret-render-wgpu/tests/effect_custom_v3_conformance.rs` (raw-vs-src and mip level 1). Known gaps: pyramid sharing/caching across multiple glass surfaces remains deferred. Dedicated v3 source counters exist (`EffectDegradationSnapshot.custom_effect_v3_sources.*`). |
 | [`0300-custom-effect-v2-user-image-input.md`](0300-custom-effect-v2-user-image-input.md) | Draft | Aligned (with known gaps) | Implements the CustomV2 “one extra input” story: a single user-provided image input referenced by `ImageId` (plus `UvRect` + `ImageSamplingHint`) to unlock LUT/noise/normal-map recipes while keeping the ABI bounded and capability-gated. Core surface: `crates/fret-core/src/{effects.rs,scene/mod.rs,scene/validate.rs,scene/fingerprint.rs}`. WGPU backend: fixed bind shape + registry + gating `crates/fret-render-wgpu/src/{capabilities.rs,renderer/services.rs,renderer/pipelines/custom_effect.rs,renderer/pipelines/wgsl/custom_effect_v2_*.wgsl,renderer/render_scene/recorders/effects.rs}`. Conformance: `crates/fret-render-wgpu/tests/effect_custom_v2_conformance.rs`. Ecosystem helper: `ecosystem/fret-ui-kit/src/custom_effects.rs` (`CustomEffectProgramV2`). Demo + diag harness: `apps/fret-examples/src/liquid_glass_demo.rs`, `tools/diag-scripts/liquid-glass-custom-v2-corners-screenshot.json`. Gaps: define the WebGPU/wasm runtime support + degradation story end-to-end (beyond WGSL validation), and ship additional authoring demos/templates that exercise the user image input (e.g. LUT/noise/normal-map). |
 | [`0299-custom-effect-abi-wgpu-only-mvp.md`](0299-custom-effect-abi-wgpu-only-mvp.md) | Draft | Aligned (with known gaps) | Adds a bounded custom effect ABI (`EffectId`, `EffectParamsV1`, `EffectStep::CustomV1`) with renderer-owned registration (`CustomEffectService`) and deterministic budget-driven degradation (v1 is wgpu-only; other backends may return `Unsupported`/degrade). WGPU backend validates and caches effect programs, invalidates scene encodings via `custom_effects_generation`, compiles per-effect pipelines, and records a single-pass fullscreen effect with scissor/mask semantics. Evidence: contract `crates/fret-core/src/{effects.rs,ids.rs,scene/mod.rs,scene/validate.rs,scene/fingerprint.rs}`, wgpu service `crates/fret-render-wgpu/src/renderer/services.rs`, pipeline `crates/fret-render-wgpu/src/renderer/pipelines/custom_effect.rs` + WGSL parts `crates/fret-render-wgpu/src/renderer/pipelines/wgsl/custom_effect_*.wgsl`, cache key `crates/fret-render-wgpu/src/renderer/render_scene/encoding_cache.rs`, executor/recorder `crates/fret-render-wgpu/src/renderer/render_scene/{executor.rs,recorders/effects.rs}`, gate `crates/fret-render-wgpu/tests/effect_custom_v1_conformance.rs`. |

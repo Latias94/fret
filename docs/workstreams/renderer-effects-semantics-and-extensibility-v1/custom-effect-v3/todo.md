@@ -67,7 +67,12 @@ This TODO tracks the V3 work as landable steps. It intentionally starts with “
 
 - [x] Write down a design space and recommended sequence:
   - `m2-sharing-and-caching-design.md`
-- [ ] M2.0 (reversible): implement chain-local pyramid reuse (same frame, same `src_raw`, no intervening writes),
+- [x] M2.0 (reversible): implement chain-local pyramid reuse (same frame, same `src_raw`, no intervening writes),
       with per-frame counters.
+  - Evidence:
+    - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` (reuse decision + cache update)
+    - `crates/fret-render-wgpu/src/renderer/mod.rs` (frame-local cache + target write epochs)
+    - `crates/fret-render-wgpu/src/renderer/types.rs` (`RenderPerfSnapshot.custom_effect_v3_pyramid_cache_{hits,misses}`)
 - [ ] M2.1 (contract): propose an explicit scene-level “glass group” primitive (ADR) to share snapshot/pyramid
       across multiple surfaces deterministically.
+  - ADR draft: `docs/adr/0302-custom-effect-v3-backdrop-source-groups.md`
