@@ -24,6 +24,8 @@ Related / prerequisites:
 - Contracts: `docs/adr/0159-ui-diagnostics-snapshot-and-scripted-interaction-tests.md`, `docs/adr/0189-ui-diagnostics-extensibility-and-capabilities-v1.md`
 - Script library modularization (taxonomy + suites): `docs/workstreams/diag-v2-hardening-and-switches-v1/script-library.md`
 - Canonical per-run artifact layout: `docs/workstreams/diag-v2-hardening-and-switches-v1/per-run-layout.md`
+- Migration runbook + guardrails: `docs/workstreams/diag-v2-hardening-and-switches-v1/migration-support.md`
+- Compatibility inventory table: `docs/workstreams/diag-v2-hardening-and-switches-v1/compat-matrix.md`
 
 ## Problem statement
 

@@ -301,6 +301,21 @@ pub struct UiDiagnosticsConfigFileV1 {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub screenshot_on_dump: Option<bool>,
 
+    /// Whether the diagnostics runtime should write the large raw bundle artifact (`bundle.json`)
+    /// during dumps.
+    ///
+    /// Tooling typically sets this to `false` for launched runs so default artifacts stay
+    /// small-by-default (manifest + sidecars + optional compact bundle view).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub write_bundle_json: Option<bool>,
+    /// Whether the diagnostics runtime should write the compact bundle view (`bundle.schema2.json`)
+    /// alongside sidecars during dumps.
+    ///
+    /// This is intended for schema2-first + AI/sidecar-first workflows to avoid requiring tooling
+    /// to parse large raw bundles just to produce a portable artifact.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub write_bundle_schema2: Option<bool>,
+
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub redact_text: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]

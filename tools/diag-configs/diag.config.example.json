@@ -29,6 +29,8 @@
   "semantics_test_ids_only": false,
   "screenshots_enabled": false,
   "screenshot_on_dump": false,
+  "write_bundle_json": false,
+  "write_bundle_schema2": true,
   "redact_text": true,
   "max_debug_string_bytes": 2048,
   "max_gating_trace_entries": 200,
