@@ -56,11 +56,20 @@ fn fret_custom_effect(src: vec4<f32>, _uv: vec2<f32>, pos_px: vec2<f32>, params:
 }
 "#;
 
-#[derive(Debug, Clone, Copy)]
-struct DemoEffect(EffectId);
+#[derive(Debug)]
+struct DemoEffectPack {
+    program: CustomEffectProgramV2,
+    input_image: Option<ImageId>,
+}
 
-#[derive(Debug, Clone, Copy)]
-struct DemoInputImage(ImageId);
+impl DemoEffectPack {
+    fn new() -> Self {
+        Self {
+            program: CustomEffectProgramV2::wgsl_utf8(WGSL),
+            input_image: None,
+        }
+    }
+}
 
 #[derive(Debug)]
 struct CustomEffectV2State {
@@ -82,7 +91,7 @@ enum Msg {
 }
 
 pub fn run() -> anyhow::Result<()> {
-    fret::mvu::app::<CustomEffectV2Program>("custom-effect-v2-demo")?
+    let builder = fret::mvu::app::<CustomEffectV2Program>("custom-effect-v2-demo")?
         .with_main_window("custom_effect_v2_demo", (1100.0, 720.0))
         .init_app(|app| {
             shadcn::shadcn_themes::apply_shadcn_new_york_v4(
@@ -90,22 +99,38 @@ pub fn run() -> anyhow::Result<()> {
                 shadcn::shadcn_themes::ShadcnBaseColor::Slate,
                 shadcn::shadcn_themes::ShadcnColorScheme::Dark,
             );
-        })
-        .install_custom_effects(install_custom_effect)
-        .on_gpu_ready(install_input_image)
-        .run()?;
+        });
+
+    install_into(builder).run()?;
     Ok(())
 }
 
-fn install_custom_effect(app: &mut App, effects: &mut dyn fret_core::CustomEffectService) {
-    let mut program = CustomEffectProgramV2::wgsl_utf8(WGSL);
-    let id = program
-        .ensure_registered(effects)
-        .expect("custom effect v2 registration must succeed on wgpu backends");
-    app.set_global(DemoEffect(id));
+/// Example of a “one line install” entrypoint for consumers on the native desktop builder path.
+///
+/// This is the intended pattern for third-party component/effect libraries:
+/// - keep `EffectId` renderer-scoped and runtime-assigned,
+/// - register lazily and cache the returned `EffectId`,
+/// - upload/register any input textures on GPU-ready.
+fn install_into<S: 'static>(builder: fret::UiAppBuilder<S>) -> fret::UiAppBuilder<S> {
+    builder
+        .install_app(install_app_globals)
+        .install_custom_effects(register_custom_effect)
+        .on_gpu_ready(upload_input_image)
 }
 
-fn install_input_image(app: &mut App, context: &WgpuContext, renderer: &mut Renderer) {
+fn install_app_globals(app: &mut App) {
+    app.set_global(DemoEffectPack::new());
+}
+
+fn register_custom_effect(app: &mut App, effects: &mut dyn fret_core::CustomEffectService) {
+    app.with_global_mut(DemoEffectPack::new, |pack, _app| {
+        pack.program
+            .ensure_registered(effects)
+            .expect("custom effect v2 registration must succeed on wgpu backends");
+    });
+}
+
+fn upload_input_image(app: &mut App, context: &WgpuContext, renderer: &mut Renderer) {
     let size = (64u32, 64u32);
     let texture = context.device.create_texture(&wgpu::TextureDescriptor {
         label: Some("custom_effect_v2_demo input texture"),
@@ -147,7 +172,9 @@ fn install_input_image(app: &mut App, context: &WgpuContext, renderer: &mut Rend
         color_space: ImageColorSpace::Linear,
         alpha_mode: AlphaMode::Opaque,
     });
-    app.set_global(DemoInputImage(image));
+    app.with_global_mut(DemoEffectPack::new, |pack, _app| {
+        pack.input_image = Some(image);
+    });
 }
 
 impl MvuProgram for CustomEffectV2Program {
@@ -229,10 +256,12 @@ fn view(
     st: &mut CustomEffectV2State,
     msg: &mut MessageRouter<Msg>,
 ) -> Elements {
-    let Some(effect) = cx.app.global::<DemoEffect>().map(|v| v.0) else {
+    let pack = cx.app.global::<DemoEffectPack>();
+    let effect = pack.and_then(|p| p.program.id());
+    let input_image = pack.and_then(|p| p.input_image);
+    let Some(effect) = effect else {
         return vec![shadcn::typography::h3(cx, "Custom effects unavailable")].into();
     };
-    let input_image = cx.app.global::<DemoInputImage>().map(|v| v.0);
 
     let enabled = cx.watch_model(&st.enabled).layout().copied_or(true);
     let sampling_value = cx
