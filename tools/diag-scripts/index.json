@@ -106,12 +106,20 @@
     {
       "id": "docking-arbitration-demo-modal-dock-drag-viewport-capture",
       "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-modal-dock-drag-viewport-capture.json",
-      "required_capabilities": [],
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
       "suite_memberships": [
         "docking-arbitration"
       ],
-      "tags": [],
-      "target_hints": []
+      "tags": [
+        "docking",
+        "gate",
+        "modal"
+      ],
+      "target_hints": [
+        "Opens a popover and asserts docking drag closes it (capture), then opens a dialog and asserts underlay click does not leak through."
+      ]
     },
     {
       "id": "docking-arbitration-demo-multiwindow-chained-tearoff-two-tabs-merge",
@@ -144,6 +152,7 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
+        "diag-hardening-smoke-docking",
         "docking-arbitration"
       ],
       "tags": [
@@ -712,17 +721,6 @@
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
       ],
-      "tags": [],
-      "target_hints": []
-    },
-    {
-      "id": "ui-gallery-carousel-demo-reinit-resize-gate",
-      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-reinit-resize-gate.json",
-      "required_capabilities": [
-        "diag.screenshot_png",
-        "diag.script_v2"
-      ],
-      "suite_memberships": [],
       "tags": [],
       "target_hints": []
     },
@@ -1725,6 +1723,7 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
+        "diag-hardening-smoke",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
@@ -1829,6 +1828,7 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
+        "diag-hardening-smoke",
         "ui-gallery"
       ],
       "tags": [
@@ -2375,6 +2375,7 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
+        "diag-hardening-smoke",
         "ui-gallery"
       ],
       "tags": [
@@ -2542,19 +2543,6 @@
       "required_capabilities": [
         "diag.overlay_placement_trace",
         "diag.script_v2"
-      ],
-      "suite_memberships": [
-        "ui-gallery-select"
-      ],
-      "tags": [],
-      "target_hints": []
-    },
-    {
-      "id": "ui-gallery-theme-preset-select-open-screenshot-zinc-light",
-      "path": "tools/diag-scripts/ui-gallery/select/ui-gallery-theme-preset-select-open-screenshot-zinc-light.json",
-      "required_capabilities": [
-        "diag.script_v2",
-        "diag.screenshot_png"
       ],
       "suite_memberships": [
         "ui-gallery-select"
@@ -2803,6 +2791,7 @@
       "path": "tools/diag-scripts/ui-gallery/table/ui-gallery-table-smoke.json",
       "required_capabilities": [],
       "suite_memberships": [
+        "diag-hardening-smoke",
         "ui-gallery"
       ],
       "tags": [],

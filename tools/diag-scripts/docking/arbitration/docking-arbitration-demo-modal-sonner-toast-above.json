@@ -1,8 +1,15 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
+  "meta": {
+    "name": "Docking arbitration demo: modal keeps sonner toast above",
+    "tags": ["docking", "modal", "toast", "gate"],
+    "required_capabilities": ["diag.script_v2"]
+  },
   "steps": [
     { "type": "press_key", "key": "escape" },
     { "type": "wait_frames", "n": 5 },
+    { "type": "set_window_inner_size", "width_px": 1600.0, "height_px": 900.0 },
+    { "type": "wait_frames", "n": 10 },
     {
       "type": "wait_until",
       "predicate": {
@@ -47,4 +54,3 @@
     }
   ]
 }
-
