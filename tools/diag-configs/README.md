@@ -24,6 +24,9 @@ Notes:
   adding more “switches” during the v2 hardening period:
   - `write_bundle_json`
   - `write_bundle_schema2`
+- Tool-launched escape hatch: if you explicitly need raw `bundle.json` for a `--launch` run, use
+  `fretboard diag ... --launch-write-bundle-json --launch -- <cmd>` (tooling writes a per-run config with
+  `write_bundle_json=true`).
 - Most `paths.*` values are resolved relative to the effective `out_dir` when the config value is not absolute.
 - Some numeric fields are clamped by the runtime for safety/bundle size control.
 
