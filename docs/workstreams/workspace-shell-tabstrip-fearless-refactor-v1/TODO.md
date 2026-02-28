@@ -61,6 +61,7 @@ This file is an execution checklist for the design in `DESIGN.md`.
 - [ ] Define kernel interfaces:
   - [ ] inputs: rects, pointer position, viewport size, state snapshot
   - [ ] outputs: intents (activate/reorder/move/split/scroll)
+- [x] Extract pinned-boundary-aware drop target computation into `tab_strip/kernel.rs`.
 - [ ] Refactor `WorkspaceTabStrip` to call kernel helpers (no behavior duplication).
 - [ ] Apply the same kernel to docking tab bars.
 - [ ] Gates:

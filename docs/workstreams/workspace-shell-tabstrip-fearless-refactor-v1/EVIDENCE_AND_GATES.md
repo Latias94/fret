@@ -80,6 +80,11 @@ For each milestone PR, include 1–3 anchors:
 - tests / diag script IDs
 - demo surface (UI Gallery page and/or `fretboard dev` command)
 
+Current anchors:
+
+- Workspace tab strip adapter: `ecosystem/fret-workspace/src/tab_strip/mod.rs`
+- Tab strip interaction kernel (WIP): `ecosystem/fret-workspace/src/tab_strip/kernel.rs`
+
 Reference anchors:
 
 - Zed pinned/preview/drop targets: `repo-ref/zed/crates/workspace/src/pane.rs`

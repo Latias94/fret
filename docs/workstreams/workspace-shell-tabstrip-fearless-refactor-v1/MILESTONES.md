@@ -29,8 +29,8 @@ layering (mechanism in `crates/*`, policy in `ecosystem/*`).
 
 - dockview overflow pipeline: `repo-ref/dockview/.../tabs.ts` + `tabsContainer.ts`
 - Zed behavior reference: `repo-ref/zed/.../pane.rs` (drop targets + scroll policies)
-- Fret adapter + overflow UI: `ecosystem/fret-workspace/src/tab_strip.rs`
-- Fret overflow computation helper: `ecosystem/fret-workspace/src/tab_strip_overflow.rs`
+- Fret adapter + overflow UI: `ecosystem/fret-workspace/src/tab_strip/mod.rs`
+- Fret overflow computation helper: `ecosystem/fret-workspace/src/tab_strip/overflow.rs`
 
 **Gates**
 
@@ -50,7 +50,7 @@ layering (mechanism in `crates/*`, policy in `ecosystem/*`).
 **Evidence anchors**
 
 - Zed pinned rows + drop targets: `repo-ref/zed/crates/workspace/src/pane.rs`
-- Fret pinned model + commands: `ecosystem/fret-workspace/src/tabs.rs` and `ecosystem/fret-workspace/src/commands.rs`
+- Fret pinned model + commands: `ecosystem/fret-workspace/src/tabs.rs`
 
 **Gates**
 
