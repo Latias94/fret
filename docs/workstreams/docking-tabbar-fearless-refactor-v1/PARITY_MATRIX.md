@@ -13,7 +13,7 @@ Status legend:
 | Cross-pane tab move | 🟡 | ✅ | ✅ | 🟡 | ✅ | ✅ |
 | Drag-to-split from tab/content | 🟡 | ✅ | ✅ | 🟡 | ✅ | ✅ |
 | Overflow dropdown / menu | 🟡 | ❌ | ✅ | 🟡 | ✅ | ✅ |
-| Auto-scroll while dragging | ❌ | ❌ | ✅ | 🟡 | ✅ | ✅ |
+| Auto-scroll while dragging | 🟡 | ❌ | ✅ | 🟡 | ✅ | ✅ |
 | Pinned tabs | ❌ | ❌ | ✅ | ❌ | ❌ | ✅ |
 | Preview tabs | ❌ | ❌ | ✅ | ❌ | ❌ | ✅ |
 | Keyboard navigation | 🟡 | 🟡 | ✅ | 🟡 | 🟡 | ✅ |
