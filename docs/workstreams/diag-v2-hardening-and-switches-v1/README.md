@@ -162,6 +162,8 @@ Make configuration predictable:
     launch error (no silent fallback to large `bundle.json` defaults). Tool-launched runs also scrub inherited
     `FRET_DIAG_*` env vars from the parent shell (pass explicit `diag --env KEY=VALUE` when you truly need a one-off
     override).
+  - Audit (2026-02-28): all `--launch` entry points (`diag run/suite/repro/perf/repeat/script`) call the same helper
+    (`crates/fret-diag/src/compare.rs:maybe_launch_demo`) to ensure consistent per-run config + env policy.
   - Smoke (2026-02-28): `ui-gallery-gesture-tap-smoke` passes under `--launch` and produces schema2-only bundle exports
     by default (`bundle.schema2.json` present, raw `bundle.json` absent).
   - Smoke (2026-02-28): `ui-gallery-table-smoke` passes again after relaxing a too-strict

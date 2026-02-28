@@ -31,6 +31,8 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
 - [x] Define “reserved env vars” policy for `--launch` (tooling-owned) and enforce it uniformly.
 - [x] Scrub all inherited `FRET_DIAG_*` env vars in `--launch` mode (prefix-based) so parent-shell overrides cannot
   silently drift tool-launched runs.
+- [x] Audit `--launch` entry points to ensure a single per-run config writer is used (`diag run/suite/repro/perf/repeat`
+  funnel through `maybe_launch_demo`).
 - [x] Add a `diag config doctor` (tooling-side) that prints an effective merged config + highlights deprecated keys/envs.
 
 ## P0.5: Script library modularization (UX scalability)
