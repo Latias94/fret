@@ -263,6 +263,8 @@ pub struct NodeGraphCanvasWith<M> {
     internals: Option<Arc<NodeGraphInternalsStore>>,
     internals_key: Option<InternalsCacheKey>,
 
+    diagnostics_anchor_ports: Option<DiagnosticsAnchorPorts>,
+
     cached_pan: CanvasPoint,
     cached_zoom: f32,
     last_cull_window_key: Option<u64>,
@@ -283,6 +285,12 @@ pub struct NodeGraphCanvasWith<M> {
     edge_labels_build_states: HashMap<u64, EdgeLabelsBuildState>,
     edge_labels_build_state: Option<EdgeLabelsBuildState>,
     interaction: InteractionState,
+}
+
+#[derive(Debug, Clone)]
+struct DiagnosticsAnchorPorts {
+    child_offset: usize,
+    ports: Vec<PortId>,
 }
 
 #[derive(Debug, Clone)]
@@ -479,6 +487,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             measured_output_key: None,
             internals: None,
             internals_key: None,
+            diagnostics_anchor_ports: None,
             cached_pan: CanvasPoint::default(),
             cached_zoom: 1.0,
             last_cull_window_key: None,
@@ -565,6 +574,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             measured_output_key: self.measured_output_key,
             internals: self.internals,
             internals_key: self.internals_key,
+            diagnostics_anchor_ports: self.diagnostics_anchor_ports,
             cached_pan: self.cached_pan,
             cached_zoom: self.cached_zoom,
             last_cull_window_key: self.last_cull_window_key,
@@ -601,6 +611,32 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 
     pub fn with_internals_store(mut self, store: Arc<NodeGraphInternalsStore>) -> Self {
         self.internals = Some(store);
+        self
+    }
+
+    /// Attaches diagnostics-only port anchors.
+    ///
+    /// This is a UI-only helper to make pointer-driven `fretboard diag` scripts deterministic
+    /// without depending on pixels. Anchors are represented as child nodes whose bounds are laid
+    /// out to match the current port bounds in window space.
+    ///
+    /// Contract:
+    /// - Anchors must be paint-only and must not affect hit-testing (anchors should be semantics-
+    ///   only widgets).
+    /// - The provided `child_offset` must match how the caller mounts children under the canvas.
+    pub fn with_diagnostics_anchor_ports(
+        mut self,
+        child_offset: usize,
+        ports: Vec<PortId>,
+    ) -> Self {
+        self.diagnostics_anchor_ports = if ports.is_empty() {
+            None
+        } else {
+            Some(DiagnosticsAnchorPorts {
+                child_offset,
+                ports,
+            })
+        };
         self
     }
 

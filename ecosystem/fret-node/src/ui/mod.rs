@@ -5,6 +5,7 @@
 pub mod a11y;
 pub mod canvas;
 pub mod commands;
+pub mod diag_anchors;
 pub mod edge_types;
 pub mod edit_queue;
 pub mod editor;
@@ -33,6 +34,7 @@ pub use canvas::{
     NoopNodeGraphCanvasMiddleware,
 };
 pub use commands::register_node_graph_commands;
+pub use diag_anchors::{NodeGraphDiagAnchor, NodeGraphDiagConnectingFlag};
 pub use edge_types::{EdgeCustomPath, EdgePathInput, EdgeTypeKey, NodeGraphEdgeTypes};
 pub use edit_queue::NodeGraphEditQueue;
 pub use editor::NodeGraphEditor;
