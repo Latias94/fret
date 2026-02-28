@@ -44,14 +44,14 @@ This file is an execution checklist for the design in `DESIGN.md`.
 
 ## M3 — Preview tabs
 
-- [ ] Define preview policy contract:
-  - [ ] when preview opens, reuse existing preview tab slot
-  - [ ] when committed, becomes normal tab
-  - [ ] if preview disabled, always open normal tabs
-- [ ] Decide how preview is represented in UI (icon/italic/indicator).
+- [x] Define preview policy contract:
+  - [x] when preview opens, reuse/replace existing preview tab slot
+  - [x] when committed (or dirtied), becomes normal tab
+  - [x] if preview disabled, always open normal tabs
+- [x] Decide how preview is represented in UI (v1: italic title).
 - [ ] Gates:
-  - [ ] test: open sequence replaces preview tab
-  - [ ] test: commit preview preserves active tab
+  - [x] test: open sequence replaces preview tab
+  - [x] test: commit/dirty preserves tab (commits preview)
 
 ## M4 — Kernel extraction + docking reuse
 
