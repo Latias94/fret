@@ -280,22 +280,12 @@ where
             let x_color = axis_color(
                 theme,
                 EditorTokenKeys::AXIS_X_COLOR,
-                Color {
-                    r: 0.95,
-                    g: 0.35,
-                    b: 0.35,
-                    a: 1.0,
-                },
+                Color::from_srgb_hex_rgb(0xf2_59_59),
             );
             let y_color = axis_color(
                 theme,
                 EditorTokenKeys::AXIS_Y_COLOR,
-                Color {
-                    r: 0.35,
-                    g: 0.95,
-                    b: 0.35,
-                    a: 1.0,
-                },
+                Color::from_srgb_hex_rgb(0x59_f2_59),
             );
 
             let auto_below = self
@@ -472,32 +462,17 @@ where
             let x_color = axis_color(
                 theme,
                 EditorTokenKeys::AXIS_X_COLOR,
-                Color {
-                    r: 0.95,
-                    g: 0.35,
-                    b: 0.35,
-                    a: 1.0,
-                },
+                Color::from_srgb_hex_rgb(0xf2_59_59),
             );
             let y_color = axis_color(
                 theme,
                 EditorTokenKeys::AXIS_Y_COLOR,
-                Color {
-                    r: 0.35,
-                    g: 0.95,
-                    b: 0.35,
-                    a: 1.0,
-                },
+                Color::from_srgb_hex_rgb(0x59_f2_59),
             );
             let z_color = axis_color(
                 theme,
                 EditorTokenKeys::AXIS_Z_COLOR,
-                Color {
-                    r: 0.35,
-                    g: 0.55,
-                    b: 0.95,
-                    a: 1.0,
-                },
+                Color::from_srgb_hex_rgb(0x59_8c_f2),
             );
 
             let auto_below = self
@@ -703,42 +678,22 @@ where
             let x_color = axis_color(
                 theme,
                 EditorTokenKeys::AXIS_X_COLOR,
-                Color {
-                    r: 0.95,
-                    g: 0.35,
-                    b: 0.35,
-                    a: 1.0,
-                },
+                Color::from_srgb_hex_rgb(0xf2_59_59),
             );
             let y_color = axis_color(
                 theme,
                 EditorTokenKeys::AXIS_Y_COLOR,
-                Color {
-                    r: 0.35,
-                    g: 0.95,
-                    b: 0.35,
-                    a: 1.0,
-                },
+                Color::from_srgb_hex_rgb(0x59_f2_59),
             );
             let z_color = axis_color(
                 theme,
                 EditorTokenKeys::AXIS_Z_COLOR,
-                Color {
-                    r: 0.35,
-                    g: 0.55,
-                    b: 0.95,
-                    a: 1.0,
-                },
+                Color::from_srgb_hex_rgb(0x59_8c_f2),
             );
             let w_color = axis_color(
                 theme,
                 EditorTokenKeys::AXIS_W_COLOR,
-                Color {
-                    r: 0.8,
-                    g: 0.8,
-                    b: 0.8,
-                    a: 1.0,
-                },
+                Color::from_srgb_hex_rgb(0xcc_cc_cc),
             );
 
             let auto_below = self
