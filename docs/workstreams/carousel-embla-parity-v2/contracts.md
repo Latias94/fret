@@ -43,6 +43,8 @@ Therefore:
 - `duration` is **not** a `std::time::Duration` in milliseconds.
 - The observable outcome is “snappiness”/convergence speed, and it depends on how often `seek()`
   is called (frame rate).
+- Note: Embla's drag release shaping uses a hard-coded `baseDuration` (`dragFree ? 43 : 25`) in
+  `DragHandler`, so changing `duration` mostly affects non-drag navigation (e.g. `scrollTo.index`).
 
 ### Contract: fixed-step engine ticks (v2 MVP)
 

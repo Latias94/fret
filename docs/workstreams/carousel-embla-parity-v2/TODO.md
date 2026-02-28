@@ -76,6 +76,10 @@ Non-goals (v2):
   - Evidence:
     - `ecosystem/fret-ui-headless/src/embla/drag_release.rs` (`skipSnaps && indexChanged()` branch)
     - Gate: `ecosystem/fret-ui-headless/src/embla/drag_release.rs` (`skip_snaps_halves_base_force_when_index_changed`)
+- [x] CAR2-123 Duration: lock Embla `duration` as a fixed-step integrator parameter.
+  - Evidence:
+    - `ecosystem/fret-ui-headless/src/embla/scroll_body.rs` (`seek` divides by `scroll_duration`)
+    - Gate: `ecosystem/fret-ui-headless/src/embla/scroll_body.rs` (`lower_duration_moves_faster_per_tick`)
 - [x] CAR2-125 Port core targeting helpers (snap selection + limits) needed by the engine.
   - Evidence:
     - `ecosystem/fret-ui-headless/src/embla/scroll_target.rs`

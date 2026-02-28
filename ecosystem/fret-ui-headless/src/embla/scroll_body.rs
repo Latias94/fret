@@ -220,4 +220,19 @@ mod tests {
         assert!((snap.target - snap.location).abs() < 1.0);
         assert!(body.settled());
     }
+
+    #[test]
+    fn lower_duration_moves_faster_per_tick() {
+        let mut fast = ScrollBody::new(0.0, 10.0, 0.9);
+        let mut slow = ScrollBody::new(0.0, 50.0, 0.9);
+        fast.set_target(100.0);
+        slow.set_target(100.0);
+
+        fast.seek();
+        slow.seek();
+
+        assert!(fast.location() > slow.location());
+        assert!(fast.location() > 0.0);
+        assert!(slow.location() > 0.0);
+    }
 }
