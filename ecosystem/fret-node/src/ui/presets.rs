@@ -1196,13 +1196,42 @@ mod tests {
         );
     }
 
+    fn assert_rgba_close(a: RgbaV1, b: RgbaV1) {
+        assert_close(a.r, b.r);
+        assert_close(a.g, b.g);
+        assert_close(a.b, b.b);
+        assert_close(a.a, b.a);
+    }
+
     #[test]
     fn builtin_presets_wire_highlight_tokens_are_present() {
         let presets = builtin_presets();
         let cases = [
-            ("workflow_clean", (0.65, 0.80), (0.70, 0.95)),
-            ("schematic_contrast", (0.70, 0.90), (0.75, 1.0)),
-            ("graph_dark", (0.65, 0.85), (0.70, 0.95)),
+            ("workflow_clean", (0.65, 0.80, None), (0.70, 0.95, None)),
+            ("schematic_contrast", (0.70, 0.90, None), (0.75, 1.0, None)),
+            (
+                "graph_dark",
+                (
+                    0.65,
+                    0.85,
+                    Some(RgbaV1 {
+                        r: 0.22,
+                        g: 0.74,
+                        b: 0.97,
+                        a: 1.0,
+                    }),
+                ),
+                (
+                    0.70,
+                    0.95,
+                    Some(RgbaV1 {
+                        r: 0.4,
+                        g: 0.91,
+                        b: 0.98,
+                        a: 1.0,
+                    }),
+                ),
+            ),
         ];
 
         for (id, selected, hovered) in cases {
@@ -1224,17 +1253,19 @@ mod tests {
 
             assert_close(sel.width_mul, selected.0);
             assert_close(sel.alpha_mul, selected.1);
-            assert!(
-                sel.color.is_none(),
-                "expected no selected highlight color for {id:?}"
-            );
+            match (sel.color, selected.2) {
+                (None, None) => {}
+                (Some(a), Some(b)) => assert_rgba_close(a, b),
+                _ => panic!("selected highlight color mismatch for {id:?}"),
+            }
 
             assert_close(hov.width_mul, hovered.0);
             assert_close(hov.alpha_mul, hovered.1);
-            assert!(
-                hov.color.is_none(),
-                "expected no hovered highlight color for {id:?}"
-            );
+            match (hov.color, hovered.2) {
+                (None, None) => {}
+                (Some(a), Some(b)) => assert_rgba_close(a, b),
+                _ => panic!("hovered highlight color mismatch for {id:?}"),
+            }
         }
     }
 }
