@@ -747,10 +747,8 @@ impl WinitAppDriver for EffectsDemoDriver {
                     ),
                     text: blob,
                     paint: (Color {
-                        r: 0.95,
-                        g: 0.95,
-                        b: 0.95,
                         a: 0.95,
+                        ..Color::from_srgb_hex_rgb(0xf2_f2_f2)
                     })
                     .into(),
                     outline: None,

@@ -81,19 +81,15 @@ impl HistogramDemoDriver {
                 .bins(80)
                 .bar_gap_fraction(0.12)
                 .fill(Color {
-                    r: 0.35,
-                    g: 0.65,
-                    b: 0.95,
                     a: 0.35,
+                    ..Color::from_srgb_hex_rgb(0x59_a6_f2)
                 }),
             HistogramSeries::new("B (N(1.25, 0.60))", b)
                 .bins(80)
                 .bar_gap_fraction(0.12)
                 .fill(Color {
-                    r: 0.95,
-                    g: 0.45,
-                    b: 0.55,
                     a: 0.35,
+                    ..Color::from_srgb_hex_rgb(0xf2_73_8c)
                 }),
         ];
 
