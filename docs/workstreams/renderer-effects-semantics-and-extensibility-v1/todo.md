@@ -189,8 +189,14 @@ if left unspecified.
   - Follow-ups: demo-oriented authoring templates + WebGPU/wasm runtime story tracked under
     `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-v2/README.md`.
 
-- [ ] CustomV3 ceiling bump (bounded, renderer-provided sources):
-  - Add a versioned CustomV3 ABI that provides a renderer-owned `src_raw` source and an optional bounded blur
-    pyramid, keeping the contract deterministic and budgetable.
-  - Tracking: `docs/adr/0301-custom-effect-v3-renderer-provided-sources.md` and
-    `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-v3/README.md`.
+- [x] CustomV3 ceiling bump (bounded, renderer-provided sources):
+  - [x] Provide a renderer-owned `src_raw` source (chain root) with deterministic aliasing and diagnostics.
+  - [x] Provide an optional bounded `src_pyramid` derived from `src_raw` with explicit budgeting:
+    - Pyramid allocation must use **budget headroom** after accounting for base required allocations
+      (e.g. `srcdst` + scratch targets), and deterministically degrade to `levels = 1` when headroom is insufficient.
+  - [ ] M2 sharing/caching: deferred (requires an explicit mechanism-level design).
+  - Evidence:
+    - `docs/adr/0301-custom-effect-v3-renderer-provided-sources.md`
+    - `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-v3/README.md`
+    - `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs`
+    - `crates/fret-render-wgpu/tests/effect_custom_v3_conformance.rs`

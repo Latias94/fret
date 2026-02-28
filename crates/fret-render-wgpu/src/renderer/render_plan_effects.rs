@@ -335,6 +335,7 @@ pub(super) fn apply_chain_in_place(
                             ctx.viewport_size,
                             ctx.format,
                             &mut work_budget_bytes,
+                            estimate_texture_bytes(ctx.viewport_size, ctx.format, 1),
                             &mut effect_degradations.custom_effect_v3_sources,
                         );
 
@@ -1522,6 +1523,7 @@ pub(super) fn apply_chain_in_place(
                     ctx.viewport_size,
                     ctx.format,
                     &mut budget_bytes,
+                    estimate_texture_bytes(ctx.viewport_size, ctx.format, 1).saturating_mul(2),
                     &mut effect_degradations.custom_effect_v3_sources,
                 );
                 if sources.want_raw {
@@ -1635,6 +1637,7 @@ fn choose_custom_v3_pyramid_levels_and_charge(
     size: (u32, u32),
     format: wgpu::TextureFormat,
     budget_bytes: &mut u64,
+    base_required_bytes: u64,
     v3: &mut super::CustomEffectV3SourceDegradationCounters,
 ) -> u32 {
     let Some(req) = sources.pyramid else {
@@ -1650,9 +1653,10 @@ fn choose_custom_v3_pyramid_levels_and_charge(
     }
 
     let budget_before = *budget_bytes;
+    let headroom_before = budget_before.saturating_sub(base_required_bytes);
     while levels >= 2 {
         let required = estimate_mipped_texture_bytes(size, format, 1, levels);
-        if required <= *budget_bytes {
+        if required <= headroom_before {
             *budget_bytes = (*budget_bytes).saturating_sub(required);
             v3.pyramid_applied_levels_ge2 = v3.pyramid_applied_levels_ge2.saturating_add(1);
             return levels;
@@ -2261,6 +2265,7 @@ fn apply_step_in_place_with_scratch_targets(
                 ctx.viewport_size,
                 ctx.format,
                 budget_bytes,
+                estimate_texture_bytes(ctx.viewport_size, ctx.format, 1).saturating_mul(2),
                 &mut effect_degradations.custom_effect_v3_sources,
             );
             if sources.want_raw {
@@ -2888,6 +2893,86 @@ mod tests {
                     && (p.mask_uniform_index.is_some() || p.mask.is_some())
             }),
             "final CustomEffect should read from the work buffer and apply clip coverage once"
+        );
+    }
+
+    #[test]
+    fn custom_v3_pyramid_budget_pressure_degrades_to_one_and_records_counters() {
+        let viewport_size = (64, 64);
+        let format = wgpu::TextureFormat::Rgba8Unorm;
+        let full = estimate_texture_bytes(viewport_size, format, 1);
+
+        let ctx = EffectCompileCtx {
+            viewport_size,
+            format,
+            // Enough for srcdst + a single scratch target, but not enough headroom for a pyramid.
+            intermediate_budget_bytes: full.saturating_mul(2),
+            clear: wgpu::Color::TRANSPARENT,
+            scale_factor: 1.0,
+        };
+        let scissor = ScissorRect::full(64, 64);
+
+        let mut passes = Vec::new();
+        let mut degradations = super::super::EffectDegradationSnapshot::default();
+        let mut blur_quality = super::super::BlurQualitySnapshot::default();
+        apply_chain_in_place(
+            &mut passes,
+            &[],
+            PlanTarget::Intermediate0,
+            fret_core::EffectMode::Backdrop,
+            fret_core::EffectChain::from_steps(&[fret_core::EffectStep::CustomV3 {
+                id: fret_core::EffectId::default(),
+                params: fret_core::scene::EffectParamsV1 {
+                    vec4s: [[0.0; 4]; 4],
+                },
+                max_sample_offset_px: fret_core::Px(0.0),
+                user0: None,
+                user1: None,
+                sources: fret_core::scene::CustomEffectSourcesV3 {
+                    want_raw: false,
+                    pyramid: Some(fret_core::scene::CustomEffectPyramidRequestV1 {
+                        max_levels: 6,
+                        max_radius_px: fret_core::Px(32.0),
+                    }),
+                },
+            }]),
+            fret_core::EffectQuality::Auto,
+            scissor,
+            None,
+            &[],
+            &mut degradations,
+            &mut blur_quality,
+            ctx,
+        );
+
+        let custom_v3 = passes.iter().find_map(|p| match p {
+            RenderPlanPass::CustomEffectV3(p) => Some(*p),
+            _ => None,
+        });
+        assert!(
+            custom_v3.is_some_and(|p| p.pyramid_wanted && p.pyramid_levels == 1),
+            "budget pressure should deterministically degrade the pyramid to 1 level"
+        );
+
+        assert_eq!(degradations.custom_effect_v3_sources.raw_requested, 0);
+        assert_eq!(degradations.custom_effect_v3_sources.pyramid_requested, 1);
+        assert_eq!(
+            degradations
+                .custom_effect_v3_sources
+                .pyramid_applied_levels_ge2,
+            0
+        );
+        assert_eq!(
+            degradations
+                .custom_effect_v3_sources
+                .pyramid_degraded_to_one_budget_zero,
+            0
+        );
+        assert_eq!(
+            degradations
+                .custom_effect_v3_sources
+                .pyramid_degraded_to_one_budget_insufficient,
+            1
         );
     }
 

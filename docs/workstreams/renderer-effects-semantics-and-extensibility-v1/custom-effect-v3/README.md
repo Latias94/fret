@@ -74,6 +74,8 @@ constraints visible.
 
 - The pyramid (when requested) is expected to be derived from `src_raw` and may require additional scratch targets.
   Degrade deterministically to `levels = 1` when budgets are insufficient.
+  Budgeting note: pyramid allocation must consume **headroom** after reserving the base required allocations
+  (e.g. `srcdst` + scratch targets). It must never “steal” budget needed for the rest of the chain to compile.
 
 ## Deliverables
 
