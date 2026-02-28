@@ -200,24 +200,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         let rect = Rect::new(Point::new(Px(x), Px(y)), Size::new(Px(box_w), Px(box_h)));
 
         let border_color = match toast.severity {
-            DiagnosticSeverity::Info => Color {
-                r: 0.20,
-                g: 0.55,
-                b: 0.95,
-                a: 1.0,
-            },
-            DiagnosticSeverity::Warning => Color {
-                r: 0.95,
-                g: 0.75,
-                b: 0.20,
-                a: 1.0,
-            },
-            DiagnosticSeverity::Error => Color {
-                r: 0.90,
-                g: 0.35,
-                b: 0.35,
-                a: 1.0,
-            },
+            DiagnosticSeverity::Info => Color::from_srgb_hex_rgb(0x33_8c_f2),
+            DiagnosticSeverity::Warning => Color::from_srgb_hex_rgb(0xf2_bf_33),
+            DiagnosticSeverity::Error => Color::from_srgb_hex_rgb(0xe6_59_59),
         };
 
         cx.scene.push(SceneOp::Quad {
@@ -304,12 +289,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 
         let border_color = if invalid_hover {
             if self.interaction.hover_port_convertible {
-                Color {
-                    r: 0.95,
-                    g: 0.75,
-                    b: 0.20,
-                    a: 1.0,
-                }
+                Color::from_srgb_hex_rgb(0xf2_bf_33)
             } else {
                 match self
                     .interaction
@@ -318,24 +298,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     .map(|(sev, _)| *sev)
                     .unwrap_or(DiagnosticSeverity::Error)
                 {
-                    DiagnosticSeverity::Info => Color {
-                        r: 0.20,
-                        g: 0.55,
-                        b: 0.95,
-                        a: 1.0,
-                    },
-                    DiagnosticSeverity::Warning => Color {
-                        r: 0.95,
-                        g: 0.75,
-                        b: 0.20,
-                        a: 1.0,
-                    },
-                    DiagnosticSeverity::Error => Color {
-                        r: 0.90,
-                        g: 0.35,
-                        b: 0.35,
-                        a: 1.0,
-                    },
+                    DiagnosticSeverity::Info => Color::from_srgb_hex_rgb(0x33_8c_f2),
+                    DiagnosticSeverity::Warning => Color::from_srgb_hex_rgb(0xf2_bf_33),
+                    DiagnosticSeverity::Error => Color::from_srgb_hex_rgb(0xe6_59_59),
                 }
             }
         } else {
