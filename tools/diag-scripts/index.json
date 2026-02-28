@@ -17,11 +17,13 @@
         "node_graph",
         "preset",
         "skin",
-        "wire_drag"
+        "wire_drag",
+        "wire_glow"
       ],
       "target_hints": [
         "Cycles the built-in node graph preset families via shortcut (paint-only skin revision).",
         "Starts a wire drag session and captures bundles for debugging skin-driven chrome.",
+        "Toggles wire glow so bundles capture both glow and no-glow variants.",
         "Exercises invalid + convertible drops without mutating the graph (conversion picker forced)."
       ]
     },
