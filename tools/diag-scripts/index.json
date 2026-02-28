@@ -379,6 +379,17 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-carousel-demo-reinit-resize-gate",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-reinit-resize-gate.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-carousel-expandable-fixed-frame-delta",
       "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-expandable-fixed-frame-delta.json",
       "required_capabilities": [],
