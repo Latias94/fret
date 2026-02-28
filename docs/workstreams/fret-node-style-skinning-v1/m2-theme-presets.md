@@ -35,6 +35,10 @@ Recent additions (2026-02-28):
   - `themes/node-graph-presets.v1.json`: `paint_only_tokens.wire.highlight_selected` /
     `highlight_hovered` (`width_mul`, `alpha_mul`, optional `color`)
   - Theme-derived presets (`NodeGraphPresetSkinV1::new_from_snapshot`) also populate defaults.
+- Edge markers are parameterized via preset tokens and can be toggled in the demo:
+  - `themes/node-graph-presets.v1.json`: `paint_only_tokens.wire.marker_exec_start` /
+    `marker_exec_end` + `marker_size_mul_selected` / `marker_size_mul_hovered`
+  - Demo: `primary+shift+j` toggles markers (skin revision bump, paint-only).
 
 ## Goals
 
