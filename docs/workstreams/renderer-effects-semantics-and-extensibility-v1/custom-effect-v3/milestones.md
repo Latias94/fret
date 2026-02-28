@@ -42,13 +42,16 @@ Current status:
 - Conformance verifies that mip level 1 sampling differs from raw near an unaligned edge.
 - Plan dumps report requested count and degraded-to-1 outcomes.
 
-## M2 — Optional sharing/caching (deferred)
+## M2 — Sharing/caching (staged)
 
 Outcome:
 
-- A mechanism-level way to share pyramid/capture work across multiple glass surfaces exists,
-  without hidden implicit caches.
+- A mechanism-level way to share capture/pyramid work across multiple glass surfaces exists, without hidden implicit
+  caches, while remaining deterministic under budgets.
 
-Design status:
+Current status:
 
-- Drafted in `m2-sharing-and-caching-design.md` (Option B: contract-backed glass groups; M2.0: chain-local reuse).
+- M2.0: implemented chain-local pyramid reuse (same frame, same `src_raw`, deterministic).
+- M2.1: drafted contract for scene-level sharing (ADR 0302: backdrop source groups).
+- M2.2: implemented group-level snapshot + shared `src_raw` (and group-bounded pyramid choice) for wgpu, with
+  conformance coverage.

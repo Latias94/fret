@@ -40,12 +40,13 @@ Provide a mechanism-level way to share backdrop preparation work across multiple
 - A fully general multi-pass custom effect graph ABI (still bounded single-pass authoring).
 - Cross-frame temporal caches (would need an explicit invalidation mechanism and would complicate determinism).
 
-## Current state (M0/M1)
+## Current state (M0/M2.2)
 
 - `src_raw` may be distinct (chain snapshot) or deterministically aliased to `src`.
 - When requested, `src_pyramid` is generated at record-time into a renderer-owned scratch (mipped) texture derived
   from `src_raw`, with deterministic degradation to `levels = 1` under budget pressure.
-- M2 (“sharing/caching”) is still deferred at the contract level.
+- M2.0 chain-local pyramid reuse exists (same frame, same `src_raw`, deterministic).
+- M2.1/ M2.2 backdrop source groups are drafted (ADR 0302) and implemented for wgpu to share a stable group snapshot.
 
 ## Design space
 
@@ -110,6 +111,12 @@ Pursue **Option B** as the long-term “correct ceiling” for liquid glass, but
    - Tracking ADR: `docs/adr/0302-custom-effect-v3-backdrop-source-groups.md`
 3) **M2.2 (implementation):** implement group snapshot + shared pyramid in the wgpu backend under budgets, with
    conformance + `fretboard diag` evidence.
+
+Status (this worktree):
+
+- M2.0: implemented and instrumented (frame-local cache hit/miss counters).
+- M2.1: ADR 0302 exists (Draft).
+- M2.2: implemented for wgpu with conformance (`effect_custom_v3_conformance` group snapshot test).
 
 ## Budgeting rules (M2.0)
 

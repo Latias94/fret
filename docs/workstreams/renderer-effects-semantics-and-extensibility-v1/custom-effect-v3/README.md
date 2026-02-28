@@ -22,7 +22,9 @@ with explicit budgeting and deterministic degradation.
 
 - M0 (dual-source `src_raw`): implemented in `fret-core` + `fret-render-wgpu` with conformance coverage.
 - M1 (bounded pyramid `src_pyramid`): implemented in `fret-render-wgpu` with plan dump reporting and conformance.
-- M2 (sharing/caching): deferred (requires an explicit mechanism-level design).
+- M2.0 (same-frame pyramid reuse): implemented in `fret-render-wgpu` (frame-local, deterministic).
+- M2.1 (contract): drafted as ADR 0302 (backdrop source groups).
+- M2.2 (group snapshot + shared sources): implemented for wgpu, with conformance coverage.
 
 ## Diagnostics vocabulary (wgpu)
 
@@ -36,6 +38,10 @@ Counters:
 - `raw_requested`, `raw_distinct`, `raw_aliased_to_src`
 - `pyramid_requested`, `pyramid_applied_levels_ge2`
 - `pyramid_degraded_to_one_budget_zero`, `pyramid_degraded_to_one_budget_insufficient`
+
+Known gap:
+
+- ADR 0302 group-specific requested/applied/degraded counters are not implemented yet.
 
 ## Design anchor
 
