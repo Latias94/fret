@@ -3,7 +3,7 @@ use std::time::Duration;
 
 use fret_core::{Edges, KeyCode, LayoutDirection, MouseButton, Point, Px, SemanticsRole};
 use fret_icons::ids;
-use fret_runtime::{Effect, Model, TimerToken};
+use fret_runtime::{Effect, Model, ModelHost, TimerToken};
 use fret_ui::action::{ActionCx, ActivateReason, KeyDownCx, OnKeyDown, UiActionHost};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, ElementKind, FlexProps, HoverRegionProps, LayoutStyle,
@@ -40,6 +40,117 @@ pub struct CarouselApiSnapshot {
     /// This is an MVP event surface intended to support shadcn-style `api.on("reInit", ...)`
     /// outcomes without storing closures inside models.
     pub reinit_generation: u64,
+}
+
+#[derive(Debug, Clone)]
+pub struct CarouselApi {
+    index: Model<usize>,
+    runtime: Model<CarouselRuntime>,
+    extent: Model<Px>,
+    snaps: Model<Arc<[Px]>>,
+    commands: Model<CarouselCommandQueue>,
+    loop_enabled: bool,
+    slides_in_view_snapshot: Option<Model<CarouselSlidesInViewSnapshot>>,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct CarouselEventCursor {
+    pub select_generation: u64,
+    pub reinit_generation: u64,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CarouselEvent {
+    Select { selected_index: usize },
+    ReInit,
+}
+
+impl CarouselApi {
+    pub fn scroll_prev(&self, host: &mut impl ModelHost) {
+        let _ = host.update_model(&self.commands, |q, _| {
+            q.pending.push(CarouselCommand::ScrollPrev);
+        });
+    }
+
+    pub fn scroll_next(&self, host: &mut impl ModelHost) {
+        let _ = host.update_model(&self.commands, |q, _| {
+            q.pending.push(CarouselCommand::ScrollNext);
+        });
+    }
+
+    pub fn scroll_to(&self, host: &mut impl ModelHost, index: usize) {
+        let _ = host.update_model(&self.commands, |q, _| {
+            q.pending.push(CarouselCommand::ScrollTo { index });
+        });
+    }
+
+    pub fn snapshot(&self, host: &mut impl ModelHost) -> CarouselApiSnapshot {
+        let selected_index = host.read(&self.index, |_host, v| *v).ok().unwrap_or(0);
+        let view_size = host.read(&self.extent, |_host, v| v.0).ok().unwrap_or(0.0);
+        let snap_count_raw = host.read(&self.snaps, |_host, v| v.len()).ok().unwrap_or(0);
+        let extent_ready = view_size > 0.0 && snap_count_raw > 0;
+
+        let runtime = host
+            .read(&self.runtime, |_host, v| *v)
+            .ok()
+            .unwrap_or_default();
+
+        let snap_count = if extent_ready { snap_count_raw } else { 0 };
+        let can_scroll_prev =
+            extent_ready && snap_count_raw > 1 && (self.loop_enabled || selected_index > 0);
+        let can_scroll_next = extent_ready
+            && snap_count_raw > 1
+            && (self.loop_enabled || selected_index + 1 < snap_count_raw);
+
+        CarouselApiSnapshot {
+            selected_index,
+            snap_count,
+            can_scroll_prev,
+            can_scroll_next,
+            select_generation: runtime.api_select_generation,
+            reinit_generation: runtime.api_reinit_generation,
+        }
+    }
+
+    pub fn selected_scroll_snap(&self, host: &mut impl ModelHost) -> usize {
+        self.snapshot(host).selected_index
+    }
+
+    pub fn scroll_snap_list(&self, host: &mut impl ModelHost) -> Arc<[Px]> {
+        host.read(&self.snaps, |_host, v| v.clone())
+            .ok()
+            .unwrap_or_else(|| Arc::from(Vec::<Px>::new()))
+    }
+
+    pub fn slides_in_view(&self, host: &mut impl ModelHost) -> Arc<[usize]> {
+        let Some(model) = self.slides_in_view_snapshot.as_ref() else {
+            return Arc::from(Vec::<usize>::new());
+        };
+        host.read(model, |_host, v| v.slides_in_view.clone())
+            .ok()
+            .unwrap_or_else(|| Arc::from(Vec::<usize>::new()))
+    }
+
+    pub fn events_since(
+        &self,
+        host: &mut impl ModelHost,
+        cursor: &mut CarouselEventCursor,
+    ) -> Vec<CarouselEvent> {
+        let snap = self.snapshot(host);
+
+        let mut out = Vec::new();
+        if snap.reinit_generation != cursor.reinit_generation {
+            cursor.reinit_generation = snap.reinit_generation;
+            out.push(CarouselEvent::ReInit);
+        }
+        if snap.select_generation != cursor.select_generation {
+            cursor.select_generation = snap.select_generation;
+            out.push(CarouselEvent::Select {
+                selected_index: snap.selected_index,
+            });
+        }
+        out
+    }
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -316,6 +427,7 @@ pub struct Carousel {
     options: CarouselOptions,
     drag_config: headless_carousel::CarouselDragConfig,
     api_snapshot: Option<Model<CarouselApiSnapshot>>,
+    api_handle: Option<Model<Option<CarouselApi>>>,
     slides_in_view_snapshot: Option<Model<CarouselSlidesInViewSnapshot>>,
     autoplay: Option<CarouselAutoplayConfig>,
     test_id: Option<Arc<str>>,
@@ -372,8 +484,21 @@ struct CarouselState {
     slides: Option<Model<Arc<[headless_carousel::CarouselSlide1D]>>>,
     max_offset: Option<Model<Px>>,
     embla_engine: Option<Model<Option<headless_embla::engine::Engine>>>,
+    api_commands: Option<Model<CarouselCommandQueue>>,
     slides_in_view_tracker: Option<Model<headless_embla::slides_in_view::SlidesInViewTracker>>,
     slide_content_ids: Option<Model<Arc<[fret_ui::elements::GlobalElementId]>>>,
+}
+
+#[derive(Debug, Clone, Default)]
+struct CarouselCommandQueue {
+    pending: Vec<CarouselCommand>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CarouselCommand {
+    ScrollPrev,
+    ScrollNext,
+    ScrollTo { index: usize },
 }
 
 fn carousel_models<H: UiHost>(
@@ -464,6 +589,21 @@ fn carousel_models<H: UiHost>(
     )
 }
 
+fn carousel_api_commands_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+) -> Model<CarouselCommandQueue> {
+    let existing = cx.with_state(CarouselState::default, |st| st.api_commands.clone());
+    if let Some(existing) = existing {
+        return existing;
+    }
+
+    let model = cx.app.models_mut().insert(CarouselCommandQueue::default());
+    cx.with_state(CarouselState::default, |st| {
+        st.api_commands = Some(model.clone());
+    });
+    model
+}
+
 fn carousel_slides_in_view_tracker_model<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
 ) -> Model<headless_embla::slides_in_view::SlidesInViewTracker> {
@@ -522,6 +662,7 @@ impl Carousel {
             options: CarouselOptions::default(),
             drag_config: headless_carousel::CarouselDragConfig::default(),
             api_snapshot: None,
+            api_handle: None,
             slides_in_view_snapshot: None,
             autoplay: None,
             test_id: None,
@@ -598,6 +739,15 @@ impl Carousel {
         self
     }
 
+    /// Exposes a Rust-native handle that can enqueue scroll commands and observe events.
+    ///
+    /// This aligns with the shadcn `setApi` example ergonomics without storing closures inside
+    /// models.
+    pub fn api_handle_model(mut self, model: Model<Option<CarouselApi>>) -> Self {
+        self.api_handle = Some(model);
+        self
+    }
+
     pub fn slides_in_view_snapshot_model(
         mut self,
         model: Model<CarouselSlidesInViewSnapshot>,
@@ -643,6 +793,7 @@ impl Carousel {
                 autoplay_cfg.is_some_and(|cfg| cfg.stop_on_interaction);
             let root_test_id = self.test_id.unwrap_or_else(|| Arc::from("carousel"));
             let slides_in_view_snapshot_model = self.slides_in_view_snapshot;
+            let api_handle_model = self.api_handle;
 
             let (
                 index_model,
@@ -654,6 +805,28 @@ impl Carousel {
                 max_offset_model,
                 embla_engine_model,
             ) = carousel_models(cx, options.start_snap);
+
+            let api_commands_model = api_handle_model
+                .as_ref()
+                .map(|_| carousel_api_commands_model(cx));
+            if let (Some(api_handle_model), Some(api_commands_model)) =
+                (api_handle_model.as_ref(), api_commands_model.as_ref())
+            {
+                let api = CarouselApi {
+                    index: index_model.clone(),
+                    runtime: runtime_model.clone(),
+                    extent: extent_model.clone(),
+                    snaps: snaps_model.clone(),
+                    commands: api_commands_model.clone(),
+                    loop_enabled: options.loop_enabled,
+                    slides_in_view_snapshot: slides_in_view_snapshot_model.clone(),
+                };
+                let _ = cx.app.models_mut().update(api_handle_model, |v| {
+                    if v.is_none() {
+                        *v = Some(api);
+                    }
+                });
+            }
 
             let root_layout = decl_style::layout_style(
                 &theme,
@@ -701,13 +874,190 @@ impl Carousel {
             let root_test_id_for_items = root_test_id.clone();
 
             let index_now = cx.watch_model(&index_model).copied().unwrap_or(0);
-            let mut offset_now = cx.watch_model(&offset_model).copied().unwrap_or(Px(0.0));
+            let offset_now = cx.watch_model(&offset_model).copied().unwrap_or(Px(0.0));
             let runtime_snapshot = cx.watch_model(&runtime_model).copied().unwrap_or_default();
 
             let embla_engine_enabled = options.embla_engine
                 || std::env::var("FRET_DEBUG_CAROUSEL_EMBLA_ENGINE")
                     .ok()
                     .is_some_and(|v| v == "1" || v.eq_ignore_ascii_case("true"));
+
+            let mut applied_api_command = false;
+            if let Some(api_commands_model) = api_commands_model.as_ref() {
+                let pointer_down = runtime_snapshot.drag.armed || runtime_snapshot.drag.dragging;
+                let commands = cx
+                    .app
+                    .models_mut()
+                    .update(api_commands_model, |q| {
+                        if pointer_down {
+                            return Vec::new();
+                        }
+                        std::mem::take(&mut q.pending)
+                    })
+                    .unwrap_or_default();
+
+                let cmd = commands.last().copied();
+                if let Some(cmd) = cmd {
+                    let snaps: Arc<[Px]> = cx
+                        .app
+                        .models_mut()
+                        .read(&snaps_model, |v| v.clone())
+                        .ok()
+                        .unwrap_or_else(|| Arc::from(Vec::<Px>::new()));
+                    let snaps_len = snaps.len();
+                    if snaps_len > 1 {
+                        if autoplay_stop_on_interaction {
+                            let token = cx
+                                .app
+                                .models_mut()
+                                .read(&runtime_model, |st| st.autoplay_token)
+                                .ok()
+                                .flatten();
+                            if let Some(token) = token {
+                                cx.app.push_effect(Effect::CancelTimer { token });
+                            }
+                            let _ = cx.app.models_mut().update(&runtime_model, |st| {
+                                st.autoplay_token = None;
+                                st.autoplay_paused = true;
+                            });
+                        }
+
+                        let index: usize = cx
+                            .app
+                            .models_mut()
+                            .read(&index_model, |v| *v)
+                            .ok()
+                            .unwrap_or(0);
+                        let target_index = match cmd {
+                            CarouselCommand::ScrollPrev => {
+                                if options.loop_enabled {
+                                    headless_snap_points::step_index_wrapped(snaps_len, index, -1)
+                                } else {
+                                    headless_snap_points::step_index_clamped(snaps_len, index, -1)
+                                }
+                            }
+                            CarouselCommand::ScrollNext => {
+                                if options.loop_enabled {
+                                    headless_snap_points::step_index_wrapped(snaps_len, index, 1)
+                                } else {
+                                    headless_snap_points::step_index_clamped(snaps_len, index, 1)
+                                }
+                            }
+                            CarouselCommand::ScrollTo { index } => Some(if options.loop_enabled {
+                                index % snaps_len.max(1)
+                            } else {
+                                index.min(snaps_len.saturating_sub(1))
+                            }),
+                        };
+
+                        if let Some(target_index) = target_index {
+                            if embla_engine_enabled {
+                                let view_size = cx
+                                    .app
+                                    .models_mut()
+                                    .read(&extent_model, |v| v.0.max(0.0))
+                                    .ok()
+                                    .unwrap_or(0.0);
+                                let max_offset = cx
+                                    .app
+                                    .models_mut()
+                                    .read(&max_offset_model, |v| *v)
+                                    .ok()
+                                    .unwrap_or(Px(0.0));
+                                let content_size =
+                                    (max_offset.0.max(0.0) + view_size.max(0.0)).max(0.0);
+                                let mut scroll_snaps =
+                                    snaps.iter().map(|px| -px.0).collect::<Vec<_>>();
+                                if scroll_snaps.is_empty() {
+                                    scroll_snaps.push(0.0);
+                                }
+
+                                let mut engine = headless_embla::engine::Engine::new(
+                                    scroll_snaps,
+                                    content_size,
+                                    headless_embla::engine::EngineConfig {
+                                        loop_enabled: options.loop_enabled,
+                                        drag_free: options.drag_free,
+                                        skip_snaps: options.skip_snaps,
+                                        duration: options.embla_duration.max(0.0),
+                                        base_friction: 0.68,
+                                        view_size,
+                                        start_snap: index,
+                                    },
+                                );
+                                let cur = cx
+                                    .app
+                                    .models_mut()
+                                    .read(&offset_model, |v| *v)
+                                    .ok()
+                                    .unwrap_or(Px(0.0));
+                                let loc = -cur.0;
+                                engine.scroll_body.set_location(loc);
+                                engine.scroll_body.set_target(loc);
+                                engine.scroll_target.set_target_vector(loc);
+                                let select = engine.scroll_to_index(target_index, 0);
+
+                                let _ = cx.app.models_mut().update(&embla_engine_model, |v| {
+                                    *v = Some(engine);
+                                });
+                                if let Some(select) = select {
+                                    let _ = cx.app.models_mut().update(&index_model, |v| {
+                                        *v = select.target_snap;
+                                    });
+                                }
+                                let _ = cx.app.models_mut().update(&runtime_model, |st| {
+                                    st.drag = headless_carousel::CarouselDragState::default();
+                                    st.settling = false;
+                                    st.embla_settling = true;
+                                    st.selection_initialized = true;
+                                });
+                                cx.request_frame();
+                            } else {
+                                let cur = cx
+                                    .app
+                                    .models_mut()
+                                    .read(&offset_model, |v| *v)
+                                    .ok()
+                                    .unwrap_or(Px(0.0));
+                                let target = snaps[target_index];
+                                let _ = cx.app.models_mut().update(&embla_engine_model, |v| {
+                                    *v = None;
+                                });
+                                let _ =
+                                    cx.app.models_mut().update(&index_model, |v| *v = target_index);
+                                let _ = cx.app.models_mut().update(&runtime_model, |st| {
+                                    st.drag = headless_carousel::CarouselDragState::default();
+                                    st.settling = true;
+                                    st.embla_settling = false;
+                                    st.settle_from = cur;
+                                    st.settle_to = target;
+                                    st.settle_generation = st.settle_generation.saturating_add(1);
+                                    st.selection_initialized = true;
+                                });
+                                cx.request_frame();
+                            }
+
+                            applied_api_command = true;
+                        }
+                    }
+                }
+            }
+
+            let index_now = if applied_api_command {
+                cx.watch_model(&index_model).copied().unwrap_or(0)
+            } else {
+                index_now
+            };
+            let mut offset_now = if applied_api_command {
+                cx.watch_model(&offset_model).copied().unwrap_or(Px(0.0))
+            } else {
+                offset_now
+            };
+            let runtime_snapshot = if applied_api_command {
+                cx.watch_model(&runtime_model).copied().unwrap_or_default()
+            } else {
+                runtime_snapshot
+            };
 
             if runtime_snapshot.embla_settling {
                 let _frames = cx.begin_continuous_frames();
@@ -1269,6 +1619,8 @@ impl Carousel {
             let loop_for_prev = options.loop_enabled;
             let embla_engine_enabled_for_prev = embla_engine_enabled;
             let embla_duration_for_prev = options.embla_duration;
+            let skip_snaps_for_prev = options.skip_snaps;
+            let drag_free_for_prev = options.drag_free;
             let on_prev: fret_ui::action::OnActivate = Arc::new(
                 move |host: &mut dyn UiActionHost, cx: ActionCx, _reason: ActivateReason| {
                     if autoplay_stop_for_prev {
@@ -1322,8 +1674,8 @@ impl Carousel {
                             content_size,
                             headless_embla::engine::EngineConfig {
                                 loop_enabled: loop_for_prev,
-                                drag_free: false,
-                                skip_snaps: false,
+                                drag_free: drag_free_for_prev,
+                                skip_snaps: skip_snaps_for_prev,
                                 duration: embla_duration_for_prev.max(0.0),
                                 base_friction: 0.68,
                                 view_size,
@@ -1401,6 +1753,8 @@ impl Carousel {
             let loop_for_next = options.loop_enabled;
             let embla_engine_enabled_for_next = embla_engine_enabled;
             let embla_duration_for_next = options.embla_duration;
+            let skip_snaps_for_next = options.skip_snaps;
+            let drag_free_for_next = options.drag_free;
             let on_next: fret_ui::action::OnActivate = Arc::new(
                 move |host: &mut dyn UiActionHost, cx: ActionCx, _reason: ActivateReason| {
                     if autoplay_stop_for_next {
@@ -1454,8 +1808,8 @@ impl Carousel {
                             content_size,
                             headless_embla::engine::EngineConfig {
                                 loop_enabled: loop_for_next,
-                                drag_free: false,
-                                skip_snaps: false,
+                                drag_free: drag_free_for_next,
+                                skip_snaps: skip_snaps_for_next,
                                 duration: embla_duration_for_next.max(0.0),
                                 base_friction: 0.68,
                                 view_size,
@@ -1533,6 +1887,8 @@ impl Carousel {
             let loop_for_key = options.loop_enabled;
             let embla_engine_enabled_for_key = embla_engine_enabled;
             let embla_duration_for_key = options.embla_duration;
+            let skip_snaps_for_key = options.skip_snaps;
+            let drag_free_for_key = options.drag_free;
             let direction_for_key = layout_direction;
             let on_key_down: OnKeyDown = Arc::new(
                 move |host: &mut dyn fret_ui::action::UiFocusActionHost,
@@ -1622,8 +1978,8 @@ impl Carousel {
                             content_size,
                             headless_embla::engine::EngineConfig {
                                 loop_enabled: loop_for_key,
-                                drag_free: false,
-                                skip_snaps: false,
+                                drag_free: drag_free_for_key,
+                                skip_snaps: skip_snaps_for_key,
                                 duration: embla_duration_for_key.max(0.0),
                                 base_friction: 0.68,
                                 view_size,

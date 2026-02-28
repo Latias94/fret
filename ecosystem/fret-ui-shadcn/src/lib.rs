@@ -148,8 +148,9 @@ pub use card::{
     Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardSize, CardTitle,
 };
 pub use carousel::{
-    Carousel, CarouselAlign, CarouselApiSnapshot, CarouselAutoplayConfig, CarouselContainScroll,
-    CarouselOptions, CarouselOrientation, CarouselSlidesInViewSnapshot, CarouselSlidesToScroll,
+    Carousel, CarouselAlign, CarouselApi, CarouselApiSnapshot, CarouselAutoplayConfig,
+    CarouselContainScroll, CarouselEvent, CarouselEventCursor, CarouselOptions,
+    CarouselOrientation, CarouselSlidesInViewSnapshot, CarouselSlidesToScroll,
 };
 pub use chart::{
     ChartLegendContent, ChartLegendItem, ChartLegendVerticalAlign, ChartTooltipContent,
