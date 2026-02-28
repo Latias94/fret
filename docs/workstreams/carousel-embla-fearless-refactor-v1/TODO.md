@@ -118,6 +118,8 @@ In-tree surfaces:
     - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-orientation-vertical-screenshot.json`
     - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-expandable-screenshot.json`
     - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-plugin-autoplay-pixels-changed.json`
+  - Note: the expandable scripts click the per-item toggle button test ids (not the draggable item)
+    to avoid accidental drag/scroll drift.
 - [x] CAR-320 Update `docs/audits/carousel-shadcn-embla-parity.md` with new evidence anchors.
   - Evidence: `docs/audits/carousel-shadcn-embla-parity.md`
 - [x] CAR-330 Run layering checks if any cross-crate refactors are required.

@@ -918,6 +918,10 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
                         shadcn::Button::new(if expanded { "Collapse" } else { "Expand" })
                             .variant(shadcn::ButtonVariant::Outline)
                             .size(shadcn::ButtonSize::Sm)
+                            .test_id(format!(
+                                "ui-gallery-carousel-expandable-item-{}-toggle",
+                                idx
+                            ))
                             .on_activate(set_expandable_selected(Some(idx)))
                             .into_element(cx),
                     ];
