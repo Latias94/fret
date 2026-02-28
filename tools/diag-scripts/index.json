@@ -104,14 +104,42 @@
       ]
     },
     {
+      "id": "docking-arbitration-demo-incoming-open-inject-smoke",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-incoming-open-inject-smoke.json",
+      "required_capabilities": [
+        "diag.incoming_open_inject",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke-docking"
+      ],
+      "tags": [
+        "docking",
+        "incoming_open",
+        "smoke"
+      ],
+      "target_hints": [
+        "Injects an IncomingOpenRequest event and asserts it is observable via event_kind_seen.",
+        "This gates that the app driver records platform-delivered events into the diagnostics ring buffer."
+      ]
+    },
+    {
       "id": "docking-arbitration-demo-modal-dock-drag-viewport-capture",
       "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-modal-dock-drag-viewport-capture.json",
-      "required_capabilities": [],
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
       "suite_memberships": [
         "docking-arbitration"
       ],
-      "tags": [],
-      "target_hints": []
+      "tags": [
+        "docking",
+        "gate",
+        "modal"
+      ],
+      "target_hints": [
+        "Opens a popover and asserts docking drag closes it (capture), then opens a dialog and asserts underlay click does not leak through."
+      ]
     },
     {
       "id": "docking-arbitration-demo-multiwindow-chained-tearoff-two-tabs-merge",
@@ -732,16 +760,6 @@
     {
       "id": "ui-gallery-card-description-no-early-wrap",
       "path": "tools/diag-scripts/ui-gallery/card/ui-gallery-card-description-no-early-wrap.json",
-      "required_capabilities": [],
-      "suite_memberships": [
-        "ui-gallery-shadcn-conformance"
-      ],
-      "tags": [],
-      "target_hints": []
-    },
-    {
-      "id": "ui-gallery-card-meeting-notes-list-no-early-wrap",
-      "path": "tools/diag-scripts/ui-gallery/card/ui-gallery-card-meeting-notes-list-no-early-wrap.json",
       "required_capabilities": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"

@@ -139,8 +139,8 @@ pub(super) fn preview_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
             .variant(shadcn::ButtonVariant::Outline)
             .size(shadcn::ButtonSize::Sm)
             .leading_icon(fret_icons::IconId::new_static("lucide.git-branch"))
-            .into_element(cx)
             .test_id("ui-gallery-button-with-icon")
+            .into_element(cx)
     };
 
     let loading = {

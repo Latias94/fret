@@ -951,6 +951,42 @@ Rules:
   - `TextInputProps.test_id`
   - `TextAreaProps.test_id`
 
+## Diagnostics-only geometry anchors (retained/canvas UIs)
+
+Some UIs (notably retained/canvas-style widgets like node graphs) have important interactive targets
+whose geometry is not naturally represented as a normal semantics subtree (e.g. a port handle that is
+painted inside a cached canvas tile).
+
+In those cases, add **diagnostics-only semantics anchors**:
+
+- They **do not paint** and **do not hit-test**.
+- They exist solely to expose a stable `test_id` + `bounds` for scripted pointer steps (like `click`,
+  `drag_to`) without relying on pixel coordinates.
+- They should not become user-visible accessibility nodes in production flows; treat them as
+  debug/test-only contract surface.
+
+Node graph example (port anchors):
+
+- Canvas root selector:
+  - `{"kind":"test_id","id":"node_graph.canvas"}`
+- Per-port anchor selectors used by scripts:
+  - `{"kind":"test_id","id":"node_graph_demo.anchor.float_out"}`
+  - `{"kind":"test_id","id":"node_graph_demo.anchor.float_in"}`
+
+Implementation pointers:
+
+- Anchor widget (semantics-only): `ecosystem/fret-node/src/ui/diag_anchors.rs` (`NodeGraphDiagAnchor`)
+- Wiring anchors to the retained canvas: `ecosystem/fret-node/src/ui/canvas/widget/retained_widget.rs`
+  (`NodeGraphCanvas::with_diagnostics_anchor_ports(...)`)
+- Script that drives a wire drag via anchors (no pixel coords):
+  - `tools/diag-scripts/extras/node-graph-demo-preset-families-paint-only.json`
+
+Script authoring tip:
+
+- Avoid `value_contains` gates when `FRET_DIAG_REDACT_TEXT=1` (default): text/value fields may be
+  redacted. Prefer `exists(test_id)` + intent steps, or add a value-free semantics flag that uses
+  `semantics_present()` (see `NodeGraphDiagConnectingFlag`).
+
 ### Supported role strings (MVP)
 
 Use the following lowercase role strings (subset of `SemanticsRole`):
@@ -1146,6 +1182,9 @@ The diagnostics harness also includes docking arbitration scripts (multi-viewpor
 - `tools/diag-scripts/docking-arbitration-demo-split-viewports.json`
 - `tools/diag-scripts/docking-arbitration-demo-modal-dock-drag-viewport-capture.json`
 - `tools/diag-scripts/docking-arbitration-demo-float-zone-floats-in-window.json`
+- `tools/diag-scripts/docking-arbitration-demo-tab-bar-drop-end-insert-index.json`
+- `tools/diag-scripts/docking-arbitration-demo-tab-bar-drop-end-insert-index-two-tabs.json`
+- `tools/diag-scripts/docking-arbitration-demo-tab-bar-drop-end-insert-index-overflow.json`
 
 You can run them as a built-in suite:
 

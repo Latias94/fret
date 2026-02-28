@@ -656,7 +656,7 @@ impl WinitAppDriver for ChartMultiAxisDemoDriver {
             ..
         } = context;
 
-        if fret_bootstrap::ui_diagnostics::maybe_consume_event(app, window, event) {
+        if fret_bootstrap::maybe_consume_event(app, window, event) {
             return;
         }
 

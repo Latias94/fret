@@ -333,6 +333,7 @@ pub(super) fn handle_drag_pointer_until_step(
                 },
                 predicate: predicate.clone(),
                 down_issued: false,
+                mouse_buttons_override_issued: false,
                 release_armed: false,
             },
         };
@@ -364,6 +365,9 @@ pub(super) fn handle_drag_pointer_until_step(
         } else {
             // If the predicate is already satisfied (e.g. after runner-owned hover routing on a
             // previous frame), release immediately.
+            let dock_drag_runtime = dock_drag_runtime_state(app, svc.known_windows.as_slice());
+            let move_steps = state.playback.steps.max(1);
+            let reached_end = state.playback.frame > move_steps;
             let predicate_ok_without_semantics = match &state.predicate {
                 UiPredicateV1::EventKindSeen { event_kind } => svc
                     .per_window
@@ -379,13 +383,92 @@ pub(super) fn handle_drag_pointer_until_step(
                 UiPredicateV1::PlatformUiWindowHoverDetectionIs { quality } => app
                     .global::<fret_runtime::PlatformCapabilities>()
                     .is_some_and(|c| c.ui.window_hover_detection.as_str() == quality.as_str()),
+                UiPredicateV1::DockDragCurrentWindowIs {
+                    window: target_window,
+                } => resolve_window_target_from_known_windows(
+                    window,
+                    svc.known_windows.as_slice(),
+                    *target_window,
+                )
+                .is_some_and(|target_window| {
+                    dock_drag_runtime
+                        .as_ref()
+                        .is_some_and(|drag| drag.dragging && drag.current_window == target_window)
+                }),
+                UiPredicateV1::DockDragActiveIs { active } => {
+                    let dragging = dock_drag_runtime.as_ref().is_some_and(|drag| drag.dragging);
+                    dragging == *active
+                }
+                UiPredicateV1::DockDropResolveSourceIs { source } => {
+                    if let Some(resolve) = docking_diag.and_then(|d| d.dock_drop_resolve.as_ref()) {
+                        let have = match resolve.source {
+                            fret_runtime::DockDropResolveSource::InvertDocking => "invert_docking",
+                            fret_runtime::DockDropResolveSource::OutsideWindow => "outside_window",
+                            fret_runtime::DockDropResolveSource::FloatZone => "float_zone",
+                            fret_runtime::DockDropResolveSource::EmptyDockSpace => {
+                                "empty_dock_space"
+                            }
+                            fret_runtime::DockDropResolveSource::LayoutBoundsMiss => {
+                                "layout_bounds_miss"
+                            }
+                            fret_runtime::DockDropResolveSource::LatchedPreviousHover => {
+                                "latched_previous_hover"
+                            }
+                            fret_runtime::DockDropResolveSource::TabBar => "tab_bar",
+                            fret_runtime::DockDropResolveSource::FloatingTitleBar => {
+                                "floating_title_bar"
+                            }
+                            fret_runtime::DockDropResolveSource::OuterHintRect => "outer_hint_rect",
+                            fret_runtime::DockDropResolveSource::InnerHintRect => "inner_hint_rect",
+                            fret_runtime::DockDropResolveSource::None => "none",
+                        };
+                        have == source.as_str()
+                    } else {
+                        false
+                    }
+                }
+                UiPredicateV1::DockDropResolvedIsSome { some } => docking_diag
+                    .and_then(|d| d.dock_drop_resolve.as_ref())
+                    .is_some_and(|d| d.resolved.is_some() == *some),
+                UiPredicateV1::DockDropResolvedZoneIs { zone } => {
+                    if let Some(resolved) = docking_diag
+                        .and_then(|d| d.dock_drop_resolve.as_ref())
+                        .and_then(|d| d.resolved.as_ref())
+                    {
+                        let have = match resolved.zone {
+                            fret_core::dock::DropZone::Center => "center",
+                            fret_core::dock::DropZone::Left => "left",
+                            fret_core::dock::DropZone::Right => "right",
+                            fret_core::dock::DropZone::Top => "top",
+                            fret_core::dock::DropZone::Bottom => "bottom",
+                        };
+                        have == zone.as_str()
+                    } else {
+                        false
+                    }
+                }
+                UiPredicateV1::DockDropResolvedInsertIndexIs { index } => docking_diag
+                    .and_then(|d| d.dock_drop_resolve.as_ref())
+                    .and_then(|d| d.resolved.as_ref())
+                    .is_some_and(|d| d.insert_index == Some(*index as usize)),
+                UiPredicateV1::DockGraphCanonicalIs { canonical } => docking_diag
+                    .and_then(|d| d.dock_graph_stats)
+                    .is_some_and(|s| s.canonical_ok == *canonical),
+                UiPredicateV1::DockGraphSignatureIs { signature } => docking_diag
+                    .and_then(|d| d.dock_graph_signature.as_ref())
+                    .is_some_and(|s| s.signature == *signature),
+                UiPredicateV1::DockGraphSignatureContains { needle } => docking_diag
+                    .and_then(|d| d.dock_graph_signature.as_ref())
+                    .is_some_and(|s| s.signature.contains(needle)),
+                UiPredicateV1::DockGraphSignatureFingerprint64Is { fingerprint64 } => docking_diag
+                    .and_then(|d| d.dock_graph_signature.as_ref())
+                    .is_some_and(|s| s.fingerprint64 == *fingerprint64),
                 _ => false,
             };
             let input_ctx = app
                 .global::<fret_runtime::WindowInputContextService>()
                 .and_then(|svc| svc.snapshot(window));
             let predicate_ok = if let Some(snapshot) = semantics_snapshot {
-                let dock_drag_runtime = dock_drag_runtime_state(app, svc.known_windows.as_slice());
                 eval_predicate(
                     snapshot,
                     window_bounds,
@@ -408,43 +491,50 @@ pub(super) fn handle_drag_pointer_until_step(
             } else {
                 predicate_ok_without_semantics
             };
+            let is_current_window_predicate = matches!(
+                &state.predicate,
+                UiPredicateV1::DockDragCurrentWindowIs { .. }
+            );
+            let predicate_ok = if is_current_window_predicate && !reached_end {
+                false
+            } else {
+                predicate_ok
+            };
+            let predicate_ok = predicate_ok || state.release_armed;
 
             if predicate_ok {
                 if state.down_issued {
                     let release_pos = drag_playback_last_position(&state.playback);
-                    let cx0 = window_bounds.origin.x.0;
-                    let cy0 = window_bounds.origin.y.0;
-                    let cx1 = cx0 + window_bounds.size.width.0.max(0.0);
-                    let cy1 = cy0 + window_bounds.size.height.0.max(0.0);
-                    // Route the release to the source window even if the cursor is outside
-                    // all windows (or fully overlapped by a smaller tear-off window). Pick
-                    // a stable in-bounds point that is likely to be unique to the source.
-                    let routing_pos = Point::new(
-                        fret_core::Px((cx1 - 2.0).max(cx0)),
-                        fret_core::Px((cy1 - 2.0).max(cy0)),
-                    );
                     let _ = write_cursor_override_window_client_logical(
                         &svc.cfg.out_dir,
                         state.playback.window,
-                        routing_pos.x.0,
-                        routing_pos.y.0,
+                        release_pos.x.0,
+                        release_pos.y.0,
                     );
 
                     if !state.release_armed {
                         // The runner polls cursor overrides at the top of the event loop. If we
                         // emit `Up/Drop` in the same frame as the override write, the release can
-                        // be routed to the wrong window during cross-window drags. Stage the
-                        // override first and release on the next frame.
+                        // be observed with a stale cursor screen position during cross-window
+                        // drags. Stage the release on the next frame.
                         state.release_armed = true;
                         state.remaining_frames = state.remaining_frames.saturating_sub(1);
                         active.v2_step_state = Some(V2StepState::DragPointerUntil(state));
                         output.request_redraw = true;
                     } else {
-                        output.events.extend(pointer_up_with_internal_drop_events(
-                            state.playback.button,
-                            release_pos,
-                            pointer_type,
-                        ));
+                        let drag_pointer_id =
+                            dock_drag_pointer_id_best_effort(app, svc.known_windows.as_slice())
+                                .unwrap_or(PointerId(0));
+                        let cross_window_hover_active = dock_drag_runtime
+                            .as_ref()
+                            .is_some_and(|d| d.cross_window_hover);
+                        if !cross_window_hover_active {
+                            output.events.extend(pointer_up_with_internal_drop_events(
+                                state.playback.button,
+                                release_pos,
+                                pointer_type,
+                            ));
+                        }
                         let _ = write_mouse_buttons_override_all_windows_v1(
                             &svc.cfg.out_dir,
                             match state.playback.button {
@@ -460,9 +550,6 @@ pub(super) fn handle_drag_pointer_until_step(
                                 _ => None,
                             },
                         );
-                        let drag_pointer_id =
-                            dock_drag_pointer_id_best_effort(app, svc.known_windows.as_slice())
-                                .unwrap_or(PointerId(0));
                         active.pending_cancel_cross_window_drag =
                             Some(PendingCancelCrossWindowDrag::new(drag_pointer_id));
                         active.v2_step_state = None;
@@ -557,6 +644,27 @@ pub(super) fn handle_drag_pointer_until_step(
                     );
                     if state.playback.frame >= 1 {
                         state.down_issued = true;
+                    }
+                    if state.down_issued
+                        && !state.mouse_buttons_override_issued
+                        && matches!(pointer_type, PointerType::Mouse)
+                    {
+                        let _ = write_mouse_buttons_override_all_windows_v1(
+                            &svc.cfg.out_dir,
+                            match state.playback.button {
+                                UiMouseButtonV1::Left => Some(true),
+                                _ => None,
+                            },
+                            match state.playback.button {
+                                UiMouseButtonV1::Right => Some(true),
+                                _ => None,
+                            },
+                            match state.playback.button {
+                                UiMouseButtonV1::Middle => Some(true),
+                                _ => None,
+                            },
+                        );
+                        state.mouse_buttons_override_issued = true;
                     }
 
                     state.remaining_frames = state.remaining_frames.saturating_sub(1);

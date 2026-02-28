@@ -26,6 +26,48 @@ struct RenderSpace {
 
 @group(0) @binding(5) var<uniform> render_space: RenderSpace;
 
+// Renderer-owned pattern atlas (deterministic utility inputs).
+//
+// Layers (current contract):
+// - 0: hash noise (64x64)
+// - 1: Bayer 8x8 repeated (64x64)
+//
+// Notes:
+// - This is intentionally small and deterministic. It exists to unlock high-end recipes (acrylic,
+//   grain, scanlines, ordered dither) without introducing user-provided textures in CustomV1.
+// - The atlas is populated by the renderer; see `GpuTextures::ensure_material_catalog_uploaded`.
+@group(0) @binding(3) var fret_material_catalog_texture: texture_2d_array<f32>;
+@group(0) @binding(4) var fret_material_catalog_sampler: sampler;
+
+const FRET_MATERIAL_CATALOG_LAYER_HASH_NOISE: i32 = 0;
+const FRET_MATERIAL_CATALOG_LAYER_BAYER8X8: i32 = 1;
+
+fn fret_local_px(pos_px: vec2<f32>) -> vec2<f32> {
+  return pos_px - render_space.origin_px;
+}
+
+fn fret_catalog_hash_noise01(pos_px: vec2<f32>) -> f32 {
+  let x = i32(floor(pos_px.x)) & 63;
+  let y = i32(floor(pos_px.y)) & 63;
+  return textureLoad(
+    fret_material_catalog_texture,
+    vec2<i32>(x, y),
+    FRET_MATERIAL_CATALOG_LAYER_HASH_NOISE,
+    0
+  ).r;
+}
+
+fn fret_catalog_bayer8x8_01(pos_px: vec2<f32>) -> f32 {
+  let x = i32(floor(pos_px.x)) & 63;
+  let y = i32(floor(pos_px.y)) & 63;
+  return textureLoad(
+    fret_material_catalog_texture,
+    vec2<i32>(x, y),
+    FRET_MATERIAL_CATALOG_LAYER_BAYER8X8,
+    0
+  ).r;
+}
+
 @group(1) @binding(0) var src_texture: texture_2d<f32>;
 @group(1) @binding(2) var mask_texture: texture_2d<f32>;
 

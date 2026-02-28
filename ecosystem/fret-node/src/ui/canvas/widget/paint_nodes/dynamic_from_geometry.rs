@@ -1,5 +1,40 @@
 use crate::ui::canvas::geometry::node_size_default_px;
 use crate::ui::canvas::widget::*;
+use crate::ui::{NodeChromeHint, NodeRingHint, PortChromeHint};
+
+fn paint_node_ring(
+    scene: &mut fret_core::Scene,
+    rect: Rect,
+    corner: Px,
+    ring: NodeRingHint,
+    zoom: f32,
+) {
+    let pad = ring.pad;
+    let w = ring.width;
+    if !pad.is_finite() || !w.is_finite() || w <= 0.0 || pad < 0.0 {
+        return;
+    }
+    let z = zoom.max(1.0e-6);
+    let pad = pad / z;
+    let ring_rect = Rect::new(
+        Point::new(Px(rect.origin.x.0 - pad), Px(rect.origin.y.0 - pad)),
+        Size::new(
+            Px(rect.size.width.0 + 2.0 * pad),
+            Px(rect.size.height.0 + 2.0 * pad),
+        ),
+    );
+    let ring_corner = Px((corner.0 + pad).max(0.0));
+    scene.push(SceneOp::Quad {
+        order: DrawOrder(3),
+        rect: ring_rect,
+        background: fret_core::Paint::TRANSPARENT,
+
+        border: Edges::all(Px(w / z)),
+        border_paint: fret_core::Paint::Solid(ring.color),
+
+        corner_radii: Corners::all(ring_corner),
+    });
+}
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(in super::super) fn paint_nodes_dynamic_from_geometry<H: UiHost>(
@@ -93,18 +128,93 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             }
         }
 
+        let skin = self.skin.clone();
+        let interaction_hint = if let Some(skin) = skin.as_ref() {
+            self.graph
+                .read_ref(cx.app, |g| skin.interaction_chrome_hint(g, &self.style))
+                .ok()
+                .unwrap_or_default()
+        } else {
+            crate::ui::InteractionChromeHint::default()
+        };
+        let focused_node = self.interaction.focused_node;
         for node in snapshot.selected_nodes.iter().copied() {
             let Some(node_geom) = geom.nodes.get(&node) else {
                 continue;
             };
             let rect = node_geom.rect;
+
+            let hint: NodeChromeHint = if let Some(skin) = skin.as_ref() {
+                self.graph
+                    .read_ref(cx.app, |g| {
+                        skin.node_chrome_hint_with_state(
+                            g,
+                            node,
+                            &self.style,
+                            true,
+                            focused_node == Some(node),
+                        )
+                    })
+                    .ok()
+                    .unwrap_or_default()
+            } else {
+                NodeChromeHint::default()
+            };
+
+            if let Some(ring) = hint.ring_selected {
+                paint_node_ring(cx.scene, rect, corner, ring, zoom);
+            }
+            if focused_node == Some(node)
+                && let Some(ring) = hint.ring_focused
+            {
+                paint_node_ring(cx.scene, rect, corner, ring, zoom);
+            }
+
+            let background = hint.background.unwrap_or(self.style.node_background);
+            let border_color = hint
+                .border_selected
+                .or(hint.border)
+                .unwrap_or(self.style.node_border_selected);
+
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(3),
                 rect,
-                background: fret_core::Paint::Solid(self.style.node_background),
+                background: fret_core::Paint::Solid(background),
+
+                border: Edges::all(Px(0.0)),
+                border_paint: fret_core::Paint::TRANSPARENT,
+
+                corner_radii: Corners::all(corner),
+            });
+
+            if let Some(color) = hint.header_background {
+                cx.scene.push(SceneOp::Quad {
+                    order: DrawOrder(3),
+                    rect: Rect::new(
+                        rect.origin,
+                        Size::new(rect.size.width, Px(title_h.min(rect.size.height.0))),
+                    ),
+                    background: fret_core::Paint::Solid(color),
+
+                    border: Edges::all(Px(0.0)),
+                    border_paint: fret_core::Paint::TRANSPARENT,
+
+                    corner_radii: Corners {
+                        top_left: corner,
+                        top_right: corner,
+                        bottom_right: Px(0.0),
+                        bottom_left: Px(0.0),
+                    },
+                });
+            }
+
+            cx.scene.push(SceneOp::Quad {
+                order: DrawOrder(3),
+                rect,
+                background: fret_core::Paint::TRANSPARENT,
 
                 border: Edges::all(Px(1.0 / zoom)),
-                border_paint: fret_core::Paint::Solid(self.style.node_border_selected),
+                border_paint: fret_core::Paint::Solid(border_color),
 
                 corner_radii: Corners::all(corner),
             });
@@ -145,12 +255,41 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             }
         }
 
+        if let Some(node) = focused_node
+            && !snapshot.selected_nodes.iter().any(|n| *n == node)
+            && let Some(node_geom) = geom.nodes.get(&node)
+        {
+            let rect = node_geom.rect;
+            let hint: NodeChromeHint = if let Some(skin) = skin.as_ref() {
+                self.graph
+                    .read_ref(cx.app, |g| {
+                        skin.node_chrome_hint_with_state(g, node, &self.style, false, true)
+                    })
+                    .ok()
+                    .unwrap_or_default()
+            } else {
+                NodeChromeHint::default()
+            };
+            if let Some(ring) = hint.ring_focused {
+                paint_node_ring(cx.scene, rect, corner, ring, zoom);
+            }
+        }
+
         let resolve_port = |port: PortId| -> Option<(Rect, Color)> {
             let handle = geom.ports.get(&port)?;
             let bounds = handle.bounds;
             let color = self
                 .graph
-                .read_ref(cx.app, |g| self.presenter.port_color(g, port, &self.style))
+                .read_ref(cx.app, |g| {
+                    let base = self.presenter.port_color(g, port, &self.style);
+                    if let Some(skin) = skin.as_ref() {
+                        let hint: PortChromeHint =
+                            skin.port_chrome_hint(g, port, &self.style, base);
+                        hint.fill.unwrap_or(base)
+                    } else {
+                        base
+                    }
+                })
                 .ok()?;
             Some((bounds, color))
         };
@@ -188,21 +327,21 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             && let Some((rect, color)) = resolve_port(port_id)
         {
             let border_color = if hovered_port_valid {
-                color
+                interaction_hint.hover.unwrap_or(color)
             } else if hovered_port_convertible {
-                Color {
+                interaction_hint.convertible.unwrap_or(Color {
                     r: 0.95,
                     g: 0.75,
                     b: 0.20,
                     a: 1.0,
-                }
+                })
             } else {
-                Color {
+                interaction_hint.invalid.unwrap_or(Color {
                     r: 0.90,
                     g: 0.35,
                     b: 0.35,
                     a: 1.0,
-                }
+                })
             };
             let pad = 2.0 / zoom;
             let hover_rect = Rect::new(
@@ -230,21 +369,21 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         {
             let border_color = if self.interaction.wire_drag.is_some() {
                 if focused_port_valid {
-                    color
+                    interaction_hint.hover.unwrap_or(color)
                 } else if focused_port_convertible {
-                    Color {
+                    interaction_hint.convertible.unwrap_or(Color {
                         r: 0.95,
                         g: 0.75,
                         b: 0.20,
                         a: 1.0,
-                    }
+                    })
                 } else {
-                    Color {
+                    interaction_hint.invalid.unwrap_or(Color {
                         r: 0.90,
                         g: 0.35,
                         b: 0.35,
                         a: 1.0,
-                    }
+                    })
                 }
             } else {
                 self.style.node_border_selected

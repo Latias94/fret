@@ -1,22 +1,9 @@
 use fret_core::{Color, DrawOrder, Edges, Px};
 use fret_ui::Theme;
-
-fn srgb_channel_to_linear(v: u8) -> f32 {
-    let c = (v as f32) / 255.0;
-    if c <= 0.04045 {
-        c / 12.92
-    } else {
-        ((c + 0.055) / 1.055).powf(2.4)
-    }
-}
+use fret_ui_kit::colors;
 
 fn color_from_srgb8(r: u8, g: u8, b: u8) -> Color {
-    Color {
-        r: srgb_channel_to_linear(r),
-        g: srgb_channel_to_linear(g),
-        b: srgb_channel_to_linear(b),
-        a: 1.0,
-    }
+    colors::linear_from_hex_rgb(((r as u32) << 16) | ((g as u32) << 8) | (b as u32))
 }
 
 fn default_series_palette() -> [Color; 10] {

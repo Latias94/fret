@@ -12,6 +12,11 @@ enum Demo {
     UiGallery,
     ComponentsGallery,
     SimpleTodo,
+    CustomEffectV2WebDemo,
+    CustomEffectV2LutWebDemo,
+    CustomEffectV2IdentityWebDemo,
+    CustomEffectV2GlassChromeWebDemo,
+    CustomEffectV3WebDemo,
     ExternalTextureImportsWebDemo,
     EmojiConformanceDemo,
     CjkConformanceDemo,
@@ -43,6 +48,21 @@ fn demo_from_id(id: &str) -> Option<Demo> {
         "ui_gallery" => Some(Demo::UiGallery),
         "components_gallery" => Some(Demo::ComponentsGallery),
         "simple-todo" | "simple_todo" | "simple_todo_demo" => Some(Demo::SimpleTodo),
+        "custom_effect_v2_web_demo" | "custom-effect-v2-web-demo" => {
+            Some(Demo::CustomEffectV2WebDemo)
+        }
+        "custom_effect_v2_lut_web_demo" | "custom-effect-v2-lut-web-demo" => {
+            Some(Demo::CustomEffectV2LutWebDemo)
+        }
+        "custom_effect_v2_identity_web_demo" | "custom-effect-v2-identity-web-demo" => {
+            Some(Demo::CustomEffectV2IdentityWebDemo)
+        }
+        "custom_effect_v2_glass_chrome_web_demo" | "custom-effect-v2-glass-chrome-web-demo" => {
+            Some(Demo::CustomEffectV2GlassChromeWebDemo)
+        }
+        "custom_effect_v3_web_demo" | "custom-effect-v3-web-demo" => {
+            Some(Demo::CustomEffectV3WebDemo)
+        }
         "external_texture_imports_web_demo" => Some(Demo::ExternalTextureImportsWebDemo),
         "emoji_conformance_demo" => Some(Demo::EmojiConformanceDemo),
         "cjk_conformance_demo" => Some(Demo::CjkConformanceDemo),
@@ -94,6 +114,11 @@ fn select_demo() -> Demo {
         "ui_gallery",
         "simple-todo",
         "simple_todo",
+        "custom_effect_v2_web_demo",
+        "custom_effect_v2_lut_web_demo",
+        "custom_effect_v2_identity_web_demo",
+        "custom_effect_v2_glass_chrome_web_demo",
+        "custom_effect_v3_web_demo",
         "chart_demo",
         "chart_multi_axis_demo",
         "horizontal_bars_demo",
@@ -156,6 +181,45 @@ pub fn start() -> Result<(), JsValue> {
             let mut config = fret_examples::simple_todo_demo::build_runner_config();
             config.main_window_title = "fret-demo simple-todo (web)".to_string();
             let driver = fret_examples::simple_todo_demo::build_driver();
+            fret_launch::run_app_with_handle(config, app, driver)
+        }
+        Demo::CustomEffectV2WebDemo => {
+            let app = fret_examples::custom_effect_v2_web_demo::build_app();
+            let mut config = fret_examples::custom_effect_v2_web_demo::build_runner_config();
+            config.main_window_title = "fret-demo custom_effect_v2_web_demo (web)".to_string();
+            let driver = fret_examples::custom_effect_v2_web_demo::build_driver();
+            fret_launch::run_app_with_handle(config, app, driver)
+        }
+        Demo::CustomEffectV2LutWebDemo => {
+            let app = fret_examples::custom_effect_v2_lut_web_demo::build_app();
+            let mut config = fret_examples::custom_effect_v2_lut_web_demo::build_runner_config();
+            config.main_window_title = "fret-demo custom_effect_v2_lut_web_demo (web)".to_string();
+            let driver = fret_examples::custom_effect_v2_lut_web_demo::build_driver();
+            fret_launch::run_app_with_handle(config, app, driver)
+        }
+        Demo::CustomEffectV2IdentityWebDemo => {
+            let app = fret_examples::custom_effect_v2_identity_web_demo::build_app();
+            let mut config =
+                fret_examples::custom_effect_v2_identity_web_demo::build_runner_config();
+            config.main_window_title =
+                "fret-demo custom_effect_v2_identity_web_demo (web)".to_string();
+            let driver = fret_examples::custom_effect_v2_identity_web_demo::build_driver();
+            fret_launch::run_app_with_handle(config, app, driver)
+        }
+        Demo::CustomEffectV2GlassChromeWebDemo => {
+            let app = fret_examples::custom_effect_v2_glass_chrome_web_demo::build_app();
+            let mut config =
+                fret_examples::custom_effect_v2_glass_chrome_web_demo::build_runner_config();
+            config.main_window_title =
+                "fret-demo custom_effect_v2_glass_chrome_web_demo (web)".to_string();
+            let driver = fret_examples::custom_effect_v2_glass_chrome_web_demo::build_driver();
+            fret_launch::run_app_with_handle(config, app, driver)
+        }
+        Demo::CustomEffectV3WebDemo => {
+            let app = fret_examples::custom_effect_v3_web_demo::build_app();
+            let mut config = fret_examples::custom_effect_v3_web_demo::build_runner_config();
+            config.main_window_title = "fret-demo custom_effect_v3_web_demo (web)".to_string();
+            let driver = fret_examples::custom_effect_v3_web_demo::build_driver();
             fret_launch::run_app_with_handle(config, app, driver)
         }
         Demo::ExternalTextureImportsWebDemo => {

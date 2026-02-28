@@ -9,6 +9,7 @@ pub enum SceneValidationErrorKind {
     MaskUnderflow,
     EffectUnderflow,
     CompositeGroupUnderflow,
+    BackdropSourceGroupUnderflow,
     NonFiniteTransform,
     NonFiniteOpacity,
     NonFiniteOpData,
@@ -19,6 +20,7 @@ pub enum SceneValidationErrorKind {
     UnbalancedMaskStack { remaining: usize },
     UnbalancedEffectStack { remaining: usize },
     UnbalancedCompositeGroupStack { remaining: usize },
+    UnbalancedBackdropSourceGroupStack { remaining: usize },
     EffectMaskCrossing,
     CompositeGroupMaskCrossing,
 }
@@ -185,6 +187,7 @@ impl SceneRecording {
         let mut effect_mask_depths: Vec<usize> = Vec::new();
         let mut composite_group_depth: usize = 0;
         let mut composite_group_mask_depths: Vec<usize> = Vec::new();
+        let mut backdrop_source_group_depth: usize = 0;
 
         for (index, &op) in self.ops.iter().enumerate() {
             match op {
@@ -379,6 +382,57 @@ impl SceneRecording {
                                 max_sample_offset_px,
                                 ..
                             } => params.is_finite() && px_is_finite(max_sample_offset_px),
+                            EffectStep::CustomV2 {
+                                params,
+                                max_sample_offset_px,
+                                input_image,
+                                ..
+                            } => {
+                                let base_ok =
+                                    params.is_finite() && px_is_finite(max_sample_offset_px);
+                                if !base_ok {
+                                    false
+                                } else if let Some(input) = input_image {
+                                    input.uv.u0.is_finite()
+                                        && input.uv.v0.is_finite()
+                                        && input.uv.u1.is_finite()
+                                        && input.uv.v1.is_finite()
+                                } else {
+                                    true
+                                }
+                            }
+                            EffectStep::CustomV3 {
+                                params,
+                                max_sample_offset_px,
+                                user0,
+                                user1,
+                                sources,
+                                ..
+                            } => {
+                                let base_ok =
+                                    params.is_finite() && px_is_finite(max_sample_offset_px);
+                                if !base_ok {
+                                    false
+                                } else {
+                                    let input_ok = |input: Option<CustomEffectImageInputV1>| {
+                                        input.is_none_or(|input| {
+                                            input.uv.u0.is_finite()
+                                                && input.uv.v0.is_finite()
+                                                && input.uv.u1.is_finite()
+                                                && input.uv.v1.is_finite()
+                                        })
+                                    };
+                                    if !input_ok(user0) || !input_ok(user1) {
+                                        false
+                                    } else if let Some(req) = sources.pyramid {
+                                        req.max_levels > 0
+                                            && px_is_finite(req.max_radius_px)
+                                            && req.max_radius_px.0 >= 0.0
+                                    } else {
+                                        true
+                                    }
+                                }
+                            }
                         };
                         if !ok {
                             return Err(SceneValidationError {
@@ -409,6 +463,34 @@ impl SceneRecording {
                         });
                     }
                     effect_depth = effect_depth.saturating_sub(1);
+                }
+                SceneOp::PushBackdropSourceGroupV1 {
+                    bounds, pyramid, ..
+                } => {
+                    let ok = rect_is_finite(bounds)
+                        && pyramid.is_none_or(|p| {
+                            p.max_levels > 0
+                                && px_is_finite(p.max_radius_px)
+                                && p.max_radius_px.0 >= 0.0
+                        });
+                    if !ok {
+                        return Err(SceneValidationError {
+                            index,
+                            op,
+                            kind: SceneValidationErrorKind::NonFiniteOpData,
+                        });
+                    }
+                    backdrop_source_group_depth = backdrop_source_group_depth.saturating_add(1);
+                }
+                SceneOp::PopBackdropSourceGroup => {
+                    if backdrop_source_group_depth == 0 {
+                        return Err(SceneValidationError {
+                            index,
+                            op,
+                            kind: SceneValidationErrorKind::BackdropSourceGroupUnderflow,
+                        });
+                    }
+                    backdrop_source_group_depth = backdrop_source_group_depth.saturating_sub(1);
                 }
                 SceneOp::PushCompositeGroup { desc } => {
                     if !rect_is_finite(desc.bounds) {
@@ -649,6 +731,15 @@ impl SceneRecording {
                 op: SceneOp::PopCompositeGroup,
                 kind: SceneValidationErrorKind::UnbalancedCompositeGroupStack {
                     remaining: composite_group_depth,
+                },
+            });
+        }
+        if backdrop_source_group_depth != 0 {
+            return Err(SceneValidationError {
+                index: self.ops.len(),
+                op: SceneOp::PopBackdropSourceGroup,
+                kind: SceneValidationErrorKind::UnbalancedBackdropSourceGroupStack {
+                    remaining: backdrop_source_group_depth,
                 },
             });
         }

@@ -140,7 +140,8 @@ pub(crate) fn content_view(
 
     let preview_panel = page_preview(cx, theme, selected, models);
 
-    let body = cx.keyed("ui_gallery.content_body", |cx| {
+    let content = if (bisect & BISECT_DISABLE_CONTENT_SCROLL) != 0 {
+        // When content scroll is disabled, keep the header and page body in one static stack.
         stack::vstack(
             cx,
             stack::VStackProps::default()
@@ -148,13 +149,13 @@ pub(crate) fn content_view(
                 .gap(Space::N6),
             |_cx| [header, preview_panel],
         )
-    });
-
-    let content_inner = if (bisect & BISECT_DISABLE_CONTENT_SCROLL) != 0 {
-        body
+        .test_id("ui-gallery-content-scroll")
     } else {
+        // Keep the page header (theme/motion presets) pinned above the scroll viewport so scripts
+        // can toggle themes without scrolling back to the top.
+        //
         // Key the scroll area by the selected page so navigation resets scroll position.
-        cx.keyed(format!("ui_gallery.content_scroll_area.{selected}"), |cx| {
+        let scroll_body = cx.keyed(format!("ui_gallery.content_scroll_area.{selected}"), |cx| {
             // Provide an explicit per-page handle so scroll position cannot leak across navigation.
             // (We still key the subtree above to ensure the handle resets deterministically.)
             let scroll_handle =
@@ -173,9 +174,15 @@ pub(crate) fn content_view(
                     fret_core::Px(0.0),
                 ));
             }
-            let mut scroll = shadcn::ScrollArea::new([body])
+            let mut scroll = shadcn::ScrollArea::new([preview_panel])
                 .scroll_handle(scroll_handle)
-                .refine_layout(LayoutRefinement::default().w_full().h_full())
+                .refine_layout(
+                    LayoutRefinement::default()
+                        .w_full()
+                        .h_full()
+                        .min_w_0()
+                        .min_h_0(),
+                )
                 .viewport_test_id("ui-gallery-content-viewport")
                 .viewport_intrinsic_measure_mode(
                     fret_ui::element::ScrollIntrinsicMeasureMode::Viewport,
@@ -187,11 +194,30 @@ pub(crate) fn content_view(
                     fret_ui::element::ScrollIntrinsicMeasureMode::Viewport,
                 );
             }
-            scroll.into_element(cx)
-        })
-    };
+            scroll.into_element(cx).test_id("ui-gallery-content-scroll")
+        });
 
-    let content = content_inner.test_id("ui-gallery-content-scroll");
+        let scroll = cx.container(
+            decl_style::container_props(
+                theme,
+                ChromeRefinement::default(),
+                LayoutRefinement::default()
+                    .w_full()
+                    .flex_1()
+                    .min_h_0()
+                    .min_w_0(),
+            ),
+            move |_cx| [scroll_body],
+        );
+
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .layout(LayoutRefinement::default().w_full().h_full())
+                .gap(Space::N6),
+            |_cx| [header, scroll],
+        )
+    };
 
     cx.named("ui_gallery.content_view_root", |cx| {
         let base_padding = fret_ui_kit::MetricRef::space(Space::N6).resolve(theme);

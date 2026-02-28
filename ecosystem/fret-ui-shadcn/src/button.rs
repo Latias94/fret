@@ -883,7 +883,12 @@ impl Button {
 
                             let icon_px = leading_icon_size.unwrap_or(Px(16.0));
                             if let Some(icon) = leading_icon.clone() {
-                                content.push(crate::icon::icon_with(cx, icon, Some(icon_px), None));
+                                let icon = crate::icon::icon_with(cx, icon, Some(icon_px), None);
+                                content.push(crate::test_id::attach_test_id_suffix(
+                                    icon,
+                                    test_id.as_ref(),
+                                    "icon",
+                                ));
                             }
 
                             if !visible_label.is_empty() {
@@ -904,11 +909,21 @@ impl Button {
                                 for axis in &label_axes_override {
                                     label = label.font_axis(axis.tag.to_string(), axis.value);
                                 }
-                                content.push(label.into_element(cx));
+                                let label = label.into_element(cx);
+                                content.push(crate::test_id::attach_test_id_suffix(
+                                    label,
+                                    test_id.as_ref(),
+                                    "label",
+                                ));
                             }
 
                             if let Some(icon) = trailing_icon.clone() {
-                                content.push(crate::icon::icon_with(cx, icon, Some(icon_px), None));
+                                let icon = crate::icon::icon_with(cx, icon, Some(icon_px), None);
+                                content.push(crate::test_id::attach_test_id_suffix(
+                                    icon,
+                                    test_id.as_ref(),
+                                    "trailing-icon",
+                                ));
                             }
 
                             content

@@ -1,0 +1,442 @@
+{
+  "schema_version": "node_graph_theme_presets.v1",
+  "notes": "output must be JSON only",
+  "presets": [
+    {
+      "id": "workflow_clean",
+      "display_name": "WorkflowClean",
+      "intent": "bright, minimal, readable",
+      "paint_only_tokens": {
+        "canvas": {
+          "background": { "r": 0.96, "g": 0.97, "b": 0.98, "a": 1.0 }
+        },
+        "grid": {
+          "minor_color": { "r": 0.88, "g": 0.9, "b": 0.91, "a": 0.5 },
+          "major_color": { "r": 0.83, "g": 0.85, "b": 0.87, "a": 0.8 }
+        },
+        "text": {
+          "primary": { "r": 0.12, "g": 0.16, "b": 0.22, "a": 1.0 },
+          "muted": { "r": 0.42, "g": 0.45, "b": 0.5, "a": 1.0 }
+        },
+        "node": {
+          "body_background": { "r": 1.0, "g": 1.0, "b": 1.0, "a": 1.0 },
+          "border": { "r": 0.69, "g": 0.73, "b": 0.77, "a": 1.0 },
+          "border_selected": { "r": 0.23, "g": 0.51, "b": 0.96, "a": 1.0 },
+          "header_background_default": { "r": 0.87, "g": 0.89, "b": 0.92, "a": 1.0 },
+          "header_by_kind": {
+            "source": { "r": 0.75, "g": 0.86, "b": 0.99, "a": 1.0 },
+            "compute": { "r": 0.73, "g": 0.97, "b": 0.82, "a": 1.0 },
+            "condition": { "r": 0.99, "g": 0.84, "b": 0.67, "a": 1.0 },
+            "output": { "r": 0.94, "g": 0.96, "b": 0.98, "a": 1.0 },
+            "utility": { "r": 0.91, "g": 0.83, "b": 1.0, "a": 1.0 },
+            "preview": { "r": 0.99, "g": 0.95, "b": 0.78, "a": 1.0 }
+          },
+          "title_text": { "r": 0.12, "g": 0.16, "b": 0.22, "a": 1.0 },
+          "ring_selected": {
+            "color": { "r": 0.23, "g": 0.51, "b": 0.96, "a": 0.4 },
+            "width_px": 3.0,
+            "pad_px": 2.0
+          },
+          "ring_focused": {
+            "color": { "r": 0.15, "g": 0.39, "b": 0.92, "a": 0.6 },
+            "width_px": 2.0,
+            "pad_px": 1.0
+          }
+        },
+        "port": {
+          "by_port_kind": {
+            "data": {
+              "fill": { "r": 0.63, "g": 0.63, "b": 0.66, "a": 1.0 },
+              "stroke": { "r": 0.44, "g": 0.44, "b": 0.48, "a": 1.0 },
+              "stroke_width_px": 1.0,
+              "inner_scale": 1.0,
+              "shape": "Circle"
+            },
+            "exec": {
+              "fill": { "r": 1.0, "g": 1.0, "b": 1.0, "a": 1.0 },
+              "stroke": { "r": 0.29, "g": 0.33, "b": 0.39, "a": 1.0 },
+              "stroke_width_px": 1.5,
+              "inner_scale": 0.0,
+              "shape": "Triangle"
+            },
+            "preview": {
+              "fill": { "r": 0.99, "g": 0.95, "b": 0.78, "a": 1.0 },
+              "stroke": { "r": 0.85, "g": 0.75, "b": 0.3, "a": 1.0 },
+              "stroke_width_px": 1.0,
+              "inner_scale": 0.5,
+              "shape": "Diamond"
+            }
+          }
+        },
+        "wire": {
+          "data_color": { "r": 0.42, "g": 0.45, "b": 0.5, "a": 1.0 },
+          "exec_color": { "r": 0.29, "g": 0.33, "b": 0.39, "a": 1.0 },
+          "preview_color": { "r": 0.69, "g": 0.73, "b": 0.77, "a": 1.0 },
+          "dash_preview": { "dash_px": 4.0, "gap_px": 4.0, "phase_px": 0.0 },
+          "dash_invalid": { "dash_px": 6.0, "gap_px": 3.0, "phase_px": 0.0 },
+          "dash_emphasis": { "dash_px": 2.0, "gap_px": 2.0, "phase_px": 0.0 },
+          "marker_exec_start": { "kind": "Arrow", "size_px": 8.0 },
+          "marker_exec_end": { "kind": "Arrow", "size_px": 12.0 },
+          "marker_size_mul_selected": 1.15,
+          "marker_size_mul_hovered": 1.25,
+          "highlight_selected": { "width_mul": 0.65, "alpha_mul": 0.8 },
+          "highlight_hovered": { "width_mul": 0.7, "alpha_mul": 0.95 }
+        },
+        "states": {
+          "hover": { "color": { "r": 0.38, "g": 0.65, "b": 0.98, "a": 1.0 } },
+          "invalid": { "color": { "r": 0.94, "g": 0.27, "b": 0.27, "a": 1.0 } },
+          "convertible": { "color": { "r": 0.38, "g": 0.65, "b": 0.98, "a": 1.0 } },
+          "disabled": { "alpha_mul": 0.4 }
+        }
+      },
+      "layout_tokens": {
+        "optional": true,
+        "node_corner_radius_px": 6.0,
+        "node_header_height_px": 24.0,
+        "pin_radius_px": 4.0,
+        "wire_width_px": 1.5,
+        "grid_minor_width_px": 1.0,
+        "grid_major_width_px": 1.0
+      },
+      "interaction_state_matrix": {
+        "node": {
+          "base": { "use": ["node.body_background", "node.border"] },
+          "hover": { "use": ["states.hover"] },
+          "selected": { "use": ["node.ring_selected", "node.border_selected"] },
+          "focused": { "use": ["node.ring_focused"] },
+          "disabled": { "use": ["states.disabled"] },
+          "invalid": { "use": ["states.invalid"] },
+          "convertible": { "use": ["states.convertible"] }
+        },
+        "pin": {
+          "base": { "use": ["port.by_port_kind.*"] },
+          "hover": { "use": ["states.hover"] },
+          "selected": { "use": ["states.hover"] },
+          "focused": { "use": ["states.hover"] },
+          "disabled": { "use": ["states.disabled"] },
+          "invalid": { "use": ["states.invalid"] },
+          "convertible": { "use": ["states.convertible"] }
+        },
+        "wire": {
+          "base": { "use": ["wire.data_color", "wire.exec_color"] },
+          "hover": { "use": ["states.hover"] },
+          "selected": { "use": ["node.ring_selected"] },
+          "focused": { "use": ["node.ring_focused"] },
+          "disabled": { "use": ["states.disabled"] },
+          "invalid": { "use": ["wire.dash_invalid", "states.invalid"] },
+          "convertible": { "use": ["wire.dash_preview", "states.convertible"] }
+        }
+      },
+      "example_compositions": [
+        {
+          "name": "example_1",
+          "description": "A 'source' kind node with 'data' ports connected to a 'compute' kind node. A 'preview' port connected via dashed 'wire_preview'."
+        },
+        {
+          "name": "example_2",
+          "description": "Node A is selected (blue ring), Node B is focused (solid blue stroke). Hovering over a 'data' pin on Node C highlights it, and a dragged wire shows an 'invalid' red dashed line to an incompatible 'exec' pin."
+        }
+      ],
+      "a11y_notes": {
+        "target_contrast": "AA preferred",
+        "risks": [
+          "Header backgrounds may lack contrast with white node body; rely on border separation."
+        ]
+      }
+    },
+    {
+      "id": "schematic_contrast",
+      "display_name": "SchematicContrast",
+      "intent": "high contrast, categorized",
+      "paint_only_tokens": {
+        "canvas": {
+          "background": { "r": 0.99, "g": 0.99, "b": 0.91, "a": 1.0 }
+        },
+        "grid": {
+          "minor_color": { "r": 0.82, "g": 0.84, "b": 0.86, "a": 1.0 },
+          "major_color": { "r": 0.61, "g": 0.64, "b": 0.68, "a": 1.0 }
+        },
+        "text": {
+          "primary": { "r": 0.0, "g": 0.0, "b": 0.0, "a": 1.0 },
+          "muted": { "r": 0.29, "g": 0.33, "b": 0.39, "a": 1.0 }
+        },
+        "node": {
+          "body_background": { "r": 1.0, "g": 1.0, "b": 1.0, "a": 1.0 },
+          "border": { "r": 0.07, "g": 0.09, "b": 0.15, "a": 1.0 },
+          "border_selected": { "r": 0.07, "g": 0.09, "b": 0.15, "a": 1.0 },
+          "header_background_default": { "r": 0.29, "g": 0.33, "b": 0.39, "a": 1.0 },
+          "header_by_kind": {
+            "source": { "r": 0.94, "g": 0.27, "b": 0.27, "a": 1.0 },
+            "compute": { "r": 0.13, "g": 0.77, "b": 0.37, "a": 1.0 },
+            "condition": { "r": 0.66, "g": 0.33, "b": 0.97, "a": 1.0 },
+            "output": { "r": 0.98, "g": 0.45, "b": 0.09, "a": 1.0 },
+            "utility": { "r": 0.23, "g": 0.51, "b": 0.96, "a": 1.0 },
+            "preview": { "r": 0.96, "g": 0.62, "b": 0.04, "a": 1.0 }
+          },
+          "title_text": { "r": 1.0, "g": 1.0, "b": 1.0, "a": 1.0 },
+          "ring_selected": {
+            "color": { "r": 0.98, "g": 0.75, "b": 0.14, "a": 1.0 },
+            "width_px": 4.0,
+            "pad_px": 0.0
+          },
+          "ring_focused": {
+            "color": { "r": 0.93, "g": 0.28, "b": 0.6, "a": 1.0 },
+            "width_px": 4.0,
+            "pad_px": 0.0
+          }
+        },
+        "port": {
+          "by_port_kind": {
+            "data": {
+              "fill": { "r": 0.12, "g": 0.25, "b": 0.69, "a": 1.0 },
+              "stroke": { "r": 0.07, "g": 0.09, "b": 0.15, "a": 1.0 },
+              "stroke_width_px": 2.0,
+              "inner_scale": 1.0,
+              "shape": "Circle"
+            },
+            "exec": {
+              "fill": { "r": 0.42, "g": 0.13, "b": 0.66, "a": 1.0 },
+              "stroke": { "r": 0.07, "g": 0.09, "b": 0.15, "a": 1.0 },
+              "stroke_width_px": 2.0,
+              "inner_scale": 0.0,
+              "shape": "Triangle"
+            },
+            "preview": {
+              "fill": { "r": 0.96, "g": 0.62, "b": 0.04, "a": 1.0 },
+              "stroke": { "r": 0.07, "g": 0.09, "b": 0.15, "a": 1.0 },
+              "stroke_width_px": 2.0,
+              "inner_scale": 1.0,
+              "shape": "Diamond"
+            }
+          }
+        },
+        "wire": {
+          "data_color": { "r": 0.15, "g": 0.39, "b": 0.92, "a": 1.0 },
+          "exec_color": { "r": 0.49, "g": 0.13, "b": 0.81, "a": 1.0 },
+          "preview_color": { "r": 0.96, "g": 0.62, "b": 0.04, "a": 1.0 },
+          "dash_preview": { "dash_px": 8.0, "gap_px": 4.0, "phase_px": 0.0 },
+          "dash_invalid": { "dash_px": 6.0, "gap_px": 3.0, "phase_px": 0.0 },
+          "dash_emphasis": { "dash_px": 2.0, "gap_px": 2.0, "phase_px": 0.0 },
+          "marker_exec_start": { "kind": "Arrow", "size_px": 8.0 },
+          "marker_exec_end": { "kind": "Arrow", "size_px": 12.0 },
+          "marker_size_mul_selected": 1.15,
+          "marker_size_mul_hovered": 1.25,
+          "highlight_selected": { "width_mul": 0.7, "alpha_mul": 0.9 },
+          "highlight_hovered": { "width_mul": 0.75, "alpha_mul": 1.0 }
+        },
+        "states": {
+          "hover": { "color": { "r": 0.0, "g": 0.0, "b": 0.0, "a": 1.0 } },
+          "invalid": { "color": { "r": 0.86, "g": 0.15, "b": 0.15, "a": 1.0 } },
+          "convertible": { "color": { "r": 0.15, "g": 0.39, "b": 0.92, "a": 1.0 } },
+          "disabled": { "alpha_mul": 0.5 }
+        }
+      },
+      "layout_tokens": {
+        "optional": true,
+        "node_corner_radius_px": 2.0,
+        "node_header_height_px": 20.0,
+        "pin_radius_px": 5.0,
+        "wire_width_px": 2.5,
+        "grid_minor_width_px": 1.0,
+        "grid_major_width_px": 2.0
+      },
+      "interaction_state_matrix": {
+        "node": {
+          "base": { "use": ["node.body_background", "node.border"] },
+          "hover": { "use": ["states.hover"] },
+          "selected": { "use": ["node.ring_selected"] },
+          "focused": { "use": ["node.ring_focused"] },
+          "disabled": { "use": ["states.disabled"] },
+          "invalid": { "use": ["states.invalid"] },
+          "convertible": { "use": ["states.convertible"] }
+        },
+        "pin": {
+          "base": { "use": ["port.by_port_kind.*"] },
+          "hover": { "use": ["states.hover"] },
+          "selected": { "use": ["node.ring_selected"] },
+          "focused": { "use": ["node.ring_focused"] },
+          "disabled": { "use": ["states.disabled"] },
+          "invalid": { "use": ["states.invalid"] },
+          "convertible": { "use": ["states.convertible"] }
+        },
+        "wire": {
+          "base": { "use": ["wire.data_color", "wire.exec_color"] },
+          "hover": { "use": ["states.hover"] },
+          "selected": { "use": ["node.ring_selected"] },
+          "focused": { "use": ["node.ring_focused"] },
+          "disabled": { "use": ["states.disabled"] },
+          "invalid": { "use": ["wire.dash_invalid", "states.invalid"] },
+          "convertible": { "use": ["wire.dash_preview", "states.convertible"] }
+        }
+      },
+      "example_compositions": [
+        {
+          "name": "example_1",
+          "description": "Red 'source' header node connected via thick blue 'data' wire to green 'compute' header node."
+        },
+        {
+          "name": "example_2",
+          "description": "Selected node enclosed in thick yellow ring with no padding. Focusing a node gives it a thick magenta ring."
+        }
+      ],
+      "a11y_notes": {
+        "target_contrast": "AAA for structural edges",
+        "risks": [
+          "Title text inside colored headers might fail contrast if headers are too light; currently forced to white on bold backgrounds."
+        ]
+      }
+    },
+    {
+      "id": "graph_dark",
+      "display_name": "GraphDark",
+      "intent": "dark, focused, neon-like via stroke",
+      "paint_only_tokens": {
+        "canvas": {
+          "background": { "r": 0.07, "g": 0.09, "b": 0.15, "a": 1.0 }
+        },
+        "grid": {
+          "minor_color": { "r": 0.12, "g": 0.16, "b": 0.22, "a": 1.0 },
+          "major_color": { "r": 0.22, "g": 0.25, "b": 0.32, "a": 1.0 }
+        },
+        "text": {
+          "primary": { "r": 0.95, "g": 0.96, "b": 0.96, "a": 1.0 },
+          "muted": { "r": 0.61, "g": 0.64, "b": 0.68, "a": 1.0 }
+        },
+        "node": {
+          "body_background": { "r": 0.12, "g": 0.16, "b": 0.22, "a": 0.95 },
+          "border": { "r": 0.29, "g": 0.33, "b": 0.39, "a": 1.0 },
+          "border_selected": { "r": 0.13, "g": 0.83, "b": 0.93, "a": 1.0 },
+          "header_background_default": { "r": 0.22, "g": 0.25, "b": 0.32, "a": 1.0 },
+          "header_by_kind": {
+            "source": { "r": 0.05, "g": 0.45, "b": 0.56, "a": 1.0 },
+            "compute": { "r": 0.08, "g": 0.5, "b": 0.24, "a": 1.0 },
+            "condition": { "r": 0.64, "g": 0.11, "b": 0.69, "a": 1.0 },
+            "output": { "r": 0.71, "g": 0.33, "b": 0.04, "a": 1.0 },
+            "utility": { "r": 0.26, "g": 0.22, "b": 0.79, "a": 1.0 },
+            "preview": { "r": 0.63, "g": 0.38, "b": 0.03, "a": 1.0 }
+          },
+          "title_text": { "r": 0.95, "g": 0.96, "b": 0.96, "a": 1.0 },
+          "ring_selected": {
+            "color": { "r": 0.13, "g": 0.83, "b": 0.93, "a": 1.0 },
+            "width_px": 3.0,
+            "pad_px": 2.0
+          },
+          "ring_focused": {
+            "color": { "r": 0.96, "g": 0.45, "b": 0.71, "a": 1.0 },
+            "width_px": 3.0,
+            "pad_px": 2.0
+          }
+        },
+        "port": {
+          "by_port_kind": {
+            "data": {
+              "fill": { "r": 0.09, "g": 0.4, "b": 0.2, "a": 1.0 },
+              "stroke": { "r": 0.29, "g": 0.87, "b": 0.5, "a": 1.0 },
+              "stroke_width_px": 1.5,
+              "inner_scale": 1.0,
+              "shape": "Circle"
+            },
+            "exec": {
+              "fill": { "r": 0.6, "g": 0.11, "b": 0.11, "a": 1.0 },
+              "stroke": { "r": 0.97, "g": 0.44, "b": 0.44, "a": 1.0 },
+              "stroke_width_px": 1.5,
+              "inner_scale": 0.0,
+              "shape": "Triangle"
+            },
+            "preview": {
+              "fill": { "r": 0.63, "g": 0.38, "b": 0.03, "a": 1.0 },
+              "stroke": { "r": 0.98, "g": 0.75, "b": 0.14, "a": 1.0 },
+              "stroke_width_px": 1.5,
+              "inner_scale": 0.5,
+              "shape": "Diamond"
+            }
+          }
+        },
+        "wire": {
+          "data_color": { "r": 0.29, "g": 0.87, "b": 0.5, "a": 1.0 },
+          "exec_color": { "r": 0.97, "g": 0.44, "b": 0.44, "a": 1.0 },
+          "preview_color": { "r": 0.98, "g": 0.75, "b": 0.14, "a": 1.0 },
+          "dash_preview": { "dash_px": 6.0, "gap_px": 6.0, "phase_px": 0.0 },
+          "dash_invalid": { "dash_px": 6.0, "gap_px": 3.0, "phase_px": 0.0 },
+          "dash_emphasis": { "dash_px": 10.0, "gap_px": 2.0, "phase_px": 0.0 },
+          "marker_exec_start": { "kind": "Arrow", "size_px": 8.0 },
+          "marker_exec_end": { "kind": "Arrow", "size_px": 12.0 },
+          "marker_data_start": { "kind": "Arrow", "size_px": 5.0 },
+          "marker_data_end": { "kind": "Arrow", "size_px": 7.0 },
+          "marker_size_mul_selected": 1.15,
+          "marker_size_mul_hovered": 1.25,
+          "highlight_selected": {
+            "width_mul": 0.65,
+            "alpha_mul": 0.85,
+            "color": { "r": 0.22, "g": 0.74, "b": 0.97, "a": 1.0 }
+          },
+          "highlight_hovered": {
+            "width_mul": 0.7,
+            "alpha_mul": 0.95,
+            "color": { "r": 0.4, "g": 0.91, "b": 0.98, "a": 1.0 }
+          }
+        },
+        "states": {
+          "hover": { "color": { "r": 0.4, "g": 0.91, "b": 0.98, "a": 1.0 } },
+          "invalid": { "color": { "r": 0.94, "g": 0.27, "b": 0.27, "a": 1.0 } },
+          "convertible": { "color": { "r": 0.22, "g": 0.74, "b": 0.97, "a": 1.0 } },
+          "disabled": { "alpha_mul": 0.3 }
+        }
+      },
+      "layout_tokens": {
+        "optional": true,
+        "node_corner_radius_px": 8.0,
+        "node_header_height_px": 28.0,
+        "pin_radius_px": 4.0,
+        "wire_width_px": 2.0,
+        "grid_minor_width_px": 1.0,
+        "grid_major_width_px": 1.0
+      },
+      "interaction_state_matrix": {
+        "node": {
+          "base": { "use": ["node.body_background", "node.border"] },
+          "hover": { "use": ["states.hover"] },
+          "selected": { "use": ["node.ring_selected", "node.border_selected"] },
+          "focused": { "use": ["node.ring_focused"] },
+          "disabled": { "use": ["states.disabled"] },
+          "invalid": { "use": ["states.invalid"] },
+          "convertible": { "use": ["states.convertible"] }
+        },
+        "pin": {
+          "base": { "use": ["port.by_port_kind.*"] },
+          "hover": { "use": ["states.hover"] },
+          "selected": { "use": ["states.hover"] },
+          "focused": { "use": ["states.hover"] },
+          "disabled": { "use": ["states.disabled"] },
+          "invalid": { "use": ["states.invalid"] },
+          "convertible": { "use": ["states.convertible"] }
+        },
+        "wire": {
+          "base": { "use": ["wire.data_color", "wire.exec_color"] },
+          "hover": { "use": ["states.hover"] },
+          "selected": { "use": ["node.ring_selected"] },
+          "focused": { "use": ["node.ring_focused"] },
+          "disabled": { "use": ["states.disabled"] },
+          "invalid": { "use": ["wire.dash_invalid", "states.invalid"] },
+          "convertible": { "use": ["wire.dash_preview", "states.convertible"] }
+        }
+      },
+      "example_compositions": [
+        {
+          "name": "example_1",
+          "description": "Dark environment with neon green 'data' wires connecting deep teal 'source' nodes to deep green 'compute' nodes."
+        },
+        {
+          "name": "example_2",
+          "description": "Selected node stands out with a vivid cyan outer glow. Dragging an incompatible connection shows a glowing red dashed wire and highlights the target pin in red."
+        }
+      ],
+      "a11y_notes": {
+        "target_contrast": "Glowing contrast against dark background",
+        "risks": [
+          "Muted text on dark background might fall below AA; adjust alpha if legibility is hindered."
+        ]
+      }
+    }
+  ]
+}

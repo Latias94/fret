@@ -1,6 +1,7 @@
 use super::*;
 use crate::text::{TextFontFamilyConfig, TextQualitySettings};
 use crate::{SystemFontRescanResult, SystemFontRescanSeed};
+use std::sync::OnceLock;
 
 impl Renderer {
     pub fn begin_text_diagnostics_frame(&mut self) {
@@ -139,6 +140,8 @@ impl Renderer {
                 .render_plan_degradations_composite_group_blend_to_over,
             effect_degradations: self.perf.effect_degradations,
             effect_blur_quality: self.perf.effect_blur_quality,
+            custom_effect_v3_pyramid_cache_hits: self.perf.custom_effect_v3_pyramid_cache_hits,
+            custom_effect_v3_pyramid_cache_misses: self.perf.custom_effect_v3_pyramid_cache_misses,
             clip_path_mask_cache_bytes_live: self.perf.clip_path_mask_cache_bytes_live,
             clip_path_mask_cache_entries_live: self.perf.clip_path_mask_cache_entries_live,
             clip_path_mask_cache_hits: self.perf.clip_path_mask_cache_hits,
@@ -175,6 +178,11 @@ impl Renderer {
             uniform_bind_group_switches: self.perf.uniform_bind_group_switches,
             texture_bind_group_switches: self.perf.texture_bind_group_switches,
             scissor_sets: self.perf.scissor_sets,
+            path_msaa_samples_requested: self.perf.path_msaa_samples_requested,
+            path_msaa_samples_effective: self.perf.path_msaa_samples_effective,
+            path_msaa_vulkan_safety_valve_degradations: self
+                .perf
+                .path_msaa_vulkan_safety_valve_degradations,
             uniform_bytes: self.perf.uniform_bytes,
             instance_bytes: self.perf.instance_bytes,
             vertex_bytes: self.perf.vertex_bytes,
@@ -188,6 +196,9 @@ impl Renderer {
             material_distinct: self.perf.material_distinct,
             material_unknown_ids: self.perf.material_unknown_ids,
             material_degraded_due_to_budget: self.perf.material_degraded_due_to_budget,
+            path_material_paints_degraded_to_solid_base: self
+                .perf
+                .path_material_paints_degraded_to_solid_base,
         };
 
         self.perf = RenderPerfStats::default();
@@ -490,14 +501,24 @@ impl Renderer {
             return 1;
         }
 
-        // Temporary safety valve: the MSAA path intermediate + composite pipeline has been observed
-        // to produce invisible output on some Vulkan drivers. Until the root cause is fixed, prefer
-        // the non-MSAA path pipeline on Vulkan to preserve correctness.
-        //
-        // Set `FRET_ALLOW_VULKAN_PATH_MSAA=1` to opt back into the MSAA path pipeline for testing.
+        // Vulkan path MSAA can be disabled via env var as an emergency escape hatch for driver
+        // issues. Prefer the opt-out knob over backend allow/deny lists to match GPUI's default
+        // behavior ("enable when supported; disable only when needed").
         if self.adapter.get_info().backend == wgpu::Backend::Vulkan
-            && std::env::var_os("FRET_ALLOW_VULKAN_PATH_MSAA").is_none()
+            && std::env::var_os("FRET_DISABLE_VULKAN_PATH_MSAA").is_some()
         {
+            static WARNED: OnceLock<()> = OnceLock::new();
+            if WARNED.set(()).is_ok() {
+                let info = self.adapter.get_info();
+                tracing::warn!(
+                    backend = ?info.backend,
+                    vendor = info.vendor,
+                    device = info.device,
+                    driver = info.driver,
+                    driver_info = info.driver_info,
+                    "Vulkan path MSAA is disabled via FRET_DISABLE_VULKAN_PATH_MSAA=1."
+                );
+            }
             return 1;
         }
 

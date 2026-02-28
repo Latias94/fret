@@ -96,16 +96,8 @@ fn gpu_path_msaa_composite_vulkan_smoke() {
         return;
     }
 
-    // Force the MSAA+composite codepath even on Vulkan (some configs default it off).
-    //
-    // SAFETY: test-only process global configuration. Nextest runs tests in separate processes by
-    // default, so this is isolated.
-    unsafe {
-        std::env::set_var("FRET_ALLOW_VULKAN_PATH_MSAA", "1");
-        std::env::set_var("FRET_FORCE_PATH_MSAA_SAMPLES", "4");
-    }
-
     let mut renderer = Renderer::new(&ctx.adapter, &ctx.device);
+    renderer.set_path_msaa_samples(4);
 
     let size = (256u32, 256u32);
     let format = wgpu::TextureFormat::Bgra8UnormSrgb;

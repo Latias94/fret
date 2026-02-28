@@ -26,6 +26,8 @@ fn clamp_i32(x: i32, lo: i32, hi: i32) -> i32 {
 
 @fragment
 fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
+  let clip = clip_alpha(pos.xy);
+
   let dims = textureDimensions(src_texture);
   let x = i32(floor(pos.x));
   let y = i32(floor(pos.y));
@@ -65,6 +67,5 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
             textureLoad(src_texture, vec2<i32>(sx4n, y), 0)) * w4;
 
   let out = c0 + c1 + c2 + c3 + c4;
-  let clip = clip_alpha(pos.xy);
   return vec4<f32>(out.rgb * clip, clip);
 }

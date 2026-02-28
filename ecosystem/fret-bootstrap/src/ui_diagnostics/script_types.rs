@@ -274,8 +274,11 @@ pub(super) struct V2DragPointerUntilState {
     pub(super) predicate: UiPredicateV1,
     /// If true, the step has issued a pointer down and should release on completion.
     pub(super) down_issued: bool,
-    /// If true, the step has staged a "route cursor to source window" override and will emit the
-    /// `Up/Drop` events on the next frame to avoid runner override polling latency.
+    /// If true, a runner-visible mouse button override has been emitted to mirror the pressed
+    /// state of the synthetic drag session.
+    pub(super) mouse_buttons_override_issued: bool,
+    /// If true, the step has staged a release and will emit the `Up/Drop` events on the next
+    /// frame to avoid runner override polling latency.
     pub(super) release_armed: bool,
 }
 

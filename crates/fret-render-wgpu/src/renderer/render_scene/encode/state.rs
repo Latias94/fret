@@ -56,6 +56,8 @@ pub(super) struct EncodeState<'a> {
     pub(super) material_distinct: &'a mut u64,
     pub(super) material_unknown_ids: &'a mut u64,
     pub(super) material_degraded_due_to_budget: &'a mut u64,
+
+    pub(super) path_material_paints_degraded_to_solid_base: &'a mut u64,
 }
 
 impl<'a> EncodeState<'a> {
@@ -99,6 +101,8 @@ impl<'a> EncodeState<'a> {
         let material_distinct = &mut encoding.material_distinct;
         let material_unknown_ids = &mut encoding.material_unknown_ids;
         let material_degraded_due_to_budget = &mut encoding.material_degraded_due_to_budget;
+        let path_material_paints_degraded_to_solid_base =
+            &mut encoding.path_material_paints_degraded_to_solid_base;
 
         let current_scissor = ScissorRect::full(viewport_size.0, viewport_size.1);
         let mask_scope_head = 0;
@@ -162,6 +166,7 @@ impl<'a> EncodeState<'a> {
             material_distinct,
             material_unknown_ids,
             material_degraded_due_to_budget,
+            path_material_paints_degraded_to_solid_base,
         };
 
         state.current_uniform_index = state.push_uniform_snapshot(0, 0, 0, 0, 0, 0);

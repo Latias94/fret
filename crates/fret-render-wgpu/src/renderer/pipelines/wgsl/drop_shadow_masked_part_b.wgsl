@@ -50,6 +50,8 @@ fn sample_premul_bilinear(p_px: vec2<f32>) -> vec4<f32> {
 
 @fragment
 fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
+  let clip = clip_alpha(pos.xy);
+
   let dims = textureDimensions(src_texture);
   let x = i32(floor(pos.x));
   let y = i32(floor(pos.y));
@@ -59,7 +61,6 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
 
   let p = pos.xy - params.offset_px;
   let src = sample_premul_bilinear(p);
-  let clip = clip_alpha(pos.xy);
   let a = src.a * clamp(params.color.a, 0.0, 1.0) * clip;
   let rgb = clamp(params.color.rgb, vec3<f32>(0.0), vec3<f32>(1.0)) * a;
   return vec4<f32>(rgb, a);

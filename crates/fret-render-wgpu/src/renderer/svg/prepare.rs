@@ -80,7 +80,9 @@ impl Renderer {
                 | SceneOp::PushEffect { .. }
                 | SceneOp::PopEffect
                 | SceneOp::PushCompositeGroup { .. }
-                | SceneOp::PopCompositeGroup => {}
+                | SceneOp::PopCompositeGroup
+                | SceneOp::PushBackdropSourceGroupV1 { .. }
+                | SceneOp::PopBackdropSourceGroup => {}
                 SceneOp::SvgMaskIcon { rect, svg, fit, .. } => {
                     let s = current_transform_scale(
                         *transform_stack

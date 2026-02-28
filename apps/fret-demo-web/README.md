@@ -2,6 +2,16 @@
 
 WebAssembly demo for the `fret` UI runtime.
 
+## Run locally (recommended: via fretboard)
+
+From the workspace root:
+
+- `cargo run -p fretboard -- dev web --demo ui_gallery`
+- `cargo run -p fretboard -- dev web --open --demo custom_effect_v2_web_demo`
+
+This uses Trunk under the hood and prints an `Open: ...` URL once the dev server is listening (so it does not get
+buried in build warnings).
+
 ## Run locally (with Trunk)
 
 1. Install prerequisites:
@@ -45,6 +55,10 @@ hash or query string:
 - `?demo=tags_demo` (or `#tags_demo`)
 - `?demo=drag_demo` (or `#drag_demo`)
 - `?demo=external_texture_imports_web_demo` (or `#external_texture_imports_web_demo`) — external image source → render target (web copy path)
+- `?demo=custom_effect_v2_web_demo` (or `#custom_effect_v2_web_demo`) — CustomV2 end-to-end WebGPU smoke (register + user image input)
+- `?demo=custom_effect_v2_lut_web_demo` (or `#custom_effect_v2_lut_web_demo`) — CustomV2 LUT authoring template (input image used as LUT)
+- `?demo=custom_effect_v2_identity_web_demo` (or `#custom_effect_v2_identity_web_demo`) — CustomV2 minimal starter template (mix + input debug)
+- `?demo=custom_effect_v3_web_demo` (or `#custom_effect_v3_web_demo`) — CustomV3 renderer-provided sources (src_raw + bounded pyramid)
 
 ## Optional bundled fonts (WASM)
 

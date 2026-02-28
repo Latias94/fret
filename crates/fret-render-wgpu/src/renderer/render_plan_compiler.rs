@@ -5,9 +5,9 @@
 
 use super::render_plan_effects as effects;
 use super::{
-    BlurQualitySnapshot, EffectDegradationSnapshot, EffectMarkerKind, OrderedDraw,
-    RenderPlanDegradation, RenderPlanDegradationKind, RenderPlanDegradationReason, RenderPlanPass,
-    SceneDrawRangePass, SceneEncoding, ScissorRect,
+    BlurQualitySnapshot, EffectDegradationSnapshot, EffectMarkerKind, FullscreenBlitPass,
+    LocalScissorRect, OrderedDraw, RenderPlanDegradation, RenderPlanDegradationKind,
+    RenderPlanDegradationReason, RenderPlanPass, SceneDrawRangePass, SceneEncoding, ScissorRect,
 };
 use crate::renderer::estimate_texture_bytes;
 use slotmap::Key;
@@ -72,6 +72,15 @@ struct ClipPathScope {
     content_size: (u32, u32),
     mask_target: Option<super::PlanTarget>,
     mask_size: (u32, u32),
+}
+
+#[derive(Clone, Copy, Debug)]
+struct BackdropSourceGroupScope {
+    scissor: ScissorRect,
+    pyramid_choice: Option<effects::CustomV3PyramidChoice>,
+    pyramid_pad_px: u32,
+    raw_target: Option<super::PlanTarget>,
+    reserved_bytes: u64,
 }
 
 pub(super) fn compile_for_scene(
@@ -149,6 +158,12 @@ pub(super) fn compile_for_scene(
                 effects::noise_enabled(viewport_size, format, intermediate_budget_bytes)
             }
             fret_core::EffectStep::CustomV1 { .. } => {
+                effects::color_adjust_enabled(viewport_size, format, intermediate_budget_bytes)
+            }
+            fret_core::EffectStep::CustomV2 { .. } => {
+                effects::color_adjust_enabled(viewport_size, format, intermediate_budget_bytes)
+            }
+            fret_core::EffectStep::CustomV3 { .. } => {
                 effects::color_adjust_enabled(viewport_size, format, intermediate_budget_bytes)
             }
         })
@@ -231,6 +246,9 @@ fn compile_for_scene_inner(
     let mut composite_group_scopes: Vec<CompositeGroupScope> = Vec::new();
     let mut clip_path_scopes: Vec<ClipPathScope> = Vec::new();
     let mut clip_path_mask_in_use_bytes: u64 = 0;
+    let mut backdrop_source_group_scopes: Vec<BackdropSourceGroupScope> = Vec::new();
+    let mut backdrop_source_group_reserved_targets: Vec<super::PlanTarget> = Vec::new();
+    let mut backdrop_source_group_in_use_bytes: u64 = 0;
 
     let can_allocate_intermediate_bytes =
         |draw_scopes: &[DrawScope], required: u64, extra_in_use: u64| -> bool {
@@ -378,7 +396,7 @@ fn compile_for_scene_inner(
             }
         };
 
-    let mut apply_chain_in_place =
+    let apply_chain_in_place =
         |passes: &mut Vec<RenderPlanPass>,
          draw_scopes: &[DrawScope],
          srcdst: super::PlanTarget,
@@ -389,7 +407,11 @@ fn compile_for_scene_inner(
          scissor: ScissorRect,
          mask_uniform_index: Option<u32>,
          extra_in_use_bytes: u64,
-         unavailable_mask_targets: &[super::PlanTarget]| {
+         unavailable_mask_targets: &[super::PlanTarget],
+         reserved_targets: &[super::PlanTarget],
+         backdrop_source_group: Option<effects::BackdropSourceGroupCtx>,
+         effect_degradations: &mut EffectDegradationSnapshot,
+         effect_blur_quality: &mut BlurQualitySnapshot| {
             if srcdst == super::PlanTarget::Output || scissor.w == 0 || scissor.h == 0 {
                 return;
             }
@@ -421,8 +443,17 @@ fn compile_for_scene_inner(
                 .saturating_add(extra_in_use_bytes);
             let effective_budget_bytes = intermediate_budget_bytes.saturating_sub(other_live_bytes);
 
-            let in_use_targets: Vec<super::PlanTarget> =
-                draw_scopes.iter().map(|s| s.target).collect();
+            let mut in_use_targets: Vec<super::PlanTarget> = Vec::new();
+            for s in draw_scopes {
+                if !in_use_targets.contains(&s.target) {
+                    in_use_targets.push(s.target);
+                }
+            }
+            for &t in reserved_targets {
+                if !in_use_targets.contains(&t) {
+                    in_use_targets.push(t);
+                }
+            }
             effects::apply_chain_in_place(
                 passes,
                 &in_use_targets,
@@ -433,8 +464,8 @@ fn compile_for_scene_inner(
                 scissor,
                 mask_uniform_index,
                 unavailable_mask_targets,
-                &mut effect_degradations,
-                &mut effect_blur_quality,
+                effect_degradations,
+                effect_blur_quality,
                 effects::EffectCompileCtx {
                     viewport_size: ctx_viewport_size,
                     format,
@@ -442,6 +473,7 @@ fn compile_for_scene_inner(
                     clear,
                     scale_factor,
                 },
+                backdrop_source_group,
             );
         };
 
@@ -488,7 +520,9 @@ fn compile_for_scene_inner(
                                 ]
                                 .into_iter()
                                 .any(|t| {
-                                    t != parent_target && !draw_scopes.iter().any(|s| s.target == t)
+                                    t != parent_target
+                                        && !draw_scopes.iter().any(|s| s.target == t)
+                                        && !backdrop_source_group_reserved_targets.contains(&t)
                                 });
 
                                 let before = passes.len();
@@ -497,6 +531,17 @@ fn compile_for_scene_inner(
                                         .iter()
                                         .filter_map(|s| s.mask_target)
                                         .collect();
+                                let backdrop_source_group =
+                                    backdrop_source_group_scopes.last().and_then(|s| {
+                                        s.raw_target.map(|raw_target| {
+                                            effects::BackdropSourceGroupCtx {
+                                                raw_target,
+                                                pyramid: s.pyramid_choice,
+                                                scissor: s.scissor,
+                                                pyramid_pad_px: s.pyramid_pad_px,
+                                            }
+                                        })
+                                    });
                                 apply_chain_in_place(
                                     &mut passes,
                                     &draw_scopes,
@@ -507,8 +552,13 @@ fn compile_for_scene_inner(
                                     parent_size,
                                     scissor,
                                     Some(uniform_index),
-                                    clip_path_mask_in_use_bytes,
+                                    clip_path_mask_in_use_bytes
+                                        .saturating_add(backdrop_source_group_in_use_bytes),
                                     &unavailable_mask_targets,
+                                    &backdrop_source_group_reserved_targets,
+                                    backdrop_source_group,
+                                    &mut effect_degradations,
+                                    &mut effect_blur_quality,
                                 );
                                 if before == passes.len()
                                     && !chain.is_empty()
@@ -559,7 +609,9 @@ fn compile_for_scene_inner(
                                         super::PlanTarget::Intermediate2,
                                         super::PlanTarget::Intermediate3,
                                     ] {
-                                        if draw_scopes.iter().any(|s| s.target == t) {
+                                        if draw_scopes.iter().any(|s| s.target == t)
+                                            || backdrop_source_group_reserved_targets.contains(&t)
+                                        {
                                             continue;
                                         }
                                         content_target = Some(t);
@@ -571,7 +623,8 @@ fn compile_for_scene_inner(
                                         && !can_allocate_intermediate_bytes(
                                             &draw_scopes,
                                             estimate_texture_bytes(content_size, format, 1),
-                                            clip_path_mask_in_use_bytes,
+                                            clip_path_mask_in_use_bytes
+                                                .saturating_add(backdrop_source_group_in_use_bytes),
                                         )
                                     {
                                         content_target = None;
@@ -638,7 +691,9 @@ fn compile_for_scene_inner(
                             ]
                             .into_iter()
                             .any(|t| {
-                                t != content_target && !draw_scopes.iter().any(|s| s.target == t)
+                                t != content_target
+                                    && !draw_scopes.iter().any(|s| s.target == t)
+                                    && !backdrop_source_group_reserved_targets.contains(&t)
                             });
 
                             let chain_scissor = if scope.content_size == viewport_size {
@@ -658,8 +713,13 @@ fn compile_for_scene_inner(
                                 scope.content_size,
                                 chain_scissor,
                                 None,
-                                clip_path_mask_in_use_bytes,
+                                clip_path_mask_in_use_bytes
+                                    .saturating_add(backdrop_source_group_in_use_bytes),
                                 &[],
+                                &backdrop_source_group_reserved_targets,
+                                None,
+                                &mut effect_degradations,
+                                &mut effect_blur_quality,
                             );
                             if before == passes.len()
                                 && !scope.chain.is_empty()
@@ -737,7 +797,9 @@ fn compile_for_scene_inner(
                                 super::PlanTarget::Intermediate2,
                                 super::PlanTarget::Intermediate3,
                             ] {
-                                if draw_scopes.iter().any(|s| s.target == t) {
+                                if draw_scopes.iter().any(|s| s.target == t)
+                                    || backdrop_source_group_reserved_targets.contains(&t)
+                                {
                                     continue;
                                 }
                                 content_target = Some(t);
@@ -771,7 +833,8 @@ fn compile_for_scene_inner(
                                 if !can_allocate_intermediate_bytes(
                                     &draw_scopes,
                                     required_color.saturating_add(required_mask),
-                                    clip_path_mask_in_use_bytes,
+                                    clip_path_mask_in_use_bytes
+                                        .saturating_add(backdrop_source_group_in_use_bytes),
                                 ) {
                                     content_target = None;
                                     mask_target = None;
@@ -900,6 +963,211 @@ fn compile_for_scene_inner(
                             let _ = scope.mask_draw_index;
                         }
                     }
+                    EffectMarkerKind::BackdropSourceGroupPush {
+                        scissor,
+                        pyramid,
+                        quality,
+                    } => {
+                        let g = &mut effect_degradations.backdrop_source_groups;
+                        g.requested = g.requested.saturating_add(1);
+                        if pyramid.is_some() {
+                            g.pyramid_requested = g.pyramid_requested.saturating_add(1);
+                        }
+
+                        let pyramid_pad_px = pyramid
+                            .map(|req| {
+                                if !req.max_radius_px.0.is_finite()
+                                    || req.max_radius_px.0 <= 0.0
+                                    || !scale_factor.is_finite()
+                                    || scale_factor <= 0.0
+                                {
+                                    return 0u32;
+                                }
+                                let pad =
+                                    (req.max_radius_px.0 * scale_factor).ceil().max(0.0) as u32;
+                                pad.min(viewport_size.0.max(viewport_size.1))
+                            })
+                            .unwrap_or(0);
+
+                        let parent_scope = draw_scopes.last().expect("draw scope");
+                        let parent_target = parent_scope.target;
+
+                        let mut raw_target: Option<super::PlanTarget> = None;
+                        let mut had_free_target = false;
+                        for t in [
+                            super::PlanTarget::Intermediate0,
+                            super::PlanTarget::Intermediate1,
+                            super::PlanTarget::Intermediate2,
+                            super::PlanTarget::Intermediate3,
+                        ] {
+                            if draw_scopes.iter().any(|s| s.target == t)
+                                || backdrop_source_group_reserved_targets.contains(&t)
+                            {
+                                continue;
+                            }
+                            raw_target = Some(t);
+                            had_free_target = true;
+                            break;
+                        }
+
+                        let raw_bytes = estimate_texture_bytes(viewport_size, format, 1);
+                        let mut reserved_bytes: u64 = 0;
+                        let mut pyramid_choice: Option<effects::CustomV3PyramidChoice> = None;
+
+                        let can_afford_raw = had_free_target
+                            && can_allocate_intermediate_bytes(
+                                &draw_scopes,
+                                raw_bytes,
+                                clip_path_mask_in_use_bytes
+                                    .saturating_add(backdrop_source_group_in_use_bytes),
+                            );
+                        if !can_afford_raw {
+                            raw_target = None;
+                            if pyramid.is_some() {
+                                g.pyramid_skipped_raw_unavailable =
+                                    g.pyramid_skipped_raw_unavailable.saturating_add(1);
+                            }
+                            if !had_free_target {
+                                g.raw_degraded_target_exhausted =
+                                    g.raw_degraded_target_exhausted.saturating_add(1);
+                            } else if intermediate_budget_bytes == 0 {
+                                g.raw_degraded_budget_zero =
+                                    g.raw_degraded_budget_zero.saturating_add(1);
+                            } else {
+                                g.raw_degraded_budget_insufficient =
+                                    g.raw_degraded_budget_insufficient.saturating_add(1);
+                            }
+                        }
+
+                        if let Some(raw_target) = raw_target {
+                            g.applied_raw = g.applied_raw.saturating_add(1);
+
+                            let snapshot_scissor = pyramid.map(|_| {
+                                let max_w = viewport_size.0;
+                                let max_h = viewport_size.1;
+                                let x0 = scissor.x.saturating_sub(pyramid_pad_px).min(max_w);
+                                let y0 = scissor.y.saturating_sub(pyramid_pad_px).min(max_h);
+                                let x1 = scissor
+                                    .x
+                                    .saturating_add(scissor.w)
+                                    .saturating_add(pyramid_pad_px)
+                                    .min(max_w);
+                                let y1 = scissor
+                                    .y
+                                    .saturating_add(scissor.h)
+                                    .saturating_add(pyramid_pad_px)
+                                    .min(max_h);
+                                if x1 <= x0 || y1 <= y0 {
+                                    LocalScissorRect(scissor)
+                                } else {
+                                    LocalScissorRect(ScissorRect {
+                                        x: x0,
+                                        y: y0,
+                                        w: x1 - x0,
+                                        h: y1 - y0,
+                                    })
+                                }
+                            });
+
+                            passes.push(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
+                                src: parent_target,
+                                dst: raw_target,
+                                src_size: viewport_size,
+                                dst_size: viewport_size,
+                                dst_scissor: snapshot_scissor,
+                                encode_output_srgb: false,
+                                load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
+                            }));
+
+                            reserved_bytes = reserved_bytes.saturating_add(raw_bytes);
+
+                            if let Some(req) = pyramid {
+                                let in_use_intermediate_bytes: u64 = draw_scopes
+                                    .iter()
+                                    .filter(|s| {
+                                        matches!(
+                                            s.target,
+                                            super::PlanTarget::Intermediate0
+                                                | super::PlanTarget::Intermediate1
+                                                | super::PlanTarget::Intermediate2
+                                                | super::PlanTarget::Intermediate3
+                                        )
+                                    })
+                                    .map(|s| estimate_texture_bytes(s.size, format, 1))
+                                    .sum();
+
+                                let budget_after_raw = intermediate_budget_bytes.saturating_sub(
+                                    in_use_intermediate_bytes
+                                        .saturating_add(clip_path_mask_in_use_bytes)
+                                        .saturating_add(backdrop_source_group_in_use_bytes)
+                                        .saturating_add(raw_bytes),
+                                );
+
+                                let choice = effects::choose_custom_v3_pyramid_choice_for_request(
+                                    req,
+                                    viewport_size,
+                                    format,
+                                    budget_after_raw,
+                                    raw_bytes,
+                                );
+
+                                if choice.levels >= 2 {
+                                    g.pyramid_applied_levels_ge2 =
+                                        g.pyramid_applied_levels_ge2.saturating_add(1);
+                                    reserved_bytes = reserved_bytes.saturating_add(
+                                        effects::estimate_custom_v3_pyramid_bytes(
+                                            viewport_size,
+                                            format,
+                                            choice.levels,
+                                        ),
+                                    );
+                                } else if let Some(reason) = choice.degraded_to_one {
+                                    match reason {
+                                        effects::CustomV3PyramidDegradeReason::BudgetZero => {
+                                            g.pyramid_degraded_to_one_budget_zero = g
+                                                .pyramid_degraded_to_one_budget_zero
+                                                .saturating_add(1);
+                                        }
+                                        effects::CustomV3PyramidDegradeReason::BudgetInsufficient => {
+                                            g.pyramid_degraded_to_one_budget_insufficient = g
+                                                .pyramid_degraded_to_one_budget_insufficient
+                                                .saturating_add(1);
+                                        }
+                                    }
+                                }
+                                pyramid_choice = Some(choice);
+                            }
+
+                            backdrop_source_group_reserved_targets.push(raw_target);
+                            let _ = quality;
+                        }
+
+                        backdrop_source_group_in_use_bytes =
+                            backdrop_source_group_in_use_bytes.saturating_add(reserved_bytes);
+                        backdrop_source_group_scopes.push(BackdropSourceGroupScope {
+                            scissor,
+                            pyramid_choice,
+                            pyramid_pad_px,
+                            raw_target,
+                            reserved_bytes,
+                        });
+                    }
+                    EffectMarkerKind::BackdropSourceGroupPop => {
+                        let Some(scope) = backdrop_source_group_scopes.pop() else {
+                            marker_ix += 1;
+                            continue;
+                        };
+
+                        backdrop_source_group_in_use_bytes =
+                            backdrop_source_group_in_use_bytes.saturating_sub(scope.reserved_bytes);
+
+                        if let Some(raw_target) = scope.raw_target {
+                            let popped = backdrop_source_group_reserved_targets.pop();
+                            debug_assert_eq!(popped, Some(raw_target));
+                        }
+
+                        let _ = scope.scissor;
+                    }
                     EffectMarkerKind::CompositeGroupPush {
                         scissor,
                         uniform_index,
@@ -926,7 +1194,9 @@ fn compile_for_scene_inner(
                                 super::PlanTarget::Intermediate2,
                                 super::PlanTarget::Intermediate3,
                             ] {
-                                if draw_scopes.iter().any(|s| s.target == t) {
+                                if draw_scopes.iter().any(|s| s.target == t)
+                                    || backdrop_source_group_reserved_targets.contains(&t)
+                                {
                                     continue;
                                 }
                                 content_target = Some(t);
@@ -938,7 +1208,8 @@ fn compile_for_scene_inner(
                                 && !can_allocate_intermediate_bytes(
                                     &draw_scopes,
                                     estimate_texture_bytes(content_size, format, 1),
-                                    clip_path_mask_in_use_bytes,
+                                    clip_path_mask_in_use_bytes
+                                        .saturating_add(backdrop_source_group_in_use_bytes),
                                 )
                             {
                                 content_target = None;

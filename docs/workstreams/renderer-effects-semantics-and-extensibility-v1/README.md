@@ -83,6 +83,9 @@ See:
 
 - Worklist: `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/todo.md`
 - Milestones: `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/milestones.md`
+- Custom effect semantics (CustomV1 WGSL contract): `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-v1-semantics.md`
+- Custom effect v2 design tracker: `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-v2/README.md`
+- Custom effect v3 design tracker: `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-v3/README.md`
 
 ## Proposed sequencing (recommended)
 

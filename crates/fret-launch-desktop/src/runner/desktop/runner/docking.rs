@@ -243,6 +243,24 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             return true;
         }
 
+        // Scripted diagnostics drive cursor position via overrides. Tear-off follow intentionally
+        // moves OS windows to keep a real cursor "inside" the moving window; during scripted runs
+        // this causes the runner to chase synthetic cursor updates and can prevent docking-back
+        // gestures from ever reaching a stable overlap/hover state.
+        //
+        // When a recent diagnostics cursor/button override was observed, stop following and let
+        // cursor-based hover/drop routing drive the interaction deterministically.
+        let diag_override_recent = self
+            .diag_last_cursor_override_tick
+            .is_some_and(|t| self.tick_id.0.saturating_sub(t.0) <= 2)
+            || self
+                .diag_last_mouse_buttons_override_tick
+                .is_some_and(|t| self.tick_id.0.saturating_sub(t.0) <= 2);
+        if diag_override_recent && self.dock_tearoff_follow.is_some() {
+            self.stop_dock_tearoff_follow(Instant::now(), false);
+            return true;
+        }
+
         if self.dock_tearoff_follow.is_none()
             && let Some(pointer_id) = pointer_id
             && let Some(drag) = self.app.drag(pointer_id)

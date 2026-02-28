@@ -10,6 +10,7 @@ mod custom_effect;
 mod dither;
 mod drop_shadow;
 mod mask;
+mod mip_downsample;
 mod noise;
 mod path;
 mod path_clip_mask;
