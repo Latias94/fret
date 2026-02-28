@@ -1,0 +1,127 @@
+{
+  "schema_version": 2,
+    "meta": {
+    "name": "Node graph demo: preset families + wire drag smoke (paint-only)",
+    "tags": [
+      "gate",
+      "node_graph",
+      "preset",
+      "skin",
+      "wire_drag",
+      "wire_glow",
+      "wire_highlight",
+      "edge_markers"
+    ],
+    "required_capabilities": ["diag.script_v2"],
+    "target_hints": [
+      "Cycles the built-in node graph preset families via shortcut (paint-only skin revision).",
+      "Starts a wire drag session and captures bundles for debugging skin-driven chrome.",
+      "Toggles wire glow so bundles capture both glow and no-glow variants.",
+      "Toggles wire highlight so bundles capture both highlight and no-highlight variants.",
+      "Toggles edge markers so bundles capture both markers and no-markers variants.",
+      "Exercises invalid + convertible drops without mutating the graph (conversion picker forced)."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "node_graph.canvas" } },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "node_graph_demo.anchor.float_out" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "node_graph_demo.anchor.float_in" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "node_graph_demo.anchor.float_out_b" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "node_graph_demo.anchor.int_in" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "node_graph.canvas" } },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "capture_bundle", "label": "node-graph-demo-preset-family-baseline" },
+
+    { "type": "press_shortcut", "shortcut": "primary+shift+p" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "capture_bundle", "label": "node-graph-demo-preset-family-1" },
+    { "type": "press_shortcut", "shortcut": "primary+shift+p" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "capture_bundle", "label": "node-graph-demo-preset-family-2" },
+
+    { "type": "press_shortcut", "shortcut": "primary+shift+g" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "capture_bundle", "label": "node-graph-demo-wire-glow-toggled-off" },
+
+    { "type": "press_shortcut", "shortcut": "primary+shift+h" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "capture_bundle", "label": "node-graph-demo-wire-highlight-toggled-off" },
+
+    { "type": "press_shortcut", "shortcut": "primary+shift+j" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "capture_bundle", "label": "node-graph-demo-edge-markers-toggled-on" },
+
+    {
+      "type": "drag_to",
+      "from": { "kind": "test_id", "id": "node_graph_demo.anchor.float_out" },
+      "to": { "kind": "test_id", "id": "node_graph_demo.anchor.float_out_b" },
+      "steps": 12,
+      "timeout_frames": 240
+    },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "capture_bundle", "label": "node-graph-demo-wire-drag-invalid" },
+
+    { "type": "press_shortcut", "shortcut": "primary+shift+g" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "capture_bundle", "label": "node-graph-demo-wire-glow-toggled-on" },
+
+    { "type": "press_shortcut", "shortcut": "primary+shift+h" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "capture_bundle", "label": "node-graph-demo-wire-highlight-toggled-on" },
+
+    { "type": "press_shortcut", "shortcut": "primary+shift+j" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "capture_bundle", "label": "node-graph-demo-edge-markers-toggled-off" },
+
+    {
+      "type": "drag_to",
+      "from": { "kind": "test_id", "id": "node_graph_demo.anchor.float_out" },
+      "to": { "kind": "test_id", "id": "node_graph_demo.anchor.int_in" },
+      "steps": 12,
+      "timeout_frames": 240
+    },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "capture_bundle", "label": "node-graph-demo-wire-drag-convertible" },
+
+    { "type": "press_shortcut", "shortcut": "primary+shift+p" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "capture_bundle", "label": "node-graph-demo-preset-family-3" }
+  ]
+}

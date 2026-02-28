@@ -91,6 +91,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 zoom,
                 cx.scale_factor,
                 edge.width,
+                edge.hint.dash,
             ) {
                 cx.scene.push(SceneOp::Path {
                     order: DrawOrder(2),

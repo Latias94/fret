@@ -10,9 +10,9 @@ scope: ecosystem/fret-node (UI canvas + portal + edgeTypes)
 This milestone implements the v1 “skin layer” so `NodeGraphCanvas` can render editor-grade
 visual styles comparable to:
 
-- Dify-like workflow editors (clean, shadcn-aligned),
-- Unreal Blueprint (strong category colors, high-contrast chrome),
-- Unity ShaderGraph (dark, subtle grids, distinct port types).
+- clean workflow editors (shadcn-aligned),
+- schematic editors (strong category colors, high-contrast chrome),
+- shader/material graph editors (dark, subtle grids, distinct port types).
 
 ## Deliverables
 
@@ -97,3 +97,23 @@ Recommended focused command while iterating:
 
 - `cargo nextest run -p fret-node dash edge_types_invalidation perf_cache hit_testing threshold_zoom_conformance`
 
+## Status (evidence anchors)
+
+- Per-node header palette is implemented on the main paint path:
+  - `ecosystem/fret-node/src/ui/skin.rs` (`NodeChromeHint::{header_background,title_text}`)
+  - `ecosystem/fret-node/src/ui/canvas/widget/paint_render_data/collect.rs` (hint collection)
+  - `ecosystem/fret-node/src/ui/canvas/widget/paint_nodes/static_nodes.rs` (header quad + title paint)
+  - Conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/skin_per_node_header_palette_conformance.rs`
+
+- Per-port paint-only chrome hints are implemented for pins:
+  - `ecosystem/fret-node/src/ui/skin.rs` (`PortChromeHint`, `PortShapeHint`)
+  - `ecosystem/fret-node/src/ui/canvas/widget/paint_render_data/collect.rs` (port hint collection)
+  - `ecosystem/fret-node/src/ui/canvas/widget/paint_nodes/static_nodes.rs` (fill + stroke + inner scale)
+  - Dynamic overlays (hover/focus rings) use skin-resolved base fill:
+    `ecosystem/fret-node/src/ui/canvas/widget/paint_nodes/dynamic_from_geometry.rs`
+  - Conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/skin_port_chrome_hints_conformance.rs`
+
+- Node paint-only ring hints are implemented for keyboard focus (and optionally selection):
+  - `ecosystem/fret-node/src/ui/skin.rs` (`NodeRingHint`, `NodeChromeHint::{ring_selected,ring_focused}`)
+  - `ecosystem/fret-node/src/ui/canvas/widget/paint_nodes/dynamic_from_geometry.rs` (focused/selected overlay)
+  - Conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/skin_node_ring_hints_conformance.rs`

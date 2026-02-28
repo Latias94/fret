@@ -1,5 +1,8 @@
 use crate::ui::canvas::widget::paint_render_data::RenderData;
 use crate::ui::canvas::widget::*;
+use crate::ui::{NodeShadowHint, PortShapeHint};
+use fret_core::scene::DropShadowV1;
+use fret_core::{EffectChain, EffectMode, EffectQuality, EffectStep};
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(in super::super) fn paint_nodes_static(
@@ -10,6 +13,51 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         render: &RenderData,
         zoom: f32,
     ) {
+        fn shadow_to_drop_shadow_canvas_units(
+            rect: Rect,
+            zoom: f32,
+            shadow: NodeShadowHint,
+        ) -> Option<(Rect, DropShadowV1)> {
+            let z = if zoom.is_finite() && zoom > 0.0 {
+                zoom
+            } else {
+                1.0
+            };
+
+            if !shadow.offset_x_px.is_finite()
+                || !shadow.offset_y_px.is_finite()
+                || !shadow.blur_radius_px.is_finite()
+            {
+                return None;
+            }
+
+            let blur_canvas = (shadow.blur_radius_px / z).max(0.0);
+            let ox_canvas = shadow.offset_x_px / z;
+            let oy_canvas = shadow.offset_y_px / z;
+
+            let pad_x = blur_canvas + ox_canvas.abs();
+            let pad_y = blur_canvas + oy_canvas.abs();
+
+            let bounds = Rect::new(
+                Point::new(Px(rect.origin.x.0 - pad_x), Px(rect.origin.y.0 - pad_y)),
+                Size::new(
+                    Px(rect.size.width.0 + 2.0 * pad_x),
+                    Px(rect.size.height.0 + 2.0 * pad_y),
+                ),
+            );
+
+            Some((
+                bounds,
+                DropShadowV1 {
+                    offset_px: Point::new(Px(ox_canvas), Px(oy_canvas)),
+                    blur_radius_px: Px(blur_canvas),
+                    downsample: shadow.downsample,
+                    color: shadow.color,
+                }
+                .sanitize(),
+            ))
+        }
+
         let mut node_text_style = self.style.context_menu_text_style.clone();
         node_text_style.size = Px(node_text_style.size.0 / zoom);
         if let Some(lh) = node_text_style.line_height.as_mut() {
@@ -20,18 +68,79 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         let title_pad = self.style.node_padding / zoom;
         let title_h = self.style.node_header_height / zoom;
 
-        for (_node, rect, _is_selected, title, body, pin_rows, _resize_handles) in &render.nodes {
+        for (_node, rect, is_selected, title, body, pin_rows, _resize_handles, hint) in
+            &render.nodes
+        {
             let rect = *rect;
+            let background = hint.background.unwrap_or(self.style.node_background);
+            let border = if *is_selected {
+                hint.border_selected
+                    .or(hint.border)
+                    .unwrap_or(self.style.node_border_selected)
+            } else {
+                hint.border.unwrap_or(self.style.node_border)
+            };
+            let border_w = Px(1.0 / zoom);
+
+            let shadow = hint.shadow;
+            if let Some(shadow) = shadow
+                && let Some((bounds, drop_shadow)) =
+                    shadow_to_drop_shadow_canvas_units(rect, zoom, shadow)
+            {
+                scene.push(SceneOp::PushEffect {
+                    bounds,
+                    mode: EffectMode::FilterContent,
+                    chain: EffectChain::from_steps(&[EffectStep::DropShadowV1(drop_shadow)]),
+                    quality: EffectQuality::Auto,
+                });
+            }
+
             scene.push(SceneOp::Quad {
                 order: DrawOrder(3),
                 rect,
-                background: fret_core::Paint::Solid(self.style.node_background),
+                background: fret_core::Paint::Solid(background),
 
-                border: Edges::all(Px(1.0 / zoom)),
-                border_paint: fret_core::Paint::Solid(self.style.node_border),
+                border: Edges::all(Px(0.0)),
+                border_paint: fret_core::Paint::TRANSPARENT,
 
                 corner_radii: Corners::all(corner),
             });
+
+            if let Some(color) = hint.header_background {
+                scene.push(SceneOp::Quad {
+                    order: DrawOrder(3),
+                    rect: Rect::new(
+                        rect.origin,
+                        Size::new(rect.size.width, Px(title_h.min(rect.size.height.0))),
+                    ),
+                    background: fret_core::Paint::Solid(color),
+
+                    border: Edges::all(Px(0.0)),
+                    border_paint: fret_core::Paint::TRANSPARENT,
+
+                    corner_radii: Corners {
+                        top_left: corner,
+                        top_right: corner,
+                        bottom_right: Px(0.0),
+                        bottom_left: Px(0.0),
+                    },
+                });
+            }
+
+            scene.push(SceneOp::Quad {
+                order: DrawOrder(3),
+                rect,
+                background: fret_core::Paint::TRANSPARENT,
+
+                border: Edges::all(border_w),
+                border_paint: fret_core::Paint::Solid(border),
+
+                corner_radii: Corners::all(corner),
+            });
+
+            if shadow.is_some() {
+                scene.push(SceneOp::PopEffect);
+            }
 
             if !title.is_empty() {
                 let max_w = (rect.size.width.0 - 2.0 * title_pad).max(0.0);
@@ -56,7 +165,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     order: DrawOrder(4),
                     origin: Point::new(text_x, text_y),
                     text: blob,
-                    paint: (self.style.context_menu_text).into(),
+                    paint: (hint.title_text.unwrap_or(self.style.context_menu_text)).into(),
                     outline: None,
                     shadow: None,
                 });
@@ -138,20 +247,126 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             });
         }
 
-        for (_port_id, rect, color) in &render.pins {
-            let rect = *rect;
+        for (port_id, rect, color, hint) in &render.pins {
+            let outer_rect = *rect;
+            let mut fill_rect = outer_rect;
             let color = *color;
-            let r = Px(0.5 * rect.size.width.0);
-            scene.push(SceneOp::Quad {
-                order: DrawOrder(4),
-                rect,
-                background: fret_core::Paint::Solid(color),
+            let shape = hint.shape.unwrap_or(PortShapeHint::Circle);
+            let dir = render.port_labels.get(port_id).map(|l| l.dir);
 
-                border: Edges::all(Px(0.0)),
-                border_paint: fret_core::Paint::TRANSPARENT,
+            if let Some(scale) = hint.inner_scale {
+                if scale.is_finite() {
+                    if scale > 0.0 {
+                        let scale = scale.clamp(0.05, 1.0);
+                        let cx = outer_rect.origin.x.0 + 0.5 * outer_rect.size.width.0;
+                        let cy = outer_rect.origin.y.0 + 0.5 * outer_rect.size.height.0;
+                        let w = outer_rect.size.width.0 * scale;
+                        let h = outer_rect.size.height.0 * scale;
+                        fill_rect = Rect::new(
+                            Point::new(Px(cx - 0.5 * w), Px(cy - 0.5 * h)),
+                            Size::new(Px(w), Px(h)),
+                        );
+                    }
+                }
+            }
 
-                corner_radii: Corners::all(r),
-            });
+            if hint.inner_scale.unwrap_or(1.0) > 0.0 {
+                match shape {
+                    PortShapeHint::Circle => {
+                        let r = Px(0.5 * fill_rect.size.width.0);
+                        scene.push(SceneOp::Quad {
+                            order: DrawOrder(4),
+                            rect: fill_rect,
+                            background: fret_core::Paint::Solid(color),
+
+                            border: Edges::all(Px(0.0)),
+                            border_paint: fret_core::Paint::TRANSPARENT,
+
+                            corner_radii: Corners::all(r),
+                        });
+                    }
+                    PortShapeHint::Diamond | PortShapeHint::Triangle => {
+                        if let Some(path) = self.paint_cache.port_shape_fill_path(
+                            services,
+                            shape,
+                            fill_rect.size,
+                            dir,
+                            zoom,
+                            scale_factor,
+                        ) {
+                            scene.push(SceneOp::Path {
+                                order: DrawOrder(4),
+                                origin: fill_rect.origin,
+                                path,
+                                paint: color.into(),
+                            });
+                        } else {
+                            let r = Px(0.5 * fill_rect.size.width.0);
+                            scene.push(SceneOp::Quad {
+                                order: DrawOrder(4),
+                                rect: fill_rect,
+                                background: fret_core::Paint::Solid(color),
+
+                                border: Edges::all(Px(0.0)),
+                                border_paint: fret_core::Paint::TRANSPARENT,
+
+                                corner_radii: Corners::all(r),
+                            });
+                        }
+                    }
+                }
+            }
+
+            if let Some(stroke) = hint.stroke {
+                let w = hint.stroke_width.unwrap_or(1.0);
+                if w.is_finite() && w > 0.0 {
+                    match shape {
+                        PortShapeHint::Circle => {
+                            let r = Px(0.5 * outer_rect.size.width.0);
+                            scene.push(SceneOp::Quad {
+                                order: DrawOrder(4),
+                                rect: outer_rect,
+                                background: fret_core::Paint::TRANSPARENT,
+
+                                border: Edges::all(Px(w / zoom)),
+                                border_paint: fret_core::Paint::Solid(stroke),
+
+                                corner_radii: Corners::all(r),
+                            });
+                        }
+                        PortShapeHint::Diamond | PortShapeHint::Triangle => {
+                            if let Some(path) = self.paint_cache.port_shape_stroke_path(
+                                services,
+                                shape,
+                                outer_rect.size,
+                                dir,
+                                zoom,
+                                scale_factor,
+                                w,
+                            ) {
+                                scene.push(SceneOp::Path {
+                                    order: DrawOrder(4),
+                                    origin: outer_rect.origin,
+                                    path,
+                                    paint: stroke.into(),
+                                });
+                            } else {
+                                let r = Px(0.5 * outer_rect.size.width.0);
+                                scene.push(SceneOp::Quad {
+                                    order: DrawOrder(4),
+                                    rect: outer_rect,
+                                    background: fret_core::Paint::TRANSPARENT,
+
+                                    border: Edges::all(Px(w / zoom)),
+                                    border_paint: fret_core::Paint::Solid(stroke),
+
+                                    corner_radii: Corners::all(r),
+                                });
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
