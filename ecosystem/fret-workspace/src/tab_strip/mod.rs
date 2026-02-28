@@ -22,8 +22,8 @@ use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::dnd as ui_dnd;
 
 use crate::commands::{
-    tab_activate_command, tab_close_command, tab_move_active_after_command,
-    tab_move_active_before_command, tab_pin_command, tab_unpin_command,
+    tab_activate_command, tab_close_command,
+    tab_pin_command, tab_unpin_command,
 };
 use crate::tab_drag::{
     DRAG_KIND_WORKSPACE_TAB, WorkspaceTabDragState, WorkspaceTabDropZone, WorkspaceTabHitRect,
@@ -31,6 +31,7 @@ use crate::tab_drag::{
 };
 
 mod drag_state;
+mod intent;
 mod kernel;
 mod layouts;
 mod state;
@@ -48,6 +49,7 @@ use kernel::{
 };
 
 use drag_state::{WorkspaceTabStripDragState, get_drag_model};
+use intent::{WorkspaceTabStripIntent, dispatch_intent};
 use layouts::{
     centered_row, fill_grow_layout, fill_layout, fixed_square_layout, row_layout,
     tab_list_semantics_layout, tab_strip_scroll_content_layout,
@@ -429,15 +431,27 @@ impl WorkspaceTabStrip {
                                                 if let Some(cmd) =
                                                     pane_activate_cmd_for_roving.clone()
                                                 {
-                                                    host.dispatch_command(Some(acx.window), cmd);
+                                                    dispatch_intent(
+                                                        host,
+                                                        acx.window,
+                                                        WorkspaceTabStripIntent::Activate(cmd),
+                                                    );
                                                 }
                                                 let Some(cmd) =
                                                     tab_commands_for_roving.get(idx).cloned()
                                                 else {
                                                     return;
                                                 };
-                                                host.dispatch_command(Some(acx.window), cmd);
-                                                host.request_redraw(acx.window);
+                                                dispatch_intent(
+                                                    host,
+                                                    acx.window,
+                                                    WorkspaceTabStripIntent::Activate(cmd),
+                                                );
+                                                dispatch_intent(
+                                                    host,
+                                                    acx.window,
+                                                    WorkspaceTabStripIntent::RequestRedraw,
+                                                );
                                             },
                                         ));
 
@@ -584,15 +598,18 @@ impl WorkspaceTabStrip {
                                                                     pane_activate_cmd_for_activate_handler
                                                                         .clone()
                                                                 {
-                                                                    host.dispatch_command(
-                                                                        Some(acx.window),
-                                                                        cmd,
+                                                                    dispatch_intent(
+                                                                        host,
+                                                                        acx.window,
+                                                                        WorkspaceTabStripIntent::Activate(cmd),
                                                                     );
                                                                 }
-                                                                host.dispatch_command(
-                                                                    Some(acx.window),
-                                                                    tab_activate_cmd_for_activate
-                                                                        .clone(),
+                                                                dispatch_intent(
+                                                                    host,
+                                                                    acx.window,
+                                                                    WorkspaceTabStripIntent::Activate(
+                                                                        tab_activate_cmd_for_activate.clone(),
+                                                                    ),
                                                                 );
                                                             },
                                                         );
@@ -619,20 +636,24 @@ impl WorkspaceTabStrip {
                                                                             pane_activate_cmd_for_pointer
                                                                                 .clone()
                                                                         {
-                                                                            host.dispatch_command(
-                                                                                Some(acx.window),
-                                                                                cmd,
+                                                                            dispatch_intent(
+                                                                                host,
+                                                                                acx.window,
+                                                                                WorkspaceTabStripIntent::Activate(cmd),
                                                                             );
                                                                         }
                                                                         if let Some(cmd) =
                                                                             tab_close_command.clone()
                                                                         {
-                                                                            host.dispatch_command(
-                                                                                Some(acx.window),
-                                                                                cmd,
-                                                                            );
-                                                                            host.request_redraw(
+                                                                            dispatch_intent(
+                                                                                host,
                                                                                 acx.window,
+                                                                                WorkspaceTabStripIntent::Close(cmd),
+                                                                            );
+                                                                            dispatch_intent(
+                                                                                host,
+                                                                                acx.window,
+                                                                                WorkspaceTabStripIntent::RequestRedraw,
                                                                             );
                                                                         }
                                                                         host.prevent_default(
@@ -645,18 +666,23 @@ impl WorkspaceTabStrip {
                                                                             pane_activate_cmd_for_pointer
                                                                                 .clone()
                                                                         {
-                                                                            host.dispatch_command(
-                                                                                Some(acx.window),
-                                                                                cmd,
+                                                                            dispatch_intent(
+                                                                                host,
+                                                                                acx.window,
+                                                                                WorkspaceTabStripIntent::Activate(cmd),
                                                                             );
                                                                         }
-                                                                        host.dispatch_command(
-                                                                            Some(acx.window),
-                                                                            tab_activate_command
-                                                                                .clone(),
-                                                                        );
-                                                                        host.request_redraw(
+                                                                        dispatch_intent(
+                                                                            host,
                                                                             acx.window,
+                                                                            WorkspaceTabStripIntent::Activate(
+                                                                                tab_activate_command.clone(),
+                                                                            ),
+                                                                        );
+                                                                        dispatch_intent(
+                                                                            host,
+                                                                            acx.window,
+                                                                            WorkspaceTabStripIntent::RequestRedraw,
                                                                         );
                                                                         host.prevent_default(
                                                                             fret_runtime::DefaultAction::FocusOnPointerDown,
@@ -827,9 +853,17 @@ impl WorkspaceTabStrip {
 
                                                                 if activate_on_drag_start {
                                                                     if let Some(cmd) = pane_activate_cmd.clone() {
-                                                                        host.dispatch_command(Some(acx.window), cmd);
+                                                                        dispatch_intent(
+                                                                            host,
+                                                                            acx.window,
+                                                                            WorkspaceTabStripIntent::Activate(cmd),
+                                                                        );
                                                                     }
-                                                                    host.dispatch_command(Some(acx.window), tab_command.clone());
+                                                                    dispatch_intent(
+                                                                        host,
+                                                                        acx.window,
+                                                                        WorkspaceTabStripIntent::Activate(tab_command.clone()),
+                                                                    );
 
                                                                     if let (Some(model), Some(source)) =
                                                                         (tab_drag_model.clone(), source_pane.clone())
@@ -953,31 +987,44 @@ impl WorkspaceTabStrip {
                                                                 match maybe_drop {
                                                                     WorkspaceTabStripDropTarget::None => {}
                                                                     WorkspaceTabStripDropTarget::Tab(target, side) => {
-                                                                        host.dispatch_command(Some(acx.window), tab_command.clone());
-                                                                        let cmd = match side {
-                                                                            WorkspaceTabInsertionSide::Before => {
-                                                                                tab_move_active_before_command(target.as_ref())
-                                                                            }
-                                                                            WorkspaceTabInsertionSide::After => {
-                                                                                tab_move_active_after_command(target.as_ref())
-                                                                            }
-                                                                        };
-                                                                        if let Some(cmd) = cmd {
-                                                                            host.dispatch_command(Some(acx.window), cmd);
-                                                                        }
-                                                                        host.request_redraw(acx.window);
+                                                                        dispatch_intent(
+                                                                            host,
+                                                                            acx.window,
+                                                                            WorkspaceTabStripIntent::Activate(tab_command.clone()),
+                                                                        );
+                                                                        dispatch_intent(
+                                                                            host,
+                                                                            acx.window,
+                                                                            WorkspaceTabStripIntent::ReorderActive {
+                                                                                target_tab_id: target,
+                                                                                side,
+                                                                            },
+                                                                        );
+                                                                        dispatch_intent(
+                                                                            host,
+                                                                            acx.window,
+                                                                            WorkspaceTabStripIntent::RequestRedraw,
+                                                                        );
                                                                     }
                                                                     WorkspaceTabStripDropTarget::PinnedBoundary => {
-                                                                        host.dispatch_command(Some(acx.window), tab_command.clone());
-                                                                        let cmd = if tab_pinned {
-                                                                            tab_unpin_command(tab_id_for_pinned_boundary.as_ref())
-                                                                        } else {
-                                                                            tab_pin_command(tab_id_for_pinned_boundary.as_ref())
-                                                                        };
-                                                                        if let Some(cmd) = cmd {
-                                                                            host.dispatch_command(Some(acx.window), cmd);
-                                                                        }
-                                                                        host.request_redraw(acx.window);
+                                                                        dispatch_intent(
+                                                                            host,
+                                                                            acx.window,
+                                                                            WorkspaceTabStripIntent::Activate(tab_command.clone()),
+                                                                        );
+                                                                        dispatch_intent(
+                                                                            host,
+                                                                            acx.window,
+                                                                            WorkspaceTabStripIntent::SetPinned {
+                                                                                tab_id: tab_id_for_pinned_boundary.clone(),
+                                                                                pinned: !tab_pinned,
+                                                                            },
+                                                                        );
+                                                                        dispatch_intent(
+                                                                            host,
+                                                                            acx.window,
+                                                                            WorkspaceTabStripIntent::RequestRedraw,
+                                                                        );
                                                                     }
                                                                     WorkspaceTabStripDropTarget::End => {}
                                                                 }
@@ -1155,11 +1202,16 @@ impl WorkspaceTabStrip {
                                                                                                     if let Some(cmd) =
                                                                                                         pane_activate_cmd_for_close.clone()
                                                                                                     {
-                                                                                                        host.dispatch_command(Some(acx.window), cmd);
+                                                                                                        dispatch_intent(
+                                                                                                            host,
+                                                                                                            acx.window,
+                                                                                                            WorkspaceTabStripIntent::Activate(cmd),
+                                                                                                        );
                                                                                                     }
-                                                                                                    host.dispatch_command(
-                                                                                                        Some(acx.window),
-                                                                                                        close_command.clone(),
+                                                                                                    dispatch_intent(
+                                                                                                        host,
+                                                                                                        acx.window,
+                                                                                                        WorkspaceTabStripIntent::Close(close_command.clone()),
                                                                                                     );
                                                                                                 },
                                                                                             );
