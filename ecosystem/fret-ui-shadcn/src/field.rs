@@ -79,12 +79,36 @@ fn is_field_legend_variant_legend(element: &AnyElement) -> bool {
     line_height.is_some_and(|lh| (lh.0 - 24.0).abs() <= 0.5)
 }
 
-fn is_field_description(muted: fret_core::Color, element: &AnyElement) -> bool {
+fn is_field_description(
+    muted: fret_core::Color,
+    desc_line_height: Px,
+    element: &AnyElement,
+) -> bool {
     let element = peel_single_child_wrappers(element);
     match &element.kind {
-        ElementKind::Text(props) => props.wrap == TextWrap::Word && props.color == Some(muted),
+        ElementKind::Text(props) => {
+            props.color == Some(muted)
+                && matches!(
+                    props.wrap,
+                    TextWrap::Word | TextWrap::Balance | TextWrap::WordBreak | TextWrap::Grapheme
+                )
+                && props
+                    .style
+                    .as_ref()
+                    .and_then(|s| s.line_height)
+                    .is_some_and(|lh| (lh.0 - desc_line_height.0).abs() <= 0.5)
+        }
         ElementKind::StyledText(props) => {
-            props.wrap == TextWrap::Word && props.color == Some(muted)
+            props.color == Some(muted)
+                && matches!(
+                    props.wrap,
+                    TextWrap::Word | TextWrap::Balance | TextWrap::WordBreak | TextWrap::Grapheme
+                )
+                && props
+                    .style
+                    .as_ref()
+                    .and_then(|s| s.line_height)
+                    .is_some_and(|lh| (lh.0 - desc_line_height.0).abs() <= 0.5)
         }
         _ => false,
     }
@@ -263,7 +287,16 @@ impl FieldSet {
         let has_radio_or_checkbox_group = self.children.iter().any(is_radio_group_element)
             || self.children.iter().any(is_checkbox_group_element);
 
-        let (gap, layout, rest_layout, legend_gap, muted, desc_mt_neg_n1, desc_mt_neg_n1p5) = {
+        let (
+            gap,
+            layout,
+            rest_layout,
+            legend_gap,
+            muted,
+            desc_mt_neg_n1,
+            desc_mt_neg_n1p5,
+            desc_line_height,
+        ) = {
             let theme = Theme::global(&*cx.app).snapshot();
             // Upstream `FieldSet` uses `gap-6`, but overrides to `gap-3` when a checkbox/radio group
             // is present via CSS `:has` selectors.
@@ -284,6 +317,13 @@ impl FieldSet {
                 decl_style::layout_style(&theme, LayoutRefinement::default().mt_neg(Space::N1));
             let desc_mt_neg_n1p5 =
                 decl_style::layout_style(&theme, LayoutRefinement::default().mt_neg(Space::N1p5));
+            let desc_line_height = theme
+                .metric_by_key("component.field.description_line_height")
+                .or_else(|| {
+                    theme.metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT)
+                })
+                .or_else(|| theme.metric_by_key("font.line_height"))
+                .unwrap_or_else(|| theme.metric_token("font.line_height"));
             (
                 gap,
                 layout,
@@ -292,6 +332,7 @@ impl FieldSet {
                 muted,
                 desc_mt_neg_n1,
                 desc_mt_neg_n1p5,
+                desc_line_height,
             )
         };
 
@@ -332,7 +373,7 @@ impl FieldSet {
                                 .map(|(idx, child)| {
                                     if len >= 2
                                         && idx == len - 2
-                                        && is_field_description(muted, &child)
+                                        && is_field_description(muted, desc_line_height, &child)
                                     {
                                         let layout = if legend_is_variant_legend && idx == 0 {
                                             desc_mt_neg_n1p5.clone()
@@ -370,7 +411,10 @@ impl FieldSet {
                         .into_iter()
                         .enumerate()
                         .map(|(idx, child)| {
-                            if len >= 2 && idx == len - 2 && is_field_description(muted, &child) {
+                            if len >= 2
+                                && idx == len - 2
+                                && is_field_description(muted, desc_line_height, &child)
+                            {
                                 let layout = desc_mt_neg_n1.clone();
                                 cx.container(
                                     ContainerProps {
@@ -982,11 +1026,35 @@ impl FieldLabel {
 #[derive(Debug, Clone)]
 pub struct FieldDescription {
     text: Arc<str>,
+    wrap: Option<TextWrap>,
+    overflow: Option<TextOverflow>,
 }
 
 impl FieldDescription {
     pub fn new(text: impl Into<Arc<str>>) -> Self {
-        Self { text: text.into() }
+        Self {
+            text: text.into(),
+            wrap: None,
+            overflow: None,
+        }
+    }
+
+    pub fn wrap(mut self, wrap: TextWrap) -> Self {
+        self.wrap = Some(wrap);
+        self
+    }
+
+    pub fn overflow(mut self, overflow: TextOverflow) -> Self {
+        self.overflow = Some(overflow);
+        self
+    }
+
+    pub fn text_balance(self) -> Self {
+        self.wrap(TextWrap::Balance)
+    }
+
+    pub fn break_words(self) -> Self {
+        self.wrap(TextWrap::WordBreak)
     }
 
     #[track_caller]
@@ -1013,13 +1081,15 @@ impl FieldDescription {
             direction_prim::LayoutDirection::Rtl => TextAlign::End,
             direction_prim::LayoutDirection::Ltr => TextAlign::Start,
         };
+        let wrap = self.wrap.unwrap_or(TextWrap::Word);
+        let overflow = self.overflow.unwrap_or(TextOverflow::Clip);
         ui::text(cx, self.text)
             .text_size_px(px)
             .line_height_px(line_height)
             .font_normal()
             .text_color(ColorRef::Color(fg))
-            .wrap(TextWrap::Word)
-            .overflow(TextOverflow::Clip)
+            .wrap(wrap)
+            .overflow(overflow)
             .text_align(align)
             .into_element(cx)
     }
@@ -1028,11 +1098,35 @@ impl FieldDescription {
 #[derive(Debug, Clone)]
 pub struct FieldError {
     text: Arc<str>,
+    wrap: Option<TextWrap>,
+    overflow: Option<TextOverflow>,
 }
 
 impl FieldError {
     pub fn new(text: impl Into<Arc<str>>) -> Self {
-        Self { text: text.into() }
+        Self {
+            text: text.into(),
+            wrap: None,
+            overflow: None,
+        }
+    }
+
+    pub fn wrap(mut self, wrap: TextWrap) -> Self {
+        self.wrap = Some(wrap);
+        self
+    }
+
+    pub fn overflow(mut self, overflow: TextOverflow) -> Self {
+        self.overflow = Some(overflow);
+        self
+    }
+
+    pub fn text_balance(self) -> Self {
+        self.wrap(TextWrap::Balance)
+    }
+
+    pub fn break_words(self) -> Self {
+        self.wrap(TextWrap::WordBreak)
     }
 
     #[track_caller]
@@ -1059,13 +1153,15 @@ impl FieldError {
             direction_prim::LayoutDirection::Rtl => TextAlign::End,
             direction_prim::LayoutDirection::Ltr => TextAlign::Start,
         };
+        let wrap = self.wrap.unwrap_or(TextWrap::Word);
+        let overflow = self.overflow.unwrap_or(TextOverflow::Clip);
         ui::text(cx, self.text)
             .text_size_px(px)
             .line_height_px(line_height)
             .font_normal()
             .text_color(ColorRef::Color(fg))
-            .wrap(TextWrap::Word)
-            .overflow(TextOverflow::Clip)
+            .wrap(wrap)
+            .overflow(overflow)
             .text_align(align)
             .into_element(cx)
     }
@@ -1259,7 +1355,7 @@ impl Field {
         };
 
         field_state_prim::with_field_state_provider(cx, field_state, |cx| {
-            let (gap, wrapper, inner_layout, muted, desc_mt_neg) = {
+            let (gap, wrapper, inner_layout, muted, desc_mt_neg, desc_line_height) = {
                 let theme = Theme::global(&*cx.app).snapshot();
                 // shadcn/ui v4 `FormItem`: `grid gap-2`.
                 let gap = MetricRef::space(Space::N2).resolve(&theme);
@@ -1275,7 +1371,21 @@ impl Field {
                 let muted = muted_foreground(&theme);
                 let desc_mt_neg =
                     decl_style::layout_style(&theme, LayoutRefinement::default().mt_neg(Space::N1));
-                (gap, wrapper, inner_layout, muted, desc_mt_neg)
+                let desc_line_height = theme
+                    .metric_by_key("component.field.description_line_height")
+                    .or_else(|| {
+                        theme.metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT)
+                    })
+                    .or_else(|| theme.metric_by_key("font.line_height"))
+                    .unwrap_or_else(|| theme.metric_token("font.line_height"));
+                (
+                    gap,
+                    wrapper,
+                    inner_layout,
+                    muted,
+                    desc_mt_neg,
+                    desc_line_height,
+                )
             };
 
             let orientation = self.orientation;
@@ -1329,7 +1439,11 @@ impl Field {
                                         .map(|(idx, child)| {
                                             if len >= 2
                                                 && idx == len - 2
-                                                && is_field_description(muted, &child)
+                                                && is_field_description(
+                                                    muted,
+                                                    desc_line_height,
+                                                    &child,
+                                                )
                                             {
                                                 cx.container(
                                                     ContainerProps {
@@ -1387,7 +1501,11 @@ impl Field {
                                                 .map(|(idx, child)| {
                                                     if len >= 2
                                                         && idx == len - 2
-                                                        && is_field_description(muted, &child)
+                                                        && is_field_description(
+                                                            muted,
+                                                            desc_line_height,
+                                                            &child,
+                                                        )
                                                     {
                                                         cx.container(
                                                             ContainerProps {
