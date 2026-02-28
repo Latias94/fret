@@ -1,0 +1,70 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Workspace shell demo: reorder tab within strip (first -> end) (smoke)",
+    "tags": ["workspace", "tabstrip", "reorder", "smoke", "gate"],
+    "required_capabilities": ["diag.script_v2"],
+    "target_hints": [
+      "Asserts initial pos_in_set for a known tab.",
+      "Drags the first tab to the end of the strip and drops it.",
+      "Asserts pos_in_set updates after the reorder."
+    ]
+  },
+  "steps": [
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 10 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "pos_in_set_is",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0" },
+        "pos_in_set": 1
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "set_size_is",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0" },
+        "set_size": 3
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "pointer_down",
+      "window": { "kind": "current" },
+      "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0" },
+      "button": "left"
+    },
+    { "type": "pointer_move", "window": { "kind": "current" }, "delta_x": 18.0, "delta_y": 0.0, "steps": 10 },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "pointer_move", "window": { "kind": "current" }, "delta_x": 720.0, "delta_y": 0.0, "steps": 90 },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "pointer_up", "window": { "kind": "current" } },
+    { "type": "wait_frames", "n": 12 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "pos_in_set_is",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0" },
+        "pos_in_set": 3
+      },
+      "timeout_frames": 240
+    },
+
+    { "type": "capture_bundle", "label": "workspace-shell-demo-tab-reorder-first-to-end-smoke" }
+  ]
+}
+

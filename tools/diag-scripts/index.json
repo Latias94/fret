@@ -3319,6 +3319,28 @@
         "Middle-clicks the tab.",
         "Asserts the tab is removed from the UI tree (not_exists)."
       ]
+    },
+    {
+      "id": "workspace-shell-demo-tab-reorder-first-to-end-smoke",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-reorder-first-to-end-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke-workspace"
+      ],
+      "tags": [
+        "gate",
+        "reorder",
+        "smoke",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": [
+        "Asserts initial pos_in_set for a known tab.",
+        "Drags the first tab to the end of the strip and drops it.",
+        "Asserts pos_in_set updates after the reorder."
+      ]
     }
   ]
 }
