@@ -81,6 +81,14 @@ Run a promoted script by `script_id` (no path required):
 
 - `cargo run -p fretboard -- diag run ui-gallery-command-palette-shortcut-primary --launch -- cargo run -p fret-ui-gallery --release`
 
+Copy/paste checklist (safe, small-by-default):
+
+1) `cargo run -p fretboard -- diag config doctor --mode launch --print-launch-policy`
+2) `cargo run -p fretboard -- diag run <script.json|script_id> --pack --ai-packet --launch -- <cmd>`
+3) `cargo run -p fretboard -- diag meta <bundle_dir|bundle.schema2.json> --json`
+4) `cargo run -p fretboard -- diag pack <bundle_dir> --ai-only`
+5) (escape hatch) add `--launch-write-bundle-json` before `--launch` only when raw `bundle.json` is truly needed
+
 Common “share what happened” flow:
 
 - `cargo run -p fretboard -- diag run ui-gallery-intro-idle-screenshot --pack --ai-packet --launch -- cargo run -p fret-ui-gallery --release`
